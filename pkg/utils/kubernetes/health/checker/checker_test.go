@@ -18,7 +18,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -39,11 +38,6 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var (
-	zeroTime     time.Time
-	zeroMetaTime metav1.Time
-)
-
 var _ = Describe("HealthChecker", func() {
 	var _ = Describe("health check", func() {
 		var (
@@ -53,8 +47,7 @@ var _ = Describe("HealthChecker", func() {
 
 			condition gardencorev1beta1.Condition
 
-			seedNamespace     = "shoot--foo--bar"
-			kubernetesVersion = semver.MustParse("1.23.3")
+			seedNamespace = "shoot--foo--bar"
 
 			valiStatefulSet = newStatefulSet(seedNamespace, v1beta1constants.StatefulSetNameVali, v1beta1constants.GardenRoleLogging, true)
 
@@ -82,7 +75,7 @@ var _ = Describe("HealthChecker", func() {
 			func(conditions []gardencorev1beta1.Condition, upToDate bool, stepTime bool, conditionMatcher types.GomegaMatcher) {
 				var (
 					mr      = new(resourcesv1alpha1.ManagedResource)
-					checker = NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, &metav1.Duration{Duration: 5 * time.Minute}, nil, kubernetesVersion)
+					checker = NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil)
 				)
 
 				if !upToDate {
@@ -95,7 +88,7 @@ var _ = Describe("HealthChecker", func() {
 
 				mr.Status.Conditions = conditions
 
-				exitCondition := checker.CheckManagedResource(condition, mr)
+				exitCondition := checker.CheckManagedResource(condition, mr, &metav1.Duration{Duration: 5 * time.Minute})
 				Expect(exitCondition).To(conditionMatcher)
 			},
 			Entry("no conditions",
@@ -281,7 +274,7 @@ var _ = Describe("HealthChecker", func() {
 					Expect(fakeClient.Create(ctx, obj.DeepCopy())).To(Succeed(), "creating statefulset "+client.ObjectKeyFromObject(obj).String())
 				}
 
-				checker := NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, nil, kubernetesVersion)
+				checker := NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil)
 
 				exitCondition, err := checker.CheckLoggingControlPlane(ctx, seedNamespace, isTestingShoot, eventLoggingEnabled, valiEnabled, condition)
 				Expect(err).NotTo(HaveOccurred())
@@ -360,8 +353,8 @@ var _ = Describe("HealthChecker", func() {
 		// CheckExtensionCondition
 		DescribeTable("#CheckExtensionCondition - HealthCheckReport",
 			func(healthCheckOutdatedThreshold *metav1.Duration, condition gardencorev1beta1.Condition, extensionsConditions []ExtensionCondition, expected types.GomegaMatcher) {
-				checker := NewHealthChecker(fakeClient, fakeClock, nil, healthCheckOutdatedThreshold, nil, nil, kubernetesVersion)
-				updatedCondition := checker.CheckExtensionCondition(condition, extensionsConditions)
+				checker := NewHealthChecker(fakeClient, fakeClock, nil, nil)
+				updatedCondition := checker.CheckExtensionCondition(condition, extensionsConditions, healthCheckOutdatedThreshold)
 				if expected == nil {
 					Expect(updatedCondition).To(BeNil())
 					return
@@ -568,10 +561,6 @@ var _ = Describe("HealthChecker", func() {
 
 func beConditionWithStatusReasonAndMessage(status gardencorev1beta1.ConditionStatus, reason, message string) types.GomegaMatcher {
 	return And(WithStatus(status), WithReason(reason), WithMessage(message))
-}
-
-func beConditionWithStatusAndCodes(status gardencorev1beta1.ConditionStatus, codes ...gardencorev1beta1.ErrorCode) types.GomegaMatcher {
-	return And(WithStatus(status), WithCodes(codes...))
 }
 
 func beConditionWithStatus(status gardencorev1beta1.ConditionStatus) types.GomegaMatcher {

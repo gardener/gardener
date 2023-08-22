@@ -59,13 +59,10 @@ var (
 
 // HealthChecker contains the condition thresholds.
 type HealthChecker struct {
-	reader                              client.Reader
-	clock                               clock.Clock
-	conditionThresholds                 map[gardencorev1beta1.ConditionType]time.Duration
-	staleExtensionHealthCheckThreshold  *metav1.Duration
-	managedResourceProgressingThreshold *metav1.Duration
-	lastOperation                       *gardencorev1beta1.LastOperation
-	kubernetesVersion                   *semver.Version
+	reader              client.Reader
+	clock               clock.Clock
+	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration
+	lastOperation       *gardencorev1beta1.LastOperation
 }
 
 // NewHealthChecker creates a new health checker.
@@ -73,19 +70,13 @@ func NewHealthChecker(
 	reader client.Reader,
 	clock clock.Clock,
 	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
-	healthCheckOutdatedThreshold *metav1.Duration,
-	managedResourceProgressingThreshold *metav1.Duration,
 	lastOperation *gardencorev1beta1.LastOperation,
-	kubernetesVersion *semver.Version,
 ) *HealthChecker {
 	return &HealthChecker{
-		reader:                              reader,
-		clock:                               clock,
-		conditionThresholds:                 conditionThresholds,
-		staleExtensionHealthCheckThreshold:  healthCheckOutdatedThreshold,
-		managedResourceProgressingThreshold: managedResourceProgressingThreshold,
-		lastOperation:                       lastOperation,
-		kubernetesVersion:                   kubernetesVersion,
+		reader:              reader,
+		clock:               clock,
+		conditionThresholds: conditionThresholds,
+		lastOperation:       lastOperation,
 	}
 }
 
@@ -210,14 +201,14 @@ func (b *HealthChecker) CheckNodes(condition gardencorev1beta1.Condition, nodes 
 }
 
 // CheckManagedResource checks the conditions of the given managed resource and reflects the state in the returned condition.
-func (b *HealthChecker) CheckManagedResource(condition gardencorev1beta1.Condition, mr *resourcesv1alpha1.ManagedResource) *gardencorev1beta1.Condition {
+func (b *HealthChecker) CheckManagedResource(condition gardencorev1beta1.Condition, mr *resourcesv1alpha1.ManagedResource, managedResourceProgressingThreshold *metav1.Duration) *gardencorev1beta1.Condition {
 	conditionsToCheck := map[gardencorev1beta1.ConditionType]func(condition gardencorev1beta1.Condition) bool{
 		resourcesv1alpha1.ResourcesApplied:     DefaultSuccessfulCheck(),
 		resourcesv1alpha1.ResourcesHealthy:     DefaultSuccessfulCheck(),
-		resourcesv1alpha1.ResourcesProgressing: ResourcesNotProgressingCheck(b.clock, b.managedResourceProgressingThreshold),
+		resourcesv1alpha1.ResourcesProgressing: ResourcesNotProgressingCheck(b.clock, managedResourceProgressingThreshold),
 	}
 
-	return b.CheckManagedResourceConditions(condition, mr, conditionsToCheck)
+	return b.CheckManagedResourceConditions(condition, mr, conditionsToCheck, managedResourceProgressingThreshold)
 }
 
 // DefaultSuccessfulCheck returns a function that checks whether the condition status is successful.
@@ -247,6 +238,7 @@ func (b *HealthChecker) CheckManagedResourceConditions(
 	condition gardencorev1beta1.Condition,
 	mr *resourcesv1alpha1.ManagedResource,
 	conditionsToCheck map[gardencorev1beta1.ConditionType]func(condition gardencorev1beta1.Condition) bool,
+	managedResourceProgressingThreshold *metav1.Duration,
 ) *gardencorev1beta1.Condition {
 	if mr.Generation != mr.Status.ObservedGeneration {
 		c := v1beta1helper.FailedCondition(b.clock, b.lastOperation, b.conditionThresholds, condition, gardencorev1beta1.OutdatedStatusError, fmt.Sprintf("observed generation of managed resource '%s/%s' outdated (%d/%d)", mr.Namespace, mr.Name, mr.Status.ObservedGeneration, mr.Generation))
@@ -276,8 +268,8 @@ func (b *HealthChecker) CheckManagedResourceConditions(
 		}
 		if !checkConditionStatus(*cond) {
 			c := v1beta1helper.FailedCondition(b.clock, b.lastOperation, b.conditionThresholds, condition, cond.Reason, cond.Message)
-			if cond.Type == resourcesv1alpha1.ResourcesProgressing && b.managedResourceProgressingThreshold != nil {
-				c = v1beta1helper.FailedCondition(b.clock, b.lastOperation, b.conditionThresholds, condition, gardencorev1beta1.ManagedResourceProgressingRolloutStuck, fmt.Sprintf("ManagedResource %s is progressing for more than %s", mr.Name, b.managedResourceProgressingThreshold.Duration))
+			if cond.Type == resourcesv1alpha1.ResourcesProgressing && managedResourceProgressingThreshold != nil {
+				c = v1beta1helper.FailedCondition(b.clock, b.lastOperation, b.conditionThresholds, condition, gardencorev1beta1.ManagedResourceProgressingRolloutStuck, fmt.Sprintf("ManagedResource %s is progressing for more than %s", mr.Name, managedResourceProgressingThreshold.Duration))
 			}
 			return &c
 		}
@@ -432,15 +424,15 @@ func (b *HealthChecker) CheckLoggingControlPlane(
 }
 
 // CheckExtensionCondition checks whether the conditions provided by extensions are healthy.
-func (b *HealthChecker) CheckExtensionCondition(condition gardencorev1beta1.Condition, extensionsConditions []ExtensionCondition) *gardencorev1beta1.Condition {
+func (b *HealthChecker) CheckExtensionCondition(condition gardencorev1beta1.Condition, extensionsConditions []ExtensionCondition, staleExtensionHealthCheckThreshold *metav1.Duration) *gardencorev1beta1.Condition {
 	for _, cond := range extensionsConditions {
 		// check if the extension controller's last heartbeat time or the condition's LastUpdateTime is older than the configured staleExtensionHealthCheckThreshold
-		if b.staleExtensionHealthCheckThreshold != nil {
+		if staleExtensionHealthCheckThreshold != nil {
 			lastHeartbeatTime := cond.LastHeartbeatTime
 			if lastHeartbeatTime == nil {
 				lastHeartbeatTime = &metav1.MicroTime{}
 			}
-			if b.clock.Now().UTC().Sub(lastHeartbeatTime.UTC()) > b.staleExtensionHealthCheckThreshold.Duration {
+			if b.clock.Now().UTC().Sub(lastHeartbeatTime.UTC()) > staleExtensionHealthCheckThreshold.Duration {
 				c := v1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionUnknown, fmt.Sprintf("%sOutdatedHealthCheckReport", cond.ExtensionType), fmt.Sprintf("%s extension (%s/%s) reports an outdated health status (last updated: %s ago at %s).", cond.ExtensionType, cond.ExtensionNamespace, cond.ExtensionName, b.clock.Now().UTC().Sub(lastHeartbeatTime.UTC()).Round(time.Minute).String(), lastHeartbeatTime.UTC().Round(time.Minute).String()))
 				return &c
 			}

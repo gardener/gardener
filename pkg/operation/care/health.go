@@ -326,7 +326,7 @@ func (h *Health) healthChecks(
 		h.log.Error(err, "Error getting extension conditions")
 	}
 
-	checker := healthchecker.NewHealthChecker(h.seedClient.Client(), h.clock, h.conditionThresholds, healthCheckOutdatedThreshold, gardenlethelper.GetManagedResourceProgressingThreshold(h.gardenletConfiguration), h.shoot.GetInfo().Status.LastOperation, h.shoot.KubernetesVersion)
+	checker := healthchecker.NewHealthChecker(h.seedClient.Client(), h.clock, h.conditionThresholds, h.shoot.GetInfo().Status.LastOperation)
 
 	shootClient, apiServerRunning, err := h.initializeShootClients()
 	if err != nil || !apiServerRunning {
@@ -339,7 +339,7 @@ func (h *Health) healthChecks(
 
 		apiserverAvailability = v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, apiserverAvailability, "APIServerDown", "Could not reach API server during client initialization.")
 
-		newControlPlane, err := h.checkControlPlane(ctx, checker, controlPlane, extensionConditionsControlPlaneHealthy)
+		newControlPlane, err := h.checkControlPlane(ctx, checker, controlPlane, extensionConditionsControlPlaneHealthy, healthCheckOutdatedThreshold)
 		controlPlane = v1beta1helper.NewConditionOrError(h.clock, controlPlane, newControlPlane, err)
 
 		newObservabilityComponents, err := h.checkObservabilityComponents(ctx, checker, observabilityComponents)
@@ -361,7 +361,7 @@ func (h *Health) healthChecks(
 			apiserverAvailability = h.checkAPIServerAvailability(ctx, apiserverAvailability)
 			return nil
 		}, func(ctx context.Context) error {
-			newControlPlane, err := h.checkControlPlane(ctx, checker, controlPlane, extensionConditionsControlPlaneHealthy)
+			newControlPlane, err := h.checkControlPlane(ctx, checker, controlPlane, extensionConditionsControlPlaneHealthy, healthCheckOutdatedThreshold)
 			controlPlane = v1beta1helper.NewConditionOrError(h.clock, controlPlane, newControlPlane, err)
 			return nil
 		}, func(ctx context.Context) error {
@@ -369,7 +369,7 @@ func (h *Health) healthChecks(
 			observabilityComponents = v1beta1helper.NewConditionOrError(h.clock, observabilityComponents, newObservabilityComponents, err)
 			return nil
 		}, func(ctx context.Context) error {
-			newSystemComponents, err := h.checkSystemComponents(ctx, checker, systemComponents, extensionConditionsSystemComponentsHealthy)
+			newSystemComponents, err := h.checkSystemComponents(ctx, checker, systemComponents, extensionConditionsSystemComponentsHealthy, healthCheckOutdatedThreshold)
 			systemComponents = v1beta1helper.NewConditionOrError(h.clock, systemComponents, newSystemComponents, err)
 			return nil
 		},
@@ -383,7 +383,7 @@ func (h *Health) healthChecks(
 
 	taskFns = append(taskFns,
 		func(ctx context.Context) error {
-			newNodes, err := h.checkClusterNodes(ctx, checker, nodes, extensionConditionsEveryNodeReady)
+			newNodes, err := h.checkClusterNodes(ctx, checker, nodes, extensionConditionsEveryNodeReady, healthCheckOutdatedThreshold)
 			nodes = v1beta1helper.NewConditionOrError(h.clock, nodes, newNodes, err)
 			return nil
 		},
@@ -407,12 +407,13 @@ func (h *Health) checkControlPlane(
 	checker *healthchecker.HealthChecker,
 	condition gardencorev1beta1.Condition,
 	extensionConditions []healthchecker.ExtensionCondition,
+	healthCheckOutdatedThreshold *metav1.Duration,
 ) (*gardencorev1beta1.Condition, error) {
 	if exitCondition, err := CheckShootControlPlane(ctx, h.shoot.GetInfo(), checker, h.shoot.SeedNamespace, condition); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 
-	if exitCondition := checker.CheckExtensionCondition(condition, extensionConditions); exitCondition != nil {
+	if exitCondition := checker.CheckExtensionCondition(condition, extensionConditions, healthCheckOutdatedThreshold); exitCondition != nil {
 		return exitCondition, nil
 	}
 
@@ -452,6 +453,7 @@ func (h *Health) checkSystemComponents(
 	checker *healthchecker.HealthChecker,
 	condition gardencorev1beta1.Condition,
 	extensionConditions []healthchecker.ExtensionCondition,
+	healthCheckOutdatedThreshold *metav1.Duration,
 ) (
 	*gardencorev1beta1.Condition,
 	error,
@@ -466,12 +468,12 @@ func (h *Health) checkSystemComponents(
 			continue
 		}
 
-		if exitCondition := checker.CheckManagedResource(condition, &mr); exitCondition != nil {
+		if exitCondition := checker.CheckManagedResource(condition, &mr, gardenlethelper.GetManagedResourceProgressingThreshold(h.gardenletConfiguration)); exitCondition != nil {
 			return exitCondition, nil
 		}
 	}
 
-	if exitCondition := checker.CheckExtensionCondition(condition, extensionConditions); exitCondition != nil {
+	if exitCondition := checker.CheckExtensionCondition(condition, extensionConditions, healthCheckOutdatedThreshold); exitCondition != nil {
 		return exitCondition, nil
 	}
 
@@ -507,8 +509,9 @@ func (h *Health) checkClusterNodes(
 	checker *healthchecker.HealthChecker,
 	condition gardencorev1beta1.Condition,
 	extensionConditions []healthchecker.ExtensionCondition,
+	healthCheckOutdatedThreshold *metav1.Duration,
 ) (*gardencorev1beta1.Condition, error) {
-	if exitCondition := checker.CheckExtensionCondition(condition, extensionConditions); exitCondition != nil {
+	if exitCondition := checker.CheckExtensionCondition(condition, extensionConditions, healthCheckOutdatedThreshold); exitCondition != nil {
 		return exitCondition, nil
 	}
 	if exitCondition, err := h.CheckClusterNodes(ctx, checker, condition); err != nil || exitCondition != nil {

@@ -142,7 +142,7 @@ func (h *Health) Check(
 		}
 	}
 
-	checker := healthchecker.NewHealthChecker(h.runtimeClient, h.clock, h.conditionThresholds, nil, nil, lastOperation, nil)
+	checker := healthchecker.NewHealthChecker(h.runtimeClient, h.clock, h.conditionThresholds, lastOperation)
 
 	taskFns := []flow.TaskFn{
 		func(ctx context.Context) error {
@@ -280,5 +280,5 @@ func checkManagedResourceForGarden(checker *healthchecker.HealthChecker, conditi
 		resourcesv1alpha1.ResourcesProgressing: healthchecker.ResourcesNotProgressingCheck(clock, nil),
 	}
 
-	return checker.CheckManagedResourceConditions(condition, managedResource, conditionsToCheck)
+	return checker.CheckManagedResourceConditions(condition, managedResource, conditionsToCheck, nil)
 }
