@@ -521,8 +521,8 @@ var _ = Describe("helper", func() {
 			Expect(SeedSettingExcessCapacityReservationEnabled(settings)).To(Equal(expectation))
 		},
 
-		Entry("setting is nil", nil, false),
-		Entry("excess capacity reservation is nil", &core.SeedSettings{}, false),
+		Entry("setting is nil", nil, true),
+		Entry("excess capacity reservation is nil", &core.SeedSettings{}, true),
 		Entry("excess capacity reservation 'enabled' is nil", &core.SeedSettings{ExcessCapacityReservation: &core.SeedSettingExcessCapacityReservation{Enabled: nil}}, true),
 		Entry("excess capacity reservation 'enabled' is false", &core.SeedSettings{ExcessCapacityReservation: &core.SeedSettingExcessCapacityReservation{Enabled: pointer.Bool(false)}}, false),
 		Entry("excess capacity reservation 'enabled' is true", &core.SeedSettings{ExcessCapacityReservation: &core.SeedSettingExcessCapacityReservation{Enabled: pointer.Bool(true)}}, true),

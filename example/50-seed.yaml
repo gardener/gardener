@@ -59,24 +59,19 @@ spec:
         enabled: true # shoot's kube-controller-managers get scaled down when the kube-apiserver is not reachable via external DNS
       probe: # deprecated
         enabled: true # shoot's kube-controller-managers get scaled down when the kube-apiserver is not reachable via external DNS
-    excessCapacityReservation:
-      enabled: true # this seed will deploy excess-capacity-reservation pods
-      # configs: # this seed has additional excess-capacity-reservation deployments
-      # - resources:
-      #     cpu: "4"
-      #     memory: 16Gi
-      #   nodeSelector:
-      #     nodeSelectorTerms:
-      #     - matchExpressions:
-      #       - key: worker.gardener.cloud/pool
-      #         operator: In
-      #         values:
-      #         - etcd
-      #   tolerations:
-      #   - effect: NoExecute
-      #     key: pool.worker.gardener.cloud/dedicated-for
-      #     operator: Equal
-      #     value: etcd
+  # excessCapacityReservation:
+  #  enabled: true # optional: automatically assumed 'true' if `configs` are specified.
+  #  configs: # this seed has the following excess-capacity-reservation deployments
+  #  - resources:
+  #      cpu: "4"
+  #      memory: 16Gi
+  #    nodeSelector:
+  #      worker.gardener.cloud/pool: etcd
+  #    tolerations:
+  #    - effect: NoExecute
+  #      key: pool.worker.gardener.cloud/dedicated-for
+  #      operator: Equal
+  #      value: etcd
     scheduling:
       visible: true # the gardener-scheduler will consider this seed for shoots
   # loadBalancerServices:

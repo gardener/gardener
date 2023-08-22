@@ -682,6 +682,112 @@ var _ = Describe("Seed Validation Tests", func() {
 		})
 
 		Context("settings", func() {
+			Context("excessCapacityReservation", func() {
+				It("should allow valid excessCapacityReservation configurations", func() {
+					seed.Spec.Settings = &core.SeedSettings{
+						ExcessCapacityReservation: &core.SeedSettingExcessCapacityReservation{
+							Configs: []core.SeedSettingExcessCapacityReservationConfig{
+								{
+									Resources: corev1.ResourceList{
+										"cpu":    resource.MustParse("2"),
+										"memory": resource.MustParse("10Gi"),
+									},
+								},
+								{
+									Resources: corev1.ResourceList{
+										"cpu":    resource.MustParse("5"),
+										"memory": resource.MustParse("100Gi"),
+									},
+									NodeSelector: map[string]string{"foo": "bar"},
+									Tolerations: []corev1.Toleration{
+										{
+											Key:      "foo",
+											Operator: "Equal",
+											Value:    "bar",
+											Effect:   "NoExecute",
+										},
+										{
+											Key:      "bar",
+											Operator: "Equal",
+											Value:    "foo",
+											Effect:   "NoSchedule",
+										},
+									},
+								},
+							},
+						},
+					}
+
+					errorList := ValidateSeed(seed)
+
+					Expect(errorList).To(BeEmpty())
+				})
+
+				It("should not allow configs with no resources", func() {
+					seed.Spec.Settings = &core.SeedSettings{
+						ExcessCapacityReservation: &core.SeedSettingExcessCapacityReservation{
+							Configs: []core.SeedSettingExcessCapacityReservationConfig{{NodeSelector: map[string]string{"foo": "bar"}}},
+						},
+					}
+
+					errorList := ValidateSeed(seed)
+
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeRequired),
+							"Field": Equal("spec.settings.excessCapacityReservation.configs[0].resources"),
+						})),
+					))
+				})
+
+				It("should not allow configs invalid resources", func() {
+					seed.Spec.Settings = &core.SeedSettings{
+						ExcessCapacityReservation: &core.SeedSettingExcessCapacityReservation{
+							Configs: []core.SeedSettingExcessCapacityReservationConfig{{Resources: corev1.ResourceList{"cpu": resource.MustParse("-1")}}},
+						},
+					}
+
+					errorList := ValidateSeed(seed)
+
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.settings.excessCapacityReservation.configs[0].resources.cpu"),
+						})),
+					))
+				})
+
+				It("should not allow configs invalid tolerations", func() {
+					seed.Spec.Settings = &core.SeedSettings{
+						ExcessCapacityReservation: &core.SeedSettingExcessCapacityReservation{
+							Configs: []core.SeedSettingExcessCapacityReservationConfig{
+								{
+									Resources:   corev1.ResourceList{"cpu": resource.MustParse("1")},
+									Tolerations: []corev1.Toleration{{Key: "foo", Value: "bar", Operator: "Equal", Effect: "foobar"}},
+								},
+								{
+									Resources:   corev1.ResourceList{"cpu": resource.MustParse("1")},
+									Tolerations: []corev1.Toleration{{Key: "foo", Operator: "Exists", Value: "bar", Effect: "NoSchedule"}},
+								},
+							},
+						},
+					}
+
+					errorList := ValidateSeed(seed)
+
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeNotSupported),
+							"Field": Equal("spec.settings.excessCapacityReservation.configs[0].tolerations[0].effect"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.settings.excessCapacityReservation.configs[1].tolerations[0].operator"),
+						})),
+					))
+				})
+			})
+
 			Context("loadbalancer", func() {
 				It("should allow valid load balancer service annotations", func() {
 					seed.Spec.Settings = &core.SeedSettings{

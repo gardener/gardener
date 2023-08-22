@@ -195,7 +195,7 @@ func TaintsAreTolerated(taints []core.SeedTaint, tolerations []core.Toleration) 
 
 // SeedSettingExcessCapacityReservationEnabled returns true if the 'excess capacity reservation' setting is enabled.
 func SeedSettingExcessCapacityReservationEnabled(settings *core.SeedSettings) bool {
-	return settings != nil && settings.ExcessCapacityReservation != nil && pointer.BoolDeref(settings.ExcessCapacityReservation.Enabled, true)
+	return settings == nil || settings.ExcessCapacityReservation == nil || pointer.BoolDeref(settings.ExcessCapacityReservation.Enabled, true)
 }
 
 // SeedSettingSchedulingVisible returns true if the 'scheduling' setting is set to 'visible'.

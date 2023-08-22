@@ -164,10 +164,13 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 	if seedSpec.Settings != nil {
 		if seedSpec.Settings.ExcessCapacityReservation != nil {
 			for i, config := range seedSpec.Settings.ExcessCapacityReservation.Configs {
-				for resource, value := range config.Resources {
-					allErrs = append(allErrs, corevalidation.ValidateResourceQuantityValue(resource.String(), value, fldPath.Child("settings, excessCapacityReservation", "configs").Index(i).Child("resources").Child(resource.String()))...)
+				if len(config.Resources) == 0 {
+					allErrs = append(allErrs, field.Required(fldPath.Child("settings", "excessCapacityReservation", "configs").Index(i).Child("resources"), "cannot be empty"))
 				}
-				allErrs = append(allErrs, corevalidation.ValidateTolerations(config.Tolerations, fldPath.Child("settings, excessCapacityReservation", "configs").Index(i).Child("tolerations"))...)
+				for resource, value := range config.Resources {
+					allErrs = append(allErrs, corevalidation.ValidateResourceQuantityValue(resource.String(), value, fldPath.Child("settings", "excessCapacityReservation", "configs").Index(i).Child("resources").Child(resource.String()))...)
+				}
+				allErrs = append(allErrs, corevalidation.ValidateTolerations(config.Tolerations, fldPath.Child("settings", "excessCapacityReservation", "configs").Index(i).Child("tolerations"))...)
 			}
 		}
 		if seedSpec.Settings.LoadBalancerServices != nil {
