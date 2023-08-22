@@ -123,11 +123,8 @@ func (g *gardener) Destroy(ctx context.Context) error {
 	return managedresources.DeleteForShoot(ctx, g.client, g.namespace, ManagedResourceName)
 }
 
-var (
-	// TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
-	// or deleted.
-	TimeoutWaitForManagedResource = 1 * time.Minute
-)
+// TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy or deleted.
+var TimeoutWaitForManagedResource = 2 * time.Minute
 
 func (g *gardener) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
