@@ -117,7 +117,7 @@ var _ = BeforeSuite(func() {
 		Logger:       log,
 		TargetClient: testClient,
 		// Use the same version as the envtest package
-		TargetVersion: semver.MustParse("1.26.0"),
+		TargetVersion: semver.MustParse("1.27.0"),
 		Config: config.HighAvailabilityConfigWebhookConfig{
 			DefaultNotReadyTolerationSeconds:    pointer.Int64(defaultNotReadyTolerationSeconds),
 			DefaultUnreachableTolerationSeconds: pointer.Int64(defaultUnreachableTolerationSeconds),
