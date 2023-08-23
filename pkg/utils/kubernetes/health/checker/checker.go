@@ -380,7 +380,6 @@ var (
 func (b *HealthChecker) CheckLoggingControlPlane(
 	ctx context.Context,
 	namespace string,
-	isTestingShoot bool,
 	eventLoggingEnabled bool,
 	valiEnabled bool,
 	condition gardencorev1beta1.Condition,
@@ -388,10 +387,6 @@ func (b *HealthChecker) CheckLoggingControlPlane(
 	*gardencorev1beta1.Condition,
 	error,
 ) {
-	if isTestingShoot {
-		return nil, nil
-	}
-
 	if valiEnabled {
 		statefulSetList := &appsv1.StatefulSetList{}
 		if err := b.reader.List(ctx, statefulSetList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: loggingSelector}); err != nil {

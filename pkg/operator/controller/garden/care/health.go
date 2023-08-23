@@ -259,7 +259,7 @@ func (h *Health) checkObservabilityComponents(ctx context.Context, checker *heal
 		return exitCondition, err
 	}
 
-	if exitCondition, err := checker.CheckLoggingControlPlane(ctx, h.gardenNamespace, false, false, true, condition); err != nil || exitCondition != nil {
+	if exitCondition, err := checker.CheckLoggingControlPlane(ctx, h.gardenNamespace, false, true, condition); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 

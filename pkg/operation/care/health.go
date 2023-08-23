@@ -427,18 +427,27 @@ func (h *Health) checkObservabilityComponents(
 	checker *healthchecker.HealthChecker,
 	condition gardencorev1beta1.Condition,
 ) (*gardencorev1beta1.Condition, error) {
-	wantsAlertmanager := h.shoot.WantsAlertmanager
-	wantsShootMonitoring := gardenlethelper.IsMonitoringEnabled(h.gardenletConfiguration) && h.shoot.Purpose != gardencorev1beta1.ShootPurposeTesting
-	if exitCondition, err := CheckShootMonitoringControlPlane(ctx, h.shoot.GetInfo(), checker, h.shoot.SeedNamespace, wantsShootMonitoring, wantsAlertmanager, condition); err != nil || exitCondition != nil {
-		return exitCondition, err
+	if h.shoot.Purpose != gardencorev1beta1.ShootPurposeTesting && gardenlethelper.IsMonitoringEnabled(h.gardenletConfiguration) {
+		if exitCondition, err := CheckShootMonitoringControlPlane(
+			ctx,
+			h.shoot.GetInfo(),
+			checker,
+			h.shoot.SeedNamespace,
+			h.shoot.WantsAlertmanager,
+			condition,
+		); err != nil || exitCondition != nil {
+			return exitCondition, err
+		}
 	}
 
-	valiEnabled := gardenlethelper.IsValiEnabled(h.gardenletConfiguration)
-	loggingEnabled := gardenlethelper.IsLoggingEnabled(h.gardenletConfiguration)
-	eventLoggingEnabled := gardenlethelper.IsEventLoggingEnabled(h.gardenletConfiguration)
-
-	if loggingEnabled {
-		if exitCondition, err := checker.CheckLoggingControlPlane(ctx, h.shoot.SeedNamespace, h.shoot.Purpose == gardencorev1beta1.ShootPurposeTesting, eventLoggingEnabled, valiEnabled, condition); err != nil || exitCondition != nil {
+	if h.shoot.Purpose != gardencorev1beta1.ShootPurposeTesting && gardenlethelper.IsLoggingEnabled(h.gardenletConfiguration) {
+		if exitCondition, err := checker.CheckLoggingControlPlane(
+			ctx,
+			h.shoot.SeedNamespace,
+			gardenlethelper.IsLoggingEnabled(h.gardenletConfiguration),
+			gardenlethelper.IsValiEnabled(h.gardenletConfiguration),
+			condition,
+		); err != nil || exitCondition != nil {
 			return exitCondition, err
 		}
 	}
@@ -530,17 +539,12 @@ func CheckShootMonitoringControlPlane(
 	shoot *gardencorev1beta1.Shoot,
 	checker *healthchecker.HealthChecker,
 	namespace string,
-	shootMonitoringEnabled bool,
 	wantsAlertmanager bool,
 	condition gardencorev1beta1.Condition,
 ) (
 	*gardencorev1beta1.Condition,
 	error,
 ) {
-	if !shootMonitoringEnabled {
-		return nil, nil
-	}
-
 	return checker.CheckMonitoringControlPlane(ctx, namespace, computeRequiredMonitoringSeedDeployments(shoot), computeRequiredMonitoringStatefulSets(wantsAlertmanager), monitoringSelector, condition)
 }
 
