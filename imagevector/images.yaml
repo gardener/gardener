@@ -675,4 +675,4 @@ images:
     name: apiserver-proxy
   sourceRepository: github.com/gardener/apiserver-proxy
   repository: eu.gcr.io/gardener-project/gardener/apiserver-proxy
-  tag: "v0.12.0"
+  tag: "v0.13.0"
