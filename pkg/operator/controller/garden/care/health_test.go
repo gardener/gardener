@@ -113,7 +113,7 @@ var _ = Describe("Garden health", func() {
 	BeforeEach(func() {
 		DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.HVPA, true))
 
-		ctx = context.TODO()
+		ctx = context.Background()
 		runtimeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
 
 		garden = &operatorv1alpha1.Garden{

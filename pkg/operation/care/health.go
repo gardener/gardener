@@ -56,18 +56,18 @@ import (
 )
 
 var (
-	requiredShootControlPlaneDeployments = sets.New(
+	requiredControlPlaneEtcds = sets.New(
+		v1beta1constants.ETCDMain,
+		v1beta1constants.ETCDEvents,
+	)
+
+	commonControlPlaneDeployments = sets.New(
 		v1beta1constants.DeploymentNameGardenerResourceManager,
 		v1beta1constants.DeploymentNameKubeAPIServer,
 		v1beta1constants.DeploymentNameKubeControllerManager,
 	)
 
-	requiredShootControlPlaneEtcds = sets.New(
-		v1beta1constants.ETCDMain,
-		v1beta1constants.ETCDEvents,
-	)
-
-	requiredMonitoringDeployments = sets.New(
+	commonMonitoringDeployments = sets.New(
 		v1beta1constants.DeploymentNameKubeStateMetrics,
 		v1beta1constants.DeploymentNamePlutono,
 	)
@@ -383,7 +383,7 @@ func (h *Health) healthChecks(
 
 	taskFns = append(taskFns,
 		func(ctx context.Context) error {
-			newNodes, err := h.checkClusterNodes(ctx, nodes, extensionConditionsEveryNodeReady, healthCheckOutdatedThreshold)
+			newNodes, err := h.checkWorkers(ctx, nodes, extensionConditionsEveryNodeReady, healthCheckOutdatedThreshold)
 			nodes = v1beta1helper.NewConditionOrError(h.clock, nodes, newNodes, err)
 			return nil
 		},
@@ -408,7 +408,12 @@ func (h *Health) checkControlPlane(
 	extensionConditions []healthchecker.ExtensionCondition,
 	healthCheckOutdatedThreshold *metav1.Duration,
 ) (*gardencorev1beta1.Condition, error) {
-	if exitCondition, err := h.CheckShootControlPlane(ctx, condition); err != nil || exitCondition != nil {
+	requiredControlPlaneDeployments, err := ComputeRequiredControlPlaneDeployments(h.shoot.GetInfo())
+	if err != nil {
+		return nil, err
+	}
+
+	if exitCondition, err := h.healthChecker.CheckControlPlane(ctx, h.shoot.SeedNamespace, requiredControlPlaneDeployments, requiredControlPlaneEtcds, condition); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 
@@ -431,8 +436,8 @@ func (h *Health) checkObservabilityComponents(
 		if exitCondition, err := h.healthChecker.CheckMonitoringControlPlane(
 			ctx,
 			h.shoot.SeedNamespace,
-			computeRequiredMonitoringSeedDeployments(h.shoot.GetInfo()),
-			computeRequiredMonitoringStatefulSets(h.shoot.WantsAlertmanager),
+			ComputeRequiredMonitoringSeedDeployments(h.shoot.GetInfo()),
+			ComputeRequiredMonitoringStatefulSets(h.shoot.WantsAlertmanager),
 			monitoringSelector,
 			condition,
 		); err != nil || exitCondition != nil {
@@ -510,9 +515,9 @@ func (h *Health) checkSystemComponents(
 	return &c, nil
 }
 
-// checkClusterNodes checks whether every node registered at the Shoot cluster is in "Ready" state, that
+// checkWorkers checks whether every node registered at the Shoot cluster is in "Ready" state, that
 // as many nodes are registered as desired, and that every machine is running.
-func (h *Health) checkClusterNodes(
+func (h *Health) checkWorkers(
 	ctx context.Context,
 	condition gardencorev1beta1.Condition,
 	extensionConditions []healthchecker.ExtensionCondition,
@@ -529,9 +534,8 @@ func (h *Health) checkClusterNodes(
 	return &c, nil
 }
 
-// computeRequiredMonitoringStatefulSets determine the required monitoring statefulsets
-// which should exist next to the control plane.
-func computeRequiredMonitoringStatefulSets(wantsAlertmanager bool) sets.Set[string] {
+// ComputeRequiredMonitoringStatefulSets returns names of monitoring statefulsets based on the given shoot.
+func ComputeRequiredMonitoringStatefulSets(wantsAlertmanager bool) sets.Set[string] {
 	var requiredMonitoringStatefulSets = sets.New(v1beta1constants.StatefulSetNamePrometheus)
 	if wantsAlertmanager {
 		requiredMonitoringStatefulSets.Insert(v1beta1constants.StatefulSetNameAlertManager)
@@ -539,8 +543,9 @@ func computeRequiredMonitoringStatefulSets(wantsAlertmanager bool) sets.Set[stri
 	return requiredMonitoringStatefulSets
 }
 
-func computeRequiredMonitoringSeedDeployments(shoot *gardencorev1beta1.Shoot) sets.Set[string] {
-	requiredDeployments := requiredMonitoringDeployments.Clone()
+// ComputeRequiredMonitoringSeedDeployments returns names of monitoring deployments based on the given shoot.
+func ComputeRequiredMonitoringSeedDeployments(shoot *gardencorev1beta1.Shoot) sets.Set[string] {
+	requiredDeployments := commonMonitoringDeployments.Clone()
 	if v1beta1helper.IsWorkerless(shoot) {
 		requiredDeployments.Delete(v1beta1constants.DeploymentNameKubeStateMetrics)
 	}
@@ -548,28 +553,12 @@ func computeRequiredMonitoringSeedDeployments(shoot *gardencorev1beta1.Shoot) se
 	return requiredDeployments
 }
 
-// CheckShootControlPlane checks whether the shoot control plane components in the given listers are complete and healthy.
-func (h *Health) CheckShootControlPlane(
-	ctx context.Context,
-	condition gardencorev1beta1.Condition,
-) (
-	*gardencorev1beta1.Condition,
-	error,
-) {
-	requiredControlPlaneDeployments, err := computeRequiredControlPlaneDeployments(h.shoot.GetInfo())
-	if err != nil {
-		return nil, err
-	}
-
-	return h.healthChecker.CheckControlPlane(ctx, h.shoot.SeedNamespace, requiredControlPlaneDeployments, requiredShootControlPlaneEtcds, condition)
-}
-
 // annotationKeyNotManagedByMCM is a constant for an annotation on the node resource that indicates that the node is not
 // handled by machine-controller-manager.
 const annotationKeyNotManagedByMCM = "node.machine.sapcloud.io/not-managed-by-mcm"
 
-// CheckClusterNodes checks whether cluster nodes in the given listers are healthy and within the desired range.
-// Additional checks are executed in the provider extension
+// CheckClusterNodes checks whether cluster nodes are healthy and within the desired range.
+// Additional checks are executed in the provider extension.
 func (h *Health) CheckClusterNodes(
 	ctx context.Context,
 	condition gardencorev1beta1.Condition,
@@ -788,9 +777,9 @@ func cosmeticMachineMessage(numberOfMachines int) string {
 	return fmt.Sprintf("%d machines are", numberOfMachines)
 }
 
-// This is a hack to quickly do a cloud provider specific check for the required control plane deployments.
-func computeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot) (sets.Set[string], error) {
-	requiredControlPlaneDeployments := requiredShootControlPlaneDeployments.Clone()
+// ComputeRequiredControlPlaneDeployments returns names of required deployments based on the given shoot.
+func ComputeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot) (sets.Set[string], error) {
+	requiredControlPlaneDeployments := commonControlPlaneDeployments.Clone()
 
 	if !v1beta1helper.IsWorkerless(shoot) {
 		requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameKubeScheduler)

@@ -102,11 +102,11 @@ func (h *Health) Check(
 		}
 	}
 
-	newSystemComponentsCondition, err := h.checkSeedSystemComponents(ctx, systemComponentsCondition)
+	newSystemComponentsCondition, err := h.checkSystemComponents(ctx, systemComponentsCondition)
 	return []gardencorev1beta1.Condition{v1beta1helper.NewConditionOrError(h.clock, systemComponentsCondition, newSystemComponentsCondition, err)}
 }
 
-func (h *Health) checkSeedSystemComponents(
+func (h *Health) checkSystemComponents(
 	ctx context.Context,
 	condition gardencorev1beta1.Condition,
 ) (

@@ -20,14 +20,12 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
 	"go.uber.org/mock/gomock"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -38,14 +36,15 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/executor"
+	"github.com/gardener/gardener/pkg/features"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/care"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -79,70 +78,6 @@ var _ = Describe("health check", func() {
 				},
 			},
 		}
-
-		shootThatNeedsAutoscaler = &gardencorev1beta1.Shoot{
-			Spec: gardencorev1beta1.ShootSpec{
-				Provider: gardencorev1beta1.Provider{
-					Workers: []gardencorev1beta1.Worker{
-						{
-							Name:    "foo",
-							Minimum: 1,
-							Maximum: 2,
-						},
-					},
-				},
-			},
-		}
-
-		shootWantsVPA = &gardencorev1beta1.Shoot{
-			Spec: gardencorev1beta1.ShootSpec{
-				Kubernetes: gardencorev1beta1.Kubernetes{
-					VerticalPodAutoscaler: &gardencorev1beta1.VerticalPodAutoscaler{
-						Enabled: true,
-					},
-				},
-				Provider: gardencorev1beta1.Provider{
-					Workers: []gardencorev1beta1.Worker{
-						{
-							Name: "foo",
-						},
-					},
-				},
-			},
-		}
-
-		// control plane deployments
-		gardenerResourceManagerDeployment = newDeployment(seedNamespace, v1beta1constants.DeploymentNameGardenerResourceManager, v1beta1constants.GardenRoleControlPlane, true)
-		kubeAPIServerDeployment           = newDeployment(seedNamespace, v1beta1constants.DeploymentNameKubeAPIServer, v1beta1constants.GardenRoleControlPlane, true)
-		kubeControllerManagerDeployment   = newDeployment(seedNamespace, v1beta1constants.DeploymentNameKubeControllerManager, v1beta1constants.GardenRoleControlPlane, true)
-		kubeSchedulerDeployment           = newDeployment(seedNamespace, v1beta1constants.DeploymentNameKubeScheduler, v1beta1constants.GardenRoleControlPlane, true)
-		clusterAutoscalerDeployment       = newDeployment(seedNamespace, v1beta1constants.DeploymentNameClusterAutoscaler, v1beta1constants.GardenRoleControlPlane, true)
-
-		requiredControlPlaneDeployments = []*appsv1.Deployment{
-			gardenerResourceManagerDeployment,
-			kubeAPIServerDeployment,
-			kubeControllerManagerDeployment,
-			kubeSchedulerDeployment,
-			clusterAutoscalerDeployment,
-		}
-
-		withVpaDeployments = func(deploys ...*appsv1.Deployment) []*appsv1.Deployment {
-			var deployments = make([]*appsv1.Deployment, 0, len(deploys))
-			deployments = append(deployments, deploys...)
-			for _, deploymentName := range v1beta1constants.GetShootVPADeploymentNames() {
-				deployments = append(deployments, newDeployment(seedNamespace, deploymentName, v1beta1constants.GardenRoleControlPlane, true))
-			}
-			return deployments
-		}
-
-		// control plane etcds
-		etcdMain   = newEtcd(seedNamespace, v1beta1constants.ETCDMain, v1beta1constants.GardenRoleControlPlane, true, nil)
-		etcdEvents = newEtcd(seedNamespace, v1beta1constants.ETCDEvents, v1beta1constants.GardenRoleControlPlane, true, nil)
-
-		requiredControlPlaneEtcds = []*druidv1alpha1.Etcd{
-			etcdMain,
-			etcdEvents,
-		}
 	)
 
 	BeforeEach(func() {
@@ -154,147 +89,117 @@ var _ = Describe("health check", func() {
 		}
 	})
 
-	DescribeTable("#CheckShootontrolPlane",
-		func(shoot *gardencorev1beta1.Shoot, deployments []*appsv1.Deployment, etcds []*druidv1alpha1.Etcd, workers []*extensionsv1alpha1.Worker, conditionMatcher types.GomegaMatcher) {
-			for _, obj := range deployments {
-				Expect(fakeClient.Create(ctx, obj.DeepCopy())).To(Succeed(), "creating deployment "+client.ObjectKeyFromObject(obj).String())
+	Describe("#ComputeRequiredControlPlaneDeployments", func() {
+		var (
+			workerlessDepoymentNames = []interface{}{
+				"gardener-resource-manager",
+				"kube-apiserver",
+				"kube-controller-manager",
 			}
-			for _, obj := range etcds {
-				Expect(fakeClient.Create(ctx, obj.DeepCopy())).To(Succeed(), "creating etcd "+client.ObjectKeyFromObject(obj).String())
-			}
-			for _, obj := range workers {
-				Expect(fakeClient.Create(ctx, obj.DeepCopy())).To(Succeed(), "creating worker "+client.ObjectKeyFromObject(obj).String())
-			}
+			commonDeploymentNames = append(workerlessDepoymentNames, "kube-scheduler")
+		)
 
-			shootPkgObj := &shootpkg.Shoot{
-				SeedNamespace: seedNamespace,
-			}
-			shootPkgObj.SetInfo(shoot)
+		tests := func(shoot *gardencorev1beta1.Shoot, names []interface{}, isWorkerless bool) {
+			It("should return expected deployments for shoot", func() {
+				deploymentNames, err := ComputeRequiredControlPlaneDeployments(shoot)
 
-			health := NewHealth(
-				&operation.Operation{
-					Shoot:         shootPkgObj,
-					SeedClientSet: kubernetesfake.NewClientSetBuilder().WithClient(fakeClient).Build(),
-				},
-				nil,
-				fakeClock,
-				nil,
-			)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(deploymentNames.UnsortedList()).To(ConsistOf(names...))
+			})
 
-			exitCondition, err := health.CheckShootControlPlane(ctx, condition)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(exitCondition).To(conditionMatcher)
-		},
-		Entry("all healthy",
-			shoot,
-			[]*appsv1.Deployment{
-				gardenerResourceManagerDeployment,
-				kubeAPIServerDeployment,
-				kubeControllerManagerDeployment,
-				kubeSchedulerDeployment,
-			},
-			requiredControlPlaneEtcds,
-			nil,
-			BeNil()),
-		Entry("all healthy (workerless)",
-			workerlessShoot,
-			[]*appsv1.Deployment{
-				gardenerResourceManagerDeployment,
-				kubeAPIServerDeployment,
-				kubeControllerManagerDeployment,
-			},
-			requiredControlPlaneEtcds,
-			nil,
-			BeNil()),
-		Entry("all healthy (needs autoscaler)",
-			shootThatNeedsAutoscaler,
-			[]*appsv1.Deployment{
-				gardenerResourceManagerDeployment,
-				kubeAPIServerDeployment,
-				kubeControllerManagerDeployment,
-				kubeSchedulerDeployment,
-				clusterAutoscalerDeployment,
-			},
-			requiredControlPlaneEtcds,
-			[]*extensionsv1alpha1.Worker{
-				{ObjectMeta: metav1.ObjectMeta{Name: "worker", Namespace: seedNamespace},
-					Status: extensionsv1alpha1.WorkerStatus{DefaultStatus: extensionsv1alpha1.DefaultStatus{
-						LastOperation: &gardencorev1beta1.LastOperation{
-							State: gardencorev1beta1.LastOperationStateSucceeded}}}},
-			},
-			BeNil()),
-		Entry("all healthy (needs VPA)",
-			shootWantsVPA,
-			withVpaDeployments(
-				gardenerResourceManagerDeployment,
-				kubeAPIServerDeployment,
-				kubeControllerManagerDeployment,
-				kubeSchedulerDeployment,
-			),
-			requiredControlPlaneEtcds,
-			[]*extensionsv1alpha1.Worker{
-				{ObjectMeta: metav1.ObjectMeta{Name: "worker", Namespace: seedNamespace},
-					Status: extensionsv1alpha1.WorkerStatus{DefaultStatus: extensionsv1alpha1.DefaultStatus{
-						LastOperation: &gardencorev1beta1.LastOperation{
-							State: gardencorev1beta1.LastOperationStateSucceeded}}}},
-			},
-			BeNil()),
-		Entry("missing required deployments",
-			shootWantsVPA,
-			[]*appsv1.Deployment{
-				kubeAPIServerDeployment,
-				kubeControllerManagerDeployment,
-				kubeSchedulerDeployment,
-			},
-			requiredControlPlaneEtcds,
-			nil,
-			PointTo(beConditionWithMissingRequiredDeployment(withVpaDeployments(gardenerResourceManagerDeployment)))),
-		Entry("missing required deployments (workerless)",
-			workerlessShoot,
-			[]*appsv1.Deployment{
-				kubeAPIServerDeployment,
-			},
-			requiredControlPlaneEtcds,
-			nil,
-			PointTo(beConditionWithMissingRequiredDeployment([]*appsv1.Deployment{gardenerResourceManagerDeployment, kubeControllerManagerDeployment}))),
-		Entry("required deployment unhealthy",
-			shoot,
-			[]*appsv1.Deployment{
-				newDeployment(gardenerResourceManagerDeployment.Namespace, gardenerResourceManagerDeployment.Name, roleOf(gardenerResourceManagerDeployment), false),
-				kubeAPIServerDeployment,
-				kubeControllerManagerDeployment,
-				kubeSchedulerDeployment,
-			},
-			requiredControlPlaneEtcds,
-			nil,
-			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
-		Entry("missing required etcd",
-			shoot,
-			requiredControlPlaneDeployments,
-			[]*druidv1alpha1.Etcd{
-				etcdEvents,
-			},
-			nil,
-			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
-		Entry("required etcd unready",
-			shoot,
-			requiredControlPlaneDeployments,
-			[]*druidv1alpha1.Etcd{
-				newEtcd(etcdMain.Namespace, etcdMain.Name, roleOf(etcdMain), false, nil),
-				etcdEvents,
-			},
-			nil,
-			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
-		Entry("required etcd unhealthy with error code message",
-			shoot,
-			requiredControlPlaneDeployments,
-			[]*druidv1alpha1.Etcd{
-				newEtcd(etcdMain.Namespace, etcdMain.Name, roleOf(etcdMain), false, pointer.String("some error that maps to an error code, e.g. unauthorized")),
-				etcdEvents,
-			},
-			nil,
-			PointTo(beConditionWithStatusAndCodes(gardencorev1beta1.ConditionFalse))),
-	)
+			It("should return expected deployments for shoot when MCM management is enabled", func() {
+				defer test.WithFeatureGate(features.DefaultFeatureGate, features.MachineControllerManagerDeployment, true)()
+				expectedDeploymentNames := names
+				if !isWorkerless {
+					expectedDeploymentNames = append(expectedDeploymentNames, "machine-controller-manager")
+				}
+
+				deploymentNames, err := ComputeRequiredControlPlaneDeployments(shoot)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(deploymentNames.UnsortedList()).To(ConsistOf(expectedDeploymentNames...))
+			})
+
+			It("should return expected deployments for shoot with Cluster Autoscaler", func() {
+				if isWorkerless {
+					return
+				}
+
+				expectedDeploymentNames := append(names, "cluster-autoscaler")
+				shootWithCA := shoot.DeepCopy()
+				shootWithCA.Spec.Provider.Workers = []gardencorev1beta1.Worker{
+					{
+						Name:    "worker",
+						Minimum: 0,
+						Maximum: 1,
+					},
+				}
+
+				deploymentNames, err := ComputeRequiredControlPlaneDeployments(shootWithCA)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(deploymentNames.UnsortedList()).To(ConsistOf(expectedDeploymentNames...))
+			})
+
+			It("should return expected deployments for shoot with VPA", func() {
+				expectedDeploymentNames := names
+				if !isWorkerless {
+					expectedDeploymentNames = append(expectedDeploymentNames, "vpa-admission-controller", "vpa-recommender", "vpa-updater")
+				}
+
+				shootWithVPA := shoot.DeepCopy()
+				shootWithVPA.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+					VerticalPodAutoscaler: &gardencorev1beta1.VerticalPodAutoscaler{
+						Enabled: true,
+					},
+				}
+
+				deploymentNames, err := ComputeRequiredControlPlaneDeployments(shootWithVPA)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(deploymentNames.UnsortedList()).To(ConsistOf(expectedDeploymentNames...))
+			})
+
+		}
+
+		Context("shoot", func() {
+			tests(shoot, commonDeploymentNames, false)
+		})
+
+		Context("workerless shoot", func() {
+			tests(workerlessShoot, workerlessDepoymentNames, true)
+		})
+	})
+
+	Describe("#ComputeRequiredMonitoringStatefulSets", func() {
+		var commonNames []interface{}
+		BeforeEach(func() {
+			commonNames = []interface{}{"prometheus"}
+		})
+
+		It("should return expected statefulsets when alert manager is not wanted", func() {
+			Expect(ComputeRequiredMonitoringStatefulSets(false).UnsortedList()).To(ConsistOf(commonNames...))
+		})
+
+		It("should return expected statefulsets when alert manager is wanted", func() {
+			Expect(ComputeRequiredMonitoringStatefulSets(true).UnsortedList()).To(ConsistOf(append(commonNames, "alertmanager")...))
+		})
+	})
+
+	Describe("#ComputeRequiredMonitoringSeedDeployments", func() {
+		var commonNames []interface{}
+		BeforeEach(func() {
+			commonNames = []interface{}{"plutono"}
+		})
+
+		It("should return expected deployments", func() {
+			Expect(ComputeRequiredMonitoringSeedDeployments(shoot).UnsortedList()).To(ConsistOf(append(commonNames, "kube-state-metrics")...))
+		})
+
+		It("should return expected deployments for workerless shoot", func() {
+			Expect(ComputeRequiredMonitoringSeedDeployments(workerlessShoot).UnsortedList()).To(ConsistOf(commonNames))
+		})
+	})
 
 	DescribeTable("#PardonCondition",
 		func(condition gardencorev1beta1.Condition, lastOp *gardencorev1beta1.LastOperation, lastErrors []gardencorev1beta1.LastError, expected types.GomegaMatcher) {
@@ -797,56 +702,6 @@ var _ = Describe("health check", func() {
 	})
 })
 
-func newDeployment(namespace, name, role string, healthy bool) *appsv1.Deployment {
-	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      name,
-			Labels:    roleLabels(role),
-		},
-	}
-	if healthy {
-		deployment.Status = appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{{
-			Type:   appsv1.DeploymentAvailable,
-			Status: corev1.ConditionTrue,
-		}}}
-	}
-	return deployment
-}
-
-func newStatefulSet(namespace, name, role string, healthy bool) *appsv1.StatefulSet {
-	statefulSet := &appsv1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      name,
-			Labels:    roleLabels(role),
-		},
-	}
-	if healthy {
-		statefulSet.Status.ReadyReplicas = 1
-	}
-
-	return statefulSet
-}
-
-func newEtcd(namespace, name, role string, healthy bool, lastError *string) *druidv1alpha1.Etcd {
-	etcd := &druidv1alpha1.Etcd{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      name,
-			Labels:    roleLabels(role),
-		},
-	}
-	if healthy {
-		etcd.Status.Ready = pointer.Bool(true)
-	} else {
-		etcd.Status.Ready = pointer.Bool(false)
-		etcd.Status.LastError = lastError
-	}
-
-	return etcd
-}
-
 func newNode(name string, healthy bool, labels labels.Set, annotations map[string]string, kubeletVersion string) corev1.Node {
 	node := corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
@@ -879,18 +734,6 @@ func roleLabels(role string) map[string]string {
 
 func beConditionWithStatus(status gardencorev1beta1.ConditionStatus) types.GomegaMatcher {
 	return WithStatus(status)
-}
-
-func beConditionWithMissingRequiredDeployment(deployments []*appsv1.Deployment) types.GomegaMatcher {
-	var names = make([]string, 0, len(deployments))
-	for _, deploy := range deployments {
-		names = append(names, deploy.Name)
-	}
-	return And(WithStatus(gardencorev1beta1.ConditionFalse), WithMessage(fmt.Sprintf("%s", names)))
-}
-
-func roleOf(obj metav1.Object) string {
-	return obj.GetLabels()[v1beta1constants.GardenRole]
 }
 
 func beConditionWithStatusAndCodes(status gardencorev1beta1.ConditionStatus, codes ...gardencorev1beta1.ErrorCode) types.GomegaMatcher {
