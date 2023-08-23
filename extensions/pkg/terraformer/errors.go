@@ -16,7 +16,7 @@ package terraformer
 
 import (
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 )
 
@@ -68,7 +68,7 @@ func findTerraformErrors(output string) string {
 		}
 
 		// Sort the occurred errors alphabetically
-		sort.Strings(valid)
+		slices.Sort(valid)
 
 		errorMessage = "* " + strings.Join(valid, "\n* ")
 

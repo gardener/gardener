@@ -16,7 +16,7 @@ package kubelet
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 	"time"
 
 	"github.com/Masterminds/semver"
@@ -99,7 +99,7 @@ func nodeLabelFlags(nodeLabels map[string]string) []string {
 
 	// maps are unsorted in go, make sure to output node labels in the exact same order every time
 	// this ensures deterministic behavior so that tests are stable and the OSC doesn't change on every reconciliation
-	sort.Strings(flags)
+	slices.Sort(flags)
 
 	return flags
 }

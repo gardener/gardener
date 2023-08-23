@@ -22,7 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -180,7 +180,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 		for secretKey := range secret.Data {
 			secretKeys = append(secretKeys, secretKey)
 		}
-		sort.Strings(secretKeys)
+		slices.Sort(secretKeys)
 
 		for _, secretKey := range secretKeys {
 			value := secret.Data[secretKey]

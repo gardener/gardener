@@ -19,7 +19,7 @@ import (
 	"net"
 	"net/url"
 	"os"
-	"sort"
+	"slices"
 	"sync"
 	"time"
 
@@ -92,7 +92,7 @@ func (l *resolver) Start(stopCtx context.Context) error {
 			return
 		}
 
-		sort.Strings(addresses)
+		slices.Sort(addresses)
 
 		l.lock.Lock()
 		updated := !equal(addresses, l.addrs)

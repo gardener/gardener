@@ -17,7 +17,7 @@ package hibernation
 import (
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 	"time"
 
 	"github.com/robfig/cron"
@@ -206,13 +206,13 @@ func parseHibernationSchedules(schedules []gardencorev1beta1.HibernationSchedule
 // If the time drifts are adjusted which in most realistic cases would be around 100ms, scheduled hibernation
 // will still be executed without missing the schedule.
 func nextHibernationTimeDuration(schedules []parsedHibernationSchedule, now time.Time) time.Duration {
-	var timeStamps []time.Time
+	timeStamps := make([]time.Time, 0, len(schedules))
 	for _, schedule := range schedules {
 		timeStamps = append(timeStamps, schedule.next(now))
 	}
 
-	sort.Slice(timeStamps, func(i, j int) bool {
-		return timeStamps[i].Before(timeStamps[j])
+	slices.SortFunc(timeStamps, func(a, b time.Time) int {
+		return a.Compare(b)
 	})
 
 	return timeStamps[0].Add(nextScheduleDelta).Sub(now)
