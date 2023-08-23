@@ -46,7 +46,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/care"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	healthchecker "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -112,22 +111,6 @@ var _ = Describe("health check", func() {
 			},
 		}
 
-		plutonoDeployment               = newDeployment(seedNamespace, v1beta1constants.DeploymentNamePlutono, v1beta1constants.GardenRoleMonitoring, true)
-		kubeStateMetricsShootDeployment = newDeployment(seedNamespace, v1beta1constants.DeploymentNameKubeStateMetrics, v1beta1constants.GardenRoleMonitoring, true)
-
-		requiredMonitoringControlPlaneDeployments = []*appsv1.Deployment{
-			plutonoDeployment,
-			kubeStateMetricsShootDeployment,
-		}
-
-		alertManagerStatefulSet = newStatefulSet(seedNamespace, v1beta1constants.StatefulSetNameAlertManager, v1beta1constants.GardenRoleMonitoring, true)
-		prometheusStatefulSet   = newStatefulSet(seedNamespace, v1beta1constants.StatefulSetNamePrometheus, v1beta1constants.GardenRoleMonitoring, true)
-
-		requiredMonitoringControlPlaneStatefulSets = []*appsv1.StatefulSet{
-			alertManagerStatefulSet,
-			prometheusStatefulSet,
-		}
-
 		// control plane deployments
 		gardenerResourceManagerDeployment = newDeployment(seedNamespace, v1beta1constants.DeploymentNameGardenerResourceManager, v1beta1constants.GardenRoleControlPlane, true)
 		kubeAPIServerDeployment           = newDeployment(seedNamespace, v1beta1constants.DeploymentNameKubeAPIServer, v1beta1constants.GardenRoleControlPlane, true)
@@ -183,9 +166,22 @@ var _ = Describe("health check", func() {
 				Expect(fakeClient.Create(ctx, obj.DeepCopy())).To(Succeed(), "creating worker "+client.ObjectKeyFromObject(obj).String())
 			}
 
-			checker := healthchecker.NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil)
+			shootPkgObj := &shootpkg.Shoot{
+				SeedNamespace: seedNamespace,
+			}
+			shootPkgObj.SetInfo(shoot)
 
-			exitCondition, err := CheckShootControlPlane(ctx, shoot, checker, seedNamespace, condition)
+			health := NewHealth(
+				&operation.Operation{
+					Shoot:         shootPkgObj,
+					SeedClientSet: kubernetesfake.NewClientSetBuilder().WithClient(fakeClient).Build(),
+				},
+				nil,
+				fakeClock,
+				nil,
+			)
+
+			exitCondition, err := health.CheckShootControlPlane(ctx, condition)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},
@@ -298,82 +294,6 @@ var _ = Describe("health check", func() {
 			},
 			nil,
 			PointTo(beConditionWithStatusAndCodes(gardencorev1beta1.ConditionFalse))),
-	)
-
-	DescribeTable("#CheckShootMonitoringControlPlane",
-		func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, workerless, wantsAlertmanager bool, conditionMatcher types.GomegaMatcher) {
-			for _, obj := range deployments {
-				Expect(fakeClient.Create(ctx, obj.DeepCopy())).To(Succeed(), "creating deployment "+client.ObjectKeyFromObject(obj).String())
-			}
-			for _, obj := range statefulSets {
-				Expect(fakeClient.Create(ctx, obj.DeepCopy())).To(Succeed(), "creating statefulset "+client.ObjectKeyFromObject(obj).String())
-			}
-
-			checker := healthchecker.NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil)
-
-			s := shoot.DeepCopy()
-			if workerless {
-				s = workerlessShoot.DeepCopy()
-			}
-
-			exitCondition, err := CheckShootMonitoringControlPlane(ctx, s, checker, seedNamespace, wantsAlertmanager, condition)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(exitCondition).To(conditionMatcher)
-		},
-		Entry("all healthy",
-			requiredMonitoringControlPlaneDeployments,
-			requiredMonitoringControlPlaneStatefulSets,
-			false,
-			true,
-			BeNil()),
-		Entry("all healthy (workerless)",
-			[]*appsv1.Deployment{
-				plutonoDeployment,
-			},
-			requiredMonitoringControlPlaneStatefulSets,
-			true,
-			true,
-			BeNil()),
-		Entry("required deployment missing",
-			[]*appsv1.Deployment{
-				plutonoDeployment,
-			},
-			requiredMonitoringControlPlaneStatefulSets,
-			false,
-			true,
-			PointTo(beConditionWithMissingRequiredDeployment([]*appsv1.Deployment{kubeStateMetricsShootDeployment}))),
-		Entry("required deployment missing (workerless Shoot)",
-			[]*appsv1.Deployment{},
-			requiredMonitoringControlPlaneStatefulSets,
-			true,
-			true,
-			PointTo(beConditionWithMissingRequiredDeployment([]*appsv1.Deployment{plutonoDeployment}))),
-		Entry("required stateful set set missing",
-			requiredMonitoringControlPlaneDeployments,
-			[]*appsv1.StatefulSet{
-				prometheusStatefulSet,
-			},
-			false,
-			true,
-			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
-		Entry("deployment unhealthy",
-			[]*appsv1.Deployment{
-				newDeployment(plutonoDeployment.Namespace, plutonoDeployment.Name, roleOf(plutonoDeployment), false),
-				kubeStateMetricsShootDeployment,
-			},
-			requiredMonitoringControlPlaneStatefulSets,
-			false,
-			true,
-			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
-		Entry("stateful set unhealthy",
-			requiredMonitoringControlPlaneDeployments,
-			[]*appsv1.StatefulSet{
-				newStatefulSet(alertManagerStatefulSet.Namespace, alertManagerStatefulSet.Name, roleOf(alertManagerStatefulSet), false),
-				prometheusStatefulSet,
-			},
-			false,
-			true,
-			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
 	)
 
 	DescribeTable("#PardonCondition",
@@ -502,8 +422,6 @@ var _ = Describe("health check", func() {
 					return nil
 				})
 
-				checker := healthchecker.NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil)
-
 				shootObj := &shootpkg.Shoot{
 					SeedNamespace:     seedNamespace,
 					KubernetesVersion: kubernetesVersion,
@@ -518,11 +436,11 @@ var _ = Describe("health check", func() {
 
 				health := NewHealth(&operation.Operation{
 					Shoot:          shootObj,
-					SeedClientSet:  (&kubernetesfake.ClientSetBuilder{}).WithClient(fakeClient).Build(),
-					ShootClientSet: (&kubernetesfake.ClientSetBuilder{}).WithClient(c).Build(),
+					SeedClientSet:  kubernetesfake.NewClientSetBuilder().WithClient(fakeClient).Build(),
+					ShootClientSet: kubernetesfake.NewClientSetBuilder().WithClient(c).Build(),
 				}, nil, fakeClock, nil)
 
-				exitCondition, err := health.CheckClusterNodes(ctx, checker, condition)
+				exitCondition, err := health.CheckClusterNodes(ctx, condition)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(exitCondition).To(conditionMatcher)
 			},

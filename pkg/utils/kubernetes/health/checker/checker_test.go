@@ -16,6 +16,7 @@ package checker_test
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -25,6 +26,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/sets"
 	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -46,19 +49,7 @@ var _ = Describe("HealthChecker", func() {
 
 			condition gardencorev1beta1.Condition
 
-			seedNamespace = "shoot--foo--bar"
-
-			valiStatefulSet = newStatefulSet(seedNamespace, v1beta1constants.StatefulSetNameVali, v1beta1constants.GardenRoleLogging, true)
-
-			requiredLoggingControlPlaneStatefulSets = []*appsv1.StatefulSet{
-				valiStatefulSet,
-			}
-
-			eventLoggerDepployment = newDeployment(seedNamespace, v1beta1constants.DeploymentNameEventLogger, v1beta1constants.GardenRoleLogging, true)
-
-			requiredLoggingControlPlaneDeployments = []*appsv1.Deployment{
-				eventLoggerDepployment,
-			}
+			namespace = "shoot--foo--bar"
 		)
 
 		BeforeEach(func() {
@@ -264,6 +255,20 @@ var _ = Describe("HealthChecker", func() {
 				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "Unknown", "bar is unknown"))),
 		)
 
+		var (
+			valiStatefulSet = newStatefulSet(namespace, v1beta1constants.StatefulSetNameVali, v1beta1constants.GardenRoleLogging, true)
+
+			requiredLoggingControlPlaneStatefulSets = []*appsv1.StatefulSet{
+				valiStatefulSet,
+			}
+
+			eventLoggerDepployment = newDeployment(namespace, v1beta1constants.DeploymentNameEventLogger, v1beta1constants.GardenRoleLogging, true)
+
+			requiredLoggingControlPlaneDeployments = []*appsv1.Deployment{
+				eventLoggerDepployment,
+			}
+		)
+
 		DescribeTable("#CheckLoggingControlPlane",
 			func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, eventLoggingEnabled, valiEnabled bool, conditionMatcher types.GomegaMatcher) {
 				for _, obj := range deployments {
@@ -275,7 +280,7 @@ var _ = Describe("HealthChecker", func() {
 
 				checker := NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil)
 
-				exitCondition, err := checker.CheckLoggingControlPlane(ctx, seedNamespace, eventLoggingEnabled, valiEnabled, condition)
+				exitCondition, err := checker.CheckLoggingControlPlane(ctx, namespace, eventLoggingEnabled, valiEnabled, condition)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(exitCondition).To(conditionMatcher)
 			},
@@ -466,6 +471,88 @@ var _ = Describe("HealthChecker", func() {
 				PointTo(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "FooUnhealthyReport", "failing health check")),
 			),
 		)
+
+		var (
+			plutonoDeployment               = newDeployment(namespace, v1beta1constants.DeploymentNamePlutono, v1beta1constants.GardenRoleMonitoring, true)
+			kubeStateMetricsShootDeployment = newDeployment(namespace, v1beta1constants.DeploymentNameKubeStateMetrics, v1beta1constants.GardenRoleMonitoring, true)
+
+			requiredMonitoringControlPlaneDeployments = []*appsv1.Deployment{
+				plutonoDeployment,
+				kubeStateMetricsShootDeployment,
+			}
+
+			alertManagerStatefulSet = newStatefulSet(namespace, v1beta1constants.StatefulSetNameAlertManager, v1beta1constants.GardenRoleMonitoring, true)
+			prometheusStatefulSet   = newStatefulSet(namespace, v1beta1constants.StatefulSetNamePrometheus, v1beta1constants.GardenRoleMonitoring, true)
+
+			requiredMonitoringControlPlaneStatefulSets = []*appsv1.StatefulSet{
+				alertManagerStatefulSet,
+				prometheusStatefulSet,
+			}
+		)
+
+		DescribeTable("#CheckShootMonitoringControlPlane",
+			func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, workerless, wantsAlertmanager bool, conditionMatcher types.GomegaMatcher) {
+				for _, obj := range deployments {
+					Expect(fakeClient.Create(ctx, obj.DeepCopy())).To(Succeed(), "creating deployment "+client.ObjectKeyFromObject(obj).String())
+				}
+				for _, obj := range statefulSets {
+					Expect(fakeClient.Create(ctx, obj.DeepCopy())).To(Succeed(), "creating statefulset "+client.ObjectKeyFromObject(obj).String())
+				}
+
+				checker := NewHealthChecker(fakeClient, fakeClock, nil, nil)
+
+				exitCondition, err := checker.CheckMonitoringControlPlane(
+					ctx,
+					namespace,
+					objectNameSet(requiredMonitoringControlPlaneDeployments),
+					objectNameSet(requiredMonitoringControlPlaneStatefulSets),
+					labels.SelectorFromSet(map[string]string{"gardener.cloud/role": "monitoring"}),
+					condition,
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(exitCondition).To(conditionMatcher)
+			},
+			Entry("all healthy",
+				requiredMonitoringControlPlaneDeployments,
+				requiredMonitoringControlPlaneStatefulSets,
+				false,
+				true,
+				BeNil()),
+			Entry("required deployment missing",
+				[]*appsv1.Deployment{
+					plutonoDeployment,
+				},
+				requiredMonitoringControlPlaneStatefulSets,
+				false,
+				true,
+				PointTo(beConditionWithMissingRequiredDeployment([]*appsv1.Deployment{kubeStateMetricsShootDeployment}))),
+			Entry("required stateful set set missing",
+				requiredMonitoringControlPlaneDeployments,
+				[]*appsv1.StatefulSet{
+					prometheusStatefulSet,
+				},
+				false,
+				true,
+				PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
+			Entry("deployment unhealthy",
+				[]*appsv1.Deployment{
+					newDeployment(plutonoDeployment.Namespace, plutonoDeployment.Name, roleOf(plutonoDeployment), false),
+					kubeStateMetricsShootDeployment,
+				},
+				requiredMonitoringControlPlaneStatefulSets,
+				false,
+				true,
+				PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
+			Entry("stateful set unhealthy",
+				requiredMonitoringControlPlaneDeployments,
+				[]*appsv1.StatefulSet{
+					newStatefulSet(alertManagerStatefulSet.Namespace, alertManagerStatefulSet.Name, roleOf(alertManagerStatefulSet), false),
+					prometheusStatefulSet,
+				},
+				false,
+				true,
+				PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
+		)
 	})
 })
 
@@ -479,6 +566,14 @@ func beConditionWithStatus(status gardencorev1beta1.ConditionStatus) types.Gomeg
 
 func beConditionWithStatusAndMsg(status gardencorev1beta1.ConditionStatus, reason, message string) types.GomegaMatcher {
 	return And(WithStatus(status), WithReason(reason), WithMessage(message))
+}
+
+func beConditionWithMissingRequiredDeployment(deployments []*appsv1.Deployment) types.GomegaMatcher {
+	var names = make([]string, 0, len(deployments))
+	for _, deploy := range deployments {
+		names = append(names, deploy.Name)
+	}
+	return And(WithStatus(gardencorev1beta1.ConditionFalse), WithMessage(fmt.Sprintf("%s", names)))
 }
 
 func roleOf(obj metav1.Object) string {
@@ -519,4 +614,14 @@ func newStatefulSet(namespace, name, role string, healthy bool) *appsv1.Stateful
 	}
 
 	return statefulSet
+}
+
+func objectNameSet[o client.Object](objs []o) sets.Set[string] {
+	names := sets.New[string]()
+
+	for _, obj := range objs {
+		names.Insert(obj.GetName())
+	}
+
+	return names
 }

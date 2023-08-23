@@ -98,7 +98,6 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 	).Check(
 		ctx,
 		conditions,
-		garden.Status.LastOperation,
 	)
 
 	// Update Garden status conditions if necessary

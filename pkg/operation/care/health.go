@@ -88,6 +88,7 @@ type Health struct {
 	clock                                     clock.Clock
 	controllerRegistrationToLastHeartbeatTime map[string]*metav1.MicroTime
 	conditionThresholds                       map[gardencorev1beta1.ConditionType]time.Duration
+	healthChecker                             *healthchecker.HealthChecker
 }
 
 // ShootClientInit is a function that initializes a kubernetes client for a Shoot.
@@ -106,6 +107,7 @@ func NewHealth(op *operation.Operation, shootClientInit ShootClientInit, clock c
 		gardenletConfiguration: op.Config,
 		controllerRegistrationToLastHeartbeatTime: map[string]*metav1.MicroTime{},
 		conditionThresholds:                       conditionThresholds,
+		healthChecker:                             healthchecker.NewHealthChecker(op.SeedClientSet.Client(), clock, conditionThresholds, op.Shoot.GetInfo().Status.LastOperation),
 	}
 }
 
@@ -326,8 +328,6 @@ func (h *Health) healthChecks(
 		h.log.Error(err, "Error getting extension conditions")
 	}
 
-	checker := healthchecker.NewHealthChecker(h.seedClient.Client(), h.clock, h.conditionThresholds, h.shoot.GetInfo().Status.LastOperation)
-
 	shootClient, apiServerRunning, err := h.initializeShootClients()
 	if err != nil || !apiServerRunning {
 		// don't execute health checks if API server has already been deleted or has not been created yet
@@ -339,10 +339,10 @@ func (h *Health) healthChecks(
 
 		apiserverAvailability = v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, apiserverAvailability, "APIServerDown", "Could not reach API server during client initialization.")
 
-		newControlPlane, err := h.checkControlPlane(ctx, checker, controlPlane, extensionConditionsControlPlaneHealthy, healthCheckOutdatedThreshold)
+		newControlPlane, err := h.checkControlPlane(ctx, controlPlane, extensionConditionsControlPlaneHealthy, healthCheckOutdatedThreshold)
 		controlPlane = v1beta1helper.NewConditionOrError(h.clock, controlPlane, newControlPlane, err)
 
-		newObservabilityComponents, err := h.checkObservabilityComponents(ctx, checker, observabilityComponents)
+		newObservabilityComponents, err := h.checkObservabilityComponents(ctx, observabilityComponents)
 		observabilityComponents = v1beta1helper.NewConditionOrError(h.clock, observabilityComponents, newObservabilityComponents, err)
 		systemComponents = v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(h.clock, systemComponents, message)
 
@@ -361,15 +361,15 @@ func (h *Health) healthChecks(
 			apiserverAvailability = h.checkAPIServerAvailability(ctx, apiserverAvailability)
 			return nil
 		}, func(ctx context.Context) error {
-			newControlPlane, err := h.checkControlPlane(ctx, checker, controlPlane, extensionConditionsControlPlaneHealthy, healthCheckOutdatedThreshold)
+			newControlPlane, err := h.checkControlPlane(ctx, controlPlane, extensionConditionsControlPlaneHealthy, healthCheckOutdatedThreshold)
 			controlPlane = v1beta1helper.NewConditionOrError(h.clock, controlPlane, newControlPlane, err)
 			return nil
 		}, func(ctx context.Context) error {
-			newObservabilityComponents, err := h.checkObservabilityComponents(ctx, checker, observabilityComponents)
+			newObservabilityComponents, err := h.checkObservabilityComponents(ctx, observabilityComponents)
 			observabilityComponents = v1beta1helper.NewConditionOrError(h.clock, observabilityComponents, newObservabilityComponents, err)
 			return nil
 		}, func(ctx context.Context) error {
-			newSystemComponents, err := h.checkSystemComponents(ctx, checker, systemComponents, extensionConditionsSystemComponentsHealthy, healthCheckOutdatedThreshold)
+			newSystemComponents, err := h.checkSystemComponents(ctx, systemComponents, extensionConditionsSystemComponentsHealthy, healthCheckOutdatedThreshold)
 			systemComponents = v1beta1helper.NewConditionOrError(h.clock, systemComponents, newSystemComponents, err)
 			return nil
 		},
@@ -383,7 +383,7 @@ func (h *Health) healthChecks(
 
 	taskFns = append(taskFns,
 		func(ctx context.Context) error {
-			newNodes, err := h.checkClusterNodes(ctx, checker, nodes, extensionConditionsEveryNodeReady, healthCheckOutdatedThreshold)
+			newNodes, err := h.checkClusterNodes(ctx, nodes, extensionConditionsEveryNodeReady, healthCheckOutdatedThreshold)
 			nodes = v1beta1helper.NewConditionOrError(h.clock, nodes, newNodes, err)
 			return nil
 		},
@@ -404,16 +404,15 @@ func (h *Health) checkAPIServerAvailability(ctx context.Context, condition garde
 // checkControlPlane checks whether the core components of the Shoot controlplane (ETCD, KAPI, KCM..) are healthy.
 func (h *Health) checkControlPlane(
 	ctx context.Context,
-	checker *healthchecker.HealthChecker,
 	condition gardencorev1beta1.Condition,
 	extensionConditions []healthchecker.ExtensionCondition,
 	healthCheckOutdatedThreshold *metav1.Duration,
 ) (*gardencorev1beta1.Condition, error) {
-	if exitCondition, err := CheckShootControlPlane(ctx, h.shoot.GetInfo(), checker, h.shoot.SeedNamespace, condition); err != nil || exitCondition != nil {
+	if exitCondition, err := h.CheckShootControlPlane(ctx, condition); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 
-	if exitCondition := checker.CheckExtensionCondition(condition, extensionConditions, healthCheckOutdatedThreshold); exitCondition != nil {
+	if exitCondition := h.healthChecker.CheckExtensionCondition(condition, extensionConditions, healthCheckOutdatedThreshold); exitCondition != nil {
 		return exitCondition, nil
 	}
 
@@ -421,19 +420,20 @@ func (h *Health) checkControlPlane(
 	return &c, nil
 }
 
+var monitoringSelector = labels.SelectorFromSet(map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring})
+
 // checkObservabilityComponents checks whether the  observability components of the Shoot control plane (Prometheus, Vali, Plutono..) are healthy.
 func (h *Health) checkObservabilityComponents(
 	ctx context.Context,
-	checker *healthchecker.HealthChecker,
 	condition gardencorev1beta1.Condition,
 ) (*gardencorev1beta1.Condition, error) {
 	if h.shoot.Purpose != gardencorev1beta1.ShootPurposeTesting && gardenlethelper.IsMonitoringEnabled(h.gardenletConfiguration) {
-		if exitCondition, err := CheckShootMonitoringControlPlane(
+		if exitCondition, err := h.healthChecker.CheckMonitoringControlPlane(
 			ctx,
-			h.shoot.GetInfo(),
-			checker,
 			h.shoot.SeedNamespace,
-			h.shoot.WantsAlertmanager,
+			computeRequiredMonitoringSeedDeployments(h.shoot.GetInfo()),
+			computeRequiredMonitoringStatefulSets(h.shoot.WantsAlertmanager),
+			monitoringSelector,
 			condition,
 		); err != nil || exitCondition != nil {
 			return exitCondition, err
@@ -441,7 +441,7 @@ func (h *Health) checkObservabilityComponents(
 	}
 
 	if h.shoot.Purpose != gardencorev1beta1.ShootPurposeTesting && gardenlethelper.IsLoggingEnabled(h.gardenletConfiguration) {
-		if exitCondition, err := checker.CheckLoggingControlPlane(
+		if exitCondition, err := h.healthChecker.CheckLoggingControlPlane(
 			ctx,
 			h.shoot.SeedNamespace,
 			gardenlethelper.IsLoggingEnabled(h.gardenletConfiguration),
@@ -459,7 +459,6 @@ func (h *Health) checkObservabilityComponents(
 // checkSystemComponents checks whether the system components of a Shoot are running.
 func (h *Health) checkSystemComponents(
 	ctx context.Context,
-	checker *healthchecker.HealthChecker,
 	condition gardencorev1beta1.Condition,
 	extensionConditions []healthchecker.ExtensionCondition,
 	healthCheckOutdatedThreshold *metav1.Duration,
@@ -477,12 +476,12 @@ func (h *Health) checkSystemComponents(
 			continue
 		}
 
-		if exitCondition := checker.CheckManagedResource(condition, &mr, gardenlethelper.GetManagedResourceProgressingThreshold(h.gardenletConfiguration)); exitCondition != nil {
+		if exitCondition := h.healthChecker.CheckManagedResource(condition, &mr, gardenlethelper.GetManagedResourceProgressingThreshold(h.gardenletConfiguration)); exitCondition != nil {
 			return exitCondition, nil
 		}
 	}
 
-	if exitCondition := checker.CheckExtensionCondition(condition, extensionConditions, healthCheckOutdatedThreshold); exitCondition != nil {
+	if exitCondition := h.healthChecker.CheckExtensionCondition(condition, extensionConditions, healthCheckOutdatedThreshold); exitCondition != nil {
 		return exitCondition, nil
 	}
 
@@ -515,37 +514,19 @@ func (h *Health) checkSystemComponents(
 // as many nodes are registered as desired, and that every machine is running.
 func (h *Health) checkClusterNodes(
 	ctx context.Context,
-	checker *healthchecker.HealthChecker,
 	condition gardencorev1beta1.Condition,
 	extensionConditions []healthchecker.ExtensionCondition,
 	healthCheckOutdatedThreshold *metav1.Duration,
 ) (*gardencorev1beta1.Condition, error) {
-	if exitCondition := checker.CheckExtensionCondition(condition, extensionConditions, healthCheckOutdatedThreshold); exitCondition != nil {
+	if exitCondition := h.healthChecker.CheckExtensionCondition(condition, extensionConditions, healthCheckOutdatedThreshold); exitCondition != nil {
 		return exitCondition, nil
 	}
-	if exitCondition, err := h.CheckClusterNodes(ctx, checker, condition); err != nil || exitCondition != nil {
+	if exitCondition, err := h.CheckClusterNodes(ctx, condition); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 
 	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "EveryNodeReady", "All nodes are ready.")
 	return &c, nil
-}
-
-var monitoringSelector = labels.SelectorFromSet(map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring})
-
-// CheckShootMonitoringControlPlane checks whether the monitoring in the given listers are complete and healthy.
-func CheckShootMonitoringControlPlane(
-	ctx context.Context,
-	shoot *gardencorev1beta1.Shoot,
-	checker *healthchecker.HealthChecker,
-	namespace string,
-	wantsAlertmanager bool,
-	condition gardencorev1beta1.Condition,
-) (
-	*gardencorev1beta1.Condition,
-	error,
-) {
-	return checker.CheckMonitoringControlPlane(ctx, namespace, computeRequiredMonitoringSeedDeployments(shoot), computeRequiredMonitoringStatefulSets(wantsAlertmanager), monitoringSelector, condition)
 }
 
 // computeRequiredMonitoringStatefulSets determine the required monitoring statefulsets
@@ -568,22 +549,19 @@ func computeRequiredMonitoringSeedDeployments(shoot *gardencorev1beta1.Shoot) se
 }
 
 // CheckShootControlPlane checks whether the shoot control plane components in the given listers are complete and healthy.
-func CheckShootControlPlane(
+func (h *Health) CheckShootControlPlane(
 	ctx context.Context,
-	shoot *gardencorev1beta1.Shoot,
-	checker *healthchecker.HealthChecker,
-	namespace string,
 	condition gardencorev1beta1.Condition,
 ) (
 	*gardencorev1beta1.Condition,
 	error,
 ) {
-	requiredControlPlaneDeployments, err := computeRequiredControlPlaneDeployments(shoot)
+	requiredControlPlaneDeployments, err := computeRequiredControlPlaneDeployments(h.shoot.GetInfo())
 	if err != nil {
 		return nil, err
 	}
 
-	return checker.CheckControlPlane(ctx, namespace, requiredControlPlaneDeployments, requiredShootControlPlaneEtcds, condition)
+	return h.healthChecker.CheckControlPlane(ctx, h.shoot.SeedNamespace, requiredControlPlaneDeployments, requiredShootControlPlaneEtcds, condition)
 }
 
 // annotationKeyNotManagedByMCM is a constant for an annotation on the node resource that indicates that the node is not
@@ -594,7 +572,6 @@ const annotationKeyNotManagedByMCM = "node.machine.sapcloud.io/not-managed-by-mc
 // Additional checks are executed in the provider extension
 func (h *Health) CheckClusterNodes(
 	ctx context.Context,
-	checker *healthchecker.HealthChecker,
 	condition gardencorev1beta1.Condition,
 ) (
 	*gardencorev1beta1.Condition,
@@ -618,7 +595,7 @@ func (h *Health) CheckClusterNodes(
 			return nil, err
 		}
 
-		if exitCondition := checker.CheckNodes(condition, nodes, pool.Name, kubernetesVersion); exitCondition != nil {
+		if exitCondition := h.healthChecker.CheckNodes(condition, nodes, pool.Name, kubernetesVersion); exitCondition != nil {
 			return exitCondition, nil
 		}
 

@@ -208,11 +208,7 @@ var _ = Describe("Garden Care Control", func() {
 
 type resultingConditionFunc func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition
 
-func (c resultingConditionFunc) Check(
-	_ context.Context,
-	conditions []gardencorev1beta1.Condition,
-	_ *gardencorev1beta1.LastOperation,
-) []gardencorev1beta1.Condition {
+func (c resultingConditionFunc) Check(_ context.Context, conditions []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
 	return c(conditions)
 }
 

@@ -96,6 +96,7 @@ type Health struct {
 	gardenClientSet     kubernetes.Interface
 	clock               clock.Clock
 	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration
+	healthChecker       *healthchecker.HealthChecker
 }
 
 // NewHealth creates a new Health instance with the given parameters.
@@ -114,6 +115,7 @@ func NewHealth(
 		gardenClientSet:     gardenClientSet,
 		clock:               clock,
 		conditionThresholds: conditionThresholds,
+		healthChecker:       healthchecker.NewHealthChecker(runtimeClient, clock, conditionThresholds, garden.Status.LastOperation),
 	}
 }
 
@@ -121,7 +123,6 @@ func NewHealth(
 func (h *Health) Check(
 	ctx context.Context,
 	conditions []gardencorev1beta1.Condition,
-	lastOperation *gardencorev1beta1.LastOperation,
 ) []gardencorev1beta1.Condition {
 	var (
 		apiServerAvailability      gardencorev1beta1.Condition
@@ -142,25 +143,23 @@ func (h *Health) Check(
 		}
 	}
 
-	checker := healthchecker.NewHealthChecker(h.runtimeClient, h.clock, h.conditionThresholds, lastOperation)
-
 	taskFns := []flow.TaskFn{
 		func(ctx context.Context) error {
 			apiServerAvailability = h.checkAPIServerAvailability(ctx, apiServerAvailability)
 			return nil
 		},
 		func(ctx context.Context) error {
-			newRuntimeComponentsCondition, err := h.checkRuntimeComponents(ctx, checker, runtimeComponentsCondition)
+			newRuntimeComponentsCondition, err := h.checkRuntimeComponents(ctx, runtimeComponentsCondition)
 			runtimeComponentsCondition = v1beta1helper.NewConditionOrError(h.clock, runtimeComponentsCondition, newRuntimeComponentsCondition, err)
 			return nil
 		},
 		func(ctx context.Context) error {
-			newVirtualComponentsCondition, err := h.checkVirtualComponents(ctx, checker, virtualComponentsCondition)
+			newVirtualComponentsCondition, err := h.checkVirtualComponents(ctx, virtualComponentsCondition)
 			virtualComponentsCondition = v1beta1helper.NewConditionOrError(h.clock, virtualComponentsCondition, newVirtualComponentsCondition, err)
 			return nil
 		},
 		func(ctx context.Context) error {
-			newObservabilityCondition, err := h.checkObservabilityComponents(ctx, checker, observabilityCondition)
+			newObservabilityCondition, err := h.checkObservabilityComponents(ctx, observabilityCondition)
 			observabilityCondition = v1beta1helper.NewConditionOrError(h.clock, observabilityCondition, newObservabilityCondition, err)
 			return nil
 		},
@@ -187,7 +186,7 @@ func (h *Health) checkAPIServerAvailability(ctx context.Context, condition garde
 	})
 }
 
-func (h *Health) checkRuntimeComponents(ctx context.Context, checker *healthchecker.HealthChecker, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
+func (h *Health) checkRuntimeComponents(ctx context.Context, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
 	managedResources := sets.List(requiredGardenRuntimeManagedResources)
 	managedResources = append(managedResources, istio.ManagedResourceNames(true, "virtual-garden-")...)
 
@@ -198,11 +197,11 @@ func (h *Health) checkRuntimeComponents(ctx context.Context, checker *healthchec
 		managedResources = append(managedResources, vpa.ManagedResourceControlName)
 	}
 
-	return h.checkManagedResources(ctx, checker, condition, managedResources, "RuntimeComponentsRunning", "All runtime components are healthy.")
+	return h.checkManagedResources(ctx, condition, managedResources, "RuntimeComponentsRunning", "All runtime components are healthy.")
 }
 
-func (h *Health) checkVirtualComponents(ctx context.Context, checker *healthchecker.HealthChecker, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
-	if exitCondition, err := checker.CheckControlPlane(
+func (h *Health) checkVirtualComponents(ctx context.Context, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
+	if exitCondition, err := h.healthChecker.CheckControlPlane(
 		ctx,
 		h.gardenNamespace,
 		requiredVirtualGardenControlPlaneDeployments,
@@ -214,12 +213,11 @@ func (h *Health) checkVirtualComponents(ctx context.Context, checker *healthchec
 
 	managedResources := sets.List(requiredVirtualGardenManagedResources)
 
-	return h.checkManagedResources(ctx, checker, condition, managedResources, "VirtualComponentsRunning", "All virtual garden components are healthy.")
+	return h.checkManagedResources(ctx, condition, managedResources, "VirtualComponentsRunning", "All virtual garden components are healthy.")
 }
 
 func (h *Health) checkManagedResources(
 	ctx context.Context,
-	checker *healthchecker.HealthChecker,
 	condition gardencorev1beta1.Condition,
 	managedResources []string,
 	successReason string,
@@ -243,7 +241,7 @@ func (h *Health) checkManagedResources(
 			return nil, err
 		}
 
-		if exitCondition := checker.CheckManagedResource(condition, mr, nil); exitCondition != nil {
+		if exitCondition := h.healthChecker.CheckManagedResource(condition, mr, nil); exitCondition != nil {
 			return exitCondition, nil
 		}
 	}
@@ -252,14 +250,14 @@ func (h *Health) checkManagedResources(
 }
 
 // checkObservabilityComponents checks whether the  observability components of the virtual garden control plane (Prometheus, Vali, Plutono..) are healthy.
-func (h *Health) checkObservabilityComponents(ctx context.Context, checker *healthchecker.HealthChecker, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
+func (h *Health) checkObservabilityComponents(ctx context.Context, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
 	requiredDeployments := requiredMonitoringDeployments.Clone()
 
-	if exitCondition, err := checker.CheckMonitoringControlPlane(ctx, h.gardenNamespace, requiredDeployments, sets.New[string](), virtualGardenMonitoringSelector, condition); err != nil || exitCondition != nil {
+	if exitCondition, err := h.healthChecker.CheckMonitoringControlPlane(ctx, h.gardenNamespace, requiredDeployments, sets.New[string](), virtualGardenMonitoringSelector, condition); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 
-	if exitCondition, err := checker.CheckLoggingControlPlane(ctx, h.gardenNamespace, false, true, condition); err != nil || exitCondition != nil {
+	if exitCondition, err := h.healthChecker.CheckLoggingControlPlane(ctx, h.gardenNamespace, false, true, condition); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 

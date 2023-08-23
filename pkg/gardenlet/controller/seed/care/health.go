@@ -56,23 +56,35 @@ var requiredManagedResourcesSeed = sets.New(
 
 // Health contains information needed to execute health checks for a seed.
 type Health struct {
-	seed           *gardencorev1beta1.Seed
-	seedClient     client.Client
-	clock          clock.Clock
-	namespace      *string
-	seedIsGarden   bool
-	loggingEnabled bool
+	seed                *gardencorev1beta1.Seed
+	seedClient          client.Client
+	clock               clock.Clock
+	namespace           *string
+	seedIsGarden        bool
+	loggingEnabled      bool
+	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration
+	healtchChecker      *healthchecker.HealthChecker
 }
 
 // NewHealth creates a new Health instance with the given parameters.
-func NewHealth(seed *gardencorev1beta1.Seed, seedClient client.Client, clock clock.Clock, namespace *string, seedIsGarden bool, loggingEnabled bool) *Health {
+func NewHealth(
+	seed *gardencorev1beta1.Seed,
+	seedClient client.Client,
+	clock clock.Clock,
+	namespace *string,
+	seedIsGarden bool,
+	loggingEnabled bool,
+	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
+) *Health {
 	return &Health{
-		seedClient:     seedClient,
-		seed:           seed,
-		clock:          clock,
-		namespace:      namespace,
-		seedIsGarden:   seedIsGarden,
-		loggingEnabled: loggingEnabled,
+		seedClient:          seedClient,
+		seed:                seed,
+		clock:               clock,
+		namespace:           namespace,
+		seedIsGarden:        seedIsGarden,
+		loggingEnabled:      loggingEnabled,
+		conditionThresholds: conditionThresholds,
+		healtchChecker:      healthchecker.NewHealthChecker(seedClient, clock, conditionThresholds, seed.Status.LastOperation),
 	}
 }
 
@@ -80,8 +92,6 @@ func NewHealth(seed *gardencorev1beta1.Seed, seedClient client.Client, clock clo
 func (h *Health) Check(
 	ctx context.Context,
 	conditions []gardencorev1beta1.Condition,
-	thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration,
-	lastOperation *gardencorev1beta1.LastOperation,
 ) []gardencorev1beta1.Condition {
 
 	var systemComponentsCondition gardencorev1beta1.Condition
@@ -92,16 +102,13 @@ func (h *Health) Check(
 		}
 	}
 
-	checker := healthchecker.NewHealthChecker(h.seedClient, h.clock, thresholdMappings, lastOperation)
-	newSystemComponentsCondition, err := h.checkSeedSystemComponents(ctx, checker, systemComponentsCondition, thresholdMappings)
+	newSystemComponentsCondition, err := h.checkSeedSystemComponents(ctx, systemComponentsCondition)
 	return []gardencorev1beta1.Condition{v1beta1helper.NewConditionOrError(h.clock, systemComponentsCondition, newSystemComponentsCondition, err)}
 }
 
 func (h *Health) checkSeedSystemComponents(
 	ctx context.Context,
-	checker *healthchecker.HealthChecker,
 	condition gardencorev1beta1.Condition,
-	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
 ) (
 	*gardencorev1beta1.Condition,
 	error,
@@ -143,13 +150,13 @@ func (h *Health) checkSeedSystemComponents(
 		mr := &resourcesv1alpha1.ManagedResource{}
 		if err := h.seedClient.Get(ctx, kubernetesutils.Key(namespace, name), mr); err != nil {
 			if apierrors.IsNotFound(err) {
-				exitCondition := v1beta1helper.FailedCondition(h.clock, h.seed.Status.LastOperation, conditionThresholds, condition, "ResourceNotFound", err.Error())
+				exitCondition := v1beta1helper.FailedCondition(h.clock, h.seed.Status.LastOperation, h.conditionThresholds, condition, "ResourceNotFound", err.Error())
 				return &exitCondition, nil
 			}
 			return nil, err
 		}
 
-		if exitCondition := checker.CheckManagedResource(condition, mr, nil); exitCondition != nil {
+		if exitCondition := h.healtchChecker.CheckManagedResource(condition, mr, nil); exitCondition != nil {
 			return exitCondition, nil
 		}
 	}

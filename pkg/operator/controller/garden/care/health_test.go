@@ -178,7 +178,6 @@ var _ = Describe("Garden health", func() {
 						virtualComponentsHealthyCondition,
 						observabilityComponentsHealthyCondition,
 					},
-					nil,
 				)
 
 				Expect(len(updatedConditions)).ToNot(BeZero())
@@ -232,7 +231,6 @@ var _ = Describe("Garden health", func() {
 						virtualComponentsHealthyCondition,
 						observabilityComponentsHealthyCondition,
 					},
-					nil,
 				)
 				Expect(len(updatedConditions)).ToNot(BeZero())
 				Expect(updatedConditions).To(ContainElements(
@@ -286,7 +284,6 @@ var _ = Describe("Garden health", func() {
 						virtualComponentsHealthyCondition,
 						observabilityComponentsHealthyCondition,
 					},
-					nil,
 				)
 				Expect(len(updatedConditions)).ToNot(BeZero())
 				Expect(updatedConditions).To(ContainElements(
@@ -315,7 +312,6 @@ var _ = Describe("Garden health", func() {
 								virtualComponentsHealthyCondition,
 								observabilityComponentsHealthyCondition,
 							},
-							nil,
 						)
 						Expect(len(updatedConditions)).ToNot(BeZero())
 						Expect(updatedConditions).To(ContainElements(
@@ -347,7 +343,6 @@ var _ = Describe("Garden health", func() {
 								virtualComponentsHealthyCondition,
 								observabilityComponentsHealthyCondition,
 							},
-							nil,
 						)
 
 						Expect(len(updatedConditions)).ToNot(BeZero())
@@ -380,7 +375,6 @@ var _ = Describe("Garden health", func() {
 								virtualComponentsHealthyCondition,
 								observabilityComponentsHealthyCondition,
 							},
-							nil,
 						)
 
 						Expect(len(updatedConditions)).ToNot(BeZero())
@@ -413,7 +407,6 @@ var _ = Describe("Garden health", func() {
 								virtualComponentsHealthyCondition,
 								observabilityComponentsHealthyCondition,
 							},
-							nil,
 						)
 
 						Expect(len(updatedConditions)).ToNot(BeZero())
@@ -446,7 +439,6 @@ var _ = Describe("Garden health", func() {
 								virtualComponentsHealthyCondition,
 								observabilityComponentsHealthyCondition,
 							},
-							nil,
 						)
 
 						Expect(len(updatedConditions)).ToNot(BeZero())
@@ -556,7 +548,6 @@ var _ = Describe("Garden health", func() {
 						virtualComponentsHealthyCondition,
 						observabilityComponentsHealthyCondition,
 					},
-					nil,
 				)
 				Expect(len(updatedConditions)).ToNot(BeZero())
 				Expect(updatedConditions).To(ContainElements(
@@ -584,7 +575,6 @@ var _ = Describe("Garden health", func() {
 						virtualComponentsHealthyCondition,
 						observabilityComponentsHealthyCondition,
 					},
-					nil,
 				)
 				Expect(len(updatedConditions)).ToNot(BeZero())
 				Expect(updatedConditions).To(ContainElements(
@@ -616,7 +606,6 @@ var _ = Describe("Garden health", func() {
 						virtualComponentsHealthyCondition,
 						observabilityComponentsHealthyCondition,
 					},
-					nil,
 				)
 				Expect(len(updatedConditions)).ToNot(BeZero())
 				Expect(updatedConditions).To(ContainElements(
@@ -644,7 +633,6 @@ var _ = Describe("Garden health", func() {
 						virtualComponentsHealthyCondition,
 						observabilityComponentsHealthyCondition,
 					},
-					nil,
 				)
 				Expect(len(updatedConditions)).ToNot(BeZero())
 				Expect(updatedConditions).To(ContainElements(
@@ -670,7 +658,6 @@ var _ = Describe("Garden health", func() {
 						virtualComponentsHealthyCondition,
 						observabilityComponentsHealthyCondition,
 					},
-					nil,
 				)
 				Expect(len(updatedConditions)).ToNot(BeZero())
 				Expect(updatedConditions).To(ContainElements(
@@ -698,7 +685,6 @@ var _ = Describe("Garden health", func() {
 						virtualComponentsHealthyCondition,
 						observabilityComponentsHealthyCondition,
 					},
-					nil,
 				)
 				Expect(len(updatedConditions)).ToNot(BeZero())
 				Expect(updatedConditions).To(ContainElements(
@@ -729,7 +715,6 @@ var _ = Describe("Garden health", func() {
 						virtualComponentsHealthyCondition,
 						observabilityComponentsHealthyCondition,
 					},
-					nil,
 				)
 				Expect(len(updatedConditions)).ToNot(BeZero())
 				Expect(updatedConditions).To(ContainElements(
@@ -760,7 +745,6 @@ var _ = Describe("Garden health", func() {
 						virtualComponentsHealthyCondition,
 						observabilityComponentsHealthyCondition,
 					},
-					nil,
 				)
 				Expect(len(updatedConditions)).ToNot(BeZero())
 				Expect(updatedConditions).To(ContainElements(
