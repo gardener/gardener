@@ -81,10 +81,6 @@ var _ = BeforeSuite(func() {
 		},
 	}
 
-	// TODO(timuthy): `MinDomainsInPodTopologySpread` feature gate is enabled by default as of Kubernetes v1.27. The following lines can be dropped as soon as `envtest` is updated.
-	args := testEnv.ControlPlane.APIServer.Configure()
-	args.Set("feature-gates", "MinDomainsInPodTopologySpread=true")
-
 	var err error
 	restConfig, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
