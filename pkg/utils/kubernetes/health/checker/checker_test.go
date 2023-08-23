@@ -33,7 +33,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/operation/care"
 	. "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -467,81 +466,7 @@ var _ = Describe("HealthChecker", func() {
 				PointTo(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "FooUnhealthyReport", "failing health check")),
 			),
 		)
-
-		DescribeTable("#PardonCondition",
-			func(condition gardencorev1beta1.Condition, lastOp *gardencorev1beta1.LastOperation, lastErrors []gardencorev1beta1.LastError, expected types.GomegaMatcher) {
-				conditions := []gardencorev1beta1.Condition{condition}
-				updatedConditions := care.PardonConditions(fakeClock, conditions, lastOp, lastErrors)
-				Expect(updatedConditions).To(expected)
-			},
-			Entry("should pardon false ConditionStatus when the last operation is nil",
-				gardencorev1beta1.Condition{
-					Type:   gardencorev1beta1.ShootAPIServerAvailable,
-					Status: gardencorev1beta1.ConditionFalse,
-				},
-				nil,
-				nil,
-				ConsistOf(beConditionWithStatus(gardencorev1beta1.ConditionProgressing))),
-			Entry("should pardon false ConditionStatus when the last operation is create processing",
-				gardencorev1beta1.Condition{
-					Type:   gardencorev1beta1.ShootAPIServerAvailable,
-					Status: gardencorev1beta1.ConditionFalse,
-				},
-				&gardencorev1beta1.LastOperation{
-					Type:  gardencorev1beta1.LastOperationTypeCreate,
-					State: gardencorev1beta1.LastOperationStateProcessing,
-				},
-				nil,
-				ConsistOf(beConditionWithStatus(gardencorev1beta1.ConditionProgressing))),
-			Entry("should pardon false ConditionStatus when the last operation is delete processing",
-				gardencorev1beta1.Condition{
-					Type:   gardencorev1beta1.ShootAPIServerAvailable,
-					Status: gardencorev1beta1.ConditionFalse,
-				},
-				&gardencorev1beta1.LastOperation{
-					Type:  gardencorev1beta1.LastOperationTypeDelete,
-					State: gardencorev1beta1.LastOperationStateProcessing,
-				},
-				nil,
-				ConsistOf(beConditionWithStatus(gardencorev1beta1.ConditionProgressing))),
-			Entry("should pardon false ConditionStatus when the last operation is processing and no last errors",
-				gardencorev1beta1.Condition{
-					Type:   gardencorev1beta1.ShootAPIServerAvailable,
-					Status: gardencorev1beta1.ConditionFalse,
-				},
-				&gardencorev1beta1.LastOperation{
-					Type:  gardencorev1beta1.LastOperationTypeReconcile,
-					State: gardencorev1beta1.LastOperationStateProcessing,
-				},
-				nil,
-				ConsistOf(beConditionWithStatus(gardencorev1beta1.ConditionProgressing))),
-			Entry("should not pardon false ConditionStatus when the last operation is processing and last errors",
-				gardencorev1beta1.Condition{
-					Type:   gardencorev1beta1.ShootAPIServerAvailable,
-					Status: gardencorev1beta1.ConditionFalse,
-				},
-				&gardencorev1beta1.LastOperation{
-					Type:  gardencorev1beta1.LastOperationTypeReconcile,
-					State: gardencorev1beta1.LastOperationStateProcessing,
-				},
-				[]gardencorev1beta1.LastError{
-					{Description: "error"},
-				},
-				ConsistOf(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
-			Entry("should not pardon false ConditionStatus when the last operation is create succeeded",
-				gardencorev1beta1.Condition{
-					Type:   gardencorev1beta1.ShootAPIServerAvailable,
-					Status: gardencorev1beta1.ConditionFalse,
-				},
-				&gardencorev1beta1.LastOperation{
-					Type:  gardencorev1beta1.LastOperationTypeCreate,
-					State: gardencorev1beta1.LastOperationStateSucceeded,
-				},
-				nil,
-				ConsistOf(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
-		)
 	})
-
 })
 
 func beConditionWithStatusReasonAndMessage(status gardencorev1beta1.ConditionStatus, reason, message string) types.GomegaMatcher {
