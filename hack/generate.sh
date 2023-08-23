@@ -62,7 +62,7 @@ run_target() {
       $REPO_ROOT/hack/update-protobuf.sh
       ;;
     codegen)
-      $REPO_ROOT/hack/update-codegen.sh
+      $REPO_ROOT/hack/update-codegen.sh --"$MODE"
       ;;
     manifests)
       if [[ "$MODE" == "sequential" ]]; then

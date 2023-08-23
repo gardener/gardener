@@ -468,7 +468,7 @@ if [[ $# -gt 0 && "$1" == "--parallel" ]]; then
     shoottolerationrestriction_groups \
     shootdnsrewriting_groups \
     provider_local_groups \
-    extensions_config_groups
+    extensions_config_groups \
     resourcemanager_groups
 else
   authentication_groups
