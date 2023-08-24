@@ -238,7 +238,7 @@ type ShootCredentialsRotation struct {
 	SSHKeypair *ShootSSHKeypairRotation `json:"sshKeypair,omitempty" protobuf:"bytes,3,opt,name=sshKeypair"`
 	// Observability contains information about the observability credential rotation.
 	// +optional
-	Observability *ShootObservabilityRotation `json:"observability,omitempty" protobuf:"bytes,4,opt,name=observability"`
+	Observability *ObservabilityRotation `json:"observability,omitempty" protobuf:"bytes,4,opt,name=observability"`
 	// ServiceAccountKey contains information about the service account key credential rotation.
 	// +optional
 	ServiceAccountKey *ServiceAccountKeyRotation `json:"serviceAccountKey,omitempty" protobuf:"bytes,5,opt,name=serviceAccountKey"`
@@ -288,8 +288,8 @@ type ShootSSHKeypairRotation struct {
 	LastCompletionTime *metav1.Time `json:"lastCompletionTime,omitempty" protobuf:"bytes,2,opt,name=lastCompletionTime"`
 }
 
-// ShootObservabilityRotation contains information about the observability credential rotation.
-type ShootObservabilityRotation struct {
+// ObservabilityRotation contains information about the observability credential rotation.
+type ObservabilityRotation struct {
 	// LastInitiationTime is the most recent time when the observability credential rotation was initiated.
 	// +optional
 	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,1,opt,name=lastInitiationTime"`
