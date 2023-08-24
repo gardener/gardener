@@ -575,7 +575,7 @@ func (r *Reconciler) updateShootStatusOperationStart(
 			startRotationSSHKeypair(shoot, &now)
 		}
 
-	case v1beta1constants.ShootOperationRotateObservabilityCredentials:
+	case v1beta1constants.OperationRotateObservabilityCredentials:
 		mustRemoveOperationAnnotation = true
 		startRotationObservability(shoot, &now)
 

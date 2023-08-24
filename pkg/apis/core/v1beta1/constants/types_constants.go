@@ -382,10 +382,10 @@ const (
 	// OperationRotateCAComplete is a constant for an annotation indicating that the rotation of the certificate
 	// authorities shall be completed.
 	OperationRotateCAComplete = "rotate-ca-complete"
-	// ShootOperationRotateObservabilityCredentials is a constant for an annotation on a Shoot indicating that the
+	// OperationRotateObservabilityCredentials is a constant for an annotation on a Shoot indicating that the
 	// credentials for the observability stack secret shall be rotated. Note that this only affects the user credentials
 	// since the operator credentials are rotated automatically each `30d`.
-	ShootOperationRotateObservabilityCredentials = "rotate-observability-credentials"
+	OperationRotateObservabilityCredentials = "rotate-observability-credentials"
 	// OperationRotateServiceAccountKeyStart is a constant for an annotation on a Shoot indicating that the
 	// rotation of the service account signing key shall be started.
 	OperationRotateServiceAccountKeyStart = "rotate-serviceaccount-key-start"
