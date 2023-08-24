@@ -52,7 +52,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	kuberneteshealth "github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	healthchecker "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
 )
 
@@ -74,8 +74,8 @@ var (
 	)
 )
 
-// Health contains information needed to execute shoot health checks.
-type Health struct {
+// health contains information needed to execute shoot health checks.
+type health struct {
 	shoot        *shoot.Shoot
 	gardenClient client.Client
 	seedClient   kubernetes.Interface
@@ -94,8 +94,8 @@ type Health struct {
 type ShootClientInit func() (kubernetes.Interface, bool, error)
 
 // NewHealth creates a new Health instance with the given parameters.
-func NewHealth(op *operation.Operation, shootClientInit ShootClientInit, clock clock.Clock) *Health {
-	return &Health{
+func NewHealth(op *operation.Operation, shootClientInit ShootClientInit, clock clock.Clock) HealthCheck {
+	return &health{
 		shoot:                  op.Shoot,
 		gardenClient:           op.GardenClient,
 		seedClient:             op.SeedClientSet,
@@ -109,7 +109,7 @@ func NewHealth(op *operation.Operation, shootClientInit ShootClientInit, clock c
 }
 
 // Check conducts the health checks on all the given conditions.
-func (h *Health) Check(
+func (h *health) Check(
 	ctx context.Context,
 	thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration,
 	healthCheckOutdatedThreshold *metav1.Duration,
@@ -122,7 +122,7 @@ func (h *Health) Check(
 	return PardonConditions(h.clock, updatedConditions, lastOp, lastErrors)
 }
 
-func (h *Health) getAllExtensionConditions(ctx context.Context) ([]healthchecker.ExtensionCondition, []healthchecker.ExtensionCondition, []healthchecker.ExtensionCondition, error) {
+func (h *health) getAllExtensionConditions(ctx context.Context) ([]healthchecker.ExtensionCondition, []healthchecker.ExtensionCondition, []healthchecker.ExtensionCondition, error) {
 	objs, err := h.retrieveExtensions(ctx)
 	if err != nil {
 		return nil, nil, nil, err
@@ -198,7 +198,7 @@ func (h *Health) getAllExtensionConditions(ctx context.Context) ([]healthchecker
 	return conditionsControlPlaneHealthy, conditionsEveryNodeReady, conditionsSystemComponentsHealthy, nil
 }
 
-func (h *Health) retrieveExtensions(ctx context.Context) ([]runtime.Object, error) {
+func (h *health) retrieveExtensions(ctx context.Context) ([]runtime.Object, error) {
 	var (
 		allExtensions       []runtime.Object
 		extensionObjectList = []client.ObjectList{
@@ -242,7 +242,7 @@ func (h *Health) retrieveExtensions(ctx context.Context) ([]runtime.Object, erro
 	return allExtensions, nil
 }
 
-func (h *Health) getLastHeartbeatTimeForExtension(ctx context.Context, controllerInstallations *gardencorev1beta1.ControllerInstallationList, controllerRegistrations *gardencorev1beta1.ControllerRegistrationList, extensionKind, extensionType string) (*metav1.MicroTime, error) {
+func (h *health) getLastHeartbeatTimeForExtension(ctx context.Context, controllerInstallations *gardencorev1beta1.ControllerInstallationList, controllerRegistrations *gardencorev1beta1.ControllerRegistrationList, extensionKind, extensionType string) (*metav1.MicroTime, error) {
 	controllerRegistration, err := getControllerRegistrationForExtensionKindAndType(controllerRegistrations, extensionKind, extensionType)
 	if err != nil {
 		return nil, err
@@ -296,7 +296,7 @@ func getControllerInstallationForControllerRegistration(controllerInstallations 
 	return nil, fmt.Errorf("could not find ControllerInstallation for ControllerRegistration %s", client.ObjectKeyFromObject(controllerRegistration))
 }
 
-func (h *Health) healthChecks(
+func (h *health) healthChecks(
 	ctx context.Context,
 	thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration,
 	healthCheckOutdatedThreshold *metav1.Duration,
@@ -396,14 +396,14 @@ func (h *Health) healthChecks(
 }
 
 // checkAPIServerAvailability checks if the API server of a Shoot cluster is reachable and measure the response time.
-func (h *Health) checkAPIServerAvailability(ctx context.Context, checker *healthchecker.HealthChecker, condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
-	return health.CheckAPIServerAvailability(ctx, h.clock, h.log, condition, h.shootClient.RESTClient(), func(conditionType, message string) gardencorev1beta1.Condition {
+func (h *health) checkAPIServerAvailability(ctx context.Context, checker *healthchecker.HealthChecker, condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
+	return kuberneteshealth.CheckAPIServerAvailability(ctx, h.clock, h.log, condition, h.shootClient.RESTClient(), func(conditionType, message string) gardencorev1beta1.Condition {
 		return checker.FailedCondition(condition, conditionType, message)
 	})
 }
 
 // checkControlPlane checks whether the core components of the Shoot controlplane (ETCD, KAPI, KCM..) are healthy.
-func (h *Health) checkControlPlane(
+func (h *health) checkControlPlane(
 	ctx context.Context,
 	checker *healthchecker.HealthChecker,
 	condition gardencorev1beta1.Condition,
@@ -422,7 +422,7 @@ func (h *Health) checkControlPlane(
 }
 
 // checkObservabilityComponents checks whether the  observability components of the Shoot control plane (Prometheus, Vali, Plutono..) are healthy.
-func (h *Health) checkObservabilityComponents(
+func (h *health) checkObservabilityComponents(
 	ctx context.Context,
 	checker *healthchecker.HealthChecker,
 	condition gardencorev1beta1.Condition,
@@ -448,7 +448,7 @@ func (h *Health) checkObservabilityComponents(
 }
 
 // checkSystemComponents checks whether the system components of a Shoot are running.
-func (h *Health) checkSystemComponents(
+func (h *health) checkSystemComponents(
 	ctx context.Context,
 	checker *healthchecker.HealthChecker,
 	condition gardencorev1beta1.Condition,
@@ -503,7 +503,7 @@ func (h *Health) checkSystemComponents(
 
 // checkClusterNodes checks whether every node registered at the Shoot cluster is in "Ready" state, that
 // as many nodes are registered as desired, and that every machine is running.
-func (h *Health) checkClusterNodes(
+func (h *health) checkClusterNodes(
 	ctx context.Context,
 	seedNamespace string,
 	checker *healthchecker.HealthChecker,

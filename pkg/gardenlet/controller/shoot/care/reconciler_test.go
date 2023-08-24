@@ -518,7 +518,7 @@ func (h resultingConditionFunc) Check(_ context.Context, _ map[gardencorev1beta1
 }
 
 func healthCheckFunc(fn resultingConditionFunc) NewHealthCheckFunc {
-	return func(op *operation.Operation, init care.ShootClientInit, clock clock.Clock) HealthCheck {
+	return func(op *operation.Operation, init care.ShootClientInit, clock clock.Clock) care.HealthCheck {
 		return fn
 	}
 }
@@ -530,7 +530,7 @@ func (c resultingConstraintFunc) Check(_ context.Context, constraints []gardenco
 }
 
 func constraintCheckFunc(fn resultingConstraintFunc) NewConstraintCheckFunc {
-	return func(clock clock.Clock, op *operation.Operation, init care.ShootClientInit) ConstraintCheck {
+	return func(clock clock.Clock, op *operation.Operation, init care.ShootClientInit) care.ConstraintCheck {
 		return fn
 	}
 }
@@ -557,7 +557,7 @@ type nopGarbageCollector struct{}
 func (n *nopGarbageCollector) Collect(_ context.Context) {}
 
 func nopGarbageCollectorFunc() NewGarbageCollectorFunc {
-	return func(_ *operation.Operation, _ care.ShootClientInit) GarbageCollector {
+	return func(_ *operation.Operation, _ care.ShootClientInit) care.GarbageCollector {
 		return &nopGarbageCollector{}
 	}
 }

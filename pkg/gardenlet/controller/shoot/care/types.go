@@ -16,11 +16,9 @@ package care
 
 import (
 	"context"
-	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -32,55 +30,35 @@ import (
 	"github.com/gardener/gardener/pkg/operation/care"
 )
 
-// HealthCheck is an interface used to perform health checks.
-type HealthCheck interface {
-	Check(ctx context.Context, thresholdMapping map[gardencorev1beta1.ConditionType]time.Duration, threshold *metav1.Duration, conditions []gardencorev1beta1.Condition) []gardencorev1beta1.Condition
-}
-
 // NewHealthCheckFunc is a function used to create a new instance for performing health checks.
-type NewHealthCheckFunc func(op *operation.Operation, init care.ShootClientInit, clock clock.Clock) HealthCheck
+type NewHealthCheckFunc func(op *operation.Operation, init care.ShootClientInit, clock clock.Clock) care.HealthCheck
 
 // defaultNewHealthCheck is the default function to create a new instance for performing health checks.
-var defaultNewHealthCheck NewHealthCheckFunc = func(op *operation.Operation, init care.ShootClientInit, clock clock.Clock) HealthCheck {
+var defaultNewHealthCheck NewHealthCheckFunc = func(op *operation.Operation, init care.ShootClientInit, clock clock.Clock) care.HealthCheck {
 	return care.NewHealth(op, init, clock)
 }
 
-// ConstraintCheck is an interface used to perform constraint checks.
-type ConstraintCheck interface {
-	Check(ctx context.Context, constraints []gardencorev1beta1.Condition) []gardencorev1beta1.Condition
-}
-
 // NewConstraintCheckFunc is a function used to create a new instance for performing constraint checks.
-type NewConstraintCheckFunc func(clock clock.Clock, op *operation.Operation, init care.ShootClientInit) ConstraintCheck
+type NewConstraintCheckFunc func(clock clock.Clock, op *operation.Operation, init care.ShootClientInit) care.ConstraintCheck
 
 // defaultNewConstraintCheck is the default function to create a new instance for performing constraint checks.
-var defaultNewConstraintCheck = func(clock clock.Clock, op *operation.Operation, init care.ShootClientInit) ConstraintCheck {
+var defaultNewConstraintCheck = func(clock clock.Clock, op *operation.Operation, init care.ShootClientInit) care.ConstraintCheck {
 	return care.NewConstraint(clock, op, init)
 }
 
-// GarbageCollector is an interface used to perform garbage collection.
-type GarbageCollector interface {
-	Collect(ctx context.Context)
-}
-
 // NewGarbageCollectorFunc is a function used to create a new instance to perform garbage collection.
-type NewGarbageCollectorFunc func(op *operation.Operation, init care.ShootClientInit) GarbageCollector
+type NewGarbageCollectorFunc func(op *operation.Operation, init care.ShootClientInit) care.GarbageCollector
 
 // defaultNewGarbageCollector is the default function to create a new instance to perform garbage collection.
-var defaultNewGarbageCollector = func(op *operation.Operation, init care.ShootClientInit) GarbageCollector {
+var defaultNewGarbageCollector = func(op *operation.Operation, init care.ShootClientInit) care.GarbageCollector {
 	return care.NewGarbageCollection(op, init)
 }
 
-// WebhookRemediator is an interface used to perform webhook remediation.
-type WebhookRemediator interface {
-	Remediate(ctx context.Context) error
-}
-
 // NewWebhookRemediatorFunc is a function used to create a new instance to perform webhook remediation.
-type NewWebhookRemediatorFunc func(op *operation.Operation, init care.ShootClientInit) WebhookRemediator
+type NewWebhookRemediatorFunc func(op *operation.Operation, init care.ShootClientInit) care.WebhookRemediator
 
 // defaultNewWebhookRemediator is the default function to create a new instance to perform webhook remediation.
-var defaultNewWebhookRemediator = func(op *operation.Operation, init care.ShootClientInit) WebhookRemediator {
+var defaultNewWebhookRemediator = func(op *operation.Operation, init care.ShootClientInit) care.WebhookRemediator {
 	return care.NewWebhookRemediation(op, init)
 }
 

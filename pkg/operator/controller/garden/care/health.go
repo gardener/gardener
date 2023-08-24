@@ -46,7 +46,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	kuberneteshealth "github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	healthchecker "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
 )
 
@@ -88,8 +88,8 @@ var (
 	virtualGardenMonitoringSelector = labels.SelectorFromSet(map[string]string{v1beta1constants.LabelRole: v1beta1constants.LabelMonitoring})
 )
 
-// Health contains information needed to execute health checks for garden.
-type Health struct {
+// health contains information needed to execute health checks for garden.
+type health struct {
 	garden          *operatorv1alpha1.Garden
 	gardenNamespace string
 	runtimeClient   client.Client
@@ -98,8 +98,8 @@ type Health struct {
 }
 
 // NewHealth creates a new Health instance with the given parameters.
-func NewHealth(garden *operatorv1alpha1.Garden, runtimeClient client.Client, gardenClientSet kubernetes.Interface, clock clock.Clock, gardenNamespace string) *Health {
-	return &Health{
+func NewHealth(garden *operatorv1alpha1.Garden, runtimeClient client.Client, gardenClientSet kubernetes.Interface, clock clock.Clock, gardenNamespace string) HealthCheck {
+	return &health{
 		garden:          garden,
 		gardenNamespace: gardenNamespace,
 		runtimeClient:   runtimeClient,
@@ -109,7 +109,7 @@ func NewHealth(garden *operatorv1alpha1.Garden, runtimeClient client.Client, gar
 }
 
 // Check conducts the health checks on all the given conditions.
-func (h *Health) Check(
+func (h *health) Check(
 	ctx context.Context,
 	conditions []gardencorev1beta1.Condition,
 	thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration,
@@ -169,17 +169,17 @@ func (h *Health) Check(
 }
 
 // checkAPIServerAvailability checks if the API server of a virtual garden is reachable and measures the response time.
-func (h *Health) checkAPIServerAvailability(ctx context.Context, checker *healthchecker.HealthChecker, condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
+func (h *health) checkAPIServerAvailability(ctx context.Context, checker *healthchecker.HealthChecker, condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
 	if h.gardenClientSet == nil {
 		return checker.FailedCondition(condition, "VirtualGardenAPIServerDown", "Could not reach virtual garden API server during client initialization.")
 	}
 	log := logf.FromContext(ctx)
-	return health.CheckAPIServerAvailability(ctx, h.clock, log, condition, h.gardenClientSet.RESTClient(), func(conditionType, message string) gardencorev1beta1.Condition {
+	return kuberneteshealth.CheckAPIServerAvailability(ctx, h.clock, log, condition, h.gardenClientSet.RESTClient(), func(conditionType, message string) gardencorev1beta1.Condition {
 		return checker.FailedCondition(condition, conditionType, message)
 	})
 }
 
-func (h *Health) checkRuntimeComponents(ctx context.Context, checker *healthchecker.HealthChecker, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
+func (h *health) checkRuntimeComponents(ctx context.Context, checker *healthchecker.HealthChecker, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
 	managedResources := sets.List(requiredGardenRuntimeManagedResources)
 	managedResources = append(managedResources, istio.ManagedResourceNames(true, "virtual-garden-")...)
 
@@ -193,7 +193,7 @@ func (h *Health) checkRuntimeComponents(ctx context.Context, checker *healthchec
 	return h.checkManagedResources(ctx, checker, condition, managedResources, "RuntimeComponentsRunning", "All runtime components are healthy.")
 }
 
-func (h *Health) checkVirtualComponents(ctx context.Context, checker *healthchecker.HealthChecker, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
+func (h *health) checkVirtualComponents(ctx context.Context, checker *healthchecker.HealthChecker, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
 	if exitCondition, err := checker.CheckControlPlane(
 		ctx,
 		h.gardenNamespace,
@@ -209,7 +209,7 @@ func (h *Health) checkVirtualComponents(ctx context.Context, checker *healthchec
 	return h.checkManagedResources(ctx, checker, condition, managedResources, "VirtualComponentsRunning", "All virtual garden components are healthy.")
 }
 
-func (h *Health) checkManagedResources(
+func (h *health) checkManagedResources(
 	ctx context.Context,
 	checker *healthchecker.HealthChecker,
 	condition gardencorev1beta1.Condition,
@@ -244,7 +244,7 @@ func (h *Health) checkManagedResources(
 }
 
 // checkObservabilityComponents checks whether the  observability components of the virtual garden control plane (Prometheus, Vali, Plutono..) are healthy.
-func (h *Health) checkObservabilityComponents(ctx context.Context, checker *healthchecker.HealthChecker, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
+func (h *health) checkObservabilityComponents(ctx context.Context, checker *healthchecker.HealthChecker, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
 	requiredDeployments := requiredMonitoringDeployments.Clone()
 
 	if exitCondition, err := checker.CheckMonitoringControlPlane(ctx, h.gardenNamespace, requiredDeployments, sets.New[string](), virtualGardenMonitoringSelector, condition); err != nil || exitCondition != nil {
@@ -259,7 +259,7 @@ func (h *Health) checkObservabilityComponents(ctx context.Context, checker *heal
 	return &c, nil
 }
 
-func (h *Health) isVPAEnabled() bool {
+func (h *health) isVPAEnabled() bool {
 	return h.garden.Spec.RuntimeCluster.Settings != nil &&
 		h.garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler != nil &&
 		pointer.BoolDeref(h.garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler.Enabled, false)

@@ -54,8 +54,8 @@ var requiredManagedResourcesSeed = sets.New(
 	vpa.ManagedResourceControlName,
 )
 
-// Health contains information needed to execute health checks for a seed.
-type Health struct {
+// health contains information needed to execute health checks for a seed.
+type health struct {
 	seed           *gardencorev1beta1.Seed
 	seedClient     client.Client
 	clock          clock.Clock
@@ -65,8 +65,8 @@ type Health struct {
 }
 
 // NewHealth creates a new Health instance with the given parameters.
-func NewHealth(seed *gardencorev1beta1.Seed, seedClient client.Client, clock clock.Clock, namespace *string, seedIsGarden bool, loggingEnabled bool) *Health {
-	return &Health{
+func NewHealth(seed *gardencorev1beta1.Seed, seedClient client.Client, clock clock.Clock, namespace *string, seedIsGarden bool, loggingEnabled bool) HealthCheck {
+	return &health{
 		seedClient:     seedClient,
 		seed:           seed,
 		clock:          clock,
@@ -77,7 +77,7 @@ func NewHealth(seed *gardencorev1beta1.Seed, seedClient client.Client, clock clo
 }
 
 // Check conducts the health checks on all the given conditions.
-func (h *Health) Check(
+func (h *health) Check(
 	ctx context.Context,
 	conditions []gardencorev1beta1.Condition,
 	thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration,
@@ -97,7 +97,7 @@ func (h *Health) Check(
 	return []gardencorev1beta1.Condition{healthchecker.NewConditionOrError(h.clock, systemComponentsCondition, newSystemComponentsCondition, err)}
 }
 
-func (h *Health) checkSeedSystemComponents(
+func (h *health) checkSeedSystemComponents(
 	ctx context.Context,
 	checker *healthchecker.HealthChecker,
 	condition gardencorev1beta1.Condition,
