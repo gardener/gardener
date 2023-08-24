@@ -149,6 +149,7 @@ func validateResourceManagerWebhookConfiguration(conf config.ResourceManagerWebh
 	allErrs = append(allErrs, validatePodSchedulerNameWebhookConfiguration(conf.PodSchedulerName, fldPath.Child("podSchedulerName"))...)
 	allErrs = append(allErrs, validateProjectedTokenMountWebhookConfiguration(conf.ProjectedTokenMount, fldPath.Child("projectedTokenMount"))...)
 	allErrs = append(allErrs, validateHighAvailabilityConfigWebhookConfiguration(conf.HighAvailabilityConfig, fldPath.Child("highAvailabilityConfig"))...)
+	allErrs = append(allErrs, validateSystemComponentsConfigWebhookConfig(&conf.SystemComponentsConfig, fldPath.Child("systemComponentsConfig"))...)
 
 	return allErrs
 }
@@ -202,11 +203,10 @@ func validateSyncPeriod(val *metav1.Duration, fldPath *field.Path) field.ErrorLi
 	return allErrs
 }
 
-// ValidateSystemComponentsConfigWebhookConfig validates the given `SystemComponentsConfigWebhookConfig`.
-func ValidateSystemComponentsConfigWebhookConfig(conf *config.SystemComponentsConfigWebhookConfig) field.ErrorList {
+func validateSystemComponentsConfigWebhookConfig(conf *config.SystemComponentsConfigWebhookConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, corevalidation.ValidateTolerations(conf.PodTolerations, field.NewPath("podTolerations"))...)
+	allErrs = append(allErrs, corevalidation.ValidateTolerations(conf.PodTolerations, fldPath.Child("podTolerations"))...)
 
 	return allErrs
 }
