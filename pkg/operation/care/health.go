@@ -523,7 +523,7 @@ func (h *Health) checkClusterNodes(
 
 var monitoringSelector = labels.SelectorFromSet(map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring})
 
-// CheckShootMonitoringControlPlane checks whether the monitoring in the given listers are complete and healthy.
+// CheckShootMonitoringControlPlane checks whether the monitoring components of the given shoot are complete and healthy.
 func CheckShootMonitoringControlPlane(
 	ctx context.Context,
 	shoot *gardencorev1beta1.Shoot,
@@ -543,7 +543,7 @@ func CheckShootMonitoringControlPlane(
 	return checker.CheckMonitoringControlPlane(ctx, namespace, computeRequiredMonitoringSeedDeployments(shoot), computeRequiredMonitoringStatefulSets(wantsAlertmanager), monitoringSelector, condition)
 }
 
-// computeRequiredMonitoringStatefulSets determine the required monitoring statefulsets
+// computeRequiredMonitoringStatefulSets determines the required monitoring statefulsets
 // which should exist next to the control plane.
 func computeRequiredMonitoringStatefulSets(wantsAlertmanager bool) sets.Set[string] {
 	var requiredMonitoringStatefulSets = sets.New(v1beta1constants.StatefulSetNamePrometheus)
@@ -585,8 +585,8 @@ func CheckShootControlPlane(
 // handled by machine-controller-manager.
 const annotationKeyNotManagedByMCM = "node.machine.sapcloud.io/not-managed-by-mcm"
 
-// CheckClusterNodes checks whether cluster nodes in the given listers are healthy and within the desired range.
-// Additional checks are executed in the provider extension
+// CheckClusterNodes checks whether cluster nodes for the given shoot are healthy and within the desired range.
+// Additional checks are executed in the provider extension.
 func CheckClusterNodes(
 	ctx context.Context,
 	shootClient client.Client,
@@ -709,7 +709,7 @@ func CheckClusterNodes(
 	return nil, nil
 }
 
-// CheckNodesScalingUp returns an error of nodes are being scaled up.
+// CheckNodesScalingUp returns an error if nodes are being scaled up.
 func CheckNodesScalingUp(machineList *machinev1alpha1.MachineList, readyNodes, desiredMachines int) error {
 	if readyNodes == desiredMachines {
 		return nil
@@ -811,7 +811,7 @@ func cosmeticMachineMessage(numberOfMachines int) string {
 	return fmt.Sprintf("%d machines are", numberOfMachines)
 }
 
-// This is a hack to quickly do a cloud provider specific check for the required control plane deployments.
+// computeRequiredControlPlaneDeployments is a hack to quickly do a cloud provider specific check for the required control plane deployments.
 func computeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot) (sets.Set[string], error) {
 	requiredControlPlaneDeployments := requiredShootControlPlaneDeployments.Clone()
 

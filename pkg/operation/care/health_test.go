@@ -182,7 +182,7 @@ var _ = Describe("health check", func() {
 		}
 	})
 
-	DescribeTable("#CheckShootontrolPlane",
+	DescribeTable("#CheckShootControlPlane",
 		func(shoot *gardencorev1beta1.Shoot, deployments []*appsv1.Deployment, etcds []*druidv1alpha1.Etcd, workers []*extensionsv1alpha1.Worker, conditionMatcher types.GomegaMatcher) {
 			for _, obj := range deployments {
 				Expect(fakeClient.Create(ctx, obj.DeepCopy())).To(Succeed(), "creating deployment "+client.ObjectKeyFromObject(obj).String())
