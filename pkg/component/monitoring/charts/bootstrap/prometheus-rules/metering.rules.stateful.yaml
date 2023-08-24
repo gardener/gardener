@@ -109,12 +109,9 @@ groups:
 
   - record: metering:persistent_volume_claims:sum_by_namespace:avg_over_time
     expr: |2
-          metering:persistent_volume_claims:sum_by_namespace:sum_over_time * 60
-        /
-          (metering:disk_usage_seconds != 0)
-      or
-        metering:persistent_volume_claims:sum_by_namespace:sum_over_time
-
+        metering:persistent_volume_claims:sum_by_namespace:sum_over_time * 60
+      /
+        (metering:disk_usage_seconds != 0)
 
   - record: metering:persistent_volume_claims:sum_by_namespace:avg_over_time:this_month
     expr: |2
