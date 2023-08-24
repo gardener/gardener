@@ -93,6 +93,7 @@ var _ = Describe("Validation Tests", func() {
 				Entry("complete ServiceAccount key rotation", "rotate-serviceaccount-key-complete"),
 				Entry("start ETCD encryption key rotation", "rotate-etcd-encryption-key-start"),
 				Entry("complete ETCD encryption key rotation", "rotate-etcd-encryption-key-complete"),
+				Entry("start Observability key rotation", "rotate-observability-credentials"),
 			)
 
 			DescribeTable("starting rotation of all credentials",
