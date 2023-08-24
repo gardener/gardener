@@ -22,6 +22,155 @@
   "panels": [
     {
       "datasource": null,
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/CPU/"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "core"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/Memory/"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 34,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "value_and_name"
+      },
+      "pluginVersion": "7.5.23",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "metering:node_capacity:sum_by_instance_type:avg_over_time:this_month{resource=\"cpu\"}",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "{{instance_type}} CPU",
+          "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "metering:node_capacity:sum_by_instance_type:avg_over_time:this_month{resource=\"memory\"}",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "{{instance_type}} Memory",
+          "refId": "B"
+        }
+      ],
+      "title": "Seed capacity by instance type (average this month)",
+      "type": "stat"
+    },
+    {
+      "datasource": null,
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 35,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "value_and_name"
+      },
+      "pluginVersion": "7.5.23",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "metering:node_cp_usage:sum_by_instance_type:avg_over_time:this_month / metering:node_capacity:sum_by_instance_type:avg_over_time:this_month * 100",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "{{instance_type}} {{resource}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Seed utilization for shoot control planes by instance type (average this month)",
+      "type": "stat"
+    },
+    {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -44,7 +193,7 @@
         "h": 8,
         "w": 5,
         "x": 0,
-        "y": 0
+        "y": 4
       },
       "id": 27,
       "options": {
@@ -114,7 +263,7 @@
         "h": 4,
         "w": 10,
         "x": 5,
-        "y": 0
+        "y": 4
       },
       "id": 29,
       "options": {
@@ -198,7 +347,7 @@
         "h": 4,
         "w": 9,
         "x": 15,
-        "y": 0
+        "y": 4
       },
       "id": 30,
       "options": {
@@ -282,7 +431,7 @@
         "h": 4,
         "w": 10,
         "x": 5,
-        "y": 4
+        "y": 8
       },
       "id": 31,
       "options": {
@@ -366,7 +515,7 @@
         "h": 4,
         "w": 9,
         "x": 15,
-        "y": 4
+        "y": 8
       },
       "id": 32,
       "options": {
@@ -574,7 +723,7 @@
         "h": 11,
         "w": 24,
         "x": 0,
-        "y": 8
+        "y": 12
       },
       "id": 22,
       "options": {
@@ -899,7 +1048,7 @@
         "h": 11,
         "w": 24,
         "x": 0,
-        "y": 19
+        "y": 23
       },
       "id": 25,
       "options": {
