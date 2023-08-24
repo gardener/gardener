@@ -230,6 +230,11 @@ func (in *CredentialsRotation) DeepCopyInto(out *CredentialsRotation) {
 		*out = new(v1beta1.ETCDEncryptionKeyRotation)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Observability != nil {
+		in, out := &in.Observability, &out.Observability
+		*out = new(v1beta1.ObservabilityRotation)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 

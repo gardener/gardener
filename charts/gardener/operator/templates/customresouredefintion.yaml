@@ -1508,6 +1508,22 @@ spec:
                         required:
                         - phase
                         type: object
+                      observability:
+                        description: Observability contains information about the
+                          observability credential rotation.
+                        properties:
+                          lastCompletionTime:
+                            description: LastCompletionTime is the most recent time
+                              when the observability credential rotation was successfully
+                              completed.
+                            format: date-time
+                            type: string
+                          lastInitiationTime:
+                            description: LastInitiationTime is the most recent time
+                              when the observability credential rotation was initiated.
+                            format: date-time
+                            type: string
+                        type: object
                       serviceAccountKey:
                         description: ServiceAccountKey contains information about
                           the service account key credential rotation.
