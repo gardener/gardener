@@ -92,7 +92,7 @@ var _ = Describe("Warnings", func() {
 						CertificateAuthorities: &core.CARotation{},
 						Kubeconfig:             &core.ShootKubeconfigRotation{},
 						SSHKeypair:             &core.ShootSSHKeypairRotation{},
-						Observability:          &core.ShootObservabilityRotation{},
+						Observability:          &core.ObservabilityRotation{},
 						ServiceAccountKey:      &core.ServiceAccountKeyRotation{},
 						ETCDEncryptionKey:      &core.ETCDEncryptionKeyRotation{},
 					}
