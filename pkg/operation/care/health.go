@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/client-go/rest"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -80,7 +81,6 @@ type Health struct {
 	seedClient   kubernetes.Interface
 
 	initializeShootClients ShootClientInit
-	shootClient            kubernetes.Interface
 
 	log logr.Logger
 
@@ -101,7 +101,6 @@ func NewHealth(op *operation.Operation, shootClientInit ShootClientInit, clock c
 		gardenClient:           op.GardenClient,
 		seedClient:             op.SeedClientSet,
 		initializeShootClients: shootClientInit,
-		shootClient:            op.ShootClientSet,
 		clock:                  clock,
 		log:                    op.Logger,
 		gardenletConfiguration: op.Config,
@@ -355,10 +354,9 @@ func (h *Health) healthChecks(
 		return []gardencorev1beta1.Condition{apiserverAvailability, controlPlane, observabilityComponents, nodes, systemComponents}
 	}
 
-	h.shootClient = shootClient
 	taskFns := []flow.TaskFn{
 		func(ctx context.Context) error {
-			apiserverAvailability = h.checkAPIServerAvailability(ctx, apiserverAvailability)
+			apiserverAvailability = h.checkAPIServerAvailability(ctx, shootClient.RESTClient(), apiserverAvailability)
 			return nil
 		}, func(ctx context.Context) error {
 			newControlPlane, err := h.checkControlPlane(ctx, controlPlane, extensionConditionsControlPlaneHealthy, healthCheckOutdatedThreshold)
@@ -369,7 +367,7 @@ func (h *Health) healthChecks(
 			observabilityComponents = v1beta1helper.NewConditionOrError(h.clock, observabilityComponents, newObservabilityComponents, err)
 			return nil
 		}, func(ctx context.Context) error {
-			newSystemComponents, err := h.checkSystemComponents(ctx, systemComponents, extensionConditionsSystemComponentsHealthy, healthCheckOutdatedThreshold)
+			newSystemComponents, err := h.checkSystemComponents(ctx, shootClient, systemComponents, extensionConditionsSystemComponentsHealthy, healthCheckOutdatedThreshold)
 			systemComponents = v1beta1helper.NewConditionOrError(h.clock, systemComponents, newSystemComponents, err)
 			return nil
 		},
@@ -383,7 +381,7 @@ func (h *Health) healthChecks(
 
 	taskFns = append(taskFns,
 		func(ctx context.Context) error {
-			newNodes, err := h.checkWorkers(ctx, nodes, extensionConditionsEveryNodeReady, healthCheckOutdatedThreshold)
+			newNodes, err := h.checkWorkers(ctx, shootClient, nodes, extensionConditionsEveryNodeReady, healthCheckOutdatedThreshold)
 			nodes = v1beta1helper.NewConditionOrError(h.clock, nodes, newNodes, err)
 			return nil
 		},
@@ -395,8 +393,8 @@ func (h *Health) healthChecks(
 }
 
 // checkAPIServerAvailability checks if the API server of a Shoot cluster is reachable and measure the response time.
-func (h *Health) checkAPIServerAvailability(ctx context.Context, condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
-	return health.CheckAPIServerAvailability(ctx, h.clock, h.log, condition, h.shootClient.RESTClient(), func(conditionType, message string) gardencorev1beta1.Condition {
+func (h *Health) checkAPIServerAvailability(ctx context.Context, shootRestClient rest.Interface, condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
+	return health.CheckAPIServerAvailability(ctx, h.clock, h.log, condition, shootRestClient, func(conditionType, message string) gardencorev1beta1.Condition {
 		return v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, conditionType, message)
 	})
 }
@@ -464,6 +462,7 @@ func (h *Health) checkObservabilityComponents(
 // checkSystemComponents checks whether the system components of a Shoot are running.
 func (h *Health) checkSystemComponents(
 	ctx context.Context,
+	shootClient kubernetes.Interface,
 	condition gardencorev1beta1.Condition,
 	extensionConditions []healthchecker.ExtensionCondition,
 	healthCheckOutdatedThreshold *metav1.Duration,
@@ -492,7 +491,7 @@ func (h *Health) checkSystemComponents(
 
 	if !h.shoot.IsWorkerless {
 		podsList := &corev1.PodList{}
-		if err := h.shootClient.Client().List(ctx, podsList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{"type": "tunnel"}); err != nil {
+		if err := shootClient.Client().List(ctx, podsList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{"type": "tunnel"}); err != nil {
 			return nil, err
 		}
 
@@ -501,7 +500,7 @@ func (h *Health) checkSystemComponents(
 			return &c, nil
 		}
 
-		if established, err := botanist.CheckTunnelConnection(ctx, logr.Discard(), h.shootClient, v1beta1constants.VPNTunnel); err != nil || !established {
+		if established, err := botanist.CheckTunnelConnection(ctx, logr.Discard(), shootClient, v1beta1constants.VPNTunnel); err != nil || !established {
 			msg := "Tunnel connection has not been established"
 			if err != nil {
 				msg += fmt.Sprintf(" (%+v)", err)
@@ -519,6 +518,7 @@ func (h *Health) checkSystemComponents(
 // as many nodes are registered as desired, and that every machine is running.
 func (h *Health) checkWorkers(
 	ctx context.Context,
+	shootClient kubernetes.Interface,
 	condition gardencorev1beta1.Condition,
 	extensionConditions []healthchecker.ExtensionCondition,
 	healthCheckOutdatedThreshold *metav1.Duration,
@@ -526,7 +526,7 @@ func (h *Health) checkWorkers(
 	if exitCondition := h.healthChecker.CheckExtensionCondition(condition, extensionConditions, healthCheckOutdatedThreshold); exitCondition != nil {
 		return exitCondition, nil
 	}
-	if exitCondition, err := h.CheckClusterNodes(ctx, condition); err != nil || exitCondition != nil {
+	if exitCondition, err := h.CheckClusterNodes(ctx, shootClient, condition); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 
@@ -561,17 +561,18 @@ const annotationKeyNotManagedByMCM = "node.machine.sapcloud.io/not-managed-by-mc
 // Additional checks are executed in the provider extension.
 func (h *Health) CheckClusterNodes(
 	ctx context.Context,
+	shootClient kubernetes.Interface,
 	condition gardencorev1beta1.Condition,
 ) (
 	*gardencorev1beta1.Condition,
 	error,
 ) {
-	workerPoolToNodes, err := botanist.WorkerPoolToNodesMap(ctx, h.shootClient.Client())
+	workerPoolToNodes, err := botanist.WorkerPoolToNodesMap(ctx, shootClient.Client())
 	if err != nil {
 		return nil, err
 	}
 
-	workerPoolToCloudConfigSecretMeta, err := botanist.WorkerPoolToCloudConfigSecretMetaMap(ctx, h.shootClient.Client())
+	workerPoolToCloudConfigSecretMeta, err := botanist.WorkerPoolToCloudConfigSecretMetaMap(ctx, shootClient.Client())
 	if err != nil {
 		return nil, err
 	}

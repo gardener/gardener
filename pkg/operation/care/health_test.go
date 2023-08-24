@@ -340,12 +340,11 @@ var _ = Describe("health check", func() {
 				})
 
 				health := NewHealth(&operation.Operation{
-					Shoot:          shootObj,
-					SeedClientSet:  kubernetesfake.NewClientSetBuilder().WithClient(fakeClient).Build(),
-					ShootClientSet: kubernetesfake.NewClientSetBuilder().WithClient(c).Build(),
+					Shoot:         shootObj,
+					SeedClientSet: kubernetesfake.NewClientSetBuilder().WithClient(fakeClient).Build(),
 				}, nil, fakeClock, nil)
 
-				exitCondition, err := health.CheckClusterNodes(ctx, condition)
+				exitCondition, err := health.CheckClusterNodes(ctx, kubernetesfake.NewClientSetBuilder().WithClient(c).Build(), condition)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(exitCondition).To(conditionMatcher)
 			},
