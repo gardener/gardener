@@ -322,43 +322,15 @@ func (h *Health) healthChecks(
 		}
 	}
 
+	// Get extensions' conditions that are examined by health checks.
 	extensionConditionsControlPlaneHealthy, extensionConditionsEveryNodeReady, extensionConditionsSystemComponentsHealthy, err := h.getAllExtensionConditions(ctx)
 	if err != nil {
 		h.log.Error(err, "Error getting extension conditions")
 	}
 
-	shootClient, apiServerRunning, err := h.initializeShootClients()
-	if err != nil || !apiServerRunning {
-		// don't execute health checks if API server has already been deleted or has not been created yet
-		message := shootControlPlaneNotRunningMessage(h.shoot.GetInfo().Status.LastOperation)
-		if err != nil {
-			h.log.Error(err, "Could not initialize Shoot client for health check")
-			message = fmt.Sprintf("Could not initialize Shoot client for health check: %+v", err)
-		}
-
-		apiserverAvailability = v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, apiserverAvailability, "APIServerDown", "Could not reach API server during client initialization.")
-
-		newControlPlane, err := h.checkControlPlane(ctx, controlPlane, extensionConditionsControlPlaneHealthy, healthCheckOutdatedThreshold)
-		controlPlane = v1beta1helper.NewConditionOrError(h.clock, controlPlane, newControlPlane, err)
-
-		newObservabilityComponents, err := h.checkObservabilityComponents(ctx, observabilityComponents)
-		observabilityComponents = v1beta1helper.NewConditionOrError(h.clock, observabilityComponents, newObservabilityComponents, err)
-		systemComponents = v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(h.clock, systemComponents, message)
-
-		if h.shoot.IsWorkerless {
-			return []gardencorev1beta1.Condition{apiserverAvailability, controlPlane, observabilityComponents, systemComponents}
-		}
-
-		nodes = v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(h.clock, nodes, message)
-
-		return []gardencorev1beta1.Condition{apiserverAvailability, controlPlane, observabilityComponents, nodes, systemComponents}
-	}
-
+	// Health checks that can be executed in all cases.
 	taskFns := []flow.TaskFn{
 		func(ctx context.Context) error {
-			apiserverAvailability = h.checkAPIServerAvailability(ctx, shootClient.RESTClient(), apiserverAvailability)
-			return nil
-		}, func(ctx context.Context) error {
 			newControlPlane, err := h.checkControlPlane(ctx, controlPlane, extensionConditionsControlPlaneHealthy, healthCheckOutdatedThreshold)
 			controlPlane = v1beta1helper.NewConditionOrError(h.clock, controlPlane, newControlPlane, err)
 			return nil
@@ -366,30 +338,55 @@ func (h *Health) healthChecks(
 			newObservabilityComponents, err := h.checkObservabilityComponents(ctx, observabilityComponents)
 			observabilityComponents = v1beta1helper.NewConditionOrError(h.clock, observabilityComponents, newObservabilityComponents, err)
 			return nil
-		}, func(ctx context.Context) error {
-			newSystemComponents, err := h.checkSystemComponents(ctx, shootClient, systemComponents, extensionConditionsSystemComponentsHealthy, healthCheckOutdatedThreshold)
-			systemComponents = v1beta1helper.NewConditionOrError(h.clock, systemComponents, newSystemComponents, err)
-			return nil
 		},
 	}
 
-	if h.shoot.IsWorkerless {
-		_ = flow.Parallel(taskFns...)(ctx)
+	// Health checks with dependencies to the Kube-Apiserver.
+	shootClient, apiServerRunning, err := h.initializeShootClients()
+	if apiServerRunning && err == nil {
+		taskFns = append(taskFns,
+			func(ctx context.Context) error {
+				apiserverAvailability = h.checkAPIServerAvailability(ctx, shootClient.RESTClient(), apiserverAvailability)
+				return nil
+			},
+			func(ctx context.Context) error {
+				newSystemComponents, err := h.checkSystemComponents(ctx, shootClient, systemComponents, extensionConditionsSystemComponentsHealthy, healthCheckOutdatedThreshold)
+				systemComponents = v1beta1helper.NewConditionOrError(h.clock, systemComponents, newSystemComponents, err)
+				return nil
+			},
+		)
+		if !h.shoot.IsWorkerless {
+			taskFns = append(taskFns,
+				func(ctx context.Context) error {
+					newNodes, err := h.checkWorkers(ctx, shootClient, nodes, extensionConditionsEveryNodeReady, healthCheckOutdatedThreshold)
+					nodes = v1beta1helper.NewConditionOrError(h.clock, nodes, newNodes, err)
+					return nil
+				})
+		}
+	} else {
+		// Some health checks cannot be executed when the API server is not running.
+		// Maintain the affected conditions here.
+		message := shootControlPlaneNotRunningMessage(h.shoot.GetInfo().Status.LastOperation)
+		if err != nil {
+			h.log.Error(err, "Could not initialize Shoot client for health check")
+			message = fmt.Sprintf("Could not initialize Shoot client for health check: %+v", err)
+		}
 
-		return []gardencorev1beta1.Condition{apiserverAvailability, controlPlane, observabilityComponents, systemComponents}
+		apiserverAvailability = v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, apiserverAvailability, "APIServerDown", "Could not reach API server during client initialization.")
+		systemComponents = v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(h.clock, systemComponents, message)
+		if !h.shoot.IsWorkerless {
+			nodes = v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(h.clock, nodes, message)
+		}
 	}
 
-	taskFns = append(taskFns,
-		func(ctx context.Context) error {
-			newNodes, err := h.checkWorkers(ctx, shootClient, nodes, extensionConditionsEveryNodeReady, healthCheckOutdatedThreshold)
-			nodes = v1beta1helper.NewConditionOrError(h.clock, nodes, newNodes, err)
-			return nil
-		},
-	)
-
+	// Execute all relevant health checks.
 	_ = flow.Parallel(taskFns...)(ctx)
 
-	return []gardencorev1beta1.Condition{apiserverAvailability, controlPlane, observabilityComponents, nodes, systemComponents}
+	result := []gardencorev1beta1.Condition{apiserverAvailability, controlPlane, observabilityComponents, systemComponents}
+	if !h.shoot.IsWorkerless {
+		result = append(result, nodes)
+	}
+	return result
 }
 
 // checkAPIServerAvailability checks if the API server of a Shoot cluster is reachable and measure the response time.
