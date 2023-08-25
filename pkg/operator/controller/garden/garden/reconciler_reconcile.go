@@ -332,8 +332,26 @@ func (r *Reconciler) reconcile(
 				virtualClusterClient = virtualClusterClientSet.Client()
 				return nil
 			}).
-				RetryUntilTimeout(time.Second, 30*time.Second),
+				RetryUntilTimeout(5*time.Second, 30*time.Second),
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServerService, deployVirtualGardenGardenerAccess, renewVirtualClusterAccess),
+		})
+		renewSeedGardenAccessSecrets = g.Add(flow.Task{
+			Name: "Label seeds to trigger renewal of their garden access secrets",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return secretsrotation.RenewSeedGardenSecrets(ctx, log, virtualClusterClient, v1beta1constants.SeedOperationRenewGardenAccessSecrets)
+			}).
+				RetryUntilTimeout(5*time.Second, 30*time.Second).
+				DoIf(helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationPreparing),
+			Dependencies: flow.NewTaskIDs(initializeVirtualClusterClient),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Check if all seeds finished the renewal of their garden access secrets",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return secretsrotation.CheckRenewSeedGardenSecretsCompleted(ctx, log, virtualClusterClient, v1beta1constants.SeedOperationRenewGardenAccessSecrets)
+			}).
+				RetryUntilTimeout(5*time.Second, 2*time.Minute).
+				DoIf(helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationPreparing),
+			Dependencies: flow.NewTaskIDs(renewSeedGardenAccessSecrets),
 		})
 		rewriteSecretsAddLabel = g.Add(flow.Task{
 			Name: "Labeling encrypted resources to re-encrypt them with new ETCD encryption key",
