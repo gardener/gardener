@@ -633,7 +633,7 @@
           "exemplar": true,
           "expr": "metering:cpu_usage:sum_by_namespace{shoot_uid!=\"\",namespace=~\"$namespace\"}",
           "interval": "",
-          "legendFormat": "Total {{shoot_uid}}",
+          "legendFormat": "Total ({{year}}/{{month}})",
           "refId": "A"
         },
         {
@@ -743,7 +743,7 @@
           "exemplar": true,
           "expr": "metering:cpu_requests:sum_by_namespace{shoot_uid!=\"\",namespace=~\"$namespace\"}",
           "interval": "",
-          "legendFormat": "Total {{shoot_uid}}",
+          "legendFormat": "Total ({{year}}/{{month}})",
           "refId": "A"
         },
         {
@@ -866,7 +866,7 @@
           "exemplar": true,
           "expr": "metering:memory_usage:sum_by_namespace{shoot_uid!=\"\",namespace=~\"$namespace\"}",
           "interval": "",
-          "legendFormat": "Total {{shoot_uid}}",
+          "legendFormat": "Total ({{year}}/{{month}})",
           "refId": "A"
         },
         {
@@ -975,7 +975,7 @@
           "exemplar": true,
           "expr": "metering:working_set_memory:sum_by_namespace{shoot_uid!=\"\",namespace=~\"$namespace\"}",
           "interval": "",
-          "legendFormat": "Total {{shoot_uid}}",
+          "legendFormat": "Total ({{year}}/{{month}})",
           "refId": "A"
         },
         {
@@ -1084,7 +1084,7 @@
           "exemplar": true,
           "expr": "metering:memory_requests:sum_by_namespace{shoot_uid!=\"\",namespace=~\"$namespace\"}",
           "interval": "",
-          "legendFormat": "Total {{shoot_uid}}",
+          "legendFormat": "Total ({{year}}/{{month}})",
           "refId": "A"
         },
         {
@@ -1207,7 +1207,7 @@
           "exemplar": true,
           "expr": "metering:network_receive:sum_by_namespace{shoot_uid!=\"\",namespace=~\"$namespace\"}",
           "interval": "",
-          "legendFormat": "Total {{shoot_uid}}",
+          "legendFormat": "Total ({{year}}/{{month}})",
           "refId": "A"
         },
         {
@@ -1317,7 +1317,7 @@
           "exemplar": true,
           "expr": "metering:network_transmit:sum_by_namespace{shoot_uid!=\"\",namespace=~\"$namespace\"}",
           "interval": "",
-          "legendFormat": "Total {{shoot_uid}}",
+          "legendFormat": "Total ({{year}}/{{month}})",
           "refId": "A"
         },
         {
@@ -1440,7 +1440,7 @@
           "exemplar": true,
           "expr": "metering:persistent_volume_usage:sum_by_namespace{shoot_uid!=\"\",namespace=~\"$namespace\"}",
           "interval": "",
-          "legendFormat": "Total {{shoot_uid}}",
+          "legendFormat": "Total ({{year}}/{{month}})",
           "refId": "A"
         },
         {
@@ -1550,7 +1550,7 @@
           "exemplar": true,
           "expr": "metering:persistent_volume_claims:sum_by_namespace{shoot_uid!=\"\",namespace=~\"$namespace\"}",
           "interval": "",
-          "legendFormat": "Total {{shoot_uid}}",
+          "legendFormat": "Total ({{year}}/{{month}})",
           "refId": "A"
         },
         {
