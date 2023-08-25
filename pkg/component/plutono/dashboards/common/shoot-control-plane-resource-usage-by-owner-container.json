@@ -643,6 +643,14 @@
           "interval": "",
           "legendFormat": "{{owner}} / {{container}}",
           "refId": "B"
+        },
+        {
+          "exemplar": true,
+          "expr": "metering:cpu_usage:sum_by_namespace:avg_over_time{shoot_uid!=\"\",namespace=~\"$namespace\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Monthly average ({{year}}/{{month}})",
+          "refId": "C"
         }
       ],
       "thresholds": [],
@@ -753,6 +761,14 @@
           "interval": "",
           "legendFormat": "{{owner}} / {{container}}",
           "refId": "B"
+        },
+        {
+          "exemplar": true,
+          "expr": "metering:cpu_requests:sum_by_namespace:avg_over_time{shoot_uid!=\"\",namespace=~\"$namespace\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Monthly average ({{year}}/{{month}})",
+          "refId": "C"
         }
       ],
       "thresholds": [],
@@ -876,6 +892,14 @@
           "interval": "",
           "legendFormat": "{{owner}} / {{container}}",
           "refId": "B"
+        },
+        {
+          "exemplar": true,
+          "expr": "metering:memory_usage:sum_by_namespace:avg_over_time{shoot_uid!=\"\",namespace=~\"$namespace\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Monthly average ({{year}}/{{month}})",
+          "refId": "C"
         }
       ],
       "thresholds": [],
@@ -985,6 +1009,14 @@
           "interval": "",
           "legendFormat": "{{owner}} / {{container}}",
           "refId": "B"
+        },
+        {
+          "exemplar": true,
+          "expr": "metering:working_set_memory:sum_by_namespace:avg_over_time{shoot_uid!=\"\",namespace=~\"$namespace\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Monthly average ({{year}}/{{month}})",
+          "refId": "C"
         }
       ],
       "thresholds": [],
@@ -1094,6 +1126,14 @@
           "interval": "",
           "legendFormat": "{{owner}} / {{container}}",
           "refId": "B"
+        },
+        {
+          "exemplar": true,
+          "expr": "metering:memory_requests:sum_by_namespace:avg_over_time{shoot_uid!=\"\",namespace=~\"$namespace\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Monthly average ({{year}}/{{month}})",
+          "refId": "C"
         }
       ],
       "thresholds": [],
@@ -1217,6 +1257,14 @@
           "interval": "",
           "legendFormat": "{{owner}}",
           "refId": "B"
+        },
+        {
+          "exemplar": true,
+          "expr": "metering:network_receive:sum_by_namespace:avg_over_time{shoot_uid!=\"\",namespace=~\"$namespace\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Monthly average ({{year}}/{{month}})",
+          "refId": "C"
         }
       ],
       "thresholds": [],
@@ -1327,6 +1375,14 @@
           "interval": "",
           "legendFormat": "{{owner}}",
           "refId": "B"
+        },
+        {
+          "exemplar": true,
+          "expr": "metering:network_transmit:sum_by_namespace:avg_over_time{shoot_uid!=\"\",namespace=~\"$namespace\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Monthly average ({{year}}/{{month}})",
+          "refId": "C"
         }
       ],
       "thresholds": [],
@@ -1450,6 +1506,14 @@
           "interval": "",
           "legendFormat": "{{owner}}",
           "refId": "B"
+        },
+        {
+          "exemplar": true,
+          "expr": "metering:persistent_volume_usage:sum_by_namespace:avg_over_time{shoot_uid!=\"\",namespace=~\"$namespace\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Monthly average ({{year}}/{{month}})",
+          "refId": "C"
         }
       ],
       "thresholds": [],
@@ -1560,6 +1624,14 @@
           "interval": "",
           "legendFormat": "{{owner}}",
           "refId": "B"
+        },
+        {
+          "exemplar": true,
+          "expr": "metering:persistent_volume_claims:sum_by_namespace:avg_over_time{shoot_uid!=\"\",namespace=~\"$namespace\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Monthly average ({{year}}/{{month}})",
+          "refId": "C"
         }
       ],
       "thresholds": [],
