@@ -673,7 +673,7 @@ func (h *Health) CheckClusterNodes(
 	return nil, nil
 }
 
-// CheckNodesScalingUp returns an error of nodes are being scaled up.
+// CheckNodesScalingUp returns an error if nodes are being scaled up.
 func CheckNodesScalingUp(machineList *machinev1alpha1.MachineList, readyNodes, desiredMachines int) error {
 	if readyNodes == desiredMachines {
 		return nil

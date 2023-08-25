@@ -16,6 +16,7 @@ package gardener_test
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -1211,6 +1212,34 @@ var _ = Describe("Shoot", func() {
 	Describe("#ExtensionsID", func() {
 		It("should return the expected identifier", func() {
 			Expect(ExtensionsID("foo", "bar")).To(Equal("foo/bar"))
+		})
+	})
+
+	Describe("#ComputeTechnicalID", func() {
+		var (
+			projectName string
+			shoot       *gardencorev1beta1.Shoot
+		)
+
+		BeforeEach(func() {
+			projectName = "project-a"
+			shoot = &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+			}
+		})
+
+		It("should return the ID from status", func() {
+			shoot.Status = gardencorev1beta1.ShootStatus{
+				TechnicalID: "some-id",
+			}
+
+			Expect(ComputeTechnicalID(projectName, shoot)).To(Equal("some-id"))
+		})
+
+		It("should calculate a new ID", func() {
+			Expect(ComputeTechnicalID(projectName, shoot)).To(Equal(fmt.Sprintf("shoot--%s--%s", projectName, shoot.Name)))
 		})
 	})
 })

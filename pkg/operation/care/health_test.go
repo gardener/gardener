@@ -35,7 +35,6 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/executor"
@@ -725,10 +724,6 @@ func newNode(name string, healthy bool, labels labels.Set, annotations map[strin
 	}
 
 	return node
-}
-
-func roleLabels(role string) map[string]string {
-	return map[string]string{v1beta1constants.GardenRole: role}
 }
 
 func beConditionWithStatus(status gardencorev1beta1.ConditionStatus) types.GomegaMatcher {
