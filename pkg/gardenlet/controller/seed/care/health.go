@@ -91,19 +91,10 @@ func NewHealth(
 // Check conducts the health checks on all the given conditions.
 func (h *health) Check(
 	ctx context.Context,
-	conditions []gardencorev1beta1.Condition,
+	conditions SeedConditions,
 ) []gardencorev1beta1.Condition {
-
-	var systemComponentsCondition gardencorev1beta1.Condition
-	for _, cond := range conditions {
-		switch cond.Type {
-		case gardencorev1beta1.SeedSystemComponentsHealthy:
-			systemComponentsCondition = cond
-		}
-	}
-
-	newSystemComponentsCondition, err := h.checkSystemComponents(ctx, systemComponentsCondition)
-	return []gardencorev1beta1.Condition{v1beta1helper.NewConditionOrError(h.clock, systemComponentsCondition, newSystemComponentsCondition, err)}
+	newSystemComponentsCondition, err := h.checkSystemComponents(ctx, conditions.systemComponentsHealthy)
+	return []gardencorev1beta1.Condition{v1beta1helper.NewConditionOrError(h.clock, conditions.systemComponentsHealthy, newSystemComponentsCondition, err)}
 }
 
 func (h *health) checkSystemComponents(
@@ -163,4 +154,31 @@ func (h *health) checkSystemComponents(
 
 	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy.")
 	return &c, nil
+}
+
+// SeedConditions contains all seed related conditions of the seed status subresource.
+type SeedConditions struct {
+	systemComponentsHealthy gardencorev1beta1.Condition
+}
+
+// ConvertToSlice returns the seed conditions as a slice.
+func (s SeedConditions) ConvertToSlice() []gardencorev1beta1.Condition {
+	return []gardencorev1beta1.Condition{
+		s.systemComponentsHealthy,
+	}
+}
+
+// ConditionTypes returns all seed condition types.
+func (s SeedConditions) ConditionTypes() []gardencorev1beta1.ConditionType {
+	return []gardencorev1beta1.ConditionType{
+		s.systemComponentsHealthy.Type,
+	}
+}
+
+// NewSeedConditions returns a new instance of SeedConditions.
+// All conditions are retrieved from the given 'status' or newly initialized.
+func NewSeedConditions(clock clock.Clock, status gardencorev1beta1.SeedStatus) SeedConditions {
+	return SeedConditions{
+		systemComponentsHealthy: v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, gardencorev1beta1.SeedSystemComponentsHealthy),
+	}
 }

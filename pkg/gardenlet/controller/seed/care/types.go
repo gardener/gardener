@@ -39,5 +39,5 @@ var defaultNewHealthCheck NewHealthCheckFunc = func(seed *gardencorev1beta1.Seed
 
 // HealthCheck is an interface used to perform health checks.
 type HealthCheck interface {
-	Check(ctx context.Context, condition []gardencorev1beta1.Condition) []gardencorev1beta1.Condition
+	Check(ctx context.Context, condition SeedConditions) []gardencorev1beta1.Condition
 }

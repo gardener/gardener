@@ -239,8 +239,8 @@ var _ = Describe("Shoot Care Control", func() {
 			Context("when no conditions / constraints are returned", func() {
 				BeforeEach(func() {
 					DeferCleanup(test.WithVars(
-						&NewHealthCheck, healthCheckFunc(func(_ []gardencorev1beta1.Condition) []gardencorev1beta1.Condition { return nil }),
-						&NewConstraintCheck, constraintCheckFunc(func(_ []gardencorev1beta1.Condition) []gardencorev1beta1.Condition { return nil }),
+						&NewHealthCheck, healthCheckFunc(func(_ care.ShootConditions) []gardencorev1beta1.Condition { return nil }),
+						&NewConstraintCheck, constraintCheckFunc(func(_ care.ShootConstraints) []gardencorev1beta1.Condition { return nil }),
 					))
 				})
 
@@ -282,12 +282,14 @@ var _ = Describe("Shoot Care Control", func() {
 			Context("when conditions / constraints are returned unchanged", func() {
 				BeforeEach(func() {
 					DeferCleanup(test.WithVars(
-						&NewHealthCheck, healthCheckFunc(func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
-							conditionsCopy := append(cond[:0:0], cond...)
+						&NewHealthCheck, healthCheckFunc(func(cond care.ShootConditions) []gardencorev1beta1.Condition {
+							conditions := cond.ConvertToSlice()
+							conditionsCopy := append(conditions[:0:0], conditions...)
 							return conditionsCopy
 						}),
-						&NewConstraintCheck, constraintCheckFunc(func(constr []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
-							constraintsCopy := append(constr[:0:0], constr...)
+						&NewConstraintCheck, constraintCheckFunc(func(constr care.ShootConstraints) []gardencorev1beta1.Condition {
+							constraints := constr.ConvertToSlice()
+							constraintsCopy := append(constraints[:0:0], constraints...)
 							return constraintsCopy
 						}),
 					))
@@ -372,10 +374,10 @@ var _ = Describe("Shoot Care Control", func() {
 					}
 
 					DeferCleanup(test.WithVars(
-						&NewHealthCheck, healthCheckFunc(func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+						&NewHealthCheck, healthCheckFunc(func(_ care.ShootConditions) []gardencorev1beta1.Condition {
 							return conditions
 						}),
-						&NewConstraintCheck, constraintCheckFunc(func(constr []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+						&NewConstraintCheck, constraintCheckFunc(func(_ care.ShootConstraints) []gardencorev1beta1.Condition {
 							return constraints
 						}),
 					))
@@ -479,10 +481,10 @@ var _ = Describe("Shoot Care Control", func() {
 					}
 
 					DeferCleanup(test.WithVars(
-						&NewHealthCheck, healthCheckFunc(func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+						&NewHealthCheck, healthCheckFunc(func(_ care.ShootConditions) []gardencorev1beta1.Condition {
 							return conditions
 						}),
-						&NewConstraintCheck, constraintCheckFunc(func(constr []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+						&NewConstraintCheck, constraintCheckFunc(func(_ care.ShootConstraints) []gardencorev1beta1.Condition {
 							return constraints
 						}),
 					))
@@ -511,9 +513,9 @@ var _ = Describe("Shoot Care Control", func() {
 	})
 })
 
-type resultingConditionFunc func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition
+type resultingConditionFunc func(care.ShootConditions) []gardencorev1beta1.Condition
 
-func (h resultingConditionFunc) Check(_ context.Context, _ *metav1.Duration, con []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+func (h resultingConditionFunc) Check(_ context.Context, _ *metav1.Duration, con care.ShootConditions) []gardencorev1beta1.Condition {
 	return h(con)
 }
 
@@ -523,9 +525,9 @@ func healthCheckFunc(fn resultingConditionFunc) NewHealthCheckFunc {
 	}
 }
 
-type resultingConstraintFunc func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition
+type resultingConstraintFunc func(care.ShootConstraints) []gardencorev1beta1.Condition
 
-func (c resultingConstraintFunc) Check(_ context.Context, constraints []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+func (c resultingConstraintFunc) Check(_ context.Context, constraints care.ShootConstraints) []gardencorev1beta1.Condition {
 	return c(constraints)
 }
 

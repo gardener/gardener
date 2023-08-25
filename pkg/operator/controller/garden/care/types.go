@@ -36,5 +36,5 @@ var defaultNewHealthCheck NewHealthCheckFunc = func(garden *operatorv1alpha1.Gar
 
 // HealthCheck is an interface used to perform health checks.
 type HealthCheck interface {
-	Check(ctx context.Context, condition []gardencorev1beta1.Condition) []gardencorev1beta1.Condition
+	Check(ctx context.Context, conditions GardenConditions) []gardencorev1beta1.Condition
 }

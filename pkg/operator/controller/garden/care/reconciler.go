@@ -72,16 +72,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 	log.V(1).Info("Starting garden care")
 
 	// Initialize conditions based on the current status.
-	conditionTypes := []gardencorev1beta1.ConditionType{
-		operatorv1alpha1.VirtualGardenAPIServerAvailable,
-		operatorv1alpha1.RuntimeComponentsHealthy,
-		operatorv1alpha1.VirtualComponentsHealthy,
-		operatorv1alpha1.ObservabilityComponentsHealthy,
-	}
-	var conditions []gardencorev1beta1.Condition
-	for _, cond := range conditionTypes {
-		conditions = append(conditions, v1beta1helper.GetOrInitConditionWithClock(r.Clock, garden.Status.Conditions, cond))
-	}
+	gardenConditions := NewGardenConditions(r.Clock, garden.Status)
 
 	gardenClientSet, err := r.GardenClientMap.GetClient(reconcileCtx, keys.ForGarden(garden))
 	if err != nil {
@@ -97,14 +88,14 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		r.GardenNamespace,
 	).Check(
 		ctx,
-		conditions,
+		gardenConditions,
 	)
 
 	// Update Garden status conditions if necessary
-	if v1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) {
+	if v1beta1helper.ConditionsNeedUpdate(gardenConditions.ConvertToSlice(), updatedConditions) {
 		// Rebuild garden conditions to ensure that only the conditions with the
 		// correct types will be updated, and any other conditions will remain intact
-		conditions = v1beta1helper.BuildConditions(garden.Status.Conditions, updatedConditions, conditionTypes)
+		conditions := v1beta1helper.BuildConditions(garden.Status.Conditions, updatedConditions, gardenConditions.ConditionTypes())
 		// TODO(rfranzke): Drop this line after v1.78 has been released.
 		conditions = v1beta1helper.RemoveConditions(conditions, "Reconciled")
 

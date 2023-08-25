@@ -120,59 +120,32 @@ func NewHealth(
 }
 
 // Check conducts the health checks on all the given conditions.
-func (h *health) Check(
-	ctx context.Context,
-	conditions []gardencorev1beta1.Condition,
-) []gardencorev1beta1.Condition {
-	var (
-		apiServerAvailability      gardencorev1beta1.Condition
-		runtimeComponentsCondition gardencorev1beta1.Condition
-		virtualComponentsCondition gardencorev1beta1.Condition
-		observabilityCondition     gardencorev1beta1.Condition
-	)
-	for _, cond := range conditions {
-		switch cond.Type {
-		case operatorv1alpha1.VirtualGardenAPIServerAvailable:
-			apiServerAvailability = cond
-		case operatorv1alpha1.RuntimeComponentsHealthy:
-			runtimeComponentsCondition = cond
-		case operatorv1alpha1.VirtualComponentsHealthy:
-			virtualComponentsCondition = cond
-		case operatorv1alpha1.ObservabilityComponentsHealthy:
-			observabilityCondition = cond
-		}
-	}
-
+func (h *health) Check(ctx context.Context, conditions GardenConditions) []gardencorev1beta1.Condition {
 	taskFns := []flow.TaskFn{
 		func(ctx context.Context) error {
-			apiServerAvailability = h.checkAPIServerAvailability(ctx, apiServerAvailability)
+			conditions.virtualGardenAPIServerAvailable = h.checkAPIServerAvailability(ctx, conditions.virtualGardenAPIServerAvailable)
 			return nil
 		},
 		func(ctx context.Context) error {
-			newRuntimeComponentsCondition, err := h.checkRuntimeComponents(ctx, runtimeComponentsCondition)
-			runtimeComponentsCondition = v1beta1helper.NewConditionOrError(h.clock, runtimeComponentsCondition, newRuntimeComponentsCondition, err)
+			newRuntimeComponentsCondition, err := h.checkRuntimeComponents(ctx, conditions.runtimeComponentsHealthy)
+			conditions.runtimeComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.runtimeComponentsHealthy, newRuntimeComponentsCondition, err)
 			return nil
 		},
 		func(ctx context.Context) error {
-			newVirtualComponentsCondition, err := h.checkVirtualComponents(ctx, virtualComponentsCondition)
-			virtualComponentsCondition = v1beta1helper.NewConditionOrError(h.clock, virtualComponentsCondition, newVirtualComponentsCondition, err)
+			newVirtualComponentsCondition, err := h.checkVirtualComponents(ctx, conditions.virtualComponentsHealthy)
+			conditions.virtualComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.virtualComponentsHealthy, newVirtualComponentsCondition, err)
 			return nil
 		},
 		func(ctx context.Context) error {
-			newObservabilityCondition, err := h.checkObservabilityComponents(ctx, observabilityCondition)
-			observabilityCondition = v1beta1helper.NewConditionOrError(h.clock, observabilityCondition, newObservabilityCondition, err)
+			newObservabilityCondition, err := h.checkObservabilityComponents(ctx, conditions.observabilityComponentsHealthy)
+			conditions.observabilityComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.observabilityComponentsHealthy, newObservabilityCondition, err)
 			return nil
 		},
 	}
 
 	_ = flow.Parallel(taskFns...)(ctx)
 
-	return []gardencorev1beta1.Condition{
-		runtimeComponentsCondition,
-		virtualComponentsCondition,
-		apiServerAvailability,
-		observabilityCondition,
-	}
+	return conditions.ConvertToSlice()
 }
 
 // checkAPIServerAvailability checks if the API server of a virtual garden is reachable and measures the response time.
@@ -269,4 +242,43 @@ func (h *health) isVPAEnabled() bool {
 	return h.garden.Spec.RuntimeCluster.Settings != nil &&
 		h.garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler != nil &&
 		pointer.BoolDeref(h.garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler.Enabled, false)
+}
+
+// GardenConditions contains all conditions of the garden status subresource.
+type GardenConditions struct {
+	virtualGardenAPIServerAvailable gardencorev1beta1.Condition
+	runtimeComponentsHealthy        gardencorev1beta1.Condition
+	virtualComponentsHealthy        gardencorev1beta1.Condition
+	observabilityComponentsHealthy  gardencorev1beta1.Condition
+}
+
+// ConvertToSlice returns the garden conditions as a slice.
+func (g GardenConditions) ConvertToSlice() []gardencorev1beta1.Condition {
+	return []gardencorev1beta1.Condition{
+		g.virtualGardenAPIServerAvailable,
+		g.runtimeComponentsHealthy,
+		g.virtualComponentsHealthy,
+		g.observabilityComponentsHealthy,
+	}
+}
+
+// ConditionTypes returns all garden condition types.
+func (g GardenConditions) ConditionTypes() []gardencorev1beta1.ConditionType {
+	return []gardencorev1beta1.ConditionType{
+		g.virtualGardenAPIServerAvailable.Type,
+		g.runtimeComponentsHealthy.Type,
+		g.virtualComponentsHealthy.Type,
+		g.observabilityComponentsHealthy.Type,
+	}
+}
+
+// NewGardenConditions returns a new instance of GardenConditions.
+// All conditions are retrieved from the given 'status' or newly initialized.
+func NewGardenConditions(clock clock.Clock, status operatorv1alpha1.GardenStatus) GardenConditions {
+	return GardenConditions{
+		virtualGardenAPIServerAvailable: v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, operatorv1alpha1.VirtualGardenAPIServerAvailable),
+		runtimeComponentsHealthy:        v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, operatorv1alpha1.RuntimeComponentsHealthy),
+		virtualComponentsHealthy:        v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, operatorv1alpha1.VirtualComponentsHealthy),
+		observabilityComponentsHealthy:  v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, operatorv1alpha1.ObservabilityComponentsHealthy),
+	}
 }

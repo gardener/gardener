@@ -99,7 +99,7 @@ func NewConstraint(clock clock.Clock, op *operation.Operation, shootClientInit S
 // Check checks all given constraints.
 func (c *Constraint) Check(
 	ctx context.Context,
-	constraints []gardencorev1beta1.Condition,
+	constraints ShootConstraints,
 ) []gardencorev1beta1.Condition {
 	updatedConstraints := c.constraintsChecks(ctx, constraints)
 	lastOp := c.shoot.GetInfo().Status.LastOperation
@@ -109,39 +109,18 @@ func (c *Constraint) Check(
 
 func (c *Constraint) constraintsChecks(
 	ctx context.Context,
-	constraints []gardencorev1beta1.Condition,
+	constraints ShootConstraints,
 ) []gardencorev1beta1.Condition {
 	if c.shoot.HibernationEnabled || c.shoot.GetInfo().Status.IsHibernated {
-		return shootHibernatedConstraints(c.clock, constraints...)
-	}
-
-	var (
-		// required constraints (always present in .status.constraints)
-		hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint gardencorev1beta1.Condition
-		// optional constraints (not always present in .status.constraints)
-		caCertificateValiditiesAcceptableConstraint = gardencorev1beta1.Condition{Type: gardencorev1beta1.ShootCACertificateValiditiesAcceptable}
-		crdsWithProblematicConversionWebhooks       = gardencorev1beta1.Condition{Type: gardencorev1beta1.ShootCRDsWithProblematicConversionWebhooks}
-	)
-
-	for _, cons := range constraints {
-		switch cons.Type {
-		case gardencorev1beta1.ShootHibernationPossible:
-			hibernationPossibleConstraint = cons
-		case gardencorev1beta1.ShootMaintenancePreconditionsSatisfied:
-			maintenancePreconditionsSatisfiedConstraint = cons
-		case gardencorev1beta1.ShootCACertificateValiditiesAcceptable:
-			caCertificateValiditiesAcceptableConstraint = cons
-		case gardencorev1beta1.ShootCRDsWithProblematicConversionWebhooks:
-			crdsWithProblematicConversionWebhooks = cons
-		}
+		return shootHibernatedConstraints(c.clock, constraints.ConvertToSlice()...)
 	}
 
 	// Check constraints not depending on the shoot's kube-apiserver to be up and running
 	status, reason, message, errorCodes, err := c.CheckIfCACertificateValiditiesAcceptable(ctx)
 	if err != nil {
-		caCertificateValiditiesAcceptableConstraint = v1beta1helper.UpdatedConditionUnknownErrorWithClock(c.clock, caCertificateValiditiesAcceptableConstraint, err)
+		constraints.caCertificateValiditiesAcceptable = v1beta1helper.UpdatedConditionUnknownErrorWithClock(c.clock, constraints.caCertificateValiditiesAcceptable, err)
 	} else {
-		caCertificateValiditiesAcceptableConstraint = v1beta1helper.UpdatedConditionWithClock(c.clock, caCertificateValiditiesAcceptableConstraint, status, reason, message, errorCodes...)
+		constraints.caCertificateValiditiesAcceptable = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.caCertificateValiditiesAcceptable, status, reason, message, errorCodes...)
 	}
 
 	// Now check constraints depending on the shoot's kube-apiserver to be up and running
@@ -150,42 +129,42 @@ func (c *Constraint) constraintsChecks(
 		c.log.Error(err, "Could not initialize Shoot client for constraints check")
 
 		message := fmt.Sprintf("Could not initialize Shoot client for constraints check: %+v", err)
-		hibernationPossibleConstraint = v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(c.clock, hibernationPossibleConstraint, message)
-		maintenancePreconditionsSatisfiedConstraint = v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(c.clock, maintenancePreconditionsSatisfiedConstraint, message)
+		constraints.hibernationPossible = v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(c.clock, constraints.hibernationPossible, message)
+		constraints.maintenancePreconditionsSatisfied = v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(c.clock, constraints.maintenancePreconditionsSatisfied, message)
 
 		return filterOptionalConstraints(
-			[]gardencorev1beta1.Condition{hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint},
-			[]gardencorev1beta1.Condition{caCertificateValiditiesAcceptableConstraint},
+			[]gardencorev1beta1.Condition{constraints.hibernationPossible, constraints.maintenancePreconditionsSatisfied},
+			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable},
 		)
 	}
 	if !apiServerRunning {
 		// don't check constraints if API server has already been deleted or has not been created yet
 		return filterOptionalConstraints(
-			shootControlPlaneNotRunningConstraints(c.clock, hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint),
-			[]gardencorev1beta1.Condition{caCertificateValiditiesAcceptableConstraint},
+			shootControlPlaneNotRunningConstraints(c.clock, constraints.hibernationPossible, constraints.maintenancePreconditionsSatisfied),
+			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable},
 		)
 	}
 	c.shootClient = shootClient.Client()
 
 	status, reason, message, errorCodes, err = c.CheckForProblematicWebhooks(ctx)
 	if err != nil {
-		hibernationPossibleConstraint = v1beta1helper.UpdatedConditionUnknownErrorWithClock(c.clock, hibernationPossibleConstraint, err)
-		maintenancePreconditionsSatisfiedConstraint = v1beta1helper.UpdatedConditionUnknownErrorWithClock(c.clock, maintenancePreconditionsSatisfiedConstraint, err)
+		constraints.hibernationPossible = v1beta1helper.UpdatedConditionUnknownErrorWithClock(c.clock, constraints.hibernationPossible, err)
+		constraints.maintenancePreconditionsSatisfied = v1beta1helper.UpdatedConditionUnknownErrorWithClock(c.clock, constraints.maintenancePreconditionsSatisfied, err)
 	} else {
-		hibernationPossibleConstraint = v1beta1helper.UpdatedConditionWithClock(c.clock, hibernationPossibleConstraint, status, reason, message, errorCodes...)
-		maintenancePreconditionsSatisfiedConstraint = v1beta1helper.UpdatedConditionWithClock(c.clock, maintenancePreconditionsSatisfiedConstraint, status, reason, message, errorCodes...)
+		constraints.hibernationPossible = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.hibernationPossible, status, reason, message, errorCodes...)
+		constraints.maintenancePreconditionsSatisfied = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.maintenancePreconditionsSatisfied, status, reason, message, errorCodes...)
 	}
 
 	status, reason, message, err = c.checkIfCRDsWithProblematicConversionWebhooksPresent(ctx)
 	if err != nil {
-		crdsWithProblematicConversionWebhooks = v1beta1helper.UpdatedConditionUnknownErrorWithClock(c.clock, crdsWithProblematicConversionWebhooks, err)
+		constraints.crdsWithProblematicConversionWebhooks = v1beta1helper.UpdatedConditionUnknownErrorWithClock(c.clock, constraints.crdsWithProblematicConversionWebhooks, err)
 	} else {
-		crdsWithProblematicConversionWebhooks = v1beta1helper.UpdatedConditionWithClock(c.clock, crdsWithProblematicConversionWebhooks, status, reason, message)
+		constraints.crdsWithProblematicConversionWebhooks = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.crdsWithProblematicConversionWebhooks, status, reason, message)
 	}
 
 	return filterOptionalConstraints(
-		[]gardencorev1beta1.Condition{hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint},
-		[]gardencorev1beta1.Condition{caCertificateValiditiesAcceptableConstraint, crdsWithProblematicConversionWebhooks},
+		[]gardencorev1beta1.Condition{constraints.hibernationPossible, constraints.maintenancePreconditionsSatisfied},
+		[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.crdsWithProblematicConversionWebhooks},
 	)
 }
 
@@ -443,4 +422,43 @@ func filterOptionalConstraints(required, optional []gardencorev1beta1.Condition)
 	}
 
 	return out
+}
+
+// ShootConstraints contains all constraints of the shoot status subresource.
+type ShootConstraints struct {
+	hibernationPossible                   gardencorev1beta1.Condition
+	maintenancePreconditionsSatisfied     gardencorev1beta1.Condition
+	caCertificateValiditiesAcceptable     gardencorev1beta1.Condition
+	crdsWithProblematicConversionWebhooks gardencorev1beta1.Condition
+}
+
+// ConvertToSlice returns the shoot constraints as a slice.
+func (g ShootConstraints) ConvertToSlice() []gardencorev1beta1.Condition {
+	return []gardencorev1beta1.Condition{
+		g.hibernationPossible,
+		g.maintenancePreconditionsSatisfied,
+		g.caCertificateValiditiesAcceptable,
+		g.crdsWithProblematicConversionWebhooks,
+	}
+}
+
+// ConstraintTypes returns all shoot constraint types.
+func (g ShootConstraints) ConstraintTypes() []gardencorev1beta1.ConditionType {
+	return []gardencorev1beta1.ConditionType{
+		g.hibernationPossible.Type,
+		g.maintenancePreconditionsSatisfied.Type,
+		g.caCertificateValiditiesAcceptable.Type,
+		g.crdsWithProblematicConversionWebhooks.Type,
+	}
+}
+
+// NewShootConstraints returns a new instance of ShootConstraints.
+// All constraints are retrieved from the given 'shoot' or newly initialized.
+func NewShootConstraints(clock clock.Clock, shoot *gardencorev1beta1.Shoot) ShootConstraints {
+	return ShootConstraints{
+		hibernationPossible:                   v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Conditions, gardencorev1beta1.ShootHibernationPossible),
+		maintenancePreconditionsSatisfied:     v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Conditions, gardencorev1beta1.ShootMaintenancePreconditionsSatisfied),
+		caCertificateValiditiesAcceptable:     v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Conditions, gardencorev1beta1.ShootCACertificateValiditiesAcceptable),
+		crdsWithProblematicConversionWebhooks: v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Conditions, gardencorev1beta1.ShootCRDsWithProblematicConversionWebhooks),
+	}
 }

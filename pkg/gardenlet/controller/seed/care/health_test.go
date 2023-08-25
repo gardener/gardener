@@ -136,7 +136,11 @@ var _ = Describe("Seed health", func() {
 
 			It("should set SeedSystemComponentsHealthy condition to true", func() {
 				healthCheck := NewHealth(seed, c, fakeClock, nil, false, true, nil)
-				updatedConditions := healthCheck.Check(ctx, []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition})
+				conditions := NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{
+					Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
+				})
+
+				updatedConditions := healthCheck.Check(ctx, conditions)
 				Expect(len(updatedConditions)).ToNot(BeZero())
 				Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy."))
 			})
@@ -157,7 +161,11 @@ var _ = Describe("Seed health", func() {
 
 			It("should set SeedSystemComponentsHealthy condition to true", func() {
 				healthCheck := NewHealth(seed, c, fakeClock, nil, true, false, nil)
-				updatedConditions := healthCheck.Check(ctx, []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition})
+				conditions := NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{
+					Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
+				})
+
+				updatedConditions := healthCheck.Check(ctx, conditions)
 				Expect(len(updatedConditions)).ToNot(BeZero())
 				Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy."))
 			})
@@ -168,7 +176,11 @@ var _ = Describe("Seed health", func() {
 				tests = func(reason, message string) {
 					It("should set SeedSystemComponentsHealthy condition to False if there is no Progressing threshold duration mapping", func() {
 						healthCheck := NewHealth(seed, c, fakeClock, nil, false, false, nil)
-						updatedConditions := healthCheck.Check(ctx, []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition})
+						conditions := NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{
+							Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
+						})
+
+						updatedConditions := healthCheck.Check(ctx, conditions)
 
 						Expect(len(updatedConditions)).ToNot(BeZero())
 						Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, reason, message))
@@ -179,7 +191,11 @@ var _ = Describe("Seed health", func() {
 						fakeClock.Step(30 * time.Second)
 
 						healthCheck := NewHealth(seed, c, fakeClock, nil, false, false, map[gardencorev1beta1.ConditionType]time.Duration{gardencorev1beta1.SeedSystemComponentsHealthy: time.Minute})
-						updatedConditions := healthCheck.Check(ctx, []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition})
+						conditions := NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{
+							Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
+						})
+
+						updatedConditions := healthCheck.Check(ctx, conditions)
 
 						Expect(len(updatedConditions)).ToNot(BeZero())
 						Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message))
@@ -190,7 +206,11 @@ var _ = Describe("Seed health", func() {
 						fakeClock.Step(30 * time.Second)
 
 						healthCheck := NewHealth(seed, c, fakeClock, nil, false, false, map[gardencorev1beta1.ConditionType]time.Duration{gardencorev1beta1.SeedSystemComponentsHealthy: time.Minute})
-						updatedConditions := healthCheck.Check(ctx, []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition})
+						conditions := NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{
+							Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
+						})
+
+						updatedConditions := healthCheck.Check(ctx, conditions)
 
 						Expect(len(updatedConditions)).ToNot(BeZero())
 						Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message))
@@ -201,7 +221,11 @@ var _ = Describe("Seed health", func() {
 						fakeClock.Step(30 * time.Second)
 
 						healthCheck := NewHealth(seed, c, fakeClock, nil, false, false, map[gardencorev1beta1.ConditionType]time.Duration{gardencorev1beta1.SeedSystemComponentsHealthy: time.Minute})
-						updatedConditions := healthCheck.Check(ctx, []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition})
+						conditions := NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{
+							Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
+						})
+
+						updatedConditions := healthCheck.Check(ctx, conditions)
 
 						Expect(len(updatedConditions)).ToNot(BeZero())
 						Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message))
@@ -212,7 +236,11 @@ var _ = Describe("Seed health", func() {
 						fakeClock.Step(90 * time.Second)
 
 						healthCheck := NewHealth(seed, c, fakeClock, nil, false, false, map[gardencorev1beta1.ConditionType]time.Duration{gardencorev1beta1.SeedSystemComponentsHealthy: time.Minute})
-						updatedConditions := healthCheck.Check(ctx, []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition})
+						conditions := NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{
+							Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
+						})
+
+						updatedConditions := healthCheck.Check(ctx, conditions)
 
 						Expect(len(updatedConditions)).ToNot(BeZero())
 						Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, reason, message))
@@ -281,6 +309,51 @@ var _ = Describe("Seed health", func() {
 				})
 
 				tests("MissingManagedResourceCondition", "is missing the following condition(s)")
+			})
+		})
+	})
+
+	Describe("SeedConditions", func() {
+		Describe("#NewSeedConditions", func() {
+			It("should initialize all conditions", func() {
+				conditions := NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{})
+
+				Expect(conditions.ConvertToSlice()).To(ConsistOf(
+					beConditionWithStatusReasonAndMessage("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+				))
+			})
+
+			It("should only initialize missing conditions", func() {
+				conditions := NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{
+					Conditions: []gardencorev1beta1.Condition{
+						{Type: "SeedSystemComponentsHealthy"},
+						{Type: "Foo"},
+					},
+				})
+
+				Expect(conditions.ConvertToSlice()).To(HaveExactElements(
+					OfType("SeedSystemComponentsHealthy"),
+				))
+			})
+		})
+
+		Describe("#ConvertToSlice", func() {
+			It("should return the expected conditions", func() {
+				conditions := NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{})
+
+				Expect(conditions.ConvertToSlice()).To(HaveExactElements(
+					OfType("SeedSystemComponentsHealthy"),
+				))
+			})
+		})
+
+		Describe("#ConditionTypes", func() {
+			It("should return the expected condition types", func() {
+				conditions := NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{})
+
+				Expect(conditions.ConditionTypes()).To(HaveExactElements(
+					gardencorev1beta1.ConditionType("SeedSystemComponentsHealthy"),
+				))
 			})
 		})
 	})

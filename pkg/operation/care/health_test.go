@@ -698,6 +698,97 @@ var _ = Describe("health check", func() {
 			Expect(CheckNodesScalingDown(machineList, nodeList, 2, 1)).To(MatchError(ContainSubstring("is waiting to be completely drained from pods")))
 		})
 	})
+
+	Describe("ShootConditions", func() {
+		Describe("#NewShootConditions", func() {
+			It("should initialize all conditions", func() {
+				conditions := NewShootConditions(fakeClock, &gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						Provider: gardencorev1beta1.Provider{
+							Workers: []gardencorev1beta1.Worker{{Name: "worker"}},
+						},
+					},
+				})
+
+				Expect(conditions.ConvertToSlice()).To(ConsistOf(
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+				))
+			})
+
+			It("should initialize all conditions for workerless shoot", func() {
+				conditions := NewShootConditions(fakeClock, &gardencorev1beta1.Shoot{})
+
+				Expect(conditions.ConvertToSlice()).To(ConsistOf(
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+				))
+			})
+
+			It("should only initialize missing conditions", func() {
+				conditions := NewShootConditions(fakeClock, &gardencorev1beta1.Shoot{
+					Status: gardencorev1beta1.ShootStatus{
+						Conditions: []gardencorev1beta1.Condition{
+							{Type: "APIServerAvailable"},
+							{Type: "Foo"},
+						},
+					},
+				})
+
+				Expect(conditions.ConvertToSlice()).To(ConsistOf(
+					OfType("APIServerAvailable"),
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+				))
+			})
+		})
+
+		Describe("#ConvertToSlice", func() {
+			It("should return the expected conditions", func() {
+				conditions := NewShootConditions(fakeClock, &gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						Provider: gardencorev1beta1.Provider{
+							Workers: []gardencorev1beta1.Worker{{Name: "worker"}},
+						},
+					},
+				})
+
+				Expect(conditions.ConvertToSlice()).To(HaveExactElements(
+					OfType("APIServerAvailable"),
+					OfType("ControlPlaneHealthy"),
+					OfType("ObservabilityComponentsHealthy"),
+					OfType("EveryNodeReady"),
+					OfType("SystemComponentsHealthy"),
+				))
+			})
+		})
+
+		Describe("#ConditionTypes", func() {
+			It("should return the expected condition types", func() {
+				conditions := NewShootConditions(fakeClock, &gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						Provider: gardencorev1beta1.Provider{
+							Workers: []gardencorev1beta1.Worker{{Name: "worker"}},
+						},
+					},
+				})
+
+				Expect(conditions.ConditionTypes()).To(HaveExactElements(
+					gardencorev1beta1.ConditionType("APIServerAvailable"),
+					gardencorev1beta1.ConditionType("ControlPlaneHealthy"),
+					gardencorev1beta1.ConditionType("ObservabilityComponentsHealthy"),
+					gardencorev1beta1.ConditionType("EveryNodeReady"),
+					gardencorev1beta1.ConditionType("SystemComponentsHealthy"),
+				))
+			})
+		})
+	})
 })
 
 func newNode(name string, healthy bool, labels labels.Set, annotations map[string]string, kubeletVersion string) corev1.Node {

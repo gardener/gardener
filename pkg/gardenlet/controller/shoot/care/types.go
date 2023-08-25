@@ -34,7 +34,7 @@ import (
 
 // HealthCheck is an interface used to perform health checks.
 type HealthCheck interface {
-	Check(ctx context.Context, threshold *metav1.Duration, conditions []gardencorev1beta1.Condition) []gardencorev1beta1.Condition
+	Check(ctx context.Context, threshold *metav1.Duration, conditions care.ShootConditions) []gardencorev1beta1.Condition
 }
 
 // NewHealthCheckFunc is a function used to create a new instance for performing health checks.
@@ -47,7 +47,7 @@ var defaultNewHealthCheck NewHealthCheckFunc = func(op *operation.Operation, ini
 
 // ConstraintCheck is an interface used to perform constraint checks.
 type ConstraintCheck interface {
-	Check(ctx context.Context, constraints []gardencorev1beta1.Condition) []gardencorev1beta1.Condition
+	Check(context.Context, care.ShootConstraints) []gardencorev1beta1.Condition
 }
 
 // NewConstraintCheckFunc is a function used to create a new instance for performing constraint checks.

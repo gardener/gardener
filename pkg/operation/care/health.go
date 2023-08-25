@@ -114,7 +114,7 @@ func NewHealth(op *operation.Operation, shootClientInit ShootClientInit, clock c
 func (h *Health) Check(
 	ctx context.Context,
 	healthCheckOutdatedThreshold *metav1.Duration,
-	conditions []gardencorev1beta1.Condition,
+	conditions ShootConditions,
 ) []gardencorev1beta1.Condition {
 	updatedConditions := h.healthChecks(ctx, healthCheckOutdatedThreshold, conditions)
 
@@ -300,26 +300,10 @@ func getControllerInstallationForControllerRegistration(controllerInstallations 
 func (h *Health) healthChecks(
 	ctx context.Context,
 	healthCheckOutdatedThreshold *metav1.Duration,
-	conditions []gardencorev1beta1.Condition,
+	conditions ShootConditions,
 ) []gardencorev1beta1.Condition {
 	if h.shoot.HibernationEnabled || h.shoot.GetInfo().Status.IsHibernated {
-		return shootHibernatedConditions(h.clock, conditions)
-	}
-
-	var apiserverAvailability, controlPlane, observabilityComponents, nodes, systemComponents gardencorev1beta1.Condition
-	for _, cond := range conditions {
-		switch cond.Type {
-		case gardencorev1beta1.ShootAPIServerAvailable:
-			apiserverAvailability = cond
-		case gardencorev1beta1.ShootControlPlaneHealthy:
-			controlPlane = cond
-		case gardencorev1beta1.ShootObservabilityComponentsHealthy:
-			observabilityComponents = cond
-		case gardencorev1beta1.ShootEveryNodeReady:
-			nodes = cond
-		case gardencorev1beta1.ShootSystemComponentsHealthy:
-			systemComponents = cond
-		}
+		return shootHibernatedConditions(h.clock, conditions.ConvertToSlice())
 	}
 
 	// Get extensions' conditions that are examined by health checks.
@@ -331,12 +315,12 @@ func (h *Health) healthChecks(
 	// Health checks that can be executed in all cases.
 	taskFns := []flow.TaskFn{
 		func(ctx context.Context) error {
-			newControlPlane, err := h.checkControlPlane(ctx, controlPlane, extensionConditionsControlPlaneHealthy, healthCheckOutdatedThreshold)
-			controlPlane = v1beta1helper.NewConditionOrError(h.clock, controlPlane, newControlPlane, err)
+			newControlPlane, err := h.checkControlPlane(ctx, conditions.controlPlaneHealthy, extensionConditionsControlPlaneHealthy, healthCheckOutdatedThreshold)
+			conditions.controlPlaneHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.controlPlaneHealthy, newControlPlane, err)
 			return nil
 		}, func(ctx context.Context) error {
-			newObservabilityComponents, err := h.checkObservabilityComponents(ctx, observabilityComponents)
-			observabilityComponents = v1beta1helper.NewConditionOrError(h.clock, observabilityComponents, newObservabilityComponents, err)
+			newObservabilityComponents, err := h.checkObservabilityComponents(ctx, conditions.observabilityComponentsHealthy)
+			conditions.observabilityComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.observabilityComponentsHealthy, newObservabilityComponents, err)
 			return nil
 		},
 	}
@@ -346,20 +330,21 @@ func (h *Health) healthChecks(
 	if apiServerRunning && err == nil {
 		taskFns = append(taskFns,
 			func(ctx context.Context) error {
-				apiserverAvailability = h.checkAPIServerAvailability(ctx, shootClient.RESTClient(), apiserverAvailability)
+				conditions.apiServerAvailable = h.checkAPIServerAvailability(ctx, shootClient.RESTClient(), conditions.apiServerAvailable)
 				return nil
 			},
 			func(ctx context.Context) error {
-				newSystemComponents, err := h.checkSystemComponents(ctx, shootClient, systemComponents, extensionConditionsSystemComponentsHealthy, healthCheckOutdatedThreshold)
-				systemComponents = v1beta1helper.NewConditionOrError(h.clock, systemComponents, newSystemComponents, err)
+				newSystemComponents, err := h.checkSystemComponents(ctx, shootClient, conditions.systemComponentsHealthy, extensionConditionsSystemComponentsHealthy, healthCheckOutdatedThreshold)
+				conditions.systemComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.systemComponentsHealthy, newSystemComponents, err)
 				return nil
 			},
 		)
-		if !h.shoot.IsWorkerless {
+		if conditions.everyNodeReady != nil {
 			taskFns = append(taskFns,
 				func(ctx context.Context) error {
-					newNodes, err := h.checkWorkers(ctx, shootClient, nodes, extensionConditionsEveryNodeReady, healthCheckOutdatedThreshold)
-					nodes = v1beta1helper.NewConditionOrError(h.clock, nodes, newNodes, err)
+					newNodes, err := h.checkWorkers(ctx, shootClient, *conditions.everyNodeReady, extensionConditionsEveryNodeReady, healthCheckOutdatedThreshold)
+					nodeCondition := v1beta1helper.NewConditionOrError(h.clock, *conditions.everyNodeReady, newNodes, err)
+					conditions.everyNodeReady = &nodeCondition
 					return nil
 				})
 		}
@@ -372,21 +357,18 @@ func (h *Health) healthChecks(
 			message = fmt.Sprintf("Could not initialize Shoot client for health check: %+v", err)
 		}
 
-		apiserverAvailability = v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, apiserverAvailability, "APIServerDown", "Could not reach API server during client initialization.")
-		systemComponents = v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(h.clock, systemComponents, message)
-		if !h.shoot.IsWorkerless {
-			nodes = v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(h.clock, nodes, message)
+		conditions.apiServerAvailable = v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, conditions.apiServerAvailable, "APIServerDown", "Could not reach API server during client initialization.")
+		conditions.systemComponentsHealthy = v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(h.clock, conditions.systemComponentsHealthy, message)
+		if conditions.everyNodeReady != nil {
+			nodeCondition := v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(h.clock, *conditions.everyNodeReady, message)
+			conditions.everyNodeReady = &nodeCondition
 		}
 	}
 
 	// Execute all relevant health checks.
 	_ = flow.Parallel(taskFns...)(ctx)
 
-	result := []gardencorev1beta1.Condition{apiserverAvailability, controlPlane, observabilityComponents, systemComponents}
-	if !h.shoot.IsWorkerless {
-		result = append(result, nodes)
-	}
-	return result
+	return conditions.ConvertToSlice()
 }
 
 // checkAPIServerAvailability checks if the API server of a Shoot cluster is reachable and measure the response time.
@@ -854,4 +836,61 @@ var unstableOperationTypes = map[gardencorev1beta1.LastOperationType]struct{}{
 func isUnstableOperationType(lastOperationType gardencorev1beta1.LastOperationType) bool {
 	_, ok := unstableOperationTypes[lastOperationType]
 	return ok
+}
+
+// ShootConditions contains all shoot related conditions of the shoot status subresource.
+type ShootConditions struct {
+	apiServerAvailable             gardencorev1beta1.Condition
+	controlPlaneHealthy            gardencorev1beta1.Condition
+	observabilityComponentsHealthy gardencorev1beta1.Condition
+	systemComponentsHealthy        gardencorev1beta1.Condition
+	everyNodeReady                 *gardencorev1beta1.Condition
+}
+
+// ConvertToSlice returns the shoot conditions as a slice.
+func (s ShootConditions) ConvertToSlice() []gardencorev1beta1.Condition {
+	conditions := []gardencorev1beta1.Condition{
+		s.apiServerAvailable,
+		s.controlPlaneHealthy,
+		s.observabilityComponentsHealthy,
+	}
+
+	if s.everyNodeReady != nil {
+		conditions = append(conditions, *s.everyNodeReady)
+	}
+
+	return append(conditions, s.systemComponentsHealthy)
+}
+
+// ConditionTypes returns all shoot condition types.
+func (s ShootConditions) ConditionTypes() []gardencorev1beta1.ConditionType {
+	types := []gardencorev1beta1.ConditionType{
+		s.apiServerAvailable.Type,
+		s.controlPlaneHealthy.Type,
+		s.observabilityComponentsHealthy.Type,
+	}
+
+	if s.everyNodeReady != nil {
+		types = append(types, gardencorev1beta1.ShootEveryNodeReady)
+	}
+
+	return append(types, s.systemComponentsHealthy.Type)
+}
+
+// NewShootConditions returns a new instance of ShootConditions.
+// All conditions are retrieved from the given 'shoot' or newly initialized.
+func NewShootConditions(clock clock.Clock, shoot *gardencorev1beta1.Shoot) ShootConditions {
+	shootConditions := ShootConditions{
+		apiServerAvailable:             v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Conditions, gardencorev1beta1.ShootAPIServerAvailable),
+		controlPlaneHealthy:            v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Conditions, gardencorev1beta1.ShootControlPlaneHealthy),
+		observabilityComponentsHealthy: v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Conditions, gardencorev1beta1.ShootObservabilityComponentsHealthy),
+		systemComponentsHealthy:        v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Conditions, gardencorev1beta1.ShootSystemComponentsHealthy),
+	}
+
+	if !v1beta1helper.IsWorkerless(shoot) {
+		nodeCondition := v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Conditions, gardencorev1beta1.ShootEveryNodeReady)
+		shootConditions.everyNodeReady = &nodeCondition
+	}
+
+	return shootConditions
 }
