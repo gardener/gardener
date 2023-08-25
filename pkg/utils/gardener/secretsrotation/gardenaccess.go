@@ -27,7 +27,10 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-var seedSecretsRotationOperations sets.Set[string] = sets.New(v1beta1constants.SeedOperationRenewGardenAccessSecrets)
+var seedSecretsRotationOperations sets.Set[string] = sets.New(
+	v1beta1constants.SeedOperationRenewGardenAccessSecrets,
+	v1beta1constants.GardenerOperationRenewKubeconfig,
+)
 
 // CheckRenewSeedGardenSecretsCompleted checks if renewal of garden secrets is completed for all seeds.
 func CheckRenewSeedGardenSecretsCompleted(ctx context.Context, log logr.Logger, c client.Client, operationAnnotation string) error {

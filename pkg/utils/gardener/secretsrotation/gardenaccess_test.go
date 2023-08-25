@@ -32,6 +32,7 @@ import (
 var _ = Describe("RenewGardenAccess", func() {
 	const (
 		renewGardenAccessSecrets = "renew-garden-access-secrets"
+		renewKubeconfig          = "renew-kubeconfig"
 	)
 
 	var (
@@ -64,10 +65,16 @@ var _ = Describe("RenewGardenAccess", func() {
 	}
 
 	Context("#CheckRenewSeedGardenSecretsCompleted", func() {
-		It("should succeed if no seed is annotated anymore", func() {
+		It("should succeed if no seed is annotated anymore - `renew-garden-access-secrets`", func() {
 			Expect(createSeeds()).To(Succeed())
 
 			Expect(CheckRenewSeedGardenSecretsCompleted(ctx, logger, gardenClient, renewGardenAccessSecrets)).To(Succeed())
+		})
+
+		It("should succeed if no seed is annotated anymore - `renew-kubeconfig`", func() {
+			Expect(createSeeds()).To(Succeed())
+
+			Expect(CheckRenewSeedGardenSecretsCompleted(ctx, logger, gardenClient, renewKubeconfig)).To(Succeed())
 		})
 
 		It("should succeed if some seeds have a different `gardener.cloud/operation` annotation", func() {
@@ -86,7 +93,7 @@ var _ = Describe("RenewGardenAccess", func() {
 	})
 
 	Context("#RenewSeedGardenSecrets", func() {
-		It("should succeed and annotate all seeds", func() {
+		It("should succeed and annotate all seeds - `renew-garden-access-secrets`", func() {
 			Expect(createSeeds()).To(Succeed())
 
 			Expect(RenewSeedGardenSecrets(ctx, logger, gardenClient, renewGardenAccessSecrets)).To(Succeed())
@@ -95,6 +102,18 @@ var _ = Describe("RenewGardenAccess", func() {
 			Expect(gardenClient.List(ctx, &seedList)).To(Succeed())
 			for _, seed := range seedList.Items {
 				Expect(seed.Annotations["gardener.cloud/operation"]).To(Equal(renewGardenAccessSecrets))
+			}
+		})
+
+		It("should succeed and annotate all seeds - `renew-kubeconfig`", func() {
+			Expect(createSeeds()).To(Succeed())
+
+			Expect(RenewSeedGardenSecrets(ctx, logger, gardenClient, renewKubeconfig)).To(Succeed())
+
+			seedList := gardencorev1beta1.SeedList{}
+			Expect(gardenClient.List(ctx, &seedList)).To(Succeed())
+			for _, seed := range seedList.Items {
+				Expect(seed.Annotations["gardener.cloud/operation"]).To(Equal(renewKubeconfig))
 			}
 		})
 
