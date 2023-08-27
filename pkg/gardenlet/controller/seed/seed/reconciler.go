@@ -248,7 +248,7 @@ func (r *Reconciler) updateStatusOperationError(ctx context.Context, seed *garde
 	seed.Status.LastOperation.Description = err.Error() + " Operation will be retried."
 	seed.Status.LastOperation.LastUpdateTime = metav1.NewTime(r.Clock.Now().UTC())
 
-	if err2 := r.GardenClient.Status().Patch(ctx, seed, patch); err != nil {
+	if err2 := r.GardenClient.Status().Patch(ctx, seed, patch); err2 != nil {
 		return fmt.Errorf("failed updating last operation to state 'Error' (due to %s): %w", err.Error(), err2)
 	}
 

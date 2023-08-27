@@ -312,7 +312,7 @@ func (r *Reconciler) updateStatusOperationError(ctx context.Context, garden *ope
 	garden.Status.LastOperation.Description = err.Error() + " Operation will be retried."
 	garden.Status.LastOperation.LastUpdateTime = metav1.NewTime(r.Clock.Now().UTC())
 
-	if err2 := r.RuntimeClientSet.Client().Status().Patch(ctx, garden, patch); err != nil {
+	if err2 := r.RuntimeClientSet.Client().Status().Patch(ctx, garden, patch); err2 != nil {
 		return fmt.Errorf("failed updating last operation to state 'Error' (due to %s): %w", err.Error(), err2)
 	}
 
