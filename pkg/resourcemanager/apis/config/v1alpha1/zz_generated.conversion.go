@@ -406,7 +406,6 @@ func Convert_config_ExtensionValidation_To_v1alpha1_ExtensionValidation(in *conf
 func autoConvert_v1alpha1_GarbageCollectorControllerConfig_To_config_GarbageCollectorControllerConfig(in *GarbageCollectorControllerConfig, out *config.GarbageCollectorControllerConfig, s conversion.Scope) error {
 	out.Enabled = in.Enabled
 	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
-	out.ConsiderManagedResources = (*bool)(unsafe.Pointer(in.ConsiderManagedResources))
 	return nil
 }
 
@@ -418,7 +417,6 @@ func Convert_v1alpha1_GarbageCollectorControllerConfig_To_config_GarbageCollecto
 func autoConvert_config_GarbageCollectorControllerConfig_To_v1alpha1_GarbageCollectorControllerConfig(in *config.GarbageCollectorControllerConfig, out *GarbageCollectorControllerConfig, s conversion.Scope) error {
 	out.Enabled = in.Enabled
 	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
-	out.ConsiderManagedResources = (*bool)(unsafe.Pointer(in.ConsiderManagedResources))
 	return nil
 }
 

@@ -28,7 +28,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -57,7 +56,7 @@ var _ = Describe("Collector", func() {
 		gc = &Reconciler{
 			TargetReader:            c,
 			TargetWriter:            c,
-			Config:                  config.GarbageCollectorControllerConfig{SyncPeriod: &metav1.Duration{}, ConsiderManagedResources: pointer.Bool(true)},
+			Config:                  config.GarbageCollectorControllerConfig{SyncPeriod: &metav1.Duration{}},
 			Clock:                   fakeClock,
 			MinimumObjectLifetime:   &minimumObjectLifetime,
 			TargetKubernetesVersion: semver.MustParse("1.24.0"),
