@@ -438,6 +438,7 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.ObservabilityRotation
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Observability contains information about the observability credential rotation.</p>
 </td>
 </tr>

@@ -570,6 +570,7 @@ type CredentialsRotation struct {
 	// +optional
 	ETCDEncryptionKey *gardencorev1beta1.ETCDEncryptionKeyRotation `json:"etcdEncryptionKey,omitempty"`
 	// Observability contains information about the observability credential rotation.
+	// +optional
 	Observability *gardencorev1beta1.ObservabilityRotation `json:"observability,omitempty"`
 }
 
