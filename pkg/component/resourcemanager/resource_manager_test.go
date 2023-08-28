@@ -130,7 +130,7 @@ var _ = Describe("ResourceManager", func() {
 		deployment                          *appsv1.Deployment
 		defaultNotReadyTolerationSeconds    *int64
 		defaultUnreachableTolerationSeconds *int64
-		configMapFor                        func(watchedNamespace, targetKubeconfig *string, isWorkerless, considerMRSecretsForGC bool) *corev1.ConfigMap
+		configMapFor                        func(watchedNamespace, targetKubeconfig *string, isWorkerless bool) *corev1.ConfigMap
 		deploymentFor                       func(configMapName string, kubernetesVersion *semver.Version, watchedNamespace *string, targetKubeconfig *string, targetClusterDiffersFromSourceCluster bool, secretNameBootstrapKubeconfig *string) *appsv1.Deployment
 		defaultLabels                       map[string]string
 		roleBinding                         *rbacv1.RoleBinding
@@ -359,7 +359,7 @@ var _ = Describe("ResourceManager", func() {
 			AutomountServiceAccountToken: pointer.Bool(false),
 		}
 
-		configMapFor = func(watchedNamespace *string, targetKubeconfig *string, isWorkerless, considerManagedResources bool) *corev1.ConfigMap {
+		configMapFor = func(watchedNamespace *string, targetKubeconfig *string, isWorkerless bool) *corev1.ConfigMap {
 			configMap := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gardener-resource-manager",
@@ -398,9 +398,8 @@ var _ = Describe("ResourceManager", func() {
 					ClusterID:     &clusterIdentity,
 					ResourceClass: &resourceClass,
 					GarbageCollector: resourcemanagerv1alpha1.GarbageCollectorControllerConfig{
-						Enabled:                  true,
-						SyncPeriod:               &metav1.Duration{Duration: 12 * time.Hour},
-						ConsiderManagedResources: &considerManagedResources,
+						Enabled:    true,
+						SyncPeriod: &metav1.Duration{Duration: 12 * time.Hour},
 					},
 					Health: resourcemanagerv1alpha1.HealthControllerConfig{
 						ConcurrentSyncs: &maxConcurrentHealthWorkers,
@@ -1865,7 +1864,7 @@ subjects:
 		Context("target cluster != source cluster; watched namespace is set", func() {
 			JustBeforeEach(func() {
 				role.Namespace = watchedNamespace
-				configMap = configMapFor(&watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), false, false)
+				configMap = configMapFor(&watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), false)
 				deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, &watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), true, nil)
 				cfg.RuntimeKubernetesVersion = semver.MustParse("1.24.0")
 				resourceManager = New(c, deployNamespace, sm, cfg)
@@ -2036,7 +2035,7 @@ subjects:
 				clusterRole.Rules = allowManagedResources
 				cfg.TargetDiffersFromSourceCluster = true
 				cfg.WatchedNamespace = nil
-				configMap = configMapFor(nil, pointer.String(gardenerutils.PathGenericKubeconfig), false, false)
+				configMap = configMapFor(nil, pointer.String(gardenerutils.PathGenericKubeconfig), false)
 				deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, nil, pointer.String(gardenerutils.PathGenericKubeconfig), true, nil)
 
 				resourceManager = New(c, deployNamespace, sm, cfg)
@@ -2154,7 +2153,7 @@ subjects:
 				cfg.TargetDiffersFromSourceCluster = true
 				cfg.WatchedNamespace = nil
 				cfg.IsWorkerless = true
-				configMap = configMapFor(nil, pointer.String(gardenerutils.PathGenericKubeconfig), true, false)
+				configMap = configMapFor(nil, pointer.String(gardenerutils.PathGenericKubeconfig), true)
 				deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, nil, pointer.String(gardenerutils.PathGenericKubeconfig), true, nil)
 
 				resourceManager = New(c, deployNamespace, sm, cfg)
@@ -2237,7 +2236,7 @@ subjects:
 				delete(service.Annotations, "networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports")
 				service.Annotations["networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports"] = `[{"protocol":"TCP","port":8080}]`
 				service.Annotations["networking.resources.gardener.cloud/from-world-to-ports"] = `[{"protocol":"TCP","port":10250}]`
-				configMap = configMapFor(&watchedNamespace, nil, false, true)
+				configMap = configMapFor(&watchedNamespace, nil, false)
 				deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, &watchedNamespace, nil, false, nil)
 
 				deployment.Spec.Template.Spec.Volumes = deployment.Spec.Template.Spec.Volumes[:len(deployment.Spec.Template.Spec.Volumes)-2]
@@ -2530,7 +2529,7 @@ subjects:
 
 	Describe("#Wait", func() {
 		BeforeEach(func() {
-			configMap = configMapFor(&watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), false, true)
+			configMap = configMapFor(&watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), false)
 			deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, &watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), false, nil)
 			resourceManager = New(fakeClient, deployNamespace, nil, cfg)
 		})

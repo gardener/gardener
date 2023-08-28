@@ -333,14 +333,12 @@ type VPAConfig struct {
 }
 
 func (r *resourceManager) Deploy(ctx context.Context) error {
-	considerManagedResourceSecretsForGC := false
 	if r.values.TargetDiffersFromSourceCluster {
 		r.secrets.shootAccess = r.newShootAccessSecret()
 		if err := r.secrets.shootAccess.WithTokenExpirationDuration("24h").Reconcile(ctx, r.client); err != nil {
 			return err
 		}
 	} else {
-		considerManagedResourceSecretsForGC = true
 		if err := r.ensureCustomResourceDefinition(ctx); err != nil {
 			return err
 		}
@@ -351,7 +349,7 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 	fns := []flow.TaskFn{
 		r.ensureServiceAccount,
 		func(ctx context.Context) error {
-			return r.ensureConfigMap(ctx, configMap, considerManagedResourceSecretsForGC)
+			return r.ensureConfigMap(ctx, configMap)
 		},
 		r.ensureRBAC,
 		r.ensureService,
@@ -513,7 +511,7 @@ func (r *resourceManager) emptyClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: r.values.NamePrefix + clusterRoleName}}
 }
 
-func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1.ConfigMap, considerManagedResourceSecretsForGC bool) error {
+func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1.ConfigMap) error {
 	config := &resourcemanagerv1alpha1.ResourceManagerConfiguration{
 		SourceClientConnection: resourcemanagerv1alpha1.SourceClientConnection{
 			Namespace: r.values.WatchedNamespace,
@@ -545,9 +543,8 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 			ClusterID:     r.values.ClusterIdentity,
 			ResourceClass: r.values.ResourceClass,
 			GarbageCollector: resourcemanagerv1alpha1.GarbageCollectorControllerConfig{
-				Enabled:                  true,
-				SyncPeriod:               &metav1.Duration{Duration: 12 * time.Hour},
-				ConsiderManagedResources: &considerManagedResourceSecretsForGC,
+				Enabled:    true,
+				SyncPeriod: &metav1.Duration{Duration: 12 * time.Hour},
 			},
 			Health: resourcemanagerv1alpha1.HealthControllerConfig{
 				ConcurrentSyncs: r.values.MaxConcurrentHealthWorkers,
