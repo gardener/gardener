@@ -64,6 +64,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		v := rotationutils.Verifiers{
 			// basic verifiers checking secrets
 			&rotation.CAVerifier{RuntimeClient: runtimeClient, Garden: garden},
+			&rotation.ObservabilityVerifier{RuntimeClient: runtimeClient, Garden: garden},
 			&rotationutils.ETCDEncryptionKeyVerifier{
 				RuntimeClient:               runtimeClient,
 				Namespace:                   namespace,
