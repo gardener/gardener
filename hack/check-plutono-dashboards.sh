@@ -26,16 +26,20 @@ function check_dashboards {
   find . -path '*/dashboards/*' -name '*.json' -type f \
   | while IFS= read -r file; do
 
-      if jq -e '.title == "" or .uid == ""' "$file" >/dev/null; then
-          echo "Error: Title or UID is empty in dashboard: $file" >&2
-          return 1
-      fi
+    #  if jq -e '.title == "" or .uid == ""' "$file" >/dev/null; then
+    #      echo "Error: Title or UID is empty in dashboard: $file" >&2
+    #      return 1
+    #  fi
 
       jq -c -r '{title: (.title // error("title is not set")),
                  uid:   (.uid   // error("uid is not set"))}
                 | if (.uid | length) > 40
                     then error("uid is too long (max length is 40 characters): \(.uid)")
-                    else .
+                  elif .title == "" then 
+                    error("title is empty")
+                  elif .uid == "" then
+                    error("UID is empty")
+                  else .
                   end
                 | "\(input_filename) \(.uid)"' "$file" \
       || { echo "Error: Failure while parsing dashboard: $file" >&2; return 1; }
