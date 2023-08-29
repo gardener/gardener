@@ -60,7 +60,7 @@ spec:
       probe: # deprecated
         enabled: true # shoot's kube-controller-managers get scaled down when the kube-apiserver is not reachable via external DNS
   # excessCapacityReservation:
-  #  enabled: true # optional: automatically assumed 'true' if `configs` are specified.
+  #  enabled: true # optional: automatically assumed 'true' if not set and `configs` are specified.
   #  configs: # this seed has the following excess-capacity-reservation deployments
   #  - resources:
   #      cpu: "4"

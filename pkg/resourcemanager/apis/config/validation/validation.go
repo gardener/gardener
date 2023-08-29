@@ -26,7 +26,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
-	corevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
+	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 )
 
 // ValidateResourceManagerConfiguration validates the given `ResourceManagerConfiguration`.
@@ -206,7 +206,7 @@ func validateSyncPeriod(val *metav1.Duration, fldPath *field.Path) field.ErrorLi
 func validateSystemComponentsConfigWebhookConfig(conf *config.SystemComponentsConfigWebhookConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, corevalidation.ValidateTolerations(conf.PodTolerations, fldPath.Child("podTolerations"))...)
+	allErrs = append(allErrs, kubernetescorevalidation.ValidateTolerations(conf.PodTolerations, fldPath.Child("podTolerations"))...)
 
 	return allErrs
 }

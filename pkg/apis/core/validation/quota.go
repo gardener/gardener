@@ -23,7 +23,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
-	corevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
+	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 )
 
 // ValidateQuota validates a Quota object.
@@ -66,7 +66,7 @@ func ValidateQuotaSpec(quotaSpec *core.QuotaSpec, fldPath *field.Path) field.Err
 		if !isValidQuotaMetric(corev1.ResourceName(k)) {
 			allErrs = append(allErrs, field.Invalid(keyPath, v.String(), fmt.Sprintf("%s is no supported quota metric", string(k))))
 		}
-		allErrs = append(allErrs, corevalidation.ValidateResourceQuantityValue(k.String(), v, keyPath)...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue(k.String(), v, keyPath)...)
 	}
 
 	return allErrs

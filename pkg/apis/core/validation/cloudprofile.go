@@ -29,7 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
-	corevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
+	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 )
 
 // ValidateCloudProfile validates a CloudProfile object.
@@ -174,9 +174,9 @@ func validateMachineTypes(machineTypes []core.MachineType, fldPath *field.Path) 
 		}
 		names[machineType.Name] = struct{}{}
 
-		allErrs = append(allErrs, corevalidation.ValidateResourceQuantityValue("cpu", machineType.CPU, cpuPath)...)
-		allErrs = append(allErrs, corevalidation.ValidateResourceQuantityValue("gpu", machineType.GPU, gpuPath)...)
-		allErrs = append(allErrs, corevalidation.ValidateResourceQuantityValue("memory", machineType.Memory, memoryPath)...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("cpu", machineType.CPU, cpuPath)...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("gpu", machineType.GPU, gpuPath)...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("memory", machineType.Memory, memoryPath)...)
 		allErrs = append(allErrs, validateMachineTypeArchitecture(machineType.Architecture, archPath)...)
 
 		if machineType.Storage != nil {
@@ -201,11 +201,11 @@ func validateMachineTypeStorage(storage core.MachineTypeStorage, fldPath *field.
 	}
 
 	if storage.StorageSize != nil {
-		allErrs = append(allErrs, corevalidation.ValidateResourceQuantityValue("size", *storage.StorageSize, fldPath.Child("size"))...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("size", *storage.StorageSize, fldPath.Child("size"))...)
 	}
 
 	if storage.MinSize != nil {
-		allErrs = append(allErrs, corevalidation.ValidateResourceQuantityValue("minSize", *storage.MinSize, fldPath.Child("minSize"))...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("minSize", *storage.MinSize, fldPath.Child("minSize"))...)
 	}
 
 	return allErrs
@@ -365,7 +365,7 @@ func validateVolumeTypes(volumeTypes []core.VolumeType, fldPath *field.Path) fie
 		}
 
 		if volumeType.MinSize != nil {
-			allErrs = append(allErrs, corevalidation.ValidateResourceQuantityValue("minSize", *volumeType.MinSize, idxPath.Child("minSize"))...)
+			allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("minSize", *volumeType.MinSize, idxPath.Child("minSize"))...)
 		}
 	}
 

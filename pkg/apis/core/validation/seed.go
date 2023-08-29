@@ -27,7 +27,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
-	corevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
+	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 )
 
 var (
@@ -142,7 +142,7 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 
 	if seedSpec.Volume != nil {
 		if seedSpec.Volume.MinimumSize != nil {
-			allErrs = append(allErrs, corevalidation.ValidateResourceQuantityValue("minimumSize", *seedSpec.Volume.MinimumSize, fldPath.Child("volume", "minimumSize"))...)
+			allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("minimumSize", *seedSpec.Volume.MinimumSize, fldPath.Child("volume", "minimumSize"))...)
 		}
 
 		volumeProviderPurposes := make(map[string]struct{}, len(seedSpec.Volume.Providers))
@@ -168,9 +168,9 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 					allErrs = append(allErrs, field.Required(fldPath.Child("settings", "excessCapacityReservation", "configs").Index(i).Child("resources"), "cannot be empty"))
 				}
 				for resource, value := range config.Resources {
-					allErrs = append(allErrs, corevalidation.ValidateResourceQuantityValue(resource.String(), value, fldPath.Child("settings", "excessCapacityReservation", "configs").Index(i).Child("resources").Child(resource.String()))...)
+					allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue(resource.String(), value, fldPath.Child("settings", "excessCapacityReservation", "configs").Index(i).Child("resources").Child(resource.String()))...)
 				}
-				allErrs = append(allErrs, corevalidation.ValidateTolerations(config.Tolerations, fldPath.Child("settings", "excessCapacityReservation", "configs").Index(i).Child("tolerations"))...)
+				allErrs = append(allErrs, kubernetescorevalidation.ValidateTolerations(config.Tolerations, fldPath.Child("settings", "excessCapacityReservation", "configs").Index(i).Child("tolerations"))...)
 			}
 		}
 		if seedSpec.Settings.LoadBalancerServices != nil {

@@ -234,6 +234,8 @@ linters-settings:
         alias: secretsmanager
       - pkg: github.com/gardener/gardener/pkg/utils/secrets/manager/fake
         alias: fakesecretsmanager
+      - pkg: github.com/gardener/gardener/pkg/utils/validation/kubernetes/(\w+)
+        alias: kubernetes${1}validation
       - pkg: github.com/gardener/gardener/plugin/pkg/utils
         alias: admissionutils
       - pkg: github.com/gardener/gardener/plugin/pkg/shoot/dnsrewriting

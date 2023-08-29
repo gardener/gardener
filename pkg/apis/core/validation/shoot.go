@@ -52,7 +52,7 @@ import (
 	admissionpluginsvalidation "github.com/gardener/gardener/pkg/utils/validation/admissionplugins"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	featuresvalidation "github.com/gardener/gardener/pkg/utils/validation/features"
-	corevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
+	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
@@ -1647,19 +1647,19 @@ func validateKubeletConfigEviction(eviction *core.KubeletConfigEviction, fldPath
 func validateKubeletConfigEvictionMinimumReclaim(eviction *core.KubeletConfigEvictionMinimumReclaim, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if eviction.MemoryAvailable != nil {
-		allErrs = append(allErrs, corevalidation.ValidateResourceQuantityValue("memoryAvailable", *eviction.MemoryAvailable, fldPath.Child("memoryAvailable"))...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("memoryAvailable", *eviction.MemoryAvailable, fldPath.Child("memoryAvailable"))...)
 	}
 	if eviction.ImageFSAvailable != nil {
-		allErrs = append(allErrs, corevalidation.ValidateResourceQuantityValue("imagefsAvailable", *eviction.ImageFSAvailable, fldPath.Child("imagefsAvailable"))...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("imagefsAvailable", *eviction.ImageFSAvailable, fldPath.Child("imagefsAvailable"))...)
 	}
 	if eviction.ImageFSInodesFree != nil {
-		allErrs = append(allErrs, corevalidation.ValidateResourceQuantityValue("imagefsInodesFree", *eviction.ImageFSInodesFree, fldPath.Child("imagefsInodesFree"))...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("imagefsInodesFree", *eviction.ImageFSInodesFree, fldPath.Child("imagefsInodesFree"))...)
 	}
 	if eviction.NodeFSAvailable != nil {
-		allErrs = append(allErrs, corevalidation.ValidateResourceQuantityValue("nodefsAvailable", *eviction.NodeFSAvailable, fldPath.Child("nodefsAvailable"))...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("nodefsAvailable", *eviction.NodeFSAvailable, fldPath.Child("nodefsAvailable"))...)
 	}
 	if eviction.ImageFSInodesFree != nil {
-		allErrs = append(allErrs, corevalidation.ValidateResourceQuantityValue("imagefsInodesFree", *eviction.ImageFSInodesFree, fldPath.Child("imagefsInodesFree"))...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("imagefsInodesFree", *eviction.ImageFSInodesFree, fldPath.Child("imagefsInodesFree"))...)
 	}
 	return allErrs
 }
@@ -1677,16 +1677,16 @@ func validateKubeletConfigEvictionSoftGracePeriod(eviction *core.KubeletConfigEv
 func validateKubeletConfigReserved(reserved *core.KubeletConfigReserved, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if reserved.CPU != nil {
-		allErrs = append(allErrs, corevalidation.ValidateResourceQuantityValue("cpu", *reserved.CPU, fldPath.Child("cpu"))...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("cpu", *reserved.CPU, fldPath.Child("cpu"))...)
 	}
 	if reserved.Memory != nil {
-		allErrs = append(allErrs, corevalidation.ValidateResourceQuantityValue("memory", *reserved.Memory, fldPath.Child("memory"))...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("memory", *reserved.Memory, fldPath.Child("memory"))...)
 	}
 	if reserved.EphemeralStorage != nil {
-		allErrs = append(allErrs, corevalidation.ValidateResourceQuantityValue("ephemeralStorage", *reserved.EphemeralStorage, fldPath.Child("ephemeralStorage"))...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("ephemeralStorage", *reserved.EphemeralStorage, fldPath.Child("ephemeralStorage"))...)
 	}
 	if reserved.PID != nil {
-		allErrs = append(allErrs, corevalidation.ValidateResourceQuantityValue("pid", *reserved.PID, fldPath.Child("pid"))...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("pid", *reserved.PID, fldPath.Child("pid"))...)
 	}
 	return allErrs
 }
@@ -1958,7 +1958,7 @@ func ValidateResourceQuantityOrPercent(valuePtr *string, fldPath *field.Path, ke
 	value := *valuePtr
 	// check for resource quantity
 	if quantity, err := resource.ParseQuantity(value); err == nil {
-		if len(corevalidation.ValidateResourceQuantityValue(key, quantity, fldPath)) == 0 {
+		if len(kubernetescorevalidation.ValidateResourceQuantityValue(key, quantity, fldPath)) == 0 {
 			return allErrs
 		}
 	}
