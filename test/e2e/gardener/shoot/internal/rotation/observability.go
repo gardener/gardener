@@ -15,10 +15,7 @@
 package rotation
 
 import (
-	"bytes"
 	"context"
-	"crypto/tls"
-	"encoding/base64"
 	"net/http"
 	"time"
 
@@ -29,6 +26,7 @@ import (
 
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/test/framework"
+	rotationutils "github.com/gardener/gardener/test/utils/rotation"
 )
 
 // ObservabilityVerifier verifies the observability credentials rotation.
@@ -56,7 +54,7 @@ func (v *ObservabilityVerifier) Before(ctx context.Context) {
 
 	By("Use old credentials to access observability endpoint")
 	Eventually(func(g Gomega) {
-		response, err := v.accessEndpoint(ctx, v.observabilityEndpoint, v.oldKeypairData["username"], v.oldKeypairData["password"])
+		response, err := rotationutils.AccessEndpoint(ctx, v.observabilityEndpoint, v.oldKeypairData["username"], v.oldKeypairData["password"])
 		g.Expect(err).NotTo(HaveOccurred())
 		g.Expect(response.StatusCode).To(Equal(http.StatusOK))
 	}).Should(Succeed())
@@ -74,7 +72,7 @@ func (v *ObservabilityVerifier) AfterPrepared(ctx context.Context) {
 
 	By("Use old credentials to access observability endpoint")
 	Consistently(func(g Gomega) {
-		response, err := v.accessEndpoint(ctx, v.observabilityEndpoint, v.oldKeypairData["username"], v.oldKeypairData["password"])
+		response, err := rotationutils.AccessEndpoint(ctx, v.observabilityEndpoint, v.oldKeypairData["username"], v.oldKeypairData["password"])
 		g.Expect(err).NotTo(HaveOccurred())
 		g.Expect(response.StatusCode).To(Equal(http.StatusUnauthorized))
 	}).Should(Succeed())
@@ -91,7 +89,7 @@ func (v *ObservabilityVerifier) AfterPrepared(ctx context.Context) {
 
 	By("Use new credentials to access observability endpoint")
 	Eventually(func(g Gomega) {
-		response, err := v.accessEndpoint(ctx, v.observabilityEndpoint, secret.Data["username"], secret.Data["password"])
+		response, err := rotationutils.AccessEndpoint(ctx, v.observabilityEndpoint, secret.Data["username"], secret.Data["password"])
 		g.Expect(err).NotTo(HaveOccurred())
 		g.Expect(response.StatusCode).To(Equal(http.StatusOK))
 	}).Should(Succeed())
@@ -105,19 +103,3 @@ func (v *ObservabilityVerifier) ExpectCompletingStatus(g Gomega) {}
 
 // AfterCompleted is called when the Shoot is in Completed status.
 func (v *ObservabilityVerifier) AfterCompleted(ctx context.Context) {}
-
-func (v *ObservabilityVerifier) accessEndpoint(ctx context.Context, url string, username, password []byte) (*http.Response, error) {
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
-
-	request, err := http.NewRequestWithContext(ctx, "GET", url+":8448", nil)
-	if err != nil {
-		return nil, err
-	}
-	request.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString(bytes.Join([][]byte{username, password}, []byte(":"))))
-
-	return httpClient.Do(request)
-}

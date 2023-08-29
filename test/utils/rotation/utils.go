@@ -15,6 +15,11 @@
 package rotation
 
 import (
+	"bytes"
+	"context"
+	"crypto/tls"
+	"encoding/base64"
+	"net/http"
 	"sort"
 
 	corev1 "k8s.io/api/core/v1"
@@ -42,3 +47,20 @@ type AgeSorter []corev1.Secret
 func (x AgeSorter) Len() int           { return len(x) }
 func (x AgeSorter) Swap(i, j int)      { x[i], x[j] = x[j], x[i] }
 func (x AgeSorter) Less(i, j int) bool { return x[i].CreationTimestamp.Before(&x[j].CreationTimestamp) }
+
+// AccessEndpoint does the GET request on given URL.
+func AccessEndpoint(ctx context.Context, url string, username, password []byte) (*http.Response, error) {
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+
+	request, err := http.NewRequestWithContext(ctx, "GET", url+":8448", nil)
+	if err != nil {
+		return nil, err
+	}
+	request.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString(bytes.Join([][]byte{username, password}, []byte(":"))))
+
+	return httpClient.Do(request)
+}

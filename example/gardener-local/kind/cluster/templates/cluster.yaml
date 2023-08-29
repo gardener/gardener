@@ -12,10 +12,9 @@ nodes:
     topology.kubernetes.io/zone: "0"
   extraPortMappings:
 {{ include "extraPortMappings.gardener.operator.virtualGarden" . | indent 2 }}
-{{ include "extraPortMappings.gardener.operator.nginx" . | indent 2 }}
+{{ include "extraPortMappings.gardener.nginx" . | indent 2 }}
 {{ include "extraPortMappings.gardener.controlPlane.etcd" . | indent 2 }}
 {{ include "extraPortMappings.gardener.seed.istio" . | indent 2 }}
-{{ include "extraPortMappings.gardener.seed.nginx" . | indent 2 }}
 {{ include "extraPortMappings.registry" . | indent 2 }}
 {{ include "extraPortMappings.gardener.seed.dns" . | indent 2 }}
   extraMounts:
