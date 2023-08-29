@@ -26,6 +26,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 )
 
 // ValidateResourceManagerConfiguration validates the given `ResourceManagerConfiguration`.
@@ -148,6 +149,7 @@ func validateResourceManagerWebhookConfiguration(conf config.ResourceManagerWebh
 	allErrs = append(allErrs, validatePodSchedulerNameWebhookConfiguration(conf.PodSchedulerName, fldPath.Child("podSchedulerName"))...)
 	allErrs = append(allErrs, validateProjectedTokenMountWebhookConfiguration(conf.ProjectedTokenMount, fldPath.Child("projectedTokenMount"))...)
 	allErrs = append(allErrs, validateHighAvailabilityConfigWebhookConfiguration(conf.HighAvailabilityConfig, fldPath.Child("highAvailabilityConfig"))...)
+	allErrs = append(allErrs, validateSystemComponentsConfigWebhookConfig(&conf.SystemComponentsConfig, fldPath.Child("systemComponentsConfig"))...)
 
 	return allErrs
 }
@@ -197,6 +199,14 @@ func validateSyncPeriod(val *metav1.Duration, fldPath *field.Path) field.ErrorLi
 	if val == nil || val.Duration < 15*time.Second {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("syncPeriod"), val, "must be at least 15s"))
 	}
+
+	return allErrs
+}
+
+func validateSystemComponentsConfigWebhookConfig(conf *config.SystemComponentsConfigWebhookConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, kubernetescorevalidation.ValidateTolerations(conf.PodTolerations, fldPath.Child("podTolerations"))...)
 
 	return allErrs
 }

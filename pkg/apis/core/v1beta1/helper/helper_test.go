@@ -894,6 +894,18 @@ var _ = Describe("helper", func() {
 		),
 	)
 
+	DescribeTable("#SeedSettingExcessCapacityReservationEnabled",
+		func(settings *gardencorev1beta1.SeedSettings, expectation bool) {
+			Expect(SeedSettingExcessCapacityReservationEnabled(settings)).To(Equal(expectation))
+		},
+
+		Entry("setting is nil", nil, true),
+		Entry("excess capacity reservation is nil", &gardencorev1beta1.SeedSettings{}, true),
+		Entry("excess capacity reservation 'enabled' is nil", &gardencorev1beta1.SeedSettings{ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{Enabled: nil}}, true),
+		Entry("excess capacity reservation 'enabled' is false", &gardencorev1beta1.SeedSettings{ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{Enabled: pointer.Bool(false)}}, false),
+		Entry("excess capacity reservation 'enabled' is true", &gardencorev1beta1.SeedSettings{ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{Enabled: pointer.Bool(true)}}, true),
+	)
+
 	DescribeTable("#SeedSettingDependencyWatchdogWeederEnabled",
 		func(settings *gardencorev1beta1.SeedSettings, expected bool) {
 			Expect(SeedSettingDependencyWatchdogWeederEnabled(settings)).To(Equal(expected))

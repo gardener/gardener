@@ -327,7 +327,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	}
 
 	// Deploy System Resources
-	systemResources, err := defaultSystem(seedClient, seed, seed.GetInfo().Spec.Settings.ExcessCapacityReservation.Enabled, r.GardenNamespace)
+	systemResources, err := defaultSystem(seedClient, seed, r.GardenNamespace)
 	if err != nil {
 		return err
 	}

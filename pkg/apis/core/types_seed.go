@@ -217,8 +217,20 @@ type SeedSettings struct {
 // SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the
 // seed.
 type SeedSettingExcessCapacityReservation struct {
-	// Enabled controls whether the excess capacity reservation should be enabled.
-	Enabled bool
+	// Enabled controls whether the default excess capacity reservation should be enabled. When not specified, the functionality is enabled.
+	Enabled *bool
+	// Configs configures excess capacity reservation deployments for shoot control planes in the seed.
+	Configs []SeedSettingExcessCapacityReservationConfig
+}
+
+// SeedSettingExcessCapacityReservationConfig configures excess capacity reservation deployments for shoot control planes in the seed.
+type SeedSettingExcessCapacityReservationConfig struct {
+	// Resources specify the resource requests and limits of the excess-capacity-reservation pod.
+	Resources corev1.ResourceList
+	// NodeSelector specifies the node where the excess-capacity-reservation pod should run.
+	NodeSelector map[string]string
+	// Tolerations specify the tolerations for the the excess-capacity-reservation pod.
+	Tolerations []corev1.Toleration
 }
 
 // SeedSettingScheduling controls settings for scheduling decisions for the seed.
