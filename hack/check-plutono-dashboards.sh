@@ -21,7 +21,6 @@ set -o pipefail
 
 echo "> Checking Plutono dashboards"
 
-
 function check_dashboards {
   find . -path '*/dashboards/*' -name '*.json' -type f \
   | while IFS= read -r file; do
