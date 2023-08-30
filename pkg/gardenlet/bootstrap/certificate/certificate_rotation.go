@@ -148,21 +148,35 @@ func waitForCertificateRotation(
 		return nil, []string{}, []net.IP{}, nil, err
 	}
 
-	if kubeconfigSecret.Annotations[v1beta1constants.GardenerOperation] == "renew" {
-		log.Info("Certificate expiration has not passed but immediate renewal was requested", "notAfter", cert.Leaf.NotAfter)
-		return &cert.Leaf.Subject, cert.Leaf.DNSNames, cert.Leaf.IPAddresses, &cert.Leaf.NotAfter, nil
-	}
-
 	deadline := nextRotationDeadline(*cert, gardenClientConnection.KubeconfigValidity)
 	log.Info("Determined certificate expiration and rotation deadline", "notAfter", cert.Leaf.NotAfter, "rotationDeadline", deadline)
 
 	if sleepInterval := deadline.Sub(now()); sleepInterval > 0 {
 		log.Info("Waiting for next certificate rotation", "interval", sleepInterval)
+	}
+
+	var stopWaiting bool
+	for !stopWaiting {
+		if kubeconfigSecret.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.KubeconfigSecretOperationRenew {
+			log.Info("Certificate expiration has not passed but immediate renewal was requested", "notAfter", cert.Leaf.NotAfter)
+			return &cert.Leaf.Subject, cert.Leaf.DNSNames, cert.Leaf.IPAddresses, &cert.Leaf.NotAfter, nil
+		}
 		// block until certificate rotation or until context is cancelled
 		select {
 		case <-ctx.Done():
 			return nil, []string{}, []net.IP{}, nil, ctx.Err()
-		case <-time.After(sleepInterval):
+		case <-time.After(deadline.Sub(now())):
+			stopWaiting = true
+		// check every 10 seconds for immediate renewal request
+		case <-time.After(time.Second * 10):
+			var tmpCert *tls.Certificate
+			kubeconfigSecret, tmpCert, err = readCertificateFromKubeconfigSecret(ctx, log, seedClient, gardenClientConnection)
+			if err != nil {
+				return nil, []string{}, []net.IP{}, nil, err
+			}
+			if tmpCert.Leaf.NotAfter != cert.Leaf.NotAfter {
+				stopWaiting = true
+			}
 		}
 	}
 

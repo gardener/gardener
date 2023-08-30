@@ -87,6 +87,8 @@ func mustIncreaseGeneration(oldSeed, newSeed *core.Seed) bool {
 		case v1beta1constants.GardenerOperationReconcile:
 			delete(newSeed.Annotations, v1beta1constants.GardenerOperation)
 			return true
+		case v1beta1constants.GardenerOperationRenewKubeconfig:
+			return true
 		}
 	}
 

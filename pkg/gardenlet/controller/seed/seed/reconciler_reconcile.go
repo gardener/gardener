@@ -473,11 +473,15 @@ func (r *Reconciler) runReconcileSeedFlow(
 				}
 
 				// remove operation annotation from seed after successful operation
-				return seed.UpdateInfo(ctx, r.GardenClient, false, func(seedObj *gardencorev1beta1.Seed) error {
-					delete(seedObj.Annotations, v1beta1constants.GardenerOperation)
-					return nil
-				})
+				return removeSeedOperationAnnotation(ctx, r.GardenClient, seed)
 			}).DoIf(seed.GetInfo().Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.SeedOperationRenewGardenAccessSecrets),
+		})
+
+		_ = g.Add(flow.Task{
+			Name: "Renewing garden kubeconfig",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return renewGardenKubeconfig(ctx, r.GardenClient, seedClient, r.Config.GardenClientConnection, seed)
+			}).DoIf(seed.GetInfo().Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRenewKubeconfig),
 		})
 	)
 
@@ -843,6 +847,33 @@ func cleanupOrphanIstioNamespace(
 	}
 
 	return nil
+}
+
+func removeSeedOperationAnnotation(ctx context.Context, gardenClient client.Client, seed *seedpkg.Seed) error {
+	return seed.UpdateInfo(ctx, gardenClient, false, func(seedObj *gardencorev1beta1.Seed) error {
+		delete(seedObj.Annotations, v1beta1constants.GardenerOperation)
+		return nil
+	})
+}
+
+func renewGardenKubeconfig(ctx context.Context, gardenClient, seedClient client.Client, gardenClientConnection *config.GardenClientConnection, seed *seedpkg.Seed) error {
+	if gardenClientConnection == nil || gardenClientConnection.KubeconfigSecret == nil {
+		return fmt.Errorf(
+			"unable to renew garden kubeconfig. No gardenClientConnection.kubeconfigSecret specified in configuration of gardenlet. Remove \"%s=%s\" annotation from seed to reconcile successfully",
+			v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRenewKubeconfig,
+		)
+	}
+
+	kubeconfig := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: gardenClientConnection.KubeconfigSecret.Name, Namespace: gardenClientConnection.KubeconfigSecret.Namespace}}
+	if err := seedClient.Get(ctx, client.ObjectKeyFromObject(kubeconfig), kubeconfig); err != nil {
+		return err
+	}
+	if err := kubernetesutils.SetAnnotationAndUpdate(ctx, seedClient, kubeconfig, v1beta1constants.GardenerOperation, v1beta1constants.KubeconfigSecretOperationRenew); err != nil {
+		return err
+	}
+
+	// remove operation annotation from seed after successful operation
+	return removeSeedOperationAnnotation(ctx, gardenClient, seed)
 }
 
 // WaitUntilLoadBalancerIsReady is an alias for kubernetesutils.WaitUntilLoadBalancerIsReady. Exposed for tests.

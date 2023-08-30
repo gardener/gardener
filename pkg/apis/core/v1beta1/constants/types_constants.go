@@ -404,6 +404,8 @@ const (
 	// SeedOperationRenewGardenAccessSecrets is a constant for an annotation on a Seed indicating that the
 	// all garden access secrets on the seed shall be renewed.
 	SeedOperationRenewGardenAccessSecrets = "renew-garden-access-secrets"
+	// KubeconfigSecretOperationRenew is a constant for an annotation on a kubeconfig secret indicating that it should be renewed.
+	KubeconfigSecretOperationRenew = "renew"
 
 	// SeedResourceManagerClass is the resource-class managed by the Gardener-Resource-Manager
 	// instance in the garden namespace on the seeds.
