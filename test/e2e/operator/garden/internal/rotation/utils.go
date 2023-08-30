@@ -16,8 +16,6 @@ package rotation
 
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 // ManagedByGardenerOperatorSecretsManager is the label selector for selecting secrets managed by gardener-operator's
@@ -25,12 +23,4 @@ import (
 var ManagedByGardenerOperatorSecretsManager = client.MatchingLabels{
 	"managed-by":       "secrets-manager",
 	"manager-identity": "gardener-operator",
-}
-
-// ObservabilitySecretManagedByGardenerOperatorSecretsManager is the label selector for selecting observability secret managed by gardener-operator's
-// instance of secrets manager.
-var ObservabilitySecretManagedByGardenerOperatorSecretsManager = client.MatchingLabels{
-	"managed-by":       "secrets-manager",
-	"manager-identity": "gardener-operator",
-	"name":             v1beta1constants.SecretNameObservabilityIngress,
 }
