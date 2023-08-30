@@ -684,12 +684,12 @@ func validateWorkerGroupAndControlPlaneKubernetesVersion(controlPlaneVersion, wo
 	var (
 		k8sGreaterEqual128, _ = versionutils.CheckVersionMeetsConstraint(controlPlaneVersion, ">= 1.28")
 		minorSkewVersion      = workerVersion.IncMinor().IncMinor().IncMinor()
-		errorString           = "worker group kubernetes version must be at most two minor versions behind control plane version"
+		maxSkew               = "two"
 	)
 
 	if k8sGreaterEqual128 {
 		minorSkewVersion = workerVersion.IncMinor().IncMinor().IncMinor().IncMinor()
-		errorString = "worker group kubernetes version must be at most three minor versions behind control plane version"
+		maxSkew = "three"
 	}
 
 	versionSkewViolation, err := versionutils.CompareVersions(controlPlaneVersion, ">=", minorSkewVersion.String())
@@ -697,7 +697,7 @@ func validateWorkerGroupAndControlPlaneKubernetesVersion(controlPlaneVersion, wo
 		allErrs = append(allErrs, field.Invalid(fldPath, controlPlaneVersion, err.Error()))
 	}
 	if versionSkewViolation {
-		allErrs = append(allErrs, field.Forbidden(fldPath, errorString))
+		allErrs = append(allErrs, field.Forbidden(fldPath, "worker group kubernetes version must be at most "+maxSkew+" minor versions behind control plane version"))
 	}
 
 	return allErrs
