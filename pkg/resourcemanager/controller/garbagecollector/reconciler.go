@@ -24,11 +24,11 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -91,6 +91,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 
 	var (
 		items             []metav1.PartialObjectMetadata
+		mrGVK             = resourcesv1alpha1.SchemeGroupVersion.WithKind("ManagedResourceList")
 		groupVersionKinds = []schema.GroupVersionKind{
 			appsv1.SchemeGroupVersion.WithKind("DeploymentList"),
 			appsv1.SchemeGroupVersion.WithKind("StatefulSetList"),
@@ -98,12 +99,9 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 			batchv1.SchemeGroupVersion.WithKind("JobList"),
 			corev1.SchemeGroupVersion.WithKind("PodList"),
 			batchv1.SchemeGroupVersion.WithKind("CronJobList"),
+			mrGVK,
 		}
 	)
-
-	if pointer.BoolDeref(r.Config.ConsiderManagedResources, false) {
-		groupVersionKinds = append(groupVersionKinds, resourcesv1alpha1.SchemeGroupVersion.WithKind("ManagedResourceList"))
-	}
 
 	if versionutils.ConstraintK8sLess125.Check(r.TargetKubernetesVersion) {
 		groupVersionKinds = append(groupVersionKinds, batchv1beta1.SchemeGroupVersion.WithKind("CronJobList"))
@@ -113,6 +111,11 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 		objList := &metav1.PartialObjectMetadataList{}
 		objList.SetGroupVersionKind(gvk)
 		if err := r.TargetReader.List(ctx, objList); err != nil {
+			if meta.IsNoMatchError(err) && gvk == mrGVK {
+				// ignore the error if the resource is not matched since
+				// not all clusters have the managed resource CRD installed
+				continue
+			}
 			return reconcile.Result{}, err
 		}
 		items = append(items, objList.Items...)
