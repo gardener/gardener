@@ -114,8 +114,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	Expect((&garbagecollector.Reconciler{
 		Config: config.GarbageCollectorControllerConfig{
-			SyncPeriod:               &metav1.Duration{Duration: 100 * time.Millisecond},
-			ConsiderManagedResources: pointer.Bool(true),
+			SyncPeriod: &metav1.Duration{Duration: 100 * time.Millisecond},
 		},
 		Clock:                 clock.RealClock{},
 		MinimumObjectLifetime: pointer.Duration(0),
