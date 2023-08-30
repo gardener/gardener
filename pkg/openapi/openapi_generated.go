@@ -133,6 +133,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.NginxIngress":                               schema_pkg_apis_core_v1beta1_NginxIngress(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.NodeLocalDNS":                               schema_pkg_apis_core_v1beta1_NodeLocalDNS(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig":                                 schema_pkg_apis_core_v1beta1_OIDCConfig(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ObservabilityRotation":                      schema_pkg_apis_core_v1beta1_ObservabilityRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.OpenIDConnectClientAuthentication":          schema_pkg_apis_core_v1beta1_OpenIDConnectClientAuthentication(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Project":                                    schema_pkg_apis_core_v1beta1_Project(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectList":                                schema_pkg_apis_core_v1beta1_ProjectList(ref),
@@ -188,7 +189,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootList":                                  schema_pkg_apis_core_v1beta1_ShootList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootMachineImage":                          schema_pkg_apis_core_v1beta1_ShootMachineImage(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootNetworks":                              schema_pkg_apis_core_v1beta1_ShootNetworks(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootObservabilityRotation":                 schema_pkg_apis_core_v1beta1_ShootObservabilityRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSSHKeypairRotation":                    schema_pkg_apis_core_v1beta1_ShootSSHKeypairRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSpec":                                  schema_pkg_apis_core_v1beta1_ShootSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootState":                                 schema_pkg_apis_core_v1beta1_ShootState(ref),
@@ -5193,6 +5193,33 @@ func schema_pkg_apis_core_v1beta1_OIDCConfig(ref common.ReferenceCallback) commo
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_ObservabilityRotation(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ObservabilityRotation contains information about the observability credential rotation.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"lastInitiationTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastInitiationTime is the most recent time when the observability credential rotation was initiated.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"lastCompletionTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastCompletionTime is the most recent time when the observability credential rotation was successfully completed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_OpenIDConnectClientAuthentication(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -7434,7 +7461,7 @@ func schema_pkg_apis_core_v1beta1_ShootCredentialsRotation(ref common.ReferenceC
 					"observability": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Observability contains information about the observability credential rotation.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootObservabilityRotation"),
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ObservabilityRotation"),
 						},
 					},
 					"serviceAccountKey": {
@@ -7453,7 +7480,7 @@ func schema_pkg_apis_core_v1beta1_ShootCredentialsRotation(ref common.ReferenceC
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CARotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDEncryptionKeyRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountKeyRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootKubeconfigRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootObservabilityRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSSHKeypairRotation"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CARotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDEncryptionKeyRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ObservabilityRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountKeyRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootKubeconfigRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSSHKeypairRotation"},
 	}
 }
 
@@ -7596,33 +7623,6 @@ func schema_pkg_apis_core_v1beta1_ShootNetworks(ref common.ReferenceCallback) co
 				},
 			},
 		},
-	}
-}
-
-func schema_pkg_apis_core_v1beta1_ShootObservabilityRotation(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ShootObservabilityRotation contains information about the observability credential rotation.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"lastInitiationTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LastInitiationTime is the most recent time when the observability credential rotation was initiated.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"lastCompletionTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LastCompletionTime is the most recent time when the observability credential rotation was successfully completed.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-				},
-			},
-		},
-		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 

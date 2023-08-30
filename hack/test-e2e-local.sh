@@ -106,9 +106,14 @@ if [[ "$1" != "operator" ]]; then
 else
   if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
     printf "\n127.0.0.1 api.virtual-garden.local.gardener.cloud\n" >>/etc/hosts
+    printf "\n127.0.0.1 plutono-garden.ingress.runtime-garden.local.gardener.cloud\n" >>/etc/hosts
   else
     if ! grep -q -x "127.0.0.1 api.virtual-garden.local.gardener.cloud" /etc/hosts; then
       printf "Hostname for the virtual garden cluster is missing in /etc/hosts. To access the virtual garden cluster and run e2e tests, you need to extend your /etc/hosts file.\nPlease refer to https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md#accessing-the-shoot-cluster\n\n"
+      exit 1
+    fi
+    if ! grep -q -x "127.0.0.1 plutono-garden.ingress.runtime-garden.local.gardener.cloud" /etc/hosts; then
+      printf "Hostname for the plutono is missing in /etc/hosts. To access the plutono and run e2e tests, you need to extend your /etc/hosts file.\nPlease refer to https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md#accessing-the-shoot-cluster\n\n"
       exit 1
     fi
   fi

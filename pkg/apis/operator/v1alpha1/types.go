@@ -569,6 +569,9 @@ type CredentialsRotation struct {
 	// ETCDEncryptionKey contains information about the ETCD encryption key credential rotation.
 	// +optional
 	ETCDEncryptionKey *gardencorev1beta1.ETCDEncryptionKeyRotation `json:"etcdEncryptionKey,omitempty"`
+	// Observability contains information about the observability credential rotation.
+	// +optional
+	Observability *gardencorev1beta1.ObservabilityRotation `json:"observability,omitempty"`
 }
 
 const (
@@ -591,6 +594,7 @@ var AvailableOperationAnnotations = sets.New(
 	v1beta1constants.OperationRotateServiceAccountKeyComplete,
 	v1beta1constants.OperationRotateETCDEncryptionKeyStart,
 	v1beta1constants.OperationRotateETCDEncryptionKeyComplete,
+	v1beta1constants.OperationRotateObservabilityCredentials,
 	v1beta1constants.OperationRotateCredentialsStart,
 	v1beta1constants.OperationRotateCredentialsComplete,
 )

@@ -25,15 +25,15 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/test/framework"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 // ObservabilityVerifier verifies the observability credentials rotation.
 type ObservabilityVerifier struct {
-	*framework.ShootCreationFramework
+	GetObservabilitySecretFunc func(context.Context) (*corev1.Secret, error)
+	GetObservabilityEndpoint   func(*corev1.Secret) string
+	GetObservabilityRotation   func() *gardencorev1beta1.ObservabilityRotation
 
 	observabilityEndpoint string
 	oldKeypairData        map[string][]byte
@@ -42,21 +42,21 @@ type ObservabilityVerifier struct {
 // Before is called before the rotation is started.
 func (v *ObservabilityVerifier) Before(ctx context.Context) {
 	By("Verify old observability secret")
-	secret := &corev1.Secret{}
 	Eventually(func(g Gomega) {
-		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(v.Shoot.Name, "monitoring")}, secret)).To(Succeed())
+		secret, err := v.GetObservabilitySecretFunc(ctx)
+		g.Expect(err).NotTo(HaveOccurred())
 		g.Expect(secret.Data).To(And(
 			HaveKeyWithValue("username", Not(BeEmpty())),
 			HaveKeyWithValue("password", Not(BeEmpty())),
 		))
 
-		v.observabilityEndpoint = secret.Annotations["url"]
+		v.observabilityEndpoint = v.GetObservabilityEndpoint(secret)
 		v.oldKeypairData = secret.Data
 	}).Should(Succeed(), "old observability secret should be present")
 
 	By("Use old credentials to access observability endpoint")
 	Eventually(func(g Gomega) {
-		response, err := v.accessEndpoint(ctx, v.observabilityEndpoint, v.oldKeypairData["username"], v.oldKeypairData["password"])
+		response, err := accessEndpoint(ctx, v.observabilityEndpoint, v.oldKeypairData["username"], v.oldKeypairData["password"])
 		g.Expect(err).NotTo(HaveOccurred())
 		g.Expect(response.StatusCode).To(Equal(http.StatusOK))
 	}).Should(Succeed())
@@ -64,25 +64,30 @@ func (v *ObservabilityVerifier) Before(ctx context.Context) {
 
 // ExpectPreparingStatus is called while waiting for the Preparing status.
 func (v *ObservabilityVerifier) ExpectPreparingStatus(g Gomega) {
-	g.Expect(time.Now().UTC().Sub(v.Shoot.Status.Credentials.Rotation.Observability.LastInitiationTime.Time.UTC())).To(BeNumerically("<=", time.Minute))
+	g.Expect(time.Now().UTC().Sub(v.GetObservabilityRotation().LastInitiationTime.Time.UTC())).To(BeNumerically("<=", time.Minute))
 }
 
 // AfterPrepared is called when the Shoot is in Prepared status.
 func (v *ObservabilityVerifier) AfterPrepared(ctx context.Context) {
-	observabilityRotation := v.Shoot.Status.Credentials.Rotation.Observability
+	observabilityRotation := v.GetObservabilityRotation()
 	Expect(observabilityRotation.LastCompletionTime.Time.UTC().After(observabilityRotation.LastInitiationTime.Time.UTC())).To(BeTrue())
 
 	By("Use old credentials to access observability endpoint")
 	Consistently(func(g Gomega) {
-		response, err := v.accessEndpoint(ctx, v.observabilityEndpoint, v.oldKeypairData["username"], v.oldKeypairData["password"])
+		response, err := accessEndpoint(ctx, v.observabilityEndpoint, v.oldKeypairData["username"], v.oldKeypairData["password"])
 		g.Expect(err).NotTo(HaveOccurred())
 		g.Expect(response.StatusCode).To(Equal(http.StatusUnauthorized))
 	}).Should(Succeed())
 
 	By("Verify new observability secret")
-	secret := &corev1.Secret{}
+	var (
+		secret *corev1.Secret
+		err    error
+	)
+
 	Eventually(func(g Gomega) {
-		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(v.Shoot.Name, "monitoring")}, secret)).To(Succeed())
+		secret, err = v.GetObservabilitySecretFunc(ctx)
+		g.Expect(err).NotTo(HaveOccurred())
 		g.Expect(secret.Data).To(And(
 			HaveKeyWithValue("username", Equal(v.oldKeypairData["username"])),
 			HaveKeyWithValue("password", Not(Equal(v.oldKeypairData["password"]))),
@@ -91,7 +96,7 @@ func (v *ObservabilityVerifier) AfterPrepared(ctx context.Context) {
 
 	By("Use new credentials to access observability endpoint")
 	Eventually(func(g Gomega) {
-		response, err := v.accessEndpoint(ctx, v.observabilityEndpoint, secret.Data["username"], secret.Data["password"])
+		response, err := accessEndpoint(ctx, v.observabilityEndpoint, secret.Data["username"], secret.Data["password"])
 		g.Expect(err).NotTo(HaveOccurred())
 		g.Expect(response.StatusCode).To(Equal(http.StatusOK))
 	}).Should(Succeed())
@@ -106,7 +111,7 @@ func (v *ObservabilityVerifier) ExpectCompletingStatus(g Gomega) {}
 // AfterCompleted is called when the Shoot is in Completed status.
 func (v *ObservabilityVerifier) AfterCompleted(ctx context.Context) {}
 
-func (v *ObservabilityVerifier) accessEndpoint(ctx context.Context, url string, username, password []byte) (*http.Response, error) {
+func accessEndpoint(ctx context.Context, url string, username, password []byte) (*http.Response, error) {
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -117,7 +122,7 @@ func (v *ObservabilityVerifier) accessEndpoint(ctx context.Context, url string, 
 	if err != nil {
 		return nil, err
 	}
-	request.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString(bytes.Join([][]byte{username, password}, []byte(":"))))
 
+	request.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString(bytes.Join([][]byte{username, password}, []byte(":"))))
 	return httpClient.Do(request)
 }

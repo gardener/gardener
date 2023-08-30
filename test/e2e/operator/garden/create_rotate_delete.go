@@ -16,6 +16,7 @@ package garden
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -64,6 +65,30 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		v := rotationutils.Verifiers{
 			// basic verifiers checking secrets
 			&rotation.CAVerifier{RuntimeClient: runtimeClient, Garden: garden},
+			&rotationutils.ObservabilityVerifier{
+				GetObservabilitySecretFunc: func(ctx context.Context) (*corev1.Secret, error) {
+					secretList := &corev1.SecretList{}
+					if err := runtimeClient.List(ctx, secretList, client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{
+						"managed-by":       "secrets-manager",
+						"manager-identity": "gardener-operator",
+						"name":             "observability-ingress",
+					}); err != nil {
+						return nil, err
+					}
+
+					if length := len(secretList.Items); length != 1 {
+						return nil, fmt.Errorf("expect exactly one secret, found %d", length)
+					}
+
+					return &secretList.Items[0], nil
+				},
+				GetObservabilityEndpoint: func(_ *corev1.Secret) string {
+					return "https://plutono-garden." + garden.Spec.RuntimeCluster.Ingress.Domain
+				},
+				GetObservabilityRotation: func() *gardencorev1beta1.ObservabilityRotation {
+					return garden.Status.Credentials.Rotation.Observability
+				},
+			},
 			&rotationutils.ETCDEncryptionKeyVerifier{
 				RuntimeClient:               runtimeClient,
 				Namespace:                   namespace,

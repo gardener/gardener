@@ -404,7 +404,7 @@ var _ = Describe("Strategy", func() {
 					false,
 				),
 				Entry("rotate-observability-credentials",
-					v1beta1constants.ShootOperationRotateObservabilityCredentials,
+					v1beta1constants.OperationRotateObservabilityCredentials,
 					nil,
 					true,
 					true,

@@ -31,6 +31,8 @@ As of today, this applies to:
 - `etcd-druid`
 - `istio` control-plane
 - `nginx-ingress-controller`
+- `vali`
+- `plutono`
 
 Those components are so-called "seed system components".
 As they were already made available by `gardener-operator`, the `gardenlet` just skips them.
@@ -84,6 +86,7 @@ Please refer to [this document](../usage/shoot_credentials_rotation.md#gardener-
 
 - certificate authorities (and related server and client certificates)
 - ETCD encryption key
+- observability password For Plutono
 - `ServiceAccount` token signing key
 
 ⚠️ Rotation of static `ServiceAccount` secrets is not supported since the `kube-controller-manager` does not enable the `serviceaccount-token` controller.

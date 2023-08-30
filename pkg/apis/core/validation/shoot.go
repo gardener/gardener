@@ -77,7 +77,7 @@ var (
 		v1beta1constants.OperationRotateCAStart,
 		v1beta1constants.OperationRotateCAComplete,
 		v1beta1constants.ShootOperationRotateKubeconfigCredentials,
-		v1beta1constants.ShootOperationRotateObservabilityCredentials,
+		v1beta1constants.OperationRotateObservabilityCredentials,
 		v1beta1constants.ShootOperationRotateSSHKeypair,
 	).Union(forbiddenShootOperationsWhenHibernated)
 	forbiddenShootOperationsWhenHibernated = sets.New(

@@ -430,6 +430,18 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDEncryptionKeyRotation
 <p>ETCDEncryptionKey contains information about the ETCD encryption key credential rotation.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>observability</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.ObservabilityRotation
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Observability contains information about the observability credential rotation.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="operator.gardener.cloud/v1alpha1.DNS">DNS

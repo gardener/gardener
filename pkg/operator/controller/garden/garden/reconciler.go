@@ -187,6 +187,7 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 		startRotationCA(garden, &now)
 		startRotationServiceAccountKey(garden, &now)
 		startRotationETCDEncryptionKey(garden, &now)
+		startRotationObservability(garden, &now)
 	case v1beta1constants.OperationRotateCredentialsComplete:
 		mustRemoveOperationAnnotation = true
 		completeRotationCA(garden, &now)
@@ -213,6 +214,10 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 	case v1beta1constants.OperationRotateETCDEncryptionKeyComplete:
 		mustRemoveOperationAnnotation = true
 		completeRotationETCDEncryptionKey(garden, &now)
+
+	case v1beta1constants.OperationRotateObservabilityCredentials:
+		mustRemoveOperationAnnotation = true
+		startRotationObservability(garden, &now)
 	}
 
 	if err := r.RuntimeClientSet.Client().Status().Update(ctx, garden); err != nil {
@@ -294,6 +299,12 @@ func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, garden *o
 			rotation.LastCompletionTime = &now
 			rotation.LastInitiationFinishedTime = nil
 			rotation.LastCompletionTriggeredTime = nil
+		})
+	}
+
+	if helper.IsObservabilityRotationInitiationTimeAfterLastCompletionTime(garden.Status.Credentials) {
+		helper.MutateObservabilityRotation(garden, func(rotation *gardencorev1beta1.ObservabilityRotation) {
+			rotation.LastCompletionTime = &now
 		})
 	}
 
@@ -380,6 +391,12 @@ func completeRotationETCDEncryptionKey(garden *operatorv1alpha1.Garden, now *met
 	})
 }
 
+func startRotationObservability(garden *operatorv1alpha1.Garden, now *metav1.Time) {
+	helper.MutateObservabilityRotation(garden, func(rotation *gardencorev1beta1.ObservabilityRotation) {
+		rotation.LastInitiationTime = now
+	})
+}
+
 func caCertConfigurations() []secretsutils.ConfigInterface {
 	return append([]secretsutils.ConfigInterface{
 		&secretsutils.CertificateSecretConfig{Name: operatorv1alpha1.SecretNameCARuntime, CertType: secretsutils.CACert, Validity: pointer.Duration(30 * 24 * time.Hour)},
@@ -426,6 +443,10 @@ func lastSecretRotationStartTimes(garden *operatorv1alpha1.Garden) map[string]ti
 
 		if gardenStatus.Credentials.Rotation.ETCDEncryptionKey != nil && gardenStatus.Credentials.Rotation.ETCDEncryptionKey.LastInitiationTime != nil {
 			rotation[v1beta1constants.SecretNameETCDEncryptionKey] = gardenStatus.Credentials.Rotation.ETCDEncryptionKey.LastInitiationTime.Time
+		}
+
+		if gardenStatus.Credentials.Rotation.Observability != nil && gardenStatus.Credentials.Rotation.Observability.LastInitiationTime != nil {
+			rotation[v1beta1constants.SecretNameObservabilityIngress] = gardenStatus.Credentials.Rotation.Observability.LastInitiationTime.Time
 		}
 	}
 

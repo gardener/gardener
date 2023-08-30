@@ -575,7 +575,7 @@ func (r *Reconciler) updateShootStatusOperationStart(
 			startRotationSSHKeypair(shoot, &now)
 		}
 
-	case v1beta1constants.ShootOperationRotateObservabilityCredentials:
+	case v1beta1constants.OperationRotateObservabilityCredentials:
 		mustRemoveOperationAnnotation = true
 		startRotationObservability(shoot, &now)
 
@@ -749,7 +749,7 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 	}
 
 	if v1beta1helper.IsShootObservabilityRotationInitiationTimeAfterLastCompletionTime(shoot.Status.Credentials) {
-		v1beta1helper.MutateObservabilityRotation(shoot, func(rotation *gardencorev1beta1.ShootObservabilityRotation) {
+		v1beta1helper.MutateObservabilityRotation(shoot, func(rotation *gardencorev1beta1.ObservabilityRotation) {
 			rotation.LastCompletionTime = &now
 		})
 	}
@@ -956,7 +956,7 @@ func startRotationSSHKeypair(shoot *gardencorev1beta1.Shoot, now *metav1.Time) {
 }
 
 func startRotationObservability(shoot *gardencorev1beta1.Shoot, now *metav1.Time) {
-	v1beta1helper.MutateObservabilityRotation(shoot, func(rotation *gardencorev1beta1.ShootObservabilityRotation) {
+	v1beta1helper.MutateObservabilityRotation(shoot, func(rotation *gardencorev1beta1.ObservabilityRotation) {
 		rotation.LastInitiationTime = now
 	})
 }

@@ -20,6 +20,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,6 +29,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/rotation"
 	"github.com/gardener/gardener/test/utils/access"
@@ -58,7 +60,18 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				// basic verifiers checking secrets
 				&rotation.CAVerifier{ShootCreationFramework: f},
 				&rotation.KubeconfigVerifier{ShootCreationFramework: f},
-				&rotation.ObservabilityVerifier{ShootCreationFramework: f},
+				&rotationutils.ObservabilityVerifier{
+					GetObservabilitySecretFunc: func(ctx context.Context) (*corev1.Secret, error) {
+						secret := &corev1.Secret{}
+						return secret, f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(f.Shoot.Name, "monitoring")}, secret)
+					},
+					GetObservabilityEndpoint: func(secret *corev1.Secret) string {
+						return secret.Annotations["url"]
+					},
+					GetObservabilityRotation: func() *gardencorev1beta1.ObservabilityRotation {
+						return f.Shoot.Status.Credentials.Rotation.Observability
+					},
+				},
 				&rotationutils.ETCDEncryptionKeyVerifier{
 					RuntimeClient:               f.ShootFramework.SeedClient.Client(),
 					Namespace:                   f.Shoot.Status.TechnicalID,

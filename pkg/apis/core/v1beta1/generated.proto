@@ -1806,6 +1806,17 @@ message OIDCConfig {
   optional string usernamePrefix = 10;
 }
 
+// ObservabilityRotation contains information about the observability credential rotation.
+message ObservabilityRotation {
+  // LastInitiationTime is the most recent time when the observability credential rotation was initiated.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 1;
+
+  // LastCompletionTime is the most recent time when the observability credential rotation was successfully completed.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
+}
+
 // OpenIDConnectClientAuthentication contains configuration for OIDC clients.
 message OpenIDConnectClientAuthentication {
   // Extra configuration added to kubeconfig's auth-provider.
@@ -2600,7 +2611,7 @@ message ShootCredentialsRotation {
 
   // Observability contains information about the observability credential rotation.
   // +optional
-  optional ShootObservabilityRotation observability = 4;
+  optional ObservabilityRotation observability = 4;
 
   // ServiceAccountKey contains information about the service account key credential rotation.
   // +optional
@@ -2657,17 +2668,6 @@ message ShootNetworks {
   // Services is the CIDR of the service network.
   // +optional
   optional string services = 2;
-}
-
-// ShootObservabilityRotation contains information about the observability credential rotation.
-message ShootObservabilityRotation {
-  // LastInitiationTime is the most recent time when the observability credential rotation was initiated.
-  // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 1;
-
-  // LastCompletionTime is the most recent time when the observability credential rotation was successfully completed.
-  // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
 }
 
 // ShootSSHKeypairRotation contains information about the ssh-keypair credential rotation.
