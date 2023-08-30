@@ -2912,7 +2912,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 			})
 
-			It("forbid to set worker pool kubernetes version lower three minor than control plane version", func() {
+			It("forbid to set worker pool kubernetes version lower three minor than control plane version for k8s version < 1.28", func() {
 				shoot.Spec.Kubernetes.Version = "1.25.0"
 				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.23.2")}
 
@@ -2923,6 +2923,30 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("spec.provider.workers[0].kubernetes.version"),
 					"Detail": Equal("worker group kubernetes version must be at most two minor versions behind control plane version"),
+				}))))
+			})
+
+			It("allow to set worker pool kubernetes version lower three minor than control plane version for k8s version >= 1.28", func() {
+				shoot.Spec.Kubernetes.Version = "1.27.0"
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.25.2")}
+
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Kubernetes.Version = "1.28.0"
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+			})
+
+			It("forbid to set worker pool kubernetes version lower four minor than control plane version for k8s version >= 1.28", func() {
+				shoot.Spec.Kubernetes.Version = "1.27.0"
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.24.2")}
+
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Kubernetes.Version = "1.28.0"
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.provider.workers[0].kubernetes.version"),
+					"Detail": Equal("worker group kubernetes version must be at most three minor versions behind control plane version"),
 				}))))
 			})
 
