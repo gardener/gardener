@@ -1317,6 +1317,6 @@
   },
   "timezone": "utc",
   "title": "Cluster Overview",
-  "uid": "cluster-overview",
+  "uid": "workerless-cluster-overview",
   "version": 1
 }

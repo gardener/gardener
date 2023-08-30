@@ -1552,6 +1552,6 @@
   },
   "timezone": "utc",
   "title": "Kubernetes Control Plane Status",
-  "uid": "kubernetes-control-plane-status",
+  "uid": "workerless-k8s-control-plane-status",
   "version": 1
 }

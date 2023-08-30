@@ -828,6 +828,6 @@
   },
   "timezone": "utc",
   "title": "Kubernetes Pods",
-  "uid": "kube-pods",
+  "uid": "shoot-kube-pods",
   "version": 1
 }

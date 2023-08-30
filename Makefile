@@ -147,6 +147,10 @@ add-license-headers: $(GO_ADD_LICENSE)
 check-generate:
 	@hack/check-generate.sh $(REPO_ROOT)
 
+.PHONY: check-plutono-dashboards
+check-plutono-dashboards:
+	@hack/check-plutono-dashboards.sh
+
 .PHONY: check
 check: $(GO_ADD_LICENSE) $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS) $(LOGCHECK) $(GOMEGACHECK) $(YQ)
 	@hack/check.sh --golangci-lint-config=./.golangci.yaml ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
