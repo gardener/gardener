@@ -20,9 +20,9 @@ import (
 	"net"
 	"strconv"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,8 +36,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 var _ = Describe("NodeLocalDNS", func() {
@@ -51,11 +49,6 @@ var _ = Describe("NodeLocalDNS", func() {
 		botanist = &Botanist{Operation: &operation.Operation{}}
 		botanist.Shoot = &shootpkg.Shoot{}
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-			ObjectMeta: metav1.ObjectMeta{
-				Annotations: map[string]string{
-					v1beta1constants.AnnotationNodeLocalDNS: "true",
-				},
-			},
 			Spec: gardencorev1beta1.ShootSpec{
 				SystemComponents: &gardencorev1beta1.SystemComponents{
 					NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{
@@ -87,19 +80,10 @@ var _ = Describe("NodeLocalDNS", func() {
 
 		It("should successfully create a node-local-dns interface", func() {
 			kubernetesClient.EXPECT().Client()
-			botanist.ImageVector = imagevector.ImageVector{{Name: images.ImageNameNodeLocalDns}}
 
 			nodeLocalDNS, err := botanist.DefaultNodeLocalDNS()
 			Expect(nodeLocalDNS).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should return an error because the image cannot be found", func() {
-			botanist.ImageVector = imagevector.ImageVector{}
-
-			nodeLocalDNS, err := botanist.DefaultNodeLocalDNS()
-			Expect(nodeLocalDNS).To(BeNil())
-			Expect(err).To(HaveOccurred())
 		})
 	})
 

@@ -80,7 +80,7 @@ func defaultGarden(backupSecret *corev1.Secret) *operatorv1alpha1.Garden {
 					Services: "10.2.0.0/16",
 				},
 				Ingress: gardencorev1beta1.Ingress{
-					Domain: "ingress.dev.my-garden.example.com",
+					Domain: "ingress.runtime-garden.local.gardener.cloud",
 					Controller: gardencorev1beta1.IngressController{
 						Kind: "nginx",
 					},
@@ -116,6 +116,9 @@ func defaultGarden(backupSecret *corev1.Secret) *operatorv1alpha1.Garden {
 						},
 					},
 				},
+				Gardener: operatorv1alpha1.Gardener{
+					ClusterIdentity: "e2e-test",
+				},
 				Kubernetes: operatorv1alpha1.Kubernetes{
 					Version: "1.27.1",
 				},
@@ -134,10 +137,13 @@ func defaultGarden(backupSecret *corev1.Secret) *operatorv1alpha1.Garden {
 }
 
 func waitForGardenToBeReconciled(ctx context.Context, garden *operatorv1alpha1.Garden) {
-	CEventually(ctx, func(g Gomega) []gardencorev1beta1.Condition {
+	CEventually(ctx, func(g Gomega) gardencorev1beta1.LastOperationState {
 		g.Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
-		return garden.Status.Conditions
-	}).WithPolling(2 * time.Second).Should(ContainCondition(OfType(operatorv1alpha1.GardenReconciled), WithStatus(gardencorev1beta1.ConditionTrue)))
+		if garden.Status.LastOperation == nil {
+			return ""
+		}
+		return garden.Status.LastOperation.State
+	}).WithPolling(2 * time.Second).Should(Equal(gardencorev1beta1.LastOperationStateSucceeded))
 }
 
 func waitForGardenToBeDeleted(ctx context.Context, garden *operatorv1alpha1.Garden) {

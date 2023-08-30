@@ -65,6 +65,7 @@ type ShootCreationConfig struct {
 	workersConfig                 string
 	shootYamlPath                 string
 	shootAnnotations              string
+	controlPlaneFailureTolerance  string
 }
 
 // ShootCreationFramework represents the shoot test framework that includes
@@ -307,6 +308,10 @@ func mergeShootCreationConfig(base, overwrite *ShootCreationConfig) *ShootCreati
 		base.workersConfig = overwrite.workersConfig
 	}
 
+	if StringSet(overwrite.controlPlaneFailureTolerance) {
+		base.controlPlaneFailureTolerance = overwrite.controlPlaneFailureTolerance
+	}
+
 	if StringSet(overwrite.shootYamlPath) {
 		base.shootYamlPath = overwrite.shootYamlPath
 	}
@@ -342,6 +347,7 @@ func RegisterShootCreationFrameworkFlags() *ShootCreationConfig {
 	flag.StringVar(&newCfg.networkingNodes, "networking-nodes", "", "the spec.networking.nodes to use for this shoot. Optional.")
 	flag.StringVar(&newCfg.startHibernatedFlag, "start-hibernated", "", "the spec.hibernation.enabled to use for this shoot. Optional.")
 	flag.StringVar(&newCfg.allowPrivilegedContainersFlag, "allow-privileged-containers", "", "the spec.kubernetes.allowPrivilegedContainers to use for this shoot. Optional, defaults to true.")
+	flag.StringVar(&newCfg.controlPlaneFailureTolerance, "control-plane-failure-tolerance", "", "the .spec.controlPlane.HighAvailability.FailureTolerance.FailureToleranceType to use for this shoot. Optional, defaults to no failure tolerance")
 
 	if newCfg.networkingType == "" {
 		newCfg.networkingType = "calico"

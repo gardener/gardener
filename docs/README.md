@@ -27,6 +27,7 @@
 * [Audit a Kubernetes cluster](usage/shoot_auditpolicy.md)
 * [Auto-Scaling for shoot clusters](usage/shoot_autoscaling.md)
 * [Cleanup of Shoot clusters in deletion](usage/shoot_cleanup.md)
+* [`containerd` Registry Configuration](usage/containerd-registry-configuration.md)
 * [Custom `containerd` configuration](usage/custom-containerd-config.md)
 * [Custom `CoreDNS` configuration](usage/custom-dns-config.md)
 * [(Custom) CSI components](usage/csi_components.md)
@@ -64,6 +65,7 @@
 * [Trigger shoot operations](usage/shoot_operations.md)
 * [Troubleshooting guide](usage/trouble_shooting_guide.md)
 * [Trusted TLS certificate for shoot control planes](usage/trusted-tls-for-control-planes.md)
+* [Trusted TLS certificate for garden runtime cluster](usage/trusted-tls-for-garden-runtime.md)
 * [Controlling the Kubernetes versions for specific worker pools](usage/worker_pool_k8s_versions.md)
 * [Migrating from `PodSecurityPolicy`s to PodSecurity admission controller](usage/pod-security.md)
 * [Supported CPU Architectures for Shoot Worker Nodes](usage/shoot_supported_architectures.md)
@@ -105,6 +107,7 @@
 * [GEP-20: Highly Available Shoot Control Planes](proposals/20-ha-control-planes.md)
 * [GEP-21: IPv6 Single-Stack Support in Local Gardener](proposals/21-ipv6-singlestack-local.md)
 * [GEP-22: Improved Usage of the `ShootState` API](proposals/22-improved-usage-of-shootstate-api.md)
+* [GEP-23: Autoscaling Shoot kube-apiserver via Independently Driven HPA and VPA](proposals/23-autoscaling-kube-apiserver-via-independent-hpa-and-vpa.md)
 
 ## Development
 

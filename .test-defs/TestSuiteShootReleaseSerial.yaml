@@ -1,3 +1,4 @@
+apiVersion: testmachinery.sapcloud.io
 kind: TestDefinition
 metadata:
   name: shoot-release-serial-test-suite
@@ -23,4 +24,4 @@ spec:
       -ginkgo.focus="\[RELEASE\].*\[SERIAL\]"
       -ginkgo.skip="\[DISRUPTIVE\]"
 
-  image: golang:1.20.6
+  image: golang:1.21.0

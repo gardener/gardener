@@ -17,12 +17,12 @@ package valitail
 import (
 	"fmt"
 
+	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/docker"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 const (
@@ -60,7 +60,7 @@ func (component) Name() string {
 	return "valitail"
 }
 
-func execStartPreCopyBinaryFromContainer(binaryName string, image *imagevector.Image) string {
+func execStartPreCopyBinaryFromContainer(binaryName string, image *imagevectorutils.Image) string {
 	return docker.PathBinary + ` run --rm -v ` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `:` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `:rw --entrypoint /bin/sh ` + image.String() + ` -c "cp /usr/bin/` + binaryName + ` ` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `"`
 }
 
@@ -90,7 +90,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 
 	return []extensionsv1alpha1.Unit{
 			getValitailUnit(
-				execStartPreCopyBinaryFromContainer("valitail", ctx.Images[images.ImageNameValitail]),
+				execStartPreCopyBinaryFromContainer("valitail", ctx.Images[imagevector.ImageNameValitail]),
 				v1beta1constants.OperatingSystemConfigFilePathBinaries+`/valitail -config.file=`+PathConfig,
 			),
 			getFetchTokenScriptUnit(

@@ -20,9 +20,9 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	"k8s.io/apimachinery/pkg/version"
 	testclock "k8s.io/utils/clock/testing"
 

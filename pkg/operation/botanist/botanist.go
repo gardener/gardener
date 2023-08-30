@@ -15,15 +15,15 @@
 package botanist
 
 import (
+	"cmp"
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
 	"k8s.io/utils/clock"
 
-	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -37,13 +37,6 @@ import (
 
 // DefaultInterval is the default interval for retry operations.
 const DefaultInterval = 5 * time.Second
-
-var (
-	// ChartsPath is an alias for charts.Path. Exposed for testing.
-	ChartsPath = charts.Path
-
-	ingressTLSCertificateValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176
-)
 
 // New takes an operation object <o> and creates a new Botanist object. It checks whether the given Shoot DNS
 // domain is covered by a default domain, and if so, it sets the <DefaultDomainSecret> attribute on the Botanist
@@ -60,7 +53,10 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 			prefix            = fmt.Sprintf("%s-", v1beta1constants.GardenRoleDefaultDomain)
 			defaultDomainKeys = o.GetSecretKeysOfRole(v1beta1constants.GardenRoleDefaultDomain)
 		)
-		sort.Slice(defaultDomainKeys, func(i, j int) bool { return len(defaultDomainKeys[i]) >= len(defaultDomainKeys[j]) })
+		slices.SortFunc(defaultDomainKeys, func(a, b string) int {
+			return cmp.Compare(len(b), len(a))
+		})
+
 		for _, key := range defaultDomainKeys {
 			defaultDomain := strings.SplitAfter(key, prefix)[1]
 			if strings.HasSuffix(*(o.Shoot.GetInfo().Spec.DNS.Domain), defaultDomain) {
@@ -217,6 +213,12 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	o.Shoot.Components.BackupEntry = b.DefaultCoreBackupEntry()
 	o.Shoot.Components.DependencyWatchdogAccess = b.DefaultDependencyWatchdogAccess()
 	o.Shoot.Components.GardenerAccess = b.DefaultGardenerAccess()
+
+	// Monitoring
+	o.Shoot.Components.Monitoring.Monitoring, err = b.DefaultMonitoring()
+	if err != nil {
+		return nil, err
+	}
 
 	// Logging
 	o.Shoot.Components.Logging.ShootRBACProxy, err = kuberbacproxy.New(b.SeedClientSet.Client(), b.Shoot.SeedNamespace)

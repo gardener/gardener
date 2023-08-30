@@ -19,9 +19,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -44,7 +44,6 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
@@ -82,28 +81,12 @@ var _ = Describe("ResourceManager", func() {
 		})
 
 		It("should successfully create a resource-manager component", func() {
-			botanist.ImageVector = imagevector.ImageVector{
-				{Name: "gardener-resource-manager"},
-			}
-
 			resourceManager, err := botanist.DefaultResourceManager()
 			Expect(resourceManager).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should return an error because the gardener-resource-manager image cannot be found", func() {
-			botanist.ImageVector = imagevector.ImageVector{}
-
-			resourceManager, err := botanist.DefaultResourceManager()
-			Expect(resourceManager).To(BeNil())
-			Expect(err).To(HaveOccurred())
-		})
-
 		It("should consider node toleration configuration", func() {
-			botanist.ImageVector = imagevector.ImageVector{
-				{Name: "gardener-resource-manager"},
-			}
-
 			notReadyTolerationSeconds := pointer.Int64(60)
 			unreachableTolerationSeconds := pointer.Int64(120)
 

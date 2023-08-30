@@ -18,6 +18,8 @@ spec:
     spec:
       containers:
       - name: logger
+        # A custom agnhost image (eu.gcr.io/gardener-project/3rd/agnhost) is used instead of the upstream one (registry.k8s.io/e2e-test-images/agnhost)
+        # because this Deployment is created in a Seed cluster and the image needs to be signed with particular keys.
         image: eu.gcr.io/gardener-project/3rd/agnhost:2.40
         command: ["/bin/sh"]
         args:

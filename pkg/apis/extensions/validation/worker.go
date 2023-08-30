@@ -15,17 +15,17 @@
 package validation
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/go-test/deep"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/strings/slices"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 )
 
 // ValidateWorker validates a Worker object.
@@ -99,7 +99,7 @@ func ValidateWorkerPools(pools []extensionsv1alpha1.WorkerPool, fldPath *field.P
 
 		if pool.NodeTemplate != nil {
 			for resourceName, value := range pool.NodeTemplate.Capacity {
-				allErrs = append(allErrs, gardencorevalidation.ValidateResourceQuantityValue(string(resourceName), value, idxPath.Child("nodeTemplate", "capacity", string(resourceName)))...)
+				allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue(string(resourceName), value, idxPath.Child("nodeTemplate", "capacity", string(resourceName)))...)
 			}
 		}
 

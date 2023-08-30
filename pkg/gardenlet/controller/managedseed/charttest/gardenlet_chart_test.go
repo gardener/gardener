@@ -19,9 +19,9 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
@@ -68,6 +68,7 @@ var (
 		"seccompprofile.resources.gardener.cloud/skip":                                "true",
 		"topology-spread-constraints.resources.gardener.cloud/skip":                   "true",
 		"networking.resources.gardener.cloud/to-all-shoots-etcd-main-client-tcp-8080": "allowed",
+		"networking.resources.gardener.cloud/to-all-shoots-kube-apiserver-tcp-443":    "allowed",
 	})
 )
 

@@ -252,10 +252,12 @@ The purpose of this controller is cleaning up such immutable `ConfigMap`s/`Secre
 The following algorithm is implemented in the GC controller:
 
 1. List all `ConfigMap`s and `Secret`s labeled with `resources.gardener.cloud/garbage-collectable-reference=true`.
-1. List all `Deployment`s, `StatefulSet`s, `DaemonSet`s, `Job`s, `CronJob`s, `Pod`s and for each of them:
+1. List all `Deployment`s, `StatefulSet`s, `DaemonSet`s, `Job`s, `CronJob`s, `Pod`s, `ManagedResource`s and for each of them:
     - iterate over the `.metadata.annotations` and for each of them:
         - If the annotation key follows the `reference.resources.gardener.cloud/{configmap,secret}-<hash>` scheme and the value equals `<name>`, then consider it as "in-use".
 1. Delete all `ConfigMap`s and `Secret`s not considered as "in-use".
+
+Note: Managed resource secrets are garbage collected only if the GC controller is configured to do so. This is the case when the GC controller acts on a seed cluster. 
 
 Consequently, clients need to:
 

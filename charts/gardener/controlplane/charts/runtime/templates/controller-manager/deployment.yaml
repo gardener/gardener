@@ -1,5 +1,5 @@
 {{- if .Values.global.controller.enabled }}
-apiVersion: {{ include "deploymentversion" . }}
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: gardener-controller-manager
@@ -21,10 +21,6 @@ spec:
       annotations:
         checksum/configmap-gardener-controller-manager-config: {{ include (print $.Template.BasePath "/controller-manager/configmap-componentconfig.yaml") . | sha256sum }}
         checksum/secret-gardener-controller-manager-kubeconfig: {{ include (print $.Template.BasePath "/controller-manager/secret-kubeconfig.yaml") . | sha256sum }}
-        checksum/secret-default-domain: {{ include "gardener.secret-default-domain" . | sha256sum }}
-        checksum/secret-internal-domain: {{ include "gardener.secret-internal-domain" . | sha256sum }}
-        checksum/secret-alerting: {{ include "gardener.secret-alerting" . | sha256sum }}
-        checksum/secret-openvpn-diffie-hellman: {{ include "gardener.secret-openvpn-diffie-hellman" . | sha256sum }}
         {{- if .Values.global.controller.podAnnotations }}
 {{ toYaml .Values.global.controller.podAnnotations | indent 8 }}
         {{- end }}
@@ -73,7 +69,7 @@ spec:
       {{- end }}
       containers:
       - name: gardener-controller-manager
-        image: {{ include "utils-templates.image" .Values.global.controller.image }}
+        image: {{ include "image" .Values.global.controller.image }}
         imagePullPolicy: {{ .Values.global.controller.image.pullPolicy }}
         args:
         - --config=/etc/gardener-controller-manager/config/config.yaml

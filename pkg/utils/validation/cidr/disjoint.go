@@ -24,56 +24,33 @@ import (
 
 // ValidateNetworkDisjointedness validates that the given <seedNetworks> and <k8sNetworks> are disjoint.
 func ValidateNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPods, shootServices, seedNodes *string, seedPods, seedServices string, workerless bool) field.ErrorList {
-	var (
-		allErrs = field.ErrorList{}
+	allErrs := field.ErrorList{}
 
-		pathNodes    = fldPath.Child("nodes")
-		pathServices = fldPath.Child("services")
-		pathPods     = fldPath.Child("pods")
-	)
+	allErrs = append(allErrs, validateOverlapWithSeed(fldPath.Child("nodes"), shootNodes, "node", false, seedNodes, seedPods, seedServices)...)
+	allErrs = append(allErrs, validateOverlapWithSeed(fldPath.Child("services"), shootServices, "service", true, seedNodes, seedPods, seedServices)...)
+	allErrs = append(allErrs, validateOverlapWithSeed(fldPath.Child("pods"), shootPods, "pod", !workerless, seedNodes, seedPods, seedServices)...)
 
-	if shootNodes != nil && seedNodes != nil && NetworksIntersect(*shootNodes, *seedNodes) {
-		allErrs = append(allErrs, field.Invalid(pathNodes, *shootNodes, "shoot node network intersects with seed node network"))
-	}
-	if shootNodes != nil && NetworksIntersect(*shootNodes, seedServices) {
-		allErrs = append(allErrs, field.Invalid(pathNodes, *shootNodes, "shoot node network intersects with seed service network"))
-	}
-	if shootNodes != nil && NetworksIntersect(*shootNodes, v1beta1constants.DefaultVPNRange) {
-		allErrs = append(allErrs, field.Invalid(pathNodes, *shootNodes, fmt.Sprintf("shoot node network intersects with default vpn network (%s)", v1beta1constants.DefaultVPNRange)))
-	}
+	return allErrs
+}
 
-	if shootServices != nil {
-		if NetworksIntersect(seedServices, *shootServices) {
-			allErrs = append(allErrs, field.Invalid(pathServices, *shootServices, "shoot service network intersects with seed service network"))
-		}
-		if NetworksIntersect(seedPods, *shootServices) {
-			allErrs = append(allErrs, field.Invalid(pathServices, *shootServices, "shoot service network intersects with seed pod network"))
-		}
-		if seedNodes != nil && NetworksIntersect(*seedNodes, *shootServices) {
-			allErrs = append(allErrs, field.Invalid(pathServices, *seedNodes, "shoot service network intersects with seed node network"))
-		}
-		if NetworksIntersect(v1beta1constants.DefaultVPNRange, *shootServices) {
-			allErrs = append(allErrs, field.Invalid(pathServices, *shootServices, fmt.Sprintf("shoot service network intersects with default vpn network (%s)", v1beta1constants.DefaultVPNRange)))
-		}
-	} else {
-		allErrs = append(allErrs, field.Required(pathServices, "services is required"))
-	}
+func validateOverlapWithSeed(fldPath *field.Path, shootNetwork *string, networkType string, networkRequired bool, seedNodes *string, seedPods, seedServices string) field.ErrorList {
+	allErrs := field.ErrorList{}
 
-	if shootPods != nil {
-		if NetworksIntersect(seedPods, *shootPods) {
-			allErrs = append(allErrs, field.Invalid(pathPods, *shootPods, "shoot pod network intersects with seed pod network"))
+	if shootNetwork != nil {
+		if NetworksIntersect(seedServices, *shootNetwork) {
+			allErrs = append(allErrs, field.Invalid(fldPath, *shootNetwork, fmt.Sprintf("shoot %s network intersects with seed service network", networkType)))
 		}
-		if NetworksIntersect(seedServices, *shootPods) {
-			allErrs = append(allErrs, field.Invalid(pathPods, *shootPods, "shoot pod network intersects with seed service network"))
+		if NetworksIntersect(seedPods, *shootNetwork) {
+			allErrs = append(allErrs, field.Invalid(fldPath, *shootNetwork, fmt.Sprintf("shoot %s network intersects with seed pod network", networkType)))
 		}
-		if seedNodes != nil && NetworksIntersect(*seedNodes, *shootPods) {
-			allErrs = append(allErrs, field.Invalid(pathPods, *seedNodes, "shoot pod network intersects with seed node network"))
+		if seedNodes != nil && NetworksIntersect(*seedNodes, *shootNetwork) {
+			allErrs = append(allErrs, field.Invalid(fldPath, *shootNetwork, fmt.Sprintf("shoot %s network intersects with seed node network", networkType)))
 		}
-		if NetworksIntersect(v1beta1constants.DefaultVPNRange, *shootPods) {
-			allErrs = append(allErrs, field.Invalid(pathPods, *shootPods, fmt.Sprintf("shoot pod network intersects with default vpn network (%s)", v1beta1constants.DefaultVPNRange)))
+		if NetworksIntersect(v1beta1constants.DefaultVPNRange, *shootNetwork) {
+			allErrs = append(allErrs, field.Invalid(fldPath, *shootNetwork, fmt.Sprintf("shoot %s network intersects with default vpn network (%s)", networkType, v1beta1constants.DefaultVPNRange)))
 		}
-	} else if !workerless {
-		allErrs = append(allErrs, field.Required(pathPods, "pods is required"))
+	} else if networkRequired {
+		allErrs = append(allErrs, field.Required(fldPath, fmt.Sprintf("%ss is required", networkType)))
 	}
 
 	return allErrs

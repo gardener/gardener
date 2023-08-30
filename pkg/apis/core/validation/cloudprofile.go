@@ -17,54 +17,20 @@ package validation
 import (
 	"fmt"
 	"regexp"
-	"time"
+	"slices"
 
 	"github.com/Masterminds/semver"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/strings/slices"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
+	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 )
-
-// ValidateCloudProfileCreation validates a CloudProfile object when it is initially created.
-func ValidateCloudProfileCreation(cloudProfile *core.CloudProfile) field.ErrorList {
-	allErrs := field.ErrorList{}
-	fldPath := field.NewPath("spec")
-
-	// check that during creation no version can have an expiration date in the past
-	fldPathKubernetes := fldPath.Child("kubernetes", "versions")
-	for index, version := range cloudProfile.Spec.Kubernetes.Versions {
-		allErrs = append(allErrs, validateVersionExpiration(version, fldPathKubernetes.Index(index))...)
-	}
-
-	fldPathMachineImage := fldPath.Child("machineImages")
-	for index, image := range cloudProfile.Spec.MachineImages {
-		fldPathImage := fldPathMachineImage.Index(index)
-		for index, version := range image.Versions {
-			fldPathImageVersion := fldPathImage.Child("versions")
-			allErrs = append(allErrs, validateVersionExpiration(version.ExpirableVersion, fldPathImageVersion.Index(index))...)
-		}
-	}
-
-	allErrs = append(allErrs, ValidateCloudProfile(cloudProfile)...)
-
-	return allErrs
-}
-
-// validateVersionExpiration validates that the version has no expiration date in the past
-func validateVersionExpiration(version core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-	if version.ExpirationDate != nil && version.ExpirationDate.Time.UTC().Before(time.Now().UTC()) {
-		allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("unable to create version %q. Creating a version with expiration date in the past is not allowed", version.Version)))
-	}
-	return allErrs
-}
 
 // ValidateCloudProfile validates a CloudProfile object.
 func ValidateCloudProfile(cloudProfile *core.CloudProfile) field.ErrorList {
@@ -90,41 +56,7 @@ func ValidateCloudProfileUpdate(newProfile, oldProfile *core.CloudProfile) field
 // ValidateCloudProfileSpecUpdate validates the spec update of a CloudProfile
 func ValidateCloudProfileSpecUpdate(new, old *core.CloudProfileSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	allErrs = append(allErrs, validateCloudProfileVersionsUpdate(new.Kubernetes.Versions, old.Kubernetes.Versions, fldPath.Child("kubernetes", "versions"))...)
 
-	for _, oldImage := range old.MachineImages {
-		for index, newImage := range new.MachineImages {
-			if oldImage.Name == newImage.Name {
-				allErrs = append(
-					allErrs,
-					validateCloudProfileVersionsUpdate(
-						helper.ToExpirableVersions(newImage.Versions),
-						helper.ToExpirableVersions(oldImage.Versions),
-						fldPath.Child("machineImages").Index(index).Child("versions"),
-					)...,
-				)
-			}
-		}
-	}
-
-	return allErrs
-}
-
-// ValidateCloudProfileAddedVersions validates versions added to the CloudProfile
-func ValidateCloudProfileAddedVersions(versions []core.ExpirableVersion, addedVersions map[string]int, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-	for _, index := range addedVersions {
-		version := versions[index]
-		allErrs = append(allErrs, validateVersionExpiration(version, fldPath.Index(index))...)
-	}
-	return allErrs
-}
-
-// validateCloudProfileVersionsUpdate validates versions added to the CloudProfile
-func validateCloudProfileVersionsUpdate(new, old []core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-	versions := helper.GetAddedVersions(old, new)
-	allErrs = append(allErrs, ValidateCloudProfileAddedVersions(new, versions, fldPath)...)
 	return allErrs
 }
 
@@ -155,6 +87,9 @@ func ValidateCloudProfileSpec(spec *core.CloudProfileSpec, fldPath *field.Path) 
 	return allErrs
 }
 
+// k8sVersionCPRegex is used to validate kubernetes versions in a cloud profile.
+var k8sVersionCPRegex = regexp.MustCompile(`^([0-9]+\.){2}[0-9]+$`)
+
 func validateKubernetesSettings(kubernetes core.KubernetesSettings, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if len(kubernetes.Versions) == 0 {
@@ -169,11 +104,10 @@ func validateKubernetesSettings(kubernetes core.KubernetesSettings, fldPath *fie
 	}
 
 	versionsFound := sets.New[string]()
-	r, _ := regexp.Compile(`^([0-9]+\.){2}[0-9]+$`)
 	for i, version := range kubernetes.Versions {
 		idxPath := fldPath.Child("versions").Index(i)
-		if !r.MatchString(version.Version) {
-			allErrs = append(allErrs, field.Invalid(idxPath, version, fmt.Sprintf("all Kubernetes versions must match the regex %s", r)))
+		if !k8sVersionCPRegex.MatchString(version.Version) {
+			allErrs = append(allErrs, field.Invalid(idxPath, version, fmt.Sprintf("all Kubernetes versions must match the regex %s", k8sVersionCPRegex)))
 		} else if versionsFound.Has(version.Version) {
 			allErrs = append(allErrs, field.Duplicate(idxPath.Child("version"), version.Version))
 		} else {
@@ -242,9 +176,9 @@ func validateMachineTypes(machineTypes []core.MachineType, fldPath *field.Path) 
 		}
 		names[machineType.Name] = struct{}{}
 
-		allErrs = append(allErrs, ValidateResourceQuantityValue("cpu", machineType.CPU, cpuPath)...)
-		allErrs = append(allErrs, ValidateResourceQuantityValue("gpu", machineType.GPU, gpuPath)...)
-		allErrs = append(allErrs, ValidateResourceQuantityValue("memory", machineType.Memory, memoryPath)...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("cpu", machineType.CPU, cpuPath)...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("gpu", machineType.GPU, gpuPath)...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("memory", machineType.Memory, memoryPath)...)
 		allErrs = append(allErrs, validateMachineTypeArchitecture(machineType.Architecture, archPath)...)
 
 		if machineType.Storage != nil {
@@ -269,11 +203,11 @@ func validateMachineTypeStorage(storage core.MachineTypeStorage, fldPath *field.
 	}
 
 	if storage.StorageSize != nil {
-		allErrs = append(allErrs, ValidateResourceQuantityValue("size", *storage.StorageSize, fldPath.Child("size"))...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("size", *storage.StorageSize, fldPath.Child("size"))...)
 	}
 
 	if storage.MinSize != nil {
-		allErrs = append(allErrs, ValidateResourceQuantityValue("minSize", *storage.MinSize, fldPath.Child("minSize"))...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("minSize", *storage.MinSize, fldPath.Child("minSize"))...)
 	}
 
 	return allErrs
@@ -433,7 +367,7 @@ func validateVolumeTypes(volumeTypes []core.VolumeType, fldPath *field.Path) fie
 		}
 
 		if volumeType.MinSize != nil {
-			allErrs = append(allErrs, ValidateResourceQuantityValue("minSize", *volumeType.MinSize, idxPath.Child("minSize"))...)
+			allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("minSize", *volumeType.MinSize, idxPath.Child("minSize"))...)
 		}
 	}
 

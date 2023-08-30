@@ -496,6 +496,11 @@ func ShootConfinesSpecUpdateRollout(maintenance *gardencorev1beta1.Maintenance) 
 	return maintenance != nil && maintenance.ConfineSpecUpdateRollout != nil && *maintenance.ConfineSpecUpdateRollout
 }
 
+// SeedSettingExcessCapacityReservationEnabled returns true if the 'excess capacity reservation' setting is enabled.
+func SeedSettingExcessCapacityReservationEnabled(settings *gardencorev1beta1.SeedSettings) bool {
+	return settings == nil || settings.ExcessCapacityReservation == nil || pointer.BoolDeref(settings.ExcessCapacityReservation.Enabled, true)
+}
+
 // SeedSettingVerticalPodAutoscalerEnabled returns true if the 'verticalPodAutoscaler' setting is enabled.
 func SeedSettingVerticalPodAutoscalerEnabled(settings *gardencorev1beta1.SeedSettings) bool {
 	return settings == nil || settings.VerticalPodAutoscaler == nil || settings.VerticalPodAutoscaler.Enabled
@@ -1134,17 +1139,8 @@ func IsCoreDNSRewritingEnabled(featureGate bool, annotations map[string]string) 
 }
 
 // IsNodeLocalDNSEnabled indicates whether the node local DNS cache is enabled or not.
-// It can be enabled via the annotation (legacy) or via the shoot specification.
-func IsNodeLocalDNSEnabled(systemComponents *gardencorev1beta1.SystemComponents, annotations map[string]string) bool {
-	fromSpec := false
-	if systemComponents != nil && systemComponents.NodeLocalDNS != nil {
-		fromSpec = systemComponents.NodeLocalDNS.Enabled
-	}
-	fromAnnotation := false
-	if annotationValue, err := strconv.ParseBool(annotations[v1beta1constants.AnnotationNodeLocalDNS]); err == nil {
-		fromAnnotation = annotationValue
-	}
-	return fromSpec || fromAnnotation
+func IsNodeLocalDNSEnabled(systemComponents *gardencorev1beta1.SystemComponents) bool {
+	return systemComponents != nil && systemComponents.NodeLocalDNS != nil && systemComponents.NodeLocalDNS.Enabled
 }
 
 // GetNodeLocalDNS returns a pointer to the NodeLocalDNS spec.

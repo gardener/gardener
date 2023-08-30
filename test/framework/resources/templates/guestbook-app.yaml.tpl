@@ -48,9 +48,8 @@ kind: Ingress
 metadata:
   name: guestbook
   namespace: {{ .HelmDeployNamespace }}
-  annotations:
-    kubernetes.io/ingress.class: nginx
 spec:
+  ingressClassName: nginx
   rules:
   - host: {{ .ShootDNSHost }}
     http:

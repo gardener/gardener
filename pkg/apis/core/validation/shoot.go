@@ -19,7 +19,9 @@ import (
 	"math/big"
 	"net"
 	"net/url"
+	"reflect"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -38,7 +40,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
-	"k8s.io/utils/strings/slices"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
@@ -51,6 +52,7 @@ import (
 	admissionpluginsvalidation "github.com/gardener/gardener/pkg/utils/validation/admissionplugins"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	featuresvalidation "github.com/gardener/gardener/pkg/utils/validation/features"
+	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
@@ -326,6 +328,13 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 	}
 
 	allErrs = append(allErrs, validateNetworkingUpdate(newSpec.Networking, oldSpec.Networking, fldPath.Child("networking"))...)
+
+	if !reflect.DeepEqual(oldSpec.SchedulerName, newSpec.SchedulerName) {
+		// only allow to set an empty scheduler name to the default scheduler
+		if oldSpec.SchedulerName != nil || pointer.StringDeref(newSpec.SchedulerName, "") != v1beta1constants.DefaultSchedulerName {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("schedulerName"), newSpec.SchedulerName, "field is immutable"))
+		}
+	}
 
 	return allErrs
 }
@@ -935,8 +944,8 @@ func ValidateWatchCacheSizes(sizes *core.WatchCacheSizes, fldPath *field.Path) f
 	return allErrs
 }
 
-// ValidateKubeAPIServerLogging validates the given KubeAPIServer Logging fields.
-func ValidateKubeAPIServerLogging(loggingConfig *core.KubeAPIServerLogging, fldPath *field.Path) field.ErrorList {
+// ValidateAPIServerLogging validates the given KubeAPIServer Logging fields.
+func ValidateAPIServerLogging(loggingConfig *core.APIServerLogging, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if loggingConfig != nil {
 		if verbosity := loggingConfig.Verbosity; verbosity != nil {
@@ -946,6 +955,35 @@ func ValidateKubeAPIServerLogging(loggingConfig *core.KubeAPIServerLogging, fldP
 			allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*httpAccessVerbosity), fldPath.Child("httpAccessVerbosity"))...)
 		}
 	}
+	return allErrs
+}
+
+// ValidateAPIServerRequests validates the given KubeAPIServer request fields.
+func ValidateAPIServerRequests(requests *core.APIServerRequests, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if requests != nil {
+		const maxNonMutatingRequestsInflight = 800
+		if v := requests.MaxNonMutatingInflight; v != nil {
+			path := fldPath.Child("maxNonMutatingInflight")
+
+			allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*v), path)...)
+			if *v > maxNonMutatingRequestsInflight {
+				allErrs = append(allErrs, field.Invalid(path, *v, fmt.Sprintf("cannot set higher than %d", maxNonMutatingRequestsInflight)))
+			}
+		}
+
+		const maxMutatingRequestsInflight = 400
+		if v := requests.MaxMutatingInflight; v != nil {
+			path := fldPath.Child("maxMutatingInflight")
+
+			allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*v), path)...)
+			if *v > maxMutatingRequestsInflight {
+				allErrs = append(allErrs, field.Invalid(path, *v, fmt.Sprintf("cannot set higher than %d", maxMutatingRequestsInflight)))
+			}
+		}
+	}
+
 	return allErrs
 }
 
@@ -1121,13 +1159,13 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 	if auditConfig := kubeAPIServer.AuditConfig; auditConfig != nil {
 		auditPath := fldPath.Child("auditConfig")
 		if auditPolicy := auditConfig.AuditPolicy; auditPolicy != nil && auditConfig.AuditPolicy.ConfigMapRef != nil {
-			allErrs = append(allErrs, validateAuditPolicyConfigMapReference(auditPolicy.ConfigMapRef, auditPath.Child("auditPolicy", "configMapRef"))...)
+			allErrs = append(allErrs, ValidateAuditPolicyConfigMapReference(auditPolicy.ConfigMapRef, auditPath.Child("auditPolicy", "configMapRef"))...)
 		}
 	}
 
 	allErrs = append(allErrs, ValidateWatchCacheSizes(kubeAPIServer.WatchCacheSizes, fldPath.Child("watchCacheSizes"))...)
 
-	allErrs = append(allErrs, ValidateKubeAPIServerLogging(kubeAPIServer.Logging, fldPath.Child("logging"))...)
+	allErrs = append(allErrs, ValidateAPIServerLogging(kubeAPIServer.Logging, fldPath.Child("logging"))...)
 
 	if defaultNotReadyTolerationSeconds := kubeAPIServer.DefaultNotReadyTolerationSeconds; defaultNotReadyTolerationSeconds != nil {
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*defaultNotReadyTolerationSeconds), fldPath.Child("defaultNotReadyTolerationSeconds"))...)
@@ -1136,27 +1174,7 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*defaultUnreachableTolerationSeconds), fldPath.Child("defaultUnreachableTolerationSeconds"))...)
 	}
 
-	if kubeAPIServer.Requests != nil {
-		const maxMaxNonMutatingRequestsInflight = 800
-		if v := kubeAPIServer.Requests.MaxNonMutatingInflight; v != nil {
-			path := fldPath.Child("requests", "maxNonMutatingInflight")
-
-			allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*v), path)...)
-			if *v > maxMaxNonMutatingRequestsInflight {
-				allErrs = append(allErrs, field.Invalid(path, *v, fmt.Sprintf("cannot set higher than %d", maxMaxNonMutatingRequestsInflight)))
-			}
-		}
-
-		const maxMaxMutatingRequestsInflight = 400
-		if v := kubeAPIServer.Requests.MaxMutatingInflight; v != nil {
-			path := fldPath.Child("requests", "maxMutatingInflight")
-
-			allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*v), path)...)
-			if *v > maxMaxMutatingRequestsInflight {
-				allErrs = append(allErrs, field.Invalid(path, *v, fmt.Sprintf("cannot set higher than %d", maxMaxMutatingRequestsInflight)))
-			}
-		}
-	}
+	allErrs = append(allErrs, ValidateAPIServerRequests(kubeAPIServer.Requests, fldPath.Child("requests"))...)
 
 	if kubeAPIServer.ServiceAccountConfig != nil {
 		if kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration != nil {
@@ -1395,6 +1413,9 @@ const (
 	maxVolumeNameLength = 15
 )
 
+// volumeSizeRegex is used for volume size validation.
+var volumeSizeRegex = regexp.MustCompile(`^(\d)+Gi$`)
+
 // ValidateWorker validates the worker object.
 func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	kubernetesVersion := kubernetes.Version
@@ -1458,8 +1479,6 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *fie
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("caBundle"), *(worker.CABundle), "caBundle is not a valid PEM-encoded certificate"))
 		}
 	}
-
-	volumeSizeRegex, _ := regexp.Compile(`^(\d)+Gi$`)
 
 	if worker.Volume != nil {
 		if !volumeSizeRegex.MatchString(worker.Volume.VolumeSize) {
@@ -1629,19 +1648,19 @@ func validateKubeletConfigEviction(eviction *core.KubeletConfigEviction, fldPath
 func validateKubeletConfigEvictionMinimumReclaim(eviction *core.KubeletConfigEvictionMinimumReclaim, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if eviction.MemoryAvailable != nil {
-		allErrs = append(allErrs, ValidateResourceQuantityValue("memoryAvailable", *eviction.MemoryAvailable, fldPath.Child("memoryAvailable"))...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("memoryAvailable", *eviction.MemoryAvailable, fldPath.Child("memoryAvailable"))...)
 	}
 	if eviction.ImageFSAvailable != nil {
-		allErrs = append(allErrs, ValidateResourceQuantityValue("imagefsAvailable", *eviction.ImageFSAvailable, fldPath.Child("imagefsAvailable"))...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("imagefsAvailable", *eviction.ImageFSAvailable, fldPath.Child("imagefsAvailable"))...)
 	}
 	if eviction.ImageFSInodesFree != nil {
-		allErrs = append(allErrs, ValidateResourceQuantityValue("imagefsInodesFree", *eviction.ImageFSInodesFree, fldPath.Child("imagefsInodesFree"))...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("imagefsInodesFree", *eviction.ImageFSInodesFree, fldPath.Child("imagefsInodesFree"))...)
 	}
 	if eviction.NodeFSAvailable != nil {
-		allErrs = append(allErrs, ValidateResourceQuantityValue("nodefsAvailable", *eviction.NodeFSAvailable, fldPath.Child("nodefsAvailable"))...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("nodefsAvailable", *eviction.NodeFSAvailable, fldPath.Child("nodefsAvailable"))...)
 	}
 	if eviction.ImageFSInodesFree != nil {
-		allErrs = append(allErrs, ValidateResourceQuantityValue("imagefsInodesFree", *eviction.ImageFSInodesFree, fldPath.Child("imagefsInodesFree"))...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("imagefsInodesFree", *eviction.ImageFSInodesFree, fldPath.Child("imagefsInodesFree"))...)
 	}
 	return allErrs
 }
@@ -1659,16 +1678,16 @@ func validateKubeletConfigEvictionSoftGracePeriod(eviction *core.KubeletConfigEv
 func validateKubeletConfigReserved(reserved *core.KubeletConfigReserved, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if reserved.CPU != nil {
-		allErrs = append(allErrs, ValidateResourceQuantityValue("cpu", *reserved.CPU, fldPath.Child("cpu"))...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("cpu", *reserved.CPU, fldPath.Child("cpu"))...)
 	}
 	if reserved.Memory != nil {
-		allErrs = append(allErrs, ValidateResourceQuantityValue("memory", *reserved.Memory, fldPath.Child("memory"))...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("memory", *reserved.Memory, fldPath.Child("memory"))...)
 	}
 	if reserved.EphemeralStorage != nil {
-		allErrs = append(allErrs, ValidateResourceQuantityValue("ephemeralStorage", *reserved.EphemeralStorage, fldPath.Child("ephemeralStorage"))...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("ephemeralStorage", *reserved.EphemeralStorage, fldPath.Child("ephemeralStorage"))...)
 	}
 	if reserved.PID != nil {
-		allErrs = append(allErrs, ValidateResourceQuantityValue("pid", *reserved.PID, fldPath.Child("pid"))...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("pid", *reserved.PID, fldPath.Child("pid"))...)
 	}
 	return allErrs
 }
@@ -1940,7 +1959,7 @@ func ValidateResourceQuantityOrPercent(valuePtr *string, fldPath *field.Path, ke
 	value := *valuePtr
 	// check for resource quantity
 	if quantity, err := resource.ParseQuantity(value); err == nil {
-		if len(ValidateResourceQuantityValue(key, quantity, fldPath)) == 0 {
+		if len(kubernetescorevalidation.ValidateResourceQuantityValue(key, quantity, fldPath)) == 0 {
 			return allErrs
 		}
 	}

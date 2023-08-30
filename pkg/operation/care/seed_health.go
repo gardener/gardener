@@ -36,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/istio"
 	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
+	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/component/nginxingress"
 	"github.com/gardener/gardener/pkg/component/seedsystem"
 	"github.com/gardener/gardener/pkg/component/vpa"
@@ -79,6 +80,7 @@ func (h *SeedHealth) CheckSeed(
 	ctx context.Context,
 	conditions []gardencorev1beta1.Condition,
 	thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration,
+	lastOperation *gardencorev1beta1.LastOperation,
 ) []gardencorev1beta1.Condition {
 
 	var systemComponentsCondition gardencorev1beta1.Condition
@@ -89,7 +91,7 @@ func (h *SeedHealth) CheckSeed(
 		}
 	}
 
-	checker := NewHealthChecker(h.seedClient, h.clock, thresholdMappings, nil, nil, nil, nil, nil)
+	checker := NewHealthChecker(h.seedClient, h.clock, thresholdMappings, nil, nil, lastOperation, nil)
 	newSystemComponentsCondition, err := h.checkSeedSystemComponents(ctx, checker, systemComponentsCondition)
 	return []gardencorev1beta1.Condition{NewConditionOrError(h.clock, systemComponentsCondition, newSystemComponentsCondition, err)}
 }
@@ -125,6 +127,8 @@ func (h *SeedHealth) checkSeedSystemComponents(
 	if h.loggingEnabled {
 		managedResources = append(managedResources, fluentoperator.OperatorManagedResourceName)
 		managedResources = append(managedResources, fluentoperator.CustomResourcesManagedResourceName)
+		managedResources = append(managedResources, fluentoperator.FluentBitManagedResourceName)
+		managedResources = append(managedResources, vali.ManagedResourceNameRuntime)
 	}
 
 	for _, name := range managedResources {

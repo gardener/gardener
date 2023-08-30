@@ -11,7 +11,7 @@ import (
 
 	chartrenderer "github.com/gardener/gardener/pkg/chartrenderer"
 	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockChartApplier is a mock of ChartApplier interface.

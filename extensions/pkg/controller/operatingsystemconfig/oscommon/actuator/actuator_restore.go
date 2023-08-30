@@ -23,6 +23,6 @@ import (
 )
 
 // Restore reconciles the update of a OperatingSystemConfig regenerating the os-specific format
-func (a *Actuator) Restore(ctx context.Context, log logr.Logger, config *extensionsv1alpha1.OperatingSystemConfig) ([]byte, *string, []string, error) {
+func (a *Actuator) Restore(ctx context.Context, log logr.Logger, config *extensionsv1alpha1.OperatingSystemConfig) ([]byte, *string, []string, []string, error) {
 	return a.Reconcile(ctx, log, config)
 }

@@ -17,6 +17,7 @@ package shared
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/Masterminds/semver"
 	appsv1 "k8s.io/api/apps/v1"
@@ -32,9 +33,9 @@ import (
 	admissionapiv1alpha1 "k8s.io/pod-security-admission/admission/api/v1alpha1"
 	admissionapiv1beta1 "k8s.io/pod-security-admission/admission/api/v1beta1"
 	"k8s.io/utils/pointer"
-	"k8s.io/utils/strings/slices"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -42,10 +43,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/utils"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/version"
@@ -87,7 +85,6 @@ func NewKubeAPIServer(
 	objectMeta metav1.ObjectMeta,
 	runtimeVersion *semver.Version,
 	targetVersion *semver.Version,
-	imageVector imagevector.ImageVector,
 	secretsManager secretsmanager.Interface,
 	namePrefix string,
 	apiServerConfig *gardencorev1beta1.KubeAPIServerConfig,
@@ -105,7 +102,7 @@ func NewKubeAPIServer(
 	kubeapiserver.Interface,
 	error,
 ) {
-	images, err := computeKubeAPIServerImages(imageVector, runtimeVersion, targetVersion, vpnConfig)
+	images, err := computeKubeAPIServerImages(runtimeVersion, targetVersion, vpnConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -120,17 +117,17 @@ func NewKubeAPIServer(
 		eventTTL                            *metav1.Duration
 		featureGates                        map[string]bool
 		oidcConfig                          *gardencorev1beta1.OIDCConfig
-		requests                            *gardencorev1beta1.KubeAPIServerRequests
+		requests                            *gardencorev1beta1.APIServerRequests
 		runtimeConfig                       map[string]bool
 		watchCacheSizes                     *gardencorev1beta1.WatchCacheSizes
-		logging                             *gardencorev1beta1.KubeAPIServerLogging
+		logging                             *gardencorev1beta1.APIServerLogging
 	)
 
 	if apiServerConfig != nil {
 		enabledAdmissionPlugins = computeEnabledKubeAPIServerAdmissionPlugins(enabledAdmissionPlugins, apiServerConfig.AdmissionPlugins, isWorkerless)
-		disabledAdmissionPlugins = computeDisabledKubeAPIServerAdmissionPlugins(apiServerConfig.AdmissionPlugins)
+		disabledAdmissionPlugins = computeDisabledAPIServerAdmissionPlugins(apiServerConfig.AdmissionPlugins)
 
-		enabledAdmissionPlugins, err = ensureAdmissionPluginConfig(enabledAdmissionPlugins)
+		enabledAdmissionPlugins, err = ensureKubeAPIServerAdmissionPluginConfig(enabledAdmissionPlugins)
 		if err != nil {
 			return nil, err
 		}
@@ -142,7 +139,7 @@ func NewKubeAPIServer(
 			}
 		}
 
-		auditConfig, err = computeKubeAPIServerAuditConfig(ctx, resourceConfigClient, objectMeta, apiServerConfig.AuditConfig, auditWebhookConfig)
+		auditConfig, err = computeAPIServerAuditConfig(ctx, resourceConfigClient, objectMeta, apiServerConfig.AuditConfig, auditWebhookConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -247,7 +244,7 @@ func DeployKubeAPIServer(
 	kubeAPIServer.SetExternalHostname(externalHostname)
 	kubeAPIServer.SetExternalServer(externalServer)
 
-	etcdEncryptionConfig, err := computeKubeAPIServerETCDEncryptionConfig(ctx, runtimeClient, runtimeNamespace, deploymentName, etcdEncryptionKeyRotationPhase, []string{"secrets"})
+	etcdEncryptionConfig, err := computeAPIServerETCDEncryptionConfig(ctx, runtimeClient, runtimeNamespace, deploymentName, etcdEncryptionKeyRotationPhase, []string{corev1.Resource("secrets").String()})
 	if err != nil {
 		return err
 	}
@@ -257,44 +254,10 @@ func DeployKubeAPIServer(
 		return err
 	}
 
-	switch etcdEncryptionKeyRotationPhase {
-	case gardencorev1beta1.RotationPreparing:
-		if !etcdEncryptionConfig.EncryptWithCurrentKey {
-			if err := kubeAPIServer.Wait(ctx); err != nil {
-				return err
-			}
-
-			// If we have hit this point then we have deployed kube-apiserver successfully with the configuration option to
-			// still use the old key for the encryption of ETCD data. Now we can mark this step as "completed" (via an
-			// annotation) and redeploy it with the option to use the current/new key for encryption, see
-			// https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#rotating-a-decryption-key for details.
-			if err := secretsrotation.PatchKubeAPIServerDeploymentMeta(ctx, runtimeClient, runtimeNamespace, values.NamePrefix, func(meta *metav1.PartialObjectMetadata) {
-				metav1.SetMetaDataAnnotation(&meta.ObjectMeta, secretsrotation.AnnotationKeyNewEncryptionKeyPopulated, "true")
-			}); err != nil {
-				return err
-			}
-
-			etcdEncryptionConfig.EncryptWithCurrentKey = true
-			kubeAPIServer.SetETCDEncryptionConfig(etcdEncryptionConfig)
-
-			if err := kubeAPIServer.Deploy(ctx); err != nil {
-				return err
-			}
-		}
-
-	case gardencorev1beta1.RotationCompleting:
-		if err := secretsrotation.PatchKubeAPIServerDeploymentMeta(ctx, runtimeClient, runtimeNamespace, values.NamePrefix, func(meta *metav1.PartialObjectMetadata) {
-			delete(meta.Annotations, secretsrotation.AnnotationKeyNewEncryptionKeyPopulated)
-		}); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return handleETCDEncryptionKeyRotation(ctx, runtimeClient, runtimeNamespace, deploymentName, kubeAPIServer, etcdEncryptionConfig, etcdEncryptionKeyRotationPhase)
 }
 
 func computeKubeAPIServerImages(
-	imageVector imagevector.ImageVector,
 	runtimeVersion *semver.Version,
 	targetVersion *semver.Version,
 	vpnConfig kubeapiserver.VPNConfig,
@@ -304,14 +267,14 @@ func computeKubeAPIServerImages(
 ) {
 	var result kubeapiserver.Images
 
-	imageKubeAPIServer, err := imageVector.FindImage(images.ImageNameKubeApiserver, imagevector.RuntimeVersion(runtimeVersion.String()), imagevector.TargetVersion(targetVersion.String()))
+	imageKubeAPIServer, err := imagevector.ImageVector().FindImage(imagevector.ImageNameKubeApiserver, imagevectorutils.RuntimeVersion(runtimeVersion.String()), imagevectorutils.TargetVersion(targetVersion.String()))
 	if err != nil {
 		return kubeapiserver.Images{}, err
 	}
 	result.KubeAPIServer = imageKubeAPIServer.String()
 
 	if version.ConstraintK8sEqual124.Check(targetVersion) {
-		imageWatchdog, err := imageVector.FindImage(images.ImageNameAlpine, imagevector.RuntimeVersion(runtimeVersion.String()), imagevector.TargetVersion(targetVersion.String()))
+		imageWatchdog, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlpine, imagevectorutils.RuntimeVersion(runtimeVersion.String()), imagevectorutils.TargetVersion(targetVersion.String()))
 		if err != nil {
 			return kubeapiserver.Images{}, err
 		}
@@ -319,7 +282,7 @@ func computeKubeAPIServerImages(
 	}
 
 	if vpnConfig.HighAvailabilityEnabled {
-		imageVPNClient, err := imageVector.FindImage(images.ImageNameVpnShootClient, imagevector.RuntimeVersion(runtimeVersion.String()), imagevector.TargetVersion(targetVersion.String()))
+		imageVPNClient, err := imagevector.ImageVector().FindImage(imagevector.ImageNameVpnShootClient, imagevectorutils.RuntimeVersion(runtimeVersion.String()), imagevectorutils.TargetVersion(targetVersion.String()))
 		if err != nil {
 			return kubeapiserver.Images{}, err
 		}
@@ -329,7 +292,7 @@ func computeKubeAPIServerImages(
 	return result, nil
 }
 
-func ensureAdmissionPluginConfig(plugins []gardencorev1beta1.AdmissionPlugin) ([]gardencorev1beta1.AdmissionPlugin, error) {
+func ensureKubeAPIServerAdmissionPluginConfig(plugins []gardencorev1beta1.AdmissionPlugin) ([]gardencorev1beta1.AdmissionPlugin, error) {
 	var index = -1
 
 	for i, plugin := range plugins {
@@ -386,67 +349,16 @@ func ensureAdmissionPluginConfig(plugins []gardencorev1beta1.AdmissionPlugin) ([
 	return plugins, nil
 }
 
-func convertToAdmissionPluginConfigs(ctx context.Context, gardenClient client.Client, namespace string, plugins []gardencorev1beta1.AdmissionPlugin) ([]apiserver.AdmissionPluginConfig, error) {
-	var (
-		err error
-		out []apiserver.AdmissionPluginConfig
-	)
-
-	for _, plugin := range plugins {
-		config := apiserver.AdmissionPluginConfig{AdmissionPlugin: plugin}
-		if plugin.KubeconfigSecretName != nil {
-			key := client.ObjectKey{Namespace: namespace, Name: *plugin.KubeconfigSecretName}
-			config.Kubeconfig, err = gardenerutils.FetchKubeconfigFromSecret(ctx, gardenClient, key)
-			if err != nil {
-				return nil, fmt.Errorf("failed reading kubeconfig for admission plugin from referenced secret %s: %w", key, err)
-			}
-		}
-		out = append(out, config)
-	}
-
-	return out, nil
-}
-
 func computeEnabledKubeAPIServerAdmissionPlugins(defaultPlugins, configuredPlugins []gardencorev1beta1.AdmissionPlugin, isWorkerless bool) []gardencorev1beta1.AdmissionPlugin {
-	for _, plugin := range configuredPlugins {
-		pluginOverwritesDefault := false
-
-		for i, defaultPlugin := range defaultPlugins {
-			if defaultPlugin.Name == plugin.Name {
-				pluginOverwritesDefault = true
-				defaultPlugins[i] = plugin
-				break
-			}
-		}
-
-		if !pluginOverwritesDefault {
-			defaultPlugins = append(defaultPlugins, plugin)
-		}
-	}
-
 	var admissionPlugins []gardencorev1beta1.AdmissionPlugin
-	for _, defaultPlugin := range defaultPlugins {
+	for _, defaultPlugin := range computeEnabledAPIServerAdmissionPlugins(defaultPlugins, configuredPlugins) {
 		// if it's a workerless cluster, we don't add the PodSecurityPolicy plugin, because the API is disabled already
 		if isWorkerless && defaultPlugin.Name == "PodSecurityPolicy" {
 			continue
 		}
-		if !pointer.BoolDeref(defaultPlugin.Disabled, false) {
-			admissionPlugins = append(admissionPlugins, defaultPlugin)
-		}
+		admissionPlugins = append(admissionPlugins, defaultPlugin)
 	}
 	return admissionPlugins
-}
-
-func computeDisabledKubeAPIServerAdmissionPlugins(configuredPlugins []gardencorev1beta1.AdmissionPlugin) []gardencorev1beta1.AdmissionPlugin {
-	var disabledAdmissionPlugins []gardencorev1beta1.AdmissionPlugin
-
-	for _, plugin := range configuredPlugins {
-		if pointer.BoolDeref(plugin.Disabled, false) {
-			disabledAdmissionPlugins = append(disabledAdmissionPlugins, plugin)
-		}
-	}
-
-	return disabledAdmissionPlugins
 }
 
 func computeKubeAPIServerReplicas(autoscalingConfig apiserver.AutoscalingConfig, deployment *appsv1.Deployment, wantScaleDown bool) *int32 {
@@ -469,83 +381,6 @@ func computeKubeAPIServerReplicas(autoscalingConfig apiserver.AutoscalingConfig,
 		// If none of the above cases applies then a default value has to be returned.
 		return pointer.Int32(1)
 	}
-}
-
-func computeKubeAPIServerAuditConfig(
-	ctx context.Context,
-	cl client.Client,
-	objectMeta metav1.ObjectMeta,
-	config *gardencorev1beta1.AuditConfig,
-	webhookConfig *apiserver.AuditWebhook,
-) (
-	*apiserver.AuditConfig,
-	error,
-) {
-	if config == nil || config.AuditPolicy == nil || config.AuditPolicy.ConfigMapRef == nil {
-		return nil, nil
-	}
-
-	var (
-		out = &apiserver.AuditConfig{
-			Webhook: webhookConfig,
-		}
-		key = kubernetesutils.Key(objectMeta.Namespace, config.AuditPolicy.ConfigMapRef.Name)
-	)
-
-	configMap := &corev1.ConfigMap{}
-	if err := cl.Get(ctx, key, configMap); err != nil {
-		// Ignore missing audit configuration on shoot deletion to prevent failing redeployments of the
-		// kube-apiserver in case the end-user deleted the configmap before/simultaneously to the shoot
-		// deletion.
-		if !apierrors.IsNotFound(err) || objectMeta.DeletionTimestamp == nil {
-			return nil, fmt.Errorf("retrieving audit policy from the ConfigMap %s failed: %w", key, err)
-		}
-	} else {
-		policy, ok := configMap.Data["policy"]
-		if !ok {
-			return nil, fmt.Errorf("missing '.data.policy' in audit policy ConfigMap %s", key)
-		}
-		out.Policy = &policy
-	}
-
-	return out, nil
-}
-
-func computeKubeAPIServerETCDEncryptionConfig(
-	ctx context.Context,
-	runtimeClient client.Client,
-	runtimeNamespace string,
-	deploymentName string,
-	etcdEncryptionKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase,
-	resources []string,
-) (
-	apiserver.ETCDEncryptionConfig,
-	error,
-) {
-	config := apiserver.ETCDEncryptionConfig{
-		RotationPhase:         etcdEncryptionKeyRotationPhase,
-		EncryptWithCurrentKey: true,
-		Resources:             resources,
-	}
-
-	if etcdEncryptionKeyRotationPhase == gardencorev1beta1.RotationPreparing {
-		deployment := &metav1.PartialObjectMetadata{}
-		deployment.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
-		if err := runtimeClient.Get(ctx, kubernetesutils.Key(runtimeNamespace, deploymentName), deployment); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return apiserver.ETCDEncryptionConfig{}, err
-			}
-		}
-
-		// If the new encryption key was not yet populated to all replicas then we should still use the old key for
-		// encryption of data. Only if all replicas know the new key we can switch and start encrypting with the new/
-		// current key, see https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#rotating-a-decryption-key.
-		if !metav1.HasAnnotation(deployment.ObjectMeta, secretsrotation.AnnotationKeyNewEncryptionKeyPopulated) {
-			config.EncryptWithCurrentKey = false
-		}
-	}
-
-	return config, nil
 }
 
 func computeKubeAPIServerServiceAccountConfig(

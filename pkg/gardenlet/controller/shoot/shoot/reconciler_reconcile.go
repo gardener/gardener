@@ -327,7 +327,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		})
 		deploySeedLogging = g.Add(flow.Task{
 			Name:         "Deploying shoot logging stack in Seed",
-			Fn:           flow.TaskFn(botanist.DeploySeedLogging).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.DeployLogging).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployNamespace, initializeSecretsManagement).InsertIf(shootControlPlaneLoggingEnabled, waitUntilGardenerResourceManagerReady),
 		})
 		deployShootNamespaces = g.Add(flow.Task{
@@ -393,7 +393,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		_ = g.Add(flow.Task{
 			Name: "Snapshotting ETCD after secrets were re-encrypted with new ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return secretsrotation.SnapshotETCDAfterRewritingEncryptedData(ctx, o.SeedClientSet.Client(), botanist.SnapshotEtcd, o.Shoot.SeedNamespace, "")
+				return secretsrotation.SnapshotETCDAfterRewritingEncryptedData(ctx, o.SeedClientSet.Client(), botanist.SnapshotEtcd, o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer)
 			}).
 				DoIf(allowBackup && v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationPreparing),
 			Dependencies: flow.NewTaskIDs(rewriteSecretsAddLabel),
@@ -401,7 +401,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		_ = g.Add(flow.Task{
 			Name: "Removing label from secrets after rotation of ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return secretsrotation.RewriteEncryptedDataRemoveLabel(ctx, o.Logger, o.SeedClientSet.Client(), o.ShootClientSet.Client(), o.Shoot.SeedNamespace, "", corev1.SchemeGroupVersion.WithKind("SecretList"))
+				return secretsrotation.RewriteEncryptedDataRemoveLabel(ctx, o.Logger, o.SeedClientSet.Client(), o.ShootClientSet.Client(), o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer, corev1.SchemeGroupVersion.WithKind("SecretList"))
 			}).
 				RetryUntilTimeout(30*time.Second, 10*time.Minute).
 				DoIf(v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationCompleting),
@@ -675,7 +675,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 
 		_ = g.Add(flow.Task{
 			Name:         "Reconciling Plutono for Shoot in Seed for the logging stack",
-			Fn:           flow.TaskFn(botanist.DeploySeedPlutono).RetryUntilTimeout(defaultInterval, 2*time.Minute),
+			Fn:           flow.TaskFn(botanist.DeployPlutono).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(deploySeedLogging),
 		})
 		nginxLBReady = g.Add(flow.Task{
@@ -705,7 +705,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		})
 		deploySeedMonitoring = g.Add(flow.Task{
 			Name:         "Deploying Shoot monitoring stack in Seed",
-			Fn:           flow.TaskFn(botanist.DeploySeedMonitoring).RetryUntilTimeout(defaultInterval, 2*time.Minute),
+			Fn:           flow.TaskFn(botanist.DeployMonitoring).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilTunnelConnectionExists, waitUntilWorkerReady).InsertIf(!staticNodesCIDR, waitUntilInfrastructureReady),
 		})
 		_ = g.Add(flow.Task{
@@ -715,7 +715,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Reconciling Plutono for Shoot in Seed for the monitoring stack",
-			Fn:           flow.TaskFn(botanist.DeploySeedPlutono).RetryUntilTimeout(defaultInterval, 2*time.Minute),
+			Fn:           flow.TaskFn(botanist.DeployPlutono).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(deploySeedMonitoring),
 		})
 

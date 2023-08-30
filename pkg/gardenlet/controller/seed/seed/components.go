@@ -28,26 +28,43 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/clusterautoscaler"
+	"github.com/gardener/gardener/pkg/component/coredns"
 	"github.com/gardener/gardener/pkg/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/component/etcd"
+	"github.com/gardener/gardener/pkg/component/extensions"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
+	"github.com/gardener/gardener/pkg/component/kubeproxy"
+	"github.com/gardener/gardener/pkg/component/kubernetesdashboard"
+	"github.com/gardener/gardener/pkg/component/kubescheduler"
+	"github.com/gardener/gardener/pkg/component/logging"
+	"github.com/gardener/gardener/pkg/component/logging/eventlogger"
+	"github.com/gardener/gardener/pkg/component/logging/fluentoperator/customresources"
+	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
+	"github.com/gardener/gardener/pkg/component/metricsserver"
+	"github.com/gardener/gardener/pkg/component/monitoring"
+	"github.com/gardener/gardener/pkg/component/nodeexporter"
+	"github.com/gardener/gardener/pkg/component/nodeproblemdetector"
 	"github.com/gardener/gardener/pkg/component/plutono"
 	"github.com/gardener/gardener/pkg/component/seedsystem"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/component/vpnseedserver"
+	"github.com/gardener/gardener/pkg/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
@@ -55,7 +72,6 @@ import (
 
 func defaultIstio(
 	seedClient client.Client,
-	imageVector imagevector.ImageVector,
 	chartRenderer chartrenderer.Interface,
 	seed *seedpkg.Seed,
 	conf *config.GardenletConfiguration,
@@ -71,7 +87,6 @@ func defaultIstio(
 
 	istioDeployer, err := shared.NewIstio(
 		seedClient,
-		imageVector,
 		chartRenderer,
 		"",
 		*conf.SNI.Ingress.Namespace,
@@ -152,7 +167,6 @@ func defaultIstio(
 func defaultDependencyWatchdogs(
 	c client.Client,
 	seedVersion *semver.Version,
-	imageVector imagevector.ImageVector,
 	seedSettings *gardencorev1beta1.SeedSettings,
 	gardenNamespaceName string,
 ) (
@@ -160,7 +174,7 @@ func defaultDependencyWatchdogs(
 	dwdProber component.DeployWaiter,
 	err error,
 ) {
-	image, err := imageVector.FindImage(images.ImageNameDependencyWatchdog, imagevector.RuntimeVersion(seedVersion.String()), imagevector.TargetVersion(seedVersion.String()))
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameDependencyWatchdog, imagevectorutils.RuntimeVersion(seedVersion.String()), imagevectorutils.TargetVersion(seedVersion.String()))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -234,13 +248,12 @@ func defaultDependencyWatchdogs(
 func defaultVPNAuthzServer(
 	c client.Client,
 	seedVersion *semver.Version,
-	imageVector imagevector.ImageVector,
 	gardenNamespaceName string,
 ) (
 	component.DeployWaiter,
 	error,
 ) {
-	image, err := imageVector.FindImage(images.ImageNameExtAuthzServer, imagevector.RuntimeVersion(seedVersion.String()), imagevector.TargetVersion(seedVersion.String()))
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameExtAuthzServer, imagevectorutils.RuntimeVersion(seedVersion.String()), imagevectorutils.TargetVersion(seedVersion.String()))
 	if err != nil {
 		return nil, err
 	}
@@ -255,14 +268,12 @@ func defaultVPNAuthzServer(
 func defaultSystem(
 	c client.Client,
 	seed *seedpkg.Seed,
-	imageVector imagevector.ImageVector,
-	reserveExcessCapacity bool,
 	gardenNamespaceName string,
 ) (
 	component.DeployWaiter,
 	error,
 ) {
-	image, err := imageVector.FindImage(images.ImageNamePauseContainer)
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNamePauseContainer)
 	if err != nil {
 		return nil, err
 	}
@@ -277,9 +288,10 @@ func defaultSystem(
 		gardenNamespaceName,
 		seedsystem.Values{
 			ReserveExcessCapacity: seedsystem.ReserveExcessCapacityValues{
-				Enabled:  reserveExcessCapacity,
+				Enabled:  v1beta1helper.SeedSettingExcessCapacityReservationEnabled(seed.GetInfo().Spec.Settings),
 				Image:    image.String(),
 				Replicas: replicasExcessCapacityReservation,
+				Configs:  seed.GetInfo().Spec.Settings.ExcessCapacityReservation.Configs,
 			},
 		},
 	), nil
@@ -288,7 +300,6 @@ func defaultSystem(
 func defaultVali(
 	ctx context.Context,
 	c client.Client,
-	imageVector imagevector.ImageVector,
 	loggingConfig *config.Logging,
 	gardenNamespaceName string,
 	isLoggingEnabled bool,
@@ -329,7 +340,6 @@ func defaultVali(
 	deployer, err := shared.NewVali(
 		c,
 		gardenNamespaceName,
-		imageVector,
 		nil,
 		component.ClusterTypeSeed,
 		1,
@@ -358,7 +368,6 @@ func defaultVali(
 func defaultPlutono(
 	c client.Client,
 	namespace string,
-	imageVector imagevector.ImageVector,
 	secretsManager secretsmanager.Interface,
 	ingressHot string,
 	authSecret string,
@@ -370,19 +379,129 @@ func defaultPlutono(
 	return shared.NewPlutono(
 		c,
 		namespace,
-		imageVector,
 		secretsManager,
-		authSecret,
 		component.ClusterTypeSeed,
+		1,
+		authSecret,
 		ingressHot,
+		v1beta1constants.PriorityClassNameSeedSystem600,
+		false,
 		true,
 		false,
 		false,
 		false,
 		false,
-		v1beta1constants.PriorityClassNameSeedSystem600,
-		1,
-		wildcardCertName,
 		false,
+		wildcardCertName,
+	)
+}
+
+func defaultMonitoring(
+	c client.Client,
+	chartApplier kubernetes.ChartApplier,
+	secretsManager secretsmanager.Interface,
+	namespace string,
+	seed *seedpkg.Seed,
+	alertingSMTPSecret *corev1.Secret,
+	globalMonitoringSecret *corev1.Secret,
+	hvpaEnabled bool,
+	ingressHost string,
+	wildcardCertName *string,
+) (
+	component.Deployer,
+	error,
+) {
+	imageAlertmanager, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlertmanager)
+	if err != nil {
+		return nil, err
+	}
+	imageAlpine, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlpine)
+	if err != nil {
+		return nil, err
+	}
+	imageConfigmapReloader, err := imagevector.ImageVector().FindImage(imagevector.ImageNameConfigmapReloader)
+	if err != nil {
+		return nil, err
+	}
+	imagePrometheus, err := imagevector.ImageVector().FindImage(imagevector.ImageNamePrometheus)
+	if err != nil {
+		return nil, err
+	}
+
+	return monitoring.NewBootstrap(
+		c,
+		chartApplier,
+		secretsManager,
+		namespace,
+		monitoring.ValuesBootstrap{
+			AlertingSMTPSecret:                 alertingSMTPSecret,
+			GlobalMonitoringSecret:             globalMonitoringSecret,
+			HVPAEnabled:                        hvpaEnabled,
+			ImageAlertmanager:                  imageAlertmanager.String(),
+			ImageAlpine:                        imageAlpine.String(),
+			ImageConfigmapReloader:             imageConfigmapReloader.String(),
+			ImagePrometheus:                    imagePrometheus.String(),
+			IngressHost:                        ingressHost,
+			SeedName:                           seed.GetInfo().Name,
+			StorageCapacityAlertmanager:        seed.GetValidVolumeSize("1Gi"),
+			StorageCapacityPrometheus:          seed.GetValidVolumeSize("10Gi"),
+			StorageCapacityAggregatePrometheus: seed.GetValidVolumeSize("20Gi"),
+			WildcardCertName:                   wildcardCertName,
+		},
+	), nil
+}
+
+// getFluentBitInputsFilterAndParsers returns all fluent-bit inputs, filters and parsers for the seed
+func getFluentOperatorCustomResources(
+	c client.Client,
+	namespace string,
+	loggingEnabled bool,
+	seedIsGarden bool,
+	isEventLoggingEnabled bool,
+	isMCMDeploymentEnabled bool,
+) (
+	deployer component.DeployWaiter,
+	err error,
+) {
+	centralLoggingConfigurations := []component.CentralLoggingConfiguration{
+		// seed system components
+		extensions.CentralLoggingConfiguration,
+		dependencywatchdog.CentralLoggingConfiguration,
+		monitoring.CentralLoggingConfiguration,
+		plutono.CentralLoggingConfiguration,
+		// shoot control plane components
+		clusterautoscaler.CentralLoggingConfiguration,
+		vpnseedserver.CentralLoggingConfiguration,
+		kubescheduler.CentralLoggingConfiguration,
+		// shoot worker components
+		downloader.CentralLoggingConfiguration,
+		// shoot system components
+		nodeexporter.CentralLoggingConfiguration,
+		nodeproblemdetector.CentralLoggingConfiguration,
+		vpnshoot.CentralLoggingConfiguration,
+		coredns.CentralLoggingConfiguration,
+		kubeproxy.CentralLoggingConfiguration,
+		metricsserver.CentralLoggingConfiguration,
+		// shoot addon components
+		kubernetesdashboard.CentralLoggingConfiguration,
+	}
+
+	if !seedIsGarden {
+		centralLoggingConfigurations = append(centralLoggingConfigurations, logging.GardenCentralLoggingConfigurations...)
+	}
+	if isEventLoggingEnabled {
+		centralLoggingConfigurations = append(centralLoggingConfigurations, eventlogger.CentralLoggingConfiguration)
+	}
+	if isMCMDeploymentEnabled {
+		centralLoggingConfigurations = append(centralLoggingConfigurations, machinecontrollermanager.CentralLoggingConfiguration)
+	}
+
+	return shared.NewFluentOperatorCustomResources(
+		c,
+		namespace,
+		loggingEnabled,
+		"",
+		centralLoggingConfigurations,
+		customresources.GetDynamicClusterOutput(map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource}),
 	)
 }

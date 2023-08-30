@@ -82,7 +82,7 @@ type GardenerESReporter struct {
 	index    []byte
 }
 
-var matchLabel, _ = regexp.Compile(`\\[(.*?)\\]`)
+var matchLabel = regexp.MustCompile(`\\[(.*?)\\]`)
 
 // newGardenerESReporter creates a new Gardener elasticsearch reporter.
 // Any report will be encoded to json and stored to the passed filename in the given es index.

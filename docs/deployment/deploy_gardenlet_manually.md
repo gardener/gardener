@@ -348,7 +348,7 @@ The seed cluster can be set up with backup and restore
 for the main `etcds` of shoot clusters.
 
 Gardener uses [etcd-backup-restore](https://github.com/gardener/etcd-backup-restore)
-that [integrates with different storage providers](https://github.com/gardener/etcd-backup-restore/blob/master/doc/usage/getting_started.md#usage)
+that [integrates with different storage providers](https://github.com/gardener/etcd-backup-restore/blob/master/docs/deployment/getting_started.md)
 to store the shoot cluster's main `etcd` backups.
 Make sure to obtain client credentials that have sufficient permissions with the chosen storage provider.
 
@@ -509,14 +509,6 @@ This helm chart creates:
         "reason": "GardenletReady",
         "status": "True",
         "type": "GardenletReady"
-      },
-      {
-        "lastTransitionTime": "2020-07-17T09:17:49Z",
-        "lastUpdateTime": "2020-07-17T09:53:17Z",
-        "message": "Seed cluster has been bootstrapped successfully.",
-        "reason": "BootstrappingSucceeded",
-        "status": "True",
-        "type": "Bootstrapped"
       },
       {
         "lastTransitionTime": "2020-07-17T09:17:49Z",

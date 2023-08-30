@@ -45,7 +45,7 @@ spec:
       type: host-local
 ```
 
-The above resources is divided into two parts (more information can be found at [Using the Networking Calico Extension](https://github.com/gardener/gardener-extension-networking-calico/blob/master/docs/usage-as-end-user.md)):
+The above resources is divided into two parts (more information can be found at [Using the Networking Calico Extension](https://github.com/gardener/gardener-extension-networking-calico/blob/master/docs/usage/usage.md)):
 
 - global configuration (e.g., podCIDR, serviceCIDR, and type)
 - provider specific config (e.g., for calico we can choose to configure a `bird` backend)

@@ -143,7 +143,7 @@ kubectl apply -f example/operator/20-garden.yaml
 You can wait for the `Garden` to be ready by running:
 
 ```shell
-./hack/usage/wait-for.sh garden garden Reconciled
+./hack/usage/wait-for.sh garden local Reconciled
 ```
 
 Alternatively, you can run `kubectl get garden` and wait for the `RECONCILED` status to reach `True`:
@@ -186,7 +186,7 @@ Note that this kubeconfig uses a token that has validity of `12h` only, hence it
 ### Deleting the `Garden`
 
 ```shell
-./hack/usage/delete garden garden
+./hack/usage/delete garden local
 ```
 
 ### Tear Down the Gardener Operator Environment
@@ -214,9 +214,15 @@ Other system components are:
 
 - garden system resources ([`PriorityClass`es](../development/priority-classes.md) for the workload resources)
 - Vertical Pod Autoscaler (if enabled via `.spec.runtimeCluster.settings.verticalPodAutoscaler.enabled=true` in the `Garden`)
-- HVPA controller (when `HVPA` feature gate is enabled)
+- HVPA Controller (when `HVPA` feature gate is enabled)
 - ETCD Druid
 - Istio
+
+The reconciler also manages a few observability-related components (more planned as part of [GEP-19](../proposals/19-migrating-observability-stack-to-operators.md)):
+
+- Fluent Operator
+- Plutono
+- Vali
 
 As soon as all system components are up, the reconciler deploys the virtual garden cluster.
 It comprises out of two ETCDs (one "main" etcd, one "events" etcd) which are managed by ETCD Druid via `druid.gardener.cloud/v1alpha1.Etcd` custom resources.
@@ -256,17 +262,18 @@ The DNS domain is used for the `server` in the kubeconfig, and for configuring t
 It is also mandatory to provide an IPv4 CIDR for the service network of the virtual cluster via `.spec.virtualCluster.networking.services`.
 This range is used by the API server to compute the cluster IPs of `Service`s.
 
-The controller maintains the `Reconciled` condition which indicates the status of an operation.
+The controller maintains the `.status.lastOperation` which indicates the status of an operation.
 
 #### [`Care` Reconciler](../../pkg/operator/controller/garden/care)
 
 This reconciler performs four "care" actions related to `Garden`s.
 
-It maintains four conditions and performs the following checks:
+It maintains the following conditions:
 
 - `RuntimeComponentsHealthy`: The conditions of the `ManagedResource`s applied to the runtime cluster are checked (e.g., `ResourcesApplied`).
 - `VirtualComponentsHealthy`: The virtual components are considered healthy when the respective `Deployment`s (for example `virtual-garden-kube-apiserver`,`virtual-garden-kube-controller-manager`), and `Etcd`s (for example `virtual-garden-etcd-main`) exist and are healthy. Additionally, the conditions of the `ManagedResource`s applied to the virtual cluster are checked (e.g., `ResourcesApplied`).
 - `VirtualGardenAPIServerAvailable`: The `/healthz` endpoint of the garden's `virtual-garden-kube-apiserver` is called and considered healthy when it responds with `200 OK`.
+- `ObservabilityComponentsHealthy`: This condition is considered healthy when the respective `Deployment`s (for example `plutono`) and `StatefulSet`s (for example `prometheus`,`vali`) exist and are healthy. 
 
 If all checks for a certain condition are succeeded, then its `status` will be set to `True`.
 Otherwise, it will be set to `False` or `Progressing`.

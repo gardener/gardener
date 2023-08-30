@@ -20,7 +20,6 @@ import (
 	_ "embed"
 	"fmt"
 	"text/template"
-	"time"
 
 	"github.com/Masterminds/sprig"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
@@ -58,11 +57,12 @@ const (
 	// ServiceName is the name of the logging service.
 	ServiceName = "logging"
 
-	managedResourceNameRuntime = "vali"
+	// ManagedResourceNameRuntime is the name of the managed resource which deploys Vali statefulSet.
+	ManagedResourceNameRuntime = "vali"
 	managedResourceNameTarget  = "vali-target"
 
 	valiName                = "vali"
-	valiServiceName         = "vali"
+	valiServiceName         = "logging"
 	valiMetricsPortName     = "metrics"
 	valiUserAndGroupId      = 10001
 	valiConfigMapVolumeName = "config"
@@ -208,7 +208,7 @@ func (v *vali) Deploy(ctx context.Context) error {
 			Organization:                []string{"gardener.cloud:monitoring:ingress"},
 			DNSNames:                    []string{v.values.IngressHost},
 			CertType:                    secrets.ServerCert,
-			Validity:                    pointer.Duration(730 * 24 * time.Hour), // ~2 years, see https://support.apple.com/en-us/HT210176)
+			Validity:                    pointer.Duration(v1beta1constants.IngressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
 		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
 		if err != nil {
@@ -274,7 +274,7 @@ func (v *vali) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, v.client, v.namespace, managedResourceNameRuntime, false, registry.SerializedObjects())
+	return managedresources.CreateForSeed(ctx, v.client, v.namespace, ManagedResourceNameRuntime, false, registry.SerializedObjects())
 }
 
 func (v *vali) Destroy(ctx context.Context) error {
@@ -282,7 +282,7 @@ func (v *vali) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	if err := managedresources.DeleteForSeed(ctx, v.client, v.namespace, managedResourceNameRuntime); err != nil {
+	if err := managedresources.DeleteForSeed(ctx, v.client, v.namespace, ManagedResourceNameRuntime); err != nil {
 		return err
 	}
 
@@ -1011,7 +1011,7 @@ func getLabels() map[string]string {
 // current one.
 // Caution: If the passed storage capacity is less than the current one the existing PVC and its PV will be deleted.
 func (v *vali) resizeOrDeleteValiDataVolumeIfStorageNotTheSame(ctx context.Context) error {
-	managedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameRuntime, Namespace: v.namespace}}
+	managedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: ManagedResourceNameRuntime, Namespace: v.namespace}}
 	addOrRemoveIgnoreAnnotationFromManagedResource := func(addIgnoreAnnotation bool) error {
 		// In order to not create the managed resource here first check if exists.
 		if err := v.client.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource); err != nil {

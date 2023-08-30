@@ -20,6 +20,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
@@ -27,15 +28,18 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/component/gardeneraccess"
-	"github.com/gardener/gardener/pkg/component/gardensystem"
+	runtimegardensystem "github.com/gardener/gardener/pkg/component/gardensystem/runtime"
 	"github.com/gardener/gardener/pkg/component/hvpa"
 	"github.com/gardener/gardener/pkg/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
+	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
+	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/component/vpa"
 	"github.com/gardener/gardener/pkg/features"
@@ -47,11 +51,15 @@ import (
 var (
 	gardenManagedResources = []string{
 		etcd.Druid,
-		kubestatemetrics.ManagedResourceName,
-		gardensystem.ManagedResourceName,
+		runtimegardensystem.ManagedResourceName,
 		hvpa.ManagedResourceName,
 		"istio-system",
 		"virtual-garden-istio",
+		kubestatemetrics.ManagedResourceName,
+		fluentoperator.OperatorManagedResourceName,
+		fluentoperator.CustomResourcesManagedResourceName + "-garden",
+		fluentoperator.FluentBitManagedResourceName,
+		vali.ManagedResourceNameRuntime,
 	}
 
 	virtualGardenManagedResources = []string{
@@ -70,6 +78,15 @@ var (
 		"virtual-garden-etcd-events",
 		"virtual-garden-etcd-main",
 	}
+
+	monitoringDeployments = []string{
+		"kube-state-metrics",
+		"plutono",
+	}
+
+	loggingStatefulSets = []string{
+		"vali",
+	}
 )
 
 var _ = Describe("Garden health", func() {
@@ -82,9 +99,10 @@ var _ = Describe("Garden health", func() {
 		garden          *operatorv1alpha1.Garden
 		gardenNamespace string
 
-		apiserverAvailabilityCondition    gardencorev1beta1.Condition
-		runtimeComponentsHealthyCondition gardencorev1beta1.Condition
-		virtualComponentsHealthyCondition gardencorev1beta1.Condition
+		apiserverAvailabilityCondition          gardencorev1beta1.Condition
+		runtimeComponentsHealthyCondition       gardencorev1beta1.Condition
+		virtualComponentsHealthyCondition       gardencorev1beta1.Condition
+		observabilityComponentsHealthyCondition gardencorev1beta1.Condition
 	)
 
 	BeforeEach(func() {
@@ -114,10 +132,14 @@ var _ = Describe("Garden health", func() {
 			Type:               operatorv1alpha1.VirtualComponentsHealthy,
 			LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
 		}
+		observabilityComponentsHealthyCondition = gardencorev1beta1.Condition{
+			Type:               operatorv1alpha1.ObservabilityComponentsHealthy,
+			LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
+		}
 	})
 
 	Describe("#CheckGarden", func() {
-		Context("When all managed resources, deployments and ETCDs are deployed successfully", func() {
+		Context("when all managed resources, deployments and ETCDs are deployed successfully", func() {
 			JustBeforeEach(func() {
 				for _, name := range append(gardenManagedResources, virtualGardenManagedResources...) {
 					Expect(runtimeClient.Create(ctx, healthyManagedResource(name))).To(Succeed())
@@ -128,6 +150,12 @@ var _ = Describe("Garden health", func() {
 				for _, name := range virtualGardenETCDs {
 					Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, "controlplane", true, nil))).To(Succeed())
 				}
+				for _, name := range monitoringDeployments {
+					Expect(runtimeClient.Create(ctx, newRuntimeDeployment(gardenNamespace, name, "monitoring", true))).To(Succeed())
+				}
+				for _, name := range loggingStatefulSets {
+					Expect(runtimeClient.Create(ctx, newStatefulSet(gardenNamespace, name, "logging", true))).To(Succeed())
+				}
 			})
 
 			It("should set RuntimeComponentsHealthy and VirtualComponentsHealthy conditions to true", func() {
@@ -136,16 +164,18 @@ var _ = Describe("Garden health", func() {
 					apiserverAvailabilityCondition,
 					runtimeComponentsHealthyCondition,
 					virtualComponentsHealthyCondition,
-				}, nil)
+					observabilityComponentsHealthyCondition,
+				}, nil, nil)
 				Expect(len(updatedConditions)).ToNot(BeZero())
 				Expect(updatedConditions).To(ContainElements(
 					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "RuntimeComponentsRunning", "All runtime components are healthy."),
 					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "VirtualComponentsRunning", "All virtual garden components are healthy."),
+					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "ObservabilityComponentsRunning", "All observability components are healthy."),
 				))
 			})
 		})
 
-		Context("When optional managed resources are turned off, and required resources are deployed successfully", func() {
+		Context("when optional managed resources are turned off, and required resources are deployed successfully", func() {
 			JustBeforeEach(func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.HVPA, false))
 				garden.Spec.RuntimeCluster.Settings = &operatorv1alpha1.Settings{
@@ -163,6 +193,12 @@ var _ = Describe("Garden health", func() {
 				for _, name := range virtualGardenETCDs {
 					Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, "controlplane", true, nil))).To(Succeed())
 				}
+				for _, name := range monitoringDeployments {
+					Expect(runtimeClient.Create(ctx, newRuntimeDeployment(gardenNamespace, name, "monitoring", true))).To(Succeed())
+				}
+				for _, name := range loggingStatefulSets {
+					Expect(runtimeClient.Create(ctx, newStatefulSet(gardenNamespace, name, "logging", true))).To(Succeed())
+				}
 			})
 
 			It("should set RuntimeComponentsHealthy and VirtualComponentsHealthy conditions to true", func() {
@@ -171,16 +207,18 @@ var _ = Describe("Garden health", func() {
 					apiserverAvailabilityCondition,
 					runtimeComponentsHealthyCondition,
 					virtualComponentsHealthyCondition,
-				}, nil)
+					observabilityComponentsHealthyCondition,
+				}, nil, nil)
 				Expect(len(updatedConditions)).ToNot(BeZero())
 				Expect(updatedConditions).To(ContainElements(
 					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "RuntimeComponentsRunning", "All runtime components are healthy."),
 					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "VirtualComponentsRunning", "All virtual garden components are healthy."),
+					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "ObservabilityComponentsRunning", "All observability components are healthy."),
 				))
 			})
 		})
 
-		Context("When optional managed resources are turned on, and all resources are deployed successfully", func() {
+		Context("when optional managed resources are turned on, and all resources are deployed successfully", func() {
 			JustBeforeEach(func() {
 				garden.Spec.RuntimeCluster.Settings = &operatorv1alpha1.Settings{
 					VerticalPodAutoscaler: &operatorv1alpha1.SettingVerticalPodAutoscaler{
@@ -199,6 +237,12 @@ var _ = Describe("Garden health", func() {
 				for _, name := range virtualGardenETCDs {
 					Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, "controlplane", true, nil))).To(Succeed())
 				}
+				for _, name := range monitoringDeployments {
+					Expect(runtimeClient.Create(ctx, newRuntimeDeployment(gardenNamespace, name, "monitoring", true))).To(Succeed())
+				}
+				for _, name := range loggingStatefulSets {
+					Expect(runtimeClient.Create(ctx, newStatefulSet(gardenNamespace, name, "logging", true))).To(Succeed())
+				}
 			})
 
 			It("should set RuntimeComponentsHealthy and VirtualComponentsHealthy conditions to true", func() {
@@ -207,16 +251,18 @@ var _ = Describe("Garden health", func() {
 					apiserverAvailabilityCondition,
 					runtimeComponentsHealthyCondition,
 					virtualComponentsHealthyCondition,
-				}, nil)
+					observabilityComponentsHealthyCondition,
+				}, nil, nil)
 				Expect(len(updatedConditions)).ToNot(BeZero())
 				Expect(updatedConditions).To(ContainElements(
 					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "RuntimeComponentsRunning", "All runtime components are healthy."),
 					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "VirtualComponentsRunning", "All virtual garden components are healthy."),
+					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "ObservabilityComponentsRunning", "All observability components are healthy."),
 				))
 			})
 		})
 
-		Context("When there are issues with garden managed resources", func() {
+		Context("when there are issues with garden managed resources", func() {
 			var (
 				tests = func(reason, message string) {
 					It("should set RuntimeComponentsHealthy and VirtualComponentsHealthy conditions to False if there is no Progressing threshold duration mapping", func() {
@@ -225,7 +271,8 @@ var _ = Describe("Garden health", func() {
 							apiserverAvailabilityCondition,
 							runtimeComponentsHealthyCondition,
 							virtualComponentsHealthyCondition,
-						}, nil)
+							observabilityComponentsHealthyCondition,
+						}, nil, nil)
 						Expect(len(updatedConditions)).ToNot(BeZero())
 						Expect(updatedConditions).To(ContainElements(
 							beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, reason, message),
@@ -245,11 +292,13 @@ var _ = Describe("Garden health", func() {
 								apiserverAvailabilityCondition,
 								runtimeComponentsHealthyCondition,
 								virtualComponentsHealthyCondition,
+								observabilityComponentsHealthyCondition,
 							},
 							map[gardencorev1beta1.ConditionType]time.Duration{
 								operatorv1alpha1.RuntimeComponentsHealthy: time.Minute,
 								operatorv1alpha1.VirtualComponentsHealthy: time.Minute,
 							},
+							nil,
 						)
 
 						Expect(len(updatedConditions)).ToNot(BeZero())
@@ -271,11 +320,13 @@ var _ = Describe("Garden health", func() {
 								apiserverAvailabilityCondition,
 								runtimeComponentsHealthyCondition,
 								virtualComponentsHealthyCondition,
+								observabilityComponentsHealthyCondition,
 							},
 							map[gardencorev1beta1.ConditionType]time.Duration{
 								operatorv1alpha1.RuntimeComponentsHealthy: time.Minute,
 								operatorv1alpha1.VirtualComponentsHealthy: time.Minute,
 							},
+							nil,
 						)
 
 						Expect(len(updatedConditions)).ToNot(BeZero())
@@ -297,11 +348,13 @@ var _ = Describe("Garden health", func() {
 								apiserverAvailabilityCondition,
 								runtimeComponentsHealthyCondition,
 								virtualComponentsHealthyCondition,
+								observabilityComponentsHealthyCondition,
 							},
 							map[gardencorev1beta1.ConditionType]time.Duration{
 								operatorv1alpha1.RuntimeComponentsHealthy: time.Minute,
 								operatorv1alpha1.VirtualComponentsHealthy: time.Minute,
 							},
+							nil,
 						)
 
 						Expect(len(updatedConditions)).ToNot(BeZero())
@@ -323,11 +376,13 @@ var _ = Describe("Garden health", func() {
 								apiserverAvailabilityCondition,
 								runtimeComponentsHealthyCondition,
 								virtualComponentsHealthyCondition,
+								observabilityComponentsHealthyCondition,
 							},
 							map[gardencorev1beta1.ConditionType]time.Duration{
 								operatorv1alpha1.RuntimeComponentsHealthy: time.Minute,
 								operatorv1alpha1.VirtualComponentsHealthy: time.Minute,
 							},
+							nil,
 						)
 
 						Expect(len(updatedConditions)).ToNot(BeZero())
@@ -339,7 +394,7 @@ var _ = Describe("Garden health", func() {
 				}
 			)
 
-			Context("When managed resources are not deployed", func() {
+			Context("when managed resources are not deployed", func() {
 				JustBeforeEach(func() {
 					for _, name := range virtualGardenDeployments {
 						Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, "controlplane", true))).To(Succeed())
@@ -352,7 +407,7 @@ var _ = Describe("Garden health", func() {
 				tests("ResourceNotFound", "not found")
 			})
 
-			Context("When all managed resources are deployed, but not healthy", func() {
+			Context("when all managed resources are deployed, but not healthy", func() {
 				JustBeforeEach(func() {
 					for _, name := range append(gardenManagedResources, virtualGardenManagedResources...) {
 						Expect(runtimeClient.Create(ctx, notHealthyManagedResource(name))).To(Succeed())
@@ -368,7 +423,7 @@ var _ = Describe("Garden health", func() {
 				tests("NotHealthy", "Resources are not healthy")
 			})
 
-			Context("When all managed resources are deployed but their resources are not applied", func() {
+			Context("when all managed resources are deployed but their resources are not applied", func() {
 				JustBeforeEach(func() {
 					for _, name := range append(gardenManagedResources, virtualGardenManagedResources...) {
 						Expect(runtimeClient.Create(ctx, notAppliedManagedResource(name))).To(Succeed())
@@ -384,7 +439,7 @@ var _ = Describe("Garden health", func() {
 				tests("NotApplied", "Resources are not applied")
 			})
 
-			Context("When all managed resources are deployed but their resources are still progressing", func() {
+			Context("when all managed resources are deployed but their resources are still progressing", func() {
 				JustBeforeEach(func() {
 					for _, name := range append(gardenManagedResources, virtualGardenManagedResources...) {
 						Expect(runtimeClient.Create(ctx, progressingManagedResource(name))).To(Succeed())
@@ -400,7 +455,7 @@ var _ = Describe("Garden health", func() {
 				tests("ResourcesProgressing", "Resources are progressing")
 			})
 
-			Context("When all managed resources are deployed but not all required conditions are present", func() {
+			Context("when all managed resources are deployed but not all required conditions are present", func() {
 				JustBeforeEach(func() {
 					for _, name := range append(gardenManagedResources, virtualGardenManagedResources...) {
 						Expect(runtimeClient.Create(ctx, managedResource(name, []gardencorev1beta1.Condition{{
@@ -420,14 +475,15 @@ var _ = Describe("Garden health", func() {
 			})
 		})
 
-		Context("When there are issues with deployments for virtual garden", func() {
+		Context("when there are issues with deployments for virtual garden", func() {
 			It("should set VirtualComponentsHealthy conditions to false when the deployments are missing", func() {
 				healthCheck := care.NewHealthForGarden(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
 				updatedConditions := healthCheck.CheckGarden(ctx, []gardencorev1beta1.Condition{
 					apiserverAvailabilityCondition,
 					runtimeComponentsHealthyCondition,
 					virtualComponentsHealthyCondition,
-				}, nil)
+					observabilityComponentsHealthyCondition,
+				}, nil, nil)
 				Expect(len(updatedConditions)).ToNot(BeZero())
 				Expect(updatedConditions).To(ContainElements(
 					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "DeploymentMissing", "Missing required deployments: [virtual-garden-gardener-resource-manager virtual-garden-kube-apiserver virtual-garden-kube-controller-manager]"),
@@ -444,7 +500,8 @@ var _ = Describe("Garden health", func() {
 					apiserverAvailabilityCondition,
 					runtimeComponentsHealthyCondition,
 					virtualComponentsHealthyCondition,
-				}, nil)
+					observabilityComponentsHealthyCondition,
+				}, nil, nil)
 				Expect(len(updatedConditions)).ToNot(BeZero())
 				Expect(updatedConditions).To(ContainElements(
 					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "DeploymentUnhealthy", "is unhealthy: condition \"Available\" is missing"),
@@ -452,7 +509,7 @@ var _ = Describe("Garden health", func() {
 			})
 		})
 
-		Context("When there are issues with ETCDs for virtual garden", func() {
+		Context("when there are issues with ETCDs for virtual garden", func() {
 			JustBeforeEach(func() {
 				for _, name := range virtualGardenDeployments {
 					Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, "controlplane", true))).To(Succeed())
@@ -465,7 +522,8 @@ var _ = Describe("Garden health", func() {
 					apiserverAvailabilityCondition,
 					runtimeComponentsHealthyCondition,
 					virtualComponentsHealthyCondition,
-				}, nil)
+					observabilityComponentsHealthyCondition,
+				}, nil, nil)
 				Expect(len(updatedConditions)).ToNot(BeZero())
 				Expect(updatedConditions).To(ContainElements(
 					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "EtcdMissing", "Missing required etcds: [virtual-garden-etcd-events virtual-garden-etcd-main]"),
@@ -482,12 +540,96 @@ var _ = Describe("Garden health", func() {
 					apiserverAvailabilityCondition,
 					runtimeComponentsHealthyCondition,
 					virtualComponentsHealthyCondition,
-				}, nil)
+					observabilityComponentsHealthyCondition,
+				}, nil, nil)
 				Expect(len(updatedConditions)).ToNot(BeZero())
 				Expect(updatedConditions).To(ContainElements(
 					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "EtcdUnhealthy", "Etcd extension resource \"virtual-garden-etcd-events\" is unhealthy: etcd \"virtual-garden-etcd-events\" is not ready yet"),
 				))
 			})
 		})
+
+		Context("when there are issues with observability components", func() {
+			It("should set ObservabilityComponentsHealthy conditions to false when no components are deployed", func() {
+				healthCheck := care.NewHealthForGarden(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
+				updatedConditions := healthCheck.CheckGarden(ctx, []gardencorev1beta1.Condition{
+					apiserverAvailabilityCondition,
+					runtimeComponentsHealthyCondition,
+					virtualComponentsHealthyCondition,
+					observabilityComponentsHealthyCondition,
+				}, nil, nil)
+				Expect(len(updatedConditions)).ToNot(BeZero())
+				Expect(updatedConditions).To(ContainElements(
+					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "DeploymentMissing", "Missing required deployments: [kube-state-metrics plutono]"),
+				))
+			})
+
+			It("should set ObservabilityComponentsHealthy conditions to false when logging components are missing", func() {
+				for _, name := range monitoringDeployments {
+					Expect(runtimeClient.Create(ctx, newRuntimeDeployment(gardenNamespace, name, "monitoring", true))).To(Succeed())
+				}
+
+				healthCheck := care.NewHealthForGarden(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
+				updatedConditions := healthCheck.CheckGarden(ctx, []gardencorev1beta1.Condition{
+					apiserverAvailabilityCondition,
+					runtimeComponentsHealthyCondition,
+					virtualComponentsHealthyCondition,
+					observabilityComponentsHealthyCondition,
+				}, nil, nil)
+				Expect(len(updatedConditions)).ToNot(BeZero())
+				Expect(updatedConditions).To(ContainElements(
+					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "StatefulSetMissing", "Missing required stateful sets: [vali]"),
+				))
+			})
+
+			It("should set ObservabilityComponentsHealthy conditions to false when components are deployed but unhealthy", func() {
+				for _, name := range monitoringDeployments {
+					Expect(runtimeClient.Create(ctx, newRuntimeDeployment(gardenNamespace, name, "monitoring", false))).To(Succeed())
+				}
+				for _, name := range loggingStatefulSets {
+					Expect(runtimeClient.Create(ctx, newStatefulSet(gardenNamespace, name, "logging", false))).To(Succeed())
+				}
+
+				healthCheck := care.NewHealthForGarden(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
+				updatedConditions := healthCheck.CheckGarden(ctx, []gardencorev1beta1.Condition{
+					apiserverAvailabilityCondition,
+					runtimeComponentsHealthyCondition,
+					virtualComponentsHealthyCondition,
+					observabilityComponentsHealthyCondition,
+				}, nil, nil)
+				Expect(len(updatedConditions)).ToNot(BeZero())
+				Expect(updatedConditions).To(ContainElements(
+					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "DeploymentUnhealthy", "Deployment \"kube-state-metrics\" is unhealthy: condition \"Available\" is missing"),
+				))
+			})
+
+			It("should set ObservabilityComponentsHealthy conditions to false when logging components are deployed but unhealthy", func() {
+				for _, name := range monitoringDeployments {
+					Expect(runtimeClient.Create(ctx, newRuntimeDeployment(gardenNamespace, name, "monitoring", true))).To(Succeed())
+				}
+				for _, name := range loggingStatefulSets {
+					Expect(runtimeClient.Create(ctx, newStatefulSet(gardenNamespace, name, "logging", false))).To(Succeed())
+				}
+
+				healthCheck := care.NewHealthForGarden(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
+				updatedConditions := healthCheck.CheckGarden(ctx, []gardencorev1beta1.Condition{
+					apiserverAvailabilityCondition,
+					runtimeComponentsHealthyCondition,
+					virtualComponentsHealthyCondition,
+					observabilityComponentsHealthyCondition,
+				}, nil, nil)
+				Expect(len(updatedConditions)).ToNot(BeZero())
+				Expect(updatedConditions).To(ContainElements(
+					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "StatefulSetUnhealthy", "Stateful set \"vali\" is unhealthy: not enough ready replicas (0/1)"),
+				))
+			})
+		})
 	})
 })
+
+func newRuntimeDeployment(namespace, name, role string, healthy bool) *appsv1.Deployment {
+	deployment := newDeployment(namespace, name, role, healthy)
+	deployment.Labels[v1beta1constants.LabelRole] = role
+	delete(deployment.Labels, v1beta1constants.GardenRole)
+	return deployment
+}

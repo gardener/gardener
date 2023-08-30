@@ -24,13 +24,12 @@ import (
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -631,7 +630,6 @@ var _ = Describe("Etcd", func() {
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(hvpaFor(class, 1, scaleDownUpdateMode)))
 				}),
-				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-etcd-peer", Namespace: testNamespace}}),
 			)
 
 			Expect(etcd.Deploy(ctx)).To(Succeed())
@@ -696,7 +694,6 @@ var _ = Describe("Etcd", func() {
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(hvpaFor(class, existingReplicas, scaleDownUpdateMode)))
 				}),
-				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-etcd-peer", Namespace: testNamespace}}),
 			)
 
 			Expect(etcd.Deploy(ctx)).To(Succeed())
@@ -766,7 +763,6 @@ var _ = Describe("Etcd", func() {
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(hvpaFor(class, existingReplicas, scaleDownUpdateMode)))
 				}),
-				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-etcd-peer", Namespace: testNamespace}}),
 			)
 
 			Expect(etcd.Deploy(ctx)).To(Succeed())
@@ -826,7 +822,6 @@ var _ = Describe("Etcd", func() {
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(hvpaFor(class, 1, scaleDownUpdateMode)))
 				}),
-				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-etcd-peer", Namespace: testNamespace}}),
 			)
 
 			Expect(etcd.Deploy(ctx)).To(Succeed())
@@ -884,7 +879,6 @@ var _ = Describe("Etcd", func() {
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(hvpaFor(class, 1, scaleDownUpdateMode)))
 				}),
-				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-etcd-peer", Namespace: testNamespace}}),
 			)
 
 			Expect(etcd.Deploy(ctx)).To(Succeed())
@@ -973,7 +967,6 @@ var _ = Describe("Etcd", func() {
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(hvpaFor(class, 1, scaleDownUpdateMode)))
 				}),
-				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-etcd-peer", Namespace: testNamespace}}),
 			)
 
 			Expect(etcd.Deploy(ctx)).To(Succeed())
@@ -1029,7 +1022,6 @@ var _ = Describe("Etcd", func() {
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(hvpaFor(class, 1, updateMode)))
 					}),
-					c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-etcd-peer", Namespace: testNamespace}}),
 				)
 
 				Expect(etcd.Deploy(ctx)).To(Succeed())
@@ -1078,7 +1070,6 @@ var _ = Describe("Etcd", func() {
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(hvpaFor(class, 1, scaleDownUpdateMode)))
 					}),
-					c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-etcd-peer", Namespace: testNamespace}}),
 				)
 
 				Expect(etcd.Deploy(ctx)).To(Succeed())
@@ -1136,7 +1127,6 @@ var _ = Describe("Etcd", func() {
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(hvpaFor(class, 1, scaleDownUpdateMode)))
 					}),
-					c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-etcd-peer", Namespace: testNamespace}}),
 				)
 
 				Expect(etcd.Deploy(ctx)).To(Succeed())
@@ -1182,7 +1172,6 @@ var _ = Describe("Etcd", func() {
 						)))
 					}),
 					c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
-					c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-etcd-peer", Namespace: testNamespace}}),
 				)
 			}
 
@@ -1400,7 +1389,6 @@ var _ = Describe("Etcd", func() {
 							Expect(obj.(*druidv1alpha1.Etcd).Spec.Etcd.PeerUrlTLS).NotTo(BeNil())
 						}),
 						c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
-						c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-etcd-peer", Namespace: testNamespace}}),
 					)
 
 					Expect(etcd.Deploy(ctx)).To(Succeed())
@@ -1435,7 +1423,6 @@ var _ = Describe("Etcd", func() {
 							Expect(obj.(*druidv1alpha1.Etcd).Spec.Etcd.PeerUrlTLS).NotTo(BeNil())
 						}),
 						c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
-						c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-etcd-peer", Namespace: testNamespace}}),
 					)
 
 					Expect(etcd.Deploy(ctx)).To(Succeed())
@@ -1492,7 +1479,6 @@ var _ = Describe("Etcd", func() {
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(hvpaFor(class, 1, updateMode)))
 					}),
-					c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-etcd-peer", Namespace: testNamespace}}),
 				)
 
 				Expect(etcd.Deploy(ctx)).To(Succeed())
@@ -1539,7 +1525,6 @@ var _ = Describe("Etcd", func() {
 				c.EXPECT().Patch(ctx, etcdRes, gomock.Any()),
 				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 				c.EXPECT().Delete(ctx, etcdRes),
-				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-etcd-peer", Namespace: testNamespace}}),
 			)
 			Expect(etcd.Destroy(ctx)).To(Succeed())
 		})

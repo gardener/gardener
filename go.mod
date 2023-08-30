@@ -1,6 +1,6 @@
 module github.com/gardener/gardener
 
-go 1.20
+go 1.21
 
 require (
 	github.com/Masterminds/semver v1.5.0
@@ -9,14 +9,13 @@ require (
 	github.com/bronze1man/yaml2json v0.0.0-20211227013850-8972abeaea25
 	github.com/coreos/go-systemd/v22 v22.3.2
 	github.com/fluent/fluent-operator/v2 v2.2.0
-	github.com/gardener/dependency-watchdog v1.0.0
-	github.com/gardener/etcd-druid v0.18.4
+	github.com/gardener/dependency-watchdog v1.1.2
+	github.com/gardener/etcd-druid v0.19.2
 	github.com/gardener/hvpa-controller/api v0.5.0
 	github.com/gardener/machine-controller-manager v0.48.1
 	github.com/go-logr/logr v1.2.4
 	github.com/go-test/deep v1.1.0
 	github.com/gogo/protobuf v1.3.2
-	github.com/golang/mock v1.6.0
 	github.com/google/gnostic v0.5.7-v3refs
 	github.com/google/go-cmp v0.5.9
 	github.com/hashicorp/go-multierror v1.1.1
@@ -48,7 +47,7 @@ require (
 	k8s.io/apimachinery v0.26.3
 	k8s.io/apiserver v0.26.3
 	k8s.io/autoscaler/vertical-pod-autoscaler v0.14.0
-	k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible
+	k8s.io/client-go v0.26.3
 	k8s.io/cluster-bootstrap v0.26.3
 	k8s.io/code-generator v0.26.3
 	k8s.io/component-base v0.26.3
@@ -157,6 +156,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.10.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.19.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
+	go.uber.org/mock v0.2.0
 	go.uber.org/multierr v1.7.0 // indirect
 	golang.org/x/mod v0.9.0 // indirect
 	golang.org/x/net v0.8.0 // indirect
@@ -179,5 +179,3 @@ require (
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 )
-
-replace k8s.io/client-go => k8s.io/client-go v0.26.3

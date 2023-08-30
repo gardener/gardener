@@ -1,4 +1,4 @@
-apiVersion: {{ include "priorityclassversion" . }}
+apiVersion: scheduling.k8s.io/v1
 kind: PriorityClass
 metadata:
   name: gardener-controlplane

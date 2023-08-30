@@ -28,17 +28,13 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	plugin "github.com/gardener/gardener/plugin/pkg"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
-)
-
-const (
-	// PluginName is the name of this admission plugin.
-	PluginName = "SeedValidator"
 )
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(PluginName, func(config io.Reader) (admission.Interface, error) {
+	plugins.Register(plugin.PluginNameSeedValidator, func(config io.Reader) (admission.Interface, error) {
 		return New()
 	})
 }

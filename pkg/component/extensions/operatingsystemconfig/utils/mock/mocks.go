@@ -9,7 +9,7 @@ import (
 
 	unit "github.com/coreos/go-systemd/v22/unit"
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockUnitSerializer is a mock of UnitSerializer interface.

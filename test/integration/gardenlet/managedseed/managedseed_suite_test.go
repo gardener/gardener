@@ -16,7 +16,6 @@ package managedseed_test
 
 import (
 	"context"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -37,7 +36,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/gardener/gardener/charts"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -52,7 +50,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/gardener/gardener/test/utils/namespacefinalizer"
 )
@@ -206,10 +203,6 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Register controller")
-	chartsPath := filepath.Join("..", "..", "..", "..", charts.Path)
-	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(chartsPath, "images.yaml"))
-	Expect(err).NotTo(HaveOccurred())
-
 	shootName = "shoot-" + testRunID
 	shootClientMap = fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForShoot(&gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: gardenNamespaceGarden.Name}}), testClientSet).Build()
 
@@ -235,10 +228,8 @@ var _ = BeforeSuite(func() {
 	gardenNamespaceShoot = "garden-shoot-" + testRunID
 	Expect((&managedseed.Reconciler{
 		Config:                cfg,
-		ChartsPath:            chartsPath,
 		GardenNamespaceGarden: gardenNamespaceGarden.Name,
 		GardenNamespaceShoot:  gardenNamespaceShoot,
-		ImageVector:           imageVector,
 		ShootClientMap:        shootClientMap,
 	}).AddToManager(ctx, mgr, mgr, mgr)).To(Succeed())
 

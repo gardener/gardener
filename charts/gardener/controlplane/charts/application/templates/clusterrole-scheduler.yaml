@@ -7,7 +7,7 @@
 # Shoots/binding CREATE on binding subresource of shoots - actual scheduling request that leads to setting shoot.Spec.Cloud.Seed
 # Shoots/status PATCH, UPDATE on status subresource of shoots
 ---
-apiVersion: {{ include "rbacversion" . }}
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: gardener.cloud:system:scheduler
@@ -33,6 +33,8 @@ rules:
   - create
   - delete
   - get
+  - list
+  - watch
   - patch
   - update
 - apiGroups:

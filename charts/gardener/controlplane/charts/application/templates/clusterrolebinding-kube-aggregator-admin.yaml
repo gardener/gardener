@@ -1,6 +1,6 @@
 {{- if .Values.global.apiserver.enabled }}
 ---
-apiVersion: {{ include "rbacversion" . }}
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: gardener.cloud:admin

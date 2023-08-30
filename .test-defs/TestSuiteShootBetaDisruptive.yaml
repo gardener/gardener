@@ -1,3 +1,4 @@
+apiVersion: testmachinery.sapcloud.io
 kind: TestDefinition
 metadata:
   name: shoot-beta-disruptive-test-suite
@@ -23,4 +24,4 @@ spec:
       -ginkgo.focus="\[BETA\].*\[DISRUPTIVE\]"
       -ginkgo.skip="\[SERIAL\]"
 
-  image: golang:1.20.6
+  image: golang:1.21.0

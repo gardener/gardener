@@ -95,7 +95,7 @@ linters-settings:
         alias: logzap
       - pkg: sigs.k8s.io/controller-runtime/pkg/log
         alias: logf
-      - pkg: github.com/golang/mock/gomock
+      - pkg: go.uber.org/mock/gomock
         alias: gmock
       - pkg: github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2
         alias: fluentbitv1alpha2
@@ -234,6 +234,8 @@ linters-settings:
         alias: secretsmanager
       - pkg: github.com/gardener/gardener/pkg/utils/secrets/manager/fake
         alias: fakesecretsmanager
+      - pkg: github.com/gardener/gardener/pkg/utils/validation/kubernetes/(\w+)
+        alias: kubernetes${1}validation
       - pkg: github.com/gardener/gardener/plugin/pkg/utils
         alias: admissionutils
       - pkg: github.com/gardener/gardener/plugin/pkg/shoot/dnsrewriting

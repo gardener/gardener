@@ -33,7 +33,7 @@ dependency_version = ci.util.check_env('DEPENDENCY_VERSION')
 
 images_file = pathlib.Path(
         ci.util.check_env('REPO_DIR'),
-        'charts',
+        'imagevector',
         'images.yaml',
 )
 

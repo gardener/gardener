@@ -58,18 +58,18 @@ YAML2JSON                  := $(TOOLS_BIN_DIR)/yaml2json
 YQ                         := $(TOOLS_BIN_DIR)/yq
 
 # default tool versions
-DOCFORGE_VERSION ?= v0.33.0
-GOLANGCI_LINT_VERSION ?= v1.53.1
-GO_APIDIFF_VERSION ?= v0.5.0
+DOCFORGE_VERSION ?= v0.34.0
+GOLANGCI_LINT_VERSION ?= v1.54.2
+GO_APIDIFF_VERSION ?= v0.6.0
 GO_ADD_LICENSE_VERSION ?= v1.1.1
-GOIMPORTSREVISER_VERSION ?= v3.3.1
+GOIMPORTSREVISER_VERSION ?= v3.4.1
 GO_VULN_CHECK_VERSION ?= latest
-HELM_VERSION ?= v3.11.2
-KIND_VERSION ?= v0.18.0
-KUBECTL_VERSION ?= v1.24.11
-PROTOC_VERSION ?= 23.4
-SKAFFOLD_VERSION ?= v2.2.0
-YQ_VERSION ?= v4.31.2
+HELM_VERSION ?= v3.12.3
+KIND_VERSION ?= v0.20.0
+KUBECTL_VERSION ?= v1.27.4
+PROTOC_VERSION ?= 24.1
+SKAFFOLD_VERSION ?= v2.3.0
+YQ_VERSION ?= v4.35.1
 
 export TOOLS_BIN_DIR := $(TOOLS_BIN_DIR)
 export PATH := $(abspath $(TOOLS_BIN_DIR)):$(PATH)
@@ -169,7 +169,7 @@ $(LOGCHECK): go.mod
 endif
 
 $(MOCKGEN): go.mod
-	go build -o $(MOCKGEN) github.com/golang/mock/mockgen
+	go build -o $(MOCKGEN) go.uber.org/mock/mockgen
 
 $(OPENAPI_GEN): go.mod
 	go build -o $(OPENAPI_GEN) k8s.io/kube-openapi/cmd/openapi-gen

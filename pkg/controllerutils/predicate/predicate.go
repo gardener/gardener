@@ -179,6 +179,17 @@ func LastOperationChanged(getLastOperation func(client.Object) *gardencorev1beta
 	}
 }
 
+// ReconciliationFinishedSuccessfully is a helper function for checking whether the last operation indicates a
+// successful reconciliation.
+func ReconciliationFinishedSuccessfully(oldLastOperation, newLastOperation *gardencorev1beta1.LastOperation) bool {
+	return oldLastOperation != nil &&
+		oldLastOperation.Type != gardencorev1beta1.LastOperationTypeDelete &&
+		oldLastOperation.State == gardencorev1beta1.LastOperationStateProcessing &&
+		newLastOperation != nil &&
+		newLastOperation.Type != gardencorev1beta1.LastOperationTypeDelete &&
+		newLastOperation.State == gardencorev1beta1.LastOperationStateSucceeded
+}
+
 func lastOperationStateFailed(lastOperation *gardencorev1beta1.LastOperation) bool {
 	if lastOperation == nil {
 		return false

@@ -19,9 +19,9 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -83,7 +83,7 @@ var _ = Describe("Controller Mapper", func() {
 		var mapper Mapper
 
 		BeforeEach(func() {
-			mapper = ClusterToObjectMapper(ctx, mgr, newObjListFunc, nil)
+			mapper = ClusterToObjectMapper(mgr, newObjListFunc, nil)
 		})
 
 		It("should find all objects for the passed cluster", func() {
@@ -105,7 +105,7 @@ var _ = Describe("Controller Mapper", func() {
 					},
 				},
 			}
-			mapper = ClusterToObjectMapper(ctx, mgr, newObjListFunc, predicates)
+			mapper = ClusterToObjectMapper(mgr, newObjListFunc, predicates)
 
 			Expect(fakeClient.Create(ctx, infra)).To(Succeed())
 

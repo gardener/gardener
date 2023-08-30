@@ -1777,34 +1777,34 @@ var _ = Describe("Shoot Validation Tests", func() {
 			)
 		})
 
-		Context("KubeAPIServerLogging validation", func() {
+		Context("APIServerLogging validation", func() {
 			var negativeSize int32 = -1
 
-			DescribeTable("KubeAPIServerLogging validation",
-				func(loggingConfig *core.KubeAPIServerLogging, matcher gomegatypes.GomegaMatcher) {
-					Expect(ValidateKubeAPIServerLogging(loggingConfig, nil)).To(matcher)
+			DescribeTable("APIServerLogging validation",
+				func(loggingConfig *core.APIServerLogging, matcher gomegatypes.GomegaMatcher) {
+					Expect(ValidateAPIServerLogging(loggingConfig, nil)).To(matcher)
 				},
 
 				Entry("valid (unset)", nil, BeEmpty()),
-				Entry("valid (fields unset)", &core.KubeAPIServerLogging{}, BeEmpty()),
-				Entry("valid (verbosity=0)", &core.KubeAPIServerLogging{
+				Entry("valid (fields unset)", &core.APIServerLogging{}, BeEmpty()),
+				Entry("valid (verbosity=0)", &core.APIServerLogging{
 					Verbosity: pointer.Int32(0),
 				}, BeEmpty()),
-				Entry("valid (httpAccessVerbosity=0)", &core.KubeAPIServerLogging{
+				Entry("valid (httpAccessVerbosity=0)", &core.APIServerLogging{
 					HTTPAccessVerbosity: pointer.Int32(0),
 				}, BeEmpty()),
-				Entry("valid (verbosity>0)", &core.KubeAPIServerLogging{
+				Entry("valid (verbosity>0)", &core.APIServerLogging{
 					Verbosity: pointer.Int32(3),
 				}, BeEmpty()),
-				Entry("valid (httpAccessVerbosity>0)", &core.KubeAPIServerLogging{
+				Entry("valid (httpAccessVerbosity>0)", &core.APIServerLogging{
 					HTTPAccessVerbosity: pointer.Int32(3),
 				}, BeEmpty()),
-				Entry("invalid (verbosity<0)", &core.KubeAPIServerLogging{
+				Entry("invalid (verbosity<0)", &core.APIServerLogging{
 					Verbosity: pointer.Int32(negativeSize),
 				}, ConsistOf(
 					field.Invalid(field.NewPath("verbosity"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
 				)),
-				Entry("invalid (httpAccessVerbosity<0)", &core.KubeAPIServerLogging{
+				Entry("invalid (httpAccessVerbosity<0)", &core.APIServerLogging{
 					HTTPAccessVerbosity: pointer.Int32(negativeSize),
 				}, ConsistOf(
 					field.Invalid(field.NewPath("httpAccessVerbosity"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
@@ -1814,7 +1814,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		Context("requests", func() {
 			It("should not allow too high values for max inflight requests fields", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.Requests = &core.KubeAPIServerRequests{
+				shoot.Spec.Kubernetes.KubeAPIServer.Requests = &core.APIServerRequests{
 					MaxNonMutatingInflight: pointer.Int32(123123123),
 					MaxMutatingInflight:    pointer.Int32(412412412),
 				}
@@ -1831,7 +1831,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should not allow negative values for max inflight requests fields", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.Requests = &core.KubeAPIServerRequests{
+				shoot.Spec.Kubernetes.KubeAPIServer.Requests = &core.APIServerRequests{
 					MaxNonMutatingInflight: pointer.Int32(-1),
 					MaxMutatingInflight:    pointer.Int32(-1),
 				}
@@ -4526,6 +4526,44 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}),
 			)
+		})
+
+		Context("scheduler name", func() {
+			It("allow setting the default scheduler name when name was 'nil'", func() {
+				shoot.Spec.SchedulerName = nil
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.SchedulerName = pointer.String("default-scheduler")
+
+				errorList := ValidateShootSpecUpdate(&shoot.Spec, &oldShoot.Spec, metav1.ObjectMeta{}, field.NewPath("spec"))
+
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("forbid changing the scheduler name when name was 'nil'", func() {
+				shoot.Spec.SchedulerName = nil
+				oldShoot := shoot.DeepCopy()
+				oldShoot.Spec.SchedulerName = pointer.String("foo-scheduler")
+
+				errorList := ValidateShootSpecUpdate(&shoot.Spec, &oldShoot.Spec, metav1.ObjectMeta{}, field.NewPath("spec"))
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.schedulerName"),
+				}))))
+			})
+
+			It("forbid changing the scheduler name when configured before", func() {
+				shoot.Spec.SchedulerName = pointer.String("foo-scheduler")
+				oldShoot := shoot.DeepCopy()
+				oldShoot.Spec.SchedulerName = pointer.String("bar-scheduler")
+
+				errorList := ValidateShootSpecUpdate(&shoot.Spec, &oldShoot.Spec, metav1.ObjectMeta{}, field.NewPath("spec"))
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.schedulerName"),
+				}))))
+			})
 		})
 	})
 

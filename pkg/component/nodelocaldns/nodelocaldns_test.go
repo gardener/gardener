@@ -485,12 +485,10 @@ status: {}
 		JustBeforeEach(func() {
 			component = New(c, namespace, values)
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
-
 			Expect(component.Deploy(ctx)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-			Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
+			expectedMr := &resourcesv1alpha1.ManagedResource{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
 					Kind:       "ManagedResource",
@@ -504,14 +502,19 @@ status: {}
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 					SecretRefs: []corev1.LocalObjectReference{{
-						Name: managedResourceSecret.Name,
+						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
 					KeepObjects: pointer.Bool(false),
 				},
-			}))
+			}
+			utilruntime.Must(references.InjectAnnotations(expectedMr))
+			Expect(managedResource).To(DeepEqual(expectedMr))
 
+			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+			Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__node-local-dns.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecret.Data["service__kube-system__kube-dns-upstream.yaml"])).To(Equal(serviceYAML))
 		})
@@ -575,7 +578,6 @@ ip6.arpa:53 {
 `,
 					}
 					configMapHash = utils.ComputeConfigMapChecksum(configMapData)[:8]
-					values.ShootAnnotations = map[string]string{}
 				})
 
 				Context("ForceTcpToClusterDNS : true and ForceTcpToUpstreamDNS : true", func() {
@@ -751,79 +753,6 @@ ip6.arpa:53 {
 						upstreamDNSAddress = values.ClusterDNS
 						forceTcpToClusterDNS = "force_tcp"
 						forceTcpToUpstreamDNS = "force_tcp"
-					})
-
-					It("should succesfully deploy all resources", func() {
-						Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
-						managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
-						Expect(err).ToNot(HaveOccurred())
-						daemonset := daemonSetYAMLFor()
-						utilruntime.Must(references.InjectAnnotations(daemonset))
-						Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
-					})
-				})
-
-				Context("Annotation ForceTcpToClusterDNS", func() {
-					BeforeEach(func() {
-						values.Config = &gardencorev1beta1.NodeLocalDNS{Enabled: true,
-							ForceTCPToClusterDNS:        pointer.Bool(true),
-							ForceTCPToUpstreamDNS:       pointer.Bool(true),
-							DisableForwardToUpstreamDNS: pointer.Bool(true),
-						}
-						values.VPAEnabled = true
-						upstreamDNSAddress = values.ClusterDNS
-						values.ShootAnnotations = map[string]string{v1beta1constants.AnnotationNodeLocalDNSForceTcpToClusterDns: "false"}
-
-						forceTcpToClusterDNS = "prefer_udp"
-						forceTcpToUpstreamDNS = "force_tcp"
-					})
-
-					It("should succesfully deploy all resources", func() {
-						Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
-						managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
-						Expect(err).ToNot(HaveOccurred())
-						daemonset := daemonSetYAMLFor()
-						utilruntime.Must(references.InjectAnnotations(daemonset))
-						Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
-					})
-				})
-				Context("Annotation ForceTcpToClusterDNS", func() {
-					BeforeEach(func() {
-						values.Config = &gardencorev1beta1.NodeLocalDNS{Enabled: true,
-							ForceTCPToClusterDNS:        pointer.Bool(true),
-							ForceTCPToUpstreamDNS:       pointer.Bool(true),
-							DisableForwardToUpstreamDNS: pointer.Bool(true),
-						}
-						values.VPAEnabled = true
-						upstreamDNSAddress = values.ClusterDNS
-						values.ShootAnnotations = map[string]string{v1beta1constants.AnnotationNodeLocalDNSForceTcpToUpstreamDns: "false"}
-
-						forceTcpToClusterDNS = "force_tcp"
-						forceTcpToUpstreamDNS = "prefer_udp"
-					})
-
-					It("should succesfully deploy all resources", func() {
-						Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
-						managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
-						Expect(err).ToNot(HaveOccurred())
-						daemonset := daemonSetYAMLFor()
-						utilruntime.Must(references.InjectAnnotations(daemonset))
-						Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
-					})
-				})
-				Context("Annotation ForceTcpToClusterDNS", func() {
-					BeforeEach(func() {
-						values.Config = &gardencorev1beta1.NodeLocalDNS{Enabled: true,
-							ForceTCPToClusterDNS:        pointer.Bool(true),
-							ForceTCPToUpstreamDNS:       pointer.Bool(true),
-							DisableForwardToUpstreamDNS: pointer.Bool(true),
-						}
-						values.VPAEnabled = true
-						upstreamDNSAddress = values.ClusterDNS
-						values.ShootAnnotations = map[string]string{v1beta1constants.AnnotationNodeLocalDNSForceTcpToClusterDns: "false", v1beta1constants.AnnotationNodeLocalDNSForceTcpToUpstreamDns: "false"}
-
-						forceTcpToClusterDNS = "prefer_udp"
-						forceTcpToUpstreamDNS = "prefer_udp"
 					})
 
 					It("should succesfully deploy all resources", func() {

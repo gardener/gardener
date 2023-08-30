@@ -1,3 +1,4 @@
+apiVersion: testmachinery.sapcloud.io
 kind: TestDefinition
 metadata:
   name: delete-shoot
@@ -15,4 +16,4 @@ spec:
     --shoot-name=$SHOOT_NAME
     --project-namespace=$PROJECT_NAMESPACE
     --kubecfg="$TM_KUBECONFIG_PATH/gardener.config"
-  image: golang:1.20.6
+  image: golang:1.21.0

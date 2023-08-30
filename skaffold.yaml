@@ -164,8 +164,10 @@ build:
         - pkg/utils/validation/admissionplugins
         - pkg/utils/validation/cidr
         - pkg/utils/validation/features
+        - pkg/utils/validation/kubernetes/core
         - pkg/utils/validation/kubernetesversion
         - pkg/utils/version
+        - plugin/pkg
         - plugin/pkg/bastion/validator
         - plugin/pkg/controllerregistration/resources
         - plugin/pkg/global/customverbauthorizer
@@ -302,6 +304,7 @@ build:
         - pkg/utils/timewindow
         - pkg/utils/validation/kubernetesversion
         - pkg/utils/version
+        - third_party/gopkg.in/yaml.v2
         - vendor
         - VERSION
       ldflags:
@@ -457,6 +460,13 @@ deploy:
           - apply
           - -f
           - example/gardener-local/controlplane/networkpolicy.yaml
+      after:
+      - host:
+          command:
+          - kubectl
+          - apply
+          - -f
+          - example/gardener-local/controlplane/domain-secrets.yaml
     releases:
     - name: gardener-controlplane
       chartPath: charts/gardener/controlplane
@@ -483,9 +493,13 @@ profiles:
       global.apiserver.clusterIdentity: gardener-extensions
       global.scheduler.config.schedulers.shoot.candidateDeterminationStrategy: MinimalDistance
       global.scheduler.config.schedulers.shoot.concurrentSyncs: 5
-  - op: add
-    path: /deploy/helm/releases/0/valuesFiles/-
-    value: example/provider-extensions/garden/controlplane/values.yaml
+  - op: replace
+    path: /deploy/helm/hooks/after/0/host/command
+    value:
+    - kubectl
+    - apply
+    - -f
+    - example/provider-extensions/garden/controlplane/domain-secrets.yaml
 - name: ipv6
   activation:
   - env: IPFAMILY=ipv6
@@ -524,7 +538,6 @@ build:
     ko:
       dependencies:
         paths:
-        - charts
         - cmd/gardener-extension-provider-local/app
         - cmd/utils
         - extensions/pkg/apis/config
@@ -561,6 +574,7 @@ build:
         - extensions/pkg/webhook/controlplane
         - extensions/pkg/webhook/controlplane/genericmutator
         - extensions/pkg/webhook/shoot
+        - imagevector
         - pkg/api/core
         - pkg/api/extensions
         - pkg/apis/core
@@ -605,6 +619,7 @@ build:
         - pkg/controllerutils/predicate
         - pkg/controllerutils/reconciler
         - pkg/extensions
+        - pkg/features
         - pkg/gardenlet/apis/config
         - pkg/gardenlet/apis/config/v1alpha1
         - pkg/healthz
@@ -613,6 +628,7 @@ build:
         - pkg/provider-local/apis/local/helper
         - pkg/provider-local/apis/local/install
         - pkg/provider-local/apis/local/v1alpha1
+        - pkg/provider-local/charts
         - pkg/provider-local/controller/backupbucket
         - pkg/provider-local/controller/backupentry
         - pkg/provider-local/controller/backupoptions
@@ -642,7 +658,6 @@ build:
         - pkg/utils/errors
         - pkg/utils/flow
         - pkg/utils/gardener
-        - pkg/utils/images
         - pkg/utils/imagevector
         - pkg/utils/kubernetes
         - pkg/utils/kubernetes/health
@@ -655,6 +670,7 @@ build:
         - pkg/utils/timewindow
         - pkg/utils/validation/kubernetesversion
         - pkg/utils/version
+        - third_party/gopkg.in/yaml.v2
         - vendor
         - VERSION
       ldflags:
@@ -753,6 +769,7 @@ build:
         - cmd/gardenlet/app
         - cmd/gardenlet/app/bootstrappers
         - cmd/utils
+        - imagevector
         - pkg/api/extensions
         - pkg/api/indexer
         - pkg/apis/core
@@ -789,7 +806,7 @@ build:
         - pkg/client/kubernetes/clientmap/builder
         - pkg/client/kubernetes/clientmap/internal
         - pkg/client/kubernetes/clientmap/keys
-        - pkg/component/gardensystem
+        - pkg/component/gardensystem/runtime
         - pkg/controller/networkpolicy
         - pkg/controller/networkpolicy/helper
         - pkg/controller/networkpolicy/hostnameresolver
@@ -876,6 +893,7 @@ build:
         - pkg/component/extensions/operatingsystemconfig/utils
         - pkg/component/extensions/worker
         - pkg/component/gardeneraccess
+        - pkg/component/gardenerapiserver
         - pkg/component/hvpa
         - pkg/component/istio
         - pkg/component/kubeapiserver
@@ -886,10 +904,11 @@ build:
         - pkg/component/kubernetesdashboard
         - pkg/component/kubescheduler
         - pkg/component/kubestatemetrics
+        - pkg/component/logging
         - pkg/component/logging/eventlogger
-        - pkg/component/logging/kuberbacproxy
         - pkg/component/logging/fluentoperator
         - pkg/component/logging/fluentoperator/customresources
+        - pkg/component/logging/kuberbacproxy
         - pkg/component/logging/vali
         - pkg/component/machinecontrollermanager
         - pkg/component/metricsserver
@@ -917,6 +936,7 @@ build:
         - pkg/operation/garden
         - pkg/operation/seed
         - pkg/operation/shoot
+        - pkg/operator/client
         - pkg/resourcemanager/apis/config
         - pkg/resourcemanager/apis/config/v1alpha1
         - pkg/resourcemanager/controller/garbagecollector/references
@@ -940,7 +960,6 @@ build:
         - pkg/utils/gardener/secretsrotation
         - pkg/utils/gardener/shootstate
         - pkg/utils/gardener/tokenrequest
-        - pkg/utils/images
         - pkg/utils/imagevector
         - pkg/utils/kubernetes
         - pkg/utils/kubernetes/bootstraptoken
@@ -957,8 +976,10 @@ build:
         - pkg/utils/validation/admissionplugins
         - pkg/utils/validation/cidr
         - pkg/utils/validation/features
+        - pkg/utils/validation/kubernetes/core
         - pkg/utils/validation/kubernetesversion
         - pkg/utils/version
+        - third_party/gopkg.in/yaml.v2
         - vendor
         - VERSION
       ldflags:
@@ -974,12 +995,10 @@ build:
         - pkg/api/extensions
         - pkg/api/indexer
         - pkg/apis/core
-        - pkg/apis/core/helper
         - pkg/apis/core/install
         - pkg/apis/core/v1beta1
         - pkg/apis/core/v1beta1/constants
         - pkg/apis/core/v1beta1/helper
-        - pkg/apis/core/validation
         - pkg/apis/extensions
         - pkg/apis/extensions/v1alpha1
         - pkg/apis/extensions/v1alpha1/helper
@@ -1008,7 +1027,6 @@ build:
         - pkg/controllerutils/predicate
         - pkg/controllerutils/reconciler
         - pkg/controllerutils/routes
-        - pkg/features
         - pkg/gardenlet/apis/config
         - pkg/gardenlet/apis/config/v1alpha1
         - pkg/healthz
@@ -1055,9 +1073,8 @@ build:
         - pkg/utils/retry
         - pkg/utils/secrets
         - pkg/utils/timewindow
-        - pkg/utils/validation/admissionplugins
         - pkg/utils/validation/cidr
-        - pkg/utils/validation/features
+        - pkg/utils/validation/kubernetes/core
         - pkg/utils/validation/kubernetesversion
         - pkg/utils/version
         - vendor
@@ -1095,7 +1112,7 @@ deploy:
           command:
           - bash
           - -ec
-          - hack/usage/wait-for.sh seed local GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
+          - hack/usage/wait-for.sh seed local GardenletReady SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
 profiles:
 - name: kind2
   patches:
@@ -1107,7 +1124,7 @@ profiles:
     value:
     - bash
     - -ec
-    - KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG hack/usage/wait-for.sh seed local2 GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
+    - KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG hack/usage/wait-for.sh seed local2 GardenletReady SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
 - name: extensions
   patches:
   - op: add
@@ -1121,7 +1138,7 @@ profiles:
     value:
     - bash
     - -ec
-    - KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG hack/usage/wait-for.sh seed "$SEED_NAME" GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady
+    - KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG hack/usage/wait-for.sh seed "$SEED_NAME" GardenletReady SeedSystemComponentsHealthy ExtensionsReady
 - name: ha-single-zone
   patches:
   - op: add
@@ -1132,7 +1149,7 @@ profiles:
     value:
     - bash
     - -ec
-    - hack/usage/wait-for.sh seed local-ha-single-zone GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
+    - hack/usage/wait-for.sh seed local-ha-single-zone GardenletReady SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
 - name: kind2-ha-single-zone
   patches:
   - op: add
@@ -1143,7 +1160,7 @@ profiles:
     value:
     - bash
     - -ec
-    - KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG hack/usage/wait-for.sh seed local2-ha-single-zone GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
+    - KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG hack/usage/wait-for.sh seed local2-ha-single-zone GardenletReady SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
 - name: ha-multi-zone
   patches:
   - op: add
@@ -1154,7 +1171,7 @@ profiles:
     value:
     - bash
     - -ec
-    - TIMEOUT=1200 hack/usage/wait-for.sh seed local-ha-multi-zone GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
+    - TIMEOUT=1200 hack/usage/wait-for.sh seed local-ha-multi-zone GardenletReady SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
 - name: ipv6
   activation:
   - env: IPFAMILY=ipv6

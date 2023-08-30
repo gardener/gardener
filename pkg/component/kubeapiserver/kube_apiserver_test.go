@@ -31,7 +31,6 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -40,6 +39,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
@@ -55,6 +55,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	. "github.com/gardener/gardener/pkg/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/component/vpnseedserver"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -113,20 +114,18 @@ var _ = Describe("KubeAPIServer", func() {
 		configMapNameEgressPolicy       = "kube-apiserver-egress-selector-config-53d92abc"
 		configMapNameTerminationHandler = "kube-apiserver-watchdog-f4f4b3d5"
 
-		deployment                           *appsv1.Deployment
-		horizontalPodAutoscalerV2beta1       *autoscalingv2beta1.HorizontalPodAutoscaler
-		horizontalPodAutoscalerV2            *autoscalingv2.HorizontalPodAutoscaler
-		verticalPodAutoscaler                *vpaautoscalingv1.VerticalPodAutoscaler
-		hvpa                                 *hvpav1alpha1.Hvpa
-		podDisruptionBudget                  *policyv1.PodDisruptionBudget
-		networkPolicyAllowFromShootAPIServer *networkingv1.NetworkPolicy
-		networkPolicyAllowToShootAPIServer   *networkingv1.NetworkPolicy
-		configMapAdmission                   *corev1.ConfigMap
-		secretAdmissionKubeconfigs           *corev1.Secret
-		configMapAuditPolicy                 *corev1.ConfigMap
-		configMapEgressSelector              *corev1.ConfigMap
-		managedResource                      *resourcesv1alpha1.ManagedResource
-		managedResourceSecret                *corev1.Secret
+		deployment                     *appsv1.Deployment
+		horizontalPodAutoscalerV2beta1 *autoscalingv2beta1.HorizontalPodAutoscaler
+		horizontalPodAutoscalerV2      *autoscalingv2.HorizontalPodAutoscaler
+		verticalPodAutoscaler          *vpaautoscalingv1.VerticalPodAutoscaler
+		hvpa                           *hvpav1alpha1.Hvpa
+		podDisruptionBudget            *policyv1.PodDisruptionBudget
+		configMapAdmission             *corev1.ConfigMap
+		secretAdmissionKubeconfigs     *corev1.Secret
+		configMapAuditPolicy           *corev1.ConfigMap
+		configMapEgressSelector        *corev1.ConfigMap
+		managedResource                *resourcesv1alpha1.ManagedResource
+		managedResourceSecret          *corev1.Secret
 
 		values Values
 	)
@@ -196,18 +195,6 @@ var _ = Describe("KubeAPIServer", func() {
 		podDisruptionBudget = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kube-apiserver",
-				Namespace: namespace,
-			},
-		}
-		networkPolicyAllowFromShootAPIServer = &networkingv1.NetworkPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "allow-from-shoot-apiserver",
-				Namespace: namespace,
-			},
-		}
-		networkPolicyAllowToShootAPIServer = &networkingv1.NetworkPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "allow-to-shoot-apiserver",
 				Namespace: namespace,
 			},
 		}
@@ -724,7 +711,7 @@ var _ = Describe("KubeAPIServer", func() {
 		})
 
 		Describe("Shoot Resources", func() {
-			It("should successfully deploy the managed resource secret", func() {
+			It("should successfully deploy the managed resource and its secret", func() {
 				var (
 					clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -763,33 +750,10 @@ subjects:
   name: system:kube-apiserver:kubelet
 `
 				)
-
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
-				Expect(kapi.Deploy(ctx)).To(Succeed())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
-				Expect(managedResourceSecret).To(DeepEqual(&corev1.Secret{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: corev1.SchemeGroupVersion.String(),
-						Kind:       "Secret",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            managedResourceSecret.Name,
-						Namespace:       managedResourceSecret.Namespace,
-						ResourceVersion: "1",
-					},
-					Type: corev1.SecretTypeOpaque,
-					Data: map[string][]byte{
-						"clusterrole____system_apiserver_kubelet.yaml":        []byte(clusterRoleYAML),
-						"clusterrolebinding____system_apiserver_kubelet.yaml": []byte(clusterRoleBindingYAML),
-					},
-				}))
-			})
-
-			It("should successfully deploy the managed resource", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 				Expect(kapi.Deploy(ctx)).To(Succeed())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-				Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
+				expectedMr := &resourcesv1alpha1.ManagedResource{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
 						Kind:       "ManagedResource",
@@ -805,7 +769,32 @@ subjects:
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 						KeepObjects:  pointer.Bool(false),
-						SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}},
+						SecretRefs:   []corev1.LocalObjectReference{{Name: managedResource.Spec.SecretRefs[0].Name}},
+					},
+				}
+				utilruntime.Must(references.InjectAnnotations(expectedMr))
+				Expect(managedResource).To(DeepEqual(expectedMr))
+
+				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret).To(DeepEqual(&corev1.Secret{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: corev1.SchemeGroupVersion.String(),
+						Kind:       "Secret",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            managedResourceSecret.Name,
+						Namespace:       managedResourceSecret.Namespace,
+						ResourceVersion: "1",
+						Labels: map[string]string{
+							"resources.gardener.cloud/garbage-collectable-reference": "true",
+						},
+					},
+					Type:      corev1.SecretTypeOpaque,
+					Immutable: pointer.Bool(true),
+					Data: map[string][]byte{
+						"clusterrole____system_apiserver_kubelet.yaml":        []byte(clusterRoleYAML),
+						"clusterrolebinding____system_apiserver_kubelet.yaml": []byte(clusterRoleBindingYAML),
 					},
 				}))
 			})
@@ -1877,14 +1866,12 @@ rules:
 						"app":                              "kubernetes",
 						"role":                             "apiserver",
 						"networking.gardener.cloud/to-dns": "allowed",
-						"networking.gardener.cloud/to-private-networks":                              "allowed",
-						"networking.gardener.cloud/to-public-networks":                               "allowed",
-						"networking.resources.gardener.cloud/to-all-webhook-targets":                 "allowed",
-						"networking.resources.gardener.cloud/to-extensions-all-webhook-targets":      "allowed",
-						"networking.resources.gardener.cloud/to-etcd-main-client-tcp-2379":           "allowed",
-						"networking.resources.gardener.cloud/to-etcd-events-client-tcp-2379":         "allowed",
-						"networking.resources.gardener.cloud/to-gardener-resource-manager-tcp-10250": "allowed",
-						"networking.resources.gardener.cloud/to-vpa-webhook-tcp-10250":               "allowed",
+						"networking.gardener.cloud/to-private-networks":                         "allowed",
+						"networking.gardener.cloud/to-public-networks":                          "allowed",
+						"networking.resources.gardener.cloud/to-all-webhook-targets":            "allowed",
+						"networking.resources.gardener.cloud/to-extensions-all-webhook-targets": "allowed",
+						"networking.resources.gardener.cloud/to-etcd-main-client-tcp-2379":      "allowed",
+						"networking.resources.gardener.cloud/to-etcd-events-client-tcp-2379":    "allowed",
 					}
 				})
 
@@ -2408,7 +2395,7 @@ rules:
 						Values: apiserver.Values{
 							EnabledAdmissionPlugins: admissionPlugins,
 							Autoscaling:             apiserver.AutoscalingConfig{APIServerResources: apiServerResources},
-							Logging: &gardencorev1beta1.KubeAPIServerLogging{
+							Logging: &gardencorev1beta1.APIServerLogging{
 								Verbosity:           pointer.Int32(3),
 								HTTPAccessVerbosity: pointer.Int32(3),
 							},
@@ -3054,7 +3041,7 @@ rules:
 				})
 
 				It("should configure the request settings if provided", func() {
-					requests := &gardencorev1beta1.KubeAPIServerRequests{
+					requests := &gardencorev1beta1.APIServerRequests{
 						MaxNonMutatingInflight: pointer.Int32(123),
 						MaxMutatingInflight:    pointer.Int32(456),
 					}
@@ -3117,7 +3104,7 @@ rules:
 					Expect(deployment.Spec.Template.Spec.Containers[0].Args).NotTo(ContainElement(ContainSubstring("--runtime-config=")))
 				})
 
-				It("should disable apis in case of workerless shoot with k8s version < 1.25", func() {
+				It("should allow to enable apis via 'RuntimeConfig' in case of workerless shoot with k8s version < 1.25", func() {
 					runtimeConfig := map[string]bool{"apps/v1": true, "bar": false}
 
 					kapi = New(kubernetesInterface, namespace, sm, Values{
@@ -3132,11 +3119,11 @@ rules:
 					deployAndRead()
 
 					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(
-						"--runtime-config=apps/v1=false,autoscaling/v2=false,bar=false,batch/v1=false,policy/v1/poddisruptionbudgets=false,policy/v1beta1/podsecuritypolicies=false,storage.k8s.io/v1/csidrivers=false,storage.k8s.io/v1/csinodes=false",
+						"--runtime-config=apps/v1=true,autoscaling/v2=false,bar=false,batch/v1=false,policy/v1/poddisruptionbudgets=false,policy/v1beta1/podsecuritypolicies=false,storage.k8s.io/v1/csidrivers=false,storage.k8s.io/v1/csinodes=false",
 					))
 				})
 
-				It("should disable apis in case of workerless shoot with k8s version >= 1.25", func() {
+				It("should allow to enable apis via 'RuntimeConfig' in case of workerless shoot with k8s version >= 1.25", func() {
 					runtimeConfig := map[string]bool{"apps/v1": true, "bar": false}
 					version = semver.MustParse("v1.26.0")
 
@@ -3152,7 +3139,8 @@ rules:
 					deployAndRead()
 
 					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(
-						"--runtime-config=apps/v1=false,autoscaling/v2=false,bar=false,batch/v1=false,policy/v1/poddisruptionbudgets=false,storage.k8s.io/v1/csidrivers=false,storage.k8s.io/v1/csinodes=false",
+						"--runtime-config=apps/v1=true" +
+							",autoscaling/v2=false,bar=false,batch/v1=false,policy/v1/poddisruptionbudgets=false,storage.k8s.io/v1/csidrivers=false,storage.k8s.io/v1/csinodes=false",
 					))
 				})
 
@@ -3210,7 +3198,7 @@ rules:
 				})
 
 				It("should configure the KubeAPISeverLogging settings if provided", func() {
-					logging := &gardencorev1beta1.KubeAPIServerLogging{
+					logging := &gardencorev1beta1.APIServerLogging{
 						Verbosity:           pointer.Int32(3),
 						HTTPAccessVerbosity: pointer.Int32(3),
 					}
@@ -3712,16 +3700,12 @@ rules:
 			Expect(c.Create(ctx, deployment)).To(Succeed())
 			Expect(c.Create(ctx, verticalPodAutoscaler)).To(Succeed())
 			Expect(c.Create(ctx, hvpa)).To(Succeed())
-			Expect(c.Create(ctx, networkPolicyAllowFromShootAPIServer)).To(Succeed())
-			Expect(c.Create(ctx, networkPolicyAllowToShootAPIServer)).To(Succeed())
 			Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
 			Expect(c.Create(ctx, managedResource)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowFromShootAPIServer), networkPolicyAllowFromShootAPIServer)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowToShootAPIServer), networkPolicyAllowToShootAPIServer)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 		})
@@ -3730,8 +3714,6 @@ rules:
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: appsv1.SchemeGroupVersion.Group, Resource: "deployments"}, deployment.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: vpaautoscalingv1.SchemeGroupVersion.Group, Resource: "verticalpodautoscalers"}, verticalPodAutoscaler.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: hvpav1alpha1.SchemeGroupVersionHvpa.Group, Resource: "hvpas"}, hvpa.Name)))
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowFromShootAPIServer), networkPolicyAllowFromShootAPIServer)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: networkingv1.SchemeGroupVersion.Group, Resource: "networkpolicies"}, networkPolicyAllowFromShootAPIServer.Name)))
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowToShootAPIServer), networkPolicyAllowToShootAPIServer)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: networkingv1.SchemeGroupVersion.Group, Resource: "networkpolicies"}, networkPolicyAllowToShootAPIServer.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 		})

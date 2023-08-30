@@ -28,7 +28,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -54,16 +53,9 @@ var (
 		v1beta1constants.ETCDEvents,
 	)
 
-	requiredMonitoringSeedDeploymentsBefore171 = sets.New(
-		v1beta1constants.DeploymentNameGrafana,
-	)
-
-	requiredMonitoringSeedDeployments = sets.New(
+	requiredMonitoringDeployments = sets.New(
+		v1beta1constants.DeploymentNameKubeStateMetrics,
 		v1beta1constants.DeploymentNamePlutono,
-	)
-
-	requiredLoggingStatefulSetsBefore171 = sets.New(
-		v1beta1constants.StatefulSetNameLoki,
 	)
 
 	requiredLoggingStatefulSets = sets.New(
@@ -74,16 +66,6 @@ var (
 		v1beta1constants.DeploymentNameEventLogger,
 	)
 )
-
-// TODO(rickardsjp, istvanballok): remove in release v1.77
-var versionConstraintLessThan171 *semver.Constraints
-
-func init() {
-	var err error
-
-	versionConstraintLessThan171, err = semver.NewConstraint("< 1.71-0")
-	utilruntime.Must(err)
-}
 
 func mustGardenRoleLabelSelector(gardenRoles ...string) labels.Selector {
 	if len(gardenRoles) == 1 {
@@ -114,7 +96,6 @@ type HealthChecker struct {
 	managedResourceProgressingThreshold *metav1.Duration
 	lastOperation                       *gardencorev1beta1.LastOperation
 	kubernetesVersion                   *semver.Version
-	gardenerVersion                     *semver.Version
 }
 
 // NewHealthChecker creates a new health checker.
@@ -126,7 +107,6 @@ func NewHealthChecker(
 	managedResourceProgressingThreshold *metav1.Duration,
 	lastOperation *gardencorev1beta1.LastOperation,
 	kubernetesVersion *semver.Version,
-	gardenerVersion *semver.Version,
 ) *HealthChecker {
 	return &HealthChecker{
 		reader:                              reader,
@@ -136,7 +116,6 @@ func NewHealthChecker(
 		managedResourceProgressingThreshold: managedResourceProgressingThreshold,
 		lastOperation:                       lastOperation,
 		kubernetesVersion:                   kubernetesVersion,
-		gardenerVersion:                     gardenerVersion,
 	}
 }
 
@@ -218,16 +197,18 @@ func (b *HealthChecker) checkStatefulSets(condition gardencorev1beta1.Condition,
 	return nil
 }
 
+// kubeletConfigProblemRegex is used to check if an error occurred due to a kubelet configuration problem.
+var kubeletConfigProblemRegex = regexp.MustCompile(`(?i)(KubeletHasInsufficientMemory|KubeletHasDiskPressure|KubeletHasInsufficientPID)`)
+
 func (b *HealthChecker) checkNodes(condition gardencorev1beta1.Condition, nodes []corev1.Node, workerGroupName string, workerGroupKubernetesVersion *semver.Version) *gardencorev1beta1.Condition {
 	for _, object := range nodes {
 		if err := health.CheckNode(&object); err != nil {
 			var (
-				errorCodes                 []gardencorev1beta1.ErrorCode
-				message                    = fmt.Sprintf("Node %q in worker group %q is unhealthy: %v", object.Name, workerGroupName, err)
-				configurationProblemRegexp = regexp.MustCompile(`(?i)(KubeletHasInsufficientMemory|KubeletHasDiskPressure|KubeletHasInsufficientPID)`)
+				errorCodes []gardencorev1beta1.ErrorCode
+				message    = fmt.Sprintf("Node %q in worker group %q is unhealthy: %v", object.Name, workerGroupName, err)
 			)
 
-			if configurationProblemRegexp.MatchString(err.Error()) {
+			if kubeletConfigProblemRegex.MatchString(err.Error()) {
 				errorCodes = append(errorCodes, gardencorev1beta1.ErrorConfigurationProblem)
 			}
 
@@ -465,7 +446,7 @@ func shootControlPlaneNotRunningMessage(lastOperation *gardencorev1beta1.LastOpe
 
 // This is a hack to quickly do a cloud provider specific check for the required control plane deployments.
 func computeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot) (sets.Set[string], error) {
-	requiredControlPlaneDeployments := sets.New(requiredShootControlPlaneDeployments.UnsortedList()...)
+	requiredControlPlaneDeployments := requiredShootControlPlaneDeployments.Clone()
 
 	if !v1beta1helper.IsWorkerless(shoot) {
 		requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameKubeScheduler)
@@ -493,15 +474,10 @@ func computeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot) (set
 	return requiredControlPlaneDeployments, nil
 }
 
-func computeRequiredMonitoringSeedDeployments(shoot *gardencorev1beta1.Shoot, gardenerVersion *semver.Version) sets.Set[string] {
-	requiredDeployments := requiredMonitoringSeedDeployments.Clone()
-	// TODO(rickardsjp, istvanballok): remove in release v1.77
-	if versionConstraintLessThan171.Check(gardenerVersion) {
-		requiredDeployments = requiredMonitoringSeedDeploymentsBefore171.Clone()
-	}
-
-	if !v1beta1helper.IsWorkerless(shoot) {
-		requiredDeployments.Insert(v1beta1constants.DeploymentNameKubeStateMetrics)
+func computeRequiredMonitoringSeedDeployments(shoot *gardencorev1beta1.Shoot) sets.Set[string] {
+	requiredDeployments := requiredMonitoringDeployments.Clone()
+	if v1beta1helper.IsWorkerless(shoot) {
+		requiredDeployments.Delete(v1beta1constants.DeploymentNameKubeStateMetrics)
 	}
 
 	return requiredDeployments
@@ -728,8 +704,47 @@ func (b *HealthChecker) CheckClusterNodes(
 	return nil, nil
 }
 
-// CheckMonitoringControlPlane checks whether the monitoring in the given listers are complete and healthy.
-func (b *HealthChecker) CheckMonitoringControlPlane(
+func (b *HealthChecker) checkMonitoringControlPlane(
+	ctx context.Context,
+	namespace string,
+	requiredMonitoringDeployments sets.Set[string],
+	requiredMonitoringStatefulSets sets.Set[string],
+	appsSelector labels.Selector,
+	condition gardencorev1beta1.Condition,
+) (
+	*gardencorev1beta1.Condition,
+	error,
+) {
+	deploymentList := &appsv1.DeploymentList{}
+	if err := b.reader.List(ctx, deploymentList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: appsSelector}); err != nil {
+		return nil, err
+	}
+
+	statefulSetList := &appsv1.StatefulSetList{}
+	if err := b.reader.List(ctx, statefulSetList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: appsSelector}); err != nil {
+		return nil, err
+	}
+
+	if exitCondition := b.checkRequiredDeployments(condition, requiredMonitoringDeployments, deploymentList.Items); exitCondition != nil {
+		return exitCondition, nil
+	}
+
+	if exitCondition := b.checkDeployments(condition, deploymentList.Items); exitCondition != nil {
+		return exitCondition, nil
+	}
+
+	if exitCondition := b.checkRequiredStatefulSets(condition, requiredMonitoringStatefulSets, statefulSetList.Items); exitCondition != nil {
+		return exitCondition, nil
+	}
+	if exitCondition := b.checkStatefulSets(condition, statefulSetList.Items); exitCondition != nil {
+		return exitCondition, nil
+	}
+
+	return nil, nil
+}
+
+// CheckShootMonitoringControlPlane checks whether the monitoring in the given listers are complete and healthy.
+func (b *HealthChecker) CheckShootMonitoringControlPlane(
 	ctx context.Context,
 	shoot *gardencorev1beta1.Shoot,
 	namespace string,
@@ -744,32 +759,7 @@ func (b *HealthChecker) CheckMonitoringControlPlane(
 		return nil, nil
 	}
 
-	deploymentList := &appsv1.DeploymentList{}
-	if err := b.reader.List(ctx, deploymentList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: monitoringSelector}); err != nil {
-		return nil, err
-	}
-
-	statefulSetList := &appsv1.StatefulSetList{}
-	if err := b.reader.List(ctx, statefulSetList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: monitoringSelector}); err != nil {
-		return nil, err
-	}
-
-	if exitCondition := b.checkRequiredDeployments(condition, computeRequiredMonitoringSeedDeployments(shoot, b.gardenerVersion), deploymentList.Items); exitCondition != nil {
-		return exitCondition, nil
-	}
-
-	if exitCondition := b.checkDeployments(condition, deploymentList.Items); exitCondition != nil {
-		return exitCondition, nil
-	}
-
-	if exitCondition := b.checkRequiredStatefulSets(condition, computeRequiredMonitoringStatefulSets(wantsAlertmanager), statefulSetList.Items); exitCondition != nil {
-		return exitCondition, nil
-	}
-	if exitCondition := b.checkStatefulSets(condition, statefulSetList.Items); exitCondition != nil {
-		return exitCondition, nil
-	}
-
-	return nil, nil
+	return b.checkMonitoringControlPlane(ctx, namespace, computeRequiredMonitoringSeedDeployments(shoot), computeRequiredMonitoringStatefulSets(wantsAlertmanager), monitoringSelector, condition)
 }
 
 // CheckLoggingControlPlane checks whether the logging components in the given listers are complete and healthy.
@@ -794,12 +784,7 @@ func (b *HealthChecker) CheckLoggingControlPlane(
 			return nil, err
 		}
 
-		// TODO(rickardsjp, istvanballok): remove in release v1.77
-		requiredStatefulSets := requiredLoggingStatefulSets
-		if versionConstraintLessThan171.Check(b.gardenerVersion) {
-			requiredStatefulSets = requiredLoggingStatefulSetsBefore171
-		}
-		if exitCondition := b.checkRequiredStatefulSets(condition, requiredStatefulSets, statefulSetList.Items); exitCondition != nil {
+		if exitCondition := b.checkRequiredStatefulSets(condition, requiredLoggingStatefulSets, statefulSetList.Items); exitCondition != nil {
 			return exitCondition, nil
 		}
 		if exitCondition := b.checkStatefulSets(condition, statefulSetList.Items); exitCondition != nil {

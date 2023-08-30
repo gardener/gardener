@@ -40,17 +40,13 @@ import (
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	plugin "github.com/gardener/gardener/plugin/pkg"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
-)
-
-const (
-	// PluginName is the name of this admission plugin.
-	PluginName = "ShootDNS"
 )
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(PluginName, func(config io.Reader) (admission.Interface, error) {
+	plugins.Register(plugin.PluginNameShootDNS, func(config io.Reader) (admission.Interface, error) {
 		return New()
 	})
 }

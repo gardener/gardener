@@ -777,6 +777,18 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener
 </tr>
 <tr>
 <td>
+<code>lastOperation</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastOperation holds information about the last operation on the Garden.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>observedGeneration</code></br>
 <em>
 int64
@@ -798,6 +810,342 @@ Credentials
 <td>
 <em>(Optional)</em>
 <p>Credentials contains information about the virtual garden cluster credentials.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.Gardener">Gardener
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.VirtualCluster">VirtualCluster</a>)
+</p>
+<p>
+<p>Gardener contains the configuration settings for the Gardener componenets.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>clusterIdentity</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>ClusterIdentity is the identity of the garden cluster. This field is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>gardenerAPIServer</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenerAPIServerConfig">
+GardenerAPIServerConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>APIServer contains configuration settings for the gardener-apiserver.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>gardenerAdmissionController</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenerAdmissionControllerConfig">
+GardenerAdmissionControllerConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AdmissionController contains configuration settings for the gardener-admission-controller.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>gardenerControllerManager</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenerControllerManagerConfig">
+GardenerControllerManagerConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ControllerManager contains configuration settings for the gardener-controller-manager.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>gardenerScheduler</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenerSchedulerConfig">
+GardenerSchedulerConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Scheduler contains configuration settings for the gardener-scheduler.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.GardenerAPIServerConfig">GardenerAPIServerConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.Gardener">Gardener</a>)
+</p>
+<p>
+<p>GardenerAPIServerConfig contains configuration settings for the gardener-apiserver.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>KubernetesConfig</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesConfig
+</em>
+</td>
+<td>
+<p>
+(Members of <code>KubernetesConfig</code> are embedded into this type.)
+</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>admissionPlugins</code></br>
+<em>
+[]github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AdmissionPlugins contains the list of user-defined admission plugins (additional to those managed by Gardener),
+and, if desired, the corresponding configuration.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>auditConfig</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AuditConfig contains configuration settings for the audit of the kube-apiserver.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>logging</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerLogging
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Logging contains configuration for the log level and HTTP access logs.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>requests</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerRequests
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Requests contains configuration for request-specific settings for the kube-apiserver.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>watchCacheSizes</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>WatchCacheSizes contains configuration of the API server&rsquo;s watch cache sizes.
+Configuring these flags might be useful for large-scale Garden clusters with a lot of parallel update requests
+and a lot of watching controllers (e.g. large ManagedSeed clusters). When the API server&rsquo;s watch cache&rsquo;s
+capacity is too small to cope with the amount of update requests and watchers for a particular resource, it
+might happen that controller watches are permanently stopped with <code>too old resource version</code> errors.
+Starting from kubernetes v1.19, the API server&rsquo;s watch cache size is adapted dynamically and setting the watch
+cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.GardenerAdmissionControllerConfig">GardenerAdmissionControllerConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.Gardener">Gardener</a>)
+</p>
+<p>
+<p>GardenerAdmissionControllerConfig contains configuration settings for the gardener-admission-controller.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>logLevel</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LogLevel is the configured log level for the gardener-admission-controller. Must be one of [info,debug,error].
+Defaults to info.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resourceAdmissionConfiguration</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.ResourceAdmissionConfiguration">
+ResourceAdmissionConfiguration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ResourceAdmissionConfiguration is the configuration for resource size restrictions for arbitrary Group-Version-Kinds.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.GardenerControllerManagerConfig">GardenerControllerManagerConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.Gardener">Gardener</a>)
+</p>
+<p>
+<p>GardenerControllerManagerConfig contains configuration settings for the gardener-controller-manager.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>KubernetesConfig</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesConfig
+</em>
+</td>
+<td>
+<p>
+(Members of <code>KubernetesConfig</code> are embedded into this type.)
+</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>defaultProjectQuotas</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.ProjectQuotaConfiguration">
+[]ProjectQuotaConfiguration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DefaultProjectQuotas is the default configuration matching projects are set up with if a quota is not already
+specified.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>logLevel</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LogLevel is the configured log level for the gardener-controller-manager. Must be one of [info,debug,error].
+Defaults to info.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.GardenerSchedulerConfig">GardenerSchedulerConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.Gardener">Gardener</a>)
+</p>
+<p>
+<p>GardenerSchedulerConfig contains configuration settings for the gardener-scheduler.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>KubernetesConfig</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesConfig
+</em>
+</td>
+<td>
+<p>
+(Members of <code>KubernetesConfig</code> are embedded into this type.)
+</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>logLevel</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LogLevel is the configured log level for the gardener-scheduler. Must be one of [info,debug,error].
+Defaults to info.</p>
 </td>
 </tr>
 </tbody>
@@ -1126,6 +1474,52 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="operator.gardener.cloud/v1alpha1.ProjectQuotaConfiguration">ProjectQuotaConfiguration
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenerControllerManagerConfig">GardenerControllerManagerConfig</a>)
+</p>
+<p>
+<p>ProjectQuotaConfiguration defines quota configurations.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>config</code></br>
+<em>
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</em>
+</td>
+<td>
+<p>Config is the quota specification used for the project set-up.
+Only v1.ResourceQuota resources are supported.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>projectSelector</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#labelselector-v1-meta">
+Kubernetes meta/v1.LabelSelector
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProjectSelector is an optional setting to select the projects considered for quotas.
+Defaults to empty LabelSelector, which matches all projects.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.gardener.cloud/v1alpha1.Provider">Provider
 </h3>
 <p>
@@ -1153,6 +1547,140 @@ string
 <td>
 <em>(Optional)</em>
 <p>Zones is the list of availability zones the cluster is deployed to.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.ResourceAdmissionConfiguration">ResourceAdmissionConfiguration
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenerAdmissionControllerConfig">GardenerAdmissionControllerConfig</a>)
+</p>
+<p>
+<p>ResourceAdmissionConfiguration contains settings about arbitrary kinds and the size each resource should have at most.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>limits</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.ResourceLimit">
+[]ResourceLimit
+</a>
+</em>
+</td>
+<td>
+<p>Limits contains configuration for resources which are subjected to size limitations.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>unrestrictedSubjects</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#subject-v1-rbac">
+[]Kubernetes rbac/v1.Subject
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>UnrestrictedSubjects contains references to users, groups, or service accounts which aren&rsquo;t subjected to any resource size limit.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>operationMode</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.ResourceAdmissionWebhookMode">
+ResourceAdmissionWebhookMode
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>OperationMode specifies the mode the webhooks operates in. Allowed values are &ldquo;block&rdquo; and &ldquo;log&rdquo;. Defaults to &ldquo;block&rdquo;.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.ResourceAdmissionWebhookMode">ResourceAdmissionWebhookMode
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.ResourceAdmissionConfiguration">ResourceAdmissionConfiguration</a>)
+</p>
+<p>
+<p>ResourceAdmissionWebhookMode is an alias type for the resource admission webhook mode.</p>
+</p>
+<h3 id="operator.gardener.cloud/v1alpha1.ResourceLimit">ResourceLimit
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.ResourceAdmissionConfiguration">ResourceAdmissionConfiguration</a>)
+</p>
+<p>
+<p>ResourceLimit contains settings about a kind and the size each resource should have at most.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiGroups</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>APIGroups is the name of the APIGroup that contains the limited resource. WildcardAll represents all groups.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>apiVersions</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>APIVersions is the version of the resource. WildcardAll represents all versions.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resources</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<p>Resources is the name of the resource this rule applies to. WildcardAll represents all resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>size</code></br>
+<em>
+k8s.io/apimachinery/pkg/api/resource.Quantity
+</em>
+</td>
+<td>
+<p>Size specifies the imposed limit.</p>
 </td>
 </tr>
 </tbody>
@@ -1602,6 +2130,19 @@ ETCD
 <td>
 <em>(Optional)</em>
 <p>ETCD contains configuration for the etcds of the virtual garden cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>gardener</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.Gardener">
+Gardener
+</a>
+</em>
+</td>
+<td>
+<p>Gardener contains the configuration options for the Gardener control plane components.</p>
 </td>
 </tr>
 <tr>

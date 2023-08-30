@@ -10,7 +10,7 @@ import (
 
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatingsystemconfig "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockInterface is a mock of Interface interface.

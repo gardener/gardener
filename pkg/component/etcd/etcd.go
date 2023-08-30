@@ -552,8 +552,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}
 	}
 
-	// TODO(rfranzke): Delete this in a future release (after v1.75).
-	return kubernetesutils.DeleteObject(ctx, e.client, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-etcd-peer", Namespace: e.namespace}})
+	return nil
 }
 
 func (e *etcd) Destroy(ctx context.Context) error {
@@ -561,15 +560,10 @@ func (e *etcd) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	objects := []client.Object{
+	return kubernetesutils.DeleteObjects(ctx, e.client,
 		e.emptyHVPA(),
 		e.etcd,
-	}
-
-	// TODO(rfranzke): Delete this in a future release (after v1.75).
-	objects = append(objects, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-etcd-peer", Namespace: e.namespace}})
-
-	return kubernetesutils.DeleteObjects(ctx, e.client, objects...)
+	)
 }
 
 func (e *etcd) getRoleLabels() map[string]string {
@@ -819,18 +813,13 @@ func (e *etcd) handlePeerCertificates(ctx context.Context) (caSecretName, peerSe
 		return
 	}
 
-	var signedByCAOptions []secretsmanager.SignedByCAOption
-	if e.values.CARotationPhase == gardencorev1beta1.RotationPreparing {
-		signedByCAOptions = append(signedByCAOptions, secretsmanager.UseCurrentCA)
-	}
-
 	peerServerSecret, err := e.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 		Name:                        secretNamePrefixPeerServer + e.values.Role,
 		CommonName:                  "etcd-server",
 		DNSNames:                    e.peerServiceDNSNames(),
 		CertType:                    secretsutils.ServerClientCert,
 		SkipPublishingCACertificate: true,
-	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCDPeer, signedByCAOptions...), secretsmanager.Rotate(secretsmanager.InPlace))
+	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCDPeer, secretsmanager.UseCurrentCA), secretsmanager.Rotate(secretsmanager.InPlace))
 	if err != nil {
 		err = fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCDPeer)
 		return

@@ -15,9 +15,9 @@
 package botanist_test
 
 import (
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
@@ -25,7 +25,6 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 var _ = Describe("MetricsServer", func() {
@@ -64,19 +63,10 @@ var _ = Describe("MetricsServer", func() {
 
 		It("should successfully create a metrics-server interface", func() {
 			kubernetesClient.EXPECT().Client()
-			botanist.ImageVector = imagevector.ImageVector{{Name: "metrics-server"}}
 
 			metricsServer, err := botanist.DefaultMetricsServer()
 			Expect(metricsServer).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should return an error because the image cannot be found", func() {
-			botanist.ImageVector = imagevector.ImageVector{}
-
-			metricsServer, err := botanist.DefaultMetricsServer()
-			Expect(metricsServer).To(BeNil())
-			Expect(err).To(HaveOccurred())
 		})
 	})
 })

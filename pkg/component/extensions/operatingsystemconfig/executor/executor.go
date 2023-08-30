@@ -18,6 +18,7 @@ import (
 	"bytes"
 	_ "embed"
 	"fmt"
+	"strings"
 	"text/template"
 
 	"github.com/Masterminds/sprig"
@@ -99,6 +100,7 @@ func Script(
 	kubeletDataVolume *gardencorev1beta1.DataVolume,
 	reloadConfigCommand string,
 	units []string,
+	files []string,
 ) (
 	[]byte,
 	error,
@@ -147,6 +149,7 @@ func Script(
 		"reloadConfigCommand":                      reloadConfigCommand,
 		"scriptCopyKubernetesBinary":               utils.EncodeBase64(scriptCopyKubernetesBinary.Bytes()),
 		"units":                                    units,
+		"cloudConfigFiles":                         strings.Join(files, "\n"),
 		"unitNameCloudConfigDownloader":            downloader.UnitName,
 		"unitNameDocker":                           docker.UnitName,
 		"unitNameVarLibMount":                      varlibmount.UnitName,

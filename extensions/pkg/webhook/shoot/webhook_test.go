@@ -223,14 +223,14 @@ webhooks:
 })
 
 func expectWebhookConfigReconciliation(ctx context.Context, fakeClient client.Client, namespace, managedResourceName string, shootWebhookConfigRaw map[string][]byte) {
-	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}
+	managedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}
+	ExpectWithOffset(1, fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+	ExpectWithOffset(1, managedResource.Spec.SecretRefs).To(HaveLen(1))
+
+	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResource.Spec.SecretRefs[0].Name, Namespace: namespace}}
 	ExpectWithOffset(1, fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 	ExpectWithOffset(1, secret.Type).To(Equal(corev1.SecretTypeOpaque))
 	ExpectWithOffset(1, secret.Data).To(Equal(shootWebhookConfigRaw))
-
-	managedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}
-	ExpectWithOffset(1, fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-	ExpectWithOffset(1, managedResource.Spec).To(DeepEqual(resourcesv1alpha1.ManagedResourceSpec{SecretRefs: []corev1.LocalObjectReference{{Name: managedResourceName}}}))
 }
 
 func expectNoWebhookConfigReconciliation(ctx context.Context, fakeClient client.Client, namespace, managedResourceName string) {

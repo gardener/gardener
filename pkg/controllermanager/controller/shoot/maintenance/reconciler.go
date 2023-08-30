@@ -17,6 +17,7 @@ package maintenance
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -29,7 +30,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
-	"k8s.io/utils/strings/slices"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -143,12 +143,40 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		return err
 	}
 
-	// Reset the `EnableStaticTokenKubeconfig` value to false, when shoot cluster is updated to  k8s version >= 1.27.
-	if versionutils.ConstraintK8sLess127.Check(oldShootKubernetesVersion) && pointer.BoolDeref(maintainedShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, false) && versionutils.ConstraintK8sGreaterEqual127.Check(shootKubernetesVersion) {
-		maintainedShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(false)
+	// Force containerd when shoot cluster is updated to k8s version >= 1.23
+	if versionutils.ConstraintK8sLess123.Check(oldShootKubernetesVersion) && versionutils.ConstraintK8sGreaterEqual123.Check(shootKubernetesVersion) {
+		reasonsForContainerdUpdate := updateToContainerd(maintainedShoot, fmt.Sprintf("Updating Kubernetes to %q", shootKubernetesVersion.String()))
+		operations = append(operations, reasonsForContainerdUpdate...)
+	}
 
-		reason := "EnableStaticTokenKubeconfig is set to false. Reason: The static token kubeconfig can no longer be enabled for Shoot clusters using Kubernetes version 1.27 and higher"
-		operations = append(operations, reason)
+	// Disable PodSecurityPolicy Admission Controller when shoot cluster is updated to k8s version >= 1.25
+	if versionutils.ConstraintK8sLess125.Check(oldShootKubernetesVersion) && versionutils.ConstraintK8sGreaterEqual125.Check(shootKubernetesVersion) {
+		if maintainedShoot.Spec.Kubernetes.AllowPrivilegedContainers != nil {
+			maintainedShoot.Spec.Kubernetes.AllowPrivilegedContainers = nil
+			operations = append(operations, fmt.Sprintf("allowPrivilegedContainers must be nil for updating Kubernetes to %q", shootKubernetesVersion.String()))
+		}
+
+		reasonsForAdmissionPluginUpdate := disablePodSecurityPolicyAdmissionController(maintainedShoot, fmt.Sprintf("PodSecurityPolicy Admission Controller must be disabled for updating Kubernetes to %q", shootKubernetesVersion.String()))
+		operations = append(operations, reasonsForAdmissionPluginUpdate...)
+		if len(reasonsForAdmissionPluginUpdate) > 0 {
+			operations = append(operations, fmt.Sprintf("Postponing Kubernetes update to %q to the next maintenance window because disabling PodSecurityPolicy Admission Controller and Kubernetes update cannot be done at the same time", shootKubernetesVersion.String()))
+			shootKubernetesVersion = oldShootKubernetesVersion
+			maintainedShoot.Spec.Kubernetes.Version = shoot.Spec.Kubernetes.Version
+			reasonForKubernetesUpdate = []string{}
+		}
+	}
+
+	// Reset the `EnableStaticTokenKubeconfig` value to false, when shoot cluster is updated to  k8s version >= 1.27.
+	if versionutils.ConstraintK8sLess127.Check(oldShootKubernetesVersion) && versionutils.ConstraintK8sGreaterEqual127.Check(shootKubernetesVersion) {
+		if pointer.BoolDeref(maintainedShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, false) {
+			maintainedShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(false)
+
+			reason := "EnableStaticTokenKubeconfig is set to false. Reason: The static token kubeconfig can no longer be enabled for Shoot clusters using Kubernetes version 1.27 and higher"
+			operations = append(operations, reason)
+		}
+
+		reasonsForIncreasingMaxWorkers := ensureSufficientMaxWorkers(maintainedShoot, fmt.Sprintf("Maximum number of workers of a worker group must be greater or equal to its number of zones for updating Kubernetes to %q", shootKubernetesVersion.String()))
+		operations = append(operations, reasonsForIncreasingMaxWorkers...)
 	}
 
 	// Now it's time to update worker pool kubernetes version if specified
@@ -197,7 +225,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		// First dry run the update call to check if it can be executed successfully.
 		// If not shoot maintenance is marked as failed and is retried only in
 		// next maintenance window.
-		if err := r.Client.Update(ctx, maintainedShoot, &client.UpdateOptions{
+		if err := r.Client.Update(ctx, maintainedShoot.DeepCopy(), &client.UpdateOptions{
 			DryRun: []string{metav1.DryRunAll},
 		}); err != nil {
 			// If shoot maintenance is triggered by `gardener.cloud/operation=maintain` annotation and if it fails in dry run,
@@ -620,4 +648,67 @@ func ExpirationDateExpired(timestamp *metav1.Time) bool {
 		return false
 	}
 	return time.Now().UTC().After(timestamp.Time) || time.Now().UTC().Equal(timestamp.Time)
+}
+
+// disablePodSecurityPolicyAdmissionController disables the PodSecurityPolicy Admission Controller of a shoot
+func disablePodSecurityPolicyAdmissionController(shoot *gardencorev1beta1.Shoot, reason string) []string {
+	var reasonsForUpdate []string
+
+	if shoot.Spec.Kubernetes.KubeAPIServer == nil {
+		shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{}
+	}
+
+	for i, admissionPlugin := range shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins {
+		if admissionPlugin.Name == "PodSecurityPolicy" {
+			if !pointer.BoolDeref(admissionPlugin.Disabled, false) {
+				shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins[i].Disabled = pointer.Bool(true)
+				reasonsForUpdate = append(reasonsForUpdate, reason)
+			}
+			return reasonsForUpdate
+		}
+	}
+
+	disabledAdmissionPlugin := gardencorev1beta1.AdmissionPlugin{
+		Name:     "PodSecurityPolicy",
+		Disabled: pointer.Bool(true),
+	}
+	shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = append(shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins, disabledAdmissionPlugin)
+	reasonsForUpdate = append(reasonsForUpdate, reason)
+
+	return reasonsForUpdate
+}
+
+// ensureSufficientMaxWorkers ensures that the number of max workers of a worker group is greater or equal to its number of zones
+func ensureSufficientMaxWorkers(shoot *gardencorev1beta1.Shoot, reason string) []string {
+	var reasonsForUpdate []string
+
+	for i, worker := range shoot.Spec.Provider.Workers {
+		if !v1beta1helper.SystemComponentsAllowed(&worker) {
+			continue
+		}
+
+		if int(worker.Maximum) >= len(worker.Zones) {
+			continue
+		}
+		newMaximum := int32(len(worker.Zones))
+		reasonsForUpdate = append(reasonsForUpdate, fmt.Sprintf("Maximum of worker-pool %q upgraded from %d to %d. Reason: %s", worker.Name, worker.Maximum, newMaximum, reason))
+		shoot.Spec.Provider.Workers[i].Maximum = newMaximum
+	}
+
+	return reasonsForUpdate
+}
+
+// updateToContainerd updates the CRI of a Shoot's worker pools to containerd
+func updateToContainerd(shoot *gardencorev1beta1.Shoot, reason string) []string {
+	var reasonsForUpdate []string
+
+	for i, worker := range shoot.Spec.Provider.Workers {
+		if worker.CRI == nil || worker.CRI.Name != gardencorev1beta1.CRINameDocker {
+			continue
+		}
+		shoot.Spec.Provider.Workers[i].CRI.Name = gardencorev1beta1.CRINameContainerD
+		reasonsForUpdate = append(reasonsForUpdate, fmt.Sprintf("CRI of worker-pool %q upgraded from %q to %q. Reason: %s", worker.Name, gardencorev1beta1.CRINameDocker, gardencorev1beta1.CRINameContainerD, reason))
+	}
+
+	return reasonsForUpdate
 }

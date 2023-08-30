@@ -44,6 +44,14 @@ config:
     # This feature gate doesn't change gardenlet's default behavior, it only allows setting `ipFamilies=[IPv6]` in the
     # Seed config. Only when this is set, gardenlet's behavior changes.
     IPv6SingleStack: true
+    # Enable ContainerdRegistryHostsDir as provider-local requires the feature gate to be enabled 
+    # in order to have the registry cache working for a Shoot cluster in local setup.
+    # If disabled, a Shoot cluster in local setup won't be able to use the registry cache
+    # (it will be still able to pull images but registry cache won't be used).
+    ContainerdRegistryHostsDir: true
+  etcdConfig:
+    featureGates:
+      UseEtcdWrapper: false
   logging:
     enabled: true
     vali:

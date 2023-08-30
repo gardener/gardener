@@ -20,9 +20,9 @@ import (
 
 	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -38,7 +38,6 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -80,19 +79,9 @@ var _ = Describe("KubeControllerManager", func() {
 		})
 
 		It("should successfully create a kube-controller-manager interface", func() {
-			botanist.ImageVector = imagevector.ImageVector{{Name: "kube-controller-manager"}}
-
 			kubeControllerManager, err := botanist.DefaultKubeControllerManager()
 			Expect(kubeControllerManager).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should return an error because the image cannot be found", func() {
-			botanist.ImageVector = imagevector.ImageVector{}
-
-			kubeControllerManager, err := botanist.DefaultKubeControllerManager()
-			Expect(kubeControllerManager).To(BeNil())
-			Expect(err).To(HaveOccurred())
 		})
 	})
 

@@ -185,6 +185,10 @@ func NodeLabelsForWorkerPool(workerPool gardencorev1beta1.Worker, nodeLocalDNSEn
 	labels[v1beta1constants.LabelWorkerPool] = workerPool.Name
 	labels[v1beta1constants.LabelWorkerPoolDeprecated] = workerPool.Name
 
+	// worker pool image labels
+	labels[v1beta1constants.LabelWorkerPoolImageName] = workerPool.Machine.Image.Name
+	labels[v1beta1constants.LabelWorkerPoolImageVersion] = *workerPool.Machine.Image.Version
+
 	// add CRI labels selected by the RuntimeClass
 	if workerPool.CRI != nil {
 		labels[extensionsv1alpha1.CRINameWorkerLabel] = string(workerPool.CRI.Name)

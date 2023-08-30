@@ -485,7 +485,6 @@ var _ = Describe("Add", func() {
 		It("should return true for update and false for create and delete event when Seed Ready status changes", func() {
 			newSeed.Status.Conditions = []gardencorev1beta1.Condition{
 				{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionTrue},
-				{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue},
 				{Type: gardencorev1beta1.SeedSystemComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
 				{Type: gardencorev1beta1.SeedBackupBucketsReady, Status: gardencorev1beta1.ConditionTrue},
 			}
@@ -543,13 +542,11 @@ var _ = Describe("Add", func() {
 		It("should return true for create, update and delete event when pending replica has SeedNotReady status and Seed is ready", func() {
 			oldSeed.Status.Conditions = []gardencorev1beta1.Condition{
 				{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionTrue},
-				{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue},
 				{Type: gardencorev1beta1.SeedSystemComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
 				{Type: gardencorev1beta1.SeedBackupBucketsReady, Status: gardencorev1beta1.ConditionTrue},
 			}
 			newSeed.Status.Conditions = []gardencorev1beta1.Condition{
 				{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionTrue},
-				{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue},
 				{Type: gardencorev1beta1.SeedSystemComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
 				{Type: gardencorev1beta1.SeedBackupBucketsReady, Status: gardencorev1beta1.ConditionTrue},
 			}

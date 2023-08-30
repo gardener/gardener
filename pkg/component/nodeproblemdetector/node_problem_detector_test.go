@@ -26,6 +26,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -35,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/nodeproblemdetector"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -358,10 +360,9 @@ status: {}
 		JustBeforeEach(func() {
 			component = New(c, namespace, values)
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
 			Expect(component.Deploy(ctx)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-			Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
+			expectedMr := &resourcesv1alpha1.ManagedResource{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
 					Kind:       "ManagedResource",
@@ -375,14 +376,19 @@ status: {}
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 					SecretRefs: []corev1.LocalObjectReference{{
-						Name: managedResourceSecret.Name,
+						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
 					KeepObjects: pointer.Bool(false),
 				},
-			}))
+			}
+			utilruntime.Must(references.InjectAnnotations(expectedMr))
+			Expect(managedResource).To(DeepEqual(expectedMr))
 
+			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+			Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__node-problem-detector.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecret.Data["clusterrole____node-problem-detector.yaml"])).To(Equal(clusterRoleYAML))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____node-problem-detector.yaml"])).To(Equal(clusterRoleBindingYAML))

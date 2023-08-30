@@ -61,6 +61,15 @@ func ControllerInstallationSeedRefNameIndexerFunc(obj client.Object) []string {
 	return []string{controllerInstallation.Spec.SeedRef.Name}
 }
 
+// ControllerInstallationRegistrationRefNameIndexerFunc extracts the .spec.registrationRef.name field of a ControllerInstallation.
+func ControllerInstallationRegistrationRefNameIndexerFunc(obj client.Object) []string {
+	controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
+	if !ok {
+		return []string{""}
+	}
+	return []string{controllerInstallation.Spec.RegistrationRef.Name}
+}
+
 // InternalSecretTypeIndexerFunc extracts the .type field of an InternalSecret.
 func InternalSecretTypeIndexerFunc(obj client.Object) []string {
 	internalSecret, ok := obj.(*gardencorev1beta1.InternalSecret)
@@ -146,13 +155,7 @@ func AddControllerInstallationSeedRefName(ctx context.Context, indexer client.Fi
 
 // AddControllerInstallationRegistrationRefName adds an index for core.ControllerInstallationRegistrationRefName to the given indexer.
 func AddControllerInstallationRegistrationRefName(ctx context.Context, indexer client.FieldIndexer) error {
-	if err := indexer.IndexField(ctx, &gardencorev1beta1.ControllerInstallation{}, core.RegistrationRefName, func(obj client.Object) []string {
-		controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
-		if !ok {
-			return []string{""}
-		}
-		return []string{controllerInstallation.Spec.RegistrationRef.Name}
-	}); err != nil {
+	if err := indexer.IndexField(ctx, &gardencorev1beta1.ControllerInstallation{}, core.RegistrationRefName, ControllerInstallationRegistrationRefNameIndexerFunc); err != nil {
 		return fmt.Errorf("failed to add indexer for %s to ControllerInstallation Informer: %w", core.RegistrationRefName, err)
 	}
 	return nil

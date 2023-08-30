@@ -141,7 +141,7 @@ var _ = Describe("resources", func() {
 
 			registered := plugins.Registered()
 			Expect(registered).To(HaveLen(1))
-			Expect(registered).To(ContainElement(PluginName))
+			Expect(registered).To(ContainElement("ControllerRegistrationResources"))
 		})
 	})
 

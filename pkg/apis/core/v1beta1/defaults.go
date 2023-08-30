@@ -51,8 +51,19 @@ func SetDefaults_Seed(obj *Seed) {
 		obj.Spec.Settings = &SeedSettings{}
 	}
 
+	var defaultExcessCapacityReservationConfigs = []SeedSettingExcessCapacityReservationConfig{
+		// This roughly corresponds to a single, moderately large control-plane.
+		{Resources: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("2"), corev1.ResourceMemory: resource.MustParse("6Gi")}},
+	}
+
 	if obj.Spec.Settings.ExcessCapacityReservation == nil {
-		obj.Spec.Settings.ExcessCapacityReservation = &SeedSettingExcessCapacityReservation{Enabled: true}
+		obj.Spec.Settings.ExcessCapacityReservation = &SeedSettingExcessCapacityReservation{
+			Configs: defaultExcessCapacityReservationConfigs,
+		}
+	}
+
+	if pointer.BoolDeref(obj.Spec.Settings.ExcessCapacityReservation.Enabled, true) && len(obj.Spec.Settings.ExcessCapacityReservation.Configs) == 0 {
+		obj.Spec.Settings.ExcessCapacityReservation.Configs = defaultExcessCapacityReservationConfigs
 	}
 
 	if obj.Spec.Settings.Scheduling == nil {
@@ -258,12 +269,16 @@ func SetDefaults_Shoot(obj *Shoot) {
 			obj.Spec.SystemComponents.CoreDNS.Autoscaling.Mode = CoreDNSAutoscalingModeHorizontal
 		}
 	}
+
+	if obj.Spec.SchedulerName == nil {
+		obj.Spec.SchedulerName = pointer.String(v1beta1constants.DefaultSchedulerName)
+	}
 }
 
 // SetDefaults_KubeAPIServerConfig sets default values for KubeAPIServerConfig objects.
 func SetDefaults_KubeAPIServerConfig(obj *KubeAPIServerConfig) {
 	if obj.Requests == nil {
-		obj.Requests = &KubeAPIServerRequests{}
+		obj.Requests = &APIServerRequests{}
 	}
 	if obj.Requests.MaxNonMutatingInflight == nil {
 		obj.Requests.MaxNonMutatingInflight = pointer.Int32(400)
@@ -278,7 +293,7 @@ func SetDefaults_KubeAPIServerConfig(obj *KubeAPIServerConfig) {
 		obj.EventTTL = &metav1.Duration{Duration: time.Hour}
 	}
 	if obj.Logging == nil {
-		obj.Logging = &KubeAPIServerLogging{}
+		obj.Logging = &APIServerLogging{}
 	}
 	if obj.Logging.Verbosity == nil {
 		obj.Logging.Verbosity = pointer.Int32(2)

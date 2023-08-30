@@ -35,6 +35,6 @@ etcd-backup-restore supports full snapshot and delta snapshots over full snapsho
     - To find the backups list, an admin can checkout the `BackupEntry` resource associated with the Shoot which holds the bucket and prefix details on the object store.
 
 ## Restoration
-The restoration process of etcd is automated through the etcd-backup-restore component from the latest snapshot. Gardener doesn't support Point-In-Time-Recovery (PITR) of etcd. In case of an etcd disaster, the etcd is recovered from the latest backup automatically. For further details, please refer the [Restoration](https://github.com/gardener/etcd-backup-restore/blob/master/doc/proposals/restoration.md) topic. Post restoration of etcd, the Shoot reconciliation loop brings the cluster back to its previous state.
+The restoration process of etcd is automated through the etcd-backup-restore component from the latest snapshot. Gardener doesn't support Point-In-Time-Recovery (PITR) of etcd. In case of an etcd disaster, the etcd is recovered from the latest backup automatically. For further details, please refer the [Restoration](https://github.com/gardener/etcd-backup-restore/blob/master/docs/proposals/restoration.md) topic. Post restoration of etcd, the Shoot reconciliation loop brings the cluster back to its previous state.
 
 Again, the Shoot owner is responsible for maintaining the backup/restore of his workload. Gardener only takes care of the cluster's etcd.

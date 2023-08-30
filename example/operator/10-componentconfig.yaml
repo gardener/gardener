@@ -44,6 +44,8 @@ controllers:
         enableBackupCompaction: false
         eventsThreshold: 1000000
         activeDeadlineDuration: "3h"
+    # featureGates:
+    #   UseEtcdWrapper: true
   gardenCare:
     syncPeriod: 1m
     conditionThresholds:
@@ -52,6 +54,8 @@ controllers:
     - type: VirtualComponentsHealthy
       duration: 1m
     - type: VirtualGardenAPIServerAvailable
+      duration: 1m
+    - type: ObservabilityComponentsHealthy
       duration: 1m
     # backupLeaderElection:
     #   reelectionPeriod: 5s

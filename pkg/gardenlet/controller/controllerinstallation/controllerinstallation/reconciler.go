@@ -326,25 +326,21 @@ func (r *Reconciler) delete(
 			Namespace: v1beta1constants.GardenNamespace,
 		},
 	}
-	if err := r.SeedClientSet.Client().Delete(seedCtx, mr); err == nil {
-		log.Info("Deletion of ManagedResource is still pending", "managedResource", client.ObjectKeyFromObject(mr))
 
+	if err := client.IgnoreNotFound(managedresources.Delete(seedCtx, r.SeedClientSet.Client(), mr.Namespace, mr.Name, false)); err != nil {
+		log.Info("Deletion of ManagedResource and its secrets failed", "managedResource", client.ObjectKeyFromObject(mr))
+		conditionInstalled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of ManagedResource %q and its secrets failed: %+v", controllerInstallation.Name, err))
+		return reconcile.Result{}, err
+	}
+
+	if err := r.SeedClientSet.Client().Get(seedCtx, client.ObjectKeyFromObject(mr), mr); err == nil {
+		log.Info("Deletion of ManagedResource is still pending", "managedResource", client.ObjectKeyFromObject(mr))
 		msg := fmt.Sprintf("Deletion of ManagedResource %q is still pending.", controllerInstallation.Name)
 		conditionInstalled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionPending", msg)
 		return reconcile.Result{RequeueAfter: RequeueDurationWhenResourceDeletionStillPresent}, nil
 	} else if !apierrors.IsNotFound(err) {
 		conditionInstalled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of ManagedResource %q failed: %+v", controllerInstallation.Name, err))
 		return reconcile.Result{}, err
-	}
-
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      controllerInstallation.Name,
-			Namespace: v1beta1constants.GardenNamespace,
-		},
-	}
-	if err := r.SeedClientSet.Client().Delete(seedCtx, secret); client.IgnoreNotFound(err) != nil {
-		conditionInstalled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of ManagedResource secret %q failed: %+v", controllerInstallation.Name, err))
 	}
 
 	namespace := getNamespaceForControllerInstallation(controllerInstallation)

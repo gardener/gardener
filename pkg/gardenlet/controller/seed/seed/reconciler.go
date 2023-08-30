@@ -18,22 +18,24 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -47,11 +49,9 @@ type Reconciler struct {
 	Clock                                clock.Clock
 	Recorder                             record.EventRecorder
 	Identity                             *gardencorev1beta1.Gardener
-	ImageVector                          imagevector.ImageVector
 	ComponentImageVectors                imagevector.ComponentImageVectors
 	ClientCertificateExpirationTimestamp *metav1.Time
 	GardenNamespace                      string
-	ChartsPath                           string
 }
 
 // Reconcile reconciles Seed resources and provisions or de-provisions the seed system components.
@@ -67,72 +67,192 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
+	operationType := gardencorev1beta1.LastOperationTypeReconcile
+	if seed.DeletionTimestamp != nil {
+		operationType = gardencorev1beta1.LastOperationTypeDelete
+	}
+
+	if err := r.updateStatusOperationStart(ctx, seed, operationType); err != nil {
+		return reconcile.Result{}, r.updateStatusOperationError(ctx, seed, err, operationType)
+	}
+
 	// Check if seed namespace is already available.
 	if err := r.GardenClient.Get(ctx, client.ObjectKey{Name: gardenerutils.ComputeGardenNamespace(seed.Name)}, &corev1.Namespace{}); err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to get seed namespace in garden cluster: %w", err)
+		return reconcile.Result{}, r.updateStatusOperationError(ctx, seed, fmt.Errorf("failed to get seed namespace in garden cluster: %w", err), operationType)
 	}
 
 	seedObj, err := seedpkg.NewBuilder().WithSeedObject(seed).Build(ctx)
 	if err != nil {
-		log.Error(err, "Failed to create a Seed object")
-		conditionSeedBootstrapped := v1beta1helper.GetOrInitConditionWithClock(r.Clock, seed.Status.Conditions, gardencorev1beta1.SeedBootstrapped)
-		conditionSeedBootstrapped = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionUnknown, gardencorev1beta1.ConditionCheckError, fmt.Sprintf("Failed to create a Seed object (%s).", err.Error()))
-		if err := r.patchSeedStatus(ctx, r.GardenClient, seed, "<unknown>", nil, nil, conditionSeedBootstrapped); err != nil {
-			return reconcile.Result{}, fmt.Errorf("could not patch seed status after failed creation of Seed object: %w", err)
-		}
-		return reconcile.Result{}, err
+		return reconcile.Result{}, r.updateStatusOperationError(ctx, seed, err, operationType)
 	}
 
 	if seed.Status.ClusterIdentity == nil {
 		seedClusterIdentity, err := determineClusterIdentity(ctx, r.SeedClientSet.Client())
 		if err != nil {
-			return reconcile.Result{}, err
+			return reconcile.Result{}, r.updateStatusOperationError(ctx, seed, err, operationType)
 		}
 
 		log.Info("Setting cluster identity", "identity", seedClusterIdentity)
 		seed.Status.ClusterIdentity = &seedClusterIdentity
 		if err := r.GardenClient.Status().Update(ctx, seed); err != nil {
-			return reconcile.Result{}, err
+			return reconcile.Result{}, r.updateStatusOperationError(ctx, seed, err, operationType)
 		}
 	}
 
 	seedIsGarden, err := gardenerutils.SeedIsGarden(ctx, r.SeedClientSet.Client())
 	if err != nil {
-		return reconcile.Result{}, err
+		return reconcile.Result{}, r.updateStatusOperationError(ctx, seed, err, operationType)
 	}
 
 	if seed.DeletionTimestamp != nil {
-		return r.delete(ctx, log, seedObj, seedIsGarden)
+		if result, err := r.delete(ctx, log, seedObj, seedIsGarden); err != nil {
+			return result, r.updateStatusOperationError(ctx, seed, err, operationType)
+		}
+		return reconcile.Result{}, nil
 	}
 
-	return r.reconcile(ctx, log, seedObj, seedIsGarden)
+	if result, err := r.reconcile(ctx, log, seedObj, seedIsGarden); err != nil {
+		return result, r.updateStatusOperationError(ctx, seed, err, operationType)
+	}
+
+	return reconcile.Result{RequeueAfter: r.Config.Controllers.Seed.SyncPeriod.Duration}, r.updateStatusOperationSuccess(ctx, seed, operationType)
 }
 
-func (r *Reconciler) patchSeedStatus(
-	ctx context.Context,
-	c client.Client,
-	seed *gardencorev1beta1.Seed,
-	seedVersion string,
-	capacity, allocatable corev1.ResourceList,
-	updateConditions ...gardencorev1beta1.Condition,
-) error {
-	patch := client.StrategicMergeFrom(seed.DeepCopy())
+func (r *Reconciler) reportProgress(log logr.Logger, seed *gardencorev1beta1.Seed) flow.ProgressReporter {
+	return flow.NewImmediateProgressReporter(func(ctx context.Context, stats *flow.Stats) {
+		patch := client.MergeFrom(seed.DeepCopy())
 
-	seed.Status.Conditions = v1beta1helper.MergeConditions(seed.Status.Conditions, updateConditions...)
-	seed.Status.ObservedGeneration = seed.Generation
+		if seed.Status.LastOperation == nil {
+			seed.Status.LastOperation = &gardencorev1beta1.LastOperation{}
+		}
+		seed.Status.LastOperation.Description = flow.MakeDescription(stats)
+		seed.Status.LastOperation.Progress = stats.ProgressPercent()
+		seed.Status.LastOperation.LastUpdateTime = metav1.NewTime(r.Clock.Now().UTC())
+
+		if err := r.GardenClient.Status().Patch(ctx, seed, patch); err != nil {
+			log.Error(err, "Could not report reconciliation progress")
+		}
+	})
+}
+
+func (r *Reconciler) updateStatusOperationStart(ctx context.Context, seed *gardencorev1beta1.Seed, operationType gardencorev1beta1.LastOperationType) error {
+	var (
+		now         = metav1.NewTime(r.Clock.Now().UTC())
+		description string
+	)
+
+	switch operationType {
+	case gardencorev1beta1.LastOperationTypeReconcile:
+		description = "Reconciliation of Seed cluster initialized."
+	case gardencorev1beta1.LastOperationTypeDelete:
+		description = "Deletion of Seed cluster in progress."
+	}
+
+	seed.Status.LastOperation = &gardencorev1beta1.LastOperation{
+		Type:           operationType,
+		State:          gardencorev1beta1.LastOperationStateProcessing,
+		Progress:       0,
+		Description:    description,
+		LastUpdateTime: now,
+	}
 	seed.Status.Gardener = r.Identity
+	seed.Status.ObservedGeneration = seed.Generation
 	seed.Status.ClientCertificateExpirationTimestamp = r.ClientCertificateExpirationTimestamp
-	seed.Status.KubernetesVersion = &seedVersion
+	seed.Status.KubernetesVersion = pointer.String(r.SeedClientSet.Version())
+
+	// Initialize capacity and allocatable
+	var capacity, allocatable corev1.ResourceList
+	if r.Config.Resources != nil && len(r.Config.Resources.Capacity) > 0 {
+		capacity = make(corev1.ResourceList, len(r.Config.Resources.Capacity))
+		allocatable = make(corev1.ResourceList, len(r.Config.Resources.Capacity))
+
+		for resourceName, quantity := range r.Config.Resources.Capacity {
+			capacity[resourceName] = quantity
+			allocatable[resourceName] = quantity
+
+			if reservedQuantity, ok := r.Config.Resources.Reserved[resourceName]; ok {
+				allocatableQuantity := quantity.DeepCopy()
+				allocatableQuantity.Sub(reservedQuantity)
+				allocatable[resourceName] = allocatableQuantity
+			}
+		}
+	}
 
 	if capacity != nil {
 		seed.Status.Capacity = capacity
 	}
-
 	if allocatable != nil {
 		seed.Status.Allocatable = allocatable
 	}
 
-	return c.Status().Patch(ctx, seed, patch)
+	return r.GardenClient.Status().Update(ctx, seed)
+}
+
+func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, seed *gardencorev1beta1.Seed, operationType gardencorev1beta1.LastOperationType) error {
+	var (
+		now                        = metav1.NewTime(r.Clock.Now().UTC())
+		description                string
+		setConditionsToProgressing bool
+	)
+
+	switch operationType {
+	case gardencorev1beta1.LastOperationTypeReconcile:
+		description = "Seed cluster has been successfully reconciled."
+		setConditionsToProgressing = true
+	case gardencorev1beta1.LastOperationTypeDelete:
+		description = "Seed cluster has been successfully deleted."
+		setConditionsToProgressing = false
+	}
+
+	patch := client.StrategicMergeFrom(seed.DeepCopy())
+
+	if setConditionsToProgressing {
+		// Set the status of SeedSystemComponentsHealthy condition to Progressing so that the Seed does not immediately
+		// become ready after being successfully reconciled in case the system components got updated. The
+		// SeedSystemComponentsHealthy condition will be set to either True, False or Progressing by the seed care
+		// reconciler depending on the health of the system components after the necessary checks are completed.
+		for i, cond := range seed.Status.Conditions {
+			switch cond.Type {
+			case gardencorev1beta1.SeedBackupBucketsReady,
+				gardencorev1beta1.SeedExtensionsReady,
+				gardencorev1beta1.SeedGardenletReady,
+				gardencorev1beta1.SeedSystemComponentsHealthy:
+				if cond.Status != gardencorev1beta1.ConditionFalse {
+					seed.Status.Conditions[i].Status = gardencorev1beta1.ConditionProgressing
+					seed.Status.Conditions[i].LastUpdateTime = metav1.Now()
+				}
+			}
+		}
+	}
+
+	seed.Status.LastOperation = &gardencorev1beta1.LastOperation{
+		Type:           operationType,
+		State:          gardencorev1beta1.LastOperationStateSucceeded,
+		Progress:       100,
+		Description:    description,
+		LastUpdateTime: now,
+	}
+
+	return r.GardenClient.Status().Patch(ctx, seed, patch)
+}
+
+func (r *Reconciler) updateStatusOperationError(ctx context.Context, seed *gardencorev1beta1.Seed, err error, operationType gardencorev1beta1.LastOperationType) error {
+	patch := client.StrategicMergeFrom(seed.DeepCopy())
+
+	seed.Status.Gardener = r.Identity
+	if seed.Status.LastOperation == nil {
+		seed.Status.LastOperation = &gardencorev1beta1.LastOperation{}
+	}
+	seed.Status.LastOperation.Type = operationType
+	seed.Status.LastOperation.State = gardencorev1beta1.LastOperationStateError
+	seed.Status.LastOperation.Description = err.Error() + " Operation will be retried."
+	seed.Status.LastOperation.LastUpdateTime = metav1.NewTime(r.Clock.Now().UTC())
+
+	if err2 := r.GardenClient.Status().Patch(ctx, seed, patch); err2 != nil {
+		return fmt.Errorf("failed updating last operation to state 'Error' (due to %s): %w", err.Error(), err2)
+	}
+
+	return err
 }
 
 // determineClusterIdentity determines the identity of a cluster, in cases where the identity was

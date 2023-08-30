@@ -19,12 +19,12 @@ import (
 
 	"k8s.io/utils/pointer"
 
+	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 var (
@@ -62,12 +62,12 @@ func (b *Botanist) getDiffieHellmanSecret() component.Secret {
 
 // DefaultVPNSeedServer returns a deployer for the vpn-seed-server.
 func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
-	imageAPIServerProxy, err := b.ImageVector.FindImage(images.ImageNameApiserverProxy, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	imageAPIServerProxy, err := imagevector.ImageVector().FindImage(imagevector.ImageNameApiserverProxy, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}
 
-	imageVPNSeedServer, err := b.ImageVector.FindImage(images.ImageNameVpnSeedServer, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	imageVPNSeedServer, err := imagevector.ImageVector().FindImage(imagevector.ImageNameVpnSeedServer, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}

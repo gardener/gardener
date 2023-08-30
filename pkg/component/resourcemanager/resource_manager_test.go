@@ -20,10 +20,10 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	"go.uber.org/mock/gomock"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -130,7 +130,7 @@ var _ = Describe("ResourceManager", func() {
 		deployment                          *appsv1.Deployment
 		defaultNotReadyTolerationSeconds    *int64
 		defaultUnreachableTolerationSeconds *int64
-		configMapFor                        func(watchedNamespace, targetKubeconfig *string, isWorkerless bool) *corev1.ConfigMap
+		configMapFor                        func(watchedNamespace, targetKubeconfig *string, isWorkerless, considerMRSecretsForGC bool) *corev1.ConfigMap
 		deploymentFor                       func(configMapName string, kubernetesVersion *semver.Version, watchedNamespace *string, targetKubeconfig *string, targetClusterDiffersFromSourceCluster bool, secretNameBootstrapKubeconfig *string) *appsv1.Deployment
 		defaultLabels                       map[string]string
 		roleBinding                         *rbacv1.RoleBinding
@@ -359,7 +359,7 @@ var _ = Describe("ResourceManager", func() {
 			AutomountServiceAccountToken: pointer.Bool(false),
 		}
 
-		configMapFor = func(watchedNamespace *string, targetKubeconfig *string, isWorkerless bool) *corev1.ConfigMap {
+		configMapFor = func(watchedNamespace *string, targetKubeconfig *string, isWorkerless, considerManagedResources bool) *corev1.ConfigMap {
 			configMap := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gardener-resource-manager",
@@ -398,8 +398,9 @@ var _ = Describe("ResourceManager", func() {
 					ClusterID:     &clusterIdentity,
 					ResourceClass: &resourceClass,
 					GarbageCollector: resourcemanagerv1alpha1.GarbageCollectorControllerConfig{
-						Enabled:    true,
-						SyncPeriod: &metav1.Duration{Duration: 12 * time.Hour},
+						Enabled:                  true,
+						SyncPeriod:               &metav1.Duration{Duration: 12 * time.Hour},
+						ConsiderManagedResources: &considerManagedResources,
 					},
 					Health: resourcemanagerv1alpha1.HealthControllerConfig{
 						ConcurrentSyncs: &maxConcurrentHealthWorkers,
@@ -1837,6 +1838,8 @@ subjects:
 				"clusterrolebinding____gardener.cloud_target_resource-manager.yaml":                           []byte(clusterRoleBindingTargetYAML),
 			},
 		}
+		utilruntime.Must(kubernetesutils.MakeUnique(managedResourceSecret))
+
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "shoot-core-gardener-resource-manager",
@@ -1845,12 +1848,13 @@ subjects:
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
 				SecretRefs: []corev1.LocalObjectReference{
-					{Name: "managedresource-shoot-core-gardener-resource-manager"},
+					{Name: managedResourceSecret.Name},
 				},
 				InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 				KeepObjects:  pointer.Bool(false),
 			},
 		}
+		utilruntime.Must(references.InjectAnnotations(managedResource))
 	})
 
 	AfterEach(func() {
@@ -1861,7 +1865,7 @@ subjects:
 		Context("target cluster != source cluster; watched namespace is set", func() {
 			JustBeforeEach(func() {
 				role.Namespace = watchedNamespace
-				configMap = configMapFor(&watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), false)
+				configMap = configMapFor(&watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), false, false)
 				deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, &watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), true, nil)
 				cfg.RuntimeKubernetesVersion = semver.MustParse("1.24.0")
 				resourceManager = New(c, deployNamespace, sm, cfg)
@@ -1913,11 +1917,18 @@ subjects:
 							Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 								Expect(obj).To(DeepEqual(vpa))
 							}),
-						c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, "managedresource-shoot-core-gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.Secret{})),
+						c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, managedResourceSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 							Expect(obj).To(DeepEqual(managedResourceSecret))
 						}),
 						c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, "shoot-core-gardener-resource-manager"), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+						c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, managedResourceSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							expected := &corev1.Secret{
+								ObjectMeta: managedResourceSecret.ObjectMeta,
+							}
+							Expect(obj).To(DeepEqual(expected))
+						}),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 							Expect(obj).To(DeepEqual(managedResource))
 						}),
@@ -1990,11 +2001,18 @@ subjects:
 							Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 								Expect(obj).To(DeepEqual(vpa))
 							}),
-						c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, "managedresource-shoot-core-gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.Secret{})),
+						c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, managedResourceSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 							Expect(obj).To(DeepEqual(managedResourceSecret))
 						}),
 						c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, "shoot-core-gardener-resource-manager"), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+						c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, managedResourceSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							expected := &corev1.Secret{
+								ObjectMeta: managedResourceSecret.ObjectMeta,
+							}
+							Expect(obj).To(DeepEqual(expected))
+						}),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 							Expect(obj).To(DeepEqual(managedResource))
 						}),
@@ -2018,7 +2036,7 @@ subjects:
 				clusterRole.Rules = allowManagedResources
 				cfg.TargetDiffersFromSourceCluster = true
 				cfg.WatchedNamespace = nil
-				configMap = configMapFor(nil, pointer.String(gardenerutils.PathGenericKubeconfig), false)
+				configMap = configMapFor(nil, pointer.String(gardenerutils.PathGenericKubeconfig), false, false)
 				deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, nil, pointer.String(gardenerutils.PathGenericKubeconfig), true, nil)
 
 				resourceManager = New(c, deployNamespace, sm, cfg)
@@ -2074,11 +2092,18 @@ subjects:
 						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(vpa))
 						}),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, "managedresource-shoot-core-gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, managedResourceSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 						Expect(obj).To(DeepEqual(managedResourceSecret))
 					}),
 					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, "shoot-core-gardener-resource-manager"), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, managedResourceSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+						expected := &corev1.Secret{
+							ObjectMeta: managedResourceSecret.ObjectMeta,
+						}
+						Expect(obj).To(DeepEqual(expected))
+					}),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
@@ -2129,7 +2154,7 @@ subjects:
 				cfg.TargetDiffersFromSourceCluster = true
 				cfg.WatchedNamespace = nil
 				cfg.IsWorkerless = true
-				configMap = configMapFor(nil, pointer.String(gardenerutils.PathGenericKubeconfig), true)
+				configMap = configMapFor(nil, pointer.String(gardenerutils.PathGenericKubeconfig), true, false)
 				deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, nil, pointer.String(gardenerutils.PathGenericKubeconfig), true, nil)
 
 				resourceManager = New(c, deployNamespace, sm, cfg)
@@ -2185,13 +2210,20 @@ subjects:
 						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(vpa))
 						}),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, "managedresource-shoot-core-gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, managedResourceSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 						Expect(obj).To(DeepEqual(managedResourceSecret))
 					}),
 					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, "shoot-core-gardener-resource-manager"), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, managedResourceSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+						expected := &corev1.Secret{
+							ObjectMeta: managedResourceSecret.ObjectMeta,
+						}
+						Expect(obj).To(DeepEqual(expected))
+					}),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(managedResource))
+						Expect(obj).To(Equal(managedResource))
 					}),
 				)
 				Expect(resourceManager.Deploy(ctx)).To(Succeed())
@@ -2205,7 +2237,7 @@ subjects:
 				delete(service.Annotations, "networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports")
 				service.Annotations["networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports"] = `[{"protocol":"TCP","port":8080}]`
 				service.Annotations["networking.resources.gardener.cloud/from-world-to-ports"] = `[{"protocol":"TCP","port":10250}]`
-				configMap = configMapFor(&watchedNamespace, nil, false)
+				configMap = configMapFor(&watchedNamespace, nil, false, true)
 				deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, &watchedNamespace, nil, false, nil)
 
 				deployment.Spec.Template.Spec.Volumes = deployment.Spec.Template.Spec.Volumes[:len(deployment.Spec.Template.Spec.Volumes)-2]
@@ -2307,8 +2339,9 @@ subjects:
 			Context("should delete all created resources", func() {
 				It("should delete all created resources", func() {
 					gomock.InOrder(
-						c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}}),
+						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 						c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "managedresource-shoot-core-gardener-resource-manager"}}),
+						c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}}),
 						c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 						c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 						c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager-vpa"}}),
@@ -2326,6 +2359,8 @@ subjects:
 
 			It("should fail because the managed resource cannot be deleted", func() {
 				gomock.InOrder(
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "managedresource-shoot-core-gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}}).Return(fakeErr),
 				)
 
@@ -2334,7 +2369,7 @@ subjects:
 
 			It("should fail because the managed resource secret cannot be deleted", func() {
 				gomock.InOrder(
-					c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "managedresource-shoot-core-gardener-resource-manager"}}).Return(fakeErr),
 				)
 
@@ -2343,8 +2378,9 @@ subjects:
 
 			It("should fail because the pdb cannot be deleted", func() {
 				gomock.InOrder(
-					c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "managedresource-shoot-core-gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}}),
 					c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 					c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}).Return(fakeErr),
 				)
@@ -2354,8 +2390,9 @@ subjects:
 
 			It("should fail because the vpa cannot be deleted", func() {
 				gomock.InOrder(
-					c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "managedresource-shoot-core-gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}}),
 					c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 					c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager-vpa"}}).Return(fakeErr),
@@ -2366,8 +2403,9 @@ subjects:
 
 			It("should fail because the deployment cannot be deleted", func() {
 				gomock.InOrder(
-					c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "managedresource-shoot-core-gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}}),
 					c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 					c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager-vpa"}}),
@@ -2379,8 +2417,9 @@ subjects:
 
 			It("should fail because the service cannot be deleted", func() {
 				gomock.InOrder(
-					c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "managedresource-shoot-core-gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}}),
 					c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 					c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager-vpa"}}),
@@ -2393,8 +2432,9 @@ subjects:
 
 			It("should fail because the service account cannot be deleted", func() {
 				gomock.InOrder(
-					c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "managedresource-shoot-core-gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}}),
 					c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 					c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager-vpa"}}),
@@ -2408,8 +2448,9 @@ subjects:
 
 			It("should fail because the secret cannot be deleted", func() {
 				gomock.InOrder(
-					c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "managedresource-shoot-core-gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}}),
 					c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 					c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager-vpa"}}),
@@ -2424,8 +2465,9 @@ subjects:
 
 			It("should fail because the role cannot be deleted", func() {
 				gomock.InOrder(
-					c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "managedresource-shoot-core-gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}}),
 					c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 					c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager-vpa"}}),
@@ -2441,8 +2483,9 @@ subjects:
 
 			It("should fail because the role binding cannot be deleted", func() {
 				gomock.InOrder(
-					c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "managedresource-shoot-core-gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}}),
 					c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 					c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager-vpa"}}),
@@ -2487,7 +2530,7 @@ subjects:
 
 	Describe("#Wait", func() {
 		BeforeEach(func() {
-			configMap = configMapFor(&watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), false)
+			configMap = configMapFor(&watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), false, true)
 			deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, &watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), false, nil)
 			resourceManager = New(fakeClient, deployNamespace, nil, cfg)
 		})

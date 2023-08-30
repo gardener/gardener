@@ -31,6 +31,19 @@ func GetSecretByReference(ctx context.Context, c client.Reader, ref *corev1.Secr
 	return secret, nil
 }
 
+// GetSecretMetadataByReference returns the secret referenced by the given secret reference.
+func GetSecretMetadataByReference(ctx context.Context, c client.Reader, ref *corev1.SecretReference) (*metav1.PartialObjectMetadata, error) {
+	metadata := &metav1.PartialObjectMetadata{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Secret",
+			APIVersion: "v1",
+		}}
+	if err := c.Get(ctx, Key(ref.Namespace, ref.Name), metadata); err != nil {
+		return nil, err
+	}
+	return metadata, nil
+}
+
 // DeleteSecretByReference deletes the secret referenced by the given secret reference.
 func DeleteSecretByReference(ctx context.Context, c client.Client, ref *corev1.SecretReference) error {
 	secret := &corev1.Secret{

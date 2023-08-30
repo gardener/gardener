@@ -33,7 +33,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/component/clusteridentity"
@@ -114,11 +113,6 @@ func (r *Reconciler) delete(
 	log.Info("No Shoots or BackupBuckets are referencing the Seed, deletion accepted")
 
 	if err := r.runDeleteSeedFlow(ctx, log, seedObj, seedIsGarden); err != nil {
-		conditionSeedBootstrapped := v1beta1helper.GetOrInitConditionWithClock(r.Clock, seedObj.GetInfo().Status.Conditions, gardencorev1beta1.SeedBootstrapped)
-		conditionSeedBootstrapped = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "DebootstrapFailed", fmt.Sprintf("Failed to delete Seed Cluster (%s).", err.Error()))
-		if err := r.patchSeedStatus(ctx, r.GardenClient, seed, "<unknown>", nil, nil, conditionSeedBootstrapped); err != nil {
-			return reconcile.Result{}, fmt.Errorf("could not patch seed status after deletion flow failed: %w", err)
-		}
 		return reconcile.Result{}, err
 	}
 
@@ -213,8 +207,8 @@ func (r *Reconciler) runDeleteSeedFlow(
 			},
 			IngressGateway: istioIngressGateway,
 		})
-		mcmCRDs            = machinecontrollermanager.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
-		fluentOperatorCRDs = fluentoperator.NewCRDs(r.SeedClientSet.Applier())
+		mcmCRDs                       = machinecontrollermanager.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
+		fluentOperatorCustomResources = fluentoperator.NewCustomResources(seedClient, r.GardenNamespace, fluentoperator.CustomResourcesValues{})
 	)
 
 	var (
@@ -273,13 +267,13 @@ func (r *Reconciler) runDeleteSeedFlow(
 			}).DoIf(!seedIsGarden),
 			Dependencies: flow.NewTaskIDs(destroyIstio),
 		})
-		destroyFluentOperatorCRDs = g.Add(flow.Task{
-			Name: "Destroy Fluent Operator CRDs",
-			Fn:   component.OpDestroyAndWait(fluentOperatorCRDs).Destroy,
-		})
 		destroyMachineControllerManagerCRDs = g.Add(flow.Task{
 			Name: "Destroy machine-controller-manager CRDs",
 			Fn:   component.OpDestroyAndWait(mcmCRDs).Destroy,
+		})
+		destroyFluentOperatorResources = g.Add(flow.Task{
+			Name: "Destroy Fluent Operator Custom Resources",
+			Fn:   component.OpDestroyAndWait(fluentOperatorCustomResources).Destroy,
 		})
 		syncPointCleanedUp = flow.NewTaskIDs(
 			destroyNginxIngress,
@@ -292,8 +286,8 @@ func (r *Reconciler) runDeleteSeedFlow(
 			destroyVPNAuthzServer,
 			destroyIstio,
 			destroyIstioCRDs,
-			destroyFluentOperatorCRDs,
 			destroyMachineControllerManagerCRDs,
+			destroyFluentOperatorResources,
 			noControllerInstallations,
 		)
 		destroySystemResources = g.Add(flow.Task{
@@ -320,16 +314,17 @@ func (r *Reconciler) runDeleteSeedFlow(
 	// When the seed is the garden cluster then these components are reconciled by the gardener-operator.
 	if !seedIsGarden {
 		var (
-			plutono                       = plutono.New(seedClient, r.GardenNamespace, nil, plutono.Values{})
-			kubeStateMetrics              = kubestatemetrics.New(seedClient, r.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
-			etcdCRD                       = etcd.NewCRD(seedClient, r.SeedClientSet.Applier())
-			etcdDruid                     = etcd.NewBootstrapper(seedClient, r.GardenNamespace, nil, r.Config.ETCDConfig, "", nil, "")
-			hvpa                          = hvpa.New(seedClient, r.GardenNamespace, hvpa.Values{})
-			verticalPodAutoscaler         = vpa.New(seedClient, r.GardenNamespace, nil, vpa.Values{ClusterType: component.ClusterTypeSeed, RuntimeKubernetesVersion: kubernetesVersion})
-			resourceManager               = resourcemanager.New(seedClient, r.GardenNamespace, nil, resourcemanager.Values{RuntimeKubernetesVersion: kubernetesVersion})
-			fluentOperator                = fluentoperator.NewFluentOperator(seedClient, r.GardenNamespace, fluentoperator.Values{})
-			fluentOperatorCustomResources = fluentoperator.NewCustomResources(seedClient, r.GardenNamespace, fluentoperator.CustomResourcesValues{}, nil, nil, nil)
-			vali                          = vali.New(seedClient, r.GardenNamespace, nil, vali.Values{})
+			plutono               = plutono.New(seedClient, r.GardenNamespace, nil, plutono.Values{})
+			kubeStateMetrics      = kubestatemetrics.New(seedClient, r.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
+			etcdCRD               = etcd.NewCRD(seedClient, r.SeedClientSet.Applier())
+			etcdDruid             = etcd.NewBootstrapper(seedClient, r.GardenNamespace, nil, r.Config.ETCDConfig, "", nil, "")
+			hvpa                  = hvpa.New(seedClient, r.GardenNamespace, hvpa.Values{})
+			verticalPodAutoscaler = vpa.New(seedClient, r.GardenNamespace, nil, vpa.Values{ClusterType: component.ClusterTypeSeed, RuntimeKubernetesVersion: kubernetesVersion})
+			resourceManager       = resourcemanager.New(seedClient, r.GardenNamespace, nil, resourcemanager.Values{RuntimeKubernetesVersion: kubernetesVersion})
+			fluentOperatorCRDs    = fluentoperator.NewCRDs(r.SeedClientSet.Applier())
+			fluentOperator        = fluentoperator.NewFluentOperator(seedClient, r.GardenNamespace, fluentoperator.Values{})
+			fluentBit             = fluentoperator.NewFluentBit(seedClient, r.GardenNamespace, fluentoperator.FluentBitValues{})
+			vali                  = vali.New(seedClient, r.GardenNamespace, nil, vali.Values{})
 
 			destroyPlutono = g.Add(flow.Task{
 				Name: "Destroying plutono",
@@ -355,14 +350,14 @@ func (r *Reconciler) runDeleteSeedFlow(
 				Name: "Destroy HVPA controller",
 				Fn:   component.OpDestroyAndWait(hvpa).Destroy,
 			})
-			destroyFluentOperatorResources = g.Add(flow.Task{
-				Name: "Destroy Fluent Operator Custom Resources",
-				Fn:   component.OpDestroyAndWait(fluentOperatorCustomResources).Destroy,
+			destroyFluentBit = g.Add(flow.Task{
+				Name: "Destroy Fluent Bit",
+				Fn:   component.OpDestroyAndWait(fluentBit).Destroy,
 			})
 			destroyFluentOperator = g.Add(flow.Task{
 				Name:         "Destroy Fluent Operator",
 				Fn:           component.OpDestroyAndWait(fluentOperator).Destroy,
-				Dependencies: flow.NewTaskIDs(destroyFluentOperatorResources),
+				Dependencies: flow.NewTaskIDs(destroyFluentOperatorResources, destroyFluentBit),
 			})
 			destroyVali = g.Add(flow.Task{
 				Name:         "Destroy Vali",
@@ -374,6 +369,11 @@ func (r *Reconciler) runDeleteSeedFlow(
 				Fn:           component.OpDestroyAndWait(etcdCRD).Destroy,
 				Dependencies: flow.NewTaskIDs(destroyEtcdDruid),
 			})
+			destroyFluentOperatorCRDs = g.Add(flow.Task{
+				Name:         "Destroy Fluent Operator CRDs",
+				Fn:           component.OpDestroyAndWait(fluentOperatorCRDs).Destroy,
+				Dependencies: flow.NewTaskIDs(destroyFluentOperatorResources, noControllerInstallations),
+			})
 		)
 
 		syncPointCleanedUp.Insert(
@@ -382,10 +382,11 @@ func (r *Reconciler) runDeleteSeedFlow(
 			destroyEtcdDruid,
 			destroyHVPA,
 			destroyVPA,
-			destroyFluentOperatorResources,
+			destroyFluentBit,
 			destroyFluentOperator,
 			destroyVali,
 			destroyEtcdCRD,
+			destroyFluentOperatorCRDs,
 		)
 
 		var (
@@ -411,7 +412,10 @@ func (r *Reconciler) runDeleteSeedFlow(
 		)
 	}
 
-	if err := g.Compile().Run(ctx, flow.Opts{Log: log}); err != nil {
+	if err := g.Compile().Run(ctx, flow.Opts{
+		Log:              log,
+		ProgressReporter: r.reportProgress(log, seed.GetInfo()),
+	}); err != nil {
 		return flow.Errors(err)
 	}
 

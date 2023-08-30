@@ -152,7 +152,7 @@ func (k *kubeProxy) reconcileManagedResource(ctx context.Context, data map[strin
 		managedResource    = managedresources.NewForShoot(k.client, k.namespace, mrName, managedresources.LabelValueGardener, false).WithSecretRef(secretName)
 	)
 
-	secret = secret.WithLabels(getManagedResourceLabels(pool, useMajorMinorVersionOnly))
+	secret = secret.AddLabels(getManagedResourceLabels(pool, useMajorMinorVersionOnly))
 	managedResource = managedResource.WithLabels(getManagedResourceLabels(pool, useMajorMinorVersionOnly))
 
 	if err := secret.Reconcile(ctx); err != nil {

@@ -18,9 +18,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	"k8s.io/utils/pointer"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -29,8 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 var _ = Describe("BlackboxExporter", func() {
@@ -71,19 +69,10 @@ var _ = Describe("BlackboxExporter", func() {
 
 		It("should successfully create a blackbox-exporter interface", func() {
 			kubernetesClient.EXPECT().Client()
-			botanist.ImageVector = imagevector.ImageVector{{Name: images.ImageNameBlackboxExporter}}
 
 			blackboxExporter, err := botanist.DefaultBlackboxExporter()
 			Expect(blackboxExporter).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should return an error because the image cannot be found", func() {
-			botanist.ImageVector = imagevector.ImageVector{}
-
-			blackboxExporter, err := botanist.DefaultBlackboxExporter()
-			Expect(blackboxExporter).To(BeNil())
-			Expect(err).To(HaveOccurred())
 		})
 	})
 

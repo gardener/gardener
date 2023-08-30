@@ -32,6 +32,31 @@ import "k8s.io/apimachinery/pkg/util/intstr/generated.proto";
 // Package-wide variables from generator "generated".
 option go_package = "github.com/gardener/gardener/pkg/apis/core/v1beta1";
 
+// APIServerLogging contains configuration for the logs level and http access logs
+message APIServerLogging {
+  // Verbosity is the kube-apiserver log verbosity level
+  // Defaults to 2.
+  // +optional
+  optional int32 verbosity = 1;
+
+  // HTTPAccessVerbosity is the kube-apiserver access logs level
+  // +optional
+  optional int32 httpAccessVerbosity = 2;
+}
+
+// APIServerRequests contains configuration for request-specific settings for the kube-apiserver.
+message APIServerRequests {
+  // MaxNonMutatingInflight is the maximum number of non-mutating requests in flight at a given time. When the server
+  // exceeds this, it rejects requests.
+  // +optional
+  optional int32 maxNonMutatingInflight = 1;
+
+  // MaxMutatingInflight is the maximum number of mutating requests in flight at a given time. When the server
+  // exceeds this, it rejects requests.
+  // +optional
+  optional int32 maxMutatingInflight = 2;
+}
+
 // Addon allows enabling or disabling a specific addon and is used to derive from.
 message Addon {
   // Enabled indicates whether the addon is enabled or not.
@@ -1030,7 +1055,7 @@ message KubeAPIServerConfig {
 
   // Requests contains configuration for request-specific settings for the kube-apiserver.
   // +optional
-  optional KubeAPIServerRequests requests = 10;
+  optional APIServerRequests requests = 10;
 
   // EnableAnonymousAuthentication defines whether anonymous requests to the secure port
   // of the API server should be allowed (flag `--anonymous-auth`).
@@ -1045,7 +1070,7 @@ message KubeAPIServerConfig {
 
   // Logging contains configuration for the log level and HTTP access logs.
   // +optional
-  optional KubeAPIServerLogging logging = 13;
+  optional APIServerLogging logging = 13;
 
   // DefaultNotReadyTolerationSeconds indicates the tolerationSeconds of the toleration for notReady:NoExecute
   // that is added by default to every pod that does not already have such a toleration (flag `--default-not-ready-toleration-seconds`).
@@ -1060,31 +1085,6 @@ message KubeAPIServerConfig {
   // Defaults to 300.
   // +optional
   optional int64 defaultUnreachableTolerationSeconds = 15;
-}
-
-// KubeAPIServerLogging contains configuration for the logs level and http access logs
-message KubeAPIServerLogging {
-  // Verbosity is the kube-apiserver log verbosity level
-  // Defaults to 2.
-  // +optional
-  optional int32 verbosity = 1;
-
-  // HTTPAccessVerbosity is the kube-apiserver access logs level
-  // +optional
-  optional int32 httpAccessVerbosity = 2;
-}
-
-// KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.
-message KubeAPIServerRequests {
-  // MaxNonMutatingInflight is the maximum number of non-mutating requests in flight at a given time. When the server
-  // exceeds this, it rejects requests.
-  // +optional
-  optional int32 maxNonMutatingInflight = 1;
-
-  // MaxMutatingInflight is the maximum number of mutating requests in flight at a given time. When the server
-  // exceeds this, it rejects requests.
-  // +optional
-  optional int32 maxMutatingInflight = 2;
 }
 
 // KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.
@@ -2258,8 +2258,27 @@ message SeedSettingDependencyWatchdogWeeder {
 
 // SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the seed.
 message SeedSettingExcessCapacityReservation {
-  // Enabled controls whether the excess capacity reservation should be enabled.
+  // Enabled controls whether the default excess capacity reservation should be enabled. When not specified, the functionality is enabled.
+  // +optional
   optional bool enabled = 1;
+
+  // Configs configures excess capacity reservation deployments for shoot control planes in the seed.
+  // +optional
+  repeated SeedSettingExcessCapacityReservationConfig configs = 2;
+}
+
+// SeedSettingExcessCapacityReservationConfig configures excess capacity reservation deployments for shoot control planes in the seed.
+message SeedSettingExcessCapacityReservationConfig {
+  // Resources specify the resource requests and limits of the excess-capacity-reservation pod.
+  map<string, k8s.io.apimachinery.pkg.api.resource.Quantity> resources = 1;
+
+  // NodeSelector specifies the node where the excess-capacity-reservation pod should run.
+  // +optional
+  map<string, string> nodeSelector = 2;
+
+  // Tolerations specify the tolerations for the the excess-capacity-reservation pod.
+  // +optional
+  repeated k8s.io.api.core.v1.Toleration tolerations = 3;
 }
 
 // SeedSettingLoadBalancerServices controls certain settings for services of type load balancer that are created in the
@@ -2430,6 +2449,10 @@ message SeedStatus {
   // ClientCertificateExpirationTimestamp is the timestamp at which gardenlet's client certificate expires.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time clientCertificateExpirationTimestamp = 8;
+
+  // LastOperation holds information about the last operation on the Seed.
+  // +optional
+  optional LastOperation lastOperation = 9;
 }
 
 // SeedTaint describes a taint on a seed.
@@ -2741,6 +2764,12 @@ message ShootSpec {
   // ControlPlane contains general settings for the control plane of the shoot.
   // +optional
   optional ControlPlane controlPlane = 20;
+
+  // SchedulerName is the name of the responsible scheduler which schedules the shoot.
+  // If not specified, the default scheduler takes over.
+  // This field is immutable.
+  // +optional
+  optional string schedulerName = 21;
 }
 
 // ShootState contains a snapshot of the Shoot's state required to migrate the Shoot's control plane to a new Seed.

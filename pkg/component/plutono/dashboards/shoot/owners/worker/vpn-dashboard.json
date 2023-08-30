@@ -518,7 +518,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(container_cpu_usage_seconds_total{pod=~\"kube-apiserver-.*|vpn-seed-.*\", container=\"vpn-.*\"}[$__rate_interval])",
+          "expr": "rate(container_cpu_usage_seconds_total{pod=~\"kube-apiserver-.*|vpn-seed-.*\", container=~\"vpn-.*\"}[$__rate_interval])",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -528,14 +528,14 @@
           "step": 20
         },
         {
-          "expr": "kube_pod_container_resource_requests{resource=\"cpu\", unit=\"core\", pod=~\"kube-apiserver-.*|vpn-seed-.*\", container=\"vpn-.*\"}",
+          "expr": "kube_pod_container_resource_requests{resource=\"cpu\", unit=\"core\", pod=~\"kube-apiserver-.*|vpn-seed-.*\", container=~\"vpn-.*\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Requests ({{pod}}/{{container}})",
           "refId": "B"
         },
         {
-          "expr": "kube_pod_container_resource_limits{resource=\"cpu\", unit=\"core\", pod=~\"kube-apiserver-.*|vpn-seed-.*\", container=\"vpn-.*\"}",
+          "expr": "kube_pod_container_resource_limits{resource=\"cpu\", unit=\"core\", pod=~\"kube-apiserver-.*|vpn-seed-.*\", container=~\"vpn-.*\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Limits ({{pod}}/{{container}})",
@@ -642,14 +642,14 @@
           "step": 10
         },
         {
-          "expr": "kube_pod_container_resource_requests{resource=\"memory\", unit=\"byte\", pod=~\"kube-apiserver-.*|vpn-seed-.*\", container=\"vpn-.*\"}",
+          "expr": "kube_pod_container_resource_requests{resource=\"memory\", unit=\"byte\", pod=~\"kube-apiserver-.*|vpn-seed-.*\", container=~\"vpn-.*\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Request ({{pod}}/{{container}})",
           "refId": "B"
         },
         {
-          "expr": "kube_pod_container_resource_limits{resource=\"memory\", unit=\"byte\", pod=~\"kube-apiserver-.*|vpn-seed-.*\", container=\"vpn-.*\"}",
+          "expr": "kube_pod_container_resource_limits{resource=\"memory\", unit=\"byte\", pod=~\"kube-apiserver-.*|vpn-seed-.*\", container=~\"vpn-.*\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Limits ({{pod}}/{{container}})",

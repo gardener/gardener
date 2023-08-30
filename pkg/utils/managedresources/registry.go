@@ -15,26 +15,32 @@
 package managedresources
 
 import (
+	"cmp"
+	"encoding/json"
 	"fmt"
 	"reflect"
-	"sort"
+	"slices"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+
+	forkedyaml "github.com/gardener/gardener/third_party/gopkg.in/yaml.v2"
 )
 
 // Registry stores objects and their serialized form. It allows to compute a map of all registered objects that can be
 // used as part of a Secret's data which is referenced by a ManagedResource.
 type Registry struct {
-	scheme       *runtime.Scheme
-	codec        runtime.Codec
-	nameToObject map[string]*object
+	scheme           *runtime.Scheme
+	codec            runtime.Codec
+	nameToObject     map[string]*object
+	isYAMLSerializer bool
 }
 
 type object struct {
@@ -44,7 +50,7 @@ type object struct {
 
 // NewRegistry returns a new registry for resources. The given scheme, codec, and serializer must know all the resource
 // types that will later be added to the registry.
-func NewRegistry(scheme *runtime.Scheme, codec serializer.CodecFactory, serializer *json.Serializer) *Registry {
+func NewRegistry(scheme *runtime.Scheme, codec serializer.CodecFactory, serializer *jsonserializer.Serializer) *Registry {
 	var groupVersions schema.GroupVersions
 	for k := range scheme.AllKnownTypes() {
 		groupVersions = append(groupVersions, k.GroupVersion())
@@ -55,17 +61,28 @@ func NewRegistry(scheme *runtime.Scheme, codec serializer.CodecFactory, serializ
 
 	// Sort groupVersions to ensure groupVersions.Identifier() is stable key
 	// for the map in https://github.com/kubernetes/apimachinery/blob/v0.26.1/pkg/runtime/serializer/versioning/versioning.go#L94
-	sort.Slice(groupVersions, func(i, j int) bool {
-		if groupVersions[i].Group == groupVersions[j].Group {
-			return groupVersions[i].Version < groupVersions[j].Version
+	slices.SortStableFunc(groupVersions, func(a, b schema.GroupVersion) int {
+		if a.Group == b.Group {
+			return cmp.Compare(a.Version, b.Version)
 		}
-		return groupVersions[i].Group < groupVersions[j].Group
+		return cmp.Compare(a.Group, b.Group)
 	})
 
+	// A workaround to incosistent/unstable ordering in yaml.v2 when encoding maps
+	// Can be removed once k8s.io/apimachinery/pkg/runtime/serializer/json migrates to yaml.v3
+	// or the issue is resolved upstream in yaml.v2
+	// Please see https://github.com/go-yaml/yaml/pull/736
+	serializerIdentifier := struct {
+		YAML string `json:"yaml"`
+	}{}
+
+	utilruntime.Must(json.Unmarshal([]byte(serializer.Identifier()), &serializerIdentifier))
+
 	return &Registry{
-		scheme:       scheme,
-		codec:        codec.CodecForVersions(serializer, serializer, groupVersions, groupVersions),
-		nameToObject: make(map[string]*object),
+		scheme:           scheme,
+		codec:            codec.CodecForVersions(serializer, serializer, groupVersions, groupVersions),
+		nameToObject:     make(map[string]*object),
+		isYAMLSerializer: serializerIdentifier.YAML == "true",
 	}
 }
 
@@ -90,6 +107,24 @@ func (r *Registry) Add(objs ...client.Object) error {
 		serializationYAML, err := runtime.Encode(r.codec, obj)
 		if err != nil {
 			return err
+		}
+
+		// We use a copy of the upstream package as a workaround
+		// to incosistent/unstable ordering in yaml.v2 when encoding maps
+		// Can be removed once k8s.io/apimachinery/pkg/runtime/serializer/json migrates to yaml.v3
+		// or the issue is resolved upstream in yaml.v2
+		// Please see https://github.com/go-yaml/yaml/pull/736
+		if r.isYAMLSerializer {
+			var anyObj interface{}
+			if err := forkedyaml.Unmarshal(serializationYAML, &anyObj); err != nil {
+				return err
+			}
+
+			serBytes, err := forkedyaml.Marshal(anyObj)
+			if err != nil {
+				return err
+			}
+			serializationYAML = serBytes
 		}
 
 		r.nameToObject[filename] = &object{

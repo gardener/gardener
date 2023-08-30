@@ -108,8 +108,8 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	)
 }
 
-// SeedPredicate returns true for all Seed events except for updates. Here, it only returns true when there is a change
-// in the .spec.dns.provider field or when the deletion timestamp is set.
+// SeedPredicate returns true for all Seed events except for updates. Here, it returns true when there is a change
+// in the spec or labels or annotations or when the deletion timestamp is set.
 func (r *Reconciler) SeedPredicate() predicate.Predicate {
 	return predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {

@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -32,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/logging/kuberbacproxy"
 	"github.com/gardener/gardener/pkg/component/test"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -110,12 +112,11 @@ var _ = Describe("KubeRBACProxy", func() {
 	Describe("#Deploy", func() {
 		It("should successfully deploy all resources", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 
 			Expect(kubeRBACProxyDeployer.Deploy(ctx)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-			Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
+			expectedMr := &resourcesv1alpha1.ManagedResource{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
 					Kind:       "ManagedResource",
@@ -129,15 +130,20 @@ var _ = Describe("KubeRBACProxy", func() {
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 					SecretRefs: []corev1.LocalObjectReference{{
-						Name: managedResourceSecret.Name,
+						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
 					KeepObjects: pointer.Bool(false),
 				},
-			}))
+			}
+			utilruntime.Must(references.InjectAnnotations(expectedMr))
+			Expect(managedResource).To(DeepEqual(expectedMr))
 
+			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Data).To(HaveLen(3))
+			Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_logging_valitail.yaml"])).To(Equal(test.Serialize(&rbacv1.ClusterRole{
 				TypeMeta: metav1.TypeMeta{

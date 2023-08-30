@@ -20,10 +20,10 @@ import (
 	"crypto/x509/pkix"
 	"net"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
+	"go.uber.org/mock/gomock"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -111,7 +111,7 @@ var _ = Describe("utils", func() {
 
 			result, err := GetWildcardCertificate(ctx, fakeClient)
 			Expect(result).To(BeNil())
-			Expect(err).To(MatchError(ContainSubstring("misconfigured seed cluster: not possible to provide more than one secret with annotation")))
+			Expect(err).To(MatchError(ContainSubstring("misconfigured cluster: not possible to provide more than one secret with annotation")))
 		})
 
 		It("should return the wildcard certificate secret", func() {

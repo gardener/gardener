@@ -26,7 +26,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	appsv1 "k8s.io/api/apps/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -54,11 +53,9 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/operations"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -74,10 +71,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
-	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 // Name is a const for the name of this component.
@@ -280,8 +274,8 @@ func (g *garden) Start(ctx context.Context) error {
 					// Gardenlet should watch secrets only in the seed namespace of the seed it is responsible for. We
 					// don't use any selector mechanism here since we want to still fall back to reading secrets with
 					// the API reader (i.e., not from cache) in case the respective secret is not found in the cache.
-					&corev1.Secret{}:         cache.MultiNamespacedCacheBuilder([]string{gardenerutils.ComputeGardenNamespace(g.kubeconfigBootstrapResult.SeedName)}),
-					&corev1.ServiceAccount{}: cache.MultiNamespacedCacheBuilder([]string{gardenerutils.ComputeGardenNamespace(g.kubeconfigBootstrapResult.SeedName)}),
+					&corev1.Secret{}:         cache.MultiNamespacedCacheBuilder([]string{gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.SeedTemplate.Name)}),
+					&corev1.ServiceAccount{}: cache.MultiNamespacedCacheBuilder([]string{gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.SeedTemplate.Name)}),
 					// Gardenlet does not have the required RBAC permissions for listing/watching the following
 					// resources on cluster level. Hence, we need to watch them individually with the help of a
 					// SingleObject cache.
@@ -357,23 +351,9 @@ func (g *garden) Start(ctx context.Context) error {
 		return err
 	}
 
-	// TODO(rfranzke): Remove this code after v1.74 has been released.
-	{
-		log.Info("Removing legacy ShootState controller finalizer from persistable secrets in seed cluster")
-		if err := removeLegacyShootStateControllerFinalizerFromSecrets(ctx, g.mgr.GetClient()); err != nil {
-			return err
-		}
-		if err := g.cleanupStaleShootStates(ctx, gardenCluster.GetClient()); err != nil {
-			return err
-		}
-	}
-
-	// TODO(shafeeqes): Remove this code in v1.77
-	{
-		log.Info("Cleaning up stale 'addons' ManagedResource from shoot namespaces in the seed cluster")
-		if err := g.cleanupStaleAddonsMR(ctx, gardenCluster.GetClient(), g.mgr.GetClient()); err != nil {
-			return err
-		}
+	log.Info("Removing 'from-world-to-ports' annotation from kube-apiserver services")
+	if err := removeFromWorldToPortsAnnotations(ctx, g.mgr.GetClient()); err != nil {
+		return fmt.Errorf("failed to remove 'from-world-to-ports' annotation from kube-apiserver services: %w", err)
 	}
 
 	log.Info("Setting up shoot client map")
@@ -423,6 +403,34 @@ func (g *garden) Start(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// TODO(timuthy): Remove this code after v1.77 is released.
+func removeFromWorldToPortsAnnotations(ctx context.Context, seedClient client.Client) error {
+	serviceList := &corev1.ServiceList{}
+	if err := seedClient.List(ctx, serviceList, client.MatchingLabels{
+		v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
+		v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer,
+	}); err != nil {
+		return err
+	}
+
+	var taskFns []flow.TaskFn
+	for _, service := range serviceList.Items {
+		if !metav1.HasAnnotation(service.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts) {
+			continue
+		}
+
+		svc := service
+		patch := client.MergeFrom(svc.DeepCopy())
+
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			delete(svc.Annotations, resourcesv1alpha1.NetworkingFromWorldToPorts)
+			return seedClient.Patch(ctx, &svc, patch)
+		})
+	}
+
+	return flow.Parallel(taskFns...)(ctx)
 }
 
 func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) error {
@@ -492,164 +500,6 @@ func (g *garden) updateProcessingShootStatusToAborted(ctx context.Context, garde
 			shoot.Status.LastOperation.State = gardencorev1beta1.LastOperationStateAborted
 			if err := gardenClient.Status().Patch(ctx, &shoot, patch); err != nil {
 				return fmt.Errorf("failed to set status to 'Aborted' for shoot %q: %w", client.ObjectKeyFromObject(&shoot), err)
-			}
-
-			return nil
-		})
-	}
-
-	return flow.Parallel(taskFns...)(ctx)
-}
-
-func removeLegacyShootStateControllerFinalizerFromSecrets(ctx context.Context, seedClient client.Client) error {
-	secretList := &metav1.PartialObjectMetadataList{}
-	secretList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("SecretList"))
-	if err := seedClient.List(ctx, secretList, client.MatchingLabels{
-		secretsmanager.LabelKeyManagedBy: secretsmanager.LabelValueSecretsManager,
-		secretsmanager.LabelKeyPersist:   secretsmanager.LabelValueTrue,
-	}); err != nil {
-		return fmt.Errorf("failed listing all secrets that must be persisted: %w", err)
-	}
-
-	var taskFns []flow.TaskFn
-
-	for _, s := range secretList.Items {
-		secret := s
-
-		taskFns = append(taskFns, func(ctx context.Context) error {
-			if err := controllerutils.RemoveFinalizers(ctx, seedClient, &secret, "gardenlet.gardener.cloud/secret-controller"); err != nil {
-				return fmt.Errorf("failed to remove legacy ShootState controller finalizer from secret %q: %w", client.ObjectKeyFromObject(&secret), err)
-			}
-			return nil
-		})
-	}
-
-	return flow.Parallel(taskFns...)(ctx)
-}
-
-func (g *garden) cleanupStaleShootStates(ctx context.Context, gardenClient client.Client) error {
-	if err := gardenClient.Get(ctx, client.ObjectKey{Name: g.config.SeedConfig.Name, Namespace: v1beta1constants.GardenNamespace}, &seedmanagementv1alpha1.ManagedSeed{}); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return fmt.Errorf("failed checking whether gardenlet is responsible for a managed seed: %w", err)
-		}
-		return nil
-	}
-
-	g.mgr.GetLogger().Info("Removing stale ShootState resources from garden cluster since I'm responsible for a managed seed (GEP-22)")
-
-	shootList := &gardencorev1beta1.ShootList{}
-	if err := gardenClient.List(ctx, shootList, client.MatchingFields{gardencore.ShootSeedName: g.config.SeedConfig.Name}); err != nil {
-		return err
-	}
-
-	var taskFns []flow.TaskFn
-
-	for _, s := range shootList.Items {
-		shoot := s
-
-		// If status.seedName is different than seed name gardenlet is responsible for, then a migration takes place.
-		// In this case, we don't want to delete the shoot state. It will be deleted eventually after successful
-		// restoration by the shoot controller itself.
-		if shoot.Status.SeedName != nil && *shoot.Status.SeedName != g.config.SeedConfig.Name {
-			continue
-		}
-
-		// We don't want to delete the shoot state when the last operation type is 'Restore' (it might not be completed
-		// yet). It will be deleted eventually after successful restoration by the shoot controller itself.
-		if v1beta1helper.ShootHasOperationType(shoot.Status.LastOperation, gardencorev1beta1.LastOperationTypeRestore) {
-			continue
-		}
-
-		taskFns = append(taskFns, func(ctx context.Context) error {
-			return shootstate.Delete(ctx, gardenClient, &shoot)
-		})
-	}
-
-	return flow.Parallel(taskFns...)(ctx)
-}
-
-func (g *garden) cleanupStaleAddonsMR(ctx context.Context, gardenClient, seedClient client.Client) error {
-	shootNamespaceList := &corev1.NamespaceList{}
-	if err := seedClient.List(ctx, shootNamespaceList, client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}); err != nil {
-		return err
-	}
-
-	var taskFns []flow.TaskFn
-
-	for _, ns := range shootNamespaceList.Items {
-		namespace := ns
-
-		taskFns = append(taskFns, func(ctx context.Context) error {
-			var (
-				addonsMR = &resourcesv1alpha1.ManagedResource{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "addons",
-						Namespace: namespace.Name,
-					},
-				}
-				addonsSecret = &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "managedresource-addons",
-						Namespace: namespace.Name,
-					},
-				}
-				resourceManagerDeployment = &appsv1.Deployment{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
-						Namespace: namespace.Name,
-					},
-				}
-				resourceManagerDeploymentFound bool
-				replicas                       int32
-			)
-
-			if err := seedClient.Get(ctx, client.ObjectKeyFromObject(addonsMR), addonsMR); err != nil {
-				// If the MR is already gone, then nothing to do here
-				if apierrors.IsNotFound(err) {
-					return nil
-				}
-				return err
-			}
-
-			if err := seedClient.Get(ctx, client.ObjectKeyFromObject(resourceManagerDeployment), resourceManagerDeployment); err == nil {
-				resourceManagerDeploymentFound = true
-			} else if !apierrors.IsNotFound(err) {
-				return err
-			}
-
-			if resourceManagerDeploymentFound {
-				replicas = pointer.Int32Deref(resourceManagerDeployment.Spec.Replicas, replicas)
-				if replicas > 0 {
-					patch := client.MergeFrom(resourceManagerDeployment.DeepCopy())
-					resourceManagerDeployment.Spec.Replicas = pointer.Int32(0)
-					if err := seedClient.Patch(ctx, resourceManagerDeployment, patch); err != nil {
-						return fmt.Errorf("failed to scale gardener-resource-manager deployment to zero %q: %w", client.ObjectKeyFromObject(resourceManagerDeployment), err)
-					}
-				}
-			}
-
-			if err := controllerutils.RemoveAllFinalizers(ctx, seedClient, addonsMR); err != nil {
-				return fmt.Errorf("failed to remove finalizers from the ManagedResource %q: %w", client.ObjectKeyFromObject(addonsMR), err)
-			}
-
-			if err := seedClient.Get(ctx, client.ObjectKeyFromObject(addonsSecret), addonsSecret); err == nil {
-				if err := controllerutils.RemoveAllFinalizers(ctx, seedClient, addonsSecret); err != nil {
-					return fmt.Errorf("failed to remove finalizers from the Secret %q: %w", client.ObjectKeyFromObject(addonsSecret), err)
-				}
-			} else if !apierrors.IsNotFound(err) {
-				return err
-			}
-
-			if err := managedresources.DeleteForShoot(ctx, seedClient, namespace.Name, addonsMR.Name); err != nil {
-				return err
-			}
-
-			if resourceManagerDeploymentFound && replicas > 0 {
-				patch := client.MergeFrom(resourceManagerDeployment.DeepCopy())
-				resourceManagerDeployment.Spec.Replicas = &replicas
-				if err := seedClient.Patch(ctx, resourceManagerDeployment, patch); err != nil {
-					return fmt.Errorf("failed to scale gardener-resource-manager deployment back from zero %q: %w", client.ObjectKeyFromObject(resourceManagerDeployment), err)
-				}
 			}
 
 			return nil

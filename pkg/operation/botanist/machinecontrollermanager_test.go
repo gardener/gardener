@@ -20,10 +20,10 @@ import (
 
 	"github.com/Masterminds/semver"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,7 +40,6 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 )
@@ -92,18 +91,9 @@ var _ = Describe("MachineControllerManager", func() {
 			Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 		})
 
-		It("should return an error because the image cannot be found", func() {
-			botanist.ImageVector = imagevector.ImageVector{}
-
-			machineControllerManager, err := botanist.DefaultMachineControllerManager(ctx)
-			Expect(machineControllerManager).To(BeNil())
-			Expect(err).To(HaveOccurred())
-		})
-
 		DescribeTable("it should successfully create a machine-controller-manager interface",
 			func(expectedReplicas int, prepTest func()) {
 				kubernetesClient.EXPECT().Client().Return(fakeClient).Times(2)
-				botanist.ImageVector = imagevector.ImageVector{{Name: "machine-controller-manager"}}
 
 				if prepTest != nil {
 					prepTest()

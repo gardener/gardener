@@ -73,7 +73,7 @@ func Add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 	if args.IgnoreOperationAnnotation {
 		if err := ctrl.Watch(
 			&source.Kind{Type: &extensionsv1alpha1.Cluster{}},
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), ClusterToControlPlaneMapper(ctx, mgr, predicates), mapper.UpdateWithNew, ctrl.GetLogger()),
+			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), ClusterToControlPlaneMapper(mgr, predicates), mapper.UpdateWithNew, ctrl.GetLogger()),
 		); err != nil {
 			return err
 		}

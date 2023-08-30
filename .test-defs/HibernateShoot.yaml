@@ -1,3 +1,4 @@
+apiVersion: testmachinery.sapcloud.io
 kind: TestDefinition
 metadata:
   name: hibernate-shoot
@@ -16,4 +17,4 @@ spec:
     --project-namespace=$PROJECT_NAMESPACE
     --kubecfg="$TM_KUBECONFIG_PATH/gardener.config"
 
-  image: golang:1.20.6
+  image: golang:1.21.0

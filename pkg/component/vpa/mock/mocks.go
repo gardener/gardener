@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	vpa "github.com/gardener/gardener/pkg/component/vpa"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockInterface is a mock of Interface interface.

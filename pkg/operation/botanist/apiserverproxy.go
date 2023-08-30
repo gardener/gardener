@@ -17,19 +17,19 @@ package botanist
 import (
 	"context"
 
+	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component/apiserverproxy"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // DefaultAPIServerProxy returns a deployer for the apiserver-proxy.
 func (b *Botanist) DefaultAPIServerProxy() (apiserverproxy.Interface, error) {
-	image, err := b.ImageVector.FindImage(images.ImageNameApiserverProxy, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameApiserverProxy, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}
 
-	sidecarImage, err := b.ImageVector.FindImage(images.ImageNameApiserverProxySidecar, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	sidecarImage, err := imagevector.ImageVector().FindImage(imagevector.ImageNameApiserverProxySidecar, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}

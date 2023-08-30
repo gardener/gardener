@@ -16,7 +16,7 @@ package kernelconfig
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 	"strconv"
 
 	"k8s.io/component-helpers/node/util/sysctl"
@@ -64,11 +64,11 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	}
 
 	// Content should be in well-defined order
-	keys := []string{}
+	keys := make([]string, 0, len(newData))
 	for key := range newData {
 		keys = append(keys, key)
 	}
-	sort.Strings(keys)
+	slices.Sort(keys)
 	fileContent := ""
 	for _, key := range keys {
 		fileContent += fmt.Sprintf("%s = %s\n", key, newData[key])

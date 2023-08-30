@@ -130,6 +130,11 @@ type ShootSpec struct {
 	// ControlPlane contains general settings for the control plane of the shoot.
 	// +optional
 	ControlPlane *ControlPlane `json:"controlPlane,omitempty" protobuf:"bytes,20,opt,name=controlPlane"`
+	// SchedulerName is the name of the responsible scheduler which schedules the shoot.
+	// If not specified, the default scheduler takes over.
+	// This field is immutable.
+	// +optional
+	SchedulerName *string `json:"schedulerName,omitempty" protobuf:"bytes,21,opt,name=schedulerName"`
 }
 
 // GetProviderType gets the type of the provider.
@@ -711,7 +716,7 @@ type KubeAPIServerConfig struct {
 	WatchCacheSizes *WatchCacheSizes `json:"watchCacheSizes,omitempty" protobuf:"bytes,9,opt,name=watchCacheSizes"`
 	// Requests contains configuration for request-specific settings for the kube-apiserver.
 	// +optional
-	Requests *KubeAPIServerRequests `json:"requests,omitempty" protobuf:"bytes,10,opt,name=requests"`
+	Requests *APIServerRequests `json:"requests,omitempty" protobuf:"bytes,10,opt,name=requests"`
 	// EnableAnonymousAuthentication defines whether anonymous requests to the secure port
 	// of the API server should be allowed (flag `--anonymous-auth`).
 	// See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
@@ -723,7 +728,7 @@ type KubeAPIServerConfig struct {
 	EventTTL *metav1.Duration `json:"eventTTL,omitempty" protobuf:"bytes,12,opt,name=eventTTL"`
 	// Logging contains configuration for the log level and HTTP access logs.
 	// +optional
-	Logging *KubeAPIServerLogging `json:"logging,omitempty" protobuf:"bytes,13,opt,name=logging"`
+	Logging *APIServerLogging `json:"logging,omitempty" protobuf:"bytes,13,opt,name=logging"`
 	// DefaultNotReadyTolerationSeconds indicates the tolerationSeconds of the toleration for notReady:NoExecute
 	// that is added by default to every pod that does not already have such a toleration (flag `--default-not-ready-toleration-seconds`).
 	// The field has effect only when the `DefaultTolerationSeconds` admission plugin is enabled.
@@ -738,8 +743,8 @@ type KubeAPIServerConfig struct {
 	DefaultUnreachableTolerationSeconds *int64 `json:"defaultUnreachableTolerationSeconds,omitempty" protobuf:"varint,15,opt,name=defaultUnreachableTolerationSeconds"`
 }
 
-// KubeAPIServerLogging contains configuration for the logs level and http access logs
-type KubeAPIServerLogging struct {
+// APIServerLogging contains configuration for the logs level and http access logs
+type APIServerLogging struct {
 	// Verbosity is the kube-apiserver log verbosity level
 	// Defaults to 2.
 	// +optional
@@ -749,8 +754,8 @@ type KubeAPIServerLogging struct {
 	HTTPAccessVerbosity *int32 `json:"httpAccessVerbosity,omitempty" protobuf:"varint,2,opt,name=httpAccessVerbosity"`
 }
 
-// KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.
-type KubeAPIServerRequests struct {
+// APIServerRequests contains configuration for request-specific settings for the kube-apiserver.
+type APIServerRequests struct {
 	// MaxNonMutatingInflight is the maximum number of non-mutating requests in flight at a given time. When the server
 	// exceeds this, it rejects requests.
 	// +optional

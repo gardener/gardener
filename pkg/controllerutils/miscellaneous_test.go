@@ -16,14 +16,10 @@ package controllerutils_test
 
 import (
 	"strings"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	testclock "k8s.io/utils/clock/testing"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/controllerutils"
 )
@@ -114,26 +110,4 @@ var _ = Describe("controller", func() {
 			Entry("task in list", map[string]string{v1beta1constants.ShootTasks: "some-task" + "," + v1beta1constants.ShootTaskDeployInfrastructure}, "some-task", true),
 		)
 	})
-
-	var deletionTimestamp = metav1.Now()
-	DescribeTable("#ReconcileOncePer24hDuration",
-		func(objectMeta metav1.ObjectMeta, observedGeneration int64, lastOperation *gardencorev1beta1.LastOperation, expectedDuration time.Duration) {
-			fakeClock := testclock.NewFakeClock(time.Date(1, 1, 2, 1, 0, 0, 0, time.UTC))
-
-			oldRandomDuration := RandomDuration
-			defer func() { RandomDuration = oldRandomDuration }()
-			RandomDuration = func(time.Duration) time.Duration { return time.Minute }
-
-			Expect(ReconcileOncePer24hDuration(fakeClock, objectMeta, observedGeneration, lastOperation)).To(Equal(expectedDuration))
-		},
-
-		Entry("deletion timestamp set", metav1.ObjectMeta{DeletionTimestamp: &deletionTimestamp}, int64(0), nil, time.Duration(0)),
-		Entry("generation not equal observed generation", metav1.ObjectMeta{Generation: int64(1)}, int64(0), nil, time.Duration(0)),
-		Entry("operation annotation is set", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile}}, int64(0), nil, time.Duration(0)),
-		Entry("last operation is nil", metav1.ObjectMeta{}, int64(0), nil, time.Duration(0)),
-		Entry("last operation state is succeeded", metav1.ObjectMeta{}, int64(0), &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateSucceeded}, time.Duration(0)),
-		Entry("last operation type is not create or reconcile", metav1.ObjectMeta{}, int64(0), &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateSucceeded, Type: gardencorev1beta1.LastOperationTypeRestore}, time.Duration(0)),
-		Entry("last reconciliation was more than 24h ago", metav1.ObjectMeta{}, int64(0), &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateSucceeded, Type: gardencorev1beta1.LastOperationTypeReconcile, LastUpdateTime: metav1.Time{Time: time.Date(1, 1, 1, 0, 30, 0, 0, time.UTC)}}, time.Duration(0)),
-		Entry("last reconciliation was not more than 24h ago", metav1.ObjectMeta{}, int64(0), &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateSucceeded, Type: gardencorev1beta1.LastOperationTypeReconcile, LastUpdateTime: metav1.Time{Time: time.Date(1, 1, 1, 1, 30, 0, 0, time.UTC)}}, time.Minute),
-	)
 })

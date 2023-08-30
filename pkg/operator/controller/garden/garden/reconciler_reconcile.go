@@ -96,8 +96,13 @@ func (r *Reconciler) reconcile(
 		}
 	}
 
+	wildcardCert, err := gardenerutils.GetWildcardCertificate(ctx, r.RuntimeClientSet.Client())
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	log.Info("Instantiating component deployers")
-	c, err := r.instantiateComponents(ctx, log, garden, secretsManager, targetVersion, kubernetes.NewApplier(r.RuntimeClientSet.Client(), r.RuntimeClientSet.Client().RESTMapper()))
+	c, err := r.instantiateComponents(ctx, log, garden, secretsManager, targetVersion, kubernetes.NewApplier(r.RuntimeClientSet.Client(), r.RuntimeClientSet.Client().RESTMapper()), wildcardCert)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -118,16 +123,20 @@ func (r *Reconciler) reconcile(
 			Fn:   c.etcdCRD.Deploy,
 		})
 		deployVPACRD = g.Add(flow.Task{
-			Name: "Deploying custom resource definition for VPA",
+			Name: "Deploying custom resource definitions for VPA",
 			Fn:   flow.TaskFn(c.vpaCRD.Deploy).DoIf(vpaEnabled(garden.Spec.RuntimeCluster.Settings)),
 		})
 		reconcileHVPACRD = g.Add(flow.Task{
-			Name: "Reconciling custom resource definition for HVPA",
+			Name: "Reconciling custom resource definitions for HVPA",
 			Fn:   c.hvpaCRD.Deploy,
 		})
 		deployIstioCRD = g.Add(flow.Task{
-			Name: "Deploying custom resource definition for Istio",
+			Name: "Deploying custom resource definitions for Istio",
 			Fn:   c.istioCRD.Deploy,
+		})
+		deployFluentCRD = g.Add(flow.Task{
+			Name: "Deploying custom resource definitions for fluent-operator",
+			Fn:   c.fluentCRD.Deploy,
 		})
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying and waiting for gardener-resource-manager to be healthy",
@@ -164,14 +173,39 @@ func (r *Reconciler) reconcile(
 			Fn:           component.OpWait(c.istio).Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
+		deployFluentOperator = g.Add(flow.Task{
+			Name:         "Deploying fluent-operator",
+			Fn:           c.fluentOperator.Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployFluentCRD),
+		})
+		deployFluentOperatorCustomResources = g.Add(flow.Task{
+			Name:         "Deploying fluent-operator CustomResources",
+			Fn:           c.fluentOperatorCustomResources.Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployFluentCRD),
+		})
+		deployFluentBit = g.Add(flow.Task{
+			Name:         "Deploying fluent-bit",
+			Fn:           c.fluentBit.Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployFluentCRD),
+		})
+		deployVali = g.Add(flow.Task{
+			Name:         "Deploying Vali",
+			Fn:           c.vali.Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+		})
 		syncPointSystemComponents = flow.NewTaskIDs(
 			generateGenericTokenKubeconfig,
 			deploySystemResources,
+			deployFluentCRD,
 			deployVPA,
 			deployHVPA,
 			deployEtcdDruid,
 			deployIstio,
 			deployNginxIngressController,
+			deployFluentOperator,
+			deployFluentOperatorCustomResources,
+			deployFluentBit,
+			deployVali,
 		)
 
 		deployEtcds = g.Add(flow.Task{
@@ -226,7 +260,7 @@ func (r *Reconciler) reconcile(
 		})
 		deployVirtualGardenGardenerAccess = g.Add(flow.Task{
 			Name:         "Deploying resources for gardener-operator access to virtual garden",
-			Fn:           c.virtualGardenGardenerAccess.Deploy,
+			Fn:           component.OpWait(c.virtualGardenGardenerAccess).Deploy,
 			Dependencies: flow.NewTaskIDs(waitUntilVirtualGardenGardenerResourceManagerIsReady),
 		})
 		renewVirtualClusterAccess = g.Add(flow.Task{
@@ -268,7 +302,7 @@ func (r *Reconciler) reconcile(
 		_ = g.Add(flow.Task{
 			Name: "Snapshotting ETCD after secrets were re-encrypted with new ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return secretsrotation.SnapshotETCDAfterRewritingEncryptedData(ctx, r.RuntimeClientSet.Client(), r.snapshotETCDFunc(secretsManager, c.etcdMain), r.GardenNamespace, namePrefix)
+				return secretsrotation.SnapshotETCDAfterRewritingEncryptedData(ctx, r.RuntimeClientSet.Client(), r.snapshotETCDFunc(secretsManager, c.etcdMain), r.GardenNamespace, namePrefix+v1beta1constants.DeploymentNameKubeAPIServer)
 			}).
 				DoIf(allowBackup && helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationPreparing),
 			Dependencies: flow.NewTaskIDs(rewriteSecretsAddLabel),
@@ -276,7 +310,7 @@ func (r *Reconciler) reconcile(
 		_ = g.Add(flow.Task{
 			Name: "Removing label from secrets after rotation of ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return secretsrotation.RewriteEncryptedDataRemoveLabel(ctx, log, r.RuntimeClientSet.Client(), virtualClusterClient, r.GardenNamespace, namePrefix, corev1.SchemeGroupVersion.WithKind("SecretList"))
+				return secretsrotation.RewriteEncryptedDataRemoveLabel(ctx, log, r.RuntimeClientSet.Client(), virtualClusterClient, r.GardenNamespace, namePrefix+v1beta1constants.DeploymentNameKubeAPIServer, corev1.SchemeGroupVersion.WithKind("SecretList"))
 			}).
 				RetryUntilTimeout(30*time.Second, 10*time.Minute).
 				DoIf(helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationCompleting),
@@ -286,6 +320,11 @@ func (r *Reconciler) reconcile(
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Kube State Metrics",
 			Fn:           c.kubeStateMetrics.Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying Plutono",
+			Fn:           c.plutono.Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
 	)

@@ -23,7 +23,6 @@ import (
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/util"
@@ -33,13 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-var diskSizeRegexp *regexp.Regexp
-
-func init() {
-	regexp, err := regexp.Compile(`^(\d+)`)
-	utilruntime.Must(err)
-	diskSizeRegexp = regexp
-}
+var diskSizeRegex = regexp.MustCompile(`^(\d+)`)
 
 // MachineDeployment holds information about the name, class, replicas of a MachineDeployment
 // managed by the machine-controller-manager.
@@ -166,8 +159,7 @@ func WorkerPoolHash(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontr
 		}
 	}
 
-	// Do not consider the shoot annotations here to prevent unintended node roll-outs.
-	if helper.IsNodeLocalDNSEnabled(cluster.Shoot.Spec.SystemComponents, map[string]string{}) {
+	if helper.IsNodeLocalDNSEnabled(cluster.Shoot.Spec.SystemComponents) {
 		data = append(data, "node-local-dns")
 	}
 
@@ -238,7 +230,7 @@ func DistributePositiveIntOrPercent(zoneIndex int32, intOrPercent intstr.IntOrSt
 // DiskSize extracts the numerical component of DiskSize strings, i.e. strings like "10Gi" and
 // returns it as string, i.e. "10" will be returned.
 func DiskSize(size string) (int, error) {
-	i, err := strconv.Atoi(diskSizeRegexp.FindString(size))
+	i, err := strconv.Atoi(diskSizeRegex.FindString(size))
 	if err != nil {
 		return -1, err
 	}

@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	. "github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 )
 
@@ -358,6 +359,16 @@ var _ = Describe("References", func() {
 					},
 				},
 			}
+			managedResourceV1alpha1 = &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: annotations,
+				},
+				Spec: resourcesv1alpha1.ManagedResourceSpec{
+					SecretRefs: []corev1.LocalObjectReference{
+						{Name: secret2}, {Name: secret5},
+					},
+				},
+			}
 		)
 
 		It("should do nothing because object is not handled", func() {
@@ -456,6 +467,18 @@ var _ = Describe("References", func() {
 					Expect(cronJob.Annotations).To(Equal(expectedAnnotationsWithExisting))
 					Expect(cronJob.Spec.JobTemplate.Annotations).To(Equal(expectedAnnotationsWithoutExisting))
 					Expect(cronJob.Spec.JobTemplate.Spec.Template.Annotations).To(Equal(expectedAnnotationsWithoutExisting))
+				},
+			),
+			Entry("resourcesv1alpha1.ManagedResource",
+				managedResourceV1alpha1,
+				func() {
+					Expect(managedResourceV1alpha1.Annotations).To(Equal(map[string]string{
+						"some-existing":                    "annotation",
+						AnnotationKey(KindSecret, secret2): secret2,
+						AnnotationKey(KindSecret, secret5): secret5,
+						additionalAnnotation1:              "",
+						additionalAnnotation2:              "",
+					}))
 				},
 			),
 		)

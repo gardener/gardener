@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	"github.com/gardener/gardener/extensions/pkg/controller/healthcheck"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	extensionsworkerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -61,6 +62,7 @@ type genericActuator struct {
 	gardenerClientset    kubernetesclient.Interface
 	chartApplier         kubernetesclient.ChartApplier
 	chartRendererFactory extensionscontroller.ChartRendererFactory
+	errorCodeCheckFunc   healthcheck.ErrorCodeCheckFunc
 }
 
 // NewActuator creates a new Actuator that reconciles
@@ -75,6 +77,7 @@ func NewActuator(
 	mcmShootChart chart.Interface,
 	imageVector imagevector.ImageVector,
 	chartRendererFactory extensionscontroller.ChartRendererFactory,
+	errorCodeCheckFunc healthcheck.ErrorCodeCheckFunc,
 ) (worker.Actuator, error) {
 	gardenerClientset, err := kubernetesclient.NewWithConfig(kubernetesclient.WithRESTConfig(mgr.GetConfig()))
 	if err != nil {
@@ -94,6 +97,7 @@ func NewActuator(
 		gardenerClientset:    gardenerClientset,
 		chartApplier:         gardenerClientset.ChartApplier(),
 		chartRendererFactory: chartRendererFactory,
+		errorCodeCheckFunc:   errorCodeCheckFunc,
 	}, nil
 }
 

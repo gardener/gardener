@@ -53,13 +53,12 @@ var (
 type ServiceValues struct {
 	// AnnotationsFunc is a function that returns annotations that should be added to the service.
 	AnnotationsFunc func() map[string]string
+	// NamePrefix is the prefix for the service name.
+	NamePrefix string
 	// TopologyAwareRoutingEnabled indicates whether topology-aware routing is enabled for the kube-apiserver service.
 	TopologyAwareRoutingEnabled bool
 	// RuntimeKubernetesVersion is the Kubernetes version of the runtime cluster.
 	RuntimeKubernetesVersion *semver.Version
-	// TODO(timuthy): Drop this annotation once the gardener-operator no longer needs to specify 'LoadBalancer' as type.
-	// ServiceType is the type of the Service.
-	ServiceType *corev1.ServiceType
 }
 
 // serviceValues configure the kube-apiserver service.
@@ -67,11 +66,10 @@ type ServiceValues struct {
 // from the outside.
 type serviceValues struct {
 	annotationsFunc             func() map[string]string
+	namePrefix                  string
 	topologyAwareRoutingEnabled bool
 	runtimeKubernetesVersion    *semver.Version
 	clusterIP                   string
-	// TODO(timuthy): Drop this annotation once the gardener-operator no longer needs to specify 'LoadBalancer' as type.
-	serviceType corev1.ServiceType
 }
 
 // NewService creates a new instance of DeployWaiter for the Service used to expose the kube-apiserver.
@@ -79,8 +77,8 @@ type serviceValues struct {
 func NewService(
 	log logr.Logger,
 	cl client.Client,
+	namespace string,
 	values *ServiceValues,
-	serviceKeyFunc func() client.ObjectKey,
 	sniServiceKeyFunc func() client.ObjectKey,
 	waiter retry.Ops,
 	clusterIPFunc func(clusterIP string),
@@ -103,7 +101,6 @@ func NewService(
 		internalValues = &serviceValues{
 			annotationsFunc: func() map[string]string { return map[string]string{} },
 			clusterIP:       clusterIP,
-			serviceType:     corev1.ServiceTypeClusterIP,
 		}
 		loadBalancerServiceKeyFunc func() client.ObjectKey
 	)
@@ -111,10 +108,8 @@ func NewService(
 	if values != nil {
 		loadBalancerServiceKeyFunc = sniServiceKeyFunc
 
-		if values.ServiceType != nil {
-			internalValues.serviceType = *values.ServiceType
-		}
 		internalValues.annotationsFunc = values.AnnotationsFunc
+		internalValues.namePrefix = values.NamePrefix
 		internalValues.topologyAwareRoutingEnabled = values.TopologyAwareRoutingEnabled
 		internalValues.runtimeKubernetesVersion = values.RuntimeKubernetesVersion
 	}
@@ -122,8 +117,8 @@ func NewService(
 	return &service{
 		log:                        log,
 		client:                     cl,
+		namespace:                  namespace,
 		values:                     internalValues,
-		serviceKeyFunc:             serviceKeyFunc,
 		loadBalancerServiceKeyFunc: loadBalancerServiceKeyFunc,
 		waiter:                     waiter,
 		clusterIPFunc:              clusterIPFunc,
@@ -134,8 +129,8 @@ func NewService(
 type service struct {
 	log                        logr.Logger
 	client                     client.Client
+	namespace                  string
 	values                     *serviceValues
-	serviceKeyFunc             func() client.ObjectKey
 	loadBalancerServiceKeyFunc func() client.ObjectKey
 	waiter                     retry.Ops
 	clusterIPFunc              func(clusterIP string)
@@ -150,10 +145,9 @@ func (s *service) Deploy(ctx context.Context) error {
 		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.istio.io/exportTo", "*")
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(obj, networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(kubeapiserverconstants.Port), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)}))
 
-		// TODO(timuthy): Drop this annotation once the gardener-operator no longer specifies 'LoadBalancer' as service
-		//  type (then API servers are only exposed indirectly via Istio) and the NetworkPolicy controller in
-		//  gardener-resource-manager is enabled for all relevant namespaces in the seed cluster.
-		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, kubeapiserverconstants.Port))
+		// The 'from-world-to-ports' annotation was set in previous releases. Remove it here since it's not required any more.
+		// TODO(timuthy): Remove this code after v1.77 is released.
+		delete(obj.Annotations, resourcesv1alpha1.NetworkingFromWorldToPorts)
 
 		namespaceSelectors := []metav1.LabelSelector{
 			{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
@@ -178,7 +172,7 @@ func (s *service) Deploy(ctx context.Context) error {
 
 		gardenerutils.ReconcileTopologyAwareRoutingMetadata(obj, s.values.topologyAwareRoutingEnabled, s.values.runtimeKubernetesVersion)
 
-		obj.Spec.Type = s.values.serviceType
+		obj.Spec.Type = corev1.ServiceTypeClusterIP
 		obj.Spec.Selector = getLabels()
 		obj.Spec.Ports = kubernetesutils.ReconcileServicePorts(obj.Spec.Ports, []corev1.ServicePort{
 			{
@@ -187,7 +181,7 @@ func (s *service) Deploy(ctx context.Context) error {
 				Port:       kubeapiserverconstants.Port,
 				TargetPort: intstr.FromInt(kubeapiserverconstants.Port),
 			},
-		}, s.values.serviceType)
+		}, corev1.ServiceTypeClusterIP)
 		if obj.Spec.ClusterIP == "" && s.values.clusterIP != "" {
 			obj.Spec.ClusterIP = s.values.clusterIP
 		}
@@ -234,7 +228,7 @@ func (s *service) WaitCleanup(ctx context.Context) error {
 }
 
 func (s *service) emptyService() *corev1.Service {
-	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: s.serviceKeyFunc().Name, Namespace: s.serviceKeyFunc().Namespace}}
+	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: s.values.namePrefix + v1beta1constants.DeploymentNameKubeAPIServer, Namespace: s.namespace}}
 }
 
 func getLabels() map[string]string {

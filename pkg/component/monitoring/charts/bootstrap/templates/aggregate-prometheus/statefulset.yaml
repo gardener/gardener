@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: aggregate-prometheus
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: aggregate-prometheus
+    role: monitoring
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: aggregate-prometheus
+      role: monitoring
+  serviceName: aggregate-prometheus
+  template:
+    metadata:
+      labels:
+        app: aggregate-prometheus
+        role: monitoring
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-runtime-apiserver: allowed
+        networking.resources.gardener.cloud/to-all-seed-scrape-targets: allowed
+        networking.resources.gardener.cloud/to-istio-system-all-seed-scrape-targets: allowed
+        networking.resources.gardener.cloud/to-all-istio-ingresses-all-seed-scrape-targets: allowed
+        networking.resources.gardener.cloud/to-all-shoots-prometheus-web-tcp-9090: allowed
+    spec:
+      # used to talk to Seed's API server.
+      serviceAccountName: aggregate-prometheus
+      priorityClassName: gardener-system-600
+      containers:
+      - name: prometheus
+        image: {{ index .Values.global.images "prometheus" }}
+        imagePullPolicy: IfNotPresent
+        args:
+          - --config.file=/etc/prometheus/config/prometheus.yaml
+          - --storage.tsdb.path=/var/prometheus/data
+          - --storage.tsdb.no-lockfile
+          - --storage.tsdb.retention.time=30d
+          - --storage.tsdb.retention.size=15GB
+          - --web.enable-admin-api
+          - --web.listen-address=0.0.0.0:{{ .Values.aggregatePrometheus.port }}
+          - --web.enable-lifecycle
+        # Since v2.0.0-beta.3 prometheus runs as nobody user (fsGroup 65534/runAsUser 0)
+        # data volume needs to be mounted with the same permissions,
+        # otherwise we will have Permission denied problems
+        securityContext:
+          runAsUser: 0
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: {{ .Values.aggregatePrometheus.port }}
+            scheme: HTTP
+          failureThreshold: 60
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 3
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: {{ .Values.aggregatePrometheus.port }}
+            scheme: HTTP
+          failureThreshold: 120
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 3
+        resources:
+          {{- toYaml .Values.aggregatePrometheus.resources.prometheus | nindent 10 }}
+        volumeMounts:
+        - mountPath: /etc/prometheus/config
+          name: config
+          readOnly: true
+        - mountPath: /var/prometheus/data
+          name: prometheus-db
+          subPath: prometheus-
+        - mountPath: /etc/prometheus/rules
+          name: rules
+          readOnly: true
+      - name: prometheus-config-reloader
+        image: {{ index .Values.global.images "configmap-reloader" }}
+        imagePullPolicy: IfNotPresent
+        args:
+        - --reload-url=http://localhost:{{ .Values.aggregatePrometheus.port }}/-/reload
+        - --watched-dir=/etc/prometheus/config
+        - --watched-dir=/etc/prometheus/rules
+        resources:
+          {{- index .Values.prometheus.resources "prometheus-config-reloader" | toYaml | nindent 10 }}
+        volumeMounts:
+        - mountPath: /etc/prometheus/config
+          name: config
+          readOnly: true
+        - mountPath: /etc/prometheus/rules
+          name: rules
+          readOnly: true
+      terminationGracePeriodSeconds: 300
+      volumes:
+      - name: config
+        configMap:
+          defaultMode: 420
+          name: aggregate-prometheus-config
+      - name: rules
+        configMap:
+          defaultMode: 420
+          name: aggregate-prometheus-rules
+  volumeClaimTemplates:
+  - metadata:
+      name: prometheus-db
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: {{ .Values.aggregatePrometheus.storage }}

@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
 	openapinamer "k8s.io/apiserver/pkg/endpoints/openapi"
 	"k8s.io/apiserver/pkg/quota/v1/generic"
@@ -69,6 +70,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/openapi"
+	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
 // NewCommandStartGardenerAPIServer creates a *cobra.Command object with default parameters.
@@ -141,8 +143,8 @@ func NewOptions() *Options {
 		schema.GroupKind{Group: gardencorev1beta1.GroupName},
 	)
 	apiserver.RegisterAllAdmissionPlugins(o.Recommended.Admission.Plugins)
-	o.Recommended.Admission.DefaultOffPlugins = apiserver.DefaultOffPlugins
-	o.Recommended.Admission.RecommendedPluginOrder = apiserver.AllOrderedPlugins
+	o.Recommended.Admission.DefaultOffPlugins = sets.NewString(plugin.AllPluginNames()...).Difference(plugin.DefaultOnPlugins())
+	o.Recommended.Admission.RecommendedPluginOrder = plugin.AllPluginNames()
 
 	return o
 }

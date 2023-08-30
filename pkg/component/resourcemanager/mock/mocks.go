@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	resourcemanager "github.com/gardener/gardener/pkg/component/resourcemanager"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockInterface is a mock of Interface interface.

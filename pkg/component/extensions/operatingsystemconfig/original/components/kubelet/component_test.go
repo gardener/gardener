@@ -26,7 +26,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
@@ -67,7 +66,7 @@ var _ = Describe("Component", func() {
 				"blub": "bar",
 			}
 
-			cliFlags := CLIFlags(ctx.KubernetesVersion, ctx.NodeLabels, ctx.CRIName, ctx.Images[images.ImageNamePauseContainer], ctx.KubeletCLIFlags)
+			cliFlags := CLIFlags(ctx.KubernetesVersion, ctx.NodeLabels, ctx.CRIName, ctx.Images["pause-container"], ctx.KubeletCLIFlags)
 			units, files, err := component.Config(ctx)
 
 			Expect(err).NotTo(HaveOccurred())

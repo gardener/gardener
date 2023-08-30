@@ -272,6 +272,12 @@ spec:
                   - type
                   type: object
                 type: array
+              files:
+                description: Files is a list of file paths that are part of the generated
+                  Cloud Config and shall be written to the host's file system.
+                items:
+                  type: string
+                type: array
               lastError:
                 description: LastError holds information about the last occurred error
                   during an operation.

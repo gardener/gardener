@@ -18,9 +18,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
@@ -28,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 var _ = Describe("KubeStateMetrics", func() {
@@ -64,19 +63,9 @@ var _ = Describe("KubeStateMetrics", func() {
 		})
 
 		It("should successfully create a kube-state-metrics component", func() {
-			botanist.ImageVector = imagevector.ImageVector{{Name: "kube-state-metrics"}}
-
-			vpa, err := botanist.DefaultKubeStateMetrics()
-			Expect(vpa).NotTo(BeNil())
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should return an error because the image cannot be found", func() {
-			botanist.ImageVector = imagevector.ImageVector{}
-
 			ksm, err := botanist.DefaultKubeStateMetrics()
-			Expect(ksm).To(BeNil())
-			Expect(err).To(HaveOccurred())
+			Expect(ksm).NotTo(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 

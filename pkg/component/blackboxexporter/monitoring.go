@@ -84,6 +84,7 @@ tls_config:
 authorization:
   type: Bearer
   credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
+follow_redirects: false
 kubernetes_sd_configs:
 - role: service
   namespaces:

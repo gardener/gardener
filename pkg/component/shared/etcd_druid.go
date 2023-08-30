@@ -18,11 +18,11 @@ import (
 	"github.com/Masterminds/semver"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // NewEtcdDruid instantiates a new `etcd-druid` component.
@@ -30,7 +30,6 @@ func NewEtcdDruid(
 	c client.Client,
 	gardenNamespaceName string,
 	runtimeVersion *semver.Version,
-	imageVector imagevector.ImageVector,
 	imageVectorOverwrites map[string]string,
 	etcdConfig *config.ETCDConfig,
 	priorityClassName string,
@@ -38,7 +37,7 @@ func NewEtcdDruid(
 	component.DeployWaiter,
 	error,
 ) {
-	image, err := imageVector.FindImage(images.ImageNameEtcdDruid, imagevector.RuntimeVersion(runtimeVersion.String()), imagevector.TargetVersion(runtimeVersion.String()))
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameEtcdDruid, imagevectorutils.RuntimeVersion(runtimeVersion.String()), imagevectorutils.TargetVersion(runtimeVersion.String()))
 	if err != nil {
 		return nil, err
 	}

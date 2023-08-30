@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Masterminds/semver"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -78,7 +77,6 @@ func New(
 	image string,
 	replicas int32,
 	config *gardencorev1beta1.ClusterAutoscaler,
-	runtimeKubernetesVersion *semver.Version,
 ) Interface {
 	return &clusterAutoscaler{
 		client:         client,
@@ -352,7 +350,8 @@ func (c *clusterAutoscaler) emptyManagedResource() *resourcesv1alpha1.ManagedRes
 }
 
 func (c *clusterAutoscaler) emptyManagedResourceSecret() *corev1.Secret {
-	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedresources.SecretName(managedResourceTargetName, true), Namespace: c.namespace}}
+	// TODO(dimityrmirchev): Remove this once mr secrets are turned into garbage-collectable, immutable secrets, after Gardener v1.90
+	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-" + managedResourceTargetName, Namespace: c.namespace}}
 }
 
 func (c *clusterAutoscaler) computeCommand() []string {

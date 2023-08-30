@@ -148,7 +148,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		})
 	}
 
-	Context("Shoot with workers", func() {
+	Context("Shoot with workers", Label("basic"), func() {
 		test(e2e.DefaultShoot("e2e-default"))
 	})
 

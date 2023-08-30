@@ -16,6 +16,7 @@ package garbagecollector_test
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -64,7 +65,14 @@ var _ = BeforeSuite(func() {
 	log = logf.Log.WithName(testID)
 
 	By("Start test environment")
-	testEnv = &envtest.Environment{}
+	testEnv = &envtest.Environment{
+		CRDInstallOptions: envtest.CRDInstallOptions{
+			Paths: []string{
+				filepath.Join("..", "..", "..", "..", "example", "resource-manager", "10-crd-resources.gardener.cloud_managedresources.yaml"),
+			},
+		},
+		ErrorIfCRDPathMissing: true,
+	}
 
 	var err error
 	restConfig, err = testEnv.Start()
@@ -106,7 +114,8 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	Expect((&garbagecollector.Reconciler{
 		Config: config.GarbageCollectorControllerConfig{
-			SyncPeriod: &metav1.Duration{Duration: 100 * time.Millisecond},
+			SyncPeriod:               &metav1.Duration{Duration: 100 * time.Millisecond},
+			ConsiderManagedResources: pointer.Bool(true),
 		},
 		Clock:                 clock.RealClock{},
 		MinimumObjectLifetime: pointer.Duration(0),

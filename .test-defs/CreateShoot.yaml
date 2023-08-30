@@ -1,3 +1,4 @@
+apiVersion: testmachinery.sapcloud.io
 kind: TestDefinition
 metadata:
   name: create-shoot
@@ -36,9 +37,10 @@ spec:
     -start-hibernated=$START_HIBERNATED
     -allow-privileged-containers=$ALLOW_PRIVILEGED_CONTAINERS
     -annotations=$SHOOT_ANNOTATIONS
+    -control-plane-failure-tolerance=$CONTROL_PLANE_FAILURE_TOLERANCE
 #    -machine-image-name=$MACHINE_IMAGE
 #    -machine-image-version=$MACHINE_IMAGE_VERSION
 #    -machine-type=$MACHINE_TYPE
 #    -external-domain=
 
-  image: golang:1.20.6
+  image: golang:1.21.0

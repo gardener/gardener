@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -37,27 +38,41 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should default the seed settings (w/o taints)", func() {
+			var excessCapacityReservation = SeedSettingExcessCapacityReservation{
+				Configs: []SeedSettingExcessCapacityReservationConfig{
+					{Resources: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("2"), corev1.ResourceMemory: resource.MustParse("6Gi")}},
+				},
+			}
+
 			SetObjectDefaults_Seed(obj)
 
 			Expect(obj.Spec.Settings.DependencyWatchdog).NotTo(BeNil())
-			Expect(obj.Spec.Settings.ExcessCapacityReservation.Enabled).To(BeTrue())
+			Expect(obj.Spec.Settings.ExcessCapacityReservation).To(PointTo(Equal(excessCapacityReservation)))
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(BeTrue())
 			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(BeTrue())
 			Expect(obj.Spec.Settings.TopologyAwareRouting.Enabled).To(BeFalse())
 		})
 
 		It("should allow taints that were not allowed in version v1.12", func() {
-			taints := []SeedTaint{
-				{Key: "seed.gardener.cloud/disable-capacity-reservation"},
-				{Key: "seed.gardener.cloud/disable-dns"},
-				{Key: "seed.gardener.cloud/invisible"},
-			}
+			var (
+				excessCapacityReservation = SeedSettingExcessCapacityReservation{
+					Configs: []SeedSettingExcessCapacityReservationConfig{
+						{Resources: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("2"), corev1.ResourceMemory: resource.MustParse("6Gi")}},
+					},
+				}
+				taints = []SeedTaint{
+					{Key: "seed.gardener.cloud/disable-capacity-reservation"},
+					{Key: "seed.gardener.cloud/disable-dns"},
+					{Key: "seed.gardener.cloud/invisible"},
+				}
+			)
+
 			obj.Spec.Taints = taints
 
 			SetObjectDefaults_Seed(obj)
 
 			Expect(obj.Spec.Settings.DependencyWatchdog).NotTo(BeNil())
-			Expect(obj.Spec.Settings.ExcessCapacityReservation.Enabled).To(BeTrue())
+			Expect(obj.Spec.Settings.ExcessCapacityReservation).To(PointTo(Equal(excessCapacityReservation)))
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(BeTrue())
 			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(BeTrue())
 			Expect(obj.Spec.Settings.TopologyAwareRouting.Enabled).To(BeFalse())
@@ -70,9 +85,14 @@ var _ = Describe("Defaults", func() {
 				dwdWeederEnabled          = false
 				dwdProberEnabled          = false
 				topologyAwareRouting      = true
-				excessCapacityReservation = false
 				scheduling                = true
 				vpaEnabled                = false
+				excessCapacityReservation = SeedSettingExcessCapacityReservation{
+					Enabled: pointer.Bool(true),
+					Configs: []SeedSettingExcessCapacityReservationConfig{
+						{Resources: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("4"), corev1.ResourceMemory: resource.MustParse("16Gi")}},
+					},
+				}
 			)
 
 			obj.Spec.Settings = &SeedSettings{
@@ -83,7 +103,7 @@ var _ = Describe("Defaults", func() {
 				TopologyAwareRouting: &SeedSettingTopologyAwareRouting{
 					Enabled: topologyAwareRouting,
 				},
-				ExcessCapacityReservation: &SeedSettingExcessCapacityReservation{Enabled: excessCapacityReservation},
+				ExcessCapacityReservation: &excessCapacityReservation,
 				Scheduling:                &SeedSettingScheduling{Visible: scheduling},
 				VerticalPodAutoscaler:     &SeedSettingVerticalPodAutoscaler{Enabled: vpaEnabled},
 			}
@@ -92,7 +112,7 @@ var _ = Describe("Defaults", func() {
 
 			Expect(obj.Spec.Settings.DependencyWatchdog.Weeder.Enabled).To(Equal(dwdWeederEnabled))
 			Expect(obj.Spec.Settings.DependencyWatchdog.Prober.Enabled).To(Equal(dwdProberEnabled))
-			Expect(obj.Spec.Settings.ExcessCapacityReservation.Enabled).To(Equal(excessCapacityReservation))
+			Expect(obj.Spec.Settings.ExcessCapacityReservation).To(PointTo(Equal(excessCapacityReservation)))
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(Equal(scheduling))
 			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(Equal(vpaEnabled))
 			Expect(obj.Spec.Settings.TopologyAwareRouting.Enabled).To(Equal(topologyAwareRouting))
@@ -313,6 +333,22 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Kubernetes.Kubelet.SerializeImagePulls).To(PointTo(BeFalse()))
 		})
 
+		It("should default schedulerName", func() {
+			obj.Spec.SchedulerName = nil
+
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.SchedulerName).To(PointTo(Equal("default-scheduler")))
+		})
+
+		It("should not default schedulerName", func() {
+			obj.Spec.SchedulerName = pointer.String("foo-scheduler")
+
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.SchedulerName).To(PointTo(Equal("foo-scheduler")))
+		})
+
 		Context("default kubeReserved", func() {
 			var (
 				defaultKubeReservedMemory = resource.MustParse("1Gi")
@@ -518,7 +554,7 @@ var _ = Describe("Defaults", func() {
 				maxMutatingRequestsInflight    int32 = 456
 			)
 
-			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{Requests: &KubeAPIServerRequests{}}
+			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{Requests: &APIServerRequests{}}
 			obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxNonMutatingInflight = &maxNonMutatingRequestsInflight
 			obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxMutatingInflight = &maxMutatingRequestsInflight
 
@@ -558,7 +594,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not overwrite the log verbosity level", func() {
-			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{Logging: &KubeAPIServerLogging{Verbosity: pointer.Int32(3)}}
+			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{Logging: &APIServerLogging{Verbosity: pointer.Int32(3)}}
 			SetObjectDefaults_Shoot(obj)
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.Logging.Verbosity).To(PointTo(Equal(int32(3))))
 		})

@@ -1483,6 +1483,11 @@ func (in *OperatingSystemConfigStatus) DeepCopyInto(out *OperatingSystemConfigSt
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.Files != nil {
+		in, out := &in.Files, &out.Files
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

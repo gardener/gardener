@@ -109,6 +109,8 @@ type SeedStatus struct {
 	Allocatable corev1.ResourceList
 	// ClientCertificateExpirationTimestamp is the timestamp at which gardenlet's client certificate expires.
 	ClientCertificateExpirationTimestamp *metav1.Time
+	// LastOperation holds information about the last operation on the Seed.
+	LastOperation *LastOperation
 }
 
 // SeedBackup contains the object store configuration for backups for shoot (currently only etcd).
@@ -215,8 +217,20 @@ type SeedSettings struct {
 // SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the
 // seed.
 type SeedSettingExcessCapacityReservation struct {
-	// Enabled controls whether the excess capacity reservation should be enabled.
-	Enabled bool
+	// Enabled controls whether the default excess capacity reservation should be enabled. When not specified, the functionality is enabled.
+	Enabled *bool
+	// Configs configures excess capacity reservation deployments for shoot control planes in the seed.
+	Configs []SeedSettingExcessCapacityReservationConfig
+}
+
+// SeedSettingExcessCapacityReservationConfig configures excess capacity reservation deployments for shoot control planes in the seed.
+type SeedSettingExcessCapacityReservationConfig struct {
+	// Resources specify the resource requests and limits of the excess-capacity-reservation pod.
+	Resources corev1.ResourceList
+	// NodeSelector specifies the node where the excess-capacity-reservation pod should run.
+	NodeSelector map[string]string
+	// Tolerations specify the tolerations for the the excess-capacity-reservation pod.
+	Tolerations []corev1.Toleration
 }
 
 // SeedSettingScheduling controls settings for scheduling decisions for the seed.
@@ -350,9 +364,6 @@ type SeedVolumeProvider struct {
 const (
 	// SeedBackupBucketsReady is a constant for a condition type indicating that associated BackupBuckets are ready.
 	SeedBackupBucketsReady ConditionType = "BackupBucketsReady"
-	// SeedBootstrapped is a constant for a condition type indicating that the seed cluster has been
-	// bootstrapped.
-	SeedBootstrapped ConditionType = "Bootstrapped"
 	// SeedExtensionsReady is a constant for a condition type indicating that the extensions are ready.
 	SeedExtensionsReady ConditionType = "ExtensionsReady"
 	// SeedGardenletReady is a constant for a condition type indicating that the Gardenlet is ready.

@@ -237,6 +237,8 @@ For example, if you set it to `48`, then the `BackupEntry`s for deleted `Shoot`s
 Additionally, you can limit the [shoot purposes](../usage/shoot_purposes.md) for which this applies by setting `.controllers.backupEntry.deletionGracePeriodShootPurposes[]`.
 For example, if you set it to `[production]` then only the `BackupEntry`s for `Shoot`s with `.spec.purpose=production` will be deleted after the configured grace period. All others will be deleted immediately after the `Shoot` deletion.
 
+In case a `BackupEntry` is scheduled for future deletion but you want to delete it immediately, add the annotation `backupentry.core.gardener.cloud/force-deletion=true`.
+
 ### [`Bastion` Controller](../../pkg/gardenlet/controller/bastion)
 
 The `Bastion` controller reconciles those `operations.gardener.cloud/v1alpha1.Bastion` resources whose `.spec.seedName` value is equal to the name of a `Seed` the respective gardenlet is responsible for.
@@ -306,6 +308,14 @@ If there are no extension resources anymore, its status will be `False`.
 
 This condition is taken into account by the `ControllerRegistration` controller part of `gardener-controller-manager` when it computes which extensions have to be deployed to which seed cluster. See [Gardener Controller Manager](controller-manager.md#controllerregistration-controller) for more details.
 
+### [`ManagedSeed` Controller](../../pkg/gardenlet/controller/managedseed)
+
+The `ManagedSeed` controller in the `gardenlet` reconciles `ManagedSeed` that refers to `Shoot` scheduled on `Seed` the gardenlet is responsible for. Additionally, the controller monitors `Seed`s, which are owned by `ManagedSeed`s for which the gardenlet is responsible.
+
+On `ManagedSeed` reconciliation, the controller first waits for the referenced Shoot to undergo a reconciliation process. Once the Shoot is successfully reconciled, the controller sets the `ShootReconciled` status of the ManagedSeed to `true`. Then, it creates `garden` namespace within the target Shoot cluster. The controller also manages secrets related to Seeds, such as the `backup` and `kubeconfig` secrets. It ensures that these secrets are created and updated according to the ManagedSeed spec. Finally, it deploys the `gardenlet` within the specified Shoot cluster which registers the `Seed` cluster.
+
+On `ManagedSeed` deletion, the controller first deletes the corresponding `Seed` that was originally created by the controller. Subsequently, it deletes the `gardenlet` instance within the Shoot cluster. The controller also ensures the deletion of related Seed secrets. Finally, the dedicated `garden` namespace within the Shoot cluster is deleted.
+
 ### [`NetworkPolicy` Controller](../../pkg/gardenlet/controller/networkpolicy)
 
 The `NetworkPolicy` controller reconciles `NetworkPolicy`s in all relevant namespaces in the seed cluster and provides so-called "general" policies for access to the runtime cluster's API server, DNS, public networks, etc.
@@ -326,11 +336,11 @@ Those comprise CA certificates, the various `CustomResourceDefinition`s, the log
 The reconciler also deploys a `BackupBucket` resource in the garden cluster in case the `Seed'`s `.spec.backup` is set.
 It also checks whether the seed cluster's Kubernetes version is at least the [minimum supported version](../usage/supported_k8s_versions.md#seed-cluster-versions) and errors in case this constraint is not met.
 
-This reconciler maintains the `Bootstrapped` condition, i.e. it sets it:
+This reconciler maintains the `.status.lastOperation` field, i.e. it sets it:
 
-- to `Progressing` before it executes its reconciliation flow.
-- to `False` in case an error occurs.
-- to `True` in case the reconciliation succeeded.
+- to `state=Progressing` before it executes its reconciliation flow.
+- to `state=Error` in case an error occurs.
+- to `state=Succeeded` in case the reconciliation succeeded.
 
 #### "Care" Reconciler
 
@@ -400,11 +410,11 @@ This reconciler performs three "care" actions related to `Shoot`s.
 
 ##### Conditions
 
-It maintains five conditions and performs the following checks:
+It maintains the following conditions:
 
 - `APIServerAvailable`: The `/healthz` endpoint of the shoot's `kube-apiserver` is called and considered healthy when it responds with `200 OK`.
 - `ControlPlaneHealthy`: The control plane is considered healthy when the respective `Deployment`s (for example `kube-apiserver`,`kube-controller-manager`), and `Etcd`s (for example `etcd-main`) exist and are healthy.
-- `ObservabilityComponentsHealthy`: This condition is considered healthy when the respective `Deployment`s (for example `plutono`), `StatefulSet`s (for example `prometheus`,`vali`), exist and are healthy.
+- `ObservabilityComponentsHealthy`: This condition is considered healthy when the respective `Deployment`s (for example `plutono`) and `StatefulSet`s (for example `prometheus`,`vali`) exist and are healthy.
 - `EveryNodyReady`: The conditions of the worker nodes are checked (e.g., `Ready`, `MemoryPressure`). Also, it's checked whether the Kubernetes version of the installed `kubelet` matches the desired version specified in the `Shoot` resource.
 - `SystemComponentsHealthy`: The conditions of the `ManagedResource`s are checked (e.g., `ResourcesApplied`). Also, it is verified whether the VPN tunnel connection is established (which is required for the `kube-apiserver` to communicate with the worker nodes).
 

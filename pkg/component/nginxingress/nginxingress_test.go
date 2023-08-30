@@ -23,6 +23,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -570,12 +571,11 @@ status: {}
 				nginxIngress = New(c, namespace, values)
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
 
 				Expect(nginxIngress.Deploy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-				Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
+				expectedMr := &resourcesv1alpha1.ManagedResource{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
 						Kind:       "ManagedResource",
@@ -589,15 +589,19 @@ status: {}
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						Class: pointer.String("seed"),
 						SecretRefs: []corev1.LocalObjectReference{{
-							Name: managedResourceSecret.Name,
+							Name: managedResource.Spec.SecretRefs[0].Name,
 						}},
 						KeepObjects: pointer.Bool(false),
 					},
-				}))
+				}
+				utilruntime.Must(references.InjectAnnotations(expectedMr))
+				Expect(managedResource).To(DeepEqual(expectedMr))
 
+				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(13))
+				Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_seed_nginx-ingress.yaml"])).To(Equal(clusterRoleYAML))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_seed_nginx-ingress.yaml"])).To(Equal(clusterRoleBindingYAML))
@@ -1184,12 +1188,11 @@ status: {}
 				nginxIngress = New(c, namespace, values)
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 
 				Expect(nginxIngress.Deploy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-				Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
+				expectedMr := &resourcesv1alpha1.ManagedResource{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
 						Kind:       "ManagedResource",
@@ -1203,14 +1206,19 @@ status: {}
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 						SecretRefs: []corev1.LocalObjectReference{{
-							Name: managedResourceSecret.Name,
+							Name: managedResource.Spec.SecretRefs[0].Name,
 						}},
 						KeepObjects: pointer.Bool(false),
 					},
-				}))
+				}
+				utilruntime.Must(references.InjectAnnotations(expectedMr))
+				Expect(managedResource).To(DeepEqual(expectedMr))
 
+				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__addons-nginx-ingress.yaml"])).To(Equal(serviceAccountYAML))
 				Expect(string(managedResourceSecret.Data["clusterrole____addons-nginx-ingress.yaml"])).To(Equal(clusterRoleYAML))

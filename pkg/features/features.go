@@ -76,6 +76,21 @@ const (
 	// owner: @voelzmo, @andrerun
 	// alpha: v1.73.0
 	DisableScalingClassesForShoots featuregate.Feature = "DisableScalingClassesForShoots"
+
+	// ContainerdRegistryHostsDir enables registry configuration in containerd based on the hosts directory pattern.
+	// The hosts directory pattern is the new way of configuring registries/mirrors in containerd.
+	// Ref https://github.com/containerd/containerd/blob/main/docs/hosts.md.
+	// When this feature gate is enabled, gardenlet adds the following config to containerd's config.toml:
+	//
+	// [plugins."io.containerd.grpc.v1.cri".registry] # gardener-managed
+	//   config_path = "/etc/containerd/certs.d"
+	//
+	// This config allows registries to be configured by creating new hosts.toml files under the predefined
+	// /etc/containerd/certs.d directory.
+	//
+	// owner: @ialidzhikov, @dimitar-kostadinov
+	// alpha: v1.77.0
+	ContainerdRegistryHostsDir featuregate.Feature = "ContainerdRegistryHostsDir"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -101,7 +116,8 @@ const (
 // feature gate map for gardener-apiserver. Hence, we reuse it for all our components.
 var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 
-var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
+// AllFeatureGates is the list of all feature gates.
+var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	HVPA:                               {Default: false, PreRelease: featuregate.Alpha},
 	HVPAForShootedSeed:                 {Default: false, PreRelease: featuregate.Alpha},
 	DefaultSeccompProfile:              {Default: false, PreRelease: featuregate.Alpha},
@@ -111,6 +127,7 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	WorkerlessShoots:                   {Default: false, PreRelease: featuregate.Alpha},
 	MachineControllerManagerDeployment: {Default: false, PreRelease: featuregate.Alpha},
 	DisableScalingClassesForShoots:     {Default: false, PreRelease: featuregate.Alpha},
+	ContainerdRegistryHostsDir:         {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
@@ -118,7 +135,7 @@ func GetFeatures(featureGates ...featuregate.Feature) map[featuregate.Feature]fe
 	out := make(map[featuregate.Feature]featuregate.FeatureSpec)
 
 	for _, fg := range featureGates {
-		if spec, ok := allFeatureGates[fg]; ok {
+		if spec, ok := AllFeatureGates[fg]; ok {
 			out[fg] = spec
 		}
 	}

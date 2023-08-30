@@ -15,6 +15,8 @@
 package executor_test
 
 import (
+	"strings"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -37,6 +39,7 @@ var _ = Describe("Executor", func() {
 			cloudConfigExecutionMaxDelaySeconds int
 			hyperkubeImage                      *imagevector.Image
 			reloadConfigCommand                 string
+			files                               []string
 			units                               []string
 
 			defaultKubeletDataVolume     = &gardencorev1beta1.DataVolume{VolumeSize: "64Gi"}
@@ -48,6 +51,10 @@ var _ = Describe("Executor", func() {
 			cloudConfigExecutionMaxDelaySeconds = 300
 			hyperkubeImage = &imagevector.Image{Repository: "bar", Tag: pointer.String("v1.0")}
 			reloadConfigCommand = "/var/bin/reload"
+			files = []string{
+				"f1",
+				"f2",
+			}
 			units = []string{
 				docker.UnitName,
 				"unit1",
@@ -61,9 +68,9 @@ var _ = Describe("Executor", func() {
 
 		DescribeTable("should correctly render the executor script",
 			func(kubernetesVersion string, copyKubernetesBinariesFn func(*imagevector.Image) string, kubeletDataVol *gardencorev1beta1.DataVolume, kubeletDataVolSize *string) {
-				script, err := executor.Script(cloudConfigUserData, cloudConfigExecutionMaxDelaySeconds, hyperkubeImage, kubernetesVersion, kubeletDataVol, reloadConfigCommand, units)
+				script, err := executor.Script(cloudConfigUserData, cloudConfigExecutionMaxDelaySeconds, hyperkubeImage, kubernetesVersion, kubeletDataVol, reloadConfigCommand, units, files)
 				Expect(err).ToNot(HaveOccurred())
-				testScript := scriptFor(cloudConfigUserData, hyperkubeImage, kubernetesVersion, copyKubernetesBinariesFn, kubeletDataVolSize, reloadConfigCommand, units)
+				testScript := scriptFor(cloudConfigUserData, hyperkubeImage, kubernetesVersion, copyKubernetesBinariesFn, kubeletDataVolSize, reloadConfigCommand, units, files)
 				Expect(string(script)).To(Equal(testScript))
 			},
 
@@ -74,7 +81,7 @@ var _ = Describe("Executor", func() {
 		It("should return an error because the data volume size cannot be parsed", func() {
 			kubeletDataVolume := &gardencorev1beta1.DataVolume{VolumeSize: "not-parsable"}
 
-			script, err := executor.Script(cloudConfigUserData, cloudConfigExecutionMaxDelaySeconds, hyperkubeImage, "1.2.3", kubeletDataVolume, reloadConfigCommand, units)
+			script, err := executor.Script(cloudConfigUserData, cloudConfigExecutionMaxDelaySeconds, hyperkubeImage, "1.2.3", kubeletDataVolume, reloadConfigCommand, units, files)
 			Expect(script).To(BeNil())
 			Expect(err).To(MatchError(ContainSubstring("quantities must match the regular expression")))
 		})
@@ -117,6 +124,7 @@ func scriptFor(
 	kubeletDataVolumeSize *string,
 	reloadConfigCommand string,
 	units []string,
+	files []string,
 ) string {
 	headerPart := `#!/bin/bash -eu
 
@@ -124,6 +132,8 @@ PATH_CLOUDCONFIG_DOWNLOADER_SERVER="/var/lib/cloud-config-downloader/credentials
 PATH_CLOUDCONFIG_DOWNLOADER_CA_CERT="/var/lib/cloud-config-downloader/credentials/ca.crt"
 PATH_CLOUDCONFIG="/var/lib/cloud-config-downloader/downloads/cloud_config"
 PATH_CLOUDCONFIG_OLD="${PATH_CLOUDCONFIG}.old"
+PATH_CLOUDCONFIG_FILES="/var/lib/cloud-config-downloader/downloads/cloud_config_files"
+PATH_CLOUDCONFIG_FILES_OLD="${PATH_CLOUDCONFIG}_files.old"
 PATH_CHECKSUM="/var/lib/cloud-config-downloader/downloads/execute-cloud-config-checksum"
 PATH_CCD_SCRIPT="/var/lib/cloud-config-downloader/download-cloud-config.sh"
 PATH_CCD_SCRIPT_CHECKSUM="/var/lib/cloud-config-downloader/download-cloud-config.md5"
@@ -136,6 +146,20 @@ PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBELET="/opt/bin/hyperkube_image_used_f
 PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBECTL="/opt/bin/hyperkube_image_used_for_last_copy_of_kubectl"
 
 mkdir -p "/var/lib/kubelet" "$PATH_HYPERKUBE_DOWNLOADS"
+
+delete_orphan_files() {
+  if [[ ! -f "$PATH_CLOUDCONFIG_FILES_OLD" ]]; then
+    touch "$PATH_CLOUDCONFIG_FILES_OLD"
+  fi
+  cat << 'EOF' > "$PATH_CLOUDCONFIG_FILES"
+` + strings.Join(files, "\n") + `
+EOF
+  # sort for join to work
+  sort -o "$PATH_CLOUDCONFIG_FILES" "$PATH_CLOUDCONFIG_FILES"
+  # calculates old_files - new_files and deletes them
+  join -t $'\n' -v 1 "$PATH_CLOUDCONFIG_FILES_OLD" "$PATH_CLOUDCONFIG_FILES" | xargs -L1 rm -vf
+  mv "$PATH_CLOUDCONFIG_FILES" "$PATH_CLOUDCONFIG_FILES_OLD"
+}
 
 `
 
@@ -375,6 +399,7 @@ if ! diff "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD" >/dev/null || \
     echo "failed to apply the cloud config."
     exit 1
   fi
+  delete_orphan_files
 fi
 
 echo "Cloud config is up to date."

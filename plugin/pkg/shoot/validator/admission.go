@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -40,7 +41,6 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/utils/pointer"
-	"k8s.io/utils/strings/slices"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
@@ -53,19 +53,15 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
+	plugin "github.com/gardener/gardener/plugin/pkg"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 )
 
-const (
-	// PluginName is the name of this admission plugin.
-	PluginName = "ShootValidator"
-
-	internalVersionErrorMsg = "must not use apiVersion 'internal'"
-)
+const internalVersionErrorMsg = "must not use apiVersion 'internal'"
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(PluginName, func(config io.Reader) (admission.Interface, error) {
+	plugins.Register(plugin.PluginNameShootValidator, func(config io.Reader) (admission.Interface, error) {
 		return New()
 	})
 }

@@ -23,10 +23,10 @@ import (
 
 	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
-	"github.com/golang/mock/gomock"
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -140,6 +140,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						Architecture: pointer.String(v1beta1constants.ArchitectureAMD64),
 						Image: &gardencorev1beta1.ShootMachineImage{
 							Name:           "type1",
+							Version:        pointer.String("1.2.3"),
 							ProviderConfig: &runtime.RawExtension{Raw: []byte(`{"foo":"bar"}`)},
 						},
 					},
@@ -150,7 +151,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 					Machine: gardencorev1beta1.Machine{
 						Architecture: pointer.String(v1beta1constants.ArchitectureAMD64),
 						Image: &gardencorev1beta1.ShootMachineImage{
-							Name: "type2",
+							Name:    "type2",
+							Version: pointer.String("1.2.3"),
 						},
 					},
 					CRI: &gardencorev1beta1.CRI{
@@ -322,6 +324,11 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 		Describe("#Deploy", func() {
 			It("should successfully deploy the shoot access secret for the cloud config downloader", func() {
+				defer test.WithVars(
+					&DownloaderConfigFn, downloaderConfigFn,
+					&OriginalConfigFn, originalConfigFn,
+				)()
+
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 				secret := &corev1.Secret{}

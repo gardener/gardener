@@ -17,7 +17,6 @@ package managedseed
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -33,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -45,6 +45,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
+	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -67,7 +68,6 @@ type actuator struct {
 	clock                clock.Clock
 	vp                   ValuesHelper
 	recorder             record.EventRecorder
-	chartsPath           string
 	gardenNamespaceShoot string
 }
 
@@ -80,7 +80,6 @@ func newActuator(
 	clock clock.Clock,
 	vp ValuesHelper,
 	recorder record.EventRecorder,
-	chartsPath string,
 	gardenNamespaceShoot string,
 ) Actuator {
 	return &actuator{
@@ -92,7 +91,6 @@ func newActuator(
 		clock:                clock,
 		vp:                   vp,
 		recorder:             recorder,
-		chartsPath:           chartsPath,
 		gardenNamespaceShoot: gardenNamespaceShoot,
 	}
 }
@@ -410,7 +408,7 @@ func (a *actuator) deployGardenlet(
 	}
 
 	// Apply gardenlet chart
-	if err := shootClient.ChartApplier().Apply(ctx, filepath.Join(a.chartsPath, "gardener", "gardenlet"), a.gardenNamespaceShoot, "gardenlet", kubernetes.Values(values)); err != nil {
+	if err := shootClient.ChartApplier().ApplyFromEmbeddedFS(ctx, charts.ChartGardenlet, charts.ChartPathGardenlet, a.gardenNamespaceShoot, "gardenlet", kubernetes.Values(values)); err != nil {
 		return err
 	}
 
@@ -452,7 +450,7 @@ func (a *actuator) deleteGardenlet(
 	}
 
 	// Delete gardenlet chart
-	return shootClient.ChartApplier().Delete(ctx, filepath.Join(a.chartsPath, "gardener", "gardenlet"), a.gardenNamespaceShoot, "gardenlet", kubernetes.Values(values))
+	return shootClient.ChartApplier().DeleteFromEmbeddedFS(ctx, charts.ChartGardenlet, charts.ChartPathGardenlet, a.gardenNamespaceShoot, "gardenlet", kubernetes.Values(values))
 }
 
 func (a *actuator) getGardenletDeployment(ctx context.Context, shootClient kubernetes.Interface) (*appsv1.Deployment, error) {
@@ -490,9 +488,13 @@ func (a *actuator) reconcileSeedSecrets(ctx context.Context, log logr.Logger, sp
 
 	// If backup is specified, create or update the backup secret if it doesn't exist or is owned by the managed seed
 	if spec.Backup != nil {
+		var checksum string
+
 		// Get backup secret
 		backupSecret, err := kubernetesutils.GetSecretByReference(ctx, a.gardenClient, &spec.Backup.SecretRef)
-		if client.IgnoreNotFound(err) != nil {
+		if err == nil {
+			checksum = utils.ComputeSecretChecksum(backupSecret.Data)[:8]
+		} else if client.IgnoreNotFound(err) != nil {
 			return err
 		}
 
@@ -511,7 +513,14 @@ func (a *actuator) reconcileSeedSecrets(ctx context.Context, log logr.Logger, sp
 			}); err != nil {
 				return err
 			}
+
+			checksum = utils.ComputeSecretChecksum(secret.Data)[:8]
 		}
+
+		// Inject backup-secret hash into the pod annotations
+		managedSeed.Spec.Gardenlet.Deployment.PodAnnotations = utils.MergeStringMaps[string](managedSeed.Spec.Gardenlet.Deployment.PodAnnotations, map[string]string{
+			"checksum/seed-backup-secret": spec.Backup.SecretRef.Name + "-" + checksum,
+		})
 	}
 
 	// If secret reference is specified and the static token kubeconfig is enabled,

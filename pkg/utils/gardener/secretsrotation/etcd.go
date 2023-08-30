@@ -72,8 +72,8 @@ func RewriteEncryptedDataRemoveLabel(
 	log logr.Logger,
 	runtimeClient client.Client,
 	targetClient client.Client,
-	kubeAPIServerNamespace string,
-	namePrefix string,
+	namespace string,
+	name string,
 	gvks ...schema.GroupVersionKind,
 ) error {
 	if err := rewriteEncryptedData(
@@ -89,7 +89,7 @@ func RewriteEncryptedDataRemoveLabel(
 		return err
 	}
 
-	return PatchKubeAPIServerDeploymentMeta(ctx, runtimeClient, kubeAPIServerNamespace, namePrefix, func(meta *metav1.PartialObjectMetadata) {
+	return PatchAPIServerDeploymentMeta(ctx, runtimeClient, namespace, name, func(meta *metav1.PartialObjectMetadata) {
 		delete(meta.Annotations, AnnotationKeyEtcdSnapshotted)
 	})
 }
@@ -123,7 +123,7 @@ func rewriteEncryptedData(
 				patch := client.StrategicMergeFrom(obj.DeepCopy())
 				mutateObjectMeta(&obj.ObjectMeta)
 
-				// Wait until we are allowed by the limiter to not overload the kube-apiserver with too many requests.
+				// Wait until we are allowed by the limiter to not overload the API server with too many requests.
 				if err := limiter.Wait(ctx); err != nil {
 					return err
 				}
@@ -137,19 +137,19 @@ func rewriteEncryptedData(
 }
 
 // SnapshotETCDAfterRewritingEncryptedData performs a full snapshot on ETCD after the encrypted data (like secrets) have
-// been rewritten as part of the ETCD encryption secret rotation. It adds an annotation to the kube-apiserver deployment
+// been rewritten as part of the ETCD encryption secret rotation. It adds an annotation to the API server deployment
 // after it's done so that it does not take another snapshot again after it succeeded once.
 func SnapshotETCDAfterRewritingEncryptedData(
 	ctx context.Context,
 	runtimeClient client.Client,
 	snapshotEtcd func(ctx context.Context) error,
-	kubeAPIServerNamespace string,
-	namePrefix string,
+	namespace string,
+	name string,
 ) error {
 	// Check if we have to snapshot ETCD now that we have rewritten all encrypted data.
 	meta := &metav1.PartialObjectMetadata{}
 	meta.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
-	if err := runtimeClient.Get(ctx, kubernetesutils.Key(kubeAPIServerNamespace, namePrefix+v1beta1constants.DeploymentNameKubeAPIServer), meta); err != nil {
+	if err := runtimeClient.Get(ctx, kubernetesutils.Key(namespace, name), meta); err != nil {
 		return err
 	}
 
@@ -164,16 +164,16 @@ func SnapshotETCDAfterRewritingEncryptedData(
 	// If we have hit this point then we have snapshotted ETCD successfully. Now we can mark this step as "completed"
 	// (via an annotation) so that we do not trigger a snapshot again in a future reconciliation in case the current one
 	// fails after this step.
-	return PatchKubeAPIServerDeploymentMeta(ctx, runtimeClient, kubeAPIServerNamespace, namePrefix, func(meta *metav1.PartialObjectMetadata) {
+	return PatchAPIServerDeploymentMeta(ctx, runtimeClient, namespace, name, func(meta *metav1.PartialObjectMetadata) {
 		metav1.SetMetaDataAnnotation(&meta.ObjectMeta, AnnotationKeyEtcdSnapshotted, "true")
 	})
 }
 
-// PatchKubeAPIServerDeploymentMeta patches metadata of a Kubernetes API-Server deployment
-func PatchKubeAPIServerDeploymentMeta(ctx context.Context, c client.Client, namespace, namePrefix string, mutate func(deployment *metav1.PartialObjectMetadata)) error {
+// PatchAPIServerDeploymentMeta patches metadata of an API Server deployment.
+func PatchAPIServerDeploymentMeta(ctx context.Context, c client.Client, namespace, name string, mutate func(deployment *metav1.PartialObjectMetadata)) error {
 	meta := &metav1.PartialObjectMetadata{}
 	meta.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
-	if err := c.Get(ctx, kubernetesutils.Key(namespace, namePrefix+v1beta1constants.DeploymentNameKubeAPIServer), meta); err != nil {
+	if err := c.Get(ctx, kubernetesutils.Key(namespace, name), meta); err != nil {
 		return err
 	}
 

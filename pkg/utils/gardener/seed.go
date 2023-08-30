@@ -105,7 +105,7 @@ func hasExactUsages(usages, requiredUsages []certificatesv1.KeyUsage) bool {
 	return true
 }
 
-// GetWildcardCertificate gets the wildcard certificate for the seed's ingress domain.
+// GetWildcardCertificate gets the wildcard certificate for the ingress domain.
 // Nil is returned if no wildcard certificate is configured.
 func GetWildcardCertificate(ctx context.Context, c client.Client) (*corev1.Secret, error) {
 	wildcardCerts := &corev1.SecretList{}
@@ -119,7 +119,7 @@ func GetWildcardCertificate(ctx context.Context, c client.Client) (*corev1.Secre
 	}
 
 	if len(wildcardCerts.Items) > 1 {
-		return nil, fmt.Errorf("misconfigured seed cluster: not possible to provide more than one secret with annotation %s", v1beta1constants.GardenRoleControlPlaneWildcardCert)
+		return nil, fmt.Errorf("misconfigured cluster: not possible to provide more than one secret with annotation %s", v1beta1constants.GardenRoleControlPlaneWildcardCert)
 	}
 
 	if len(wildcardCerts.Items) == 1 {

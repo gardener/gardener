@@ -6,7 +6,7 @@ metadata:
   namespace: garden
 spec:
   targetRef:
-    apiVersion: {{ include "deploymentversion" . }}
+    apiVersion: apps/v1
     kind: Deployment
     name: gardener-admission-controller
   updatePolicy:

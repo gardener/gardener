@@ -33,6 +33,7 @@ import (
 	apiextensions "github.com/gardener/gardener/pkg/api/extensions"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -42,7 +43,6 @@ import (
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -294,7 +294,7 @@ func (h *Health) healthChecks(
 		h.log.Error(err, "Error getting extension conditions")
 	}
 
-	checker := NewHealthChecker(h.seedClient.Client(), h.clock, thresholdMappings, healthCheckOutdatedThreshold, gardenlethelper.GetManagedResourceProgressingThreshold(h.gardenletConfiguration), h.shoot.GetInfo().Status.LastOperation, h.shoot.KubernetesVersion, h.shoot.GardenerVersion)
+	checker := NewHealthChecker(h.seedClient.Client(), h.clock, thresholdMappings, healthCheckOutdatedThreshold, gardenlethelper.GetManagedResourceProgressingThreshold(h.gardenletConfiguration), h.shoot.GetInfo().Status.LastOperation, h.shoot.KubernetesVersion)
 
 	shootClient, apiServerRunning, err := h.initializeShootClients()
 	if err != nil || !apiServerRunning {
@@ -396,7 +396,7 @@ func (h *Health) checkObservabilityComponents(
 ) (*gardencorev1beta1.Condition, error) {
 	wantsAlertmanager := h.shoot.WantsAlertmanager
 	wantsShootMonitoring := gardenlethelper.IsMonitoringEnabled(h.gardenletConfiguration) && h.shoot.Purpose != gardencorev1beta1.ShootPurposeTesting
-	if exitCondition, err := checker.CheckMonitoringControlPlane(ctx, h.shoot.GetInfo(), h.shoot.SeedNamespace, wantsShootMonitoring, wantsAlertmanager, condition); err != nil || exitCondition != nil {
+	if exitCondition, err := checker.CheckShootMonitoringControlPlane(ctx, h.shoot.GetInfo(), h.shoot.SeedNamespace, wantsShootMonitoring, wantsAlertmanager, condition); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 
@@ -454,7 +454,7 @@ func (h *Health) checkSystemComponents(
 			return &c, nil
 		}
 
-		if established, err := botanist.CheckTunnelConnection(ctx, logr.Discard(), h.shootClient, common.VPNTunnel); err != nil || !established {
+		if established, err := botanist.CheckTunnelConnection(ctx, logr.Discard(), h.shootClient, v1beta1constants.VPNTunnel); err != nil || !established {
 			msg := "Tunnel connection has not been established"
 			if err != nil {
 				msg += fmt.Sprintf(" (%+v)", err)
@@ -478,11 +478,11 @@ func (h *Health) checkClusterNodes(
 	condition gardencorev1beta1.Condition,
 	extensionConditions []ExtensionCondition,
 ) (*gardencorev1beta1.Condition, error) {
-	if exitCondition, err := checker.CheckClusterNodes(ctx, shootClient, seedNamespace, h.shoot.GetInfo().Spec.Provider.Workers, condition); err != nil || exitCondition != nil {
-		return exitCondition, err
-	}
 	if exitCondition := checker.CheckExtensionCondition(condition, extensionConditions); exitCondition != nil {
 		return exitCondition, nil
+	}
+	if exitCondition, err := checker.CheckClusterNodes(ctx, shootClient, seedNamespace, h.shoot.GetInfo().Spec.Provider.Workers, condition); err != nil || exitCondition != nil {
+		return exitCondition, err
 	}
 
 	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "EveryNodeReady", "All nodes are ready.")

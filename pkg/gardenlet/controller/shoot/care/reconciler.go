@@ -38,7 +38,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 var (
@@ -61,7 +60,6 @@ type Reconciler struct {
 	ShootClientMap        clientmap.ClientMap
 	Config                config.GardenletConfiguration
 	Clock                 clock.Clock
-	ImageVector           imagevector.ImageVector
 	Identity              *gardencorev1beta1.Gardener
 	GardenClusterIdentity string
 	SeedName              string
@@ -152,7 +150,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		r.Identity,
 		r.GardenClusterIdentity,
 		r.gardenSecrets,
-		r.ImageVector,
 		shoot,
 	)
 	if err != nil {

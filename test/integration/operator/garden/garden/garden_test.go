@@ -17,7 +17,6 @@ package garden_test
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"time"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
@@ -38,16 +37,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/component/etcd"
+	"github.com/gardener/gardener/pkg/component/gardeneraccess"
+	"github.com/gardener/gardener/pkg/component/istio"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/component/kubeapiserverexposure"
 	"github.com/gardener/gardener/pkg/component/kubecontrollermanager"
+	"github.com/gardener/gardener/pkg/component/nginxingress"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -57,7 +58,7 @@ import (
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	gardencontroller "github.com/gardener/gardener/pkg/operator/controller/garden/garden"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -79,6 +80,8 @@ var _ = Describe("Garden controller tests", func() {
 		DeferCleanup(test.WithVars(
 			&etcd.DefaultInterval, 100*time.Millisecond,
 			&etcd.DefaultTimeout, 500*time.Millisecond,
+			&gardeneraccess.TimeoutWaitForManagedResource, 500*time.Millisecond,
+			&istio.TimeoutWaitForManagedResource, 500*time.Millisecond,
 			&kubeapiserverexposure.DefaultInterval, 100*time.Millisecond,
 			&kubeapiserverexposure.DefaultTimeout, 500*time.Millisecond,
 			&kubeapiserver.IntervalWaitForDeployment, 100*time.Millisecond,
@@ -87,11 +90,13 @@ var _ = Describe("Garden controller tests", func() {
 			&kubecontrollermanager.IntervalWaitForDeployment, 100*time.Millisecond,
 			&kubecontrollermanager.TimeoutWaitForDeployment, 500*time.Millisecond,
 			&kubecontrollermanager.Until, untilInTest,
+			&nginxingress.TimeoutWaitForManagedResource, 500*time.Millisecond,
 			&resourcemanager.SkipWebhookDeployment, true,
 			&resourcemanager.IntervalWaitForDeployment, 100*time.Millisecond,
 			&resourcemanager.TimeoutWaitForDeployment, 500*time.Millisecond,
 			&resourcemanager.Until, untilInTest,
 			&shared.IntervalWaitForGardenerResourceManagerBootstrapping, 500*time.Millisecond,
+			&managedresources.IntervalWait, 100*time.Millisecond,
 		))
 
 		By("Create test Namespace")
@@ -124,6 +129,9 @@ var _ = Describe("Garden controller tests", func() {
 					},
 				},
 			}),
+			ClientDisableCacheFor: []client.Object{
+				&corev1.Secret{}, // applied because of operations on managed resources and their secrets
+			},
 		})
 		Expect(err).NotTo(HaveOccurred())
 		mgrClient = mgr.GetClient()
@@ -133,10 +141,6 @@ var _ = Describe("Garden controller tests", func() {
 		Expect((&operationannotation.Reconciler{ForObject: func() client.Object { return &druidv1alpha1.Etcd{} }}).AddToManager(mgr)).To(Succeed())
 
 		By("Register controller")
-		chartsPath := filepath.Join("..", "..", "..", "..", "..", charts.Path)
-		imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(chartsPath, "images.yaml"))
-		Expect(err).NotTo(HaveOccurred())
-
 		garden = &operatorv1alpha1.Garden{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   "garden-" + testRunID,
@@ -149,7 +153,7 @@ var _ = Describe("Garden controller tests", func() {
 						Services: "10.2.0.0/16",
 					},
 					Ingress: gardencorev1beta1.Ingress{
-						Domain: "ingress.dev.garden.example.com",
+						Domain: "ingress.runtime-garden.local.gardener.cloud",
 						Controller: gardencorev1beta1.IngressController{
 							Kind: "nginx",
 						},
@@ -169,6 +173,9 @@ var _ = Describe("Garden controller tests", func() {
 				VirtualCluster: operatorv1alpha1.VirtualCluster{
 					DNS: operatorv1alpha1.DNS{
 						Domains: []string{"virtual-garden.local.gardener.cloud"},
+					},
+					Gardener: operatorv1alpha1.Gardener{
+						ClusterIdentity: "test",
 					},
 					Kubernetes: operatorv1alpha1.Kubernetes{
 						Version: "1.26.3",
@@ -205,8 +212,10 @@ var _ = Describe("Garden controller tests", func() {
 						},
 					},
 				},
+				FeatureGates: map[string]bool{
+					"HVPA": true,
+				},
 			},
-			ImageVector:     imageVector,
 			Identity:        &gardencorev1beta1.Gardener{Name: "test-gardener"},
 			GardenClientMap: gardenClientMap,
 			GardenNamespace: testNamespace.Name,
@@ -250,14 +259,14 @@ var _ = Describe("Garden controller tests", func() {
 			return garden.Finalizers
 		}).Should(ConsistOf("gardener.cloud/operator"))
 
-		By("Wait for Reconciled condition to be set to Progressing")
-		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+		By("Wait for last operation state to be set to Progressing")
+		Eventually(func(g Gomega) gardencorev1beta1.LastOperationState {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
-			return garden.Status.Conditions
-		}).Should(ContainCondition(
-			OfType(operatorv1alpha1.GardenReconciled),
-			WithStatus(gardencorev1beta1.ConditionProgressing),
-		))
+			if garden.Status.LastOperation == nil {
+				return ""
+			}
+			return garden.Status.LastOperation.State
+		}).Should(Equal(gardencorev1beta1.LastOperationStateProcessing))
 		Expect(garden.Status.Gardener).NotTo(BeNil())
 
 		By("Verify that the custom resource definitions have been created")
@@ -286,6 +295,18 @@ var _ = Describe("Garden controller tests", func() {
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("wasmplugins.extensions.istio.io")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("workloadentries.networking.istio.io")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("workloadgroups.networking.istio.io")})}),
+			// fluent-operator
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterfilters.fluentbit.fluent.io")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterfluentbitconfigs.fluentbit.fluent.io")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterinputs.fluentbit.fluent.io")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusteroutputs.fluentbit.fluent.io")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterparsers.fluentbit.fluent.io")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("fluentbits.fluentbit.fluent.io")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("collectors.fluentbit.fluent.io")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("fluentbitconfigs.fluentbit.fluent.io")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("filters.fluentbit.fluent.io")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("parsers.fluentbit.fluent.io")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("outputs.fluentbit.fluent.io")})}),
 		))
 
 		By("Verify that garden runtime CA secret was generated")
@@ -327,6 +348,11 @@ var _ = Describe("Garden controller tests", func() {
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-druid")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-state-metrics")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("nginx-ingress")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("fluent-operator")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("fluent-bit")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("fluent-operator-custom-resources-garden")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("vali")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("plutono")})}),
 		))
 
 		// The garden controller waits for the Istio ManagedResources to be healthy, but Istio is not really running in
@@ -357,9 +383,9 @@ var _ = Describe("Garden controller tests", func() {
 			}
 		}).Should(Succeed())
 
-		// The garden controller waits for the nginx-ingress ManagedResources to be healthy, but nginx-controller is not really running in
+		// The garden controller waits for the nginx-ingress ManagedResource to be healthy, but nginx-controller is not really running in
 		// this test, so let's fake this here.
-		By("Patch nginx-ingress ManagedResources to report healthiness")
+		By("Patch nginx-ingress ManagedResource to report healthiness")
 		Eventually(func(g Gomega) {
 			mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress", Namespace: testNamespace.Name}}
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed(), "for "+mr.Name)
@@ -399,7 +425,6 @@ var _ = Describe("Garden controller tests", func() {
 			return service.Annotations
 		}).Should(Equal(utils.MergeStringMaps(loadBalancerServiceAnnotations, map[string]string{
 			"networking.istio.io/exportTo":                                              "*",
-			"networking.resources.gardener.cloud/from-world-to-ports":                   `[{"protocol":"TCP","port":443}]`,
 			"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":443}]`,
 			"networking.resources.gardener.cloud/namespace-selectors":                   `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchLabels":{"networking.gardener.cloud/access-target-apiserver":"allowed"}}]`,
 		})))
@@ -518,9 +543,9 @@ var _ = Describe("Garden controller tests", func() {
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("shoot-core-gardener-resource-manager")})}),
 		))
 
-		// The garden controller waits for the shoot-core-gardener-resource-manager ManagedResources to be healthy, but virtual-garden-gardener-resource-manager is not really running in
+		// The garden controller waits for the shoot-core-gardener-resource-manager ManagedResource to be healthy, but virtual-garden-gardener-resource-manager is not really running in
 		// this test, so let's fake this here.
-		By("Patch shoot-core-gardener-resource-manager ManagedResources to report healthiness")
+		By("Patch shoot-core-gardener-resource-manager ManagedResource to report healthiness")
 		Eventually(func(g Gomega) {
 			mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "shoot-core-gardener-resource-manager", Namespace: testNamespace.Name}}
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed())
@@ -592,6 +617,32 @@ var _ = Describe("Garden controller tests", func() {
 			g.Expect(testClient.Patch(ctx, secret, patch)).To(Succeed())
 		}).Should(Succeed())
 
+		// The garden controller waits for the shoot-core-gardeneraccess ManagedResource to be healthy, but virtual-garden-gardener-resource-manager is not really running in
+		// this test, so let's fake this here.
+		By("Patch shoot-core-gardeneraccess ManagedResource to report healthiness")
+		Eventually(func(g Gomega) {
+			mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "shoot-core-gardeneraccess", Namespace: testNamespace.Name}}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed())
+
+			patch := client.MergeFrom(mr.DeepCopy())
+			mr.Status.ObservedGeneration = mr.Generation
+			mr.Status.Conditions = []gardencorev1beta1.Condition{
+				{
+					Type:               "ResourcesHealthy",
+					Status:             "True",
+					LastUpdateTime:     metav1.NewTime(time.Unix(0, 0)),
+					LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
+				},
+				{
+					Type:               "ResourcesApplied",
+					Status:             "True",
+					LastUpdateTime:     metav1.NewTime(time.Unix(0, 0)),
+					LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
+				},
+			}
+			g.Expect(testClient.Status().Patch(ctx, mr, patch)).To(Succeed())
+		}).Should(Succeed())
+
 		By("Ensure virtual-garden-kube-controller-manager was deployed")
 		Eventually(func(g Gomega) []appsv1.Deployment {
 			deploymentList := &appsv1.DeploymentList{}
@@ -633,11 +684,14 @@ var _ = Describe("Garden controller tests", func() {
 			g.Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
 		}).Should(Succeed())
 
-		By("Wait for Reconciled condition to be set to True")
-		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+		By("Wait for last operation state to be set to Succeeded")
+		Eventually(func(g Gomega) gardencorev1beta1.LastOperationState {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
-			return garden.Status.Conditions
-		}).Should(ContainCondition(OfType(operatorv1alpha1.GardenReconciled), WithStatus(gardencorev1beta1.ConditionTrue)))
+			if garden.Status.LastOperation == nil {
+				return ""
+			}
+			return garden.Status.LastOperation.State
+		}).Should(Equal(gardencorev1beta1.LastOperationStateSucceeded))
 
 		By("Delete Garden")
 		Expect(testClient.Delete(ctx, garden)).To(Succeed())
@@ -695,6 +749,18 @@ var _ = Describe("Garden controller tests", func() {
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("wasmplugins.extensions.istio.io")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("workloadentries.networking.istio.io")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("workloadgroups.networking.istio.io")})}),
+			// fluent-operator
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterfilters.fluentbit.fluent.io")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterfluentbitconfigs.fluentbit.fluent.io")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterinputs.fluentbit.fluent.io")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusteroutputs.fluentbit.fluent.io")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterparsers.fluentbit.fluent.io")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("fluentbits.fluentbit.fluent.io")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("collectors.fluentbit.fluent.io")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("fluentbitconfigs.fluentbit.fluent.io")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("filters.fluentbit.fluent.io")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("parsers.fluentbit.fluent.io")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("outputs.fluentbit.fluent.io")})}),
 		))
 
 		By("Verify that gardener-resource-manager has been deleted")

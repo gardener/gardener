@@ -144,6 +144,9 @@ type GarbageCollectorControllerConfig struct {
 	Enabled bool
 	// SyncPeriod is the duration how often the controller performs its reconciliation.
 	SyncPeriod *metav1.Duration
+	// ConsiderManagedResources specifies if managed resources should be considered
+	// as owners of garbage collectable secrets.
+	ConsiderManagedResources *bool
 }
 
 // HealthControllerConfig is the configuration for the health controller.

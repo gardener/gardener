@@ -16,7 +16,7 @@ package kernelconfig_test
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -78,7 +78,7 @@ var _ = Describe("Component", func() {
 				lines = append(lines, line)
 			}
 		}
-		sort.Strings(lines)
+		slices.Sort(lines)
 		modifiedData := ""
 		for _, line := range lines {
 			modifiedData += line + "\n"

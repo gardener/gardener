@@ -47,6 +47,7 @@ With this labeling strategy, it is also possible to see the test properties dire
 
 Using ginkgo focus to only run desired tests and combined testsuites, an example test definition will look like the following.
 ```yaml
+apiVersion: testmachinery.sapcloud.io
 kind: TestDefinition
 metadata:
   name: gardener-beta-suite

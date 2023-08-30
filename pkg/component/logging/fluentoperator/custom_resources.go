@@ -18,16 +18,13 @@ import (
 	"context"
 
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/logging/fluentoperator/customresources"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -38,27 +35,17 @@ const (
 
 // CustomResourcesValues are the values for the custom resources.
 type CustomResourcesValues struct {
-	// FluentBit represents the fluent-bit values.
-	FluentBit FluentBit
-}
-
-// FluentBit holds the fluent-bit configurations
-type FluentBit struct {
-	// Image is the fluent-bit image.
-	Image string
-	// InitContainerImage is the fluent-bit init container image.
-	InitContainerImage string
-	// PriorityClass is the name of the priority class of the fluent-bit.
-	PriorityClass string
+	Suffix  string
+	Inputs  []*fluentbitv1alpha2.ClusterInput
+	Filters []*fluentbitv1alpha2.ClusterFilter
+	Parsers []*fluentbitv1alpha2.ClusterParser
+	Outputs []*fluentbitv1alpha2.ClusterOutput
 }
 
 type customResources struct {
-	client            client.Client
-	namespace         string
-	values            CustomResourcesValues
-	additionalInputs  []*fluentbitv1alpha2.ClusterInput
-	additionalFilters []*fluentbitv1alpha2.ClusterFilter
-	additionalParsers []*fluentbitv1alpha2.ClusterParser
+	client    client.Client
+	namespace string
+	values    CustomResourcesValues
 }
 
 // NewCustomResources creates a new instance of Fluent Operator Custom Resources.
@@ -66,120 +53,52 @@ func NewCustomResources(
 	client client.Client,
 	namespace string,
 	values CustomResourcesValues,
-	additionalInputs []*fluentbitv1alpha2.ClusterInput,
-	additionalFilters []*fluentbitv1alpha2.ClusterFilter,
-	additionalParsers []*fluentbitv1alpha2.ClusterParser,
 ) component.DeployWaiter {
 	return &customResources{
-		client:            client,
-		namespace:         namespace,
-		values:            values,
-		additionalInputs:  additionalInputs,
-		additionalFilters: additionalFilters,
-		additionalParsers: additionalParsers,
+		client:    client,
+		namespace: namespace,
+		values:    values,
 	}
 }
 
 func (c *customResources) Deploy(ctx context.Context) error {
 	var (
-		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-
-		configMap = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      v1beta1constants.DaemonSetNameFluentBit + "-lua-config",
-				Namespace: c.namespace,
-			},
-			Data: map[string]string{
-				"modify_severity.lua": `
-function cb_modify(tag, timestamp, record)
-  local unified_severity = cb_modify_unify_severity(record)
-
-  if not unified_severity then
-    return 0, 0, 0
-  end
-
-  return 1, timestamp, record
-end
-
-function cb_modify_unify_severity(record)
-  local modified = false
-  local severity = record["severity"]
-  if severity == nil or severity == "" then
-	return modified
-  end
-
-  severity = trim(severity):upper()
-
-  if severity == "I" or severity == "INF" or severity == "INFO" then
-    record["severity"] = "INFO"
-    modified = true
-  elseif severity == "W" or severity == "WRN" or severity == "WARN" or severity == "WARNING" then
-    record["severity"] = "WARN"
-    modified = true
-  elseif severity == "E" or severity == "ERR" or severity == "ERROR" or severity == "EROR" then
-    record["severity"] = "ERR"
-    modified = true
-  elseif severity == "D" or severity == "DBG" or severity == "DEBUG" then
-    record["severity"] = "DBG"
-    modified = true
-  elseif severity == "N" or severity == "NOTICE" then
-    record["severity"] = "NOTICE"
-    modified = true
-  elseif severity == "F" or severity == "FATAL" then
-    record["severity"] = "FATAL"
-    modified = true
-  end
-
-  return modified
-end
-
-function trim(s)
-  return (s:gsub("^%s*(.-)%s*$", "%1"))
-end`,
-				"add_tag_to_record.lua": `
-function add_tag_to_record(tag, timestamp, record)
-  record["tag"] = tag
-  return 1, timestamp, record
-end`,
-			},
-		}
+		registry  = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+		resources []client.Object
 	)
 
-	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
+	// TODO(rfranzke): Remove this block after v1.77 has been released.
+	{
+		resources = append(resources,
+			&fluentbitv1alpha2.ClusterFluentBitConfig{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit-config", Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}},
 
-	resources := []client.Object{configMap}
+			&fluentbitv1alpha2.ClusterFilter{ObjectMeta: metav1.ObjectMeta{Name: "01-docker", Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}},
+			&fluentbitv1alpha2.ClusterFilter{ObjectMeta: metav1.ObjectMeta{Name: "02-containerd", Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}},
+			&fluentbitv1alpha2.ClusterFilter{ObjectMeta: metav1.ObjectMeta{Name: "03-add-tag-to-record", Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}},
+			&fluentbitv1alpha2.ClusterFilter{ObjectMeta: metav1.ObjectMeta{Name: "zz-modify-severity", Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}},
 
-	fluentBit := customresources.GetFluentBit(getFluentBitLabels(), v1beta1constants.DaemonSetNameFluentBit, c.namespace, c.values.FluentBit.Image, c.values.FluentBit.InitContainerImage, c.values.FluentBit.PriorityClass)
-	resources = append(resources, fluentBit)
+			&fluentbitv1alpha2.ClusterParser{ObjectMeta: metav1.ObjectMeta{Name: "docker-parser", Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}},
+			&fluentbitv1alpha2.ClusterParser{ObjectMeta: metav1.ObjectMeta{Name: "containerd-parser", Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}},
 
-	clusterFluentBitConfig := customresources.GetClusterFluentBitConfig(v1beta1constants.DaemonSetNameFluentBit, getCustomResourcesLabels())
-	resources = append(resources, clusterFluentBitConfig)
+			&fluentbitv1alpha2.ClusterInput{ObjectMeta: metav1.ObjectMeta{Name: "tail-kubernetes", Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}},
 
-	for _, clusterInput := range customresources.GetClusterInputs(getCustomResourcesLabels()) {
+			&fluentbitv1alpha2.ClusterOutput{ObjectMeta: metav1.ObjectMeta{Name: "journald", Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}},
+		)
+	}
+
+	for _, clusterInput := range c.values.Inputs {
 		resources = append(resources, clusterInput)
 	}
 
-	for _, clusterFilter := range customresources.GetClusterFilters(configMap.Name, getCustomResourcesLabels()) {
+	for _, clusterFilter := range c.values.Filters {
 		resources = append(resources, clusterFilter)
 	}
 
-	for _, clusterParser := range customresources.GetClusterParsers(getCustomResourcesLabels()) {
+	for _, clusterParser := range c.values.Parsers {
 		resources = append(resources, clusterParser)
 	}
 
-	for _, clusterOutput := range customresources.GetClusterOutputs(getCustomResourcesLabels()) {
-		resources = append(resources, clusterOutput)
-	}
-
-	for _, clusterInput := range c.additionalInputs {
-		resources = append(resources, clusterInput)
-	}
-
-	for _, clusterFilter := range c.additionalFilters {
-		resources = append(resources, clusterFilter)
-	}
-
-	for _, clusterParser := range c.additionalParsers {
+	for _, clusterParser := range c.values.Outputs {
 		resources = append(resources, clusterParser)
 	}
 
@@ -188,25 +107,29 @@ end`,
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, c.client, c.namespace, CustomResourcesManagedResourceName, false, serializedResources)
+	return managedresources.CreateForSeed(ctx, c.client, c.namespace, c.getManagedResourceName(), false, serializedResources)
 }
 
 func (c *customResources) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForSeed(ctx, c.client, c.namespace, CustomResourcesManagedResourceName)
+	return managedresources.DeleteForSeed(ctx, c.client, c.namespace, c.getManagedResourceName())
 }
 
 func (c *customResources) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeoutWaitForManagedResources)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, c.client, c.namespace, CustomResourcesManagedResourceName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, c.client, c.namespace, c.getManagedResourceName())
 }
 
 func (c *customResources) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeoutWaitForManagedResources)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, c.client, c.namespace, CustomResourcesManagedResourceName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, c.client, c.namespace, c.getManagedResourceName())
+}
+
+func (c *customResources) getManagedResourceName() string {
+	return CustomResourcesManagedResourceName + c.values.Suffix
 }
 
 func getCustomResourcesLabels() map[string]string {

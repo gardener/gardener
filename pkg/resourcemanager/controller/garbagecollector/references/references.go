@@ -28,6 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -80,8 +81,11 @@ func KindFromAnnotationKey(key string) string {
 	return split[0]
 }
 
-// InjectAnnotations injects annotations into the annotation maps based on the referenced ConfigMaps/Secrets appearing
-// in the pod template spec's `.volumes[]` or `.containers[].envFrom[]` or `.containers[].env[].valueFrom[]` or `.imagePullSecrets[]` lists.
+// InjectAnnotations injects annotations into the annotation maps based
+// on the referenced ConfigMaps/Secrets appearing in:
+//   - pod template spec's `.volumes[]` or `.containers[].envFrom[]` or `.containers[].env[].valueFrom[]` or `.imagePullSecrets[]` lists
+//   - managed resource spec's `.secretRefs`
+//
 // Additional reference annotations can be specified via the variadic parameter (expected format is that returned by
 // `AnnotationKey`).
 func InjectAnnotations(obj runtime.Object, additional ...string) error {
@@ -147,11 +151,27 @@ func InjectAnnotations(obj runtime.Object, additional ...string) error {
 		o.Spec.JobTemplate.Annotations = mergeAnnotations(o.Spec.JobTemplate.Annotations, referenceAnnotations)
 		o.Spec.JobTemplate.Spec.Template.Annotations = mergeAnnotations(o.Spec.JobTemplate.Spec.Template.Annotations, referenceAnnotations)
 
+	case *resourcesv1alpha1.ManagedResource:
+		referenceAnnotations := computeAnnotationsFromLocalObjRefs(o.Spec.SecretRefs, KindSecret, additional...)
+		o.Annotations = mergeAnnotations(o.Annotations, referenceAnnotations)
+
 	default:
 		return fmt.Errorf("unhandled object type %T", obj)
 	}
 
 	return nil
+}
+
+func computeAnnotationsFromLocalObjRefs(refs []corev1.LocalObjectReference, kind string, additional ...string) map[string]string {
+	out := make(map[string]string, len(refs)+len(additional))
+	for _, ref := range refs {
+		out[AnnotationKey(kind, ref.Name)] = ref.Name
+	}
+	for _, v := range additional {
+		out[v] = ""
+	}
+
+	return out
 }
 
 func computeAnnotations(spec corev1.PodSpec, additional ...string) map[string]string {

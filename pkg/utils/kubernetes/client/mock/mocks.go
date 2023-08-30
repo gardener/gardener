@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	client "github.com/gardener/gardener/pkg/utils/kubernetes/client"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	client0 "sigs.k8s.io/controller-runtime/pkg/client"
 )

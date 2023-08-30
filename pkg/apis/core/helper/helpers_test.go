@@ -516,17 +516,6 @@ var _ = Describe("helper", func() {
 		}, true),
 	)
 
-	DescribeTable("#SeedSettingExcessCapacityReservationEnabled",
-		func(settings *core.SeedSettings, expectation bool) {
-			Expect(SeedSettingExcessCapacityReservationEnabled(settings)).To(Equal(expectation))
-		},
-
-		Entry("setting is nil", nil, true),
-		Entry("excess capacity reservation is nil", &core.SeedSettings{}, true),
-		Entry("excess capacity reservation 'enabled' is false", &core.SeedSettings{ExcessCapacityReservation: &core.SeedSettingExcessCapacityReservation{Enabled: false}}, false),
-		Entry("excess capacity reservation 'enabled' is true", &core.SeedSettings{ExcessCapacityReservation: &core.SeedSettingExcessCapacityReservation{Enabled: true}}, true),
-	)
-
 	DescribeTable("#SeedSettingSchedulingVisible",
 		func(settings *core.SeedSettings, expectation bool) {
 			Expect(SeedSettingSchedulingVisible(settings)).To(Equal(expectation))
@@ -921,11 +910,11 @@ var _ = Describe("helper", func() {
 			Expect(ShootEnablesSSHAccess(shoot)).To(Equal(expectedResult))
 		},
 
-		Entry("should return false when shoot provider has zero workers", nil, nil, false),
-		Entry("should return true when shoot provider has no WorkersSettings", []core.Worker{core.Worker{}}, nil, true),
-		Entry("should return true when shoot worker settings has no SSHAccess", []core.Worker{core.Worker{}}, &core.WorkersSettings{}, true),
-		Entry("should return true when shoot worker settings has SSHAccess set to true", []core.Worker{core.Worker{}}, &core.WorkersSettings{SSHAccess: &core.SSHAccess{Enabled: true}}, true),
-		Entry("should return false when shoot worker settings has SSHAccess set to false", []core.Worker{core.Worker{}}, &core.WorkersSettings{SSHAccess: &core.SSHAccess{Enabled: false}}, false),
+		Entry("should return false when shoot provider has zero workers", []core.Worker{}, nil, false),
+		Entry("should return true when shoot provider has no WorkersSettings", []core.Worker{{Name: "worker"}}, nil, true),
+		Entry("should return true when shoot worker settings has no SSHAccess", []core.Worker{{Name: "worker"}}, &core.WorkersSettings{}, true),
+		Entry("should return true when shoot worker settings has SSHAccess set to true", []core.Worker{{Name: "worker"}}, &core.WorkersSettings{SSHAccess: &core.SSHAccess{Enabled: true}}, true),
+		Entry("should return false when shoot worker settings has SSHAccess set to false", []core.Worker{{Name: "worker"}}, &core.WorkersSettings{SSHAccess: &core.SSHAccess{Enabled: false}}, false),
 	)
 
 	Describe("#DeterminePrimaryIPFamily", func() {

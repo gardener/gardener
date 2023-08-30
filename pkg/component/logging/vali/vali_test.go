@@ -19,9 +19,9 @@ import (
 	"fmt"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -165,7 +165,7 @@ var _ = Describe("Vali", func() {
 			Expect(c.Get(ctx, client.ObjectKey{Name: kubeRBacProxyShootAccessSecretName, Namespace: namespace}, &corev1.Secret{})).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-			Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
+			expectedMr := &resourcesv1alpha1.ManagedResource{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
 					Kind:       "ManagedResource",
@@ -178,15 +178,20 @@ var _ = Describe("Vali", func() {
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					Class: pointer.String("seed"),
 					SecretRefs: []corev1.LocalObjectReference{{
-						Name: managedResourceSecret.Name,
+						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
 					KeepObjects: pointer.Bool(false),
 				},
-			}))
+			}
+			utilruntime.Must(references.InjectAnnotations(expectedMr))
+			Expect(managedResource).To(DeepEqual(expectedMr))
 
+			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Data).To(HaveLen(6))
+			Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__"+telegrafConfigMapName+".yaml"])).To(Equal(test.Serialize(getTelegrafConfigMap())))
 			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__"+valiConfigMapName+".yaml"])).To(Equal(test.Serialize(getValiConfigMap())))
@@ -196,7 +201,7 @@ var _ = Describe("Vali", func() {
 			Expect(string(managedResourceSecret.Data["statefulset__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getStatefulSet(true))))
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceTarget), managedResourceTarget)).To(Succeed())
-			Expect(managedResourceTarget).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
+			expectedTargetMr := &resourcesv1alpha1.ManagedResource{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
 					Kind:       "ManagedResource",
@@ -210,15 +215,20 @@ var _ = Describe("Vali", func() {
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 					SecretRefs: []corev1.LocalObjectReference{{
-						Name: managedResourceSecretTarget.Name,
+						Name: managedResourceTarget.Spec.SecretRefs[0].Name,
 					}},
 					KeepObjects: pointer.Bool(false),
 				},
-			}))
+			}
+			utilruntime.Must(references.InjectAnnotations(expectedTargetMr))
+			Expect(managedResourceTarget).To(DeepEqual(expectedTargetMr))
 
+			managedResourceSecretTarget.Name = managedResourceTarget.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretTarget), managedResourceSecretTarget)).To(Succeed())
 			Expect(managedResourceSecretTarget.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecretTarget.Data).To(HaveLen(3))
+			Expect(managedResourceSecretTarget.Immutable).To(Equal(pointer.Bool(true)))
+			Expect(managedResourceSecretTarget.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			Expect(string(managedResourceSecretTarget.Data["clusterrolebinding____gardener.cloud_logging_kube-rbac-proxy.yaml"])).To(Equal(test.Serialize(getKubeRBACProxyClusterRoleBinding())))
 			Expect(string(managedResourceSecretTarget.Data["clusterrole____gardener.cloud_logging_valitail.yaml"])).To(Equal(test.Serialize(getValitailClusterRole())))
@@ -264,7 +274,7 @@ var _ = Describe("Vali", func() {
 			Expect(c.Get(ctx, client.ObjectKey{Name: managedResourceNameTarget, Namespace: namespace}, &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-			Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
+			expectedMr := &resourcesv1alpha1.ManagedResource{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
 					Kind:       "ManagedResource",
@@ -277,15 +287,20 @@ var _ = Describe("Vali", func() {
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					Class: pointer.String("seed"),
 					SecretRefs: []corev1.LocalObjectReference{{
-						Name: managedResourceSecret.Name,
+						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
 					KeepObjects: pointer.Bool(false),
 				},
-			}))
+			}
+			utilruntime.Must(references.InjectAnnotations(expectedMr))
+			Expect(managedResource).To(DeepEqual(expectedMr))
 
+			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Data).To(HaveLen(4))
+			Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__"+valiConfigMapName+".yaml"])).To(Equal(test.Serialize(getValiConfigMap())))
 			Expect(string(managedResourceSecret.Data["hvpa__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getHVPA(false))))
@@ -317,7 +332,7 @@ var _ = Describe("Vali", func() {
 			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-			Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
+			expectedMr := &resourcesv1alpha1.ManagedResource{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
 					Kind:       "ManagedResource",
@@ -330,15 +345,20 @@ var _ = Describe("Vali", func() {
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					Class: pointer.String("seed"),
 					SecretRefs: []corev1.LocalObjectReference{{
-						Name: managedResourceSecret.Name,
+						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
 					KeepObjects: pointer.Bool(false),
 				},
-			}))
+			}
+			utilruntime.Must(references.InjectAnnotations(expectedMr))
+			Expect(managedResource).To(DeepEqual(expectedMr))
 
+			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Data).To(HaveLen(3))
+			Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__"+valiConfigMapName+".yaml"])).To(Equal(test.Serialize(getValiConfigMap())))
 			Expect(string(managedResourceSecret.Data["service__shoot--foo--bar__logging.yaml"])).To(Equal(test.Serialize(getService(false, "seed"))))
@@ -470,15 +490,18 @@ var _ = Describe("Vali", func() {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
 				// Delete target managed resource
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceNameTarget), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				runtimeClient.EXPECT().Delete(ctx, objectOfTypeSecret),
 				runtimeClient.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameTarget, Namespace: gardenNamespace}}),
-				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretNameTarget, Namespace: gardenNamespace}}),
 				// Delete shoot access secrets
 				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: valitailShootAccessSecretName, Namespace: gardenNamespace}}),
 				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: kubeRBacProxyShootAccessSecretName, Namespace: gardenNamespace}}),
 				// Create Managed resource
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceSecretName), objectOfTypeSecret),
+				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
 				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
+				runtimeClient.EXPECT().Patch(ctx, objectOfTypeSecret, gomock.Any()),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeMR),
 			)
 			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
@@ -506,15 +529,18 @@ var _ = Describe("Vali", func() {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
 				// Delete target managed resource
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceNameTarget), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				runtimeClient.EXPECT().Delete(ctx, objectOfTypeSecret),
 				runtimeClient.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameTarget, Namespace: gardenNamespace}}),
-				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretNameTarget, Namespace: gardenNamespace}}),
 				// Delete shoot access secrets
 				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: valitailShootAccessSecretName, Namespace: gardenNamespace}}),
 				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: kubeRBacProxyShootAccessSecretName, Namespace: gardenNamespace}}),
 				// Create Managed resource
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceSecretName), objectOfTypeSecret),
+				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
 				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
+				runtimeClient.EXPECT().Patch(ctx, objectOfTypeSecret, gomock.Any()),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeMR),
 			)
 			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
@@ -531,15 +557,18 @@ var _ = Describe("Vali", func() {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
 				// Delete target managed resource
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceNameTarget), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				runtimeClient.EXPECT().Delete(ctx, objectOfTypeSecret),
 				runtimeClient.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameTarget, Namespace: gardenNamespace}}),
-				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretNameTarget, Namespace: gardenNamespace}}),
 				// Delete shoot access secrets
 				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: valitailShootAccessSecretName, Namespace: gardenNamespace}}),
 				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: kubeRBacProxyShootAccessSecretName, Namespace: gardenNamespace}}),
 				// Create Managed resource
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceSecretName), objectOfTypeSecret),
+				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
 				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
+				runtimeClient.EXPECT().Patch(ctx, objectOfTypeSecret, gomock.Any()),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeMR),
 			)
 			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
@@ -556,15 +585,18 @@ var _ = Describe("Vali", func() {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
 				// Delete target managed resource
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceNameTarget), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				runtimeClient.EXPECT().Delete(ctx, objectOfTypeSecret),
 				runtimeClient.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameTarget, Namespace: gardenNamespace}}),
-				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretNameTarget, Namespace: gardenNamespace}}),
 				// Delete shoot access secrets
 				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: valitailShootAccessSecretName, Namespace: gardenNamespace}}),
 				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: kubeRBacProxyShootAccessSecretName, Namespace: gardenNamespace}}),
 				// Create Managed resource
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceSecretName), objectOfTypeSecret),
+				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
 				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
+				runtimeClient.EXPECT().Patch(ctx, objectOfTypeSecret, gomock.Any()),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeMR),
 			)
 			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
@@ -591,15 +623,18 @@ var _ = Describe("Vali", func() {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
 				// Delete target managed resource
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceNameTarget), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				runtimeClient.EXPECT().Delete(ctx, objectOfTypeSecret),
 				runtimeClient.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameTarget, Namespace: gardenNamespace}}),
-				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretNameTarget, Namespace: gardenNamespace}}),
 				// Delete shoot access secrets
 				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: valitailShootAccessSecretName, Namespace: gardenNamespace}}),
 				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: kubeRBacProxyShootAccessSecretName, Namespace: gardenNamespace}}),
 				// Create Managed resource
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceSecretName), objectOfTypeSecret),
+				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
 				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
+				runtimeClient.EXPECT().Patch(ctx, objectOfTypeSecret, gomock.Any()),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeMR),
 			)
 			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
@@ -627,15 +662,18 @@ var _ = Describe("Vali", func() {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
 				// Delete target managed resource
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceNameTarget), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				runtimeClient.EXPECT().Delete(ctx, objectOfTypeSecret),
 				runtimeClient.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameTarget, Namespace: gardenNamespace}}),
-				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretNameTarget, Namespace: gardenNamespace}}),
 				// Delete shoot access secrets
 				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: valitailShootAccessSecretName, Namespace: gardenNamespace}}),
 				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: kubeRBacProxyShootAccessSecretName, Namespace: gardenNamespace}}),
 				// Create Managed resource
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceSecretName), objectOfTypeSecret),
+				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
 				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
+				runtimeClient.EXPECT().Patch(ctx, objectOfTypeSecret, gomock.Any()),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeMR),
 			)
 			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
@@ -663,15 +701,18 @@ var _ = Describe("Vali", func() {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
 				// Delete target managed resource
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceNameTarget), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				runtimeClient.EXPECT().Delete(ctx, objectOfTypeSecret),
 				runtimeClient.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameTarget, Namespace: gardenNamespace}}),
-				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretNameTarget, Namespace: gardenNamespace}}),
 				// Delete shoot access secrets
 				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: valitailShootAccessSecretName, Namespace: gardenNamespace}}),
 				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: kubeRBacProxyShootAccessSecretName, Namespace: gardenNamespace}}),
 				// Create Managed resource
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceSecretName), objectOfTypeSecret),
+				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
 				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
+				runtimeClient.EXPECT().Patch(ctx, objectOfTypeSecret, gomock.Any()),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeMR),
 			)
 			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
@@ -1154,7 +1195,7 @@ func getIngress() *networkingv1.Ingress {
 								{
 									Backend: networkingv1.IngressBackend{
 										Service: &networkingv1.IngressServiceBackend{
-											Name: "vali",
+											Name: "logging",
 											Port: networkingv1.ServiceBackendPort{
 												Number: 8080,
 											},

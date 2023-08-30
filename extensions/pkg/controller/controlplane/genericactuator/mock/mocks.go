@@ -11,7 +11,7 @@ import (
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensions "github.com/gardener/gardener/pkg/extensions"
 	manager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockValuesProvider is a mock of ValuesProvider interface.

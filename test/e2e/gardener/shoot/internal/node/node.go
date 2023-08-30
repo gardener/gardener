@@ -160,7 +160,7 @@ func createOrUpdateNodeCriticalManagedResource(ctx context.Context, seedClient, 
 	secretName, secret := managedresources.NewSecret(seedClient, namespace, name, data, true)
 	managedResource := managedresources.NewForShoot(seedClient, namespace, name, managedresources.LabelValueGardener, false).WithSecretRef(secretName)
 
-	ExpectWithOffset(1, secret.WithLabels(getLabels(name)).Reconcile(ctx)).To(Succeed())
+	ExpectWithOffset(1, secret.AddLabels(getLabels(name)).Reconcile(ctx)).To(Succeed())
 	ExpectWithOffset(1, managedResource.WithLabels(getLabels(name)).Reconcile(ctx)).To(Succeed())
 
 	By("Wait for DaemonSet to be applied in shoot")

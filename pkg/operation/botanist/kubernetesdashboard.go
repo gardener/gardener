@@ -19,20 +19,20 @@ import (
 
 	"k8s.io/utils/pointer"
 
+	"github.com/gardener/gardener/imagevector"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/component/kubernetesdashboard"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // DefaultKubernetesDashboard returns a deployer for kubernetes-dashboard.
 func (b *Botanist) DefaultKubernetesDashboard() (kubernetesdashboard.Interface, error) {
-	image, err := b.ImageVector.FindImage(images.ImageNameKubernetesDashboard, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameKubernetesDashboard, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}
 
-	scraperImage, err := b.ImageVector.FindImage(images.ImageNameKubernetesDashboardMetricsScraper, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	scraperImage, err := imagevector.ImageVector().FindImage(imagevector.ImageNameKubernetesDashboardMetricsScraper, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}

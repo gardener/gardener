@@ -75,7 +75,7 @@ const (
 	// GardenerVersionFlag is the name of the command line flag containing the Gardener version.
 	GardenerVersionFlag = "gardener-version"
 	// GardenletManagesMCMFlag is the name of the command line flag containing the Gardener version.
-	// TODO(rfranzke): Remove this flag when all provider extensions support the feature, see https://github.com/gardener/gardener/issues/7594.
+	// TODO(rfranzke): Remove this flag when the MachineControllerManagerDeployment feature gate is promoted to GA.
 	GardenletManagesMCMFlag = "gardenlet-manages-mcm"
 
 	// LogLevelFlag is the name of the command line flag containing the log level.

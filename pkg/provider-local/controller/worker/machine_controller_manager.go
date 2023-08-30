@@ -16,13 +16,13 @@ package worker
 
 import (
 	"context"
-	"path/filepath"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/provider-local/charts"
 	localimagevector "github.com/gardener/gardener/pkg/provider-local/imagevector"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 	"github.com/gardener/gardener/pkg/utils/chart"
@@ -31,9 +31,10 @@ import (
 
 var (
 	mcmChart = &chart.Chart{
-		Name:   local.MachineControllerManagerName,
-		Path:   filepath.Join(local.InternalChartsPath, local.MachineControllerManagerName, "seed"),
-		Images: []string{localimagevector.ImageNameMachineControllerManager, localimagevector.ImageNameMachineControllerManagerProviderLocal},
+		Name:       local.MachineControllerManagerName,
+		EmbeddedFS: &charts.ChartMachineControllerManagerSeed,
+		Path:       charts.ChartPathMachineControllerManagerSeed,
+		Images:     []string{localimagevector.ImageNameMachineControllerManager, localimagevector.ImageNameMachineControllerManagerProviderLocal},
 		Objects: []*chart.Object{
 			{Type: &appsv1.Deployment{}, Name: local.MachineControllerManagerName},
 			{Type: &corev1.Service{}, Name: local.MachineControllerManagerName},
@@ -45,8 +46,9 @@ var (
 	}
 
 	mcmShootChart = &chart.Chart{
-		Name: local.MachineControllerManagerName,
-		Path: filepath.Join(local.InternalChartsPath, local.MachineControllerManagerName, "shoot"),
+		Name:       local.MachineControllerManagerName,
+		EmbeddedFS: &charts.ChartMachineControllerManagerShoot,
+		Path:       charts.ChartPathMachineControllerManagerShoot,
 	}
 )
 

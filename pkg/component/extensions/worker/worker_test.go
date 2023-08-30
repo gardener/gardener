@@ -21,9 +21,9 @@ import (
 
 	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -281,6 +281,8 @@ var _ = Describe("Worker", func() {
 						"worker.gardener.cloud/cri-name":  string(worker1CRIName),
 						"containerruntime.worker.gardener.cloud/" + worker1CRIContainerRuntime1Type: "true",
 						"networking.gardener.cloud/node-local-dns-enabled":                          "false",
+						"worker.gardener.cloud/image-name":                                          worker1MachineImageName,
+						"worker.gardener.cloud/image-version":                                       worker1MachineImageVersion,
 					}),
 					Taints:      worker1Taints,
 					MachineType: worker1MachineType,
@@ -324,6 +326,8 @@ var _ = Describe("Worker", func() {
 						"worker.gardener.cloud/pool":                       worker2Name,
 						"worker.garden.sapcloud.io/group":                  worker2Name,
 						"networking.gardener.cloud/node-local-dns-enabled": "false",
+						"worker.gardener.cloud/image-name":                 worker2MachineImageName,
+						"worker.gardener.cloud/image-version":              worker2MachineImageVersion,
 					},
 					MachineType: worker2MachineType,
 					MachineImage: extensionsv1alpha1.MachineImage{

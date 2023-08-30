@@ -33,7 +33,7 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("#CRDs", func() {
+var _ = Describe("CRDs", func() {
 	var (
 		ctx         context.Context
 		c           client.Client

@@ -10,7 +10,7 @@ import (
 
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta10 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"

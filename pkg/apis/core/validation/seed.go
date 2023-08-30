@@ -27,6 +27,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
+	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 )
 
 var (
@@ -39,6 +40,7 @@ var (
 	)
 	availableSeedOperations = sets.New(
 		v1beta1constants.SeedOperationRenewGardenAccessSecrets,
+		v1beta1constants.GardenerOperationReconcile,
 	)
 )
 
@@ -141,7 +143,7 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 
 	if seedSpec.Volume != nil {
 		if seedSpec.Volume.MinimumSize != nil {
-			allErrs = append(allErrs, ValidateResourceQuantityValue("minimumSize", *seedSpec.Volume.MinimumSize, fldPath.Child("volume", "minimumSize"))...)
+			allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("minimumSize", *seedSpec.Volume.MinimumSize, fldPath.Child("volume", "minimumSize"))...)
 		}
 
 		volumeProviderPurposes := make(map[string]struct{}, len(seedSpec.Volume.Providers))
@@ -161,6 +163,17 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 	}
 
 	if seedSpec.Settings != nil {
+		if seedSpec.Settings.ExcessCapacityReservation != nil {
+			for i, config := range seedSpec.Settings.ExcessCapacityReservation.Configs {
+				if len(config.Resources) == 0 {
+					allErrs = append(allErrs, field.Required(fldPath.Child("settings", "excessCapacityReservation", "configs").Index(i).Child("resources"), "cannot be empty"))
+				}
+				for resource, value := range config.Resources {
+					allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue(resource.String(), value, fldPath.Child("settings", "excessCapacityReservation", "configs").Index(i).Child("resources").Child(resource.String()))...)
+				}
+				allErrs = append(allErrs, kubernetescorevalidation.ValidateTolerations(config.Tolerations, fldPath.Child("settings", "excessCapacityReservation", "configs").Index(i).Child("tolerations"))...)
+			}
+		}
 		if seedSpec.Settings.LoadBalancerServices != nil {
 			allErrs = append(allErrs, apivalidation.ValidateAnnotations(seedSpec.Settings.LoadBalancerServices.Annotations, fldPath.Child("settings", "loadBalancerServices", "annotations"))...)
 

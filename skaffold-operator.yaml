@@ -8,7 +8,6 @@ build:
     ko:
       dependencies:
         paths:
-        - charts
         - cmd/gardener-operator/app
         - cmd/utils
         - extensions/pkg/apis/config
@@ -17,6 +16,10 @@ build:
         - extensions/pkg/webhook
         - extensions/pkg/webhook/certificates
         - extensions/pkg/webhook/shoot
+        - imagevector
+        - pkg/admissioncontroller/apis/config
+        - pkg/admissioncontroller/apis/config/v1alpha1
+        - pkg/admissioncontroller/apis/config/validation
         - pkg/api/extensions
         - pkg/apis/core
         - pkg/apis/core/install
@@ -34,6 +37,7 @@ build:
         - pkg/apis/operations/v1alpha1
         - pkg/apis/operator
         - pkg/apis/operator/v1alpha1
+        - pkg/apis/operator/v1alpha1/conversion
         - pkg/apis/operator/v1alpha1/helper
         - pkg/apis/operator/v1alpha1/validation
         - pkg/apis/resources
@@ -91,7 +95,8 @@ build:
         - pkg/component/extensions/operatingsystemconfig/utils
         - pkg/component/extensions/worker
         - pkg/component/gardeneraccess
-        - pkg/component/gardensystem
+        - pkg/component/gardenerapiserver
+        - pkg/component/gardensystem/runtime
         - pkg/component/hvpa
         - pkg/component/istio
         - pkg/component/kubeapiserver
@@ -102,19 +107,21 @@ build:
         - pkg/component/kubernetesdashboard
         - pkg/component/kubescheduler
         - pkg/component/kubestatemetrics
+        - pkg/component/logging
         - pkg/component/logging/eventlogger
+        - pkg/component/logging/fluentoperator
+        - pkg/component/logging/fluentoperator/customresources
         - pkg/component/logging/kuberbacproxy
+        - pkg/component/logging/vali
         - pkg/component/machinecontrollermanager
         - pkg/component/metricsserver
+        - pkg/component/monitoring
         - pkg/component/namespaces
         - pkg/component/nginxingress
         - pkg/component/nodeexporter
         - pkg/component/nodelocaldns
         - pkg/component/nodelocaldns/constants
         - pkg/component/nodeproblemdetector
-        - pkg/component/logging/fluentoperator
-        - pkg/component/logging/fluentoperator/customresources
-        - pkg/component/logging/vali
         - pkg/component/plutono
         - pkg/component/resourcemanager
         - pkg/component/resourcemanager/constants
@@ -185,7 +192,6 @@ build:
         - pkg/utils/gardener
         - pkg/utils/gardener/secretsrotation
         - pkg/utils/gardener/tokenrequest
-        - pkg/utils/images
         - pkg/utils/imagevector
         - pkg/utils/kubernetes
         - pkg/utils/kubernetes/client
@@ -201,8 +207,11 @@ build:
         - pkg/utils/validation/admissionplugins
         - pkg/utils/validation/cidr
         - pkg/utils/validation/features
+        - pkg/utils/validation/kubernetes/core
         - pkg/utils/validation/kubernetesversion
         - pkg/utils/version
+        - plugin/pkg
+        - third_party/gopkg.in/yaml.v2
         - vendor
         - VERSION
       ldflags:
@@ -218,12 +227,10 @@ build:
         - pkg/api/extensions
         - pkg/api/indexer
         - pkg/apis/core
-        - pkg/apis/core/helper
         - pkg/apis/core/install
         - pkg/apis/core/v1beta1
         - pkg/apis/core/v1beta1/constants
         - pkg/apis/core/v1beta1/helper
-        - pkg/apis/core/validation
         - pkg/apis/extensions
         - pkg/apis/extensions/v1alpha1
         - pkg/apis/extensions/v1alpha1/helper
@@ -252,7 +259,6 @@ build:
         - pkg/controllerutils/predicate
         - pkg/controllerutils/reconciler
         - pkg/controllerutils/routes
-        - pkg/features
         - pkg/gardenlet/apis/config
         - pkg/gardenlet/apis/config/v1alpha1
         - pkg/healthz
@@ -299,10 +305,9 @@ build:
         - pkg/utils/retry
         - pkg/utils/secrets
         - pkg/utils/timewindow
-        - pkg/utils/validation/admissionplugins
         - pkg/utils/validation/cidr
-        - pkg/utils/validation/features
         - pkg/utils/validation/kubernetesversion
+        - pkg/utils/validation/kubernetes/core
         - pkg/utils/version
         - vendor
         - VERSION

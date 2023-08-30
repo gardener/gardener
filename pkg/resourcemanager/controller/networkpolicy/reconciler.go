@@ -39,11 +39,7 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-var fromPolicyRegexp *regexp.Regexp
-
-func init() {
-	fromPolicyRegexp = regexp.MustCompile(resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + "(.*)" + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix)
-}
+var fromPolicyRegexp = regexp.MustCompile(resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + "(.*)" + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix)
 
 // Reconciler reconciles Service objects and creates NetworkPolicy objects.
 type Reconciler struct {

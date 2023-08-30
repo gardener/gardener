@@ -1,9 +1,0 @@
-dependencies:
-- name: monitoring
-  repository: http://localhost:10191
-  version: 0.1.0
-  condition: monitoring.enabled
-- name: podsecuritypolicies
-  repository: http://localhost:10191
-  version: 0.1.0
-  condition: podsecuritypolicies.enabled

@@ -19,15 +19,6 @@ https://git.k8s.io/kubernetes.
 Copyright 2017 The Kubernetes Authors.  
 Apache 2 license (https://git.k8s.io/kubernetes/LICENSE).  
 
-The following charts of the [`charts`](charts) directory were seeded based on a copy of the following origins:
-
-* [git.k8s.io/charts/stable/kube-state-metrics](https://git.k8s.io/charts/stable/kube-state-metrics)
-* [git.k8s.io/charts/stable/nginx-ingress](https://git.k8s.io/charts/stable/nginx-ingress)
-* [git.k8s.io/charts/stable/prometheus](https://git.k8s.io/charts/stable/prometheus)
-* [git.k8s.io/charts/stable/kubernetes-dashboard](https://git.k8s.io/charts/stable/kubernetes-dashboard)
-* [github.com/grafana/loki/blob/master/production/helm/loki/templates/statefulset.yaml](https://github.com/grafana/loki/blob/master/production/helm/loki/templates/statefulset.yaml)
-* [github.com/grafana/loki/blob/master/production/helm/loki/templates/service.yaml](https://github.com/grafana/loki/blob/master/production/helm/loki/templates/service.yaml)
-
 ## Container Images
 
-The list of container images and versions deployed by the Gardener can be found [here](charts/images.yaml).
+The list of container images and versions deployed by the Gardener can be found [here](imagevector/images.yaml).

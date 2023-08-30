@@ -54,7 +54,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		},
 	}
 
-	It("Create and Delete Unprivileged Shoot", Label("unprivileged"), func() {
+	It("Create and Delete Unprivileged Shoot", Label("unprivileged", "basic"), func() {
 		By("Create Shoot")
 		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
 		defer cancel()

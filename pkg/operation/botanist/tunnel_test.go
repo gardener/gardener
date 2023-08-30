@@ -20,9 +20,9 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
@@ -32,7 +32,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
@@ -55,7 +54,7 @@ var _ = Describe("Tunnel", func() {
 			ctx = context.Background()
 			cl = mockclient.NewMockClient(ctrl)
 			log = logr.Discard()
-			tunnelName = common.VPNTunnel
+			tunnelName = "vpn-shoot"
 			tunnelPod = corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: metav1.NamespaceSystem,

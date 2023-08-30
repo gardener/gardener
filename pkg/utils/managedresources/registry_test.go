@@ -41,13 +41,47 @@ var _ = Describe("Registry", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "secret:name",
 				Namespace: "foo",
+				Annotations: map[string]string{
+					"foo.bar/test-939fc8c2": "3",
+					"foo.bar/test-ea8edc28": "7",
+					"foo.bar/test-9dca243c": "1",
+					"foo.bar/test-47fc132b": "2",
+					"foo.bar/test-2871f8c4": "4",
+					"foo.bar/test-07679f5e": "5",
+					"foo.bar/test-d2718f1d": "6",
+				},
+				Labels: map[string]string{
+					"foo.bar/test-939fc8c2": "3",
+					"foo.bar/test-47fc132b": "2",
+					"foo.bar/test-d2718f1d": "6",
+					"foo.bar/test-9dca243c": "1",
+					"foo.bar/test-07679f5e": "5",
+					"foo.bar/test-2871f8c4": "4",
+					"foo.bar/test-ea8edc28": "7",
+				},
 			},
 		}
 		secretFilename   = "secret__" + secret.Namespace + "__secret_name.yaml"
 		secretSerialized = []byte(`apiVersion: v1
 kind: Secret
 metadata:
+  annotations:
+    foo.bar/test-9dca243c: "1"
+    foo.bar/test-47fc132b: "2"
+    foo.bar/test-939fc8c2: "3"
+    foo.bar/test-2871f8c4: "4"
+    foo.bar/test-07679f5e: "5"
+    foo.bar/test-d2718f1d: "6"
+    foo.bar/test-ea8edc28: "7"
   creationTimestamp: null
+  labels:
+    foo.bar/test-9dca243c: "1"
+    foo.bar/test-47fc132b: "2"
+    foo.bar/test-939fc8c2: "3"
+    foo.bar/test-2871f8c4: "4"
+    foo.bar/test-07679f5e: "5"
+    foo.bar/test-d2718f1d: "6"
+    foo.bar/test-ea8edc28: "7"
   name: ` + secret.Name + `
   namespace: ` + secret.Namespace + `
 `)

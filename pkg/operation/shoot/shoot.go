@@ -34,7 +34,7 @@ import (
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -184,6 +184,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 		ControlPlane:     &ControlPlane{},
 		SystemComponents: &SystemComponents{},
 		Logging:          &Logging{},
+		Monitoring:       &Monitoring{},
 		Addons:           &Addons{},
 	}
 
@@ -230,7 +231,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 		shoot.Networks = networks
 	}
 
-	shoot.NodeLocalDNSEnabled = v1beta1helper.IsNodeLocalDNSEnabled(shoot.GetInfo().Spec.SystemComponents, shoot.GetInfo().Annotations)
+	shoot.NodeLocalDNSEnabled = v1beta1helper.IsNodeLocalDNSEnabled(shoot.GetInfo().Spec.SystemComponents)
 	shoot.Purpose = v1beta1helper.GetPurpose(shootObject)
 
 	shoot.PSPDisabled = v1beta1helper.IsPSPDisabled(shoot.GetInfo())
@@ -512,12 +513,12 @@ func ToNetworks(s *gardencorev1beta1.Shoot, workerless bool) (*Networks, error) 
 		return nil, fmt.Errorf("shoot's service cidr is empty")
 	}
 
-	apiserver, err := common.ComputeOffsetIP(svc, 1)
+	apiserver, err := utils.ComputeOffsetIP(svc, 1)
 	if err != nil {
 		return nil, fmt.Errorf("cannot calculate default/kubernetes ClusterIP: %w", err)
 	}
 
-	coreDNS, err := common.ComputeOffsetIP(svc, 10)
+	coreDNS, err := utils.ComputeOffsetIP(svc, 10)
 	if err != nil {
 		return nil, fmt.Errorf("cannot calculate CoreDNS ClusterIP: %w", err)
 	}

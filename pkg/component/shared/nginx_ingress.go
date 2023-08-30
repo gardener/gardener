@@ -19,10 +19,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/nginxingress"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // NewNginxIngress returns a deployer for nginx-ingress-controller.
@@ -30,7 +30,6 @@ func NewNginxIngress(
 	c client.Client,
 	namespaceName string,
 	targetNamespace string,
-	imageVector imagevector.ImageVector,
 	kubernetesVersion *semver.Version,
 	config map[string]string,
 	loadBalancerAnnotations map[string]string,
@@ -45,11 +44,11 @@ func NewNginxIngress(
 	component.DeployWaiter,
 	error,
 ) {
-	imageController, err := imageVector.FindImage(images.ImageNameNginxIngressController, imagevector.TargetVersion(kubernetesVersion.String()))
+	imageController, err := imagevector.ImageVector().FindImage(imagevector.ImageNameNginxIngressController, imagevectorutils.TargetVersion(kubernetesVersion.String()))
 	if err != nil {
 		return nil, err
 	}
-	imageDefaultBackend, err := imageVector.FindImage(images.ImageNameIngressDefaultBackend, imagevector.TargetVersion(kubernetesVersion.String()))
+	imageDefaultBackend, err := imagevector.ImageVector().FindImage(imagevector.ImageNameIngressDefaultBackend, imagevectorutils.TargetVersion(kubernetesVersion.String()))
 	if err != nil {
 		return nil, err
 	}

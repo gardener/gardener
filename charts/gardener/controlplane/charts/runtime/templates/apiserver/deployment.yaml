@@ -1,5 +1,5 @@
 {{- if .Values.global.apiserver.enabled }}
-apiVersion: {{ include "deploymentversion" . }}
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: gardener-apiserver
@@ -89,7 +89,7 @@ spec:
       {{- end }}
       containers:
       - name: gardener-apiserver
-        image: {{ include "utils-templates.image" .Values.global.apiserver.image }}
+        image: {{ include "image" .Values.global.apiserver.image }}
         imagePullPolicy: {{ .Values.global.apiserver.image.pullPolicy }}
         args:
         {{- if (include "gardener-apiserver.hasAdmissionPlugins" .) }}

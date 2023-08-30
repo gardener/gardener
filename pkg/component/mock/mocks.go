@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockDeployer is a mock of Deployer interface.

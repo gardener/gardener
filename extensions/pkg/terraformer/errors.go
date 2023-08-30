@@ -16,18 +16,20 @@ package terraformer
 
 import (
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
+)
+
+var (
+	regexTerraformError = regexp.MustCompile(`(?:Error): *([\s\S]*)`)
+	regexUUID           = regexp.MustCompile(`(?i)[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}`)
+	regexMultiNewline   = regexp.MustCompile(`\n{2,}`)
 )
 
 // findTerraformErrors gets the <output> of a Terraform run and parses it to find the occurred
 // errors (which will be returned). If no errors occurred, an empty string will be returned.
 func findTerraformErrors(output string) string {
 	var (
-		regexTerraformError = regexp.MustCompile(`(?:Error): *([\s\S]*)`)
-		regexUUID           = regexp.MustCompile(`(?i)[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}`)
-		regexMultiNewline   = regexp.MustCompile(`\n{2,}`)
-
 		errorMessage = output
 		valid        []string
 	)
@@ -66,7 +68,7 @@ func findTerraformErrors(output string) string {
 		}
 
 		// Sort the occurred errors alphabetically
-		sort.Strings(valid)
+		slices.Sort(valid)
 
 		errorMessage = "* " + strings.Join(valid, "\n* ")
 

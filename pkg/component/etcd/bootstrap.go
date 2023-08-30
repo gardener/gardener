@@ -401,6 +401,11 @@ func getDruidDeployCommands(etcdConfig *config.ETCDConfig) []string {
 		command = append(command, "--active-deadline-duration="+etcdConfig.BackupCompactionController.ActiveDeadlineDuration.Duration.String())
 	}
 
+	// Add feature gates to the etcd druid command
+	if etcdConfig.FeatureGates != nil {
+		command = append(command, kubernetesutils.FeatureGatesToCommandLineParameter(etcdConfig.FeatureGates))
+	}
+
 	return command
 }
 

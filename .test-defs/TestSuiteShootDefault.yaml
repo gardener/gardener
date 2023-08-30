@@ -1,3 +1,4 @@
+apiVersion: testmachinery.sapcloud.io
 kind: TestDefinition
 metadata:
   name: shoot-default-test-suite
@@ -22,4 +23,4 @@ spec:
       -ginkgo.skip="\[SERIAL\]|\[DISRUPTIVE\]"
       -ginkgo.timeout=2h
 
-  image: golang:1.20.6
+  image: golang:1.21.0

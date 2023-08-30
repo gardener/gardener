@@ -16,9 +16,9 @@ package botanist_test
 
 import (
 	"github.com/Masterminds/semver"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
@@ -26,7 +26,6 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 var _ = Describe("KubeScheduler", func() {
@@ -61,19 +60,10 @@ var _ = Describe("KubeScheduler", func() {
 
 		It("should successfully create a kube-scheduler interface", func() {
 			kubernetesClient.EXPECT().Client()
-			botanist.ImageVector = imagevector.ImageVector{{Name: "kube-scheduler"}}
 
 			kubeScheduler, err := botanist.DefaultKubeScheduler()
 			Expect(kubeScheduler).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should return an error because the image cannot be found", func() {
-			botanist.ImageVector = imagevector.ImageVector{}
-
-			kubeScheduler, err := botanist.DefaultKubeScheduler()
-			Expect(kubeScheduler).To(BeNil())
-			Expect(err).To(HaveOccurred())
 		})
 	})
 })

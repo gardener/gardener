@@ -33,7 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
@@ -74,9 +73,6 @@ func (r *Reconciler) AddToManager(
 	if r.GardenNamespaceShoot == "" {
 		r.GardenNamespaceShoot = v1beta1constants.GardenNamespace
 	}
-	if r.ChartsPath == "" {
-		r.ChartsPath = charts.Path
-	}
 
 	if r.Actuator == nil {
 		r.Actuator = newActuator(
@@ -86,9 +82,8 @@ func (r *Reconciler) AddToManager(
 			seedCluster.GetClient(),
 			r.ShootClientMap,
 			r.Clock,
-			NewValuesHelper(&r.Config, r.ImageVector),
+			NewValuesHelper(&r.Config),
 			gardenCluster.GetEventRecorderFor(ControllerName+"-controller"),
-			r.ChartsPath,
 			r.GardenNamespaceShoot,
 		)
 	}

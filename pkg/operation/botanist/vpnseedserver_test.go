@@ -20,9 +20,9 @@ import (
 	"net"
 
 	"github.com/Masterminds/semver"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -40,8 +40,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 var _ = Describe("VPNSeedServer", func() {
@@ -100,7 +98,6 @@ var _ = Describe("VPNSeedServer", func() {
 		It("should successfully create a vpn seed server interface", func() {
 			kubernetesClient.EXPECT().Client()
 			kubernetesClient.EXPECT().Version()
-			botanist.ImageVector = imagevector.ImageVector{{Name: images.ImageNameVpnSeedServer}, {Name: images.ImageNameApiserverProxy}}
 
 			vpnSeedServer, err := botanist.DefaultVPNSeedServer()
 			Expect(vpnSeedServer).NotTo(BeNil())
@@ -111,7 +108,6 @@ var _ = Describe("VPNSeedServer", func() {
 			func(hibernated, highAvailable bool, expectedReplicas int) {
 				kubernetesClient.EXPECT().Client()
 				kubernetesClient.EXPECT().Version()
-				botanist.ImageVector = imagevector.ImageVector{{Name: images.ImageNameVpnSeedServer}, {Name: images.ImageNameApiserverProxy}}
 				botanist.Shoot.HibernationEnabled = hibernated
 				if highAvailable {
 					botanist.Shoot.VPNHighAvailabilityEnabled = highAvailable
@@ -129,14 +125,6 @@ var _ = Describe("VPNSeedServer", func() {
 			Entry("HA & awake", false, true, 2),
 			Entry("HA & hibernated", true, true, 0),
 		)
-
-		It("should return an error because the images cannot be found", func() {
-			botanist.ImageVector = imagevector.ImageVector{}
-
-			vpnSeedServer, err := botanist.DefaultVPNSeedServer()
-			Expect(vpnSeedServer).To(BeNil())
-			Expect(err).To(HaveOccurred())
-		})
 	})
 
 	Describe("#DeployVPNSeedServer", func() {

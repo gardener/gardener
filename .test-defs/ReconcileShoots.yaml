@@ -1,3 +1,4 @@
+apiVersion: testmachinery.sapcloud.io
 kind: TestDefinition
 metadata:
   name: reconcile-shoots
@@ -15,4 +16,4 @@ spec:
     -kubecfg=$TM_KUBECONFIG_PATH/gardener.config
     -version=$GARDENER_VERSION
 
-  image: golang:1.20.6
+  image: golang:1.21.0

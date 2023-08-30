@@ -9,7 +9,7 @@ import (
 	time "time"
 
 	retry "github.com/gardener/gardener/pkg/utils/retry"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockErrorAggregator is a mock of ErrorAggregator interface.

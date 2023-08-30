@@ -85,6 +85,7 @@ There is a CI/CD job that runs periodically and releases a new `hyperkube` image
   - Sometimes default values for shoots are intentionally changed with the introduction of a new Kubernetes version.
   - The final Kubernetes version for a shoot is determined in the [Shoot Validator Admission Plugin](https://github.com/gardener/gardener/blob/17dfefaffed6c5e125e35b6614c8dcad801839f1/plugin/pkg/shoot/validator/admission.go).
   - Any defaulting logic that depends on the version should be placed in this admission plugin ([example](https://github.com/gardener/gardener/blob/f754c071e6cf8e45f7ac7bc5924acaf81b96dc06/plugin/pkg/shoot/validator/admission.go#L782)).
+- Ensure that [maintenance-controller](https://github.com/gardener/gardener/tree/master/pkg/controllermanager/controller/shoot/maintenance) is able to auto-update shoots to the new Kubernetes version. Changes to the shoot spec required for the Kubernetes update should be enforced in such cases ([examples](https://github.com/gardener/gardener/blob/bdfc06dc5cb4e5764800fd31ba1dd07727ad78bf/pkg/controllermanager/controller/shoot/maintenance/reconciler.go#L146-L162)).
 - Bump the used Kubernetes version for local e2e test.
   - See [this](https://github.com/gardener/gardener/pull/5255/commits/5707c4c7a4fd265b176387178b755cabeea89ffe) example commit.
 

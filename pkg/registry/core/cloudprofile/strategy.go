@@ -16,6 +16,7 @@ package cloudprofile
 
 import (
 	"context"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -39,11 +40,14 @@ func (cloudProfileStrategy) NamespaceScoped() bool {
 }
 
 func (cloudProfileStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
+	cloudprofile := obj.(*core.CloudProfile)
+
+	dropExpiredVersions(cloudprofile)
 }
 
 func (cloudProfileStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
 	cloudprofile := obj.(*core.CloudProfile)
-	return validation.ValidateCloudProfileCreation(cloudprofile)
+	return validation.ValidateCloudProfile(cloudprofile)
 }
 
 func (cloudProfileStrategy) Canonicalize(obj runtime.Object) {
@@ -75,4 +79,30 @@ func (cloudProfileStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Ob
 // WarningsOnUpdate returns warnings to the client performing the update.
 func (cloudProfileStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
 	return nil
+}
+
+func dropExpiredVersions(cloudProfile *core.CloudProfile) {
+	var validKubernetesVersions []core.ExpirableVersion
+
+	for _, version := range cloudProfile.Spec.Kubernetes.Versions {
+		if version.ExpirationDate != nil && version.ExpirationDate.Time.Before(time.Now()) {
+			continue
+		}
+		validKubernetesVersions = append(validKubernetesVersions, version)
+	}
+
+	cloudProfile.Spec.Kubernetes.Versions = validKubernetesVersions
+
+	for i, machineImage := range cloudProfile.Spec.MachineImages {
+		var validMachineImageVersions []core.MachineImageVersion
+
+		for _, version := range machineImage.Versions {
+			if version.ExpirationDate != nil && version.ExpirationDate.Time.Before(time.Now()) {
+				continue
+			}
+			validMachineImageVersions = append(validMachineImageVersions, version)
+		}
+
+		cloudProfile.Spec.MachineImages[i].Versions = validMachineImageVersions
+	}
 }

@@ -53,9 +53,12 @@ authorization:
   type: Bearer
   credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
 honor_labels: false
+follow_redirects: false
 kubernetes_sd_configs:
 - role: endpoints
   api_server: https://kube-apiserver:443
+  namespaces:
+    names: [ kube-system ]
   tls_config:
     ca_file: /etc/prometheus/seed/ca.crt
   authorization:

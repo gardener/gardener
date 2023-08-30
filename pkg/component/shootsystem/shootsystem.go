@@ -17,7 +17,7 @@ package shootsystem
 import (
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -358,11 +358,11 @@ func (s *shootSystem) shootInfoData() map[string]string {
 		data["nodeNetwork"] = *nodeNetwork
 	}
 
-	var extensions []string
+	extensions := make([]string, 0, len(s.values.Shoot.Components.Extensions.Extension.Extensions()))
 	for extensionType := range s.values.Shoot.Components.Extensions.Extension.Extensions() {
 		extensions = append(extensions, extensionType)
 	}
-	sort.Strings(extensions)
+	slices.Sort(extensions)
 	data["extensions"] = strings.Join(extensions, ",")
 
 	return data

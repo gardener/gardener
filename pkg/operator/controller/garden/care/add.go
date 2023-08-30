@@ -19,7 +19,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
@@ -35,7 +34,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
@@ -87,8 +85,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		Watches(
 			source.NewKindWithCache(&operatorv1alpha1.Garden{}, mgr.GetCache()),
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(
-				r.GardenPredicate()),
+			builder.WithPredicates(r.GardenPredicate()),
 		).Build(r)
 	if err != nil {
 		return err
@@ -119,33 +116,33 @@ func (r *Reconciler) GardenPredicate() predicate.Predicate {
 				return false
 			}
 
-			return gardenReconciledSuccessfully(oldGarden, garden)
+			// re-evaluate health status right after a reconciliation operation has succeeded
+			return predicateutils.ReconciliationFinishedSuccessfully(oldGarden.Status.LastOperation, garden.Status.LastOperation)
 		},
 		DeleteFunc:  func(event.DeleteEvent) bool { return false },
 		GenericFunc: func(event.GenericEvent) bool { return false },
 	}
 }
 
-func gardenReconciledSuccessfully(oldSeed, newSeed *operatorv1alpha1.Garden) bool {
-	oldReconcileCondition := v1beta1helper.GetCondition(oldSeed.Status.Conditions, operatorv1alpha1.GardenReconciled)
-	newReconcileCondition := v1beta1helper.GetCondition(newSeed.Status.Conditions, operatorv1alpha1.GardenReconciled)
-
-	return newReconcileCondition != nil &&
-		newReconcileCondition.Status == gardencorev1beta1.ConditionTrue &&
-		(oldReconcileCondition == nil || oldReconcileCondition.Status != gardencorev1beta1.ConditionTrue)
-}
-
 // MapManagedResourceToGarden is a mapper.MapFunc for mapping a ManagedResource to the owning Garden.
 func (r *Reconciler) MapManagedResourceToGarden(ctx context.Context, log logr.Logger, _ client.Reader, _ client.Object) []reconcile.Request {
-	gardenList := &metav1.PartialObjectMetadataList{}
-	gardenList.SetGroupVersionKind(operatorv1alpha1.SchemeGroupVersion.WithKind("GardenList"))
+	gardenList := &operatorv1alpha1.GardenList{}
 	if err := r.RuntimeClient.List(ctx, gardenList, client.Limit(1)); err != nil {
 		log.Error(err, "Could not list gardens")
 		return nil
 	}
+
 	if len(gardenList.Items) == 0 {
 		return nil
 	}
-	// Garden is a singleton
-	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: gardenList.Items[0].Name}}}
+	garden := gardenList.Items[0]
+
+	// A garden reconciliation typically touches most of the existing ManagedResources and this will cause the
+	// ManagedResource controller to frequently change their conditions. In this case, we don't want to spam the API
+	// server with updates on the Garden conditions.
+	if garden.Status.LastOperation != nil && garden.Status.LastOperation.State == gardencorev1beta1.LastOperationStateProcessing {
+		return nil
+	}
+
+	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: garden.Name}}}
 }

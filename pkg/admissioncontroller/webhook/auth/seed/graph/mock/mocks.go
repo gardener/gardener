@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	graph "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed/graph"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 	cache "sigs.k8s.io/controller-runtime/pkg/cache"
 )
 

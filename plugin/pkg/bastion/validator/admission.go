@@ -32,16 +32,12 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 	"github.com/gardener/gardener/pkg/utils/kubernetes"
-)
-
-const (
-	// PluginName is the name of this admission plugin.
-	PluginName = "Bastion"
+	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(PluginName, func(config io.Reader) (admission.Interface, error) {
+	plugins.Register(plugin.PluginNameBastion, func(config io.Reader) (admission.Interface, error) {
 		return New()
 	})
 }

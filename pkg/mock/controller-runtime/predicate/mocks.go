@@ -7,7 +7,7 @@ package predicate
 import (
 	reflect "reflect"
 
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 	event "sigs.k8s.io/controller-runtime/pkg/event"
 )
 

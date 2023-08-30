@@ -1841,6 +1841,20 @@ ControlPlane
 <p>ControlPlane contains general settings for the control plane of the shoot.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>schedulerName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SchedulerName is the name of the responsible scheduler which schedules the shoot.
+If not specified, the default scheduler takes over.
+This field is immutable.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -1964,6 +1978,95 @@ ShootStateSpec
 </td>
 </tr>
 </table>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.APIServerLogging">APIServerLogging
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
+</p>
+<p>
+<p>APIServerLogging contains configuration for the logs level and http access logs</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>verbosity</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Verbosity is the kube-apiserver log verbosity level
+Defaults to 2.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>httpAccessVerbosity</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>HTTPAccessVerbosity is the kube-apiserver access logs level</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.APIServerRequests">APIServerRequests
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
+</p>
+<p>
+<p>APIServerRequests contains configuration for request-specific settings for the kube-apiserver.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>maxNonMutatingInflight</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxNonMutatingInflight is the maximum number of non-mutating requests in flight at a given time. When the server
+exceeds this, it rejects requests.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maxMutatingInflight</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxMutatingInflight is the maximum number of mutating requests in flight at a given time. When the server
+exceeds this, it rejects requests.</p>
 </td>
 </tr>
 </tbody>
@@ -5038,8 +5141,8 @@ cache size flags will have no effect, except when setting it to 0 (which disable
 <td>
 <code>requests</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.KubeAPIServerRequests">
-KubeAPIServerRequests
+<a href="#core.gardener.cloud/v1beta1.APIServerRequests">
+APIServerRequests
 </a>
 </em>
 </td>
@@ -5081,8 +5184,8 @@ Defaults to 1h.</p>
 <td>
 <code>logging</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.KubeAPIServerLogging">
-KubeAPIServerLogging
+<a href="#core.gardener.cloud/v1beta1.APIServerLogging">
+APIServerLogging
 </a>
 </em>
 </td>
@@ -5119,95 +5222,6 @@ int64
 that is added by default to every pod that does not already have such a toleration (flag <code>--default-unreachable-toleration-seconds</code>).
 The field has effect only when the <code>DefaultTolerationSeconds</code> admission plugin is enabled.
 Defaults to 300.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="core.gardener.cloud/v1beta1.KubeAPIServerLogging">KubeAPIServerLogging
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
-</p>
-<p>
-<p>KubeAPIServerLogging contains configuration for the logs level and http access logs</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>verbosity</code></br>
-<em>
-int32
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Verbosity is the kube-apiserver log verbosity level
-Defaults to 2.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>httpAccessVerbosity</code></br>
-<em>
-int32
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>HTTPAccessVerbosity is the kube-apiserver access logs level</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="core.gardener.cloud/v1beta1.KubeAPIServerRequests">KubeAPIServerRequests
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
-</p>
-<p>
-<p>KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>maxNonMutatingInflight</code></br>
-<em>
-int32
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>MaxNonMutatingInflight is the maximum number of non-mutating requests in flight at a given time. When the server
-exceeds this, it rejects requests.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>maxMutatingInflight</code></br>
-<em>
-int32
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>MaxMutatingInflight is the maximum number of mutating requests in flight at a given time. When the server
-exceeds this, it rejects requests.</p>
 </td>
 </tr>
 </tbody>
@@ -6582,6 +6596,7 @@ string
 (<em>Appears on:</em>
 <a href="#core.gardener.cloud/v1beta1.BackupBucketStatus">BackupBucketStatus</a>, 
 <a href="#core.gardener.cloud/v1beta1.BackupEntryStatus">BackupEntryStatus</a>, 
+<a href="#core.gardener.cloud/v1beta1.SeedStatus">SeedStatus</a>, 
 <a href="#core.gardener.cloud/v1beta1.ShootStatus">ShootStatus</a>)
 </p>
 <p>
@@ -9112,7 +9127,80 @@ bool
 </em>
 </td>
 <td>
-<p>Enabled controls whether the excess capacity reservation should be enabled.</p>
+<em>(Optional)</em>
+<p>Enabled controls whether the default excess capacity reservation should be enabled. When not specified, the functionality is enabled.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>configs</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettingExcessCapacityReservationConfig">
+[]SeedSettingExcessCapacityReservationConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Configs configures excess capacity reservation deployments for shoot control planes in the seed.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.SeedSettingExcessCapacityReservationConfig">SeedSettingExcessCapacityReservationConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettingExcessCapacityReservation">SeedSettingExcessCapacityReservation</a>)
+</p>
+<p>
+<p>SeedSettingExcessCapacityReservationConfig configures excess capacity reservation deployments for shoot control planes in the seed.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>resources</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcelist-v1-core">
+Kubernetes core/v1.ResourceList
+</a>
+</em>
+</td>
+<td>
+<p>Resources specify the resource requests and limits of the excess-capacity-reservation pod.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>nodeSelector</code></br>
+<em>
+map[string]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NodeSelector specifies the node where the excess-capacity-reservation pod should run.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>tolerations</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#toleration-v1-core">
+[]Kubernetes core/v1.Toleration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Tolerations specify the tolerations for the the excess-capacity-reservation pod.</p>
 </td>
 </tr>
 </tbody>
@@ -9711,6 +9799,20 @@ Kubernetes meta/v1.Time
 <td>
 <em>(Optional)</em>
 <p>ClientCertificateExpirationTimestamp is the timestamp at which gardenlet&rsquo;s client certificate expires.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastOperation</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.LastOperation">
+LastOperation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastOperation holds information about the last operation on the Seed.</p>
 </td>
 </tr>
 </tbody>
@@ -10909,6 +11011,20 @@ ControlPlane
 <p>ControlPlane contains general settings for the control plane of the shoot.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>schedulerName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SchedulerName is the name of the responsible scheduler which schedules the shoot.
+If not specified, the default scheduler takes over.
+This field is immutable.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ShootStateSpec">ShootStateSpec
@@ -11533,6 +11649,20 @@ ControlPlane
 <td>
 <em>(Optional)</em>
 <p>ControlPlane contains general settings for the control plane of the shoot.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>schedulerName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SchedulerName is the name of the responsible scheduler which schedules the shoot.
+If not specified, the default scheduler takes over.
+This field is immutable.</p>
 </td>
 </tr>
 </table>

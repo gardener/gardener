@@ -19,21 +19,30 @@ import (
 	"net"
 
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
+	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/component-base/featuregate"
 	"k8s.io/utils/pointer"
 
+	admissioncontrollerconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
+	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
+	admissioncontrollervalidation "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/validation"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	operatorv1alpha1conversion "github.com/gardener/gardener/pkg/apis/operator/v1alpha1/conversion"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
+	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	"github.com/gardener/gardener/pkg/utils/validation/kubernetesversion"
+	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
 var gardenCoreScheme *runtime.Scheme
@@ -41,6 +50,7 @@ var gardenCoreScheme *runtime.Scheme
 func init() {
 	gardenCoreScheme = runtime.NewScheme()
 	utilruntime.Must(gardencoreinstall.AddToScheme(gardenCoreScheme))
+	utilruntime.Must(admissioncontrollerv1alpha1.AddToScheme(gardenCoreScheme))
 }
 
 // ValidateGarden contains functionality for performing extended validation of a Garden object which is not possible
@@ -172,6 +182,8 @@ func validateVirtualCluster(virtualCluster operatorv1alpha1.VirtualCluster, runt
 		allErrs = append(allErrs, gardencorevalidation.ValidateKubeControllerManager(coreKubeControllerManagerConfig, nil, virtualCluster.Kubernetes.Version, true, path)...)
 	}
 
+	allErrs = append(allErrs, validateGardener(virtualCluster.Gardener, fldPath.Child("gardener"))...)
+
 	if _, _, err := net.ParseCIDR(virtualCluster.Networking.Services); err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "services"), virtualCluster.Networking.Services, fmt.Sprintf("cannot parse service network cidr: %s", err.Error())))
 	}
@@ -183,6 +195,137 @@ func validateVirtualCluster(virtualCluster operatorv1alpha1.VirtualCluster, runt
 	}
 	if runtimeCluster.Networking.Nodes != nil && cidrvalidation.NetworksIntersect(*runtimeCluster.Networking.Nodes, virtualCluster.Networking.Services) {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "services"), virtualCluster.Networking.Services, "node network of runtime cluster intersects with service network of virtual cluster"))
+	}
+
+	return allErrs
+}
+
+func validateGardener(config operatorv1alpha1.Gardener, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, validateGardenerAPIServerConfig(config.APIServer, fldPath.Child("gardenerAPIServer"))...)
+	allErrs = append(allErrs, validateGardenerAdmissionController(config.AdmissionController, fldPath.Child("gardenerAdmissionController"))...)
+	allErrs = append(allErrs, validateGardenerControllerManagerConfig(config.ControllerManager, fldPath.Child("gardenerControllerManager"))...)
+	allErrs = append(allErrs, validateGardenerSchedulerConfig(config.Scheduler, fldPath.Child("gardenerScheduler"))...)
+
+	return allErrs
+}
+
+func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if config == nil {
+		return allErrs
+	}
+
+	allErrs = append(allErrs, validateGardenerFeatureGates(config.FeatureGates, fldPath.Child("featureGates"))...)
+
+	for i, admissionPlugin := range config.AdmissionPlugins {
+		idxPath := fldPath.Child("admissionPlugins").Index(i)
+
+		if len(admissionPlugin.Name) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("name"), "must provide a name"))
+			return allErrs
+		}
+
+		if !utils.ValueExists(admissionPlugin.Name, plugin.AllPluginNames()) {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("name"), admissionPlugin.Name, plugin.AllPluginNames()))
+		}
+	}
+
+	if auditConfig := config.AuditConfig; auditConfig != nil {
+		auditPath := fldPath.Child("auditConfig")
+		if auditPolicy := auditConfig.AuditPolicy; auditPolicy != nil && auditConfig.AuditPolicy.ConfigMapRef != nil {
+			allErrs = append(allErrs, gardencorevalidation.ValidateAuditPolicyConfigMapReference(auditPolicy.ConfigMapRef, auditPath.Child("auditPolicy", "configMapRef"))...)
+		}
+	}
+
+	if config.WatchCacheSizes != nil {
+		watchCacheSizes := &gardencore.WatchCacheSizes{}
+		if err := gardenCoreScheme.Convert(config.WatchCacheSizes, watchCacheSizes, nil); err != nil {
+			allErrs = append(allErrs, field.InternalError(fldPath.Child("watchCacheSizes"), err))
+		}
+		allErrs = append(allErrs, gardencorevalidation.ValidateWatchCacheSizes(watchCacheSizes, fldPath.Child("watchCacheSizes"))...)
+	}
+
+	if config.Logging != nil {
+		logging := &gardencore.APIServerLogging{}
+		if err := gardenCoreScheme.Convert(config.Logging, logging, nil); err != nil {
+			allErrs = append(allErrs, field.InternalError(fldPath.Child("logging"), err))
+		}
+		allErrs = append(allErrs, gardencorevalidation.ValidateAPIServerLogging(logging, fldPath.Child("logging"))...)
+	}
+
+	if config.Requests != nil {
+		requests := &gardencore.APIServerRequests{}
+		if err := gardenCoreScheme.Convert(config.Requests, requests, nil); err != nil {
+			allErrs = append(allErrs, field.InternalError(fldPath.Child("requests"), err))
+		}
+		allErrs = append(allErrs, gardencorevalidation.ValidateAPIServerRequests(requests, fldPath.Child("requests"))...)
+	}
+
+	return allErrs
+}
+
+func validateGardenerAdmissionController(config *operatorv1alpha1.GardenerAdmissionControllerConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if config == nil {
+		return allErrs
+	}
+
+	if config.ResourceAdmissionConfiguration != nil {
+		externalAdmissionConfiguration := operatorv1alpha1conversion.ConvertToAdmissionControllerResourceAdmissionConfiguration(config.ResourceAdmissionConfiguration)
+		internalAdmissionConfiguration := &admissioncontrollerconfig.ResourceAdmissionConfiguration{}
+		if err := gardenCoreScheme.Convert(externalAdmissionConfiguration, internalAdmissionConfiguration, nil); err != nil {
+			allErrs = append(allErrs, field.InternalError(fldPath.Child("resourceAdmissionConfiguration"), err))
+		}
+		allErrs = append(allErrs, admissioncontrollervalidation.ValidateResourceAdmissionConfiguration(internalAdmissionConfiguration, fldPath.Child("resourceAdmissionConfiguration"))...)
+	}
+
+	return allErrs
+}
+
+func validateGardenerControllerManagerConfig(config *operatorv1alpha1.GardenerControllerManagerConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if config == nil {
+		return allErrs
+	}
+
+	allErrs = append(allErrs, validateGardenerFeatureGates(config.FeatureGates, fldPath.Child("featureGates"))...)
+
+	for i, quota := range config.DefaultProjectQuotas {
+		allErrs = append(allErrs, metav1validation.ValidateLabelSelector(quota.ProjectSelector, metav1validation.LabelSelectorValidationOptions{AllowInvalidLabelValueInSelector: true}, fldPath.Child("defaultProjectQuotas").Index(i).Child("projectSelector"))...)
+	}
+
+	return allErrs
+}
+
+func validateGardenerSchedulerConfig(config *operatorv1alpha1.GardenerSchedulerConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if config == nil {
+		return allErrs
+	}
+
+	allErrs = append(allErrs, validateGardenerFeatureGates(config.FeatureGates, fldPath.Child("featureGates"))...)
+
+	return allErrs
+}
+
+func validateGardenerFeatureGates(featureGates map[string]bool, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	for featureGate := range featureGates {
+		spec, supported := features.AllFeatureGates[featuregate.Feature(featureGate)]
+		if !supported {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child(featureGate), "not supported by Gardener"))
+		} else {
+			if spec.LockToDefault && featureGates[featureGate] != spec.Default {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child(featureGate), fmt.Sprintf("cannot set feature gate to %v, feature is locked to %v", featureGates[featureGate], spec.Default)))
+			}
+		}
 	}
 
 	return allErrs

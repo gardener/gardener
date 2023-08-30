@@ -21,17 +21,17 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/component/nodelocaldns"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // DefaultNodeLocalDNS returns a deployer for the node-local-dns.
 func (b *Botanist) DefaultNodeLocalDNS() (nodelocaldns.Interface, error) {
-	image, err := b.ImageVector.FindImage(images.ImageNameNodeLocalDns, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameNodeLocalDns, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,6 @@ func (b *Botanist) DefaultNodeLocalDNS() (nodelocaldns.Interface, error) {
 			Image:             image.String(),
 			VPAEnabled:        b.Shoot.WantsVerticalPodAutoscaler,
 			Config:            v1beta1helper.GetNodeLocalDNS(b.Shoot.GetInfo().Spec.SystemComponents),
-			ShootAnnotations:  b.Shoot.GetInfo().Annotations,
 			ClusterDNS:        clusterDNS,
 			DNSServer:         dnsServer,
 			PSPDisabled:       b.Shoot.PSPDisabled,

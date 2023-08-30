@@ -32,8 +32,8 @@ import (
 
 // ClusterToWorkerMapper returns a mapper that returns requests for Worker whose
 // referenced clusters have been modified.
-func ClusterToWorkerMapper(ctx context.Context, mgr manager.Manager, predicates []predicate.Predicate) mapper.Mapper {
-	return mapper.ClusterToObjectMapper(ctx, mgr, func() client.ObjectList { return &extensionsv1alpha1.WorkerList{} }, predicates)
+func ClusterToWorkerMapper(mgr manager.Manager, predicates []predicate.Predicate) mapper.Mapper {
+	return mapper.ClusterToObjectMapper(mgr, func() client.ObjectList { return &extensionsv1alpha1.WorkerList{} }, predicates)
 }
 
 // MachineSetToWorkerMapper returns a mapper that returns requests for Worker whose
