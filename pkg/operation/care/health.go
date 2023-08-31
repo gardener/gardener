@@ -116,11 +116,79 @@ func (h *Health) Check(
 	healthCheckOutdatedThreshold *metav1.Duration,
 	conditions ShootConditions,
 ) []gardencorev1beta1.Condition {
-	updatedConditions := h.healthChecks(ctx, healthCheckOutdatedThreshold, conditions)
+	var (
+		lastOp     = h.shoot.GetInfo().Status.LastOperation
+		lastErrors = h.shoot.GetInfo().Status.LastErrors
+	)
 
-	lastOp := h.shoot.GetInfo().Status.LastOperation
-	lastErrors := h.shoot.GetInfo().Status.LastErrors
-	return PardonConditions(h.clock, updatedConditions, lastOp, lastErrors)
+	if h.shoot.HibernationEnabled || h.shoot.GetInfo().Status.IsHibernated {
+		updatedConditions := shootHibernatedConditions(h.clock, conditions.ConvertToSlice())
+		return PardonConditions(h.clock, updatedConditions, lastOp, lastErrors)
+	}
+
+	// Get extensions' conditions that are examined by health checks.
+	extensionConditionsControlPlaneHealthy, extensionConditionsEveryNodeReady, extensionConditionsSystemComponentsHealthy, err := h.getAllExtensionConditions(ctx)
+	if err != nil {
+		h.log.Error(err, "Error getting extension conditions")
+	}
+
+	// Health checks that can be executed in all cases.
+	taskFns := []flow.TaskFn{
+		func(ctx context.Context) error {
+			newControlPlane, err := h.checkControlPlane(ctx, conditions.controlPlaneHealthy, extensionConditionsControlPlaneHealthy, healthCheckOutdatedThreshold)
+			conditions.controlPlaneHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.controlPlaneHealthy, newControlPlane, err)
+			return nil
+		}, func(ctx context.Context) error {
+			newObservabilityComponents, err := h.checkObservabilityComponents(ctx, conditions.observabilityComponentsHealthy)
+			conditions.observabilityComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.observabilityComponentsHealthy, newObservabilityComponents, err)
+			return nil
+		},
+	}
+
+	// Health checks with dependencies to the Kube-Apiserver.
+	shootClient, apiServerRunning, err := h.initializeShootClients()
+	if apiServerRunning && err == nil {
+		taskFns = append(taskFns,
+			func(ctx context.Context) error {
+				conditions.apiServerAvailable = h.checkAPIServerAvailability(ctx, shootClient.RESTClient(), conditions.apiServerAvailable)
+				return nil
+			},
+			func(ctx context.Context) error {
+				newSystemComponents, err := h.checkSystemComponents(ctx, shootClient, conditions.systemComponentsHealthy, extensionConditionsSystemComponentsHealthy, healthCheckOutdatedThreshold)
+				conditions.systemComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.systemComponentsHealthy, newSystemComponents, err)
+				return nil
+			},
+		)
+		if conditions.everyNodeReady != nil {
+			taskFns = append(taskFns,
+				func(ctx context.Context) error {
+					newNodes, err := h.checkWorkers(ctx, shootClient, *conditions.everyNodeReady, extensionConditionsEveryNodeReady, healthCheckOutdatedThreshold)
+					nodeCondition := v1beta1helper.NewConditionOrError(h.clock, *conditions.everyNodeReady, newNodes, err)
+					conditions.everyNodeReady = &nodeCondition
+					return nil
+				})
+		}
+	} else {
+		// Some health checks cannot be executed when the API server is not running.
+		// Maintain the affected conditions here.
+		message := shootControlPlaneNotRunningMessage(h.shoot.GetInfo().Status.LastOperation)
+		if err != nil {
+			h.log.Error(err, "Could not initialize Shoot client for health check")
+			message = fmt.Sprintf("Could not initialize Shoot client for health check: %+v", err)
+		}
+
+		conditions.apiServerAvailable = v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, conditions.apiServerAvailable, "APIServerDown", "Could not reach API server during client initialization.")
+		conditions.systemComponentsHealthy = v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(h.clock, conditions.systemComponentsHealthy, message)
+		if conditions.everyNodeReady != nil {
+			nodeCondition := v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(h.clock, *conditions.everyNodeReady, message)
+			conditions.everyNodeReady = &nodeCondition
+		}
+	}
+
+	// Execute all relevant health checks.
+	_ = flow.Parallel(taskFns...)(ctx)
+
+	return PardonConditions(h.clock, conditions.ConvertToSlice(), lastOp, lastErrors)
 }
 
 func (h *Health) getAllExtensionConditions(ctx context.Context) ([]healthchecker.ExtensionCondition, []healthchecker.ExtensionCondition, []healthchecker.ExtensionCondition, error) {
@@ -295,80 +363,6 @@ func getControllerInstallationForControllerRegistration(controllerInstallations 
 		}
 	}
 	return nil, fmt.Errorf("could not find ControllerInstallation for ControllerRegistration %s", client.ObjectKeyFromObject(controllerRegistration))
-}
-
-func (h *Health) healthChecks(
-	ctx context.Context,
-	healthCheckOutdatedThreshold *metav1.Duration,
-	conditions ShootConditions,
-) []gardencorev1beta1.Condition {
-	if h.shoot.HibernationEnabled || h.shoot.GetInfo().Status.IsHibernated {
-		return shootHibernatedConditions(h.clock, conditions.ConvertToSlice())
-	}
-
-	// Get extensions' conditions that are examined by health checks.
-	extensionConditionsControlPlaneHealthy, extensionConditionsEveryNodeReady, extensionConditionsSystemComponentsHealthy, err := h.getAllExtensionConditions(ctx)
-	if err != nil {
-		h.log.Error(err, "Error getting extension conditions")
-	}
-
-	// Health checks that can be executed in all cases.
-	taskFns := []flow.TaskFn{
-		func(ctx context.Context) error {
-			newControlPlane, err := h.checkControlPlane(ctx, conditions.controlPlaneHealthy, extensionConditionsControlPlaneHealthy, healthCheckOutdatedThreshold)
-			conditions.controlPlaneHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.controlPlaneHealthy, newControlPlane, err)
-			return nil
-		}, func(ctx context.Context) error {
-			newObservabilityComponents, err := h.checkObservabilityComponents(ctx, conditions.observabilityComponentsHealthy)
-			conditions.observabilityComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.observabilityComponentsHealthy, newObservabilityComponents, err)
-			return nil
-		},
-	}
-
-	// Health checks with dependencies to the Kube-Apiserver.
-	shootClient, apiServerRunning, err := h.initializeShootClients()
-	if apiServerRunning && err == nil {
-		taskFns = append(taskFns,
-			func(ctx context.Context) error {
-				conditions.apiServerAvailable = h.checkAPIServerAvailability(ctx, shootClient.RESTClient(), conditions.apiServerAvailable)
-				return nil
-			},
-			func(ctx context.Context) error {
-				newSystemComponents, err := h.checkSystemComponents(ctx, shootClient, conditions.systemComponentsHealthy, extensionConditionsSystemComponentsHealthy, healthCheckOutdatedThreshold)
-				conditions.systemComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.systemComponentsHealthy, newSystemComponents, err)
-				return nil
-			},
-		)
-		if conditions.everyNodeReady != nil {
-			taskFns = append(taskFns,
-				func(ctx context.Context) error {
-					newNodes, err := h.checkWorkers(ctx, shootClient, *conditions.everyNodeReady, extensionConditionsEveryNodeReady, healthCheckOutdatedThreshold)
-					nodeCondition := v1beta1helper.NewConditionOrError(h.clock, *conditions.everyNodeReady, newNodes, err)
-					conditions.everyNodeReady = &nodeCondition
-					return nil
-				})
-		}
-	} else {
-		// Some health checks cannot be executed when the API server is not running.
-		// Maintain the affected conditions here.
-		message := shootControlPlaneNotRunningMessage(h.shoot.GetInfo().Status.LastOperation)
-		if err != nil {
-			h.log.Error(err, "Could not initialize Shoot client for health check")
-			message = fmt.Sprintf("Could not initialize Shoot client for health check: %+v", err)
-		}
-
-		conditions.apiServerAvailable = v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, conditions.apiServerAvailable, "APIServerDown", "Could not reach API server during client initialization.")
-		conditions.systemComponentsHealthy = v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(h.clock, conditions.systemComponentsHealthy, message)
-		if conditions.everyNodeReady != nil {
-			nodeCondition := v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(h.clock, *conditions.everyNodeReady, message)
-			conditions.everyNodeReady = &nodeCondition
-		}
-	}
-
-	// Execute all relevant health checks.
-	_ = flow.Parallel(taskFns...)(ctx)
-
-	return conditions.ConvertToSlice()
 }
 
 // checkAPIServerAvailability checks if the API server of a Shoot cluster is reachable and measure the response time.

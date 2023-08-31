@@ -288,7 +288,7 @@ func (b *HealthChecker) checkManagedResourceConditions(
 	return nil
 }
 
-// CheckControlPlane checks whether the control plane components in the given listers are complete and healthy.
+// CheckControlPlane checks whether the given required control-plane component deployments and ETCDs are complete and healthy.
 func (b *HealthChecker) CheckControlPlane(
 	ctx context.Context,
 	namespace string,
@@ -376,7 +376,7 @@ var (
 	)
 )
 
-// CheckLoggingControlPlane checks whether the logging components in the given listers are complete and healthy.
+// CheckLoggingControlPlane checks whether the logging components are complete and healthy.
 func (b *HealthChecker) CheckLoggingControlPlane(
 	ctx context.Context,
 	namespace string,

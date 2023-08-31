@@ -26,5 +26,5 @@ import (
 func TestChecker(t *testing.T) {
 	features.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Health Checker Suite")
+	RunSpecs(t, "Utils Kubernetes Health Checker Suite")
 }

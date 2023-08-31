@@ -63,7 +63,7 @@ type health struct {
 	seedIsGarden        bool
 	loggingEnabled      bool
 	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration
-	healtchChecker      *healthchecker.HealthChecker
+	healthChecker       *healthchecker.HealthChecker
 }
 
 // NewHealth creates a new Health instance with the given parameters.
@@ -84,7 +84,7 @@ func NewHealth(
 		seedIsGarden:        seedIsGarden,
 		loggingEnabled:      loggingEnabled,
 		conditionThresholds: conditionThresholds,
-		healtchChecker:      healthchecker.NewHealthChecker(seedClient, clock, conditionThresholds, seed.Status.LastOperation),
+		healthChecker:       healthchecker.NewHealthChecker(seedClient, clock, conditionThresholds, seed.Status.LastOperation),
 	}
 }
 
@@ -147,7 +147,7 @@ func (h *health) checkSystemComponents(
 			return nil, err
 		}
 
-		if exitCondition := h.healtchChecker.CheckManagedResource(condition, mr, nil); exitCondition != nil {
+		if exitCondition := h.healthChecker.CheckManagedResource(condition, mr, nil); exitCondition != nil {
 			return exitCondition, nil
 		}
 	}
