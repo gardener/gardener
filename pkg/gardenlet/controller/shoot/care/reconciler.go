@@ -101,35 +101,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	defer cancel()
 
 	// Initialize conditions based on the current status.
-	conditionTypes := []gardencorev1beta1.ConditionType{
-		gardencorev1beta1.ShootAPIServerAvailable,
-		gardencorev1beta1.ShootControlPlaneHealthy,
-		gardencorev1beta1.ShootObservabilityComponentsHealthy,
-		gardencorev1beta1.ShootSystemComponentsHealthy,
-	}
+	shootConditions := NewShootConditions(r.Clock, shoot)
 
-	if !v1beta1helper.IsWorkerless(shoot) {
-		conditionTypes = append(conditionTypes,
-			gardencorev1beta1.ShootEveryNodeReady,
-		)
-	}
-
-	var conditions []gardencorev1beta1.Condition
-	for _, cond := range conditionTypes {
-		conditions = append(conditions, v1beta1helper.GetOrInitConditionWithClock(r.Clock, shoot.Status.Conditions, cond))
-	}
-
-	// Initialize constraints
-	constraintTypes := []gardencorev1beta1.ConditionType{
-		gardencorev1beta1.ShootHibernationPossible,
-		gardencorev1beta1.ShootMaintenancePreconditionsSatisfied,
-		gardencorev1beta1.ShootCACertificateValiditiesAcceptable,
-		gardencorev1beta1.ShootCRDsWithProblematicConversionWebhooks,
-	}
-	var constraints []gardencorev1beta1.Condition
-	for _, constr := range constraintTypes {
-		constraints = append(constraints, v1beta1helper.GetOrInitConditionWithClock(r.Clock, shoot.Status.Constraints, constr))
-	}
+	// Initialize constraints based on the current status.
+	shootConstraints := NewShootConstraints(r.Clock, shoot)
 
 	// Only read Garden secrets once because we don't rely on up-to-date secrets for health checks.
 	if r.gardenSecrets == nil {
@@ -153,7 +128,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		shoot,
 	)
 	if err != nil {
-		if err := r.patchStatusToUnknown(ctx, shoot, "Precondition failed: operation could not be initialized", conditions, constraints); err != nil {
+		if err := r.patchStatusToUnknown(ctx, shoot, "Precondition failed: operation could not be initialized", shootConditions.ConvertToSlice(), shootConstraints.ConvertToSlice()); err != nil {
 			log.Error(err, "Error when trying to update the shoot status after failed operation initialization")
 		}
 		return reconcile.Result{}, err
@@ -168,36 +143,46 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	if err := flow.Parallel(
 		// Trigger health check
 		func(ctx context.Context) error {
-			shootHealth := NewHealthCheck(o, initializeShootClients, r.Clock)
-			updatedConditions = shootHealth.Check(
-				ctx,
+			updatedConditions = NewHealthCheck(
+				log,
+				o.Shoot,
+				r.SeedClientSet,
+				r.GardenClient,
+				initializeShootClients,
+				r.Clock,
+				&r.Config,
 				r.conditionThresholdsToProgressingMapping(),
+			).Check(
+				ctx,
 				staleExtensionHealthCheckThreshold,
-				conditions,
+				shootConditions,
 			)
 			return nil
 		},
 		// Trigger constraint checks
 		func(ctx context.Context) error {
-			constraint := NewConstraintCheck(clock.RealClock{}, o, initializeShootClients)
-			updatedConstraints = constraint.Check(
+			updatedConstraints = NewConstraintCheck(
+				log,
+				o.Shoot,
+				r.SeedClientSet.Client(),
+				initializeShootClients,
+				clock.RealClock{},
+			).Check(
 				ctx,
-				constraints,
+				shootConstraints,
 			)
 			return nil
 		},
 		// Trigger garbage collection
 		func(ctx context.Context) error {
-			garbageCollector := NewGarbageCollector(o, initializeShootClients)
-			garbageCollector.Collect(ctx)
+			NewGarbageCollector(o, initializeShootClients).Collect(ctx)
 			// errors during garbage collection are only being logged and do not cause the care operation to fail
 			return nil
 		},
 		// Trigger webhook remediation
 		func(ctx context.Context) error {
 			if pointer.BoolDeref(r.Config.Controllers.ShootCare.WebhookRemediatorEnabled, false) {
-				webhookRemediator := NewWebhookRemediator(o, initializeShootClients)
-				_ = webhookRemediator.Remediate(ctx)
+				_ = NewWebhookRemediator(log, shoot, initializeShootClients).Remediate(ctx)
 				// errors during webhook remediation are only being logged and do not cause the care operation to fail
 			}
 			return nil
@@ -207,12 +192,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	// Update Shoot status (conditions, constraints) if necessary
-	if v1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) || v1beta1helper.ConditionsNeedUpdate(constraints, updatedConstraints) {
+	if v1beta1helper.ConditionsNeedUpdate(shootConditions.ConvertToSlice(), updatedConditions) ||
+		v1beta1helper.ConditionsNeedUpdate(shootConstraints.ConvertToSlice(), updatedConstraints) {
 		log.V(1).Info("Updating status conditions and constraints")
 		// Rebuild shoot conditions and constraints to ensure that only the conditions and constraints with the
 		// correct types will be updated, and any other conditions will remain intact
-		conditions = v1beta1helper.BuildConditions(shoot.Status.Conditions, updatedConditions, conditionTypes)
-		constraints = v1beta1helper.BuildConditions(shoot.Status.Constraints, updatedConstraints, constraintTypes)
+		conditions := v1beta1helper.BuildConditions(shoot.Status.Conditions, updatedConditions, shootConditions.ConditionTypes())
+		constraints := v1beta1helper.BuildConditions(shoot.Status.Constraints, updatedConstraints, shootConstraints.ConstraintTypes())
 
 		if err := r.patchStatus(ctx, shoot, conditions, constraints); err != nil {
 			log.Error(err, "Error when trying to update the shoot status")

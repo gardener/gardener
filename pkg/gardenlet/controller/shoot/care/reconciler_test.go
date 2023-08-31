@@ -41,9 +41,11 @@ import (
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
 	"github.com/gardener/gardener/pkg/operation"
-	"github.com/gardener/gardener/pkg/operation/care"
+	"github.com/gardener/gardener/pkg/operation/shoot"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -239,8 +241,8 @@ var _ = Describe("Shoot Care Control", func() {
 			Context("when no conditions / constraints are returned", func() {
 				BeforeEach(func() {
 					DeferCleanup(test.WithVars(
-						&NewHealthCheck, healthCheckFunc(func(_ []gardencorev1beta1.Condition) []gardencorev1beta1.Condition { return nil }),
-						&NewConstraintCheck, constraintCheckFunc(func(_ []gardencorev1beta1.Condition) []gardencorev1beta1.Condition { return nil }),
+						&NewHealthCheck, healthCheckFunc(func(_ care.ShootConditions) []gardencorev1beta1.Condition { return nil }),
+						&NewConstraintCheck, constraintCheckFunc(func(_ care.ShootConstraints) []gardencorev1beta1.Condition { return nil }),
 					))
 				})
 
@@ -282,12 +284,14 @@ var _ = Describe("Shoot Care Control", func() {
 			Context("when conditions / constraints are returned unchanged", func() {
 				BeforeEach(func() {
 					DeferCleanup(test.WithVars(
-						&NewHealthCheck, healthCheckFunc(func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
-							conditionsCopy := append(cond[:0:0], cond...)
+						&NewHealthCheck, healthCheckFunc(func(cond care.ShootConditions) []gardencorev1beta1.Condition {
+							conditions := cond.ConvertToSlice()
+							conditionsCopy := append(conditions[:0:0], conditions...)
 							return conditionsCopy
 						}),
-						&NewConstraintCheck, constraintCheckFunc(func(constr []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
-							constraintsCopy := append(constr[:0:0], constr...)
+						&NewConstraintCheck, constraintCheckFunc(func(constr care.ShootConstraints) []gardencorev1beta1.Condition {
+							constraints := constr.ConvertToSlice()
+							constraintsCopy := append(constraints[:0:0], constraints...)
 							return constraintsCopy
 						}),
 					))
@@ -372,10 +376,10 @@ var _ = Describe("Shoot Care Control", func() {
 					}
 
 					DeferCleanup(test.WithVars(
-						&NewHealthCheck, healthCheckFunc(func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+						&NewHealthCheck, healthCheckFunc(func(_ care.ShootConditions) []gardencorev1beta1.Condition {
 							return conditions
 						}),
-						&NewConstraintCheck, constraintCheckFunc(func(constr []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+						&NewConstraintCheck, constraintCheckFunc(func(_ care.ShootConstraints) []gardencorev1beta1.Condition {
 							return constraints
 						}),
 					))
@@ -479,10 +483,10 @@ var _ = Describe("Shoot Care Control", func() {
 					}
 
 					DeferCleanup(test.WithVars(
-						&NewHealthCheck, healthCheckFunc(func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+						&NewHealthCheck, healthCheckFunc(func(_ care.ShootConditions) []gardencorev1beta1.Condition {
 							return conditions
 						}),
-						&NewConstraintCheck, constraintCheckFunc(func(constr []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+						&NewConstraintCheck, constraintCheckFunc(func(_ care.ShootConstraints) []gardencorev1beta1.Condition {
 							return constraints
 						}),
 					))
@@ -511,42 +515,56 @@ var _ = Describe("Shoot Care Control", func() {
 	})
 })
 
-type resultingConditionFunc func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition
+type resultingConditionFunc func(care.ShootConditions) []gardencorev1beta1.Condition
 
-func (h resultingConditionFunc) Check(_ context.Context, _ map[gardencorev1beta1.ConditionType]time.Duration, _ *metav1.Duration, con []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+func (h resultingConditionFunc) Check(_ context.Context, _ *metav1.Duration, con care.ShootConditions) []gardencorev1beta1.Condition {
 	return h(con)
 }
 
 func healthCheckFunc(fn resultingConditionFunc) NewHealthCheckFunc {
-	return func(op *operation.Operation, init care.ShootClientInit, clock clock.Clock) HealthCheck {
+	return func(
+		log logr.Logger,
+		shoot *shoot.Shoot,
+		seedClient kubernetes.Interface,
+		gardenClient client.Client,
+		shootClientInit ShootClientInit,
+		clock clock.Clock,
+		gardenletConfig *gardenletconfig.GardenletConfiguration,
+		conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
+	) HealthCheck {
 		return fn
 	}
 }
 
-type resultingConstraintFunc func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition
+type resultingConstraintFunc func(care.ShootConstraints) []gardencorev1beta1.Condition
 
-func (c resultingConstraintFunc) Check(_ context.Context, constraints []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+func (c resultingConstraintFunc) Check(_ context.Context, constraints care.ShootConstraints) []gardencorev1beta1.Condition {
 	return c(constraints)
 }
 
 func constraintCheckFunc(fn resultingConstraintFunc) NewConstraintCheckFunc {
-	return func(clock clock.Clock, op *operation.Operation, init care.ShootClientInit) ConstraintCheck {
+	return func(log logr.Logger,
+		shoot *shoot.Shoot,
+		seedClient client.Client,
+		shootClientInit ShootClientInit,
+		clock clock.Clock,
+	) ConstraintCheck {
 		return fn
 	}
 }
 
 func opFunc(op *operation.Operation, err error) NewOperationFunc {
 	return func(
-		_ context.Context,
-		_ logr.Logger,
-		_ client.Client,
-		_ kubernetes.Interface,
-		_ clientmap.ClientMap,
-		_ *config.GardenletConfiguration,
-		_ *gardencorev1beta1.Gardener,
-		_ string,
-		_ map[string]*corev1.Secret,
-		_ *gardencorev1beta1.Shoot,
+		ctx context.Context,
+		log logr.Logger,
+		gardenClient client.Client,
+		seedClientSet kubernetes.Interface,
+		shootClientMap clientmap.ClientMap,
+		config *config.GardenletConfiguration,
+		gardenerInfo *gardencorev1beta1.Gardener,
+		gardenClusterIdentity string,
+		secrets map[string]*corev1.Secret,
+		shoot *gardencorev1beta1.Shoot,
 	) (*operation.Operation, error) {
 		return op, err
 	}

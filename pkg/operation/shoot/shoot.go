@@ -173,7 +173,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	}
 
 	shoot.HibernationEnabled = v1beta1helper.HibernationIsEnabled(shootObject)
-	shoot.SeedNamespace = ComputeTechnicalID(b.projectName, shootObject)
+	shoot.SeedNamespace = gardenerutils.ComputeTechnicalID(b.projectName, shootObject)
 	shoot.InternalClusterDomain = gardenerutils.ConstructInternalClusterDomain(shootObject.Name, b.projectName, b.internalDomain)
 	shoot.ExternalClusterDomain = gardenerutils.ConstructExternalClusterDomain(shootObject)
 	shoot.IgnoreAlerts = v1beta1helper.ShootIgnoresAlerts(shootObject)
@@ -471,20 +471,6 @@ func (s *Shoot) IPVSEnabled() bool {
 // IsShootControlPlaneLoggingEnabled return true if the Shoot controlplane logging is enabled
 func (s *Shoot) IsShootControlPlaneLoggingEnabled(c *config.GardenletConfiguration) bool {
 	return s.Purpose != gardencorev1beta1.ShootPurposeTesting && gardenlethelper.IsLoggingEnabled(c)
-}
-
-// ComputeTechnicalID determines the technical id of that Shoot which is later used for the name of the
-// namespace and for tagging all the resources created in the infrastructure.
-func ComputeTechnicalID(projectName string, shoot *gardencorev1beta1.Shoot) string {
-	// Use the stored technical ID in the Shoot's status field if it's there.
-	// For backwards compatibility we keep the pattern as it was before we had to change it
-	// (double hyphens).
-	if len(shoot.Status.TechnicalID) > 0 {
-		return shoot.Status.TechnicalID
-	}
-
-	// New clusters shall be created with the new technical id (double hyphens).
-	return fmt.Sprintf("%s-%s--%s", v1beta1constants.TechnicalIDPrefix, projectName, shoot.Name)
 }
 
 // ToNetworks return a network with computed cidrs and ClusterIPs

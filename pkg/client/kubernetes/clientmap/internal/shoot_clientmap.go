@@ -28,8 +28,8 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
 )
 
@@ -184,7 +184,7 @@ func (f *ShootClientSetFactory) getSeedNamespace(ctx context.Context, key ShootC
 		if err != nil {
 			return "", fmt.Errorf("failed to get Project for Shoot %q: %w", key.Key(), err)
 		}
-		namespace = shootpkg.ComputeTechnicalID(project.Name, shoot)
+		namespace = gardenerutils.ComputeTechnicalID(project.Name, shoot)
 	}
 
 	f.seedNamespaceToCache(key, namespace)

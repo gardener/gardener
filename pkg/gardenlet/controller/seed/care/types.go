@@ -22,7 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/operation/care"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 )
 
@@ -31,14 +30,14 @@ var defaultNewSeedObjectFunc = func(ctx context.Context, seed *gardencorev1beta1
 }
 
 // NewHealthCheckFunc is a function used to create a new instance for performing health checks.
-type NewHealthCheckFunc func(*gardencorev1beta1.Seed, client.Client, clock.Clock, *string, bool, bool) HealthCheck
+type NewHealthCheckFunc func(*gardencorev1beta1.Seed, client.Client, clock.Clock, *string, bool, bool, map[gardencorev1beta1.ConditionType]time.Duration) HealthCheck
 
 // defaultNewHealthCheck is the default function to create a new instance for performing health checks.
-var defaultNewHealthCheck NewHealthCheckFunc = func(seed *gardencorev1beta1.Seed, client client.Client, clock clock.Clock, namespace *string, seedIsGarden bool, loggingEnabled bool) HealthCheck {
-	return care.NewHealthForSeed(seed, client, clock, namespace, seedIsGarden, loggingEnabled)
+var defaultNewHealthCheck NewHealthCheckFunc = func(seed *gardencorev1beta1.Seed, client client.Client, clock clock.Clock, namespace *string, seedIsGarden bool, loggingEnabled bool, conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration) HealthCheck {
+	return NewHealth(seed, client, clock, namespace, seedIsGarden, loggingEnabled, conditionThresholds)
 }
 
 // HealthCheck is an interface used to perform health checks.
 type HealthCheck interface {
-	CheckSeed(ctx context.Context, condition []gardencorev1beta1.Condition, thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration, lastOperation *gardencorev1beta1.LastOperation) []gardencorev1beta1.Condition
+	Check(ctx context.Context, condition SeedConditions) []gardencorev1beta1.Condition
 }

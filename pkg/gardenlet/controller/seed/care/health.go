@@ -42,6 +42,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/vpa"
 	"github.com/gardener/gardener/pkg/features"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	healthchecker "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
 )
 
 var requiredManagedResourcesSeed = sets.New(
@@ -53,52 +54,51 @@ var requiredManagedResourcesSeed = sets.New(
 	vpa.ManagedResourceControlName,
 )
 
-// SeedHealth contains information needed to execute health checks for seed.
-type SeedHealth struct {
-	seed           *gardencorev1beta1.Seed
-	seedClient     client.Client
-	clock          clock.Clock
-	namespace      *string
-	seedIsGarden   bool
-	loggingEnabled bool
+// health contains information needed to execute health checks for a seed.
+type health struct {
+	seed                *gardencorev1beta1.Seed
+	seedClient          client.Client
+	clock               clock.Clock
+	namespace           *string
+	seedIsGarden        bool
+	loggingEnabled      bool
+	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration
+	healthChecker       *healthchecker.HealthChecker
 }
 
-// NewHealthForSeed creates a new Health instance with the given parameters.
-func NewHealthForSeed(seed *gardencorev1beta1.Seed, seedClient client.Client, clock clock.Clock, namespace *string, seedIsGarden bool, loggingEnabled bool) *SeedHealth {
-	return &SeedHealth{
-		seedClient:     seedClient,
-		seed:           seed,
-		clock:          clock,
-		namespace:      namespace,
-		seedIsGarden:   seedIsGarden,
-		loggingEnabled: loggingEnabled,
+// NewHealth creates a new Health instance with the given parameters.
+func NewHealth(
+	seed *gardencorev1beta1.Seed,
+	seedClient client.Client,
+	clock clock.Clock,
+	namespace *string,
+	seedIsGarden bool,
+	loggingEnabled bool,
+	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
+) HealthCheck {
+	return &health{
+		seedClient:          seedClient,
+		seed:                seed,
+		clock:               clock,
+		namespace:           namespace,
+		seedIsGarden:        seedIsGarden,
+		loggingEnabled:      loggingEnabled,
+		conditionThresholds: conditionThresholds,
+		healthChecker:       healthchecker.NewHealthChecker(seedClient, clock, conditionThresholds, seed.Status.LastOperation),
 	}
 }
 
-// CheckSeed conducts the health checks on all the given conditions.
-func (h *SeedHealth) CheckSeed(
+// Check conducts the health checks on all the given conditions.
+func (h *health) Check(
 	ctx context.Context,
-	conditions []gardencorev1beta1.Condition,
-	thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration,
-	lastOperation *gardencorev1beta1.LastOperation,
+	conditions SeedConditions,
 ) []gardencorev1beta1.Condition {
-
-	var systemComponentsCondition gardencorev1beta1.Condition
-	for _, cond := range conditions {
-		switch cond.Type {
-		case gardencorev1beta1.SeedSystemComponentsHealthy:
-			systemComponentsCondition = cond
-		}
-	}
-
-	checker := NewHealthChecker(h.seedClient, h.clock, thresholdMappings, nil, nil, lastOperation, nil)
-	newSystemComponentsCondition, err := h.checkSeedSystemComponents(ctx, checker, systemComponentsCondition)
-	return []gardencorev1beta1.Condition{NewConditionOrError(h.clock, systemComponentsCondition, newSystemComponentsCondition, err)}
+	newSystemComponentsCondition, err := h.checkSystemComponents(ctx, conditions.systemComponentsHealthy)
+	return []gardencorev1beta1.Condition{v1beta1helper.NewConditionOrError(h.clock, conditions.systemComponentsHealthy, newSystemComponentsCondition, err)}
 }
 
-func (h *SeedHealth) checkSeedSystemComponents(
+func (h *health) checkSystemComponents(
 	ctx context.Context,
-	checker *HealthChecker,
 	condition gardencorev1beta1.Condition,
 ) (
 	*gardencorev1beta1.Condition,
@@ -141,13 +141,13 @@ func (h *SeedHealth) checkSeedSystemComponents(
 		mr := &resourcesv1alpha1.ManagedResource{}
 		if err := h.seedClient.Get(ctx, kubernetesutils.Key(namespace, name), mr); err != nil {
 			if apierrors.IsNotFound(err) {
-				exitCondition := checker.FailedCondition(condition, "ResourceNotFound", err.Error())
+				exitCondition := v1beta1helper.FailedCondition(h.clock, h.seed.Status.LastOperation, h.conditionThresholds, condition, "ResourceNotFound", err.Error())
 				return &exitCondition, nil
 			}
 			return nil, err
 		}
 
-		if exitCondition := checkManagedResourceForSeed(checker, condition, mr); exitCondition != nil {
+		if exitCondition := h.healthChecker.CheckManagedResource(condition, mr, nil); exitCondition != nil {
 			return exitCondition, nil
 		}
 	}
@@ -156,12 +156,29 @@ func (h *SeedHealth) checkSeedSystemComponents(
 	return &c, nil
 }
 
-func checkManagedResourceForSeed(checker *HealthChecker, condition gardencorev1beta1.Condition, managedResource *resourcesv1alpha1.ManagedResource) *gardencorev1beta1.Condition {
-	conditionsToCheck := map[gardencorev1beta1.ConditionType]func(condition gardencorev1beta1.Condition) bool{
-		resourcesv1alpha1.ResourcesApplied:     defaultSuccessfulCheck(),
-		resourcesv1alpha1.ResourcesHealthy:     defaultSuccessfulCheck(),
-		resourcesv1alpha1.ResourcesProgressing: resourcesNotProgressingCheck(checker.clock, nil),
-	}
+// SeedConditions contains all seed related conditions of the seed status subresource.
+type SeedConditions struct {
+	systemComponentsHealthy gardencorev1beta1.Condition
+}
 
-	return checker.checkManagedResourceConditions(condition, managedResource, conditionsToCheck)
+// ConvertToSlice returns the seed conditions as a slice.
+func (s SeedConditions) ConvertToSlice() []gardencorev1beta1.Condition {
+	return []gardencorev1beta1.Condition{
+		s.systemComponentsHealthy,
+	}
+}
+
+// ConditionTypes returns all seed condition types.
+func (s SeedConditions) ConditionTypes() []gardencorev1beta1.ConditionType {
+	return []gardencorev1beta1.ConditionType{
+		s.systemComponentsHealthy.Type,
+	}
+}
+
+// NewSeedConditions returns a new instance of SeedConditions.
+// All conditions are retrieved from the given 'status' or newly initialized.
+func NewSeedConditions(clock clock.Clock, status gardencorev1beta1.SeedStatus) SeedConditions {
+	return SeedConditions{
+		systemComponentsHealthy: v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, gardencorev1beta1.SeedSystemComponentsHealthy),
+	}
 }

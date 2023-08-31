@@ -30,23 +30,20 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/operation"
+	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
 	"github.com/gardener/gardener/pkg/operation/botanist/matchers"
-	. "github.com/gardener/gardener/pkg/operation/care"
-	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("WebhookRemediation", func() {
 	var (
-		ctx = context.TODO()
+		ctx = context.Background()
 
 		fakeClient              client.Client
 		fakeKubernetesInterface kubernetes.Interface
 		shootClientInit         func() (kubernetes.Interface, bool, error)
 
 		shoot *gardencorev1beta1.Shoot
-		op    *operation.Operation
 
 		remediator *WebhookRemediation
 	)
@@ -59,13 +56,8 @@ var _ = Describe("WebhookRemediation", func() {
 		}
 
 		shoot = &gardencorev1beta1.Shoot{}
-		op = &operation.Operation{
-			Logger: logr.Discard(),
-			Shoot:  &shootpkg.Shoot{},
-		}
-		op.Shoot.SetInfo(shoot)
 
-		remediator = NewWebhookRemediation(op, shootClientInit)
+		remediator = NewWebhookRemediation(logr.Discard(), shoot, shootClientInit)
 	})
 
 	Describe("#Remediate", func() {

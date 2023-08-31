@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -48,14 +49,14 @@ import (
 	apiregistrationv1beta1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/clock/testing"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/operation"
-	. "github.com/gardener/gardener/pkg/operation/care"
+	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -98,6 +99,15 @@ func (w *webhookTestCase) build() (
 }
 
 var _ = Describe("Constraints", func() {
+	var (
+		clock clock.Clock
+		now   = time.Date(2022, 2, 22, 22, 22, 22, 0, time.UTC)
+	)
+
+	BeforeEach(func() {
+		clock = testing.NewFakeClock(now)
+	})
+
 	Describe("#IsProblematicWebhook", func() {
 		var (
 			failurePolicyIgnore = admissionregistrationv1.Ignore
@@ -447,15 +457,11 @@ var _ = Describe("Constraints", func() {
 
 	Describe("Constraint", func() {
 		var (
-			ctx           = context.TODO()
+			ctx           = context.Background()
 			seedNamespace = "shoot--foo--bar"
 			seedClient    client.Client
 			shootClient   client.Client
 
-			now   = time.Date(2022, 2, 22, 22, 22, 22, 0, time.UTC)
-			clock clock.Clock
-
-			op         *operation.Operation
 			constraint *Constraint
 
 			newCASecret = func(validUntilTime time.Time) *corev1.Secret {
@@ -479,26 +485,35 @@ var _ = Describe("Constraints", func() {
 			seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 			shootClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
 
-			clock = testing.NewFakeClock(now)
-			op = &operation.Operation{
-				SeedClientSet: kubernetesfake.NewClientSetBuilder().WithClient(seedClient).Build(),
-				Shoot: &shootpkg.Shoot{
-					SeedNamespace: seedNamespace,
-				},
+			shoot := &shootpkg.Shoot{
+				SeedNamespace: seedNamespace,
 			}
-			op.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
-			constraint = NewConstraint(clock, op, func() (kubernetes.Interface, bool, error) {
-				return kubernetesfake.NewClientSetBuilder().WithClient(shootClient).Build(), true, nil
-			})
+			shoot.SetInfo(&gardencorev1beta1.Shoot{})
+
+			constraint = NewConstraint(
+				logr.Discard(),
+				shoot,
+				seedClient,
+				func() (kubernetes.Interface, bool, error) {
+					return kubernetesfake.NewClientSetBuilder().WithClient(shootClient).Build(), true, nil
+				},
+				clock,
+			)
 		})
 
 		Describe("#Check", func() {
 			var (
-				constraints = []gardencorev1beta1.Condition{
-					{Type: gardencorev1beta1.ShootHibernationPossible},
-					{Type: gardencorev1beta1.ShootMaintenancePreconditionsSatisfied},
-					{Type: gardencorev1beta1.ShootCRDsWithProblematicConversionWebhooks},
+				shoot = &gardencorev1beta1.Shoot{
+					Status: gardencorev1beta1.ShootStatus{
+						Constraints: []gardencorev1beta1.Condition{
+							{Type: gardencorev1beta1.ShootHibernationPossible},
+							{Type: gardencorev1beta1.ShootMaintenancePreconditionsSatisfied},
+							{Type: gardencorev1beta1.ShootCRDsWithProblematicConversionWebhooks},
+						},
+					},
 				}
+
+				constraints = NewShootConstraints(testclock.NewFakeClock(time.Time{}), shoot)
 			)
 
 			It("should remove the 'CACertificateValiditiesAcceptable' constraint because it's true", func() {
@@ -627,6 +642,65 @@ var _ = Describe("Constraints", func() {
 				Expect(reason).To(BeEmpty())
 				Expect(message).To(BeEmpty())
 				Expect(errorCodes).To(BeNil())
+			})
+		})
+	})
+
+	Describe("ShootConstraints", func() {
+		Describe("#NewShootConstraints", func() {
+			It("should initialize all constraints", func() {
+				constraints := NewShootConstraints(clock, &gardencorev1beta1.Shoot{})
+
+				Expect(constraints.ConvertToSlice()).To(ConsistOf(
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+				))
+			})
+
+			It("should only initialize missing conditions", func() {
+				constraints := NewShootConstraints(clock, &gardencorev1beta1.Shoot{
+					Status: gardencorev1beta1.ShootStatus{
+						Constraints: []gardencorev1beta1.Condition{
+							{Type: "HibernationPossible"},
+							{Type: "Foo"},
+						},
+					},
+				})
+
+				Expect(constraints.ConvertToSlice()).To(ConsistOf(
+					OfType("HibernationPossible"),
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+				))
+			})
+		})
+
+		Describe("#ConvertToSlice", func() {
+			It("should return the expected conditions", func() {
+				constraints := NewShootConstraints(clock, &gardencorev1beta1.Shoot{})
+
+				Expect(constraints.ConvertToSlice()).To(HaveExactElements(
+					OfType("HibernationPossible"),
+					OfType("MaintenancePreconditionsSatisfied"),
+					OfType("CACertificateValiditiesAcceptable"),
+					OfType("CRDsWithProblematicConversionWebhooks"),
+				))
+			})
+		})
+
+		Describe("#ConstraintTypes", func() {
+			It("should return the expected condition types", func() {
+				constraints := NewShootConstraints(clock, &gardencorev1beta1.Shoot{})
+
+				Expect(constraints.ConstraintTypes()).To(HaveExactElements(
+					gardencorev1beta1.ConditionType("HibernationPossible"),
+					gardencorev1beta1.ConditionType("MaintenancePreconditionsSatisfied"),
+					gardencorev1beta1.ConditionType("CACertificateValiditiesAcceptable"),
+					gardencorev1beta1.ConditionType("CRDsWithProblematicConversionWebhooks"),
+				))
 			})
 		})
 	})

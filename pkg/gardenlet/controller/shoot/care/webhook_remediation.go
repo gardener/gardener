@@ -31,7 +31,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/operation"
 	webhookmatchers "github.com/gardener/gardener/pkg/operation/botanist/matchers"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -45,11 +44,11 @@ type WebhookRemediation struct {
 }
 
 // NewWebhookRemediation creates a new instance for webhook remediation.
-func NewWebhookRemediation(op *operation.Operation, shootClientInit ShootClientInit) *WebhookRemediation {
+func NewWebhookRemediation(log logr.Logger, shoot *gardencorev1beta1.Shoot, shootClientInit ShootClientInit) *WebhookRemediation {
 	return &WebhookRemediation{
-		log:                    op.Logger,
+		log:                    log,
 		initializeShootClients: shootClientInit,
-		shoot:                  op.Shoot.GetInfo(),
+		shoot:                  shoot,
 	}
 }
 

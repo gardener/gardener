@@ -806,7 +806,6 @@ build:
         - pkg/client/kubernetes/clientmap/builder
         - pkg/client/kubernetes/clientmap/internal
         - pkg/client/kubernetes/clientmap/keys
-        - pkg/component/gardensystem/runtime
         - pkg/controller/networkpolicy
         - pkg/controller/networkpolicy/helper
         - pkg/controller/networkpolicy/hostnameresolver
@@ -931,7 +930,6 @@ build:
         - pkg/component/vpnseedserver
         - pkg/component/vpnshoot
         - pkg/operation/botanist/matchers
-        - pkg/operation/care
         - pkg/operation/common
         - pkg/operation/garden
         - pkg/operation/seed
@@ -965,6 +963,7 @@ build:
         - pkg/utils/kubernetes/bootstraptoken
         - pkg/utils/kubernetes/client
         - pkg/utils/kubernetes/health
+        - pkg/utils/kubernetes/health/checker
         - pkg/utils/kubernetes/unstructured
         - pkg/utils/managedresources
         - pkg/utils/managedresources/builder
