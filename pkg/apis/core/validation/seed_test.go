@@ -170,8 +170,53 @@ var _ = Describe("Seed Validation Tests", func() {
 				metav1.SetMetaDataAnnotation(&seed.ObjectMeta, "gardener.cloud/operation", operation)
 				Expect(ValidateSeed(seed)).To(BeEmpty())
 			},
+				Entry("reconcile", "reconcile"),
 				Entry("renew-garden-access-secrets", "renew-garden-access-secrets"),
+				Entry("renew-kubeconfig", "renew-kubeconfig"),
 			)
+
+			DescribeTable("should do nothing if a valid operation annotation is added", func(operation string) {
+				newSeed := prepareSeedForUpdate(seed)
+				metav1.SetMetaDataAnnotation(&newSeed.ObjectMeta, "gardener.cloud/operation", operation)
+				Expect(ValidateSeedUpdate(newSeed, seed)).To(BeEmpty())
+			},
+				Entry("reconcile", "reconcile"),
+				Entry("renew-garden-access-secrets", "renew-garden-access-secrets"),
+				Entry("renew-kubeconfig", "renew-kubeconfig"),
+			)
+
+			DescribeTable("should do nothing if a valid operation annotation is removed", func(operation string) {
+				metav1.SetMetaDataAnnotation(&seed.ObjectMeta, "gardener.cloud/operation", operation)
+				newSeed := prepareSeedForUpdate(seed)
+				delete(newSeed.Annotations, "gardener.cloud/operation")
+				Expect(ValidateSeedUpdate(newSeed, seed)).To(BeEmpty())
+			},
+				Entry("reconcile", "reconcile"),
+				Entry("renew-garden-access-secrets", "renew-garden-access-secrets"),
+				Entry("renew-kubeconfig", "renew-kubeconfig"),
+			)
+
+			DescribeTable("should do nothing if a valid operation annotation does not change during an update", func(operation string) {
+				metav1.SetMetaDataAnnotation(&seed.ObjectMeta, "gardener.cloud/operation", operation)
+				newSeed := prepareSeedForUpdate(seed)
+				Expect(ValidateSeedUpdate(newSeed, seed)).To(BeEmpty())
+			},
+				Entry("reconcile", "reconcile"),
+				Entry("renew-garden-access-secrets", "renew-garden-access-secrets"),
+				Entry("renew-kubeconfig", "renew-kubeconfig"),
+			)
+
+			It("should return an error if a valid operation should be overwritten with a different valid operation", func() {
+				metav1.SetMetaDataAnnotation(&seed.ObjectMeta, "gardener.cloud/operation", "renew-garden-access-secrets")
+				newSeed := prepareSeedForUpdate(seed)
+				metav1.SetMetaDataAnnotation(&newSeed.ObjectMeta, "gardener.cloud/operation", "renew-kubeconfig")
+				Expect(ValidateSeedUpdate(newSeed, seed)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+						"Detail": Equal("must not overwrite operation \"renew-garden-access-secrets\" with \"renew-kubeconfig\""),
+					}))))
+			})
 		})
 
 		It("should forbid Seed specification with empty or invalid keys", func() {
