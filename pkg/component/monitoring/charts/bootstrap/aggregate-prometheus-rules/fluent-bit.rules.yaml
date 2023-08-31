@@ -1,7 +1,7 @@
 groups:
   - name: fluent-bit.rules
     rules:
-  
+
     - alert: FluentBitDown
       expr: |
         absent(
