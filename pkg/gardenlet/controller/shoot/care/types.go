@@ -28,34 +28,80 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation"
-	"github.com/gardener/gardener/pkg/operation/care"
+	"github.com/gardener/gardener/pkg/operation/shoot"
 )
 
 // HealthCheck is an interface used to perform health checks.
 type HealthCheck interface {
-	Check(ctx context.Context, threshold *metav1.Duration, conditions care.ShootConditions) []gardencorev1beta1.Condition
+	Check(ctx context.Context, threshold *metav1.Duration, conditions ShootConditions) []gardencorev1beta1.Condition
 }
 
 // NewHealthCheckFunc is a function used to create a new instance for performing health checks.
-type NewHealthCheckFunc func(op *operation.Operation, init care.ShootClientInit, clock clock.Clock, conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration) HealthCheck
+type NewHealthCheckFunc func(
+	logger logr.Logger,
+	shoot *shoot.Shoot,
+	seedClient kubernetes.Interface,
+	gardenClient client.Client,
+	shootClientInit ShootClientInit,
+	clock clock.Clock,
+	gardenletConfig *gardenletconfig.GardenletConfiguration,
+	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
+) HealthCheck
 
 // defaultNewHealthCheck is the default function to create a new instance for performing health checks.
-var defaultNewHealthCheck NewHealthCheckFunc = func(op *operation.Operation, init care.ShootClientInit, clock clock.Clock, conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration) HealthCheck {
-	return care.NewHealth(op, init, clock, conditionThresholds)
+var defaultNewHealthCheck NewHealthCheckFunc = func(
+	log logr.Logger,
+	shoot *shoot.Shoot,
+	seedClientSet kubernetes.Interface,
+	gardenClient client.Client,
+	shootClientInit ShootClientInit,
+	clock clock.Clock,
+	gardenletConfig *gardenletconfig.GardenletConfiguration,
+	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
+) HealthCheck {
+	return NewHealth(
+		log,
+		shoot,
+		seedClientSet,
+		gardenClient,
+		shootClientInit,
+		clock,
+		gardenletConfig,
+		conditionThresholds,
+	)
 }
 
 // ConstraintCheck is an interface used to perform constraint checks.
 type ConstraintCheck interface {
-	Check(context.Context, care.ShootConstraints) []gardencorev1beta1.Condition
+	Check(context.Context, ShootConstraints) []gardencorev1beta1.Condition
 }
 
 // NewConstraintCheckFunc is a function used to create a new instance for performing constraint checks.
-type NewConstraintCheckFunc func(clock clock.Clock, op *operation.Operation, init care.ShootClientInit) ConstraintCheck
+type NewConstraintCheckFunc func(
+	log logr.Logger,
+	shoot *shoot.Shoot,
+	seedClient client.Client,
+	shootClientInit ShootClientInit,
+	clock clock.Clock,
+) ConstraintCheck
 
 // defaultNewConstraintCheck is the default function to create a new instance for performing constraint checks.
-var defaultNewConstraintCheck = func(clock clock.Clock, op *operation.Operation, init care.ShootClientInit) ConstraintCheck {
-	return care.NewConstraint(clock, op, init)
+var defaultNewConstraintCheck = func(
+	log logr.Logger,
+	shoot *shoot.Shoot,
+	seedClient client.Client,
+	shootClientInit ShootClientInit,
+	clock clock.Clock,
+) ConstraintCheck {
+	return NewConstraint(
+		log,
+		shoot,
+		seedClient,
+		shootClientInit,
+		clock,
+	)
 }
 
 // GarbageCollector is an interface used to perform garbage collection.
@@ -64,11 +110,11 @@ type GarbageCollector interface {
 }
 
 // NewGarbageCollectorFunc is a function used to create a new instance to perform garbage collection.
-type NewGarbageCollectorFunc func(op *operation.Operation, init care.ShootClientInit) GarbageCollector
+type NewGarbageCollectorFunc func(op *operation.Operation, init ShootClientInit) GarbageCollector
 
 // defaultNewGarbageCollector is the default function to create a new instance to perform garbage collection.
-var defaultNewGarbageCollector = func(op *operation.Operation, init care.ShootClientInit) GarbageCollector {
-	return care.NewGarbageCollection(op, init)
+var defaultNewGarbageCollector = func(op *operation.Operation, init ShootClientInit) GarbageCollector {
+	return NewGarbageCollection(op, init)
 }
 
 // WebhookRemediator is an interface used to perform webhook remediation.
@@ -77,11 +123,11 @@ type WebhookRemediator interface {
 }
 
 // NewWebhookRemediatorFunc is a function used to create a new instance to perform webhook remediation.
-type NewWebhookRemediatorFunc func(op *operation.Operation, init care.ShootClientInit) WebhookRemediator
+type NewWebhookRemediatorFunc func(op *operation.Operation, init ShootClientInit) WebhookRemediator
 
 // defaultNewWebhookRemediator is the default function to create a new instance to perform webhook remediation.
-var defaultNewWebhookRemediator = func(op *operation.Operation, init care.ShootClientInit) WebhookRemediator {
-	return care.NewWebhookRemediation(op, init)
+var defaultNewWebhookRemediator = func(log logr.Logger, shoot *gardencorev1beta1.Shoot, init ShootClientInit) WebhookRemediator {
+	return NewWebhookRemediation(log, shoot, init)
 }
 
 // NewOperationFunc is a function used to create a new `operation.Operation` instance.

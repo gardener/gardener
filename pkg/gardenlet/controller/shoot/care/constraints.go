@@ -37,7 +37,6 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
-	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/matchers"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
@@ -86,13 +85,19 @@ type Constraint struct {
 }
 
 // NewConstraint returns a new constraint instance.
-func NewConstraint(clock clock.Clock, op *operation.Operation, shootClientInit ShootClientInit) *Constraint {
+func NewConstraint(
+	log logr.Logger,
+	shoot *shoot.Shoot,
+	seedClient client.Client,
+	shootClientInit ShootClientInit,
+	clock clock.Clock,
+) *Constraint {
 	return &Constraint{
 		clock:                  clock,
-		shoot:                  op.Shoot,
-		seedClient:             op.SeedClientSet.Client(),
+		shoot:                  shoot,
+		seedClient:             seedClient,
 		initializeShootClients: shootClientInit,
-		log:                    op.Logger,
+		log:                    log,
 	}
 }
 

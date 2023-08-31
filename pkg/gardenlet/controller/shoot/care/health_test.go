@@ -21,6 +21,7 @@ import (
 
 	"github.com/Masterminds/semver"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -39,9 +40,8 @@ import (
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/executor"
 	"github.com/gardener/gardener/pkg/features"
+	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	"github.com/gardener/gardener/pkg/operation"
-	. "github.com/gardener/gardener/pkg/operation/care"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -338,10 +338,16 @@ var _ = Describe("health check", func() {
 					},
 				})
 
-				health := NewHealth(&operation.Operation{
-					Shoot:         shootObj,
-					SeedClientSet: kubernetesfake.NewClientSetBuilder().WithClient(fakeClient).Build(),
-				}, nil, fakeClock, nil)
+				health := NewHealth(
+					logr.Discard(),
+					shootObj,
+					kubernetesfake.NewClientSetBuilder().WithClient(fakeClient).Build(),
+					nil,
+					nil,
+					fakeClock,
+					nil,
+					nil,
+				)
 
 				exitCondition, err := health.CheckClusterNodes(ctx, kubernetesfake.NewClientSetBuilder().WithClient(c).Build(), condition)
 				Expect(err).NotTo(HaveOccurred())

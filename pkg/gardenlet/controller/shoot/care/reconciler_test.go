@@ -41,9 +41,11 @@ import (
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
 	"github.com/gardener/gardener/pkg/operation"
-	"github.com/gardener/gardener/pkg/operation/care"
+	"github.com/gardener/gardener/pkg/operation/shoot"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -520,7 +522,16 @@ func (h resultingConditionFunc) Check(_ context.Context, _ *metav1.Duration, con
 }
 
 func healthCheckFunc(fn resultingConditionFunc) NewHealthCheckFunc {
-	return func(*operation.Operation, care.ShootClientInit, clock.Clock, map[gardencorev1beta1.ConditionType]time.Duration) HealthCheck {
+	return func(
+		log logr.Logger,
+		shoot *shoot.Shoot,
+		seedClient kubernetes.Interface,
+		gardenClient client.Client,
+		shootClientInit ShootClientInit,
+		clock clock.Clock,
+		gardenletConfig *gardenletconfig.GardenletConfiguration,
+		conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
+	) HealthCheck {
 		return fn
 	}
 }
@@ -532,23 +543,28 @@ func (c resultingConstraintFunc) Check(_ context.Context, constraints care.Shoot
 }
 
 func constraintCheckFunc(fn resultingConstraintFunc) NewConstraintCheckFunc {
-	return func(clock clock.Clock, op *operation.Operation, init care.ShootClientInit) ConstraintCheck {
+	return func(log logr.Logger,
+		shoot *shoot.Shoot,
+		seedClient client.Client,
+		shootClientInit ShootClientInit,
+		clock clock.Clock,
+	) ConstraintCheck {
 		return fn
 	}
 }
 
 func opFunc(op *operation.Operation, err error) NewOperationFunc {
 	return func(
-		_ context.Context,
-		_ logr.Logger,
-		_ client.Client,
-		_ kubernetes.Interface,
-		_ clientmap.ClientMap,
-		_ *config.GardenletConfiguration,
-		_ *gardencorev1beta1.Gardener,
-		_ string,
-		_ map[string]*corev1.Secret,
-		_ *gardencorev1beta1.Shoot,
+		ctx context.Context,
+		log logr.Logger,
+		gardenClient client.Client,
+		seedClientSet kubernetes.Interface,
+		shootClientMap clientmap.ClientMap,
+		config *config.GardenletConfiguration,
+		gardenerInfo *gardencorev1beta1.Gardener,
+		gardenClusterIdentity string,
+		secrets map[string]*corev1.Secret,
+		shoot *gardencorev1beta1.Shoot,
 	) (*operation.Operation, error) {
 		return op, err
 	}

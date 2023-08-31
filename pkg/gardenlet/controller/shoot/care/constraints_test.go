@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -55,8 +56,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/operation"
-	. "github.com/gardener/gardener/pkg/operation/care"
+	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -462,7 +462,6 @@ var _ = Describe("Constraints", func() {
 			seedClient    client.Client
 			shootClient   client.Client
 
-			op         *operation.Operation
 			constraint *Constraint
 
 			newCASecret = func(validUntilTime time.Time) *corev1.Secret {
@@ -486,16 +485,20 @@ var _ = Describe("Constraints", func() {
 			seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 			shootClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
 
-			op = &operation.Operation{
-				SeedClientSet: kubernetesfake.NewClientSetBuilder().WithClient(seedClient).Build(),
-				Shoot: &shootpkg.Shoot{
-					SeedNamespace: seedNamespace,
-				},
+			shoot := &shootpkg.Shoot{
+				SeedNamespace: seedNamespace,
 			}
-			op.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
-			constraint = NewConstraint(clock, op, func() (kubernetes.Interface, bool, error) {
-				return kubernetesfake.NewClientSetBuilder().WithClient(shootClient).Build(), true, nil
-			})
+			shoot.SetInfo(&gardencorev1beta1.Shoot{})
+
+			constraint = NewConstraint(
+				logr.Discard(),
+				shoot,
+				seedClient,
+				func() (kubernetes.Interface, bool, error) {
+					return kubernetesfake.NewClientSetBuilder().WithClient(shootClient).Build(), true, nil
+				},
+				clock,
+			)
 		})
 
 		Describe("#Check", func() {

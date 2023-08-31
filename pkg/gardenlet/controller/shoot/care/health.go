@@ -46,7 +46,6 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -95,18 +94,27 @@ type Health struct {
 type ShootClientInit func() (kubernetes.Interface, bool, error)
 
 // NewHealth creates a new Health instance with the given parameters.
-func NewHealth(op *operation.Operation, shootClientInit ShootClientInit, clock clock.Clock, conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration) *Health {
+func NewHealth(
+	log logr.Logger,
+	shoot *shoot.Shoot,
+	seedClientSet kubernetes.Interface,
+	gardenClient client.Client,
+	shootClientInit ShootClientInit,
+	clock clock.Clock,
+	gardenletConfig *gardenletconfig.GardenletConfiguration,
+	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
+) *Health {
 	return &Health{
-		shoot:                  op.Shoot,
-		gardenClient:           op.GardenClient,
-		seedClient:             op.SeedClientSet,
+		shoot:                  shoot,
+		gardenClient:           gardenClient,
+		seedClient:             seedClientSet,
 		initializeShootClients: shootClientInit,
 		clock:                  clock,
-		log:                    op.Logger,
-		gardenletConfiguration: op.Config,
+		log:                    log,
+		gardenletConfiguration: gardenletConfig,
 		controllerRegistrationToLastHeartbeatTime: map[string]*metav1.MicroTime{},
 		conditionThresholds:                       conditionThresholds,
-		healthChecker:                             healthchecker.NewHealthChecker(op.SeedClientSet.Client(), clock, conditionThresholds, op.Shoot.GetInfo().Status.LastOperation),
+		healthChecker:                             healthchecker.NewHealthChecker(seedClientSet.Client(), clock, conditionThresholds, shoot.GetInfo().Status.LastOperation),
 	}
 }
 

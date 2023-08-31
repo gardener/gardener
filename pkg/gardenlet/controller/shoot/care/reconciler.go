@@ -36,7 +36,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/operation"
-	"github.com/gardener/gardener/pkg/operation/care"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -102,10 +101,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	defer cancel()
 
 	// Initialize conditions based on the current status.
-	shootConditions := care.NewShootConditions(r.Clock, shoot)
+	shootConditions := NewShootConditions(r.Clock, shoot)
 
 	// Initialize constraints based on the current status.
-	shootConstraints := care.NewShootConstraints(r.Clock, shoot)
+	shootConstraints := NewShootConstraints(r.Clock, shoot)
 
 	// Only read Garden secrets once because we don't rely on up-to-date secrets for health checks.
 	if r.gardenSecrets == nil {
@@ -145,9 +144,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		// Trigger health check
 		func(ctx context.Context) error {
 			updatedConditions = NewHealthCheck(
-				o,
+				log,
+				o.Shoot,
+				r.SeedClientSet,
+				r.GardenClient,
 				initializeShootClients,
 				r.Clock,
+				&r.Config,
 				r.conditionThresholdsToProgressingMapping(),
 			).Check(
 				ctx,
@@ -159,9 +162,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		// Trigger constraint checks
 		func(ctx context.Context) error {
 			updatedConstraints = NewConstraintCheck(
-				clock.RealClock{},
-				o,
+				log,
+				o.Shoot,
+				r.SeedClientSet.Client(),
 				initializeShootClients,
+				clock.RealClock{},
 			).Check(
 				ctx,
 				shootConstraints,
@@ -177,8 +182,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		// Trigger webhook remediation
 		func(ctx context.Context) error {
 			if pointer.BoolDeref(r.Config.Controllers.ShootCare.WebhookRemediatorEnabled, false) {
-				webhookRemediator := NewWebhookRemediator(o, initializeShootClients)
-				_ = webhookRemediator.Remediate(ctx)
+				_ = NewWebhookRemediator(log, shoot, initializeShootClients).Remediate(ctx)
 				// errors during webhook remediation are only being logged and do not cause the care operation to fail
 			}
 			return nil

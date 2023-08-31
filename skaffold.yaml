@@ -930,7 +930,6 @@ build:
         - pkg/component/vpnseedserver
         - pkg/component/vpnshoot
         - pkg/operation/botanist/matchers
-        - pkg/operation/care
         - pkg/operation/common
         - pkg/operation/garden
         - pkg/operation/seed
