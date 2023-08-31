@@ -166,6 +166,9 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		},
 
 		MapperProvider: func(config *rest.Config, httpClient *http.Client) (meta.RESTMapper, error) {
+			// TODO(ary1992): The new rest mapper implementation doesn't return a NoKindMatchError but a ErrGroupDiscoveryFailed
+			// when an API GroupVersion is not present in the cluster. Remove the old restmapper usage once the upstream issue
+			// (https://github.com/kubernetes-sigs/controller-runtime/pull/2425) is fixed.
 			return thirdpartyapiutil.NewDynamicRESTMapper(
 				config,
 				thirdpartyapiutil.WithLazyDiscovery,
@@ -284,7 +287,7 @@ func (g *garden) Start(ctx context.Context) error {
 				},
 			}
 
-			ns := gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.SeedTemplate.Name)
+			seedNamespace := gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.SeedTemplate.Name)
 			return kubernetes.AggregatorCacheFunc(
 				kubernetes.NewRuntimeCache,
 				map[client.Object]cache.NewCacheFunc{
@@ -292,11 +295,19 @@ func (g *garden) Start(ctx context.Context) error {
 					// don't use any selector mechanism here since we want to still fall back to reading secrets with
 					// the API reader (i.e., not from cache) in case the respective secret is not found in the cache.
 					&corev1.Secret{}: func(c *rest.Config, o cache.Options) (cache.Cache, error) {
-						o.Namespaces = []string{ns, ns}
+						// cache.New only creates a multiNamespacedCache if cache.Options.Namespaces has more than one namespace
+						// (https://github.com/kubernetes-sigs/controller-runtime/blob/116a1b831fffe7ccc3c8145306c3e1a3b1b14ffa/pkg/cache/cache.go#L202-L204).
+						// MultiNamespacedCache can only be possible when there are more than one namespace
+						// (https://github.com/kubernetes-sigs/controller-runtime/blob/116a1b831fffe7ccc3c8145306c3e1a3b1b14ffa/pkg/cache/multi_namespace_cache.go#L53-L55)
+						o.Namespaces = []string{seedNamespace, seedNamespace}
 						return cache.New(c, o)
 					},
 					&corev1.ServiceAccount{}: func(c *rest.Config, o cache.Options) (cache.Cache, error) {
-						o.Namespaces = []string{ns, ns}
+						// cache.New only creates a multiNamespacedCache if cache.Options.Namespaces has more than one namespace
+						// (https://github.com/kubernetes-sigs/controller-runtime/blob/116a1b831fffe7ccc3c8145306c3e1a3b1b14ffa/pkg/cache/cache.go#L202-L204).
+						// MultiNamespacedCacheBuilder can only be used when there are more than one namespace
+						// (https://github.com/kubernetes-sigs/controller-runtime/blob/116a1b831fffe7ccc3c8145306c3e1a3b1b14ffa/pkg/cache/multi_namespace_cache.go#L53-L55)
+						o.Namespaces = []string{seedNamespace, seedNamespace}
 						return cache.New(c, o)
 					},
 					// Gardenlet does not have the required RBAC permissions for listing/watching the following
@@ -342,6 +353,9 @@ func (g *garden) Start(ctx context.Context) error {
 		}
 
 		opts.MapperProvider = func(config *rest.Config, httpClient *http.Client) (meta.RESTMapper, error) {
+			// TODO(ary1992): The new rest mapper implementation doesn't return a NoKindMatchError but a ErrGroupDiscoveryFailed
+			// when an API GroupVersion is not present in the cluster. Remove the old restmapper usage once the upstream issue
+			// (https://github.com/kubernetes-sigs/controller-runtime/pull/2425) is fixed.
 			return thirdpartyapiutil.NewDynamicRESTMapper(
 				config,
 				thirdpartyapiutil.WithLazyDiscovery,

@@ -211,6 +211,9 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 			// use dynamic rest mapper for target cluster, which will automatically rediscover resources on NoMatchErrors
 			// but is rate-limited to not issue to many discovery calls (rate-limit shared across all reconciliations)
 			opts.MapperProvider = func(config *rest.Config, httpClient *http.Client) (meta.RESTMapper, error) {
+				// TODO(ary1992): The new rest mapper implementation doesn't return a NoKindMatchError but a ErrGroupDiscoveryFailed
+				// when an API GroupVersion is not present in the cluster. Remove the old restmapper usage once the upstream issue
+				// (https://github.com/kubernetes-sigs/controller-runtime/pull/2425) is fixed.
 				return thirdpartyapiutil.NewDynamicRESTMapper(
 					config,
 					thirdpartyapiutil.WithLazyDiscovery,

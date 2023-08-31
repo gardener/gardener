@@ -58,6 +58,9 @@ func setCacheOptionsDefaults(options *cache.Options) error {
 func setClientOptionsDefaults(config *rest.Config, options *client.Options) error {
 	if options.Mapper == nil {
 		// default the client's REST mapper to a dynamic REST mapper (automatically rediscovers resources on NoMatchErrors)
+		// TODO(ary1992): The new rest mapper implementation doesn't return a NoKindMatchError but a ErrGroupDiscoveryFailed
+		// when an API GroupVersion is not present in the cluster. Remove the old restmapper usage once the upstream issue
+		// (https://github.com/kubernetes-sigs/controller-runtime/pull/2425) is fixed.
 		mapper, err := thirdpartyapiutil.NewDynamicRESTMapper(
 			config,
 			thirdpartyapiutil.WithLazyDiscovery,

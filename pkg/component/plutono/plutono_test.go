@@ -16,7 +16,6 @@ package plutono_test
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -784,10 +783,6 @@ func testDashboardConfigMap(ctx context.Context, c client.Client, namespaceName 
 		configmap           = &corev1.ConfigMap{}
 		availableDashboards = sets.Set[string]{}
 	)
-
-	cmList := &corev1.ConfigMapList{}
-	ExpectWithOffset(1, c.List(ctx, cmList)).To(Succeed())
-	fmt.Println(cmList.Items[0].Name)
 
 	ExpectWithOffset(1, c.Get(ctx, namespaceName, configmap)).To(Succeed())
 

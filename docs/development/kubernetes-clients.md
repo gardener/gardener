@@ -212,7 +212,7 @@ _Important characteristics of cached controller-runtime clients:_
 In order to allow more granular control over which object kinds should be cached and which calls should bypass the cache, controller-runtime offers a few mechanisms to further tweak the client/cache behavior:
 
 - When creating a `DelegatingClient`, certain object kinds can be configured to always be read directly from the API instead of from the cache. Note that this does not prevent starting a new Informer when retrieving them directly from the cache.
-- Watches can be restricted to a given (set of) namespace(s) by setting `cache.Options.Namespace`.
+- Watches can be restricted to a given (set of) namespace(s) by setting `cache.Options.Namespaces`.
 - Watches can be filtered (e.g., by label) per object kind by configuring `cache.Options.SelectorsByObject` on creation of the cache.
 - Retrieving metadata-only objects or lists from a cache results in a metadata-only watch/cache for that object kind.
 - The `APIReader` can be used to always talk directly to the API server for a given `Get` or `List` call (use with care and only as a last resort!).

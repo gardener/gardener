@@ -108,6 +108,9 @@ func NewClientForShoot(ctx context.Context, c client.Client, namespace string, o
 	ApplyRESTOptions(shootRESTConfig, restOptions)
 
 	if opts.Mapper == nil {
+		// TODO(ary1992): The new rest mapper implementation doesn't return a NoKindMatchError but a ErrGroupDiscoveryFailed
+		// when an API GroupVersion is not present in the cluster. Remove the old restmapper usage once the upstream issue
+		// (https://github.com/kubernetes-sigs/controller-runtime/pull/2425) is fixed.
 		mapper, err := thirdpartyapiutil.NewDynamicRESTMapper(shootRESTConfig)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to create new DynamicRESTMapper: %w", err)
