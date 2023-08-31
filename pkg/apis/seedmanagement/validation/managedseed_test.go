@@ -161,6 +161,28 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 			),
 		)
 
+		Context("operation annotation", func() {
+			It("should do nothing if the operation annotation is not set", func() {
+				Expect(ValidateManagedSeed(managedSeed)).To(BeEmpty())
+			})
+
+			It("should return an error if the operation annotation is invalid", func() {
+				metav1.SetMetaDataAnnotation(&managedSeed.ObjectMeta, "gardener.cloud/operation", "foo-bar")
+				Expect(ValidateManagedSeed(managedSeed)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
+				}))))
+			})
+
+			DescribeTable("should return nothing if the operation annotations is valid", func(operation string) {
+				metav1.SetMetaDataAnnotation(&managedSeed.ObjectMeta, "gardener.cloud/operation", operation)
+				Expect(ValidateManagedSeed(managedSeed)).To(BeEmpty())
+			},
+				Entry("reconcile", "reconcile"),
+				Entry("renew-kubeconfig", "renew-kubeconfig"),
+			)
+		})
+
 		It("should forbid nil shoot", func() {
 			managedSeed.Spec.Shoot = nil
 
@@ -358,6 +380,44 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 		BeforeEach(func() {
 			newManagedSeed = managedSeed.DeepCopy()
 			newManagedSeed.ResourceVersion = "1"
+		})
+
+		Context("operation annotation", func() {
+			DescribeTable("should do nothing if a valid operation annotation is added", func(operation string) {
+				metav1.SetMetaDataAnnotation(&newManagedSeed.ObjectMeta, "gardener.cloud/operation", operation)
+				Expect(ValidateManagedSeedUpdate(newManagedSeed, managedSeed)).To(BeEmpty())
+			},
+				Entry("reconcile", "reconcile"),
+				Entry("renew-kubeconfig", "renew-kubeconfig"),
+			)
+
+			DescribeTable("should do nothing if a valid operation annotation is removed", func(operation string) {
+				metav1.SetMetaDataAnnotation(&managedSeed.ObjectMeta, "gardener.cloud/operation", operation)
+				Expect(ValidateManagedSeedUpdate(newManagedSeed, managedSeed)).To(BeEmpty())
+			},
+				Entry("reconcile", "reconcile"),
+				Entry("renew-kubeconfig", "renew-kubeconfig"),
+			)
+
+			DescribeTable("should do nothing if a valid operation annotation does not change during an update", func(operation string) {
+				metav1.SetMetaDataAnnotation(&managedSeed.ObjectMeta, "gardener.cloud/operation", operation)
+				metav1.SetMetaDataAnnotation(&newManagedSeed.ObjectMeta, "gardener.cloud/operation", operation)
+				Expect(ValidateManagedSeedUpdate(newManagedSeed, managedSeed)).To(BeEmpty())
+			},
+				Entry("reconcile", "reconcile"),
+				Entry("renew-kubeconfig", "renew-kubeconfig"),
+			)
+
+			It("should return an error if a valid operation should be overwritten with a different valid operation", func() {
+				metav1.SetMetaDataAnnotation(&managedSeed.ObjectMeta, "gardener.cloud/operation", "reconcile")
+				metav1.SetMetaDataAnnotation(&newManagedSeed.ObjectMeta, "gardener.cloud/operation", "renew-kubeconfig")
+				Expect(ValidateManagedSeedUpdate(newManagedSeed, managedSeed)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+						"Detail": Equal("must not overwrite operation \"reconcile\" with \"renew-kubeconfig\""),
+					}))))
+			})
 		})
 
 		It("should forbid changes to immutable metadata fields", func() {
