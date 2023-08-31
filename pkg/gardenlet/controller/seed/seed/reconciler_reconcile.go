@@ -126,7 +126,7 @@ func (r *Reconciler) reconcile(
 }
 
 func (r *Reconciler) checkMinimumK8SVersion(version string) error {
-	const minKubernetesVersion = "1.22"
+	const minKubernetesVersion = "1.24"
 
 	seedVersionOK, err := versionutils.CompareVersions(version, ">=", minKubernetesVersion)
 	if err != nil {

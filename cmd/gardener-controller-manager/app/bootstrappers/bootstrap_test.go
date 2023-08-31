@@ -45,7 +45,7 @@ var _ = Describe("#bootstrapCluster", func() {
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		fakeDiscoveryClient = &fakediscovery.FakeDiscovery{Fake: &testing.Fake{}}
-		fakeDiscoveryClient.FakedServerVersion = &version.Info{GitVersion: "1.22.4"}
+		fakeDiscoveryClient.FakedServerVersion = &version.Info{GitVersion: "1.26.4"}
 		sm = fakesecretsmanager.New(fakeClient, namespace)
 	})
 
@@ -55,8 +55,8 @@ var _ = Describe("#bootstrapCluster", func() {
 	})
 
 	It("should return an error because the garden version is too low", func() {
-		fakeDiscoveryClient.FakedServerVersion.GitVersion = "1.16.5"
-		Expect(bootstrapCluster(ctx, fakeClient, fakeDiscoveryClient, sm)).To(MatchError(ContainSubstring("the Kubernetes version of the Garden cluster must be at least 1.22")))
+		fakeDiscoveryClient.FakedServerVersion.GitVersion = "1.22.5"
+		Expect(bootstrapCluster(ctx, fakeClient, fakeDiscoveryClient, sm)).To(MatchError(ContainSubstring("the Kubernetes version of the Garden cluster must be at least 1.24")))
 	})
 
 	It("should generate a global monitoring secret because none exists yet", func() {
