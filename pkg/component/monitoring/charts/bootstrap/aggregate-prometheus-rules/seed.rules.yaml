@@ -10,7 +10,7 @@ groups:
       type: seed
       visibility: operator
     annotations:
-      summary: Some pod is stuck in pending
+      summary: A pod is stuck in pending
       description: >
-        Pod in namespace {{$labels.namespace}} was stuck
+        Pod {{$labels.pod}} in namespace {{$labels.namespace}} was stuck
         in Pending state for more than 10 minutes.
