@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	controllerwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook"
@@ -117,6 +118,12 @@ func run(ctx context.Context, log logr.Logger, cfg *config.AdmissionControllerCo
 		MetricsBindAddress:     net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
 
 		LeaderElection: false,
+
+		WebhookServer: controllerwebhook.NewServer(controllerwebhook.Options{
+			Host:    cfg.Server.Webhooks.BindAddress,
+			Port:    cfg.Server.Webhooks.Port,
+			CertDir: cfg.Server.Webhooks.TLS.ServerCertDir,
+		}),
 	})
 	if err != nil {
 		return err

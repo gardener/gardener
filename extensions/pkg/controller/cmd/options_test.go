@@ -28,6 +28,7 @@ import (
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	extensionsmockcmd "github.com/gardener/gardener/extensions/pkg/controller/cmd/mock"
 	extensionsmockcontroller "github.com/gardener/gardener/extensions/pkg/controller/mock"
@@ -615,6 +616,7 @@ var _ = Describe("Options", func() {
 					Controller: controllerconfig.Controller{
 						RecoverPanic: pointer.Bool(true),
 					},
+					WebhookServer: &webhook.DefaultServer{},
 				}))
 			})
 		})

@@ -44,6 +44,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	controllerwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/gardener/gardener/cmd/gardener-resource-manager/app/bootstrappers"
 	"github.com/gardener/gardener/pkg/api/indexer"
@@ -147,9 +148,6 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 		Namespace:               *cfg.SourceClientConnection.Namespace,
 		SyncPeriod:              &cfg.SourceClientConnection.CacheResyncPeriod.Duration,
 
-		Host:                   cfg.Server.Webhooks.BindAddress,
-		Port:                   cfg.Server.Webhooks.Port,
-		CertDir:                cfg.Server.Webhooks.TLS.ServerCertDir,
 		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(cfg.Server.HealthProbes.Port)),
 		MetricsBindAddress:     net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
 
@@ -164,6 +162,12 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 		Controller: controllerconfig.Controller{
 			RecoverPanic: pointer.Bool(true),
 		},
+
+		WebhookServer: controllerwebhook.NewServer(controllerwebhook.Options{
+			Host:    cfg.Server.Webhooks.BindAddress,
+			Port:    cfg.Server.Webhooks.Port,
+			CertDir: cfg.Server.Webhooks.TLS.ServerCertDir,
+		}),
 	})
 	if err != nil {
 		return err

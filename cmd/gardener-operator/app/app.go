@@ -39,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	controllerwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/certificates"
@@ -124,9 +125,6 @@ func run(ctx context.Context, log logr.Logger, cfg *config.OperatorConfiguration
 		Scheme:                  operatorclient.RuntimeScheme,
 		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
 
-		Host:                   cfg.Server.Webhooks.BindAddress,
-		Port:                   cfg.Server.Webhooks.Port,
-		CertDir:                "/tmp/gardener-operator-cert",
 		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(cfg.Server.HealthProbes.Port)),
 		MetricsBindAddress:     net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
 
@@ -141,6 +139,12 @@ func run(ctx context.Context, log logr.Logger, cfg *config.OperatorConfiguration
 		Controller: controllerconfig.Controller{
 			RecoverPanic: pointer.Bool(true),
 		},
+
+		WebhookServer: controllerwebhook.NewServer(controllerwebhook.Options{
+			Host:    cfg.Server.Webhooks.BindAddress,
+			Port:    cfg.Server.Webhooks.Port,
+			CertDir: "/tmp/gardener-operator-cert",
+		}),
 	})
 	if err != nil {
 		return err
