@@ -163,7 +163,7 @@ images:
 - name: alertmanager
   sourceRepository: github.com/prometheus/alertmanager
   repository: quay.io/prometheus/alertmanager
-  tag: v0.24.0
+  tag: v0.26.0
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
