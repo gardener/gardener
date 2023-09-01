@@ -598,6 +598,25 @@ var _ = Describe("Helper", func() {
 		Entry("dns providers and unmanaged type", &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{Type: &unmanagedType}}}, true),
 	)
 
+	DescribeTable("#ShootNeedsForceDeletion",
+		func(shoot *gardencorev1beta1.Shoot, match gomegatypes.GomegaMatcher) {
+			Expect(ShootNeedsForceDeletion(shoot)).To(match)
+		},
+
+		Entry("shoot is nil",
+			nil,
+			BeFalse()),
+		Entry("no force-delete annotation present",
+			&gardencorev1beta1.Shoot{},
+			BeFalse()),
+		Entry("force-delete annotation present but value is false",
+			&gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.AnnotationConfirmationForceDeletion: "0"}}},
+			BeFalse()),
+		Entry("force-delete annotation present and value is true",
+			&gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.AnnotationConfirmationForceDeletion: "t"}}},
+			BeTrue()),
+	)
+
 	var profile = gardencorev1beta1.SchedulingProfileBinPacking
 
 	DescribeTable("#ShootSchedulingProfile",

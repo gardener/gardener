@@ -107,6 +107,13 @@ This admission controller reacts on `CREATE` and `UPDATE` operations for `Shoot`
 It tries to assign a default domain to the `Shoot`.
 It also validates the DNS configuration (`.spec.dns`) for shoots.
 
+## `ShootForceDeletion`
+
+_(enabled by default)_
+
+This admission controller reacts on `CREATE` and `UPDATE` operations for `Shoot`s.
+It validates the force-deletion annotation, i.e., `confirmation.gardener.cloud/force-delete=true`. It denies adding the annotation when the Shoot does not have deletionTimestamp and a required [ErrorCode](../usage/shoot_status.md#error-codes) in the Shoot status. Note that this plugin is disabled in [local setup](../deployment/getting_started_locally.md) to simplify testing.
+
 ## `ShootNodeLocalDNSEnabledByDefault`
 
 _(disabled by default)_

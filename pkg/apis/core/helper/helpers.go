@@ -16,6 +16,7 @@ package helper
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/Masterminds/semver"
@@ -28,6 +29,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 // GetConditionIndex returns the index of the condition with the given <conditionType> out of the list of <conditions>.
@@ -231,6 +233,21 @@ func ShootUsesUnmanagedDNS(shoot *core.Shoot) bool {
 	}
 
 	return len(shoot.Spec.DNS.Providers) > 0 && shoot.Spec.DNS.Providers[0].Type != nil && *shoot.Spec.DNS.Providers[0].Type == core.DNSUnmanaged
+}
+
+// ShootNeedsForceDeletion determines whether a Shoot should be force deleted or not.
+func ShootNeedsForceDeletion(shoot *core.Shoot) bool {
+	if shoot == nil {
+		return false
+	}
+
+	value, ok := shoot.Annotations[v1beta1constants.AnnotationConfirmationForceDeletion]
+	if !ok {
+		return false
+	}
+
+	forceDelete, _ := strconv.ParseBool(value)
+	return forceDelete
 }
 
 // FindPrimaryDNSProvider finds the primary provider among the given `providers`.
