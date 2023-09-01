@@ -57,7 +57,7 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddO
 
 	genericactuator, err := genericactuator.NewActuator(mgr, local.Name, getSecretConfigs, nil, nil, nil, nil, nil, controlPlaneShootChart,
 		nil, storageClassChart, nil, NewValuesProvider(), extensionscontroller.ChartRendererFactoryFunc(util.NewChartRendererForShoot),
-		imagevector.ImageVector(), "", opts.ShootWebhookConfig, opts.WebhookServerNamespace, defaultServer.Options.Port)
+		imagevector.ImageVector(), "", opts.ShootWebhookConfig, opts.WebhookServerNamespace, defaultServer.Options.Port, nil)
 
 	if err != nil {
 		return err

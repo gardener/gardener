@@ -35,12 +35,15 @@ import (
 	extensionsshootwebhook "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/chart"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -77,12 +80,12 @@ func NewActuator(
 	atomicShootWebhookConfig *atomic.Value,
 	webhookServerNamespace string,
 	webhookServerPort int,
+	extendedAPIsForCleanup map[string]client.ObjectList,
 ) (controlplane.Actuator, error) {
 	gardenerClientset, err := kubernetesclient.NewWithConfig(kubernetesclient.WithRESTConfig(mgr.GetConfig()))
 	if err != nil {
 		return nil, err
 	}
-
 	return &actuator{
 		providerName: providerName,
 
@@ -108,6 +111,8 @@ func NewActuator(
 
 		gardenerClientset: gardenerClientset,
 		client:            mgr.GetClient(),
+
+		extendedAPIsForCleanup: extendedAPIsForCleanup,
 
 		newSecretsManager: extensionssecretsmanager.SecretsManagerForCluster,
 	}, nil
@@ -138,6 +143,8 @@ type actuator struct {
 	atomicShootWebhookConfig   *atomic.Value
 	webhookServerNamespace     string
 	webhookServerPort          int
+
+	extendedAPIsForCleanup map[string]client.ObjectList
 
 	gardenerClientset kubernetesclient.Interface
 	client            client.Client
@@ -392,6 +399,12 @@ func (a *actuator) Delete(
 	cp *extensionsv1alpha1.ControlPlane,
 	cluster *extensionscontroller.Cluster,
 ) error {
+	if v1beta1helper.ShootNeedsForceDeletion(cluster.Shoot) {
+		return utilclient.ApplyToObjectKinds(ctx, func(kind string, objectList client.ObjectList) flow.TaskFn {
+			return utilclient.ForceDeleteObjects(ctx, log, a.client, kind, cp.Namespace, objectList)
+		}, a.extendedAPIsForCleanup)
+	}
+
 	sm, err := a.newSecretsManagerForControlPlane(ctx, log, cp, cluster, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create secrets manager for ControlPlane: %w", err)
