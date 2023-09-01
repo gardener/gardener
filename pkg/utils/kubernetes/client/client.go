@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -27,6 +28,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	timeutils "github.com/gardener/gardener/pkg/utils/time"
 )
@@ -429,4 +431,22 @@ func ApplyToObjectKinds(ctx context.Context, fn func(kind string, objectList cli
 	}
 
 	return flow.Parallel(taskFns...)(ctx)
+}
+
+// ForceDeleteObjects lists and finalizes all the objects in the passed namespace and deletes them.
+func ForceDeleteObjects(ctx context.Context, log logr.Logger, c client.Client, kind string, namespace string, objectList client.ObjectList) flow.TaskFn {
+	return func(ctx context.Context) error {
+		log.Info("Deleting all resources in namespace", "namespace", namespace, "kind", kind)
+		if err := c.List(ctx, objectList, client.InNamespace(namespace)); err != nil {
+			return err
+		}
+
+		return ApplyToObjects(ctx, objectList, func(ctx context.Context, object client.Object) error {
+			if err := c.Delete(ctx, object); client.IgnoreNotFound(err) != nil {
+				return err
+			}
+
+			return controllerutils.RemoveAllFinalizers(ctx, c, object)
+		})
+	}
 }

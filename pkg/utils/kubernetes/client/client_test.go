@@ -16,9 +16,11 @@ package client_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr"
 	volumesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -27,13 +29,16 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	kubernetesfake "k8s.io/client-go/kubernetes/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	mockutilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client/mock"
@@ -565,6 +570,136 @@ var _ = Describe("Cleaner", func() {
 
 				Expect(o.CleanAndEnsureGone(ctx, c, &cm1)).To(Succeed())
 			})
+		})
+	})
+
+	Context("#ApplyToObjects", func() {
+		var (
+			s          *runtime.Scheme
+			fakeClient client.Client
+			ctx        context.Context
+		)
+		BeforeEach(func() {
+			ctx = context.TODO()
+			s = runtime.NewScheme()
+			Expect(kubernetesfake.AddToScheme(s)).To(Succeed())
+
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(s).Build()
+		})
+
+		It("should apply the function all the objects in the list", func() {
+			for i := 1; i <= 5; i++ {
+				Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("secret-%d", i), Namespace: "default"}})).To(Succeed())
+			}
+
+			fn := func(ctx context.Context, object client.Object) error {
+				object.SetAnnotations(map[string]string{"test-annotation": "test"})
+
+				return fakeClient.Update(ctx, object)
+			}
+
+			secretList := &corev1.SecretList{}
+
+			Expect(fakeClient.List(ctx, secretList)).To(Succeed())
+			Expect(ApplyToObjects(ctx, secretList, fn)).To(Succeed())
+
+			Expect(fakeClient.List(ctx, secretList)).To(Succeed())
+			for _, secret := range secretList.Items {
+				Expect(secret.Annotations).To(HaveKeyWithValue("test-annotation", "test"))
+			}
+		})
+	})
+
+	Context("#ApplyToObjectKinds", func() {
+		var (
+			s          *runtime.Scheme
+			fakeClient client.Client
+			ctx        context.Context
+		)
+		BeforeEach(func() {
+			ctx = context.TODO()
+			s = runtime.NewScheme()
+			Expect(kubernetesfake.AddToScheme(s)).To(Succeed())
+
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(s).Build()
+		})
+
+		It("should apply the function to all the object kinds passed", func() {
+			for i := 1; i <= 5; i++ {
+				Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("secret-%d", i), Namespace: "default"}})).To(Succeed())
+				Expect(fakeClient.Create(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("comfigmap-%d", i), Namespace: "default"}})).To(Succeed())
+			}
+
+			annotateResources := func(ctx context.Context, object client.Object) error {
+				object.SetAnnotations(map[string]string{"test-annotation": "test"})
+
+				return fakeClient.Update(ctx, object)
+			}
+
+			fn := func(kind string, objectList client.ObjectList) flow.TaskFn {
+				return func(ctx context.Context) error {
+					if err := fakeClient.List(ctx, objectList); err != nil {
+						return err
+					}
+
+					return ApplyToObjects(ctx, objectList, annotateResources)
+				}
+			}
+
+			Expect(ApplyToObjectKinds(ctx, fn, map[string]client.ObjectList{
+				"Secret":    &corev1.SecretList{},
+				"ConfigMap": &corev1.ConfigMapList{},
+			})).To(Succeed())
+
+			secretList := &corev1.SecretList{}
+			configMapList := &corev1.ConfigMapList{}
+
+			Expect(fakeClient.List(ctx, secretList)).To(Succeed())
+			Expect(fakeClient.List(ctx, configMapList)).To(Succeed())
+
+			for _, secret := range secretList.Items {
+				Expect(secret.Annotations).To(HaveKeyWithValue("test-annotation", "test"))
+			}
+			for _, configMap := range configMapList.Items {
+				Expect(configMap.Annotations).To(HaveKeyWithValue("test-annotation", "test"))
+			}
+		})
+	})
+
+	Context("#ForceDeleteObjects", func() {
+		var (
+			s          *runtime.Scheme
+			fakeClient client.Client
+			ctx        context.Context
+		)
+		BeforeEach(func() {
+			ctx = context.TODO()
+			s = runtime.NewScheme()
+			Expect(kubernetesfake.AddToScheme(s)).To(Succeed())
+
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(s).Build()
+		})
+
+		It("should finalize and delete all the objects in the list", func() {
+			for i := 1; i <= 5; i++ {
+				Expect(fakeClient.Create(ctx, &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       fmt.Sprintf("secret-%d", i),
+						Namespace:  "default",
+						Finalizers: []string{"finalizer"},
+					},
+				})).To(Succeed())
+			}
+
+			secretList := &corev1.SecretList{}
+			Expect(fakeClient.List(ctx, secretList)).To(Succeed())
+			Expect(secretList.Items).To(HaveLen(5))
+
+			taskFns := ForceDeleteObjects(ctx, logr.Discard(), fakeClient, "Secret", "default", &corev1.SecretList{})
+			Expect(flow.Parallel(taskFns)(ctx)).To(Succeed())
+
+			Expect(fakeClient.List(ctx, secretList)).To(Succeed())
+			Expect(secretList.Items).To(BeEmpty())
 		})
 	})
 })
