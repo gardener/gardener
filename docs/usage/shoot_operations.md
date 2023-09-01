@@ -52,3 +52,19 @@ The annotation will be removed from the `Node` object after all specified system
 It will also be removed even if the restart of one or more services failed.
 
 > ℹ️ In the example mentioned above, you could additionally verify when/whether the kubelet restarted by using `kubectl describe node <node-name>` and looking for such a `Starting kubelet` event.
+
+## Shoot Force Deletion
+
+Gardener provides the option to force delete the Shoot. This is only possible if the Shoot fails to be deleted normally. For forceful deletion, the following conditions should be met:
+
+- Shoot has a deletion timestamp.
+- Shoot status contains at least one of the following [ErrorCodes](shoot_status.md#error-codes):
+  - ERR_CLEANUP_CLUSTER_RESOURCES
+  - ERR_CONFIGURATION_PROBLEM
+  - ERR_INFRA_DEPENDENCIES
+  - ERR_INFRA_UNAUTHENTICATED
+  - ERR_INFRA_UNAUTHORIZED
+
+If the above conditions are satisfied, you can annotate the Shoot with `confirmation.gardener.cloud/force-deletion=true`, and Gardener will cleanup the Shoot controlplane and the Shoot metadata.
+
+> :warning: You **MUST** ensure that all the resources created in the IaaS account are cleaned up to prevent orphaned resources. Gardener will **NOT** delete any resources in the Shoot cloud-provider account.
