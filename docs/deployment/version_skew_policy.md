@@ -16,8 +16,10 @@ For more information, see the [Releases document](../development/process.md#rele
 ### Supported Version Skew
 
 Technically, we follow the same [policy](https://kubernetes.io/releases/version-skew-policy/) as the Kubernetes project.
-However, given that our release cadence is much more frequent compared to Kubernetes (every `14d` vs. every `120d`), in many cases it is possible to skip a version.
+However, given that our release cadence is much more frequent compared to Kubernetes (every `14d` vs. every `120d`), in many cases it might be possible to skip versions.
 Still, to be on the safe side, it is highly recommended to follow the described policy.
+
+🚨 Note that downgrading Gardener versions is generally not tested during development and should be considered unsupported.
 
 #### gardener-apiserver
 
