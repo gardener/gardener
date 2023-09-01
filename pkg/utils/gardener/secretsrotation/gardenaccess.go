@@ -19,7 +19,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/util/sets"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -27,20 +27,11 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-var seedSecretsRotationOperations sets.Set[string] = sets.New(
-	v1beta1constants.SeedOperationRenewGardenAccessSecrets,
-	v1beta1constants.GardenerOperationRenewKubeconfig,
-)
-
 // CheckRenewSeedGardenSecretsCompleted checks if renewal of garden secrets is completed for all seeds.
 func CheckRenewSeedGardenSecretsCompleted(ctx context.Context, log logr.Logger, c client.Client, operationAnnotation string) error {
-	if !seedSecretsRotationOperations.Has(operationAnnotation) {
-		return fmt.Errorf("%q is not a valid seed secrets rotation operation", operationAnnotation)
-	}
-
-	seedList := gardencorev1beta1.SeedList{}
-	if err := c.List(ctx, &seedList); err != nil {
-		log.Error(err, "Error listing seeds")
+	seedList := &metav1.PartialObjectMetadataList{}
+	seedList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("SeedList"))
+	if err := c.List(ctx, seedList); err != nil {
 		return err
 	}
 
@@ -55,22 +46,17 @@ func CheckRenewSeedGardenSecretsCompleted(ctx context.Context, log logr.Logger, 
 
 // RenewSeedGardenSecrets annotates all seeds to trigger renewal of their garden secrets.
 func RenewSeedGardenSecrets(ctx context.Context, log logr.Logger, c client.Client, operationAnnotation string) error {
-	if !seedSecretsRotationOperations.Has(operationAnnotation) {
-		return fmt.Errorf("%q is not a valid seed secrets rotation operation", operationAnnotation)
-	}
-
-	seedList := gardencorev1beta1.SeedList{}
-	if err := c.List(ctx, &seedList); err != nil {
-		log.Error(err, "Error listing seeds")
+	seedList := &metav1.PartialObjectMetadataList{}
+	seedList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("SeedList"))
+	if err := c.List(ctx, seedList); err != nil {
 		return err
 	}
 
-	log.Info("Seeds requiring renewal of their garden secrets", "number", len(seedList.Items))
+	log.Info("Seeds requiring renewal of their garden secrets", v1beta1constants.GardenerOperation, operationAnnotation, "number", len(seedList.Items))
 
 	for _, seed := range seedList.Items {
 		log := log.WithValues("seed", seed.Name)
 		if seed.Annotations[v1beta1constants.GardenerOperation] == operationAnnotation {
-			log.Info("Seed is already annotated with", "label", v1beta1constants.GardenerOperation, "value", operationAnnotation)
 			continue
 		}
 
@@ -78,12 +64,13 @@ func RenewSeedGardenSecrets(ctx context.Context, log logr.Logger, c client.Clien
 			return fmt.Errorf("error annotating seed %s: already annotated with \"%s: %s\"", seed.Name, v1beta1constants.GardenerOperation, seed.Annotations[v1beta1constants.GardenerOperation])
 		}
 
+		seed.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"))
 		patch := client.MergeFrom(seed.DeepCopy())
 		kubernetesutils.SetMetaDataAnnotation(&seed.ObjectMeta, v1beta1constants.GardenerOperation, operationAnnotation)
 		if err := c.Patch(ctx, &seed, patch); err != nil {
 			return fmt.Errorf("error annotating seed %s: %w", seed.Name, err)
 		}
-		log.Info("Successfully annotated seed to renew its garden secret")
+		log.Info("Successfully annotated seed to renew its garden secrets", v1beta1constants.GardenerOperation, operationAnnotation)
 	}
 
 	return nil

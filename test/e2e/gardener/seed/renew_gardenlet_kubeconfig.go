@@ -26,7 +26,7 @@ import (
 )
 
 var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
-	Describe("Renew garden kubeconfig for seed", func() {
+	Describe("Renew gardenlet kubeconfig", func() {
 		const (
 			gardenletKubeconfigSecretName      = "gardenlet-kubeconfig"
 			gardenletKubeconfigSecretNamespace = "garden"
@@ -34,9 +34,7 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 			gardenletDeploymentNamespace       = "garden"
 		)
 
-		var (
-			seed *gardencorev1beta1.Seed
-		)
+		var seed *gardencorev1beta1.Seed
 
 		BeforeEach(func() {
 			// find the first seed (seed name differs between test scenarios, e.g., non-ha/ha)
