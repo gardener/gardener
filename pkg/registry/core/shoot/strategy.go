@@ -103,6 +103,11 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 		return true
 	}
 
+	// Force delete annotation is set.
+	if !gardencorehelper.ShootNeedsForceDeletion(oldShoot) && gardencorehelper.ShootNeedsForceDeletion(newShoot) {
+		return true
+	}
+
 	if lastOperation := newShoot.Status.LastOperation; lastOperation != nil {
 		var (
 			mustIncrease                  bool
