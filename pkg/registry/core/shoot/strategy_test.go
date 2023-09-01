@@ -63,6 +63,8 @@ var _ = Describe("Strategy", func() {
 		})
 
 		It("should forbid an empty worker list if WorkerlessShoots featuregate is disabled", func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.WorkerlessShoots, false))
+
 			errorList := shootregistry.NewStrategy(0).Validate(context.TODO(), shoot)
 
 			Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{

@@ -160,7 +160,6 @@ global:
     featureGates:
       IPv6SingleStack: true
       MutableShootSpecNetworkingNodes: true
-      WorkerlessShoots: true
     resources: {}
     podLabels:
       networking.resources.gardener.cloud/to-all-webhook-targets: allowed

@@ -28,9 +28,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -128,8 +126,6 @@ var _ = Describe("Shoot Care controller tests", func() {
 	})
 
 	JustBeforeEach(func() {
-		DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.WorkerlessShoots, true))
-
 		// Typically, GCM creates the seed-specific namespace, but it doesn't run in this test, hence we have to do it.
 		By("Create seed-specific namespace")
 		Expect(testClient.Create(ctx, seedNamespace)).To(Succeed())
