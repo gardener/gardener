@@ -41,6 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	controllerwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	"github.com/gardener/gardener/cmd/gardener-operator/app/bootstrappers"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/certificates"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -168,6 +169,11 @@ func run(ctx context.Context, log logr.Logger, cfg *config.OperatorConfiguration
 	}
 	if err := mgr.AddReadyzCheck("webhook-server", mgr.GetWebhookServer().StartedChecker()); err != nil {
 		return err
+	}
+
+	log.Info("Perform Gardener version verification")
+	if err := bootstrappers.VerifyGardenerVersion(ctx, mgr.GetLogger(), mgr.GetAPIReader()); err != nil {
+		return fmt.Errorf("failed verifying Gardener version: %w", err)
 	}
 
 	log.Info("Adding certificate management to manager")
