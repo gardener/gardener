@@ -181,8 +181,9 @@ spec:
     #       resource: shoots
     #       size: 500
     # gardenerAdmissionController:
-    #   logLevel: info
+    #   logLevel: info # either {debug,info,error}
     #   resourceAdmissionConfiguration:
+    #    operationMode: block # either {block,log}
     #    limits:
     #    - apiGroups: ["core.gardener.cloud"]
     #      apiVersions: ["*"]
@@ -205,11 +206,11 @@ spec:
     #     projectSelector: {}
     #   featureGates:
     #     SomeGardenerFeature: true
-    #   logLevel: info  # either {debug,info,error}
+    #   logLevel: info # either {debug,info,error}
     # gardenerScheduler:
     #   featureGates:
     #     SomeGardenerFeature: true
-    #   logLevel: info  # either {debug,info,error}
+    #   logLevel: info # either {debug,info,error}
     maintenance:
       timeWindow:
         begin: 220000+0100
