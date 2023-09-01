@@ -64,6 +64,12 @@ const (
 	// beta: v1.79.0
 	WorkerlessShoots featuregate.Feature = "WorkerlessShoots"
 
+	// ShootForceDeletion allows force deletion of Shoots.
+	// See [Shoot Force Deletion](https://github.com/gardener/gardener/blob/master/docs/usage/shoot_operations.md#shoot-force-deletion) for more details.
+	// owner: @acumino @ary1992 @shafeeqes
+	// alpha: v1.79.0
+	ShootForceDeletion featuregate.Feature = "ShootForceDeletion"
+
 	// MachineControllerManagerDeployment enables Gardener to take over the deployment of the
 	// machine-controller-manager. If enabled, all registered provider extensions must support injecting the
 	// provider-specific MCM provider sidecar container into the deployment via the `controlplane` webhook.
@@ -127,6 +133,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	IPv6SingleStack:                    {Default: false, PreRelease: featuregate.Alpha},
 	MutableShootSpecNetworkingNodes:    {Default: false, PreRelease: featuregate.Alpha},
 	WorkerlessShoots:                   {Default: true, PreRelease: featuregate.Beta},
+	ShootForceDeletion:                 {Default: false, PreRelease: featuregate.Alpha},
 	MachineControllerManagerDeployment: {Default: false, PreRelease: featuregate.Alpha},
 	DisableScalingClassesForShoots:     {Default: true, PreRelease: featuregate.Beta},
 	ContainerdRegistryHostsDir:         {Default: false, PreRelease: featuregate.Alpha},

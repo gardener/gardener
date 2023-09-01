@@ -161,6 +161,10 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 	allErrs = append(allErrs, ValidateShootHAConfigUpdate(newShoot, oldShoot)...)
 	allErrs = append(allErrs, validateHibernationUpdate(newShoot, oldShoot)...)
 
+	if helper.ShootNeedsForceDeletion(newShoot) && !helper.ShootNeedsForceDeletion(oldShoot) && !features.DefaultFeatureGate.Enabled(features.ShootForceDeletion) {
+		allErrs = append(allErrs, field.Forbidden(field.NewPath("metadata", "annotations").Key(v1beta1constants.AnnotationConfirmationForceDeletion), "force-deletion annotation cannot be added when the ShootForceDeletion feature gate is not enabled"))
+	}
+
 	return allErrs
 }
 
