@@ -402,3 +402,31 @@ var defaultCleanerOps = NewCleanOps(DefaultGoneEnsurer(), DefaultCleaner())
 func DefaultCleanOps() CleanOps {
 	return defaultCleanerOps
 }
+
+// ApplyToObjects applies the passed function to all the objects in the list.
+func ApplyToObjects(ctx context.Context, objectList client.ObjectList, fn func(ctx context.Context, object client.Object) error) error {
+	taskFns := make([]flow.TaskFn, 0, meta.LenList(objectList))
+	if err := meta.EachListItem(objectList, func(obj runtime.Object) error {
+		object, ok := obj.(client.Object)
+		if !ok {
+			return fmt.Errorf("expected client.Object but got %T", obj)
+		}
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			return fn(ctx, object)
+		})
+		return nil
+	}); err != nil {
+		return err
+	}
+	return flow.Parallel(taskFns...)(ctx)
+}
+
+// ApplyToObjectKinds applies the passed function to all the object lists for the passed kinds.
+func ApplyToObjectKinds(ctx context.Context, fn func(kind string, objectList client.ObjectList) flow.TaskFn, kindToObjectList map[string]client.ObjectList) error {
+	var taskFns []flow.TaskFn
+	for kind, objectList := range kindToObjectList {
+		taskFns = append(taskFns, fn(kind, objectList))
+	}
+
+	return flow.Parallel(taskFns...)(ctx)
+}
