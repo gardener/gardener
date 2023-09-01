@@ -333,9 +333,9 @@ gardener-ha-single-zone%: export SKAFFOLD_PROFILE=ha-single-zone
 gardener-ha-multi-zone%: export SKAFFOLD_PROFILE=ha-multi-zone
 
 gardener-up gardener-ha-single-zone-up gardener-ha-multi-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
-	$(SKAFFOLD) run
+	$(SKAFFOLD) run -p local
 gardener-dev gardener-ha-single-zone-dev gardener-ha-multi-zone-dev: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
-	$(SKAFFOLD) dev
+	$(SKAFFOLD) dev -p local
 gardener-debug gardener-ha-single-zone-debug gardener-ha-multi-zone-debug: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
 	$(SKAFFOLD) debug
 gardener-down gardener-ha-single-zone-down gardener-ha-multi-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
