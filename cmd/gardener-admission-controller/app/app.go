@@ -110,10 +110,6 @@ func run(ctx context.Context, log logr.Logger, cfg *config.AdmissionControllerCo
 		Scheme:                  kubernetes.GardenScheme,
 		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
 
-		Host:    cfg.Server.Webhooks.BindAddress,
-		Port:    cfg.Server.Webhooks.Port,
-		CertDir: cfg.Server.Webhooks.TLS.ServerCertDir,
-
 		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(cfg.Server.HealthProbes.Port)),
 		MetricsBindAddress:     net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
 

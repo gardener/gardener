@@ -297,16 +297,14 @@ func (g *garden) Start(ctx context.Context) error {
 					&corev1.Secret{}: func(c *rest.Config, o cache.Options) (cache.Cache, error) {
 						// cache.New only creates a multiNamespacedCache if cache.Options.Namespaces has more than one namespace
 						// (https://github.com/kubernetes-sigs/controller-runtime/blob/116a1b831fffe7ccc3c8145306c3e1a3b1b14ffa/pkg/cache/cache.go#L202-L204).
-						// MultiNamespacedCache can only be possible when there are more than one namespace
-						// (https://github.com/kubernetes-sigs/controller-runtime/blob/116a1b831fffe7ccc3c8145306c3e1a3b1b14ffa/pkg/cache/multi_namespace_cache.go#L53-L55)
+						// multiNamespacedCache scopes the cache to a list of namespaces.
 						o.Namespaces = []string{seedNamespace, seedNamespace}
 						return cache.New(c, o)
 					},
 					&corev1.ServiceAccount{}: func(c *rest.Config, o cache.Options) (cache.Cache, error) {
 						// cache.New only creates a multiNamespacedCache if cache.Options.Namespaces has more than one namespace
 						// (https://github.com/kubernetes-sigs/controller-runtime/blob/116a1b831fffe7ccc3c8145306c3e1a3b1b14ffa/pkg/cache/cache.go#L202-L204).
-						// MultiNamespacedCacheBuilder can only be used when there are more than one namespace
-						// (https://github.com/kubernetes-sigs/controller-runtime/blob/116a1b831fffe7ccc3c8145306c3e1a3b1b14ffa/pkg/cache/multi_namespace_cache.go#L53-L55)
+						// multiNamespacedCache scopes the cache to a list of namespaces.
 						o.Namespaces = []string{seedNamespace, seedNamespace}
 						return cache.New(c, o)
 					},
