@@ -172,6 +172,7 @@ build:
         - plugin/pkg/controllerregistration/resources
         - plugin/pkg/global/customverbauthorizer
         - plugin/pkg/global/deletionconfirmation
+        - plugin/pkg/shoot/forcedeletion
         - plugin/pkg/global/extensionlabels
         - plugin/pkg/global/extensionvalidation
         - plugin/pkg/global/resourcereferencemanager
@@ -671,6 +672,7 @@ build:
         - pkg/utils/gardener
         - pkg/utils/imagevector
         - pkg/utils/kubernetes
+        - pkg/utils/kubernetes/client
         - pkg/utils/kubernetes/health
         - pkg/utils/kubernetes/unstructured
         - pkg/utils/managedresources
@@ -678,6 +680,7 @@ build:
         - pkg/utils/retry
         - pkg/utils/secrets
         - pkg/utils/secrets/manager
+        - pkg/utils/time
         - pkg/utils/timewindow
         - pkg/utils/validation/kubernetesversion
         - pkg/utils/version
