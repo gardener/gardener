@@ -282,17 +282,17 @@ func (r *Reconciler) reconcile(
 			Fn:           c.gardenerAPIServer.Wait,
 			Dependencies: flow.NewTaskIDs(deployGardenerAPIServer),
 		})
-		deployGardenerAdmissionController = g.Add(flow.Task{
+		_ = g.Add(flow.Task{
 			Name:         "Deploying Gardener Admission Controller",
 			Fn:           component.OpWait(c.gardenerAdmissionController).Deploy,
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerAPIServerReady),
 		})
-		deployGardenerControllerManager = g.Add(flow.Task{
+		_ = g.Add(flow.Task{
 			Name:         "Deploying Gardener Controller Manager",
 			Fn:           component.OpWait(c.gardenerControllerManager).Deploy,
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerAPIServerReady),
 		})
-		deployGardenerScheduler = g.Add(flow.Task{
+		_ = g.Add(flow.Task{
 			Name:         "Deploying Gardener Scheduler",
 			Fn:           component.OpWait(c.gardenerScheduler).Deploy,
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerAPIServerReady),
@@ -320,7 +320,7 @@ func (r *Reconciler) reconcile(
 			}).
 				RetryUntilTimeout(5*time.Second, 30*time.Second).
 				DoIf(helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationPreparing),
-			Dependencies: flow.NewTaskIDs(deployVirtualGardenGardenerAccess, deployGardenerAPIServer, deployGardenerAdmissionController, deployGardenerControllerManager, deployGardenerScheduler),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, waitUntilVirtualGardenGardenerResourceManagerIsReady),
 		})
 		initializeVirtualClusterClient = g.Add(flow.Task{
 			Name: "Initializing connection to virtual garden cluster",

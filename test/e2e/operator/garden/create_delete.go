@@ -90,7 +90,6 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
 			g.Expect(runtimeClient.List(ctx, managedResourceList, client.InNamespace(namespace))).To(Succeed())
 			g.Expect(managedResourceList.Items).To(ConsistOf(
-				healthyManagedResource("garden-system"),
 				healthyManagedResource("hvpa"),
 				healthyManagedResource("vpa"),
 				healthyManagedResource("etcd-druid"),
@@ -104,6 +103,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				healthyManagedResource("fluent-operator-custom-resources-garden"),
 				healthyManagedResource("vali"),
 				healthyManagedResource("plutono"),
+				healthyManagedResource("garden-system"),
 				healthyManagedResource("garden-system-virtual"),
 				healthyManagedResource("gardener-apiserver-runtime"),
 				healthyManagedResource("gardener-apiserver-virtual"),
