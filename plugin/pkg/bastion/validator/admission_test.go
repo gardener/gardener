@@ -264,6 +264,25 @@ var _ = Describe("Bastion", func() {
 			err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, oldBastion, admission.Update), nil)
 			Expect(err).To(Succeed())
 		})
+
+		It("should allow the Bastion update on finalizers even if the Shoot's SSH access is disabled", func() {
+			shoot.Spec.Provider.WorkersSettings = &gardencore.WorkersSettings{
+				SSHAccess: &gardencore.SSHAccess{Enabled: false},
+			}
+			now := metav1.Now()
+			bastion.DeletionTimestamp = &now
+
+			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+				return true, shoot, nil
+			})
+
+			oldBastion := bastion.DeepCopy()
+			oldBastion.ObjectMeta.Finalizers = []string{"foo"}
+			bastion.ObjectMeta.Finalizers = []string{""}
+
+			err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, oldBastion, admission.Update), nil)
+			Expect(err).To(Succeed())
+		})
 	})
 
 	Describe("#Register", func() {

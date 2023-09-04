@@ -150,7 +150,7 @@ func (v *Bastion) Admit(ctx context.Context, a admission.Attributes, _ admission
 	}
 
 	// ensure shoot SSH access is not disabled
-	if shoot.Spec.Provider.WorkersSettings != nil && shoot.Spec.Provider.WorkersSettings.SSHAccess != nil && !shoot.Spec.Provider.WorkersSettings.SSHAccess.Enabled {
+	if shoot.Spec.Provider.WorkersSettings != nil && shoot.Spec.Provider.WorkersSettings.SSHAccess != nil && !shoot.Spec.Provider.WorkersSettings.SSHAccess.Enabled && bastion.DeletionTimestamp == nil {
 		fieldErr := field.Invalid(shootPath, shootName, "ssh access is disabled for worker nodes")
 		return apierrors.NewInvalid(gk, bastion.Name, field.ErrorList{fieldErr})
 	}
