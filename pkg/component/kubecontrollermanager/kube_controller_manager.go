@@ -746,7 +746,7 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		"--profiling=false",
 		fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.DataKeyCertificate),
 		fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.DataKeyPrivateKey),
-		fmt.Sprintf("--tls-cipher-suites=%s", strings.Join(kubernetesutils.TLSCipherSuites(k.values.TargetVersion), ",")),
+		fmt.Sprintf("--tls-cipher-suites=%s", strings.Join(kubernetesutils.TLSCipherSuites, ",")),
 		"--use-service-account-credentials=true",
 		"--v=2",
 	)

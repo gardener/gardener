@@ -2426,7 +2426,7 @@ rules:
 					issuerIdx := indexOfElement(deployment.Spec.Template.Spec.Containers[0].Args, "--service-account-issuer="+serviceAccountIssuer)
 					issuerIdx1 := indexOfElement(deployment.Spec.Template.Spec.Containers[0].Args, "--service-account-issuer="+acceptedIssuers[0])
 					issuerIdx2 := indexOfElement(deployment.Spec.Template.Spec.Containers[0].Args, "--service-account-issuer="+acceptedIssuers[1])
-					tlscipherSuites := kubernetesutils.TLSCipherSuites(version)
+					tlscipherSuites := kubernetesutils.TLSCipherSuites
 
 					Expect(deployment.Spec.Template.Spec.Containers[0].Name).To(Equal("kube-apiserver"))
 					Expect(deployment.Spec.Template.Spec.Containers[0].Image).To(Equal(images.KubeAPIServer))

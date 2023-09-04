@@ -526,10 +526,6 @@ func (k *kubeScheduler) computeCommand(port int32) []string {
 		fmt.Sprintf("--secure-port=%d", port),
 	)
 
-	if versionutils.ConstraintK8sEqual122.Check(k.version) {
-		command = append(command, "--port=0")
-	}
-
 	if k.config != nil {
 		command = append(command, kubernetesutils.FeatureGatesToCommandLineParameter(k.config.FeatureGates))
 	}

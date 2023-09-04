@@ -58,7 +58,7 @@ func InjectDefaultSettings(
 		"--shutdown-delay-duration=15s",
 		fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.DataKeyCertificate),
 		fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.DataKeyPrivateKey),
-		"--tls-cipher-suites="+strings.Join(kubernetesutils.TLSCipherSuites(k8sVersion), ","),
+		"--tls-cipher-suites="+strings.Join(kubernetesutils.TLSCipherSuites, ","),
 	)
 
 	if values.FeatureGates != nil {

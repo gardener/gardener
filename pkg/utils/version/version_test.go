@@ -29,11 +29,6 @@ var _ = Describe("Version", func() {
 			Expect(constraint.Check(version)).To(matcher)
 		},
 
-		Entry("ConstraintK8sEqual122, success", ConstraintK8sEqual122, semver.MustParse("1.22.1"), BeTrue()),
-		Entry("ConstraintK8sEqual122, failure", ConstraintK8sEqual122, semver.MustParse("1.21.0"), BeFalse()),
-		Entry("ConstraintK8sEqual122, success w/ suffix", ConstraintK8sEqual122, semver.MustParse("v1.22.1-foo.12"), BeTrue()),
-		Entry("ConstraintK8sEqual122, failure w/ suffix", ConstraintK8sEqual122, semver.MustParse("v1.21.0-foo.12"), BeFalse()),
-
 		Entry("ConstraintK8sEqual123, success", ConstraintK8sEqual123, semver.MustParse("1.23.1"), BeTrue()),
 		Entry("ConstraintK8sEqual123, failure", ConstraintK8sEqual123, semver.MustParse("1.22.0"), BeFalse()),
 		Entry("ConstraintK8sEqual123, success w/ suffix", ConstraintK8sEqual123, semver.MustParse("1.23.1-foo.12"), BeTrue()),
