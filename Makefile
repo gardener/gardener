@@ -180,7 +180,7 @@ define GENERATE_HELP_INFO
 #   WHAT              - Specify the targets to run (e.g., "protobuf codegen manifests logcheck gomegacheck monitoring-docs")
 #   CODEGEN_GROUPS    - Specify which groups to run the 'codegen' target for, not applicable for other targets (e.g., "authentication core extensions resources operator seedmanagement operations settings operatorconfig controllermanager admissioncontroller scheduler gardenlet resourcemanager shoottolerationrestriction shootdnsrewriting provider_local extensions_config")
 #   MANIFESTS_FOLDERS - Specify which folders to run the 'manifests' target in, not applicable for other targets (e.g., "charts cmd example extensions pkg plugin test")
-#   MODE              - Specify the mode for the 'manifests' or 'codegen' target (e.g., "parallel" (default) or "sequential")
+#   MODE              - Specify the mode for the 'manifests' or 'codegen' target (e.g., "parallel" or "sequential")
 #
 # Examples:
 #   make generate

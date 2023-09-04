@@ -19,7 +19,7 @@ set -o nounset
 set -o pipefail
 
 WHICH=()
-MODE="parallel"
+MODE="sequential"
 
 # Friendly reminder if workspace location is not in $GOPATH
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
