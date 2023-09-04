@@ -48,7 +48,6 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 var _ = Describe("KubeScheduler", func() {
@@ -501,8 +500,6 @@ subjects:
 				Expect(actualPDB).To(DeepEqual(pdb))
 			},
 
-			Entry("kubernetes 1.23 w/o config", "1.23.1", configEmpty, "testdata/component-config-1.23.yaml"),
-			Entry("kubernetes 1.23 w/ full config", "1.23.1", configFull, "testdata/component-config-1.23-bin-packing.yaml"),
 			Entry("kubernetes 1.24 w/o config", "1.24.1", configEmpty, "testdata/component-config-1.23.yaml"),
 			Entry("kubernetes 1.24 w/ full config", "1.24.1", configFull, "testdata/component-config-1.23-bin-packing.yaml"),
 			Entry("kubernetes 1.25 w/o config", "1.25.0", configEmpty, "testdata/component-config-1.25.yaml"),
@@ -544,10 +541,6 @@ func commandForKubernetesVersion(version string, port int32, featureGateFlags ..
 		"--tls-private-key-file=/var/lib/kube-scheduler-server/tls.key",
 		"--secure-port="+strconv.Itoa(int(port)),
 	)
-
-	if k8sVersionLessThan123, _ := versionutils.CompareVersions(version, "<", "1.23"); k8sVersionLessThan123 {
-		command = append(command, "--port=0")
-	}
 
 	command = append(command, featureGateFlags...)
 	command = append(command, "--v=2")

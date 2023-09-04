@@ -487,10 +487,8 @@ func (k *kubeScheduler) computeComponentConfig() (string, error) {
 	var apiVersion string
 	if versionutils.ConstraintK8sGreaterEqual125.Check(k.version) {
 		apiVersion = "kubescheduler.config.k8s.io/v1"
-	} else if versionutils.ConstraintK8sGreaterEqual123.Check(k.version) {
-		apiVersion = "kubescheduler.config.k8s.io/v1beta3"
 	} else {
-		apiVersion = "kubescheduler.config.k8s.io/v1beta2"
+		apiVersion = "kubescheduler.config.k8s.io/v1beta3"
 	}
 
 	profile := gardencorev1beta1.SchedulingProfileBalanced
