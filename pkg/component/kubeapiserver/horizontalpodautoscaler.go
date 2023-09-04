@@ -19,16 +19,13 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
-	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -36,90 +33,54 @@ const (
 	hpaTargetAverageUtilizationMemory int32 = 80
 )
 
-func (k *kubeAPIServer) emptyHorizontalPodAutoscaler() client.Object {
-	hpaObjectMeta := metav1.ObjectMeta{
-		Name:      k.values.NamePrefix + v1beta1constants.DeploymentNameKubeAPIServer,
-		Namespace: k.namespace,
-	}
-
-	if versionutils.ConstraintK8sGreaterEqual123.Check(k.values.RuntimeVersion) {
-		return &autoscalingv2.HorizontalPodAutoscaler{
-			ObjectMeta: hpaObjectMeta,
-		}
-	}
-	return &autoscalingv2beta1.HorizontalPodAutoscaler{
-		ObjectMeta: hpaObjectMeta,
+func (k *kubeAPIServer) emptyHorizontalPodAutoscaler() *autoscalingv2.HorizontalPodAutoscaler {
+	return &autoscalingv2.HorizontalPodAutoscaler{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      k.values.NamePrefix + v1beta1constants.DeploymentNameKubeAPIServer,
+			Namespace: k.namespace,
+		},
 	}
 }
 
-func (k *kubeAPIServer) reconcileHorizontalPodAutoscaler(ctx context.Context, obj client.Object, deployment *appsv1.Deployment) error {
+func (k *kubeAPIServer) reconcileHorizontalPodAutoscaler(ctx context.Context, hpa *autoscalingv2.HorizontalPodAutoscaler, deployment *appsv1.Deployment) error {
 	if k.values.Autoscaling.HVPAEnabled ||
 		k.values.Autoscaling.Replicas == nil ||
 		*k.values.Autoscaling.Replicas == 0 {
 
-		return kubernetesutils.DeleteObject(ctx, k.client.Client(), obj)
+		return kubernetesutils.DeleteObject(ctx, k.client.Client(), hpa)
 	}
 
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), obj, func() error {
-		switch hpa := obj.(type) {
-		case *autoscalingv2.HorizontalPodAutoscaler:
-			hpa.Spec = autoscalingv2.HorizontalPodAutoscalerSpec{
-				MinReplicas: &k.values.Autoscaling.MinReplicas,
-				MaxReplicas: k.values.Autoscaling.MaxReplicas,
-				ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
-					APIVersion: appsv1.SchemeGroupVersion.String(),
-					Kind:       "Deployment",
-					Name:       deployment.Name,
-				},
-				Metrics: []autoscalingv2.MetricSpec{
-					{
-						Type: autoscalingv2.ResourceMetricSourceType,
-						Resource: &autoscalingv2.ResourceMetricSource{
-							Name: corev1.ResourceCPU,
-							Target: autoscalingv2.MetricTarget{
-								Type:               autoscalingv2.UtilizationMetricType,
-								AverageUtilization: pointer.Int32(hpaTargetAverageUtilizationCPU),
-							},
-						},
-					},
-					{
-						Type: autoscalingv2.ResourceMetricSourceType,
-						Resource: &autoscalingv2.ResourceMetricSource{
-							Name: corev1.ResourceMemory,
-							Target: autoscalingv2.MetricTarget{
-								Type:               autoscalingv2.UtilizationMetricType,
-								AverageUtilization: pointer.Int32(hpaTargetAverageUtilizationMemory),
-							},
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), hpa, func() error {
+		hpa.Spec = autoscalingv2.HorizontalPodAutoscalerSpec{
+			MinReplicas: &k.values.Autoscaling.MinReplicas,
+			MaxReplicas: k.values.Autoscaling.MaxReplicas,
+			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
+				APIVersion: appsv1.SchemeGroupVersion.String(),
+				Kind:       "Deployment",
+				Name:       deployment.Name,
+			},
+			Metrics: []autoscalingv2.MetricSpec{
+				{
+					Type: autoscalingv2.ResourceMetricSourceType,
+					Resource: &autoscalingv2.ResourceMetricSource{
+						Name: corev1.ResourceCPU,
+						Target: autoscalingv2.MetricTarget{
+							Type:               autoscalingv2.UtilizationMetricType,
+							AverageUtilization: pointer.Int32(hpaTargetAverageUtilizationCPU),
 						},
 					},
 				},
-			}
-		case *autoscalingv2beta1.HorizontalPodAutoscaler:
-			hpa.Spec = autoscalingv2beta1.HorizontalPodAutoscalerSpec{
-				MinReplicas: &k.values.Autoscaling.MinReplicas,
-				MaxReplicas: k.values.Autoscaling.MaxReplicas,
-				ScaleTargetRef: autoscalingv2beta1.CrossVersionObjectReference{
-					APIVersion: appsv1.SchemeGroupVersion.String(),
-					Kind:       "Deployment",
-					Name:       deployment.Name,
-				},
-				Metrics: []autoscalingv2beta1.MetricSpec{
-					{
-						Type: autoscalingv2beta1.ResourceMetricSourceType,
-						Resource: &autoscalingv2beta1.ResourceMetricSource{
-							Name:                     corev1.ResourceCPU,
-							TargetAverageUtilization: pointer.Int32(hpaTargetAverageUtilizationCPU),
-						},
-					},
-					{
-						Type: autoscalingv2beta1.ResourceMetricSourceType,
-						Resource: &autoscalingv2beta1.ResourceMetricSource{
-							Name:                     corev1.ResourceMemory,
-							TargetAverageUtilization: pointer.Int32(hpaTargetAverageUtilizationMemory),
+				{
+					Type: autoscalingv2.ResourceMetricSourceType,
+					Resource: &autoscalingv2.ResourceMetricSource{
+						Name: corev1.ResourceMemory,
+						Target: autoscalingv2.MetricTarget{
+							Type:               autoscalingv2.UtilizationMetricType,
+							AverageUtilization: pointer.Int32(hpaTargetAverageUtilizationMemory),
 						},
 					},
 				},
-			}
+			},
 		}
 
 		return nil

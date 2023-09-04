@@ -20,7 +20,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -120,8 +119,6 @@ var _ = BeforeSuite(func() {
 	Expect((&highavailabilityconfig.Handler{
 		Logger:       log,
 		TargetClient: testClient,
-		// Use the same version as the envtest package
-		TargetVersion: semver.MustParse("1.27.0"),
 		Config: config.HighAvailabilityConfigWebhookConfig{
 			DefaultNotReadyTolerationSeconds:    pointer.Int64(defaultNotReadyTolerationSeconds),
 			DefaultUnreachableTolerationSeconds: pointer.Int64(defaultUnreachableTolerationSeconds),

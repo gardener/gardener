@@ -23,7 +23,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -45,7 +44,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // Handler handles admission requests and sets the following fields based on the failure tolerance type and the
@@ -54,11 +52,10 @@ import (
 // - `.spec.template.spec.affinity`
 // - `.spec.template.spec.topologySpreadConstraints`
 type Handler struct {
-	Logger        logr.Logger
-	TargetClient  client.Reader
-	TargetVersion *semver.Version
-	Config        config.HighAvailabilityConfigWebhookConfig
-	Decoder       *admission.Decoder
+	Logger       logr.Logger
+	TargetClient client.Reader
+	Config       config.HighAvailabilityConfigWebhookConfig
+	Decoder      *admission.Decoder
 }
 
 // Handle defaults the high availability settings of the provided resource.
@@ -354,29 +351,15 @@ func getReplicaCount(obj client.Object, currentOrMinReplicas *int32, failureTole
 }
 
 func (h *Handler) isHorizontallyScaled(ctx context.Context, namespace, targetAPIVersion, targetKind, targetName string) (bool, int32, error) {
-	if versionutils.ConstraintK8sGreaterEqual123.Check(h.TargetVersion) {
-		hpaList := &autoscalingv2.HorizontalPodAutoscalerList{}
-		if err := h.TargetClient.List(ctx, hpaList, client.InNamespace(namespace)); err != nil {
-			return false, 0, fmt.Errorf("failed to list all HPAs: %w", err)
-		}
+	hpaList := &autoscalingv2.HorizontalPodAutoscalerList{}
+	if err := h.TargetClient.List(ctx, hpaList, client.InNamespace(namespace)); err != nil {
+		return false, 0, fmt.Errorf("failed to list all HPAs: %w", err)
+	}
 
-		for _, hpa := range hpaList.Items {
-			if targetRef := hpa.Spec.ScaleTargetRef; targetRef.APIVersion == targetAPIVersion &&
-				targetRef.Kind == targetKind && targetRef.Name == targetName {
-				return true, hpa.Spec.MaxReplicas, nil
-			}
-		}
-	} else {
-		hpaList := &autoscalingv2beta1.HorizontalPodAutoscalerList{}
-		if err := h.TargetClient.List(ctx, hpaList, client.InNamespace(namespace)); err != nil {
-			return false, 0, fmt.Errorf("failed to list all HPAs: %w", err)
-		}
-
-		for _, hpa := range hpaList.Items {
-			if targetRef := hpa.Spec.ScaleTargetRef; targetRef.APIVersion == targetAPIVersion &&
-				targetRef.Kind == targetKind && targetRef.Name == targetName {
-				return true, hpa.Spec.MaxReplicas, nil
-			}
+	for _, hpa := range hpaList.Items {
+		if targetRef := hpa.Spec.ScaleTargetRef; targetRef.APIVersion == targetAPIVersion &&
+			targetRef.Kind == targetKind && targetRef.Name == targetName {
+			return true, hpa.Spec.MaxReplicas, nil
 		}
 	}
 

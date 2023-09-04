@@ -129,14 +129,13 @@ func New(
 	runtimeKubernetesVersion *semver.Version,
 ) Interface {
 	return &kubeScheduler{
-		client:                        client,
-		namespace:                     namespace,
-		secretsManager:                secretsManager,
-		version:                       version,
-		image:                         image,
-		replicas:                      replicas,
-		config:                        config,
-		runtimeVersionGreaterEqual123: versionutils.ConstraintK8sGreaterEqual123.Check(runtimeKubernetesVersion),
+		client:         client,
+		namespace:      namespace,
+		secretsManager: secretsManager,
+		version:        version,
+		image:          image,
+		replicas:       replicas,
+		config:         config,
 	}
 }
 
@@ -148,8 +147,6 @@ type kubeScheduler struct {
 	image          string
 	replicas       int32
 	config         *gardencorev1beta1.KubeSchedulerConfig
-
-	runtimeVersionGreaterEqual123 bool
 }
 
 func (k *kubeScheduler) Deploy(ctx context.Context) error {

@@ -114,18 +114,17 @@ var _ = Describe("KubeAPIServer", func() {
 		configMapNameEgressPolicy       = "kube-apiserver-egress-selector-config-53d92abc"
 		configMapNameTerminationHandler = "kube-apiserver-watchdog-f4f4b3d5"
 
-		deployment                     *appsv1.Deployment
-		horizontalPodAutoscalerV2beta1 *autoscalingv2beta1.HorizontalPodAutoscaler
-		horizontalPodAutoscalerV2      *autoscalingv2.HorizontalPodAutoscaler
-		verticalPodAutoscaler          *vpaautoscalingv1.VerticalPodAutoscaler
-		hvpa                           *hvpav1alpha1.Hvpa
-		podDisruptionBudget            *policyv1.PodDisruptionBudget
-		configMapAdmission             *corev1.ConfigMap
-		secretAdmissionKubeconfigs     *corev1.Secret
-		configMapAuditPolicy           *corev1.ConfigMap
-		configMapEgressSelector        *corev1.ConfigMap
-		managedResource                *resourcesv1alpha1.ManagedResource
-		managedResourceSecret          *corev1.Secret
+		deployment                 *appsv1.Deployment
+		horizontalPodAutoscalerV2  *autoscalingv2.HorizontalPodAutoscaler
+		verticalPodAutoscaler      *vpaautoscalingv1.VerticalPodAutoscaler
+		hvpa                       *hvpav1alpha1.Hvpa
+		podDisruptionBudget        *policyv1.PodDisruptionBudget
+		configMapAdmission         *corev1.ConfigMap
+		secretAdmissionKubeconfigs *corev1.Secret
+		configMapAuditPolicy       *corev1.ConfigMap
+		configMapEgressSelector    *corev1.ConfigMap
+		managedResource            *resourcesv1alpha1.ManagedResource
+		managedResourceSecret      *corev1.Secret
 
 		values Values
 	)
@@ -163,12 +162,6 @@ var _ = Describe("KubeAPIServer", func() {
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: vpnseedserver.SecretNameTLSAuth, Namespace: namespace}})).To(Succeed())
 
 		deployment = &appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "kube-apiserver",
-				Namespace: namespace,
-			},
-		}
-		horizontalPodAutoscalerV2beta1 = &autoscalingv2beta1.HorizontalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kube-apiserver",
 				Namespace: namespace,
@@ -224,10 +217,10 @@ var _ = Describe("KubeAPIServer", func() {
 						Version: version},
 					)
 
-					Expect(c.Create(ctx, horizontalPodAutoscalerV2beta1)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscalerV2beta1), horizontalPodAutoscalerV2beta1)).To(Succeed())
+					Expect(c.Create(ctx, horizontalPodAutoscalerV2)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscalerV2), horizontalPodAutoscalerV2)).To(Succeed())
 					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscalerV2beta1), horizontalPodAutoscalerV2beta1)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv2beta1.SchemeGroupVersion.Group, Resource: "horizontalpodautoscalers"}, horizontalPodAutoscalerV2beta1.Name)))
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscalerV2), horizontalPodAutoscalerV2)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv2.SchemeGroupVersion.Group, Resource: "horizontalpodautoscalers"}, horizontalPodAutoscalerV2.Name)))
 				},
 
 				Entry("HVPA is enabled", apiserver.AutoscalingConfig{HVPAEnabled: true}),
@@ -235,120 +228,63 @@ var _ = Describe("KubeAPIServer", func() {
 				Entry("replicas is 0", apiserver.AutoscalingConfig{HVPAEnabled: false, Replicas: pointer.Int32(0)}),
 			)
 
-			Context("Kubernetes version < 1.23", func() {
-				BeforeEach(func() {
-					autoscalingConfig = apiserver.AutoscalingConfig{
-						HVPAEnabled: false,
-						Replicas:    pointer.Int32(2),
-						MinReplicas: 4,
-						MaxReplicas: 6,
-					}
+			BeforeEach(func() {
+				autoscalingConfig = apiserver.AutoscalingConfig{
+					HVPAEnabled: false,
+					Replicas:    pointer.Int32(2),
+					MinReplicas: 4,
+					MaxReplicas: 6,
+				}
 
-					runtimeVersion = semver.MustParse("1.22.11")
-				})
-
-				It("should successfully deploy the HPA resource", func() {
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscalerV2beta1), horizontalPodAutoscalerV2beta1)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv2beta1.SchemeGroupVersion.Group, Resource: "horizontalpodautoscalers"}, horizontalPodAutoscalerV2beta1.Name)))
-					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscalerV2beta1), horizontalPodAutoscalerV2beta1)).To(Succeed())
-					Expect(horizontalPodAutoscalerV2beta1).To(DeepEqual(&autoscalingv2beta1.HorizontalPodAutoscaler{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: autoscalingv2beta1.SchemeGroupVersion.String(),
-							Kind:       "HorizontalPodAutoscaler",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            horizontalPodAutoscalerV2beta1.Name,
-							Namespace:       horizontalPodAutoscalerV2beta1.Namespace,
-							ResourceVersion: "1",
-						},
-						Spec: autoscalingv2beta1.HorizontalPodAutoscalerSpec{
-							MinReplicas: &autoscalingConfig.MinReplicas,
-							MaxReplicas: autoscalingConfig.MaxReplicas,
-							ScaleTargetRef: autoscalingv2beta1.CrossVersionObjectReference{
-								APIVersion: "apps/v1",
-								Kind:       "Deployment",
-								Name:       "kube-apiserver",
-							},
-							Metrics: []autoscalingv2beta1.MetricSpec{
-								{
-									Type: "Resource",
-									Resource: &autoscalingv2beta1.ResourceMetricSource{
-										Name:                     "cpu",
-										TargetAverageUtilization: pointer.Int32(80),
-									},
-								},
-								{
-									Type: "Resource",
-									Resource: &autoscalingv2beta1.ResourceMetricSource{
-										Name:                     "memory",
-										TargetAverageUtilization: pointer.Int32(80),
-									},
-								},
-							},
-						},
-					}))
-				})
+				runtimeVersion = semver.MustParse("1.23.0")
 			})
 
-			Context("Kubernetes version >=1.23", func() {
-				BeforeEach(func() {
-					autoscalingConfig = apiserver.AutoscalingConfig{
-						HVPAEnabled: false,
-						Replicas:    pointer.Int32(2),
-						MinReplicas: 4,
-						MaxReplicas: 6,
-					}
-
-					runtimeVersion = semver.MustParse("1.23.0")
-				})
-
-				It("should successfully deploy the HPA resource", func() {
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscalerV2), horizontalPodAutoscalerV2)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv2.SchemeGroupVersion.Group, Resource: "horizontalpodautoscalers"}, horizontalPodAutoscalerV2.Name)))
-					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscalerV2), horizontalPodAutoscalerV2)).To(Succeed())
-					Expect(horizontalPodAutoscalerV2).To(DeepEqual(&autoscalingv2.HorizontalPodAutoscaler{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: autoscalingv2.SchemeGroupVersion.String(),
-							Kind:       "HorizontalPodAutoscaler",
+			It("should successfully deploy the HPA resource", func() {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscalerV2), horizontalPodAutoscalerV2)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv2.SchemeGroupVersion.Group, Resource: "horizontalpodautoscalers"}, horizontalPodAutoscalerV2.Name)))
+				Expect(kapi.Deploy(ctx)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscalerV2), horizontalPodAutoscalerV2)).To(Succeed())
+				Expect(horizontalPodAutoscalerV2).To(DeepEqual(&autoscalingv2.HorizontalPodAutoscaler{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: autoscalingv2.SchemeGroupVersion.String(),
+						Kind:       "HorizontalPodAutoscaler",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            horizontalPodAutoscalerV2.Name,
+						Namespace:       horizontalPodAutoscalerV2.Namespace,
+						ResourceVersion: "1",
+					},
+					Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
+						MinReplicas: &autoscalingConfig.MinReplicas,
+						MaxReplicas: autoscalingConfig.MaxReplicas,
+						ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
+							APIVersion: "apps/v1",
+							Kind:       "Deployment",
+							Name:       "kube-apiserver",
 						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            horizontalPodAutoscalerV2.Name,
-							Namespace:       horizontalPodAutoscalerV2.Namespace,
-							ResourceVersion: "1",
-						},
-						Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
-							MinReplicas: &autoscalingConfig.MinReplicas,
-							MaxReplicas: autoscalingConfig.MaxReplicas,
-							ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
-								APIVersion: "apps/v1",
-								Kind:       "Deployment",
-								Name:       "kube-apiserver",
-							},
-							Metrics: []autoscalingv2.MetricSpec{
-								{
-									Type: "Resource",
-									Resource: &autoscalingv2.ResourceMetricSource{
-										Name: "cpu",
-										Target: autoscalingv2.MetricTarget{
-											Type:               autoscalingv2.UtilizationMetricType,
-											AverageUtilization: pointer.Int32(80),
-										},
+						Metrics: []autoscalingv2.MetricSpec{
+							{
+								Type: "Resource",
+								Resource: &autoscalingv2.ResourceMetricSource{
+									Name: "cpu",
+									Target: autoscalingv2.MetricTarget{
+										Type:               autoscalingv2.UtilizationMetricType,
+										AverageUtilization: pointer.Int32(80),
 									},
 								},
-								{
-									Type: "Resource",
-									Resource: &autoscalingv2.ResourceMetricSource{
-										Name: "memory",
-										Target: autoscalingv2.MetricTarget{
-											Type:               autoscalingv2.UtilizationMetricType,
-											AverageUtilization: pointer.Int32(80),
-										},
+							},
+							{
+								Type: "Resource",
+								Resource: &autoscalingv2.ResourceMetricSource{
+									Name: "memory",
+									Target: autoscalingv2.MetricTarget{
+										Type:               autoscalingv2.UtilizationMetricType,
+										AverageUtilization: pointer.Int32(80),
 									},
 								},
 							},
 						},
-					}))
-				})
+					},
+				}))
 			})
 		})
 
@@ -3718,38 +3654,17 @@ rules:
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 		})
 
-		Context("Kubernetes version < v1.23", func() {
-			BeforeEach(func() {
-				runtimeVersion = semver.MustParse("1.22.8")
-			})
-			It("should delete all the resources successfully", func() {
-				Expect(c.Create(ctx, horizontalPodAutoscalerV2beta1)).To(Succeed())
+		It("should delete all the resources successfully", func() {
+			Expect(c.Create(ctx, horizontalPodAutoscalerV2)).To(Succeed())
+			Expect(c.Create(ctx, podDisruptionBudget)).To(Succeed())
 
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscalerV2beta1), horizontalPodAutoscalerV2beta1)).To(Succeed())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscalerV2), horizontalPodAutoscalerV2)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(Succeed())
 
-				Expect(kapi.Destroy(ctx)).To(Succeed())
+			Expect(kapi.Destroy(ctx)).To(Succeed())
 
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscalerV2beta1), horizontalPodAutoscalerV2beta1)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv2beta1.SchemeGroupVersion.Group, Resource: "horizontalpodautoscalers"}, horizontalPodAutoscalerV2beta1.Name)))
-			})
-		})
-
-		Context("Kubernetes version >= v1.23", func() {
-			BeforeEach(func() {
-				runtimeVersion = semver.MustParse("1.23.10")
-			})
-			It("should delete all the resources successfully", func() {
-				Expect(c.Create(ctx, horizontalPodAutoscalerV2)).To(Succeed())
-				Expect(c.Create(ctx, podDisruptionBudget)).To(Succeed())
-
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscalerV2), horizontalPodAutoscalerV2)).To(Succeed())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(Succeed())
-
-				Expect(kapi.Destroy(ctx)).To(Succeed())
-
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscalerV2), horizontalPodAutoscalerV2)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv2.SchemeGroupVersion.Group, Resource: "horizontalpodautoscalers"}, horizontalPodAutoscalerV2.Name)))
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: policyv1.SchemeGroupVersion.Group, Resource: "poddisruptionbudgets"}, podDisruptionBudget.Name)))
-			})
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscalerV2), horizontalPodAutoscalerV2)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv2.SchemeGroupVersion.Group, Resource: "horizontalpodautoscalers"}, horizontalPodAutoscalerV2.Name)))
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: policyv1.SchemeGroupVersion.Group, Resource: "poddisruptionbudgets"}, podDisruptionBudget.Name)))
 		})
 	})
 

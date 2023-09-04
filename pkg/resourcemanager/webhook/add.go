@@ -17,8 +17,6 @@ package webhook
 import (
 	"fmt"
 
-	"github.com/Masterminds/semver/v3"
-	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -39,20 +37,6 @@ import (
 
 // AddToManager adds all webhook handlers to the given manager.
 func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, cfg *config.ResourceManagerConfiguration) error {
-	kubernetesClient, err := kubernetesclientset.NewForConfig(targetCluster.GetConfig())
-	if err != nil {
-		return fmt.Errorf("failed creating Kubernetes client: %w", err)
-	}
-
-	targetServerVersion, err := kubernetesClient.DiscoveryClient.ServerVersion()
-	if err != nil {
-		return err
-	}
-	targetVersion, err := semver.NewVersion(targetServerVersion.GitVersion)
-	if err != nil {
-		return err
-	}
-
 	if cfg.Webhooks.CRDDeletionProtection.Enabled {
 		if err := (&crddeletionprotection.Handler{
 			Logger:       mgr.GetLogger().WithName("webhook").WithName(crddeletionprotection.HandlerName),
@@ -79,11 +63,10 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 
 	if cfg.Webhooks.HighAvailabilityConfig.Enabled {
 		if err := (&highavailabilityconfig.Handler{
-			Logger:        mgr.GetLogger().WithName("webhook").WithName(highavailabilityconfig.HandlerName),
-			TargetClient:  targetCluster.GetClient(),
-			TargetVersion: targetVersion,
-			Config:        cfg.Webhooks.HighAvailabilityConfig,
-			Decoder:       admission.NewDecoder(mgr.GetScheme()),
+			Logger:       mgr.GetLogger().WithName("webhook").WithName(highavailabilityconfig.HandlerName),
+			TargetClient: targetCluster.GetClient(),
+			Config:       cfg.Webhooks.HighAvailabilityConfig,
+			Decoder:      admission.NewDecoder(mgr.GetScheme()),
 		}).AddToManager(mgr); err != nil {
 			return fmt.Errorf("failed adding %s webhook handler: %w", highavailabilityconfig.HandlerName, err)
 		}
