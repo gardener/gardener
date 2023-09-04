@@ -804,53 +804,6 @@ var _ = Describe("Shoot Maintenance", func() {
 			Expect(shoot.Spec.Provider.Workers[1].Maximum).To(Equal(int32(2)))
 		})
 	})
-
-	Describe("#UpdateToContainerd", func() {
-		var (
-			shoot *gardencorev1beta1.Shoot
-		)
-
-		BeforeEach(func() {
-			shoot = &gardencorev1beta1.Shoot{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "shoot",
-				},
-				Spec: gardencorev1beta1.ShootSpec{
-					Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{
-						{
-							Name: "cpu-worker",
-						},
-						{
-							Name: "cpu-worker2",
-						},
-					}},
-				},
-			}
-		})
-
-		It("should not change anything if CRI is not set", func() {
-			result := updateToContainerd(shoot, "foobar")
-			Expect(result).To(HaveLen(0))
-			Expect(shoot.Spec.Provider.Workers[0].CRI).To(BeNil())
-			Expect(shoot.Spec.Provider.Workers[1].CRI).To(BeNil())
-		})
-
-		It("should change docker to containerd", func() {
-			shoot.Spec.Provider.Workers[1].CRI = &gardencorev1beta1.CRI{Name: "docker"}
-			result := updateToContainerd(shoot, "foobar")
-			Expect(result).To(HaveLen(1))
-			Expect(shoot.Spec.Provider.Workers[1].CRI.Name).To(Equal(gardencorev1beta1.CRINameContainerD))
-			Expect(shoot.Spec.Provider.Workers[0].CRI).To(BeNil())
-		})
-
-		It("should keep containerd if it is already set", func() {
-			shoot.Spec.Provider.Workers[0].CRI = &gardencorev1beta1.CRI{Name: "containerd"}
-			result := updateToContainerd(shoot, "foobar")
-			Expect(result).To(HaveLen(0))
-			Expect(shoot.Spec.Provider.Workers[0].CRI.Name).To(Equal(gardencorev1beta1.CRINameContainerD))
-			Expect(shoot.Spec.Provider.Workers[1].CRI).To(BeNil())
-		})
-	})
 })
 
 func assertWorkerMachineImageVersion(worker *gardencorev1beta1.Worker, imageName string, imageVersion string) {

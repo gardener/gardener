@@ -132,7 +132,7 @@ var _ = Describe("Defaults", func() {
 			obj = &Shoot{
 				Spec: ShootSpec{
 					Kubernetes: Kubernetes{
-						Version: "1.22.1",
+						Version: "1.26.1",
 					},
 					Provider: Provider{
 						Workers: []Worker{{}},
@@ -642,7 +642,6 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should default cri.name to containerd", func() {
-			obj.Spec.Kubernetes.Version = "1.22"
 			obj.Spec.Provider.Workers = []Worker{
 				{Name: "DefaultWorker"},
 				{Name: "Worker with CRI configuration",
@@ -655,10 +654,8 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should default worker cri.name to containerd", func() {
-			obj.Spec.Kubernetes.Version = "1.22"
 			obj.Spec.Provider.Workers = []Worker{
-				{Name: "DefaultWorker",
-					Kubernetes: &WorkerKubernetes{Version: pointer.String("1.22")}},
+				{Name: "DefaultWorker"},
 				{Name: "Worker with CRI configuration",
 					CRI: &CRI{Name: "some configured value"}},
 			}

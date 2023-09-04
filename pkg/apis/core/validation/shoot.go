@@ -94,9 +94,8 @@ var (
 		string(core.ShootPurposeDevelopment),
 		string(core.ShootPurposeProduction),
 	)
-	availableWorkerCRINames = sets.New(
+	availableWorkerCRINamesForShoot = sets.New(
 		string(core.CRINameContainerD),
-		string(core.CRINameDocker),
 	)
 	availableClusterAutoscalerExpanderModes = sets.New(
 		string(core.ClusterAutoscalerExpanderLeastWaste),
@@ -1559,7 +1558,7 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *fie
 	}
 
 	if worker.CRI != nil {
-		allErrs = append(allErrs, ValidateCRI(worker.CRI, kubernetesVersion, fldPath.Child("cri"))...)
+		allErrs = append(allErrs, ValidateCRI(worker.CRI, fldPath.Child("cri"))...)
 	}
 
 	if worker.Machine.Architecture != nil {
@@ -2046,17 +2045,11 @@ func IsNotMoreThan100Percent(intOrStringValue *intstr.IntOrString, fldPath *fiel
 }
 
 // ValidateCRI validates container runtime interface name and its container runtimes
-func ValidateCRI(CRI *core.CRI, kubernetesVersion string, fldPath *field.Path) field.ErrorList {
+func ValidateCRI(CRI *core.CRI, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	k8sVersionIs123OrGreater, _ := versionutils.CompareVersions(kubernetesVersion, ">=", "1.23")
-
-	if k8sVersionIs123OrGreater && CRI.Name == core.CRINameDocker {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("name"), "'docker' is only allowed for kubernetes versions < 1.23"))
-	}
-
-	if !availableWorkerCRINames.Has(string(CRI.Name)) {
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("name"), CRI.Name, sets.List(availableWorkerCRINames)))
+	if !availableWorkerCRINamesForShoot.Has(string(CRI.Name)) {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("name"), CRI.Name, sets.List(availableWorkerCRINamesForShoot)))
 	}
 
 	if CRI.ContainerRuntimes != nil {

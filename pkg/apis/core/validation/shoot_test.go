@@ -542,7 +542,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 			func(purpose core.ShootPurpose, allowed bool) {
 				shootCopy := shoot.DeepCopy()
 				shootCopy.Spec.Purpose = &purpose
-				shootCopy.Spec.Kubernetes.Version = "1.22.0"
 
 				errorList := ValidateShoot(shootCopy)
 
@@ -5315,29 +5314,23 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		DescribeTable("validate CRI name depending on the kubernetes version",
-			func(name core.CRIName, kubernetesVersion string, matcher gomegatypes.GomegaMatcher) {
+			func(name core.CRIName, matcher gomegatypes.GomegaMatcher) {
 				worker := core.Worker{
 					Name: "worker",
 					CRI:  &core.CRI{Name: name},
 				}
 
-				errList := ValidateCRI(worker.CRI, kubernetesVersion, field.NewPath("cri"))
+				errList := ValidateCRI(worker.CRI, field.NewPath("cri"))
 
 				Expect(errList).To(matcher)
 			},
 
-			Entry("containerd is a valid CRI name for k8s < 1.23", core.CRINameContainerD, "1.22.0", BeEmpty()),
-			Entry("containerd is a valid CRI name for k8s >= 1.23", core.CRINameContainerD, "1.23.0", BeEmpty()),
-			Entry("docker is a valid CRI name for k8s < 1.23", core.CRINameDocker, "1.22.0", BeEmpty()),
-			Entry("docker is NOT a valid CRI name for k8s >= 1.23", core.CRINameDocker, "1.23.0", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeForbidden),
-				"Field": Equal("cri.name"),
-			})))),
-			Entry("not valid CRI name for k8s < 1.23", core.CRIName("other"), "1.22.0", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("containerd is a valid CRI name", core.CRINameContainerD, BeEmpty()),
+			Entry("docker is NOT a valid CRI name", core.CRINameDocker, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
 				"Field": Equal("cri.name"),
 			})))),
-			Entry("not valid CRI name for k8s >= 1.23", core.CRIName("other"), "1.23.0", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("not valid CRI name", core.CRIName("other"), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
 				"Field": Equal("cri.name"),
 			})))),
@@ -5366,7 +5359,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				},
 			}
 
-			errList := ValidateCRI(worker.CRI, "1.22.0", field.NewPath("cri"))
+			errList := ValidateCRI(worker.CRI, field.NewPath("cri"))
 			Expect(errList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -5384,7 +5377,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				},
 			}
 
-			errList := ValidateCRI(worker.CRI, "1.22.0", field.NewPath("cri"))
+			errList := ValidateCRI(worker.CRI, field.NewPath("cri"))
 			Expect(errList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeDuplicate),
