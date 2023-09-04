@@ -33,6 +33,12 @@ images:
   repository: eu.gcr.io/gardener-project/gardener/resource-manager
   resourceId:
     name: resource-manager
+- name: gardener-metrics-exporter
+  resourceId:
+    name: metrics-exporter
+  sourceRepository: github.com/gardener/gardener-metrics-exporter
+  repository: eu.gcr.io/gardener-project/gardener/metrics-exporter
+  tag: "0.27.0"
 
 # Seed bootstrap
 - name: pause-container

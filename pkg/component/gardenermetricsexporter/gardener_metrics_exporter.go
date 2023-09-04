@@ -17,8 +17,9 @@ package gardenermetricsexporter
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/component"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/component"
 )
 
 // Interface contains functions for a gardener-metrics-exporter deployer.
