@@ -726,10 +726,6 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		command = append(command, kubernetesutils.FeatureGatesToCommandLineParameter(k.values.Config.FeatureGates))
 	}
 
-	if versionutils.ConstraintK8sLess124.Check(k.values.TargetVersion) {
-		command = append(command, "--port=0")
-	}
-
 	command = append(command,
 		fmt.Sprintf("--root-ca-file=%s/%s", volumeMountPathCA, secrets.DataKeyCertificateBundle),
 		fmt.Sprintf("--service-account-private-key-file=%s/%s", volumeMountPathServiceAccountKey, secrets.DataKeyRSAPrivateKey),

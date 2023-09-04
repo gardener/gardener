@@ -1021,10 +1021,6 @@ func commandForKubernetesVersion(
 		command = append(command, featureGateFlags)
 	}
 
-	if versionutils.ConstraintK8sLess124.Check(semver.MustParse(version)) {
-		command = append(command, "--port=0")
-	}
-
 	command = append(command,
 		"--root-ca-file=/srv/kubernetes/ca/bundle.crt",
 		"--service-account-private-key-file=/srv/kubernetes/service-account-key/id_rsa",

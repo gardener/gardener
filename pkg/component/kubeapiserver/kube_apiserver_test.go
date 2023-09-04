@@ -2389,7 +2389,6 @@ rules:
 						"--encryption-provider-config=/etc/kubernetes/etcd-encryption-secret/encryption-configuration.yaml",
 						"--event-ttl="+eventTTL.String(),
 						"--external-hostname="+externalHostname,
-						"--insecure-port=0",
 						"--livez-grace-period=1m",
 						"--shutdown-delay-duration=15s",
 						"--profiling=false",
