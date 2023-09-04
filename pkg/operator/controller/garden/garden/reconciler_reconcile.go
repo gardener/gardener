@@ -368,6 +368,11 @@ func (r *Reconciler) reconcile(
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
+			Name:         "Deploying Gardener Metrics Exporter",
+			Fn:           c.gardenerMetricsExporter.Deploy,
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, deployGardenerResourceManager),
+		})
+		_ = g.Add(flow.Task{
 			Name:         "Deploying Plutono",
 			Fn:           c.plutono.Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
