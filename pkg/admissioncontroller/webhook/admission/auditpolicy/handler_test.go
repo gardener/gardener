@@ -69,10 +69,8 @@ var _ = Describe("handler", func() {
 		shootName      = "fake-shoot-name"
 		shootNamespace = cmNamespace
 
-		cm                  *corev1.ConfigMap
-		shootv1beta1        *gardencorev1beta1.Shoot
-		shootv1beta1K8sV124 *gardencorev1beta1.Shoot
-		shootv1beta1K8sV123 *gardencorev1beta1.Shoot
+		cm           *corev1.ConfigMap
+		shootv1beta1 *gardencorev1beta1.Shoot
 
 		validAuditPolicy = `
 ---
@@ -181,6 +179,7 @@ rules:
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				Kubernetes: gardencorev1beta1.Kubernetes{
+					Version: "1.25.4",
 					KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
 						AuditConfig: &gardencorev1beta1.AuditConfig{
 							AuditPolicy: &gardencorev1beta1.AuditPolicy{
@@ -190,56 +189,6 @@ rules:
 							},
 						},
 					},
-				},
-			},
-		}
-
-		shootv1beta1K8sV124 = &gardencorev1beta1.Shoot{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
-				Kind:       "Shoot",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      shootName,
-				Namespace: shootNamespace,
-			},
-			Spec: gardencorev1beta1.ShootSpec{
-				Kubernetes: gardencorev1beta1.Kubernetes{
-					KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-						AuditConfig: &gardencorev1beta1.AuditConfig{
-							AuditPolicy: &gardencorev1beta1.AuditPolicy{
-								ConfigMapRef: &corev1.ObjectReference{
-									Name: cmName,
-								},
-							},
-						},
-					},
-					Version: "1.24.0",
-				},
-			},
-		}
-
-		shootv1beta1K8sV123 = &gardencorev1beta1.Shoot{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
-				Kind:       "Shoot",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      shootName,
-				Namespace: shootNamespace,
-			},
-			Spec: gardencorev1beta1.ShootSpec{
-				Kubernetes: gardencorev1beta1.Kubernetes{
-					KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-						AuditConfig: &gardencorev1beta1.AuditConfig{
-							AuditPolicy: &gardencorev1beta1.AuditPolicy{
-								ConfigMapRef: &corev1.ObjectReference{
-									Name: cmName,
-								},
-							},
-						},
-					},
-					Version: "1.23.2",
 				},
 			},
 		}
@@ -309,32 +258,6 @@ rules:
 					return nil
 				})
 				test(admissionv1.Create, nil, shootv1beta1, true, statusCodeAllowed, "referenced audit policy is valid", "")
-			})
-
-			It("references a valid auditPolicy/v1alpha1 (CREATE k8s < 1.24.0)", func() {
-				returnedCm := corev1.ConfigMap{
-					TypeMeta:   metav1.TypeMeta{},
-					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "1"},
-					Data:       map[string]string{"policy": validAuditPolicyV1alpha1},
-				}
-				mockReader.EXPECT().Get(gomock.Any(), kubernetesutils.Key(shootNamespace, cmName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, key client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
-					*cm = returnedCm
-					return nil
-				})
-				test(admissionv1.Create, nil, shootv1beta1K8sV123, true, statusCodeAllowed, "referenced audit policy is valid", "")
-			})
-
-			It("references a valid auditPolicy/v1beta1 (CREATE k8s < 1.24.0)", func() {
-				returnedCm := corev1.ConfigMap{
-					TypeMeta:   metav1.TypeMeta{},
-					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "1"},
-					Data:       map[string]string{"policy": validAuditPolicyV1beta1},
-				}
-				mockReader.EXPECT().Get(gomock.Any(), kubernetesutils.Key(shootNamespace, cmName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, key client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
-					*cm = returnedCm
-					return nil
-				})
-				test(admissionv1.Create, nil, shootv1beta1K8sV123, true, statusCodeAllowed, "referenced audit policy is valid", "")
 			})
 
 			It("referenced auditPolicy name was not changed (UPDATE)", func() {
@@ -447,7 +370,7 @@ rules:
 				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "did not find expected key", "")
 			})
 
-			It("references a valid auditPolicy/v1alpha1 (CREATE k8s >= 1.24.0)", func() {
+			It("references a valid auditPolicy/v1alpha1 (CREATE)", func() {
 				returnedCm := corev1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{},
 					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "2"},
@@ -457,7 +380,7 @@ rules:
 					*cm = returnedCm
 					return nil
 				})
-				test(admissionv1.Create, nil, shootv1beta1K8sV124, false, statusCodeInvalid, "audit policy with apiVersion 'v1alpha1' is not supported for shoot 'fake-shoot-name' with Kubernetes version >= 1.24.0", "")
+				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "audit policy with apiVersion 'v1alpha1' is not supported", "")
 			})
 
 			It("references a valid auditPolicy/v1alpha1 (UPDATE kubernetes version)", func() {
@@ -472,11 +395,11 @@ rules:
 				})
 
 				newShoot := shootv1beta1.DeepCopy()
-				newShoot.Spec.Kubernetes.Version = "1.24.0"
-				test(admissionv1.Update, shootv1beta1, newShoot, false, statusCodeInvalid, "audit policy with apiVersion 'v1alpha1' is not supported for shoot 'fake-shoot-name' with Kubernetes version >= 1.24.0", "")
+				newShoot.Spec.Kubernetes.Version = "1.26.5"
+				test(admissionv1.Update, shootv1beta1, newShoot, false, statusCodeInvalid, "audit policy with apiVersion 'v1alpha1' is not supported", "")
 			})
 
-			It("references a valid auditPolicy/v1beta1 (CREATE k8s >= 1.24.0)", func() {
+			It("references a valid auditPolicy/v1beta1 (CREATE)", func() {
 				returnedCm := corev1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{},
 					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "2"},
@@ -486,7 +409,7 @@ rules:
 					*cm = returnedCm
 					return nil
 				})
-				test(admissionv1.Create, nil, shootv1beta1K8sV124, false, statusCodeInvalid, "audit policy with apiVersion 'v1beta1' is not supported for shoot 'fake-shoot-name' with Kubernetes version >= 1.24.0", "")
+				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "audit policy with apiVersion 'v1beta1' is not supported", "")
 			})
 
 			It("references a valid auditPolicy/v1beta1 (UPDATE kubernetes version)", func() {
@@ -501,10 +424,9 @@ rules:
 				})
 
 				newShoot := shootv1beta1.DeepCopy()
-				newShoot.Spec.Kubernetes.Version = "1.24.0"
-				test(admissionv1.Update, shootv1beta1, newShoot, false, statusCodeInvalid, "audit policy with apiVersion 'v1beta1' is not supported for shoot 'fake-shoot-name' with Kubernetes version >= 1.24.0", "")
+				newShoot.Spec.Kubernetes.Version = "1.26.0"
+				test(admissionv1.Update, shootv1beta1, newShoot, false, statusCodeInvalid, "audit policy with apiVersion 'v1beta1' is not supported", "")
 			})
-
 		})
 	})
 
@@ -552,7 +474,7 @@ rules:
 
 				It("should allow if the auditPolicy is changed to something valid", func() {
 					Expect(fakeClient.Create(ctx, shootv1beta1)).To(Succeed())
-					shootv1beta1.Spec.Kubernetes.Version = "1.22"
+					shootv1beta1.Spec.Kubernetes.Version = "1.26.0"
 					newCm := cm.DeepCopy()
 					newCm.Data["policy"] = anotherValidAuditPolicy
 
@@ -591,18 +513,11 @@ rules:
 					test(admissionv1.Update, cm, newCm, false, statusCodeInvalid, "did not find expected key", "")
 				})
 
-				It("holds audit policy with unsupported version for the kubernetes version of one of the shoots", func() {
-					patch := client.MergeFrom(shootv1beta1.DeepCopy())
-					shootv1beta1.Spec.Kubernetes.Version = "1.23"
-					Expect(fakeClient.Patch(ctx, shootv1beta1, patch)).To(Succeed())
-
-					shootv1beta1K8sV124.Name = "fake-shoot-name-2"
-					Expect(fakeClient.Create(ctx, shootv1beta1K8sV124)).To(Succeed())
-
+				It("holds audit policy with unsupported version", func() {
 					newCm := cm.DeepCopy()
 					newCm.Data["policy"] = validAuditPolicyV1beta1
 
-					test(admissionv1.Update, cm, newCm, false, statusCodeInvalid, "audit policy with apiVersion 'v1beta1' is not supported for shoot 'fake-shoot-name-2' with Kubernetes version >= 1.24.0", "")
+					test(admissionv1.Update, cm, newCm, false, statusCodeInvalid, "audit policy with apiVersion 'v1beta1' is not supported", "")
 				})
 			})
 		})
