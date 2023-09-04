@@ -92,6 +92,7 @@ var _ = Describe("Garden Care controller tests", func() {
 		requiredMonitoringDeployments = []string{
 			"kube-state-metrics",
 			"plutono",
+			"gardener-metrics-exporter",
 		}
 
 		requiredLoggingStatefulSets = []string{
