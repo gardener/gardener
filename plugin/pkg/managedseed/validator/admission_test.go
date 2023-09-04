@@ -502,40 +502,24 @@ var _ = Describe("ManagedSeed", func() {
 				))
 			})
 
-			It("should forbid the ManagedSeed creation if the Shoot kubernetes version is invalid", func() {
-				shoot.Spec.Kubernetes.Version = "foo"
-
-				coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
-					return true, shoot, nil
-				})
-
-				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
-					Config: &gardenletv1alpha1.GardenletConfiguration{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
-							Kind:       "GardenletConfiguration",
-						},
-						SeedConfig: &gardenletv1alpha1.SeedConfig{
-							SeedTemplate: gardencorev1beta1.SeedTemplate{
-								Spec: seedx.Spec,
-							},
-						},
-					},
-				}
-
-				err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
-				Expect(err).To(BeInvalidError())
-				Expect(getErrorList(err)).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.shoot.name"),
-						"Detail": ContainSubstring("cannot parse the shoot kubernetes version"),
-					})),
-				))
-			})
-
 			Context("when topology-aware routing Seed setting is enabled", func() {
-				It("it should forbid when the TopologyAwareHints feature gate is not enabled", func() {
+				It("it should forbid when the TopologyAwareHints feature gate is disabled", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+						KubernetesConfig: core.KubernetesConfig{
+							FeatureGates: map[string]bool{"TopologyAwareHints": false},
+						},
+					}
+					shoot.Spec.Kubernetes.KubeControllerManager = &core.KubeControllerManagerConfig{
+						KubernetesConfig: core.KubernetesConfig{
+							FeatureGates: map[string]bool{"TopologyAwareHints": false},
+						},
+					}
+					shoot.Spec.Kubernetes.KubeProxy = &core.KubeProxyConfig{
+						KubernetesConfig: core.KubernetesConfig{
+							FeatureGates: map[string]bool{"TopologyAwareHints": false},
+						},
+					}
+
 					coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
 						return true, shoot, nil
 					})
@@ -564,29 +548,23 @@ var _ = Describe("ManagedSeed", func() {
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeInvalid),
 							"Field":  Equal("spec.gardenlet.config.seedConfig.spec.settings.topologyAwareRouting.enabled"),
-							"Detail": ContainSubstring("the topology-aware routing seed setting cannot be enabled for K8s < 1.24 clusters when the TopologyAwareHints feature gate is not enabled for kube-apiserver"),
+							"Detail": ContainSubstring("the topology-aware routing seed setting cannot be enabled when the TopologyAwareHints feature gate is disabled for kube-apiserver"),
 						})),
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeInvalid),
 							"Field":  Equal("spec.gardenlet.config.seedConfig.spec.settings.topologyAwareRouting.enabled"),
-							"Detail": ContainSubstring("the topology-aware routing seed setting cannot be enabled for K8s < 1.24 clusters when the TopologyAwareHints feature gate is not enabled for kube-controller-manager"),
+							"Detail": ContainSubstring("the topology-aware routing seed setting cannot be enabled when the TopologyAwareHints feature gate is disabled for kube-controller-manager"),
 						})),
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeInvalid),
 							"Field":  Equal("spec.gardenlet.config.seedConfig.spec.settings.topologyAwareRouting.enabled"),
-							"Detail": ContainSubstring("the topology-aware routing seed setting cannot be enabled for K8s < 1.24 clusters when the TopologyAwareHints feature gate is not enabled for kube-proxy"),
+							"Detail": ContainSubstring("the topology-aware routing seed setting cannot be enabled when the TopologyAwareHints feature gate is disabled for kube-proxy"),
 						})),
 					))
 				})
 
-				It("should allow the ManagedSeed creation when the TopologyAwareHints feature gate is enabled and the K8s version is 1.23", func() {
-					shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
-						KubernetesConfig: core.KubernetesConfig{
-							FeatureGates: map[string]bool{
-								"TopologyAwareHints": true,
-							},
-						},
-					}
+				It("should allow the ManagedSeed creation when the TopologyAwareHints feature gate is not disabled", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{}
 					shoot.Spec.Kubernetes.KubeControllerManager = &core.KubeControllerManagerConfig{
 						KubernetesConfig: core.KubernetesConfig{
 							FeatureGates: map[string]bool{
@@ -596,40 +574,9 @@ var _ = Describe("ManagedSeed", func() {
 					}
 					shoot.Spec.Kubernetes.KubeProxy = &core.KubeProxyConfig{
 						KubernetesConfig: core.KubernetesConfig{
-							FeatureGates: map[string]bool{
-								"TopologyAwareHints": true,
-							},
+							FeatureGates: map[string]bool{},
 						},
 					}
-
-					coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
-						return true, shoot, nil
-					})
-
-					seedx.Spec.Settings.TopologyAwareRouting = &gardencorev1beta1.SeedSettingTopologyAwareRouting{
-						Enabled: true,
-					}
-
-					managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
-						Config: &gardenletv1alpha1.GardenletConfiguration{
-							TypeMeta: metav1.TypeMeta{
-								APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
-								Kind:       "GardenletConfiguration",
-							},
-							SeedConfig: &gardenletv1alpha1.SeedConfig{
-								SeedTemplate: gardencorev1beta1.SeedTemplate{
-									Spec: seedx.Spec,
-								},
-							},
-						},
-					}
-
-					err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
-					Expect(err).NotTo(HaveOccurred())
-				})
-
-				It("should allow the ManagedSeed creation when the K8s version is > 1.23", func() {
-					shoot.Spec.Kubernetes.Version = "1.24.10"
 
 					coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
 						return true, shoot, nil

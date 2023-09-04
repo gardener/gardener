@@ -21,7 +21,6 @@ import (
 	"io"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,7 +48,6 @@ import (
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 )
@@ -430,22 +428,16 @@ func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencore
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("secretRef"), spec.SecretRef, "seed secretRef cannot be specified when the shoot static token kubeconfig is disabled"))
 	}
 
-	k8sVersion, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
-	if err != nil {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "shoot", "name"), shoot.Name, fmt.Sprintf("cannot parse the shoot kubernetes version: %s", err.Error())))
-		// exit early, all other validation errors will be misleading
-		return allErrs, nil
-	}
 	topologyAwareRoutingEnabled := gardencorehelper.SeedSettingTopologyAwareRoutingEnabled(spec.Settings)
-	if topologyAwareRoutingEnabled && versionutils.ConstraintK8sLess124.Check(k8sVersion) {
-		if !gardencorehelper.KubeAPIServerFeatureGateEnabled(shoot, "TopologyAwareHints") {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("settings", "topologyAwareRouting", "enabled"), spec.Settings.TopologyAwareRouting.Enabled, "the topology-aware routing seed setting cannot be enabled for K8s < 1.24 clusters when the TopologyAwareHints feature gate is not enabled for kube-apiserver"))
+	if topologyAwareRoutingEnabled {
+		if gardencorehelper.KubeAPIServerFeatureGateDisabled(shoot, "TopologyAwareHints") {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("settings", "topologyAwareRouting", "enabled"), spec.Settings.TopologyAwareRouting.Enabled, "the topology-aware routing seed setting cannot be enabled when the TopologyAwareHints feature gate is disabled for kube-apiserver"))
 		}
-		if !gardencorehelper.KubeControllerManagerFeatureGateEnabled(shoot, "TopologyAwareHints") {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("settings", "topologyAwareRouting", "enabled"), spec.Settings.TopologyAwareRouting.Enabled, "the topology-aware routing seed setting cannot be enabled for K8s < 1.24 clusters when the TopologyAwareHints feature gate is not enabled for kube-controller-manager"))
+		if gardencorehelper.KubeControllerManagerFeatureGateDisabled(shoot, "TopologyAwareHints") {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("settings", "topologyAwareRouting", "enabled"), spec.Settings.TopologyAwareRouting.Enabled, "the topology-aware routing seed setting cannot be enabled when the TopologyAwareHints feature gate is disabled for kube-controller-manager"))
 		}
-		if !gardencorehelper.KubeProxyFeatureGateEnabled(shoot, "TopologyAwareHints") {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("settings", "topologyAwareRouting", "enabled"), spec.Settings.TopologyAwareRouting.Enabled, "the topology-aware routing seed setting cannot be enabled for K8s < 1.24 clusters when the TopologyAwareHints feature gate is not enabled for kube-proxy"))
+		if gardencorehelper.KubeProxyFeatureGateDisabled(shoot, "TopologyAwareHints") {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("settings", "topologyAwareRouting", "enabled"), spec.Settings.TopologyAwareRouting.Enabled, "the topology-aware routing seed setting cannot be enabled when the TopologyAwareHints feature gate is disabled for kube-proxy"))
 		}
 	}
 

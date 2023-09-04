@@ -934,9 +934,9 @@ var _ = Describe("helper", func() {
 		})
 	})
 
-	DescribeTable("#KubeAPIServerFeatureGateEnabled",
+	DescribeTable("#KubeAPIServerFeatureGateDisabled",
 		func(shoot *core.Shoot, featureGate string, expected bool) {
-			actual := KubeAPIServerFeatureGateEnabled(shoot, featureGate)
+			actual := KubeAPIServerFeatureGateDisabled(shoot, featureGate)
 			Expect(actual).To(Equal(expected))
 		},
 
@@ -998,13 +998,30 @@ var _ = Describe("helper", func() {
 				},
 			},
 			"FooBar",
+			false,
+		),
+		Entry("when feature gate exists and is disabled",
+			&core.Shoot{
+				Spec: core.ShootSpec{
+					Kubernetes: core.Kubernetes{
+						KubeAPIServer: &core.KubeAPIServerConfig{
+							KubernetesConfig: core.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									"FooBar": false,
+								},
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
 			true,
 		),
 	)
 
-	DescribeTable("#KubeControllerManagerFeatureGateEnabled",
+	DescribeTable("#KubeControllerManagerFeatureGateDisabled",
 		func(shoot *core.Shoot, featureGate string, expected bool) {
-			actual := KubeControllerManagerFeatureGateEnabled(shoot, featureGate)
+			actual := KubeControllerManagerFeatureGateDisabled(shoot, featureGate)
 			Expect(actual).To(Equal(expected))
 		},
 
@@ -1066,13 +1083,30 @@ var _ = Describe("helper", func() {
 				},
 			},
 			"FooBar",
+			false,
+		),
+		Entry("when feature gate exists and is disabled",
+			&core.Shoot{
+				Spec: core.ShootSpec{
+					Kubernetes: core.Kubernetes{
+						KubeControllerManager: &core.KubeControllerManagerConfig{
+							KubernetesConfig: core.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									"FooBar": false,
+								},
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
 			true,
 		),
 	)
 
-	DescribeTable("#KubeProxyFeatureGateEnabled",
+	DescribeTable("#KubeProxyFeatureGateDisabled",
 		func(shoot *core.Shoot, featureGate string, expected bool) {
-			actual := KubeProxyFeatureGateEnabled(shoot, featureGate)
+			actual := KubeProxyFeatureGateDisabled(shoot, featureGate)
 			Expect(actual).To(Equal(expected))
 		},
 
@@ -1127,6 +1161,23 @@ var _ = Describe("helper", func() {
 							KubernetesConfig: core.KubernetesConfig{
 								FeatureGates: map[string]bool{
 									"FooBar": true,
+								},
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("when feature gate exists and is disabled",
+			&core.Shoot{
+				Spec: core.ShootSpec{
+					Kubernetes: core.Kubernetes{
+						KubeProxy: &core.KubeProxyConfig{
+							KubernetesConfig: core.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									"FooBar": false,
 								},
 							},
 						},
