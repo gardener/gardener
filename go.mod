@@ -43,24 +43,24 @@ require (
 	google.golang.org/protobuf v1.28.1
 	istio.io/api v0.0.0-20230217221049-9d422bf48675
 	istio.io/client-go v1.17.1
-	k8s.io/api v0.26.3
-	k8s.io/apiextensions-apiserver v0.26.3
-	k8s.io/apimachinery v0.26.3
-	k8s.io/apiserver v0.26.3
+	k8s.io/api v0.26.4
+	k8s.io/apiextensions-apiserver v0.26.4
+	k8s.io/apimachinery v0.26.4
+	k8s.io/apiserver v0.26.4
 	k8s.io/autoscaler/vertical-pod-autoscaler v0.14.0
-	k8s.io/client-go v0.26.3
-	k8s.io/cluster-bootstrap v0.26.3
-	k8s.io/code-generator v0.26.3
-	k8s.io/component-base v0.26.3
-	k8s.io/component-helpers v0.26.3
+	k8s.io/client-go v0.26.4
+	k8s.io/cluster-bootstrap v0.26.4
+	k8s.io/code-generator v0.26.4
+	k8s.io/component-base v0.26.4
+	k8s.io/component-helpers v0.26.4
 	k8s.io/helm v2.16.1+incompatible
 	k8s.io/klog/v2 v2.90.1
-	k8s.io/kube-aggregator v0.26.3
+	k8s.io/kube-aggregator v0.26.4
 	k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280
-	k8s.io/kube-proxy v0.26.3
-	k8s.io/kubelet v0.26.3
-	k8s.io/metrics v0.26.3
-	k8s.io/pod-security-admission v0.26.3
+	k8s.io/kube-proxy v0.26.4
+	k8s.io/kubelet v0.26.4
+	k8s.io/metrics v0.26.4
+	k8s.io/pod-security-admission v0.26.4
 	k8s.io/utils v0.0.0-20221128185143-99ec85e7a448
 	sigs.k8s.io/controller-runtime v0.14.6
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20221212190805-d4f1e822ca11 // v0.14.1
@@ -174,7 +174,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/gengo v0.0.0-20220902162205-c0856e24416d // indirect
 	k8s.io/klog v1.0.0 // indirect
-	k8s.io/kms v0.26.3 // indirect
+	k8s.io/kms v0.26.4 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.36 // indirect
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
