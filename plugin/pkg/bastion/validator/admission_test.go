@@ -44,6 +44,7 @@ const (
 	bastionName = "foo"
 	shootName   = "foo"
 	seedName    = "foo"
+	workerName  = "foo"
 	namespace   = "garden"
 	provider    = "foo-provider"
 	region      = "foo-region"
@@ -71,6 +72,11 @@ var _ = Describe("Bastion", func() {
 					SeedName: pointer.String(seedName),
 					Provider: gardencore.Provider{
 						Type: provider,
+						Workers: []gardencore.Worker{
+							{
+								Name: workerName,
+							},
+						},
 					},
 					Region: region,
 				},
@@ -259,7 +265,7 @@ var _ = Describe("Bastion", func() {
 
 			oldBastion := bastion.DeepCopy()
 			oldBastion.ObjectMeta.Finalizers = []string{"foo"}
-			bastion.ObjectMeta.Finalizers = []string{""}
+			bastion.ObjectMeta.Finalizers = nil
 
 			err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, oldBastion, admission.Update), nil)
 			Expect(err).To(Succeed())
@@ -278,7 +284,7 @@ var _ = Describe("Bastion", func() {
 
 			oldBastion := bastion.DeepCopy()
 			oldBastion.ObjectMeta.Finalizers = []string{"foo"}
-			bastion.ObjectMeta.Finalizers = []string{""}
+			bastion.ObjectMeta.Finalizers = nil
 
 			err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, oldBastion, admission.Update), nil)
 			Expect(err).To(Succeed())

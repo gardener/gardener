@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
 
+	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/operations"
@@ -150,7 +151,7 @@ func (v *Bastion) Admit(ctx context.Context, a admission.Attributes, _ admission
 	}
 
 	// ensure shoot SSH access is not disabled
-	if shoot.Spec.Provider.WorkersSettings != nil && shoot.Spec.Provider.WorkersSettings.SSHAccess != nil && !shoot.Spec.Provider.WorkersSettings.SSHAccess.Enabled && bastion.DeletionTimestamp == nil {
+	if bastion.DeletionTimestamp == nil && !gardencorehelper.ShootEnablesSSHAccess(shoot) {
 		fieldErr := field.Invalid(shootPath, shootName, "ssh access is disabled for worker nodes")
 		return apierrors.NewInvalid(gk, bastion.Name, field.ErrorList{fieldErr})
 	}
