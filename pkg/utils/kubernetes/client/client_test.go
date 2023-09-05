@@ -579,8 +579,9 @@ var _ = Describe("Cleaner", func() {
 			fakeClient client.Client
 			ctx        context.Context
 		)
+
 		BeforeEach(func() {
-			ctx = context.TODO()
+			ctx = context.Background()
 			s = runtime.NewScheme()
 			Expect(kubernetesfake.AddToScheme(s)).To(Succeed())
 
@@ -616,8 +617,9 @@ var _ = Describe("Cleaner", func() {
 			fakeClient client.Client
 			ctx        context.Context
 		)
+
 		BeforeEach(func() {
-			ctx = context.TODO()
+			ctx = context.Background()
 			s = runtime.NewScheme()
 			Expect(kubernetesfake.AddToScheme(s)).To(Succeed())
 
@@ -672,8 +674,9 @@ var _ = Describe("Cleaner", func() {
 			fakeClient client.Client
 			ctx        context.Context
 		)
+
 		BeforeEach(func() {
-			ctx = context.TODO()
+			ctx = context.Background()
 			s = runtime.NewScheme()
 			Expect(kubernetesfake.AddToScheme(s)).To(Succeed())
 

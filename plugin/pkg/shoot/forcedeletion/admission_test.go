@@ -76,7 +76,7 @@ var _ = Describe("ShootForceDeletion", func() {
 		It("should do nothing if the resource is not a Shoot", func() {
 			attrs := admission.NewAttributesRecord(nil, nil, core.Kind("Foo").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("foos").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
-			err := admissionHandler.Validate(context.TODO(), attrs, nil)
+			err := admissionHandler.Validate(context.Background(), attrs, nil)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -93,7 +93,7 @@ var _ = Describe("ShootForceDeletion", func() {
 
 			attrs := admission.NewAttributesRecord(shoot, oldShoot, gardencorev1beta1.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, gardencorev1beta1.Resource("shoots").WithVersion("v1beta1"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-			err := admissionHandler.Validate(context.TODO(), attrs, nil)
+			err := admissionHandler.Validate(context.Background(), attrs, nil)
 			Expect(err).To(BeForbiddenError())
 			Expect(err.Error()).To(ContainSubstring("force-deletion annotation cannot be set when Shoot deletionTimestamp is nil"))
 		})
@@ -104,7 +104,7 @@ var _ = Describe("ShootForceDeletion", func() {
 
 			attrs := admission.NewAttributesRecord(shoot, nil, gardencorev1beta1.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, gardencorev1beta1.Resource("shoots").WithVersion("v1beta1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-			err := admissionHandler.Validate(context.TODO(), attrs, nil)
+			err := admissionHandler.Validate(context.Background(), attrs, nil)
 			Expect(err).To(BeForbiddenError())
 			Expect(err.Error()).To(ContainSubstring("force-deletion annotation cannot be set when Shoot status does not contain one of these ErrorCode: [ERR_CLEANUP_CLUSTER_RESOURCES ERR_CONFIGURATION_PROBLEM ERR_INFRA_DEPENDENCIES ERR_INFRA_UNAUTHENTICATED ERR_INFRA_UNAUTHORIZED]"))
 		})
@@ -122,7 +122,7 @@ var _ = Describe("ShootForceDeletion", func() {
 
 			attrs := admission.NewAttributesRecord(shoot, nil, gardencorev1beta1.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, gardencorev1beta1.Resource("shoots").WithVersion("v1beta1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-			err := admissionHandler.Validate(context.TODO(), attrs, nil)
+			err := admissionHandler.Validate(context.Background(), attrs, nil)
 			Expect(err).To(BeForbiddenError())
 			Expect(err.Error()).To(ContainSubstring("force-deletion annotation cannot be set when Shoot status does not contain one of these ErrorCode: [ERR_CLEANUP_CLUSTER_RESOURCES ERR_CONFIGURATION_PROBLEM ERR_INFRA_DEPENDENCIES ERR_INFRA_UNAUTHENTICATED ERR_INFRA_UNAUTHORIZED]"))
 		})
@@ -134,7 +134,7 @@ var _ = Describe("ShootForceDeletion", func() {
 
 			attrs := admission.NewAttributesRecord(shoot, oldShoot, gardencorev1beta1.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, gardencorev1beta1.Resource("shoots").WithVersion("v1beta1"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-			err := admissionHandler.Validate(context.TODO(), attrs, nil)
+			err := admissionHandler.Validate(context.Background(), attrs, nil)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -145,9 +145,9 @@ var _ = Describe("ShootForceDeletion", func() {
 
 			attrs := admission.NewAttributesRecord(shoot, oldShoot, gardencorev1beta1.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, gardencorev1beta1.Resource("shoots").WithVersion("v1beta1"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-			err := admissionHandler.Validate(context.TODO(), attrs, nil)
+			err := admissionHandler.Validate(context.Background(), attrs, nil)
 			Expect(err).To(BeForbiddenError())
-			Expect(err.Error()).To(ContainSubstring("orce-deletion annotation cannot be removed once set"))
+			Expect(err.Error()).To(ContainSubstring("force-deletion annotation cannot be removed once set"))
 		})
 
 		It("should allow setting the force-deletion annotation if the Shoot has a deletionTimestamp and the status has a required ErrorCode", func() {
@@ -164,7 +164,7 @@ var _ = Describe("ShootForceDeletion", func() {
 
 			attrs := admission.NewAttributesRecord(shoot, oldShoot, gardencorev1beta1.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, gardencorev1beta1.Resource("shoots").WithVersion("v1beta1"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-			err := admissionHandler.Validate(context.TODO(), attrs, nil)
+			err := admissionHandler.Validate(context.Background(), attrs, nil)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})

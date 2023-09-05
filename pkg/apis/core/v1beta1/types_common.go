@@ -147,8 +147,6 @@ const (
 	EventDeleted = "Deleted"
 	// EventDeleteError indicates that the Delete operation failed.
 	EventDeleteError = "DeleteError"
-	// EventForceDeleteError indicates that the Force Delete operation failed.
-	EventForceDeleteError = "ForceDeleteError"
 	// EventPrepareMigration indicates that the Prepare Migration operation started.
 	EventPrepareMigration = "PrepareMigration"
 	// EventMigrationPrepared indicates that the Migration preparation was successful.

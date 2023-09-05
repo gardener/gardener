@@ -111,7 +111,7 @@ func validateForceDeletion(newShoot, oldShoot *core.Shoot) *field.Error {
 
 	if newNeedsForceDeletion && !oldNeedsForceDeletion {
 		if newShoot.DeletionTimestamp == nil {
-			return field.Forbidden(fldPath, "force-deletion annotation cannot be set when Shoot deletionTimestamp is nil.")
+			return field.Forbidden(fldPath, "force-deletion annotation cannot be set when Shoot deletionTimestamp is nil")
 		}
 
 		for _, lastError := range newShoot.Status.LastErrors {

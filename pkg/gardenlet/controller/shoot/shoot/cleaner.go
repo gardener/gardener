@@ -61,48 +61,6 @@ var (
 	}
 )
 
-// Cleaner provides methods for deleting and waiting upon deletion of shoot resources in a seed cluster.
-type Cleaner interface {
-	// DeleteBackupEntry deletes the shoot BackupEntry resource in the garden cluster.
-	DeleteBackupEntry(ctx context.Context) error
-	// DeleteCluster deletes the shoot Cluster resource in the seed cluster.
-	DeleteCluster(ctx context.Context) error
-	// DeleteExtensionObjects deletes all extension resources in the shoot namespace.
-	DeleteExtensionObjects(ctx context.Context) error
-	// DeleteSecrets removes all remaining finalizers and deletes all secrets in the shoot namespace.
-	DeleteSecrets(ctx context.Context) error
-	// DeleteManagedResources removes all remaining finalizers and deletes all ManagedResource resources in the shoot namespace.
-	DeleteManagedResources(ctx context.Context) error
-	// DeleteNamespace deletes the shoot namespace in the seed cluster.
-	DeleteNamespace(ctx context.Context) error
-	// DeleteControlPlanes deletes all ControlPlane resources in the shoot namespace.
-	DeleteControlPlanes(ctx context.Context) error
-	// DeleteDNSRecords deletes all DNSRecord resources in the shoot namespace.
-	DeleteDNSRecords(ctx context.Context) error
-	// DeleteMCMResources deletes all MachineControllerManager resources in the shoot namespace.
-	DeleteMCMResources(ctx context.Context) error
-
-	// SetKeepObjectsForManagedResources sets keepObjects to false for all ManagedResource resources in the shoot namespace.
-	SetKeepObjectsForManagedResources(ctx context.Context) error
-
-	// WaitUntilBackupEntryDeleted waits until the shoot BackupEntry resource in the garden cluster has been deleted.
-	WaitUntilBackupEntryDeleted(ctx context.Context) error
-	// WaitUntilClusterDeleted waits until the shoot Cluster resource in the seed cluster has been deleted.
-	WaitUntilClusterDeleted(ctx context.Context) error
-	// WaitUntilExtensionObjectsDeleted waits until all extension resources in the shoot namespace have been deleted.
-	WaitUntilExtensionObjectsDeleted(ctx context.Context) error
-	// WaitUntilManagedResourcesDeleted waits until all ManagedResource resources in the shoot namespace have been deleted.
-	WaitUntilManagedResourcesDeleted(ctx context.Context) error
-	// WaitUntilNamespaceDeleted waits until the shoot namespace in the seed cluster has been deleted.
-	WaitUntilNamespaceDeleted(ctx context.Context) error
-	// WaitUntilControlPlanesDeleted waits until all ControlPlane resources in the shoot namespace have been deleted.
-	WaitUntilControlPlanesDeleted(ctx context.Context) error
-	// WaitUntilDNSRecordsDeleted waits until all DNSRecord resources in the shoot namespace have been deleted.
-	WaitUntilDNSRecordsDeleted(ctx context.Context) error
-	// WaitUntilMCMResourcesDeleted waits until all MachineControllerManager resources in the shoot namespace have been deleted.
-	WaitUntilMCMResourcesDeleted(ctx context.Context) error
-}
-
 type cleaner struct {
 	seedClient       client.Client
 	gardenClient     client.Client
@@ -112,8 +70,8 @@ type cleaner struct {
 	log              logr.Logger
 }
 
-// NewCleaner creates a Cleaner with the given clients and logger, for a shoot with the given namespaces and backupEntryName.
-func NewCleaner(seedClient, gardenClient client.Client, seedNamespace, projectNamespace string, backupEntryName string, log logr.Logger) Cleaner {
+// NewCleaner creates a cleaner with the given clients and logger, for a shoot with the given namespaces and backupEntryName.
+func NewCleaner(seedClient, gardenClient client.Client, seedNamespace, projectNamespace string, backupEntryName string, log logr.Logger) *cleaner {
 	return &cleaner{
 		seedClient:       seedClient,
 		gardenClient:     gardenClient,
@@ -229,17 +187,6 @@ func (c *cleaner) DeleteSecrets(ctx context.Context) error {
 	return c.removeFinalizersFromObjects(ctx, c.seedNamespace, &corev1.SecretList{})
 }
 
-// DeleteNamespace deletes the shoot namespace in the seed cluster.
-func (c *cleaner) DeleteNamespace(ctx context.Context) error {
-	c.log.Info("Deleting namespace", "namespace", c.seedNamespace)
-	return client.IgnoreNotFound(c.seedClient.Delete(ctx, c.getEmptyNamespace()))
-}
-
-// WaitUntilNamespaceDeleted waits until the shoot namespace in the seed cluster has been deleted.
-func (c *cleaner) WaitUntilNamespaceDeleted(ctx context.Context) error {
-	return kubernetesutils.WaitUntilResourceDeleted(ctx, c.seedClient, c.getEmptyNamespace(), defaultInterval)
-}
-
 // DeleteCluster deletes the shoot Cluster resource in the seed cluster.
 func (c *cleaner) DeleteCluster(ctx context.Context) error {
 	cluster := c.getEmptyCluster()
@@ -255,10 +202,6 @@ func (c *cleaner) DeleteCluster(ctx context.Context) error {
 // WaitUntilClusterDeleted waits until the shoot Cluster resource in the seed cluster has been deleted.
 func (c *cleaner) WaitUntilClusterDeleted(ctx context.Context) error {
 	return kubernetesutils.WaitUntilResourceDeleted(ctx, c.seedClient, c.getEmptyCluster(), defaultInterval)
-}
-
-func (c *cleaner) getEmptyNamespace() *corev1.Namespace {
-	return &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: c.seedNamespace}}
 }
 
 func (c *cleaner) getEmptyCluster() *extensionsv1alpha1.Cluster {

@@ -67,7 +67,7 @@ const (
 	// ShootForceDeletion allows force deletion of Shoots.
 	// See [Shoot Force Deletion](https://github.com/gardener/gardener/blob/master/docs/usage/shoot_operations.md#shoot-force-deletion) for more details.
 	// owner: @acumino @ary1992 @shafeeqes
-	// alpha: v1.79.0
+	// alpha: v1.80.0
 	ShootForceDeletion featuregate.Feature = "ShootForceDeletion"
 
 	// MachineControllerManagerDeployment enables Gardener to take over the deployment of the

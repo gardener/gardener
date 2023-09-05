@@ -176,7 +176,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 
 func getGraph(
 	botanist *botanistpkg.Botanist,
-	cleaner Cleaner,
+	cleaner *cleaner,
 	forceDelete,
 	nonTerminatingNamespace,
 	cleanupShootResources,
@@ -284,12 +284,19 @@ func getGraph(
 			})
 			deleteNamespace = g.Add(flow.Task{
 				Name:         "Deleting shoot namespace",
-				Fn:           flow.TaskFn(cleaner.DeleteNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
+				Fn:           flow.TaskFn(botanist.DeleteSeedNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
 				Dependencies: flow.NewTaskIDs(waitUntilExtensionObjectsDeleted, waitUntilEtcdsDeleted, waitUntilMCMResourcesDeleted, waitUntilManagedResourcesDeleted, deleteSecrets),
 			})
 			_ = g.Add(flow.Task{
 				Name:         "Waiting until shoot namespace has been deleted",
-				Fn:           cleaner.WaitUntilNamespaceDeleted,
+				Fn:           botanist.WaitUntilSeedNamespaceDeleted,
+				Dependencies: flow.NewTaskIDs(deleteNamespace),
+			})
+			_ = g.Add(flow.Task{
+				Name: "Deleting Shoot State",
+				Fn: func(ctx context.Context) error {
+					return shootstate.Delete(ctx, botanist.GardenClient, botanist.Shoot.GetInfo())
+				},
 				Dependencies: flow.NewTaskIDs(deleteNamespace),
 			})
 		)

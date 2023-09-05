@@ -104,6 +104,7 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 	}
 
 	// Force delete annotation is set.
+	// This is necessary because we want to trigger a reconciliation right away even if the Shoot is failed.
 	if !gardencorehelper.ShootNeedsForceDeletion(oldShoot) && gardencorehelper.ShootNeedsForceDeletion(newShoot) {
 		return true
 	}

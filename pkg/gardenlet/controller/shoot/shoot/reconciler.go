@@ -227,18 +227,10 @@ func (r *Reconciler) deleteShoot(ctx context.Context, log logr.Logger, shoot *ga
 	}
 
 	r.Recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting Shoot cluster")
-	if v1beta1helper.ShootNeedsForceDeletion(shoot) {
-		if flowErr := r.runDeleteShootFlow(ctx, o, true); flowErr != nil {
-			r.Recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventForceDeleteError, flowErr.Description)
-			updateErr := r.patchShootStatusOperationError(ctx, shoot, flowErr.Description, operationType, flowErr.LastErrors...)
-			return reconcile.Result{}, errorsutils.WithSuppressed(errors.New(flowErr.Description), updateErr)
-		}
-	} else {
-		if flowErr := r.runDeleteShootFlow(ctx, o, false); flowErr != nil {
-			r.Recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, flowErr.Description)
-			updateErr := r.patchShootStatusOperationError(ctx, shoot, flowErr.Description, operationType, flowErr.LastErrors...)
-			return reconcile.Result{}, errorsutils.WithSuppressed(errors.New(flowErr.Description), updateErr)
-		}
+	if flowErr := r.runDeleteShootFlow(ctx, o, v1beta1helper.ShootNeedsForceDeletion(shoot)); flowErr != nil {
+		r.Recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, flowErr.Description)
+		updateErr := r.patchShootStatusOperationError(ctx, shoot, flowErr.Description, operationType, flowErr.LastErrors...)
+		return reconcile.Result{}, errorsutils.WithSuppressed(errors.New(flowErr.Description), updateErr)
 	}
 
 	r.Recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventDeleted, "Deleted Shoot cluster")

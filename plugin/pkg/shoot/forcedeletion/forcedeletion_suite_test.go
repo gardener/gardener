@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestForceDelete(t *testing.T) {
+func TestForceDeletion(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "AdmissionPlugin Shoot ForceDeletion Suite")
 }
