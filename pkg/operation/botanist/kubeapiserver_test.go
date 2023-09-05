@@ -203,9 +203,12 @@ var _ = Describe("KubeAPIServer", func() {
 						ScaleDownDisabledForHvpa:  false,
 					},
 				),
-				Entry("default behaviour, HVPA is enabled",
+				Entry("default behaviour, HVPA is enabled and DisableScalingClassesForShoots is disabled",
 					nil,
-					map[featuregate.Feature]bool{features.HVPA: true},
+					map[featuregate.Feature]bool{
+						features.HVPA:                           true,
+						features.DisableScalingClassesForShoots: false,
+					},
 					apiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(40, ""),
 						HVPAEnabled:               true,
@@ -218,8 +221,7 @@ var _ = Describe("KubeAPIServer", func() {
 				Entry("default behaviour, HVPA is enabled and DisableScalingClassesForShoots is enabled",
 					nil,
 					map[featuregate.Feature]bool{
-						features.HVPA:                           true,
-						features.DisableScalingClassesForShoots: true,
+						features.HVPA: true,
 					},
 					apiserver.AutoscalingConfig{
 						APIServerResources: corev1.ResourceRequirements{
@@ -238,8 +240,7 @@ var _ = Describe("KubeAPIServer", func() {
 				Entry("default behaviour, HVPA is disabled and DisableScalingClassesForShoots is enabled",
 					nil,
 					map[featuregate.Feature]bool{
-						features.HVPA:                           false,
-						features.DisableScalingClassesForShoots: true,
+						features.HVPA: false,
 					},
 					apiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(4, ""),
@@ -292,11 +293,14 @@ var _ = Describe("KubeAPIServer", func() {
 						ScaleDownDisabledForHvpa:  false,
 					},
 				),
-				Entry("shoot is a managed seed and HVPAForShootedSeed is enabled",
+				Entry("shoot is a managed seed and HVPAForShootedSeed is enabled and DisableScalingClassesForShoots is disabled",
 					func() {
 						botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
 					},
-					map[featuregate.Feature]bool{features.HVPAForShootedSeed: true},
+					map[featuregate.Feature]bool{
+						features.HVPAForShootedSeed:             true,
+						features.DisableScalingClassesForShoots: false,
+					},
 					apiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(40, ""),
 						HVPAEnabled:               true,
@@ -306,7 +310,7 @@ var _ = Describe("KubeAPIServer", func() {
 						ScaleDownDisabledForHvpa:  false,
 					},
 				),
-				Entry("shoot is a managed seed w/ APIServer settings and HVPAForShootedSeed is enabled",
+				Entry("shoot is a managed seed w/ APIServer settings and HVPAForShootedSeed is enabled and DisableScalingClassesForShoots is disabled",
 					func() {
 						botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
 						botanist.ManagedSeedAPIServer = &helper.ManagedSeedAPIServer{
@@ -317,7 +321,10 @@ var _ = Describe("KubeAPIServer", func() {
 							Replicas: pointer.Int32(24),
 						}
 					},
-					map[featuregate.Feature]bool{features.HVPAForShootedSeed: true},
+					map[featuregate.Feature]bool{
+						features.HVPAForShootedSeed:             true,
+						features.DisableScalingClassesForShoots: false,
+					},
 					apiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(40, ""),
 						HVPAEnabled:               true,
@@ -339,8 +346,7 @@ var _ = Describe("KubeAPIServer", func() {
 						}
 					},
 					map[featuregate.Feature]bool{
-						features.HVPAForShootedSeed:             true,
-						features.DisableScalingClassesForShoots: true,
+						features.HVPAForShootedSeed: true,
 					},
 					apiserver.AutoscalingConfig{
 						APIServerResources: corev1.ResourceRequirements{
@@ -395,8 +401,7 @@ var _ = Describe("KubeAPIServer", func() {
 						}
 					},
 					map[featuregate.Feature]bool{
-						features.HVPAForShootedSeed:             false,
-						features.DisableScalingClassesForShoots: true,
+						features.HVPAForShootedSeed: false,
 					},
 					apiserver.AutoscalingConfig{
 						APIServerResources: corev1.ResourceRequirements{
