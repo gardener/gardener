@@ -36,7 +36,6 @@ type Config struct {
 	restConfig        *rest.Config
 	cacheSyncPeriod   *time.Duration
 	disableCache      bool
-	uncachedObjects   []client.Object
 	allowedUserFields []string
 	clientConfig      clientcmd.ClientConfig
 }
@@ -121,14 +120,6 @@ func WithCacheSyncPeriod(sync time.Duration) ConfigFunc {
 func WithDisabledCachedClient() ConfigFunc {
 	return func(config *Config) error {
 		config.disableCache = true
-		return nil
-	}
-}
-
-// WithUncached disables the cached client for the specified objects' GroupKinds.
-func WithUncached(objs ...client.Object) ConfigFunc {
-	return func(config *Config) error {
-		config.uncachedObjects = append(config.uncachedObjects, objs...)
 		return nil
 	}
 }
