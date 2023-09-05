@@ -33,7 +33,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -563,7 +562,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 		)
 
 		It("should forbid addon configuration if the shoot is workerless", func() {
-			DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.WorkerlessShoots, true))
 			shoot.Spec.Provider.Workers = []core.Worker{}
 			shoot.Spec.Addons = &core.Addons{}
 			shoot.Spec.Kubernetes.KubeControllerManager = nil
@@ -655,7 +653,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		It("should forbid adding secretBindingName in case of workerless shoot", func() {
-			DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.WorkerlessShoots, true))
 			shoot.Spec.Provider.Workers = nil
 			shoot.Spec.SecretBindingName = pointer.String("foo")
 
@@ -669,7 +666,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		It("should allow nil secretBindingName in case of workerless shoot", func() {
-			DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.WorkerlessShoots, true))
 			shoot.Spec.Provider.Workers = nil
 			shoot.Spec.Addons = nil
 			shoot.Spec.SecretBindingName = nil
@@ -1054,7 +1050,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should prevent setting InfrastructureConfig for workerless Shoot", func() {
-				DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.WorkerlessShoots, true))
 				shoot.Spec.Provider.Workers = nil
 				shoot.Spec.Addons = nil
 				shoot.Spec.Kubernetes.KubeControllerManager = nil
@@ -1073,7 +1068,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should prevent setting ControlPlaneConfig for workerless Shoot", func() {
-				DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.WorkerlessShoots, true))
 				shoot.Spec.Provider.Workers = nil
 				shoot.Spec.Addons = nil
 				shoot.Spec.Kubernetes.KubeControllerManager = nil
@@ -2032,7 +2026,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 		Context("KubeControllerManager validation", func() {
 			Context("for workerless shoots", func() {
 				BeforeEach(func() {
-					DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.WorkerlessShoots, true))
 					shoot.Spec.Provider.Workers = []core.Worker{}
 				})
 
@@ -2289,8 +2282,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should prevent setting kubescheduler config for workerless shoots", func() {
-				DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.WorkerlessShoots, true))
-
 				profile := core.SchedulingProfileBinPacking
 				shoot.Spec.Provider.Workers = []core.Worker{}
 				shoot.Spec.Kubernetes.KubeScheduler = &core.KubeSchedulerConfig{
@@ -2339,8 +2330,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should prevent setting kubeproxy config for workerless shoots", func() {
-				DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.WorkerlessShoots, true))
-
 				shoot.Spec.Provider.Workers = []core.Worker{}
 				shoot.Spec.Kubernetes.KubeProxy = &core.KubeProxyConfig{
 					KubernetesConfig: core.KubernetesConfig{
@@ -2751,8 +2740,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should allow upgrading to v1.25 even if PodSecurityPolicy admission plugin is not disabled for a workerless Shoot", func() {
-				DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.WorkerlessShoots, true))
-
 				shoot.Spec.Kubernetes.Version = "1.24.0"
 				shoot.Spec.Kubernetes.KubeControllerManager = nil
 				shoot.Spec.Provider.Workers = nil
@@ -2978,7 +2965,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 		Context("networking section", func() {
 			Context("Workerless Shoots", func() {
 				It("should forbid setting networking.type, networking.providerConfig, networking.pods, networking.nodes", func() {
-					DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.WorkerlessShoots, true))
 					shoot.Spec.Provider.Workers = nil
 					shoot.Spec.SecretBindingName = nil
 					shoot.Spec.Addons = nil

@@ -26,7 +26,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | CoreDNSQueryRewriting               | `false` | `Alpha` | `1.55` |        |
 | IPv6SingleStack                     | `false` | `Alpha` | `1.63` |        |
 | MutableShootSpecNetworkingNodes     | `false` | `Alpha` | `1.64` |        |
-| WorkerlessShoots                    | `false` | `Alpha` | `1.70` |        |
+| WorkerlessShoots                    | `false` | `Alpha` | `1.70` | `1.78` |
+| WorkerlessShoots                    | `false` | `Beta`  | `1.79` |        |
 | MachineControllerManagerDeployment  | `false` | `Alpha` | `1.73` |        |
 | DisableScalingClassesForShoots      | `false` | `Alpha` | `1.73` |        |
 | ContainerdRegistryHostsDir          | `false` | `Alpha` | `1.77` |        |
