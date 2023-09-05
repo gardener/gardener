@@ -11,11 +11,11 @@ The username associated with such `kubeconfig` will be the same which is used fo
 In order to request such a `kubeconfig`, you can run the following commands:
 
 ```bash
-export NAMESPACE=my-namespace
+export PROJECT_NAME=my-project
 export SHOOT_NAME=my-shoot
 kubectl create \
     -f <path>/<to>/kubeconfig-request.json \
-    --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/adminkubeconfig | jq -r ".status.kubeconfig" | base64 -d
+    --raw /apis/core.gardener.cloud/v1beta1/namespaces/garden-${PROJECT_NAME}/shoots/${SHOOT_NAME}/adminkubeconfig | jq -r ".status.kubeconfig" | base64 -d
 ```
 
 Here, the `kubeconfig-request.json` has the following content:
