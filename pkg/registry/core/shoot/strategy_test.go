@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -75,8 +74,6 @@ var _ = Describe("Strategy", func() {
 		})
 
 		It("should allow an empty worker list if WorkerlessShoots featuregate is enabled", func() {
-			DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.WorkerlessShoots, true))
-
 			errorList := shootregistry.NewStrategy(0).Validate(context.TODO(), shoot)
 
 			Expect(errorList).To(BeEmpty())
