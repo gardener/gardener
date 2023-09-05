@@ -288,6 +288,13 @@ func newClientSet(conf *Config) (Interface, error) {
 
 	var uncachedClient client.Client
 	if runtimeAPIReader == nil || runtimeClient == nil {
+		cacheOptions := conf.clientOptions.Cache
+		if cacheOptions == nil {
+			cacheOptions = &client.CacheOptions{}
+		}
+		cacheOptions.Reader = nil
+		conf.clientOptions.Cache = cacheOptions
+
 		uncachedClient, err = client.New(conf.restConfig, conf.clientOptions)
 		if err != nil {
 			return nil, err
@@ -302,18 +309,20 @@ func newClientSet(conf *Config) (Interface, error) {
 		if conf.disableCache {
 			runtimeClient = uncachedClient
 		} else {
-			delegatingClient, err := client.New(conf.restConfig, client.Options{
-				Cache: &client.CacheOptions{
-					Reader:     runtimeCache,
-					DisableFor: conf.uncachedObjects,
-				},
-			})
+			cacheOptions := conf.clientOptions.Cache
+			if cacheOptions == nil {
+				cacheOptions = &client.CacheOptions{}
+			}
+			cacheOptions.Reader = runtimeCache
+			conf.clientOptions.Cache = cacheOptions
+
+			cachedClient, err := client.New(conf.restConfig, conf.clientOptions)
 			if err != nil {
 				return nil, err
 			}
 
 			runtimeClient = &FallbackClient{
-				Client: delegatingClient,
+				Client: cachedClient,
 				Reader: runtimeAPIReader,
 			}
 		}
