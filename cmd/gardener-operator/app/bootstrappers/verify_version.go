@@ -65,7 +65,7 @@ func VerifyGardenerVersion(ctx context.Context, log logr.Logger, client client.R
 	if upgradeMoreThanOneVersion, err := versionutils.CompareVersions(currentGardenerVersion, ">=", minorVersionSkew.String()); err != nil {
 		return fmt.Errorf("failed comparing versions for upgrade check: %w", err)
 	} else if upgradeMoreThanOneVersion {
-		return fmt.Errorf("skipping Gardener versions is unsupported (old version was %s, my version is %s),, please consult https://github.com/gardener/gardener/blob/master/docs/deployment/version_skew_policy.md", oldGardenerVersion.String(), currentGardenerVersion)
+		return fmt.Errorf("skipping Gardener versions is unsupported (old version was %s, my version is %s), please consult https://github.com/gardener/gardener/blob/master/docs/deployment/version_skew_policy.md", oldGardenerVersion.String(), currentGardenerVersion)
 	}
 
 	log.Info("Successfully verified Gardener version skew")

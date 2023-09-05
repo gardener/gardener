@@ -47,7 +47,7 @@ var _ = Describe("VerifyVersion", func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).WithStatusSubresource(garden).Build()
 	})
 
-	Describe("#Start", func() {
+	Describe("#VerifyGardenerVersion", func() {
 		It("should do nothing because no Gardens exist", func() {
 			Expect(VerifyGardenerVersion(ctx, log, fakeClient)).To(Succeed())
 		})
