@@ -75,7 +75,6 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -893,12 +892,7 @@ func (r *Reconciler) newGardenerAdmissionController(garden *operatorv1alpha1.Gar
 	if err != nil {
 		return nil, err
 	}
-
-	repository, tag := image.String(), version.Get().GitVersion
-	if image.Tag != nil {
-		repository, tag = image.Repository, *image.Tag
-	}
-	image = &imagevectorutils.Image{Repository: repository, Tag: &tag}
+	image.WithOptionalTag(version.Get().GitVersion)
 
 	values := gardeneradmissioncontroller.Values{
 		Image:                       image.String(),
@@ -923,12 +917,7 @@ func (r *Reconciler) newGardenerControllerManager(garden *operatorv1alpha1.Garde
 	if err != nil {
 		return nil, err
 	}
-
-	repository, tag := image.String(), version.Get().GitVersion
-	if image.Tag != nil {
-		repository, tag = image.Repository, *image.Tag
-	}
-	image = &imagevectorutils.Image{Repository: repository, Tag: &tag}
+	image.WithOptionalTag(version.Get().GitVersion)
 
 	values := gardenercontrollermanager.Values{
 		Image:    image.String(),
@@ -957,12 +946,7 @@ func (r *Reconciler) newGardenerScheduler(garden *operatorv1alpha1.Garden, secre
 	if err != nil {
 		return nil, err
 	}
-
-	repository, tag := image.String(), version.Get().GitVersion
-	if image.Tag != nil {
-		repository, tag = image.Repository, *image.Tag
-	}
-	image = &imagevectorutils.Image{Repository: repository, Tag: &tag}
+	image.WithOptionalTag(version.Get().GitVersion)
 
 	values := gardenerscheduler.Values{
 		Image:    image.String(),

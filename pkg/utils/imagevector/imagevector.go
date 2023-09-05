@@ -376,7 +376,15 @@ func (i *ImageSource) ToImage(targetVersion *string) *Image {
 	}
 }
 
-// String will returns the string representation of the image.
+// WithOptionalTag will set the 'Tag' field of the 'Image' to <tag> in case it is nil. If 'Tag' is already set, nothing
+// happens.
+func (i *Image) WithOptionalTag(tag string) {
+	if i.Tag == nil {
+		i.Tag = &tag
+	}
+}
+
+// String returns the string representation of the image.
 func (i *Image) String() string {
 	if i.Tag == nil {
 		return i.Repository

@@ -286,25 +286,16 @@ func (vp *valuesHelper) getGardenletConfigurationValues(config *gardenletv1alpha
 }
 
 func getParentGardenletDeployment() (*seedmanagementv1alpha1.GardenletDeployment, error) {
-	// Get image repository and tag
-	var imageRepository, imageTag string
-	gardenletImage, err := imagevector.ImageVector().FindImage("gardenlet")
+	gardenletImage, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenlet)
 	if err != nil {
 		return nil, err
 	}
-	if gardenletImage.Tag != nil {
-		imageRepository = gardenletImage.Repository
-		imageTag = *gardenletImage.Tag
-	} else {
-		imageRepository = gardenletImage.String()
-		imageTag = version.Get().GitVersion
-	}
+	gardenletImage.WithOptionalTag(version.Get().GitVersion)
 
-	// Create and return result
 	return &seedmanagementv1alpha1.GardenletDeployment{
 		Image: &seedmanagementv1alpha1.Image{
-			Repository: &imageRepository,
-			Tag:        &imageTag,
+			Repository: &gardenletImage.Repository,
+			Tag:        gardenletImage.Tag,
 		},
 	}, nil
 }

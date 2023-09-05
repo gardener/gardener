@@ -40,7 +40,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	resourcemanagerv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -71,12 +70,7 @@ func NewRuntimeGardenerResourceManager(
 	if err != nil {
 		return nil, err
 	}
-
-	repository, tag := image.String(), version.Get().GitVersion
-	if image.Tag != nil {
-		repository, tag = image.Repository, *image.Tag
-	}
-	image = &imagevectorutils.Image{Repository: repository, Tag: &tag}
+	image.WithOptionalTag(version.Get().GitVersion)
 
 	return resourcemanager.New(c, gardenNamespaceName, secretsManager, resourcemanager.Values{
 		ConcurrentSyncs:                           pointer.Int(20),
@@ -144,12 +138,7 @@ func NewTargetGardenerResourceManager(
 	if err != nil {
 		return nil, err
 	}
-
-	repository, tag := image.String(), version.Get().GitVersion
-	if image.Tag != nil {
-		repository, tag = image.Repository, *image.Tag
-	}
-	image = &imagevectorutils.Image{Repository: repository, Tag: &tag}
+	image.WithOptionalTag(version.Get().GitVersion)
 
 	cfg := resourcemanager.Values{
 		AlwaysUpdate:                         pointer.Bool(true),

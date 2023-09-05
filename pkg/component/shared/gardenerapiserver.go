@@ -29,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/gardenerapiserver"
 	"github.com/gardener/gardener/pkg/logger"
-	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -54,12 +53,7 @@ func NewGardenerAPIServer(
 	if err != nil {
 		return nil, err
 	}
-
-	repository, tag := image.String(), version.Get().GitVersion
-	if image.Tag != nil {
-		repository, tag = image.Repository, *image.Tag
-	}
-	image = &imagevectorutils.Image{Repository: repository, Tag: &tag}
+	image.WithOptionalTag(version.Get().GitVersion)
 
 	var (
 		auditConfig              *apiserver.AuditConfig
