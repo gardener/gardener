@@ -18,6 +18,7 @@ import (
 	"context"
 	"time"
 
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,14 +42,24 @@ const (
 	defaultTimeout = 5 * time.Minute
 )
 
-var extensionKindToObjectList = map[string]client.ObjectList{
-	extensionsv1alpha1.BastionResource:               &extensionsv1alpha1.BastionList{},
-	extensionsv1alpha1.ContainerRuntimeResource:      &extensionsv1alpha1.ContainerRuntimeList{},
-	extensionsv1alpha1.ExtensionResource:             &extensionsv1alpha1.ExtensionList{},
-	extensionsv1alpha1.InfrastructureResource:        &extensionsv1alpha1.InfrastructureList{},
-	extensionsv1alpha1.NetworkResource:               &extensionsv1alpha1.NetworkList{},
-	extensionsv1alpha1.OperatingSystemConfigResource: &extensionsv1alpha1.OperatingSystemConfigList{},
-}
+var (
+	extensionKindToObjectList = map[string]client.ObjectList{
+		extensionsv1alpha1.BastionResource:               &extensionsv1alpha1.BastionList{},
+		extensionsv1alpha1.ContainerRuntimeResource:      &extensionsv1alpha1.ContainerRuntimeList{},
+		extensionsv1alpha1.ExtensionResource:             &extensionsv1alpha1.ExtensionList{},
+		extensionsv1alpha1.InfrastructureResource:        &extensionsv1alpha1.InfrastructureList{},
+		extensionsv1alpha1.NetworkResource:               &extensionsv1alpha1.NetworkList{},
+		extensionsv1alpha1.OperatingSystemConfigResource: &extensionsv1alpha1.OperatingSystemConfigList{},
+		extensionsv1alpha1.WorkerResource:                &extensionsv1alpha1.WorkerList{},
+	}
+
+	mcmKindToObjectList = map[string]client.ObjectList{
+		"MachineDeployment": &machinev1alpha1.MachineDeploymentList{},
+		"MachineSet":        &machinev1alpha1.MachineSetList{},
+		"MachineClass":      &machinev1alpha1.MachineClassList{},
+		"Machine":           &machinev1alpha1.MachineList{},
+	}
+)
 
 // Cleaner provides methods for deleting and waiting upon deletion of shoot resources in a seed cluster.
 type Cleaner interface {
@@ -68,8 +79,8 @@ type Cleaner interface {
 	DeleteControlPlanes(ctx context.Context) error
 	// DeleteDNSRecords deletes all DNSRecord resources in the shoot namespace.
 	DeleteDNSRecords(ctx context.Context) error
-	// DeleteWorkers deletes all Worker resources in the shoot namespace.
-	DeleteWorkers(ctx context.Context) error
+	// DeleteMCMResources deletes all MachineControllerManager resources in the shoot namespace.
+	DeleteMCMResources(ctx context.Context) error
 
 	// SetKeepObjectsForManagedResources sets keepObjects to false for all ManagedResource resources in the shoot namespace.
 	SetKeepObjectsForManagedResources(ctx context.Context) error
@@ -88,8 +99,8 @@ type Cleaner interface {
 	WaitUntilControlPlanesDeleted(ctx context.Context) error
 	// WaitUntilDNSRecordsDeleted waits until all DNSRecord resources in the shoot namespace have been deleted.
 	WaitUntilDNSRecordsDeleted(ctx context.Context) error
-	// WaitUntilWorkersDeleted waits until all Worker resources in the shoot namespace have been deleted.
-	WaitUntilWorkersDeleted(ctx context.Context) error
+	// WaitUntilMCMResourcesDeleted waits until all MachineControllerManager resources in the shoot namespace have been deleted.
+	WaitUntilMCMResourcesDeleted(ctx context.Context) error
 }
 
 type cleaner struct {
@@ -170,15 +181,20 @@ func (c *cleaner) WaitUntilDNSRecordsDeleted(ctx context.Context) error {
 	return extensions.WaitUntilExtensionObjectsDeleted(ctx, c.seedClient, c.log, &extensionsv1alpha1.DNSRecordList{}, extensionsv1alpha1.DNSRecordResource, c.seedNamespace, defaultInterval, defaultTimeout, nil)
 }
 
-// DeleteWorkers deletes all Worker resources in the shoot namespace.
-func (c *cleaner) DeleteWorkers(ctx context.Context) error {
-	c.log.Info("Deleting all Worker resources in namespace", "namespace", c.seedNamespace)
-	return extensions.DeleteExtensionObjects(ctx, c.seedClient, &extensionsv1alpha1.WorkerList{}, c.seedNamespace, nil)
+// DeleteMCMResources deletes all MachineControllerManager resources in the shoot namespace.
+func (c *cleaner) DeleteMCMResources(ctx context.Context) error {
+	return utilclient.ApplyToObjectKinds(ctx, func(kind string, objectList client.ObjectList) flow.TaskFn {
+		return utilclient.ForceDeleteObjects(ctx, c.log, c.seedClient, kind, c.seedNamespace, objectList)
+	}, mcmKindToObjectList)
 }
 
-// WaitUntilWorkersDeleted waits until all Worker resources in the shoot namespace have been deleted.
-func (c *cleaner) WaitUntilWorkersDeleted(ctx context.Context) error {
-	return extensions.WaitUntilExtensionObjectsDeleted(ctx, c.seedClient, c.log, &extensionsv1alpha1.WorkerList{}, extensionsv1alpha1.WorkerResource, c.seedNamespace, defaultInterval, defaultTimeout, nil)
+// WaitUntilMCMResourcesDeleted waits until all MachineControllerManager resources in the shoot namespace have been deleted.
+func (c *cleaner) WaitUntilMCMResourcesDeleted(ctx context.Context) error {
+	return utilclient.ApplyToObjectKinds(ctx, func(kind string, objectList client.ObjectList) flow.TaskFn {
+		return func(ctx context.Context) error {
+			return kubernetesutils.WaitUntilResourcesDeleted(ctx, c.seedClient, objectList, defaultInterval, client.InNamespace(c.seedNamespace))
+		}
+	}, mcmKindToObjectList)
 }
 
 // SetKeepObjectsForManagedResources sets keepObjects to false for all ManagedResource resources in the shoot namespace.

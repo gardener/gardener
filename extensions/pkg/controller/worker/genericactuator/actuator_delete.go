@@ -33,7 +33,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 )
 
@@ -43,12 +42,6 @@ const (
 )
 
 func (a *genericActuator) Delete(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
-	if v1beta1helper.ShootNeedsForceDeletion(cluster.Shoot) {
-		log = log.WithValues("operation", "force-delete")
-
-		return forceDeleteWorker(ctx, log, a.client, worker.Namespace)
-	}
-
 	log = log.WithValues("operation", "delete")
 
 	workerDelegate, err := a.delegateFactory.WorkerDelegate(ctx, worker, cluster)
@@ -290,16 +283,4 @@ func (a *genericActuator) waitUntilCredentialsSecretAcquiredOrReleased(ctx conte
 		}
 		return retryutils.Ok()
 	})
-}
-
-func forceDeleteWorker(ctx context.Context, log logr.Logger, c client.Client, namespace string) error {
-	mcmKindToObjectList := map[string]client.ObjectList{
-		"MachineDeployment": &machinev1alpha1.MachineDeploymentList{},
-		"MachineSet":        &machinev1alpha1.MachineSetList{},
-		"Machine":           &machinev1alpha1.MachineList{},
-	}
-
-	return utilclient.ApplyToObjectKinds(ctx, func(kind string, objectList client.ObjectList) flow.TaskFn {
-		return utilclient.ForceDeleteObjects(ctx, log, c, kind, namespace, objectList)
-	}, mcmKindToObjectList)
 }

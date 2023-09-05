@@ -215,15 +215,6 @@ func getGraph(
 				Fn:           cleaner.WaitUntilDNSRecordsDeleted,
 				Dependencies: flow.NewTaskIDs(deleteDNSRecords),
 			})
-			deleteWorkers = g.Add(flow.Task{
-				Name: "Deleting Worker resources",
-				Fn:   flow.TaskFn(cleaner.DeleteWorkers).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			})
-			waitUntilWorkersDeleted = g.Add(flow.Task{
-				Name:         "Waiting until Worker resources have been deleted",
-				Fn:           cleaner.WaitUntilWorkersDeleted,
-				Dependencies: flow.NewTaskIDs(deleteWorkers),
-			})
 			deleteExtensionObjects = g.Add(flow.Task{
 				Name: "Deleting extension resources",
 				Fn:   flow.TaskFn(cleaner.DeleteExtensionObjects).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -232,6 +223,15 @@ func getGraph(
 				Name:         "Waiting until extension resources have been deleted",
 				Fn:           cleaner.WaitUntilExtensionObjectsDeleted,
 				Dependencies: flow.NewTaskIDs(deleteExtensionObjects),
+			})
+			deleteMCMResources = g.Add(flow.Task{
+				Name: "Deleting MCM resources",
+				Fn:   flow.TaskFn(cleaner.DeleteMCMResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			})
+			waitUntilMCMResourcesDeleted = g.Add(flow.Task{
+				Name:         "Waiting until MCM resources have been deleted",
+				Fn:           cleaner.WaitUntilMCMResourcesDeleted,
+				Dependencies: flow.NewTaskIDs(deleteMCMResources),
 			})
 			deleteBackupEntry = g.Add(flow.Task{
 				Name: "Deleting BackupEntry resource",
@@ -245,7 +245,7 @@ func getGraph(
 			deleteCluster = g.Add(flow.Task{
 				Name:         "Deleting Cluster resource",
 				Fn:           flow.TaskFn(cleaner.DeleteCluster).RetryUntilTimeout(defaultInterval, defaultTimeout),
-				Dependencies: flow.NewTaskIDs(waitUntilExtensionObjectsDeleted, waitUntilBackupEntryDeleted, waitUntilControlPlanesDeleted, waitUntilDNSRecordsDeleted, waitUntilWorkersDeleted),
+				Dependencies: flow.NewTaskIDs(waitUntilExtensionObjectsDeleted, waitUntilBackupEntryDeleted, waitUntilControlPlanesDeleted, waitUntilDNSRecordsDeleted),
 			})
 			_ = g.Add(flow.Task{
 				Name:         "Waiting until Cluster resource has been deleted",
@@ -280,12 +280,12 @@ func getGraph(
 			deleteSecrets = g.Add(flow.Task{
 				Name:         "Deleting secrets",
 				Fn:           flow.TaskFn(cleaner.DeleteSecrets).RetryUntilTimeout(defaultInterval, defaultTimeout),
-				Dependencies: flow.NewTaskIDs(waitUntilExtensionObjectsDeleted, waitUntilEtcdsDeleted, waitUntilWorkersDeleted, waitUntilManagedResourcesDeleted),
+				Dependencies: flow.NewTaskIDs(waitUntilExtensionObjectsDeleted, waitUntilEtcdsDeleted, waitUntilMCMResourcesDeleted, waitUntilManagedResourcesDeleted),
 			})
 			deleteNamespace = g.Add(flow.Task{
 				Name:         "Deleting shoot namespace",
 				Fn:           flow.TaskFn(cleaner.DeleteNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
-				Dependencies: flow.NewTaskIDs(waitUntilExtensionObjectsDeleted, waitUntilEtcdsDeleted, waitUntilWorkersDeleted, waitUntilManagedResourcesDeleted, deleteSecrets),
+				Dependencies: flow.NewTaskIDs(waitUntilExtensionObjectsDeleted, waitUntilEtcdsDeleted, waitUntilMCMResourcesDeleted, waitUntilManagedResourcesDeleted, deleteSecrets),
 			})
 			_ = g.Add(flow.Task{
 				Name:         "Waiting until shoot namespace has been deleted",
