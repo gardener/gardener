@@ -40,6 +40,16 @@ Example:
 - `gardener-apiserver` is at **v1.37**
 - `gardener-controller-manager`, `gardener-scheduler`, `gardener-admission-controller`, and `gardenlet` are supported at **1.37** and **v1.36**
 
+#### gardener-operator
+
+Since `gardener-operator` manages the Gardener control plane components (`gardener-apiserver`, `gardener-controller-manager`, `gardener-scheduler`, `gardener-admission-controller`), it follows the same policy as for [`gardener-apiserver`](#gardener-apiserver).
+
+It implements additional start-up checks to ensure adherence to this policy.
+Concretely, `gardener-operator` will crash when
+
+- its gets downgraded.
+- its version gets upgraded and skips at least one minor version.
+
 ### Supported Component Upgrade Order
 
 The supported version skew between components has implications on the order in which components must be upgraded.
@@ -61,11 +71,21 @@ Actions:
 
 Prerequisites:
 
-- The `gardener-apiserver` instances these components communicate with are at **1.38** (in multi-instance setups in which these components can communicate with any `gardener-apiserver` instance in the cluster, all `gardener-apiserver` instances must be upgraded before upgrading these components)
+- The `gardener-apiserver` instances these components communicate with are at **1.38** (in multi-instance setups in which these components can communicate with any `gardener-apiserver` instance in the cluster, all `gardener-apiserver` instances must be upgraded before upgrading these components).
 
 Actions:
 
 - Upgrade `gardener-controller-manager`, `gardener-scheduler`, `gardener-admission-controller`, and `gardenlet` to **1.38**
+
+#### gardener-operator
+
+Prerequisites:
+
+- All `gardener-operator` instances are at **1.37**.
+
+Actions:
+
+- Upgrade `gardener-operator` to **1.38**.
 
 ## Supported Kubernetes Versions
 
