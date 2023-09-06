@@ -316,7 +316,7 @@ kind-operator-down: $(KIND)
 
 # speed-up skaffold deployments by building all images concurrently
 export SKAFFOLD_BUILD_CONCURRENCY = 0
-export SKAFFOLD_DISABLE_HEALTH_CHECKS ?= ""
+
 gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator-up operator-dev operator-debug: export SKAFFOLD_DEFAULT_REPO = localhost:5001
 gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator-up operator-dev operator-debug: export SKAFFOLD_PUSH = true
 gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator-up operator-dev operator-debug: export SOURCE_DATE_EPOCH = $(shell date +%s)
@@ -331,10 +331,6 @@ gardener%dev gardenlet%dev operator-dev: export SKAFFOLD_TRIGGER = manual
 # However, these artifacts do not include the gcflags which `skaffold debug` sets automatically, so delve would not work.
 # Disabling the skaffold cache for debugging ensures that you run artifacts with gcflags required for debugging.
 gardener%debug gardenlet%debug operator-debug: export SKAFFOLD_CACHE_ARTIFACTS = false
-# Health checks may be disabled on a per-controller basis. To boot a garden from scratch, some controllers may be launched before
-# their attendant resources are installed. Those controllers will need to be restarted by health checks after the resources are available.
-# Developers who prefer to do this manually may provide comma-separated controller names from {admission,controller,scheduler,gardenlet,operator}.
-gardener%dev gardener%debug gardenlet%dev gardenlet%debug operator-dev operator-debug: export SKAFFOLD_DISABLE_HEALTH_CHECKS ?= ""
 
 gardener-ha-single-zone%: export SKAFFOLD_PROFILE=ha-single-zone
 gardener-ha-multi-zone%: export SKAFFOLD_PROFILE=ha-multi-zone

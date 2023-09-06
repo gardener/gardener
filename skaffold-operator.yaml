@@ -761,4 +761,4 @@ profiles:
     value:
       replicaCount: 1
       config.leaderElection.leaderElect: false
-      config.server.healthProbes.enable: "{{ default \"\" .SKAFFOLD_DISABLE_HEALTH_CHECKS | lower | splitList \",\" | has \"operator\" | ternary \"false\" \"true\" }}"
+      config.server.healthProbes.enable: '{{ default "" .ENABLE_HEALTH_CHECKS | lower | splitList "," | has "operator" }}'

@@ -136,22 +136,37 @@ Please check your console output for the concrete port-forwarding on your machin
 > Note: Resuming or stopping only a single goroutine (Go Issue [25578](https://github.com/golang/go/issues/25578), [31132](https://github.com/golang/go/issues/31132)) is currently not supported, so the action will cause all the goroutines to get activated or paused.
 ([vscode-go wiki](https://github.com/golang/vscode-go/wiki/debugging#connecting-to-headless-delve-with-target-specified-at-server-start-up))
 
-This means that when a goroutine of gardenlet (or any other gardener-core component you try to debug) is paused on a breakpoint, all the other goroutines are paused. Hence, when the whole gardenlet process is paused, it can not renew its lease and can not respond to the liveness and readiness probes. Skaffold automatically increases `timeoutSeconds` of liveness and readiness probes to 600. Anyway, we were facing problems when debugging that pods have been killed after a while.
+### Readiness and Leader Election Checks
 
-Thus, leader election and readiness checks for `gardener-admission-controller`, `gardener-apiserver`, `gardener-controller-manager`, `gardener-scheduler`,`gardenlet` and `operator` are disabled when debugging.
+Standard Kubernetes health checks deserve attention when debugging Gardener using Delve. When Gardener controllers encounter an error condition (such as a missing CRD), they may enter (or remain in) an unready state. Under normal deployment
+circumstances with readiness checks enabled, the controllers will be restarted by Kubernetes until the undesirable preconditions clear and the controller can fully start. But this will not happen if the readiness checks are disabled for
+debugging purposes.
 
-Standard Kubernetes health checks are handled somewhat differently. When Gardener controllers encounter an error condition (such as a missing CRD), they enter (or remain in) an unready state. Under normal circumstances, the controllers will
-be restarted by Kubernetes until they enter a ready state, but this cannot happen if the health checks are disabled for debugging purposes. Thus, Gardener cannot boot in Skaffold without either having health checks enabled or the developer
-manually deleting pods whose health endpoint reports they are not ready. To reduce onboarding complexity, we choose to leave the health checks running by default.
+This means that when a goroutine of gardenlet (or any other gardener-core component you try to debug) is paused on a breakpoint, all the other goroutines (including those responding to health checks) are also paused. Kubernetes controllers
+are *not* paused though. For instance, when the whole gardenlet process is paused, it can not renew its lease and can not respond to the liveness and readiness probes. The Kubernetes control plane interprets that controller as failed and
+attempts to restart it. That's obviously disruptive to a debugging session with Delve!
 
-As health checks depend on several lines of configuration that are duplicated through templates, Gardener provides an environment variable called `DISABLE_HEALTH_CHECKS`. This is set to a comma-separated list of controller names that should
-be generated without health checks. For instance, to disable all health checks, set the following environment variable before running Skaffold:
+To alleviate some of this, Skaffold automatically increases `timeoutSeconds` of liveness and readiness probes to 600, but sometimes this is not enough to resolve an issue -- or is too long for other controllers which depend on responses.
+The new developer will need to be initially cautious in their interpretations of these states, but they become second nature over time.
+
+Thus, new developers are advised to set `ENABLE_HEALTH_CHECKS`, both at the command line with the various make environments and with Google Cloud Code IDE plugin. This will cause health checks to be deployed by Helm as they would be in
+production. Note this is **_not_** a good long term debugging configuration though.
 
 ```bash
-SKAFFOLD_DISABLE_HEALTH_CHECKS=admission,controller,scheduler,gardenlet,operator
+make gardener-debug ENABLE_HEALTH_CHECKS=admission,controller,scheduler,gardenlet,operator
 ```
 
-If you have similar problems with other components which are not deployed by skaffold, you could temporarily turn off the leader election and disable liveness and readiness probes there too.
+Once a developer discovers a health check disturbing their debugging workflow, they should remove the check from the `ENABLE_HEALTH_CHECKS` list. The available checks are currently from the set
+of `{admission,controller,scheduler, gardenlet, operator}`.
+
+Note that this variable is separate from `SKAFFOLD_MODULES` and may cause some confusion. `SKAFFOLD_MODULES` is defined by Skaffold itself and substitutes for the `--modules` CLI flag. In a Skaffold configuration containing multiple
+`Config` elements, the module list specifies which configurations should be loaded. Because many Skaffold configs deploy more than one controller and health check, disabling all healthchecks for a module may be undesirable.
+
+As a developer becomes familiar with the environment, they are unlikely to use this variable at all, preferring to manually take over the responsibilities of the health check facilities and restarting stuck pods as needed.
+
+Similarly, leader election for `gardener-admission-controller`, `gardener-apiserver`, `gardener-controller-manager`, `gardener-scheduler`,`gardenlet` and `operator` are disabled when debugging.
+
+As a developer, you will learn to recognize the same problems in other components which are not deployed by Skaffold, you can temporarily turn off the leader election and disable liveness and readiness probes there too.
 
 ### Configuring Skaffold
 

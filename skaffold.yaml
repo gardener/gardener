@@ -525,13 +525,13 @@ profiles:
       global.apiserver.livenessProbe.enable: false
       global.apiserver.readinessProbe.enable: false
       global.admission.replicaCount: 1
-      global.admission.config.server.healthProbes.enable: "{{ default \"\" .SKAFFOLD_DISABLE_HEALTH_CHECKS | lower | splitList \",\" | has \"admission\" | ternary \"false\" \"true\" }}"
+      global.admission.config.server.healthProbes.enable: '{{ default "" .ENABLE_HEALTH_CHECKS | lower | splitList "," | has "admission" }}'
       global.controller.replicaCount: 1
       global.controller.config.leaderElection.leaderElect: false
-      global.controller.config.server.healthProbes.enable: "{{ default \"\" .SKAFFOLD_DISABLE_HEALTH_CHECKS | lower | splitList \",\" | has \"controller\" | ternary \"false\" \"true\" }}"
+      global.controller.config.server.healthProbes.enable: '{{ default "" .ENABLE_HEALTH_CHECKS | lower | splitList "," | has "controller" }}'
       global.scheduler.replicaCount: 1
       global.scheduler.config.leaderElection.leaderElect: false
-      global.scheduler.config.server.healthProbes.enable: "{{ default \"\" .SKAFFOLD_DISABLE_HEALTH_CHECKS | lower | splitList \",\" | has \"scheduler\" | ternary \"false\" \"true\" }}"
+      global.scheduler.config.server.healthProbes.enable: '{{ default "" .ENABLE_HEALTH_CHECKS | lower | splitList "," | has "scheduler" }}'
 ---
 apiVersion: skaffold/v4beta7
 kind: Config
@@ -1199,4 +1199,4 @@ profiles:
     value:
       replicaCount: 1
       config.leaderElection.leaderElect: false
-      config.server.healthProbes.enable: "{{ default \"\" .SKAFFOLD_DISABLE_HEALTH_CHECKS | lower | splitList \",\" | has \"gardenlet\" | ternary \"false\" \"true\" }}"
+      config.server.healthProbes.enable: '{{ default "" .ENABLE_HEALTH_CHECKS | lower | splitList "," | has "gardenlet" }}'
