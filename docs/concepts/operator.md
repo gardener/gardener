@@ -153,6 +153,27 @@ If at least one check fails and there is threshold configuration for the conditi
 The condition thresholds can be used to prevent reporting issues too early just because there is a rollout or a short disruption.
 Only if the unhealthiness persists for at least the configured threshold duration, then the issues will be reported (by setting the status to `False`).
 
+#### [`Reference` Reconciler](../../pkg/operator/controller/garden/reference)
+
+`Garden` objects may specify references to other objects in the Garden cluster which are required for certain features.
+For example, operators can configure a secret for ETCD backup via `.spec.virtualCluster.etcd.main.backup.secretRef.name` or an audit policy `ConfigMap` via `.spec.virtualCluster.kubernetes.kubeAPIServer.auditConfig.auditPolicy.configMapRef.name`.
+Such objects need a special protection against deletion requests as long as they are still being referenced by the `Garden`.
+
+Therefore, this reconciler checks `Garden`s for referenced objects and adds the finalizer `gardener.cloud/reference-protection` to their `.metadata.finalizers` list.
+The reconciled `Garden` also gets this finalizer to enable a proper garbage collection in case the `gardener-operator` is offline at the moment of an incoming deletion request.
+When an object is not actively referenced anymore because the `Garden` specification has changed is in deletion, the controller will remove the added finalizer again so that the object can safely be deleted or garbage collected.
+
+This reconciler inspects the following references:
+
+- ETCD backup `Secret`s (`.spec.virtualCluster.etcd.main.backup.secretRef`)
+- Admission plugin kubeconfig `Secret`s (`.spec.virtualCluster.kubernetes.kubeAPIServer.admissionPlugins[].kubeconfigSecretName` and `.spec.virtualCluster.gardener.gardenerAPIServer.admissionPlugins[].kubeconfigSecretName`)
+- Authentication webhook kubeconfig `Secret`s (`.spec.virtualCluster.kubernetes.kubeAPIServer.authentication.webhook.kubeconfigSecretName`)
+- Audit webhook kubeconfig `Secret`s (`.spec.virtualCluster.kubernetes.kubeAPIServer.auditWebhook.kubeconfigSecretName` and `.spec.virtualCluster.gardener.gardenerAPIServer.auditWebhook.kubeconfigSecretName`)
+- SNI `Secret`s (`.spec.virtualCluster.kubernetes.kubeAPIServer.sni.secretName`)
+- Audit policy `ConfigMap`s (`.spec.virtualCluster.kubernetes.kubeAPIServer.auditConfig.auditPolicy.configMapRef.name` and `.spec.virtualCluster.gardener.gardenerAPIServer.auditConfig.auditPolicy.configMapRef.name`)
+
+Further checks might be added in the future.
+
 ### [`NetworkPolicy` Controller Registrar](../../pkg/controller/networkpolicy)
 
 This controller registers the same `NetworkPolicy` controller which is also used in `gardenlet`, please read it up [here](gardenlet.md#networkpolicy-controllerpkggardenletcontrollernetworkpolicy) for more details.
