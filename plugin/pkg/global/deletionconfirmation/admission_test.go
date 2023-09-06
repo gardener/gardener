@@ -27,7 +27,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	internalClientSet "github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -165,22 +164,6 @@ var _ = Describe("deleteconfirmation", func() {
 					err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 					Expect(err).NotTo(HaveOccurred())
-				})
-			})
-
-			Context("no ignore annotation", func() {
-				It("should reject if the ignore-shoot annotation is set", func() {
-					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
-
-					shoot.Annotations = map[string]string{
-						gardenerutils.ConfirmationDeletion: "true",
-						v1beta1constants.ShootIgnore:       "true",
-					}
-					Expect(shootStore.Add(&shoot)).NotTo(HaveOccurred())
-
-					err := admissionHandler.Validate(context.TODO(), attrs, nil)
-
-					Expect(err).To(BeForbiddenError())
 				})
 			})
 

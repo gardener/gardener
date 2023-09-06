@@ -175,14 +175,6 @@ func (f *GardenerFramework) DeleteShootAndWaitForDeletion(ctx context.Context, s
 // DeleteShoot deletes the test shoot
 func (f *GardenerFramework) DeleteShoot(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
 	err := retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
-		err = f.RemoveShootAnnotation(ctx, shoot, v1beta1constants.ShootIgnore)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				return retry.Ok()
-			}
-			return retry.MinorError(err)
-		}
-
 		// First we annotate the shoot to be deleted.
 		err = f.AnnotateShoot(ctx, shoot, map[string]string{
 			gardenerutils.ConfirmationDeletion: "true",
