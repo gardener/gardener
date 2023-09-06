@@ -232,6 +232,106 @@ Please refer to [this document](../usage/shoot_credentials_rotation.md#gardener-
 
 ⚠️ Rotation of static `ServiceAccount` secrets is not supported since the `kube-controller-manager` does not enable the `serviceaccount-token` controller.
 
+## Upgrading An Existing Gardener Landscape To `gardener-operator`
+
+Since `gardener-operator` was only developed in 2023, six years after the Gardener project initiation, most users probably already have an existing Gardener landscape.
+The most prominent installation procedure is [garden-setup](https://github.com/gardener/garden-setup), however experience shows that most community members have developed their own tooling for managing the garden cluster and the Gardener control plane components.
+
+> Consequently, providing a general upgrade guide is not possible since the detailed steps vary heavily based on how the components were set up previously.
+> As a result, this section can only highlight the most important caveats and things to know, while the concrete upgrade steps must be figured out individually based on the existing installation.
+
+Please make sure that you configure all your desired fields in the [`Garden` resource](#garden-resources).
+
+### ETCD
+
+`gardener-operator` leverages `etcd-druid` for managing the `virtual-garden-etcd-main` and `virtual-garden-etcd-events`, similar to what happens for shoot clusters.
+The `PersistentVolumeClaim` names differ slightly - for `virtual-garden-etcd-events` it's `virtual-garden-etcd-events-virtual-garden-etcd-events-0`, while for `virtual-garden-etcd-main` it's `main-virtual-garden-etcd-virtual-garden-etcd-main-0`.
+
+The backup bucket must be created separately, and its name as well as the respective credentials must be provided via the `Garden` resource in `.spec.virtualCluster.etcd.main.backup`.
+
+### `virtual-garden-kube-apiserver`
+
+`gardener-operator` deploys a `virtual-garden-kube-apiserver` into the runtime cluster.
+This `virtual-garden-kube-apiserver` spans a new cluster, called the virtual cluster.
+There are a few certificates and other credentials that should not change during the upgrade.
+You have to prepare the environment accordingly by leveraging the [secret's manager capabilities](../development/secrets_management.md#migrating-existing-secrets-to-secretsmanager).
+
+- The existing Cluster CA `Secret` should be labeled with `secrets-manager-use-data-for-name=ca`.
+- The existing Client CA `Secret` should be labeled with `secrets-manager-use-data-for-name=ca-client`.
+- The existing Front Proxy CA `Secret` should be labeled with `secrets-manager-use-data-for-name=ca-front-proxy`.
+- The existing Service Account Signing Key `Secret` should be labeled with `secrets-manager-use-data-for-name=service-account-key`.
+- The existing ETCD Encryption Key `Secret` should be labeled with `secrets-manager-use-data-for-name=kube-apiserver-etcd-encryption-key`.
+
+### `virtual-garden-kube-apiserver` Exposure
+
+The `virtual-garden-kube-apiserver` is exposed via a dedicated `istio-ingressgateway` deployed to namespace `virtual-garden-istio-ingress`.
+The `virtual-garden-kube-apiserver` `Service` in the `garden` namespace is only of type `ClusterIP`.
+Consequently, DNS records for this API server must target the load balancer IP of the `istio-ingressgateway`.
+
+### Virtual Garden Kubeconfig
+
+`gardener-operator` does not generate any static token or likewise for access to the virtual cluster.
+Ideally, human users access it via OIDC only.
+Alternatively, you can create an auto-rotated token that you can use for automation like CI/CD pipelines:
+
+```yaml
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: shoot-access-virtual-garden
+  namespace: garden
+  labels:
+    resources.gardener.cloud/purpose: token-requestor
+  annotations:
+    serviceaccount.resources.gardener.cloud/name: virtual-garden-user
+    serviceaccount.resources.gardener.cloud/namespace: kube-system
+    serviceaccount.resources.gardener.cloud/token-expiration-duration: 3h
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: managedresource-virtual-garden-access
+  namespace: garden
+type: Opaque
+stringData:
+  clusterrolebinding____gardener.cloud.virtual-garden-access.yaml: |
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: gardener.cloud.sap:virtual-garden
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: cluster-admin
+    subjects:
+    - kind: ServiceAccount
+      name: virtual-garden-user
+      namespace: kube-system
+---
+apiVersion: resources.gardener.cloud/v1alpha1
+kind: ManagedResource
+metadata:
+  name: virtual-garden-access
+  namespace: garden
+spec:
+  secretRefs:
+  - name: managedresource-virtual-garden-access
+```
+
+The `shoot-access-virtual-garden` `Secret` will get a `.data.token` field which can be used to authenticate against the virtual garden cluster.
+See also [this document](resource-manager.md#tokenrequestor-controller) for more information about the `TokenRequestor`.
+
+### `gardener-apiserver`
+
+Similar to the [`virtual-garden-kube-apiserver`](#virtual-garden-kube-apiserver), the `gardener-apiserver` also uses a few certificates and other credentials that should not change during the upgrade.
+Again, you have to prepare the environment accordingly by leveraging the [secret's manager capabilities](../development/secrets_management.md#migrating-existing-secrets-to-secretsmanager).
+
+- The existing ETCD Encryption Key `Secret` should be labeled with `secrets-manager-use-data-for-name=gardener-apiserver-etcd-encryption-key`.
+
+> Please test your upgrade procedure thoroughly.
+> Note that in some cases it can be easier to set up a fresh landscape with `gardener-operator`, restore the ETCD data, switch the DNS records, and issue new credentials for all clients.
+
 ## Local Development
 
 The easiest setup is using a local [KinD](https://kind.sigs.k8s.io/) cluster and the [Skaffold](https://skaffold.dev/) based approach to deploy and develop the `gardener-operator`.
