@@ -107,11 +107,9 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Register controller")
-	Expect((&reference.Reconciler{
-		Config: config.ShootReferenceControllerConfiguration{
-			ConcurrentSyncs: pointer.Int(5),
-		},
-	}).AddToManager(mgr)).To(Succeed())
+	Expect(reference.AddToManager(mgr, config.ShootReferenceControllerConfiguration{
+		ConcurrentSyncs: pointer.Int(5),
+	})).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
