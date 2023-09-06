@@ -130,7 +130,7 @@ var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	"InTreePluginvSphereUnregister":                  {}, // Missing from docu?
 	"IndexedJob":                                     {Default: true, LockedToDefaultInVersion: "1.24", RemovedInVersion: "1.26"},
 	"IngressClassNamespacedParams":                   {Default: true, LockedToDefaultInVersion: "1.23", RemovedInVersion: "1.25"},
-	"JobMutableNodeSchedulingDirectives":             {AddedInVersion: "1.23", LockedToDefaultInVersion: "1.27"},
+	"JobMutableNodeSchedulingDirectives":             {Default: true, AddedInVersion: "1.23", LockedToDefaultInVersion: "1.27"},
 	"JobPodFailurePolicy":                            {AddedInVersion: "1.25"},
 	"JobReadyPods":                                   {AddedInVersion: "1.23"},
 	"JobTrackingWithFinalizers":                      {Default: true, LockedToDefaultInVersion: "1.26"},
@@ -168,7 +168,7 @@ var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	"NonPreemptingPriority":                          {Default: true, LockedToDefaultInVersion: "1.24", RemovedInVersion: "1.26"},
 	"NodeSwap":                                       {},
 	"OpenAPIEnums":                                   {AddedInVersion: "1.23"},
-	"OpenAPIV3":                                      {AddedInVersion: "1.23", LockedToDefaultInVersion: "1.27"},
+	"OpenAPIV3":                                      {Default: true, AddedInVersion: "1.23", LockedToDefaultInVersion: "1.27"},
 	"PDBUnhealthyPodEvictionPolicy":                  {AddedInVersion: "1.26"},
 	"PodAndContainerStatsFromCRI":                    {AddedInVersion: "1.23"},
 	"PodAffinityNamespaceSelector":                   {Default: true, LockedToDefaultInVersion: "1.24", RemovedInVersion: "1.26"},
