@@ -233,7 +233,7 @@ type Backup struct {
 	BucketName string `json:"bucketName"`
 	// SecretRef is a reference to a Secret object containing the cloud provider credentials for the object store where
 	// backups should be stored. It should have enough privileges to manipulate the objects as well as buckets.
-	SecretRef corev1.SecretReference `json:"secretRef"`
+	SecretRef corev1.LocalObjectReference `json:"secretRef"`
 }
 
 // Maintenance contains information about the time window for maintenance operations.
