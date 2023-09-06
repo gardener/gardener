@@ -5,8 +5,6 @@ Without this component, users must deploy ETCD, the Gardener control plane, etc.
 This is quite unfortunate since this requires separate tooling, processes, etc.
 A lot of production- and enterprise-grade features were built into Gardener for managing the seed and shoot clusters, so it makes sense to re-use them as much as possible also for the garden cluster.
 
-**⚠️ Consider this component highly experimental and DO NOT use it in production.**
-
 ## Deployment
 
 There is a [Helm chart](../../charts/gardener/operator) which can be used to deploy the `gardener-operator`.
