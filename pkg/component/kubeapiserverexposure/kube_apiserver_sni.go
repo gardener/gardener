@@ -147,7 +147,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, virtualService, istio.VirtualServiceWithSNIMatch(virtualService, getLabels(), s.valuesFunc().Hosts, gateway.Name, kubeapiserverconstants.Port, hostName)); err != nil {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, virtualService, istio.VirtualServiceWithSNIMatch(virtualService, getLabels(), s.valuesFunc().Hosts, gateway.Name, kubeapiserverconstants.Port, hostName, kubeapiserverconstants.Port)); err != nil {
 		return err
 	}
 

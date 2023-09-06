@@ -20,7 +20,7 @@ import (
 )
 
 // VirtualServiceWithSNIMatch returns a function setting the given attributes to a virtual service object.
-func VirtualServiceWithSNIMatch(virtualService *istionetworkingv1beta1.VirtualService, labels map[string]string, hosts []string, gatewayName string, port uint32, destinationHost string) func() error {
+func VirtualServiceWithSNIMatch(virtualService *istionetworkingv1beta1.VirtualService, labels map[string]string, hosts []string, gatewayName string, externalPort uint32, destinationHost string, destinationPort uint32) func() error {
 	return func() error {
 		virtualService.Labels = labels
 		virtualService.Spec = istioapinetworkingv1beta1.VirtualService{
@@ -29,13 +29,13 @@ func VirtualServiceWithSNIMatch(virtualService *istionetworkingv1beta1.VirtualSe
 			Gateways: []string{gatewayName},
 			Tls: []*istioapinetworkingv1beta1.TLSRoute{{
 				Match: []*istioapinetworkingv1beta1.TLSMatchAttributes{{
-					Port:     port,
+					Port:     externalPort,
 					SniHosts: hosts,
 				}},
 				Route: []*istioapinetworkingv1beta1.RouteDestination{{
 					Destination: &istioapinetworkingv1beta1.Destination{
 						Host: destinationHost,
-						Port: &istioapinetworkingv1beta1.PortSelector{Number: port},
+						Port: &istioapinetworkingv1beta1.PortSelector{Number: destinationPort},
 					},
 				}},
 			}},

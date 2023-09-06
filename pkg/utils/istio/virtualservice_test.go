@@ -23,10 +23,10 @@ import (
 )
 
 var _ = Describe("VirtualService", func() {
-	DescribeTable("#VirtualServiceWithSNIMatch", func(labels map[string]string, hosts []string, gatewayName string, port uint32, destinationHost string) {
+	DescribeTable("#VirtualServiceWithSNIMatch", func(labels map[string]string, hosts []string, gatewayName string, externalPort uint32, destinationHost string, destinationPort uint32) {
 		virtualService := &istionetworkingv1beta1.VirtualService{}
 
-		function := VirtualServiceWithSNIMatch(virtualService, labels, hosts, gatewayName, port, destinationHost)
+		function := VirtualServiceWithSNIMatch(virtualService, labels, hosts, gatewayName, externalPort, destinationHost, destinationPort)
 
 		Expect(function).NotTo(BeNil())
 
@@ -39,14 +39,14 @@ var _ = Describe("VirtualService", func() {
 		Expect(virtualService.Spec.Gateways[0]).To(Equal(gatewayName))
 		Expect(len(virtualService.Spec.Tls)).To(Equal(1))
 		Expect(len(virtualService.Spec.Tls[0].Match)).To(Equal(1))
-		Expect(virtualService.Spec.Tls[0].Match[0].Port).To(Equal(port))
+		Expect(virtualService.Spec.Tls[0].Match[0].Port).To(Equal(externalPort))
 		Expect(virtualService.Spec.Tls[0].Match[0].SniHosts).To(Equal(hosts))
 		Expect(len(virtualService.Spec.Tls[0].Route)).To(Equal(1))
 		Expect(virtualService.Spec.Tls[0].Route[0].Destination.Host).To(Equal(destinationHost))
-		Expect(virtualService.Spec.Tls[0].Route[0].Destination.Port.Number).To(Equal(port))
+		Expect(virtualService.Spec.Tls[0].Route[0].Destination.Port.Number).To(Equal(destinationPort))
 	},
 
-		Entry("Nil values", nil, nil, "", uint32(0), ""),
-		Entry("Some values", map[string]string{"foo": "bar", "key": "value"}, []string{"host-1", "host-2"}, "my-gateway", uint32(123456), "destination.namespace.svc.cluster.local"),
+		Entry("Nil values", nil, nil, "", uint32(0), "", uint32(0)),
+		Entry("Some values", map[string]string{"foo": "bar", "key": "value"}, []string{"host-1", "host-2"}, "my-gateway", uint32(123456), "destination.namespace.svc.cluster.local", uint32(654321)),
 	)
 })
