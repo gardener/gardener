@@ -233,16 +233,12 @@ spec:
                   dns:
                     description: DNS holds information about DNS settings.
                     properties:
-                      domain:
-                        description: 'Deprecated: This field is deprecated and will
-                          be removed soon. Please use `Domains` instead. TODO(timuthy):
-                          Drop this after v1.74 has been released.'
-                        type: string
                       domains:
                         description: Domains are the external domains of the virtual
                           garden cluster. The first given domain in this list is immutable.
                         items:
                           type: string
+                        minItems: 1
                         type: array
                     type: object
                   etcd:
