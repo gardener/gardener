@@ -89,12 +89,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	// Add finalizer to referenced secrets that are not managed by Gardener.
-	addedFinalizerToSecret, err := r.handleReferencedSecrets(ctx, log, r.Client, shoot)
+	addedFinalizerToSecret, err := r.handleReferencedSecrets(ctx, log, shoot)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	addedFinalizerToConfigMap, err := r.handleReferencedConfigMap(ctx, log, r.Client, shoot)
+	addedFinalizerToConfigMap, err := r.handleReferencedConfigMaps(ctx, log, shoot)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -123,63 +123,49 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	return reconcile.Result{}, nil
 }
 
-func (r *Reconciler) handleReferencedSecrets(ctx context.Context, log logr.Logger, c client.Client, shoot *gardencorev1beta1.Shoot) (bool, error) {
+func (r *Reconciler) handleReferencedSecrets(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) (bool, error) {
+	return r.handleReferencedResources(ctx, log, "Secret", func() client.Object { return &corev1.Secret{} }, shoot.Namespace, getReferencedSecretNames(shoot)...)
+}
+
+func (r *Reconciler) handleReferencedConfigMaps(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) (bool, error) {
+	return r.handleReferencedResources(ctx, log, "ConfigMap", func() client.Object { return &corev1.ConfigMap{} }, shoot.Namespace, getReferencedConfigMapNames(shoot)...)
+}
+
+func (r *Reconciler) handleReferencedResources(
+	ctx context.Context,
+	log logr.Logger,
+	kind string,
+	newObjectFunc func() client.Object,
+	namespace string,
+	resourceNames ...string,
+) (
+	bool,
+	error,
+) {
 	var (
-		fns         []flow.TaskFn
-		added       = uint32(0)
-		secretNames = getReferencedSecretNames(shoot)
+		fns   []flow.TaskFn
+		added = uint32(0)
 	)
 
-	for _, secretName := range secretNames {
-		name := secretName
+	for _, resourceName := range resourceNames {
+		name := resourceName
 		fns = append(fns, func(ctx context.Context) error {
-			secret := &corev1.Secret{}
-			if err := c.Get(ctx, kubernetesutils.Key(shoot.Namespace, name), secret); err != nil {
+			obj := newObjectFunc()
+			if err := r.Client.Get(ctx, kubernetesutils.Key(namespace, name), obj); err != nil {
 				return err
 			}
 
 			// Don't handle Gardener managed secrets.
-			if _, ok := secret.Labels[v1beta1constants.GardenRole]; ok {
+			if kind == "Secret" && obj.GetLabels()[v1beta1constants.GardenRole] != "" {
 				return nil
 			}
 
 			atomic.StoreUint32(&added, 1)
 
-			if !controllerutil.ContainsFinalizer(secret, v1beta1constants.ReferenceProtectionFinalizerName) {
-				log.Info("Adding finalizer to secret", "secret", client.ObjectKeyFromObject(secret))
-				if err := controllerutils.AddFinalizers(ctx, r.Client, secret, v1beta1constants.ReferenceProtectionFinalizerName); err != nil {
-					return fmt.Errorf("failed to add finalizer to secret: %w", err)
-				}
-			}
-
-			return nil
-		})
-	}
-
-	return added != 0, flow.Parallel(fns...)(ctx)
-}
-
-func (r *Reconciler) handleReferencedConfigMap(ctx context.Context, log logr.Logger, c client.Client, shoot *gardencorev1beta1.Shoot) (bool, error) {
-	var (
-		fns            []flow.TaskFn
-		added          = uint32(0)
-		configMapNames = getReferencedConfigMapNames(shoot)
-	)
-
-	for _, configMapName := range configMapNames {
-		name := configMapName
-		fns = append(fns, func(ctx context.Context) error {
-			configMap := &corev1.ConfigMap{}
-			if err := c.Get(ctx, kubernetesutils.Key(shoot.Namespace, name), configMap); err != nil {
-				return err
-			}
-
-			atomic.StoreUint32(&added, 1)
-
-			if !controllerutil.ContainsFinalizer(configMap, v1beta1constants.ReferenceProtectionFinalizerName) {
-				log.Info("Adding finalizer to ConfigMap", "configMap", client.ObjectKeyFromObject(configMap))
-				if err := controllerutils.AddFinalizers(ctx, r.Client, configMap, v1beta1constants.ReferenceProtectionFinalizerName); err != nil {
-					return fmt.Errorf("failed to add finalizer to ConfigMap: %w", err)
+			if !controllerutil.ContainsFinalizer(obj, v1beta1constants.ReferenceProtectionFinalizerName) {
+				log.Info("Adding finalizer to object", "kind", kind, "obj", client.ObjectKeyFromObject(obj))
+				if err := controllerutils.AddFinalizers(ctx, r.Client, obj, v1beta1constants.ReferenceProtectionFinalizerName); err != nil {
+					return fmt.Errorf("failed to add finalizer to %s %s: %w", kind, client.ObjectKeyFromObject(obj), err)
 				}
 			}
 
