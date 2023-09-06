@@ -67,13 +67,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	// Iterate over all user secrets in project namespace and check if they can be released.
-	if err := r.releaseUnreferencedSecrets(ctx, log, shoot); err != nil {
+	secrets, err := r.getUnreferencedResources(ctx, shoot, &corev1.SecretList{}, getReferencedSecretNames)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if err := r.releaseUnreferencedResources(ctx, log, secrets...); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// Iterate over all user configmaps in project namespace and check if they can be released.
-	if err := r.releaseUnreferencedConfigMaps(ctx, log, shoot); err != nil {
+	configMaps, err := r.getUnreferencedResources(ctx, shoot, &corev1.ConfigMapList{}, getReferencedConfigMapNames)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if err := r.releaseUnreferencedResources(ctx, log, configMaps...); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -89,12 +95,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	// Add finalizer to referenced secrets that are not managed by Gardener.
-	addedFinalizerToSecret, err := r.handleReferencedSecrets(ctx, log, shoot)
+	addedFinalizerToSecret, err := r.handleReferencedResources(ctx, log, "Secret", func() client.Object { return &corev1.Secret{} }, shoot.Namespace, getReferencedSecretNames(shoot)...)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	addedFinalizerToConfigMap, err := r.handleReferencedConfigMaps(ctx, log, shoot)
+	addedFinalizerToConfigMap, err := r.handleReferencedResources(ctx, log, "ConfigMap", func() client.Object { return &corev1.ConfigMap{} }, shoot.Namespace, getReferencedConfigMapNames(shoot)...)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -121,14 +127,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	return reconcile.Result{}, nil
-}
-
-func (r *Reconciler) handleReferencedSecrets(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) (bool, error) {
-	return r.handleReferencedResources(ctx, log, "Secret", func() client.Object { return &corev1.Secret{} }, shoot.Namespace, getReferencedSecretNames(shoot)...)
-}
-
-func (r *Reconciler) handleReferencedConfigMaps(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) (bool, error) {
-	return r.handleReferencedResources(ctx, log, "ConfigMap", func() client.Object { return &corev1.ConfigMap{} }, shoot.Namespace, getReferencedConfigMapNames(shoot)...)
 }
 
 func (r *Reconciler) handleReferencedResources(
@@ -174,24 +172,6 @@ func (r *Reconciler) handleReferencedResources(
 	}
 
 	return added != 0, flow.Parallel(fns...)(ctx)
-}
-
-func (r *Reconciler) releaseUnreferencedSecrets(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) error {
-	secrets, err := r.getUnreferencedResources(ctx, shoot, &corev1.SecretList{}, getReferencedSecretNames)
-	if err != nil {
-		return err
-	}
-
-	return r.releaseUnreferencedResources(ctx, log, secrets...)
-}
-
-func (r *Reconciler) releaseUnreferencedConfigMaps(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) error {
-	configMaps, err := r.getUnreferencedResources(ctx, shoot, &corev1.ConfigMapList{}, getReferencedConfigMapNames)
-	if err != nil {
-		return err
-	}
-
-	return r.releaseUnreferencedResources(ctx, log, configMaps...)
 }
 
 var (
