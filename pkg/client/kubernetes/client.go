@@ -288,14 +288,7 @@ func newClientSet(conf *Config) (Interface, error) {
 
 	var uncachedClient client.Client
 	if runtimeAPIReader == nil || runtimeClient == nil {
-		cacheOptions := conf.clientOptions.Cache
-		if cacheOptions == nil {
-			cacheOptions = &client.CacheOptions{}
-		}
-		cacheOptions.Reader = nil
-		conf.clientOptions.Cache = cacheOptions
-
-		uncachedClient, err = client.New(conf.restConfig, conf.clientOptions)
+		uncachedClient, err = newClient(conf, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -309,14 +302,7 @@ func newClientSet(conf *Config) (Interface, error) {
 		if conf.disableCache {
 			runtimeClient = uncachedClient
 		} else {
-			cacheOptions := conf.clientOptions.Cache
-			if cacheOptions == nil {
-				cacheOptions = &client.CacheOptions{}
-			}
-			cacheOptions.Reader = runtimeCache
-			conf.clientOptions.Cache = cacheOptions
-
-			cachedClient, err := client.New(conf.restConfig, conf.clientOptions)
+			cachedClient, err := newClient(conf, runtimeCache)
 			if err != nil {
 				return nil, err
 			}
@@ -376,6 +362,18 @@ func defaultContentTypeProtobuf(c *rest.Config) *rest.Config {
 		config.ContentType = runtime.ContentTypeProtobuf
 	}
 	return &config
+}
+
+func newClient(conf *Config, reader client.Reader) (client.Client, error) {
+	cacheOptions := conf.clientOptions.Cache
+	if cacheOptions == nil {
+		cacheOptions = &client.CacheOptions{}
+	}
+
+	cacheOptions.Reader = reader
+	conf.clientOptions.Cache = cacheOptions
+
+	return client.New(conf.restConfig, conf.clientOptions)
 }
 
 var _ client.Client = &FallbackClient{}
