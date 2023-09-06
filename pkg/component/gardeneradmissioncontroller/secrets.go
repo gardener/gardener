@@ -29,13 +29,13 @@ import (
 func (a *gardenerAdmissionController) reconcileSecretServerCert(ctx context.Context) (*corev1.Secret, error) {
 	return a.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 		Name:                        secretNameServerCert,
-		CommonName:                  serviceName,
-		DNSNames:                    kubernetesutils.DNSNamesForService(serviceName, a.namespace),
+		CommonName:                  ServiceName,
+		DNSNames:                    kubernetesutils.DNSNamesForService(ServiceName, a.namespace),
 		CertType:                    secretsutils.ServerCert,
 		SkipPublishingCACertificate: true,
 	}, secretsmanager.SignedByCA(operatorv1alpha1.SecretNameCAGardener, secretsmanager.UseCurrentCA), secretsmanager.Rotate(secretsmanager.InPlace))
 }
 
 func (a *gardenerAdmissionController) newVirtualGardenAccessSecret() *gardenerutils.AccessSecret {
-	return gardenerutils.NewShootAccessSecret(deploymentName, a.namespace)
+	return gardenerutils.NewShootAccessSecret(DeploymentName, a.namespace)
 }

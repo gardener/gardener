@@ -39,6 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/etcd"
+	"github.com/gardener/gardener/pkg/component/gardenerapiserver"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/component/shared"
@@ -102,7 +103,12 @@ func (r *Reconciler) reconcile(
 	}
 
 	log.Info("Instantiating component deployers")
-	c, err := r.instantiateComponents(ctx, log, garden, secretsManager, targetVersion, kubernetes.NewApplier(r.RuntimeClientSet.Client(), r.RuntimeClientSet.Client().RESTMapper()), wildcardCert)
+	enableSeedAuthorizer, err := r.enableSeedAuthorizer(ctx)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	c, err := r.instantiateComponents(ctx, log, garden, secretsManager, targetVersion, kubernetes.NewApplier(r.RuntimeClientSet.Client(), r.RuntimeClientSet.Client().RESTMapper()), wildcardCert, enableSeedAuthorizer)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -110,6 +116,13 @@ func (r *Reconciler) reconcile(
 	var (
 		allowBackup          = garden.Spec.VirtualCluster.ETCD != nil && garden.Spec.VirtualCluster.ETCD.Main != nil && garden.Spec.VirtualCluster.ETCD.Main.Backup != nil
 		virtualClusterClient client.Client
+		encryptedGVKs        = []schema.GroupVersionKind{
+			corev1.SchemeGroupVersion.WithKind("SecretList"),
+			gardencorev1beta1.SchemeGroupVersion.WithKind("ControllerDeploymentList"),
+			gardencorev1beta1.SchemeGroupVersion.WithKind("ControllerRegistrationList"),
+			gardencorev1beta1.SchemeGroupVersion.WithKind("InternalSecretList"),
+			gardencorev1beta1.SchemeGroupVersion.WithKind("ShootStateList"),
+		}
 
 		g                              = flow.NewGraph("Garden reconciliation")
 		generateGenericTokenKubeconfig = g.Add(flow.Task{
@@ -144,13 +157,13 @@ func (r *Reconciler) reconcile(
 			Dependencies: flow.NewTaskIDs(deployEtcdCRD, deployVPACRD, reconcileHVPACRD, deployIstioCRD),
 		})
 		deployNginxIngressController = g.Add(flow.Task{
-			Name:         "Deploying and waiting for nginx-ingress controller to be healthy",
-			Fn:           component.OpWait(c.nginxIngressController).Deploy,
+			Name:         "Deploying nginx-ingress controller",
+			Fn:           c.nginxIngressController.Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
-		deploySystemResources = g.Add(flow.Task{
-			Name:         "Deploying system resources",
-			Fn:           c.system.Deploy,
+		deployRuntimeSystemResources = g.Add(flow.Task{
+			Name:         "Deploying runtime system resources",
+			Fn:           c.runtimeSystem.Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
 		deployVPA = g.Add(flow.Task{
@@ -195,7 +208,7 @@ func (r *Reconciler) reconcile(
 		})
 		syncPointSystemComponents = flow.NewTaskIDs(
 			generateGenericTokenKubeconfig,
-			deploySystemResources,
+			deployRuntimeSystemResources,
 			deployFluentCRD,
 			deployVPA,
 			deployHVPA,
@@ -238,7 +251,7 @@ func (r *Reconciler) reconcile(
 			Fn:           c.kubeAPIServer.Wait,
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
 		})
-		_ = g.Add(flow.Task{
+		deployKubeControllerManager = g.Add(flow.Task{
 			Name: "Deploying Kubernetes Controller Manager",
 			Fn: func(ctx context.Context) error {
 				c.kubeControllerManager.SetReplicaCount(1)
@@ -258,6 +271,38 @@ func (r *Reconciler) reconcile(
 			Fn:           c.virtualGardenGardenerResourceManager.Wait,
 			Dependencies: flow.NewTaskIDs(deployVirtualGardenGardenerResourceManager),
 		})
+
+		deployGardenerAPIServer = g.Add(flow.Task{
+			Name:         "Deploying Gardener API Server",
+			Fn:           r.deployGardenerAPIServerFunc(ctx, garden, c.gardenerAPIServer),
+			Dependencies: flow.NewTaskIDs(waitUntilEtcdsReady, waitUntilKubeAPIServerIsReady, waitUntilVirtualGardenGardenerResourceManagerIsReady),
+		})
+		waitUntilGardenerAPIServerReady = g.Add(flow.Task{
+			Name:         "Waiting until Gardener API server rolled out",
+			Fn:           c.gardenerAPIServer.Wait,
+			Dependencies: flow.NewTaskIDs(deployGardenerAPIServer),
+		})
+		deployGardenerAdmissionController = g.Add(flow.Task{
+			Name:         "Deploying Gardener Admission Controller",
+			Fn:           component.OpWait(c.gardenerAdmissionController).Deploy,
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerAPIServerReady),
+		})
+		deployGardenerControllerManager = g.Add(flow.Task{
+			Name:         "Deploying Gardener Controller Manager",
+			Fn:           component.OpWait(c.gardenerControllerManager).Deploy,
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerAPIServerReady),
+		})
+		deployGardenerScheduler = g.Add(flow.Task{
+			Name:         "Deploying Gardener Scheduler",
+			Fn:           component.OpWait(c.gardenerScheduler).Deploy,
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerAPIServerReady),
+		})
+
+		_ = g.Add(flow.Task{
+			Name:         "Deploying virtual system resources",
+			Fn:           c.virtualSystem.Deploy,
+			Dependencies: flow.NewTaskIDs(deployVirtualGardenGardenerResourceManager),
+		})
 		deployVirtualGardenGardenerAccess = g.Add(flow.Task{
 			Name:         "Deploying resources for gardener-operator access to virtual garden",
 			Fn:           component.OpWait(c.virtualGardenGardenerAccess).Deploy,
@@ -275,7 +320,7 @@ func (r *Reconciler) reconcile(
 			}).
 				RetryUntilTimeout(5*time.Second, 30*time.Second).
 				DoIf(helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationPreparing),
-			Dependencies: flow.NewTaskIDs(deployVirtualGardenGardenerAccess),
+			Dependencies: flow.NewTaskIDs(deployKubeControllerManager, deployVirtualGardenGardenerAccess, deployGardenerAPIServer, deployGardenerAdmissionController, deployGardenerControllerManager, deployGardenerScheduler),
 		})
 		initializeVirtualClusterClient = g.Add(flow.Task{
 			Name: "Initializing connection to virtual garden cluster",
@@ -291,16 +336,16 @@ func (r *Reconciler) reconcile(
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServerService, deployVirtualGardenGardenerAccess, renewVirtualClusterAccess),
 		})
 		rewriteSecretsAddLabel = g.Add(flow.Task{
-			Name: "Labeling secrets to encrypt them with new ETCD encryption key",
+			Name: "Labeling encrypted resources to re-encrypt them with new ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return secretsrotation.RewriteEncryptedDataAddLabel(ctx, log, virtualClusterClient, secretsManager, corev1.SchemeGroupVersion.WithKind("SecretList"))
+				return secretsrotation.RewriteEncryptedDataAddLabel(ctx, log, virtualClusterClient, secretsManager, encryptedGVKs...)
 			}).
 				RetryUntilTimeout(30*time.Second, 10*time.Minute).
 				DoIf(helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationPreparing),
-			Dependencies: flow.NewTaskIDs(initializeVirtualClusterClient),
+			Dependencies: flow.NewTaskIDs(initializeVirtualClusterClient, waitUntilGardenerAPIServerReady),
 		})
 		_ = g.Add(flow.Task{
-			Name: "Snapshotting ETCD after secrets were re-encrypted with new ETCD encryption key",
+			Name: "Snapshotting ETCD after encrypted resources were re-encrypted with new ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return secretsrotation.SnapshotETCDAfterRewritingEncryptedData(ctx, r.RuntimeClientSet.Client(), r.snapshotETCDFunc(secretsManager, c.etcdMain), r.GardenNamespace, namePrefix+v1beta1constants.DeploymentNameKubeAPIServer)
 			}).
@@ -308,13 +353,13 @@ func (r *Reconciler) reconcile(
 			Dependencies: flow.NewTaskIDs(rewriteSecretsAddLabel),
 		})
 		_ = g.Add(flow.Task{
-			Name: "Removing label from secrets after rotation of ETCD encryption key",
+			Name: "Removing label from re-encrypted resources after rotation of ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return secretsrotation.RewriteEncryptedDataRemoveLabel(ctx, log, r.RuntimeClientSet.Client(), virtualClusterClient, r.GardenNamespace, namePrefix+v1beta1constants.DeploymentNameKubeAPIServer, corev1.SchemeGroupVersion.WithKind("SecretList"))
+				return secretsrotation.RewriteEncryptedDataRemoveLabel(ctx, log, r.RuntimeClientSet.Client(), virtualClusterClient, r.GardenNamespace, namePrefix+v1beta1constants.DeploymentNameKubeAPIServer, encryptedGVKs...)
 			}).
 				RetryUntilTimeout(30*time.Second, 10*time.Minute).
 				DoIf(helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationCompleting),
-			Dependencies: flow.NewTaskIDs(initializeVirtualClusterClient),
+			Dependencies: flow.NewTaskIDs(initializeVirtualClusterClient, waitUntilGardenerAPIServerReady),
 		})
 
 		_ = g.Add(flow.Task{
@@ -337,6 +382,11 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, flow.Errors(err)
 	}
 	*garden = *gardenCopy
+
+	if !enableSeedAuthorizer {
+		log.Info("Triggering a second reconciliation to enable seed authorizer feature")
+		return reconcile.Result{Requeue: true}, nil
+	}
 
 	return reconcile.Result{}, secretsManager.Cleanup(ctx)
 }
@@ -442,7 +492,6 @@ func (r *Reconciler) snapshotETCDFunc(secretsManager secretsmanager.Interface, e
 	}
 }
 
-// deployVirtualGardenGardenerResourceManager deploys the virtual-garden-gardener-resource-manager
 func (r *Reconciler) deployVirtualGardenGardenerResourceManager(ctx context.Context, secretsManager secretsmanager.Interface, resourceManager resourcemanager.Interface) error {
 	return shared.DeployGardenerResourceManager(
 		ctx,
@@ -454,4 +503,16 @@ func (r *Reconciler) deployVirtualGardenGardenerResourceManager(ctx context.Cont
 			return 2, nil
 		},
 		func() string { return namePrefix + v1beta1constants.DeploymentNameKubeAPIServer })
+}
+
+func (r *Reconciler) deployGardenerAPIServerFunc(ctx context.Context, garden *operatorv1alpha1.Garden, gardenerAPIServer gardenerapiserver.Interface) flow.TaskFn {
+	return func(context.Context) error {
+		return shared.DeployGardenerAPIServer(
+			ctx,
+			r.RuntimeClientSet.Client(),
+			r.GardenNamespace,
+			gardenerAPIServer,
+			helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials),
+		)
+	}
 }

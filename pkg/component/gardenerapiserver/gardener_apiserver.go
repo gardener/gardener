@@ -44,8 +44,10 @@ const (
 	// DeploymentName is the name of the deployment.
 	DeploymentName = "gardener-apiserver"
 
-	managedResourceNameRuntime = "gardener-apiserver-runtime"
-	managedResourceNameVirtual = "gardener-apiserver-virtual"
+	// ManagedResourceNameRuntime is the name of the ManagedResource for the runtime resources.
+	ManagedResourceNameRuntime = "gardener-apiserver-runtime"
+	// ManagedResourceNameVirtual is the name of the ManagedResource for the virtual resources.
+	ManagedResourceNameVirtual = "gardener-apiserver-virtual"
 )
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy or
@@ -162,7 +164,7 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := managedresources.CreateForSeed(ctx, g.client, g.namespace, managedResourceNameRuntime, false, runtimeResources); err != nil {
+	if err := managedresources.CreateForSeed(ctx, g.client, g.namespace, ManagedResourceNameRuntime, false, runtimeResources); err != nil {
 		return err
 	}
 
@@ -187,14 +189,14 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, g.client, g.namespace, managedResourceNameVirtual, managedresources.LabelValueGardener, false, virtualResources)
+	return managedresources.CreateForShoot(ctx, g.client, g.namespace, ManagedResourceNameVirtual, managedresources.LabelValueGardener, false, virtualResources)
 }
 
 func (g *gardenerAPIServer) Destroy(ctx context.Context) error {
-	if err := managedresources.DeleteForShoot(ctx, g.client, g.namespace, managedResourceNameVirtual); err != nil {
+	if err := managedresources.DeleteForShoot(ctx, g.client, g.namespace, ManagedResourceNameVirtual); err != nil {
 		return err
 	}
-	if err := managedresources.DeleteForSeed(ctx, g.client, g.namespace, managedResourceNameRuntime); err != nil {
+	if err := managedresources.DeleteForSeed(ctx, g.client, g.namespace, ManagedResourceNameRuntime); err != nil {
 		return err
 	}
 	return kubernetesutils.DeleteObjects(ctx, g.client, g.newVirtualGardenAccessSecret().Secret)
@@ -216,27 +218,27 @@ func (g *gardenerAPIServer) Wait(ctx context.Context) error {
 	timeoutCtx, cancel = context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, g.client, g.namespace, managedResourceNameVirtual)
+	return managedresources.WaitUntilHealthy(timeoutCtx, g.client, g.namespace, ManagedResourceNameVirtual)
 }
 
 func (g *gardenerAPIServer) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	if err := managedresources.WaitUntilDeleted(timeoutCtx, g.client, g.namespace, managedResourceNameVirtual); err != nil {
+	if err := managedresources.WaitUntilDeleted(timeoutCtx, g.client, g.namespace, ManagedResourceNameVirtual); err != nil {
 		return err
 	}
 
 	timeoutCtx, cancel = context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, g.client, g.namespace, managedResourceNameRuntime)
+	return managedresources.WaitUntilDeleted(timeoutCtx, g.client, g.namespace, ManagedResourceNameRuntime)
 }
 
 func (g *gardenerAPIServer) waitUntilRuntimeManagedResourceHealthyAndNotProgressing(ctx context.Context) error {
 	obj := &resourcesv1alpha1.ManagedResource{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      managedResourceNameRuntime,
+			Name:      ManagedResourceNameRuntime,
 			Namespace: g.namespace,
 		},
 	}

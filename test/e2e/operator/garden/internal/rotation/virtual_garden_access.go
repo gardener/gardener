@@ -165,7 +165,7 @@ func (v *VirtualGardenAccessVerifier) Cleanup(ctx context.Context) {
 		g.Expect(access.CleanupObjectsFromCSRAccess(ctx, virtualGardenClient)).To(Succeed())
 	}).Should(Succeed())
 
-	By("Clean up objects in shoot from dynamic ServiceAccount token access")
+	By("Clean up objects in virtual garden from dynamic ServiceAccount token access")
 	Eventually(func(g Gomega) {
 		g.Expect(access.CleanupObjectsFromDynamicServiceAccountTokenAccess(ctx, virtualGardenClient)).To(Succeed())
 	}).Should(Succeed())

@@ -34,8 +34,10 @@ import (
 )
 
 const (
-	deploymentName = "gardener-admission-controller"
-	serviceName    = deploymentName
+	// DeploymentName is the name of the deployment.
+	DeploymentName = "gardener-admission-controller"
+	// ServiceName is the name of the service.
+	ServiceName = DeploymentName
 
 	roleName = "admission-controller"
 
@@ -43,8 +45,10 @@ const (
 	probePort   = 2722
 	metricsPort = 2723
 
-	managedResourceNameRuntime = "gardener-admission-controller-runtime"
-	managedResourceNameVirtual = "gardener-admission-controller-virtual"
+	// ManagedResourceNameRuntime is the name of the ManagedResource for the runtime resources.
+	ManagedResourceNameRuntime = "gardener-admission-controller-runtime"
+	// ManagedResourceNameVirtual is the name of the ManagedResource for the virtual resources.
+	ManagedResourceNameVirtual = "gardener-admission-controller-virtual"
 )
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy or
@@ -61,6 +65,8 @@ type Values struct {
 	ResourceAdmissionConfiguration *admissioncontrollerv1alpha1.ResourceAdmissionConfiguration
 	// RuntimeVersion is the Kubernetes version of the runtime cluster.
 	RuntimeVersion *semver.Version
+	// SeedRestrictionEnabled specifies whether the seed-restriction webhook is enabled.
+	SeedRestrictionEnabled bool
 	// TopologyAwareRoutingEnabled determines whether topology aware hints are intended for the gardener-admission-controller.
 	TopologyAwareRoutingEnabled bool
 }
@@ -118,7 +124,7 @@ func (a *gardenerAdmissionController) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := managedresources.CreateForSeed(ctx, a.client, a.namespace, managedResourceNameRuntime, false, runtimeResources); err != nil {
+	if err := managedresources.CreateForSeed(ctx, a.client, a.namespace, ManagedResourceNameRuntime, false, runtimeResources); err != nil {
 		return err
 	}
 
@@ -138,7 +144,7 @@ func (a *gardenerAdmissionController) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, a.client, a.namespace, managedResourceNameVirtual, managedresources.LabelValueGardener, false, virtualResources)
+	return managedresources.CreateForShoot(ctx, a.client, a.namespace, ManagedResourceNameVirtual, managedresources.LabelValueGardener, false, virtualResources)
 }
 
 func (a *gardenerAdmissionController) Wait(ctx context.Context) error {
@@ -147,20 +153,20 @@ func (a *gardenerAdmissionController) Wait(ctx context.Context) error {
 
 	return flow.Parallel(
 		func(ctx context.Context) error {
-			return managedresources.WaitUntilHealthy(ctx, a.client, a.namespace, managedResourceNameRuntime)
+			return managedresources.WaitUntilHealthy(ctx, a.client, a.namespace, ManagedResourceNameRuntime)
 		},
 		func(ctx context.Context) error {
-			return managedresources.WaitUntilHealthy(ctx, a.client, a.namespace, managedResourceNameVirtual)
+			return managedresources.WaitUntilHealthy(ctx, a.client, a.namespace, ManagedResourceNameVirtual)
 		},
 	)(timeoutCtx)
 }
 
 func (a *gardenerAdmissionController) Destroy(ctx context.Context) error {
-	if err := managedresources.DeleteForShoot(ctx, a.client, a.namespace, managedResourceNameVirtual); err != nil {
+	if err := managedresources.DeleteForShoot(ctx, a.client, a.namespace, ManagedResourceNameVirtual); err != nil {
 		return err
 	}
 
-	if err := managedresources.DeleteForSeed(ctx, a.client, a.namespace, managedResourceNameRuntime); err != nil {
+	if err := managedresources.DeleteForSeed(ctx, a.client, a.namespace, ManagedResourceNameRuntime); err != nil {
 		return err
 	}
 
@@ -173,10 +179,10 @@ func (a *gardenerAdmissionController) WaitCleanup(ctx context.Context) error {
 
 	return flow.Parallel(
 		func(ctx context.Context) error {
-			return managedresources.WaitUntilDeleted(ctx, a.client, a.namespace, managedResourceNameRuntime)
+			return managedresources.WaitUntilDeleted(ctx, a.client, a.namespace, ManagedResourceNameRuntime)
 		},
 		func(ctx context.Context) error {
-			return managedresources.WaitUntilDeleted(ctx, a.client, a.namespace, managedResourceNameVirtual)
+			return managedresources.WaitUntilDeleted(ctx, a.client, a.namespace, ManagedResourceNameVirtual)
 		},
 	)(timeoutCtx)
 }

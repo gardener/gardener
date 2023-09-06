@@ -81,8 +81,12 @@ check "skaffold.yaml" "gardener-scheduler"                 "controlplane"
 check "skaffold.yaml" "gardenlet"                          "gardenlet"
 
 # skaffold-operator.yaml
-check "skaffold-operator.yaml" "gardener-operator"         "gardener-operator"
-check "skaffold-operator.yaml" "gardener-resource-manager" "gardener-operator"
+check "skaffold-operator.yaml" "gardener-operator"             "gardener-operator"
+check "skaffold-operator.yaml" "gardener-resource-manager"     "gardener-operator"
+check "skaffold-operator.yaml" "gardener-admission-controller" "gardener-operator"
+check "skaffold-operator.yaml" "gardener-apiserver"            "gardener-operator"
+check "skaffold-operator.yaml" "gardener-controller-manager"   "gardener-operator"
+check "skaffold-operator.yaml" "gardener-scheduler"            "gardener-operator"
 
 if [ "$check_successful" = false ] ; then
   exit 1

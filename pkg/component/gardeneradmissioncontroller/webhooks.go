@@ -26,13 +26,6 @@ import (
 	"k8s.io/utils/pointer"
 
 	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
-	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/admissionpluginsecret"
-	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/auditpolicy"
-	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/internaldomainsecret"
-	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/kubeconfigsecret"
-	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/namespacedeletion"
-	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/resourcesize"
-	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/seedrestriction"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
@@ -50,7 +43,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 
 	validatingWebhook := &admissionregistrationv1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: deploymentName,
+			Name: DeploymentName,
 		},
 		Webhooks: []admissionregistrationv1.ValidatingWebhook{
 			{
@@ -72,7 +65,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 					},
 				},
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
-					URL:      buildClientConfigURL(namespacedeletion.WebhookPath, a.namespace),
+					URL:      buildClientConfigURL("/webhooks/validate-namespace-deletion", a.namespace),
 					CABundle: caBundle,
 				},
 				SideEffects: &sideEffectsNone,
@@ -97,85 +90,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 					},
 				},
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
-					URL:      buildClientConfigURL(kubeconfigsecret.WebhookPath, a.namespace),
-					CABundle: caBundle,
-				},
-				SideEffects: &sideEffectsNone,
-			},
-			{
-				Name:                    "seed-restriction.gardener.cloud",
-				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          pointer.Int32(10),
-				Rules: []admissionregistrationv1.RuleWithOperations{
-					{
-						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
-						Rule: admissionregistrationv1.Rule{
-							APIGroups:   []string{corev1.GroupName},
-							APIVersions: []string{"v1"},
-							Resources:   []string{"secrets", "serviceaccounts"},
-						},
-					},
-					{
-						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
-						Rule: admissionregistrationv1.Rule{
-							APIGroups:   []string{rbacv1.GroupName},
-							APIVersions: []string{"v1"},
-							Resources:   []string{"clusterrolebindings"},
-						},
-					},
-					{
-						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
-						Rule: admissionregistrationv1.Rule{
-							APIGroups:   []string{coordinationv1.GroupName},
-							APIVersions: []string{"v1"},
-							Resources:   []string{"leases"},
-						},
-					},
-					{
-						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
-						Rule: admissionregistrationv1.Rule{
-							APIGroups:   []string{certificatesv1.GroupName},
-							APIVersions: []string{"v1"},
-							Resources:   []string{"certificatesigningrequests"},
-						},
-					},
-					{
-						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
-						Rule: admissionregistrationv1.Rule{
-							APIGroups:   []string{gardencorev1beta1.GroupName},
-							APIVersions: []string{"v1beta1"},
-							Resources:   []string{"backupentries", "internalsecrets", "shootstates"},
-						},
-					},
-					{
-						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Delete},
-						Rule: admissionregistrationv1.Rule{
-							APIGroups:   []string{gardencorev1beta1.GroupName},
-							APIVersions: []string{"v1beta1"},
-							Resources:   []string{"backupbuckets"},
-						},
-					},
-					{
-						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update, admissionregistrationv1.Delete},
-						Rule: admissionregistrationv1.Rule{
-							APIGroups:   []string{gardencorev1beta1.GroupName},
-							APIVersions: []string{"v1beta1"},
-							Resources:   []string{"seeds"},
-						},
-					},
-					{
-						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
-						Rule: admissionregistrationv1.Rule{
-							APIGroups:   []string{operationsv1alpha1.GroupName},
-							APIVersions: []string{"v1alpha1"},
-							Resources:   []string{"bastions"},
-						},
-					},
-				},
-				FailurePolicy: &failurePolicyFail,
-				MatchPolicy:   &matchPolicyEquivalent,
-				ClientConfig: admissionregistrationv1.WebhookClientConfig{
-					URL:      buildClientConfigURL(seedrestriction.WebhookPath, a.namespace),
+					URL:      buildClientConfigURL("/webhooks/validate-kubeconfig-secrets", a.namespace),
 					CABundle: caBundle,
 				},
 				SideEffects: &sideEffectsNone,
@@ -199,7 +114,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 					},
 				},
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
-					URL:      buildClientConfigURL(internaldomainsecret.WebhookPath, a.namespace),
+					URL:      buildClientConfigURL("/webhooks/admission/validate-internal-domain", a.namespace),
 					CABundle: caBundle,
 				},
 				SideEffects: &sideEffectsNone,
@@ -233,7 +148,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 					},
 				},
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
-					URL:      buildClientConfigURL(auditpolicy.WebhookPath, a.namespace),
+					URL:      buildClientConfigURL("/webhooks/audit-policies", a.namespace),
 					CABundle: caBundle,
 				},
 				SideEffects: &sideEffectsNone,
@@ -259,7 +174,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 					},
 				},
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
-					URL:      buildClientConfigURL(admissionpluginsecret.WebhookPath, a.namespace),
+					URL:      buildClientConfigURL("/webhooks/validate-admission-plugin-secret", a.namespace),
 					CABundle: caBundle,
 				},
 				SideEffects: &sideEffectsNone,
@@ -281,7 +196,88 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 				},
 			},
 			ClientConfig: admissionregistrationv1.WebhookClientConfig{
-				URL:      buildClientConfigURL(resourcesize.WebhookPath, a.namespace),
+				URL:      buildClientConfigURL("/webhooks/validate-resource-size", a.namespace),
+				CABundle: caBundle,
+			},
+			SideEffects: &sideEffectsNone,
+		})
+	}
+
+	if a.values.SeedRestrictionEnabled {
+		validatingWebhook.Webhooks = append(validatingWebhook.Webhooks, admissionregistrationv1.ValidatingWebhook{
+			Name:                    "seed-restriction.gardener.cloud",
+			AdmissionReviewVersions: []string{"v1", "v1beta1"},
+			TimeoutSeconds:          pointer.Int32(10),
+			Rules: []admissionregistrationv1.RuleWithOperations{
+				{
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{corev1.GroupName},
+						APIVersions: []string{"v1"},
+						Resources:   []string{"secrets", "serviceaccounts"},
+					},
+				},
+				{
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{rbacv1.GroupName},
+						APIVersions: []string{"v1"},
+						Resources:   []string{"clusterrolebindings"},
+					},
+				},
+				{
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{coordinationv1.GroupName},
+						APIVersions: []string{"v1"},
+						Resources:   []string{"leases"},
+					},
+				},
+				{
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{certificatesv1.GroupName},
+						APIVersions: []string{"v1"},
+						Resources:   []string{"certificatesigningrequests"},
+					},
+				},
+				{
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{gardencorev1beta1.GroupName},
+						APIVersions: []string{"v1beta1"},
+						Resources:   []string{"backupentries", "internalsecrets", "shootstates"},
+					},
+				},
+				{
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Delete},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{gardencorev1beta1.GroupName},
+						APIVersions: []string{"v1beta1"},
+						Resources:   []string{"backupbuckets"},
+					},
+				},
+				{
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update, admissionregistrationv1.Delete},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{gardencorev1beta1.GroupName},
+						APIVersions: []string{"v1beta1"},
+						Resources:   []string{"seeds"},
+					},
+				},
+				{
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{operationsv1alpha1.GroupName},
+						APIVersions: []string{"v1alpha1"},
+						Resources:   []string{"bastions"},
+					},
+				},
+			},
+			FailurePolicy: &failurePolicyFail,
+			MatchPolicy:   &matchPolicyEquivalent,
+			ClientConfig: admissionregistrationv1.WebhookClientConfig{
+				URL:      buildClientConfigURL("/webhooks/admission/seedrestriction", a.namespace),
 				CABundle: caBundle,
 			},
 			SideEffects: &sideEffectsNone,
@@ -312,5 +308,5 @@ func buildWebhookConfigRulesForResourceSize(config *admissioncontrollerv1alpha1.
 }
 
 func buildClientConfigURL(webhookPath, namespace string) *string {
-	return pointer.String(fmt.Sprintf("https://%s.%s%s", serviceName, namespace, webhookPath))
+	return pointer.String(fmt.Sprintf("https://%s.%s%s", ServiceName, namespace, webhookPath))
 }

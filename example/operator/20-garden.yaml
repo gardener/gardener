@@ -97,12 +97,6 @@ spec:
     #       kubeconfigSecretName: name-of-secret-containing-kubeconfig-for-authentication-webhook
     #       cacheTTL: 30m
     #       version: v1beta1
-    #   authorization:
-    #     webhook:
-    #       kubeconfigSecretName: name-of-secret-containing-kubeconfig-for-authorization-webhook
-    #       cacheAuthorizedTTL: 31m
-    #       cacheUnauthorizedTTL: 32m
-    #       version: v1beta1
     #   auditConfig:
     #     auditPolicy:
     #       configMapRef:

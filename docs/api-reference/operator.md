@@ -14,6 +14,7 @@ Resource Types:
 </h3>
 <p>
 (<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenerAPIServerConfig">GardenerAPIServerConfig</a>, 
 <a href="#operator.gardener.cloud/v1alpha1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
 </p>
 <p>
@@ -126,109 +127,6 @@ Kubernetes meta/v1.Duration
 <td>
 <em>(Optional)</em>
 <p>CacheTTL is the duration to cache responses from the webhook authenticator.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>kubeconfigSecretName</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this webhook.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>version</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Version is the API version to send and expect from the webhook.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="operator.gardener.cloud/v1alpha1.Authorization">Authorization
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.gardener.cloud/v1alpha1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
-</p>
-<p>
-<p>Authorization contains settings related to authorization.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>webhook</code></br>
-<em>
-<a href="#operator.gardener.cloud/v1alpha1.AuthorizationWebhook">
-AuthorizationWebhook
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Webhook contains settings related to an authorization webhook configuration.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="operator.gardener.cloud/v1alpha1.AuthorizationWebhook">AuthorizationWebhook
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.gardener.cloud/v1alpha1.Authorization">Authorization</a>)
-</p>
-<p>
-<p>AuthorizationWebhook contains settings related to an authorization webhook configuration.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>cacheAuthorizedTTL</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#duration-v1-meta">
-Kubernetes meta/v1.Duration
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>CacheAuthorizedTTL is the duration to cache &lsquo;authorized&rsquo; responses from the webhook authorizer.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>cacheUnauthorizedTTL</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#duration-v1-meta">
-Kubernetes meta/v1.Duration
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>CacheUnauthorizedTTL is the duration to cache &lsquo;unauthorized&rsquo; responses from the webhook authorizer.</p>
 </td>
 </tr>
 <tr>
@@ -969,6 +867,20 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig
 </tr>
 <tr>
 <td>
+<code>auditWebhook</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.AuditWebhook">
+AuditWebhook
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AuditWebhook contains settings related to an audit webhook configuration.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>logging</code></br>
 <em>
 github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerLogging
@@ -1270,20 +1182,6 @@ Authentication
 <td>
 <em>(Optional)</em>
 <p>Authentication contains settings related to authentication.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>authorization</code></br>
-<em>
-<a href="#operator.gardener.cloud/v1alpha1.Authorization">
-Authorization
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Authorization contains settings related to authorization.</p>
 </td>
 </tr>
 <tr>

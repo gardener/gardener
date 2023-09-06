@@ -31,11 +31,17 @@ As of today, this applies to:
 - `etcd-druid`
 - `istio` control-plane
 - `nginx-ingress-controller`
-- `vali`
-- `plutono`
 
 Those components are so-called "seed system components".
-As they were already made available by `gardener-operator`, the `gardenlet` just skips them.
+In addition, there are a few observability components:
+
+- `fluent-operator`
+- `fluent-bit`
+- `vali`
+- `plutono`
+- `kube-state-metrics`
+
+As all of these components are managed by `gardener-operator` in this scenario, the `gardenlet` just skips them.
 
 > ℹ️ There is no need to configure anything - the `gardenlet` will automatically detect when its seed cluster is the garden runtime cluster at the same time.
 
@@ -215,17 +221,12 @@ The [`gardener-resource-manager`](./resource-manager.md) is deployed first since
 
 Other system components are:
 
-- garden system resources ([`PriorityClass`es](../development/priority-classes.md) for the workload resources)
+- runtime garden system resources ([`PriorityClass`es](../development/priority-classes.md) for the workload resources)
+- virtual garden system resources (RBAC rules)
 - Vertical Pod Autoscaler (if enabled via `.spec.runtimeCluster.settings.verticalPodAutoscaler.enabled=true` in the `Garden`)
 - HVPA Controller (when `HVPA` feature gate is enabled)
 - ETCD Druid
 - Istio
-
-The reconciler also manages a few observability-related components (more planned as part of [GEP-19](../proposals/19-migrating-observability-stack-to-operators.md)):
-
-- Fluent Operator
-- Plutono
-- Vali
 
 As soon as all system components are up, the reconciler deploys the virtual garden cluster.
 It comprises out of two ETCDs (one "main" etcd, one "events" etcd) which are managed by ETCD Druid via `druid.gardener.cloud/v1alpha1.Etcd` custom resources.
@@ -261,6 +262,25 @@ Third-party components that need to communicate with the virtual cluster can lev
 For the virtual cluster, it is essential to provide a DNS domain via `.spec.virtualCluster.dns.domain`.
 **The respective DNS record is not managed by `gardener-operator` and should be manually created and pointed to the load balancer IP of the `virtual-garden-kube-apiserver` `Service`.**
 The DNS domain is used for the `server` in the kubeconfig, and for configuring the `--external-hostname` flag of the API server.
+
+Apart from the control plane components of the virtual cluster, the reconcile also deploys the control plane components of Gardener.
+`gardener-apiserver` reuses the same ETCDs like the `virtual-garden-kube-apiserver`, so all data related to the "the garden cluster" is stored together and "isolated" from ETCD data related to the runtime cluster.
+This drastically simplifies backup and restore capabilities (e.g., moving the virtual garden cluster from one runtime cluster to another).
+
+The Gardener control plane components are:
+
+- `gardener-apiserver`
+- `gardener-admission-controller`
+- `gardener-controller-manager`
+- `gardener-scheduler`
+
+The reconciler also manages a few observability-related components (more planned as part of [GEP-19](../proposals/19-migrating-observability-stack-to-operators.md)):
+
+- `fluent-operator`
+- `fluent-bit`
+- `vali`
+- `plutono`
+- `kube-state-metrics`
 
 It is also mandatory to provide an IPv4 CIDR for the service network of the virtual cluster via `.spec.virtualCluster.networking.services`.
 This range is used by the API server to compute the cluster IPs of `Service`s.

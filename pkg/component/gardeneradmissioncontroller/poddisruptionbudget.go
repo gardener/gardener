@@ -24,7 +24,7 @@ import (
 func (a *gardenerAdmissionController) podDisruptionBudget() *policyv1.PodDisruptionBudget {
 	return &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      deploymentName,
+			Name:      DeploymentName,
 			Namespace: a.namespace,
 			Labels:    GetLabels(),
 		},

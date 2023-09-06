@@ -44,7 +44,7 @@ const (
 func (a *gardenerAdmissionController) deployment(secretServerCert, secretGenericTokenKubeconfig, secretVirtualGardenAccess, configMapAdmissionConfig string) *appsv1.Deployment {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      deploymentName,
+			Name:      DeploymentName,
 			Namespace: a.namespace,
 			Labels: utils.MergeStringMaps(GetLabels(), map[string]string{
 				resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
@@ -67,7 +67,7 @@ func (a *gardenerAdmissionController) deployment(secretServerCert, secretGeneric
 					AutomountServiceAccountToken: pointer.Bool(false),
 					Containers: []corev1.Container{
 						{
-							Name:            deploymentName,
+							Name:            DeploymentName,
 							Image:           a.values.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Args: []string{

@@ -37,8 +37,10 @@ const (
 	probePort   = 10251
 	metricsPort = 19251
 
-	managedResourceNameRuntime = "gardener-scheduler-runtime"
-	managedResourceNameVirtual = "gardener-scheduler-virtual"
+	// ManagedResourceNameRuntime is the name of the ManagedResource for the runtime resources.
+	ManagedResourceNameRuntime = "gardener-scheduler-runtime"
+	// ManagedResourceNameVirtual is the name of the ManagedResource for the virtual resources.
+	ManagedResourceNameVirtual = "gardener-scheduler-virtual"
 
 	roleName = "scheduler"
 )
@@ -105,7 +107,7 @@ func (g *gardenerScheduler) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := managedresources.CreateForSeed(ctx, g.client, g.namespace, managedResourceNameRuntime, false, runtimeResources); err != nil {
+	if err := managedresources.CreateForSeed(ctx, g.client, g.namespace, ManagedResourceNameRuntime, false, runtimeResources); err != nil {
 		return err
 	}
 
@@ -121,7 +123,7 @@ func (g *gardenerScheduler) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, g.client, g.namespace, managedResourceNameVirtual, managedresources.LabelValueGardener, false, virtualResources)
+	return managedresources.CreateForShoot(ctx, g.client, g.namespace, ManagedResourceNameVirtual, managedresources.LabelValueGardener, false, virtualResources)
 }
 
 func (g *gardenerScheduler) Wait(ctx context.Context) error {
@@ -130,20 +132,20 @@ func (g *gardenerScheduler) Wait(ctx context.Context) error {
 
 	return flow.Parallel(
 		func(ctx context.Context) error {
-			return managedresources.WaitUntilHealthy(ctx, g.client, g.namespace, managedResourceNameRuntime)
+			return managedresources.WaitUntilHealthy(ctx, g.client, g.namespace, ManagedResourceNameRuntime)
 		},
 		func(ctx context.Context) error {
-			return managedresources.WaitUntilHealthy(ctx, g.client, g.namespace, managedResourceNameVirtual)
+			return managedresources.WaitUntilHealthy(ctx, g.client, g.namespace, ManagedResourceNameVirtual)
 		},
 	)(timeoutCtx)
 }
 
 func (g *gardenerScheduler) Destroy(ctx context.Context) error {
-	if err := managedresources.DeleteForShoot(ctx, g.client, g.namespace, managedResourceNameVirtual); err != nil {
+	if err := managedresources.DeleteForShoot(ctx, g.client, g.namespace, ManagedResourceNameVirtual); err != nil {
 		return err
 	}
 
-	if err := managedresources.DeleteForSeed(ctx, g.client, g.namespace, managedResourceNameRuntime); err != nil {
+	if err := managedresources.DeleteForSeed(ctx, g.client, g.namespace, ManagedResourceNameRuntime); err != nil {
 		return err
 	}
 
@@ -156,10 +158,10 @@ func (g *gardenerScheduler) WaitCleanup(ctx context.Context) error {
 
 	return flow.Parallel(
 		func(ctx context.Context) error {
-			return managedresources.WaitUntilDeleted(ctx, g.client, g.namespace, managedResourceNameRuntime)
+			return managedresources.WaitUntilDeleted(ctx, g.client, g.namespace, ManagedResourceNameRuntime)
 		},
 		func(ctx context.Context) error {
-			return managedresources.WaitUntilDeleted(ctx, g.client, g.namespace, managedResourceNameVirtual)
+			return managedresources.WaitUntilDeleted(ctx, g.client, g.namespace, ManagedResourceNameVirtual)
 		},
 	)(timeoutCtx)
 }

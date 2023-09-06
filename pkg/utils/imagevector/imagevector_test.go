@@ -20,6 +20,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
 	"k8s.io/utils/pointer"
 
@@ -586,6 +587,24 @@ images:
 	})
 
 	Describe("> Image", func() {
+		Describe("#WithOptionalTag", func() {
+			It("should do nothing because tag is already set", func() {
+				image := Image{Repository: "some-repo", Tag: pointer.String("some-tag")}
+				image.WithOptionalTag("foo")
+
+				Expect(image.Repository).To(Equal("some-repo"))
+				Expect(image.Tag).To(PointTo(Equal("some-tag")))
+			})
+
+			It("should use the optional tag", func() {
+				image := Image{Repository: "some-repo"}
+				image.WithOptionalTag("foo")
+
+				Expect(image.Repository).To(Equal("some-repo"))
+				Expect(image.Tag).To(PointTo(Equal("foo")))
+			})
+		})
+
 		Describe("#String", func() {
 			It("should return the string representation of the image (w/o normal tag)", func() {
 				repo := "my-repo"

@@ -25,24 +25,37 @@ import (
 	"github.com/Masterminds/semver"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
+	"k8s.io/component-base/version"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	operatorv1alpha1conversion "github.com/gardener/gardener/pkg/apis/operator/v1alpha1/conversion"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/component/gardeneraccess"
+	"github.com/gardener/gardener/pkg/component/gardeneradmissioncontroller"
+	"github.com/gardener/gardener/pkg/component/gardenerapiserver"
+	"github.com/gardener/gardener/pkg/component/gardenercontrollermanager"
+	"github.com/gardener/gardener/pkg/component/gardenerscheduler"
 	runtimegardensystem "github.com/gardener/gardener/pkg/component/gardensystem/runtime"
+	virtualgardensystem "github.com/gardener/gardener/pkg/component/gardensystem/virtual"
 	"github.com/gardener/gardener/pkg/component/hvpa"
 	"github.com/gardener/gardener/pkg/component/istio"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
@@ -57,9 +70,13 @@ import (
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/component/vpa"
+	controllermanagerv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
@@ -72,7 +89,7 @@ type components struct {
 	fluentCRD component.DeployWaiter
 
 	gardenerResourceManager component.DeployWaiter
-	system                  component.DeployWaiter
+	runtimeSystem           component.DeployWaiter
 	verticalPodAutoscaler   component.DeployWaiter
 	hvpaController          component.DeployWaiter
 	etcdDruid               component.DeployWaiter
@@ -87,6 +104,12 @@ type components struct {
 	kubeControllerManager                kubecontrollermanager.Interface
 	virtualGardenGardenerResourceManager resourcemanager.Interface
 	virtualGardenGardenerAccess          component.DeployWaiter
+	virtualSystem                        component.DeployWaiter
+
+	gardenerAPIServer           gardenerapiserver.Interface
+	gardenerAdmissionController component.DeployWaiter
+	gardenerControllerManager   component.DeployWaiter
+	gardenerScheduler           component.DeployWaiter
 
 	kubeStateMetrics              component.DeployWaiter
 	fluentOperator                component.DeployWaiter
@@ -104,6 +127,7 @@ func (r *Reconciler) instantiateComponents(
 	targetVersion *semver.Version,
 	applier kubernetes.Applier,
 	wildcardCert *corev1.Secret,
+	enableSeedAuthorizer bool,
 ) (
 	c components,
 	err error,
@@ -123,7 +147,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.system = r.newSystem()
+	c.runtimeSystem = r.newRuntimeSystem()
 	c.verticalPodAutoscaler, err = r.newVerticalPodAutoscaler(garden, secretsManager)
 	if err != nil {
 		return
@@ -162,7 +186,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.kubeAPIServer, err = r.newKubeAPIServer(ctx, garden, secretsManager, targetVersion)
+	c.kubeAPIServer, err = r.newKubeAPIServer(ctx, garden, secretsManager, targetVersion, enableSeedAuthorizer)
 	if err != nil {
 		return
 	}
@@ -174,14 +198,26 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
+	c.virtualSystem = r.newVirtualSystem(enableSeedAuthorizer)
+	c.virtualGardenGardenerAccess = r.newGardenerAccess(garden, secretsManager)
 
-	var accessDomain string
-	if domains := garden.Spec.VirtualCluster.DNS.Domains; len(domains) > 0 {
-		accessDomain = domains[0]
-	} else {
-		accessDomain = *garden.Spec.VirtualCluster.DNS.Domain
+	// gardener control plane components
+	c.gardenerAPIServer, err = r.newGardenerAPIServer(ctx, garden, secretsManager)
+	if err != nil {
+		return
 	}
-	c.virtualGardenGardenerAccess = r.newGardenerAccess(secretsManager, accessDomain)
+	c.gardenerAdmissionController, err = r.newGardenerAdmissionController(garden, secretsManager, enableSeedAuthorizer)
+	if err != nil {
+		return
+	}
+	c.gardenerControllerManager, err = r.newGardenerControllerManager(garden, secretsManager)
+	if err != nil {
+		return
+	}
+	c.gardenerScheduler, err = r.newGardenerScheduler(garden, secretsManager)
+	if err != nil {
+		return
+	}
 
 	// observability components
 	c.kubeStateMetrics, err = r.newKubeStateMetrics()
@@ -211,6 +247,31 @@ func (r *Reconciler) instantiateComponents(
 	}
 
 	return c, nil
+}
+
+func (r *Reconciler) enableSeedAuthorizer(ctx context.Context) (bool, error) {
+	// The reconcile flow deploys the kube-apiserver of the virtual garden cluster before the gardener-apiserver and
+	// gardener-admission-controller (it has to be this way, otherwise the Gardener components cannot start). However,
+	// GAC serves an authorization webhook for the SeedAuthorizer feature. We can only configure kube-apiserver to
+	// consult this webhook when GAC runs, obviously. This is not possible in the initial Garden deployment (due to
+	// above order). Hence, we have to run the flow as second time after the initial Garden creation - this time with
+	// the SeedAuthorizer feature getting enabled. From then on, all subsequent reconciliations can always enable it and
+	// only one reconciliation is needed.
+	if err := r.RuntimeClientSet.Client().Get(ctx, client.ObjectKey{Name: gardenerapiserver.DeploymentName, Namespace: r.GardenNamespace}, &appsv1.Deployment{}); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return false, err
+		}
+		return false, nil
+	}
+
+	if err := r.RuntimeClientSet.Client().Get(ctx, client.ObjectKey{Name: gardeneradmissioncontroller.DeploymentName, Namespace: r.GardenNamespace}, &appsv1.Deployment{}); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return false, err
+		}
+		return false, nil
+	}
+
+	return true, nil
 }
 
 const namePrefix = "virtual-garden-"
@@ -295,7 +356,7 @@ func (r *Reconciler) newEtcdDruid() (component.DeployWaiter, error) {
 	)
 }
 
-func (r *Reconciler) newSystem() component.DeployWaiter {
+func (r *Reconciler) newRuntimeSystem() component.DeployWaiter {
 	return runtimegardensystem.New(r.RuntimeClientSet.Client(), r.GardenNamespace)
 }
 
@@ -426,6 +487,7 @@ func (r *Reconciler) newKubeAPIServer(
 	garden *operatorv1alpha1.Garden,
 	secretsManager secretsmanager.Interface,
 	targetVersion *semver.Version,
+	enableSeedAuthorizer bool,
 ) (
 	kubeapiserver.Interface,
 	error,
@@ -437,17 +499,12 @@ func (r *Reconciler) newKubeAPIServer(
 		authenticationWebhookConfig  *kubeapiserver.AuthenticationWebhook
 		authorizationWebhookConfig   *kubeapiserver.AuthorizationWebhook
 		resourcesToStoreInETCDEvents []schema.GroupResource
-		minReplicas                  int32 = 2
 	)
-
-	if garden.Spec.VirtualCluster.ControlPlane != nil && garden.Spec.VirtualCluster.ControlPlane.HighAvailability != nil {
-		minReplicas = 3
-	}
 
 	if apiServer := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; apiServer != nil {
 		apiServerConfig = apiServer.KubeAPIServerConfig
 
-		auditWebhookConfig, err = r.computeKubeAPIServerAuditWebhookConfig(ctx, apiServer.AuditWebhook)
+		auditWebhookConfig, err = r.computeAPIServerAuditWebhookConfig(ctx, apiServer.AuditWebhook)
 		if err != nil {
 			return nil, err
 		}
@@ -457,13 +514,33 @@ func (r *Reconciler) newKubeAPIServer(
 			return nil, err
 		}
 
-		authorizationWebhookConfig, err = r.computeKubeAPIServerAuthorizationWebhookConfig(ctx, apiServer.Authorization)
-		if err != nil {
-			return nil, err
-		}
-
 		for _, gr := range apiServer.ResourcesToStoreInETCDEvents {
 			resourcesToStoreInETCDEvents = append(resourcesToStoreInETCDEvents, schema.GroupResource{Group: gr.Group, Resource: gr.Resource})
+		}
+	}
+
+	if enableSeedAuthorizer {
+		caSecret, found := secretsManager.Get(operatorv1alpha1.SecretNameCAGardener)
+		if !found {
+			return nil, fmt.Errorf("secret %q not found", operatorv1alpha1.SecretNameCAGardener)
+		}
+
+		kubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kubernetesutils.NewKubeconfig(
+			"authorization-webhook",
+			clientcmdv1.Cluster{
+				Server:                   fmt.Sprintf("https://%s/webhooks/auth/seed", gardeneradmissioncontroller.ServiceName),
+				CertificateAuthorityData: caSecret.Data[secretsutils.DataKeyCertificateBundle],
+			},
+			clientcmdv1.AuthInfo{},
+		))
+		if err != nil {
+			return nil, fmt.Errorf("failed generating authorization webhook kubeconfig: %w", err)
+		}
+
+		authorizationWebhookConfig = &kubeapiserver.AuthorizationWebhook{
+			Kubeconfig:           kubeconfig,
+			CacheAuthorizedTTL:   pointer.Duration(0),
+			CacheUnauthorizedTTL: pointer.Duration(0),
 		}
 	}
 
@@ -478,19 +555,7 @@ func (r *Reconciler) newKubeAPIServer(
 		secretsManager,
 		namePrefix,
 		apiServerConfig,
-		apiserver.AutoscalingConfig{
-			APIServerResources: corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("600m"),
-					corev1.ResourceMemory: resource.MustParse("512Mi"),
-				},
-			},
-			HVPAEnabled:               hvpaEnabled(),
-			MinReplicas:               minReplicas,
-			MaxReplicas:               6,
-			UseMemoryMetricForHvpaHPA: true,
-			ScaleDownDisabledForHvpa:  false,
-		},
+		defaultAPIServerAutoscalingConfig(garden),
 		garden.Spec.VirtualCluster.Networking.Services,
 		kubeapiserver.VPNConfig{Enabled: false},
 		v1beta1constants.PriorityClassNameGardenSystem500,
@@ -503,7 +568,28 @@ func (r *Reconciler) newKubeAPIServer(
 	)
 }
 
-func (r *Reconciler) computeKubeAPIServerAuditWebhookConfig(ctx context.Context, config *operatorv1alpha1.AuditWebhook) (*apiserver.AuditWebhook, error) {
+func defaultAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) apiserver.AutoscalingConfig {
+	minReplicas := int32(2)
+	if garden.Spec.VirtualCluster.ControlPlane != nil && garden.Spec.VirtualCluster.ControlPlane.HighAvailability != nil {
+		minReplicas = 3
+	}
+
+	return apiserver.AutoscalingConfig{
+		APIServerResources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("600m"),
+				corev1.ResourceMemory: resource.MustParse("512Mi"),
+			},
+		},
+		HVPAEnabled:               hvpaEnabled(),
+		MinReplicas:               minReplicas,
+		MaxReplicas:               6,
+		UseMemoryMetricForHvpaHPA: true,
+		ScaleDownDisabledForHvpa:  false,
+	}
+}
+
+func (r *Reconciler) computeAPIServerAuditWebhookConfig(ctx context.Context, config *operatorv1alpha1.AuditWebhook) (*apiserver.AuditWebhook, error) {
 	if config == nil {
 		return nil, nil
 	}
@@ -541,33 +627,6 @@ func (r *Reconciler) computeKubeAPIServerAuthenticationWebhookConfig(ctx context
 		Kubeconfig: kubeconfig,
 		CacheTTL:   cacheTTL,
 		Version:    config.Webhook.Version,
-	}, nil
-}
-
-func (r *Reconciler) computeKubeAPIServerAuthorizationWebhookConfig(ctx context.Context, config *operatorv1alpha1.Authorization) (*kubeapiserver.AuthorizationWebhook, error) {
-	if config == nil || config.Webhook == nil {
-		return nil, nil
-	}
-
-	key := client.ObjectKey{Namespace: r.GardenNamespace, Name: config.Webhook.KubeconfigSecretName}
-	kubeconfig, err := gardenerutils.FetchKubeconfigFromSecret(ctx, r.RuntimeClientSet.Client(), key)
-	if err != nil {
-		return nil, fmt.Errorf("failed reading kubeconfig for audit webhook from referenced secret %s: %w", key, err)
-	}
-
-	var cacheAuthorizedTTL, cacheUnauthorizedTTL *time.Duration
-	if config.Webhook.CacheAuthorizedTTL != nil {
-		cacheAuthorizedTTL = &config.Webhook.CacheAuthorizedTTL.Duration
-	}
-	if config.Webhook.CacheUnauthorizedTTL != nil {
-		cacheUnauthorizedTTL = &config.Webhook.CacheUnauthorizedTTL.Duration
-	}
-
-	return &kubeapiserver.AuthorizationWebhook{
-		Kubeconfig:           kubeconfig,
-		CacheAuthorizedTTL:   cacheAuthorizedTTL,
-		CacheUnauthorizedTTL: cacheUnauthorizedTTL,
-		Version:              config.Webhook.Version,
 	}, nil
 }
 
@@ -686,14 +745,21 @@ func (r *Reconciler) newSNI(garden *operatorv1alpha1.Garden, ingressGatewayValue
 	), nil
 }
 
-func (r *Reconciler) newGardenerAccess(secretsManager secretsmanager.Interface, domain string) component.DeployWaiter {
+func (r *Reconciler) newGardenerAccess(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) component.DeployWaiter {
+	var accessDomain string
+	if domains := garden.Spec.VirtualCluster.DNS.Domains; len(domains) > 0 {
+		accessDomain = domains[0]
+	} else {
+		accessDomain = *garden.Spec.VirtualCluster.DNS.Domain
+	}
+
 	return gardeneraccess.New(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		secretsManager,
 		gardeneraccess.Values{
 			ServerInCluster:    fmt.Sprintf("%s%s.%s.svc.cluster.local", namePrefix, v1beta1constants.DeploymentNameKubeAPIServer, r.GardenNamespace),
-			ServerOutOfCluster: gardenerutils.GetAPIServerDomain(domain),
+			ServerOutOfCluster: gardenerutils.GetAPIServerDomain(accessDomain),
 		},
 	)
 }
@@ -784,6 +850,117 @@ func getLoadBalancerServiceAnnotations(garden *operatorv1alpha1.Garden) map[stri
 		return utils.MergeStringMaps(garden.Spec.RuntimeCluster.Settings.LoadBalancerServices.Annotations)
 	}
 	return nil
+}
+
+func (r *Reconciler) newVirtualSystem(enableSeedAuthorizer bool) component.DeployWaiter {
+	return virtualgardensystem.New(r.RuntimeClientSet.Client(), r.GardenNamespace, virtualgardensystem.Values{SeedAuthorizerEnabled: enableSeedAuthorizer})
+}
+
+func (r *Reconciler) newGardenerAPIServer(ctx context.Context, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (gardenerapiserver.Interface, error) {
+	var (
+		err                error
+		apiServerConfig    *operatorv1alpha1.GardenerAPIServerConfig
+		auditWebhookConfig *apiserver.AuditWebhook
+	)
+
+	if apiServer := garden.Spec.VirtualCluster.Gardener.APIServer; apiServer != nil {
+		apiServerConfig = apiServer
+
+		auditWebhookConfig, err = r.computeAPIServerAuditWebhookConfig(ctx, apiServer.AuditWebhook)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return sharedcomponent.NewGardenerAPIServer(
+		ctx,
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		metav1.ObjectMeta{Namespace: r.GardenNamespace, Name: garden.Name},
+		r.RuntimeVersion,
+		secretsManager,
+		apiServerConfig,
+		defaultAPIServerAutoscalingConfig(garden),
+		auditWebhookConfig,
+		helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
+		garden.Spec.VirtualCluster.Gardener.ClusterIdentity,
+	)
+}
+
+func (r *Reconciler) newGardenerAdmissionController(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, enableSeedRestriction bool) (component.DeployWaiter, error) {
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenerAdmissionController)
+	if err != nil {
+		return nil, err
+	}
+	image.WithOptionalTag(version.Get().GitVersion)
+
+	values := gardeneradmissioncontroller.Values{
+		Image:                       image.String(),
+		LogLevel:                    logger.InfoLevel,
+		RuntimeVersion:              r.RuntimeVersion,
+		SeedRestrictionEnabled:      enableSeedRestriction,
+		TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
+	}
+
+	if config := garden.Spec.VirtualCluster.Gardener.AdmissionController; config != nil {
+		values.ResourceAdmissionConfiguration = operatorv1alpha1conversion.ConvertToAdmissionControllerResourceAdmissionConfiguration(config.ResourceAdmissionConfiguration)
+		if config.LogLevel != nil {
+			values.LogLevel = *config.LogLevel
+		}
+	}
+
+	return gardeneradmissioncontroller.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, values), nil
+}
+
+func (r *Reconciler) newGardenerControllerManager(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenerControllerManager)
+	if err != nil {
+		return nil, err
+	}
+	image.WithOptionalTag(version.Get().GitVersion)
+
+	values := gardenercontrollermanager.Values{
+		Image:    image.String(),
+		LogLevel: logger.InfoLevel,
+	}
+
+	if config := garden.Spec.VirtualCluster.Gardener.ControllerManager; config != nil {
+		values.FeatureGates = config.FeatureGates
+		if config.LogLevel != nil {
+			values.LogLevel = *config.LogLevel
+		}
+
+		for _, defaultProjectQuota := range config.DefaultProjectQuotas {
+			values.Quotas = append(values.Quotas, controllermanagerv1alpha1.QuotaConfiguration{
+				Config:          defaultProjectQuota.Config,
+				ProjectSelector: defaultProjectQuota.ProjectSelector,
+			})
+		}
+	}
+
+	return gardenercontrollermanager.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, values), nil
+}
+
+func (r *Reconciler) newGardenerScheduler(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenerScheduler)
+	if err != nil {
+		return nil, err
+	}
+	image.WithOptionalTag(version.Get().GitVersion)
+
+	values := gardenerscheduler.Values{
+		Image:    image.String(),
+		LogLevel: logger.InfoLevel,
+	}
+
+	if config := garden.Spec.VirtualCluster.Gardener.Scheduler; config != nil {
+		values.FeatureGates = config.FeatureGates
+		if config.LogLevel != nil {
+			values.LogLevel = *config.LogLevel
+		}
+	}
+
+	return gardenerscheduler.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, values), nil
 }
 
 func (r *Reconciler) newFluentOperator() (component.DeployWaiter, error) {
