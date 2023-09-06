@@ -127,10 +127,7 @@ func (r *Reconciler) handleReferencedSecrets(ctx context.Context, log logr.Logge
 	var (
 		fns         []flow.TaskFn
 		added       = uint32(0)
-		secretNames = append(
-			secretNamesForDNSProviders(shoot),
-			namesForReferencedResources(shoot, "Secret")...,
-		)
+		secretNames = getReferencedSecretNames(shoot)
 	)
 
 	for _, secretName := range secretNames {
@@ -166,12 +163,8 @@ func (r *Reconciler) handleReferencedConfigMap(ctx context.Context, log logr.Log
 	var (
 		fns            []flow.TaskFn
 		added          = uint32(0)
-		configMapNames = namesForReferencedResources(shoot, "ConfigMap")
+		configMapNames = getReferencedConfigMapNames(shoot)
 	)
-
-	if configMapRef := getAuditPolicyConfigMapRef(shoot.Spec.Kubernetes.KubeAPIServer); configMapRef != nil {
-		configMapNames = append(configMapNames, configMapRef.Name)
-	}
 
 	for _, configMapName := range configMapNames {
 		name := configMapName
@@ -198,12 +191,7 @@ func (r *Reconciler) handleReferencedConfigMap(ctx context.Context, log logr.Log
 }
 
 func (r *Reconciler) releaseUnreferencedSecrets(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) error {
-	secrets, err := r.getUnreferencedResources(ctx, shoot, &corev1.SecretList{}, func(shoot *gardencorev1beta1.Shoot) []string {
-		var out []string
-		out = append(out, secretNamesForDNSProviders(shoot)...)
-		out = append(out, namesForReferencedResources(shoot, "Secret")...)
-		return out
-	})
+	secrets, err := r.getUnreferencedResources(ctx, shoot, &corev1.SecretList{}, getReferencedSecretNames)
 	if err != nil {
 		return err
 	}
@@ -212,14 +200,7 @@ func (r *Reconciler) releaseUnreferencedSecrets(ctx context.Context, log logr.Lo
 }
 
 func (r *Reconciler) releaseUnreferencedConfigMaps(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) error {
-	configMaps, err := r.getUnreferencedResources(ctx, shoot, &corev1.ConfigMapList{}, func(shoot *gardencorev1beta1.Shoot) []string {
-		var out []string
-		if configMapRef := getAuditPolicyConfigMapRef(shoot.Spec.Kubernetes.KubeAPIServer); configMapRef != nil {
-			out = append(out, configMapRef.Name)
-		}
-		out = append(out, namesForReferencedResources(shoot, "ConfigMap")...)
-		return out
-	})
+	configMaps, err := r.getUnreferencedResources(ctx, shoot, &corev1.ConfigMapList{}, getReferencedConfigMapNames)
 	if err != nil {
 		return err
 	}
@@ -311,6 +292,22 @@ func (r *Reconciler) getUnreferencedResources(
 	}
 
 	return objectsToRelease, nil
+}
+
+func getReferencedSecretNames(shoot *gardencorev1beta1.Shoot) []string {
+	var out []string
+	out = append(out, secretNamesForDNSProviders(shoot)...)
+	out = append(out, namesForReferencedResources(shoot, "Secret")...)
+	return out
+}
+
+func getReferencedConfigMapNames(shoot *gardencorev1beta1.Shoot) []string {
+	var out []string
+	if configMapRef := getAuditPolicyConfigMapRef(shoot.Spec.Kubernetes.KubeAPIServer); configMapRef != nil {
+		out = append(out, configMapRef.Name)
+	}
+	out = append(out, namesForReferencedResources(shoot, "ConfigMap")...)
+	return out
 }
 
 func secretNamesForDNSProviders(shoot *gardencorev1beta1.Shoot) []string {
