@@ -172,7 +172,6 @@ build:
         - plugin/pkg/controllerregistration/resources
         - plugin/pkg/global/customverbauthorizer
         - plugin/pkg/global/deletionconfirmation
-        - plugin/pkg/shoot/forcedeletion
         - plugin/pkg/global/extensionlabels
         - plugin/pkg/global/extensionvalidation
         - plugin/pkg/global/resourcereferencemanager
@@ -491,12 +490,6 @@ deploy:
       createNamespace: true
       wait: true
 profiles:
-- name: local
-  patches:
-  - op: add
-    path: /deploy/helm/releases/0/setValues
-    value:
-      global.apiserver.disableAdmissionPlugins: [ShootForceDeletion]
 - name: extensions
   patches:
   - op: add

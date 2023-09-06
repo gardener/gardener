@@ -112,6 +112,13 @@ var (
 		string(core.SchedulingProfileBalanced),
 		string(core.SchedulingProfileBinPacking),
 	)
+	errorCodesAllowingForceDeletion = sets.New(
+		core.ErrorInfraUnauthenticated,
+		core.ErrorInfraUnauthorized,
+		core.ErrorInfraDependencies,
+		core.ErrorCleanupClusterResources,
+		core.ErrorConfigurationProblem,
+	)
 	// ForbiddenShootFinalizersOnCreation is a list of finalizers which are forbidden to be specified on Shoot creation.
 	ForbiddenShootFinalizersOnCreation = sets.New(
 		gardencorev1beta1.GardenerName,
@@ -161,7 +168,11 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 	allErrs = append(allErrs, ValidateShootHAConfigUpdate(newShoot, oldShoot)...)
 	allErrs = append(allErrs, validateHibernationUpdate(newShoot, oldShoot)...)
 
-	if helper.ShootNeedsForceDeletion(newShoot) && !helper.ShootNeedsForceDeletion(oldShoot) && !features.DefaultFeatureGate.Enabled(features.ShootForceDeletion) {
+	if features.DefaultFeatureGate.Enabled(features.ShootForceDeletion) {
+		if err := ValidateForceDeletion(newShoot, oldShoot); err != nil {
+			allErrs = append(allErrs, err)
+		}
+	} else if helper.ShootNeedsForceDeletion(newShoot) && !helper.ShootNeedsForceDeletion(oldShoot) {
 		allErrs = append(allErrs, field.Forbidden(field.NewPath("metadata", "annotations").Key(v1beta1constants.AnnotationConfirmationForceDeletion), "force-deletion annotation cannot be added when the ShootForceDeletion feature gate is not enabled"))
 	}
 
@@ -2272,6 +2283,32 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 		}
 	}
 	return allErrs
+}
+
+// ValidateForceDeletion validates the addition of force-deletion annotation on the Shoot.
+func ValidateForceDeletion(newShoot, oldShoot *core.Shoot) *field.Error {
+	var (
+		fldPath               = field.NewPath("metadata", "annotations").Key(v1beta1constants.AnnotationConfirmationForceDeletion)
+		oldNeedsForceDeletion = helper.ShootNeedsForceDeletion(oldShoot)
+		newNeedsForceDeletion = helper.ShootNeedsForceDeletion(newShoot)
+	)
+
+	if !newNeedsForceDeletion && oldNeedsForceDeletion {
+		return field.Forbidden(fldPath, "force-deletion annotation cannot be removed once set")
+	}
+
+	if newNeedsForceDeletion && !oldNeedsForceDeletion {
+		if newShoot.DeletionTimestamp == nil {
+			return field.Forbidden(fldPath, "force-deletion annotation cannot be set when Shoot deletionTimestamp is nil")
+		}
+		for _, lastError := range newShoot.Status.LastErrors {
+			if errorCodesAllowingForceDeletion.HasAny(lastError.Codes...) {
+				return nil
+			}
+		}
+		return field.Forbidden(fldPath, fmt.Sprintf("force-deletion annotation cannot be set when Shoot status does not contain one of these ErrorCode: %v", sets.List(errorCodesAllowingForceDeletion)))
+	}
+	return nil
 }
 
 // ValidateShootHAConfig enforces that both annotation and HA spec are not set together.

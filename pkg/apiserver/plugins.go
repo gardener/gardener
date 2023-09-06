@@ -32,7 +32,6 @@ import (
 	shootdns "github.com/gardener/gardener/plugin/pkg/shoot/dns"
 	shootdnsrewriting "github.com/gardener/gardener/plugin/pkg/shoot/dnsrewriting"
 	shootexposureclass "github.com/gardener/gardener/plugin/pkg/shoot/exposureclass"
-	shootforcedeletion "github.com/gardener/gardener/plugin/pkg/shoot/forcedeletion"
 	shootmanagedseed "github.com/gardener/gardener/plugin/pkg/shoot/managedseed"
 	shootnodelocaldns "github.com/gardener/gardener/plugin/pkg/shoot/nodelocaldns"
 	"github.com/gardener/gardener/plugin/pkg/shoot/oidc/clusteropenidconnectpreset"
@@ -47,7 +46,6 @@ import (
 func RegisterAllAdmissionPlugins(plugins *admission.Plugins) {
 	resourcereferencemanager.Register(plugins)
 	deletionconfirmation.Register(plugins)
-	shootforcedeletion.Register(plugins)
 	extensionvalidation.Register(plugins)
 	extensionlabels.Register(plugins)
 	shoottolerationrestriction.Register(plugins)

@@ -52,8 +52,6 @@ const (
 	PluginNameShootDNSRewriting = "ShootDNSRewriting"
 	// PluginNameShootExposureClass is the name of the ShootExposureClass admission plugin.
 	PluginNameShootExposureClass = "ShootExposureClass"
-	// PluginNameShootForceDeletion is the name of the ShootForceDeletion admission plugin.
-	PluginNameShootForceDeletion = "ShootForceDeletion"
 	// PluginNameShootManagedSeed is the name of the ShootManagedSeed admission plugin.
 	PluginNameShootManagedSeed = "ShootManagedSeed"
 	// PluginNameShootNodeLocalDNSEnabledByDefault is the name of the ShootNodeLocalDNSEnabledByDefault admission plugin.
@@ -79,7 +77,6 @@ func AllPluginNames() []string {
 		PluginNameResourceReferenceManager,          // ResourceReferenceManager
 		PluginNameExtensionValidator,                // ExtensionValidator
 		PluginNameExtensionLabels,                   // ExtensionLabels
-		PluginNameShootForceDeletion,                // ShootForceDeletion
 		PluginNameShootTolerationRestriction,        // ShootTolerationRestriction
 		PluginNameShootExposureClass,                // ShootExposureClass
 		PluginNameShootDNS,                          // ShootDNS
@@ -120,7 +117,6 @@ func DefaultOnPlugins() sets.String {
 		PluginNameResourceReferenceManager,        // ResourceReferenceManager
 		PluginNameExtensionValidator,              // ExtensionValidator
 		PluginNameExtensionLabels,                 // ExtensionLabels
-		PluginNameShootForceDeletion,              // ShootForceDeletion
 		PluginNameShootTolerationRestriction,      // ShootTolerationRestriction
 		PluginNameShootExposureClass,              // ShootExposureClass
 		PluginNameShootDNS,                        // ShootDNS
