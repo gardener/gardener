@@ -27,7 +27,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -206,21 +208,7 @@ func (r *Reconciler) releaseUnreferencedSecrets(ctx context.Context, log logr.Lo
 		return err
 	}
 
-	var fns []flow.TaskFn
-	for _, secret := range secrets {
-		s := secret
-		fns = append(fns, func(ctx context.Context) error {
-			if controllerutil.ContainsFinalizer(s, v1beta1constants.ReferenceProtectionFinalizerName) {
-				log.Info("Removing finalizer from secret", "secret", client.ObjectKeyFromObject(s))
-				if err := controllerutils.RemoveFinalizers(ctx, r.Client, s, v1beta1constants.ReferenceProtectionFinalizerName); err != nil {
-					return fmt.Errorf("failed to remove finalizer from secret: %w", err)
-				}
-			}
-			return nil
-		})
-	}
-
-	return flow.Parallel(fns...)(ctx)
+	return r.releaseUnreferencedResources(ctx, log, secrets...)
 }
 
 func (r *Reconciler) releaseUnreferencedConfigMaps(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) error {
@@ -236,21 +224,7 @@ func (r *Reconciler) releaseUnreferencedConfigMaps(ctx context.Context, log logr
 		return err
 	}
 
-	var fns []flow.TaskFn
-	for _, configMap := range configMaps {
-		cm := configMap
-		fns = append(fns, func(ctx context.Context) error {
-			if controllerutil.ContainsFinalizer(cm, v1beta1constants.ReferenceProtectionFinalizerName) {
-				log.Info("Removing finalizer from ConfigMap", "configMap", client.ObjectKeyFromObject(cm))
-				if err := controllerutils.RemoveFinalizers(ctx, r.Client, cm, v1beta1constants.ReferenceProtectionFinalizerName); err != nil {
-					return fmt.Errorf("failed to remove finalizer from ConfigMap: %w", err)
-				}
-			}
-			return nil
-		})
-
-	}
-	return flow.Parallel(fns...)(ctx)
+	return r.releaseUnreferencedResources(ctx, log, configMaps...)
 }
 
 var (
@@ -259,6 +233,33 @@ var (
 	// UserManagedSelector is a selector for objects which are managed by users and not created by Gardener.
 	UserManagedSelector = client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(noGardenRole)}
 )
+
+func (r *Reconciler) releaseUnreferencedResources(
+	ctx context.Context,
+	log logr.Logger,
+	resources ...client.Object,
+) error {
+	var fns []flow.TaskFn
+	for _, resource := range resources {
+		obj := resource
+
+		gvk, err := apiutil.GVKForObject(obj, kubernetesscheme.Scheme)
+		if err != nil {
+			return fmt.Errorf("failed to identify GVK for object: %w", err)
+		}
+
+		fns = append(fns, func(ctx context.Context) error {
+			if controllerutil.ContainsFinalizer(obj, v1beta1constants.ReferenceProtectionFinalizerName) {
+				log.Info("Removing finalizer from object", "kind", gvk.Kind, "obj", client.ObjectKeyFromObject(obj))
+				if err := controllerutils.RemoveFinalizers(ctx, r.Client, obj, v1beta1constants.ReferenceProtectionFinalizerName); err != nil {
+					return fmt.Errorf("failed to remove finalizer from %s %s: %w", gvk.Kind, client.ObjectKeyFromObject(obj), err)
+				}
+			}
+			return nil
+		})
+	}
+	return flow.Parallel(fns...)(ctx)
+}
 
 func (r *Reconciler) getUnreferencedResources(
 	ctx context.Context,
