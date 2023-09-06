@@ -50,13 +50,15 @@ for version in "${versions[@]}"; do
   for file in "${files[@]}"; do
     { wget -q -O - "https://raw.githubusercontent.com/kubernetes/kubernetes/release-${version}/${file}" || echo; } > "${out_dir}/kube_features.go"
     grep -E '{Default: .*, PreRelease: .*},' "${out_dir}/kube_features.go" | awk '{print $1}' | { grep -Eo '[A-Z]\w+' || true; } > "${out_dir}/constants.txt"
-    while read constant; do
+    while read -r constant; do
       grep -E "${constant} featuregate.Feature = \".*\"" "${out_dir}/kube_features.go" | awk '{print $4}' | { grep -Eo '[A-Z]\w+' || true; } >> "${out_dir}/featuregates-${version}.txt"
     done < "${out_dir}/constants.txt"
 
-    grep -E '{Default: .*, PreRelease: .*, LockToDefault: .*},' "${out_dir}/kube_features.go" | awk '{print $1}' | { grep -Eo '[A-Z]\w+' || true; } > "${out_dir}/locked_features.txt"
-    while read feature; do
-      grep -E "${feature} featuregate.Feature = \".*\"" "${out_dir}/kube_features.go" | awk '{print $4}' | { grep -Eo '[A-Z]\w+' || true; } >> "${out_dir}/locked-featuregates-${version}.txt"
+    grep -E '{Default: .*, PreRelease: .*, LockToDefault: .*},' "${out_dir}/kube_features.go" | sed -En 's/([A-Z]\w+)(: +\{)(Default: (true|false)).*$/\1 \4/p' > "${out_dir}/locked_features.txt"
+    while read -r feature; do
+      name=$(echo "$feature" | awk '{print $1}' )
+      default="$(echo "$feature" | awk '{print $2}')"
+      grep -E "${name} featuregate.Feature = \".*\"" "${out_dir}/kube_features.go" | sed -En 's/^.*\"([A-Z]\w+)\".*$/\1 \tDefault: '"$default"'/p' >> "${out_dir}/locked-featuregates-${version}.txt"
     done < "${out_dir}/locked_features.txt"
     rm -f "${out_dir}/kube_features.go" "${out_dir}/constants.txt" "${out_dir}/locked_features.txt"
   done
@@ -72,5 +74,5 @@ echo "Feature gates removed in $2 compared to $1:"
 diff "${out_dir}/featuregates-$1.txt" "${out_dir}/featuregates-$2.txt" | grep '<' | awk '{print $2}'
 echo
 echo "Feature gates locked to default in $2 compared to $1:"
-diff "${out_dir}/locked-featuregates-$1.txt" "${out_dir}/locked-featuregates-$2.txt" | grep '>' | awk '{print $2}'
+diff "${out_dir}/locked-featuregates-$1.txt" "${out_dir}/locked-featuregates-$2.txt" | grep '>' | cut -c 2- | column -t
 echo
