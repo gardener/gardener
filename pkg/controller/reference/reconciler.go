@@ -39,7 +39,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Reconciler checks the object in the given request for Secret or ConfiGMap references to further objects in order to
@@ -49,6 +48,7 @@ type Reconciler struct {
 	ConcurrentSyncs             *int
 	NewObjectFunc               func() client.Object
 	NewObjectListFunc           func() client.ObjectList
+	GetNamespace                func(client.Object) string
 	GetReferencedSecretNames    func(client.Object) []string
 	GetReferencedConfigMapNames func(client.Object) []string
 	ReferenceChangedPredicate   func(oldObj, newObj client.Object) bool
@@ -99,11 +99,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	addedFinalizerToSecret, err := r.handleReferencedResources(ctx, log, "Secret", func() client.Object { return &corev1.Secret{} }, obj.GetNamespace(), referencedSecretNames...)
+	addedFinalizerToSecret, err := r.handleReferencedResources(ctx, log, "Secret", func() client.Object { return &corev1.Secret{} }, r.GetNamespace(obj), referencedSecretNames...)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	addedFinalizerToConfigMap, err := r.handleReferencedResources(ctx, log, "ConfigMap", func() client.Object { return &corev1.ConfigMap{} }, obj.GetNamespace(), referencedConfigMapNames...)
+	addedFinalizerToConfigMap, err := r.handleReferencedResources(ctx, log, "ConfigMap", func() client.Object { return &corev1.ConfigMap{} }, r.GetNamespace(obj), referencedConfigMapNames...)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -158,7 +158,7 @@ func (r *Reconciler) handleReferencedResources(
 		name := resourceName
 		fns = append(fns, func(ctx context.Context) error {
 			obj := newObjectFunc()
-			if err := r.Client.Get(ctx, kubernetesutils.Key(namespace, name), obj); err != nil {
+			if err := r.Client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, obj); err != nil {
 				return err
 			}
 
@@ -219,12 +219,17 @@ func (r *Reconciler) getUnreferencedResources(
 	[]client.Object,
 	error,
 ) {
-	if err := r.Client.List(ctx, resourceList, client.InNamespace(reconciledObj.GetNamespace()), UserManagedSelector); err != nil {
+	var listOptions []client.ListOption
+	if namespace := r.GetNamespace(reconciledObj); namespace != "" {
+		listOptions = append(listOptions, client.InNamespace(namespace))
+	}
+
+	if err := r.Client.List(ctx, resourceList, append([]client.ListOption{UserManagedSelector}, listOptions...)...); err != nil {
 		return nil, err
 	}
 
 	reconciledObjList := r.NewObjectListFunc()
-	if err := r.Client.List(ctx, reconciledObjList, client.InNamespace(reconciledObj.GetNamespace())); err != nil {
+	if err := r.Client.List(ctx, reconciledObjList, listOptions...); err != nil {
 		return nil, err
 	}
 

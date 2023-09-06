@@ -32,6 +32,7 @@ func AddToManager(mgr manager.Manager, cfg config.ShootReferenceControllerConfig
 		ConcurrentSyncs:             cfg.ConcurrentSyncs,
 		NewObjectFunc:               func() client.Object { return &gardencorev1beta1.Shoot{} },
 		NewObjectListFunc:           func() client.ObjectList { return &gardencorev1beta1.ShootList{} },
+		GetNamespace:                func(obj client.Object) string { return obj.GetNamespace() },
 		GetReferencedSecretNames:    getReferencedSecretNames,
 		GetReferencedConfigMapNames: getReferencedConfigMapNames,
 		ReferenceChangedPredicate:   Predicate,
