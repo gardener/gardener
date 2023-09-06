@@ -34,7 +34,6 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -64,6 +63,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/gardener/gardener/test/utils/operationannotation"
+	thirdpartyapiutil "github.com/gardener/gardener/third_party/controller-runtime/pkg/apiutil"
 )
 
 var _ = Describe("Garden controller tests", func() {
@@ -115,20 +115,20 @@ var _ = Describe("Garden controller tests", func() {
 		})
 
 		By("Setup manager")
-		mapper, err := apiutil.NewDynamicRESTMapper(restConfig)
+		mapper, err := thirdpartyapiutil.NewDynamicRESTMapper(restConfig)
 		Expect(err).NotTo(HaveOccurred())
 
 		mgr, err := manager.New(restConfig, manager.Options{
 			Scheme:             operatorclient.RuntimeScheme,
 			MetricsBindAddress: "0",
-			NewCache: cache.BuilderWithOptions(cache.Options{
+			Cache: cache.Options{
 				Mapper: mapper,
-				SelectorsByObject: map[client.Object]cache.ObjectSelector{
+				ByObject: map[client.Object]cache.ByObject{
 					&operatorv1alpha1.Garden{}: {
 						Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 					},
 				},
-			}),
+			},
 			ClientDisableCacheFor: []client.Object{
 				&corev1.Secret{}, // applied because of operations on managed resources and their secrets
 			},

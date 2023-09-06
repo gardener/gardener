@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/admissionpluginsecret"
@@ -41,6 +42,7 @@ func AddToManager(
 		Logger:    mgr.GetLogger().WithName("webhook").WithName(auditpolicy.HandlerName),
 		APIReader: mgr.GetAPIReader(),
 		Client:    mgr.GetClient(),
+		Decoder:   admission.NewDecoder(mgr.GetScheme()),
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding %s webhook handler: %w", auditpolicy.HandlerName, err)
 	}
@@ -80,8 +82,9 @@ func AddToManager(
 	}
 
 	if err := (&seedrestriction.Handler{
-		Logger: mgr.GetLogger().WithName("webhook").WithName(seedrestriction.HandlerName),
-		Client: mgr.GetClient(),
+		Logger:  mgr.GetLogger().WithName("webhook").WithName(seedrestriction.HandlerName),
+		Client:  mgr.GetClient(),
+		Decoder: admission.NewDecoder(mgr.GetScheme()),
 	}).AddToManager(ctx, mgr); err != nil {
 		return fmt.Errorf("failed adding %s webhook handler: %w", seedrestriction.HandlerName, err)
 	}

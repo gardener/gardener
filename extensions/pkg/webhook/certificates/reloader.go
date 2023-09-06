@@ -28,6 +28,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/gardener/gardener/pkg/controllerutils"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -58,7 +59,13 @@ type reloader struct {
 // manager in order to periodically reload the secret from the cluster.
 func (r *reloader) AddToManager(ctx context.Context, mgr manager.Manager) error {
 	r.reader = mgr.GetClient()
-	r.certDir = mgr.GetWebhookServer().CertDir
+
+	webhookServer := mgr.GetWebhookServer()
+	defaultServer, ok := webhookServer.(*webhook.DefaultServer)
+	if !ok {
+		return fmt.Errorf("expected *webhook.DefaultServer, got %T", webhookServer)
+	}
+	r.certDir = defaultServer.Options.CertDir
 
 	// initial retrieval of server cert, needed in order for the webhook server to start successfully
 	found, _, serverCert, serverKey, err := r.getServerCert(ctx, mgr.GetAPIReader())

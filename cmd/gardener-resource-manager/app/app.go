@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	goruntime "runtime"
 	"strconv"
@@ -37,16 +38,16 @@ import (
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
-	controllerconfigv1alpha1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
+	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	controllerwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/gardener/gardener/cmd/gardener-resource-manager/app/bootstrappers"
+	"github.com/gardener/gardener/pkg/api/indexer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
@@ -56,6 +57,7 @@ import (
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook"
+	thirdpartyapiutil "github.com/gardener/gardener/third_party/controller-runtime/pkg/apiutil"
 )
 
 // Name is a const for the name of this component.
@@ -146,9 +148,6 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 		Namespace:               *cfg.SourceClientConnection.Namespace,
 		SyncPeriod:              &cfg.SourceClientConnection.CacheResyncPeriod.Duration,
 
-		Host:                   cfg.Server.Webhooks.BindAddress,
-		Port:                   cfg.Server.Webhooks.Port,
-		CertDir:                cfg.Server.Webhooks.TLS.ServerCertDir,
 		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(cfg.Server.HealthProbes.Port)),
 		MetricsBindAddress:     net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
 
@@ -160,9 +159,15 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 		LeaseDuration:                 &cfg.LeaderElection.LeaseDuration.Duration,
 		RenewDeadline:                 &cfg.LeaderElection.RenewDeadline.Duration,
 		RetryPeriod:                   &cfg.LeaderElection.RetryPeriod.Duration,
-		Controller: controllerconfigv1alpha1.ControllerConfigurationSpec{
+		Controller: controllerconfig.Controller{
 			RecoverPanic: pointer.Bool(true),
 		},
+
+		WebhookServer: controllerwebhook.NewServer(controllerwebhook.Options{
+			Host:    cfg.Server.Webhooks.BindAddress,
+			Port:    cfg.Server.Webhooks.Port,
+			CertDir: cfg.Server.Webhooks.TLS.ServerCertDir,
+		}),
 	})
 	if err != nil {
 		return err
@@ -205,27 +210,32 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 
 			// use dynamic rest mapper for target cluster, which will automatically rediscover resources on NoMatchErrors
 			// but is rate-limited to not issue to many discovery calls (rate-limit shared across all reconciliations)
-			opts.MapperProvider = func(config *rest.Config) (meta.RESTMapper, error) {
-				return apiutil.NewDynamicRESTMapper(
+			opts.MapperProvider = func(config *rest.Config, httpClient *http.Client) (meta.RESTMapper, error) {
+				// TODO(ary1992): The new rest mapper implementation doesn't return a NoKindMatchError but a ErrGroupDiscoveryFailed
+				// when an API GroupVersion is not present in the cluster. Remove the old restmapper usage once the upstream issue
+				// (https://github.com/kubernetes-sigs/controller-runtime/pull/2425) is fixed.
+				return thirdpartyapiutil.NewDynamicRESTMapper(
 					config,
-					apiutil.WithLazyDiscovery,
-					apiutil.WithLimiter(rate.NewLimiter(rate.Every(1*time.Minute), 1)), // rediscover at maximum every minute
+					thirdpartyapiutil.WithLazyDiscovery,
+					thirdpartyapiutil.WithLimiter(rate.NewLimiter(rate.Every(1*time.Minute), 1)), // rediscover at maximum every minute
 				)
 			}
 
-			opts.Namespace = *cfg.TargetClientConnection.Namespace
+			opts.Cache.Namespaces = []string{*cfg.TargetClientConnection.Namespace}
 			opts.SyncPeriod = &cfg.TargetClientConnection.CacheResyncPeriod.Duration
 
 			if *cfg.TargetClientConnection.DisableCachedClient {
-				opts.NewClient = func(_ cache.Cache, config *rest.Config, opts client.Options, _ ...client.Object) (client.Client, error) {
+				opts.NewClient = func(config *rest.Config, opts client.Options) (client.Client, error) {
 					return client.New(config, opts)
 				}
 			}
 
-			opts.ClientDisableCacheFor = []client.Object{
-				&corev1.Event{},
-				&eventsv1beta1.Event{},
-				&eventsv1.Event{},
+			opts.Client.Cache = &client.CacheOptions{
+				DisableFor: []client.Object{
+					&corev1.Event{},
+					&eventsv1beta1.Event{},
+					&eventsv1.Event{},
+				},
 			}
 		})
 		if err != nil {
@@ -241,6 +251,11 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 		if err := mgr.Add(targetCluster); err != nil {
 			return fmt.Errorf("failed adding target cluster to manager: %w", err)
 		}
+	}
+
+	log.Info("Adding field indexes to informers")
+	if err := addAllFieldIndexes(ctx, targetCluster.GetFieldIndexer()); err != nil {
+		return fmt.Errorf("failed adding indexes: %w", err)
 	}
 
 	log.Info("Adding webhook handlers to manager")
@@ -259,4 +274,17 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 
 	log.Info("Starting manager")
 	return mgr.Start(ctx)
+}
+
+func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
+	for _, fn := range []func(context.Context, client.FieldIndexer) error{
+		// core/v1 API group
+		indexer.AddPodNodeName,
+	} {
+		if err := fn(ctx, i); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

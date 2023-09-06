@@ -34,6 +34,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/logger"
@@ -80,10 +81,6 @@ var _ = BeforeSuite(func() {
 		},
 	}
 
-	// TODO(timuthy): `MinDomainsInPodTopologySpread` feature gate is enabled by default as of Kubernetes v1.27. The following lines can be dropped as soon as `envtest` is updated.
-	args := testEnv.ControlPlane.APIServer.Configure()
-	args.Set("feature-gates", "MinDomainsInPodTopologySpread=true")
-
 	var err error
 	restConfig, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
@@ -116,11 +113,12 @@ var _ = BeforeSuite(func() {
 		Logger:       log,
 		TargetClient: testClient,
 		// Use the same version as the envtest package
-		TargetVersion: semver.MustParse("1.26.0"),
+		TargetVersion: semver.MustParse("1.27.0"),
 		Config: config.HighAvailabilityConfigWebhookConfig{
 			DefaultNotReadyTolerationSeconds:    pointer.Int64(defaultNotReadyTolerationSeconds),
 			DefaultUnreachableTolerationSeconds: pointer.Int64(defaultUnreachableTolerationSeconds),
 		},
+		Decoder: admission.NewDecoder(mgr.GetScheme()),
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("Start manager")

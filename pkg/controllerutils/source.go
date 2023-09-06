@@ -34,7 +34,7 @@ var EnqueueOnce = source.Func(func(_ context.Context, _ handler.EventHandler, q 
 
 // HandleOnce is a source.Source that simply triggers the reconciler once by calling 'Create' at the event handler with
 // an empty event.CreateEvent.
-var HandleOnce = source.Func(func(_ context.Context, handler handler.EventHandler, queue workqueue.RateLimitingInterface, _ ...predicate.Predicate) error {
-	handler.Create(event.CreateEvent{}, queue)
+var HandleOnce = source.Func(func(ctx context.Context, handler handler.EventHandler, queue workqueue.RateLimitingInterface, _ ...predicate.Predicate) error {
+	handler.Create(ctx, event.CreateEvent{}, queue)
 	return nil
 })

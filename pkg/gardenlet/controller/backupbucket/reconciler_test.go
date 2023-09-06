@@ -65,31 +65,6 @@ var _ = Describe("Controller", func() {
 	)
 
 	BeforeEach(func() {
-		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
-
-		testSchemeBuilder := runtime.NewSchemeBuilder(
-			kubernetes.AddSeedSchemeToScheme,
-			extensionsv1alpha1.AddToScheme,
-		)
-		testScheme := runtime.NewScheme()
-		Expect(testSchemeBuilder.AddToScheme(testScheme)).To(Succeed())
-
-		seedClient = fakeclient.NewClientBuilder().WithScheme(testScheme).Build()
-
-		fakeClock = testclock.NewFakeClock(time.Now())
-
-		reconciler = &Reconciler{
-			GardenClient: gardenClient,
-			SeedClient:   seedClient,
-			Recorder:     &record.FakeRecorder{},
-			Config: config.BackupBucketControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(5),
-			},
-			Clock:           fakeClock,
-			GardenNamespace: gardenNamespaceName,
-			SeedName:        seedName,
-		}
-
 		gardenSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-secret",
@@ -99,7 +74,6 @@ var _ = Describe("Controller", func() {
 				"foo": []byte("bar"),
 			},
 		}
-		Expect(gardenClient.Create(ctx, gardenSecret)).To(Succeed())
 
 		backupBucket = &gardencorev1beta1.BackupBucket{
 			ObjectMeta: metav1.ObjectMeta{
@@ -127,6 +101,33 @@ var _ = Describe("Controller", func() {
 				ProviderStatus: providerStatus,
 			},
 		}
+
+		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithStatusSubresource(&gardencorev1beta1.BackupBucket{}).Build()
+
+		testSchemeBuilder := runtime.NewSchemeBuilder(
+			kubernetes.AddSeedSchemeToScheme,
+			extensionsv1alpha1.AddToScheme,
+		)
+		testScheme := runtime.NewScheme()
+		Expect(testSchemeBuilder.AddToScheme(testScheme)).To(Succeed())
+
+		seedClient = fakeclient.NewClientBuilder().WithScheme(testScheme).Build()
+
+		fakeClock = testclock.NewFakeClock(time.Now())
+
+		reconciler = &Reconciler{
+			GardenClient: gardenClient,
+			SeedClient:   seedClient,
+			Recorder:     &record.FakeRecorder{},
+			Config: config.BackupBucketControllerConfiguration{
+				ConcurrentSyncs: pointer.Int(5),
+			},
+			Clock:           fakeClock,
+			GardenNamespace: gardenNamespaceName,
+			SeedName:        seedName,
+		}
+
+		Expect(gardenClient.Create(ctx, gardenSecret)).To(Succeed())
 		Expect(gardenClient.Create(ctx, backupBucket)).To(Succeed())
 
 		now := fakeClock.Now().UTC()

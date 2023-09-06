@@ -118,7 +118,7 @@ AuthenticationWebhook
 <td>
 <code>cacheTTL</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#duration-v1-meta">
 Kubernetes meta/v1.Duration
 </a>
 </em>
@@ -207,7 +207,7 @@ AuthorizationWebhook
 <td>
 <code>cacheAuthorizedTTL</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#duration-v1-meta">
 Kubernetes meta/v1.Duration
 </a>
 </em>
@@ -221,7 +221,7 @@ Kubernetes meta/v1.Duration
 <td>
 <code>cacheUnauthorizedTTL</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#duration-v1-meta">
 Kubernetes meta/v1.Duration
 </a>
 </em>
@@ -299,7 +299,7 @@ string
 <td>
 <code>secretRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secretreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
 Kubernetes core/v1.SecretReference
 </a>
 </em>
@@ -633,7 +633,7 @@ Storage
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -1354,7 +1354,7 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeControllerManagerConfig
 <td>
 <code>certificateSigningDuration</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#duration-v1-meta">
 Kubernetes meta/v1.Duration
 </a>
 </em>
@@ -1519,7 +1519,7 @@ Only v1.ResourceQuota resources are supported.</p>
 <td>
 <code>projectSelector</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#labelselector-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#labelselector-v1-meta">
 Kubernetes meta/v1.LabelSelector
 </a>
 </em>
@@ -1597,7 +1597,7 @@ Defaults to empty LabelSelector, which matches all projects.</p>
 <td>
 <code>unrestrictedSubjects</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#subject-v1-rbac">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#subject-v1-rbac">
 []Kubernetes rbac/v1.Subject
 </a>
 </em>

@@ -86,11 +86,11 @@ const (
 	UpdateWithNew
 )
 
-func (e *enqueueRequestsFromMapFunc) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueRequestsFromMapFunc) Create(_ context.Context, evt event.CreateEvent, q workqueue.RateLimitingInterface) {
 	e.mapAndEnqueue(q, evt.Object)
 }
 
-func (e *enqueueRequestsFromMapFunc) Update(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueRequestsFromMapFunc) Update(_ context.Context, evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
 	switch e.updateBehavior {
 	case UpdateWithOldAndNew:
 		e.mapAndEnqueue(q, evt.ObjectOld)
@@ -102,11 +102,11 @@ func (e *enqueueRequestsFromMapFunc) Update(evt event.UpdateEvent, q workqueue.R
 	}
 }
 
-func (e *enqueueRequestsFromMapFunc) Delete(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueRequestsFromMapFunc) Delete(_ context.Context, evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
 	e.mapAndEnqueue(q, evt.Object)
 }
 
-func (e *enqueueRequestsFromMapFunc) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueRequestsFromMapFunc) Generic(_ context.Context, evt event.GenericEvent, q workqueue.RateLimitingInterface) {
 	e.mapAndEnqueue(q, evt.Object)
 }
 

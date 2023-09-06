@@ -52,6 +52,8 @@ var _ = Describe("handler", func() {
 
 		secret            *corev1.Secret
 		shootMetadataList *metav1.PartialObjectMetadataList
+		warning           admission.Warnings
+		err               error
 
 		resourceName         = "foo"
 		regularNamespaceName = "regular-namespace"
@@ -95,9 +97,18 @@ var _ = Describe("handler", func() {
 	Context("ignored requests", func() {
 		It("should only handle garden and seed namespaces", func() {
 			secret.Namespace = regularNamespaceName
-			Expect(handler.ValidateCreate(ctx, secret)).To(Succeed())
-			Expect(handler.ValidateUpdate(ctx, secret, secret)).To(Succeed())
-			Expect(handler.ValidateDelete(ctx, secret)).To(Succeed())
+
+			warning, err = handler.ValidateCreate(ctx, secret)
+			Expect(warning).To(BeNil())
+			Expect(err).To(Succeed())
+
+			warning, err = handler.ValidateUpdate(ctx, secret, secret)
+			Expect(warning).To(BeNil())
+			Expect(err).To(Succeed())
+
+			warning, err = handler.ValidateDelete(ctx, secret)
+			Expect(warning).To(BeNil())
+			Expect(err).To(Succeed())
 		})
 	})
 
@@ -111,7 +122,9 @@ var _ = Describe("handler", func() {
 				client.Limit(1),
 			).Return(fakeErr)
 
-			err := handler.ValidateCreate(ctx, secret)
+			warning, err = handler.ValidateCreate(ctx, secret)
+			Expect(warning).To(BeNil())
+
 			statusError, ok := err.(*apierrors.StatusError)
 			Expect(ok).To(BeTrue())
 			Expect(statusError.Status().Code).To(Equal(int32(http.StatusInternalServerError)))
@@ -130,7 +143,9 @@ var _ = Describe("handler", func() {
 				return nil
 			})
 
-			Expect(handler.ValidateCreate(ctx, secret)).To(MatchError(ContainSubstring("there can be only one secret with the 'internal-domain' secret role")))
+			warning, err = handler.ValidateCreate(ctx, secret)
+			Expect(warning).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("there can be only one secret with the 'internal-domain' secret role")))
 		})
 
 		It("should fail because another internal domain secret exists in the same seed namespace", func() {
@@ -146,7 +161,9 @@ var _ = Describe("handler", func() {
 			})
 
 			secret.Namespace = seedNamespace
-			Expect(handler.ValidateCreate(ctx, secret)).To(MatchError(ContainSubstring("there can be only one secret with the 'internal-domain' secret role")))
+			warning, err = handler.ValidateCreate(ctx, secret)
+			Expect(warning).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("there can be only one secret with the 'internal-domain' secret role")))
 		})
 
 		It("should fail because the secret misses domain info", func() {
@@ -159,7 +176,9 @@ var _ = Describe("handler", func() {
 			)
 
 			secret.Annotations = nil
-			Expect(handler.ValidateCreate(ctx, secret)).To(MatchError(ContainSubstring("domain secret has no annotations")))
+			warning, err = handler.ValidateCreate(ctx, secret)
+			Expect(warning).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("domain secret has no annotations")))
 		})
 
 		It("should pass because no other internal domain secret exists", func() {
@@ -171,7 +190,9 @@ var _ = Describe("handler", func() {
 				client.Limit(1),
 			)
 
-			Expect(handler.ValidateCreate(ctx, secret)).To(Succeed())
+			warning, err = handler.ValidateCreate(ctx, secret)
+			Expect(warning).To(BeNil())
+			Expect(err).To(Succeed())
 		})
 	})
 
@@ -193,7 +214,9 @@ var _ = Describe("handler", func() {
 					client.Limit(1),
 				).Return(fakeErr)
 
-				err := handler.ValidateUpdate(ctx, oldSecret, secret)
+				warning, err = handler.ValidateUpdate(ctx, oldSecret, secret)
+				Expect(warning).To(BeNil())
+
 				statusError, ok := err.(*apierrors.StatusError)
 				Expect(ok).To(BeTrue())
 				Expect(statusError.Status().Code).To(Equal(int32(http.StatusInternalServerError)))
@@ -212,20 +235,26 @@ var _ = Describe("handler", func() {
 					return nil
 				})
 
-				Expect(handler.ValidateUpdate(ctx, oldSecret, secret)).To(MatchError(ContainSubstring("there can be only one secret with the 'internal-domain' secret role")))
+				warning, err = handler.ValidateUpdate(ctx, oldSecret, secret)
+				Expect(warning).To(BeNil())
+				Expect(err).To(MatchError(ContainSubstring("there can be only one secret with the 'internal-domain' secret role")))
 			})
 		})
 
 		It("should fail because the old secret misses domain info", func() {
 			oldSecret := secret.DeepCopy()
 			oldSecret.Annotations = nil
-			Expect(handler.ValidateUpdate(ctx, oldSecret, secret)).To(MatchError(ContainSubstring("domain secret has no annotations")))
+			warning, err = handler.ValidateUpdate(ctx, oldSecret, secret)
+			Expect(warning).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("domain secret has no annotations")))
 		})
 
 		It("should fail because the secret misses domain info", func() {
 			oldSecret := secret.DeepCopy()
 			secret.Annotations = nil
-			Expect(handler.ValidateUpdate(ctx, oldSecret, secret)).To(MatchError(ContainSubstring("domain secret has no annotations")))
+			warning, err = handler.ValidateUpdate(ctx, oldSecret, secret)
+			Expect(warning).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("domain secret has no annotations")))
 		})
 
 		It("should forbid because the domain is changed but shoot listing failed", func() {
@@ -238,7 +267,9 @@ var _ = Describe("handler", func() {
 			oldSecret := secret.DeepCopy()
 			secret.Annotations["dns.gardener.cloud/domain"] = "foobar"
 
-			err := handler.ValidateUpdate(ctx, oldSecret, secret)
+			warning, err = handler.ValidateUpdate(ctx, oldSecret, secret)
+			Expect(warning).To(BeNil())
+
 			statusError, ok := err.(*apierrors.StatusError)
 			Expect(ok).To(BeTrue())
 			Expect(statusError.Status().Code).To(Equal(int32(http.StatusInternalServerError)))
@@ -257,7 +288,9 @@ var _ = Describe("handler", func() {
 
 			oldSecret := secret.DeepCopy()
 			secret.Annotations["dns.gardener.cloud/domain"] = "foobar"
-			Expect(handler.ValidateUpdate(ctx, oldSecret, secret)).To(MatchError(ContainSubstring("cannot change domain because there are still shoots left in the system")))
+			warning, err = handler.ValidateUpdate(ctx, oldSecret, secret)
+			Expect(warning).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("cannot change domain because there are still shoots left in the system")))
 		})
 
 		It("should forbid because the domain in seed namespace is changed but shoots using the seed exist", func() {
@@ -274,7 +307,9 @@ var _ = Describe("handler", func() {
 			secret.Namespace = seedNamespace
 			oldSecret := secret.DeepCopy()
 			secret.Annotations["dns.gardener.cloud/domain"] = "foobar"
-			Expect(handler.ValidateUpdate(ctx, oldSecret, secret)).To(MatchError(ContainSubstring("cannot change domain because there are still shoots left in the system")))
+			warning, err = handler.ValidateUpdate(ctx, oldSecret, secret)
+			Expect(warning).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("cannot change domain because there are still shoots left in the system")))
 		})
 
 		It("should allow because the domain is changed but no shoots exist", func() {
@@ -286,13 +321,17 @@ var _ = Describe("handler", func() {
 
 			oldSecret := secret.DeepCopy()
 			secret.Annotations["dns.gardener.cloud/domain"] = "foobar"
-			Expect(handler.ValidateUpdate(ctx, oldSecret, secret)).To(Succeed())
+			warning, err = handler.ValidateUpdate(ctx, oldSecret, secret)
+			Expect(warning).To(BeNil())
+			Expect(err).To(Succeed())
 		})
 
 		It("should allow because the domain is not changed", func() {
 			oldSecret := secret.DeepCopy()
 			secret.Annotations["dns.gardener.cloud/provider"] = "foobar"
-			Expect(handler.ValidateUpdate(ctx, oldSecret, secret)).To(Succeed())
+			warning, err = handler.ValidateUpdate(ctx, oldSecret, secret)
+			Expect(warning).To(BeNil())
+			Expect(err).To(Succeed())
 		})
 	})
 
@@ -304,7 +343,9 @@ var _ = Describe("handler", func() {
 				client.Limit(1),
 			).Return(fakeErr)
 
-			err := handler.ValidateDelete(ctx, secret)
+			warning, err = handler.ValidateDelete(ctx, secret)
+			Expect(warning).To(BeNil())
+
 			statusError, ok := err.(*apierrors.StatusError)
 			Expect(ok).To(BeTrue())
 			Expect(statusError.Status().Code).To(Equal(int32(http.StatusInternalServerError)))
@@ -321,7 +362,9 @@ var _ = Describe("handler", func() {
 				return nil
 			})
 
-			Expect(handler.ValidateDelete(ctx, secret)).To(MatchError(ContainSubstring("cannot delete internal domain secret because there are still shoots left in the system")))
+			warning, err = handler.ValidateDelete(ctx, secret)
+			Expect(warning).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("cannot delete internal domain secret because there are still shoots left in the system")))
 		})
 
 		It("should fail because at least one shoot on the seed exists", func() {
@@ -336,7 +379,9 @@ var _ = Describe("handler", func() {
 			})
 
 			secret.Namespace = seedNamespace
-			Expect(handler.ValidateDelete(ctx, secret)).To(MatchError(ContainSubstring("cannot delete internal domain secret because there are still shoots left in the system")))
+			warning, err = handler.ValidateDelete(ctx, secret)
+			Expect(warning).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("cannot delete internal domain secret because there are still shoots left in the system")))
 		})
 
 		It("should pass because no shoots exist", func() {
@@ -346,7 +391,9 @@ var _ = Describe("handler", func() {
 				client.Limit(1),
 			)
 
-			Expect(handler.ValidateDelete(ctx, secret)).To(Succeed())
+			warning, err = handler.ValidateDelete(ctx, secret)
+			Expect(warning).To(BeNil())
+			Expect(err).To(Succeed())
 		})
 	})
 })

@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -40,53 +41,53 @@ type Handler struct {
 }
 
 // ValidateCreate performs the check.
-func (h *Handler) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+func (h *Handler) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	secret, ok := obj.(*corev1.Secret)
 	if !ok {
-		return apierrors.NewBadRequest(fmt.Sprintf("expected *corev1.Secret but got %T", obj))
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected *corev1.Secret but got %T", obj))
 	}
 
 	seedName := gardenerutils.ComputeSeedName(secret.Namespace)
 	if secret.Namespace != v1beta1constants.GardenNamespace && seedName == "" {
-		return nil
+		return nil, nil
 	}
 
 	exists, err := h.internalDomainSecretExists(ctx, secret.Namespace)
 	if err != nil {
-		return apierrors.NewInternalError(err)
+		return nil, apierrors.NewInternalError(err)
 	}
 	if exists {
-		return apierrors.NewConflict(schema.GroupResource{Group: corev1.GroupName, Resource: "Secret"}, secret.Name, fmt.Errorf("cannot create internal domain secret because there can be only one secret with the 'internal-domain' secret role per namespace"))
+		return nil, apierrors.NewConflict(schema.GroupResource{Group: corev1.GroupName, Resource: "Secret"}, secret.Name, fmt.Errorf("cannot create internal domain secret because there can be only one secret with the 'internal-domain' secret role per namespace"))
 	}
 
 	if _, _, _, err := gardenerutils.GetDomainInfoFromAnnotations(secret.Annotations); err != nil {
-		return apierrors.NewBadRequest(err.Error())
+		return nil, apierrors.NewBadRequest(err.Error())
 	}
 
-	return nil
+	return nil, nil
 }
 
 // ValidateUpdate performs the check.
-func (h *Handler) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+func (h *Handler) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	secret, ok := newObj.(*corev1.Secret)
 	if !ok {
-		return apierrors.NewBadRequest(fmt.Sprintf("expected *corev1.Secret but got %T", newObj))
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected *corev1.Secret but got %T", newObj))
 	}
 
 	oldSecret, ok := oldObj.(*corev1.Secret)
 	if !ok {
-		return apierrors.NewBadRequest(fmt.Sprintf("expected *corev1.Secret but got %T", oldObj))
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected *corev1.Secret but got %T", oldObj))
 	}
 
 	seedName := gardenerutils.ComputeSeedName(secret.Namespace)
 	if secret.Namespace != v1beta1constants.GardenNamespace && seedName == "" {
-		return nil
+		return nil, nil
 	}
 
 	// If secret was newly labeled with gardener.cloud/role=internal-domain then check whether another internal domain
@@ -95,59 +96,59 @@ func (h *Handler) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Obj
 		secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleInternalDomain {
 		exists, err := h.internalDomainSecretExists(ctx, secret.Namespace)
 		if err != nil {
-			return apierrors.NewInternalError(err)
+			return nil, apierrors.NewInternalError(err)
 		}
 		if exists {
-			return apierrors.NewConflict(schema.GroupResource{Group: corev1.GroupName, Resource: "Secret"}, secret.Name, fmt.Errorf("cannot update secret because there can be only one secret with the 'internal-domain' secret role per namespace"))
+			return nil, apierrors.NewConflict(schema.GroupResource{Group: corev1.GroupName, Resource: "Secret"}, secret.Name, fmt.Errorf("cannot update secret because there can be only one secret with the 'internal-domain' secret role per namespace"))
 		}
 	}
 
 	_, oldDomain, _, err := gardenerutils.GetDomainInfoFromAnnotations(oldSecret.Annotations)
 	if err != nil {
-		return apierrors.NewInternalError(err)
+		return nil, apierrors.NewInternalError(err)
 	}
 	_, newDomain, _, err := gardenerutils.GetDomainInfoFromAnnotations(secret.Annotations)
 	if err != nil {
-		return apierrors.NewInternalError(err)
+		return nil, apierrors.NewInternalError(err)
 	}
 
 	if oldDomain != newDomain {
 		atLeastOneShoot, err := h.atLeastOneShootExists(ctx, seedName)
 		if err != nil {
-			return apierrors.NewInternalError(err)
+			return nil, apierrors.NewInternalError(err)
 		}
 		if atLeastOneShoot {
-			return apierrors.NewForbidden(schema.GroupResource{Group: corev1.GroupName, Resource: "Secret"}, secret.Name, fmt.Errorf("cannot change domain because there are still shoots left in the system"))
+			return nil, apierrors.NewForbidden(schema.GroupResource{Group: corev1.GroupName, Resource: "Secret"}, secret.Name, fmt.Errorf("cannot change domain because there are still shoots left in the system"))
 		}
 	}
 
-	return nil
+	return nil, nil
 }
 
 // ValidateDelete performs the check.
-func (h *Handler) ValidateDelete(ctx context.Context, obj runtime.Object) error {
+func (h *Handler) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	secret, ok := obj.(*corev1.Secret)
 	if !ok {
-		return apierrors.NewBadRequest(fmt.Sprintf("expected *corev1.Secret but got %T", obj))
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected *corev1.Secret but got %T", obj))
 	}
 
 	seedName := gardenerutils.ComputeSeedName(secret.Namespace)
 	if secret.Namespace != v1beta1constants.GardenNamespace && seedName == "" {
-		return nil
+		return nil, nil
 	}
 
 	atLeastOneShoot, err := h.atLeastOneShootExists(ctx, seedName)
 	if err != nil {
-		return apierrors.NewInternalError(err)
+		return nil, apierrors.NewInternalError(err)
 	}
 	if atLeastOneShoot {
-		return apierrors.NewForbidden(schema.GroupResource{Group: corev1.GroupName, Resource: "Secret"}, secret.Name, fmt.Errorf("cannot delete internal domain secret because there are still shoots left in the system"))
+		return nil, apierrors.NewForbidden(schema.GroupResource{Group: corev1.GroupName, Resource: "Secret"}, secret.Name, fmt.Errorf("cannot delete internal domain secret because there are still shoots left in the system"))
 	}
 
-	return nil
+	return nil, nil
 }
 
 func (h *Handler) atLeastOneShootExists(ctx context.Context, seedName string) (bool, error) {

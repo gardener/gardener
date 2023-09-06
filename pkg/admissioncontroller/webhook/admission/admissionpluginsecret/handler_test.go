@@ -38,6 +38,8 @@ var _ = Describe("Handler", func() {
 		ctx        = context.TODO()
 		log        logr.Logger
 		fakeClient client.Client
+		warning    admission.Warnings
+		err        error
 
 		handler *Handler
 
@@ -86,7 +88,9 @@ var _ = Describe("Handler", func() {
 	})
 
 	It("should pass because no shoot references secret", func() {
-		Expect(handler.ValidateUpdate(ctx, nil, secret)).To(BeNil())
+		warning, err = handler.ValidateUpdate(ctx, nil, secret)
+		Expect(warning).To(BeNil())
+		Expect(err).To(BeNil())
 	})
 
 	It("should fail because some shoot references secret and kubeconfig is removed from secret", func() {
@@ -101,7 +105,9 @@ var _ = Describe("Handler", func() {
 		Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 		Expect(fakeClient.Create(ctx, shoot1)).To(Succeed())
 
-		Expect(handler.ValidateUpdate(ctx, nil, secret)).To(MatchError(ContainSubstring("Secret \"test-kubeconfig\" is forbidden: data kubeconfig can't be removed from secret or set to empty because secret is in use by shoots: [fake-shoot-name, test-shoot]")))
+		warning, err = handler.ValidateUpdate(ctx, nil, secret)
+		Expect(warning).To(BeNil())
+		Expect(err).To(MatchError(ContainSubstring("Secret \"test-kubeconfig\" is forbidden: data kubeconfig can't be removed from secret or set to empty because secret is in use by shoots: [fake-shoot-name, test-shoot]")))
 	})
 
 	It("should fail because some shoot references secret and kubeconfig is set to empty", func() {
@@ -114,7 +120,9 @@ var _ = Describe("Handler", func() {
 		Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 
 		secret.Data = map[string][]byte{"kubeconfig": {}}
-		Expect(handler.ValidateUpdate(ctx, nil, secret)).To(MatchError(ContainSubstring("Secret \"test-kubeconfig\" is forbidden: data kubeconfig can't be removed from secret or set to empty because secret is in use by shoots: [fake-shoot-name]")))
+		warning, err = handler.ValidateUpdate(ctx, nil, secret)
+		Expect(warning).To(BeNil())
+		Expect(err).To(MatchError(ContainSubstring("Secret \"test-kubeconfig\" is forbidden: data kubeconfig can't be removed from secret or set to empty because secret is in use by shoots: [fake-shoot-name]")))
 	})
 
 	It("should pass because secret contain kubeconfig and it is not empty", func() {
@@ -127,6 +135,8 @@ var _ = Describe("Handler", func() {
 		Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 
 		secret.Data = map[string][]byte{"kubeconfig": []byte("secret-data")}
-		Expect(handler.ValidateUpdate(ctx, nil, secret)).To(Succeed())
+		warning, err = handler.ValidateUpdate(ctx, nil, secret)
+		Expect(warning).To(BeNil())
+		Expect(err).To(Succeed())
 	})
 })

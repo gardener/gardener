@@ -62,8 +62,8 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 			// if going into exponential backoff, wait at most the configured sync period
 			RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.Config.SyncPeriod.Duration),
 		}).
-		Watches(
-			source.NewKindWithCache(&gardencorev1beta1.Seed{}, gardenCluster.GetCache()),
+		WatchesRawSource(
+			source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.Seed{}),
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(
 				predicateutils.HasName(r.SeedName),
@@ -74,7 +74,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 	}
 
 	return c.Watch(
-		source.NewKindWithCache(&resourcesv1alpha1.ManagedResource{}, seedCluster.GetCache()),
+		source.Kind(seedCluster.GetCache(), &resourcesv1alpha1.ManagedResource{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapManagedResourceToSeed), mapper.UpdateWithNew, c.GetLogger()),
 		r.IsSystemComponent(),
 		predicateutils.ManagedResourceConditionsChanged(),

@@ -81,8 +81,8 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, runt
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.ConcurrentSyncs, 0),
 		}).
-		Watches(
-			source.NewKindWithCache(&corev1.Namespace{}, runtimeCluster.GetCache()),
+		WatchesRawSource(
+			source.Kind(runtimeCluster.GetCache(), &corev1.Namespace{}),
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update)),
 		).
@@ -92,7 +92,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, runt
 	}
 
 	if err := c.Watch(
-		source.NewKindWithCache(&corev1.Endpoints{}, runtimeCluster.GetCache()),
+		source.Kind(runtimeCluster.GetCache(), &corev1.Endpoints{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapToNamespaces), mapper.UpdateWithNew, c.GetLogger()),
 		r.IsKubernetesEndpoint(),
 	); err != nil {
@@ -100,7 +100,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, runt
 	}
 
 	if err := c.Watch(
-		source.NewKindWithCache(&networkingv1.NetworkPolicy{}, runtimeCluster.GetCache()),
+		source.Kind(runtimeCluster.GetCache(), &networkingv1.NetworkPolicy{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToNamespace), mapper.UpdateWithNew, c.GetLogger()),
 		r.NetworkPolicyPredicate(),
 	); err != nil {

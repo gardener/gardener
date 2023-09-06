@@ -78,17 +78,17 @@ func add(ctx context.Context, mgr manager.Manager, args AddArgs, predicates []pr
 
 	if args.IgnoreOperationAnnotation {
 		if err := ctrl.Watch(
-			&source.Kind{Type: &metav1.PartialObjectMetadata{
+			source.Kind(mgr.GetCache(), &metav1.PartialObjectMetadata{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "Secret",
 					APIVersion: "v1",
 				},
-			}},
+			}),
 			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), SecretToBackupBucketMapper(predicates), mapper.UpdateWithNew, ctrl.GetLogger()),
 		); err != nil {
 			return err
 		}
 	}
 
-	return ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.BackupBucket{}}, &handler.EnqueueRequestForObject{}, predicates...)
+	return ctrl.Watch(source.Kind(mgr.GetCache(), &extensionsv1alpha1.BackupBucket{}), &handler.EnqueueRequestForObject{}, predicates...)
 }

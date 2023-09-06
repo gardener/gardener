@@ -36,6 +36,8 @@ var _ = Describe("handler", func() {
 		ctx     = context.TODO()
 		log     logr.Logger
 		handler *Handler
+		warning admission.Warnings
+		err     error
 
 		secretTypeMeta = metav1.TypeMeta{
 			Kind:       "Secret",
@@ -139,8 +141,13 @@ users:
 	})
 
 	test := func(objFn func() runtime.Object, matcher gomegatypes.GomegaMatcher) {
-		Expect(handler.ValidateCreate(ctx, objFn())).To(matcher)
-		Expect(handler.ValidateUpdate(ctx, nil, objFn())).To(matcher)
+		warning, err = handler.ValidateCreate(ctx, objFn())
+		Expect(warning).To(BeNil())
+		Expect(err).To(matcher)
+
+		warning, err = handler.ValidateUpdate(ctx, nil, objFn())
+		Expect(warning).To(BeNil())
+		Expect(err).To(matcher)
 	}
 
 	It("should pass because no Kubeconfig is found (create)", func() {
@@ -164,6 +171,8 @@ users:
 	})
 
 	It("should pass because operation is delete", func() {
-		Expect(handler.ValidateDelete(ctx, nil)).To(Succeed())
+		warning, err = handler.ValidateDelete(ctx, nil)
+		Expect(warning).To(BeNil())
+		Expect(err).To(Succeed())
 	})
 })

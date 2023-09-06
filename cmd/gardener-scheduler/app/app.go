@@ -35,7 +35,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	controllerconfigv1alpha1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
+	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -123,13 +123,13 @@ func run(ctx context.Context, log logr.Logger, cfg *config.SchedulerConfiguratio
 		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(cfg.Server.HealthProbes.Port)),
 		MetricsBindAddress:     net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
 
-		NewCache: cache.BuilderWithOptions(cache.Options{
-			SelectorsByObject: map[client.Object]cache.ObjectSelector{
+		Cache: cache.Options{
+			ByObject: map[client.Object]cache.ByObject{
 				&corev1.ConfigMap{}: {
 					Label: labels.NewSelector().Add(utils.MustNewRequirement(v1beta1constants.SchedulingPurpose, selection.Equals, v1beta1constants.SchedulingPurposeRegionConfig)),
 				},
 			},
-		}),
+		},
 		LeaderElection:                cfg.LeaderElection.LeaderElect,
 		LeaderElectionResourceLock:    cfg.LeaderElection.ResourceLock,
 		LeaderElectionID:              cfg.LeaderElection.ResourceName,
@@ -138,7 +138,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.SchedulerConfiguratio
 		LeaseDuration:                 &cfg.LeaderElection.LeaseDuration.Duration,
 		RenewDeadline:                 &cfg.LeaderElection.RenewDeadline.Duration,
 		RetryPeriod:                   &cfg.LeaderElection.RetryPeriod.Duration,
-		Controller: controllerconfigv1alpha1.ControllerConfigurationSpec{
+		Controller: controllerconfig.Controller{
 			RecoverPanic: pointer.Bool(true),
 		},
 	})

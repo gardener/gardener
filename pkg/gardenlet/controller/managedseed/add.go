@@ -94,8 +94,8 @@ func (r *Reconciler) AddToManager(
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.Controllers.ManagedSeed.ConcurrentSyncs, 0),
 		}).
-		Watches(
-			source.NewKindWithCache(&seedmanagementv1alpha1.ManagedSeed{}, gardenCluster.GetCache()),
+		WatchesRawSource(
+			source.Kind(gardenCluster.GetCache(), &seedmanagementv1alpha1.ManagedSeed{}),
 			r.EnqueueWithJitterDelay(),
 			builder.WithPredicates(
 				r.ManagedSeedPredicate(ctx, r.Config.SeedConfig.SeedTemplate.Name),
@@ -108,7 +108,7 @@ func (r *Reconciler) AddToManager(
 	}
 
 	return c.Watch(
-		source.NewKindWithCache(&gardencorev1beta1.Seed{}, gardenCluster.GetCache()),
+		source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.Seed{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapSeedToManagedSeed), mapper.UpdateWithNew, c.GetLogger()),
 		r.SeedOfManagedSeedPredicate(ctx, r.Config.SeedConfig.SeedTemplate.Name),
 	)
@@ -236,7 +236,7 @@ var RandomDurationWithMetaDuration = utils.RandomDurationWithMetaDuration
 // All other events are normally enqueued.
 func (r *Reconciler) EnqueueWithJitterDelay() handler.EventHandler {
 	return &handler.Funcs{
-		CreateFunc: func(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
+		CreateFunc: func(_ context.Context, evt event.CreateEvent, q workqueue.RateLimitingInterface) {
 			managedSeed, ok := evt.Object.(*seedmanagementv1alpha1.ManagedSeed)
 			if !ok {
 				return
@@ -264,7 +264,7 @@ func (r *Reconciler) EnqueueWithJitterDelay() handler.EventHandler {
 			// roughly at the same time.
 			q.AddAfter(reconcileRequest(evt.Object), RandomDurationWithMetaDuration(r.Config.Controllers.ManagedSeed.SyncJitterPeriod))
 		},
-		UpdateFunc: func(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+		UpdateFunc: func(_ context.Context, evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
 			managedSeed, ok := evt.ObjectNew.(*seedmanagementv1alpha1.ManagedSeed)
 			if !ok {
 				return
@@ -287,7 +287,7 @@ func (r *Reconciler) EnqueueWithJitterDelay() handler.EventHandler {
 				q.Add(reconcileRequest(evt.ObjectNew))
 			}
 		},
-		DeleteFunc: func(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
+		DeleteFunc: func(_ context.Context, evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
 			if evt.Object == nil {
 				return
 			}

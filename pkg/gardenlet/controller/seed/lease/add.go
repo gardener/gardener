@@ -52,8 +52,8 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 			MaxConcurrentReconciles: 1,
 			RateLimiter:             workqueue.NewItemExponentialFailureRateLimiter(time.Millisecond, 2*time.Second),
 		}).
-		Watches(
-			source.NewKindWithCache(&gardencorev1beta1.Seed{}, gardenCluster.GetCache()),
+		WatchesRawSource(
+			source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.Seed{}),
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(
 				predicateutils.HasName(r.SeedName),

@@ -4283,7 +4283,7 @@ func autoConvert_v1beta1_NginxIngress_To_core_NginxIngress(in *NginxIngress, out
 	}
 	out.LoadBalancerSourceRanges = *(*[]string)(unsafe.Pointer(&in.LoadBalancerSourceRanges))
 	out.Config = *(*map[string]string)(unsafe.Pointer(&in.Config))
-	out.ExternalTrafficPolicy = (*v1.ServiceExternalTrafficPolicyType)(unsafe.Pointer(in.ExternalTrafficPolicy))
+	out.ExternalTrafficPolicy = (*v1.ServiceExternalTrafficPolicy)(unsafe.Pointer(in.ExternalTrafficPolicy))
 	return nil
 }
 
@@ -4298,7 +4298,7 @@ func autoConvert_core_NginxIngress_To_v1beta1_NginxIngress(in *core.NginxIngress
 	}
 	out.LoadBalancerSourceRanges = *(*[]string)(unsafe.Pointer(&in.LoadBalancerSourceRanges))
 	out.Config = *(*map[string]string)(unsafe.Pointer(&in.Config))
-	out.ExternalTrafficPolicy = (*v1.ServiceExternalTrafficPolicyType)(unsafe.Pointer(in.ExternalTrafficPolicy))
+	out.ExternalTrafficPolicy = (*v1.ServiceExternalTrafficPolicy)(unsafe.Pointer(in.ExternalTrafficPolicy))
 	return nil
 }
 
@@ -5246,7 +5246,7 @@ func Convert_core_SeedSettingExcessCapacityReservationConfig_To_v1beta1_SeedSett
 
 func autoConvert_v1beta1_SeedSettingLoadBalancerServices_To_core_SeedSettingLoadBalancerServices(in *SeedSettingLoadBalancerServices, out *core.SeedSettingLoadBalancerServices, s conversion.Scope) error {
 	out.Annotations = *(*map[string]string)(unsafe.Pointer(&in.Annotations))
-	out.ExternalTrafficPolicy = (*v1.ServiceExternalTrafficPolicyType)(unsafe.Pointer(in.ExternalTrafficPolicy))
+	out.ExternalTrafficPolicy = (*v1.ServiceExternalTrafficPolicy)(unsafe.Pointer(in.ExternalTrafficPolicy))
 	out.Zones = *(*[]core.SeedSettingLoadBalancerServicesZones)(unsafe.Pointer(&in.Zones))
 	return nil
 }
@@ -5258,7 +5258,7 @@ func Convert_v1beta1_SeedSettingLoadBalancerServices_To_core_SeedSettingLoadBala
 
 func autoConvert_core_SeedSettingLoadBalancerServices_To_v1beta1_SeedSettingLoadBalancerServices(in *core.SeedSettingLoadBalancerServices, out *SeedSettingLoadBalancerServices, s conversion.Scope) error {
 	out.Annotations = *(*map[string]string)(unsafe.Pointer(&in.Annotations))
-	out.ExternalTrafficPolicy = (*v1.ServiceExternalTrafficPolicyType)(unsafe.Pointer(in.ExternalTrafficPolicy))
+	out.ExternalTrafficPolicy = (*v1.ServiceExternalTrafficPolicy)(unsafe.Pointer(in.ExternalTrafficPolicy))
 	out.Zones = *(*[]SeedSettingLoadBalancerServicesZones)(unsafe.Pointer(&in.Zones))
 	return nil
 }
@@ -5271,7 +5271,7 @@ func Convert_core_SeedSettingLoadBalancerServices_To_v1beta1_SeedSettingLoadBala
 func autoConvert_v1beta1_SeedSettingLoadBalancerServicesZones_To_core_SeedSettingLoadBalancerServicesZones(in *SeedSettingLoadBalancerServicesZones, out *core.SeedSettingLoadBalancerServicesZones, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Annotations = *(*map[string]string)(unsafe.Pointer(&in.Annotations))
-	out.ExternalTrafficPolicy = (*v1.ServiceExternalTrafficPolicyType)(unsafe.Pointer(in.ExternalTrafficPolicy))
+	out.ExternalTrafficPolicy = (*v1.ServiceExternalTrafficPolicy)(unsafe.Pointer(in.ExternalTrafficPolicy))
 	return nil
 }
 
@@ -5283,7 +5283,7 @@ func Convert_v1beta1_SeedSettingLoadBalancerServicesZones_To_core_SeedSettingLoa
 func autoConvert_core_SeedSettingLoadBalancerServicesZones_To_v1beta1_SeedSettingLoadBalancerServicesZones(in *core.SeedSettingLoadBalancerServicesZones, out *SeedSettingLoadBalancerServicesZones, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Annotations = *(*map[string]string)(unsafe.Pointer(&in.Annotations))
-	out.ExternalTrafficPolicy = (*v1.ServiceExternalTrafficPolicyType)(unsafe.Pointer(in.ExternalTrafficPolicy))
+	out.ExternalTrafficPolicy = (*v1.ServiceExternalTrafficPolicy)(unsafe.Pointer(in.ExternalTrafficPolicy))
 	return nil
 }
 

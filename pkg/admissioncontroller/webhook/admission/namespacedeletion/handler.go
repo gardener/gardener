@@ -40,31 +40,31 @@ type Handler struct {
 }
 
 // ValidateCreate returns nil (not implemented by this handler).
-func (h *Handler) ValidateCreate(_ context.Context, _ runtime.Object) error {
-	return nil
+func (h *Handler) ValidateCreate(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }
 
 // ValidateUpdate returns nil (not implemented by this handler).
-func (h *Handler) ValidateUpdate(_ context.Context, _, _ runtime.Object) error {
-	return nil
+func (h *Handler) ValidateUpdate(_ context.Context, _, _ runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }
 
 // ValidateDelete validates the namespace deletion.
-func (h *Handler) ValidateDelete(ctx context.Context, _ runtime.Object) error {
+func (h *Handler) ValidateDelete(ctx context.Context, _ runtime.Object) (admission.Warnings, error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	req, err := admission.RequestFromContext(ctx)
 	if err != nil {
-		return apierrors.NewInternalError(err)
+		return nil, apierrors.NewInternalError(err)
 	}
 
 	if err := h.admitNamespace(ctx, req.Name); err != nil {
 		h.Logger.Info("Rejected namespace deletion", "user", req.UserInfo.Username, "reason", err.Error())
-		return err
+		return nil, err
 	}
 
-	return nil
+	return nil, nil
 }
 
 // admitNamespace does only allow the request if no Shoots exist in this specific namespace anymore.

@@ -24,7 +24,6 @@ import (
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -36,9 +35,9 @@ type FakeManagedSeeds struct {
 	ns   string
 }
 
-var managedseedsResource = schema.GroupVersionResource{Group: "seedmanagement.gardener.cloud", Version: "v1alpha1", Resource: "managedseeds"}
+var managedseedsResource = v1alpha1.SchemeGroupVersion.WithResource("managedseeds")
 
-var managedseedsKind = schema.GroupVersionKind{Group: "seedmanagement.gardener.cloud", Version: "v1alpha1", Kind: "ManagedSeed"}
+var managedseedsKind = v1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")
 
 // Get takes name of the managedSeed, and returns the corresponding managedSeed object, and an error if there is any.
 func (c *FakeManagedSeeds) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ManagedSeed, err error) {

@@ -15,6 +15,7 @@
 package care_test
 
 import (
+	"context"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -57,6 +58,7 @@ var _ = Describe("Add", func() {
 
 	Describe("#EventHandler", func() {
 		var (
+			ctx   = context.TODO()
 			hdlr  handler.EventHandler
 			queue *mockworkqueue.MockRateLimitingInterface
 			req   reconcile.Request
@@ -74,21 +76,21 @@ var _ = Describe("Add", func() {
 			}))
 			queue.EXPECT().AddAfter(req, reconciler.Config.Controllers.ShootCare.SyncPeriod.Duration)
 
-			hdlr.Create(event.CreateEvent{Object: shoot}, queue)
+			hdlr.Create(ctx, event.CreateEvent{Object: shoot}, queue)
 		})
 
 		It("should enqueue the object for Update events", func() {
 			queue.EXPECT().Add(req)
 
-			hdlr.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: shoot}, queue)
+			hdlr.Update(ctx, event.UpdateEvent{ObjectNew: shoot, ObjectOld: shoot}, queue)
 		})
 
 		It("should not enqueue the object for Delete events", func() {
-			hdlr.Delete(event.DeleteEvent{Object: shoot}, queue)
+			hdlr.Delete(ctx, event.DeleteEvent{Object: shoot}, queue)
 		})
 
 		It("should not enqueue the object for Generic events", func() {
-			hdlr.Generic(event.GenericEvent{Object: shoot}, queue)
+			hdlr.Generic(ctx, event.GenericEvent{Object: shoot}, queue)
 		})
 	})
 

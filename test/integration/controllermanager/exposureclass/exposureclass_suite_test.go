@@ -110,13 +110,13 @@ var _ = BeforeSuite(func() {
 		Scheme:             kubernetes.GardenScheme,
 		MetricsBindAddress: "0",
 		Namespace:          testNamespace.Name,
-		NewCache: cache.BuilderWithOptions(cache.Options{
-			SelectorsByObject: map[client.Object]cache.ObjectSelector{
+		Cache: cache.Options{
+			ByObject: map[client.Object]cache.ByObject{
 				&gardencorev1beta1.ExposureClass{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},
 			},
-		}),
+		},
 	})
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()

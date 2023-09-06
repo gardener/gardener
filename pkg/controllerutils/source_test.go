@@ -52,7 +52,7 @@ var _ = Describe("Source", func() {
 		var (
 			ctx          = context.Background()
 			eventHandler = handler.Funcs{
-				CreateFunc: func(_ event.CreateEvent, queue workqueue.RateLimitingInterface) {
+				CreateFunc: func(ctx context.Context, _ event.CreateEvent, queue workqueue.RateLimitingInterface) {
 					queue.Add(reconcile.Request{})
 				},
 			}

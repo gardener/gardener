@@ -57,14 +57,14 @@ var _ = Describe("Seed Care Control", func() {
 		ctx = context.Background()
 		logf.IntoContext(ctx, logr.Discard())
 
-		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
-		seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-
 		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: seedName,
 			},
 		}
+
+		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithStatusSubresource(&gardencorev1beta1.Seed{}).Build()
+		seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
 		fakeClock = testclock.NewFakeClock(time.Now())
 	})

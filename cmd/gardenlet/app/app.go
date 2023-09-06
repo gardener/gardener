@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	goruntime "runtime"
 	"strconv"
@@ -31,6 +32,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -43,7 +45,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
-	controllerconfigv1alpha1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
+	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -72,6 +74,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	thirdpartyapiutil "github.com/gardener/gardener/third_party/controller-runtime/pkg/apiutil"
 )
 
 // Name is a const for the name of this component.
@@ -158,13 +161,27 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		LeaseDuration:                 &cfg.LeaderElection.LeaseDuration.Duration,
 		RenewDeadline:                 &cfg.LeaderElection.RenewDeadline.Duration,
 		RetryPeriod:                   &cfg.LeaderElection.RetryPeriod.Duration,
-		Controller: controllerconfigv1alpha1.ControllerConfigurationSpec{
+		Controller: controllerconfig.Controller{
 			RecoverPanic: pointer.Bool(true),
 		},
 
-		ClientDisableCacheFor: []client.Object{
-			&corev1.Event{},
-			&eventsv1.Event{},
+		MapperProvider: func(config *rest.Config, httpClient *http.Client) (meta.RESTMapper, error) {
+			// TODO(ary1992): The new rest mapper implementation doesn't return a NoKindMatchError but a ErrGroupDiscoveryFailed
+			// when an API GroupVersion is not present in the cluster. Remove the old restmapper usage once the upstream issue
+			// (https://github.com/kubernetes-sigs/controller-runtime/pull/2425) is fixed.
+			return thirdpartyapiutil.NewDynamicRESTMapper(
+				config,
+				thirdpartyapiutil.WithLazyDiscovery,
+			)
+		},
+
+		Client: client.Options{
+			Cache: &client.CacheOptions{
+				DisableFor: []client.Object{
+					&corev1.Event{},
+					&eventsv1.Event{},
+				},
+			},
 		},
 	})
 	if err != nil {
@@ -252,14 +269,16 @@ func (g *garden) Start(ctx context.Context) error {
 		opts.Scheme = kubernetes.GardenScheme
 		opts.Logger = log
 
-		opts.ClientDisableCacheFor = []client.Object{
-			&corev1.Event{},
-			&eventsv1.Event{},
+		opts.Client.Cache = &client.CacheOptions{
+			DisableFor: []client.Object{
+				&corev1.Event{},
+				&eventsv1.Event{},
+			},
 		}
 
 		opts.NewCache = func(config *rest.Config, opts cache.Options) (cache.Cache, error) {
 			// gardenlet should watch only objects which are related to the seed it is responsible for.
-			opts.SelectorsByObject = map[client.Object]cache.ObjectSelector{
+			opts.ByObject = map[client.Object]cache.ByObject{
 				&gardencorev1beta1.ControllerInstallation{}: {
 					Field: fields.SelectorFromSet(fields.Set{gardencore.SeedRefName: g.config.SeedConfig.SeedTemplate.Name}),
 				},
@@ -268,14 +287,27 @@ func (g *garden) Start(ctx context.Context) error {
 				},
 			}
 
+			seedNamespace := gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.SeedTemplate.Name)
 			return kubernetes.AggregatorCacheFunc(
 				kubernetes.NewRuntimeCache,
 				map[client.Object]cache.NewCacheFunc{
 					// Gardenlet should watch secrets only in the seed namespace of the seed it is responsible for. We
 					// don't use any selector mechanism here since we want to still fall back to reading secrets with
 					// the API reader (i.e., not from cache) in case the respective secret is not found in the cache.
-					&corev1.Secret{}:         cache.MultiNamespacedCacheBuilder([]string{gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.SeedTemplate.Name)}),
-					&corev1.ServiceAccount{}: cache.MultiNamespacedCacheBuilder([]string{gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.SeedTemplate.Name)}),
+					&corev1.Secret{}: func(c *rest.Config, o cache.Options) (cache.Cache, error) {
+						// cache.New only creates a multiNamespacedCache if cache.Options.Namespaces has more than one namespace
+						// (https://github.com/kubernetes-sigs/controller-runtime/blob/116a1b831fffe7ccc3c8145306c3e1a3b1b14ffa/pkg/cache/cache.go#L202-L204).
+						// multiNamespacedCache scopes the cache to a list of namespaces.
+						o.Namespaces = []string{seedNamespace, seedNamespace}
+						return cache.New(c, o)
+					},
+					&corev1.ServiceAccount{}: func(c *rest.Config, o cache.Options) (cache.Cache, error) {
+						// cache.New only creates a multiNamespacedCache if cache.Options.Namespaces has more than one namespace
+						// (https://github.com/kubernetes-sigs/controller-runtime/blob/116a1b831fffe7ccc3c8145306c3e1a3b1b14ffa/pkg/cache/cache.go#L202-L204).
+						// multiNamespacedCache scopes the cache to a list of namespaces.
+						o.Namespaces = []string{seedNamespace, seedNamespace}
+						return cache.New(c, o)
+					},
 					// Gardenlet does not have the required RBAC permissions for listing/watching the following
 					// resources on cluster level. Hence, we need to watch them individually with the help of a
 					// SingleObject cache.
@@ -299,25 +331,33 @@ func (g *garden) Start(ctx context.Context) error {
 		// read a secret from another namespace. There might be secrets in namespace other than the seed-specific
 		// namespace (e.g., backup secret in the SeedSpec). Hence, let's use a fallback client which falls back to an
 		// uncached reader in case it fails to read objects from the cache.
-		opts.NewClient = func(cache cache.Cache, config *rest.Config, options client.Options, uncachedObjects ...client.Object) (client.Client, error) {
-			uncachedClient, err := client.New(config, options)
+		opts.NewClient = func(config *rest.Config, options client.Options) (client.Client, error) {
+			uncachedOptions := options
+			uncachedOptions.Cache = nil
+			uncachedClient, err := client.New(config, uncachedOptions)
 			if err != nil {
 				return nil, err
 			}
 
-			delegatingClient, err := client.NewDelegatingClient(client.NewDelegatingClientInput{
-				CacheReader:     cache,
-				Client:          uncachedClient,
-				UncachedObjects: uncachedObjects,
-			})
+			cachedClient, err := client.New(config, options)
 			if err != nil {
 				return nil, err
 			}
 
 			return &kubernetes.FallbackClient{
-				Client: delegatingClient,
+				Client: cachedClient,
 				Reader: uncachedClient,
 			}, nil
+		}
+
+		opts.MapperProvider = func(config *rest.Config, httpClient *http.Client) (meta.RESTMapper, error) {
+			// TODO(ary1992): The new rest mapper implementation doesn't return a NoKindMatchError but a ErrGroupDiscoveryFailed
+			// when an API GroupVersion is not present in the cluster. Remove the old restmapper usage once the upstream issue
+			// (https://github.com/kubernetes-sigs/controller-runtime/pull/2425) is fixed.
+			return thirdpartyapiutil.NewDynamicRESTMapper(
+				config,
+				thirdpartyapiutil.WithLazyDiscovery,
+			)
 		}
 	})
 	if err != nil {

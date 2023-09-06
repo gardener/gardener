@@ -68,13 +68,7 @@ var (
 type Handler struct {
 	Logger  logr.Logger
 	Client  client.Reader
-	decoder *admission.Decoder
-}
-
-// InjectDecoder injects the decoder.
-func (h *Handler) InjectDecoder(d *admission.Decoder) error {
-	h.decoder = d
-	return nil
+	Decoder *admission.Decoder
 }
 
 // Handle restricts requests made by gardenlets.
@@ -119,7 +113,7 @@ func (h *Handler) admitBackupBucket(ctx context.Context, seedName string, reques
 		// If a gardenlet tries to create a BackupBucket then the request may only be allowed if the used `.spec.seedName`
 		// is equal to the gardenlet's seed.
 		backupBucket := &gardencorev1beta1.BackupBucket{}
-		if err := h.decoder.Decode(request, backupBucket); err != nil {
+		if err := h.Decoder.Decode(request, backupBucket); err != nil {
 			return admission.Errored(http.StatusBadRequest, err)
 		}
 		return h.admit(seedName, backupBucket.Spec.SeedName)
@@ -146,7 +140,7 @@ func (h *Handler) admitBackupEntry(ctx context.Context, seedName string, request
 	}
 
 	backupEntry := &gardencorev1beta1.BackupEntry{}
-	if err := h.decoder.Decode(request, backupEntry); err != nil {
+	if err := h.Decoder.Decode(request, backupEntry); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
@@ -204,7 +198,7 @@ func (h *Handler) admitBastion(seedName string, request admission.Request) admis
 	}
 
 	bastion := &operationsv1alpha1.Bastion{}
-	if err := h.decoder.Decode(request, bastion); err != nil {
+	if err := h.Decoder.Decode(request, bastion); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
@@ -221,7 +215,7 @@ func (h *Handler) admitCertificateSigningRequest(seedName string, userType seedi
 	}
 
 	csr := &certificatesv1.CertificateSigningRequest{}
-	if err := h.decoder.Decode(request, csr); err != nil {
+	if err := h.Decoder.Decode(request, csr); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
@@ -251,7 +245,7 @@ func (h *Handler) admitClusterRoleBinding(ctx context.Context, seedName string, 
 	// gardenlets deployed as part of the ManagedSeed reconciliation.
 	if strings.HasPrefix(request.Name, gardenletbootstraputil.ClusterRoleBindingNamePrefix) {
 		clusterRoleBinding := &rbacv1.ClusterRoleBinding{}
-		if err := h.decoder.Decode(request, clusterRoleBinding); err != nil {
+		if err := h.Decoder.Decode(request, clusterRoleBinding); err != nil {
 			return admission.Errored(http.StatusBadRequest, err)
 		}
 
@@ -350,7 +344,7 @@ func (h *Handler) admitSecret(ctx context.Context, seedName string, request admi
 	// Check if the secret is a bootstrap token for a ManagedSeed.
 	if strings.HasPrefix(request.Name, bootstraptokenapi.BootstrapTokenSecretPrefix) && request.Namespace == metav1.NamespaceSystem {
 		secret := &corev1.Secret{}
-		if err := h.decoder.Decode(request, secret); err != nil {
+		if err := h.Decoder.Decode(request, secret); err != nil {
 			return admission.Errored(http.StatusBadRequest, err)
 		}
 

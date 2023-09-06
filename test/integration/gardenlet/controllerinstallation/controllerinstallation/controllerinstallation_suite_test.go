@@ -181,8 +181,8 @@ var _ = BeforeSuite(func() {
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             testScheme,
 		MetricsBindAddress: "0",
-		NewCache: cache.BuilderWithOptions(cache.Options{
-			SelectorsByObject: map[client.Object]cache.ObjectSelector{
+		Cache: cache.Options{
+			ByObject: map[client.Object]cache.ByObject{
 				&gardencorev1beta1.ControllerInstallation{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 					Field: fields.SelectorFromSet(fields.Set{gardencore.SeedRefName: seed.Name}),
@@ -197,7 +197,7 @@ var _ = BeforeSuite(func() {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},
 			},
-		}),
+		},
 		ClientDisableCacheFor: []client.Object{
 			&corev1.Secret{}, // applied because of operations on managed resources and their secrets
 		},

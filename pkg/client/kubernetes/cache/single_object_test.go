@@ -42,10 +42,10 @@ var _ = Describe("SingleObject", func() {
 		ctx       context.Context
 		ctrl      *gomock.Controller
 
-		obj    *corev1.Secret
-		gvk    = corev1.SchemeGroupVersion.WithKind("Secret")
-		key    client.ObjectKey
-		resync = pointer.Duration(time.Second)
+		obj        *corev1.Secret
+		gvk        = corev1.SchemeGroupVersion.WithKind("Secret")
+		key        client.ObjectKey
+		syncPeriod = pointer.Duration(time.Second)
 
 		mockCache         *mockcache.MockCache
 		singleObjectCache cache.Cache
@@ -71,15 +71,15 @@ var _ = Describe("SingleObject", func() {
 
 		mockCache = mockcache.NewMockCache(ctrl)
 		newCacheFunc := func(_ *rest.Config, opts cache.Options) (cache.Cache, error) {
-			Expect(opts.Namespace).To(Equal(obj.Namespace))
-			Expect(opts.DefaultSelector).To(Equal(cache.ObjectSelector{Field: fields.SelectorFromSet(fields.Set{"metadata.name": obj.Name})}))
-			Expect(opts.SelectorsByObject).To(BeNil())
-			Expect(opts.Resync).To(Equal(resync))
+			Expect(opts.Namespaces).To(ConsistOf(obj.Namespace))
+			Expect(opts.DefaultFieldSelector).To(Equal(fields.SelectorFromSet(fields.Set{"metadata.name": obj.Name})))
+			Expect(opts.ByObject).To(BeNil())
+			Expect(opts.SyncPeriod).To(Equal(syncPeriod))
 			return mockCache, nil
 		}
 		clock = testclock.NewFakeClock(time.Now())
 
-		singleObjectCache = NewSingleObject(logr.Discard(), nil, newCacheFunc, cache.Options{Resync: resync}, gvk, clock, maxIdleTime, 50*time.Millisecond)
+		singleObjectCache = NewSingleObject(logr.Discard(), nil, newCacheFunc, cache.Options{SyncPeriod: syncPeriod}, gvk, clock, maxIdleTime, 50*time.Millisecond)
 
 		var cancel context.CancelFunc
 		parentCtx, cancel = context.WithCancel(context.Background())

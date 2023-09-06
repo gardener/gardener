@@ -28,7 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
@@ -53,7 +52,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 			resourcemanagerpredicate.HasFinalizer(r.ClassFilter.FinalizerName()),
 		)).
 		Watches(
-			&source.Kind{Type: &resourcesv1alpha1.ManagedResource{}},
+			&resourcesv1alpha1.ManagedResource{},
 			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapManagedResourcesToSecrets), mapper.UpdateWithOldAndNew, logr.Discard()),
 			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		).

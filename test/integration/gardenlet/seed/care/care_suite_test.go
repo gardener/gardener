@@ -16,6 +16,7 @@ package care_test
 
 import (
 	"context"
+	"net/http"
 	"path/filepath"
 	"testing"
 	"time"
@@ -24,6 +25,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -44,6 +46,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	thirdpartyapiutil "github.com/gardener/gardener/third_party/controller-runtime/pkg/apiutil"
 )
 
 func TestCare(t *testing.T) {
@@ -128,13 +131,16 @@ var _ = BeforeSuite(func() {
 		Scheme:             testScheme,
 		MetricsBindAddress: "0",
 		Namespace:          testNamespace.Name,
-		NewCache: cache.BuilderWithOptions(cache.Options{
-			SelectorsByObject: map[client.Object]cache.ObjectSelector{
+		Cache: cache.Options{
+			ByObject: map[client.Object]cache.ByObject{
 				&gardencorev1beta1.Seed{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},
 			},
-		}),
+		},
+		MapperProvider: func(config *rest.Config, httpClient *http.Client) (meta.RESTMapper, error) {
+			return thirdpartyapiutil.NewDynamicRESTMapper(config)
+		},
 	})
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()

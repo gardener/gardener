@@ -46,10 +46,11 @@ func NewStorage(optsGetter generic.RESTOptionsGetter) ControllerRegistrationStor
 // NewREST returns a RESTStorage object that will work against controllerRegistrations.
 func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 	store := &genericregistry.Store{
-		NewFunc:                  func() runtime.Object { return &core.ControllerRegistration{} },
-		NewListFunc:              func() runtime.Object { return &core.ControllerRegistrationList{} },
-		DefaultQualifiedResource: core.Resource("controllerregistrations"),
-		EnableGarbageCollection:  true,
+		NewFunc:                   func() runtime.Object { return &core.ControllerRegistration{} },
+		NewListFunc:               func() runtime.Object { return &core.ControllerRegistrationList{} },
+		DefaultQualifiedResource:  core.Resource("controllerregistrations"),
+		SingularQualifiedResource: core.Resource("controllerregistration"),
+		EnableGarbageCollection:   true,
 
 		CreateStrategy: controllerregistration.Strategy,
 		UpdateStrategy: controllerregistration.Strategy,

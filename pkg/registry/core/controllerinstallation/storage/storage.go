@@ -54,11 +54,12 @@ func NewStorage(optsGetter generic.RESTOptionsGetter) ControllerInstallationStor
 func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 	var (
 		store = &genericregistry.Store{
-			NewFunc:                  func() runtime.Object { return &core.ControllerInstallation{} },
-			NewListFunc:              func() runtime.Object { return &core.ControllerInstallationList{} },
-			PredicateFunc:            controllerinstallation.MatchControllerInstallation,
-			DefaultQualifiedResource: core.Resource("controllerinstallations"),
-			EnableGarbageCollection:  true,
+			NewFunc:                   func() runtime.Object { return &core.ControllerInstallation{} },
+			NewListFunc:               func() runtime.Object { return &core.ControllerInstallationList{} },
+			PredicateFunc:             controllerinstallation.MatchControllerInstallation,
+			DefaultQualifiedResource:  core.Resource("controllerinstallations"),
+			SingularQualifiedResource: core.Resource("controllerinstallation"),
+			EnableGarbageCollection:   true,
 
 			CreateStrategy: controllerinstallation.Strategy,
 			UpdateStrategy: controllerinstallation.Strategy,

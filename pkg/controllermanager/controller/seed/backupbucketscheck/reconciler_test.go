@@ -77,6 +77,7 @@ var _ = Describe("Reconciler", func() {
 			c = fakeclient.NewClientBuilder().
 				WithScheme(kubernetes.GardenScheme).
 				WithObjects(seed).
+				WithStatusSubresource(seed).
 				WithIndex(&gardencorev1beta1.BackupBucket{}, core.BackupBucketSeedName, indexer.BackupBucketSeedNameIndexerFunc).
 				Build()
 

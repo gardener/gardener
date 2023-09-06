@@ -27,14 +27,15 @@ const (
 )
 
 // If isPath is true:
-//   We remove redundant '/'s, the leading '/', and trailing '/'.
-//   If the result is empty, a '/' is inserted.
+//
+//	We remove redundant '/'s, the leading '/', and trailing '/'.
+//	If the result is empty, a '/' is inserted.
 //
 // We always:
-//  Replace the following characters with `\x%x`:
-//   Leading `.`
-//   `-`, `\`, and anything not in this set: `:-_.\[0-9a-zA-Z]`
-//  Replace '/' with '-'.
+//
+//	Replace the following characters with `\x%x`: Leading `.`,
+//	 `-`, `\`, and anything not in this set: `:-_.\[0-9a-zA-Z]`
+//	Replace '/' with '-'.
 func escape(unescaped string, isPath bool) string {
 	e := []byte{}
 	inSlashes := false
@@ -69,11 +70,13 @@ func escape(unescaped string, isPath bool) string {
 }
 
 // If isPath is true:
-//   We always return a string beginning with '/'.
+//
+//	We always return a string beginning with '/'.
 //
 // We always:
-//  Replace '-' with '/'.
-//  Replace `\x%x` with the value represented in hex.
+//
+//	Replace '-' with '/'.
+//	Replace `\x%x` with the value represented in hex.
 func unescape(escaped string, isPath bool) string {
 	u := []byte{}
 	for i := 0; i < len(escaped); i++ {

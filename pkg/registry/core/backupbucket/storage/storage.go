@@ -52,10 +52,11 @@ func NewStorage(optsGetter generic.RESTOptionsGetter) BackupBucketStorage {
 // NewREST returns a RESTStorage object that will work against backupBuckets.
 func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 	store := &genericregistry.Store{
-		NewFunc:                  func() runtime.Object { return &core.BackupBucket{} },
-		NewListFunc:              func() runtime.Object { return &core.BackupBucketList{} },
-		DefaultQualifiedResource: core.Resource("backupbuckets"),
-		EnableGarbageCollection:  true,
+		NewFunc:                   func() runtime.Object { return &core.BackupBucket{} },
+		NewListFunc:               func() runtime.Object { return &core.BackupBucketList{} },
+		DefaultQualifiedResource:  core.Resource("backupbuckets"),
+		SingularQualifiedResource: core.Resource("backupbucket"),
+		EnableGarbageCollection:   true,
 
 		CreateStrategy: backupbucket.Strategy,
 		UpdateStrategy: backupbucket.Strategy,

@@ -24,7 +24,6 @@ import (
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -35,9 +34,9 @@ type FakeClusterOpenIDConnectPresets struct {
 	Fake *FakeSettingsV1alpha1
 }
 
-var clusteropenidconnectpresetsResource = schema.GroupVersionResource{Group: "settings.gardener.cloud", Version: "v1alpha1", Resource: "clusteropenidconnectpresets"}
+var clusteropenidconnectpresetsResource = v1alpha1.SchemeGroupVersion.WithResource("clusteropenidconnectpresets")
 
-var clusteropenidconnectpresetsKind = schema.GroupVersionKind{Group: "settings.gardener.cloud", Version: "v1alpha1", Kind: "ClusterOpenIDConnectPreset"}
+var clusteropenidconnectpresetsKind = v1alpha1.SchemeGroupVersion.WithKind("ClusterOpenIDConnectPreset")
 
 // Get takes name of the clusterOpenIDConnectPreset, and returns the corresponding clusterOpenIDConnectPreset object, and an error if there is any.
 func (c *FakeClusterOpenIDConnectPresets) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ClusterOpenIDConnectPreset, err error) {

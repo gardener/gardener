@@ -385,7 +385,6 @@ var _ = Describe("Actuator", func() {
 
 			// Create mock client
 			c := mockclient.NewMockClient(ctrl)
-			mgr.EXPECT().GetClient().Return(c)
 
 			if webhookConfig != nil {
 				c.EXPECT().Get(ctx, resourceKeyShootWebhooksNetworkPolicy, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Return(errNotFound)
@@ -524,8 +523,29 @@ webhooks:
 				})
 
 			// Create actuator
-			a := NewActuator(mgr, providerName, getSecretsConfigs, shootAccessSecretsFunc, nil, nil, configChart, ccmChart, ccmShootChart, cpShootCRDsChart, storageClassesChart, nil, vp, crf, imageVector, configName, atomicWebhookConfig, webhookServerNamespace, webhookServerPort, gardenerClientset)
-			a.(*actuator).newSecretsManager = newSecretsManager
+			a := &actuator{
+				providerName:                   providerName,
+				secretConfigsFunc:              getSecretsConfigs,
+				shootAccessSecretsFunc:         shootAccessSecretsFunc,
+				exposureSecretConfigsFunc:      nil,
+				exposureShootAccessSecretsFunc: nil,
+				configChart:                    configChart,
+				controlPlaneChart:              ccmChart,
+				controlPlaneShootChart:         ccmShootChart,
+				controlPlaneShootCRDsChart:     cpShootCRDsChart,
+				storageClassesChart:            storageClassesChart,
+				controlPlaneExposureChart:      nil,
+				vp:                             vp,
+				chartRendererFactory:           crf,
+				imageVector:                    imageVector,
+				configName:                     configName,
+				atomicShootWebhookConfig:       atomicWebhookConfig,
+				webhookServerNamespace:         webhookServerNamespace,
+				webhookServerPort:              webhookServerPort,
+				gardenerClientset:              gardenerClientset,
+				client:                         c,
+				newSecretsManager:              newSecretsManager,
+			}
 
 			// Call Reconcile method and check the result
 			requeue, err := a.Reconcile(ctx, logger, cp, cluster)
@@ -561,7 +581,6 @@ webhooks:
 
 			// Create mock clients
 			client := mockclient.NewMockClient(ctrl)
-			mgr.EXPECT().GetClient().Return(client)
 
 			client.EXPECT().Get(gomock.Any(), resourceKeyStorageClassesChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{}))
 			client.EXPECT().Delete(ctx, deletedMRForStorageClassesChart).Return(nil)
@@ -607,8 +626,29 @@ webhooks:
 			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootAccessSecretsFunc(namespace)[0].Secret.Name, Namespace: namespace}})
 
 			// Create actuator
-			a := NewActuator(mgr, providerName, getSecretsConfigs, shootAccessSecretsFunc, nil, nil, configChart, ccmChart, nil, cpShootCRDsChart, nil, nil, vp, nil, nil, configName, atomicWebhookConfig, webhookServerNamespace, webhookServerPort, gardenerClientset)
-			a.(*actuator).newSecretsManager = newSecretsManager
+			a := &actuator{
+				providerName:                   providerName,
+				secretConfigsFunc:              getSecretsConfigs,
+				shootAccessSecretsFunc:         shootAccessSecretsFunc,
+				exposureSecretConfigsFunc:      nil,
+				exposureShootAccessSecretsFunc: nil,
+				configChart:                    configChart,
+				controlPlaneChart:              ccmChart,
+				controlPlaneShootChart:         nil,
+				controlPlaneShootCRDsChart:     cpShootCRDsChart,
+				storageClassesChart:            nil,
+				controlPlaneExposureChart:      nil,
+				vp:                             vp,
+				chartRendererFactory:           nil,
+				imageVector:                    nil,
+				configName:                     configName,
+				atomicShootWebhookConfig:       atomicWebhookConfig,
+				webhookServerNamespace:         webhookServerNamespace,
+				webhookServerPort:              webhookServerPort,
+				gardenerClientset:              gardenerClientset,
+				client:                         client,
+				newSecretsManager:              newSecretsManager,
+			}
 
 			// Call Delete method and check the result
 			Expect(a.Delete(ctx, logger, cp, cluster)).To(Succeed())
@@ -625,7 +665,6 @@ webhooks:
 		func() {
 			// Create mock client
 			c := mockclient.NewMockClient(ctrl)
-			mgr.EXPECT().GetClient().Return(c)
 
 			// Create mock Gardener clientset and chart applier
 			gardenerClientset := kubernetesmock.NewMockInterface(ctrl)
@@ -667,8 +706,29 @@ webhooks:
 				})
 
 			// Create actuator
-			a := NewActuator(mgr, providerName, nil, nil, getSecretsConfigsExposure, exposureShootAccessSecretsFunc, nil, nil, nil, nil, nil, cpExposureChart, vp, nil, imageVector, "", nil, "", 0, gardenerClientset)
-			a.(*actuator).newSecretsManager = newSecretsManager
+			a := &actuator{
+				providerName:                   providerName,
+				secretConfigsFunc:              nil,
+				shootAccessSecretsFunc:         nil,
+				exposureSecretConfigsFunc:      getSecretsConfigsExposure,
+				exposureShootAccessSecretsFunc: exposureShootAccessSecretsFunc,
+				configChart:                    nil,
+				controlPlaneChart:              nil,
+				controlPlaneShootChart:         nil,
+				controlPlaneShootCRDsChart:     nil,
+				storageClassesChart:            nil,
+				controlPlaneExposureChart:      cpExposureChart,
+				vp:                             vp,
+				chartRendererFactory:           nil,
+				imageVector:                    imageVector,
+				configName:                     "",
+				atomicShootWebhookConfig:       nil,
+				webhookServerNamespace:         "",
+				webhookServerPort:              0,
+				gardenerClientset:              gardenerClientset,
+				client:                         c,
+				newSecretsManager:              newSecretsManager,
+			}
 
 			// Call Reconcile method and check the result
 			requeue, err := a.Reconcile(ctx, logger, cpExposure, cluster)
@@ -687,7 +747,6 @@ webhooks:
 		func() {
 			// Create mock clients
 			client := mockclient.NewMockClient(ctrl)
-			mgr.EXPECT().GetClient().Return(client)
 
 			// Create mock Gardener clientset and chart applier
 			gardenerClientset := kubernetesmock.NewMockInterface(ctrl)
@@ -700,8 +759,29 @@ webhooks:
 			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: exposureShootAccessSecretsFunc(namespace)[0].Secret.Name, Namespace: namespace}})
 
 			// Create actuator
-			a := NewActuator(mgr, providerName, nil, nil, getSecretsConfigsExposure, exposureShootAccessSecretsFunc, nil, nil, nil, nil, nil, cpExposureChart, nil, nil, nil, "", nil, "", 0, gardenerClientset)
-			a.(*actuator).newSecretsManager = newSecretsManager
+			a := &actuator{
+				providerName:                   providerName,
+				secretConfigsFunc:              nil,
+				shootAccessSecretsFunc:         nil,
+				exposureSecretConfigsFunc:      getSecretsConfigsExposure,
+				exposureShootAccessSecretsFunc: exposureShootAccessSecretsFunc,
+				configChart:                    nil,
+				controlPlaneChart:              nil,
+				controlPlaneShootChart:         nil,
+				controlPlaneShootCRDsChart:     nil,
+				storageClassesChart:            nil,
+				controlPlaneExposureChart:      cpExposureChart,
+				vp:                             nil,
+				chartRendererFactory:           nil,
+				imageVector:                    nil,
+				configName:                     "",
+				atomicShootWebhookConfig:       nil,
+				webhookServerNamespace:         "",
+				webhookServerPort:              0,
+				gardenerClientset:              gardenerClientset,
+				client:                         client,
+				newSecretsManager:              newSecretsManager,
+			}
 
 			// Call Delete method and check the result
 			Expect(a.Delete(ctx, logger, cpExposure, cluster)).To(Succeed())

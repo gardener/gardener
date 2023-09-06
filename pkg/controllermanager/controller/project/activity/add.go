@@ -66,7 +66,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	if err := c.Watch(
-		&source.Kind{Type: &gardencorev1beta1.Shoot{}},
+		source.Kind(mgr.GetCache(), &gardencorev1beta1.Shoot{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToProject), mapper.UpdateWithNew, c.GetLogger()),
 		r.OnlyNewlyCreatedObjects(),
 		predicate.GenerationChangedPredicate{},
@@ -75,7 +75,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	if err := c.Watch(
-		&source.Kind{Type: &gardencorev1beta1.BackupEntry{}},
+		source.Kind(mgr.GetCache(), &gardencorev1beta1.BackupEntry{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToProject), mapper.UpdateWithNew, c.GetLogger()),
 		r.OnlyNewlyCreatedObjects(),
 		predicate.GenerationChangedPredicate{},
@@ -84,7 +84,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	if err := c.Watch(
-		&source.Kind{Type: &gardencorev1beta1.Quota{}},
+		source.Kind(mgr.GetCache(), &gardencorev1beta1.Quota{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToProject), mapper.UpdateWithNew, c.GetLogger()),
 		r.OnlyNewlyCreatedObjects(),
 		r.NeedsSecretBindingReferenceLabelPredicate(),
@@ -93,7 +93,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	return c.Watch(
-		&source.Kind{Type: &corev1.Secret{}},
+		source.Kind(mgr.GetCache(), &corev1.Secret{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToProject), mapper.UpdateWithNew, c.GetLogger()),
 		r.OnlyNewlyCreatedObjects(),
 		r.NeedsSecretBindingReferenceLabelPredicate(),

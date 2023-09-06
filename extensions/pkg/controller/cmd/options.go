@@ -26,9 +26,10 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/utils/pointer"
-	controllerconfigv1alpha1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
+	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/pkg/logger"
@@ -296,13 +297,15 @@ func (c *ManagerConfig) Apply(opts *manager.Options) {
 	opts.LeaderElectionResourceLock = c.LeaderElectionResourceLock
 	opts.LeaderElectionID = c.LeaderElectionID
 	opts.LeaderElectionNamespace = c.LeaderElectionNamespace
-	opts.Host = c.WebhookServerHost
-	opts.Port = c.WebhookServerPort
-	opts.CertDir = c.WebhookCertDir
 	opts.MetricsBindAddress = c.MetricsBindAddress
 	opts.HealthProbeBindAddress = c.HealthBindAddress
 	opts.Logger = c.Logger
-	opts.Controller = controllerconfigv1alpha1.ControllerConfigurationSpec{RecoverPanic: pointer.Bool(true)}
+	opts.Controller = controllerconfig.Controller{RecoverPanic: pointer.Bool(true)}
+	opts.WebhookServer = webhook.NewServer(webhook.Options{
+		Host:    c.WebhookServerHost,
+		Port:    c.WebhookServerPort,
+		CertDir: c.WebhookCertDir,
+	})
 }
 
 // Options initializes empty manager.Options, applies the set values and returns it.

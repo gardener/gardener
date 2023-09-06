@@ -46,10 +46,11 @@ func NewStorage(optsGetter generic.RESTOptionsGetter) ShootState {
 // NewREST returns a RESTStorage object that will work against ShootStates.
 func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 	store := &genericregistry.Store{
-		NewFunc:                  func() runtime.Object { return &core.ShootState{} },
-		NewListFunc:              func() runtime.Object { return &core.ShootStateList{} },
-		DefaultQualifiedResource: core.Resource("shootstates"),
-		EnableGarbageCollection:  true,
+		NewFunc:                   func() runtime.Object { return &core.ShootState{} },
+		NewListFunc:               func() runtime.Object { return &core.ShootStateList{} },
+		DefaultQualifiedResource:  core.Resource("shootstates"),
+		SingularQualifiedResource: core.Resource("shootstate"),
+		EnableGarbageCollection:   true,
 
 		CreateStrategy: shootstate.Strategy,
 		UpdateStrategy: shootstate.Strategy,

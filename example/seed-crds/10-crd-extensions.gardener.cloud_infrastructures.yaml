@@ -3,8 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.11.3
-  creationTimestamp: null
+    controller-gen.kubebuilder.io/version: v0.11.4
   name: infrastructures.extensions.gardener.cloud
 spec:
   group: extensions.gardener.cloud
@@ -224,13 +223,15 @@ spec:
                       description: ResourceRef is a reference to a resource.
                       properties:
                         apiVersion:
-                          description: API version of the referent
+                          description: apiVersion is the API version of the referent
                           type: string
                         kind:
-                          description: 'Kind of the referent; More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                          description: 'kind is the kind of the referent; More info:
+                            https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                           type: string
                         name:
-                          description: 'Name of the referent; More info: http://kubernetes.io/docs/user-guide/identifiers#names'
+                          description: 'name is the name of the referent; More info:
+                            https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                           type: string
                       required:
                       - kind

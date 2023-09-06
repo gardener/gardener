@@ -47,8 +47,8 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 		}).
-		Watches(
-			source.NewKindWithCache(&certificatesv1.CertificateSigningRequest{}, targetCluster.GetCache()),
+		WatchesRawSource(
+			source.Kind(targetCluster.GetCache(), &certificatesv1.CertificateSigningRequest{}),
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(
 				predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),

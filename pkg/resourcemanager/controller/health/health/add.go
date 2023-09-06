@@ -67,7 +67,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 		}).
 		Watches(
-			&source.Kind{Type: &resourcesv1alpha1.ManagedResource{}},
+			&resourcesv1alpha1.ManagedResource{},
 			r.EnqueueCreateAndUpdate(),
 			builder.WithPredicates(
 				predicate.Or(
@@ -114,7 +114,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 			c.GetLogger().Info("Adding new watch for GroupVersionKind", "groupVersionKind", gvk, "metadataOnly", metadataOnly)
 
 			if err := c.Watch(
-				source.NewKindWithCache(obj, targetCluster.GetCache()),
+				source.Kind(targetCluster.GetCache(), obj),
 				mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
 				utils.HealthStatusChanged(c.GetLogger()),
 			); err != nil {
@@ -132,13 +132,13 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 // EnqueueCreateAndUpdate returns an event handler which only enqueues create and update events.
 func (r *Reconciler) EnqueueCreateAndUpdate() handler.EventHandler {
 	return &handler.Funcs{
-		CreateFunc: func(e event.CreateEvent, q workqueue.RateLimitingInterface) {
+		CreateFunc: func(_ context.Context, e event.CreateEvent, q workqueue.RateLimitingInterface) {
 			q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
 				Name:      e.Object.GetName(),
 				Namespace: e.Object.GetNamespace(),
 			}})
 		},
-		UpdateFunc: func(e event.UpdateEvent, q workqueue.RateLimitingInterface) {
+		UpdateFunc: func(_ context.Context, e event.UpdateEvent, q workqueue.RateLimitingInterface) {
 			q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
 				Name:      e.ObjectNew.GetName(),
 				Namespace: e.ObjectNew.GetNamespace(),

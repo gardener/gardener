@@ -31,7 +31,6 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
@@ -57,6 +56,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/gardener/gardener/test/utils/namespacefinalizer"
+	thirdpartyapiutil "github.com/gardener/gardener/third_party/controller-runtime/pkg/apiutil"
 )
 
 var _ = Describe("Seed controller tests", func() {
@@ -87,15 +87,15 @@ var _ = Describe("Seed controller tests", func() {
 		})
 
 		By("Setup manager")
-		mapper, err := apiutil.NewDynamicRESTMapper(restConfig)
+		mapper, err := thirdpartyapiutil.NewDynamicRESTMapper(restConfig)
 		Expect(err).NotTo(HaveOccurred())
 
 		mgr, err := manager.New(restConfig, manager.Options{
 			Scheme:             testScheme,
 			MetricsBindAddress: "0",
-			NewCache: cache.BuilderWithOptions(cache.Options{
+			Cache: cache.Options{
 				Mapper: mapper,
-				SelectorsByObject: map[client.Object]cache.ObjectSelector{
+				ByObject: map[client.Object]cache.ByObject{
 					&gardencorev1beta1.Seed{}: {
 						Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 					},
@@ -103,7 +103,7 @@ var _ = Describe("Seed controller tests", func() {
 						Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 					},
 				},
-			}),
+			},
 		})
 		Expect(err).NotTo(HaveOccurred())
 		mgrClient = mgr.GetClient()

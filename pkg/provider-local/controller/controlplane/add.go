@@ -16,16 +16,17 @@ package controlplane
 
 import (
 	"context"
+	"fmt"
 	"sync/atomic"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
 	"github.com/gardener/gardener/extensions/pkg/util"
-	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/provider-local/imagevector"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 )
@@ -48,15 +49,22 @@ type AddOptions struct {
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
 // The opts.Reconciler is being set with a newly instantiated actuator.
 func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddOptions) error {
-	gardenerClientset, err := kubernetesclient.NewWithConfig(kubernetesclient.WithRESTConfig(mgr.GetConfig()))
+	webhookServer := mgr.GetWebhookServer()
+	defaultServer, ok := webhookServer.(*webhook.DefaultServer)
+	if !ok {
+		return fmt.Errorf("expected *webhook.DefaultServer, got %T", webhookServer)
+	}
+
+	genericactuator, err := genericactuator.NewActuator(mgr, local.Name, getSecretConfigs, nil, nil, nil, nil, nil, controlPlaneShootChart,
+		nil, storageClassChart, nil, NewValuesProvider(), extensionscontroller.ChartRendererFactoryFunc(util.NewChartRendererForShoot),
+		imagevector.ImageVector(), "", opts.ShootWebhookConfig, opts.WebhookServerNamespace, defaultServer.Options.Port)
+
 	if err != nil {
 		return err
 	}
 
 	return controlplane.Add(ctx, mgr, controlplane.AddArgs{
-		Actuator: genericactuator.NewActuator(mgr, local.Name, getSecretConfigs, nil, nil, nil, nil, nil, controlPlaneShootChart,
-			nil, storageClassChart, nil, NewValuesProvider(), extensionscontroller.ChartRendererFactoryFunc(util.NewChartRendererForShoot),
-			imagevector.ImageVector(), "", opts.ShootWebhookConfig, opts.WebhookServerNamespace, mgr.GetWebhookServer().Port, gardenerClientset),
+		Actuator:          genericactuator,
 		ControllerOptions: opts.Controller,
 		Predicates:        controlplane.DefaultPredicates(ctx, mgr, opts.IgnoreOperationAnnotation),
 		Type:              local.Type,

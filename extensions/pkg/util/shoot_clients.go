@@ -26,7 +26,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	extensionsconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -34,6 +33,7 @@ import (
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	thirdpartyapiutil "github.com/gardener/gardener/third_party/controller-runtime/pkg/apiutil"
 )
 
 // ShootClients bundles together several clients for the shoot cluster.
@@ -108,7 +108,10 @@ func NewClientForShoot(ctx context.Context, c client.Client, namespace string, o
 	ApplyRESTOptions(shootRESTConfig, restOptions)
 
 	if opts.Mapper == nil {
-		mapper, err := apiutil.NewDynamicRESTMapper(shootRESTConfig, apiutil.WithLazyDiscovery)
+		// TODO(ary1992): The new rest mapper implementation doesn't return a NoKindMatchError but a ErrGroupDiscoveryFailed
+		// when an API GroupVersion is not present in the cluster. Remove the old restmapper usage once the upstream issue
+		// (https://github.com/kubernetes-sigs/controller-runtime/pull/2425) is fixed.
+		mapper, err := thirdpartyapiutil.NewDynamicRESTMapper(shootRESTConfig)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to create new DynamicRESTMapper: %w", err)
 		}

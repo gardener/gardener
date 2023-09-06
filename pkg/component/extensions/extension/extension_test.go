@@ -94,7 +94,6 @@ var _ = Describe("Extension", func() {
 	)
 
 	BeforeEach(func() {
-		fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		namespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "test-namespace"}}
 
 		logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
@@ -164,6 +163,8 @@ var _ = Describe("Extension", func() {
 				},
 			},
 		}
+
+		fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithStatusSubresource(&extensionsv1alpha1.Extension{}).Build()
 
 		ext = extension.New(
 			log,

@@ -210,8 +210,8 @@ var _ = BeforeSuite(func() {
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             testScheme,
 		MetricsBindAddress: "0",
-		NewCache: cache.BuilderWithOptions(cache.Options{
-			SelectorsByObject: map[client.Object]cache.ObjectSelector{
+		Cache: cache.Options{
+			ByObject: map[client.Object]cache.ByObject{
 				&gardencorev1beta1.BackupBucket{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 					Field: fields.SelectorFromSet(fields.Set{gardencore.BackupBucketSeedName: seed.Name}),
@@ -224,7 +224,7 @@ var _ = BeforeSuite(func() {
 					Field: fields.SelectorFromSet(fields.Set{gardencore.BackupEntrySeedName: seed.Name}),
 				},
 			},
-		}),
+		},
 	})
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()

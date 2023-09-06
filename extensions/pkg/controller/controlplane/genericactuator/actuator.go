@@ -77,8 +77,12 @@ func NewActuator(
 	atomicShootWebhookConfig *atomic.Value,
 	webhookServerNamespace string,
 	webhookServerPort int,
-	gardenerClientset kubernetesclient.Interface,
-) controlplane.Actuator {
+) (controlplane.Actuator, error) {
+	gardenerClientset, err := kubernetesclient.NewWithConfig(kubernetesclient.WithRESTConfig(mgr.GetConfig()))
+	if err != nil {
+		return nil, err
+	}
+
 	return &actuator{
 		providerName: providerName,
 
@@ -106,7 +110,7 @@ func NewActuator(
 		client:            mgr.GetClient(),
 
 		newSecretsManager: extensionssecretsmanager.SecretsManagerForCluster,
-	}
+	}, nil
 }
 
 type newSecretsManagerFunc func(context.Context, logr.Logger, clock.Clock, client.Client, *extensionscontroller.Cluster, string, []extensionssecretsmanager.SecretConfigWithOptions) (secretsmanager.Interface, error)

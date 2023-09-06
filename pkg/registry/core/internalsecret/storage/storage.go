@@ -32,10 +32,11 @@ type REST struct {
 // NewREST returns a RESTStorage object that will work against internalsecrets.
 func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 	store := &genericregistry.Store{
-		NewFunc:                  func() runtime.Object { return &core.InternalSecret{} },
-		NewListFunc:              func() runtime.Object { return &core.InternalSecretList{} },
-		PredicateFunc:            internalsecret.MatchInternalSecret,
-		DefaultQualifiedResource: core.Resource("internalsecrets"),
+		NewFunc:                   func() runtime.Object { return &core.InternalSecret{} },
+		NewListFunc:               func() runtime.Object { return &core.InternalSecretList{} },
+		PredicateFunc:             internalsecret.MatchInternalSecret,
+		DefaultQualifiedResource:  core.Resource("internalsecrets"),
+		SingularQualifiedResource: core.Resource("internalsecret"),
 
 		CreateStrategy: internalsecret.Strategy,
 		UpdateStrategy: internalsecret.Strategy,

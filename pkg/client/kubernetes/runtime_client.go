@@ -30,10 +30,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	kubernetescache "github.com/gardener/gardener/pkg/client/kubernetes/cache"
+	thirdpartyapiutil "github.com/gardener/gardener/third_party/controller-runtime/pkg/apiutil"
 )
 
 const (
-	defaultCacheResyncPeriod = 6 * time.Hour
+	defaultCacheSyncPeriod = 6 * time.Hour
 )
 
 // NewRuntimeCache creates a new cache.Cache with the given config and options. It can be used
@@ -47,8 +48,8 @@ func NewRuntimeCache(config *rest.Config, options cache.Options) (cache.Cache, e
 }
 
 func setCacheOptionsDefaults(options *cache.Options) error {
-	if options.Resync == nil {
-		options.Resync = pointer.Duration(defaultCacheResyncPeriod)
+	if options.SyncPeriod == nil {
+		options.SyncPeriod = pointer.Duration(defaultCacheSyncPeriod)
 	}
 
 	return nil
@@ -57,10 +58,13 @@ func setCacheOptionsDefaults(options *cache.Options) error {
 func setClientOptionsDefaults(config *rest.Config, options *client.Options) error {
 	if options.Mapper == nil {
 		// default the client's REST mapper to a dynamic REST mapper (automatically rediscovers resources on NoMatchErrors)
-		mapper, err := apiutil.NewDynamicRESTMapper(
+		// TODO(ary1992): The new rest mapper implementation doesn't return a NoKindMatchError but a ErrGroupDiscoveryFailed
+		// when an API GroupVersion is not present in the cluster. Remove the old restmapper usage once the upstream issue
+		// (https://github.com/kubernetes-sigs/controller-runtime/pull/2425) is fixed.
+		mapper, err := thirdpartyapiutil.NewDynamicRESTMapper(
 			config,
-			apiutil.WithLazyDiscovery,
-			apiutil.WithLimiter(rate.NewLimiter(rate.Every(5*time.Second), 1)),
+			thirdpartyapiutil.WithLazyDiscovery,
+			thirdpartyapiutil.WithLimiter(rate.NewLimiter(rate.Every(5*time.Second), 1)),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to create new DynamicRESTMapper: %w", err)

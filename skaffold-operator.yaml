@@ -162,6 +162,7 @@ build:
         - pkg/utils/version
         - plugin/pkg
         - third_party/gopkg.in/yaml.v2
+        - third_party/controller-runtime/pkg/apiutil
         - vendor
         - VERSION
       ldflags:
@@ -259,6 +260,7 @@ build:
         - pkg/utils/validation/kubernetesversion
         - pkg/utils/validation/kubernetes/core
         - pkg/utils/version
+        - third_party/controller-runtime/pkg/apiutil
         - vendor
         - VERSION
       ldflags:

@@ -83,7 +83,9 @@ var _ = Describe("handler", func() {
 
 	test := func(op admissionv1.Operation, matcher gomegatypes.GomegaMatcher) {
 		ctx = admission.NewContextWithRequest(ctx, admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{Name: namespaceName}})
-		Expect(handler.ValidateDelete(ctx, nil)).To(matcher)
+		warning, err := handler.ValidateDelete(ctx, nil)
+		Expect(warning).To(BeNil())
+		Expect(err).To(matcher)
 	}
 
 	It("should pass because no projects available", func() {

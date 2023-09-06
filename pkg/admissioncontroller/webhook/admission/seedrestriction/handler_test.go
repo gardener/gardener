@@ -88,15 +88,14 @@ var _ = Describe("handler", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		mockCache = mockcache.NewMockCache(ctrl)
-		decoder, err = admission.NewDecoder(kubernetes.GardenScheme)
+		decoder = admission.NewDecoder(kubernetes.GardenScheme)
 		Expect(err).NotTo(HaveOccurred())
 
 		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 		request = admission.Request{}
 		encoder = &json.Serializer{}
 
-		handler = &Handler{Logger: log, Client: mockCache}
-		Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
+		handler = &Handler{Logger: log, Client: mockCache, Decoder: decoder}
 
 		seedName = "seed"
 		gardenletUser = authenticationv1.UserInfo{

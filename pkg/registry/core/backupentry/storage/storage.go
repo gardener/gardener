@@ -54,10 +54,11 @@ func NewStorage(optsGetter generic.RESTOptionsGetter) BackupEntryStorage {
 func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 	var (
 		store = &genericregistry.Store{
-			NewFunc:                  func() runtime.Object { return &core.BackupEntry{} },
-			NewListFunc:              func() runtime.Object { return &core.BackupEntryList{} },
-			DefaultQualifiedResource: core.Resource("backupentries"),
-			EnableGarbageCollection:  true,
+			NewFunc:                   func() runtime.Object { return &core.BackupEntry{} },
+			NewListFunc:               func() runtime.Object { return &core.BackupEntryList{} },
+			DefaultQualifiedResource:  core.Resource("backupentries"),
+			SingularQualifiedResource: core.Resource("backupentry"),
+			EnableGarbageCollection:   true,
 
 			CreateStrategy: backupentry.Strategy,
 			UpdateStrategy: backupentry.Strategy,

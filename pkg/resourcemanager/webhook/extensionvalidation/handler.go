@@ -21,6 +21,7 @@ import (
 	druidvalidation "github.com/gardener/etcd-druid/api/validation"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/extensions/validation"
@@ -41,242 +42,242 @@ type (
 	workerValidator                struct{}
 )
 
-func (backupBucketValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+func (backupBucketValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	object := obj.(*extensionsv1alpha1.BackupBucket)
 	if errs := validation.ValidateBackupBucket(object); len(errs) > 0 {
-		return apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.BackupBucketResource), object.GetName(), errs)
+		return nil, apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.BackupBucketResource), object.GetName(), errs)
 	}
-	return nil
+	return nil, nil
 }
 
-func (backupBucketValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+func (backupBucketValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
 	object := newObj.(*extensionsv1alpha1.BackupBucket)
 	if errs := validation.ValidateBackupBucketUpdate(object, oldObj.(*extensionsv1alpha1.BackupBucket)); len(errs) > 0 {
-		return apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.BackupBucketResource), object.GetName(), errs)
+		return nil, apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.BackupBucketResource), object.GetName(), errs)
 	}
-	return nil
+	return nil, nil
 }
 
-func (backupBucketValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
-	return nil
+func (backupBucketValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }
 
-func (backupEntryValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+func (backupEntryValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	object := obj.(*extensionsv1alpha1.BackupEntry)
 	if errs := validation.ValidateBackupEntry(object); len(errs) > 0 {
-		return apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.BackupEntryResource), object.GetName(), errs)
+		return nil, apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.BackupEntryResource), object.GetName(), errs)
 	}
-	return nil
+	return nil, nil
 }
 
-func (backupEntryValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+func (backupEntryValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
 	object := newObj.(*extensionsv1alpha1.BackupEntry)
 	if errs := validation.ValidateBackupEntryUpdate(object, oldObj.(*extensionsv1alpha1.BackupEntry)); len(errs) > 0 {
-		return apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.BackupEntryResource), object.GetName(), errs)
+		return nil, apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.BackupEntryResource), object.GetName(), errs)
 	}
-	return nil
+	return nil, nil
 }
 
-func (backupEntryValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
-	return nil
+func (backupEntryValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }
 
-func (bastionValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+func (bastionValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	object := obj.(*extensionsv1alpha1.Bastion)
 	if errs := validation.ValidateBastion(object); len(errs) > 0 {
-		return apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.BastionResource), object.GetName(), errs)
+		return nil, apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.BastionResource), object.GetName(), errs)
 	}
-	return nil
+	return nil, nil
 }
 
-func (bastionValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+func (bastionValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
 	object := newObj.(*extensionsv1alpha1.Bastion)
 	if errs := validation.ValidateBastionUpdate(object, oldObj.(*extensionsv1alpha1.Bastion)); len(errs) > 0 {
-		return apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.BastionResource), object.GetName(), errs)
+		return nil, apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.BastionResource), object.GetName(), errs)
 	}
-	return nil
+	return nil, nil
 }
 
-func (bastionValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
-	return nil
+func (bastionValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }
 
-func (containerRuntimeValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+func (containerRuntimeValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	object := obj.(*extensionsv1alpha1.ContainerRuntime)
 	if errs := validation.ValidateContainerRuntime(object); len(errs) > 0 {
-		return apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.ContainerRuntimeResource), object.GetName(), errs)
+		return nil, apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.ContainerRuntimeResource), object.GetName(), errs)
 	}
-	return nil
+	return nil, nil
 }
 
-func (containerRuntimeValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+func (containerRuntimeValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
 	object := newObj.(*extensionsv1alpha1.ContainerRuntime)
 	if errs := validation.ValidateContainerRuntimeUpdate(object, oldObj.(*extensionsv1alpha1.ContainerRuntime)); len(errs) > 0 {
-		return apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.ContainerRuntimeResource), object.GetName(), errs)
+		return nil, apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.ContainerRuntimeResource), object.GetName(), errs)
 	}
-	return nil
+	return nil, nil
 }
 
-func (containerRuntimeValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
-	return nil
+func (containerRuntimeValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }
 
-func (controlPlaneValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+func (controlPlaneValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	object := obj.(*extensionsv1alpha1.ControlPlane)
 	if errs := validation.ValidateControlPlane(object); len(errs) > 0 {
-		return apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.ControlPlaneResource), object.GetName(), errs)
+		return nil, apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.ControlPlaneResource), object.GetName(), errs)
 	}
-	return nil
+	return nil, nil
 }
 
-func (controlPlaneValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+func (controlPlaneValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
 	object := newObj.(*extensionsv1alpha1.ControlPlane)
 	if errs := validation.ValidateControlPlaneUpdate(object, oldObj.(*extensionsv1alpha1.ControlPlane)); len(errs) > 0 {
-		return apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.ControlPlaneResource), object.GetName(), errs)
+		return nil, apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.ControlPlaneResource), object.GetName(), errs)
 	}
-	return nil
+	return nil, nil
 }
 
-func (controlPlaneValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
-	return nil
+func (controlPlaneValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }
 
-func (dnsRecordValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+func (dnsRecordValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	object := obj.(*extensionsv1alpha1.DNSRecord)
 	if errs := validation.ValidateDNSRecord(object); len(errs) > 0 {
-		return apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.DNSRecordResource), object.GetName(), errs)
+		return nil, apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.DNSRecordResource), object.GetName(), errs)
 	}
-	return nil
+	return nil, nil
 }
 
-func (dnsRecordValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+func (dnsRecordValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
 	object := newObj.(*extensionsv1alpha1.DNSRecord)
 	if errs := validation.ValidateDNSRecordUpdate(object, oldObj.(*extensionsv1alpha1.DNSRecord)); len(errs) > 0 {
-		return apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.DNSRecordResource), object.GetName(), errs)
+		return nil, apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.DNSRecordResource), object.GetName(), errs)
 	}
-	return nil
+	return nil, nil
 }
 
-func (dnsRecordValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
-	return nil
+func (dnsRecordValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }
 
-func (etcdValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+func (etcdValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	object := obj.(*druidv1alpha1.Etcd)
 	if errs := druidvalidation.ValidateEtcd(object); len(errs) > 0 {
-		return apierrors.NewInvalid(object.GroupVersionKind().GroupKind(), object.GetName(), errs)
+		return nil, apierrors.NewInvalid(object.GroupVersionKind().GroupKind(), object.GetName(), errs)
 	}
-	return nil
+	return nil, nil
 }
 
-func (etcdValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+func (etcdValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
 	object := newObj.(*druidv1alpha1.Etcd)
 	if errs := druidvalidation.ValidateEtcdUpdate(object, oldObj.(*druidv1alpha1.Etcd)); len(errs) > 0 {
-		return apierrors.NewInvalid(object.GroupVersionKind().GroupKind(), object.GetName(), errs)
+		return nil, apierrors.NewInvalid(object.GroupVersionKind().GroupKind(), object.GetName(), errs)
 	}
-	return nil
+	return nil, nil
 }
 
-func (etcdValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
-	return nil
+func (etcdValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }
 
-func (extensionValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+func (extensionValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	object := obj.(*extensionsv1alpha1.Extension)
 	if errs := validation.ValidateExtension(object); len(errs) > 0 {
-		return apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.ExtensionResource), object.GetName(), errs)
+		return nil, apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.ExtensionResource), object.GetName(), errs)
 	}
-	return nil
+	return nil, nil
 }
 
-func (extensionValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+func (extensionValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
 	object := newObj.(*extensionsv1alpha1.Extension)
 	if errs := validation.ValidateExtensionUpdate(object, oldObj.(*extensionsv1alpha1.Extension)); len(errs) > 0 {
-		return apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.ExtensionResource), object.GetName(), errs)
+		return nil, apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.ExtensionResource), object.GetName(), errs)
 	}
-	return nil
+	return nil, nil
 }
 
-func (extensionValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
-	return nil
+func (extensionValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }
 
-func (infrastructureValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+func (infrastructureValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	object := obj.(*extensionsv1alpha1.Infrastructure)
 	if errs := validation.ValidateInfrastructure(object); len(errs) > 0 {
-		return apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.InfrastructureResource), object.GetName(), errs)
+		return nil, apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.InfrastructureResource), object.GetName(), errs)
 	}
-	return nil
+	return nil, nil
 }
 
-func (infrastructureValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+func (infrastructureValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
 	object := newObj.(*extensionsv1alpha1.Infrastructure)
 	if errs := validation.ValidateInfrastructureUpdate(object, oldObj.(*extensionsv1alpha1.Infrastructure)); len(errs) > 0 {
-		return apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.InfrastructureResource), object.GetName(), errs)
+		return nil, apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.InfrastructureResource), object.GetName(), errs)
 	}
-	return nil
+	return nil, nil
 }
 
-func (infrastructureValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
-	return nil
+func (infrastructureValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }
 
-func (networkValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+func (networkValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	object := obj.(*extensionsv1alpha1.Network)
 	if errs := validation.ValidateNetwork(object); len(errs) > 0 {
-		return apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.NetworkResource), object.GetName(), errs)
+		return nil, apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.NetworkResource), object.GetName(), errs)
 	}
-	return nil
+	return nil, nil
 }
 
-func (networkValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+func (networkValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
 	object := newObj.(*extensionsv1alpha1.Network)
 	if errs := validation.ValidateNetworkUpdate(object, oldObj.(*extensionsv1alpha1.Network)); len(errs) > 0 {
-		return apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.NetworkResource), object.GetName(), errs)
+		return nil, apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.NetworkResource), object.GetName(), errs)
 	}
-	return nil
+	return nil, nil
 }
 
-func (networkValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
-	return nil
+func (networkValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }
 
-func (operatingSystemConfigValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+func (operatingSystemConfigValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	object := obj.(*extensionsv1alpha1.OperatingSystemConfig)
 	if errs := validation.ValidateOperatingSystemConfig(object); len(errs) > 0 {
-		return apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.OperatingSystemConfigResource), object.GetName(), errs)
+		return nil, apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.OperatingSystemConfigResource), object.GetName(), errs)
 	}
-	return nil
+	return nil, nil
 }
 
-func (operatingSystemConfigValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+func (operatingSystemConfigValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
 	object := newObj.(*extensionsv1alpha1.OperatingSystemConfig)
 	if errs := validation.ValidateOperatingSystemConfigUpdate(object, oldObj.(*extensionsv1alpha1.OperatingSystemConfig)); len(errs) > 0 {
-		return apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.OperatingSystemConfigResource), object.GetName(), errs)
+		return nil, apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.OperatingSystemConfigResource), object.GetName(), errs)
 	}
-	return nil
+	return nil, nil
 }
 
-func (operatingSystemConfigValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
-	return nil
+func (operatingSystemConfigValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }
 
-func (workerValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+func (workerValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	object := obj.(*extensionsv1alpha1.Worker)
 	if errs := validation.ValidateWorker(object); len(errs) > 0 {
-		return apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.WorkerResource), object.GetName(), errs)
+		return nil, apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.WorkerResource), object.GetName(), errs)
 	}
-	return nil
+	return nil, nil
 }
 
-func (workerValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+func (workerValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
 	object := newObj.(*extensionsv1alpha1.Worker)
 	if errs := validation.ValidateWorkerUpdate(object, oldObj.(*extensionsv1alpha1.Worker)); len(errs) > 0 {
-		return apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.WorkerResource), object.GetName(), errs)
+		return nil, apierrors.NewInvalid(extensionsv1alpha1.Kind(extensionsv1alpha1.WorkerResource), object.GetName(), errs)
 	}
-	return nil
+	return nil, nil
 }
 
-func (workerValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
-	return nil
+func (workerValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }

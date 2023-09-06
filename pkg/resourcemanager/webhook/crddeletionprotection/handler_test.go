@@ -71,11 +71,10 @@ var _ = Describe("handler", func() {
 			request.Operation = admissionv1.Delete
 
 			var err error
-			decoder, err = admission.NewDecoder(kubernetes.SeedScheme)
+			decoder = admission.NewDecoder(kubernetes.SeedScheme)
 			Expect(err).NotTo(HaveOccurred())
 
-			handler = &Handler{Logger: log, SourceReader: c}
-			Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
+			handler = &Handler{Logger: log, SourceReader: c, Decoder: decoder}
 		})
 
 		AfterEach(func() {
@@ -334,13 +333,13 @@ var _ = Describe("handler", func() {
 
 func expectAllowed(response admission.Response, reason gomegatypes.GomegaMatcher, optionalDescription ...interface{}) {
 	Expect(response.Allowed).To(BeTrue(), optionalDescription...)
-	Expect(string(response.Result.Reason)).To(reason, optionalDescription...)
+	Expect(string(response.Result.Message)).To(reason, optionalDescription...)
 }
 
 func expectDenied(response admission.Response, reason gomegatypes.GomegaMatcher, optionalDescription ...interface{}) {
 	Expect(response.Allowed).To(BeFalse(), optionalDescription...)
 	Expect(response.Result.Code).To(BeEquivalentTo(http.StatusForbidden), optionalDescription...)
-	Expect(string(response.Result.Reason)).To(reason, optionalDescription...)
+	Expect(string(response.Result.Message)).To(reason, optionalDescription...)
 }
 
 func expectErrored(response admission.Response, code, err gomegatypes.GomegaMatcher, optionalDescription ...interface{}) {

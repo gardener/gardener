@@ -24,7 +24,6 @@ import (
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -35,9 +34,9 @@ type FakeCloudProfiles struct {
 	Fake *FakeCoreV1beta1
 }
 
-var cloudprofilesResource = schema.GroupVersionResource{Group: "core.gardener.cloud", Version: "v1beta1", Resource: "cloudprofiles"}
+var cloudprofilesResource = v1beta1.SchemeGroupVersion.WithResource("cloudprofiles")
 
-var cloudprofilesKind = schema.GroupVersionKind{Group: "core.gardener.cloud", Version: "v1beta1", Kind: "CloudProfile"}
+var cloudprofilesKind = v1beta1.SchemeGroupVersion.WithKind("CloudProfile")
 
 // Get takes name of the cloudProfile, and returns the corresponding cloudProfile object, and an error if there is any.
 func (c *FakeCloudProfiles) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.CloudProfile, err error) {

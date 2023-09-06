@@ -25,6 +25,7 @@ import (
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/certificates"
@@ -245,7 +246,12 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 	}
 	webhookServer := mgr.GetWebhookServer()
 
-	servicePort := webhookServer.Port
+	defaultServer, ok := webhookServer.(*webhook.DefaultServer)
+	if !ok {
+		return nil, fmt.Errorf("expected *webhook.DefaultServer, got %T", webhookServer)
+	}
+
+	servicePort := defaultServer.Options.Port
 	if (c.Server.Mode == extensionswebhook.ModeService || c.Server.Mode == extensionswebhook.ModeURLWithServiceName) && c.Server.ServicePort > 0 {
 		servicePort = c.Server.ServicePort
 	}
@@ -280,7 +286,7 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 		mgr.GetLogger().Info("Running webhooks with unmanaged certificates (i.e., the webhook CA will not be rotated automatically). " +
 			"This mode is supposed to be used for development purposes only. Make sure to configure --webhook-config-namespace in production.")
 
-		caBundle, err := certificates.GenerateUnmanagedCertificates(c.extensionName, webhookServer.CertDir, c.Server.Mode, c.Server.URL)
+		caBundle, err := certificates.GenerateUnmanagedCertificates(c.extensionName, defaultServer.Options.CertDir, c.Server.Mode, c.Server.URL)
 		if err != nil {
 			return nil, fmt.Errorf("error generating new certificates for webhook server: %w", err)
 		}
@@ -356,7 +362,14 @@ func (c *AddToManagerConfig) reconcileShootWebhookConfigs(mgr manager.Manager, s
 			if err := extensionswebhook.InjectCABundleIntoWebhookConfig(shootWebhookConfig, caBundle); err != nil {
 				return err
 			}
-			if err := extensionsshootwebhook.ReconcileWebhooksForAllNamespaces(ctx, mgr.GetClient(), c.Server.Namespace, c.extensionName, c.shootWebhookManagedResourceName, c.shootNamespaceSelector, mgr.GetWebhookServer().Port, shootWebhookConfig); err != nil {
+
+			webhookServer := mgr.GetWebhookServer()
+			defaultServer, ok := webhookServer.(*webhook.DefaultServer)
+			if !ok {
+				return fmt.Errorf("expected *webhook.DefaultServer, got %T", webhookServer)
+			}
+
+			if err := extensionsshootwebhook.ReconcileWebhooksForAllNamespaces(ctx, mgr.GetClient(), c.Server.Namespace, c.extensionName, c.shootWebhookManagedResourceName, c.shootNamespaceSelector, defaultServer.Options.Port, shootWebhookConfig); err != nil {
 				return fmt.Errorf("error reconciling all shoot webhook configs: %w", err)
 			}
 		}

@@ -40,6 +40,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
 )
 
@@ -110,8 +111,9 @@ var _ = Describe("Worker Reconcile", func() {
 	)
 
 	DescribeTable("Reconcile function", func(t *test) {
+		apiReader := mockclient.NewMockReader(ctrl)
 		mgr.EXPECT().GetClient().Return(t.fields.client).AnyTimes()
-		mgr.EXPECT().GetAPIReader().Return(t.fields.client).AnyTimes()
+		mgr.EXPECT().GetAPIReader().Return(apiReader).AnyTimes()
 		reconciler := worker.NewReconciler(mgr, t.fields.actuator(ctrl))
 
 		got, err := reconciler.Reconcile(ctx, t.args.request)
@@ -127,7 +129,7 @@ var _ = Describe("Worker Reconcile", func() {
 					addOperationAnnotationToWorker(
 						getWorker(),
 						v1beta1constants.GardenerOperationReconcile),
-					getCluster()).Build(),
+					getCluster()).WithStatusSubresource(&extensionsv1alpha1.Worker{}).Build(),
 			},
 			args:    arguments,
 			want:    reconcile.Result{},
@@ -139,15 +141,17 @@ var _ = Describe("Worker Reconcile", func() {
 				actuator: newMockActuator("", nil),
 				ctx:      context.TODO(),
 				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
-					addDeletionTimestampToWorker(
-						addOperationAnnotationToWorker(
-							addLastOperationToWorker(
-								getWorker(),
-								gardencorev1beta1.LastOperationTypeMigrate,
-								gardencorev1beta1.LastOperationStateSucceeded,
-								"Migrate worker"),
-							v1beta1constants.GardenerOperationReconcile)),
-					getCluster()).Build(),
+					addFinalizerToWorker(
+						addDeletionTimestampToWorker(
+							addOperationAnnotationToWorker(
+								addLastOperationToWorker(
+									getWorker(),
+									gardencorev1beta1.LastOperationTypeMigrate,
+									gardencorev1beta1.LastOperationStateSucceeded,
+									"Migrate worker"),
+								v1beta1constants.GardenerOperationReconcile)),
+						worker.FinalizerName),
+					getCluster()).WithStatusSubresource(&extensionsv1alpha1.Worker{}).Build(),
 			},
 			args:    arguments,
 			want:    reconcile.Result{},
@@ -162,7 +166,7 @@ var _ = Describe("Worker Reconcile", func() {
 					addOperationAnnotationToWorker(
 						getWorker(),
 						v1beta1constants.GardenerOperationMigrate),
-					getCluster()).Build(),
+					getCluster()).WithStatusSubresource(&extensionsv1alpha1.Worker{}).Build(),
 			},
 			args:    arguments,
 			want:    reconcile.Result{},
@@ -177,7 +181,7 @@ var _ = Describe("Worker Reconcile", func() {
 					addOperationAnnotationToWorker(
 						getWorker(),
 						v1beta1constants.GardenerOperationMigrate),
-					getCluster()).Build(),
+					getCluster()).WithStatusSubresource(&extensionsv1alpha1.Worker{}).Build(),
 			},
 			args:    arguments,
 			want:    reconcile.Result{},
@@ -194,7 +198,7 @@ var _ = Describe("Worker Reconcile", func() {
 						gardencorev1beta1.LastOperationTypeMigrate,
 						gardencorev1beta1.LastOperationStateFailed,
 						"Migrate worker"),
-					getCluster()).Build(),
+					getCluster()).WithStatusSubresource(&extensionsv1alpha1.Worker{}).Build(),
 			},
 			args:    arguments,
 			want:    reconcile.Result{},
@@ -211,7 +215,7 @@ var _ = Describe("Worker Reconcile", func() {
 						gardencorev1beta1.LastOperationTypeMigrate,
 						gardencorev1beta1.LastOperationStateFailed,
 						"Migrate worker"),
-					getCluster()).Build(),
+					getCluster()).WithStatusSubresource(&extensionsv1alpha1.Worker{}).Build(),
 			},
 			args:    arguments,
 			want:    reconcile.Result{},
@@ -224,7 +228,7 @@ var _ = Describe("Worker Reconcile", func() {
 				ctx:      context.TODO(),
 				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addFinalizerToWorker(addDeletionTimestampToWorker(getWorker()), worker.FinalizerName),
-					getCluster()).Build(),
+					getCluster()).WithStatusSubresource(&extensionsv1alpha1.Worker{}).Build(),
 			},
 			args:    arguments,
 			want:    reconcile.Result{},
@@ -237,7 +241,7 @@ var _ = Describe("Worker Reconcile", func() {
 				ctx:      context.TODO(),
 				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addFinalizerToWorker(addDeletionTimestampToWorker(getWorker()), worker.FinalizerName),
-					getCluster()).Build(),
+					getCluster()).WithStatusSubresource(&extensionsv1alpha1.Worker{}).Build(),
 			},
 			args:    arguments,
 			want:    reconcile.Result{},
@@ -252,7 +256,7 @@ var _ = Describe("Worker Reconcile", func() {
 					addOperationAnnotationToWorker(
 						getWorker(),
 						v1beta1constants.GardenerOperationRestore),
-					getCluster()).Build(),
+					getCluster()).WithStatusSubresource(&extensionsv1alpha1.Worker{}).Build(),
 			},
 			args:    arguments,
 			want:    reconcile.Result{},
@@ -267,7 +271,7 @@ var _ = Describe("Worker Reconcile", func() {
 					addOperationAnnotationToWorker(
 						getWorker(),
 						v1beta1constants.GardenerOperationRestore),
-					getCluster()).Build(),
+					getCluster()).WithStatusSubresource(&extensionsv1alpha1.Worker{}).Build(),
 			},
 			args:    arguments,
 			want:    reconcile.Result{},
@@ -284,7 +288,7 @@ var _ = Describe("Worker Reconcile", func() {
 						gardencorev1beta1.LastOperationTypeReconcile,
 						gardencorev1beta1.LastOperationStateFailed,
 						"Reconcile worker"),
-					getCluster()).Build(),
+					getCluster()).WithStatusSubresource(&extensionsv1alpha1.Worker{}).Build(),
 			},
 			args:    arguments,
 			want:    reconcile.Result{},
@@ -301,7 +305,7 @@ var _ = Describe("Worker Reconcile", func() {
 						gardencorev1beta1.LastOperationTypeReconcile,
 						gardencorev1beta1.LastOperationStateProcessing,
 						"Processs worker reconcilation"),
-					getCluster()).Build(),
+					getCluster()).WithStatusSubresource(&extensionsv1alpha1.Worker{}).Build(),
 			},
 			args:    arguments,
 			want:    reconcile.Result{},
@@ -318,7 +322,7 @@ var _ = Describe("Worker Reconcile", func() {
 						gardencorev1beta1.LastOperationTypeReconcile,
 						gardencorev1beta1.LastOperationStateFailed,
 						"Reconcile worker"),
-					getCluster()).Build(),
+					getCluster()).WithStatusSubresource(&extensionsv1alpha1.Worker{}).Build(),
 			},
 			args:    arguments,
 			want:    reconcile.Result{},
@@ -335,7 +339,7 @@ var _ = Describe("Worker Reconcile", func() {
 						gardencorev1beta1.LastOperationTypeReconcile,
 						gardencorev1beta1.LastOperationStateProcessing,
 						"Processs worker reconcilation"),
-					getCluster()).Build(),
+					getCluster()).WithStatusSubresource(&extensionsv1alpha1.Worker{}).Build(),
 			},
 			args:    arguments,
 			want:    reconcile.Result{},

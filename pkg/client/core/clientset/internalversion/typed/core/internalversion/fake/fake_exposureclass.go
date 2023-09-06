@@ -24,7 +24,6 @@ import (
 	core "github.com/gardener/gardener/pkg/apis/core"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -35,9 +34,9 @@ type FakeExposureClasses struct {
 	Fake *FakeCore
 }
 
-var exposureclassesResource = schema.GroupVersionResource{Group: "core.gardener.cloud", Version: "", Resource: "exposureclasses"}
+var exposureclassesResource = core.SchemeGroupVersion.WithResource("exposureclasses")
 
-var exposureclassesKind = schema.GroupVersionKind{Group: "core.gardener.cloud", Version: "", Kind: "ExposureClass"}
+var exposureclassesKind = core.SchemeGroupVersion.WithKind("ExposureClass")
 
 // Get takes name of the exposureClass, and returns the corresponding exposureClass object, and an error if there is any.
 func (c *FakeExposureClasses) Get(ctx context.Context, name string, options v1.GetOptions) (result *core.ExposureClass, err error) {

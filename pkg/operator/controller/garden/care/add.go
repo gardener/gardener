@@ -83,7 +83,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 			),
 		}).
 		Watches(
-			source.NewKindWithCache(&operatorv1alpha1.Garden{}, mgr.GetCache()),
+			&operatorv1alpha1.Garden{},
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(r.GardenPredicate()),
 		).Build(r)
@@ -92,7 +92,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	return c.Watch(
-		source.NewKindWithCache(&resourcesv1alpha1.ManagedResource{}, mgr.GetCache()),
+		source.Kind(mgr.GetCache(), &resourcesv1alpha1.ManagedResource{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapManagedResourceToGarden), mapper.UpdateWithNew, c.GetLogger()),
 		predicateutils.ManagedResourceConditionsChanged(),
 	)

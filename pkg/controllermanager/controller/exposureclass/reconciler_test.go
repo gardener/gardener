@@ -90,11 +90,10 @@ var _ = Describe("Controller", func() {
 
 	Context("when deletion timestamp is set", func() {
 		BeforeEach(func() {
-			now := metav1.Now()
-			exposureClass.DeletionTimestamp = &now
 			exposureClass.Finalizers = []string{finalizerName}
 
 			Expect(fakeClient.Create(ctx, exposureClass)).To(Succeed())
+			Expect(fakeClient.Delete(ctx, exposureClass)).To(Succeed())
 		})
 
 		It("should do nothing because finalizer is not present", func() {

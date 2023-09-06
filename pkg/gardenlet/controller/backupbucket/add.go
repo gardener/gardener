@@ -66,8 +66,8 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 			RateLimiter:             r.RateLimiter,
 		}).
-		Watches(
-			source.NewKindWithCache(&gardencorev1beta1.BackupBucket{}, gardenCluster.GetCache()),
+		WatchesRawSource(
+			source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.BackupBucket{}),
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(
 				&predicate.GenerationChangedPredicate{},
@@ -80,7 +80,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 	}
 
 	return c.Watch(
-		source.NewKindWithCache(&extensionsv1alpha1.BackupBucket{}, seedCluster.GetCache()),
+		source.Kind(seedCluster.GetCache(), &extensionsv1alpha1.BackupBucket{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapExtensionBackupBucketToCoreBackupBucket), mapper.UpdateWithNew, c.GetLogger()),
 		predicateutils.LastOperationChanged(predicateutils.GetExtensionLastOperation),
 	)

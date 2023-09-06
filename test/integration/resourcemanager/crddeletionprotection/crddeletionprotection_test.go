@@ -108,14 +108,14 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 	testDeletionUnconfirmed := func(ctx context.Context, obj client.Object) {
 		Eventually(func() string {
 			err := testClient.Delete(ctx, obj)
-			return string(apierrors.ReasonForError(err))
+			return err.Error()
 		}).Should(ContainSubstring("annotation to delete"), objectID(obj))
 	}
 
 	testDeleteCollectionUnconfirmed := func(ctx context.Context, obj client.Object) {
 		Eventually(func() string {
 			err := testClient.DeleteAllOf(ctx, obj, client.InNamespace(obj.GetNamespace()))
-			return string(apierrors.ReasonForError(err))
+			return err.Error()
 		}).Should(ContainSubstring("annotation to delete"), objectID(obj))
 	}
 

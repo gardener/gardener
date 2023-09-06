@@ -84,14 +84,14 @@ func add(ctx context.Context, mgr manager.Manager, args AddArgs, predicates []pr
 
 	if args.IgnoreOperationAnnotation {
 		if err := ctrl.Watch(
-			&source.Kind{Type: &extensionsv1alpha1.Cluster{}},
+			source.Kind(mgr.GetCache(), &extensionsv1alpha1.Cluster{}),
 			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), ClusterToWorkerMapper(mgr, predicates), mapper.UpdateWithNew, ctrl.GetLogger()),
 		); err != nil {
 			return err
 		}
 	}
 
-	return ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.Worker{}}, &handler.EnqueueRequestForObject{}, predicates...)
+	return ctrl.Watch(source.Kind(mgr.GetCache(), &extensionsv1alpha1.Worker{}), &handler.EnqueueRequestForObject{}, predicates...)
 }
 
 func addStateUpdatingController(ctx context.Context, mgr manager.Manager, options controller.Options, extensionType string) error {
@@ -116,7 +116,7 @@ func addStateUpdatingController(ctx context.Context, mgr manager.Manager, option
 	}
 
 	if err := ctrl.Watch(
-		&source.Kind{Type: &machinev1alpha1.MachineSet{}},
+		source.Kind(mgr.GetCache(), &machinev1alpha1.MachineSet{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), MachineSetToWorkerMapper(workerPredicates), mapper.UpdateWithNew, ctrl.GetLogger()),
 		machinePredicates...,
 	); err != nil {
@@ -124,7 +124,7 @@ func addStateUpdatingController(ctx context.Context, mgr manager.Manager, option
 	}
 
 	return ctrl.Watch(
-		&source.Kind{Type: &machinev1alpha1.Machine{}},
+		source.Kind(mgr.GetCache(), &machinev1alpha1.Machine{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), MachineToWorkerMapper(workerPredicates), mapper.UpdateWithNew, ctrl.GetLogger()),
 		machinePredicates...,
 	)
