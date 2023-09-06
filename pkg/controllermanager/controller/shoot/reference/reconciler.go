@@ -22,7 +22,9 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -194,7 +196,12 @@ func (r *Reconciler) handleReferencedConfigMap(ctx context.Context, log logr.Log
 }
 
 func (r *Reconciler) releaseUnreferencedSecrets(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) error {
-	secrets, err := r.getUnreferencedSecrets(ctx, shoot)
+	secrets, err := r.getUnreferencedResources(ctx, shoot, &corev1.SecretList{}, func(shoot *gardencorev1beta1.Shoot) []string {
+		var out []string
+		out = append(out, secretNamesForDNSProviders(shoot)...)
+		out = append(out, namesForReferencedResources(shoot, "Secret")...)
+		return out
+	})
 	if err != nil {
 		return err
 	}
@@ -203,9 +210,9 @@ func (r *Reconciler) releaseUnreferencedSecrets(ctx context.Context, log logr.Lo
 	for _, secret := range secrets {
 		s := secret
 		fns = append(fns, func(ctx context.Context) error {
-			if controllerutil.ContainsFinalizer(&s, v1beta1constants.ReferenceProtectionFinalizerName) {
-				log.Info("Removing finalizer from secret", "secret", client.ObjectKeyFromObject(&s))
-				if err := controllerutils.RemoveFinalizers(ctx, r.Client, &s, v1beta1constants.ReferenceProtectionFinalizerName); err != nil {
+			if controllerutil.ContainsFinalizer(s, v1beta1constants.ReferenceProtectionFinalizerName) {
+				log.Info("Removing finalizer from secret", "secret", client.ObjectKeyFromObject(s))
+				if err := controllerutils.RemoveFinalizers(ctx, r.Client, s, v1beta1constants.ReferenceProtectionFinalizerName); err != nil {
 					return fmt.Errorf("failed to remove finalizer from secret: %w", err)
 				}
 			}
@@ -217,7 +224,14 @@ func (r *Reconciler) releaseUnreferencedSecrets(ctx context.Context, log logr.Lo
 }
 
 func (r *Reconciler) releaseUnreferencedConfigMaps(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) error {
-	configMaps, err := r.getUnreferencedConfigMaps(ctx, shoot)
+	configMaps, err := r.getUnreferencedResources(ctx, shoot, &corev1.ConfigMapList{}, func(shoot *gardencorev1beta1.Shoot) []string {
+		var out []string
+		if configMapRef := getAuditPolicyConfigMapRef(shoot.Spec.Kubernetes.KubeAPIServer); configMapRef != nil {
+			out = append(out, configMapRef.Name)
+		}
+		out = append(out, namesForReferencedResources(shoot, "ConfigMap")...)
+		return out
+	})
 	if err != nil {
 		return err
 	}
@@ -226,9 +240,9 @@ func (r *Reconciler) releaseUnreferencedConfigMaps(ctx context.Context, log logr
 	for _, configMap := range configMaps {
 		cm := configMap
 		fns = append(fns, func(ctx context.Context) error {
-			if controllerutil.ContainsFinalizer(&cm, v1beta1constants.ReferenceProtectionFinalizerName) {
-				log.Info("Removing finalizer from ConfigMap", "configMap", client.ObjectKeyFromObject(&cm))
-				if err := controllerutils.RemoveFinalizers(ctx, r.Client, &cm, v1beta1constants.ReferenceProtectionFinalizerName); err != nil {
+			if controllerutil.ContainsFinalizer(cm, v1beta1constants.ReferenceProtectionFinalizerName) {
+				log.Info("Removing finalizer from ConfigMap", "configMap", client.ObjectKeyFromObject(cm))
+				if err := controllerutils.RemoveFinalizers(ctx, r.Client, cm, v1beta1constants.ReferenceProtectionFinalizerName); err != nil {
 					return fmt.Errorf("failed to remove finalizer from ConfigMap: %w", err)
 				}
 			}
@@ -246,86 +260,56 @@ var (
 	UserManagedSelector = client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(noGardenRole)}
 )
 
-func (r *Reconciler) getUnreferencedSecrets(ctx context.Context, shoot *gardencorev1beta1.Shoot) ([]corev1.Secret, error) {
-	namespace := shoot.Namespace
-
-	secrets := &corev1.SecretList{}
-	if err := r.Client.List(ctx, secrets, client.InNamespace(namespace), UserManagedSelector); err != nil {
+func (r *Reconciler) getUnreferencedResources(
+	ctx context.Context,
+	shoot *gardencorev1beta1.Shoot,
+	listObj client.ObjectList,
+	getReferencedObjectNames func(shoot *gardencorev1beta1.Shoot) []string,
+) (
+	[]client.Object,
+	error,
+) {
+	if err := r.Client.List(ctx, listObj, client.InNamespace(shoot.Namespace), UserManagedSelector); err != nil {
 		return nil, err
 	}
 
-	shoots := &gardencorev1beta1.ShootList{}
-	if err := r.Client.List(ctx, shoots, client.InNamespace(namespace)); err != nil {
+	shootList := &gardencorev1beta1.ShootList{}
+	if err := r.Client.List(ctx, shootList, client.InNamespace(shoot.Namespace)); err != nil {
 		return nil, err
 	}
 
-	referencedSecrets := sets.New[string]()
-	for _, s := range shoots.Items {
+	referencedObjects := sets.New[string]()
+	for _, s := range shootList.Items {
 		// Ignore own references if shoot is in deletion and references are not needed any more by Gardener.
 		if s.Name == shoot.Name && shoot.DeletionTimestamp != nil && !controllerutil.ContainsFinalizer(&s, gardencorev1beta1.GardenerName) {
 			continue
 		}
-		referencedSecrets.Insert(secretNamesForDNSProviders(&s)...)
-		referencedSecrets.Insert(namesForReferencedResources(&s, "Secret")...)
+		referencedObjects.Insert(getReferencedObjectNames(&s)...)
 	}
 
-	var secretsToRelease []corev1.Secret
-	for _, secret := range secrets.Items {
-		if !controllerutil.ContainsFinalizer(&secret, v1beta1constants.ReferenceProtectionFinalizerName) {
-			continue
+	var objectsToRelease []client.Object
+
+	if err := meta.EachListItem(listObj, func(o runtime.Object) error {
+		obj, ok := o.(client.Object)
+		if !ok {
+			return fmt.Errorf("failed converting runtime.Object to client.Object: %+v", o)
 		}
-		if referencedSecrets.Has(secret.Name) {
-			continue
+
+		if !controllerutil.ContainsFinalizer(obj, v1beta1constants.ReferenceProtectionFinalizerName) {
+			return nil
 		}
-		secretsToRelease = append(secretsToRelease, secret)
-	}
 
-	return secretsToRelease, nil
-}
+		if referencedObjects.Has(obj.GetName()) {
+			return nil
+		}
 
-func (r *Reconciler) getUnreferencedConfigMaps(ctx context.Context, shoot *gardencorev1beta1.Shoot) ([]corev1.ConfigMap, error) {
-	namespace := shoot.Namespace
-
-	configMaps := &corev1.ConfigMapList{}
-	if err := r.Client.List(ctx, configMaps, client.InNamespace(namespace)); err != nil {
+		objectsToRelease = append(objectsToRelease, obj)
+		return nil
+	}); err != nil {
 		return nil, err
 	}
 
-	// Exit early if there are no ConfigMaps at all in the namespace
-	if len(configMaps.Items) == 0 {
-		return nil, nil
-	}
-
-	shoots := &gardencorev1beta1.ShootList{}
-	if err := r.Client.List(ctx, shoots, client.InNamespace(namespace)); err != nil {
-		return nil, err
-	}
-
-	referencedConfigMaps := sets.New[string]()
-	for _, s := range shoots.Items {
-		// Ignore own references if shoot is in deletion and references are not needed any more by Gardener.
-		if s.Name == shoot.Name && shoot.DeletionTimestamp != nil && !controllerutil.ContainsFinalizer(&s, gardencorev1beta1.GardenerName) {
-			continue
-		}
-
-		if configMapRef := getAuditPolicyConfigMapRef(s.Spec.Kubernetes.KubeAPIServer); configMapRef != nil {
-			referencedConfigMaps.Insert(configMapRef.Name)
-		}
-		referencedConfigMaps.Insert(namesForReferencedResources(&s, "ConfigMap")...)
-	}
-
-	var configMapsToRelease []corev1.ConfigMap
-	for _, configMap := range configMaps.Items {
-		if !controllerutil.ContainsFinalizer(&configMap, v1beta1constants.ReferenceProtectionFinalizerName) {
-			continue
-		}
-		if referencedConfigMaps.Has(configMap.Name) {
-			continue
-		}
-		configMapsToRelease = append(configMapsToRelease, configMap)
-	}
-
-	return configMapsToRelease, nil
+	return objectsToRelease, nil
 }
 
 func secretNamesForDNSProviders(shoot *gardencorev1beta1.Shoot) []string {
