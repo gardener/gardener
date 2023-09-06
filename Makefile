@@ -179,7 +179,7 @@ define GENERATE_HELP_INFO
 # Options:
 #   WHAT              - Specify the targets to run (e.g., "protobuf codegen manifests logcheck gomegacheck monitoring-docs")
 #   CODEGEN_GROUPS    - Specify which groups to run the 'codegen' target for, not applicable for other targets (e.g., "authentication core extensions resources operator seedmanagement operations settings operatorconfig controllermanager admissioncontroller scheduler gardenlet resourcemanager shoottolerationrestriction shootdnsrewriting provider_local extensions_config")
-#   MANIFESTS_FOLDERS - Specify which folders to run the 'manifests' target in, not applicable for other targets (e.g., "charts cmd example extensions pkg plugin test")
+#   MANIFESTS_FOLDERS - Specify which folders to run the 'manifests' target in, not applicable for other targets (Default folders are "charts cmd example extensions imagevector pkg plugin test")
 #   MODE              - Specify the mode for the 'manifests' or 'codegen' target (e.g., "parallel" or "sequential")
 #
 # Examples:
@@ -188,7 +188,7 @@ define GENERATE_HELP_INFO
 #   make generate WHAT="codegen protobuf" MODE="sequential"
 #   make generate WHAT="manifests" MANIFESTS_FOLDERS="pkg/component plugin" MODE="sequential"
 #   make generate WHAT="codegen" CODEGEN_GROUPS="core extensions" 
-#   make generate CODEGEN_GROUPS="operator controllermanager" MANIFESTS_FOLDERS="charts example/provider-local"
+#   make generate WHAT="codegen manifests" CODEGEN_GROUPS="operator controllermanager" MANIFESTS_FOLDERS="charts example/provider-local"
 #
 endef
 export GENERATE_HELP_INFO

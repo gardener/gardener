@@ -45,6 +45,7 @@ DEFAULT_MANIFESTS_FOLDERS=(
   "cmd"
   "example"
   "extensions"
+  "imagevector"
   "pkg"
   "plugin"
   "test"
