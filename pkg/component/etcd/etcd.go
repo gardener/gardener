@@ -556,7 +556,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 }
 
 func (e *etcd) Destroy(ctx context.Context) error {
-	if err := gardenerutils.ConfirmDeletion(ctx, e.client, e.etcd); client.IgnoreNotFound(err) != nil {
+	if err := gardenerutils.ConfirmDeletion(ctx, e.client, e.etcd, false); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 

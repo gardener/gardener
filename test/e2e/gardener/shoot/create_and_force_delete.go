@@ -57,7 +57,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			}).Should(Succeed())
 
 			By("Confirming force deletion")
-			Expect(gardenerutils.ConfirmForceDeletion(ctx, f.GardenClient.Client(), f.Shoot)).To(Succeed())
+			Expect(gardenerutils.ConfirmDeletion(ctx, f.GardenClient.Client(), f.Shoot, true)).To(Succeed())
 
 			By("Patching Shoot to be not ignored")
 			Expect(f.AnnotateShoot(ctx, f.Shoot, map[string]string{

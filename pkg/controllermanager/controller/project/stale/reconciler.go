@@ -140,7 +140,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 	}
 
 	log.Info("Deleting Project now because its auto-delete timestamp is exceeded")
-	if err := gardenerutils.ConfirmDeletion(ctx, r.Client, project); err != nil {
+	if err := gardenerutils.ConfirmDeletion(ctx, r.Client, project, false); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("Project already gone")
 			return nil

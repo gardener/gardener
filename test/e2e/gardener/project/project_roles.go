@@ -59,7 +59,7 @@ var _ = Describe("Project Tests", Label("Project", "default"), func() {
 
 		DeferCleanup(func() {
 			By("Delete Project")
-			Expect(client.IgnoreNotFound(gardenerutils.ConfirmDeletion(ctx, testClient, project))).To(Succeed())
+			Expect(client.IgnoreNotFound(gardenerutils.ConfirmDeletion(ctx, testClient, project, false))).To(Succeed())
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, project))).To(Succeed())
 
 			By("Wait for Project to be gone")

@@ -96,7 +96,7 @@ var _ = Describe("DeletionConfirmation", func() {
 
 			expectedAnnotations := map[string]string{ConfirmationDeletion: "true", v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano)}
 
-			Expect(ConfirmDeletion(ctx, c, obj)).To(Succeed())
+			Expect(ConfirmDeletion(ctx, c, obj, false)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
 			Expect(obj.GetAnnotations()).To(Equal(expectedAnnotations))
@@ -113,7 +113,21 @@ var _ = Describe("DeletionConfirmation", func() {
 
 			expectedAnnotations := map[string]string{"foo": "bar", ConfirmationDeletion: "true", v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano)}
 
-			Expect(ConfirmDeletion(ctx, c, obj)).To(Succeed())
+			Expect(ConfirmDeletion(ctx, c, obj, false)).To(Succeed())
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
+			Expect(obj.GetAnnotations()).To(Equal(expectedAnnotations))
+		})
+
+		It("should add the force deletion confirmation annotation also if forceDelete is set to true", func() {
+			defer test.WithVars(
+				&TimeNow, mockNow.Do,
+			)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+			expectedAnnotations := map[string]string{ConfirmationDeletion: "true", v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano), v1beta1constants.AnnotationConfirmationForceDeletion: "true"}
+
+			Expect(ConfirmDeletion(ctx, c, obj, true)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
 			Expect(obj.GetAnnotations()).To(Equal(expectedAnnotations))
@@ -122,7 +136,7 @@ var _ = Describe("DeletionConfirmation", func() {
 		It("should fail for non-existing objects", func() {
 			Expect(c.Delete(ctx, obj)).To(Succeed())
 
-			Expect(ConfirmDeletion(ctx, c, obj)).To(BeNotFoundError())
+			Expect(ConfirmDeletion(ctx, c, obj, false)).To(BeNotFoundError())
 		})
 	})
 })

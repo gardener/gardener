@@ -99,7 +99,7 @@ func (c *crd) Destroy(ctx context.Context) error {
 			return fmt.Errorf("failed reading manifest: %w", err)
 		}
 
-		if err := gardenerutils.ConfirmDeletion(ctx, c.client, obj); client.IgnoreNotFound(err) != nil {
+		if err := gardenerutils.ConfirmDeletion(ctx, c.client, obj, false); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 

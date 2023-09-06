@@ -95,7 +95,7 @@ func Delete(ctx context.Context, gardenClient client.Client, shoot *gardencorev1
 		},
 	}
 
-	if err := gardenerutils.ConfirmDeletion(ctx, gardenClient, shootState); err != nil {
+	if err := gardenerutils.ConfirmDeletion(ctx, gardenClient, shootState, false); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
