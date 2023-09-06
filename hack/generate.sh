@@ -17,7 +17,8 @@
 set -e
 
 WHAT="protobuf codegen manifests logcheck gomegacheck monitoring-docs"
-WHICH=""
+CODEGEN_GROUPS=""
+MANIFESTS_FOLDERS=""
 MODE="parallel"
 AVAILABLE_CODEGEN_OPTIONS=(
   "authentication"
@@ -39,6 +40,15 @@ AVAILABLE_CODEGEN_OPTIONS=(
   "provider_local"
   "extensions_config"
 )
+DEFAULT_MANIFESTS_FOLDERS=(
+  "charts"
+  "cmd"
+  "example"
+  "extensions"
+  "pkg"
+  "plugin"
+  "test"
+)
 
 parse_flags() {
   while test $# -gt 0; do
@@ -53,9 +63,13 @@ parse_flags() {
         MODE="$1"
         fi
         ;;
-      --which)
+      --codegengroups)
         shift
-        WHICH="${1:-$WHICH}"
+        CODEGEN_GROUPS="${1:-$CODEGEN_GROUPS}"
+        ;;
+      --manifestsfolders)
+        shift
+        MANIFESTS_FOLDERS="${1:-$MANIFESTS_FOLDERS}"
         ;;
       *)
         echo "Unknown argument: $1"
@@ -67,12 +81,15 @@ parse_flags() {
 }
 
 overwrite_paths() {
-  local which=$WHICH
-  IFS=' ' read -ra entries <<< "$which"
-  for entry in "${entries[@]}"; do
-    which=${which//$entry/./$entry/...}
+  local options=()
+  IFS=' ' read -ra options <<< "$@"
+  local updated_paths=()
+
+  for option in "${options[@]}"; do
+    updated_paths+=("./$option/...")
   done
-  echo "$which"
+
+  echo "${updated_paths[*]}"
 }
 
 run_target() {
@@ -82,20 +99,19 @@ run_target() {
       $REPO_ROOT/hack/update-protobuf.sh
       ;;
     codegen)
-      IFS=' ' read -ra available_options <<< "${AVAILABLE_CODEGEN_OPTIONS[@]}"
-      local which=$WHICH
+      local which=$CODEGEN_GROUPS
+      local valid_options=()
+      local invalid_options=()
+
       if [[ -z "$which" ]]; then
-        which=("${available_options[@]}")
-        valid_options=("${available_options[@]}")
+        which=("${AVAILABLE_CODEGEN_OPTIONS[@]}")
+        valid_options=("${AVAILABLE_CODEGEN_OPTIONS[@]}")
       else
-        valid_options=()
-        invalid_options=()
-        
         IFS=' ' read -ra WHICH_ARRAY <<< "$which"
         for option in "${WHICH_ARRAY[@]}"; do
             valid=false
         
-            for valid_option in "${available_options[@]}"; do
+            for valid_option in "${AVAILABLE_CODEGEN_OPTIONS[@]}"; do
                 if [[ "$option" == "$valid_option" ]]; then
                     valid=true
                     break
@@ -110,22 +126,31 @@ run_target() {
         done
         
         if [[ ${#invalid_options[@]} -gt 0 ]]; then
-            printf "Skipping invalid options: %s, Available options are: %s\n\n" "${invalid_options[*]}" "${available_options[*]}"
+            printf "Skipping invalid options: %s, Available options are: %s\n\n" "${invalid_options[*]}" "${AVAILABLE_CODEGEN_OPTIONS[*]}"
         fi
       fi
 
       if [[ ${#valid_options[@]} -gt 0 ]]; then
-        printf "\n> Generating codegen for groups: ${valid_options[*]}\n\n"
+        printf "\n> Generating codegen for groups: %s\n" "${valid_options[*]}"
         $REPO_ROOT/hack/update-codegen.sh --which "${valid_options[*]}" --mode "$MODE"
+      else
+        printf "!! No valid groups provided for codegen, Available groups are: %s\n\n"  "${AVAILABLE_CODEGEN_OPTIONS[*]}"
       fi
       ;;
     manifests)
+      local which=$MANIFESTS_FOLDERS
+      if [[ -z "$which" ]]; then
+        which=("${DEFAULT_MANIFESTS_FOLDERS[@]}")
+      fi
+
+      printf "\n> Generating manifests for folders: %s\n" "${which[*]}"
       if [[ "$MODE" == "sequential" ]]; then
         # In sequential mode, paths need to be converted to go package notation (e.g., ./charts/...)
-        which=$(overwrite_paths)
-        $REPO_ROOT/hack/generate-sequential.sh $which
+        $REPO_ROOT/hack/generate-sequential.sh $(overwrite_paths "${which[@]}")
+      elif [[ "$MODE" == "parallel" ]]; then
+        $REPO_ROOT/hack/generate-parallel.sh "${which[@]}"
       else
-        $REPO_ROOT/hack/generate-parallel.sh $WHICH
+        printf "!! Invalid mode, Specify either 'parallel' or 'sequential'\n\n"
       fi
       ;;
     logcheck)
