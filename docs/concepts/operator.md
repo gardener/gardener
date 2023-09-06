@@ -80,23 +80,6 @@ Using a runtime cluster without VPA is not supported.
 
 Refer to the [Topology-Aware Traffic Routing documentation](../operations/topology_aware_routing.md) as this document contains the documentation for the topology-aware routing setting for the garden runtime cluster.
 
-## Credentials Rotation
-
-The credentials rotation works in the same way as it does for `Shoot` resources, i.e. there are `gardener.cloud/operation` annotation values for starting or completing the rotation procedures.
-
-For certificate authorities, `gardener-operator` generates one which is automatically rotated roughly each month (`ca-garden-runtime`) and several CAs which are **NOT** automatically rotated but only on demand.
-
-**🚨 Hence, it is the responsibility of the (human) operator to regularly perform the credentials rotation.**
-
-Please refer to [this document](../usage/shoot_credentials_rotation.md#gardener-provided-credentials) for more details. As of today, `gardener-operator` only creates the following types of credentials (i.e., some sections of the document don't apply for `Garden`s and can be ignored):
-
-- certificate authorities (and related server and client certificates)
-- ETCD encryption key
-- observability password For Plutono
-- `ServiceAccount` token signing key
-
-⚠️ Rotation of static `ServiceAccount` secrets is not supported since the `kube-controller-manager` does not enable the `serviceaccount-token` controller.
-
 ## Controllers
 
 As of today, the `gardener-operator` only has two controllers which are now described in more detail.
@@ -231,6 +214,23 @@ It prevents creating a second `Garden` when there is already one in the system.
 This webhook handler mutates the `Garden` resource on `CREATE`/`UPDATE`/`DELETE` operations.
 Simple defaulting is performed via [standard CRD defaulting](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#defaulting).
 However, more advanced defaulting is hard to express via these means and is performed by this webhook handler.
+
+## Credentials Rotation
+
+The credentials rotation works in the same way as it does for `Shoot` resources, i.e. there are `gardener.cloud/operation` annotation values for starting or completing the rotation procedures.
+
+For certificate authorities, `gardener-operator` generates one which is automatically rotated roughly each month (`ca-garden-runtime`) and several CAs which are **NOT** automatically rotated but only on demand.
+
+**🚨 Hence, it is the responsibility of the (human) operator to regularly perform the credentials rotation.**
+
+Please refer to [this document](../usage/shoot_credentials_rotation.md#gardener-provided-credentials) for more details. As of today, `gardener-operator` only creates the following types of credentials (i.e., some sections of the document don't apply for `Garden`s and can be ignored):
+
+- certificate authorities (and related server and client certificates)
+- ETCD encryption key
+- observability password For Plutono
+- `ServiceAccount` token signing key
+
+⚠️ Rotation of static `ServiceAccount` secrets is not supported since the `kube-controller-manager` does not enable the `serviceaccount-token` controller.
 
 ## Local Development
 
