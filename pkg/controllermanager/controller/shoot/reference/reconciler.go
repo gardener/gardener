@@ -67,21 +67,21 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	referencedSecretNames := getReferencedSecretNames(shoot)
+	var (
+		referencedSecretNames    = getReferencedSecretNames(shoot)
+		referencedConfigMapNames = getReferencedConfigMapNames(shoot)
+	)
+
 	unreferencedSecretNames, err := r.getUnreferencedResources(ctx, shoot, &corev1.SecretList{}, referencedSecretNames...)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	if err := r.releaseUnreferencedResources(ctx, log, unreferencedSecretNames...); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	referencedConfigMapNames := getReferencedConfigMapNames(shoot)
 	unreferencedConfigMapNames, err := r.getUnreferencedResources(ctx, shoot, &corev1.ConfigMapList{}, referencedConfigMapNames...)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	if err := r.releaseUnreferencedResources(ctx, log, unreferencedConfigMapNames...); err != nil {
+
+	if err := r.releaseUnreferencedResources(ctx, log, append(unreferencedSecretNames, unreferencedConfigMapNames...)...); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -100,7 +100,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-
 	addedFinalizerToConfigMap, err := r.handleReferencedResources(ctx, log, "ConfigMap", func() client.Object { return &corev1.ConfigMap{} }, shoot.Namespace, referencedConfigMapNames...)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -129,6 +128,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	return reconcile.Result{}, nil
 }
+
+var (
+	noGardenRole = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.DoesNotExist)
+
+	// UserManagedSelector is a selector for objects which are managed by users and not created by Gardener.
+	UserManagedSelector = client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(noGardenRole)}
+)
 
 func (r *Reconciler) handleReferencedResources(
 	ctx context.Context,
@@ -174,13 +180,6 @@ func (r *Reconciler) handleReferencedResources(
 
 	return added != 0, flow.Parallel(fns...)(ctx)
 }
-
-var (
-	noGardenRole = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.DoesNotExist)
-
-	// UserManagedSelector is a selector for objects which are managed by users and not created by Gardener.
-	UserManagedSelector = client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(noGardenRole)}
-)
 
 func (r *Reconciler) releaseUnreferencedResources(
 	ctx context.Context,
