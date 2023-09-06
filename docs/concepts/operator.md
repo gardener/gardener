@@ -1,6 +1,6 @@
 # Gardener Operator
 
-The `gardener-operator` is meant to be responsible for the garden cluster environment.
+The `gardener-operator` is responsible for the garden cluster environment.
 Without this component, users must deploy ETCD, the Gardener control plane, etc., manually and with separate mechanisms (not maintained in this repository).
 This is quite unfortunate since this requires separate tooling, processes, etc.
 A lot of production- and enterprise-grade features were built into Gardener for managing the seed and shoot clusters, so it makes sense to re-use them as much as possible also for the garden cluster.
@@ -96,114 +96,6 @@ Please refer to [this document](../usage/shoot_credentials_rotation.md#gardener-
 - `ServiceAccount` token signing key
 
 ⚠️ Rotation of static `ServiceAccount` secrets is not supported since the `kube-controller-manager` does not enable the `serviceaccount-token` controller.
-
-## Local Development
-
-The easiest setup is using a local [KinD](https://kind.sigs.k8s.io/) cluster and the [Skaffold](https://skaffold.dev/) based approach to deploy and develop the `gardener-operator`.
-
-### Setting Up the KinD Cluster (runtime cluster)
-
-```shell
-make kind-operator-up
-```
-
-This command sets up a new KinD cluster named `gardener-local` and stores the kubeconfig in the `./example/gardener-local/kind/operator/kubeconfig` file.
-
-> It might be helpful to copy this file to `$HOME/.kube/config`, since you will need to target this KinD cluster multiple times.
-Alternatively, make sure to set your `KUBECONFIG` environment variable to `./example/gardener-local/kind/operator/kubeconfig` for all future steps via `export KUBECONFIG=$PWD/example/gardener-local/kind/operator/kubeconfig`.
-
-All the following steps assume that you are using this kubeconfig.
-
-### Setting Up Gardener Operator
-
-```shell
-make operator-up
-```
-
-This will first build the base images (which might take a bit if you do it for the first time).
-Afterwards, the Gardener Operator resources will be deployed into the cluster.
-
-### Developing Gardener Operator (Optional)
-
-```shell
-make operator-dev
-```
-
-This is similar to `make operator-up` but additionally starts a [skaffold dev loop](https://skaffold.dev/docs/workflows/dev/).
-After the initial deployment, skaffold starts watching source files.
-Once it has detected changes, press any key to trigger a new build and deployment of the changed components.
-
-### Debugging Gardener Operator (Optional)
-
-```shell
-make operator-debug
-```
-
-This is similar to `make gardener-debug` but for Gardener Operator component. Please check [Debugging Gardener](../deployment/getting_started_locally.md#debugging-gardener) for details.
-
-### Creating a `Garden`
-
-In order to create a garden, just run:
-
-```shell
-kubectl apply -f example/operator/20-garden.yaml
-```
-
-You can wait for the `Garden` to be ready by running:
-
-```shell
-./hack/usage/wait-for.sh garden local Reconciled
-```
-
-Alternatively, you can run `kubectl get garden` and wait for the `RECONCILED` status to reach `True`:
-
-```shell
-NAME     RECONCILED    AGE
-garden   Progressing   1s
-```
-
-(Optional): Instead of creating above `Garden` resource manually, you could execute the e2e tests by running:
-
-```shell
-make test-e2e-local-operator
-```
-
-#### Accessing the Virtual Garden Cluster
-
-⚠️ Please note that in this setup, the virtual garden cluster is not accessible by default when you download the kubeconfig and try to communicate with it.
-The reason is that your host most probably cannot resolve the DNS name of the cluster.
-Hence, if you want to access the virtual garden cluster, you have to run the following command which will extend your `/etc/hosts` file with the required information to make the DNS names resolvable:
-
-```shell
-cat <<EOF | sudo tee -a /etc/hosts
-
-# Manually created to access local Gardener virtual garden cluster.
-# TODO: Remove this again when the virtual garden cluster access is no longer required.
-127.0.0.1 api.virtual-garden.local.gardener.cloud
-EOF
-```
-
-To access the virtual garden, you can acquire a `kubeconfig` by
-
-```shell
-kubectl -n garden get secret gardener -o jsonpath={.data.kubeconfig} | base64 -d > /tmp/virtual-garden-kubeconfig
-kubectl --kubeconfig /tmp/virtual-garden-kubeconfig get namespaces
-```
-
-Note that this kubeconfig uses a token that has validity of `12h` only, hence it might expire and causing you to re-download the kubeconfig.
-
-### Deleting the `Garden`
-
-```shell
-./hack/usage/delete garden local
-```
-
-### Tear Down the Gardener Operator Environment
-
-```shell
-make operator-down
-make kind-operator-down
-```
 
 ## Controllers
 
@@ -339,3 +231,111 @@ It prevents creating a second `Garden` when there is already one in the system.
 This webhook handler mutates the `Garden` resource on `CREATE`/`UPDATE`/`DELETE` operations.
 Simple defaulting is performed via [standard CRD defaulting](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#defaulting).
 However, more advanced defaulting is hard to express via these means and is performed by this webhook handler.
+
+## Local Development
+
+The easiest setup is using a local [KinD](https://kind.sigs.k8s.io/) cluster and the [Skaffold](https://skaffold.dev/) based approach to deploy and develop the `gardener-operator`.
+
+### Setting Up the KinD Cluster (runtime cluster)
+
+```shell
+make kind-operator-up
+```
+
+This command sets up a new KinD cluster named `gardener-local` and stores the kubeconfig in the `./example/gardener-local/kind/operator/kubeconfig` file.
+
+> It might be helpful to copy this file to `$HOME/.kube/config`, since you will need to target this KinD cluster multiple times.
+Alternatively, make sure to set your `KUBECONFIG` environment variable to `./example/gardener-local/kind/operator/kubeconfig` for all future steps via `export KUBECONFIG=$PWD/example/gardener-local/kind/operator/kubeconfig`.
+
+All the following steps assume that you are using this kubeconfig.
+
+### Setting Up Gardener Operator
+
+```shell
+make operator-up
+```
+
+This will first build the base images (which might take a bit if you do it for the first time).
+Afterwards, the Gardener Operator resources will be deployed into the cluster.
+
+### Developing Gardener Operator (Optional)
+
+```shell
+make operator-dev
+```
+
+This is similar to `make operator-up` but additionally starts a [skaffold dev loop](https://skaffold.dev/docs/workflows/dev/).
+After the initial deployment, skaffold starts watching source files.
+Once it has detected changes, press any key to trigger a new build and deployment of the changed components.
+
+### Debugging Gardener Operator (Optional)
+
+```shell
+make operator-debug
+```
+
+This is similar to `make gardener-debug` but for Gardener Operator component. Please check [Debugging Gardener](../deployment/getting_started_locally.md#debugging-gardener) for details.
+
+### Creating a `Garden`
+
+In order to create a garden, just run:
+
+```shell
+kubectl apply -f example/operator/20-garden.yaml
+```
+
+You can wait for the `Garden` to be ready by running:
+
+```shell
+./hack/usage/wait-for.sh garden local Reconciled
+```
+
+Alternatively, you can run `kubectl get garden` and wait for the `RECONCILED` status to reach `True`:
+
+```shell
+NAME     RECONCILED    AGE
+garden   Progressing   1s
+```
+
+(Optional): Instead of creating above `Garden` resource manually, you could execute the e2e tests by running:
+
+```shell
+make test-e2e-local-operator
+```
+
+#### Accessing the Virtual Garden Cluster
+
+⚠️ Please note that in this setup, the virtual garden cluster is not accessible by default when you download the kubeconfig and try to communicate with it.
+The reason is that your host most probably cannot resolve the DNS name of the cluster.
+Hence, if you want to access the virtual garden cluster, you have to run the following command which will extend your `/etc/hosts` file with the required information to make the DNS names resolvable:
+
+```shell
+cat <<EOF | sudo tee -a /etc/hosts
+
+# Manually created to access local Gardener virtual garden cluster.
+# TODO: Remove this again when the virtual garden cluster access is no longer required.
+127.0.0.1 api.virtual-garden.local.gardener.cloud
+EOF
+```
+
+To access the virtual garden, you can acquire a `kubeconfig` by
+
+```shell
+kubectl -n garden get secret gardener -o jsonpath={.data.kubeconfig} | base64 -d > /tmp/virtual-garden-kubeconfig
+kubectl --kubeconfig /tmp/virtual-garden-kubeconfig get namespaces
+```
+
+Note that this kubeconfig uses a token that has validity of `12h` only, hence it might expire and causing you to re-download the kubeconfig.
+
+### Deleting the `Garden`
+
+```shell
+./hack/usage/delete garden local
+```
+
+### Tear Down the Gardener Operator Environment
+
+```shell
+make operator-down
+make kind-operator-down
+```
