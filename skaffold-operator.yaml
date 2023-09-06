@@ -156,6 +156,7 @@ build:
         - pkg/utils/gardener/secretsrotation
         - pkg/utils/gardener/tokenrequest
         - pkg/utils/imagevector
+        - pkg/utils/istio
         - pkg/utils/kubernetes
         - pkg/utils/kubernetes/health
         - pkg/utils/kubernetes/health/checker
