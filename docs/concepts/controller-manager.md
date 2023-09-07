@@ -59,7 +59,7 @@ The `ControllerRegistration` controller makes sure that the required [Gardener E
 It also takes care of the creation and deletion of `ControllerInstallation` objects for a given seed cluster.
 The controller has three reconciliation loops.
 
-#### "Main" Reconciler
+#### ["Main" Reconciler](../../pkg/controllermanager/controller/controllerregistration/seed)
 
 This reconciliation loop watches the `Seed` objects and determines which `ControllerRegistration`s are required for them and reconciles the corresponding `ControllerInstallation` resources to reach the determined state.
 To begin with, it computes the kind/type combinations of extensions required for the seed.
@@ -74,13 +74,13 @@ The controller then creates or updates the required `ControllerInstallation` obj
 It also deletes every existing `ControllerInstallation` whose referenced `ControllerRegistration` is not part of the required list.
 For example, if the shoots in the seed are no longer using the DNS provider `aws-route53`, then the controller proceeds to delete the respective `ControllerInstallation` object.
 
-#### "ControllerRegistration" Reconciler
+#### ["ControllerRegistration Finalizer" Reconciler](../../pkg/controllermanager/controller/controllerregistration/controllerregistrationfinalizer)
 
 This reconciliation loop watches the `ControllerRegistration` resource and adds finalizers to it when they are created.
 In case a deletion request comes in for the resource, i.e., if a `.metadata.deletionTimestamp` is set, it actively scans for a `ControllerInstallation` resource using this `ControllerRegistration`, and decides whether the deletion can be allowed.
 In case no related `ControllerInstallation` is present, it removes the finalizer and marks it for deletion.
 
-#### "Seed" Reconciler
+#### ["Seed Finalizer" Reconciler](../../pkg/controllermanager/controller/controllerregistration/seedfinalizer)
 
 This loop also watches the `Seed` object and adds finalizers to it at creation.
 If a `.metadata.deletionTimestamp` is set for the seed, then the controller checks for existing `ControllerInstallation` objects which reference this seed.
@@ -140,7 +140,7 @@ Consequently, to ensure that `Quota`s in-use are always present in the system un
 There are multiple controllers responsible for different aspects of `Project` objects.
 Please also refer to the [`Project` documentation](../usage/projects.md).
 
-#### "Main" Reconciler
+#### ["Main" Reconciler](../../pkg/controllermanager/controller/project/project)
 
 This reconciler manages a dedicated `Namespace` for each `Project`.
 The namespace name can either be specified explicitly in `.spec.namespace` (must be prefixed with `garden-`) or it will be determined by the controller.
@@ -153,7 +153,7 @@ These RBAC resources are prefixed with `gardener.cloud:system:project{-member,-v
 Gardener administrators and extension developers can define their own roles. For more information, see [Extending Project Roles](../extensions/project-roles.md) for more information.
 
 In addition, operators can configure the Project controller to maintain a default [ResourceQuota](https://kubernetes.io/docs/concepts/policy/resource-quotas/) for project namespaces.
-Quotas can especially limit the creation of user facing resources, e.g. `Shoots`, `SecretBindings`, `Secrets` and thus protect the Garden cluster from massive resource exhaustion but also enable operators to align quotas with respective enterprise policies.
+Quotas can especially limit the creation of user facing resources, e.g. `Shoots`, `SecretBindings`, `Secrets` and thus protect the garden cluster from massive resource exhaustion but also enable operators to align quotas with respective enterprise policies.
 
 > :warning: **Gardener itself is not exempted from configured quotas**. For example, Gardener creates `Secrets` for every shoot cluster in the project namespace and at the same time increases the available quota count. Please mind this additional resource consumption.
 
@@ -188,7 +188,7 @@ Also, it generates `Event`s to provide further information about its operations.
 When a `Project` is marked for deletion, the controller ensures that there are no `Shoots` left in the project namespace.
 Once all `Shoots` are gone, the `Namespace` and `Project` are released.
 
-#### "Stale Projects" Reconciler
+#### ["Stale Projects" Reconciler](../../pkg/controllermanager/controller/project/stale)
 
 As Gardener is a large-scale Kubernetes as a Service, it is designed for being used by a large amount of end-users.
 Over time, it is likely to happen that some of the hundreds or thousands of `Project` resources are no longer actively used.
@@ -215,7 +215,7 @@ The component configuration of the `gardener-controller-manager` offers to confi
 
 > Gardener administrators/operators can exclude specific `Project`s from the stale check by annotating the related `Namespace` resource with `project.gardener.cloud/skip-stale-check=true`.
 
-#### "Activity" Reconciler
+#### ["Activity" Reconciler](../../pkg/controllermanager/controller/project/activity)
 
 Since the other two reconcilers are unable to actively monitor the relevant objects that are used in a `Project` (`Shoot`, `Secret`, etc.), there could be a situation where the user creates and deletes objects in a short period of time. In that case, the `Stale Project Reconciler` could not see that there was any activity on that project and it will still mark it as a `Stale`, even though it is actively used.
 
@@ -234,23 +234,23 @@ Also, all referenced `Secret`s, as well as `Quota`s, will be labeled with `refer
 
 The Seed controller in the `gardener-controller-manager` reconciles `Seed` objects with the help of the following reconcilers.
 
-#### "Main" Reconciler
+#### ["Main" Reconciler](../../pkg/controllermanager/controller/seed/secrets)
 
-This reconciliation loop takes care of seed related operations in the Garden cluster. When a new `Seed` object is created,
+This reconciliation loop takes care of seed related operations in the garden cluster. When a new `Seed` object is created,
 the reconciler creates a new `Namespace` in the garden cluster `seed-<seed-name>`. `Namespaces` dedicated to single
 seed clusters allow us to segregate access permissions i.e., a `gardenlet` must not have permissions to access objects in
-all `Namespaces` in the Garden cluster.
+all `Namespaces` in the garden cluster.
 There are objects in a Garden environment which are created once by the operator e.g., default domain secret,
 alerting credentials, and are required for operations happening in the `gardenlet`. Therefore, we not only need a seed specific
 `Namespace` but also a copy of these "shared" objects.
 
 The "main" reconciler takes care about this replication:
 
-| Kind   | Namespace  |Label Selector  |
-|:-------:|:---------:|:-----:|
-| Secret | garden | gardener.cloud/role |
+| Kind   | Namespace | Label Selector      |
+|--------|-----------|---------------------|
+| Secret | garden    | gardener.cloud/role |
 
-#### "Backup Buckets Check" Reconciler
+#### ["Backup Buckets Check" Reconciler](../../pkg/controllermanager/controller/seed/backupbucketscheck)
 
 Every time a `BackupBucket` object is created or updated, the referenced `Seed` object is enqueued for reconciliation.
 It's the reconciler's task to check the `status` subresource of all existing `BackupBucket`s that reference this `Seed`.
@@ -258,13 +258,13 @@ If at least one `BackupBucket` has `.status.lastError != nil`, the `BackupBucket
 If the `SeedBackupBucketsCheckControllerConfiguration` (which is part of `gardener-controller-manager`s component configuration) contains a `conditionThreshold` for the `BackupBucketsReady`, the condition will instead first be set to `Progressing` and eventually to `False` once the `conditionThreshold` expires. See [the example config file](../../example/20-componentconfig-gardener-controller-manager.yaml) for details.
 Once the `BackupBucket` is healthy again, the seed will be re-queued and the condition will turn `true`.
 
-#### "Extensions Check" Reconciler
+#### ["Extensions Check" Reconciler](../../pkg/controllermanager/controller/seed/extensionscheck)
 
 This reconciler reconciles `Seed` objects and checks whether all `ControllerInstallation`s referencing them are in a healthy state.
 Concretely, all three conditions `Valid`, `Installed`, and `Healthy` must have status `True` and the `Progressing` condition must have status `False`.
 Based on this check, it maintains the `ExtensionsReady` condition in the respective `Seed`'s `.status.conditions` list.
 
-#### "Lifecycle" Reconciler
+#### ["Lifecycle" Reconciler](../../pkg/controllermanager/controller/seed/lifecycle)
 
 The "Lifecycle" reconciler processes `Seed` objects which are enqueued every 10 seconds in order to check if the responsible
 `gardenlet` is still responding and operable. Therefore, it checks renewals via `Lease` objects of the seed in the garden cluster
@@ -279,32 +279,32 @@ In case a `Lease` is not renewed for the configured amount in `config.controller
 
 ### [`Shoot` Controller](../../pkg/controllermanager/controller/shoot)
 
-#### "Conditions" Reconciler
+#### ["Conditions" Reconciler](../../pkg/controllermanager/controller/shoot/conditions)
 
 In case the reconciled `Shoot` is registered via a `ManagedSeed` as a seed cluster, this reconciler merges the conditions in the respective `Seed`'s `.status.conditions` into the `.status.conditions` of the `Shoot`.
 This is to provide a holistic view on the status of the registered seed cluster by just looking at the `Shoot` resource.
 
-#### "Hibernation" Reconciler
+#### ["Hibernation" Reconciler](../../pkg/controllermanager/controller/shoot/hibernation)
 
 This reconciler is responsible for hibernating or awakening shoot clusters based on the schedules defined in their `.spec.hibernation.schedules`.
 It ignores [failed `Shoot`s](../usage/shoot_status.md#last-operation) and those marked for deletion.
 
-#### "Maintenance" Reconciler
+#### ["Maintenance" Reconciler](../../pkg/controllermanager/controller/shoot/maintenance)
 
 This reconciler is responsible for maintaining shoot clusters based on the time window defined in their `.spec.maintenance.timeWindow`.
 It might auto-update the Kubernetes version or the operating system versions specified in the worker pools (`.spec.provider.workers`).
 It could also add some operation or task annotations. For more information, see [Shoot Maintenance](../usage/shoot_maintenance.md).
 
-#### "Quota" Reconciler
+#### ["Quota" Reconciler](../../pkg/controllermanager/controller/shoot/quota)
 
 This reconciler might auto-delete shoot clusters in case their referenced `SecretBinding` is itself referencing a `Quota` with `.spec.clusterLifetimeDays != nil`.
 If the shoot cluster is older than the configured lifetime, then it gets deleted.
 It maintains the expiration time of the `Shoot` in the value of the `shoot.gardener.cloud/expiration-timestamp` annotation.
 This annotation might be overridden, however only by at most twice the value of the `.spec.clusterLifetimeDays`.
 
-#### "Reference" Reconciler
+#### ["Reference" Reconciler](../../pkg/controllermanager/controller/shoot/reference)
 
-Shoot objects may specify references to other objects in the Garden cluster which are required for certain features.
+Shoot objects may specify references to other objects in the garden cluster which are required for certain features.
 For example, users can configure various DNS providers via `.spec.dns.providers` and usually need to refer to a corresponding `Secret` with valid DNS provider credentials inside.
 Such objects need a special protection against deletion requests as long as they are still being referenced by one or multiple shoots.
 
@@ -319,11 +319,11 @@ This reconciler inspects the following references:
 
 Further checks might be added in the future.
 
-#### "Retry" Reconciler
+#### ["Retry" Reconciler](../../pkg/controllermanager/controller/shoot/retry)
 
 This reconciler is responsible for retrying certain failed `Shoot`s.
 Currently, the reconciler retries only failed `Shoot`s with an error code `ERR_INFRA_RATE_LIMITS_EXCEEDED`. See [Shoot Status](../usage/shoot_status.md#error-codes) for more details.
 
-#### "Status Label" Reconciler
+#### ["Status Label" Reconciler](../../pkg/controllermanager/controller/shoot/statuslabel)
 
 This reconciler is responsible for maintaining the `shoot.gardener.cloud/status` label on `Shoot`s. See [Shoot Status](../usage/shoot_status.md#status-label) for more details.
