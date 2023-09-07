@@ -204,7 +204,7 @@ build:
         - vendor
         - VERSION
       ldflags:
-        - '{{default now .SOURCE_DATE_EPOCH | date "2006-01-02T15:04:05-0700" | cmd "hack/get-build-ld-flags.sh" "k8s.io/component-base" "VERSION" "Gardener"}}'
+        - '{{default now .SOURCE_DATE_EPOCH | date "2006-01-02T15:04:05-07:00" | cmd "hack/get-build-ld-flags.sh" "k8s.io/component-base" "VERSION" "Gardener"}}'
       main: ./cmd/gardener-apiserver
   - image: eu.gcr.io/gardener-project/gardener/controller-manager
     ko:
@@ -311,7 +311,7 @@ build:
         - vendor
         - VERSION
       ldflags:
-        - '{{default now .SOURCE_DATE_EPOCH | date "2006-01-02T15:04:05-0700" | cmd "hack/get-build-ld-flags.sh" "k8s.io/component-base" "VERSION" "Gardener"}}'
+        - '{{default now .SOURCE_DATE_EPOCH | date "2006-01-02T15:04:05-07:00" | cmd "hack/get-build-ld-flags.sh" "k8s.io/component-base" "VERSION" "Gardener"}}'
       main: ./cmd/gardener-controller-manager
   - image: eu.gcr.io/gardener-project/gardener/scheduler
     ko:
@@ -375,7 +375,7 @@ build:
         - vendor
         - VERSION
       ldflags:
-        - '{{default now .SOURCE_DATE_EPOCH | date "2006-01-02T15:04:05-0700" | cmd "hack/get-build-ld-flags.sh" "k8s.io/component-base" "VERSION" "Gardener"}}'
+        - '{{default now .SOURCE_DATE_EPOCH | date "2006-01-02T15:04:05-07:00" | cmd "hack/get-build-ld-flags.sh" "k8s.io/component-base" "VERSION" "Gardener"}}'
       main: ./cmd/gardener-scheduler
   - image: eu.gcr.io/gardener-project/gardener/admission-controller
     ko:
@@ -453,7 +453,7 @@ build:
         - vendor
         - VERSION
       ldflags:
-        - '{{default now .SOURCE_DATE_EPOCH | date "2006-01-02T15:04:05-0700" | cmd "hack/get-build-ld-flags.sh" "k8s.io/component-base" "VERSION" "Gardener"}}'
+        - '{{default now .SOURCE_DATE_EPOCH | date "2006-01-02T15:04:05-07:00" | cmd "hack/get-build-ld-flags.sh" "k8s.io/component-base" "VERSION" "Gardener"}}'
       main: ./cmd/gardener-admission-controller
 deploy:
   helm:
@@ -682,7 +682,7 @@ build:
         - vendor
         - VERSION
       ldflags:
-        - '{{default now .SOURCE_DATE_EPOCH | date "2006-01-02T15:04:05-0700" | cmd "hack/get-build-ld-flags.sh" "k8s.io/component-base" "VERSION" "Gardener"}}'
+        - '{{default now .SOURCE_DATE_EPOCH | date "2006-01-02T15:04:05-07:00" | cmd "hack/get-build-ld-flags.sh" "k8s.io/component-base" "VERSION" "Gardener"}}'
       main: ./cmd/gardener-extension-provider-local
 resourceSelector:
   allow:
@@ -991,7 +991,7 @@ build:
         - vendor
         - VERSION
       ldflags:
-        - '{{default now .SOURCE_DATE_EPOCH | date "2006-01-02T15:04:05-0700" | cmd "hack/get-build-ld-flags.sh" "k8s.io/component-base" "VERSION" "Gardener"}}'
+        - '{{default now .SOURCE_DATE_EPOCH | date "2006-01-02T15:04:05-07:00" | cmd "hack/get-build-ld-flags.sh" "k8s.io/component-base" "VERSION" "Gardener"}}'
       main: ./cmd/gardenlet
   - image: eu.gcr.io/gardener-project/gardener/resource-manager
     ko:
@@ -1091,7 +1091,7 @@ build:
         - vendor
         - VERSION
       ldflags:
-        - '{{default now .SOURCE_DATE_EPOCH | date "2006-01-02T15:04:05-0700" | cmd "hack/get-build-ld-flags.sh" "k8s.io/component-base" "VERSION" "Gardener"}}'
+        - '{{default now .SOURCE_DATE_EPOCH | date "2006-01-02T15:04:05-07:00" | cmd "hack/get-build-ld-flags.sh" "k8s.io/component-base" "VERSION" "Gardener"}}'
       main: ./cmd/gardener-resource-manager
 deploy:
   helm:
