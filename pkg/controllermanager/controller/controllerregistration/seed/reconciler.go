@@ -310,12 +310,14 @@ func computeWantedControllerRegistrationNames(
 	)
 
 	for name, controllerRegistration := range controllerRegistrations {
-		if controllerRegistration.deployAlways && seedObjectMeta.DeletionTimestamp == nil {
-			wantedControllerRegistrationNames.Insert(name)
-		}
+		if controllerRegistration.obj.DeletionTimestamp == nil {
+			if controllerRegistration.deployAlways && seedObjectMeta.DeletionTimestamp == nil {
+				wantedControllerRegistrationNames.Insert(name)
+			}
 
-		if controllerRegistration.deployAlwaysExceptNoShoots && numberOfShoots > 0 {
-			wantedControllerRegistrationNames.Insert(name)
+			if controllerRegistration.deployAlwaysExceptNoShoots && numberOfShoots > 0 {
+				wantedControllerRegistrationNames.Insert(name)
+			}
 		}
 
 		for _, resource := range controllerRegistration.obj.Spec.Resources {
