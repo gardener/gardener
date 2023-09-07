@@ -20,18 +20,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/controller/reference"
 )
 
 // AddToManager adds the garden-reference controller to the given manager.
-func AddToManager(mgr manager.Manager) error {
+func AddToManager(mgr manager.Manager, gardenNamespace string) error {
 	return (&reference.Reconciler{
 		ConcurrentSyncs:             pointer.Int(1),
 		NewObjectFunc:               func() client.Object { return &operatorv1alpha1.Garden{} },
 		NewObjectListFunc:           func() client.ObjectList { return &operatorv1alpha1.GardenList{} },
-		GetNamespace:                func(client.Object) string { return v1beta1constants.GardenNamespace },
+		GetNamespace:                func(client.Object) string { return gardenNamespace },
 		GetReferencedSecretNames:    getReferencedSecretNames,
 		GetReferencedConfigMapNames: getReferencedConfigMapNames,
 		ReferenceChangedPredicate:   Predicate,
