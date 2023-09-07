@@ -15,20 +15,15 @@
 package controlplane
 
 import (
-	"bytes"
 	"context"
-	_ "embed"
 	"path/filepath"
-	"text/template"
 
 	"github.com/Masterminds/semver"
-	"github.com/Masterminds/sprig"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/pointer"
@@ -41,30 +36,8 @@ import (
 	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/provider-local/imagevector"
 	"github.com/gardener/gardener/pkg/provider-local/local"
-	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
-
-const (
-	pathContainerdConfigScript = v1beta1constants.OperatingSystemConfigFilePathBinaries + "/init-containerd-with-registry-mirrors"
-	unitNameInitializer        = "containerd-configuration-local-setup.service"
-)
-
-var (
-	tplNameInitializer = "init"
-	//go:embed templates/scripts/configure-containerd.tpl.sh
-	tplContentInitializer string
-	tplInitializer        *template.Template
-)
-
-func init() {
-	var err error
-	tplInitializer, err = template.
-		New(tplNameInitializer).
-		Funcs(sprig.TxtFuncMap()).
-		Parse(tplContentInitializer)
-	utilruntime.Must(err)
-}
 
 // NewEnsurer creates a new controlplane ensurer.
 func NewEnsurer(logger logr.Logger, gardenletManagesMCM bool) genericmutator.Ensurer {
@@ -133,37 +106,6 @@ func (e *ensurer) EnsureKubeletConfiguration(_ context.Context, _ extensionscont
 }
 
 func (e *ensurer) EnsureAdditionalFiles(ctx context.Context, gc extensionscontextwebhook.GardenContext, new, _ *[]extensionsv1alpha1.File) error {
-	var script bytes.Buffer
-	if err := tplInitializer.Execute(&script, nil); err != nil {
-		return err
-	}
-
-	appendUniqueFile(new, extensionsv1alpha1.File{
-		Path:        pathContainerdConfigScript,
-		Permissions: pointer.Int32(0744),
-		Content: extensionsv1alpha1.FileContent{
-			Inline: &extensionsv1alpha1.FileContentInline{
-				Encoding: "b64",
-				Data:     utils.EncodeBase64(script.Bytes()),
-			},
-		},
-	})
-
-	// With this file, we make the containerd unit dependent on the mirror configuration unit.
-	// Otherwise, containerd might start before we modified the configuration file, i.e., it wouldn't respect the
-	// configured mirrors.
-	appendUniqueFile(new, extensionsv1alpha1.File{
-		Path:        "/etc/systemd/system/containerd.service.d/10-require-containerd-configuration-local-setup.conf",
-		Permissions: pointer.Int32(0644),
-		Content: extensionsv1alpha1.FileContent{
-			Inline: &extensionsv1alpha1.FileContentInline{
-				Data: `[Unit]
-After=` + unitNameInitializer + `
-Requires=` + unitNameInitializer,
-			},
-		},
-	})
-
 	mirrors := []RegistryMirror{
 		{UpstreamHost: "localhost:5001", UpstreamServer: "http://localhost:5001", MirrorHost: "http://garden.local.gardener.cloud:5001"},
 		{UpstreamHost: "gcr.io", UpstreamServer: "https://gcr.io", MirrorHost: "http://garden.local.gardener.cloud:5003"},
@@ -192,6 +134,11 @@ Requires=` + unitNameInitializer,
 	return nil
 }
 
+// TODO(ialidzhikov): Drop the containerd-configuration-local-setup.service unit in 1.81.
+// It is preserved only for graceful migration purposes. Currently it is a no-op unit that only sleeps 1s.
+
+const unitNameInitializer = "containerd-configuration-local-setup.service"
+
 func (e *ensurer) EnsureAdditionalUnits(_ context.Context, _ extensionscontextwebhook.GardenContext, new, _ *[]extensionsv1alpha1.Unit) error {
 	unit := extensionsv1alpha1.Unit{
 		Name:    unitNameInitializer,
@@ -209,25 +156,12 @@ Requires=containerd-initializer.service
 
 [Service]
 Type=oneshot
-RemainAfterExit=yes
-ExecStart=` + pathContainerdConfigScript)}
+RemainAfterExit=no
+ExecStart=sleep 1s`)}
 
 	appendUniqueUnit(new, unit)
 
 	return nil
-}
-
-// appendUniqueFile appends a unit file only if it does not exist, otherwise overwrite content of previous files
-func appendUniqueFile(files *[]extensionsv1alpha1.File, file extensionsv1alpha1.File) {
-	resFiles := make([]extensionsv1alpha1.File, 0, len(*files))
-
-	for _, f := range *files {
-		if f.Path != file.Path {
-			resFiles = append(resFiles, f)
-		}
-	}
-
-	*files = append(resFiles, file)
 }
 
 func appendFileIfNotPresent(files *[]extensionsv1alpha1.File, file extensionsv1alpha1.File) {
