@@ -1,6 +1,6 @@
 ---
 title: 19 Observability Stack - Migrating to the prometheus-operator and fluent-bit-operator
-gep-number: 0019
+gep-number: 19
 creation-date: 2022-06-21
 status: implementable
 authors:
