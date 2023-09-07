@@ -361,19 +361,6 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.ObservabilityRotation
 <tbody>
 <tr>
 <td>
-<code>domain</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Deprecated: This field is deprecated and will be removed soon. Please use <code>Domains</code> instead.
-TODO(timuthy): Drop this after v1.74 has been released.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>domains</code></br>
 <em>
 []string

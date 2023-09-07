@@ -722,12 +722,6 @@ func (r *Reconciler) newSNI(garden *operatorv1alpha1.Garden, ingressGatewayValue
 		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the SNI config")
 	}
 
-	var domains []string
-	if domain := garden.Spec.VirtualCluster.DNS.Domain; domain != nil {
-		domains = append(domains, *domain)
-	}
-	domains = append(domains, garden.Spec.VirtualCluster.DNS.Domains...)
-
 	return kubeapiserverexposure.NewSNI(
 		r.RuntimeClientSet.Client(),
 		r.RuntimeClientSet.Applier(),
@@ -735,7 +729,7 @@ func (r *Reconciler) newSNI(garden *operatorv1alpha1.Garden, ingressGatewayValue
 		r.GardenNamespace,
 		func() *kubeapiserverexposure.SNIValues {
 			return &kubeapiserverexposure.SNIValues{
-				Hosts: getAPIServerDomains(domains),
+				Hosts: getAPIServerDomains(garden.Spec.VirtualCluster.DNS.Domains),
 				IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
 					Namespace: ingressGatewayValues[0].Namespace,
 					Labels:    ingressGatewayValues[0].Labels,
@@ -746,20 +740,13 @@ func (r *Reconciler) newSNI(garden *operatorv1alpha1.Garden, ingressGatewayValue
 }
 
 func (r *Reconciler) newGardenerAccess(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) component.DeployWaiter {
-	var accessDomain string
-	if domains := garden.Spec.VirtualCluster.DNS.Domains; len(domains) > 0 {
-		accessDomain = domains[0]
-	} else {
-		accessDomain = *garden.Spec.VirtualCluster.DNS.Domain
-	}
-
 	return gardeneraccess.New(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		secretsManager,
 		gardeneraccess.Values{
 			ServerInCluster:    fmt.Sprintf("%s%s.%s.svc.cluster.local", namePrefix, v1beta1constants.DeploymentNameKubeAPIServer, r.GardenNamespace),
-			ServerOutOfCluster: gardenerutils.GetAPIServerDomain(accessDomain),
+			ServerOutOfCluster: gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0]),
 		},
 	)
 }

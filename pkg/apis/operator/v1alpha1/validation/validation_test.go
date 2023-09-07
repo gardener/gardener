@@ -56,7 +56,7 @@ var _ = Describe("Validation Tests", func() {
 					},
 					VirtualCluster: operatorv1alpha1.VirtualCluster{
 						DNS: operatorv1alpha1.DNS{
-							Domain: pointer.String("foo.bar.com"),
+							Domains: []string{"foo.bar.com"},
 						},
 						Kubernetes: operatorv1alpha1.Kubernetes{
 							Version: "1.26.3",
@@ -797,26 +797,13 @@ var _ = Describe("Validation Tests", func() {
 
 		Context("virtual cluster", func() {
 			Context("DNS", func() {
-				It("should complain about that no domain is configured", func() {
-					garden.Spec.VirtualCluster.DNS.Domain = nil
-					garden.Spec.VirtualCluster.DNS.Domains = nil
-
-					Expect(ValidateGarden(garden)).To(ContainElements(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeRequired),
-							"Field": Equal("spec.virtualCluster.dns.domains"),
-						})),
-					))
-				})
-
 				It("should complain about invalid domain name in 'domain'", func() {
-					garden.Spec.VirtualCluster.DNS.Domain = pointer.String(",,,")
 					garden.Spec.VirtualCluster.DNS.Domains = []string{",,,"}
 
 					Expect(ValidateGarden(garden)).To(ContainElements(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeInvalid),
-							"Field": Equal("spec.virtualCluster.dns.domain"),
+							"Field": Equal("spec.virtualCluster.dns.domains[0]"),
 						})),
 					))
 				})
@@ -832,21 +819,6 @@ var _ = Describe("Validation Tests", func() {
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeDuplicate),
 							"Field": Equal("spec.virtualCluster.dns.domains[2]"),
-						})),
-					))
-				})
-
-				It("should complain about duplicate domain names in 'domain'", func() {
-					garden.Spec.VirtualCluster.DNS.Domain = pointer.String("example.com")
-					garden.Spec.VirtualCluster.DNS.Domains = []string{
-						"example.com",
-						"foo.bar",
-					}
-
-					Expect(ValidateGarden(garden)).To(ContainElements(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeDuplicate),
-							"Field": Equal("spec.virtualCluster.dns.domain"),
 						})),
 					))
 				})
@@ -1468,68 +1440,10 @@ var _ = Describe("Validation Tests", func() {
 
 		Context("virtual cluster", func() {
 			Context("dns", func() {
-				Context("when 'domain' is migrated to 'domains' field", func() {
-					It("should allow the update when domain equals to the first entry", func() {
-						oldGarden.Spec.VirtualCluster.DNS.Domain = pointer.String("example.com")
-						newGarden.Spec.VirtualCluster.DNS.Domains = []string{
-							"example.com",
-							"foo.bar",
-						}
-
-						Expect(ValidateGardenUpdate(oldGarden, newGarden)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-							"Field": ContainSubstring("domain"),
-						}))))
-					})
-
-					It("should deny the update when domain is not found in the first entry", func() {
-						oldGarden.Spec.VirtualCluster.DNS.Domain = pointer.String("example.com")
-						newGarden.Spec.VirtualCluster.DNS.Domains = []string{
-							"foo.bar",
-							"example.com",
-						}
-
-						Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeInvalid),
-							"Field": Equal("spec.virtualCluster.dns.domains[0]"),
-						}))))
-					})
-
-					It("should deny the update when domain is not specified anymore", func() {
-						oldGarden.Spec.VirtualCluster.DNS.Domain = pointer.String("example.com")
-						newGarden.Spec.VirtualCluster.DNS.Domains = []string{
-							"foo.bar",
-						}
-
-						Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeInvalid),
-							"Field": Equal("spec.virtualCluster.dns.domains[0]"),
-						}))))
-					})
-				})
-
-				Context("when 'domains' is migrated to 'domain' field", func() {
-					It("should deny the update", func() {
-						oldGarden.Spec.VirtualCluster.DNS.Domains = []string{
-							"example.com",
-						}
-						newGarden.Spec.VirtualCluster.DNS.Domains = nil
-						newGarden.Spec.VirtualCluster.DNS.Domain = pointer.String("example.com")
-
-						Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeForbidden),
-							"Field": Equal("spec.virtualCluster.dns.domain"),
-						}))))
-					})
-				})
-
 				Context("when domains are modified", func() {
 					It("should allow update if nothing changes", func() {
-						oldGarden.Spec.VirtualCluster.DNS.Domains = []string{
-							"example.com",
-						}
-						newGarden.Spec.VirtualCluster.DNS.Domains = []string{
-							"example.com",
-						}
+						oldGarden.Spec.VirtualCluster.DNS.Domains = []string{"example.com"}
+						newGarden.Spec.VirtualCluster.DNS.Domains = []string{"example.com"}
 
 						Expect(ValidateGardenUpdate(oldGarden, newGarden)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Field": ContainSubstring("domain"),
@@ -1537,13 +1451,8 @@ var _ = Describe("Validation Tests", func() {
 					})
 
 					It("should allow adding a domain", func() {
-						oldGarden.Spec.VirtualCluster.DNS.Domains = []string{
-							"example.com",
-						}
-						newGarden.Spec.VirtualCluster.DNS.Domains = []string{
-							"example.com",
-							"foo.bar",
-						}
+						oldGarden.Spec.VirtualCluster.DNS.Domains = []string{"example.com"}
+						newGarden.Spec.VirtualCluster.DNS.Domains = []string{"example.com", "foo.bar"}
 
 						Expect(ValidateGardenUpdate(oldGarden, newGarden)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Field": ContainSubstring("domain"),
@@ -1551,15 +1460,8 @@ var _ = Describe("Validation Tests", func() {
 					})
 
 					It("should allow removing any domain but first entry", func() {
-						oldGarden.Spec.VirtualCluster.DNS.Domains = []string{
-							"example.com",
-							"foo.bar",
-							"bar.foo",
-						}
-						newGarden.Spec.VirtualCluster.DNS.Domains = []string{
-							"example.com",
-							"bar.foo",
-						}
+						oldGarden.Spec.VirtualCluster.DNS.Domains = []string{"example.com", "foo.bar", "bar.foo"}
+						newGarden.Spec.VirtualCluster.DNS.Domains = []string{"example.com", "bar.foo"}
 
 						Expect(ValidateGardenUpdate(oldGarden, newGarden)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Field": ContainSubstring("domain"),
@@ -1567,14 +1469,8 @@ var _ = Describe("Validation Tests", func() {
 					})
 
 					It("should forbid removing the first entry", func() {
-						oldGarden.Spec.VirtualCluster.DNS.Domains = []string{
-							"example.com",
-							"foo.bar",
-							"bar.foo",
-						}
-						newGarden.Spec.VirtualCluster.DNS.Domains = []string{
-							"bar.foo",
-						}
+						oldGarden.Spec.VirtualCluster.DNS.Domains = []string{"example.com", "foo.bar", "bar.foo"}
+						newGarden.Spec.VirtualCluster.DNS.Domains = []string{"bar.foo"}
 
 						Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeInvalid),
@@ -1583,16 +1479,8 @@ var _ = Describe("Validation Tests", func() {
 					})
 
 					It("should forbid changing the first entry", func() {
-						oldGarden.Spec.VirtualCluster.DNS.Domains = []string{
-							"example.com",
-							"foo.bar",
-							"bar.foo",
-						}
-						newGarden.Spec.VirtualCluster.DNS.Domains = []string{
-							"example2.com",
-							"foo.bar",
-							"bar.foo",
-						}
+						oldGarden.Spec.VirtualCluster.DNS.Domains = []string{"example.com", "foo.bar", "bar.foo"}
+						newGarden.Spec.VirtualCluster.DNS.Domains = []string{"example2.com", "foo.bar", "bar.foo"}
 
 						Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeInvalid),

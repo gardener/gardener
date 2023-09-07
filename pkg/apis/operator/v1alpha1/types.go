@@ -178,12 +178,9 @@ type VirtualCluster struct {
 
 // DNS holds information about DNS settings.
 type DNS struct {
-	// Deprecated: This field is deprecated and will be removed soon. Please use `Domains` instead.
-	// TODO(timuthy): Drop this after v1.74 has been released.
-	// +optional
-	Domain *string `json:"domain,omitempty"`
 	// Domains are the external domains of the virtual garden cluster.
 	// The first given domain in this list is immutable.
+	// +kubebuilder:validation:MinItems=1
 	// +optional
 	Domains []string `json:"domains,omitempty"`
 }
