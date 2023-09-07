@@ -1311,6 +1311,6 @@
   },
   "timezone": "utc",
   "title": "ETCD Backup and Restore",
-  "uid": "etcd-backup-restore",
+  "uid": "shoot-etcd-backup-restore",
   "version": 1
 }

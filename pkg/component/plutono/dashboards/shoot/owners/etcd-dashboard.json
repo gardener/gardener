@@ -1021,6 +1021,6 @@
   },
   "timezone": "utc",
   "title": "ETCD",
-  "uid": "etcd",
+  "uid": "shoot-etcd",
   "version": 1
 }

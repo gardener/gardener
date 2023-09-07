@@ -865,5 +865,6 @@
   },
   "timezone": "browser",
   "title": "Garden Availability",
+  "uid": "garden-availability",
   "version": 0
 }
