@@ -57,6 +57,8 @@ const (
 	ImageNameGardenerApiserver = "gardener-apiserver"
 	// ImageNameGardenerControllerManager is a constant for an image in the image vector with name 'gardener-controller-manager'.
 	ImageNameGardenerControllerManager = "gardener-controller-manager"
+	// ImageNameGardenerMetricsExporter is a constant for an image in the image vector with name 'gardener-metrics-exporter'.
+	ImageNameGardenerMetricsExporter = "gardener-metrics-exporter"
 	// ImageNameGardenerResourceManager is a constant for an image in the image vector with name 'gardener-resource-manager'.
 	ImageNameGardenerResourceManager = "gardener-resource-manager"
 	// ImageNameGardenerScheduler is a constant for an image in the image vector with name 'gardener-scheduler'.

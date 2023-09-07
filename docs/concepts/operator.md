@@ -278,9 +278,10 @@ The reconciler also manages a few observability-related components (more planned
 
 - `fluent-operator`
 - `fluent-bit`
-- `vali`
-- `plutono`
+- `gardener-metrics-exporter`
 - `kube-state-metrics`
+- `plutono`
+- `vali`
 
 It is also mandatory to provide an IPv4 CIDR for the service network of the virtual cluster via `.spec.virtualCluster.networking.services`.
 This range is used by the API server to compute the cluster IPs of `Service`s.

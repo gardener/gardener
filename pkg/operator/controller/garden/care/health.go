@@ -97,6 +97,7 @@ var (
 	requiredMonitoringDeployments = sets.New(
 		v1beta1constants.DeploymentNameKubeStateMetrics,
 		v1beta1constants.DeploymentNamePlutono,
+		v1beta1constants.DeploymentNameGardenerMetricsExporter,
 	)
 
 	virtualGardenMonitoringSelector = labels.SelectorFromSet(map[string]string{v1beta1constants.LabelRole: v1beta1constants.LabelMonitoring})

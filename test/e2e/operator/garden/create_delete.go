@@ -113,6 +113,8 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				healthyManagedResource("gardener-controller-manager-virtual"),
 				healthyManagedResource("gardener-scheduler-runtime"),
 				healthyManagedResource("gardener-scheduler-virtual"),
+				healthyManagedResource("gardener-metrics-exporter-runtime"),
+				healthyManagedResource("gardener-metrics-exporter-virtual"),
 			))
 
 			g.Expect(runtimeClient.List(ctx, managedResourceList, client.InNamespace("istio-system"))).To(Succeed())

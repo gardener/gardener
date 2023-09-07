@@ -101,6 +101,7 @@ var (
 	monitoringDeployments = []string{
 		"kube-state-metrics",
 		"plutono",
+		"gardener-metrics-exporter",
 	}
 
 	loggingStatefulSets = []string{
@@ -639,7 +640,7 @@ var _ = Describe("Garden health", func() {
 				)
 				Expect(len(updatedConditions)).ToNot(BeZero())
 				Expect(updatedConditions).To(ContainElements(
-					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "DeploymentMissing", "Missing required deployments: [kube-state-metrics plutono]"),
+					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "DeploymentMissing", "Missing required deployments: [gardener-metrics-exporter kube-state-metrics plutono"),
 				))
 			})
 
@@ -686,7 +687,7 @@ var _ = Describe("Garden health", func() {
 				)
 				Expect(len(updatedConditions)).ToNot(BeZero())
 				Expect(updatedConditions).To(ContainElements(
-					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "DeploymentUnhealthy", "Deployment \"kube-state-metrics\" is unhealthy: condition \"Available\" is missing"),
+					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "DeploymentUnhealthy", "Deployment \"gardener-metrics-exporter\" is unhealthy: condition \"Available\" is missing"),
 				))
 			})
 

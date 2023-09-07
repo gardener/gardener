@@ -71,6 +71,7 @@ build:
         - pkg/component/extensions/operatingsystemconfig/utils
         - pkg/component/gardeneraccess
         - pkg/component/gardenerapiserver
+        - pkg/component/gardenermetricsexporter
         - pkg/component/gardensystem/runtime
         - pkg/component/gardensystem/virtual
         - pkg/component/gardeneradmissioncontroller

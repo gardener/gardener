@@ -53,6 +53,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/gardeneradmissioncontroller"
 	"github.com/gardener/gardener/pkg/component/gardenerapiserver"
 	"github.com/gardener/gardener/pkg/component/gardenercontrollermanager"
+	"github.com/gardener/gardener/pkg/component/gardenermetricsexporter"
 	"github.com/gardener/gardener/pkg/component/gardenerscheduler"
 	runtimegardensystem "github.com/gardener/gardener/pkg/component/gardensystem/runtime"
 	virtualgardensystem "github.com/gardener/gardener/pkg/component/gardensystem/virtual"
@@ -111,6 +112,7 @@ type components struct {
 	gardenerControllerManager   component.DeployWaiter
 	gardenerScheduler           component.DeployWaiter
 
+	gardenerMetricsExporter       component.DeployWaiter
 	kubeStateMetrics              component.DeployWaiter
 	fluentOperator                component.DeployWaiter
 	fluentBit                     component.DeployWaiter
@@ -220,6 +222,10 @@ func (r *Reconciler) instantiateComponents(
 	}
 
 	// observability components
+	c.gardenerMetricsExporter, err = r.newGardenerMetricsExporter(secretsManager)
+	if err != nil {
+		return
+	}
 	c.kubeStateMetrics, err = r.newKubeStateMetrics()
 	if err != nil {
 		return
@@ -781,6 +787,15 @@ func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden) 
 		"",
 		v1beta1constants.SeedNginxIngressClass,
 	)
+}
+
+func (r *Reconciler) newGardenerMetricsExporter(secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenerMetricsExporter)
+	if err != nil {
+		return nil, err
+	}
+
+	return gardenermetricsexporter.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, gardenermetricsexporter.Values{Image: image.String()}), nil
 }
 
 func (r *Reconciler) newPlutono(secretsManager secretsmanager.Interface, ingressDomain string, wildcardCert *corev1.Secret) (plutono.Interface, error) {

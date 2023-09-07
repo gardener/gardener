@@ -245,6 +245,10 @@ images:
     value:
     - type: 'githubTeam'
       teamname: 'gardener/monitoring-maintainers'
+- name: gardener-metrics-exporter
+  sourceRepository: github.com/gardener/gardener-metrics-exporter
+  repository: eu.gcr.io/gardener-project/gardener/metrics-exporter
+  tag: "0.27.0"
 - name: node-exporter
   sourceRepository: github.com/prometheus/node_exporter
   repository: quay.io/prometheus/node-exporter

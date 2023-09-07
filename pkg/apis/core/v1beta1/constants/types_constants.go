@@ -158,6 +158,9 @@ const (
 	// DeploymentNameKubeStateMetrics is a constant for the name of a Kubernetes deployment object that contains
 	// the kube-state-metrics pod.
 	DeploymentNameKubeStateMetrics = "kube-state-metrics"
+	// DeploymentNameGardenerMetricsExporter is a constant for the name of a Kubernetes deployment object that contains
+	// the gardener-metrics-exporter pod.
+	DeploymentNameGardenerMetricsExporter = "gardener-metrics-exporter"
 
 	// DeploymentNameVPAAdmissionController is a constant for the name of the VPA admission controller deployment.
 	DeploymentNameVPAAdmissionController = "vpa-admission-controller"
