@@ -16,8 +16,10 @@ For more information, see the [Releases document](../development/process.md#rele
 ### Supported Version Skew
 
 Technically, we follow the same [policy](https://kubernetes.io/releases/version-skew-policy/) as the Kubernetes project.
-However, given that our release cadence is much more frequent compared to Kubernetes (every `14d` vs. every `120d`), in many cases it is possible to skip a version.
-Still, to be on the safe side, it is highly recommended to follow the described policy.
+However, given that our release cadence is much more frequent compared to Kubernetes (every `14d` vs. every `120d`), in many cases it might be possible to skip versions, though we do not test these upgrade paths.
+Consequently, in general it might not work, and to be on the safe side, it is highly recommended to follow the described policy.
+
+🚨 Note that downgrading Gardener versions is generally not tested during development and should be considered unsupported.
 
 #### gardener-apiserver
 
@@ -37,6 +39,16 @@ Example:
 
 - `gardener-apiserver` is at **v1.37**
 - `gardener-controller-manager`, `gardener-scheduler`, `gardener-admission-controller`, and `gardenlet` are supported at **1.37** and **v1.36**
+
+#### gardener-operator
+
+Since `gardener-operator` manages the Gardener control plane components (`gardener-apiserver`, `gardener-controller-manager`, `gardener-scheduler`, `gardener-admission-controller`), it follows the same policy as for [`gardener-apiserver`](#gardener-apiserver).
+
+It implements additional start-up checks to ensure adherence to this policy.
+Concretely, `gardener-operator` will crash when
+
+- its gets downgraded.
+- its version gets upgraded and skips at least one minor version.
 
 ### Supported Component Upgrade Order
 
@@ -59,11 +71,21 @@ Actions:
 
 Prerequisites:
 
-- The `gardener-apiserver` instances these components communicate with are at **1.38** (in multi-instance setups in which these components can communicate with any `gardener-apiserver` instance in the cluster, all `gardener-apiserver` instances must be upgraded before upgrading these components)
+- The `gardener-apiserver` instances these components communicate with are at **1.38** (in multi-instance setups in which these components can communicate with any `gardener-apiserver` instance in the cluster, all `gardener-apiserver` instances must be upgraded before upgrading these components).
 
 Actions:
 
 - Upgrade `gardener-controller-manager`, `gardener-scheduler`, `gardener-admission-controller`, and `gardenlet` to **1.38**
+
+#### gardener-operator
+
+Prerequisites:
+
+- All `gardener-operator` instances are at **1.37**.
+
+Actions:
+
+- Upgrade `gardener-operator` to **1.38**.
 
 ## Supported Kubernetes Versions
 

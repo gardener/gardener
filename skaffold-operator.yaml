@@ -9,6 +9,7 @@ build:
       dependencies:
         paths:
         - cmd/gardener-operator/app
+        - cmd/gardener-operator/app/bootstrappers
         - cmd/utils
         - extensions/pkg/apis/config
         - extensions/pkg/controller
