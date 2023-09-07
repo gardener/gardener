@@ -21,7 +21,7 @@ import (
 )
 
 func (g *gardenerMetricsExporter) service() *corev1.Service {
-	svc := &corev1.Service{
+	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceName,
 			Namespace: g.namespace,
@@ -40,6 +40,4 @@ func (g *gardenerMetricsExporter) service() *corev1.Service {
 			},
 		},
 	}
-
-	return svc
 }

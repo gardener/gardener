@@ -102,7 +102,7 @@ func (g *gardenerMetricsExporter) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	var virtualRegistry = managedresources.NewRegistry(operatorclient.VirtualScheme, operatorclient.VirtualCodec, operatorclient.VirtualSerializer)
+	virtualRegistry := managedresources.NewRegistry(operatorclient.VirtualScheme, operatorclient.VirtualCodec, operatorclient.VirtualSerializer)
 
 	virtualResources, err := virtualRegistry.AddAllAndSerialize(
 		g.clusterRole(),
