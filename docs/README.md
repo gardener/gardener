@@ -39,6 +39,7 @@
 * [ExposureClasses](usage/exposureclasses.md)
 * [Hibernate a Cluster](usage/shoot_hibernate.md)
 * [IPv6 in Gardener Clusters](usage/ipv6.md)
+* [Logging](usage/logging.md)
 * [`NodeLocalDNS` feature](usage/node-local-dns.md)
 * [OpenIDConnect presets](usage/openidconnect-presets.md)
 * [Projects](usage/projects.md)
