@@ -230,28 +230,33 @@ Please refer to [this document](../usage/shoot_credentials_rotation.md#gardener-
 
 ⚠️ Rotation of static `ServiceAccount` secrets is not supported since the `kube-controller-manager` does not enable the `serviceaccount-token` controller.
 
-## Upgrading An Existing Gardener Landscape To `gardener-operator`
+## Migrating an Existing Gardener Landscape to `gardener-operator`
 
 Since `gardener-operator` was only developed in 2023, six years after the Gardener project initiation, most users probably already have an existing Gardener landscape.
 The most prominent installation procedure is [garden-setup](https://github.com/gardener/garden-setup), however experience shows that most community members have developed their own tooling for managing the garden cluster and the Gardener control plane components.
 
-> Consequently, providing a general upgrade guide is not possible since the detailed steps vary heavily based on how the components were set up previously.
-> As a result, this section can only highlight the most important caveats and things to know, while the concrete upgrade steps must be figured out individually based on the existing installation.
+> Consequently, providing a general migration guide is not possible since the detailed steps vary heavily based on how the components were set up previously.
+> As a result, this section can only highlight the most important caveats and things to know, while the concrete migration steps must be figured out individually based on the existing installation.
+>
+> Please test your migration procedure thoroughly.
+Note that in some cases it can be easier to set up a fresh landscape with `gardener-operator`, restore the ETCD data, switch the DNS records, and issue new credentials for all clients.
 
 Please make sure that you configure all your desired fields in the [`Garden` resource](#garden-resources).
 
 ### ETCD
 
-`gardener-operator` leverages `etcd-druid` for managing the `virtual-garden-etcd-main` and `virtual-garden-etcd-events`, similar to what happens for shoot clusters.
+`gardener-operator` leverages `etcd-druid` for managing the `virtual-garden-etcd-main` and `virtual-garden-etcd-events`, similar to how shoot cluster control planes are handled.
 The `PersistentVolumeClaim` names differ slightly - for `virtual-garden-etcd-events` it's `virtual-garden-etcd-events-virtual-garden-etcd-events-0`, while for `virtual-garden-etcd-main` it's `main-virtual-garden-etcd-virtual-garden-etcd-main-0`.
+The easiest approach for the migration is to make your existing ETCD volumes follow the same naming scheme.
+Alternatively, backup your data, let `gardener-operator` take over ETCD, and then [restore](https://github.com/gardener/etcd-backup-restore/blob/master/docs/operations/manual_restoration.md) your data to the new volume.
 
 The backup bucket must be created separately, and its name as well as the respective credentials must be provided via the `Garden` resource in `.spec.virtualCluster.etcd.main.backup`.
 
-### `virtual-garden-kube-apiserver`
+### `virtual-garden-kube-apiserver` Deployment
 
 `gardener-operator` deploys a `virtual-garden-kube-apiserver` into the runtime cluster.
 This `virtual-garden-kube-apiserver` spans a new cluster, called the virtual cluster.
-There are a few certificates and other credentials that should not change during the upgrade.
+There are a few certificates and other credentials that should not change during the migration.
 You have to prepare the environment accordingly by leveraging the [secret's manager capabilities](../development/secrets_management.md#migrating-existing-secrets-to-secretsmanager).
 
 - The existing Cluster CA `Secret` should be labeled with `secrets-manager-use-data-for-name=ca`.
@@ -322,13 +327,12 @@ See also [this document](resource-manager.md#tokenrequestor-controller) for more
 
 ### `gardener-apiserver`
 
-Similar to the [`virtual-garden-kube-apiserver`](#virtual-garden-kube-apiserver), the `gardener-apiserver` also uses a few certificates and other credentials that should not change during the upgrade.
+Similar to the [`virtual-garden-kube-apiserver`](#virtual-garden-kube-apiserver), the `gardener-apiserver` also uses a few certificates and other credentials that should not change during the migration.
 Again, you have to prepare the environment accordingly by leveraging the [secret's manager capabilities](../development/secrets_management.md#migrating-existing-secrets-to-secretsmanager).
 
 - The existing ETCD Encryption Key `Secret` should be labeled with `secrets-manager-use-data-for-name=gardener-apiserver-etcd-encryption-key`.
 
-> Please test your upgrade procedure thoroughly.
-> Note that in some cases it can be easier to set up a fresh landscape with `gardener-operator`, restore the ETCD data, switch the DNS records, and issue new credentials for all clients.
+Also note that `gardener-operator` manages the `Service` and `Endpoints` resources for the `gardener-apiserver` in the virtual cluster within the `kube-system` namespace (`garden-setup` uses the `garden` namespace).
 
 ## Local Development
 
