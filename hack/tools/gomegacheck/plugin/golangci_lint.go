@@ -20,14 +20,7 @@ import (
 	"github.com/gardener/gardener/hack/tools/gomegacheck/pkg/gomegacheck"
 )
 
-// AnalyzerPlugin is the golangci-lint plugin.
-var AnalyzerPlugin analyzerPlugin //nolint:deadcode,unused
-
-// analyzerPlugin implements the golangci-lint AnalyzerPlugin interface.
-// see https://golangci-lint.run/contributing/new-linters/#how-to-add-a-private-linter-to-golangci-lint
-type analyzerPlugin struct{}
-
-// GetAnalyzers returns the gomegacheck analyzer.
-func (*analyzerPlugin) GetAnalyzers() []*analysis.Analyzer {
-	return []*analysis.Analyzer{gomegacheck.Analyzer}
+// New returns the gomegacheck analyzer.
+func New(conf any) ([]*analysis.Analyzer, error) {
+	return []*analysis.Analyzer{gomegacheck.Analyzer}, nil
 }
