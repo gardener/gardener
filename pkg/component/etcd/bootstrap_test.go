@@ -42,6 +42,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -662,21 +663,17 @@ status:
 	})
 
 	Describe("#Wait", func() {
-		It("should fail because it cannot be checked if the managed resource became healthy", func() {
-			oldTimeout := TimeoutWaitForManagedResource
-			defer func() { TimeoutWaitForManagedResource = oldTimeout }()
-			TimeoutWaitForManagedResource = time.Millisecond
+		BeforeEach(func() {
+			DeferCleanup(test.WithVar(&TimeoutWaitForManagedResource, time.Millisecond))
+		})
 
+		It("should fail because it cannot be checked if the managed resource became healthy", func() {
 			c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr)
 
 			Expect(bootstrapper.Wait(ctx)).To(MatchError(fakeErr))
 		})
 
 		It("should fail because the managed resource doesn't become healthy", func() {
-			oldTimeout := TimeoutWaitForManagedResource
-			defer func() { TimeoutWaitForManagedResource = oldTimeout }()
-			TimeoutWaitForManagedResource = time.Millisecond
-
 			c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(
 				func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 					(&resourcesv1alpha1.ManagedResource{
@@ -704,11 +701,7 @@ status:
 			Expect(bootstrapper.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
 		})
 
-		It("should successfully wait for the managed resource to become healthy", func() {
-			oldTimeout := TimeoutWaitForManagedResource
-			defer func() { TimeoutWaitForManagedResource = oldTimeout }()
-			TimeoutWaitForManagedResource = time.Millisecond
-
+		It("should fail because the managed resource is still progressing", func() {
 			c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(
 				func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 					(&resourcesv1alpha1.ManagedResource{
@@ -725,6 +718,38 @@ status:
 								{
 									Type:   resourcesv1alpha1.ResourcesHealthy,
 									Status: gardencorev1beta1.ConditionTrue,
+								},
+							},
+						},
+					}).DeepCopyInto(obj.(*resourcesv1alpha1.ManagedResource))
+					return nil
+				},
+			)
+
+			Expect(bootstrapper.Wait(ctx)).To(MatchError(ContainSubstring("is still progressing")))
+		})
+
+		It("should successfully wait for the managed resource to become healthy and not progressing", func() {
+			c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(
+				func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+					(&resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Generation: 1,
+						},
+						Status: resourcesv1alpha1.ManagedResourceStatus{
+							ObservedGeneration: 1,
+							Conditions: []gardencorev1beta1.Condition{
+								{
+									Type:   resourcesv1alpha1.ResourcesApplied,
+									Status: gardencorev1beta1.ConditionTrue,
+								},
+								{
+									Type:   resourcesv1alpha1.ResourcesHealthy,
+									Status: gardencorev1beta1.ConditionTrue,
+								},
+								{
+									Type:   resourcesv1alpha1.ResourcesProgressing,
+									Status: gardencorev1beta1.ConditionFalse,
 								},
 							},
 						},
@@ -844,24 +869,18 @@ status:
 		})
 
 		Describe("#WaitCleanup", func() {
-			It("should fail when the wait for the managed resource deletion fails", func() {
-				oldTimeNow := gardenerutils.TimeNow
-				defer func() { gardenerutils.TimeNow = oldTimeNow }()
-				gardenerutils.TimeNow = timeNowFunc
+			BeforeEach(func() {
+				DeferCleanup(test.WithVar(&gardenerutils.TimeNow, timeNowFunc))
+			})
 
+			It("should fail when the wait for the managed resource deletion fails", func() {
 				c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr)
 
 				Expect(bootstrapper.WaitCleanup(ctx)).To(MatchError(fakeErr))
 			})
 
 			It("should fail when the wait for the managed resource deletion times out", func() {
-				oldTimeNow := gardenerutils.TimeNow
-				defer func() { gardenerutils.TimeNow = oldTimeNow }()
-				gardenerutils.TimeNow = timeNowFunc
-
-				oldTimeout := TimeoutWaitForManagedResource
-				defer func() { TimeoutWaitForManagedResource = oldTimeout }()
-				TimeoutWaitForManagedResource = time.Millisecond
+				DeferCleanup(test.WithVar(&TimeoutWaitForManagedResource, time.Millisecond))
 
 				c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).AnyTimes()
 
@@ -869,10 +888,6 @@ status:
 			})
 
 			It("should successfully delete all resources", func() {
-				oldTimeNow := gardenerutils.TimeNow
-				defer func() { gardenerutils.TimeNow = oldTimeNow }()
-				gardenerutils.TimeNow = timeNowFunc
-
 				c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 
 				Expect(bootstrapper.WaitCleanup(ctx)).To(Succeed())
