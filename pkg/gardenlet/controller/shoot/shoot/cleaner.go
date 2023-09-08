@@ -24,7 +24,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -103,18 +102,6 @@ func (c *cleaner) WaitUntilExtensionObjectsDeleted(ctx context.Context) error {
 	}, extensionKindToObjectList)
 }
 
-// DeleteBackupEntry deletes the shoot BackupEntry resource in the garden cluster.
-func (c *cleaner) DeleteBackupEntry(ctx context.Context) error {
-	c.log.Info("Deleting BackupEntry resource", "backupentry", c.backupEntryName)
-	return kubernetesutils.DeleteObject(ctx, c.gardenClient, c.getEmptyBackupEntry())
-
-}
-
-// WaitUntilBackupEntryDeleted waits until the shoot BackupEntry resource in the garden cluster has been deleted.
-func (c *cleaner) WaitUntilBackupEntryDeleted(ctx context.Context) error {
-	return kubernetesutils.WaitUntilResourceDeleted(ctx, c.gardenClient, c.getEmptyBackupEntry(), defaultInterval)
-}
-
 // DeleteMCMResources deletes all MachineControllerManager resources in the shoot namespace.
 func (c *cleaner) DeleteMCMResources(ctx context.Context) error {
 	return utilclient.ApplyToObjectKinds(ctx, func(kind string, objectList client.ObjectList) flow.TaskFn {
@@ -182,10 +169,6 @@ func (c *cleaner) WaitUntilClusterDeleted(ctx context.Context) error {
 
 func (c *cleaner) getEmptyCluster() *extensionsv1alpha1.Cluster {
 	return &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: c.seedNamespace}}
-}
-
-func (c *cleaner) getEmptyBackupEntry() *gardencorev1beta1.BackupEntry {
-	return &gardencorev1beta1.BackupEntry{ObjectMeta: metav1.ObjectMeta{Name: c.backupEntryName, Namespace: c.projectNamespace}}
 }
 
 func (c *cleaner) removeFinalizersFromObjects(ctx context.Context, namespace string, objectList client.ObjectList) error {

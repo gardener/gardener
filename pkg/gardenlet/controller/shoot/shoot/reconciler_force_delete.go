@@ -103,19 +103,10 @@ func (r *Reconciler) runForceDeleteShootFlow(ctx context.Context, o *operation.O
 			Fn:           cleaner.WaitUntilMCMResourcesDeleted,
 			Dependencies: flow.NewTaskIDs(deleteMCMResources),
 		})
-		deleteBackupEntry = g.Add(flow.Task{
-			Name: "Deleting BackupEntry resource",
-			Fn:   flow.TaskFn(cleaner.DeleteBackupEntry).RetryUntilTimeout(defaultInterval, defaultTimeout),
-		})
-		waitUntilBackupEntryDeleted = g.Add(flow.Task{
-			Name:         "Waiting until BackupEntry resource has been deleted",
-			Fn:           cleaner.WaitUntilBackupEntryDeleted,
-			Dependencies: flow.NewTaskIDs(deleteBackupEntry),
-		})
 		deleteCluster = g.Add(flow.Task{
 			Name:         "Deleting Cluster resource",
 			Fn:           flow.TaskFn(cleaner.DeleteCluster).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(waitUntilExtensionObjectsDeleted, waitUntilBackupEntryDeleted),
+			Dependencies: flow.NewTaskIDs(waitUntilExtensionObjectsDeleted),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until Cluster resource has been deleted",
