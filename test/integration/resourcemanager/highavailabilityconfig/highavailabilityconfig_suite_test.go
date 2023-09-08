@@ -105,9 +105,13 @@ var _ = BeforeSuite(func() {
 			CertDir: testEnv.WebhookInstallOptions.LocalServingCertDir,
 		}),
 		Metrics: metricsserver.Options{BindAddress: "0"},
-		ClientDisableCacheFor: []client.Object{
-			// Disable cache for namespaces so that changes applied by tests are seen immediately.
-			&corev1.Namespace{},
+		Client: client.Options{
+			Cache: &client.CacheOptions{
+				DisableFor: []client.Object{
+					// Disable cache for namespaces so that changes applied by tests are seen immediately.
+					&corev1.Namespace{},
+				},
+			},
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())

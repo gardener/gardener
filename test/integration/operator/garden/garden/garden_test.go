@@ -131,8 +131,12 @@ var _ = Describe("Garden controller tests", func() {
 					},
 				},
 			},
-			ClientDisableCacheFor: []client.Object{
-				&corev1.Secret{}, // applied because of operations on managed resources and their secrets
+			Client: client.Options{
+				Cache: &client.CacheOptions{
+					DisableFor: []client.Object{
+						&corev1.Secret{}, // applied because of operations on managed resources and their secrets
+					},
+				},
 			},
 		})
 		Expect(err).NotTo(HaveOccurred())
