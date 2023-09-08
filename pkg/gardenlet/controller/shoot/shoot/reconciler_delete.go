@@ -25,7 +25,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -43,7 +42,7 @@ import (
 
 // runDeleteShootFlow deletes a Shoot cluster.
 // It receives an Operation object <o> which stores the Shoot object and an ErrorContext which contains error from the previous operation.
-func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operation, forceDelete bool) *v1beta1helper.WrappedLastErrors {
+func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operation) *v1beta1helper.WrappedLastErrors {
 	var (
 		botanist                             *botanistpkg.Botanist
 		kubeAPIServerDeploymentFound         = true
@@ -146,167 +145,15 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 	}
 
 	var (
+		defaultInterval         = 5 * time.Second
+		defaultTimeout          = 30 * time.Second
+		staticNodesCIDR         = botanist.Shoot.GetInfo().Spec.Networking != nil && botanist.Shoot.GetInfo().Spec.Networking.Nodes != nil
+		useDNS                  = botanist.ShootUsesDNS()
 		nonTerminatingNamespace = botanist.SeedNamespaceObject.UID != "" && botanist.SeedNamespaceObject.Status.Phase != corev1.NamespaceTerminating
 		cleanupShootResources   = nonTerminatingNamespace && kubeAPIServerDeploymentFound && (infrastructure != nil || o.Shoot.IsWorkerless)
 
-		cleaner = NewCleaner(botanist.SeedClientSet.Client(), r.GardenClient, botanist.Shoot.SeedNamespace, botanist.Shoot.GetInfo().Namespace, botanist.Shoot.BackupEntryName, logf.FromContext(ctx))
-		g       = getGraph(botanist, cleaner, forceDelete, nonTerminatingNamespace, cleanupShootResources, controlPlaneDeploymentNeeded, kubeControllerManagerDeploymentFound, kubeAPIServerDeploymentReplicas)
-	)
+		g = flow.NewGraph("Shoot cluster deletion")
 
-	f := g.Compile()
-
-	if err := f.Run(ctx, flow.Opts{
-		Log:              o.Logger,
-		ProgressReporter: r.newProgressReporter(o.ReportShootProgress),
-		ErrorCleaner:     o.CleanShootTaskError,
-		ErrorContext:     errorContext,
-	}); err != nil {
-		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), flow.Errors(err))
-	}
-
-	// ensure that shoot client is invalidated after it has been deleted
-	if err := o.ShootClientMap.InvalidateClient(keys.ForShoot(o.Shoot.GetInfo())); err != nil {
-		err = fmt.Errorf("failed to invalidate shoot client: %w", err)
-		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
-	}
-
-	o.Logger.Info("Successfully deleted Shoot cluster")
-	return nil
-}
-
-func getGraph(
-	botanist *botanistpkg.Botanist,
-	cleaner *cleaner,
-	forceDelete,
-	nonTerminatingNamespace,
-	cleanupShootResources,
-	controlPlaneDeploymentNeeded,
-	kubeControllerManagerDeploymentFound bool,
-	kubeAPIServerDeploymentReplicas int32,
-) *flow.Graph {
-	var (
-		defaultInterval = 5 * time.Second
-		defaultTimeout  = 30 * time.Second
-		staticNodesCIDR = botanist.Shoot.GetInfo().Spec.Networking != nil && botanist.Shoot.GetInfo().Spec.Networking.Nodes != nil
-		useDNS          = botanist.ShootUsesDNS()
-
-		g *flow.Graph
-	)
-
-	if forceDelete {
-		g = flow.NewGraph("Shoot cluster force deletion")
-
-		var (
-			deleteControlPlanes = g.Add(flow.Task{
-				Name: "Deleting ControlPlane resources",
-				Fn:   flow.TaskFn(cleaner.DeleteControlPlanes).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			})
-			waitUntilControlPlanesDeleted = g.Add(flow.Task{
-				Name:         "Waiting until ControlPlane resources have been deleted",
-				Fn:           cleaner.WaitUntilControlPlanesDeleted,
-				Dependencies: flow.NewTaskIDs(deleteControlPlanes),
-			})
-			deleteDNSRecords = g.Add(flow.Task{
-				Name: "Deleting DNSRecord resources",
-				Fn:   flow.TaskFn(cleaner.DeleteDNSRecords).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			})
-			waitUntilDNSRecordsDeleted = g.Add(flow.Task{
-				Name:         "Waiting until DNSRecord resources have been deleted",
-				Fn:           cleaner.WaitUntilDNSRecordsDeleted,
-				Dependencies: flow.NewTaskIDs(deleteDNSRecords),
-			})
-			deleteExtensionObjects = g.Add(flow.Task{
-				Name: "Deleting extension resources",
-				Fn:   flow.TaskFn(cleaner.DeleteExtensionObjects).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			})
-			waitUntilExtensionObjectsDeleted = g.Add(flow.Task{
-				Name:         "Waiting until extension resources have been deleted",
-				Fn:           cleaner.WaitUntilExtensionObjectsDeleted,
-				Dependencies: flow.NewTaskIDs(deleteExtensionObjects),
-			})
-			deleteMCMResources = g.Add(flow.Task{
-				Name: "Deleting MCM resources",
-				Fn:   flow.TaskFn(cleaner.DeleteMCMResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			})
-			waitUntilMCMResourcesDeleted = g.Add(flow.Task{
-				Name:         "Waiting until MCM resources have been deleted",
-				Fn:           cleaner.WaitUntilMCMResourcesDeleted,
-				Dependencies: flow.NewTaskIDs(deleteMCMResources),
-			})
-			deleteBackupEntry = g.Add(flow.Task{
-				Name: "Deleting BackupEntry resource",
-				Fn:   flow.TaskFn(cleaner.DeleteBackupEntry).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			})
-			waitUntilBackupEntryDeleted = g.Add(flow.Task{
-				Name:         "Waiting until BackupEntry resource has been deleted",
-				Fn:           cleaner.WaitUntilBackupEntryDeleted,
-				Dependencies: flow.NewTaskIDs(deleteBackupEntry),
-			})
-			deleteCluster = g.Add(flow.Task{
-				Name:         "Deleting Cluster resource",
-				Fn:           flow.TaskFn(cleaner.DeleteCluster).RetryUntilTimeout(defaultInterval, defaultTimeout),
-				Dependencies: flow.NewTaskIDs(waitUntilExtensionObjectsDeleted, waitUntilBackupEntryDeleted, waitUntilControlPlanesDeleted, waitUntilDNSRecordsDeleted),
-			})
-			_ = g.Add(flow.Task{
-				Name:         "Waiting until Cluster resource has been deleted",
-				Fn:           cleaner.WaitUntilClusterDeleted,
-				Dependencies: flow.NewTaskIDs(deleteCluster),
-			})
-			setKeepObjectsForManagedResources = g.Add(flow.Task{
-				Name:         "Configuring managed resources to keep their objects when deleted",
-				Fn:           flow.TaskFn(cleaner.SetKeepObjectsForManagedResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
-				Dependencies: flow.NewTaskIDs(),
-			})
-			deleteManagedResources = g.Add(flow.Task{
-				Name:         "Deleting managed resources",
-				Fn:           flow.TaskFn(cleaner.DeleteManagedResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
-				Dependencies: flow.NewTaskIDs(setKeepObjectsForManagedResources),
-			})
-			waitUntilManagedResourcesDeleted = g.Add(flow.Task{
-				Name:         "Waiting until managed resources have been deleted",
-				Fn:           cleaner.WaitUntilManagedResourcesDeleted,
-				Dependencies: flow.NewTaskIDs(deleteManagedResources),
-			})
-			deleteEtcds = g.Add(flow.Task{
-				Name:         "Deleting Etcd resources",
-				Fn:           flow.TaskFn(botanist.DestroyEtcd).RetryUntilTimeout(defaultInterval, defaultTimeout),
-				Dependencies: flow.NewTaskIDs(),
-			})
-			waitUntilEtcdsDeleted = g.Add(flow.Task{
-				Name:         "Waiting until Etcd resources have been deleted",
-				Fn:           botanist.WaitUntilEtcdsDeleted,
-				Dependencies: flow.NewTaskIDs(deleteEtcds),
-			})
-			deleteSecrets = g.Add(flow.Task{
-				Name:         "Deleting secrets",
-				Fn:           flow.TaskFn(cleaner.DeleteSecrets).RetryUntilTimeout(defaultInterval, defaultTimeout),
-				Dependencies: flow.NewTaskIDs(waitUntilExtensionObjectsDeleted, waitUntilEtcdsDeleted, waitUntilMCMResourcesDeleted, waitUntilManagedResourcesDeleted),
-			})
-			deleteNamespace = g.Add(flow.Task{
-				Name:         "Deleting shoot namespace",
-				Fn:           flow.TaskFn(botanist.DeleteSeedNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
-				Dependencies: flow.NewTaskIDs(waitUntilExtensionObjectsDeleted, waitUntilEtcdsDeleted, waitUntilMCMResourcesDeleted, waitUntilManagedResourcesDeleted, deleteSecrets),
-			})
-			_ = g.Add(flow.Task{
-				Name:         "Waiting until shoot namespace has been deleted",
-				Fn:           botanist.WaitUntilSeedNamespaceDeleted,
-				Dependencies: flow.NewTaskIDs(deleteNamespace),
-			})
-			_ = g.Add(flow.Task{
-				Name: "Deleting Shoot State",
-				Fn: func(ctx context.Context) error {
-					return shootstate.Delete(ctx, botanist.GardenClient, botanist.Shoot.GetInfo())
-				},
-				Dependencies: flow.NewTaskIDs(deleteNamespace),
-			})
-		)
-
-		return g
-	}
-
-	g = flow.NewGraph("Shoot cluster deletion")
-
-	var (
 		deployNamespace = g.Add(flow.Task{
 			Name: "Deploying Shoot namespace in Seed",
 			Fn:   flow.TaskFn(botanist.DeploySeedNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(nonTerminatingNamespace),
@@ -832,7 +679,25 @@ func getGraph(
 			},
 			Dependencies: flow.NewTaskIDs(deleteNamespace),
 		})
+
+		f = g.Compile()
 	)
 
-	return g
+	if err := f.Run(ctx, flow.Opts{
+		Log:              o.Logger,
+		ProgressReporter: r.newProgressReporter(o.ReportShootProgress),
+		ErrorCleaner:     o.CleanShootTaskError,
+		ErrorContext:     errorContext,
+	}); err != nil {
+		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), flow.Errors(err))
+	}
+
+	// ensure that shoot client is invalidated after it has been deleted
+	if err := o.ShootClientMap.InvalidateClient(keys.ForShoot(o.Shoot.GetInfo())); err != nil {
+		err = fmt.Errorf("failed to invalidate shoot client: %w", err)
+		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
+	}
+
+	o.Logger.Info("Successfully deleted Shoot cluster")
+	return nil
 }

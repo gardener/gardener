@@ -227,7 +227,14 @@ func (r *Reconciler) deleteShoot(ctx context.Context, log logr.Logger, shoot *ga
 	}
 
 	r.Recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting Shoot cluster")
-	if flowErr := r.runDeleteShootFlow(ctx, o, v1beta1helper.ShootNeedsForceDeletion(shoot)); flowErr != nil {
+	var flowErr *v1beta1helper.WrappedLastErrors
+
+	if v1beta1helper.ShootNeedsForceDeletion(shoot) {
+		flowErr = r.runForceDeleteShootFlow(ctx, o)
+	} else {
+		flowErr = r.runDeleteShootFlow(ctx, o)
+	}
+	if flowErr != nil {
 		r.Recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, flowErr.Description)
 		updateErr := r.patchShootStatusOperationError(ctx, shoot, flowErr.Description, operationType, flowErr.LastErrors...)
 		return reconcile.Result{}, errorsutils.WithSuppressed(errors.New(flowErr.Description), updateErr)
