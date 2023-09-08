@@ -58,33 +58,43 @@ func (mr *MockCacheMockRecorder) Get(arg0, arg1, arg2 interface{}, arg3 ...inter
 }
 
 // GetInformer mocks base method.
-func (m *MockCache) GetInformer(arg0 context.Context, arg1 client.Object) (cache.Informer, error) {
+func (m *MockCache) GetInformer(arg0 context.Context, arg1 client.Object, arg2 ...cache.InformerGetOption) (cache.Informer, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetInformer", arg0, arg1)
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetInformer", varargs...)
 	ret0, _ := ret[0].(cache.Informer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetInformer indicates an expected call of GetInformer.
-func (mr *MockCacheMockRecorder) GetInformer(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockCacheMockRecorder) GetInformer(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInformer", reflect.TypeOf((*MockCache)(nil).GetInformer), arg0, arg1)
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInformer", reflect.TypeOf((*MockCache)(nil).GetInformer), varargs...)
 }
 
 // GetInformerForKind mocks base method.
-func (m *MockCache) GetInformerForKind(arg0 context.Context, arg1 schema.GroupVersionKind) (cache.Informer, error) {
+func (m *MockCache) GetInformerForKind(arg0 context.Context, arg1 schema.GroupVersionKind, arg2 ...cache.InformerGetOption) (cache.Informer, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetInformerForKind", arg0, arg1)
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetInformerForKind", varargs...)
 	ret0, _ := ret[0].(cache.Informer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetInformerForKind indicates an expected call of GetInformerForKind.
-func (mr *MockCacheMockRecorder) GetInformerForKind(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockCacheMockRecorder) GetInformerForKind(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInformerForKind", reflect.TypeOf((*MockCache)(nil).GetInformerForKind), arg0, arg1)
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInformerForKind", reflect.TypeOf((*MockCache)(nil).GetInformerForKind), varargs...)
 }
 
 // IndexField mocks base method.
