@@ -14,12 +14,12 @@ and seed clusters can be seen as worker nodes.
 The following Gardener components play a similar role as the corresponding components
 in the Kubernetes architecture:
 
-| Gardener Component | Kubernetes Component |
-|:---|:---|
-| `gardener-apiserver` | `kube-apiserver` |
+| Gardener Component            | Kubernetes Component      |
+|-------------------------------|---------------------------|
+| `gardener-apiserver`          | `kube-apiserver`          |
 | `gardener-controller-manager` | `kube-controller-manager` |
-| `gardener-scheduler` | `kube-scheduler` |
-| `gardenlet` | `kubelet` |
+| `gardener-scheduler`          | `kube-scheduler`          |
+| `gardenlet`                   | `kubelet`                 |
 
 Similar to how the `kube-scheduler` of Kubernetes finds an appropriate node
 for newly created pods, the `gardener-scheduler` of Gardener finds an appropriate seed cluster
@@ -252,7 +252,7 @@ Once this resource is gone, the finalizer of the `operations.gardener.cloud/v1al
 
 The `ControllerInstallation` controller in the `gardenlet` reconciles `ControllerInstallation` objects with the help of the following reconcilers.
 
-#### "Main" Reconciler
+#### ["Main" Reconciler](../../pkg/gardenlet/controller/controllerinstallation/controllerinstallation)
 
 This reconciler is responsible for `ControllerInstallation`s referencing a `ControllerDeployment` whose `type=helm`.
 
@@ -288,7 +288,7 @@ It is labeled with `controllerinstallation-name=<name>` so that one can easily f
 
 The reconciler maintains the `Installed` condition of the `ControllerInstallation` and sets it to `False` if the rendering or deployment fails.
 
-#### "Care" Reconciler
+#### ["Care" Reconciler](../../pkg/gardenlet/controller/controllerinstallation/care)
 
 This reconciler reconciles `ControllerInstallation` objects and checks whether they are in a healthy state.
 It checks the `.status.conditions` of the backing `ManagedResource` created in the `garden` namespace of the seed cluster.
@@ -299,7 +299,7 @@ It checks the `.status.conditions` of the backing `ManagedResource` created in t
 
 A `ControllerInstallation` is considered "healthy" if `Applied=Healthy=True` and `Progressing=False`.
 
-#### "Required" Reconciler
+#### ["Required" Reconciler](../../pkg/gardenlet/controller/controllerinstallation/required)
 
 This reconciler watches all resources in the `extensions.gardener.cloud` API group in the seed cluster.
 It is responsible for maintaining the `Required` condition on `ControllerInstallation`s.
@@ -328,7 +328,7 @@ For more details about `NetworkPolicy`s in Gardener, please see [`NetworkPolicy`
 
 The `Seed` controller in the `gardenlet` reconciles `Seed` objects with the help of the following reconcilers.
 
-#### "Main Reconciler"
+#### ["Main Reconciler"](../../pkg/gardenlet/controller/seed/seed)
 
 This reconciler is responsible for managing the seed's system components.
 Those comprise CA certificates, the various `CustomResourceDefinition`s, the logging and monitoring stacks, and few central components like `gardener-resource-manager`, `etcd-druid`, `istio`, etc.
@@ -342,7 +342,7 @@ This reconciler maintains the `.status.lastOperation` field, i.e. it sets it:
 - to `state=Error` in case an error occurs.
 - to `state=Succeeded` in case the reconciliation succeeded.
 
-#### "Care" Reconciler
+#### ["Care" Reconciler](../../pkg/gardenlet/controller/seed/care)
 
 This reconciler checks whether the seed system components (deployed by the "main" reconciler) are healthy.
 It checks the `.status.conditions` of the backing `ManagedResource` created in the `garden` namespace of the seed cluster.
@@ -360,7 +360,7 @@ If at least one `ManagedResource` is unhealthy and there is threshold configurat
 The condition thresholds can be used to prevent reporting issues too early just because there is a rollout or a short disruption.
 Only if the unhealthiness persists for at least the configured threshold duration, then the issues will be reported (by setting the status to `False`).
 
-#### "Lease" Reconciler
+#### ["Lease" Reconciler](../../pkg/gardenlet/controller/seed/lease)
 
 This reconciler checks whether the connection to the seed cluster's `/healthz` endpoint works.
 If this succeeds, then it renews a `Lease` resource in the garden cluster's `gardener-system-seed-lease` namespace.
@@ -376,7 +376,7 @@ This internal health status is available via the `gardenlet`'s `/healthz` endpoi
 
 The `Shoot` controller in the `gardenlet` reconciles `Shoot` objects with the help of the following reconcilers.
 
-#### "Main" Reconciler
+#### ["Main" Reconciler](../../pkg/gardenlet/controller/shoot/shoot)
 
 This reconciler is responsible for managing all shoot cluster components and implements the core logic for creating, updating, hibernating, deleting, and migrating shoot clusters.
 It is also responsible for syncing the [`Cluster` cluster](../extensions/cluster.md) to the seed cluster before and after each successful shoot reconciliation.
@@ -404,7 +404,7 @@ There are a few special cases that overwrite or confine how often and under whic
 - In case `GardenletConfiguration.controllers.shoot.reconcileInMaintenanceOnly` is enabled (disabled by default), the gardenlet performs regular shoot reconciliations only once in the respective maintenance time window (`GardenletConfiguration.controllers.shoot.syncPeriod` is ignored). The gardenlet randomly distributes shoot reconciliations over the maintenance time window to avoid high bursts of reconciliations (see [Shoot Maintenance](../usage/shoot_maintenance.md#cluster-reconciliation)).
 - In case `Shoot.spec.maintenance.confineSpecUpdateRollout` is enabled (disabled by default), changes to the shoot specification are not rolled out immediately but only during the respective maintenance time window (see [Shoot Maintenance](../usage/shoot_maintenance.md)).
 
-#### "Care" Reconciler
+#### ["Care" Reconciler](../../pkg/gardenlet/controller/shoot/care)
 
 This reconciler performs three "care" actions related to `Shoot`s.
 
@@ -449,7 +449,7 @@ A pod is considered stale when:
 - it was terminated with reason starting with `OutOf` (e.g., `OutOfCpu`).
 - it is stuck in termination (i.e., if its `deletionTimestamp` is more than `5m` ago).
 
-#### "State" Reconciler
+#### ["State" Reconciler](../../pkg/gardenlet/controller/shoot/state)
 
 This reconciler periodically (default: every `6h`) performs backups of the state of `Shoot` clusters and persists them into `ShootState` resources into the same namespace as the `Shoot`s in the garden cluster.
 It is only started in case the `gardenlet` is responsible for an unmanaged `Seed`, i.e. a `Seed` which is not backed by a `seedmanagement.gardener.cloud/v1alpha1.ManagedSeed` object.
