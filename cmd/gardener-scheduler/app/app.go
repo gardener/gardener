@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	goruntime "runtime"
 	"strconv"
@@ -115,6 +116,14 @@ func run(ctx context.Context, log logr.Logger, cfg *config.SchedulerConfiguratio
 		return err
 	}
 
+	var extraHandlers map[string]http.Handler
+	if cfg.Debugging != nil && cfg.Debugging.EnableProfiling {
+		extraHandlers = routes.ProfilingHandlers
+		if cfg.Debugging.EnableContentionProfiling {
+			goruntime.SetBlockProfileRate(1)
+		}
+	}
+
 	log.Info("Setting up manager")
 	mgr, err := manager.New(restCfg, manager.Options{
 		Logger:                  log,
@@ -122,7 +131,10 @@ func run(ctx context.Context, log logr.Logger, cfg *config.SchedulerConfiguratio
 		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
 
 		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(cfg.Server.HealthProbes.Port)),
-		Metrics:                metricsserver.Options{BindAddress: net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port))},
+		Metrics: metricsserver.Options{
+			BindAddress:   net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
+			ExtraHandlers: extraHandlers,
+		},
 
 		Cache: cache.Options{
 			ByObject: map[client.Object]cache.ByObject{
@@ -145,15 +157,6 @@ func run(ctx context.Context, log logr.Logger, cfg *config.SchedulerConfiguratio
 	})
 	if err != nil {
 		return err
-	}
-
-	if cfg.Debugging != nil && cfg.Debugging.EnableProfiling {
-		if err := (routes.Profiling{}).AddToManager(mgr); err != nil {
-			return fmt.Errorf("failed adding profiling handlers to manager: %w", err)
-		}
-		if cfg.Debugging.EnableContentionProfiling {
-			goruntime.SetBlockProfileRate(1)
-		}
 	}
 
 	log.Info("Adding health check endpoints to manager")
