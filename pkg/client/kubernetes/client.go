@@ -22,6 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -382,7 +383,8 @@ var _ client.Client = &FallbackClient{}
 // in case Get/List requests with the ordinary `client.Client` fail (e.g. because of cache errors).
 type FallbackClient struct {
 	client.Client
-	Reader client.Reader
+	Reader           client.Reader
+	KindToNamespaces map[string]sets.Set[string]
 }
 
 var cacheError = &kubernetescache.CacheError{}
@@ -390,7 +392,24 @@ var cacheError = &kubernetescache.CacheError{}
 // Get retrieves an obj for a given object key from the Kubernetes Cluster.
 // In case of a cache error, the underlying API reader is used to execute the request again.
 func (d *FallbackClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-	err := d.Client.Get(ctx, key, obj)
+	gvk, err := apiutil.GVKForObject(obj, GardenScheme)
+	if err != nil {
+		return err
+	}
+
+	// Check if there are specific namespaces for this object's kind in the cache.
+	namespaces, ok := d.KindToNamespaces[gvk.Kind]
+
+	// If there are specific namespaces for this kind in the cache and the object's namespace is not cached,
+	// use the API reader to get the object.
+	if ok && !namespaces.Has(obj.GetNamespace()) {
+		return d.Reader.Get(ctx, key, obj)
+	}
+
+	// Otherwise, try to get the object from the cache.
+	err = d.Client.Get(ctx, key, obj)
+
+	// If an error occurs and it's a cache error, log it and use the API reader as a fallback.
 	if err != nil && errors.As(err, &cacheError) {
 		logf.Log.V(1).Info("Falling back to API reader because a cache error occurred", "error", err)
 		return d.Reader.Get(ctx, key, obj)

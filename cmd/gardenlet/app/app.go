@@ -35,6 +35,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
 	"k8s.io/component-base/version"
@@ -295,17 +296,11 @@ func (g *garden) Start(ctx context.Context) error {
 					// don't use any selector mechanism here since we want to still fall back to reading secrets with
 					// the API reader (i.e., not from cache) in case the respective secret is not found in the cache.
 					&corev1.Secret{}: func(c *rest.Config, o cache.Options) (cache.Cache, error) {
-						// cache.New only creates a multiNamespacedCache if cache.Options.Namespaces has more than one namespace
-						// (https://github.com/kubernetes-sigs/controller-runtime/blob/116a1b831fffe7ccc3c8145306c3e1a3b1b14ffa/pkg/cache/cache.go#L202-L204).
-						// multiNamespacedCache scopes the cache to a list of namespaces.
-						o.Namespaces = []string{seedNamespace, seedNamespace}
+						o.Namespaces = []string{seedNamespace}
 						return cache.New(c, o)
 					},
 					&corev1.ServiceAccount{}: func(c *rest.Config, o cache.Options) (cache.Cache, error) {
-						// cache.New only creates a multiNamespacedCache if cache.Options.Namespaces has more than one namespace
-						// (https://github.com/kubernetes-sigs/controller-runtime/blob/116a1b831fffe7ccc3c8145306c3e1a3b1b14ffa/pkg/cache/cache.go#L202-L204).
-						// multiNamespacedCache scopes the cache to a list of namespaces.
-						o.Namespaces = []string{seedNamespace, seedNamespace}
+						o.Namespaces = []string{seedNamespace}
 						return cache.New(c, o)
 					},
 					// Gardenlet does not have the required RBAC permissions for listing/watching the following
@@ -344,9 +339,14 @@ func (g *garden) Start(ctx context.Context) error {
 				return nil, err
 			}
 
+			seedNamespace := gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.SeedTemplate.Name)
 			return &kubernetes.FallbackClient{
 				Client: cachedClient,
 				Reader: uncachedClient,
+				KindToNamespaces: map[string]sets.Set[string]{
+					"Secret":         sets.New[string](seedNamespace),
+					"ServiceAccount": sets.New[string](seedNamespace),
+				},
 			}, nil
 		}
 
