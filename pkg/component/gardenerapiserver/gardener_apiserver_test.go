@@ -712,7 +712,7 @@ var _ = Describe("GardenerAPIServer", func() {
 			},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: "rbac.authorization.k8s.io",
-				Kind:     "ClusterRole",
+				Kind:     "Role",
 				Name:     "extension-apiserver-authentication-reader",
 			},
 			Subjects: []rbacv1.Subject{{

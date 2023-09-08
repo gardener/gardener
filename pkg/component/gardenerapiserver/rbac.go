@@ -84,7 +84,7 @@ func (g *gardenerAPIServer) roleBindingAuthReader(serviceAccountName string) *rb
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
-			Kind:     "ClusterRole",
+			Kind:     "Role",
 			Name:     "extension-apiserver-authentication-reader",
 		},
 		Subjects: []rbacv1.Subject{{
