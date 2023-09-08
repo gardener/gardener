@@ -29,6 +29,8 @@ type Actuator interface {
 	Reconcile(context.Context, logr.Logger, *extensionsv1alpha1.Infrastructure, *extensionscontroller.Cluster) error
 	// Delete the Infrastructure config.
 	Delete(context.Context, logr.Logger, *extensionsv1alpha1.Infrastructure, *extensionscontroller.Cluster) error
+	// ForceDelete forcefully deletes the Infrastructure config.
+	ForceDelete(context.Context, logr.Logger, *extensionsv1alpha1.Infrastructure, *extensionscontroller.Cluster) error
 	// Restore takes the state of the Infrastrucure resource and applies it to the terraform pod's output state
 	Restore(context.Context, logr.Logger, *extensionsv1alpha1.Infrastructure, *extensionscontroller.Cluster) error
 	// Migrate deletes the terraform k8s resources without deleting the corresponding resources in the IaaS provider

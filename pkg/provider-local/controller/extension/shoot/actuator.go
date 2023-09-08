@@ -29,6 +29,9 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/utils/flow"
+	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -37,6 +40,7 @@ const (
 	ApplicationName string = "local-ext-shoot"
 	// ManagedResourceNamesShoot is the name used to describe the managed shoot resources.
 	ManagedResourceNamesShoot string = ApplicationName
+	finalizer                 string = "local-ext-shoot"
 )
 
 type actuator struct {
@@ -65,7 +69,7 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 		keepObjects          = false
 	)
 
-	return managedresources.Create(
+	if err := managedresources.Create(
 		ctx,
 		a.client,
 		namespace,
@@ -77,7 +81,41 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 		&keepObjects,
 		injectedLabels,
 		nil,
-	)
+	); err != nil {
+		return err
+	}
+
+	configMap1 := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "test-configmap-1",
+			Namespace:  ex.Namespace,
+			Finalizers: []string{finalizer},
+		},
+	}
+
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, configMap1, func() error {
+		configMap1.Labels = map[string]string{"key": "value"}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	configMap2 := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "test-configmap-2",
+			Namespace:  ex.Namespace,
+			Finalizers: []string{finalizer},
+		},
+	}
+
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, configMap2, func() error {
+		configMap2.Labels = map[string]string{"key": "value"}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Delete the extension resource.
@@ -93,6 +131,11 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, ex *extensionsv1
 	}
 
 	return managedresources.WaitUntilDeleted(timeoutShootCtx, a.client, namespace, ManagedResourceNamesShoot)
+}
+
+// ForceDelete force deletes the extension resource.
+func (a *actuator) ForceDelete(ctx context.Context, log logr.Logger, ex *extensionsv1alpha1.Extension) error {
+	return flow.Parallel(utilclient.ForceDeleteObjects(ctx, log, a.client, "ConfigMap", ex.Namespace, &corev1.ConfigMapList{}))(ctx)
 }
 
 // Migrate the extension resource.

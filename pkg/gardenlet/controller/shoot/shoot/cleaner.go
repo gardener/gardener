@@ -46,6 +46,8 @@ var (
 	extensionKindToObjectList = map[string]client.ObjectList{
 		extensionsv1alpha1.BastionResource:               &extensionsv1alpha1.BastionList{},
 		extensionsv1alpha1.ContainerRuntimeResource:      &extensionsv1alpha1.ContainerRuntimeList{},
+		extensionsv1alpha1.ControlPlaneResource:          &extensionsv1alpha1.ControlPlaneList{},
+		extensionsv1alpha1.DNSRecordResource:             &extensionsv1alpha1.DNSRecordList{},
 		extensionsv1alpha1.ExtensionResource:             &extensionsv1alpha1.ExtensionList{},
 		extensionsv1alpha1.InfrastructureResource:        &extensionsv1alpha1.InfrastructureList{},
 		extensionsv1alpha1.NetworkResource:               &extensionsv1alpha1.NetworkList{},
@@ -87,11 +89,7 @@ func (c *cleaner) DeleteExtensionObjects(ctx context.Context) error {
 	return utilclient.ApplyToObjectKinds(ctx, func(kind string, objectList client.ObjectList) flow.TaskFn {
 		return func(ctx context.Context) error {
 			c.log.Info("Deleting all extension resources", "kind", kind)
-			if err := extensions.DeleteExtensionObjects(ctx, c.seedClient, objectList, c.seedNamespace, nil); err != nil {
-				return err
-			}
-
-			return c.removeFinalizersFromObjects(ctx, c.seedNamespace, objectList)
+			return extensions.DeleteExtensionObjects(ctx, c.seedClient, objectList, c.seedNamespace, nil)
 		}
 	}, extensionKindToObjectList)
 }
@@ -115,28 +113,6 @@ func (c *cleaner) DeleteBackupEntry(ctx context.Context) error {
 // WaitUntilBackupEntryDeleted waits until the shoot BackupEntry resource in the garden cluster has been deleted.
 func (c *cleaner) WaitUntilBackupEntryDeleted(ctx context.Context) error {
 	return kubernetesutils.WaitUntilResourceDeleted(ctx, c.gardenClient, c.getEmptyBackupEntry(), defaultInterval)
-}
-
-// DeleteControlPlanes deletes all ControlPlane resources in the shoot namespace.
-func (c *cleaner) DeleteControlPlanes(ctx context.Context) error {
-	c.log.Info("Deleting all ControlPlane resources in namespace", "namespace", c.seedNamespace)
-	return extensions.DeleteExtensionObjects(ctx, c.seedClient, &extensionsv1alpha1.ControlPlaneList{}, c.seedNamespace, nil)
-}
-
-// WaitUntilControlPlanesDeleted waits until all ControlPlane resources in the shoot namespace have been deleted.
-func (c *cleaner) WaitUntilControlPlanesDeleted(ctx context.Context) error {
-	return extensions.WaitUntilExtensionObjectsDeleted(ctx, c.seedClient, c.log, &extensionsv1alpha1.ControlPlaneList{}, extensionsv1alpha1.ControlPlaneResource, c.seedNamespace, defaultInterval, defaultTimeout, nil)
-}
-
-// DeleteDNSRecords deletes all DNSRecord resources in the shoot namespace.
-func (c *cleaner) DeleteDNSRecords(ctx context.Context) error {
-	c.log.Info("Deleting all DNSRecord resources in namespace", "namespace", c.seedNamespace)
-	return extensions.DeleteExtensionObjects(ctx, c.seedClient, &extensionsv1alpha1.DNSRecordList{}, c.seedNamespace, nil)
-}
-
-// WaitUntilDNSRecordsDeleted waits until all DNSRecord resources in the shoot namespace have been deleted.
-func (c *cleaner) WaitUntilDNSRecordsDeleted(ctx context.Context) error {
-	return extensions.WaitUntilExtensionObjectsDeleted(ctx, c.seedClient, c.log, &extensionsv1alpha1.DNSRecordList{}, extensionsv1alpha1.DNSRecordResource, c.seedNamespace, defaultInterval, defaultTimeout, nil)
 }
 
 // DeleteMCMResources deletes all MachineControllerManager resources in the shoot namespace.

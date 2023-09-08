@@ -85,24 +85,6 @@ func (r *Reconciler) runForceDeleteShootFlow(ctx context.Context, o *operation.O
 
 		g = flow.NewGraph("Shoot cluster force deletion")
 
-		deleteControlPlanes = g.Add(flow.Task{
-			Name: "Deleting ControlPlane resources",
-			Fn:   flow.TaskFn(cleaner.DeleteControlPlanes).RetryUntilTimeout(defaultInterval, defaultTimeout),
-		})
-		waitUntilControlPlanesDeleted = g.Add(flow.Task{
-			Name:         "Waiting until ControlPlane resources have been deleted",
-			Fn:           cleaner.WaitUntilControlPlanesDeleted,
-			Dependencies: flow.NewTaskIDs(deleteControlPlanes),
-		})
-		deleteDNSRecords = g.Add(flow.Task{
-			Name: "Deleting DNSRecord resources",
-			Fn:   flow.TaskFn(cleaner.DeleteDNSRecords).RetryUntilTimeout(defaultInterval, defaultTimeout),
-		})
-		waitUntilDNSRecordsDeleted = g.Add(flow.Task{
-			Name:         "Waiting until DNSRecord resources have been deleted",
-			Fn:           cleaner.WaitUntilDNSRecordsDeleted,
-			Dependencies: flow.NewTaskIDs(deleteDNSRecords),
-		})
 		deleteExtensionObjects = g.Add(flow.Task{
 			Name: "Deleting extension resources",
 			Fn:   flow.TaskFn(cleaner.DeleteExtensionObjects).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -133,7 +115,7 @@ func (r *Reconciler) runForceDeleteShootFlow(ctx context.Context, o *operation.O
 		deleteCluster = g.Add(flow.Task{
 			Name:         "Deleting Cluster resource",
 			Fn:           flow.TaskFn(cleaner.DeleteCluster).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(waitUntilExtensionObjectsDeleted, waitUntilBackupEntryDeleted, waitUntilControlPlanesDeleted, waitUntilDNSRecordsDeleted),
+			Dependencies: flow.NewTaskIDs(waitUntilExtensionObjectsDeleted, waitUntilBackupEntryDeleted),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until Cluster resource has been deleted",

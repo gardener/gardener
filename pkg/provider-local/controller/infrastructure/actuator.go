@@ -115,6 +115,10 @@ func (a *actuator) Migrate(ctx context.Context, log logr.Logger, infrastructure 
 	return a.Delete(ctx, log, infrastructure, cluster)
 }
 
+func (a *actuator) ForceDelete(ctx context.Context, log logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
+	return a.Delete(ctx, log, infrastructure, cluster)
+}
+
 func (a *actuator) Restore(ctx context.Context, log logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
 	return a.Reconcile(ctx, log, infrastructure, cluster)
 }

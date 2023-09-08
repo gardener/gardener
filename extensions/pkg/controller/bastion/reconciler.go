@@ -147,8 +147,13 @@ func (r *reconciler) delete(
 	}
 
 	log.Info("Starting the deletion of Bastion")
-
-	if err := r.actuator.Delete(ctx, log, bastion, cluster); err != nil {
+	var err error
+	if v1beta1helper.ShootNeedsForceDeletion(cluster.Shoot) {
+		err = r.actuator.ForceDelete(ctx, log, bastion, cluster)
+	} else {
+		err = r.actuator.Delete(ctx, log, bastion, cluster)
+	}
+	if err != nil {
 		_ = r.statusUpdater.Error(ctx, log, bastion, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error deleting Bastion")
 		return reconcilerutils.ReconcileErr(err)
 	}

@@ -82,6 +82,11 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, ex *extensionsv1
 	return managedresources.WaitUntilDeleted(timeoutSeedCtx, a.client, namespace, ManagedResourceNamesSeed)
 }
 
+// ForceDelete force deletes the extension resource.
+func (a *actuator) ForceDelete(ctx context.Context, log logr.Logger, ex *extensionsv1alpha1.Extension) error {
+	return a.Delete(ctx, log, ex)
+}
+
 // Migrate the extension resource.
 func (a *actuator) Migrate(ctx context.Context, log logr.Logger, ex *extensionsv1alpha1.Extension) error {
 	return a.Delete(ctx, log, ex)

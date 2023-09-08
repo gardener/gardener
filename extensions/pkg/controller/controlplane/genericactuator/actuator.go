@@ -35,7 +35,6 @@ import (
 	extensionsshootwebhook "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/chart"
@@ -399,12 +398,6 @@ func (a *actuator) Delete(
 	cp *extensionsv1alpha1.ControlPlane,
 	cluster *extensionscontroller.Cluster,
 ) error {
-	if v1beta1helper.ShootNeedsForceDeletion(cluster.Shoot) {
-		return utilclient.ApplyToObjectKinds(ctx, func(kind string, objectList client.ObjectList) flow.TaskFn {
-			return utilclient.ForceDeleteObjects(ctx, log, a.client, kind, cp.Namespace, objectList)
-		}, a.extendedAPIsForCleanup)
-	}
-
 	sm, err := a.newSecretsManagerForControlPlane(ctx, log, cp, cluster, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create secrets manager for ControlPlane: %w", err)
@@ -415,6 +408,18 @@ func (a *actuator) Delete(
 	}
 
 	return sm.Cleanup(ctx)
+}
+
+// ForceDelete finalizes and deletes all the objects in the extendedAPIsForCleanup in the actuator.
+func (a *actuator) ForceDelete(
+	ctx context.Context,
+	log logr.Logger,
+	cp *extensionsv1alpha1.ControlPlane,
+	cluster *extensionscontroller.Cluster,
+) error {
+	return utilclient.ApplyToObjectKinds(ctx, func(kind string, objectList client.ObjectList) flow.TaskFn {
+		return utilclient.ForceDeleteObjects(ctx, log, a.client, kind, cp.Namespace, objectList)
+	}, a.extendedAPIsForCleanup)
 }
 
 func (a *actuator) delete(ctx context.Context, log logr.Logger, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) error {

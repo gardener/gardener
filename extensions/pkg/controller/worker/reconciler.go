@@ -163,7 +163,13 @@ func (r *reconciler) delete(
 	}
 
 	log.Info("Starting the deletion of worker")
-	if err := r.actuator.Delete(ctx, log, worker, cluster); err != nil {
+	var err error
+	if v1beta1helper.ShootNeedsForceDeletion(cluster.Shoot) {
+		err = r.actuator.ForceDelete(ctx, log, worker, cluster)
+	} else {
+		err = r.actuator.Delete(ctx, log, worker, cluster)
+	}
+	if err != nil {
 		_ = r.statusUpdater.Error(ctx, log, worker, err, gardencorev1beta1.LastOperationTypeDelete, "Error deleting Worker")
 		return reconcilerutils.ReconcileErr(err)
 	}
@@ -172,7 +178,7 @@ func (r *reconciler) delete(
 		return reconcile.Result{}, err
 	}
 
-	err := r.removeFinalizerFromWorker(ctx, log, worker)
+	err = r.removeFinalizerFromWorker(ctx, log, worker)
 	return reconcile.Result{}, err
 }
 

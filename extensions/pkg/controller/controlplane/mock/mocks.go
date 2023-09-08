@@ -51,6 +51,20 @@ func (mr *MockActuatorMockRecorder) Delete(arg0, arg1, arg2, arg3 interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockActuator)(nil).Delete), arg0, arg1, arg2, arg3)
 }
 
+// ForceDelete mocks base method.
+func (m *MockActuator) ForceDelete(arg0 context.Context, arg1 logr.Logger, arg2 *v1alpha1.ControlPlane, arg3 *extensions.Cluster) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ForceDelete", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ForceDelete indicates an expected call of ForceDelete.
+func (mr *MockActuatorMockRecorder) ForceDelete(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForceDelete", reflect.TypeOf((*MockActuator)(nil).ForceDelete), arg0, arg1, arg2, arg3)
+}
+
 // Migrate mocks base method.
 func (m *MockActuator) Migrate(arg0 context.Context, arg1 logr.Logger, arg2 *v1alpha1.ControlPlane, arg3 *extensions.Cluster) error {
 	m.ctrl.T.Helper()
