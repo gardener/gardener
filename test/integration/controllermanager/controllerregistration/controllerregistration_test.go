@@ -115,7 +115,7 @@ var _ = Describe("ControllerRegistration controller test", func() {
 				return seedControllerRegistration.Finalizers
 			}).Should(ConsistOf("core.gardener.cloud/controllerregistration"))
 
-			By("Expect ControllerInstallation be created")
+			By("Expect ControllerInstallation to be created")
 			Eventually(func(g Gomega) {
 				controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
 				g.Expect(testClient.List(ctx, controllerInstallationList, client.MatchingFields{
@@ -174,7 +174,7 @@ var _ = Describe("ControllerRegistration controller test", func() {
 			By("Create object")
 			Expect(testClient.Create(ctx, obj)).To(Succeed())
 
-			By("Expect ControllerInstallation be created")
+			By("Expect ControllerInstallation to be created")
 			Eventually(func(g Gomega) {
 				controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
 				g.Expect(testClient.List(ctx, controllerInstallationList, client.MatchingFields{
@@ -244,7 +244,7 @@ var _ = Describe("ControllerRegistration controller test", func() {
 			By("Create object")
 			Expect(testClient.Create(ctx, obj)).To(Succeed())
 
-			By("Expect ControllerInstallation be created")
+			By("Expect ControllerInstallation to be created")
 			controllerInstallation := &gardencorev1beta1.ControllerInstallation{}
 			Eventually(func(g Gomega) {
 				controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
@@ -363,7 +363,7 @@ var _ = Describe("ControllerRegistration controller test", func() {
 			By("Create object")
 			Expect(testClient.Create(ctx, obj)).To(Succeed())
 
-			By("Expect ControllerInstallation be created")
+			By("Expect ControllerInstallation to be created")
 			Eventually(func(g Gomega) {
 				controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
 				g.Expect(testClient.List(ctx, controllerInstallationList, client.MatchingFields{
@@ -415,7 +415,7 @@ var _ = Describe("ControllerRegistration controller test", func() {
 			By("Create object")
 			Expect(testClient.Create(ctx, shoot)).To(Succeed())
 
-			By("Expect ControllerInstallation be created")
+			By("Expect ControllerInstallation to be created")
 			Eventually(func(g Gomega) {
 				controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
 				g.Expect(testClient.List(ctx, controllerInstallationList, client.MatchingFields{
@@ -425,7 +425,7 @@ var _ = Describe("ControllerRegistration controller test", func() {
 				g.Expect(controllerInstallationList.Items).To(HaveLen(1))
 			}).Should(Succeed())
 
-			By("Delete object")
+			By("Delete Shoot")
 			Expect(testClient.Delete(ctx, shoot)).To(Succeed())
 
 			By("Expect ControllerInstallation be deleted")
@@ -477,7 +477,7 @@ var _ = Describe("ControllerRegistration controller test", func() {
 					return controllerRegistration.Finalizers
 				}).Should(ConsistOf("core.gardener.cloud/controllerregistration"))
 
-				By("Expect ControllerInstallation be created")
+				By("Expect ControllerInstallation to be created")
 				Eventually(func(g Gomega) {
 					controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
 					g.Expect(testClient.List(ctx, controllerInstallationList, client.MatchingFields{
@@ -546,7 +546,7 @@ var _ = Describe("ControllerRegistration controller test", func() {
 					return controllerRegistration.Finalizers
 				}).Should(ConsistOf("core.gardener.cloud/controllerregistration"))
 
-				By("Expect no ControllerInstallation be created because no Shoot exists")
+				By("Expect no ControllerInstallation to be created because no Shoot exists")
 				Consistently(func(g Gomega) {
 					controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
 					g.Expect(testClient.List(ctx, controllerInstallationList, client.MatchingFields{
@@ -559,7 +559,7 @@ var _ = Describe("ControllerRegistration controller test", func() {
 				By("Create object")
 				Expect(testClient.Create(ctx, shoot)).To(Succeed())
 
-				By("Expect ControllerInstallation be created")
+				By("Expect ControllerInstallation to be created")
 				Eventually(func(g Gomega) {
 					controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
 					g.Expect(testClient.List(ctx, controllerInstallationList, client.MatchingFields{
@@ -591,7 +591,7 @@ var _ = Describe("ControllerRegistration controller test", func() {
 					return controllerRegistration.Finalizers
 				}).Should(ConsistOf("core.gardener.cloud/controllerregistration"))
 
-				By("Expect no ControllerInstallation be created because no Shoot exists")
+				By("Expect no ControllerInstallation to be created because no Shoot exists")
 				Consistently(func(g Gomega) {
 					controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
 					g.Expect(testClient.List(ctx, controllerInstallationList, client.MatchingFields{
@@ -604,7 +604,7 @@ var _ = Describe("ControllerRegistration controller test", func() {
 				By("Create Shoot")
 				Expect(testClient.Create(ctx, shoot)).To(Succeed())
 
-				By("Expect ControllerInstallation be created")
+				By("Expect ControllerInstallation to be created")
 				Eventually(func(g Gomega) {
 					controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
 					g.Expect(testClient.List(ctx, controllerInstallationList, client.MatchingFields{
