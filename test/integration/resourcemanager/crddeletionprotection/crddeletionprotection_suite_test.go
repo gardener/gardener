@@ -31,6 +31,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	cmdutils "github.com/gardener/gardener/cmd/utils"
@@ -104,11 +105,11 @@ var _ = BeforeSuite(func() {
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             kubernetes.SeedScheme,
-		Port:               testEnv.WebhookInstallOptions.LocalServingPort,
-		Host:               testEnv.WebhookInstallOptions.LocalServingHost,
-		CertDir:            testEnv.WebhookInstallOptions.LocalServingCertDir,
-		MetricsBindAddress: "0",
+		Scheme:  kubernetes.SeedScheme,
+		Port:    testEnv.WebhookInstallOptions.LocalServingPort,
+		Host:    testEnv.WebhookInstallOptions.LocalServingHost,
+		CertDir: testEnv.WebhookInstallOptions.LocalServingCertDir,
+		Metrics: metricsserver.Options{BindAddress: "0"},
 	})
 	Expect(err).NotTo(HaveOccurred())
 

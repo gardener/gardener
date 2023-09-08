@@ -29,6 +29,7 @@ import (
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -297,7 +298,7 @@ func (c *ManagerConfig) Apply(opts *manager.Options) {
 	opts.LeaderElectionResourceLock = c.LeaderElectionResourceLock
 	opts.LeaderElectionID = c.LeaderElectionID
 	opts.LeaderElectionNamespace = c.LeaderElectionNamespace
-	opts.MetricsBindAddress = c.MetricsBindAddress
+	opts.Metrics = metricsserver.Options{BindAddress: c.MetricsBindAddress}
 	opts.HealthProbeBindAddress = c.HealthBindAddress
 	opts.Logger = c.Logger
 	opts.Controller = controllerconfig.Controller{RecoverPanic: pointer.Bool(true)}

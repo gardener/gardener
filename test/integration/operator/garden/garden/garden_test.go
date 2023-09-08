@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
@@ -120,8 +121,8 @@ var _ = Describe("Garden controller tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		mgr, err := manager.New(restConfig, manager.Options{
-			Scheme:             operatorclient.RuntimeScheme,
-			MetricsBindAddress: "0",
+			Scheme:  operatorclient.RuntimeScheme,
+			Metrics: metricsserver.Options{BindAddress: "0"},
 			Cache: cache.Options{
 				Mapper: mapper,
 				ByObject: map[client.Object]cache.ByObject{

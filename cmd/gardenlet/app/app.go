@@ -50,6 +50,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/cmd/gardenlet/app/bootstrappers"
 	"github.com/gardener/gardener/pkg/api/indexer"
@@ -152,7 +153,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
 
 		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(cfg.Server.HealthProbes.Port)),
-		MetricsBindAddress:     net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
+		Metrics:                metricsserver.Options{BindAddress: net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port))},
 
 		LeaderElection:                cfg.LeaderElection.LeaderElect,
 		LeaderElectionResourceLock:    cfg.LeaderElection.ResourceLock,
@@ -297,11 +298,11 @@ func (g *garden) Start(ctx context.Context) error {
 					// don't use any selector mechanism here since we want to still fall back to reading secrets with
 					// the API reader (i.e., not from cache) in case the respective secret is not found in the cache.
 					&corev1.Secret{}: func(c *rest.Config, o cache.Options) (cache.Cache, error) {
-						o.Namespaces = []string{seedNamespace}
+						o.DefaultNamespaces = map[string]cache.Config{seedNamespace: {}}
 						return cache.New(c, o)
 					},
 					&corev1.ServiceAccount{}: func(c *rest.Config, o cache.Options) (cache.Cache, error) {
-						o.Namespaces = []string{seedNamespace}
+						o.DefaultNamespaces = map[string]cache.Config{seedNamespace: {}}
 						return cache.New(c, o)
 					},
 					// Gardenlet does not have the required RBAC permissions for listing/watching the following

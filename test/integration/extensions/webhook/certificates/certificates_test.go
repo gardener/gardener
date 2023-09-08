@@ -39,6 +39,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
@@ -176,8 +177,8 @@ var _ = Describe("Certificates tests", func() {
 		JustBeforeEach(func() {
 			By("Setup manager")
 			mgr, err = manager.New(restConfig, manager.Options{
-				Scheme:             kubernetes.SeedScheme,
-				MetricsBindAddress: "0",
+				Scheme:  kubernetes.SeedScheme,
+				Metrics: metricsserver.Options{BindAddress: "0"},
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -345,8 +346,8 @@ var _ = Describe("Certificates tests", func() {
 		JustBeforeEach(func() {
 			By("Setup manager")
 			mgr, err = manager.New(restConfig, manager.Options{
-				Scheme:             kubernetes.SeedScheme,
-				MetricsBindAddress: "0",
+				Scheme:  kubernetes.SeedScheme,
+				Metrics: metricsserver.Options{BindAddress: "0"},
 			})
 			Expect(err).NotTo(HaveOccurred())
 
