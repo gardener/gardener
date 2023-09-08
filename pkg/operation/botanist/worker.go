@@ -150,8 +150,12 @@ func CloudConfigUpdatedForAllWorkerPools(
 				continue
 			}
 
-			if nodeChecksum, ok := node.Annotations[executor.AnnotationKeyChecksum]; ok && nodeChecksum != secretChecksum {
-				result = multierror.Append(result, fmt.Errorf("the last successfully applied cloud config on node %q is outdated (current: %s, desired: %s)", node.Name, nodeChecksum, secretChecksum))
+			if nodeChecksum, ok := node.Annotations[executor.AnnotationKeyChecksum]; nodeChecksum != secretChecksum {
+				if !ok {
+					result = multierror.Append(result, fmt.Errorf("the last successfully applied cloud config on node %q hasn't been reported yet", node.Name))
+				} else {
+					result = multierror.Append(result, fmt.Errorf("the last successfully applied cloud config on node %q is outdated (current: %s, desired: %s)", node.Name, nodeChecksum, secretChecksum))
+				}
 			}
 		}
 	}
