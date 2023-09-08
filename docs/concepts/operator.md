@@ -1,11 +1,9 @@
 # Gardener Operator
 
-The `gardener-operator` is meant to be responsible for the garden cluster environment.
+The `gardener-operator` is responsible for the garden cluster environment.
 Without this component, users must deploy ETCD, the Gardener control plane, etc., manually and with separate mechanisms (not maintained in this repository).
 This is quite unfortunate since this requires separate tooling, processes, etc.
 A lot of production- and enterprise-grade features were built into Gardener for managing the seed and shoot clusters, so it makes sense to re-use them as much as possible also for the garden cluster.
-
-**⚠️ Consider this component highly experimental and DO NOT use it in production.**
 
 ## Deployment
 
@@ -16,37 +14,6 @@ Note that there can only be one `Garden` resource per system at a time.
 > ℹ️ Similar to seed clusters, garden runtime clusters require a [VPA](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler), see [this section](#vertical-pod-autoscaler).
 > By default, `gardener-operator` deploys the VPA components.
 > However, when there already is a VPA available, then set `.spec.runtimeCluster.settings.verticalPodAutoscaler.enabled=false` in the `Garden` resource.
-
-## Using Garden Runtime Cluster As Seed Cluster
-
-In production scenarios, you probably wouldn't use the Kubernetes cluster running `gardener-operator` and the Gardener control plane (called "runtime cluster") as seed cluster at the same time.
-However, such setup is technically possible and might simplify certain situations (e.g., development, evaluation, ...).
-
-If the runtime cluster is a seed cluster at the same time, [`gardenlet`'s `Seed` controller](./gardenlet.md#seed-controller) will not manage the components which were already deployed (and reconciled) by `gardener-operator`.
-As of today, this applies to:
-
-- `gardener-resource-manager`
-- `vpa-{admission-controller,recommender,updater}`
-- `hvpa-controller` (when `HVPA` feature gate is enabled)
-- `etcd-druid`
-- `istio` control-plane
-- `nginx-ingress-controller`
-
-Those components are so-called "seed system components".
-In addition, there are a few observability components:
-
-- `fluent-operator`
-- `fluent-bit`
-- `vali`
-- `plutono`
-- `kube-state-metrics`
-
-As all of these components are managed by `gardener-operator` in this scenario, the `gardenlet` just skips them.
-
-> ℹ️ There is no need to configure anything - the `gardenlet` will automatically detect when its seed cluster is the garden runtime cluster at the same time.
-
-⚠️ Note that such setup requires that you upgrade the versions of `gardener-operator` and `gardenlet` in lock-step.
-Otherwise, you might experience unexpected behaviour or issues with your seed or shoot clusters.
 
 ## `Garden` Resources
 
@@ -79,131 +46,6 @@ Using a runtime cluster without VPA is not supported.
 #### Topology-Aware Traffic Routing
 
 Refer to the [Topology-Aware Traffic Routing documentation](../operations/topology_aware_routing.md) as this document contains the documentation for the topology-aware routing setting for the garden runtime cluster.
-
-## Credentials Rotation
-
-The credentials rotation works in the same way as it does for `Shoot` resources, i.e. there are `gardener.cloud/operation` annotation values for starting or completing the rotation procedures.
-
-For certificate authorities, `gardener-operator` generates one which is automatically rotated roughly each month (`ca-garden-runtime`) and several CAs which are **NOT** automatically rotated but only on demand.
-
-**🚨 Hence, it is the responsibility of the (human) operator to regularly perform the credentials rotation.**
-
-Please refer to [this document](../usage/shoot_credentials_rotation.md#gardener-provided-credentials) for more details. As of today, `gardener-operator` only creates the following types of credentials (i.e., some sections of the document don't apply for `Garden`s and can be ignored):
-
-- certificate authorities (and related server and client certificates)
-- ETCD encryption key
-- observability password For Plutono
-- `ServiceAccount` token signing key
-
-⚠️ Rotation of static `ServiceAccount` secrets is not supported since the `kube-controller-manager` does not enable the `serviceaccount-token` controller.
-
-## Local Development
-
-The easiest setup is using a local [KinD](https://kind.sigs.k8s.io/) cluster and the [Skaffold](https://skaffold.dev/) based approach to deploy and develop the `gardener-operator`.
-
-### Setting Up the KinD Cluster (runtime cluster)
-
-```shell
-make kind-operator-up
-```
-
-This command sets up a new KinD cluster named `gardener-local` and stores the kubeconfig in the `./example/gardener-local/kind/operator/kubeconfig` file.
-
-> It might be helpful to copy this file to `$HOME/.kube/config`, since you will need to target this KinD cluster multiple times.
-Alternatively, make sure to set your `KUBECONFIG` environment variable to `./example/gardener-local/kind/operator/kubeconfig` for all future steps via `export KUBECONFIG=$PWD/example/gardener-local/kind/operator/kubeconfig`.
-
-All the following steps assume that you are using this kubeconfig.
-
-### Setting Up Gardener Operator
-
-```shell
-make operator-up
-```
-
-This will first build the base images (which might take a bit if you do it for the first time).
-Afterwards, the Gardener Operator resources will be deployed into the cluster.
-
-### Developing Gardener Operator (Optional)
-
-```shell
-make operator-dev
-```
-
-This is similar to `make operator-up` but additionally starts a [skaffold dev loop](https://skaffold.dev/docs/workflows/dev/).
-After the initial deployment, skaffold starts watching source files.
-Once it has detected changes, press any key to trigger a new build and deployment of the changed components.
-
-### Debugging Gardener Operator (Optional)
-
-```shell
-make operator-debug
-```
-
-This is similar to `make gardener-debug` but for Gardener Operator component. Please check [Debugging Gardener](../deployment/getting_started_locally.md#debugging-gardener) for details.
-
-### Creating a `Garden`
-
-In order to create a garden, just run:
-
-```shell
-kubectl apply -f example/operator/20-garden.yaml
-```
-
-You can wait for the `Garden` to be ready by running:
-
-```shell
-./hack/usage/wait-for.sh garden local Reconciled
-```
-
-Alternatively, you can run `kubectl get garden` and wait for the `RECONCILED` status to reach `True`:
-
-```shell
-NAME     RECONCILED    AGE
-garden   Progressing   1s
-```
-
-(Optional): Instead of creating above `Garden` resource manually, you could execute the e2e tests by running:
-
-```shell
-make test-e2e-local-operator
-```
-
-#### Accessing the Virtual Garden Cluster
-
-⚠️ Please note that in this setup, the virtual garden cluster is not accessible by default when you download the kubeconfig and try to communicate with it.
-The reason is that your host most probably cannot resolve the DNS name of the cluster.
-Hence, if you want to access the virtual garden cluster, you have to run the following command which will extend your `/etc/hosts` file with the required information to make the DNS names resolvable:
-
-```shell
-cat <<EOF | sudo tee -a /etc/hosts
-
-# Manually created to access local Gardener virtual garden cluster.
-# TODO: Remove this again when the virtual garden cluster access is no longer required.
-127.0.0.1 api.virtual-garden.local.gardener.cloud
-EOF
-```
-
-To access the virtual garden, you can acquire a `kubeconfig` by
-
-```shell
-kubectl -n garden get secret gardener -o jsonpath={.data.kubeconfig} | base64 -d > /tmp/virtual-garden-kubeconfig
-kubectl --kubeconfig /tmp/virtual-garden-kubeconfig get namespaces
-```
-
-Note that this kubeconfig uses a token that has validity of `12h` only, hence it might expire and causing you to re-download the kubeconfig.
-
-### Deleting the `Garden`
-
-```shell
-./hack/usage/delete garden local
-```
-
-### Tear Down the Gardener Operator Environment
-
-```shell
-make operator-down
-make kind-operator-down
-```
 
 ## Controllers
 
@@ -340,3 +182,263 @@ It prevents creating a second `Garden` when there is already one in the system.
 This webhook handler mutates the `Garden` resource on `CREATE`/`UPDATE`/`DELETE` operations.
 Simple defaulting is performed via [standard CRD defaulting](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#defaulting).
 However, more advanced defaulting is hard to express via these means and is performed by this webhook handler.
+
+## Using Garden Runtime Cluster As Seed Cluster
+
+In production scenarios, you probably wouldn't use the Kubernetes cluster running `gardener-operator` and the Gardener control plane (called "runtime cluster") as seed cluster at the same time.
+However, such setup is technically possible and might simplify certain situations (e.g., development, evaluation, ...).
+
+If the runtime cluster is a seed cluster at the same time, [`gardenlet`'s `Seed` controller](./gardenlet.md#seed-controller) will not manage the components which were already deployed (and reconciled) by `gardener-operator`.
+As of today, this applies to:
+
+- `gardener-resource-manager`
+- `vpa-{admission-controller,recommender,updater}`
+- `hvpa-controller` (when `HVPA` feature gate is enabled)
+- `etcd-druid`
+- `istio` control-plane
+- `nginx-ingress-controller`
+
+Those components are so-called "seed system components".
+In addition, there are a few observability components:
+
+- `fluent-operator`
+- `fluent-bit`
+- `vali`
+- `plutono`
+- `kube-state-metrics`
+
+As all of these components are managed by `gardener-operator` in this scenario, the `gardenlet` just skips them.
+
+> ℹ️ There is no need to configure anything - the `gardenlet` will automatically detect when its seed cluster is the garden runtime cluster at the same time.
+
+⚠️ Note that such setup requires that you upgrade the versions of `gardener-operator` and `gardenlet` in lock-step.
+Otherwise, you might experience unexpected behaviour or issues with your seed or shoot clusters.
+
+## Credentials Rotation
+
+The credentials rotation works in the same way as it does for `Shoot` resources, i.e. there are `gardener.cloud/operation` annotation values for starting or completing the rotation procedures.
+
+For certificate authorities, `gardener-operator` generates one which is automatically rotated roughly each month (`ca-garden-runtime`) and several CAs which are **NOT** automatically rotated but only on demand.
+
+**🚨 Hence, it is the responsibility of the (human) operator to regularly perform the credentials rotation.**
+
+Please refer to [this document](../usage/shoot_credentials_rotation.md#gardener-provided-credentials) for more details. As of today, `gardener-operator` only creates the following types of credentials (i.e., some sections of the document don't apply for `Garden`s and can be ignored):
+
+- certificate authorities (and related server and client certificates)
+- ETCD encryption key
+- observability password For Plutono
+- `ServiceAccount` token signing key
+
+⚠️ Rotation of static `ServiceAccount` secrets is not supported since the `kube-controller-manager` does not enable the `serviceaccount-token` controller.
+
+## Migrating an Existing Gardener Landscape to `gardener-operator`
+
+Since `gardener-operator` was only developed in 2023, six years after the Gardener project initiation, most users probably already have an existing Gardener landscape.
+The most prominent installation procedure is [garden-setup](https://github.com/gardener/garden-setup), however experience shows that most community members have developed their own tooling for managing the garden cluster and the Gardener control plane components.
+
+> Consequently, providing a general migration guide is not possible since the detailed steps vary heavily based on how the components were set up previously.
+> As a result, this section can only highlight the most important caveats and things to know, while the concrete migration steps must be figured out individually based on the existing installation.
+>
+> Please test your migration procedure thoroughly.
+Note that in some cases it can be easier to set up a fresh landscape with `gardener-operator`, restore the ETCD data, switch the DNS records, and issue new credentials for all clients.
+
+Please make sure that you configure all your desired fields in the [`Garden` resource](#garden-resources).
+
+### ETCD
+
+`gardener-operator` leverages `etcd-druid` for managing the `virtual-garden-etcd-main` and `virtual-garden-etcd-events`, similar to how shoot cluster control planes are handled.
+The `PersistentVolumeClaim` names differ slightly - for `virtual-garden-etcd-events` it's `virtual-garden-etcd-events-virtual-garden-etcd-events-0`, while for `virtual-garden-etcd-main` it's `main-virtual-garden-etcd-virtual-garden-etcd-main-0`.
+The easiest approach for the migration is to make your existing ETCD volumes follow the same naming scheme.
+Alternatively, backup your data, let `gardener-operator` take over ETCD, and then [restore](https://github.com/gardener/etcd-backup-restore/blob/master/docs/operations/manual_restoration.md) your data to the new volume.
+
+The backup bucket must be created separately, and its name as well as the respective credentials must be provided via the `Garden` resource in `.spec.virtualCluster.etcd.main.backup`.
+
+### `virtual-garden-kube-apiserver` Deployment
+
+`gardener-operator` deploys a `virtual-garden-kube-apiserver` into the runtime cluster.
+This `virtual-garden-kube-apiserver` spans a new cluster, called the virtual cluster.
+There are a few certificates and other credentials that should not change during the migration.
+You have to prepare the environment accordingly by leveraging the [secret's manager capabilities](../development/secrets_management.md#migrating-existing-secrets-to-secretsmanager).
+
+- The existing Cluster CA `Secret` should be labeled with `secrets-manager-use-data-for-name=ca`.
+- The existing Client CA `Secret` should be labeled with `secrets-manager-use-data-for-name=ca-client`.
+- The existing Front Proxy CA `Secret` should be labeled with `secrets-manager-use-data-for-name=ca-front-proxy`.
+- The existing Service Account Signing Key `Secret` should be labeled with `secrets-manager-use-data-for-name=service-account-key`.
+- The existing ETCD Encryption Key `Secret` should be labeled with `secrets-manager-use-data-for-name=kube-apiserver-etcd-encryption-key`.
+
+### `virtual-garden-kube-apiserver` Exposure
+
+The `virtual-garden-kube-apiserver` is exposed via a dedicated `istio-ingressgateway` deployed to namespace `virtual-garden-istio-ingress`.
+The `virtual-garden-kube-apiserver` `Service` in the `garden` namespace is only of type `ClusterIP`.
+Consequently, DNS records for this API server must target the load balancer IP of the `istio-ingressgateway`.
+
+### Virtual Garden Kubeconfig
+
+`gardener-operator` does not generate any static token or likewise for access to the virtual cluster.
+Ideally, human users access it via OIDC only.
+Alternatively, you can create an auto-rotated token that you can use for automation like CI/CD pipelines:
+
+```yaml
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: shoot-access-virtual-garden
+  namespace: garden
+  labels:
+    resources.gardener.cloud/purpose: token-requestor
+  annotations:
+    serviceaccount.resources.gardener.cloud/name: virtual-garden-user
+    serviceaccount.resources.gardener.cloud/namespace: kube-system
+    serviceaccount.resources.gardener.cloud/token-expiration-duration: 3h
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: managedresource-virtual-garden-access
+  namespace: garden
+type: Opaque
+stringData:
+  clusterrolebinding____gardener.cloud.virtual-garden-access.yaml: |
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: gardener.cloud.sap:virtual-garden
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: cluster-admin
+    subjects:
+    - kind: ServiceAccount
+      name: virtual-garden-user
+      namespace: kube-system
+---
+apiVersion: resources.gardener.cloud/v1alpha1
+kind: ManagedResource
+metadata:
+  name: virtual-garden-access
+  namespace: garden
+spec:
+  secretRefs:
+  - name: managedresource-virtual-garden-access
+```
+
+The `shoot-access-virtual-garden` `Secret` will get a `.data.token` field which can be used to authenticate against the virtual garden cluster.
+See also [this document](resource-manager.md#tokenrequestor-controller) for more information about the `TokenRequestor`.
+
+### `gardener-apiserver`
+
+Similar to the [`virtual-garden-kube-apiserver`](#virtual-garden-kube-apiserver), the `gardener-apiserver` also uses a few certificates and other credentials that should not change during the migration.
+Again, you have to prepare the environment accordingly by leveraging the [secret's manager capabilities](../development/secrets_management.md#migrating-existing-secrets-to-secretsmanager).
+
+- The existing ETCD Encryption Key `Secret` should be labeled with `secrets-manager-use-data-for-name=gardener-apiserver-etcd-encryption-key`.
+
+Also note that `gardener-operator` manages the `Service` and `Endpoints` resources for the `gardener-apiserver` in the virtual cluster within the `kube-system` namespace (`garden-setup` uses the `garden` namespace).
+
+## Local Development
+
+The easiest setup is using a local [KinD](https://kind.sigs.k8s.io/) cluster and the [Skaffold](https://skaffold.dev/) based approach to deploy and develop the `gardener-operator`.
+
+### Setting Up the KinD Cluster (runtime cluster)
+
+```shell
+make kind-operator-up
+```
+
+This command sets up a new KinD cluster named `gardener-local` and stores the kubeconfig in the `./example/gardener-local/kind/operator/kubeconfig` file.
+
+> It might be helpful to copy this file to `$HOME/.kube/config`, since you will need to target this KinD cluster multiple times.
+Alternatively, make sure to set your `KUBECONFIG` environment variable to `./example/gardener-local/kind/operator/kubeconfig` for all future steps via `export KUBECONFIG=$PWD/example/gardener-local/kind/operator/kubeconfig`.
+
+All the following steps assume that you are using this kubeconfig.
+
+### Setting Up Gardener Operator
+
+```shell
+make operator-up
+```
+
+This will first build the base images (which might take a bit if you do it for the first time).
+Afterwards, the Gardener Operator resources will be deployed into the cluster.
+
+### Developing Gardener Operator (Optional)
+
+```shell
+make operator-dev
+```
+
+This is similar to `make operator-up` but additionally starts a [skaffold dev loop](https://skaffold.dev/docs/workflows/dev/).
+After the initial deployment, skaffold starts watching source files.
+Once it has detected changes, press any key to trigger a new build and deployment of the changed components.
+
+### Debugging Gardener Operator (Optional)
+
+```shell
+make operator-debug
+```
+
+This is similar to `make gardener-debug` but for Gardener Operator component. Please check [Debugging Gardener](../deployment/getting_started_locally.md#debugging-gardener) for details.
+
+### Creating a `Garden`
+
+In order to create a garden, just run:
+
+```shell
+kubectl apply -f example/operator/20-garden.yaml
+```
+
+You can wait for the `Garden` to be ready by running:
+
+```shell
+./hack/usage/wait-for.sh garden local Reconciled
+```
+
+Alternatively, you can run `kubectl get garden` and wait for the `RECONCILED` status to reach `True`:
+
+```shell
+NAME     RECONCILED    AGE
+garden   Progressing   1s
+```
+
+(Optional): Instead of creating above `Garden` resource manually, you could execute the e2e tests by running:
+
+```shell
+make test-e2e-local-operator
+```
+
+#### Accessing the Virtual Garden Cluster
+
+⚠️ Please note that in this setup, the virtual garden cluster is not accessible by default when you download the kubeconfig and try to communicate with it.
+The reason is that your host most probably cannot resolve the DNS name of the cluster.
+Hence, if you want to access the virtual garden cluster, you have to run the following command which will extend your `/etc/hosts` file with the required information to make the DNS names resolvable:
+
+```shell
+cat <<EOF | sudo tee -a /etc/hosts
+
+# Manually created to access local Gardener virtual garden cluster.
+# TODO: Remove this again when the virtual garden cluster access is no longer required.
+127.0.0.1 api.virtual-garden.local.gardener.cloud
+EOF
+```
+
+To access the virtual garden, you can acquire a `kubeconfig` by
+
+```shell
+kubectl -n garden get secret gardener -o jsonpath={.data.kubeconfig} | base64 -d > /tmp/virtual-garden-kubeconfig
+kubectl --kubeconfig /tmp/virtual-garden-kubeconfig get namespaces
+```
+
+Note that this kubeconfig uses a token that has validity of `12h` only, hence it might expire and causing you to re-download the kubeconfig.
+
+### Deleting the `Garden`
+
+```shell
+./hack/usage/delete garden local
+```
+
+### Tear Down the Gardener Operator Environment
+
+```shell
+make operator-down
+make kind-operator-down
+```
