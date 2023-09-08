@@ -376,6 +376,11 @@ var _ = Describe("Garden controller tests", func() {
 			Eventually(makeManagedResourceHealthy(name, "istio-system")).Should(Succeed())
 		}
 
+		// The garden controller waits for the etcd-druid ManagedResources to be healthy, but it is not really running
+		// in this test, so let's fake this here.
+		By("Patch etcd-druid ManagedResources to report healthiness")
+		Eventually(makeManagedResourceHealthy("etcd-druid", testNamespace.Name)).Should(Succeed())
+
 		By("Verify that the virtual garden control plane components have been deployed")
 		Eventually(func(g Gomega) []druidv1alpha1.Etcd {
 			etcdList := &druidv1alpha1.EtcdList{}
