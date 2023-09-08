@@ -198,7 +198,7 @@ var _ = Describe("Reconciler", func() {
 								LastUpdateTime:     metav1.Time{Time: fakeClock.Now().Add(-30 * time.Second)},
 							},
 						}
-						Expect(c.Update(ctx, seed)).To(Succeed())
+						Expect(c.Status().Update(ctx, seed)).To(Succeed())
 
 						matchExpectedCondition = MatchFields(IgnoreExtras, Fields{
 							"Message": matchMessage,
@@ -219,7 +219,7 @@ var _ = Describe("Reconciler", func() {
 								LastUpdateTime:     metav1.Time{Time: fakeClock.Now().Add(-2 * time.Minute)},
 							},
 						}
-						Expect(c.Update(ctx, seed)).To(Succeed())
+						Expect(c.Status().Update(ctx, seed)).To(Succeed())
 
 						matchExpectedCondition = MatchFields(IgnoreExtras, Fields{
 							"Message": matchMessage,

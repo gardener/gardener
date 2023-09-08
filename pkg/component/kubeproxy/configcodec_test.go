@@ -72,6 +72,12 @@ ipvs:
   tcpTimeout: 0s
   udpTimeout: 0s
 kind: KubeProxyConfiguration
+logging:
+  flushFrequency: 0
+  options:
+    json:
+      infoBufferSize: "0"
+  verbosity: 0
 metricsBindAddress: ""
 mode: ""
 nodePortAddresses: null

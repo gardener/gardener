@@ -706,7 +706,6 @@ spec:
   policyTypes:
   - Ingress
   - Egress
-status: {}
 `
 
 			serviceBackendYAML = `apiVersion: v1

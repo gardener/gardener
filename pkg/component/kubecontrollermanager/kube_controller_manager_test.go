@@ -835,7 +835,7 @@ namespace: kube-system
 				deploy.Status.Replicas = *deploy.Spec.Replicas
 				deploy.Status.UpdatedReplicas = *deploy.Spec.Replicas
 				deploy.Status.AvailableReplicas = *deploy.Spec.Replicas
-				Expect(c.Update(ctx, deploy)).To(Succeed())
+				Expect(c.Status().Update(ctx, deploy)).To(Succeed())
 			})
 			defer timer.Stop()
 

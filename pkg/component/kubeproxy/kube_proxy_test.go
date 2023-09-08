@@ -213,9 +213,9 @@ type: Opaque
 
 			configMapNameFor = func(ipvsEnabled bool) string {
 				if !ipvsEnabled {
-					return "kube-proxy-config-47550688"
+					return "kube-proxy-config-b2209acf"
 				}
-				return "kube-proxy-config-e93f60cb"
+				return "kube-proxy-config-ff9faa85"
 			}
 			configMapYAMLFor = func(ipvsEnabled bool) string {
 				out := `apiVersion: v1
@@ -270,6 +270,12 @@ data:
       tcpTimeout: 0s
       udpTimeout: 0s
     kind: KubeProxyConfiguration
+    logging:
+      flushFrequency: 0
+      options:
+        json:
+          infoBufferSize: "0"
+      verbosity: 0
     metricsBindAddress: 0.0.0.0:10249`
 				if ipvsEnabled {
 					out += `

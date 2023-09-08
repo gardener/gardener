@@ -124,7 +124,6 @@ spec:
   policyTypes:
   - Egress
   - Ingress
-status: {}
 `
 			networkPolicyFromSeedYAML = `apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -149,7 +148,6 @@ spec:
       networking.gardener.cloud/from-seed: allowed
   policyTypes:
   - Ingress
-status: {}
 `
 			serviceAccountYAML = `apiVersion: v1
 automountServiceAccountToken: false

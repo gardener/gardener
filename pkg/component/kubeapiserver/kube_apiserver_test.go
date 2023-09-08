@@ -3794,7 +3794,7 @@ rules:
 				deploy.Status.Replicas = *deploy.Spec.Replicas
 				deploy.Status.UpdatedReplicas = *deploy.Spec.Replicas
 				deploy.Status.AvailableReplicas = *deploy.Spec.Replicas
-				Expect(fakeClient.Update(ctx, deploy)).To(Succeed())
+				Expect(fakeClient.Status().Update(ctx, deploy)).To(Succeed())
 			})
 			defer timer.Stop()
 

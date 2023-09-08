@@ -267,7 +267,7 @@ var _ = Describe("Shoot Care Control", func() {
 						Conditions:  []gardencorev1beta1.Condition{apiServerCondition},
 						Constraints: []gardencorev1beta1.Condition{hibernationConstraint},
 					}
-					Expect(gardenClient.Update(ctx, shoot)).To(Succeed())
+					Expect(gardenClient.Status().Update(ctx, shoot)).To(Succeed())
 
 					Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 
@@ -317,7 +317,7 @@ var _ = Describe("Shoot Care Control", func() {
 						Conditions:  []gardencorev1beta1.Condition{apiServerCondition},
 						Constraints: []gardencorev1beta1.Condition{hibernationConstraint},
 					}
-					Expect(gardenClient.Update(ctx, shoot)).To(Succeed())
+					Expect(gardenClient.Status().Update(ctx, shoot)).To(Succeed())
 
 					Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 

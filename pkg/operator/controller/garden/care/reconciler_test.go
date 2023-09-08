@@ -167,7 +167,7 @@ var _ = Describe("Garden Care Control", func() {
 					garden.Status = operatorv1alpha1.GardenStatus{
 						Conditions: []gardencorev1beta1.Condition{gardenSystemComponentsCondition},
 					}
-					Expect(runtimeClient.Update(ctx, garden)).To(Succeed())
+					Expect(runtimeClient.Status().Update(ctx, garden)).To(Succeed())
 
 					Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 
