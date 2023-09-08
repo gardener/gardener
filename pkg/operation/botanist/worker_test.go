@@ -283,6 +283,17 @@ var _ = Describe("Worker", func() {
 			nil,
 			MatchError(ContainSubstring("missing cloud config secret metadata")),
 		),
+		Entry("checksum annotation missing",
+			[]gardencorev1beta1.Worker{{Name: "pool1"}},
+			map[string][]corev1.Node{"pool1": {{ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{"worker.gardener.cloud/kubernetes-version": "1.24.0"},
+			}}}},
+			map[string]metav1.ObjectMeta{"pool1": {
+				Name:        "cloud-config--c63c0",
+				Annotations: map[string]string{"checksum/data-script": "foo"},
+			}},
+			MatchError(ContainSubstring("hasn't been reported yet")),
+		),
 		Entry("checksum annotation outdated",
 			[]gardencorev1beta1.Worker{{Name: "pool1"}},
 			map[string][]corev1.Node{"pool1": {{ObjectMeta: metav1.ObjectMeta{
