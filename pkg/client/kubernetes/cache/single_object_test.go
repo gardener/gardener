@@ -71,7 +71,7 @@ var _ = Describe("SingleObject", func() {
 
 		mockCache = mockcache.NewMockCache(ctrl)
 		newCacheFunc := func(_ *rest.Config, opts cache.Options) (cache.Cache, error) {
-			Expect(opts.Namespaces).To(ConsistOf(obj.Namespace))
+			Expect(opts.DefaultNamespaces).To(HaveKeyWithValue(obj.Namespace, cache.Config{}))
 			Expect(opts.DefaultFieldSelector).To(Equal(fields.SelectorFromSet(fields.Set{"metadata.name": obj.Name})))
 			Expect(opts.ByObject).To(BeNil())
 			Expect(opts.SyncPeriod).To(Equal(syncPeriod))
