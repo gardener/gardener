@@ -539,7 +539,7 @@ var _ = Describe("ControllerRegistration controller test", func() {
 				g.Expect(controllerInstallationList.Items).To(HaveLen(1))
 			}).Should(Succeed())
 
-			By("Delete object")
+			By("Delete Shoot")
 			Expect(testClient.Delete(ctx, shoot)).To(Succeed())
 
 			By("Expect ControllerInstallation to be deleted")
