@@ -132,7 +132,10 @@ var _ = BeforeSuite(func() {
 		Scheme:  testScheme,
 		Metrics: metricsserver.Options{BindAddress: "0"},
 		Cache: cache.Options{
-			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
+			// Here kube-system namespace is added because in the controller we fetch cluster identity from
+			// kube-system namespace and expect it to return not found error, but if don't create cache for it
+			// a cache error will be returned.
+			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}, metav1.NamespaceSystem: {}},
 			ByObject: map[client.Object]cache.ByObject{
 				&gardencorev1beta1.Seed{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
