@@ -47,17 +47,17 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 	})
 
 	Context("NodeAgentConfiguration", func() {
-		It("should pass because apiversion is specified", func() {
+		It("should pass because apiVersion is specified", func() {
 			errorList := ValidateNodeAgentConfiguration(conf)
 			Expect(errorList).To(BeEmpty())
 		})
-		It("should fail because apiversion config is not specified", func() {
+		It("should fail because apiVersion config is not specified", func() {
 			conf.APIVersion = ""
 			errorList := ValidateNodeAgentConfiguration(conf)
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("nodeagent.config.apiversion"),
+					"Field": Equal("nodeAgent.config.apiVersion"),
 				})),
 			))
 		})
@@ -67,7 +67,7 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("nodeagent.config.hyperkubeimage"),
+					"Field": Equal("nodeAgent.config.hyperkubeImage"),
 				})),
 			))
 		})
@@ -77,7 +77,7 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("nodeagent.config.image"),
+					"Field": Equal("nodeAgent.config.image"),
 				})),
 			))
 		})
@@ -87,7 +87,7 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("nodeagent.config.kubernetesversion"),
+					"Field": Equal("nodeAgent.config.kubernetesVersion"),
 				})),
 			))
 		})
@@ -98,57 +98,57 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("nodeagent.config.kubernetesversion"),
+					"Field": Equal("nodeAgent.config.kubernetesVersion"),
 				})),
 			))
 		})
-		It("should fail because oscsecretname config is not specified", func() {
+		It("should fail because oscSecretName config is not specified", func() {
 			conf.OSCSecretName = ""
 			errorList := ValidateNodeAgentConfiguration(conf)
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("nodeagent.config.oscsecretname"),
+					"Field": Equal("nodeAgent.config.oscSecretName"),
 				})),
 			))
 		})
-		It("should fail because tokensecretname config is not specified", func() {
+		It("should fail because tokenSecretName config is not specified", func() {
 			conf.TokenSecretName = ""
 			errorList := ValidateNodeAgentConfiguration(conf)
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("nodeagent.config.tokensecretname"),
+					"Field": Equal("nodeAgent.config.tokenSecretName"),
 				})),
 			))
 		})
-		It("should fail because apiserver.URL config is not specified", func() {
+		It("should fail because apiServer.url config is not specified", func() {
 			conf.APIServer.URL = ""
 			errorList := ValidateNodeAgentConfiguration(conf)
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("nodeagent.config.apiserver.url"),
+					"Field": Equal("nodeAgent.config.apiServer.url"),
 				})),
 			))
 		})
-		It("should fail because apiserver.ca config is not specified", func() {
+		It("should fail because apiServer.ca config is not specified", func() {
 			conf.APIServer.CA = ""
 			errorList := ValidateNodeAgentConfiguration(conf)
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("nodeagent.config.apiserver.ca"),
+					"Field": Equal("nodeAgent.config.apiServer.ca"),
 				})),
 			))
 		})
-		It("should fail because apiserver.bootstraptoken config is not specified", func() {
+		It("should fail because apiServer.bootstrapToken config is not specified", func() {
 			conf.APIServer.BootstrapToken = ""
 			errorList := ValidateNodeAgentConfiguration(conf)
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("nodeagent.config.apiserver.bootstraptoken"),
+					"Field": Equal("nodeAgent.config.apiServer.bootstrapToken"),
 				})),
 			))
 		})
