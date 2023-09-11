@@ -81,7 +81,7 @@ var _ = Describe("NodeLocalDNS", func() {
 		values = Values{
 			Image:             image,
 			PSPDisabled:       true,
-			KubernetesVersion: semver.MustParse("1.22.1"),
+			KubernetesVersion: semver.MustParse("1.26.1"),
 		}
 
 		managedResource = &resourcesv1alpha1.ManagedResource{

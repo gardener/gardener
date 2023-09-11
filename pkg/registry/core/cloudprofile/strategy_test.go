@@ -58,7 +58,7 @@ var _ = Describe("PrepareForCreate", func() {
 							ExpirationDate: expiredExpirationDate1,
 						},
 						{
-							Version:        "1.23.6",
+							Version:        "1.24.6",
 							ExpirationDate: expiredExpirationDate2,
 						},
 					},

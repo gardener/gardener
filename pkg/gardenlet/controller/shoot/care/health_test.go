@@ -56,7 +56,7 @@ var _ = Describe("health check", func() {
 		condition gardencorev1beta1.Condition
 
 		seedNamespace     = "shoot--foo--bar"
-		kubernetesVersion = semver.MustParse("1.23.3")
+		kubernetesVersion = semver.MustParse("1.26.3")
 
 		shoot = &gardencorev1beta1.Shoot{
 			Spec: gardencorev1beta1.ShootSpec{
@@ -482,7 +482,7 @@ var _ = Describe("health check", func() {
 						Maximum: 10,
 						Minimum: 1,
 						Kubernetes: &gardencorev1beta1.WorkerKubernetes{
-							Version: pointer.String("1.22.3"),
+							Version: pointer.String("1.26.2"),
 						},
 					},
 				},

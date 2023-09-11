@@ -94,7 +94,7 @@ var _ = Describe("ManagedSeed", func() {
 					},
 					Kubernetes: core.Kubernetes{
 						EnableStaticTokenKubeconfig: pointer.Bool(true),
-						Version:                     "1.23.9",
+						Version:                     "1.27.5",
 						VerticalPodAutoscaler: &core.VerticalPodAutoscaler{
 							Enabled: true,
 						},

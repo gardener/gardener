@@ -65,7 +65,7 @@ var _ = Describe("NodeProblemDetector", func() {
 		values = Values{
 			Image:             image,
 			VPAEnabled:        false,
-			KubernetesVersion: semver.MustParse("1.22.1"),
+			KubernetesVersion: semver.MustParse("1.26.1"),
 		}
 		component = New(c, namespace, values)
 

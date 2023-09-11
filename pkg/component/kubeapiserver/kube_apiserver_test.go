@@ -133,8 +133,8 @@ var _ = Describe("KubeAPIServer", func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		sm = fakesecretsmanager.New(c, namespace)
 
-		version = semver.MustParse("1.22.1")
-		runtimeVersion = semver.MustParse("1.22.1")
+		version = semver.MustParse("1.25.1")
+		runtimeVersion = semver.MustParse("1.25.1")
 	})
 
 	JustBeforeEach(func() {
@@ -236,7 +236,7 @@ var _ = Describe("KubeAPIServer", func() {
 					MaxReplicas: 6,
 				}
 
-				runtimeVersion = semver.MustParse("1.23.0")
+				runtimeVersion = semver.MustParse("1.25.0")
 			})
 
 			It("should successfully deploy the HPA resource", func() {
@@ -611,10 +611,6 @@ var _ = Describe("KubeAPIServer", func() {
 		})
 
 		Describe("PodDisruptionBudget", func() {
-			BeforeEach(func() {
-				runtimeVersion = semver.MustParse("1.22.1")
-			})
-
 			It("should successfully deploy the PDB resource", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: policyv1.SchemeGroupVersion.Group, Resource: "poddisruptionbudgets"}, podDisruptionBudget.Name)))
 				Expect(kapi.Deploy(ctx)).To(Succeed())
@@ -2398,7 +2394,7 @@ rules:
 						"--requestheader-extra-headers-prefix=X-Remote-Extra-",
 						"--requestheader-group-headers=X-Remote-Group",
 						"--requestheader-username-headers=X-Remote-User",
-						"--runtime-config=apps/v1=false,autoscaling/v2=false,batch/v1=false,policy/v1/poddisruptionbudgets=false,policy/v1beta1/podsecuritypolicies=false,storage.k8s.io/v1/csidrivers=false,storage.k8s.io/v1/csinodes=false",
+						"--runtime-config=apps/v1=false,autoscaling/v2=false,batch/v1=false,policy/v1/poddisruptionbudgets=false,storage.k8s.io/v1/csidrivers=false,storage.k8s.io/v1/csinodes=false",
 						"--secure-port=443",
 						"--service-cluster-ip-range="+serviceNetworkCIDR,
 						"--service-account-issuer="+serviceAccountIssuer,
@@ -3042,6 +3038,7 @@ rules:
 				It("should allow to enable apis via 'RuntimeConfig' in case of workerless shoot with k8s version < 1.25", func() {
 					runtimeConfig := map[string]bool{"apps/v1": true, "bar": false}
 
+					version = semver.MustParse("v1.24.0")
 					kapi = New(kubernetesInterface, namespace, sm, Values{
 						Values: apiserver.Values{
 							RuntimeVersion: runtimeVersion,

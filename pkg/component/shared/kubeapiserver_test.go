@@ -114,7 +114,7 @@ var _ = Describe("KubeAPIServer", func() {
 				Data: map[string][]byte{"kubeconfig": []byte("kubeconfig-data")},
 			}
 
-			runtimeClientSet = fake.NewClientSetBuilder().WithClient(runtimeClient).WithVersion("1.22.0").Build()
+			runtimeClientSet = fake.NewClientSetBuilder().WithClient(runtimeClient).WithVersion("1.26.0").Build()
 			resourceConfigClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
 			sm = fakesecretsmanager.New(runtimeClient, namespace)
 		})

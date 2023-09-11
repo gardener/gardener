@@ -238,7 +238,7 @@ metadata:
 
 			Context("k8s = 1.22", func() {
 				BeforeEach(func() {
-					values.Shoot.KubernetesVersion = semver.MustParse("1.22.6")
+					values.Shoot.KubernetesVersion = semver.MustParse("1.26.6")
 					component = New(c, namespace, values)
 				})
 

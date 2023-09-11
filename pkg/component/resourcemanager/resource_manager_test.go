@@ -80,7 +80,7 @@ var _ = Describe("ResourceManager", func() {
 		healthPort                  int32 = 8081
 		metricsPort                 int32 = 8080
 		serverPort                        = 10250
-		version                           = semver.MustParse("1.22.1")
+		version                           = semver.MustParse("1.26.1")
 		binPackingSchedulingProfile       = gardencorev1beta1.SchedulingProfileBinPacking
 
 		// optional configuration
@@ -2337,7 +2337,7 @@ subjects:
 	Describe("#Destroy", func() {
 		Context("target differs from source cluster", func() {
 			JustBeforeEach(func() {
-				cfg.RuntimeKubernetesVersion = semver.MustParse("1.22")
+				cfg.RuntimeKubernetesVersion = semver.MustParse("1.26")
 				resourceManager = New(c, deployNamespace, sm, cfg)
 			})
 

@@ -184,7 +184,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Domain: &domain,
 					},
 					Kubernetes: core.Kubernetes{
-						Version: "1.24.2",
+						Version: "1.26.2",
 						KubeAPIServer: &core.KubeAPIServerConfig{
 							OIDCConfig: &core.OIDCConfig{
 								CABundle:       pointer.String("-----BEGIN CERTIFICATE-----\nMIICRzCCAfGgAwIBAgIJALMb7ecMIk3MMA0GCSqGSIb3DQEBCwUAMH4xCzAJBgNV\nBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNVBAcMBkxvbmRvbjEYMBYGA1UE\nCgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1JVCBEZXBhcnRtZW50MRswGQYD\nVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwIBcNMTcwNDI2MjMyNjUyWhgPMjExNzA0\nMDIyMzI2NTJaMH4xCzAJBgNVBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNV\nBAcMBkxvbmRvbjEYMBYGA1UECgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1J\nVCBEZXBhcnRtZW50MRswGQYDVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwXDANBgkq\nhkiG9w0BAQEFAANLADBIAkEAtBMa7NWpv3BVlKTCPGO/LEsguKqWHBtKzweMY2CV\ntAL1rQm913huhxF9w+ai76KQ3MHK5IVnLJjYYA5MzP2H5QIDAQABo1AwTjAdBgNV\nHQ4EFgQU22iy8aWkNSxv0nBxFxerfsvnZVMwHwYDVR0jBBgwFoAU22iy8aWkNSxv\n0nBxFxerfsvnZVMwDAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQsFAANBAEOefGbV\nNcHxklaW06w6OBYJPwpIhCVozC1qdxGX1dg8VkEKzjOzjgqVD30m59OFmSlBmHsl\nnkVA6wyOSDYBf3o=\n-----END CERTIFICATE-----"),
@@ -2009,6 +2009,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		Context("kubernetes.allowPrivilegedContainers field validation", func() {
 			Context("kubernetes version < 1.25", func() {
 				It("should allow creating shoots with this field set", func() {
+					shoot.Spec.Kubernetes.Version = "1.24.6"
 					shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(true)
 
 					errorList := ValidateShoot(shoot)
@@ -2927,7 +2928,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		Context("worker pool kubernetes version", func() {
 			It("should forbid worker pool kubernetes version higher than control plane", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.25.0")}
+				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.27.0")}
 
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
@@ -2944,10 +2945,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should allow to set worker pool kubernetes version lower one minor than control plane version", func() {
-				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.23.2")}
+				shoot.Spec.Kubernetes.Version = "1.26.2"
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.26.2")}
 
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Kubernetes.Version = "1.24.2"
+				newShoot.Spec.Kubernetes.Version = "1.27.2"
 
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 			})
@@ -2963,11 +2965,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("forbid to set worker pool kubernetes version lower three minor than control plane version for k8s version < 1.28", func() {
-				shoot.Spec.Kubernetes.Version = "1.25.0"
-				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.23.2")}
+				shoot.Spec.Kubernetes.Version = "1.26.0"
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.24.2")}
 
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Kubernetes.Version = "1.26.0"
+				newShoot.Spec.Kubernetes.Version = "1.27.0"
 
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
@@ -3011,8 +3013,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("forbid to set worker pool kubernetes version to nil with two minor difference", func() {
-				shoot.Spec.Kubernetes.Version = "1.25.0"
-				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.23.2")}
+				shoot.Spec.Kubernetes.Version = "1.27.0"
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.25.2")}
 
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: nil}
@@ -5643,7 +5645,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		)
 
 		DescribeTable("MemorySwap",
-			func(allowSwap bool, swapBehavior *string, k8sVersion string, matcher gomegatypes.GomegaMatcher) {
+			func(allowSwap bool, swapBehavior *string, matcher gomegatypes.GomegaMatcher) {
 				kubeletConfig := core.KubeletConfig{}
 				if swapBehavior != nil {
 					kubeletConfig.MemorySwap = &core.MemorySwapConfiguration{SwapBehavior: (*core.SwapBehavior)(swapBehavior)}
@@ -5656,15 +5658,15 @@ var _ = Describe("Shoot Validation Tests", func() {
 					kubeletConfig.FailSwapOn = pointer.Bool(false)
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, k8sVersion, false, nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "1.26", false, nil)
 				Expect(errList).To(matcher)
 			},
 
-			Entry("should allow empty memory swap", false, nil, "1.22", BeEmpty()),
-			Entry("should allow empty memory swap - NodeSwap set and FailSwap=false", true, nil, "1.22", BeEmpty()),
-			Entry("should allow LimitedSwap behavior", true, pointer.String("LimitedSwap"), "1.22", BeEmpty()),
-			Entry("should allow UnlimitedSwap behavior", true, pointer.String("UnlimitedSwap"), "1.22", BeEmpty()),
-			Entry("should forbid configuration of swap behaviour if either the feature gate NodeSwap is not set or FailSwap=true", false, pointer.String("LimitedSwap"), "1.22", ConsistOf(
+			Entry("should allow empty memory swap", false, nil, BeEmpty()),
+			Entry("should allow empty memory swap - NodeSwap set and FailSwap=false", true, nil, BeEmpty()),
+			Entry("should allow LimitedSwap behavior", true, pointer.String("LimitedSwap"), BeEmpty()),
+			Entry("should allow UnlimitedSwap behavior", true, pointer.String("UnlimitedSwap"), BeEmpty()),
+			Entry("should forbid configuration of swap behaviour if either the feature gate NodeSwap is not set or FailSwap=true", false, pointer.String("LimitedSwap"), ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("memorySwap"),

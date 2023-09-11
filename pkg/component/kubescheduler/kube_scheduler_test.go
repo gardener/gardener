@@ -57,9 +57,9 @@ var _ = Describe("KubeScheduler", func() {
 		kubeScheduler            Interface
 		ctx                            = context.TODO()
 		namespace                      = "shoot--foo--bar"
-		version                        = "1.23.2"
+		version                        = "1.27.2"
 		semverVersion, _               = semver.NewVersion(version)
-		image                          = "registry.k8s.io/kube-scheduler:v1.23.2"
+		image                          = "registry.k8s.io/kube-scheduler:v1.27.2"
 		replicas                 int32 = 1
 		profileBinPacking              = gardencorev1beta1.SchedulingProfileBinPacking
 		runtimeKubernetesVersion       = semver.MustParse("1.25.0")
