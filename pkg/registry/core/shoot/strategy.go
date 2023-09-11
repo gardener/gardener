@@ -83,7 +83,7 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 		newShoot.Generation = oldShoot.Generation + 1
 	}
 
-	// TODO(acumino): Drop this in gardener v1.84 release.
+	// TODO(acumino): Drop this after v1.83 has been released.
 	removeDuplicateExtensions(newShoot)
 }
 
