@@ -19,7 +19,6 @@ import (
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
@@ -37,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/gardeneradmissioncontroller"
 	"github.com/gardener/gardener/pkg/component/gardenerapiserver"
 	"github.com/gardener/gardener/pkg/component/gardenercontrollermanager"
+	"github.com/gardener/gardener/pkg/component/gardenermetricsexporter"
 	"github.com/gardener/gardener/pkg/component/gardenerscheduler"
 	runtimegardensystem "github.com/gardener/gardener/pkg/component/gardensystem/runtime"
 	virtualgardensystem "github.com/gardener/gardener/pkg/component/gardensystem/virtual"
@@ -46,6 +46,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/logging/vali"
+	"github.com/gardener/gardener/pkg/component/plutono"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/component/vpa"
 	"github.com/gardener/gardener/pkg/features"
@@ -61,11 +62,6 @@ var (
 	requiredGardenRuntimeManagedResources = sets.New(
 		etcd.Druid,
 		runtimegardensystem.ManagedResourceName,
-		kubestatemetrics.ManagedResourceName,
-		fluentoperator.OperatorManagedResourceName,
-		fluentoperator.CustomResourcesManagedResourceName+"-garden",
-		fluentoperator.FluentBitManagedResourceName,
-		vali.ManagedResourceNameRuntime,
 	)
 
 	requiredVirtualGardenManagedResources = sets.New(
@@ -94,13 +90,16 @@ var (
 		virtualGardenPrefix+v1beta1constants.ETCDEvents,
 	)
 
-	requiredMonitoringDeployments = sets.New(
-		v1beta1constants.DeploymentNameKubeStateMetrics,
-		v1beta1constants.DeploymentNamePlutono,
-		v1beta1constants.DeploymentNameGardenerMetricsExporter,
+	requiredObservabilityManagedResources = sets.New(
+		kubestatemetrics.ManagedResourceName,
+		fluentoperator.OperatorManagedResourceName,
+		fluentoperator.CustomResourcesManagedResourceName+"-garden",
+		fluentoperator.FluentBitManagedResourceName,
+		vali.ManagedResourceNameRuntime,
+		plutono.ManagedResourceName,
+		gardenermetricsexporter.ManagedResourceNameRuntime,
+		gardenermetricsexporter.ManagedResourceNameVirtual,
 	)
-
-	virtualGardenMonitoringSelector = labels.SelectorFromSet(map[string]string{v1beta1constants.LabelRole: v1beta1constants.LabelMonitoring})
 )
 
 // health contains information needed to execute health checks for garden.
@@ -199,9 +198,7 @@ func (h *health) checkVirtualComponents(ctx context.Context, condition gardencor
 		return exitCondition, err
 	}
 
-	managedResources := sets.List(requiredVirtualGardenManagedResources)
-
-	return h.checkManagedResources(ctx, condition, managedResources, "VirtualComponentsRunning", "All virtual garden components are healthy.")
+	return h.checkManagedResources(ctx, condition, sets.List(requiredVirtualGardenManagedResources), "VirtualComponentsRunning", "All virtual garden components are healthy.")
 }
 
 func (h *health) checkManagedResources(
@@ -239,18 +236,7 @@ func (h *health) checkManagedResources(
 
 // checkObservabilityComponents checks whether the  observability components of the virtual garden control plane (Prometheus, Vali, Plutono..) are healthy.
 func (h *health) checkObservabilityComponents(ctx context.Context, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
-	requiredDeployments := requiredMonitoringDeployments.Clone()
-
-	if exitCondition, err := h.healthChecker.CheckMonitoringControlPlane(ctx, h.gardenNamespace, requiredDeployments, sets.New[string](), virtualGardenMonitoringSelector, condition); err != nil || exitCondition != nil {
-		return exitCondition, err
-	}
-
-	if exitCondition, err := h.healthChecker.CheckLoggingControlPlane(ctx, h.gardenNamespace, false, true, condition); err != nil || exitCondition != nil {
-		return exitCondition, err
-	}
-
-	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "ObservabilityComponentsRunning", "All observability components are healthy.")
-	return &c, nil
+	return h.checkManagedResources(ctx, condition, sets.List(requiredObservabilityManagedResources), "ObservabilityComponentsRunning", "All observability components are healthy.")
 }
 
 func (h *health) isVPAEnabled() bool {
