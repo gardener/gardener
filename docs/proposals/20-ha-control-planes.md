@@ -1,6 +1,6 @@
 ---
 title: 20 Highly Available Shoot Control Planes
-gep-number: "20"
+gep-number: 20
 creation-date: 2022-07-07
 status: implementable
 authors:
@@ -102,7 +102,7 @@ Each consumer therefore needs to decide on the degree of failure isolation that 
 - In the current scope, three control plane components - `Kube Apiserver`, `etcd`, and `Gardener Resource Manager` will be highly available. In the future, other components could be set up in HA mode.
 - To achieve HA we consider components to have at least three replicas. Greater failure tolerance is not targeted by this GEP.
 
-## High Availablity 
+## High Availablity
 
 ### Topologies
 
@@ -160,7 +160,7 @@ The consumer can optionally specify `highAvailability` in the shoot spec. Failur
 
 ## Gardener Scheduler
 
-A scheduling request could be for a HA shoot with failure tolerance of `node` or `zone`. It is therefore required to appropriately select a seed. 
+A scheduling request could be for a HA shoot with failure tolerance of `node` or `zone`. It is therefore required to appropriately select a seed.
 
 ### Case #1: HA Shoot with no Seed Assigned
 
@@ -192,7 +192,7 @@ _Proposed Change_
 
 As mentioned in [High-Availablity](#high-availablity), certain aspects need to be considered for a seed cluster to host HA shoots. The following sections explain the requirements for a seed cluster to host a single or multi zonal HA shoot cluster.
 
-### Hosting an HA Shoot Control Plane with `node` Failure Tolerance 
+### Hosting an HA Shoot Control Plane with `node` Failure Tolerance
 
 To host an HA shoot control plane within a single zone, it should be ensured that each worker pool that potentially runs seed system or shoot control plane components should have at least **three nodes**. This is also the minium size that is required by an HA `etcd` cluster with a failure tolerance of a single node. Furthermore, the nodes must run in a single zone only (see [Recommended Number of Nodes and Zones](#recommended-number-of-nodes-and-zones)).
 
@@ -211,7 +211,7 @@ At present, seed usage is computed by counting the number of shoot control plane
 Which parameters could be considered?
 * Number of available machines of a type, as requested as part of the shoot spec. Sufficient capacity should be available to also allow rolling updates, which will also be governed by the `maxSurge` configuration at the worker pool level.
 * Node CIDR range must grant enough space to schedule additional replicas that the HA feature requires. (For instance, for etcd the requirement for nodes will be 3 times higher, as compared to the current single node).
-* If additional zones are added to an existing non-multi-zonal seed cluster to make it multi-zonal, then care should be taken that zone specific CIDRs are appropriately checked and changed if required. 
+* If additional zones are added to an existing non-multi-zonal seed cluster to make it multi-zonal, then care should be taken that zone specific CIDRs are appropriately checked and changed if required.
 * Number of volumes that will be required to host a multi-node/multi-zone etcd cluster will increase by `(n-1)` where `n` is the total number of members in the etcd cluster.
 
 The above list is not an exhaustive list and is just indicative that the currently set limit of 250 will have to be revisited.

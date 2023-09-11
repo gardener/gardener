@@ -1,6 +1,6 @@
 ---
 title: Autoscaling Shoot `kube-apiserver` via Independently Driven HPA and VPA
-gep-number: 0023
+gep-number: 23
 creation-date: 2023-01-31
 status: implementable
 authors:
@@ -42,7 +42,7 @@ reviewers:
 When it comes to autoscaling shoot control plane `kube-apiserver` instances (ShootKapi hereafter), Gardener needs
 both stability and efficiency (accurate scaling). The existing approach of fusing HPA and VPA into the 2-dimensional
 autoscaler which is HVPA, poses severe algorithmic limitations which manifest as stability and efficiency issues in the
-field. 
+field.
 
 This document outlines the main deficiencies in the existing solution and proposes a simple design which overcomes them,
 reduces maintenance effort by reducing Gardener's custom code base, and enables subsequent reduction in ShootKapi
@@ -57,13 +57,13 @@ This need is a consequence of the following concerns:
    compute resources required by ShootKapis of different shoots vary by two orders of magnitude.
 2. The compute cost of ShootKapi workloads constitutes a major part of Gardener's overall compute cost. Small relative
    waste in sizing ShootKapis results in considerable absolute cost.
-3. Kube-apiserver does not scale well horizontally, in a sense that extra replicas come with substantial compute overhead.   
+3. Kube-apiserver does not scale well horizontally, in a sense that extra replicas come with substantial compute overhead.
 
 In short, ShootKapi needs to be scaled:
 - Within a broad range
 - With reasonable accuracy, relative to actual resource consumption
 
-The implication is that ShootKapi requires both horizontal and vertical scaling. The existing implementation utilized 
+The implication is that ShootKapi requires both horizontal and vertical scaling. The existing implementation utilized
 to that end is [HVPA].
 
 ### Existing Solution
@@ -136,7 +136,7 @@ all custom metrics for the seed kube-apiserver, including the one driving the Sh
 
 _Fig 2: Proposed design_
 
-### Element: Gardener Custom Metrics Provider Component 
+### Element: Gardener Custom Metrics Provider Component
 A new component, named gardener-custom-metrics is added to seed clusters. It periodically scrapes the metrics endpoints
 of all ShootKapi pods on the seed. It implements the K8s custom metrics API and provides K8s metrics specific to
 Gardener, based on custom calculations. The proposed design can naturally be extended to multiple sources of
@@ -149,7 +149,7 @@ possible, in which a metrics filter component is added as a sidecar to each Shoo
 mirror the metrics endpoint of its respective ShootKapi, with the only addition of support for filtering based on an
 HTTP request parameter (e.g. `GET /metrics?name=apiserver_request_total` would forward a `GET /metrics` request to the
 ShootKapi, and then would reduce the response to only `apiserver_request_total` counters, before passing it on to the
-caller). 
+caller).
 
 #### High availability operation
 A single gardener-custom-metrics replica does not satisfy Gardener's high availability (HA) requirements. Autoscaling
@@ -165,7 +165,7 @@ That service does not use a selector and endpoints are managed by gardener-custo
 At any time there is at most one endpoint.
 When a gardener-custom-metrics replica acquires leadership, as part of the transition from passive to active
 state, the replica configures the service with a single endpoint which points to its own metrics server IP
-endpoint. 
+endpoint.
 
 Since gardener-custom-metrics replicas do not interfere with each other, an active/passive arrangement is not
 necessitated by functional requirements. A simpler active/active is technically possible, but pragmatically undesirable
@@ -236,7 +236,7 @@ loads.
 #### Gardener-custom metrics precludes the use of other sources of custom metrics
 With current K8s design, only one API extension can serve custom metrics. Per this GEP, the custom metrics extension
 point is occupied by gardener-custom-metrics. If necessary in the future, this limitation can be mitigated via
-gardener-custom-metrics aggregating other sources of custom metrics, and selectively forwarding queries to them. 
+gardener-custom-metrics aggregating other sources of custom metrics, and selectively forwarding queries to them.
 
 #### Observed fluctuations in actual compute efficiency affecting ShootKapi workloads
 There is a known source of horizontal scaling inefficiency, which presents an opportunity for substantial further
@@ -258,18 +258,18 @@ is planned, where instead of overall request rate, HPA will be driven by a weigh
 compute cost of different request categories (e.g. a cluster-scoped LIST is more cpu intensive than a resource-scoped PUT).
 
 ## Alternatives
-Below is a list of the most promising alternatives to the proposed approach. 
+Below is a list of the most promising alternatives to the proposed approach.
 1. **Using VPA, plus a simple custom horizontal autoscaler which acts when VPA recommendation goes below or above a
    predetermined acceptable range:**
    Initial research indicates to be a promising solution. The solution described in this GEP was ultimately preferred
-   because it does not require building custom components.   
-2. **Adding the missing stabilization features to VPA via a custom recommender which is a minimal fork of the default 
+   because it does not require building custom components.
+2. **Adding the missing stabilization features to VPA via a custom recommender which is a minimal fork of the default
    VPA recommender:**
    Not a standalone solution, but a potential part of any solution which leverages VPA but requires less disruptive
    scaling behavior. Research indicates to be a pragmatically viable solution, incurring minimal ongoing maintenance
    cost.
 
-Continued use of (an improved) HVPA does not look promising, due to the inherent algorithmic issues described above. 
+Continued use of (an improved) HVPA does not look promising, due to the inherent algorithmic issues described above.
 
 ## References
 - [HVPA]
