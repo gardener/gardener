@@ -54,7 +54,7 @@ Because actual and previous configuration are compared, removed files and units 
 
 ### Availability
 
-Previously, the `cloud-config-downloader` simply restarted the `systemd-units` on every change to the `OSC`, regardless which of the services changed. The `gardener-node-agent` first checks which systemd-unit was changed, and will only restart these. This will remove unneeded `kubelet` restarts.
+Previously, the `cloud-config-downloader` simply restarted the `systemd-units` on every change to the `OSC`, regardless which of the services changed. The `gardener-node-agent` first checks which systemd-unit was changed, and will only restart these. This will prevent unneeded `kubelet` restarts.
 
 ### Future Development
 
