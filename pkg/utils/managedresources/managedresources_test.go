@@ -36,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -395,9 +396,7 @@ var _ = Describe("managedresources", func() {
 		})
 
 		It("should retry when the managed resource is not healthy yet", func() {
-			oldInterval := IntervalWait
-			defer func() { IntervalWait = oldInterval }()
-			IntervalWait = time.Millisecond * 10
+			DeferCleanup(test.WithVar(&IntervalWait, time.Millisecond*10))
 
 			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
 			shouldFail := atomic.Bool{}
@@ -504,7 +503,145 @@ var _ = Describe("managedresources", func() {
 		})
 	})
 
-	Describe("WaitUntilDeleted", func() {
+	Describe("#WaitUntilHealthyAndNotProgressing()", func() {
+		It("should fail when the managed resource cannot be read", func() {
+			errClient := &errorClient{err: fakeErr, failMRGet: true, Client: fakeClient}
+			Expect(WaitUntilHealthyAndNotProgressing(ctx, errClient, namespace, name)).To(MatchError(fakeErr))
+		})
+
+		It("should retry when the managed resource is not healthy yet or still progressing", func() {
+			DeferCleanup(test.WithVar(&IntervalWait, time.Millisecond*10))
+
+			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
+			shouldFail := atomic.Bool{}
+			shouldFail.Store(true)
+			go func() {
+				defer GinkgoRecover()
+				_, err := controllerutils.GetAndCreateOrMergePatch(ctx, fakeClient, mr, func() error {
+					mr.ObjectMeta.Generation = 2
+					mr.Status = resourcesv1alpha1.ManagedResourceStatus{
+						ObservedGeneration: 1,
+					}
+					return nil
+				})
+				Expect(err).To(Not(HaveOccurred()))
+				time.Sleep(time.Millisecond * 50)
+
+				_, err = controllerutils.GetAndCreateOrMergePatch(ctx, fakeClient, mr, func() error {
+					mr.ObjectMeta.Generation = 2
+					mr.Status = resourcesv1alpha1.ManagedResourceStatus{
+						ObservedGeneration: 2,
+					}
+					return nil
+				})
+				Expect(err).To(Not(HaveOccurred()))
+				time.Sleep(time.Millisecond * 50)
+
+				_, err = controllerutils.GetAndCreateOrMergePatch(ctx, fakeClient, mr, func() error {
+					mr.ObjectMeta.Generation = 2
+					mr.Status = resourcesv1alpha1.ManagedResourceStatus{
+						ObservedGeneration: 2,
+						Conditions: []gardencorev1beta1.Condition{
+							{
+								Type:   resourcesv1alpha1.ResourcesApplied,
+								Status: gardencorev1beta1.ConditionTrue,
+							},
+						},
+					}
+					return nil
+				})
+				Expect(err).To(Not(HaveOccurred()))
+				time.Sleep(time.Millisecond * 50)
+
+				_, err = controllerutils.GetAndCreateOrMergePatch(ctx, fakeClient, mr, func() error {
+					mr.ObjectMeta.Generation = 2
+					mr.Status = resourcesv1alpha1.ManagedResourceStatus{
+						ObservedGeneration: 2,
+						Conditions: []gardencorev1beta1.Condition{
+							{
+								Type:   resourcesv1alpha1.ResourcesHealthy,
+								Status: gardencorev1beta1.ConditionTrue,
+							},
+						},
+					}
+					return nil
+				})
+				Expect(err).To(Not(HaveOccurred()))
+				time.Sleep(time.Millisecond * 50)
+
+				_, err = controllerutils.GetAndCreateOrMergePatch(ctx, fakeClient, mr, func() error {
+					mr.ObjectMeta.Generation = 1
+					mr.Status = resourcesv1alpha1.ManagedResourceStatus{
+						ObservedGeneration: 1,
+						Conditions: []gardencorev1beta1.Condition{
+							{
+								Type:   resourcesv1alpha1.ResourcesApplied,
+								Status: gardencorev1beta1.ConditionFalse,
+							},
+							{
+								Type:   resourcesv1alpha1.ResourcesHealthy,
+								Status: gardencorev1beta1.ConditionFalse,
+							},
+						},
+					}
+					return nil
+				})
+				Expect(err).To(Not(HaveOccurred()))
+				time.Sleep(time.Millisecond * 50)
+
+				_, err = controllerutils.GetAndCreateOrMergePatch(ctx, fakeClient, mr, func() error {
+					mr.ObjectMeta.Generation = 1
+					mr.Status = resourcesv1alpha1.ManagedResourceStatus{
+						ObservedGeneration: 1,
+						Conditions: []gardencorev1beta1.Condition{
+							{
+								Type:   resourcesv1alpha1.ResourcesApplied,
+								Status: gardencorev1beta1.ConditionTrue,
+							},
+							{
+								Type:   resourcesv1alpha1.ResourcesHealthy,
+								Status: gardencorev1beta1.ConditionTrue,
+							},
+						},
+					}
+					return nil
+				})
+				Expect(err).To(Not(HaveOccurred()))
+				time.Sleep(time.Millisecond * 50)
+
+				_, err = controllerutils.GetAndCreateOrMergePatch(ctx, fakeClient, mr, func() error {
+					mr.ObjectMeta.Generation = 1
+					mr.Status = resourcesv1alpha1.ManagedResourceStatus{
+						ObservedGeneration: 1,
+						Conditions: []gardencorev1beta1.Condition{
+							{
+								Type:   resourcesv1alpha1.ResourcesApplied,
+								Status: gardencorev1beta1.ConditionTrue,
+							},
+							{
+								Type:   resourcesv1alpha1.ResourcesHealthy,
+								Status: gardencorev1beta1.ConditionTrue,
+							},
+							{
+								Type:   resourcesv1alpha1.ResourcesProgressing,
+								Status: gardencorev1beta1.ConditionFalse,
+							},
+						},
+					}
+					return nil
+				})
+				Expect(err).To(Not(HaveOccurred()))
+				shouldFail.Store(false)
+			}()
+
+			timeoutCtx, cancel := context.WithTimeout(ctx, time.Second*5)
+			defer cancel()
+			Expect(WaitUntilHealthyAndNotProgressing(timeoutCtx, fakeClient, namespace, name)).To(Succeed())
+			Expect(shouldFail.Load()).To(BeFalse()) // to ensure that the goroutine actually applies all patches
+		})
+	})
+
+	Describe("#WaitUntilDeleted", func() {
 		It("should not return error if managed resource does not exist", func() {
 			Expect(WaitUntilDeleted(ctx, fakeClient, namespace, name)).To(Succeed())
 		})

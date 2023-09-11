@@ -178,7 +178,7 @@ func (r *Reconciler) reconcile(
 		})
 		deployEtcdDruid = g.Add(flow.Task{
 			Name:         "Deploying ETCD Druid",
-			Fn:           c.etcdDruid.Deploy,
+			Fn:           component.OpWait(c.etcdDruid).Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
 		deployIstio = g.Add(flow.Task{

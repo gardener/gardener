@@ -440,7 +440,7 @@ func (b *bootstrapper) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, b.client, b.namespace, managedResourceControlName)
+	return managedresources.WaitUntilHealthyAndNotProgressing(timeoutCtx, b.client, b.namespace, managedResourceControlName)
 }
 
 func (b *bootstrapper) WaitCleanup(ctx context.Context) error {

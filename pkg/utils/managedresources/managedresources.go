@@ -256,6 +256,15 @@ var IntervalWait = 2 * time.Second
 
 // WaitUntilHealthy waits until the given managed resource is healthy.
 func WaitUntilHealthy(ctx context.Context, client client.Client, namespace, name string) error {
+	return waitUntilHealthy(ctx, client, namespace, name, false)
+}
+
+// WaitUntilHealthyAndNotProgressing waits until the given managed resource is healthy and not progressing.
+func WaitUntilHealthyAndNotProgressing(ctx context.Context, client client.Client, namespace, name string) error {
+	return waitUntilHealthy(ctx, client, namespace, name, true)
+}
+
+func waitUntilHealthy(ctx context.Context, client client.Client, namespace, name string, andNotProgressing bool) error {
 	obj := &resourcesv1alpha1.ManagedResource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -270,6 +279,12 @@ func WaitUntilHealthy(ctx context.Context, client client.Client, namespace, name
 
 		if err := health.CheckManagedResource(obj); err != nil {
 			return retry.MinorError(fmt.Errorf("managed resource %s/%s is not healthy", namespace, name))
+		}
+
+		if andNotProgressing {
+			if err := health.CheckManagedResourceProgressing(obj); err != nil {
+				return retry.MinorError(fmt.Errorf("managed resource %s/%s is still progressing", namespace, name))
+			}
 		}
 
 		return retry.Ok()

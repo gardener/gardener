@@ -1520,7 +1520,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					Status: unhealthyManagedResourceStatus,
 				})).To(Succeed())
 
-				Expect(deployer.Wait(ctx)).To(MatchError(ContainSubstring("is unhealthy")))
+				Expect(deployer.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
 			})
 
 			It("should fail because the runtime ManagedResource is still progressing", func() {

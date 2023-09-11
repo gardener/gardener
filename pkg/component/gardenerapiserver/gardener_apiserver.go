@@ -20,23 +20,19 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/etcd"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -211,7 +207,7 @@ func (g *gardenerAPIServer) Wait(ctx context.Context) error {
 	// virtual resources. This is important for credentials rotation since we want all GAPI pods to run with the new
 	// server certificate before we drop the old CA from the bundle in the APIServices (which get deployed via the
 	// virtual resources).
-	if err := g.waitUntilRuntimeManagedResourceHealthyAndNotProgressing(timeoutCtx); err != nil {
+	if err := managedresources.WaitUntilHealthyAndNotProgressing(timeoutCtx, g.client, g.namespace, ManagedResourceNameRuntime); err != nil {
 		return err
 	}
 
@@ -233,31 +229,6 @@ func (g *gardenerAPIServer) WaitCleanup(ctx context.Context) error {
 	defer cancel()
 
 	return managedresources.WaitUntilDeleted(timeoutCtx, g.client, g.namespace, ManagedResourceNameRuntime)
-}
-
-func (g *gardenerAPIServer) waitUntilRuntimeManagedResourceHealthyAndNotProgressing(ctx context.Context) error {
-	obj := &resourcesv1alpha1.ManagedResource{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      ManagedResourceNameRuntime,
-			Namespace: g.namespace,
-		},
-	}
-
-	return retry.Until(ctx, managedresources.IntervalWait, func(ctx context.Context) (done bool, err error) {
-		if err := g.client.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
-			return retry.SevereError(err)
-		}
-
-		if err := health.CheckManagedResource(obj); err != nil {
-			return retry.MinorError(fmt.Errorf("managed resource %s is unhealthy", client.ObjectKeyFromObject(obj)))
-		}
-
-		if err := health.CheckManagedResourceProgressing(obj); err != nil {
-			return retry.MinorError(fmt.Errorf("managed resource %s is still progressing", client.ObjectKeyFromObject(obj)))
-		}
-
-		return retry.Ok()
-	})
 }
 
 func (g *gardenerAPIServer) GetValues() Values {
