@@ -24,15 +24,15 @@ import (
 	"path/filepath"
 	"strings"
 
+	"helm.sh/helm/v3/pkg/chart"
+	chartloader "helm.sh/helm/v3/pkg/chart/loader"
+	v3chartutil "helm.sh/helm/v3/pkg/chartutil"
+	"helm.sh/helm/v3/pkg/engine"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
-	"k8s.io/helm/pkg/chartutil"
-	"k8s.io/helm/pkg/engine"
 	"k8s.io/helm/pkg/ignore"
 	"k8s.io/helm/pkg/manifest"
-	chartapi "k8s.io/helm/pkg/proto/hapi/chart"
-	"k8s.io/helm/pkg/timeconv"
 )
 
 const notesFileSuffix = "NOTES.txt"
@@ -42,7 +42,7 @@ const notesFileSuffix = "NOTES.txt"
 // resulting manifest can be generated.
 type chartRenderer struct {
 	renderer     *engine.Engine
-	capabilities *chartutil.Capabilities
+	capabilities *v3chartutil.Capabilities
 }
 
 // NewForConfig creates a new ChartRenderer object. It requires a Kubernetes client as input which will be
@@ -63,28 +63,33 @@ func NewForConfig(cfg *rest.Config) (Interface, error) {
 
 // NewWithServerVersion creates a new chart renderer with the given server version.
 func NewWithServerVersion(serverVersion *version.Info) Interface {
+	sv := kubeVersionConverter(serverVersion)
 	return &chartRenderer{
-		renderer:     engine.New(),
-		capabilities: &chartutil.Capabilities{KubeVersion: serverVersion},
+		renderer:     &engine.Engine{},
+		capabilities: &v3chartutil.Capabilities{KubeVersion: sv},
 	}
+}
+
+func kubeVersionConverter(serverVersion *version.Info) v3chartutil.KubeVersion {
+	return v3chartutil.KubeVersion{Version: serverVersion.GitVersion, Major: serverVersion.Major, Minor: serverVersion.Minor}
 }
 
 // DiscoverCapabilities discovers the capabilities required for chart renderers using the given
 // DiscoveryInterface.
-func DiscoverCapabilities(disc discovery.DiscoveryInterface) (*chartutil.Capabilities, error) {
+func DiscoverCapabilities(disc discovery.DiscoveryInterface) (*v3chartutil.Capabilities, error) {
 	sv, err := disc.ServerVersion()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get kubernetes server version %w", err)
 	}
 
-	return &chartutil.Capabilities{KubeVersion: sv}, nil
+	return &v3chartutil.Capabilities{KubeVersion: kubeVersionConverter(sv)}, nil
 }
 
 // Render loads the chart from the given location <chartPath> and calls the Render() function
 // to convert it into a ChartRelease object.
 // Deprecated: Use RenderEmbeddedFS for new code!
 func (r *chartRenderer) Render(chartPath, releaseName, namespace string, values interface{}) (*RenderedChart, error) {
-	chart, err := chartutil.Load(chartPath)
+	chart, err := chartloader.Load(chartPath)
 	if err != nil {
 		return nil, fmt.Errorf("can't load chart from path %s:, %s", chartPath, err)
 	}
@@ -94,7 +99,7 @@ func (r *chartRenderer) Render(chartPath, releaseName, namespace string, values 
 // RenderArchive loads the chart from the given location <chartPath> and calls the Render() function
 // to convert it into a ChartRelease object.
 func (r *chartRenderer) RenderArchive(archive []byte, releaseName, namespace string, values interface{}) (*RenderedChart, error) {
-	chart, err := chartutil.LoadArchive(bytes.NewReader(archive))
+	chart, err := chartloader.LoadArchive(bytes.NewReader(archive))
 	if err != nil {
 		return nil, fmt.Errorf("can't load chart from archive: %s", err)
 	}
@@ -111,43 +116,47 @@ func (r *chartRenderer) RenderEmbeddedFS(embeddedFS embed.FS, chartPath, release
 	return r.renderRelease(chart, releaseName, namespace, values)
 }
 
-func (r *chartRenderer) renderRelease(chart *chartapi.Chart, releaseName, namespace string, values interface{}) (*RenderedChart, error) {
-	chartName := chart.GetMetadata().GetName()
+func (r *chartRenderer) renderRelease(chart *chart.Chart, releaseName, namespace string, values interface{}) (*RenderedChart, error) {
+
+	if err := chart.Metadata.Validate(); err != nil {
+		return nil, err
+	}
+
+	chartName := chart.Name()
+	if err := v3chartutil.ValidateMetadataName(chartName); err != nil {
+		return nil, fmt.Errorf("chart name '%s' is invalid: ,%s", chartName, err)
+	}
 
 	parsedValues, err := json.Marshal(values)
 	if err != nil {
 		return nil, fmt.Errorf("can't parse variables for chart %s: ,%s", chartName, err)
 	}
-	chartConfig := &chartapi.Config{Raw: string(parsedValues)}
-
-	err = chartutil.ProcessRequirementsEnabled(chart, chartConfig)
+	mapValues, err := v3chartutil.ReadValues(parsedValues)
 	if err != nil {
-		return nil, fmt.Errorf("can't process requirements for chart %s: ,%s", chartName, err)
+		return nil, fmt.Errorf("can't parse variables for chart %s: ,%s", chartName, err)
 	}
-	err = chartutil.ProcessRequirementsImportValues(chart)
-	if err != nil {
-		return nil, fmt.Errorf("can't process requirements for import values for chart %s: ,%s", chartName, err)
+
+	if err := v3chartutil.ProcessDependencies(chart, mapValues); err != nil {
+		return nil, fmt.Errorf(" can't process dependencies for chart  %s: ,%s", chartName, err)
 	}
 
 	caps := r.capabilities
 	revision := 1
-	ts := timeconv.Now()
-	options := chartutil.ReleaseOptions{
+	options := v3chartutil.ReleaseOptions{
 		Name:      releaseName,
-		Time:      ts,
 		Namespace: namespace,
 		Revision:  revision,
 		IsInstall: true,
 	}
 
-	valuesToRender, err := chartutil.ToRenderValuesCaps(chart, chartConfig, options, caps)
+	valuesToRender, err := v3chartutil.ToRenderValues(chart, mapValues, options, caps)
 	if err != nil {
 		return nil, err
 	}
 	return r.renderResources(chart, valuesToRender)
 }
 
-func (r *chartRenderer) renderResources(ch *chartapi.Chart, values chartutil.Values) (*RenderedChart, error) {
+func (r *chartRenderer) renderResources(ch *chart.Chart, values v3chartutil.Values) (*RenderedChart, error) {
 	files, err := r.renderer.Render(ch, values)
 	if err != nil {
 		return nil, err
@@ -164,7 +173,7 @@ func (r *chartRenderer) renderResources(ch *chartapi.Chart, values chartutil.Val
 	manifests = SortByKind(manifests)
 
 	return &RenderedChart{
-		ChartName: ch.Metadata.Name,
+		ChartName: ch.Name(),
 		Manifests: manifests,
 	}, nil
 }
@@ -213,10 +222,10 @@ func (c *RenderedChart) AsSecretData() map[string][]byte {
 }
 
 // loadEmbeddedFS is a copy of chartutil.LoadDir with the difference that it uses an embed.FS.
-func loadEmbeddedFS(embeddedFS embed.FS, chartPath string) (*chartapi.Chart, error) {
+func loadEmbeddedFS(embeddedFS embed.FS, chartPath string) (*chart.Chart, error) {
 	var (
 		rules = ignore.Empty()
-		files []*chartutil.BufferedFile
+		files []*chartloader.BufferedFile
 	)
 
 	if helmIgnore, err := embeddedFS.ReadFile(filepath.Join(chartPath, ignore.HelmIgnore)); err == nil {
@@ -271,12 +280,13 @@ func loadEmbeddedFS(embeddedFS embed.FS, chartPath string) (*chartapi.Chart, err
 		if err != nil {
 			return fmt.Errorf("error reading %s: %s", normalizedPath, err)
 		}
-		files = append(files, &chartutil.BufferedFile{Name: normalizedPath, Data: data})
+		files = append(files, &chartloader.BufferedFile{Name: normalizedPath, Data: data})
 
 		return nil
 	}); err != nil {
 		return nil, err
 	}
 
-	return chartutil.LoadFiles(files)
+	// TODO (galantsev): helm
+	return chartloader.LoadFiles(files)
 }
