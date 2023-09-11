@@ -57,36 +57,7 @@ images:
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: registry.k8s.io/ingress-nginx/controller-chroot
-  tag: "v1.4.0"
-  targetVersion: "1.22.x"
-  labels:
-  - name: 'gardener.cloud/cve-categorisation'
-    value:
-      network_exposure: 'public'
-      authentication_enforced: true
-      user_interaction: 'end-user'
-      confidentiality_requirement: 'low'
-      integrity_requirement: 'low'
-      availability_requirement: 'low'
-- name: nginx-ingress-controller
-  sourceRepository: github.com/kubernetes/ingress-nginx
-  repository: registry.k8s.io/ingress-nginx/controller-chroot
-  tag: "v1.6.4"
-  targetVersion: "1.23.x"
-  labels:
-  - name: 'gardener.cloud/cve-categorisation'
-    value:
-      network_exposure: 'public'
-      authentication_enforced: true
-      user_interaction: 'end-user'
-      confidentiality_requirement: 'low'
-      integrity_requirement: 'low'
-      availability_requirement: 'low'
-- name: nginx-ingress-controller
-  sourceRepository: github.com/kubernetes/ingress-nginx
-  repository: registry.k8s.io/ingress-nginx/controller-chroot
   tag: "v1.8.1"
-  targetVersion: ">= 1.24"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -161,16 +132,6 @@ images:
   repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
   tag: "v1.24.3"
   targetVersion: "1.24.x"
-- name: cluster-autoscaler
-  sourceRepository: github.com/gardener/autoscaler
-  repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
-  tag: "v1.23.4"
-  targetVersion: "1.23.x"
-- name: cluster-autoscaler
-  sourceRepository: github.com/gardener/autoscaler
-  repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
-  tag: "v1.22.6"
-  targetVersion: "1.22.x"
 - name: vpn-seed-server
   sourceRepository: github.com/gardener/vpn2
   repository: eu.gcr.io/gardener-project/gardener/vpn-seed-server
