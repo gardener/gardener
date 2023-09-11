@@ -449,6 +449,50 @@ var _ = Describe("Strategy", func() {
 				),
 			)
 		})
+
+		Context("remove duplicate extensions", func() {
+			var (
+				oldShoot *core.Shoot
+				newShoot *core.Shoot
+			)
+
+			BeforeEach(func() {
+				oldShoot = &core.Shoot{
+					Spec: core.ShootSpec{
+						Extensions: []core.Extension{
+							{
+								Type:     "arbitrary",
+								Disabled: pointer.Bool(false),
+							},
+							{
+								Type:     "arbitrary",
+								Disabled: pointer.Bool(true),
+							},
+							{
+								Type:     "arbitrary-1",
+								Disabled: pointer.Bool(true),
+							},
+						},
+					},
+				}
+				newShoot = oldShoot.DeepCopy()
+			})
+
+			It("should remove duplicated extensions and take the latest configuration of duplicate extensions", func() {
+				shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+
+				Expect(newShoot.Spec.Extensions).To(HaveLen(2))
+				Expect(newShoot.Spec.Extensions).To(ContainElements(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":     Equal("arbitrary"),
+						"Disabled": Equal(pointer.Bool(true)),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"Type":     Equal("arbitrary-1"),
+						"Disabled": Equal(pointer.Bool(true)),
+					})))
+			})
+		})
 	})
 
 	Describe("#Canonicalize", func() {

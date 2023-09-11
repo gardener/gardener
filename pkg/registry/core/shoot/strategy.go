@@ -15,8 +15,10 @@
 package shoot
 
 import (
+	"cmp"
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/Masterminds/semver"
@@ -80,6 +82,9 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 	if mustIncreaseGeneration(oldShoot, newShoot) {
 		newShoot.Generation = oldShoot.Generation + 1
 	}
+
+	// TODO(acumino): Drop this in gardener v1.84 release.
+	removeDuplicateExtension(newShoot)
 }
 
 func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
@@ -164,6 +169,25 @@ func removeForbiddenFinalizers(shoot *core.Shoot) {
 	}
 
 	shoot.Finalizers = finalizers
+}
+
+func removeDuplicateExtension(shoot *core.Shoot) {
+	if len(shoot.Spec.Extensions) > 1 {
+		extensionsType := map[string]core.Extension{}
+		extensionsList := []core.Extension{}
+		for _, extension := range shoot.Spec.Extensions {
+			extensionsType[extension.Type] = extension
+		}
+
+		for _, extension := range extensionsType {
+			extensionsList = append(extensionsList, extension)
+		}
+
+		slices.SortFunc(extensionsList, func(a, b core.Extension) int {
+			return cmp.Compare(a.Type, b.Type)
+		})
+		shoot.Spec.Extensions = extensionsList
+	}
 }
 
 func (shootStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {
