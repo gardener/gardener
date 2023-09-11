@@ -84,7 +84,7 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 	}
 
 	// TODO(acumino): Drop this in gardener v1.84 release.
-	removeDuplicateExtension(newShoot)
+	removeDuplicateExtensions(newShoot)
 }
 
 func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
@@ -171,15 +171,15 @@ func removeForbiddenFinalizers(shoot *core.Shoot) {
 	shoot.Finalizers = finalizers
 }
 
-func removeDuplicateExtension(shoot *core.Shoot) {
+func removeDuplicateExtensions(shoot *core.Shoot) {
 	if len(shoot.Spec.Extensions) > 1 {
-		extensionsType := map[string]core.Extension{}
-		extensionsList := []core.Extension{}
+		typeToExtension := make(map[string]core.Extension, len(shoot.Spec.Extensions))
 		for _, extension := range shoot.Spec.Extensions {
-			extensionsType[extension.Type] = extension
+			typeToExtension[extension.Type] = extension
 		}
 
-		for _, extension := range extensionsType {
+		extensionsList := make([]core.Extension, 0, len(typeToExtension))
+		for _, extension := range typeToExtension {
 			extensionsList = append(extensionsList, extension)
 		}
 
