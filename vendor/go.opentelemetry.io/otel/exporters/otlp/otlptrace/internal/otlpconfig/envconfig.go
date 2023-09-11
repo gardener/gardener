@@ -15,7 +15,6 @@
 package otlpconfig // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlpconfig"
 
 import (
-	"crypto/tls"
 	"net/url"
 	"os"
 	"path"
@@ -81,8 +80,6 @@ func getOptionsFromEnv() []GenericOption {
 				return cfg
 			}, withEndpointForGRPC(u)))
 		}),
-		envconfig.WithTLSConfig("CERTIFICATE", func(c *tls.Config) { opts = append(opts, WithTLSClientConfig(c)) }),
-		envconfig.WithTLSConfig("TRACES_CERTIFICATE", func(c *tls.Config) { opts = append(opts, WithTLSClientConfig(c)) }),
 		envconfig.WithHeaders("HEADERS", func(h map[string]string) { opts = append(opts, WithHeaders(h)) }),
 		envconfig.WithHeaders("TRACES_HEADERS", func(h map[string]string) { opts = append(opts, WithHeaders(h)) }),
 		WithEnvCompression("COMPRESSION", func(c Compression) { opts = append(opts, WithCompression(c)) }),
