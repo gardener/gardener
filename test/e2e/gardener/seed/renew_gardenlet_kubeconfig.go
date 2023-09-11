@@ -27,17 +27,10 @@ import (
 
 var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 	Describe("Renew gardenlet kubeconfig", func() {
-		const (
-			gardenletKubeconfigSecretName      = "gardenlet-kubeconfig"
-			gardenletKubeconfigSecretNamespace = "garden"
-			gardenletDeploymentName            = "gardenlet"
-			gardenletDeploymentNamespace       = "garden"
-		)
-
 		var seed *gardencorev1beta1.Seed
 
 		BeforeEach(func() {
-			// find the first seed (seed name differs between test scenarios, e.g., non-ha/ha)
+			// find the first seed, it doesn't matter which one (seed name differs between test scenarios, e.g., non-ha/ha)
 			seedList := &gardencorev1beta1.SeedList{}
 			Expect(testClient.List(ctx, seedList, client.Limit(1))).To(Succeed())
 			seed = seedList.Items[0].DeepCopy()
@@ -48,8 +41,8 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 				GardenReader:                       testClient,
 				SeedReader:                         testClient,
 				Seed:                               seed,
-				GardenletKubeconfigSecretName:      gardenletKubeconfigSecretName,
-				GardenletKubeconfigSecretNamespace: gardenletKubeconfigSecretNamespace,
+				GardenletKubeconfigSecretName:      "gardenlet-kubeconfig",
+				GardenletKubeconfigSecretNamespace: "garden",
 			}
 
 			By("Verify before state")

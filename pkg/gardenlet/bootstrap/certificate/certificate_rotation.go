@@ -161,14 +161,15 @@ func waitForCertificateRotation(
 			log.Info("Certificate expiration has not passed but immediate renewal was requested", "notAfter", cert.Leaf.NotAfter)
 			return &cert.Leaf.Subject, cert.Leaf.DNSNames, cert.Leaf.IPAddresses, &cert.Leaf.NotAfter, nil
 		}
-		// block until certificate rotation or until context is cancelled
+
 		select {
-		case <-ctx.Done():
+		case <-ctx.Done(): // context is cancelled
 			return nil, []string{}, []net.IP{}, nil, ctx.Err()
-		case <-time.After(deadline.Sub(now())):
+
+		case <-time.After(deadline.Sub(now())): // certificate rotation is due
 			stopWaiting = true
-		// check every 10 seconds for immediate renewal request
-		case <-time.After(time.Second * 10):
+
+		case <-time.After(time.Second * 10): // check every 10 seconds for immediate renewal request
 			var tmpCert *tls.Certificate
 			kubeconfigSecret, tmpCert, err = readCertificateFromKubeconfigSecret(ctx, log, seedClient, gardenClientConnection)
 			if err != nil {

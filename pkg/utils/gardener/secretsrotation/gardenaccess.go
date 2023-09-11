@@ -27,25 +27,8 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-// CheckRenewSeedGardenSecretsCompleted checks if renewal of garden secrets is completed for all seeds.
-func CheckRenewSeedGardenSecretsCompleted(ctx context.Context, log logr.Logger, c client.Client, operationAnnotation string) error {
-	seedList := &metav1.PartialObjectMetadataList{}
-	seedList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("SeedList"))
-	if err := c.List(ctx, seedList); err != nil {
-		return err
-	}
-
-	for _, seed := range seedList.Items {
-		if seed.Annotations[v1beta1constants.GardenerOperation] == operationAnnotation {
-			return fmt.Errorf("renewing secrets for seed %q is not completed", seed.Name)
-		}
-	}
-
-	return nil
-}
-
-// RenewSeedGardenSecrets annotates all seeds to trigger renewal of their garden secrets.
-func RenewSeedGardenSecrets(ctx context.Context, log logr.Logger, c client.Client, operationAnnotation string) error {
+// RenewGardenSecretsInAllSeeds annotates all seeds to trigger renewal of their garden secrets.
+func RenewGardenSecretsInAllSeeds(ctx context.Context, log logr.Logger, c client.Client, operationAnnotation string) error {
 	seedList := &metav1.PartialObjectMetadataList{}
 	seedList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("SeedList"))
 	if err := c.List(ctx, seedList); err != nil {
@@ -71,6 +54,23 @@ func RenewSeedGardenSecrets(ctx context.Context, log logr.Logger, c client.Clien
 			return fmt.Errorf("error annotating seed %s: %w", seed.Name, err)
 		}
 		log.Info("Successfully annotated seed to renew its garden secrets", v1beta1constants.GardenerOperation, operationAnnotation)
+	}
+
+	return nil
+}
+
+// CheckIfGardenSecretsRenewalCompletedInAllSeeds checks if renewal of garden secrets is completed for all seeds.
+func CheckIfGardenSecretsRenewalCompletedInAllSeeds(ctx context.Context, c client.Client, operationAnnotation string) error {
+	seedList := &metav1.PartialObjectMetadataList{}
+	seedList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("SeedList"))
+	if err := c.List(ctx, seedList); err != nil {
+		return err
+	}
+
+	for _, seed := range seedList.Items {
+		if seed.Annotations[v1beta1constants.GardenerOperation] == operationAnnotation {
+			return fmt.Errorf("renewing secrets for seed %q is not yet completed", seed.Name)
+		}
 	}
 
 	return nil

@@ -466,9 +466,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Name: "Renewing garden access secrets",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				// renew access secrets in all namespaces with the resources.gardener.cloud/class=garden label
-				if err := tokenrequest.RenewAccessSecrets(ctx, seedClient,
-					client.MatchingLabels{resourcesv1alpha1.ResourceManagerClass: resourcesv1alpha1.ResourceManagerClassGarden},
-				); err != nil {
+				if err := tokenrequest.RenewAccessSecrets(ctx, seedClient, client.MatchingLabels{resourcesv1alpha1.ResourceManagerClass: resourcesv1alpha1.ResourceManagerClassGarden}); err != nil {
 					return err
 				}
 
@@ -480,7 +478,12 @@ func (r *Reconciler) runReconcileSeedFlow(
 		_ = g.Add(flow.Task{
 			Name: "Renewing garden kubeconfig",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return renewGardenKubeconfig(ctx, r.GardenClient, seedClient, r.Config.GardenClientConnection, seed)
+				if err := renewGardenKubeconfig(ctx, seedClient, r.Config.GardenClientConnection); err != nil {
+					return err
+				}
+
+				// remove operation annotation from seed after successful operation
+				return removeSeedOperationAnnotation(ctx, r.GardenClient, seed)
 			}).DoIf(seed.GetInfo().Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRenewKubeconfig),
 		})
 	)
@@ -856,7 +859,7 @@ func removeSeedOperationAnnotation(ctx context.Context, gardenClient client.Clie
 	})
 }
 
-func renewGardenKubeconfig(ctx context.Context, gardenClient, seedClient client.Client, gardenClientConnection *config.GardenClientConnection, seed *seedpkg.Seed) error {
+func renewGardenKubeconfig(ctx context.Context, seedClient client.Client, gardenClientConnection *config.GardenClientConnection) error {
 	if gardenClientConnection == nil || gardenClientConnection.KubeconfigSecret == nil {
 		return fmt.Errorf(
 			"unable to renew garden kubeconfig. No gardenClientConnection.kubeconfigSecret specified in configuration of gardenlet. Remove \"%s=%s\" annotation from seed to reconcile successfully",
@@ -864,16 +867,12 @@ func renewGardenKubeconfig(ctx context.Context, gardenClient, seedClient client.
 		)
 	}
 
-	kubeconfig := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: gardenClientConnection.KubeconfigSecret.Name, Namespace: gardenClientConnection.KubeconfigSecret.Namespace}}
-	if err := seedClient.Get(ctx, client.ObjectKeyFromObject(kubeconfig), kubeconfig); err != nil {
-		return err
-	}
-	if err := kubernetesutils.SetAnnotationAndUpdate(ctx, seedClient, kubeconfig, v1beta1constants.GardenerOperation, v1beta1constants.KubeconfigSecretOperationRenew); err != nil {
+	kubeconfigSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: gardenClientConnection.KubeconfigSecret.Name, Namespace: gardenClientConnection.KubeconfigSecret.Namespace}}
+	if err := seedClient.Get(ctx, client.ObjectKeyFromObject(kubeconfigSecret), kubeconfigSecret); err != nil {
 		return err
 	}
 
-	// remove operation annotation from seed after successful operation
-	return removeSeedOperationAnnotation(ctx, gardenClient, seed)
+	return kubernetesutils.SetAnnotationAndUpdate(ctx, seedClient, kubeconfigSecret, v1beta1constants.GardenerOperation, v1beta1constants.KubeconfigSecretOperationRenew)
 }
 
 // WaitUntilLoadBalancerIsReady is an alias for kubernetesutils.WaitUntilLoadBalancerIsReady. Exposed for tests.
