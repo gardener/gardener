@@ -690,19 +690,28 @@ var _ = Describe("Cleaner", func() {
 						Name:       fmt.Sprintf("secret-%d", i),
 						Namespace:  "default",
 						Finalizers: []string{"finalizer"},
+						Labels:     map[string]string{"key": "value"},
 					},
 				})).To(Succeed())
 			}
 
+			Expect(fakeClient.Create(ctx, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       fmt.Sprintf("secret-%d", 6),
+					Namespace:  "default",
+					Finalizers: []string{"finalizer"},
+				},
+			})).To(Succeed())
+
 			secretList := &corev1.SecretList{}
 			Expect(fakeClient.List(ctx, secretList)).To(Succeed())
-			Expect(secretList.Items).To(HaveLen(5))
+			Expect(secretList.Items).To(HaveLen(6))
 
-			taskFns := ForceDeleteObjects(ctx, logr.Discard(), fakeClient, "Secret", "default", &corev1.SecretList{})
+			taskFns := ForceDeleteObjects(ctx, logr.Discard(), fakeClient, "Secret", "default", &corev1.SecretList{}, client.MatchingLabels{"key": "value"})
 			Expect(flow.Parallel(taskFns)(ctx)).To(Succeed())
 
 			Expect(fakeClient.List(ctx, secretList)).To(Succeed())
-			Expect(secretList.Items).To(BeEmpty())
+			Expect(secretList.Items).To(HaveLen(1))
 		})
 	})
 })

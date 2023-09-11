@@ -40,7 +40,7 @@ const (
 	ApplicationName string = "local-ext-shoot"
 	// ManagedResourceNamesShoot is the name used to describe the managed shoot resources.
 	ManagedResourceNamesShoot string = ApplicationName
-	finalizer                 string = "local-ext-shoot"
+	finalizer                 string = "extensions.gardener.cloud/local-ext-shoot"
 )
 
 type actuator struct {
@@ -94,7 +94,7 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 	}
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, configMap1, func() error {
-		configMap1.Labels = map[string]string{"key": "value"}
+		configMap1.Labels = getLabels()
 		return nil
 	}); err != nil {
 		return err
@@ -109,7 +109,7 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 	}
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, configMap2, func() error {
-		configMap2.Labels = map[string]string{"key": "value"}
+		configMap2.Labels = getLabels()
 		return nil
 	}); err != nil {
 		return err
@@ -135,7 +135,17 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, ex *extensionsv1
 
 // ForceDelete force deletes the extension resource.
 func (a *actuator) ForceDelete(ctx context.Context, log logr.Logger, ex *extensionsv1alpha1.Extension) error {
-	return flow.Parallel(utilclient.ForceDeleteObjects(ctx, log, a.client, "ConfigMap", ex.Namespace, &corev1.ConfigMapList{}))(ctx)
+	return flow.Parallel(
+		utilclient.ForceDeleteObjects(
+			ctx,
+			log,
+			a.client,
+			"ConfigMap",
+			ex.Namespace,
+			&corev1.ConfigMapList{},
+			client.MatchingLabels{"app.kubernetes.io/name": ApplicationName},
+		),
+	)(ctx)
 }
 
 // Migrate the extension resource.
