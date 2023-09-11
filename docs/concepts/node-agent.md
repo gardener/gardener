@@ -1,6 +1,6 @@
 # Gardener Node Agent
 
-The goal of the `gardener-node-agent` is to bootstrap a machine into a worker node and maintain node-specific components, which run on the node and are unmanaged by Kubernetes (e.g. the kubelet service, systemd units, ...).
+The goal of the `gardener-node-agent` is to bootstrap a machine into a worker node and maintain node-specific components, which run on the node and are unmanaged by Kubernetes (e.g. the `kubelet` service, systemd units, ...).
 
 It effectively is a Kubernetes controller deployed onto the worker node.
 
@@ -12,7 +12,7 @@ This figure visualizes the overall architecture of the `gardener-node-agent`. On
 
 On the right side the `cloud-config` secret will be extracted and used by the `gardener-node-agent` after being installed. Details on this can be found in the next section.
 
-Finally the `gardener-node-agent` runs a systemd service watching on secret resources located in the `kube-system` namespace like our `cloud-config` secret that contains the `OperatingSystemConfig`. When `gardener-node-agent` applies the OSC, it installs the kubelet + configuration on the worker node.
+Finally the `gardener-node-agent` runs a systemd service watching on secret resources located in the `kube-system` namespace like our `cloud-config` secret that contains the `OperatingSystemConfig`. When `gardener-node-agent` applies the OSC, it installs the `kubelet` + configuration on the worker node.
 
 ## Installation and Bootstrapping
 
@@ -20,9 +20,9 @@ This section describes how the `gardener-node-agent` is initially installed onto
 
 In the beginning, there is a very small bash script called [`gardener-node-init.sh`](../../pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/init.tpl.sh), which will be copied to `/var/lib/gardener-node-agent/gardener-node-init.sh` on the node with cloud-init data. This script's sole purpose is downloading and starting the `gardener-node-agent`. The binary artifact is extracted from an [OCI artifact](https://github.com/opencontainers/image-spec/blob/main/manifest.md) and lives at `/usr/local/bin/gardener-node-agent`. At the beginning, two architectures of the `gardener-node-agent` are supported: `amd64` and `x86`. The `kubelet` should also be contained in the same OCI artifact.
 
-Along with the init script, a configuration for the `gardener-node-agent` is carried over to the worker node at `/var/lib/gardener-node-agent/configuration.yaml`. This configuration contains things like the shoot's kube-apiserver endpoint, the according certificates to communicate with it, the bootstrap token for the kubelet, and so on.
+Along with the init script, a configuration for the `gardener-node-agent` is carried over to the worker node at `/var/lib/gardener-node-agent/configuration.yaml`. This configuration contains things like the shoot's kube-apiserver endpoint, the according certificates to communicate with it, the bootstrap token for the `kubelet`, and so on.
 
-In a bootstrapping phase, the `gardener-node-agent` sets itself up as a systemd service. It also executes tasks that need to be executed before any other components are installed, e.g. formatting the data device for the kubelet.
+In a bootstrapping phase, the `gardener-node-agent` sets itself up as a systemd service. It also executes tasks that need to be executed before any other components are installed, e.g. formatting the data device for the `kubelet`.
 
 ## Reasoning
 
@@ -44,7 +44,7 @@ This will speed up operations and will reduce the load on the api-server of the 
 
 The `cloud-config-downloader` adds a random wait time before restarting the `kubelet` in case the `kubelet` was updated or a configuration change was made to it. This is required to reduce the load on the API server and the traffic on the internet uplink. It also reduces the overall downtime of the services in the cluster because every `kubelet` restart takes a node for several seconds into `NotReady` state which potentionally interrupts service availability.
 
-Decision was made to keep the existing jitter mechanism which calculates the kubelet-download-and-restart-delay-seconds on the controller itself.
+Decision was made to keep the existing jitter mechanism which calculates the `kubelet-download-and-restart-delay-seconds` on the controller itself.
 
 ### Correctness
 
