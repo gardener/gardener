@@ -15,6 +15,8 @@
 package validation
 
 import (
+	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
@@ -41,6 +43,7 @@ var (
 	availableSeedOperations = sets.New(
 		v1beta1constants.SeedOperationRenewGardenAccessSecrets,
 		v1beta1constants.GardenerOperationReconcile,
+		v1beta1constants.GardenerOperationRenewKubeconfig,
 	)
 )
 
@@ -60,6 +63,7 @@ func ValidateSeedUpdate(newSeed, oldSeed *core.Seed) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newSeed.ObjectMeta, &oldSeed.ObjectMeta, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, validateSeedOperationUpdate(newSeed.Annotations[v1beta1constants.GardenerOperation], oldSeed.Annotations[v1beta1constants.GardenerOperation], field.NewPath("metadata", "annotations").Key(v1beta1constants.GardenerOperation))...)
 	allErrs = append(allErrs, ValidateSeedSpecUpdate(&newSeed.Spec, &oldSeed.Spec, field.NewPath("spec"))...)
 	allErrs = append(allErrs, ValidateSeed(newSeed)...)
 
@@ -351,6 +355,20 @@ func validateSeedOperation(operation string, fldPath *field.Path) field.ErrorLis
 
 	if operation != "" && !availableSeedOperations.Has(operation) {
 		allErrs = append(allErrs, field.NotSupported(fldPath, operation, sets.List(availableSeedOperations)))
+	}
+
+	return allErrs
+}
+
+func validateSeedOperationUpdate(newOperation, oldOperation string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if newOperation == "" || oldOperation == "" {
+		return allErrs
+	}
+
+	if newOperation != oldOperation {
+		allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("must not overwrite operation %q with %q", oldOperation, newOperation)))
 	}
 
 	return allErrs

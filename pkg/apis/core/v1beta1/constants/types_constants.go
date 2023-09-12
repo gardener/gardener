@@ -233,7 +233,8 @@ const (
 	// GardenerOperationKeepalive is a constant for the value of the operation annotation describing an
 	// operation that extends the lifetime of the object having the operation annotation.
 	GardenerOperationKeepalive = "keepalive"
-	// GardenerOperationRenewKubeconfig is a constant for the value of the operation annotation to renew the gardenlet's kubeconfig secret.
+	// GardenerOperationRenewKubeconfig is a constant for the value of the operation annotation to renew the gardenlet's
+	// kubeconfig secret.
 	GardenerOperationRenewKubeconfig = "renew-kubeconfig"
 
 	// GardenRole is a constant for a label that describes a role.
@@ -404,6 +405,9 @@ const (
 	// SeedOperationRenewGardenAccessSecrets is a constant for an annotation on a Seed indicating that the
 	// all garden access secrets on the seed shall be renewed.
 	SeedOperationRenewGardenAccessSecrets = "renew-garden-access-secrets"
+	// KubeconfigSecretOperationRenew is a constant for an annotation on the secret in a Seed containing the garden
+	// cluster kubeconfig of a gardenlet indicating that it should be renewed.
+	KubeconfigSecretOperationRenew = "renew"
 
 	// SeedResourceManagerClass is the resource-class managed by the Gardener-Resource-Manager
 	// instance in the garden namespace on the seeds.

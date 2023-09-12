@@ -110,9 +110,13 @@ the CSR during a certificate rotation.
 
 ℹ️ You can trigger an immediate renewal by annotating the `Secret` in the seed
 cluster stated in the `.gardenClientConnection.kubeconfigSecret` field with
-`gardener.cloud/operation=renew` and restarting the gardenlet. After it has booted
-up again, gardenlet will issue a new certificate independent of the remaining
-validity of the existing one.
+`gardener.cloud/operation=renew`. Within `10s`, gardenlet detects this and terminates
+itself to request new credentials. After it has booted up again, gardenlet will issue a
+new certificate independent of the remaining validity of the existing one.
+
+ℹ️ Alternatively, annotate the respective `Seed` with `gardener.cloud/operation=renew-kubeconfig`.
+This will make gardenlet annotate its own kubeconfig secret with `gardener.cloud/operation=renew`
+and triggers the process described in the previous paragraph.
 
 ### Rotate Certificates Using Custom `kubeconfig`
 

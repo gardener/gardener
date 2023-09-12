@@ -88,6 +88,14 @@ var _ = Describe("Strategy", func() {
 				Expect(newSeed.Generation).To(Equal(oldSeed.Generation + 1))
 			})
 
+			It("should bump the generation if the operation annotation was set to renew-kubeconfig", func() {
+				metav1.SetMetaDataAnnotation(&newSeed.ObjectMeta, "gardener.cloud/operation", "renew-kubeconfig")
+
+				strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
+
+				Expect(newSeed.Generation).To(Equal(oldSeed.Generation + 1))
+			})
+
 			It("should bump the generation and remove the annotation if the operation annotation was set to reconcile", func() {
 				metav1.SetMetaDataAnnotation(&newSeed.ObjectMeta, "gardener.cloud/operation", "reconcile")
 

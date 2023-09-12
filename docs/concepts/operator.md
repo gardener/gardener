@@ -231,6 +231,14 @@ Please refer to [this document](../usage/shoot_credentials_rotation.md#gardener-
 
 ⚠️ Rotation of static `ServiceAccount` secrets is not supported since the `kube-controller-manager` does not enable the `serviceaccount-token` controller.
 
+When the `ServiceAccount` token signing key rotation is in `Preparing` phase, then `gardener-operator` annotates all `Seed`s with `gardener.cloud/operation=renew-garden-access-secrets`.
+This causes `gardenlet` to populate new `ServiceAccount` tokens for the garden cluster to all extensions, which are now signed with the new signing key.
+Read more about it [here](../extensions/garden-api-access.md#renewing-all-garden-access-secrets).
+
+Similarly, when the CA certificate rotation is in `Preparing` phase, then `gardener-operator` annotates all `Seed`s with `gardener.cloud/operation=renew-kubeconfig`.
+This causes `gardenlet` to request a new client certificate for its garden cluster kubeconfig, which is now signed with the new client CA, and which also contains the new CA bundle for the server certificate verification.
+Read more about it [here](gardenlet.md#rotate-certificates-using-bootstrap-kubeconfig).
+
 ## Migrating an Existing Gardener Landscape to `gardener-operator`
 
 Since `gardener-operator` was only developed in 2023, six years after the Gardener project initiation, most users probably already have an existing Gardener landscape.

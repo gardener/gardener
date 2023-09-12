@@ -267,7 +267,7 @@ var _ = Describe("Garden controller tests", func() {
 		})
 	})
 
-	It("should properly maintain the Reconciled condition", func() {
+	It("should successfully reconcile and delete a Garden", func() {
 		By("Wait for Garden to have finalizer")
 		Eventually(func(g Gomega) []string {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())

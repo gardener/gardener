@@ -20,9 +20,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -31,11 +33,17 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
+var availableManagedSeedOperations = sets.New(
+	v1beta1constants.GardenerOperationReconcile,
+	v1beta1constants.GardenerOperationRenewKubeconfig,
+)
+
 // ValidateManagedSeed validates a ManagedSeed object.
 func ValidateManagedSeed(managedSeed *seedmanagement.ManagedSeed) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&managedSeed.ObjectMeta, true, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, validateManagedSeedOperation(managedSeed.Annotations[v1beta1constants.GardenerOperation], field.NewPath("metadata", "annotations").Key(v1beta1constants.GardenerOperation))...)
 	allErrs = append(allErrs, ValidateManagedSeedSpec(&managedSeed.Spec, field.NewPath("spec"), false)...)
 
 	return allErrs
@@ -46,6 +54,7 @@ func ValidateManagedSeedUpdate(newManagedSeed, oldManagedSeed *seedmanagement.Ma
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newManagedSeed.ObjectMeta, &oldManagedSeed.ObjectMeta, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, validateManagedSeedOperationUpdate(newManagedSeed.Annotations[v1beta1constants.GardenerOperation], oldManagedSeed.Annotations[v1beta1constants.GardenerOperation], field.NewPath("metadata", "annotations").Key(v1beta1constants.GardenerOperation))...)
 	allErrs = append(allErrs, ValidateManagedSeedSpecUpdate(&newManagedSeed.Spec, &oldManagedSeed.Spec, field.NewPath("spec"))...)
 	allErrs = append(allErrs, ValidateManagedSeed(newManagedSeed)...)
 
@@ -292,6 +301,34 @@ func validateGardenClientConnection(gcc *config.GardenClientConnection, bootstra
 		if gcc.KubeconfigSecret != nil {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubeconfigSecret"), "kubeconfig secret is forbidden if bootstrap is not specified"))
 		}
+	}
+
+	return allErrs
+}
+
+func validateManagedSeedOperation(operation string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if operation == "" {
+		return allErrs
+	}
+
+	if operation != "" && !availableManagedSeedOperations.Has(operation) {
+		allErrs = append(allErrs, field.NotSupported(fldPath, operation, sets.List(availableManagedSeedOperations)))
+	}
+
+	return allErrs
+}
+
+func validateManagedSeedOperationUpdate(newOperation, oldOperation string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if newOperation == "" || oldOperation == "" {
+		return allErrs
+	}
+
+	if newOperation != oldOperation {
+		allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("must not overwrite operation %q with %q", oldOperation, newOperation)))
 	}
 
 	return allErrs
