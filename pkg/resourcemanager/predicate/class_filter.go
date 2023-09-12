@@ -102,24 +102,22 @@ func (f *ClassFilter) Active(o runtime.Object) (action bool, responsible bool) {
 
 // Create implements `predicate.Predicate`.
 func (f *ClassFilter) Create(e event.CreateEvent) bool {
-	a, r := f.Active(e.Object)
-	return a || r
+	return f.Responsible(e.Object)
+
 }
 
 // Delete implements `predicate.Predicate`.
 func (f *ClassFilter) Delete(e event.DeleteEvent) bool {
-	a, r := f.Active(e.Object)
-	return a || r
+	return f.Responsible(e.Object)
+
 }
 
 // Update implements `predicate.Predicate`.
 func (f *ClassFilter) Update(e event.UpdateEvent) bool {
-	a, r := f.Active(e.ObjectNew)
-	return a || r
+	return f.Responsible(e.ObjectNew)
 }
 
 // Generic implements `predicate.Predicate`.
 func (f *ClassFilter) Generic(e event.GenericEvent) bool {
-	a, r := f.Active(e.Object)
-	return a || r
+	return f.Responsible(e.Object)
 }
