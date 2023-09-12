@@ -130,7 +130,20 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, ex *extensionsv1
 		return err
 	}
 
-	return managedresources.WaitUntilDeleted(timeoutShootCtx, a.client, namespace, ManagedResourceNamesShoot)
+	return flow.Parallel(
+		func(ctx context.Context) error {
+			return managedresources.WaitUntilDeleted(timeoutShootCtx, a.client, namespace, ManagedResourceNamesShoot)
+		},
+		utilclient.ForceDeleteObjects(
+			ctx,
+			log,
+			a.client,
+			"ConfigMap",
+			ex.Namespace,
+			&corev1.ConfigMapList{},
+			client.MatchingLabels{"app.kubernetes.io/name": ApplicationName},
+		),
+	)(ctx)
 }
 
 // ForceDelete force deletes the extension resource.
