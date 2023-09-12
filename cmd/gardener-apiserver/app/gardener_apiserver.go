@@ -257,9 +257,18 @@ func (o *Options) config(kubeAPIServerConfig *rest.Config, kubeClient *kubernete
 		}, nil
 	}
 
+	gardenerKubeClient, err := kubernetes.NewForConfig(gardenerAPIServerConfig.ClientConfig)
+	if err != nil {
+		return nil, err
+	}
+	gardenerDynamicClient, err := dynamic.NewForConfig(gardenerAPIServerConfig.ClientConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	if initializers, err := o.Recommended.ExtraAdmissionInitializers(gardenerAPIServerConfig); err != nil {
 		return apiConfig, err
-	} else if err := o.Recommended.Admission.ApplyTo(&gardenerAPIServerConfig.Config, gardenerAPIServerConfig.SharedInformerFactory, gardenerAPIServerConfig.ClientConfig, features.DefaultFeatureGate, initializers...); err != nil {
+	} else if err := o.Recommended.Admission.ApplyTo(&gardenerAPIServerConfig.Config, gardenerAPIServerConfig.SharedInformerFactory, gardenerKubeClient, gardenerDynamicClient, features.DefaultFeatureGate, initializers...); err != nil {
 		return apiConfig, err
 	}
 
@@ -377,11 +386,6 @@ func (o *Options) ApplyTo(config *apiserver.Config) error {
 	gardenerAPIServerConfig := config.GenericConfig
 
 	gardenerVersion := version.Get()
-	// There is an upstream bug which requires OpenAPIConfig and OpenAPIV3Config to be available. Otherwise, there will be a nil pointer exception.
-	// ref: https://github.com/kubernetes/apiserver/blob/b9faf8358c6ec35a3ca611244052efcc394c8e44/pkg/server/genericapiserver.go#L962
-	gardenerAPIServerConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(openapi.GetOpenAPIDefinitions, openapinamer.NewDefinitionNamer(api.Scheme))
-	gardenerAPIServerConfig.OpenAPIConfig.Info.Title = "Gardener"
-	gardenerAPIServerConfig.OpenAPIConfig.Info.Version = gardenerVersion.GitVersion
 	gardenerAPIServerConfig.OpenAPIV3Config = genericapiserver.DefaultOpenAPIV3Config(openapi.GetOpenAPIDefinitions, openapinamer.NewDefinitionNamer(api.Scheme))
 	gardenerAPIServerConfig.OpenAPIV3Config.Info.Title = "Gardener"
 	gardenerAPIServerConfig.OpenAPIV3Config.Info.Version = gardenerVersion.GitVersion
@@ -436,10 +440,6 @@ func (o *Options) ApplyTo(config *apiserver.Config) error {
 			mergedResourceConfig,
 			nil,
 		),
-	}
-
-	if err := o.Recommended.Etcd.Complete(config.GenericConfig.StorageObjectCountTracker, config.GenericConfig.DrainedNotify(), config.GenericConfig.AddPostStartHook); err != nil {
-		return err
 	}
 
 	return o.Recommended.Etcd.ApplyWithStorageFactoryTo(storageFactory, &gardenerAPIServerConfig.Config)
