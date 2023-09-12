@@ -87,7 +87,7 @@ func NewCleaner(seedClient, gardenClient client.Client, seedNamespace, projectNa
 func (c *cleaner) DeleteExtensionObjects(ctx context.Context) error {
 	return utilclient.ApplyToObjectKinds(ctx, func(kind string, objectList client.ObjectList) flow.TaskFn {
 		return func(ctx context.Context) error {
-			c.log.Info("Deleting all extension resources", "kind", kind)
+			c.log.Info("Deleting all extension resources", "kind", kind, "namespace", c.seedNamespace)
 			return extensions.DeleteExtensionObjects(ctx, c.seedClient, objectList, c.seedNamespace, nil)
 		}
 	}, extensionKindToObjectList)
