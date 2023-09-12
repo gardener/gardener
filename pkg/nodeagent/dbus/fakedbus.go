@@ -25,8 +25,8 @@ import (
 type FakeAction int
 
 const (
-	// FakeDeamonReload is the fake action for daemon reload.
-	FakeDeamonReload FakeAction = iota
+	// FakeDaemonReload is the fake action for daemon reload.
+	FakeDaemonReload FakeAction = iota
 	// FakeDisable is the fake action for disable.
 	FakeDisable
 	// FakeEnable is the fake action for enable.
@@ -53,7 +53,7 @@ type FakeDbus struct {
 // DaemonReload implements Dbus.
 func (f *FakeDbus) DaemonReload(ctx context.Context) error {
 	f.Actions = append(f.Actions, FakeSystemdAction{
-		Action: FakeDeamonReload,
+		Action: FakeDaemonReload,
 	})
 	return nil
 }

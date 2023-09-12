@@ -40,6 +40,7 @@ type Dbus interface {
 	// DaemonReload reload the systemd configuration, same as executing systemctl daemon-reload
 	DaemonReload(ctx context.Context) error
 }
+
 type db struct{}
 
 // New returns a new working Dbus
