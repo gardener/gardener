@@ -377,7 +377,7 @@ func (o *Options) ApplyTo(config *apiserver.Config) error {
 	gardenerAPIServerConfig := config.GenericConfig
 
 	gardenerVersion := version.Get()
-	// There might be an upstream bug which requires OpenAPIConfig and OpenAPIV3Config to be available. Otherwise, there will be a nil pointer exception.
+	// There is an upstream bug which requires OpenAPIConfig and OpenAPIV3Config to be available. Otherwise, there will be a nil pointer exception.
 	// ref: https://github.com/kubernetes/apiserver/blob/b9faf8358c6ec35a3ca611244052efcc394c8e44/pkg/server/genericapiserver.go#L962
 	gardenerAPIServerConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(openapi.GetOpenAPIDefinitions, openapinamer.NewDefinitionNamer(api.Scheme))
 	gardenerAPIServerConfig.OpenAPIConfig.Info.Title = "Gardener"
