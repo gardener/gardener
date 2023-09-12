@@ -16,7 +16,6 @@ package charts
 
 import (
 	"embed"
-	_ "embed"
 	"path/filepath"
 )
 
