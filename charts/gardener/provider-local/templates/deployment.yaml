@@ -42,7 +42,6 @@ spec:
         image: {{ .Values.image }}
         imagePullPolicy: {{ .Values.imagePullPolicy }}
         args:
-        - --leader-election-resource-lock={{ .Values.leaderElection.resourceLock }}
         - --controlplane-max-concurrent-reconciles={{ .Values.controllers.controlplane.concurrentSyncs }}
         - --dnsrecord-max-concurrent-reconciles={{ .Values.controllers.dnsrecord.concurrentSyncs }}
         # Writing to /etc/hosts is only used for local development, useless when running in pod.
