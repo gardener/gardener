@@ -1205,6 +1205,19 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 				allErrs = append(allErrs, field.Forbidden(fldPath.Child("serviceAccountConfig", "maxTokenExpiration"), "must be at most 2160h (90d)"))
 			}
 		}
+		if len(kubeAPIServer.ServiceAccountConfig.AcceptedIssuers) > 0 {
+			issuers := sets.New[string]()
+			if kubeAPIServer.ServiceAccountConfig.Issuer != nil {
+				issuers.Insert(*kubeAPIServer.ServiceAccountConfig.Issuer)
+			}
+			for i, issuer := range kubeAPIServer.ServiceAccountConfig.AcceptedIssuers {
+				if issuers.Has(issuer) {
+					allErrs = append(allErrs, field.Duplicate(fldPath.Child("serviceAccountConfig", "acceptedIssuers").Index(i), issuer))
+				} else {
+					issuers.Insert(issuer)
+				}
+			}
+		}
 	}
 
 	if kubeAPIServer.EventTTL != nil {

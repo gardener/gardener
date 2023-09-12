@@ -1908,6 +1908,36 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration"),
 				}))))
 			})
+
+			It("should not allow to specify duplicates in accepted issuers", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
+					AcceptedIssuers: []string{
+						"issuer",
+						"issuer",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.acceptedIssuers[1]"),
+				}))))
+			})
+
+			It("should not allow to duplicate the issuer in accepted issuers", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
+					Issuer:          pointer.String("issuer"),
+					AcceptedIssuers: []string{"issuer"},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.acceptedIssuers[0]"),
+				}))))
+			})
 		})
 
 		It("should not allow to specify a negative event ttl duration", func() {

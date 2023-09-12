@@ -410,6 +410,15 @@ func computeKubeAPIServerServiceAccountConfig(
 	if out.Issuer != defaultIssuer && !utils.ValueExists(defaultIssuer, out.AcceptedIssuers) {
 		out.AcceptedIssuers = append(out.AcceptedIssuers, defaultIssuer)
 	}
+	if config.ServiceAccountConfig.Issuer == nil {
+		// ensure defaultIssuer is not duplicated in the accepted issuers
+		for i, val := range out.AcceptedIssuers {
+			if val == defaultIssuer {
+				out.AcceptedIssuers = append(out.AcceptedIssuers[:i], out.AcceptedIssuers[i+1:]...)
+				break
+			}
+		}
+	}
 
 	return out
 }
