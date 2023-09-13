@@ -63,12 +63,6 @@ func New(
 		values:         values,
 	}
 
-	if values.ClusterType == component.ClusterTypeSeed {
-		k.registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-	} else {
-		k.registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
-	}
-
 	return k
 }
 
@@ -77,7 +71,6 @@ type kubeStateMetrics struct {
 	secretsManager secretsmanager.Interface
 	namespace      string
 	values         Values
-	registry       *managedresources.Registry
 }
 
 // Values is a set of configuration values for the kube-state-metrics.
@@ -117,7 +110,14 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 		}
 	}
 
-	return component.DeployResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, k.managedResourceName(), k.registry, k.getResourceConfigs(genericTokenKubeconfigSecretName, shootAccessSecret))
+	var registry *managedresources.Registry
+	if k.values.ClusterType == component.ClusterTypeSeed {
+		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+	} else {
+		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+	}
+
+	return component.DeployResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, k.managedResourceName(), registry, k.getResourceConfigs(genericTokenKubeconfigSecretName, shootAccessSecret))
 }
 
 func (k *kubeStateMetrics) Destroy(ctx context.Context) error {
