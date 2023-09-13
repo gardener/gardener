@@ -63,9 +63,9 @@ func (r *Reconciler) reconcile(
 	reconcile.Result,
 	error,
 ) {
-	if !controllerutil.ContainsFinalizer(garden, finalizerName) {
+	if !controllerutil.ContainsFinalizer(garden, operatorv1alpha1.FinalizerName) {
 		log.Info("Adding finalizer")
-		if err := controllerutils.AddFinalizers(ctx, r.RuntimeClientSet.Client(), garden, finalizerName); err != nil {
+		if err := controllerutils.AddFinalizers(ctx, r.RuntimeClientSet.Client(), garden, operatorv1alpha1.FinalizerName); err != nil {
 			return reconcile.Result{}, err
 		}
 	}

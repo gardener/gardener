@@ -272,9 +272,9 @@ func (r *Reconciler) delete(
 	}
 	*garden = *gardenCopy
 
-	if controllerutil.ContainsFinalizer(garden, finalizerName) {
+	if controllerutil.ContainsFinalizer(garden, operatorv1alpha1.FinalizerName) {
 		log.Info("Removing finalizer")
-		if err := controllerutils.RemoveFinalizers(ctx, r.RuntimeClientSet.Client(), garden, finalizerName); err != nil {
+		if err := controllerutils.RemoveFinalizers(ctx, r.RuntimeClientSet.Client(), garden, operatorv1alpha1.FinalizerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 		}
 	}

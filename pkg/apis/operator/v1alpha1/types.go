@@ -566,3 +566,6 @@ var AvailableOperationAnnotations = sets.New(
 	v1beta1constants.OperationRotateCredentialsStart,
 	v1beta1constants.OperationRotateCredentialsComplete,
 )
+
+// FinalizerName is the name of the finalizer used by gardener-operator.
+const FinalizerName = "gardener.cloud/operator"
