@@ -89,8 +89,8 @@ type NodeAgentConfiguration struct {
 type APIServer struct {
 	// URL is the url to the api server.
 	URL string `json:"url"`
-	// CA is the ca certificate for the api server.
-	CA string `json:"ca"`
+	// CABundle is the ca certificate for the api server.
+	CABundle []byte `json:"caBundle"`
 	// BootstrapToken is the initial token to fetch the shoot access token for
 	// kubelet and the gardener-node-agent.
 	BootstrapToken string `json:"bootstrapToken"`

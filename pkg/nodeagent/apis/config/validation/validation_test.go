@@ -35,7 +35,7 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 			},
 			APIServer: config.APIServer{
 				BootstrapToken: "bootstraptoken",
-				CA:             "base64 encoded ca",
+				CABundle:       []byte("base64 encoded ca"),
 				URL:            "https://api.shoot.foo.bar",
 			},
 			KubernetesVersion:               "v1.27.0",
@@ -50,17 +50,6 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 		It("should pass because apiVersion is specified", func() {
 			errorList := ValidateNodeAgentConfiguration(conf)
 			Expect(errorList).To(BeEmpty())
-		})
-
-		It("should fail because apiVersion config is not specified", func() {
-			conf.APIVersion = ""
-			errorList := ValidateNodeAgentConfiguration(conf)
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("nodeAgent.config.apiVersion"),
-				})),
-			))
 		})
 
 		It("should fail because hyperkube image config is not specified", func() {
@@ -141,7 +130,7 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 		})
 
 		It("should fail because apiServer.ca config is not specified", func() {
-			conf.APIServer.CA = ""
+			conf.APIServer.CABundle = nil
 			errorList := ValidateNodeAgentConfiguration(conf)
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{

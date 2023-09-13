@@ -61,7 +61,7 @@ func RegisterConversions(s *runtime.Scheme) error {
 
 func autoConvert_v1alpha1_APIServer_To_config_APIServer(in *APIServer, out *config.APIServer, s conversion.Scope) error {
 	out.URL = in.URL
-	out.CA = in.CA
+	out.CABundle = *(*[]byte)(unsafe.Pointer(&in.CABundle))
 	out.BootstrapToken = in.BootstrapToken
 	return nil
 }
@@ -73,7 +73,7 @@ func Convert_v1alpha1_APIServer_To_config_APIServer(in *APIServer, out *config.A
 
 func autoConvert_config_APIServer_To_v1alpha1_APIServer(in *config.APIServer, out *APIServer, s conversion.Scope) error {
 	out.URL = in.URL
-	out.CA = in.CA
+	out.CABundle = *(*[]byte)(unsafe.Pointer(&in.CABundle))
 	out.BootstrapToken = in.BootstrapToken
 	return nil
 }

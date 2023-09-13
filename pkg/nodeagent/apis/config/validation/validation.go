@@ -53,7 +53,7 @@ func ValidateNodeAgentConfiguration(conf *config.NodeAgentConfiguration) field.E
 	if conf.APIServer.URL == "" {
 		allErrs = append(allErrs, field.Required(apiServerFldPath.Child("url"), "must provide a url"))
 	}
-	if conf.APIServer.CA == "" {
+	if len(conf.APIServer.CABundle) == 0 {
 		allErrs = append(allErrs, field.Required(apiServerFldPath.Child("ca"), "must provide a ca"))
 	}
 	if conf.APIServer.BootstrapToken == "" {
