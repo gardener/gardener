@@ -87,8 +87,8 @@ func autoConvert_v1alpha1_NodeAgentConfiguration_To_config_NodeAgentConfiguratio
 	if err := Convert_v1alpha1_APIServer_To_config_APIServer(&in.APIServer, &out.APIServer, s); err != nil {
 		return err
 	}
-	out.OSCSecretName = in.OSCSecretName
-	out.TokenSecretName = in.TokenSecretName
+	out.OperatingSystemConfigSecretName = in.OperatingSystemConfigSecretName
+	out.AccessTokenSecretName = in.AccessTokenSecretName
 	out.Image = in.Image
 	out.HyperkubeImage = in.HyperkubeImage
 	out.KubernetesVersion = in.KubernetesVersion
@@ -105,8 +105,8 @@ func autoConvert_config_NodeAgentConfiguration_To_v1alpha1_NodeAgentConfiguratio
 	if err := Convert_config_APIServer_To_v1alpha1_APIServer(&in.APIServer, &out.APIServer, s); err != nil {
 		return err
 	}
-	out.OSCSecretName = in.OSCSecretName
-	out.TokenSecretName = in.TokenSecretName
+	out.OperatingSystemConfigSecretName = in.OperatingSystemConfigSecretName
+	out.AccessTokenSecretName = in.AccessTokenSecretName
 	out.Image = in.Image
 	out.HyperkubeImage = in.HyperkubeImage
 	out.KubernetesVersion = in.KubernetesVersion

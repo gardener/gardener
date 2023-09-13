@@ -38,11 +38,11 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 				CA:             "base64 encoded ca",
 				URL:            "https://api.shoot.foo.bar",
 			},
-			KubernetesVersion: "v1.27.0",
-			HyperkubeImage:    "registry.com/hyperkube:v1.27.0",
-			Image:             "registry.com/node-agent:v1.73.0",
-			OSCSecretName:     "osc-secret",
-			TokenSecretName:   "token-secret",
+			KubernetesVersion:               "v1.27.0",
+			HyperkubeImage:                  "registry.com/hyperkube:v1.27.0",
+			Image:                           "registry.com/node-agent:v1.73.0",
+			OperatingSystemConfigSecretName: "osc-secret",
+			AccessTokenSecretName:           "token-secret",
 		}
 	})
 
@@ -103,7 +103,7 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 			))
 		})
 		It("should fail because oscSecretName config is not specified", func() {
-			conf.OSCSecretName = ""
+			conf.OperatingSystemConfigSecretName = ""
 			errorList := ValidateNodeAgentConfiguration(conf)
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
@@ -113,7 +113,7 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 			))
 		})
 		It("should fail because tokenSecretName config is not specified", func() {
-			conf.TokenSecretName = ""
+			conf.AccessTokenSecretName = ""
 			errorList := ValidateNodeAgentConfiguration(conf)
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{

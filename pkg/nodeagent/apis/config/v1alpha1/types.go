@@ -63,11 +63,12 @@ type NodeAgentConfiguration struct {
 	APIServer APIServer `json:"apiServer"`
 
 	// SecretName defines the name of the secret in the shoot cluster control plane, which contains
-	// the OSC for the gardener-node-agent.
-	OSCSecretName string `json:"oscSecretName"`
-	// TokenSecretName defines the name of the secret in the shoot cluster control plane, which contains
+	// the Operating System Config (OSC) for the gardener-node-agent.
+	OperatingSystemConfigSecretName string
+
+	// AccessTokenSecretName defines the name of the secret in the shoot cluster control plane, which contains
 	// the `kube-apiserver` access token for the gardener-node-agent.
-	TokenSecretName string `json:"tokenSecretName"`
+	AccessTokenSecretName string
 
 	// Image is the container image reference to the gardener-node-agent.
 	Image string `json:"image"`

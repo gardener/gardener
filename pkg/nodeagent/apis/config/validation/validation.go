@@ -44,10 +44,10 @@ func ValidateNodeAgentConfiguration(conf *config.NodeAgentConfiguration) field.E
 		allErrs = append(allErrs, field.Invalid(configFldPath.Child("kubernetesVersion"), conf.KubernetesVersion, err.Error()))
 	}
 
-	if conf.OSCSecretName == "" {
+	if conf.OperatingSystemConfigSecretName == "" {
 		allErrs = append(allErrs, field.Required(configFldPath.Child("oscSecretName"), "must provide a oscSecretName"))
 	}
-	if conf.TokenSecretName == "" {
+	if conf.AccessTokenSecretName == "" {
 		allErrs = append(allErrs, field.Required(configFldPath.Child("tokenSecretName"), "must provide a tokenSecretName"))
 	}
 
