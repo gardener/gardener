@@ -277,6 +277,8 @@ func (g *garden) Start(ctx context.Context) error {
 			},
 		}
 
+		seedNamespace := gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.SeedTemplate.Name)
+
 		opts.NewCache = func(config *rest.Config, opts cache.Options) (cache.Cache, error) {
 			// gardenlet should watch only objects which are related to the seed it is responsible for.
 			opts.ByObject = map[client.Object]cache.ByObject{
@@ -288,7 +290,6 @@ func (g *garden) Start(ctx context.Context) error {
 				},
 			}
 
-			seedNamespace := gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.SeedTemplate.Name)
 			return kubernetes.AggregatorCacheFunc(
 				kubernetes.NewRuntimeCache,
 				map[client.Object]cache.NewCacheFunc{
@@ -339,7 +340,6 @@ func (g *garden) Start(ctx context.Context) error {
 				return nil, err
 			}
 
-			seedNamespace := gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.SeedTemplate.Name)
 			return &kubernetes.FallbackClient{
 				Client: cachedClient,
 				Reader: uncachedClient,
