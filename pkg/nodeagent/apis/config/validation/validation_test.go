@@ -15,6 +15,7 @@
 package validation_test
 
 import (
+	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -38,7 +39,7 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 				CABundle:       []byte("base64 encoded ca"),
 				URL:            "https://api.shoot.foo.bar",
 			},
-			KubernetesVersion:               "v1.27.0",
+			KubernetesVersion:               semver.MustParse("v1.27.0"),
 			HyperkubeImage:                  "registry.com/hyperkube:v1.27.0",
 			Image:                           "registry.com/node-agent:v1.73.0",
 			OperatingSystemConfigSecretName: "osc-secret",
@@ -75,7 +76,7 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 		})
 
 		It("should fail because kubernetes version is empty", func() {
-			conf.KubernetesVersion = ""
+			conf.KubernetesVersion = nil
 			errorList := ValidateNodeAgentConfiguration(conf)
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
@@ -86,7 +87,7 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 		})
 
 		It("should fail because kubernetes version is unsupported", func() {
-			conf.KubernetesVersion = "unsupported"
+			conf.KubernetesVersion = semver.MustParse("0.0.1+unsupported")
 			errorList := ValidateNodeAgentConfiguration(conf)
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{

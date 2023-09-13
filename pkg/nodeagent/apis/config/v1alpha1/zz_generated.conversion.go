@@ -24,6 +24,7 @@ package v1alpha1
 import (
 	unsafe "unsafe"
 
+	semver "github.com/Masterminds/semver"
 	config "github.com/gardener/gardener/pkg/nodeagent/apis/config"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -91,7 +92,7 @@ func autoConvert_v1alpha1_NodeAgentConfiguration_To_config_NodeAgentConfiguratio
 	out.AccessTokenSecretName = in.AccessTokenSecretName
 	out.Image = in.Image
 	out.HyperkubeImage = in.HyperkubeImage
-	out.KubernetesVersion = in.KubernetesVersion
+	out.KubernetesVersion = (*semver.Version)(unsafe.Pointer(in.KubernetesVersion))
 	out.KubeletDataVolumeSize = (*int64)(unsafe.Pointer(in.KubeletDataVolumeSize))
 	return nil
 }
@@ -109,7 +110,7 @@ func autoConvert_config_NodeAgentConfiguration_To_v1alpha1_NodeAgentConfiguratio
 	out.AccessTokenSecretName = in.AccessTokenSecretName
 	out.Image = in.Image
 	out.HyperkubeImage = in.HyperkubeImage
-	out.KubernetesVersion = in.KubernetesVersion
+	out.KubernetesVersion = (*semver.Version)(unsafe.Pointer(in.KubernetesVersion))
 	out.KubeletDataVolumeSize = (*int64)(unsafe.Pointer(in.KubeletDataVolumeSize))
 	return nil
 }

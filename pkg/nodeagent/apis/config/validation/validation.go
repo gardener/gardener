@@ -35,9 +35,9 @@ func ValidateNodeAgentConfiguration(conf *config.NodeAgentConfiguration) field.E
 		allErrs = append(allErrs, field.Required(configFldPath.Child("image"), "must provide a image"))
 	}
 
-	if conf.KubernetesVersion == "" {
+	if conf.KubernetesVersion == nil {
 		allErrs = append(allErrs, field.Required(configFldPath.Child("kubernetesVersion"), "must provide a supported kubernetesVersion"))
-	} else if err := kubernetesversion.CheckIfSupported(conf.KubernetesVersion); err != nil {
+	} else if err := kubernetesversion.CheckIfSupported(conf.KubernetesVersion.String()); err != nil {
 		allErrs = append(allErrs, field.Invalid(configFldPath.Child("kubernetesVersion"), conf.KubernetesVersion, err.Error()))
 	}
 

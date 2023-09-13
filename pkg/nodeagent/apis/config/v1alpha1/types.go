@@ -15,6 +15,7 @@
 package v1alpha1
 
 import (
+	"github.com/Masterminds/semver"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -77,7 +78,7 @@ type NodeAgentConfiguration struct {
 
 	// KubernetesVersion contains the kubernetes version of the kubelet, used for annotating
 	// the corresponding node resource with a kubernetes version annotation.
-	KubernetesVersion string `json:"kubernetesVersion"`
+	KubernetesVersion *semver.Version `json:"kubernetesVersion"`
 
 	// KubeletDataVolumeSize sets the data volume size of an unformatted disk on the worker node,
 	// which is used for /var/lib on the worker.

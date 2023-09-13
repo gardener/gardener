@@ -22,6 +22,7 @@ limitations under the License.
 package config
 
 import (
+	semver "github.com/Masterminds/semver"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -51,6 +52,11 @@ func (in *NodeAgentConfiguration) DeepCopyInto(out *NodeAgentConfiguration) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
 	in.APIServer.DeepCopyInto(&out.APIServer)
+	if in.KubernetesVersion != nil {
+		in, out := &in.KubernetesVersion, &out.KubernetesVersion
+		*out = new(semver.Version)
+		**out = **in
+	}
 	if in.KubeletDataVolumeSize != nil {
 		in, out := &in.KubeletDataVolumeSize, &out.KubeletDataVolumeSize
 		*out = new(int64)
