@@ -68,16 +68,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	var (
-		referencedSecretNames    = r.GetReferencedSecretNames(obj)
-		referencedConfigMapNames = r.GetReferencedConfigMapNames(obj)
-	)
-
-	unreferencedSecrets, err := r.getUnreferencedResources(ctx, obj, &corev1.SecretList{}, referencedSecretNames...)
+	unreferencedSecrets, err := r.getUnreferencedResources(ctx, obj, &corev1.SecretList{}, r.GetReferencedSecretNames)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	unreferencedConfigMaps, err := r.getUnreferencedResources(ctx, obj, &corev1.ConfigMapList{}, referencedConfigMapNames...)
+	unreferencedConfigMaps, err := r.getUnreferencedResources(ctx, obj, &corev1.ConfigMapList{}, r.GetReferencedConfigMapNames)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -97,11 +92,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	addedFinalizerToSecret, err := r.handleReferencedResources(ctx, log, "Secret", func() client.Object { return &corev1.Secret{} }, r.GetNamespace(obj), referencedSecretNames...)
+	addedFinalizerToSecret, err := r.handleReferencedResources(ctx, log, "Secret", func() client.Object { return &corev1.Secret{} }, r.GetNamespace(obj), r.GetReferencedSecretNames(obj)...)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	addedFinalizerToConfigMap, err := r.handleReferencedResources(ctx, log, "ConfigMap", func() client.Object { return &corev1.ConfigMap{} }, r.GetNamespace(obj), referencedConfigMapNames...)
+	addedFinalizerToConfigMap, err := r.handleReferencedResources(ctx, log, "ConfigMap", func() client.Object { return &corev1.ConfigMap{} }, r.GetNamespace(obj), r.GetReferencedConfigMapNames(obj)...)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -207,7 +202,7 @@ func (r *Reconciler) getUnreferencedResources(
 	ctx context.Context,
 	reconciledObj client.Object,
 	resourceList client.ObjectList,
-	objectNames ...string,
+	getReferencedObjectsFunc func(client.Object) []string,
 ) (
 	[]client.Object,
 	error,
@@ -238,7 +233,7 @@ func (r *Reconciler) getUnreferencedResources(
 			return nil
 		}
 
-		referencedObjects.Insert(objectNames...)
+		referencedObjects.Insert(getReferencedObjectsFunc(obj)...)
 		return nil
 	}); err != nil {
 		return nil, err
