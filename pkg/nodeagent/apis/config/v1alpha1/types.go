@@ -82,7 +82,7 @@ type NodeAgentConfiguration struct {
 	// KubeletDataVolumeSize sets the data volume size of an unformatted disk on the worker node,
 	// which is used for /var/lib on the worker.
 	// +optional
-	KubeletDataVolumeSize *int64 `json:"KubeletDataVolumeSize,omitempty"`
+	KubeletDataVolumeSize *int64 `json:"kubeletDataVolumeSize,omitempty"`
 }
 
 // APIServer contains the connection configuration for the gardener-node-agent to
