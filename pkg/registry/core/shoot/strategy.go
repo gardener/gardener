@@ -70,6 +70,8 @@ func (shootStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 
 	// TODO(shafeeqes): Drop this after gardener v1.80 has been released.
 	removeForbiddenFinalizers(shoot)
+	// TODO(acumino): Drop this after v1.83 has been released.
+	removeDuplicateExtensions(shoot)
 }
 
 func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {

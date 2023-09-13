@@ -97,6 +97,40 @@ var _ = Describe("Strategy", func() {
 
 			Expect(shoot.Finalizers).To(ConsistOf("random", "some-finalizer"))
 		})
+
+		It("should remove duplicated extensions and take the latest configuration of duplicate extensions", func() {
+			shoot := &core.Shoot{
+				Spec: core.ShootSpec{
+					Extensions: []core.Extension{
+						{
+							Type:     "arbitrary",
+							Disabled: pointer.Bool(false),
+						},
+						{
+							Type:     "arbitrary",
+							Disabled: pointer.Bool(true),
+						},
+						{
+							Type:     "arbitrary-1",
+							Disabled: pointer.Bool(true),
+						},
+					},
+				},
+			}
+
+			shootregistry.NewStrategy(0).PrepareForCreate(context.TODO(), shoot)
+
+			Expect(shoot.Spec.Extensions).To(HaveLen(2))
+			Expect(shoot.Spec.Extensions).To(ContainElements(
+				MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal("arbitrary"),
+					"Disabled": Equal(pointer.Bool(true)),
+				}),
+				MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal("arbitrary-1"),
+					"Disabled": Equal(pointer.Bool(true)),
+				})))
+		})
 	})
 
 	Describe("#PrepareForUpdate", func() {
