@@ -28,9 +28,6 @@ func ValidateNodeAgentConfiguration(conf *config.NodeAgentConfiguration) field.E
 
 	configFldPath := fldPath.Child("config")
 
-	if conf.APIVersion == "" {
-		allErrs = append(allErrs, field.Required(configFldPath.Child("apiVersion"), "must provide a apiVersion"))
-	}
 	if conf.HyperkubeImage == "" {
 		allErrs = append(allErrs, field.Required(configFldPath.Child("hyperkubeImage"), "must provide a hyperkubeImage"))
 	}
@@ -51,16 +48,16 @@ func ValidateNodeAgentConfiguration(conf *config.NodeAgentConfiguration) field.E
 		allErrs = append(allErrs, field.Required(configFldPath.Child("tokenSecretName"), "must provide a tokenSecretName"))
 	}
 
-	apiserverFldPath := configFldPath.Child("apiServer")
+	apiServerFldPath := configFldPath.Child("apiServer")
 
 	if conf.APIServer.URL == "" {
-		allErrs = append(allErrs, field.Required(apiserverFldPath.Child("url"), "must provide a url"))
+		allErrs = append(allErrs, field.Required(apiServerFldPath.Child("url"), "must provide a url"))
 	}
 	if conf.APIServer.CA == "" {
-		allErrs = append(allErrs, field.Required(apiserverFldPath.Child("ca"), "must provide a ca"))
+		allErrs = append(allErrs, field.Required(apiServerFldPath.Child("ca"), "must provide a ca"))
 	}
 	if conf.APIServer.BootstrapToken == "" {
-		allErrs = append(allErrs, field.Required(apiserverFldPath.Child("bootstrapToken"), "must provide a bootstrapToken"))
+		allErrs = append(allErrs, field.Required(apiServerFldPath.Child("bootstrapToken"), "must provide a bootstrapToken"))
 	}
 	return allErrs
 }

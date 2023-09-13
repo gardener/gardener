@@ -51,6 +51,7 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 			errorList := ValidateNodeAgentConfiguration(conf)
 			Expect(errorList).To(BeEmpty())
 		})
+
 		It("should fail because apiVersion config is not specified", func() {
 			conf.APIVersion = ""
 			errorList := ValidateNodeAgentConfiguration(conf)
@@ -61,6 +62,7 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 				})),
 			))
 		})
+
 		It("should fail because hyperkube image config is not specified", func() {
 			conf.HyperkubeImage = ""
 			errorList := ValidateNodeAgentConfiguration(conf)
@@ -71,6 +73,7 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 				})),
 			))
 		})
+
 		It("should fail because image config is not specified", func() {
 			conf.Image = ""
 			errorList := ValidateNodeAgentConfiguration(conf)
@@ -81,6 +84,7 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 				})),
 			))
 		})
+
 		It("should fail because kubernetes version is empty", func() {
 			conf.KubernetesVersion = ""
 			errorList := ValidateNodeAgentConfiguration(conf)
@@ -102,6 +106,7 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 				})),
 			))
 		})
+
 		It("should fail because oscSecretName config is not specified", func() {
 			conf.OperatingSystemConfigSecretName = ""
 			errorList := ValidateNodeAgentConfiguration(conf)
@@ -112,6 +117,7 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 				})),
 			))
 		})
+
 		It("should fail because tokenSecretName config is not specified", func() {
 			conf.AccessTokenSecretName = ""
 			errorList := ValidateNodeAgentConfiguration(conf)
@@ -122,6 +128,7 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 				})),
 			))
 		})
+
 		It("should fail because apiServer.url config is not specified", func() {
 			conf.APIServer.URL = ""
 			errorList := ValidateNodeAgentConfiguration(conf)
@@ -132,6 +139,7 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 				})),
 			))
 		})
+
 		It("should fail because apiServer.ca config is not specified", func() {
 			conf.APIServer.CA = ""
 			errorList := ValidateNodeAgentConfiguration(conf)
@@ -142,6 +150,7 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 				})),
 			))
 		})
+
 		It("should fail because apiServer.bootstrapToken config is not specified", func() {
 			conf.APIServer.BootstrapToken = ""
 			errorList := ValidateNodeAgentConfiguration(conf)
