@@ -31,7 +31,7 @@ cat <<EOF
         metering:$NAME:sum_by_namespace
       +
         (
-            last_over_time(metering:$NAME:sum_by_namespace:sum_over_time[10m])
+            last_over_time(metering:$NAME:sum_by_namespace:sum_over_time[30m])
           or
             metering:$NAME:sum_by_namespace * 0
         )
@@ -46,7 +46,7 @@ cat <<EOF
     expr: |2
         metering:$NAME:sum_by_namespace:avg_over_time
       or
-          last_over_time(metering:$NAME:sum_by_namespace:avg_over_time:this_month[10m])
+          last_over_time(metering:$NAME:sum_by_namespace:avg_over_time:this_month[30m])
         + on (year, month) group_left ()
           _year_month2
 
