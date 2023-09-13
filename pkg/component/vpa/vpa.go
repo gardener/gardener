@@ -64,21 +64,12 @@ func New(
 	secretsManager secretsmanager.Interface,
 	values Values,
 ) Interface {
-	v := &vpa{
+	return &vpa{
 		client:         client,
 		namespace:      namespace,
 		secretsManager: secretsManager,
 		values:         values,
 	}
-
-	if values.ClusterType == component.ClusterTypeSeed {
-		v.registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-	} else {
-		v.registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
-		v.crdDeployer = NewCRD(nil, v.registry)
-	}
-
-	return v
 }
 
 type vpa struct {
@@ -86,9 +77,6 @@ type vpa struct {
 	namespace      string
 	secretsManager secretsmanager.Interface
 	values         Values
-
-	registry    *managedresources.Registry
-	crdDeployer component.Deployer
 
 	caSecretName                     string
 	caBundle                         []byte
@@ -151,6 +139,13 @@ func (v *vpa) Deploy(ctx context.Context) error {
 		)
 	}
 
+	var registry *managedresources.Registry
+	if v.values.ClusterType == component.ClusterTypeSeed {
+		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+	} else {
+		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+	}
+
 	if v.values.ClusterType == component.ClusterTypeShoot {
 		genericTokenKubeconfigSecret, found := v.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
 		if !found {
@@ -168,12 +163,13 @@ func (v *vpa) Deploy(ctx context.Context) error {
 			}
 		}
 
-		if err := v.crdDeployer.Deploy(ctx); err != nil {
+		crdDeployer := NewCRD(nil, registry)
+		if err := crdDeployer.Deploy(ctx); err != nil {
 			return err
 		}
 	}
 
-	return component.DeployResourceConfigs(ctx, v.client, v.namespace, v.values.ClusterType, v.managedResourceName(), v.registry, allResources)
+	return component.DeployResourceConfigs(ctx, v.client, v.namespace, v.values.ClusterType, v.managedResourceName(), registry, allResources)
 }
 
 func (v *vpa) Destroy(ctx context.Context) error {
