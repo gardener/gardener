@@ -225,14 +225,14 @@ var _ = Describe("Garden Reference controller tests", func() {
 			}
 		})
 
-		It("should remove finalizers from the referenced secrets and configmaps", func() {
+		It("should remove finalizers from the garden and the referenced secrets and configmaps", func() {
 			patch := client.MergeFrom(garden.DeepCopy())
 			garden.Spec.VirtualCluster.ETCD = nil
 			garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = nil
 			garden.Spec.VirtualCluster.Gardener.APIServer = nil
 			Expect(testClient.Patch(ctx, garden, patch)).To(Succeed())
 
-			for _, obj := range []client.Object{secret1, secret2, secret3, secret4, secret5, secret6, secret7, configMap1, configMap2} {
+			for _, obj := range []client.Object{garden, secret1, secret2, secret3, secret4, secret5, secret6, secret7, configMap1, configMap2} {
 				Eventually(func(g Gomega) []string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
 					return obj.GetFinalizers()

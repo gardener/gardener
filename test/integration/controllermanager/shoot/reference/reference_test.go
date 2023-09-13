@@ -201,14 +201,14 @@ var _ = Describe("Shoot Reference controller tests", func() {
 			}
 		})
 
-		It("should remove finalizers from the referenced secrets and configmaps", func() {
+		It("should remove finalizers from the shoot and the referenced secrets and configmaps", func() {
 			patch := client.MergeFrom(shoot.DeepCopy())
 			shoot.Spec.DNS.Providers = nil
 			shoot.Spec.Kubernetes.KubeAPIServer = nil
 			shoot.Spec.Resources = nil
 			Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
 
-			for _, obj := range []client.Object{secret1, secret2, secret3, configMap1, configMap2} {
+			for _, obj := range []client.Object{shoot, secret1, secret2, secret3, configMap1, configMap2} {
 				Eventually(func(g Gomega) []string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
 					return obj.GetFinalizers()

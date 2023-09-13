@@ -37,7 +37,7 @@ var _ = Describe("Add", func() {
 		}
 	})
 
-	Describe("ShootPredicate", func() {
+	Describe("Predicate", func() {
 		var (
 			p   predicate.Predicate
 			obj *corev1.Pod
@@ -79,7 +79,7 @@ var _ = Describe("Add", func() {
 					Expect(p.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: oldObj})).To(BeFalse())
 				})
 
-				It("should return false because obj does not contain finalizer", func() {
+				It("should return true because obj does not contain finalizer", func() {
 					Expect(p.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: obj})).To(BeTrue())
 				})
 			})

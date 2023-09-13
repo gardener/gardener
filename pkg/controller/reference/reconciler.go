@@ -1,4 +1,4 @@
-// Copyright 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,9 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
-	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -75,16 +73,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		referencedConfigMapNames = r.GetReferencedConfigMapNames(obj)
 	)
 
-	unreferencedSecretNames, err := r.getUnreferencedResources(ctx, obj, &corev1.SecretList{}, referencedSecretNames...)
+	unreferencedSecrets, err := r.getUnreferencedResources(ctx, obj, &corev1.SecretList{}, referencedSecretNames...)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	unreferencedConfigMapNames, err := r.getUnreferencedResources(ctx, obj, &corev1.ConfigMapList{}, referencedConfigMapNames...)
+	unreferencedConfigMaps, err := r.getUnreferencedResources(ctx, obj, &corev1.ConfigMapList{}, referencedConfigMapNames...)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if err := r.releaseUnreferencedResources(ctx, log, append(unreferencedSecretNames, unreferencedConfigMapNames...)...); err != nil {
+	if err := r.releaseUnreferencedResources(ctx, log, append(unreferencedSecrets, unreferencedConfigMaps...)...); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -192,16 +190,11 @@ func (r *Reconciler) releaseUnreferencedResources(
 	for _, resource := range resources {
 		obj := resource
 
-		gvk, err := apiutil.GVKForObject(obj, kubernetesscheme.Scheme)
-		if err != nil {
-			return fmt.Errorf("failed to identify GVK for object: %w", err)
-		}
-
 		fns = append(fns, func(ctx context.Context) error {
 			if controllerutil.ContainsFinalizer(obj, v1beta1constants.ReferenceProtectionFinalizerName) {
-				log.Info("Removing finalizer from object", "kind", gvk.Kind, "obj", client.ObjectKeyFromObject(obj))
+				log.Info("Removing finalizer from object", "kind", obj.GetObjectKind().GroupVersionKind().Kind, "obj", client.ObjectKeyFromObject(obj))
 				if err := controllerutils.RemoveFinalizers(ctx, r.Client, obj, v1beta1constants.ReferenceProtectionFinalizerName); err != nil {
-					return fmt.Errorf("failed to remove finalizer from %s %s: %w", gvk.Kind, client.ObjectKeyFromObject(obj), err)
+					return fmt.Errorf("failed to remove finalizer from %s %s: %w", obj.GetObjectKind().GroupVersionKind().Kind, client.ObjectKeyFromObject(obj), err)
 				}
 			}
 			return nil
@@ -240,7 +233,7 @@ func (r *Reconciler) getUnreferencedResources(
 			return fmt.Errorf("failed converting runtime.Object to client.Object: %+v", o)
 		}
 
-		// Ignore own references if shoot is in deletion and references are not needed any more by Gardener.
+		// Ignore own references if the object is in deletion and references are not needed anymore.
 		if obj.GetName() == reconciledObj.GetName() && obj.GetDeletionTimestamp() != nil && !controllerutil.ContainsFinalizer(obj, gardencorev1beta1.GardenerName) {
 			return nil
 		}
