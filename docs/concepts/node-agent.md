@@ -32,7 +32,7 @@ With the new architecture we gain a lot, let's describe the most important gains
 
 ### Developer Productivity
 
-Because we all develop in go day by day, writing business logic in `bash` is difficult, hard to maintain, almost impossible to test. Getting rid of almost all `bash` scripts which are currently in use for this very important part of the cluster creation process will enhance the speed of adding new features and removing bugs.
+Since the Gardener community develops in Go day by day, writing business logic in `bash` is difficult, hard to maintain, almost impossible to test. Getting rid of almost all `bash` scripts which are currently in use for this very important part of the cluster creation process will enhance the speed of adding new features and removing bugs.
 
 ### Speed
 
