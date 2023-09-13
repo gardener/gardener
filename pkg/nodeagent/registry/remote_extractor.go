@@ -37,7 +37,7 @@ func (remoteExtractor) ExtractFromLayer(image, pathSuffix, dest string) error {
 	// machine and machine pods.
 	image = strings.ReplaceAll(image, "localhost:5001", "garden.local.gardener.cloud:5001")
 
-	imageRef, err := name.ParseReference(image, name.Insecure)
+	imageRef, err := name.ParseReference(image)
 	if err != nil {
 		return fmt.Errorf("unable to parse reference: %w", err)
 	}
