@@ -215,5 +215,54 @@ var _ = Describe("Shoot Reference controller tests", func() {
 				}).ShouldNot(ContainElement("gardener.cloud/reference-protection"), obj.GetName()+" should not have the finalizer")
 			}
 		})
+
+		Context("multiple shoots", func() {
+			var shoot2 *gardencorev1beta1.Shoot
+
+			BeforeEach(func() {
+				shoot2 = shoot.DeepCopy()
+			})
+
+			JustBeforeEach(func() {
+				By("Create second Shoot")
+				Expect(testClient.Create(ctx, shoot2)).To(Succeed())
+				log.Info("Created second Shoot for test", "shoot", client.ObjectKeyFromObject(shoot2))
+
+				DeferCleanup(func() {
+					By("Delete second Shoot")
+					Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot2))).To(Succeed())
+				})
+
+				Eventually(func(g Gomega) []string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot2), shoot2)).To(Succeed())
+					return shoot2.Finalizers
+				}).Should(ContainElement("gardener.cloud/reference-protection"))
+			})
+
+			It("should not remove finalizers from the referenced secrets and configmaps because another shoot still references them", func() {
+				patch := client.MergeFrom(shoot.DeepCopy())
+				shoot.Spec.DNS.Providers = nil
+				shoot.Spec.Kubernetes.KubeAPIServer = nil
+				shoot.Spec.Resources = nil
+				Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
+
+				Eventually(func(g Gomega) []string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+					return shoot.GetFinalizers()
+				}).ShouldNot(ContainElement("gardener.cloud/reference-protection"), shoot.GetName()+" should not have the finalizer")
+
+				Consistently(func(g Gomega) []string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot2), shoot2)).To(Succeed())
+					return shoot2.GetFinalizers()
+				}).Should(ContainElement("gardener.cloud/reference-protection"), shoot2.GetName()+" should have the finalizer")
+
+				for _, obj := range []client.Object{secret1, secret2, secret3, configMap1, configMap2} {
+					Consistently(func(g Gomega) []string {
+						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
+						return obj.GetFinalizers()
+					}).Should(ContainElement("gardener.cloud/reference-protection"), obj.GetName()+" should have the finalizer")
+				}
+			})
+		})
 	})
 })
