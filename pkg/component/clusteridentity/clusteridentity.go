@@ -50,7 +50,6 @@ type clusterIdentity struct {
 	namespace               string
 	identity                string
 	identityType            string
-	managedResourceRegistry *managedresources.Registry
 	managedResourceName     string
 	managedResourceDeleteFn func(ctx context.Context, client client.Client, namespace string, name string) error
 }
@@ -60,7 +59,6 @@ func newComponent(
 	namespace string,
 	identity string,
 	identityType string,
-	managedResourceRegistry *managedresources.Registry,
 	managedResourceName string,
 	managedResourceDeleteFn func(ctx context.Context, client client.Client, namespace string, name string) error,
 ) Interface {
@@ -69,7 +67,6 @@ func newComponent(
 		namespace:               namespace,
 		identity:                identity,
 		identityType:            identityType,
-		managedResourceRegistry: managedResourceRegistry,
 		managedResourceName:     managedResourceName,
 		managedResourceDeleteFn: managedResourceDeleteFn,
 	}
@@ -82,7 +79,6 @@ func NewForSeed(c client.Client, namespace, identity string) Interface {
 		namespace,
 		identity,
 		v1beta1constants.ClusterIdentityOriginSeed,
-		managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer),
 		ManagedResourceControlName,
 		managedresources.DeleteForSeed,
 	)
@@ -95,7 +91,6 @@ func NewForShoot(c client.Client, namespace, identity string) Interface {
 		namespace,
 		identity,
 		v1beta1constants.ClusterIdentityOriginShoot,
-		managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer),
 		ShootManagedResourceName,
 		managedresources.DeleteForShoot,
 	)
@@ -114,7 +109,14 @@ func (c *clusterIdentity) Deploy(ctx context.Context) error {
 		},
 	}
 
-	resources, err := c.managedResourceRegistry.AddAllAndSerialize(configMap)
+	var registry *managedresources.Registry
+	if c.identityType == v1beta1constants.ClusterIdentityOriginShoot {
+		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+	} else {
+		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+	}
+
+	resources, err := registry.AddAllAndSerialize(configMap)
 	if err != nil {
 		return err
 	}
