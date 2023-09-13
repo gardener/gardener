@@ -226,6 +226,10 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 
 			if *cfg.TargetClientConnection.DisableCachedClient {
 				opts.NewClient = func(config *rest.Config, opts client.Options) (client.Client, error) {
+					opts.Cache.DisableFor = append(opts.Cache.DisableFor,
+						&corev1.ConfigMap{},
+						&corev1.Secret{},
+					)
 					return client.New(config, opts)
 				}
 			}
