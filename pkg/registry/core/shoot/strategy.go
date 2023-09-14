@@ -87,6 +87,8 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 
 	// TODO(acumino): Drop this after v1.83 has been released.
 	removeDuplicateExtensions(newShoot)
+	// TODO(dimitar-kostadinov): Drop this after v1.83 has been released.
+	removeDuplicateServiceAccountIssuers(newShoot)
 }
 
 func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
@@ -189,6 +191,24 @@ func removeDuplicateExtensions(shoot *core.Shoot) {
 			return cmp.Compare(a.Type, b.Type)
 		})
 		shoot.Spec.Extensions = extensionsList
+	}
+}
+
+func removeDuplicateServiceAccountIssuers(shoot *core.Shoot) {
+	apiSrv := shoot.Spec.Kubernetes.KubeAPIServer
+	if apiSrv != nil && apiSrv.ServiceAccountConfig != nil && len(apiSrv.ServiceAccountConfig.AcceptedIssuers) > 0 {
+		issuers := make(map[string]struct{})
+		if apiSrv.ServiceAccountConfig.Issuer != nil {
+			issuers[*apiSrv.ServiceAccountConfig.Issuer] = struct{}{}
+		}
+		var acceptedIssuers []string
+		for _, issuer := range apiSrv.ServiceAccountConfig.AcceptedIssuers {
+			if _, ok := issuers[issuer]; !ok {
+				issuers[issuer] = struct{}{}
+				acceptedIssuers = append(acceptedIssuers, issuer)
+			}
+		}
+		apiSrv.ServiceAccountConfig.AcceptedIssuers = acceptedIssuers
 	}
 }
 
