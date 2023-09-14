@@ -19,9 +19,11 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 var _ = Describe("Worker Predicates", func() {
@@ -86,6 +88,55 @@ var _ = Describe("Worker Predicates", func() {
 			Expect(predicate.Create(createEvent)).To(BeTrue())
 			Expect(predicate.Update(updateEvent)).To(BeFalse())
 			Expect(predicate.Delete(deleteEvent)).To(BeTrue())
+			Expect(predicate.Generic(genericEvent)).To(BeFalse())
+		})
+	})
+
+	Describe("#WorkerStateUpdateIsNotSkipped", func() {
+		var (
+			object       client.Object
+			createEvent  event.CreateEvent
+			updateEvent  event.UpdateEvent
+			deleteEvent  event.DeleteEvent
+			genericEvent event.GenericEvent
+		)
+
+		BeforeEach(func() {
+			object = &extensionsv1alpha1.Worker{}
+			createEvent = event.CreateEvent{
+				Object: object,
+			}
+			updateEvent = event.UpdateEvent{
+				ObjectOld: object,
+				ObjectNew: object,
+			}
+			deleteEvent = event.DeleteEvent{
+				Object: object,
+			}
+			genericEvent = event.GenericEvent{
+				Object: object,
+			}
+		})
+
+		It("should be true for a worker without the worker.gardener.cloud/skip-state-update annotation", func() {
+			predicate := worker.WorkerStateUpdateIsNotSkipped()
+
+			Expect(predicate.Create(createEvent)).To(BeTrue())
+			Expect(predicate.Update(updateEvent)).To(BeTrue())
+			Expect(predicate.Delete(deleteEvent)).To(BeTrue())
+			Expect(predicate.Generic(genericEvent)).To(BeTrue())
+		})
+
+		It("should be false for a worker with the worker.gardener.cloud/skip-state-update annotation", func() {
+			object.SetAnnotations(map[string]string{
+				"worker.gardener.cloud/skip-state-update": "true",
+			})
+
+			predicate := worker.WorkerStateUpdateIsNotSkipped()
+
+			Expect(predicate.Create(createEvent)).To(BeFalse())
+			Expect(predicate.Update(updateEvent)).To(BeFalse())
+			Expect(predicate.Delete(deleteEvent)).To(BeFalse())
 			Expect(predicate.Generic(genericEvent)).To(BeFalse())
 		})
 	})
