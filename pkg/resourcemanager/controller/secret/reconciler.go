@@ -68,7 +68,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			// check if we are responsible for this MR, class might have changed, then we need to remove our finalizer
 			if ref.Name == secret.Name && r.ClassFilter.Responsible(&resource) {
 				secretIsReferenced = true
-				if _, ok := secret.Labels[v1alpha1.ReferencedBy]; !ok {
+				if !metav1.HasLabel(secret.ObjectMeta, resourcesv1alpha1.ReferencedBy) {
 					patch := client.MergeFromWithOptions(secret.DeepCopy(), client.MergeFromWithOptimisticLock{})
 					metav1.SetMetaDataLabel(&secret.ObjectMeta, v1alpha1.ReferencedBy, resource.Name)
 					if err := r.SourceClient.Patch(ctx, secret, patch); err != nil {
