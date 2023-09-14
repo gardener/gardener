@@ -28,7 +28,7 @@ type Actuator interface {
 	Reconcile(context.Context, logr.Logger, *extensionsv1alpha1.Extension) error
 	// Delete the Extension resource.
 	Delete(context.Context, logr.Logger, *extensionsv1alpha1.Extension) error
-	// ForceDelete force deletes the Extension resource.
+	// ForceDelete forcefully deletes the Extension resource.
 	ForceDelete(context.Context, logr.Logger, *extensionsv1alpha1.Extension) error
 	// Restore the Extension resource.
 	Restore(context.Context, logr.Logger, *extensionsv1alpha1.Extension) error

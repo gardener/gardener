@@ -67,4 +67,4 @@ When the `ShootForceDeletion` feature gate in the gardener-apiserver is enabled,
 
 If the above conditions are satisfied, you can annotate the Shoot with `confirmation.gardener.cloud/force-deletion=true`, and Gardener will cleanup the Shoot controlplane and the Shoot metadata.
 
-> :warning: You **MUST** ensure that all the resources created in the IaaS account are cleaned up to prevent orphaned resources. Gardener will **NOT** delete any resources in the underlying infrastructure account. Hence, use this annotation on your own risk and only if you are fully aware of these consequences.
+> :warning: You **MUST** ensure that all the resources created in the IaaS account are cleaned up to prevent orphaned resources. Gardener will **NOT** delete any resources in the underlying infrastructure account. Hence, use this annotation at your own risk and only if you are fully aware of these consequences.

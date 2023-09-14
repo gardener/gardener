@@ -29,7 +29,7 @@ type Actuator interface {
 	Reconcile(context.Context, logr.Logger, *extensionsv1alpha1.Worker, *extensionscontroller.Cluster) error
 	// Delete deletes the Worker.
 	Delete(context.Context, logr.Logger, *extensionsv1alpha1.Worker, *extensionscontroller.Cluster) error
-	// ForceDelete force deletes the Worker.
+	// ForceDelete forcefully deletes the Worker.
 	ForceDelete(context.Context, logr.Logger, *extensionsv1alpha1.Worker, *extensionscontroller.Cluster) error
 	// Restore reads from the worker.status.state field and deploys the machines and machineSet
 	Restore(context.Context, logr.Logger, *extensionsv1alpha1.Worker, *extensionscontroller.Cluster) error
