@@ -251,12 +251,7 @@ var _ = Describe("Shoot Reference controller tests", func() {
 					return shoot.GetFinalizers()
 				}).ShouldNot(ContainElement("gardener.cloud/reference-protection"), shoot.GetName()+" should not have the finalizer")
 
-				Consistently(func(g Gomega) []string {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot2), shoot2)).To(Succeed())
-					return shoot2.GetFinalizers()
-				}).Should(ContainElement("gardener.cloud/reference-protection"), shoot2.GetName()+" should have the finalizer")
-
-				for _, obj := range []client.Object{secret1, secret2, secret3, configMap1, configMap2} {
+				for _, obj := range []client.Object{shoot2, secret1, secret2, secret3, configMap1, configMap2} {
 					Consistently(func(g Gomega) []string {
 						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
 						return obj.GetFinalizers()
