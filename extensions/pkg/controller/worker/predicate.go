@@ -19,6 +19,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	"github.com/gardener/gardener/pkg/api/extensions"
 )
 
 // MachineNodeInfoHasChanged is a predicate deciding whether the information about the backing node of a Machine has
@@ -53,4 +55,21 @@ func MachineNodeInfoHasChanged() predicate.Predicate {
 			return true
 		},
 	}
+}
+
+// WorkerSkipStateUpdateAnnotation is a Worker annotation that instructs the worker-state controller to do not reconcile the corresponding Worker.
+const WorkerSkipStateUpdateAnnotation = "worker.gardener.cloud/skip-state-update"
+
+// WorkerStateUpdateIsNotSkipped is a predicate deciding whether the Worker is not annotated to skip state updates.
+func WorkerStateUpdateIsNotSkipped() predicate.Predicate {
+	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		acc, err := extensions.Accessor(obj)
+		if err != nil {
+			// We assume by default that the Worker is not annotated to skip state updates.
+			return true
+		}
+
+		_, found := acc.GetAnnotations()[WorkerSkipStateUpdateAnnotation]
+		return !found
+	})
 }
