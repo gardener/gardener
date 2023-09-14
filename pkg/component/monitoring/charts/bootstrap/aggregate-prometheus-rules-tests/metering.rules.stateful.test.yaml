@@ -1,0 +1,276 @@
+rule_files:
+- ../prometheus-rules/metering.rules.stateful.yaml
+
+tests:
+
+# _year_month2 contains the year and month labels of the evaluation time. The
+# suffix 2 is added to avoid rules with the same name if both the "stateless" and
+# "stateful" recording rules are loaded.
+- name: _year_month2
+  promql_expr_test:
+  - expr: _year_month2
+    exp_samples:
+    - labels: _year_month2{
+                  year  = "1970",
+                  month = "1"}
+      value: 0
+
+# metering:node_capacity:sum_by_instance_type:sum_over_time
+# metering:node_capacity:sum_by_instance_type:count_over_time
+# metering:node_capacity:sum_by_instance_type:count_over_time:this_month
+# metering:node_capacity:sum_by_instance_type:avg_over_time
+# metering:node_capacity:sum_by_instance_type:avg_over_time:this_month
+- name: metering:node_capacity:sum_by_instance_type:*
+  interval: 1m
+  input_series:
+  - series: metering:node_capacity:sum_by_instance_type{type="complete", year="1970", month="1"}
+    values: 1x60
+  - series: metering:node_capacity:sum_by_instance_type{type="data gaps", year="1970", month="1"}
+    values: 1+0x9 stale _x24 1+0x4 0x13 stale _x4 0 # can cope with gaps up to 30 minutes
+  - series: metering:node_capacity:sum_by_instance_type{type="no longer existing", year="1970", month="1"}
+    values: 1+0x29 stale _x29
+  promql_expr_test:
+  - expr: metering:node_capacity:sum_by_instance_type:sum_over_time
+    eval_time: 59m
+    exp_samples:
+    - labels: metering:node_capacity:sum_by_instance_type:sum_over_time{type="complete", year="1970", month="1"}
+      value: 60
+    - labels: metering:node_capacity:sum_by_instance_type:sum_over_time{type="data gaps", year="1970", month="1"}
+      value: 15
+  - expr: metering:node_capacity:sum_by_instance_type:count_over_time
+    eval_time: 59m
+    exp_samples:
+    - labels: metering:node_capacity:sum_by_instance_type:count_over_time{type="complete", year="1970", month="1"}
+      value: 60
+    - labels: metering:node_capacity:sum_by_instance_type:count_over_time{type="data gaps", year="1970", month="1"}
+      value: 30
+  - expr: metering:node_capacity:sum_by_instance_type:avg_over_time
+    eval_time: 59m
+    exp_samples:
+    - labels: metering:node_capacity:sum_by_instance_type:avg_over_time{type="complete", year="1970", month="1"}
+      value: 1
+    - labels: metering:node_capacity:sum_by_instance_type:avg_over_time{type="data gaps", year="1970", month="1"}
+      value: 0.5
+
+  - expr: metering:node_capacity:sum_by_instance_type:count_over_time:this_month
+    eval_time: 59m
+    exp_samples:
+    - labels: metering:node_capacity:sum_by_instance_type:count_over_time:this_month{type="complete", year="1970", month="1"}
+      value: 60
+    - labels: metering:node_capacity:sum_by_instance_type:count_over_time:this_month{type="data gaps", year="1970", month="1"}
+      value: 30
+    - labels: metering:node_capacity:sum_by_instance_type:count_over_time:this_month{type="no longer existing", year="1970", month="1"}
+      value: 30
+  - expr: metering:node_capacity:sum_by_instance_type:avg_over_time:this_month
+    eval_time: 59m
+    exp_samples:
+    - labels: metering:node_capacity:sum_by_instance_type:avg_over_time:this_month{type="complete", year="1970", month="1"}
+      value: 1
+    - labels: metering:node_capacity:sum_by_instance_type:avg_over_time:this_month{type="data gaps", year="1970", month="1"}
+      value: 0.5
+    - labels: metering:node_capacity:sum_by_instance_type:avg_over_time:this_month{type="no longer existing", year="1970", month="1"}
+      value: 1
+
+# metering:node_cp_usage:sum_by_instance_type:sum_over_time
+# metering:node_cp_usage:sum_by_instance_type:count_over_time
+# metering:node_cp_usage:sum_by_instance_type:count_over_time:this_month
+# metering:node_cp_usage:sum_by_instance_type:avg_over_time
+# metering:node_cp_usage:sum_by_instance_type:avg_over_time:this_month
+- name: metering:node_cp_usage:sum_by_instance_type:*
+  interval: 1m
+  input_series:
+  - series: metering:node_cp_usage:sum_by_instance_type{type="complete", year="1970", month="1"}
+    values: 1x60
+  - series: metering:node_cp_usage:sum_by_instance_type{type="data gaps", year="1970", month="1"}
+    values: 1+0x9 stale _x24 1+0x4 0x13 stale _x4 0 # can cope with gaps up to 30 minutes
+  - series: metering:node_cp_usage:sum_by_instance_type{type="no longer existing", year="1970", month="1"}
+    values: 1+0x29 stale _x29
+  promql_expr_test:
+  - expr: metering:node_cp_usage:sum_by_instance_type:sum_over_time
+    eval_time: 59m
+    exp_samples:
+    - labels: metering:node_cp_usage:sum_by_instance_type:sum_over_time{type="complete", year="1970", month="1"}
+      value: 60
+    - labels: metering:node_cp_usage:sum_by_instance_type:sum_over_time{type="data gaps", year="1970", month="1"}
+      value: 15
+  - expr: metering:node_cp_usage:sum_by_instance_type:count_over_time
+    eval_time: 59m
+    exp_samples:
+    - labels: metering:node_cp_usage:sum_by_instance_type:count_over_time{type="complete", year="1970", month="1"}
+      value: 60
+    - labels: metering:node_cp_usage:sum_by_instance_type:count_over_time{type="data gaps", year="1970", month="1"}
+      value: 30
+  - expr: metering:node_cp_usage:sum_by_instance_type:avg_over_time
+    eval_time: 59m
+    exp_samples:
+    - labels: metering:node_cp_usage:sum_by_instance_type:avg_over_time{type="complete", year="1970", month="1"}
+      value: 1
+    - labels: metering:node_cp_usage:sum_by_instance_type:avg_over_time{type="data gaps", year="1970", month="1"}
+      value: 0.5
+
+  - expr: metering:node_cp_usage:sum_by_instance_type:count_over_time:this_month
+    eval_time: 59m
+    exp_samples:
+    - labels: metering:node_cp_usage:sum_by_instance_type:count_over_time:this_month{type="complete", year="1970", month="1"}
+      value: 60
+    - labels: metering:node_cp_usage:sum_by_instance_type:count_over_time:this_month{type="data gaps", year="1970", month="1"}
+      value: 30
+    - labels: metering:node_cp_usage:sum_by_instance_type:count_over_time:this_month{type="no longer existing", year="1970", month="1"}
+      value: 30
+  - expr: metering:node_cp_usage:sum_by_instance_type:avg_over_time:this_month
+    eval_time: 59m
+    exp_samples:
+    - labels: metering:node_cp_usage:sum_by_instance_type:avg_over_time:this_month{type="complete", year="1970", month="1"}
+      value: 1
+    - labels: metering:node_cp_usage:sum_by_instance_type:avg_over_time:this_month{type="data gaps", year="1970", month="1"}
+      value: 0.5
+    - labels: metering:node_cp_usage:sum_by_instance_type:avg_over_time:this_month{type="no longer existing", year="1970", month="1"}
+      value: 1
+
+# metering:memory_usage_seconds
+# metering:memory_usage_seconds:this_month
+- name: metering:memory_usage_seconds*
+  interval: 1m
+  input_series:
+  - series: metering:working_set_memory:sum_by_namespace{type="complete", year="1970", month="1"}
+    values: 1x60
+  - series: metering:working_set_memory:sum_by_namespace{type="data gaps", year="1970", month="1"}
+    values: 1+0x9 stale _x24 1+0x4 0x13 stale _x4 0 # can cope with gaps up to 30 minutes
+  - series: metering:working_set_memory:sum_by_namespace{type="no longer existing", year="1970", month="1"}
+    values: 1+0x29 stale _x29
+  promql_expr_test:
+  - expr: metering:memory_usage_seconds
+    eval_time: 59m
+    exp_samples:
+    - labels: metering:memory_usage_seconds{type="complete", year="1970", month="1"}
+      value: 3600
+    - labels: metering:memory_usage_seconds{type="data gaps", year="1970", month="1"}
+      value: 900
+  - expr: metering:memory_usage_seconds:this_month
+    eval_time: 59m
+    exp_samples:
+    - labels: metering:memory_usage_seconds:this_month{type="complete", year="1970", month="1"}
+      value: 3600
+    - labels: metering:memory_usage_seconds:this_month{type="data gaps", year="1970", month="1"}
+      value: 900
+    - labels: metering:memory_usage_seconds:this_month{type="no longer existing", year="1970", month="1"}
+      value: 1800
+
+# metering:disk_usage_seconds
+# metering:disk_usage_seconds:this_month
+- name: metering:disk_usage_seconds*
+  interval: 1m
+  input_series:
+  - series: metering:persistent_volume_claims:sum_by_namespace{type="complete", year="1970", month="1"}
+    values: 1x60
+  - series: metering:persistent_volume_claims:sum_by_namespace{type="data gaps", year="1970", month="1"}
+    values: 1+0x9 stale _x24 1+0x4 0x13 stale _x4 0 # can cope with gaps up to 30 minutes
+  - series: metering:persistent_volume_claims:sum_by_namespace{type="no longer existing", year="1970", month="1"}
+    values: 1+0x29 stale _x29
+  promql_expr_test:
+  - expr: metering:disk_usage_seconds
+    eval_time: 59m
+    exp_samples:
+    - labels: metering:disk_usage_seconds{type="complete", year="1970", month="1"}
+      value: 3600
+    - labels: metering:disk_usage_seconds{type="data gaps", year="1970", month="1"}
+      value: 900
+  - expr: metering:disk_usage_seconds:this_month
+    eval_time: 59m
+    exp_samples:
+    - labels: metering:disk_usage_seconds:this_month{type="complete", year="1970", month="1"}
+      value: 3600
+    - labels: metering:disk_usage_seconds:this_month{type="data gaps", year="1970", month="1"}
+      value: 900
+    - labels: metering:disk_usage_seconds:this_month{type="no longer existing", year="1970", month="1"}
+      value: 1800
+
+# metering:persistent_volume_claims:sum_by_namespace:sum_over_time
+# metering:persistent_volume_claims:sum_by_namespace:avg_over_time
+# metering:persistent_volume_claims:sum_by_namespace:avg_over_time:this_month
+- name: metering:persistent_volume_claims:sum_by_namespace:*
+  interval: 1m
+  input_series:
+  - series: metering:persistent_volume_claims:sum_by_namespace{type="complete", year="1970", month="1"}
+    values: 1x60
+  - series: metering:persistent_volume_claims:sum_by_namespace{type="data gaps", year="1970", month="1"}
+    values: 1+0x9 stale _x24 1+0x4 0x13 stale _x4 0 # can cope with gaps up to 30 minutes
+  - series: metering:persistent_volume_claims:sum_by_namespace{type="no longer existing", year="1970", month="1"}
+    values: 1+0x29 stale _x29
+  promql_expr_test:
+  - expr: metering:persistent_volume_claims:sum_by_namespace:sum_over_time
+    eval_time: 59m
+    exp_samples:
+    - labels: metering:persistent_volume_claims:sum_by_namespace:sum_over_time{type="complete", year="1970", month="1"}
+      value: 60
+    - labels: metering:persistent_volume_claims:sum_by_namespace:sum_over_time{type="data gaps", year="1970", month="1"}
+      value: 15
+  - expr: metering:persistent_volume_claims:sum_by_namespace:avg_over_time
+    eval_time: 59m
+    exp_samples:
+    - labels: metering:persistent_volume_claims:sum_by_namespace:avg_over_time{type="complete", year="1970", month="1"}
+      value: 1
+    - labels: metering:persistent_volume_claims:sum_by_namespace:avg_over_time{type="data gaps", year="1970", month="1"}
+      value: 1
+  - expr: metering:persistent_volume_claims:sum_by_namespace:avg_over_time:this_month
+    eval_time: 59m
+    exp_samples:
+    - labels: metering:persistent_volume_claims:sum_by_namespace:avg_over_time:this_month{type="complete", year="1970", month="1"}
+      value: 1
+    - labels: metering:persistent_volume_claims:sum_by_namespace:avg_over_time:this_month{type="data gaps", year="1970", month="1"}
+      value: 1
+    - labels: metering:persistent_volume_claims:sum_by_namespace:avg_over_time:this_month{type="no longer existing", year="1970", month="1"}
+      value: 1
+
+# metering:cpu_usage:sum_by_namespace:sum_over_time
+# metering:cpu_usage:sum_by_namespace:avg_over_time
+# metering:cpu_usage:sum_by_namespace:avg_over_time:this_month
+- name: metering:cpu_usage:sum_by_namespace:*
+  interval: 1m
+  input_series:
+  - series: metering:cpu_usage:sum_by_namespace{type="complete", year="1970", month="1"}
+    values: 1x60
+  - series: metering:memory_usage_seconds{type="complete", year="1970", month="1"}
+    values: 60+60x60
+  - series: metering:cpu_usage:sum_by_namespace{type="data gaps", year="1970", month="1"}
+    values: 1+0x9 stale _x24 1+0x4 0x13 stale _x4 0 # can cope with gaps up to 30 minutes
+  - series: metering:working_set_memory:sum_by_namespace{type="data gaps", year="1970", month="1"}
+    values: 1+0x9 stale _x24 1+0x4 1x13 stale _x4 1
+  - series: metering:cpu_usage:sum_by_namespace{type="no longer existing", year="1970", month="1"}
+    values: 1+0x29 stale _x29
+  - series: metering:working_set_memory:sum_by_namespace{type="no longer existing", year="1970", month="1"}
+    values: 1+0x9 stale _x29
+  - series: metering:cpu_usage:sum_by_namespace{type="avg calculation bug", year="1970", month="1"}
+    values: 1x60
+  - series: metering:working_set_memory:sum_by_namespace{type="avg calculation bug", year="1970", month="1"}
+    values: 1x58 stale
+  promql_expr_test:
+  - expr: metering:cpu_usage:sum_by_namespace:sum_over_time
+    eval_time: 59m
+    exp_samples:
+    - labels: metering:cpu_usage:sum_by_namespace:sum_over_time{type="complete", year="1970", month="1"}
+      value: 60
+    - labels: metering:cpu_usage:sum_by_namespace:sum_over_time{type="data gaps", year="1970", month="1"}
+      value: 15
+    - labels: metering:cpu_usage:sum_by_namespace:sum_over_time{type="avg calculation bug", year="1970", month="1"}
+      value: 60
+  - expr: metering:cpu_usage:sum_by_namespace:avg_over_time
+    eval_time: 59m
+    exp_samples:
+    - labels: metering:cpu_usage:sum_by_namespace:avg_over_time{type="complete", year="1970", month="1"}
+      value: 1
+    - labels: metering:cpu_usage:sum_by_namespace:avg_over_time{type="data gaps", year="1970", month="1"}
+      value: 0.5
+  - expr: metering:cpu_usage:sum_by_namespace:avg_over_time:this_month
+    eval_time: 59m
+    exp_samples:
+    - labels: metering:cpu_usage:sum_by_namespace:avg_over_time:this_month{type="complete", year="1970", month="1"}
+      value: 1
+    - labels: metering:cpu_usage:sum_by_namespace:avg_over_time:this_month{type="data gaps", year="1970", month="1"}
+      value: 0.5
+    - labels: metering:cpu_usage:sum_by_namespace:avg_over_time:this_month{type="no longer existing", year="1970", month="1"}
+      value: 1
+    - labels: metering:cpu_usage:sum_by_namespace:avg_over_time:this_month{type="avg calculation bug", year="1970", month="1"}
+      value: 1
+
+# The remaining recording rules are similar

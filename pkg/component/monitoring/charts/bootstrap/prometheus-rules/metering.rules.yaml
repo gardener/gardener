@@ -386,7 +386,6 @@ groups:
 # - metering  :persistent_volume_claims  :sum_by_namespace
 # - metering  :persistent_volume_usage   :sum_by_namespace
 
-
   - record: metering:cpu_usage:sum_by_namespace
     expr: |
       sum without (instance_type) (metering:cpu_usage:sum_by_namespace_instance_type)
@@ -444,16 +443,12 @@ groups:
     labels:
       resource: cpu
       unit: core
-    expr: |2
-        sum by (instance_type) (metering:cpu_usage:sum_by_namespace_instance_type{instance_type!=""})
-      + on () group_left (year, month)
-        _year_month
+    expr: |
+      sum by (instance_type, year, month) (metering:cpu_usage:sum_by_namespace_instance_type{instance_type!=""})
 
   - record: metering:node_cp_usage:sum_by_instance_type
     labels:
       resource: memory
       unit: byte
-    expr: |2
-        sum by (instance_type) (metering:memory_usage:sum_by_namespace_instance_type{instance_type!=""})
-      + on () group_left (year, month)
-        _year_month
+    expr: |
+      sum by (instance_type, year, month) (metering:memory_usage:sum_by_namespace_instance_type{instance_type!=""})

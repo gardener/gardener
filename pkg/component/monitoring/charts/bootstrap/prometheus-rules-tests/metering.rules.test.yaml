@@ -1,0 +1,577 @@
+rule_files:
+- ../prometheus-rules/metering.rules.yaml
+
+tests:
+
+# _node_instance_type is a mapping from the node label to the instance_type label
+- name: _node_instance_type
+  input_series:
+  - series: kube_node_labels{
+                node                                   = "node1",
+                label_node_kubernetes_io_instance_type = "small"}
+    values: 1
+  - series: kube_node_labels{
+                node                                   = "node2",
+                label_node_kubernetes_io_instance_type = "smaller"}
+    values: 1
+  promql_expr_test:
+  - expr: _node_instance_type
+    exp_samples:
+    - labels: _node_instance_type{
+                  node          = "node1",
+                  instance_type = "small"}
+      value: 0
+    - labels: _node_instance_type{
+                  node          = "node2",
+                  instance_type = "smaller"}
+      value: 0
+
+# _kube_pod_owner_with_instance_type enriches kube_pod_owner with the
+# instance_type of the node that the pod is running on
+- name: _kube_pod_owner_with_instance_type
+  input_series:
+  - series: _node_instance_type{
+                node          = "node1",
+                instance_type = "small"}
+    values: 0
+  - series: _node_instance_type{
+                node          = "node2",
+                instance_type = "smaller"}
+    values: 0
+
+  - series: kube_pod_info{
+                namespace = "shoot--local--local",
+                pod       = "etcd-main-0",
+                node      = "node1"}
+    values: 1
+  - series: kube_pod_info{
+                namespace = "shoot--local--local",
+                pod       = "kube-apiserver-hash1-hash2",
+                node      = "node2"}
+    values: 1
+
+  - series: kube_pod_owner{
+                namespace  = "shoot--local--local",
+                owner_kind = "StatefulSet",
+                owner_name = "etcd-main",
+                pod        = "etcd-main-0"}
+    values: 1
+  - series: kube_pod_owner{
+                namespace  = "shoot--local--local",
+                owner_kind = "ReplicaSet",
+                owner_name = "kube-apiserver-hash1",
+                pod        = "kube-apiserver-hash1-hash2"}
+    values: 1
+
+  promql_expr_test:
+  - expr: _kube_pod_owner_with_instance_type
+    exp_samples:
+    - labels: _kube_pod_owner_with_instance_type{
+                  namespace     = "shoot--local--local",
+                  owner_kind    = "StatefulSet",
+                  owner_name    = "etcd-main",
+                  pod           = "etcd-main-0",
+                  instance_type = "small"}
+      value: 0
+    - labels: _kube_pod_owner_with_instance_type{
+                  namespace     = "shoot--local--local",
+                  owner_kind    = "ReplicaSet",
+                  owner_name    = "kube-apiserver-hash1",
+                  pod           = "kube-apiserver-hash1-hash2",
+                  instance_type = "smaller"}
+      value: 0
+
+# _namespace_to_shoot_uid is a mapping from the namespace label to the shoot_uid label
+- name: _namespace_to_shoot_uid
+  input_series:
+  - series: kube_namespace_annotations{
+                namespace                           = "shoot--local--local",
+                annotation_shoot_gardener_cloud_uid = "uid1"}
+    values: 1
+  - series: kube_namespace_annotations{
+                namespace                           = "shoot--local--local2",
+                annotation_shoot_gardener_cloud_uid = "uid2"}
+    values: 1
+  promql_expr_test:
+  - expr: _namespace_to_shoot_uid
+    exp_samples:
+    - labels: _namespace_to_shoot_uid{
+                  namespace = "shoot--local--local",
+                  shoot_uid = "uid1"}
+      value: 0
+    - labels: _namespace_to_shoot_uid{
+                  namespace = "shoot--local--local2",
+                  shoot_uid = "uid2"}
+      value: 0
+
+# _year_month contains the year and month labels of the evaluation time
+- name: _year_month
+  promql_expr_test:
+  - expr: _year_month
+    exp_samples:
+    - labels: _year_month{
+                  year  = "1970",
+                  month = "1"}
+      value: 0
+
+# _namespace_to_shoot_uid_and_date enriches _namespace_to_shoot_uid with the
+# year and month labels
+- name: _namespace_to_shoot_uid_and_date
+  input_series:
+  - series: _namespace_to_shoot_uid{
+                namespace = "shoot--local--local",
+                shoot_uid = "uid1"}
+    values: 0
+  - series: _namespace_to_shoot_uid{
+                namespace = "shoot--local--local2",
+                shoot_uid = "uid2"}
+    values: 0
+
+  promql_expr_test:
+  - expr: _namespace_to_shoot_uid_and_date
+    exp_samples:
+    - labels: _namespace_to_shoot_uid_and_date{
+                  namespace = "shoot--local--local",
+                  shoot_uid = "uid1",
+                  year      = "1970",
+                  month     = "1"}
+      value: 0
+    - labels: _namespace_to_shoot_uid_and_date{
+                  namespace = "shoot--local--local2",
+                  shoot_uid = "uid2",
+                  year      = "1970",
+                  month     = "1"}
+      value: 0
+
+# _pod_to_owner_instance_type is a mapping from a pod in a namespace to its
+# owner, also carrying the instance_type of the node the pod is running on. The
+# owner is used later as a stable name for a group of pods.
+- name: _pod_to_owner_instance_type
+  input_series:
+  - series: _kube_pod_owner_with_instance_type{
+                namespace     = "shoot--local--local",
+                owner_kind    = "StatefulSet",
+                owner_name    = "etcd-main",
+                pod           = "etcd-main-0",
+                instance_type = "small"}
+    values: 0
+  - series: _kube_pod_owner_with_instance_type{
+                namespace     = "shoot--local--local",
+                owner_kind    = "ReplicaSet",
+                owner_name    = "kube-apiserver-hash1",
+                pod           = "kube-apiserver-hash1-hash2",
+                instance_type = "smaller"}
+    values: 0
+  - series: kube_replicaset_owner{
+                namespace  = "shoot--local--local",
+                owner_kind = "Deployment",
+                owner_name = "kube-apiserver",
+                replicaset = "kube-apiserver-hash1"}
+    values: 0
+
+  promql_expr_test:
+  - expr: _pod_to_owner_instance_type
+    exp_samples:
+    - labels: _pod_to_owner_instance_type{
+                  namespace     = "shoot--local--local",
+                  pod           = "etcd-main-0",
+                  instance_type = "small",
+                  owner         = "etcd-main"}
+      value: 0
+    - labels: _pod_to_owner_instance_type{
+                  namespace     = "shoot--local--local",
+                  pod           = "kube-apiserver-hash1-hash2",
+                  instance_type = "smaller",
+                  owner         = "kube-apiserver"}
+      value: 0
+
+# metering:node_capacity:sum_by_instance_type sum up the node capacity by
+# instance type and carries the year and month labels
+- name: metering:node_capacity:sum_by_instance_type
+  input_series:
+  - series: kube_node_status_capacity{
+                node     = "node1",
+                resource = "cpu",
+                unit     = "core"}
+    values: 4
+  - series: kube_node_status_capacity{
+                node     = "node1b",
+                resource = "cpu",
+                unit     = "core"}
+    values: 4
+  - series: kube_node_status_capacity{
+                node     = "node2",
+                resource = "cpu",
+                unit     = "core"}
+    values: 2
+  - series: kube_node_status_capacity{
+                node     = "node1",
+                resource = "memory",
+                unit     = "byte"}
+    values: 68719476736
+  - series: kube_node_status_capacity{
+                node     = "node1b",
+                resource = "memory",
+                unit     = "byte"}
+    values: 68719476736
+  - series: kube_node_status_capacity{
+                node     = "node2",
+                resource = "memory",
+                unit     = "byte"}
+    values: 34359738368
+  - series: _node_instance_type{
+                node          = "node1",
+                instance_type = "small"}
+    values: 0
+  - series: _node_instance_type{
+                node          = "node1b",
+                instance_type = "small"}
+    values: 0
+  - series: _node_instance_type{
+                node          = "node2",
+                instance_type = "smaller"}
+    values: 0
+
+  promql_expr_test:
+  - expr: metering:node_capacity:sum_by_instance_type
+    exp_samples:
+    - labels: metering:node_capacity:sum_by_instance_type{
+                  resource      = "cpu",
+                  unit          = "core",
+                  instance_type = "small",
+                  year          = "1970",
+                  month         = "1"}
+      value: 8
+    - labels: metering:node_capacity:sum_by_instance_type{
+                  resource      = "cpu",
+                  unit          = "core",
+                  instance_type = "smaller",
+                  year          = "1970",
+                  month         = "1"}
+      value: 2
+    - labels: metering:node_capacity:sum_by_instance_type{
+                  resource      = "memory",
+                  unit          = "byte",
+                  instance_type = "small",
+                  year          = "1970",
+                  month         = "1"}
+      value: 137438953472
+    - labels: metering:node_capacity:sum_by_instance_type{
+                  resource      = "memory",
+                  unit          = "byte",
+                  instance_type = "smaller",
+                  year          = "1970",
+                  month         = "1"}
+      value: 34359738368
+
+# metering:cpu_usage:sum_by_namespace_owner_container_instance_type
+- name: metering:cpu_usage:sum_by_namespace_owner_container_instance_type
+  interval: 1m
+  input_series:
+  - series: container_cpu_usage_seconds_total{
+                namespace      = "shoot--local--local",
+                pod            = "etcd-main-0",
+                container      = "etcd"}
+    values: 0x5 90+90x4
+  - series: container_cpu_usage_seconds_total{
+                namespace      = "shoot--local--local",
+                pod            = "etcd-main-1",
+                container      = "etcd"}
+    values: 0x5 90+90x4
+  - series: _pod_to_owner_instance_type{
+                namespace     = "shoot--local--local",
+                pod           = "etcd-main-0",
+                instance_type = "small",
+                owner         = "etcd-main"}
+    values: 0x10
+  - series: _pod_to_owner_instance_type{
+                namespace     = "shoot--local--local",
+                pod           = "etcd-main-1",
+                instance_type = "small",
+                owner         = "etcd-main"}
+    values: 0x10
+  - series: _namespace_to_shoot_uid{
+                namespace = "shoot--local--local",
+                shoot_uid = "uid1"}
+    values: 0x10
+  promql_expr_test:
+  - expr: metering:cpu_usage:sum_by_namespace_owner_container_instance_type
+    eval_time: 10m
+    exp_samples:
+    - labels: metering:cpu_usage:sum_by_namespace_owner_container_instance_type{
+                  namespace     = "shoot--local--local",
+                  shoot_uid     = "uid1",
+                  owner         = "etcd-main",
+                  container     = "etcd",
+                  instance_type = "small"}
+      value: 3
+
+# metering:cpu_requests:sum_by_namespace_owner_container_instance_type
+- name: metering:cpu_requests:sum_by_namespace_owner_container_instance_type
+  input_series:
+  - series: kube_pod_container_resource_requests{
+                namespace      = "shoot--local--local",
+                resource       = "cpu",
+                unit           = "core",
+                pod            = "etcd-main-0",
+                container      = "etcd"}
+    values: 2
+  - series: kube_pod_container_resource_requests{
+                namespace      = "shoot--local--local",
+                resource       = "cpu",
+                unit           = "core",
+                pod            = "etcd-main-1",
+                container      = "etcd"}
+    values: 3
+  - series: _pod_to_owner_instance_type{
+                namespace     = "shoot--local--local",
+                pod           = "etcd-main-0",
+                instance_type = "small",
+                owner         = "etcd-main"}
+    values: 0
+  - series: _pod_to_owner_instance_type{
+                namespace     = "shoot--local--local",
+                pod           = "etcd-main-1",
+                instance_type = "small",
+                owner         = "etcd-main"}
+    values: 0
+  - series: _namespace_to_shoot_uid{
+                namespace = "shoot--local--local",
+                shoot_uid = "uid1"}
+    values: 0
+  promql_expr_test:
+  - expr: metering:cpu_requests:sum_by_namespace_owner_container_instance_type
+    exp_samples:
+    - labels: metering:cpu_requests:sum_by_namespace_owner_container_instance_type{
+                  namespace     = "shoot--local--local",
+                  shoot_uid     = "uid1",
+                  owner         = "etcd-main",
+                  container     = "etcd",
+                  instance_type = "small"}
+      value: 5
+
+# The following similar recording rules are not covered in unit tests for brevity
+#   metering:memory_usage:sum_by_namespace_owner_container_instance_type
+#   metering:working_set_memory:sum_by_namespace_owner_container_instance_type
+#   metering:memory_requests:sum_by_namespace_owner_container_instance_type
+#   metering:network_transmit:sum_by_namespace_owner_instance_type
+#   metering:network_receive:sum_by_namespace_owner_instance_type
+#   metering:persistent_volume_claims:sum_by_namespace_owner_instance_type
+#   metering:persistent_volume_usage:sum_by_namespace_owner_instance_type
+
+# metering:cpu_usage:sum_by_namespace_owner_container
+- name: metering:cpu_usage:sum_by_namespace_owner_container
+  input_series:
+  - series: metering:cpu_usage:sum_by_namespace_owner_container_instance_type{
+                namespace     = "shoot--local--local",
+                shoot_uid     = "uid1",
+                owner         = "etcd-main",
+                container     = "etcd",
+                instance_type = "small"}
+    values: 1
+  - series: metering:cpu_usage:sum_by_namespace_owner_container_instance_type{
+                namespace     = "shoot--local--local",
+                shoot_uid     = "uid1",
+                owner         = "etcd-main",
+                container     = "etcd",
+                instance_type = "smaller"}
+    values: 2
+  promql_expr_test:
+  - expr: metering:cpu_usage:sum_by_namespace_owner_container
+    exp_samples:
+    - labels: metering:cpu_usage:sum_by_namespace_owner_container{
+                  namespace     = "shoot--local--local",
+                  shoot_uid     = "uid1",
+                  owner         = "etcd-main",
+                  container     = "etcd"}
+      value: 3
+
+# The following similar recording rules are not covered in unit tests for brevity
+#   metering:cpu_requests:sum_by_namespace_owner_container
+#   metering:memory_usage:sum_by_namespace_owner_container
+#   metering:working_set_memory:sum_by_namespace_owner_container
+#   metering:memory_requests:sum_by_namespace_owner_container
+#   metering:network_transmit:sum_by_namespace_owner
+#   metering:network_receive:sum_by_namespace_owner
+#   metering:persistent_volume_claims:sum_by_namespace_owner
+#   metering:persistent_volume_usage:sum_by_namespace_owner
+
+# metering:cpu_usage:sum_by_namespace_instance_type
+- name: metering:cpu_usage:sum_by_namespace_instance_type
+  input_series:
+  - series: metering:cpu_usage:sum_by_namespace_owner_container_instance_type{
+                namespace     = "shoot--local--local",
+                shoot_uid     = "uid1",
+                owner         = "etcd-main",
+                container     = "etcd",
+                instance_type = "small"}
+    values: 1
+  - series: metering:cpu_usage:sum_by_namespace_owner_container_instance_type{
+                namespace     = "shoot--local--local",
+                shoot_uid     = "uid1",
+                owner         = "etcd-main",
+                container     = "backup-restore",
+                instance_type = "small"}
+    values: 2
+  - series: _namespace_to_shoot_uid_and_date{
+                namespace = "shoot--local--local",
+                shoot_uid = "uid1",
+                year      = "1970",
+                month     = "1"}
+    values: 0
+  - series: _namespace_to_shoot_uid_and_date{
+                namespace = "shoot--local--local2",
+                shoot_uid = "uid2",
+                year      = "1970",
+                month     = "1"}
+    values: 0
+  promql_expr_test:
+  - expr: metering:cpu_usage:sum_by_namespace_instance_type
+    exp_samples:
+    - labels: metering:cpu_usage:sum_by_namespace_instance_type{
+                  namespace     = "shoot--local--local",
+                  shoot_uid     = "uid1",
+                  year          = "1970",
+                  month         = "1",
+                  instance_type = "small"}
+      value: 3
+    - labels: metering:cpu_usage:sum_by_namespace_instance_type{
+                  namespace     = "shoot--local--local2",
+                  shoot_uid     = "uid2",
+                  year          = "1970",
+                  month         = "1"}
+      value: 0
+
+# The following similar recording rules are not covered in unit tests for brevity
+#   metering:cpu_requests:sum_by_namespace_instance_type
+#   metering:memory_usage:sum_by_namespace_instance_type
+#   metering:working_set_memory:sum_by_namespace_instance_type
+#   metering:memory_requests:sum_by_namespace_instance_type
+#   metering:network_transmit:sum_by_namespace_instance_type
+#   metering:network_receive:sum_by_namespace_instance_type
+#   metering:persistent_volume_claims:sum_by_namespace_instance_type
+#   metering:persistent_volume_usage:sum_by_namespace_instance_type
+
+# metering:cpu_usage:sum_by_namespace
+- name: metering:cpu_usage:sum_by_namespace
+  input_series:
+  - series: metering:cpu_usage:sum_by_namespace_instance_type{
+                namespace     = "shoot--local--local",
+                shoot_uid     = "uid1",
+                year          = "1970",
+                month         = "1",
+                instance_type = "small"}
+    values: 1
+  - series: metering:cpu_usage:sum_by_namespace_instance_type{
+                namespace     = "shoot--local--local",
+                shoot_uid     = "uid1",
+                year          = "1970",
+                month         = "1",
+                instance_type = "smaller"}
+    values: 2
+  - series: metering:cpu_usage:sum_by_namespace_instance_type{
+                namespace     = "shoot--local--local2",
+                shoot_uid     = "uid2",
+                year          = "1970",
+                month         = "1"}
+    values: 0
+  promql_expr_test:
+  - expr: metering:cpu_usage:sum_by_namespace
+    exp_samples:
+    - labels: metering:cpu_usage:sum_by_namespace{
+                  namespace     = "shoot--local--local",
+                  shoot_uid     = "uid1",
+                  year          = "1970",
+                  month         = "1"}
+      value: 3
+    - labels: metering:cpu_usage:sum_by_namespace{
+                  namespace     = "shoot--local--local2",
+                  shoot_uid     = "uid2",
+                  year          = "1970",
+                  month         = "1"}
+      value: 0
+
+# The following similar recording rules are not covered in unit tests for brevity
+#   metering:cpu_requests:sum_by_namespace
+#   metering:memory_usage:sum_by_namespace
+#   metering:working_set_memory:sum_by_namespace
+#   metering:memory_requests:sum_by_namespace
+#   metering:network_transmit:sum_by_namespace
+#   metering:network_receive:sum_by_namespace
+#   metering:persistent_volume_claims:sum_by_namespace
+#   metering:persistent_volume_usage:sum_by_namespace
+
+# metering:node_cp_usage:sum_by_instance_type
+- name: metering:node_cp_usage:sum_by_instance_type
+  input_series:
+  - series: metering:cpu_usage:sum_by_namespace_instance_type{
+                namespace     = "shoot--local--local",
+                shoot_uid     = "uid1",
+                year          = "1970",
+                month         = "1",
+                instance_type = "small"}
+    values: 1
+  - series: metering:cpu_usage:sum_by_namespace_instance_type{
+                namespace     = "shoot--local--local",
+                shoot_uid     = "uid1",
+                year          = "1970",
+                month         = "1",
+                instance_type = "smaller"}
+    values: 2
+  - series: metering:cpu_usage:sum_by_namespace_instance_type{
+                namespace     = "shoot--local--local2",
+                shoot_uid     = "uid2",
+                year          = "1970",
+                month         = "1"}
+    values: 3
+  - series: metering:memory_usage:sum_by_namespace_instance_type{
+                namespace     = "shoot--local--local",
+                shoot_uid     = "uid1",
+                year          = "1970",
+                month         = "1",
+                instance_type = "small"}
+    values: 100
+  - series: metering:memory_usage:sum_by_namespace_instance_type{
+                namespace     = "shoot--local--local",
+                shoot_uid     = "uid1",
+                year          = "1970",
+                month         = "1",
+                instance_type = "smaller"}
+    values: 200
+  - series: metering:memory_usage:sum_by_namespace_instance_type{
+                namespace     = "shoot--local--local2",
+                shoot_uid     = "uid2",
+                year          = "1970",
+                month         = "1"}
+    values: 300
+  promql_expr_test:
+  - expr: metering:node_cp_usage:sum_by_instance_type
+    exp_samples:
+    - labels: metering:node_cp_usage:sum_by_instance_type{
+                  resource      = "cpu",
+                  unit          = "core",
+                  year          = "1970",
+                  month         = "1",
+                  instance_type = "small"}
+      value: 1
+    - labels: metering:node_cp_usage:sum_by_instance_type{
+                  resource      = "cpu",
+                  unit          = "core",
+                  year          = "1970",
+                  month         = "1",
+                  instance_type = "smaller"}
+      value: 2
+    - labels: metering:node_cp_usage:sum_by_instance_type{
+                  resource      = "memory",
+                  unit          = "byte",
+                  year          = "1970",
+                  month         = "1",
+                  instance_type = "small"}
+      value: 100
+    - labels: metering:node_cp_usage:sum_by_instance_type{
+                  resource      = "memory",
+                  unit          = "byte",
+                  year          = "1970",
+                  month         = "1",
+                  instance_type = "smaller"}
+      value: 200
