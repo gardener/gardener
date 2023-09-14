@@ -331,7 +331,7 @@ func WaitUntilDeleted(ctx context.Context, c client.Client, namespace, name stri
 		return err
 	}
 
-	if err := kubernetesutils.WaitUntilResourcesDeleted(ctx, c, &corev1.SecretList{}, IntervalWait, client.InNamespace(namespace), client.MatchingLabels(map[string]string{v1alpha1.ReferencedBy: name})); err != nil {
+	if err := kubernetesutils.WaitUntilResourcesDeleted(ctx, c, &corev1.SecretList{}, IntervalWait, client.InNamespace(namespace), client.MatchingLabels{v1alpha1.ReferencedBy: name}); err != nil {
 		return err
 	}
 	return nil
