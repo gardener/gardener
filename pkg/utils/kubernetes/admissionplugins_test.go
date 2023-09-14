@@ -24,30 +24,7 @@ import (
 
 var _ = Describe("kubernetes", func() {
 	Describe("#GetAdmissionPluginsForVersion", func() {
-		It("should return the correct list for 1.22", func() {
-			expected := []string{
-				"Priority",
-				"NamespaceLifecycle",
-				"LimitRanger",
-				"PodSecurityPolicy",
-				"ServiceAccount",
-				"NodeRestriction",
-				"DefaultStorageClass",
-				"DefaultTolerationSeconds",
-				"ResourceQuota",
-				"StorageObjectInUseProtection",
-				"MutatingAdmissionWebhook",
-				"ValidatingAdmissionWebhook",
-			}
-
-			plugins := GetAdmissionPluginsForVersion("1.22.0")
-
-			for _, plugin := range expected {
-				Expect(plugins).To(ContainElement(gardencorev1beta1.AdmissionPlugin{Name: plugin}))
-			}
-		})
-
-		It("should return the correct list for 1.23 upto 1.25", func() {
+		It("should return the correct list for 1.24", func() {
 			expected := []string{"Priority",
 				"NamespaceLifecycle",
 				"LimitRanger",
@@ -89,18 +66,6 @@ var _ = Describe("kubernetes", func() {
 
 			for _, plugin := range expected {
 				Expect(plugins).To(ContainElement(gardencorev1beta1.AdmissionPlugin{Name: plugin}))
-			}
-		})
-
-		It("should return copy of the default plugins", func() {
-			expected := []string{"Priority", "NamespaceLifecycle", "LimitRanger", "ServiceAccount", "NodeRestriction", "DefaultStorageClass", "DefaultTolerationSeconds", "ResourceQuota", "StorageObjectInUseProtection", "MutatingAdmissionWebhook", "ValidatingAdmissionWebhook"}
-
-			plugins := GetAdmissionPluginsForVersion("1.22.0")
-			plugins2 := GetAdmissionPluginsForVersion("1.22.0")
-			plugins[0].Name = "MissingPlugin"
-
-			for _, plugin := range expected {
-				Expect(plugins2).To(ContainElement(gardencorev1beta1.AdmissionPlugin{Name: plugin}))
 			}
 		})
 	})

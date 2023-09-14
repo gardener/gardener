@@ -23,12 +23,11 @@ import (
 )
 
 var (
-	lowestSupportedKubernetesVersionMajorMinor = "1.22"
+	lowestSupportedKubernetesVersionMajorMinor = "1.24"
 	lowestSupportedKubernetesVersion, _        = semver.NewVersion(lowestSupportedKubernetesVersionMajorMinor)
 
 	admissionPlugins = map[string][]gardencorev1beta1.AdmissionPlugin{
-		"1.22": getDefaultPlugins("1.22"),
-		"1.23": getDefaultPlugins("1.23"),
+		"1.24": getDefaultPlugins("1.24"),
 		"1.25": getDefaultPlugins("1.25"),
 	}
 )
@@ -65,22 +64,7 @@ func getAdmissionPluginsForVersionInternal(v string) []gardencorev1beta1.Admissi
 func getDefaultPlugins(version string) []gardencorev1beta1.AdmissionPlugin {
 	var admissionPlugins []gardencorev1beta1.AdmissionPlugin
 	switch version {
-	case "1.22":
-		admissionPlugins = append(admissionPlugins, []gardencorev1beta1.AdmissionPlugin{
-			{Name: "Priority"},
-			{Name: "NamespaceLifecycle"},
-			{Name: "LimitRanger"},
-			{Name: "PodSecurityPolicy"},
-			{Name: "ServiceAccount"},
-			{Name: "NodeRestriction"},
-			{Name: "DefaultStorageClass"},
-			{Name: "DefaultTolerationSeconds"},
-			{Name: "ResourceQuota"},
-			{Name: "StorageObjectInUseProtection"},
-			{Name: "MutatingAdmissionWebhook"},
-			{Name: "ValidatingAdmissionWebhook"},
-		}...)
-	case "1.23":
+	case "1.24":
 		admissionPlugins = append(admissionPlugins, []gardencorev1beta1.AdmissionPlugin{
 			{Name: "Priority"},
 			{Name: "NamespaceLifecycle"},

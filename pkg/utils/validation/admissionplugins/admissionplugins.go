@@ -236,15 +236,10 @@ func validateAdmissionPluginConfig(plugin core.AdmissionPlugin, version string, 
 			errorString = "PodSecurityConfiguration apiVersion for Kubernetes version %q should be %q but got %q"
 		)
 
-		switch {
-		case versionutils.ConstraintK8sLess123.Check(kubernetesVersion):
-			if apiVersion != admissionapiv1alpha1.SchemeGroupVersion.Version {
-				return field.Invalid(fldPath.Child("config"), string(plugin.Config.Raw), fmt.Sprintf(errorString, version, "pod-security.admission.config.k8s.io/v1alpha1", apiGroup+"/"+apiVersion))
-			}
-		case versionutils.ConstraintK8sLess125.Check(kubernetesVersion):
-			if apiVersion != admissionapiv1beta1.SchemeGroupVersion.Version && apiVersion != admissionapiv1alpha1.SchemeGroupVersion.Version {
-				return field.Invalid(fldPath.Child("config"), string(plugin.Config.Raw), fmt.Sprintf(errorString, version, "pod-security.admission.config.k8s.io/v1beta1 or pod-security.admission.config.k8s.io/v1alpha1", apiGroup+"/"+apiVersion))
-			}
+		if versionutils.ConstraintK8sLess125.Check(kubernetesVersion) &&
+			apiVersion != admissionapiv1beta1.SchemeGroupVersion.Version &&
+			apiVersion != admissionapiv1alpha1.SchemeGroupVersion.Version {
+			return field.Invalid(fldPath.Child("config"), string(plugin.Config.Raw), fmt.Sprintf(errorString, version, "pod-security.admission.config.k8s.io/v1beta1 or pod-security.admission.config.k8s.io/v1alpha1", apiGroup+"/"+apiVersion))
 		}
 	}
 

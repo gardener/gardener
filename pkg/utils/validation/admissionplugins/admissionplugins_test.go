@@ -84,12 +84,12 @@ var _ = Describe("admissionplugins", func() {
 				errList := ValidateAdmissionPlugins(plugins, version, field.NewPath("admissionPlugins"))
 				Expect(errList).To(matcher)
 			},
-			Entry("empty list", nil, "1.18.14", BeEmpty()),
-			Entry("supported admission plugin", []core.AdmissionPlugin{{Name: "AlwaysAdmit"}}, "1.18.14", BeEmpty()),
-			Entry("unsupported admission plugin", []core.AdmissionPlugin{{Name: "ClusterTrustBundleAttest"}}, "1.22.16", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("empty list", nil, "1.27.1", BeEmpty()),
+			Entry("supported admission plugin", []core.AdmissionPlugin{{Name: "AlwaysAdmit"}}, "1.27.1", BeEmpty()),
+			Entry("unsupported admission plugin", []core.AdmissionPlugin{{Name: "ClusterTrustBundleAttest"}}, "1.25.10", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal(field.NewPath("admissionPlugins[0].name").String()),
-				"Detail": Equal("admission plugin \"ClusterTrustBundleAttest\" is not supported in Kubernetes version 1.22.16"),
+				"Detail": Equal("admission plugin \"ClusterTrustBundleAttest\" is not supported in Kubernetes version 1.25.10"),
 			})))),
 			Entry("unsupported admission plugin", []core.AdmissionPlugin{{Name: "PodSecurityPolicy"}}, "1.26.6", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
@@ -102,34 +102,34 @@ var _ = Describe("admissionplugins", func() {
 				"Detail": Equal("admission plugin \"ClusterTrustBundleAttest\" is not supported in Kubernetes version 1.26.6"),
 			})))),
 			Entry("unsupported admission plugin and is disabled but plugin in migration", []core.AdmissionPlugin{{Name: "PodSecurityPolicy", Disabled: pointer.Bool(true)}}, "1.25.6", BeEmpty()),
-			Entry("admission plugin without name", []core.AdmissionPlugin{{}}, "1.18.14", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("admission plugin without name", []core.AdmissionPlugin{{}}, "1.26.10", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeRequired),
 				"Field":  Equal(field.NewPath("admissionPlugins[0].name").String()),
 				"Detail": Equal("must provide a name"),
 			})))),
-			Entry("unknown admission plugin", []core.AdmissionPlugin{{Name: "Foo"}}, "1.18.14", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("unknown admission plugin", []core.AdmissionPlugin{{Name: "Foo"}}, "1.26.8", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":     Equal(field.ErrorTypeInvalid),
 				"Field":    Equal(field.NewPath("admissionPlugins[0].name").String()),
 				"BadValue": Equal("Foo"),
 				"Detail":   Equal("unknown admission plugin \"Foo\""),
 			})))),
-			Entry("disabling non-required admission plugin", []core.AdmissionPlugin{{Name: "AlwaysAdmit", Disabled: pointer.Bool(true)}}, "1.18.14", BeEmpty()),
-			Entry("disabling required admission plugin", []core.AdmissionPlugin{{Name: "MutatingAdmissionWebhook", Disabled: pointer.Bool(true)}}, "1.18.14", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("disabling non-required admission plugin", []core.AdmissionPlugin{{Name: "AlwaysAdmit", Disabled: pointer.Bool(true)}}, "1.26.8", BeEmpty()),
+			Entry("disabling required admission plugin", []core.AdmissionPlugin{{Name: "MutatingAdmissionWebhook", Disabled: pointer.Bool(true)}}, "1.26.8", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal(field.NewPath("admissionPlugins[0]").String()),
 				"Detail": Equal("admission plugin \"MutatingAdmissionWebhook\" cannot be disabled"),
 			})))),
-			Entry("adding forbidden admission plugin", []core.AdmissionPlugin{{Name: "SecurityContextDeny"}}, "1.18.4", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("adding forbidden admission plugin", []core.AdmissionPlugin{{Name: "SecurityContextDeny"}}, "1.27.4", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal(field.NewPath("admissionPlugins[0].name").String()),
 				"Detail": Equal("forbidden admission plugin was specified - do not use plugins from the following list: [SecurityContextDeny]"),
 			})))),
-			Entry("adding kubeconfig secret to admission plugin not supporting external kubeconfig", []core.AdmissionPlugin{{Name: "TaintNodesByCondition", KubeconfigSecretName: pointer.String("test-secret")}}, "1.18.4", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("adding kubeconfig secret to admission plugin not supporting external kubeconfig", []core.AdmissionPlugin{{Name: "TaintNodesByCondition", KubeconfigSecretName: pointer.String("test-secret")}}, "1.27.5", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal(field.NewPath("admissionPlugins[0].kubeconfigSecretName").String()),
 				"Detail": Equal("admission plugin \"TaintNodesByCondition\" does not allow specifying external kubeconfig"),
 			})))),
-			Entry("adding kubeconfig secret to admission plugin supporting external kubeconfig", []core.AdmissionPlugin{{Name: "ValidatingAdmissionWebhook", KubeconfigSecretName: pointer.String("test-secret")}}, "1.18.4", BeEmpty()),
+			Entry("adding kubeconfig secret to admission plugin supporting external kubeconfig", []core.AdmissionPlugin{{Name: "ValidatingAdmissionWebhook", KubeconfigSecretName: pointer.String("test-secret")}}, "1.27.5", BeEmpty()),
 		)
 
 		Describe("validate PodSecurity admissionPlugin config", func() {
@@ -207,12 +207,6 @@ var _ = Describe("admissionplugins", func() {
 				}
 			}
 
-			Context("v1.22 cluster", func() {
-				test("v1.22.13", true, false, false)
-			})
-			Context("v1.23 cluster", func() {
-				test("v1.23.10", true, true, false)
-			})
 			Context("v1.24 cluster", func() {
 				test("v1.24.8", true, true, false)
 			})
