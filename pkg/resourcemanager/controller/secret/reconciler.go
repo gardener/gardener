@@ -72,7 +72,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 					patch := client.MergeFromWithOptions(secret.DeepCopy(), client.MergeFromWithOptimisticLock{})
 					metav1.SetMetaDataLabel(&secret.ObjectMeta, v1alpha1.ReferencedBy, resource.Name)
 					if err := r.SourceClient.Patch(ctx, secret, patch); err != nil {
-						log.Info(fmt.Errorf("failed to add label to secret: %w", err).Error())
+						return reconcile.Result{}, fmt.Errorf("failed to add the %s label to secret: %w", resourcesv1alpha1.ReferencedBy, err)
 					}
 				}
 				break
