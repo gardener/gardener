@@ -151,6 +151,30 @@ EOF
 
 parse_flags "$@"
 
+# Prepare garden.local.gardener.cloud hostname that can be used everywhere to talk to the garden cluster.
+# Historically, we used the docker container name for this, but this differs between clusters with different names
+# and doesn't work in IPv6 kind clusters: https://github.com/kubernetes-sigs/kind/issues/3114
+# Hence, we "manually" inject a host configuration into the cluster that always resolves to the kind container's IP,
+# that serves our garden cluster API.
+# This works in
+# - the first and the second kind cluster
+# - in IPv4 and IPv6 kind clusters
+# - in ManagedSeeds
+
+garden_cluster="$CLUSTER_NAME"
+if [[ "$CLUSTER_NAME" == "gardener-local2" ]] ; then
+  # garden-local2 is used as a second seed cluster, the first kind cluster runs the gardener control plane
+  garden_cluster="gardener-local"
+fi
+
+if [[ "$CLUSTER_NAME" == "gardener-local2-ha-single-zone" ]]; then
+  garden_cluster="gardener-local-ha-single-zone"
+fi
+
+if [[ -n "$(docker ps -aq -f name="$garden_cluster"-control-plane)" ]]; then
+    docker start "$garden_cluster"-control-plane
+fi
+
 mkdir -m 0755 -p \
   "$(dirname "$0")/../dev/local-backupbuckets" \
   "$(dirname "$0")/../dev/local-registry"
@@ -213,26 +237,6 @@ kubectl get nodes -o name |\
 
 if [[ "$KUBECONFIG" != "$PATH_KUBECONFIG" ]]; then
   cp "$KUBECONFIG" "$PATH_KUBECONFIG"
-fi
-
-# Prepare garden.local.gardener.cloud hostname that can be used everywhere to talk to the garden cluster.
-# Historically, we used the docker container name for this, but this differs between clusters with different names
-# and doesn't work in IPv6 kind clusters: https://github.com/kubernetes-sigs/kind/issues/3114
-# Hence, we "manually" inject a host configuration into the cluster that always resolves to the kind container's IP,
-# that serves our garden cluster API.
-# This works in
-# - the first and the second kind cluster
-# - in IPv4 and IPv6 kind clusters
-# - in ManagedSeeds
-
-garden_cluster="$CLUSTER_NAME"
-if [[ "$CLUSTER_NAME" == "gardener-local2" ]] ; then
-  # garden-local2 is used as a second seed cluster, the first kind cluster runs the gardener control plane
-  garden_cluster="gardener-local"
-fi
-
-if [[ "$CLUSTER_NAME" == "gardener-local2-ha-single-zone" ]]; then
-  garden_cluster="gardener-local-ha-single-zone"
 fi
 
 ip_address_field="IPAddress"

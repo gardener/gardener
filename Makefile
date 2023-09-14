@@ -278,40 +278,40 @@ kind2-up kind2-down: export CLUSTER_NAME = gardener-local2
 kind-ha-single-zone-up kind-ha-single-zone-down: export CLUSTER_NAME = gardener-local-ha-single-zone
 kind2-ha-single-zone-up kind2-ha-single-zone-down: export CLUSTER_NAME = gardener-local2-ha-single-zone
 kind-ha-multi-zone-up kind-ha-multi-zone-down: export CLUSTER_NAME = gardener-local-ha-multi-zone
+kind-extensions-up kind-extensions-down: export CLUSTER_NAME = gardener-extensions
+kind-operator-up kind-operator-down: export CLUSTER_NAME = gardener-operator-local
 # KIND_KUBECONFIG
 kind-up kind-down: export KIND_KUBECONFIG = $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig
 kind2-up kind2-down: export KIND_KUBECONFIG = $(REPO_ROOT)/example/provider-local/seed-kind2/base/kubeconfig
 kind-ha-single-zone-up kind-ha-single-zone-down: export KIND_KUBECONFIG = $(REPO_ROOT)/example/provider-local/seed-kind-ha-single-zone/base/kubeconfig
 kind2-ha-single-zone-up kind2-ha-single-zone-down: export KIND_KUBECONFIG = $(REPO_ROOT)/example/provider-local/seed-kind2-ha-single-zone/base/kubeconfig
 kind-ha-multi-zone-up kind-ha-multi-zone-down: export KIND_KUBECONFIG = $(REPO_ROOT)/example/provider-local/seed-kind-ha-multi-zone/base/kubeconfig
+kind-extensions-up: export KIND_KUBECONFIG = $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig
+kind-operator-up kind-operator-down: export KIND_KUBECONFIG = $(GARDENER_LOCAL_OPERATOR_KUBECONFIG)
 # CLUSTER_VALUES
 kind-up kind-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/local/values.yaml
 kind2-up kind2-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/local2/values.yaml
 kind-ha-single-zone-up kind-ha-single-zone-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/ha-single-zone/values.yaml
 kind2-ha-single-zone-up kind2-ha-single-zone-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/ha-single-zone2/values.yaml
 kind-ha-multi-zone-up kind-ha-multi-zone-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/ha-multi-zone/values.yaml
+kind-extensions-up kind-extensions-clean: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/extensions/values.yaml
+kind-operator-up kind-operator-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/operator/values.yaml
 # ADDITIONAL_PARAMETERS
 kind2-up kind2-ha-single-zone-up: export ADDITIONAL_PARAMETERS = --skip-registry
 kind2-down: export ADDITIONAL_PARAMETERS = --keep-backupbuckets-dir
 kind-ha-multi-zone-up: export ADDITIONAL_PARAMETERS = --multi-zonal
 
-kind-up kind2-up kind-ha-single-zone-up kind2-ha-single-zone-up kind-ha-multi-zone-up: $(KIND) $(KUBECTL) $(HELM) $(YQ)
+kind%up: $(KIND) $(KUBECTL) $(HELM) $(YQ)
 	./hack/kind-up.sh --cluster-name $(CLUSTER_NAME) --path-kubeconfig $(KIND_KUBECONFIG) --path-cluster-values $(CLUSTER_VALUES) $(ADDITIONAL_PARAMETERS)
-kind-down kind2-down kind-ha-single-zone-down kind2-ha-single-zone-down kind-ha-multi-zone-down: $(KIND)
+	if [ "$*" = "-operator-" ]; then mkdir -p $(REPO_ROOT)/dev/local-backupbuckets/gardener-operator; fi
+
+kind-down kind-extensions-clean kind2-down kind-ha-single-zone-down kind2-ha-single-zone-down kind-ha-multi-zone-down: $(KIND)
 	./hack/kind-down.sh --cluster-name $(CLUSTER_NAME) --path-kubeconfig $(KIND_KUBECONFIG) $(ADDITIONAL_PARAMETERS)
 
-kind-extensions-up: $(KIND) $(KUBECTL)
-	REPO_ROOT=$(REPO_ROOT) ./hack/kind-extensions-up.sh
 kind-extensions-down: $(KIND)
 	docker stop gardener-extensions-control-plane
-kind-extensions-clean:
-	./hack/kind-down.sh --cluster-name gardener-extensions --path-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig
 
-kind-operator-up: $(KIND) $(KUBECTL) $(HELM) $(YQ)
-	./hack/kind-up.sh --cluster-name gardener-operator-local --path-kubeconfig $(REPO_ROOT)/example/gardener-local/kind/operator/kubeconfig --path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/operator/values.yaml
-	mkdir -p $(REPO_ROOT)/dev/local-backupbuckets/gardener-operator
-kind-operator-down: $(KIND)
-	./hack/kind-down.sh --cluster-name gardener-operator-local --path-kubeconfig $(REPO_ROOT)/example/gardener-local/kind/operator/kubeconfig
+kind-operator-down: $(KIND) kind-down
 	# We need root privileges to clean the backup bucket directory, see https://github.com/gardener/gardener/issues/6752
 	docker run --user root:root -v $(REPO_ROOT)/dev/local-backupbuckets:/dev/local-backupbuckets alpine rm -rf /dev/local-backupbuckets/gardener-operator
 
