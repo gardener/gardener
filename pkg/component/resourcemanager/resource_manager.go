@@ -296,6 +296,8 @@ type Values struct {
 	TargetDiffersFromSourceCluster bool
 	// TargetDisableCache disables the cache for target cluster and always talk directly to the API server (defaults to false)
 	TargetDisableCache *bool
+	// TargetNamespaces is the list of namespaces for the target client connection configuration.
+	TargetNamespaces []string
 	// WatchedNamespace restricts the gardener-resource-manager to only watch ManagedResources in the defined namespace.
 	// If not set the gardener-resource-manager controller watches for ManagedResources in all namespaces
 	WatchedNamespace *string
@@ -513,9 +515,6 @@ func (r *resourceManager) emptyClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 
 func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1.ConfigMap) error {
 	config := &resourcemanagerv1alpha1.ResourceManagerConfiguration{
-		SourceClientConnection: resourcemanagerv1alpha1.SourceClientConnection{
-			Namespace: r.values.WatchedNamespace,
-		},
 		LeaderElection: componentbaseconfigv1alpha1.LeaderElectionConfiguration{
 			LeaderElect:       pointer.Bool(true),
 			ResourceName:      r.values.NamePrefix + v1beta1constants.DeploymentNameGardenerResourceManager,
@@ -577,12 +576,16 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 		},
 	}
 
+	if r.values.WatchedNamespace != nil {
+		config.SourceClientConnection.Namespaces = []string{*r.values.WatchedNamespace}
+	}
+
 	if r.values.TargetDiffersFromSourceCluster {
 		config.TargetClientConnection = &resourcemanagerv1alpha1.TargetClientConnection{
 			ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 				Kubeconfig: gardenerutils.PathGenericKubeconfig,
 			},
-			DisableCachedClient: r.values.TargetDisableCache,
+			Namespaces: r.values.TargetNamespaces,
 		}
 	} else {
 		config.Controllers.NetworkPolicy = resourcemanagerv1alpha1.NetworkPolicyControllerConfig{
@@ -605,6 +608,9 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 	if v := r.values.MaxConcurrentCSRApproverWorkers; v != nil {
 		config.Controllers.KubeletCSRApprover.Enabled = true
 		config.Controllers.KubeletCSRApprover.ConcurrentSyncs = v
+		if r.values.WatchedNamespace != nil {
+			config.Controllers.KubeletCSRApprover.MachineNamespace = *r.values.WatchedNamespace
+		}
 	}
 
 	if v := r.values.MaxConcurrentTokenRequestorWorkers; v != nil {
