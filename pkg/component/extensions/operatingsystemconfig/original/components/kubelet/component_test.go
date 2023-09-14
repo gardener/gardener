@@ -141,16 +141,28 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 		},
 
 		Entry(
-			"kubernetes 1.22, w/ docker",
-			"1.22.1",
+			"kubernetes 1.25, w/ docker",
+			"1.25.1",
 			extensionsv1alpha1.CRINameDocker,
-			kubeletConfig(true, true),
+			kubeletConfig(true, true, false),
 		),
 		Entry(
-			"kubernetes 1.22, w/ containerd",
-			"1.22.1",
+			"kubernetes 1.25, w/ containerd",
+			"1.25.1",
 			extensionsv1alpha1.CRINameContainerD,
-			kubeletConfig(true, true),
+			kubeletConfig(true, true, false),
+		),
+		Entry(
+			"kubernetes 1.26, w/ docker",
+			"1.26.1",
+			extensionsv1alpha1.CRINameDocker,
+			kubeletConfig(true, true, true),
+		),
+		Entry(
+			"kubernetes 1.26, w/ containerd",
+			"1.26.1",
+			extensionsv1alpha1.CRINameContainerD,
+			kubeletConfig(true, true, true),
 		),
 	)
 })
@@ -304,7 +316,13 @@ Wants=docker.socket rpc-statd.service`
 func kubeletConfig(
 	rotateCertificates bool,
 	volumePluginDir bool,
+	k8sGreaterEqual126 bool,
 ) string {
+	streamingConnectionIdleTimeout := "4h0m0s"
+	if k8sGreaterEqual126 {
+		streamingConnectionIdleTimeout = "5m0s"
+	}
+
 	out := `apiVersion: kubelet.config.k8s.io/v1beta1
 authentication:
   anonymous:
@@ -385,7 +403,14 @@ maxOpenFiles: 1000000
 maxPods: 110
 memorySwap: {}
 nodeStatusReportFrequency: 0s
-nodeStatusUpdateFrequency: 0s
+nodeStatusUpdateFrequency: 0s`
+
+	if k8sGreaterEqual126 {
+		out += `
+protectKernelDefaults: true`
+	}
+
+	out += `
 registerWithTaints:
 - effect: NoSchedule
   key: node.gardener.cloud/critical-components-not-ready
@@ -402,7 +427,7 @@ serializeImagePulls: true
 serverTLSBootstrap: true
 shutdownGracePeriod: 0s
 shutdownGracePeriodCriticalPods: 0s
-streamingConnectionIdleTimeout: 4h0m0s
+streamingConnectionIdleTimeout: ` + streamingConnectionIdleTimeout + `
 syncFrequency: 1m0s`
 
 	if volumePluginDir {

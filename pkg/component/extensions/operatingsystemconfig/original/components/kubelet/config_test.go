@@ -265,56 +265,6 @@ var _ = Describe("Config", func() {
 		},
 
 		Entry(
-			"kubernetes 1.22 w/o defaults",
-			"1.22.1",
-			clusterDNSAddress,
-			clusterDomain,
-			components.ConfigurableKubeletConfigParameters{},
-			kubeletConfigWithDefaults,
-			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
-				cfg.RotateCertificates = true
-				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
-			},
-		),
-		Entry(
-			"kubernetes 1.22 w/ defaults",
-			"1.22.1",
-			clusterDNSAddress,
-			clusterDomain,
-			params,
-			kubeletConfigWithParams,
-			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
-				cfg.RotateCertificates = true
-				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
-			},
-		),
-
-		Entry(
-			"kubernetes 1.23 w/o defaults",
-			"1.23.1",
-			clusterDNSAddress,
-			clusterDomain,
-			components.ConfigurableKubeletConfigParameters{},
-			kubeletConfigWithDefaults,
-			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
-				cfg.RotateCertificates = true
-				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
-			},
-		),
-		Entry(
-			"kubernetes 1.23 w/ defaults",
-			"1.23.1",
-			clusterDNSAddress,
-			clusterDomain,
-			params,
-			kubeletConfigWithParams,
-			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
-				cfg.RotateCertificates = true
-				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
-			},
-		),
-
-		Entry(
 			"kubernetes 1.24 w/o defaults",
 			"1.24.1",
 			clusterDNSAddress,
