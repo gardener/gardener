@@ -38,7 +38,7 @@ import (
 const ControllerName = "health-progressing"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, targetCacheDisabled bool, clusterID string) error {
+func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, clusterID string) error {
 	if r.SourceClient == nil {
 		r.SourceClient = sourceCluster.GetClient()
 	}
@@ -78,28 +78,26 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 		})
 
-	if !targetCacheDisabled {
-		// Watch relevant objects for Progressing condition in order to immediately update the condition as soon as there is
-		// a change on managed resources.
-		// If the target cache is disabled (e.g. for Shoots), we don't want to watch workload objects (Deployment, DaemonSet,
-		// StatefulSet) because this would cache all of them in the entire cluster. This can potentially be a lot of objects
-		// in Shoot clusters, because they are controlled by the end user. In this case, we rely on periodic syncs only.
-		// If we want to have immediate updates for managed resources in Shoots in the future as well, we could consider
-		// adding labels to managed resources and watch them explicitly.
-		b = b.WatchesRawSource(
-			source.Kind(targetCluster.GetCache(), &appsv1.Deployment{}),
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
-			builder.WithPredicates(r.ProgressingStatusChanged()),
-		).WatchesRawSource(
-			source.Kind(targetCluster.GetCache(), &appsv1.StatefulSet{}),
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
-			builder.WithPredicates(r.ProgressingStatusChanged()),
-		).WatchesRawSource(
-			source.Kind(targetCluster.GetCache(), &appsv1.DaemonSet{}),
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
-			builder.WithPredicates(r.ProgressingStatusChanged()),
-		)
-	}
+	// Watch relevant objects for Progressing condition in order to immediately update the condition as soon as there is
+	// a change on managed resources.
+	// If the target cache is disabled (e.g. for Shoots), we don't want to watch workload objects (Deployment, DaemonSet,
+	// StatefulSet) because this would cache all of them in the entire cluster. This can potentially be a lot of objects
+	// in Shoot clusters, because they are controlled by the end user. In this case, we rely on periodic syncs only.
+	// If we want to have immediate updates for managed resources in Shoots in the future as well, we could consider
+	// adding labels to managed resources and watch them explicitly.
+	b = b.WatchesRawSource(
+		source.Kind(targetCluster.GetCache(), &appsv1.Deployment{}),
+		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
+		builder.WithPredicates(r.ProgressingStatusChanged()),
+	).WatchesRawSource(
+		source.Kind(targetCluster.GetCache(), &appsv1.StatefulSet{}),
+		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
+		builder.WithPredicates(r.ProgressingStatusChanged()),
+	).WatchesRawSource(
+		source.Kind(targetCluster.GetCache(), &appsv1.DaemonSet{}),
+		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
+		builder.WithPredicates(r.ProgressingStatusChanged()),
+	)
 
 	return b.Complete(r)
 }

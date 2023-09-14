@@ -57,11 +57,6 @@ func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targe
 		return err
 	}
 
-	var targetCacheDisabled bool
-	if cfg.TargetClientConnection != nil {
-		targetCacheDisabled = pointer.BoolDeref(cfg.TargetClientConnection.DisableCachedClient, false)
-	}
-
 	if cfg.Controllers.KubeletCSRApprover.Enabled {
 		if err := (&csrapprover.Reconciler{
 			CertificatesClient: targetClientSet.CertificatesV1().CertificateSigningRequests(),
@@ -82,7 +77,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targe
 		}
 	}
 
-	if err := health.AddToManager(ctx, mgr, sourceCluster, targetCluster, *cfg, targetCacheDisabled); err != nil {
+	if err := health.AddToManager(ctx, mgr, sourceCluster, targetCluster, *cfg); err != nil {
 		return fmt.Errorf("failed adding health controller: %w", err)
 	}
 

@@ -38,6 +38,7 @@ import (
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
@@ -145,9 +146,10 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 		Logger:                  log,
 		Scheme:                  managerScheme,
 		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
-		Namespace:               *cfg.SourceClientConnection.Namespace,
-		SyncPeriod:              &cfg.SourceClientConnection.CacheResyncPeriod.Duration,
-
+		Cache: cache.Options{
+			Namespaces: cfg.SourceClientConnection.Namespaces,
+			SyncPeriod: &cfg.SourceClientConnection.CacheResyncPeriod.Duration,
+		},
 		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(cfg.Server.HealthProbes.Port)),
 		MetricsBindAddress:     net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
 
@@ -221,18 +223,8 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 				)
 			}
 
-			opts.Cache.Namespaces = []string{*cfg.TargetClientConnection.Namespace}
-			opts.SyncPeriod = &cfg.TargetClientConnection.CacheResyncPeriod.Duration
-
-			if *cfg.TargetClientConnection.DisableCachedClient {
-				opts.NewClient = func(config *rest.Config, opts client.Options) (client.Client, error) {
-					opts.Cache.DisableFor = append(opts.Cache.DisableFor,
-						&corev1.ConfigMap{},
-						&corev1.Secret{},
-					)
-					return client.New(config, opts)
-				}
-			}
+			opts.Cache.Namespaces = cfg.TargetClientConnection.Namespaces
+			opts.Cache.SyncPeriod = &cfg.TargetClientConnection.CacheResyncPeriod.Duration
 
 			opts.Client.Cache = &client.CacheOptions{
 				DisableFor: []client.Object{
