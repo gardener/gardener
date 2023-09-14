@@ -15,8 +15,10 @@
 package shoot
 
 import (
+	"cmp"
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/Masterminds/semver"
@@ -68,6 +70,8 @@ func (shootStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 
 	// TODO(shafeeqes): Drop this after gardener v1.80 has been released.
 	removeForbiddenFinalizers(shoot)
+	// TODO(acumino): Drop this after v1.83 has been released.
+	removeDuplicateExtensions(shoot)
 }
 
 func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
@@ -80,6 +84,9 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 	if mustIncreaseGeneration(oldShoot, newShoot) {
 		newShoot.Generation = oldShoot.Generation + 1
 	}
+
+	// TODO(acumino): Drop this after v1.83 has been released.
+	removeDuplicateExtensions(newShoot)
 }
 
 func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
@@ -164,6 +171,25 @@ func removeForbiddenFinalizers(shoot *core.Shoot) {
 	}
 
 	shoot.Finalizers = finalizers
+}
+
+func removeDuplicateExtensions(shoot *core.Shoot) {
+	if len(shoot.Spec.Extensions) > 1 {
+		typeToExtension := make(map[string]core.Extension, len(shoot.Spec.Extensions))
+		for _, extension := range shoot.Spec.Extensions {
+			typeToExtension[extension.Type] = extension
+		}
+
+		extensionsList := make([]core.Extension, 0, len(typeToExtension))
+		for _, extension := range typeToExtension {
+			extensionsList = append(extensionsList, extension)
+		}
+
+		slices.SortFunc(extensionsList, func(a, b core.Extension) int {
+			return cmp.Compare(a.Type, b.Type)
+		})
+		shoot.Spec.Extensions = extensionsList
+	}
 }
 
 func (shootStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {

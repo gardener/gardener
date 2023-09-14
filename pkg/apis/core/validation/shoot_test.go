@@ -780,6 +780,33 @@ var _ = Describe("Shoot Validation Tests", func() {
 			Expect(errorList).To(BeEmpty())
 		})
 
+		It("should forbid passing an extension of same type more than once", func() {
+			extension := core.Extension{
+				Type: "arbitrary",
+			}
+			shoot.Spec.Extensions = append(shoot.Spec.Extensions, extension, extension)
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.extensions[1].type"),
+				}))))
+		})
+
+		It("should allow passing more than one extension of different type", func() {
+			extension := core.Extension{
+				Type: "arbitrary",
+			}
+			shoot.Spec.Extensions = append(shoot.Spec.Extensions, extension, extension)
+			shoot.Spec.Extensions[1].Type = "arbitrary-2"
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
 		It("should forbid resources w/o names or w/ invalid references", func() {
 			ref := core.NamedResourceReference{}
 			shoot.Spec.Resources = append(shoot.Spec.Resources, ref)
