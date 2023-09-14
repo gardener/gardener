@@ -1049,7 +1049,7 @@ func autoConvert_v1alpha1_SourceClientConnection_To_config_SourceClientConnectio
 	if err := configv1alpha1.Convert_v1alpha1_ClientConnectionConfiguration_To_config_ClientConnectionConfiguration(&in.ClientConnectionConfiguration, &out.ClientConnectionConfiguration, s); err != nil {
 		return err
 	}
-	out.Namespace = (*string)(unsafe.Pointer(in.Namespace))
+	out.Namespaces = *(*[]string)(unsafe.Pointer(&in.Namespaces))
 	out.CacheResyncPeriod = (*v1.Duration)(unsafe.Pointer(in.CacheResyncPeriod))
 	return nil
 }
@@ -1063,7 +1063,7 @@ func autoConvert_config_SourceClientConnection_To_v1alpha1_SourceClientConnectio
 	if err := configv1alpha1.Convert_config_ClientConnectionConfiguration_To_v1alpha1_ClientConnectionConfiguration(&in.ClientConnectionConfiguration, &out.ClientConnectionConfiguration, s); err != nil {
 		return err
 	}
-	out.Namespace = (*string)(unsafe.Pointer(in.Namespace))
+	out.Namespaces = *(*[]string)(unsafe.Pointer(&in.Namespaces))
 	out.CacheResyncPeriod = (*v1.Duration)(unsafe.Pointer(in.CacheResyncPeriod))
 	return nil
 }
@@ -1123,8 +1123,7 @@ func autoConvert_v1alpha1_TargetClientConnection_To_config_TargetClientConnectio
 	if err := configv1alpha1.Convert_v1alpha1_ClientConnectionConfiguration_To_config_ClientConnectionConfiguration(&in.ClientConnectionConfiguration, &out.ClientConnectionConfiguration, s); err != nil {
 		return err
 	}
-	out.Namespace = (*string)(unsafe.Pointer(in.Namespace))
-	out.DisableCachedClient = (*bool)(unsafe.Pointer(in.DisableCachedClient))
+	out.Namespaces = *(*[]string)(unsafe.Pointer(&in.Namespaces))
 	out.CacheResyncPeriod = (*v1.Duration)(unsafe.Pointer(in.CacheResyncPeriod))
 	return nil
 }
@@ -1138,8 +1137,7 @@ func autoConvert_config_TargetClientConnection_To_v1alpha1_TargetClientConnectio
 	if err := configv1alpha1.Convert_config_ClientConnectionConfiguration_To_v1alpha1_ClientConnectionConfiguration(&in.ClientConnectionConfiguration, &out.ClientConnectionConfiguration, s); err != nil {
 		return err
 	}
-	out.Namespace = (*string)(unsafe.Pointer(in.Namespace))
-	out.DisableCachedClient = (*bool)(unsafe.Pointer(in.DisableCachedClient))
+	out.Namespaces = *(*[]string)(unsafe.Pointer(&in.Namespaces))
 	out.CacheResyncPeriod = (*v1.Duration)(unsafe.Pointer(in.CacheResyncPeriod))
 	return nil
 }

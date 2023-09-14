@@ -51,8 +51,8 @@ type ResourceManagerConfiguration struct {
 // for the proxy server to use when communicating with the seed apiserver.
 type SourceClientConnection struct {
 	componentbaseconfig.ClientConnectionConfiguration
-	// Namespace in which the ManagedResources should be observed (defaults to "all namespaces").
-	Namespace *string
+	// Namespaces in which the ManagedResources should be observed (defaults to "all namespaces").
+	Namespaces []string
 	// CacheResyncPeriod specifies the duration how often the cache for the source cluster is resynced.
 	CacheResyncPeriod *metav1.Duration
 }
@@ -61,11 +61,8 @@ type SourceClientConnection struct {
 // for the proxy server to use when communicating with the shoot apiserver.
 type TargetClientConnection struct {
 	componentbaseconfig.ClientConnectionConfiguration
-	// Namespace in which controllers for the target clusters act on objects (defaults to "all namespaces").
-	Namespace *string
-	// DisableCachedClient specifies whether the cache for the target cluster client should be disabled. If true, then
-	// each request is performed with a direct client.
-	DisableCachedClient *bool
+	// Namespaces in which controllers for the target clusters act on objects (defaults to "all namespaces").
+	Namespaces []string
 	// CacheResyncPeriod specifies the duration how often the cache for the target cluster is resynced.
 	CacheResyncPeriod *metav1.Duration
 }

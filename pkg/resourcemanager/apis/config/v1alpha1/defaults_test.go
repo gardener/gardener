@@ -57,7 +57,7 @@ var _ = Describe("Defaults", func() {
 
 			SetDefaults_SourceClientConnection(obj)
 
-			Expect(obj.Namespace).To(PointTo(Equal("")))
+			Expect(obj.Namespaces).To(BeEmpty())
 			Expect(obj.CacheResyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 24 * time.Hour})))
 			Expect(obj.QPS).To(Equal(float32(100.0)))
 			Expect(obj.Burst).To(Equal(int32(130)))
@@ -69,13 +69,13 @@ var _ = Describe("Defaults", func() {
 					QPS:   float32(1.2),
 					Burst: int32(34),
 				},
-				Namespace:         pointer.String("foo"),
+				Namespaces:        []string{"foo"},
 				CacheResyncPeriod: &metav1.Duration{Duration: time.Hour},
 			}
 
 			SetDefaults_SourceClientConnection(obj)
 
-			Expect(obj.Namespace).To(PointTo(Equal("foo")))
+			Expect(obj.Namespaces).To(ConsistOf("foo"))
 			Expect(obj.CacheResyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Hour})))
 			Expect(obj.QPS).To(Equal(float32(1.2)))
 			Expect(obj.Burst).To(Equal(int32(34)))
@@ -88,8 +88,7 @@ var _ = Describe("Defaults", func() {
 
 			SetDefaults_TargetClientConnection(obj)
 
-			Expect(obj.Namespace).To(PointTo(Equal("")))
-			Expect(obj.DisableCachedClient).To(PointTo(BeFalse()))
+			Expect(obj.Namespaces).To(BeEmpty())
 			Expect(obj.CacheResyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 24 * time.Hour})))
 			Expect(obj.QPS).To(Equal(float32(100.0)))
 			Expect(obj.Burst).To(Equal(int32(130)))
@@ -101,15 +100,13 @@ var _ = Describe("Defaults", func() {
 					QPS:   float32(1.2),
 					Burst: int32(34),
 				},
-				Namespace:           pointer.String("foo"),
-				DisableCachedClient: pointer.Bool(true),
-				CacheResyncPeriod:   &metav1.Duration{Duration: time.Hour},
+				Namespaces:        []string{"foo"},
+				CacheResyncPeriod: &metav1.Duration{Duration: time.Hour},
 			}
 
 			SetDefaults_TargetClientConnection(obj)
 
-			Expect(obj.Namespace).To(PointTo(Equal("foo")))
-			Expect(obj.DisableCachedClient).To(PointTo(BeTrue()))
+			Expect(obj.Namespaces).To(ConsistOf("foo"))
 			Expect(obj.CacheResyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Hour})))
 			Expect(obj.QPS).To(Equal(float32(1.2)))
 			Expect(obj.Burst).To(Equal(int32(34)))

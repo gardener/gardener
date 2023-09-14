@@ -54,9 +54,9 @@ type ResourceManagerConfiguration struct {
 // for the proxy server to use when communicating with the seed apiserver.
 type SourceClientConnection struct {
 	componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:",inline"`
-	// Namespace in which the ManagedResources should be observed (defaults to "all namespaces").
+	// Namespaces in which the ManagedResources should be observed (defaults to "all namespaces").
 	// +optional
-	Namespace *string `json:"namespace,omitempty"`
+	Namespaces []string `json:"namespaces,omitempty"`
 	// CacheResyncPeriod specifies the duration how often the cache for the source cluster is resynced.
 	// +optional
 	CacheResyncPeriod *metav1.Duration `json:"cacheResyncPeriod,omitempty"`
@@ -66,13 +66,9 @@ type SourceClientConnection struct {
 // for the proxy server to use when communicating with the shoot apiserver.
 type TargetClientConnection struct {
 	componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:",inline"`
-	// Namespace in which controllers for the target clusters act on objects (defaults to "all namespaces").
+	// Namespaces in which controllers for the target clusters act on objects (defaults to "all namespaces").
 	// +optional
-	Namespace *string `json:"namespace,omitempty"`
-	// DisableCachedClient specifies whether the cache for the target cluster client should be disabled. If true, then
-	// each request is performed with a direct client.
-	// +optional
-	DisableCachedClient *bool `json:"disableCachedClient,omitempty"`
+	Namespaces []string `json:"namespaces,omitempty"`
 	// CacheResyncPeriod specifies the duration how often the cache for the target cluster is resynced.
 	// +optional
 	CacheResyncPeriod *metav1.Duration `json:"cacheResyncPeriod,omitempty"`

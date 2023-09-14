@@ -4,13 +4,12 @@ kind: ResourceManagerConfiguration
 sourceClientConnection:
   qps: 100
   burst: 130
-# namespace: ""
+# namespaces: []
 # cacheResyncPeriod: 24h
 #targetClientConnection:
 #  qps: 100
 #  burst: 130
-#  namespace: ""
-#  disableCachedClient: false
+#  namespaces: []
 #  cacheResyncPeriod: 24h
 leaderElection:
   leaderElect: true

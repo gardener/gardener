@@ -14,8 +14,9 @@ data:
     sourceClientConnection:
       qps: {{ .Values.global.config.sourceClientConnection.qps }}
       burst: {{ .Values.global.config.sourceClientConnection.burst }}
-    {{- if .Values.global.config.sourceClientConnection.namespace }}
-      namespace: {{ .Values.global.config.sourceClientConnection.namespace }}
+    {{- if .Values.global.config.sourceClientConnection.namespaces }}
+      namespaces:
+{{ toYaml .Values.global.config.sourceClientConnection.namespaces | indent 6 }}
     {{- end }}
     {{- if .Values.global.config.sourceClientConnection.cacheResyncPeriod }}
       cacheResyncPeriod: {{ .Values.global.config.sourceClientConnection.cacheResyncPeriod }}
@@ -27,11 +28,9 @@ data:
     targetClientConnection:
       qps: {{ .Values.global.config.targetClientConnection.qps }}
       burst: {{ .Values.global.config.targetClientConnection.burst }}
-    {{- if .Values.global.config.targetClientConnection.namespace }}
-      namespace: {{ .Values.global.config.targetClientConnection.namespace }}
-    {{- end }}
-    {{- if .Values.global.config.targetClientConnection.disableCachedClient }}
-      disableCachedClient: {{ .Values.global.config.targetClientConnection.disableCachedClient }}
+    {{- if .Values.global.config.targetClientConnection.namespaces }}
+      namespaces:
+{{ toYaml .Values.global.config.targetClientConnection.namespaces | indent 6 }}
     {{- end }}
     {{- if .Values.global.config.targetClientConnection.cacheResyncPeriod }}
       cacheResyncPeriod: {{ .Values.global.config.targetClientConnection.cacheResyncPeriod }}

@@ -44,9 +44,6 @@ func SetDefaults_ResourceManagerConfiguration(obj *ResourceManagerConfiguration)
 func SetDefaults_SourceClientConnection(obj *SourceClientConnection) {
 	SetDefaults_ClientConnectionConfiguration(&obj.ClientConnectionConfiguration)
 
-	if obj.Namespace == nil {
-		obj.Namespace = pointer.String("")
-	}
 	if obj.CacheResyncPeriod == nil {
 		obj.CacheResyncPeriod = &metav1.Duration{Duration: 24 * time.Hour}
 	}
@@ -56,12 +53,6 @@ func SetDefaults_SourceClientConnection(obj *SourceClientConnection) {
 func SetDefaults_TargetClientConnection(obj *TargetClientConnection) {
 	SetDefaults_ClientConnectionConfiguration(&obj.ClientConnectionConfiguration)
 
-	if obj.Namespace == nil {
-		obj.Namespace = pointer.String("")
-	}
-	if obj.DisableCachedClient == nil {
-		obj.DisableCachedClient = pointer.Bool(false)
-	}
 	if obj.CacheResyncPeriod == nil {
 		obj.CacheResyncPeriod = &metav1.Duration{Duration: 24 * time.Hour}
 	}

@@ -560,10 +560,10 @@ func (in *ServerConfiguration) DeepCopy() *ServerConfiguration {
 func (in *SourceClientConnection) DeepCopyInto(out *SourceClientConnection) {
 	*out = *in
 	out.ClientConnectionConfiguration = in.ClientConnectionConfiguration
-	if in.Namespace != nil {
-		in, out := &in.Namespace, &out.Namespace
-		*out = new(string)
-		**out = **in
+	if in.Namespaces != nil {
+		in, out := &in.Namespaces, &out.Namespaces
+		*out = make([]string, len(*in))
+		copy(*out, *in)
 	}
 	if in.CacheResyncPeriod != nil {
 		in, out := &in.CacheResyncPeriod, &out.CacheResyncPeriod
@@ -640,15 +640,10 @@ func (in *TLSServer) DeepCopy() *TLSServer {
 func (in *TargetClientConnection) DeepCopyInto(out *TargetClientConnection) {
 	*out = *in
 	out.ClientConnectionConfiguration = in.ClientConnectionConfiguration
-	if in.Namespace != nil {
-		in, out := &in.Namespace, &out.Namespace
-		*out = new(string)
-		**out = **in
-	}
-	if in.DisableCachedClient != nil {
-		in, out := &in.DisableCachedClient, &out.DisableCachedClient
-		*out = new(bool)
-		**out = **in
+	if in.Namespaces != nil {
+		in, out := &in.Namespaces, &out.Namespaces
+		*out = make([]string, len(*in))
+		copy(*out, *in)
 	}
 	if in.CacheResyncPeriod != nil {
 		in, out := &in.CacheResyncPeriod, &out.CacheResyncPeriod
