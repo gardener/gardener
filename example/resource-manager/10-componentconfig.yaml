@@ -45,6 +45,7 @@ controllers:
   kubeletCSRApprover:
     enabled: true
     concurrentSyncs: 1
+    machineNamespace: shoot--foo--bar
   managedResources:
     concurrentSyncs: 5
     syncPeriod: 1m

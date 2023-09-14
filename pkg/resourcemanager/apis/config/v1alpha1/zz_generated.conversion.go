@@ -526,6 +526,7 @@ func Convert_config_IngressControllerSelector_To_v1alpha1_IngressControllerSelec
 func autoConvert_v1alpha1_KubeletCSRApproverControllerConfig_To_config_KubeletCSRApproverControllerConfig(in *KubeletCSRApproverControllerConfig, out *config.KubeletCSRApproverControllerConfig, s conversion.Scope) error {
 	out.Enabled = in.Enabled
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
+	out.MachineNamespace = in.MachineNamespace
 	return nil
 }
 
@@ -537,6 +538,7 @@ func Convert_v1alpha1_KubeletCSRApproverControllerConfig_To_config_KubeletCSRApp
 func autoConvert_config_KubeletCSRApproverControllerConfig_To_v1alpha1_KubeletCSRApproverControllerConfig(in *config.KubeletCSRApproverControllerConfig, out *KubeletCSRApproverControllerConfig, s conversion.Scope) error {
 	out.Enabled = in.Enabled
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
+	out.MachineNamespace = in.MachineNamespace
 	return nil
 }
 

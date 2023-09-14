@@ -145,6 +145,8 @@ type KubeletCSRApproverControllerConfig struct {
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	// MachineNamespace is the namespace in the source cluster in which the Machine objects are stored.
+	MachineNamespace string `json:"machineNamespace"`
 }
 
 // GarbageCollectorControllerConfig is the configuration for the garbage-collector controller.

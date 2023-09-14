@@ -61,7 +61,6 @@ func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targe
 		if err := (&csrapprover.Reconciler{
 			CertificatesClient: targetClientSet.CertificatesV1().CertificateSigningRequests(),
 			Config:             cfg.Controllers.KubeletCSRApprover,
-			SourceNamespace:    *cfg.SourceClientConnection.Namespace,
 		}).AddToManager(mgr, sourceCluster, targetCluster); err != nil {
 			return fmt.Errorf("failed adding Kubelet CSR Approver controller: %w", err)
 		}

@@ -92,6 +92,9 @@ data:
         {{- if .Values.global.config.controllers.kubeletCSRApprover.concurrentSyncs }}
         concurrentSyncs: {{ .Values.global.config.controllers.kubeletCSRApprover.concurrentSyncs }}
         {{- end }}
+        {{- if .Values.global.config.controllers.kubeletCSRApprover.machineNamespace }}
+        machineNamespace: {{ .Values.global.config.controllers.kubeletCSRApprover.machineNamespace }}
+        {{- end }}
       managedResources:
         {{- if .Values.global.config.controllers.managedResources.concurrentSyncs }}
         concurrentSyncs: {{ .Values.global.config.controllers.managedResources.concurrentSyncs }}
