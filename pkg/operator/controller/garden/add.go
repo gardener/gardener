@@ -22,10 +22,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	"github.com/gardener/gardener/pkg/operator/controller/garden/care"
 	"github.com/gardener/gardener/pkg/operator/controller/garden/garden"
+	"github.com/gardener/gardener/pkg/operator/controller/garden/reference"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
@@ -73,7 +75,11 @@ func AddToManager(
 		Config:          *cfg,
 		GardenClientMap: gardenClientMap,
 	}).AddToManager(ctx, mgr); err != nil {
-		return fmt.Errorf("failed adding Garden-Care controller: %w", err)
+		return fmt.Errorf("failed adding care reconciler: %w", err)
+	}
+
+	if err := reference.AddToManager(mgr, v1beta1constants.GardenNamespace); err != nil {
+		return fmt.Errorf("failed adding reference reconciler: %w", err)
 	}
 
 	return nil

@@ -102,6 +102,7 @@ build:
         - pkg/controller/networkpolicy
         - pkg/controller/networkpolicy/helper
         - pkg/controller/networkpolicy/hostnameresolver
+        - pkg/controller/reference
         - pkg/controller/service
         - pkg/controllermanager/apis/config
         - pkg/controllermanager/apis/config/v1alpha1
@@ -124,6 +125,7 @@ build:
         - pkg/operator/controller/garden
         - pkg/operator/controller/garden/care
         - pkg/operator/controller/garden/garden
+        - pkg/operator/controller/garden/reference
         - pkg/operator/controller/networkpolicyregistrar
         - pkg/operator/features
         - pkg/operator/webhook
@@ -498,6 +500,7 @@ build:
         - pkg/client/kubernetes/cache
         - pkg/component
         - pkg/component/projectrbac
+        - pkg/controller/reference
         - pkg/controllermanager/apis/config
         - pkg/controllermanager/apis/config/v1alpha1
         - pkg/controllermanager/apis/config/validation

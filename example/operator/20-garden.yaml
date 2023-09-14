@@ -52,7 +52,6 @@ spec:
           bucketName: gardener-operator
           secretRef:
             name: virtual-garden-etcd-main-backup-local
-            namespace: garden
         storage:
           capacity: 25Gi
         # className: default

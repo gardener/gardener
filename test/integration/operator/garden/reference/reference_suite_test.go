@@ -1,4 +1,4 @@
-// Copyright 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@ package reference_test
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -24,23 +25,21 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/reference"
-	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
+	operatorclient "github.com/gardener/gardener/pkg/operator/client"
+	"github.com/gardener/gardener/pkg/operator/controller/garden/reference"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 func TestReference(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Test Integration ControllerManager Shoot Reference Suite")
+	RunSpecs(t, "Test Integration Operator Garden Reference Suite")
 }
 
 const testID = "reference-controller-test"
@@ -50,8 +49,9 @@ var (
 	log logr.Logger
 
 	restConfig *rest.Config
-	testEnv    *gardenerenvtest.GardenerTestEnvironment
+	testEnv    *envtest.Environment
 	testClient client.Client
+	mgrClient  client.Client
 
 	testNamespace *corev1.Namespace
 	testRunID     string
@@ -62,10 +62,11 @@ var _ = BeforeSuite(func() {
 	log = logf.Log.WithName(testID)
 
 	By("Start test environment")
-	testEnv = &gardenerenvtest.GardenerTestEnvironment{
-		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
-			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator,ShootQuotaValidator,ShootValidator,ShootTolerationRestriction,ShootDNS"},
+	testEnv = &envtest.Environment{
+		CRDInstallOptions: envtest.CRDInstallOptions{
+			Paths: []string{filepath.Join("..", "..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_gardens.yaml")},
 		},
+		ErrorIfCRDPathMissing: true,
 	}
 
 	var err error
@@ -79,7 +80,7 @@ var _ = BeforeSuite(func() {
 	})
 
 	By("Create test client")
-	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
+	testClient, err = client.New(restConfig, client.Options{Scheme: operatorclient.RuntimeScheme})
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Create test Namespace")
@@ -100,16 +101,15 @@ var _ = BeforeSuite(func() {
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             kubernetes.GardenScheme,
+		Scheme:             operatorclient.RuntimeScheme,
 		MetricsBindAddress: "0",
 		Namespace:          testNamespace.Name,
 	})
 	Expect(err).NotTo(HaveOccurred())
+	mgrClient = mgr.GetClient()
 
 	By("Register controller")
-	Expect(reference.AddToManager(mgr, config.ShootReferenceControllerConfiguration{
-		ConcurrentSyncs: pointer.Int(5),
-	})).To(Succeed())
+	Expect(reference.AddToManager(mgr, testNamespace.Name)).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

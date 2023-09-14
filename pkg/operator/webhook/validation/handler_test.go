@@ -16,6 +16,7 @@ package validation_test
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/go-logr/logr"
@@ -100,6 +101,30 @@ var _ = Describe("Handler", func() {
 			Expect(ok).To(BeTrue())
 			Expect(statusError.Status().Code).To(Equal(int32(http.StatusBadRequest)))
 			Expect(statusError.Status().Message).To(ContainSubstring("there can be only one operator.gardener.cloud/v1alpha1.Garden resource in the system at a time"))
+		})
+
+		Context("forbidden finalizers", func() {
+			test := func(finalizer string) {
+				It("should return error", func() {
+					garden.Finalizers = append([]string{"some-finalizer", "random"}, finalizer)
+
+					warnings, err := handler.ValidateCreate(ctx, garden)
+					Expect(warnings).To(BeNil())
+
+					statusError, ok := err.(*apierrors.StatusError)
+					Expect(ok).To(BeTrue())
+					Expect(statusError.Status().Code).To(Equal(int32(http.StatusBadRequest)))
+					Expect(statusError.Status().Message).To(Equal(fmt.Sprintf(`finalizer "%s" cannot be added on creation`, finalizer)))
+				})
+			}
+
+			Context("reference-protection", func() {
+				test("gardener.cloud/reference-protection")
+			})
+
+			Context("operator", func() {
+				test("gardener.cloud/operator")
+			})
 		})
 	})
 

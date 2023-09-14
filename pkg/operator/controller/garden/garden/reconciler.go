@@ -46,8 +46,6 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
-const finalizerName = "gardener.cloud/operator"
-
 // Reconciler reconciles Gardens.
 type Reconciler struct {
 	RuntimeClientSet      kubernetes.Interface

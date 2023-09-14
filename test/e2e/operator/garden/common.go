@@ -109,9 +109,8 @@ func defaultGarden(backupSecret *corev1.Secret) *operatorv1alpha1.Garden {
 						Backup: &operatorv1alpha1.Backup{
 							Provider:   "local",
 							BucketName: "gardener-operator/" + name,
-							SecretRef: corev1.SecretReference{
-								Name:      backupSecret.Name,
-								Namespace: backupSecret.Namespace,
+							SecretRef: corev1.LocalObjectReference{
+								Name: backupSecret.Name,
 							},
 						},
 					},

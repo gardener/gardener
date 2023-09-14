@@ -21,9 +21,11 @@ import (
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/validation"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -36,12 +38,7 @@ type Handler struct {
 	RuntimeClient client.Client
 }
 
-func validate(obj runtime.Object) (admission.Warnings, error) {
-	garden, ok := obj.(*operatorv1alpha1.Garden)
-	if !ok {
-		return nil, fmt.Errorf("expected *operatorv1alpha1.Garden but got %T", obj)
-	}
-
+func validate(garden *operatorv1alpha1.Garden) (admission.Warnings, error) {
 	if errs := validation.ValidateGarden(garden); len(errs) > 0 {
 		return nil, apierrors.NewInvalid(operatorv1alpha1.Kind("Garden"), garden.Name, errs)
 	}
@@ -66,6 +63,12 @@ func validateUpdate(oldObj, newObj runtime.Object) (admission.Warnings, error) {
 	return nil, nil
 }
 
+// ForbiddenFinalizersOnCreation is a list of finalizers which are forbidden to be specified on Garden creation.
+var ForbiddenFinalizersOnCreation = sets.New(
+	operatorv1alpha1.FinalizerName,
+	v1beta1constants.ReferenceProtectionFinalizerName,
+)
+
 // ValidateCreate performs the validation.
 func (h *Handler) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	otherGardensAlreadyExist, err := kubernetesutils.ResourcesExist(ctx, h.RuntimeClient, operatorv1alpha1.SchemeGroupVersion.WithKind("GardenList"))
@@ -76,7 +79,18 @@ func (h *Handler) ValidateCreate(ctx context.Context, obj runtime.Object) (admis
 		return nil, apierrors.NewBadRequest("there can be only one operator.gardener.cloud/v1alpha1.Garden resource in the system at a time")
 	}
 
-	return validate(obj)
+	garden, ok := obj.(*operatorv1alpha1.Garden)
+	if !ok {
+		return nil, fmt.Errorf("expected *operatorv1alpha1.Garden but got %T", obj)
+	}
+
+	for _, finalizer := range garden.Finalizers {
+		if ForbiddenFinalizersOnCreation.Has(finalizer) {
+			return nil, apierrors.NewBadRequest(fmt.Sprintf("finalizer %q cannot be added on creation", finalizer))
+		}
+	}
+
+	return validate(garden)
 }
 
 // ValidateUpdate performs the validation.
