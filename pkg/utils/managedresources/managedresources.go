@@ -31,7 +31,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/utils/chart"
@@ -331,10 +330,7 @@ func WaitUntilDeleted(ctx context.Context, c client.Client, namespace, name stri
 		return err
 	}
 
-	if err := kubernetesutils.WaitUntilResourcesDeleted(ctx, c, &corev1.SecretList{}, IntervalWait, client.InNamespace(namespace), client.MatchingLabels{v1alpha1.ReferencedBy: name}); err != nil {
-		return err
-	}
-	return nil
+	return kubernetesutils.WaitUntilResourcesDeleted(ctx, c, &corev1.SecretList{}, IntervalWait, client.InNamespace(namespace), client.MatchingLabels{resourcesv1alpha1.ReferencedBy: name})
 }
 
 // SetKeepObjects updates the keepObjects field of the managed resource with the given name in the given namespace.

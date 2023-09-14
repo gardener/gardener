@@ -30,7 +30,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	secretcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/secret"
@@ -219,7 +218,7 @@ var _ = Describe("SecretReconciler", func() {
 				})
 
 			secretAfter := secret.DeepCopy()
-			secretAfter.SetLabels(map[string]string{v1alpha1.ReferencedBy: "MR1"})
+			secretAfter.SetLabels(map[string]string{resourcesv1alpha1.ReferencedBy: "MR1"})
 			test.EXPECTPatchWithOptimisticLock(gomock.Any(), c, secretAfter, secret, types.MergePatchType)
 
 			res, err := r.Reconcile(ctx, secretReq)
@@ -254,7 +253,7 @@ var _ = Describe("SecretReconciler", func() {
 				})
 
 			secretAfter := secret.DeepCopy()
-			secretAfter.SetLabels(map[string]string{v1alpha1.ReferencedBy: "MR1"})
+			secretAfter.SetLabels(map[string]string{resourcesv1alpha1.ReferencedBy: "MR1"})
 			test.EXPECTPatchWithOptimisticLock(gomock.Any(), c, secretAfter, secret, types.MergePatchType)
 
 			secretAfter2 := secretAfter.DeepCopy()

@@ -50,7 +50,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	mockchartrenderer "github.com/gardener/gardener/pkg/chartrenderer/mock"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
@@ -594,7 +593,7 @@ webhooks:
 				c.EXPECT().Delete(ctx, deletedMRForCPShootCRDsChart).Return(nil)
 				c.EXPECT().Delete(ctx, deletedMRSecretForCPShootCRDsChart).Return(nil)
 				c.EXPECT().Get(gomock.Any(), resourceKeyCPShootCRDsChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, deletedMRForCPShootCRDsChart.Name))
-				c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(resourceKeyCPShootCRDsChart.Namespace), client.MatchingLabels(map[string]string{v1alpha1.ReferencedBy: resourceKeyCPShootCRDsChart.Name}))
+				c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(resourceKeyCPShootCRDsChart.Namespace), client.MatchingLabels(map[string]string{resourcesv1alpha1.ReferencedBy: resourceKeyCPShootCRDsChart.Name}))
 
 			}
 
@@ -603,9 +602,9 @@ webhooks:
 			c.EXPECT().Delete(ctx, deletedMRSecretForCPShootChart).Return(nil)
 
 			c.EXPECT().Get(gomock.Any(), resourceKeyStorageClassesChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, deletedMRForStorageClassesChart.Name))
-			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(resourceKeyStorageClassesChart.Namespace), client.MatchingLabels(map[string]string{v1alpha1.ReferencedBy: resourceKeyStorageClassesChart.Name}))
+			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(resourceKeyStorageClassesChart.Namespace), client.MatchingLabels(map[string]string{resourcesv1alpha1.ReferencedBy: resourceKeyStorageClassesChart.Name}))
 			c.EXPECT().Get(gomock.Any(), resourceKeyCPShootChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, deletedMRForCPShootChart.Name))
-			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(resourceKeyCPShootChart.Namespace), client.MatchingLabels(map[string]string{v1alpha1.ReferencedBy: resourceKeyCPShootChart.Name}))
+			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(resourceKeyCPShootChart.Namespace), client.MatchingLabels(map[string]string{resourcesv1alpha1.ReferencedBy: resourceKeyCPShootChart.Name}))
 
 			// Create mock charts
 			var configChart chart.Interface
@@ -625,7 +624,7 @@ webhooks:
 				c.EXPECT().Delete(ctx, deletedMRForShootWebhooks).Return(nil)
 				c.EXPECT().Delete(ctx, deletedMRSecretForShootWebhooks).Return(nil)
 				c.EXPECT().Get(gomock.Any(), resourceKeyShootWebhooks, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, deletedMRForShootWebhooks.Name))
-				c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(resourceKeyShootWebhooks.Namespace), client.MatchingLabels(map[string]string{v1alpha1.ReferencedBy: resourceKeyShootWebhooks.Name}))
+				c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(resourceKeyShootWebhooks.Namespace), client.MatchingLabels(map[string]string{resourcesv1alpha1.ReferencedBy: resourceKeyShootWebhooks.Name}))
 
 			}
 

@@ -26,7 +26,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
@@ -63,23 +62,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	// check if there is at least one ManagedResource this controller is responsible for and which references this secret
 	secretIsReferenced := false
+	var referencedMRResource resourcesv1alpha1.ManagedResource
 	for _, resource := range resourceList.Items {
 		for _, ref := range resource.Spec.SecretRefs {
 			// check if we are responsible for this MR, class might have changed, then we need to remove our finalizer
 			if ref.Name == secret.Name && r.ClassFilter.Responsible(&resource) {
 				secretIsReferenced = true
-				if !metav1.HasLabel(secret.ObjectMeta, resourcesv1alpha1.ReferencedBy) {
-					patch := client.MergeFromWithOptions(secret.DeepCopy(), client.MergeFromWithOptimisticLock{})
-					metav1.SetMetaDataLabel(&secret.ObjectMeta, v1alpha1.ReferencedBy, resource.Name)
-					if err := r.SourceClient.Patch(ctx, secret, patch); err != nil {
-						return reconcile.Result{}, fmt.Errorf("failed to add the %s label to secret: %w", resourcesv1alpha1.ReferencedBy, err)
-					}
-				}
+				referencedMRResource = resource
 				break
 			}
 		}
 	}
-
+	if secretIsReferenced && !metav1.HasLabel(secret.ObjectMeta, resourcesv1alpha1.ReferencedBy) {
+		patch := client.MergeFromWithOptions(secret.DeepCopy(), client.MergeFromWithOptimisticLock{})
+		metav1.SetMetaDataLabel(&secret.ObjectMeta, resourcesv1alpha1.ReferencedBy, referencedMRResource.Name)
+		if err := r.SourceClient.Patch(ctx, secret, patch); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add the %s label to secret: %w", resourcesv1alpha1.ReferencedBy, err)
+		}
+	}
 	controllerFinalizer := r.ClassFilter.FinalizerName()
 	hasFinalizer := controllerutil.ContainsFinalizer(secret, controllerFinalizer)
 	if secretIsReferenced && !hasFinalizer {

@@ -503,6 +503,7 @@ var _ = Describe("managedresources", func() {
 		})
 	})
 
+<<<<<<< HEAD
 	Describe("#WaitUntilHealthyAndNotProgressing()", func() {
 		It("should fail when the managed resource cannot be read", func() {
 			errClient := &errorClient{err: fakeErr, failMRGet: true, Client: fakeClient}
@@ -635,6 +636,33 @@ var _ = Describe("managedresources", func() {
 			}()
 
 			timeoutCtx, cancel := context.WithTimeout(ctx, time.Second*5)
+=======
+	Describe("#WaitUntilDeleted", func() {
+		It("should not return error if managed resource and corresponding secret does not exist", func() {
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name + "-secret",
+					Namespace: namespace,
+					Labels:    map[string]string{resourcesv1alpha1.ReferencedBy: "other-MR"},
+				},
+			}
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+			newContenxt, cancel := context.WithTimeout(ctx, 20*time.Second)
+			defer cancel()
+			Expect(WaitUntilDeleted(newContenxt, fakeClient, namespace, name)).To(Succeed())
+		})
+
+		It("should not return error if managed resource and secret does not exist", func() {
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+					Labels:    map[string]string{resourcesv1alpha1.ReferencedBy: name},
+				},
+			}
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+			newContenxt, cancel := context.WithTimeout(ctx, 20*time.Second)
+>>>>>>> 000d83a57 (Removing imports, pathing outside loop and following linter suggestion)
 			defer cancel()
 			Expect(WaitUntilHealthyAndNotProgressing(timeoutCtx, fakeClient, namespace, name)).To(Succeed())
 			Expect(shouldFail.Load()).To(BeFalse()) // to ensure that the goroutine actually applies all patches
