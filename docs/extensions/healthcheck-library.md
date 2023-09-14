@@ -13,6 +13,7 @@ The library provides a generic controller with the ability to register any resou
 An example is [the `Worker` CRD](../../pkg/apis/extensions/v1alpha1/types_worker.go).
 
 Health check functions for commonly used dependent objects can be reused and registered with the controller, such as:
+
 - Deployment
 - DaemonSet
 - StatefulSet
@@ -46,6 +47,7 @@ For more information, see [Contributing to Shoot Health Status Conditions](./sho
 
 A health check has to [satisfy the below interface](../../extensions/pkg/controller/healthcheck/actuator.go).
 You can find implementation examples in the [healtcheck folder](../../extensions/pkg/controller/healthcheck/general).
+
 ```go
 type HealthCheck interface {
     // Check is the function that executes the actual health check
@@ -84,10 +86,10 @@ status:
 
 Please note that there are four statuses: `True`, `False`, `Unknown`, and `Progressing`.
 
-* `True` should be used for successful health checks.
-* `False` should be used for unsuccessful/failing health checks.
-* `Unknown` should be used when there was an error trying to determine the health status.
-* `Progressing` should be used to indicate that the health status did not succeed but for expected reasons (e.g., a cluster scale up/down could make the standard health check fail because something is wrong with the `Machines`, however, it's actually an expected situation and known to be completed within a few minutes.)
+- `True` should be used for successful health checks.
+- `False` should be used for unsuccessful/failing health checks.
+- `Unknown` should be used when there was an error trying to determine the health status.
+- `Progressing` should be used to indicate that the health status did not succeed but for expected reasons (e.g., a cluster scale up/down could make the standard health check fail because something is wrong with the `Machines`, however, it's actually an expected situation and known to be completed within a few minutes.)
 
 Health checks that report `Progressing` should also provide a timeout, after which this "progressing situation" is expected to be completed.
 The health check library will automatically transition the status to `False` if the timeout was exceeded.

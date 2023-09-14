@@ -4,9 +4,9 @@ An existing shoot can be registered as a seed by creating a `ManagedSeed` resour
 
 * The name of the shoot that should be registered as seed.
 * A `gardenlet` section that contains:
-    * `gardenlet` deployment parameters, such as the number of replicas, the image, etc.
-    * The `GardenletConfiguration` resource that contains controllers configuration, feature gates, and a `seedConfig` section that contains the `Seed` spec and parts of its metadata.
-    * Additional configuration parameters, such as the garden connection bootstrap mechanism (see [TLS Bootstrapping](../concepts/gardenlet.md#tls-bootstrapping)), and whether to merge the provided configuration with the configuration of the parent `gardenlet`.
+  * `gardenlet` deployment parameters, such as the number of replicas, the image, etc.
+  * The `GardenletConfiguration` resource that contains controllers configuration, feature gates, and a `seedConfig` section that contains the `Seed` spec and parts of its metadata.
+  * Additional configuration parameters, such as the garden connection bootstrap mechanism (see [TLS Bootstrapping](../concepts/gardenlet.md#tls-bootstrapping)), and whether to merge the provided configuration with the configuration of the parent `gardenlet`.
 
 `gardenlet` is deployed to the shoot, and it registers a new seed upon startup based on the `seedConfig` section.
 

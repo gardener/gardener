@@ -12,6 +12,7 @@ Further details can be found in
 1. [Architecture of Gardener](https://github.com/gardener/documentation/wiki/Architecture)
 
 This guide is split into two main parts:
+
 * [Preparing your setup by installing all dependencies and tools](#preparing-the-setup)
 * [Getting the Gardener source code locally](#get-the-sources)
 
@@ -22,6 +23,7 @@ This guide is split into two main parts:
 The copy-paste instructions in this guide are designed for macOS and use the package manager [Homebrew](https://brew.sh/).
 
 On macOS run
+
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
@@ -59,6 +61,7 @@ For other OS, please check the [kubectl installation documentation](https://kube
 ## Installing Docker
 
 You need to have docker installed and running. On macOS run
+
 ```bash
 brew install --cask docker
 ```
@@ -111,6 +114,7 @@ export PATH=$(brew --prefix)/opt/gzip/bin:$PATH
 Apart from Linux distributions and macOS, the local gardener setup can also run on the Windows Subsystem for Linux 2.
 
 While WSL1, plain docker for Windows and various Linux distributions and local Kubernetes environments may be supported, this setup was verified with:
+
 * [WSL2](https://docs.microsoft.com/en-us/windows/wsl/wsl2-index)
 * [Docker Desktop WSL2 Engine](https://docs.docker.com/docker-for-windows/wsl/)
 * [Ubuntu 18.04 LTS on WSL2](https://ubuntu.com/blog/ubuntu-on-wsl-2-is-generally-available)

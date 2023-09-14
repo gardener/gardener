@@ -5,8 +5,9 @@ Additionally, it has several extension points allowing external controllers to p
 As a consequence, there are several configuration options for the various custom resources that are partially required.
 
 This document describes the:
+
 1. [Configuration and usage of Gardener as operator/administrator](#configuration-and-usage-of-gardener-as-operatoradministrator).
-2. [Configuration and usage of Gardener as end-user/stakeholder/customer](#configuration-and-usage-of-gardener-as-end-userstakeholdercustomer).
+1. [Configuration and usage of Gardener as end-user/stakeholder/customer](#configuration-and-usage-of-gardener-as-end-userstakeholdercustomer).
 
 ## Configuration and Usage of Gardener as Operator/Administrator
 
@@ -15,9 +16,9 @@ Gardener consists of the following components:
 
 1. `gardener-apiserver`, a Kubernetes-native API extension that serves custom resources in the Kubernetes-style (like `Seed`s and `Shoot`s), and a component that contains multiple admission plugins.
 1. `gardener-admission-controller`, an HTTP(S) server with several handlers to be used in a [ValidatingWebhookConfiguration](../../charts/gardener/controlplane/charts/application/templates/validatingwebhook-admission-controller.yaml).
-2. `gardener-controller-manager`, a component consisting of multiple controllers that implement reconciliation and deletion flows for some of the custom resources (e.g., it contains the logic for maintaining `Shoot`s, reconciling `Project`s).
-3. `gardener-scheduler`, a component that assigns newly created `Shoot` clusters to appropriate `Seed` clusters.
-4. `gardenlet`, a component running in seed clusters and consisting out of multiple controllers that implement reconciliation and deletion flows for some of the custom resources (e.g., it contains the logic for reconciliation and deletion of `Shoot`s).
+1. `gardener-controller-manager`, a component consisting of multiple controllers that implement reconciliation and deletion flows for some of the custom resources (e.g., it contains the logic for maintaining `Shoot`s, reconciling `Project`s).
+1. `gardener-scheduler`, a component that assigns newly created `Shoot` clusters to appropriate `Seed` clusters.
+1. `gardenlet`, a component running in seed clusters and consisting out of multiple controllers that implement reconciliation and deletion flows for some of the custom resources (e.g., it contains the logic for reconciliation and deletion of `Shoot`s).
 
 Each of these components have various configuration options.
 The `gardener-apiserver` uses the standard API server library maintained by the Kubernetes community, and as such it mainly supports command line flags.
