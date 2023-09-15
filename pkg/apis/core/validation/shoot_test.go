@@ -962,6 +962,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(BeEmpty())
 			})
 
+			It("should allow workers having min=0", func() {
+				shoot.Spec.Provider.Workers[0].Minimum = 0
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(BeEmpty())
+			})
+
 			It("should forbid too long worker names", func() {
 				shoot.Spec.Provider.Workers[0] = invalidWorkerTooLongName
 
