@@ -4,8 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.9.2
-  labels:
-    gardener.cloud/deletion-protected: "true"
+  creationTimestamp: null
   name: machinedeployments.machine.sapcloud.io
 spec:
   group: machine.sapcloud.io
@@ -46,7 +45,8 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Deployment enables declarative updates for machines and MachineSets.
+        description: MachineDeployment enables declarative updates for machines and
+          MachineSets.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -81,7 +81,7 @@ spec:
                   a condition with a ProgressDeadlineExceeded reason will be surfaced
                   in the MachineDeployment status. Note that progress will not be
                   estimated during the time a MachineDeployment is paused. This is
-                  not set by default.
+                  not set by default, which is treated as infinite deadline.
                 format: int32
                 type: integer
               replicas:
@@ -150,6 +150,7 @@ spec:
                       are ANDed.
                     type: object
                 type: object
+                x-kubernetes-map-type: atomic
               strategy:
                 description: The MachineDeployment strategy to use to replace existing
                   machines with new ones.
@@ -204,7 +205,7 @@ spec:
                 description: Template describes the machines that will be created.
                 properties:
                   metadata:
-                    description: 'Standard object''s metadata. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata'
+                    description: 'Standard object''s metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata'
                     type: object
                     x-kubernetes-preserve-unknown-fields: true
                   spec:
@@ -259,10 +260,9 @@ spec:
                               node is created with.
                             properties:
                               configSource:
-                                description: If specified, the source to get node
-                                  configuration from The DynamicKubeletConfig feature
-                                  gate must be enabled for the Kubelet to use this
-                                  field
+                                description: 'Deprecated: Previously used to specify
+                                      the source of the node''s configuration for the
+                                      DynamicKubeletConfig feature. This feature is removed.'
                                 properties:
                                   configMap:
                                     description: ConfigMap is a reference to a Node's
@@ -430,6 +430,9 @@ spec:
                       properties:
                         description:
                           description: Description of the current operation
+                          type: string
+                        errorCode:
+                          description: ErrorCode of the current operation if any
                           type: string
                         lastUpdateTime:
                           description: Last update time of current operation
