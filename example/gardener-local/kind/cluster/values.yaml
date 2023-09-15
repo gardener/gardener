@@ -1,5 +1,5 @@
 # TODO(oliver-goetz): Update to 1.28.0 after the merge of https://github.com/gardener/gardener/pull/8479 has been merged and released (after 1.80 has been released).
-image: kindest/node:v1.27.1
+image: kindest/node:v1.27.3
 
 gardener:
   apiserverRelay:
