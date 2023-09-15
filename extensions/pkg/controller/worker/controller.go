@@ -104,6 +104,7 @@ func addStateUpdatingController(ctx context.Context, mgr manager.Manager, option
 		}
 		workerPredicates = []predicate.Predicate{
 			extensionspredicate.HasType(extensionType),
+			WorkerStateUpdateIsNotSkipped(),
 		}
 	)
 
