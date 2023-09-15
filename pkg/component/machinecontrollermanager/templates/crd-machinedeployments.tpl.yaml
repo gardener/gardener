@@ -6,7 +6,6 @@ metadata:
     controller-gen.kubebuilder.io/version: v0.9.2
   labels:
     gardener.cloud/deletion-protected: "true"
-  creationTimestamp: null
   name: machinedeployments.machine.sapcloud.io
 spec:
   group: machine.sapcloud.io
