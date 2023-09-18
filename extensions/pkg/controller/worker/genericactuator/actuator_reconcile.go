@@ -31,13 +31,10 @@ import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	extensionsworkercontroller "github.com/gardener/gardener/extensions/pkg/controller/worker"
 	extensionsworkerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 )
@@ -94,17 +91,10 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 		return fmt.Errorf("failed to generate the machine deployments: %w", err)
 	}
 
-	var clusterAutoscalerUsed = extensionsv1alpha1helper.ClusterAutoscalerRequired(worker.Spec.Pools)
-
-	// TODO(rfranzke): Remove this code after v1.77 was released.
-	// When the Shoot is hibernated we want to remove the cluster autoscaler so that it does not interfer
-	// with Gardeners modifications on the machine deployment's replicas fields.
-	isHibernationEnabled := extensionscontroller.IsHibernationEnabled(cluster)
-	if clusterAutoscalerUsed && isHibernationEnabled {
-		if err = a.scaleClusterAutoscaler(ctx, log, worker, 0); err != nil {
-			return err
-		}
-	}
+	var (
+		clusterAutoscalerUsed = extensionsv1alpha1helper.ClusterAutoscalerRequired(worker.Spec.Pools)
+		isHibernationEnabled  = extensionscontroller.IsHibernationEnabled(cluster)
+	)
 
 	// Get list of existing machine class names
 	existingMachineClassNames, err := a.listMachineClassNames(ctx, worker.Namespace, workerDelegate.MachineClassList())
@@ -203,24 +193,12 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 		}
 	}
 
-	// TODO(rfranzke): Remove this code after v1.77 was released.
-	if clusterAutoscalerUsed && !isHibernationEnabled {
-		if err = a.scaleClusterAutoscaler(ctx, log, worker, 1); err != nil {
-			return err
-		}
-	}
-
 	// Call post reconcilation hook after Worker reconciliation has happened.
 	if err := workerDelegate.PostReconcileHook(ctx); err != nil {
 		return fmt.Errorf("post worker reconciliation hook failed: %w", err)
 	}
 
 	return nil
-}
-
-func (a *genericActuator) scaleClusterAutoscaler(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, replicas int32) error {
-	log.Info("Scaling cluster-autoscaler", "replicas", replicas)
-	return client.IgnoreNotFound(kubernetes.ScaleDeployment(ctx, a.client, kubernetesutils.Key(worker.Namespace, v1beta1constants.DeploymentNameClusterAutoscaler), replicas))
 }
 
 func deployMachineDeployments(
