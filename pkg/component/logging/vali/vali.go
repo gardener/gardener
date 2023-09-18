@@ -923,7 +923,6 @@ wait
 			},
 		})
 
-		// TODO: Move `pkg/component/logging/kuberbacproxy` resources into this component.
 		utilruntime.Must(gardenerutils.InjectGenericKubeconfig(statefulSet, genericTokenKubeconfigSecretName, "shoot-access-"+kubeRBACProxyName, kubeRBACProxyName))
 	}
 

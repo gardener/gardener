@@ -56,18 +56,17 @@ var _ = Describe("Logging", func() {
 		ctrl *gomock.Controller
 		c    *mockclient.MockClient
 
-		k8sSeedClient          kubernetes.Interface
-		botanist               *Botanist
-		shootRBACProxyDeployer *mockcomponent.MockDeployer
-		eventLoggerDeployer    *mockcomponent.MockDeployer
-		valiDeployer           *mockvali.MockInterface
-		fakeSecretManager      secretsmanager.Interface
-		chartApplier           *mock.MockChartApplier
-		ctx                    = context.TODO()
-		seedNamespace          = "shoot--foo--bar"
-		shootName              = "bar"
-		projectNamespace       = "garden-foo"
-		fakeErr                = fmt.Errorf("fake error")
+		k8sSeedClient       kubernetes.Interface
+		botanist            *Botanist
+		eventLoggerDeployer *mockcomponent.MockDeployer
+		valiDeployer        *mockvali.MockInterface
+		fakeSecretManager   secretsmanager.Interface
+		chartApplier        *mock.MockChartApplier
+		ctx                 = context.TODO()
+		seedNamespace       = "shoot--foo--bar"
+		shootName           = "bar"
+		projectNamespace    = "garden-foo"
+		fakeErr             = fmt.Errorf("fake error")
 
 		shootPurposeDevelopment = gardencorev1beta1.ShootPurposeDevelopment
 		shootPurposeTesting     = gardencorev1beta1.ShootPurposeTesting
@@ -84,7 +83,6 @@ var _ = Describe("Logging", func() {
 			WithRESTConfig(&rest.Config{}).
 			Build()
 
-		shootRBACProxyDeployer = mockcomponent.NewMockDeployer(ctrl)
 		eventLoggerDeployer = mockcomponent.NewMockDeployer(ctrl)
 		valiDeployer = mockvali.NewMockInterface(ctrl)
 		fakeSecretManager = fakesecretsmanager.New(c, seedNamespace)
@@ -116,9 +114,8 @@ var _ = Describe("Logging", func() {
 					Purpose:       "development",
 					Components: &shootpkg.Components{
 						Logging: &shootpkg.Logging{
-							ShootRBACProxy: shootRBACProxyDeployer,
-							EventLogger:    eventLoggerDeployer,
-							Vali:           valiDeployer,
+							EventLogger: eventLoggerDeployer,
+							Vali:        valiDeployer,
 						},
 					},
 					IsWorkerless: false,
@@ -154,8 +151,6 @@ var _ = Describe("Logging", func() {
 		It("should successfully delete the logging stack when shoot is with testing purpose", func() {
 			botanist.Shoot.Purpose = shootPurposeTesting
 			gomock.InOrder(
-				// Destroying the Shoot Node Logging
-				shootRBACProxyDeployer.EXPECT().Destroy(ctx),
 				// Destroying the Shoot Event Logging
 				eventLoggerDeployer.EXPECT().Destroy(ctx),
 				// Delete Vali
@@ -168,8 +163,6 @@ var _ = Describe("Logging", func() {
 		It("should successfully delete the logging stack when it is disabled", func() {
 			*botanist.Config.Logging.Enabled = false
 			gomock.InOrder(
-				// Destroying the Shoot Node Logging
-				shootRBACProxyDeployer.EXPECT().Destroy(ctx),
 				// Destroying the Shoot Event Logging
 				eventLoggerDeployer.EXPECT().Destroy(ctx),
 				// Delete Vali
@@ -189,8 +182,6 @@ var _ = Describe("Logging", func() {
 			gomock.InOrder(
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(nil),
 
-				// Destroying the Shoot Node Logging
-				shootRBACProxyDeployer.EXPECT().Destroy(ctx),
 				c.EXPECT().Delete(ctx, &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-from-prometheus-to-loki-telegraf", Namespace: seedNamespace}}),
 				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "telegraf-config", Namespace: seedNamespace}}),
@@ -262,7 +253,6 @@ var _ = Describe("Logging", func() {
 
 				// deploy Shoot Event Logging
 				eventLoggerDeployer.EXPECT().Deploy(ctx),
-				shootRBACProxyDeployer.EXPECT().Deploy(ctx),
 				// deploy Vali
 				valiDeployer.EXPECT().Deploy(ctx),
 			)
@@ -275,7 +265,6 @@ var _ = Describe("Logging", func() {
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 				// deploy Shoot Event Logging
 				eventLoggerDeployer.EXPECT().Deploy(ctx),
-				shootRBACProxyDeployer.EXPECT().Deploy(ctx),
 				// deploy Vali
 				valiDeployer.EXPECT().Deploy(ctx),
 			)
@@ -289,8 +278,6 @@ var _ = Describe("Logging", func() {
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 				// destroy Shoot Event Logging
 				eventLoggerDeployer.EXPECT().Destroy(ctx),
-				// deploy Shoot Node Logging
-				shootRBACProxyDeployer.EXPECT().Deploy(ctx),
 				// deploy Vali
 				valiDeployer.EXPECT().Deploy(ctx),
 			)
@@ -304,8 +291,6 @@ var _ = Describe("Logging", func() {
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 				// deploy Shoot Event Logging
 				eventLoggerDeployer.EXPECT().Deploy(ctx),
-				// destroy Shoot Node Logging
-				shootRBACProxyDeployer.EXPECT().Destroy(ctx),
 				// deploy Vali
 				valiDeployer.EXPECT().Deploy(ctx),
 			)
@@ -319,8 +304,6 @@ var _ = Describe("Logging", func() {
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 				// deploy Shoot Event Logging
 				eventLoggerDeployer.EXPECT().Deploy(ctx),
-				// destroy Shoot Node Logging
-				shootRBACProxyDeployer.EXPECT().Destroy(ctx),
 				// deploy Vali
 				valiDeployer.EXPECT().Deploy(ctx),
 			)
@@ -334,8 +317,6 @@ var _ = Describe("Logging", func() {
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 				// deploy Shoot Event Logging
 				eventLoggerDeployer.EXPECT().Deploy(ctx),
-				// destroy Shoot Node Logging
-				shootRBACProxyDeployer.EXPECT().Destroy(ctx),
 				// deploy Vali
 				valiDeployer.EXPECT().Destroy(ctx),
 			)
@@ -344,20 +325,10 @@ var _ = Describe("Logging", func() {
 		})
 
 		Context("Tests expecting a failure", func() {
-			It("should fail to delete the logging stack when ShootRBACProxyDeployer Destroy returns error", func() {
-				*botanist.Config.Logging.Enabled = false
-				shootRBACProxyDeployer.EXPECT().Destroy(ctx).Return(fakeErr)
-				Expect(botanist.DeployLogging(ctx)).ToNot(Succeed())
-			})
-
 			It("should fail to delete the logging stack when ShootEventLoggerDeployer Destroy return error", func() {
 				*botanist.Config.Logging.Enabled = false
-				gomock.InOrder(
-					// Destroying the Shoot Node Logging
-					shootRBACProxyDeployer.EXPECT().Destroy(ctx),
-					// Destroying the Shoot Event Logging
-					eventLoggerDeployer.EXPECT().Destroy(ctx).Return(fakeErr),
-				)
+				// Destroying the Shoot Event Logging
+				eventLoggerDeployer.EXPECT().Destroy(ctx).Return(fakeErr)
 
 				Expect(botanist.DeployLogging(ctx)).ToNot(Succeed())
 			})
@@ -365,8 +336,6 @@ var _ = Describe("Logging", func() {
 			It("should fail to delete the logging stack when logging is disbaled and ShootValiDeployer Destroy return error", func() {
 				*botanist.Config.Logging.Enabled = false
 				gomock.InOrder(
-					// Destroying the Shoot Node Logging
-					shootRBACProxyDeployer.EXPECT().Destroy(ctx),
 					// Destroying the Shoot Event Logging
 					eventLoggerDeployer.EXPECT().Destroy(ctx),
 					// Delete Vali
@@ -395,21 +364,10 @@ var _ = Describe("Logging", func() {
 				Expect(botanist.DeployLogging(ctx)).ToNot(Succeed())
 			})
 
-			It("should fail to deploy the logging stack when KubeRBACProxyDeployer Deploy returns an error", func() {
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
-					eventLoggerDeployer.EXPECT().Deploy(ctx),
-					shootRBACProxyDeployer.EXPECT().Deploy(ctx).Return(fakeErr),
-				)
-
-				Expect(botanist.DeployLogging(ctx)).ToNot(Succeed())
-			})
-
 			It("should fail to deploy the logging stack when ValiDeployer Deploy returns error", func() {
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 					eventLoggerDeployer.EXPECT().Deploy(ctx),
-					shootRBACProxyDeployer.EXPECT().Deploy(ctx),
 					valiDeployer.EXPECT().Deploy(ctx).Return(fakeErr),
 				)
 

@@ -396,6 +396,11 @@ func (g *garden) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to remove 'from-world-to-ports' annotation from kube-apiserver services: %w", err)
 	}
 
+	log.Info("Cleaning up legacy 'shoot-node-logging' ManagedResource")
+	if err := cleanupLegacyLoggingManagedResource(ctx, g.mgr.GetClient()); err != nil {
+		return err
+	}
+
 	log.Info("Setting up shoot client map")
 	shootClientMap, err := clientmapbuilder.
 		NewShootClientMapBuilder().
@@ -468,6 +473,29 @@ func removeFromWorldToPortsAnnotations(ctx context.Context, seedClient client.Cl
 			delete(svc.Annotations, resourcesv1alpha1.NetworkingFromWorldToPorts)
 			return seedClient.Patch(ctx, &svc, patch)
 		})
+	}
+
+	return flow.Parallel(taskFns...)(ctx)
+}
+
+func cleanupLegacyLoggingManagedResource(ctx context.Context, seedClient client.Client) error {
+	managedResourceList := &metav1.PartialObjectMetadataList{}
+	managedResourceList.SetGroupVersionKind(resourcesv1alpha1.SchemeGroupVersion.WithKind("ManagedResourceList"))
+	if err := seedClient.List(ctx, managedResourceList); err != nil {
+		if meta.IsNoMatchError(err) {
+			return nil
+		}
+		return err
+	}
+
+	var taskFns []flow.TaskFn
+	for _, managedResource := range managedResourceList.Items {
+		if managedResource.GetName() == "shoot-node-logging" {
+			mr := managedResource
+			taskFns = append(taskFns, func(ctx context.Context) error {
+				return seedClient.Delete(ctx, &mr)
+			})
+		}
 	}
 
 	return flow.Parallel(taskFns...)(ctx)
