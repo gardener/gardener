@@ -452,3 +452,19 @@ groups:
       unit: byte
     expr: |
       sum by (instance_type, year, month) (metering:memory_usage:sum_by_namespace_instance_type{instance_type!=""})
+
+# - metering  :node_cp_requests          :sum_by_instance_type
+
+  - record: metering:node_cp_requests:sum_by_instance_type
+    labels:
+      resource: cpu
+      unit: core
+    expr: |
+      sum by (instance_type, year, month) (metering:cpu_requests:sum_by_namespace_instance_type{instance_type!=""})
+
+  - record: metering:node_cp_requests:sum_by_instance_type
+    labels:
+      resource: memory
+      unit: byte
+    expr: |
+      sum by (instance_type, year, month) (metering:memory_requests:sum_by_namespace_instance_type{instance_type!=""})

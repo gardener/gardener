@@ -575,3 +575,78 @@ tests:
                   month         = "1",
                   instance_type = "smaller"}
       value: 200
+
+# metering:node_cp_requests:sum_by_instance_type
+- name: metering:node_cp_requests:sum_by_instance_type
+  input_series:
+  - series: metering:cpu_requests:sum_by_namespace_instance_type{
+                namespace     = "shoot--local--local",
+                shoot_uid     = "uid1",
+                year          = "1970",
+                month         = "1",
+                instance_type = "small"}
+    values: 1
+  - series: metering:cpu_requests:sum_by_namespace_instance_type{
+                namespace     = "shoot--local--local",
+                shoot_uid     = "uid1",
+                year          = "1970",
+                month         = "1",
+                instance_type = "smaller"}
+    values: 2
+  - series: metering:cpu_requests:sum_by_namespace_instance_type{
+                namespace     = "shoot--local--local2",
+                shoot_uid     = "uid2",
+                year          = "1970",
+                month         = "1"}
+    values: 3
+  - series: metering:memory_requests:sum_by_namespace_instance_type{
+                namespace     = "shoot--local--local",
+                shoot_uid     = "uid1",
+                year          = "1970",
+                month         = "1",
+                instance_type = "small"}
+    values: 100
+  - series: metering:memory_requests:sum_by_namespace_instance_type{
+                namespace     = "shoot--local--local",
+                shoot_uid     = "uid1",
+                year          = "1970",
+                month         = "1",
+                instance_type = "smaller"}
+    values: 200
+  - series: metering:memory_requests:sum_by_namespace_instance_type{
+                namespace     = "shoot--local--local2",
+                shoot_uid     = "uid2",
+                year          = "1970",
+                month         = "1"}
+    values: 300
+  promql_expr_test:
+  - expr: metering:node_cp_requests:sum_by_instance_type
+    exp_samples:
+    - labels: metering:node_cp_requests:sum_by_instance_type{
+                  resource      = "cpu",
+                  unit          = "core",
+                  year          = "1970",
+                  month         = "1",
+                  instance_type = "small"}
+      value: 1
+    - labels: metering:node_cp_requests:sum_by_instance_type{
+                  resource      = "cpu",
+                  unit          = "core",
+                  year          = "1970",
+                  month         = "1",
+                  instance_type = "smaller"}
+      value: 2
+    - labels: metering:node_cp_requests:sum_by_instance_type{
+                  resource      = "memory",
+                  unit          = "byte",
+                  year          = "1970",
+                  month         = "1",
+                  instance_type = "small"}
+      value: 100
+    - labels: metering:node_cp_requests:sum_by_instance_type{
+                  resource      = "memory",
+                  unit          = "byte",
+                  year          = "1970",
+                  month         = "1",
+                  instance_type = "smaller"}
+      value: 200
