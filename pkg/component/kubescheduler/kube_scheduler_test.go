@@ -500,8 +500,8 @@ subjects:
 				Expect(actualPDB).To(DeepEqual(pdb))
 			},
 
-			Entry("kubernetes 1.24 w/o config", "1.24.1", configEmpty, "testdata/component-config-1.23.yaml"),
-			Entry("kubernetes 1.24 w/ full config", "1.24.1", configFull, "testdata/component-config-1.23-bin-packing.yaml"),
+			Entry("kubernetes 1.24 w/o config", "1.24.1", configEmpty, "testdata/component-config-1.24.yaml"),
+			Entry("kubernetes 1.24 w/ full config", "1.24.1", configFull, "testdata/component-config-1.24-bin-packing.yaml"),
 			Entry("kubernetes 1.25 w/o config", "1.25.0", configEmpty, "testdata/component-config-1.25.yaml"),
 			Entry("kubernetes 1.25 w/ full config", "1.25.0", configFull, "testdata/component-config-1.25-bin-packing.yaml"),
 			Entry("kubernetes 1.26 w/o config", "1.26.0", configEmpty, "testdata/component-config-1.25.yaml"),
