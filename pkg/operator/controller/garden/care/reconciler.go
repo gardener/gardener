@@ -93,15 +93,12 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 
 	// Update Garden status conditions if necessary
 	if v1beta1helper.ConditionsNeedUpdate(gardenConditions.ConvertToSlice(), updatedConditions) {
-		// Rebuild garden conditions to ensure that only the conditions with the
-		// correct types will be updated, and any other conditions will remain intact
-		conditions := v1beta1helper.BuildConditions(garden.Status.Conditions, updatedConditions, gardenConditions.ConditionTypes())
-		// TODO(rfranzke): Drop this line after v1.78 has been released.
-		conditions = v1beta1helper.RemoveConditions(conditions, "Reconciled")
-
 		log.Info("Updating garden status conditions")
 		patch := client.MergeFrom(garden.DeepCopy())
-		garden.Status.Conditions = conditions
+		// Rebuild garden conditions to ensure that only the conditions with the
+		// correct types will be updated, and any other conditions will remain intact
+		garden.Status.Conditions = v1beta1helper.BuildConditions(garden.Status.Conditions, updatedConditions, gardenConditions.ConditionTypes())
+
 		if err := r.RuntimeClient.Status().Patch(reconcileCtx, garden, patch); err != nil {
 			log.Error(err, "Could not update garden status")
 			return reconcile.Result{}, err
