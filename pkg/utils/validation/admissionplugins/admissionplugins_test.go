@@ -299,7 +299,7 @@ defaults:
   enforce-version: "latest"
   audit-version: "latest"
   warn: "baseline"
-  warn-version: "v1.22"
+  warn-version: "v1.25"
 exemptions:
   usernames: ["admin"]
   runtimeClasses: ["random"]

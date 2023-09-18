@@ -253,7 +253,7 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 func (s *shootSystem) getServiceAccountNamesToInvalidate() []string {
 	// Well-known {kube,cloud}-controller-manager controllers using a token for ServiceAccounts in the shoot
 	// To maintain this list for each new Kubernetes version:
-	// * Run hack/compare-k8s-controllers.sh <old-version> <new-version> (e.g. 'hack/compare-k8s-controllers.sh 1.22 1.23').
+	// * Run hack/compare-k8s-controllers.sh <old-version> <new-version> (e.g. 'hack/compare-k8s-controllers.sh 1.26 1.27').
 	//   It will present 2 lists of controllers: those added and those removed in <new-version> compared to <old-version>.
 	// * Double check whether such ServiceAccount indeed appears in the kube-system namespace when creating a cluster
 	//   with <new-version>. Note that it sometimes might be hidden behind a default-off feature gate.

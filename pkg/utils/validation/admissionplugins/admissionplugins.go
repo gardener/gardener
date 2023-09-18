@@ -39,7 +39,7 @@ var (
 	// Extracted from https://raw.githubusercontent.com/kubernetes/kubernetes/release-${version}/pkg/kubeapiserver/options/plugins.go
 	// and https://raw.githubusercontent.com/kubernetes/kubernetes/release-${version}/staging/src/k8s.io/apiserver/pkg/server/plugins.go.
 	// To maintain this list for each new Kubernetes version:
-	//   - Run hack/compare-k8s-admission-plugins.sh <old-version> <new-version> (e.g. 'hack/compare-k8s-admission-plugins.sh 1.22 1.23').
+	//   - Run hack/compare-k8s-admission-plugins.sh <old-version> <new-version> (e.g. 'hack/compare-k8s-admission-plugins.sh 1.26 1.27').
 	//     It will present 2 lists of admission plugins: those added and those removed in <new-version> compared to <old-version> and
 	//   - Add all added admission plugins to the map with <new-version> as AddedInVersion and no RemovedInVersion.
 	//   - For any removed admission plugin, add <new-version> as RemovedInVersion to the already existing admission plugin in the map.

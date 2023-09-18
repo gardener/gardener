@@ -454,7 +454,7 @@ defaults:
   enforce-version: "latest"
   audit-version: "latest"
   warn: "baseline"
-  warn-version: "v1.23"
+  warn-version: "v1.25"
 exemptions:
   usernames: ["admin"]
   runtimeClasses: ["random"]
@@ -476,7 +476,7 @@ exemptions:
 								// This field is defaulted by kubernetes
 								"Audit":       Equal("privileged"),
 								"Warn":        Equal("baseline"),
-								"WarnVersion": Equal("v1.23"),
+								"WarnVersion": Equal("v1.25"),
 							}))
 							Expect(admConfig.Exemptions.Usernames).To(ContainElement("admin"))
 							Expect(admConfig.Exemptions.Namespaces).To(ContainElements("kube-system", "random"))
@@ -495,7 +495,7 @@ defaults:
   enforce-version: "latest"
   audit-version: "latest"
   warn: "baseline"
-  warn-version: "v1.23"
+  warn-version: "v1.25"
 exemptions:
   usernames: ["admin"]
   runtimeClasses: ["random"]
@@ -517,7 +517,7 @@ exemptions:
 								// This field is defaulted by kubernetes
 								"Audit":       Equal("privileged"),
 								"Warn":        Equal("baseline"),
-								"WarnVersion": Equal("v1.23"),
+								"WarnVersion": Equal("v1.25"),
 							}))
 							Expect(admConfig.Exemptions.Usernames).To(ContainElement("admin"))
 							Expect(admConfig.Exemptions.Namespaces).To(ContainElements("kube-system", "random"))
@@ -536,7 +536,7 @@ defaults:
   enforce-version: "latest"
   audit-version: "latest"
   warn: "baseline"
-  warn-version: "v1.22"
+  warn-version: "v1.25"
 exemptions:
   usernames: ["admin"]
   runtimeClasses: ["random"]
@@ -558,7 +558,7 @@ exemptions:
 								// This field is defaulted by kubernetes
 								"Audit":       Equal("privileged"),
 								"Warn":        Equal("baseline"),
-								"WarnVersion": Equal("v1.22"),
+								"WarnVersion": Equal("v1.25"),
 							}))
 							Expect(admConfig.Exemptions.Usernames).To(ContainElement("admin"))
 							Expect(admConfig.Exemptions.Namespaces).To(ContainElements("kube-system", "random"))

@@ -922,8 +922,7 @@ spec:
 		}
 
 		istioIngressAutoscaler = func(min *int, max *int) string {
-			return `
-apiVersion: autoscaling/v2beta1
+			return `apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: istio-ingressgateway
@@ -944,7 +943,9 @@ spec:
   - type: Resource
     resource:
       name: cpu
-      targetAverageUtilization: 80
+      target:
+        averageUtilization: 80
+        type: Utilization
 `
 		}
 
