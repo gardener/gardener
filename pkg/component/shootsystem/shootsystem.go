@@ -308,7 +308,8 @@ func (s *shootSystem) getServiceAccountNamesToInvalidate() []string {
 	if versionutils.ConstraintK8sGreaterEqual128.Check(s.values.Shoot.KubernetesVersion) {
 		kubeControllerManagerServiceAccountNames = append(kubeControllerManagerServiceAccountNames,
 			"legacy-service-account-token-cleaner",
-			"validatingadmissionpolicy-status-controller")
+			"validatingadmissionpolicy-status-controller",
+		)
 	}
 
 	return append(kubeControllerManagerServiceAccountNames, "default")
