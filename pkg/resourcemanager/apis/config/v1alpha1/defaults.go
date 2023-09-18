@@ -40,17 +40,8 @@ func SetDefaults_ResourceManagerConfiguration(obj *ResourceManagerConfiguration)
 	}
 }
 
-// SetDefaults_SourceClientConnection sets defaults for the source client connection.
-func SetDefaults_SourceClientConnection(obj *SourceClientConnection) {
-	SetDefaults_ClientConnectionConfiguration(&obj.ClientConnectionConfiguration)
-
-	if obj.CacheResyncPeriod == nil {
-		obj.CacheResyncPeriod = &metav1.Duration{Duration: 24 * time.Hour}
-	}
-}
-
-// SetDefaults_TargetClientConnection sets defaults for the target client connection.
-func SetDefaults_TargetClientConnection(obj *TargetClientConnection) {
+// SetDefaults_ClientConnection sets defaults for the client connection.
+func SetDefaults_ClientConnection(obj *ClientConnection) {
 	SetDefaults_ClientConnectionConfiguration(&obj.ClientConnectionConfiguration)
 
 	if obj.CacheResyncPeriod == nil {

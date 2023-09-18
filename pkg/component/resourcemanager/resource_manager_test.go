@@ -458,7 +458,7 @@ var _ = Describe("ResourceManager", func() {
 			}
 
 			if targetKubeconfig != nil {
-				config.TargetClientConnection = &resourcemanagerv1alpha1.TargetClientConnection{
+				config.TargetClientConnection = &resourcemanagerv1alpha1.ClientConnection{
 					ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 						Kubeconfig: gardenerutils.PathGenericKubeconfig,
 					},

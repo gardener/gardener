@@ -87,7 +87,7 @@ var _ = Describe("Validation", func() {
 
 		Context("target client connection", func() {
 			It("should return errors because some values are not satisfying", func() {
-				conf.TargetClientConnection = &config.TargetClientConnection{}
+				conf.TargetClientConnection = &config.ClientConnection{}
 				conf.TargetClientConnection.CacheResyncPeriod = &metav1.Duration{Duration: time.Second}
 				conf.TargetClientConnection.Burst = -1
 

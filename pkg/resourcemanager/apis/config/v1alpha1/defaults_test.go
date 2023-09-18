@@ -51,11 +51,11 @@ var _ = Describe("Defaults", func() {
 		})
 	})
 
-	Describe("#SetDefaults_SourceClientConnection", func() {
+	Describe("#SetDefaults_ClientConnection", func() {
 		It("should default the object", func() {
-			obj := &SourceClientConnection{}
+			obj := &ClientConnection{}
 
-			SetDefaults_SourceClientConnection(obj)
+			SetDefaults_ClientConnection(obj)
 
 			Expect(obj.Namespaces).To(BeEmpty())
 			Expect(obj.CacheResyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 24 * time.Hour})))
@@ -64,7 +64,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not overwrite existing values", func() {
-			obj := &SourceClientConnection{
+			obj := &ClientConnection{
 				ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 					QPS:   float32(1.2),
 					Burst: int32(34),
@@ -73,38 +73,7 @@ var _ = Describe("Defaults", func() {
 				CacheResyncPeriod: &metav1.Duration{Duration: time.Hour},
 			}
 
-			SetDefaults_SourceClientConnection(obj)
-
-			Expect(obj.Namespaces).To(ConsistOf("foo"))
-			Expect(obj.CacheResyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Hour})))
-			Expect(obj.QPS).To(Equal(float32(1.2)))
-			Expect(obj.Burst).To(Equal(int32(34)))
-		})
-	})
-
-	Describe("#SetDefaults_TargetClientConnection", func() {
-		It("should default the object", func() {
-			obj := &TargetClientConnection{}
-
-			SetDefaults_TargetClientConnection(obj)
-
-			Expect(obj.Namespaces).To(BeEmpty())
-			Expect(obj.CacheResyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 24 * time.Hour})))
-			Expect(obj.QPS).To(Equal(float32(100.0)))
-			Expect(obj.Burst).To(Equal(int32(130)))
-		})
-
-		It("should not overwrite existing values", func() {
-			obj := &TargetClientConnection{
-				ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
-					QPS:   float32(1.2),
-					Burst: int32(34),
-				},
-				Namespaces:        []string{"foo"},
-				CacheResyncPeriod: &metav1.Duration{Duration: time.Hour},
-			}
-
-			SetDefaults_TargetClientConnection(obj)
+			SetDefaults_ClientConnection(obj)
 
 			Expect(obj.Namespaces).To(ConsistOf("foo"))
 			Expect(obj.CacheResyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Hour})))

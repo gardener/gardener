@@ -28,11 +28,11 @@ type ResourceManagerConfiguration struct {
 	// SourceClientConnection specifies the client connection settings for the proxy server
 	// to use when communicating with the source apiserver.
 	// +optional
-	SourceClientConnection SourceClientConnection `json:"sourceClientConnection"`
+	SourceClientConnection ClientConnection `json:"sourceClientConnection"`
 	// TargetClientConnection specifies the client connection settings for the proxy server
 	// to use when communicating with the target apiserver.
 	// +optional
-	TargetClientConnection *TargetClientConnection `json:"targetClientConnection,omitempty"`
+	TargetClientConnection *ClientConnection `json:"targetClientConnection,omitempty"`
 	// LeaderElection defines the configuration of leader election client.
 	LeaderElection componentbaseconfigv1alpha1.LeaderElectionConfiguration `json:"leaderElection"`
 	// Server defines the configuration of the HTTP server.
@@ -50,26 +50,13 @@ type ResourceManagerConfiguration struct {
 	Webhooks ResourceManagerWebhookConfiguration `json:"webhooks"`
 }
 
-// SourceClientConnection specifies the client connection settings
-// for the proxy server to use when communicating with the seed apiserver.
-type SourceClientConnection struct {
+// ClientConnection specifies the client connection settings to use when communicating with an API server.
+type ClientConnection struct {
 	componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:",inline"`
 	// Namespaces in which the ManagedResources should be observed (defaults to "all namespaces").
 	// +optional
 	Namespaces []string `json:"namespaces,omitempty"`
-	// CacheResyncPeriod specifies the duration how often the cache for the source cluster is resynced.
-	// +optional
-	CacheResyncPeriod *metav1.Duration `json:"cacheResyncPeriod,omitempty"`
-}
-
-// TargetClientConnection specifies the client connection settings
-// for the proxy server to use when communicating with the shoot apiserver.
-type TargetClientConnection struct {
-	componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:",inline"`
-	// Namespaces in which controllers for the target clusters act on objects (defaults to "all namespaces").
-	// +optional
-	Namespaces []string `json:"namespaces,omitempty"`
-	// CacheResyncPeriod specifies the duration how often the cache for the target cluster is resynced.
+	// CacheResyncPeriod specifies the duration how often the cache for the cluster is resynced.
 	// +optional
 	CacheResyncPeriod *metav1.Duration `json:"cacheResyncPeriod,omitempty"`
 }

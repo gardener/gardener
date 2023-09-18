@@ -581,7 +581,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 	}
 
 	if r.values.TargetDiffersFromSourceCluster {
-		config.TargetClientConnection = &resourcemanagerv1alpha1.TargetClientConnection{
+		config.TargetClientConnection = &resourcemanagerv1alpha1.ClientConnection{
 			ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 				Kubeconfig: gardenerutils.PathGenericKubeconfig,
 			},
