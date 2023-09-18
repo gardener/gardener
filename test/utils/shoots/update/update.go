@@ -88,12 +88,10 @@ func RunTest(
 		WaitForJobToBeReady(ctx, f.SeedClient.Client(), job)
 	}
 
-	k8sGreaterEqual123, err := versionutils.CheckVersionMeetsConstraint(f.Shoot.Spec.Kubernetes.Version, ">= 1.23")
-	Expect(err).NotTo(HaveOccurred())
 	k8sLess125, err := versionutils.CheckVersionMeetsConstraint(f.Shoot.Spec.Kubernetes.Version, "< 1.25")
 	Expect(err).NotTo(HaveOccurred())
 
-	if k8sGreaterEqual123 {
+	if k8sLess125 {
 		patch := client.MergeFrom(f.Shoot.DeepCopy())
 		// Disable PodSecurityPolicy in the Shoot spec
 		if !v1beta1helper.IsPSPDisabled(f.Shoot) {
@@ -117,12 +115,10 @@ func RunTest(
 
 		Expect(f.WaitForShootToBeReconciled(ctx, f.Shoot)).To(Succeed())
 
-		if k8sLess125 {
-			By("Verify no PodSecurityPolicy resources exist")
-			pspList := &policyv1beta1.PodSecurityPolicyList{}
-			Expect(shootClient.Client().List(ctx, pspList)).To(Succeed())
-			Expect(pspList.Items).To(BeEmpty())
-		}
+		By("Verify no PodSecurityPolicy resources exist")
+		pspList := &policyv1beta1.PodSecurityPolicyList{}
+		Expect(shootClient.Client().List(ctx, pspList)).To(Succeed())
+		Expect(pspList.Items).To(BeEmpty())
 	}
 
 	By("Verify the Kubernetes version for all existing nodes matches with the versions defined in the Shoot spec [before update]")
