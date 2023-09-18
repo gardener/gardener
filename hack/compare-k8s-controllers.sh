@@ -49,7 +49,7 @@ for version in "${versions[@]}"; do
   git sparse-checkout set "$kcm_dir" "$ccm_dir"
   popd > /dev/null
 
-  for dir in $kcm_dir $ccm_dir; do
+  for dir in $kcm_dir; do
     cat "${out_dir}/kubernetes-${version}/$dir/"*.go |\
       sed -rn "s/.*[Client|Config]OrDie\(\"(.*)\"\).*/\1/p" |\
       grep -vE "informers|discovery" |\
@@ -57,7 +57,6 @@ for version in "${versions[@]}"; do
       uniq >> "${out_dir}/k8s-controllers-${version}.txt"
   done
 
-  # Starting with release-v1.23 the names for the CCM controllers are maintained differently.
   cat "${out_dir}/kubernetes-${version}/$ccm_dir/controllermanager.go" |\
     sed -rn "s/.*ClientName: \"(.*)\",.*/\1/p" |\
     sort |\
