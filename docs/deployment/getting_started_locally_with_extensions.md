@@ -31,6 +31,7 @@ As this setup is running on a real infrastructure, you have to provide credentia
 > There are `.gitignore` entries for all files and directories which include credentials. Nevertheless, please double check and make sure that credentials are not commited.
 
 ### DNS
+
 Gardener control plane requires DNS for default and internal domains. Thus, you have to configure a valid DNS provider for your setup.
 
 Please maintain your DNS provider configuration and credentials at `./example/provider-extensions/garden/controlplane/domain-secrets.yaml`.
@@ -38,13 +39,16 @@ Please maintain your DNS provider configuration and credentials at `./example/pr
 You can find a template for the file at `./example/provider-extensions/garden/controlplane/domain-secrets.yaml.tmpl`.
 
 ### Infrastructure
+
 Infrastructure secrets and the corresponding secret bindings should be maintained at:
+
 - `./example/provider-extensions/garden/project/credentials/infrastructure-secrets.yaml`
 - `./example/provider-extensions/garden/project/credentials/secretbindings.yaml`
 
 There are templates with `.tmpl` suffixes for the files in the same folder.
 
 ### Seed Cluster Preparation
+
 The `kubeconfig` of your Kubernetes cluster you would like to use as seed should be placed at `./example/provider-extensions/seed/kubeconfig`.
 Additionally, please maintain the configuration of your seed in `./example/provider-extensions/gardenlet/values.yaml`. It is automatically copied from `values.yaml.tmpl` in the same directory when you run `make gardener-extensions-up` for the first time. It also includes explanations of the properties you should set.
 
@@ -53,9 +57,11 @@ Using a Gardener cluster as seed simplifies the process, because some configurat
 However, you can use different Kubernetes clusters for your seed too and configure these things manually. Please configure the options of `./example/provider-extensions/gardenlet/values.yaml` upfront. For configuring DNS and TLS certificates, `make gardener-extensions-up`, which is explained later, will pause and tell you what to do.
 
 ### External Controllers
+
 You might plan to deploy and register external controllers for networking, operating system, providers, etc. Please put `ControllerDeployment`s and `ControllerRegistration`s into the `./example/provider-extensions/garden/controllerregistrations` directory. The whole content of this folder will be applied to your KinD cluster.
 
 ### `CloudProfile`s
+
 There are no demo `CloudProfiles` yet. Thus, please copy `CloudProfiles` from another landscape to the `./example/provider-extensions/garden/cloudprofiles` directory or create your own `CloudProfiles` based on the [gardener examples](../../example/30-cloudprofile.yaml). Please check the GitHub repository of your desired provider-extension. Most of them include example `CloudProfile`s. All files you place in this folder will be applied to your KinD cluster.
 
 ## Setting Up the KinD Cluster
@@ -122,7 +128,7 @@ The KinD cluster can be paused by stopping and keeping its docker container. Thi
 make kind-extensions-down
 ```
 
-When you run `make kind-extensions-up` again, you will start the docker container with your previous Gardener configuration again. 
+When you run `make kind-extensions-up` again, you will start the docker container with your previous Gardener configuration again.
 
 This provides the option to switch off your local KinD cluster fast without leaving orphaned infrastructure elements behind.
 
@@ -144,7 +150,6 @@ provider-extensions   Ready    gcp        europe-west1   111m   v1.61.0-dev   v1
 ```
 
 In order to create a first shoot cluster, please create your own `Shoot` definition and apply it to your KinD cluster. `gardener-scheduler` includes `candidateDeterminationStrategy: MinimalDistance` configuration so you are able to run schedule `Shoot`s of different providers on your `Seed`.
-
 
 You can wait for your `Shoot`s to be ready by running `kubectl -n garden-local get shoots` and wait for the `LAST OPERATION` to reach `100%`. The output depends on your `Shoot` definition. This is an example output:
 
@@ -172,7 +177,7 @@ Before tearing down your environment, you have to delete your shoot clusters. Th
 
 ## Tear Down the Gardener Environment
 
-Before you delete your local KinD cluster, you should shut down your `Shoots` and `Seed` in a clean way to avoid orphaned infrastructure elements in your projects. 
+Before you delete your local KinD cluster, you should shut down your `Shoots` and `Seed` in a clean way to avoid orphaned infrastructure elements in your projects.
 
 Please ensure that your KinD and Seed clusters are online (not paused or hibernated) and run:
 

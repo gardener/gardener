@@ -27,7 +27,7 @@ Concretely, all seed system components should respect the following conventions:
 
 - **Replica Counts**
 
-  | Component Type                      | ` < 3` Zones | `>= 3` Zones | Comment                                |
+  | Component Type                      | `< 3` Zones | `>= 3` Zones | Comment                                |
   | ----------------------------------- | ------------ | ------------ | -------------------------------------- |
   | Observability (Monitoring, Logging) | 1            | 1            | Downtimes accepted due to cost reasons |
   | Controllers                         | 2            | 2            | /                                      |
@@ -110,7 +110,7 @@ All control plane components should respect the following conventions:
     ```
 
     Hence, the node spread is done on best-effort basis only.
-    
+
     However, if the shoot cluster has defined a failure tolerance type, the `whenUnsafisfiable` field should be set to `DoNotSchedule`.
 
   - ... and the failure tolerance type of the shoot cluster is `zone`, then the component should also have a second `topologySpreadConstraint` ensuring the replicas are spread over the zones:
@@ -131,7 +131,7 @@ All control plane components should respect the following conventions:
 
   - If the shoot cluster is non-HA or has failure tolerance type `node`, then the value will be always exactly one zone (e.g., `high-availability-config.resources.gardener.cloud/zones=europe-1b`).
   - If the shoot cluster has failure tolerance type `zone`, then the value will always contain exactly three zones (e.g.,  `high-availability-config.resources.gardener.cloud/zones=europe-1a,europe-1b,europe-1c`).
-  
+
   For backwards-compatibility, this annotation might contain multiple zones for shoot clusters created before `gardener/gardener@v1.60` and not having failure tolerance type `zone`.
   This is because their volumes might already exist in multiple zones, hence pinning them to only one zone would not work.
 
@@ -209,9 +209,10 @@ According to above scenarios and conventions, the `replicas`, `topologySpreadCon
 In order to apply those conveniently and easily for developers, Gardener installs a mutating webhook into both seed and shoot clusters which reacts on `Deployment`s and `StatefulSet`s deployed to namespaces with the `high-availability-config.resources.gardener.cloud/consider=true` label set.
 
 **The following actions have to be taken by developers:**
+
 1. Check if `components` are prepared to run concurrently with multiple replicas, e.g. controllers usually use [leader election](https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/leaderelection) to achieve this.
 
-2. All components should be generally equipped with `PodDisruptionBudget`s with `.spec.maxUnavailable=1`:
+1. All components should be generally equipped with `PodDisruptionBudget`s with `.spec.maxUnavailable=1`:
 
 ```yaml
 spec:
@@ -220,7 +221,7 @@ spec:
     matchLabels: ...
 ```
 
-3. Add the label `high-availability-config.resources.gardener.cloud/type` to `deployment`s or `statefulset`s, as well as optionally involved `horizontalpodautoscaler`s or `HVPA`s where the following two values are possible:
+1. Add the label `high-availability-config.resources.gardener.cloud/type` to `deployment`s or `statefulset`s, as well as optionally involved `horizontalpodautoscaler`s or `HVPA`s where the following two values are possible:
 
 - `controller`
 - `server`

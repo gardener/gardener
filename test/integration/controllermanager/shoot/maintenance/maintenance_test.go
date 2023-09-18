@@ -410,7 +410,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 	Describe("Kubernetes version maintenance tests", func() {
 		BeforeEach(func() {
 			shoot126.Spec.Kubernetes.Version = "1.26.0"
-			shoot126.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.BoolPtr(true)
+			shoot126.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
 
 			By("Create k8s v1.26 Shoot")
 			Expect(testClient.Create(ctx, shoot126)).To(Succeed())
@@ -491,7 +491,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 						TriggeredTime: metav1.Time{Time: fakeClock.Now()},
 						State:         gardencorev1beta1.LastOperationStateSucceeded,
 					}))
-					g.Expect(shoot126.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(Equal(pointer.BoolPtr(false)))
+					g.Expect(shoot126.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(Equal(pointer.Bool(false)))
 					return shoot126.Spec.Kubernetes.Version
 				}).Should(Equal("1.27.0"))
 			})
@@ -748,7 +748,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 						TriggeredTime: metav1.Time{Time: fakeClock.Now()},
 						State:         gardencorev1beta1.LastOperationStateSucceeded,
 					}))
-					g.Expect(shoot126.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(Equal(pointer.BoolPtr(false)))
+					g.Expect(shoot126.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(Equal(pointer.Bool(false)))
 					return shoot126.Spec.Kubernetes.Version
 				}).Should(Equal("1.27.0"))
 			})

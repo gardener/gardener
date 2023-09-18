@@ -35,7 +35,7 @@ Ideally though, you would add the missing test cases for the current code as wel
 - Introduce custom matchers to make tests more readable where applicable: [example matcher](https://github.com/gardener/gardener/blob/2eb54485231408cbdbabaa49812572a07124364f/pkg/utils/test/matchers/matchers.go#L51-L57)
 - Don't rely on accurate timing of `time.Sleep` and friends.
   - If doing so, CPU throttling in CI will make tests flaky, [example flake](https://github.com/gardener/gardener/issues/5410)
-  - Use fake clocks instead, [example PR](https://github.com/gardener/gardener/pull/4569) 
+  - Use fake clocks instead, [example PR](https://github.com/gardener/gardener/pull/4569)
 - Use the same client schemes that are also used by production code to avoid subtle bugs/regressions: [example PR](https://github.com/gardener/gardener/pull/5469), [production schemes](https://github.com/gardener/gardener/blob/2de823d0a457beb9d680260243032c95fa47dc72/pkg/resourcemanager/cmd/source.go#L34-L43), [usage in test](https://github.com/gardener/gardener/blob/2de823d0a457beb9d680260243032c95fa47dc72/test/integration/resourcemanager/health/health_suite_test.go#L108-L109)
 - Make sure that your test is actually asserting the right thing and it doesn't pass if the exact bug is introduced that you want to prevent.
   - Use specific error matchers instead of asserting any error has happened, make sure that the corresponding branch in the code is tested, e.g., prefer
@@ -367,7 +367,7 @@ stress -ignore "unable to grab random port" -p 16 ./bastion.test
     - Use `GenerateName`: [example test](https://github.com/gardener/gardener/blob/ee3e50387fc7e6298908242f59894a7ea6f91fa7/test/integration/resourcemanager/health/health_test.go#L38-L48)
     - Alternatively, use a checksum of a random UUID using `uuid.NewUUID()` function: [example test](https://github.com/gardener/gardener/blob/3840acaaf57955fd65330c83b2b2d5bdaad56179/test/integration/resourcemanager/tokeninvalidator/tokeninvalidator_suite_test.go#L71-L72)
     - Logging the created object names is generally a good idea to support debugging failing or flaky tests: [example test](https://github.com/gardener/gardener/blob/50f92c5dc35160fe05da9002a79e7ce4a9cf3509/test/integration/controllermanager/cloudprofile/cloudprofile_test.go#L94-L96)
-    - Always delete all resources after the test case (e.g., via `DeferCleanup`) that were created for the test case 
+    - Always delete all resources after the test case (e.g., via `DeferCleanup`) that were created for the test case
     - This avoids conflicts between test cases and cascading failures which distract from the actual root failures
   - Don't tolerate already existing resources (~dirty test environment), code smell: ignoring already exist errors
 - Don't use a cached client in test code (e.g., the one from a controller-runtime manager), always construct a dedicated test client (uncached): [example test](https://github.com/gardener/gardener/blob/ee3e50387fc7e6298908242f59894a7ea6f91fa7/test/integration/resourcemanager/managedresource/resource_suite_test.go#L96-L97)
@@ -472,7 +472,7 @@ Gardener upgrade tests setup a kind cluster and deploy Gardener version `vX.X.X`
 
 This allows verifying whether the current (unreleased) revision/branch (or a specific release) is compatible with the latest (or a specific other) release. The `GARDENER_PREVIOUS_RELEASE` and `GARDENER_NEXT_RELEASE` environment variables are used to specify the respective versions.
 
-This helps understanding what happens or how the system reacts when Gardener upgrades from versions `vX.X.X` to `vY.Y.Y` for existing shoots in different states (`creation`/`hibernation`/`wakeup`/`deletion`). Gardener upgrade tests also help qualifying releases for all flavors (**non-HA** or **HA** with failure tolerance `node`/`zone`). 
+This helps understanding what happens or how the system reacts when Gardener upgrades from versions `vX.X.X` to `vY.Y.Y` for existing shoots in different states (`creation`/`hibernation`/`wakeup`/`deletion`). Gardener upgrade tests also help qualifying releases for all flavors (**non-HA** or **HA** with failure tolerance `node`/`zone`).
 
 Just like E2E tests, upgrade tests also use a [KinD cluster](https://kind.sigs.k8s.io/) and [skaffold](https://skaffold.dev/) for bootstrapping a full Gardener installation based on the current revision/branch, including [provider-local](../extensions/provider-local.md).
 This allows running e2e tests in an isolated test environment, fully locally without any infrastructure interaction.
@@ -489,18 +489,16 @@ Below is a sequence describing how the tests are performed.
 
 ### How to Run Upgrade Tests Between Two Gardener Releases
 
-Sometimes, we need to verify/qualify two Gardener releases when we upgrade from one version to another.  
-This can performed by fetching the two Gardener versions from the  **[GitHub Gardener release page](https://github.com/gardener/gardener/releases/latest)** and setting appropriate env variables `GARDENER_PREVIOUS_RELEASE`, `GARDENER_NEXT_RELEASE`.   
+Sometimes, we need to verify/qualify two Gardener releases when we upgrade from one version to another.
+This can performed by fetching the two Gardener versions from the  **[GitHub Gardener release page](https://github.com/gardener/gardener/releases/latest)** and setting appropriate env variables `GARDENER_PREVIOUS_RELEASE`, `GARDENER_NEXT_RELEASE`.
 
 >**`GARDENER_PREVIOUS_RELEASE`** -- This env variable refers to a source revision/branch (or a specific release) which has to be installed first and then upgraded to version **`GARDENER_NEXT_RELEASE`**. By default, it fetches the latest release version from **[GitHub Gardener release page](https://github.com/gardener/gardener/releases/latest)**.
 
 >**`GARDENER_NEXT_RELEASE`** -- This env variable refers to the target revision/branch (or a specific release) to be upgraded to after successful installation of **`GARDENER_PREVIOUS_RELEASE`**. By default, it considers the local HEAD revision, builds code, and installs Gardener from the current revision where the Gardener upgrade tests triggered.
 
-
 - `make ci-e2e-kind-upgrade GARDENER_PREVIOUS_RELEASE=v1.60.0 GARDENER_NEXT_RELEASE=v1.61.0`
 - `make ci-e2e-kind-ha-single-zone-upgrade GARDENER_PREVIOUS_RELEASE=v1.60.0 GARDENER_NEXT_RELEASE=v1.61.0`
 - `make ci-e2e-kind-ha-multi-zone-upgrade GARDENER_PREVIOUS_RELEASE=v1.60.0 GARDENER_NEXT_RELEASE=v1.61.0`
-
 
 ### Purpose of Upgrade Tests
 

@@ -139,7 +139,7 @@ It maintains the following conditions:
 - `RuntimeComponentsHealthy`: The conditions of the `ManagedResource`s applied to the runtime cluster are checked (e.g., `ResourcesApplied`).
 - `VirtualComponentsHealthy`: The virtual components are considered healthy when the respective `Deployment`s (for example `virtual-garden-kube-apiserver`,`virtual-garden-kube-controller-manager`), and `Etcd`s (for example `virtual-garden-etcd-main`) exist and are healthy. Additionally, the conditions of the `ManagedResource`s applied to the virtual cluster are checked (e.g., `ResourcesApplied`).
 - `VirtualGardenAPIServerAvailable`: The `/healthz` endpoint of the garden's `virtual-garden-kube-apiserver` is called and considered healthy when it responds with `200 OK`.
-- `ObservabilityComponentsHealthy`: This condition is considered healthy when the respective `Deployment`s (for example `plutono`) and `StatefulSet`s (for example `prometheus`,`vali`) exist and are healthy. 
+- `ObservabilityComponentsHealthy`: This condition is considered healthy when the respective `Deployment`s (for example `plutono`) and `StatefulSet`s (for example `prometheus`,`vali`) exist and are healthy.
 
 If all checks for a certain condition are succeeded, then its `status` will be set to `True`.
 Otherwise, it will be set to `False` or `Progressing`.
@@ -357,7 +357,7 @@ See also [this document](resource-manager.md#tokenrequestor-controller) for more
 
 ### `gardener-apiserver`
 
-Similar to the [`virtual-garden-kube-apiserver`](#virtual-garden-kube-apiserver), the `gardener-apiserver` also uses a few certificates and other credentials that should not change during the migration.
+Similar to the [`virtual-garden-kube-apiserver`](#virtual-garden-kube-apiserver-deployment), the `gardener-apiserver` also uses a few certificates and other credentials that should not change during the migration.
 Again, you have to prepare the environment accordingly by leveraging the [secret's manager capabilities](../development/secrets_management.md#migrating-existing-secrets-to-secretsmanager).
 
 - The existing ETCD Encryption Key `Secret` should be labeled with `secrets-manager-use-data-for-name=gardener-apiserver-etcd-encryption-key`.

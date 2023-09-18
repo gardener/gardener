@@ -27,7 +27,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/shoot"
@@ -137,7 +136,7 @@ type NewOperationFunc func(
 	gardenClient client.Client,
 	seedClientSet kubernetes.Interface,
 	shootClientMap clientmap.ClientMap,
-	config *config.GardenletConfiguration,
+	config *gardenletconfig.GardenletConfiguration,
 	gardenerInfo *gardencorev1beta1.Gardener,
 	gardenClusterIdentity string,
 	secrets map[string]*corev1.Secret,
@@ -153,7 +152,7 @@ var defaultNewOperationFunc = func(
 	gardenClient client.Client,
 	seedClientSet kubernetes.Interface,
 	shootClientMap clientmap.ClientMap,
-	config *config.GardenletConfiguration,
+	config *gardenletconfig.GardenletConfiguration,
 	gardenerInfo *gardencorev1beta1.Gardener,
 	gardenClusterIdentity string,
 	secrets map[string]*corev1.Secret,

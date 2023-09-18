@@ -121,7 +121,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 							Nodes:    pointer.String("172.16.2.0/18"),
 						},
 						Provider: gardencorev1beta1.Provider{
-							Workers: []gardencorev1beta1.Worker{gardencorev1beta1.Worker{}},
+							Workers: []gardencorev1beta1.Worker{},
 						},
 					},
 				}},

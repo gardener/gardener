@@ -48,7 +48,6 @@ import (
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	apiregistrationv1beta1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/clock/testing"
 	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -105,7 +104,7 @@ var _ = Describe("Constraints", func() {
 	)
 
 	BeforeEach(func() {
-		clock = testing.NewFakeClock(now)
+		clock = testclock.NewFakeClock(now)
 	})
 
 	Describe("#IsProblematicWebhook", func() {

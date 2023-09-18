@@ -21,6 +21,7 @@ In essence, Gardener is an [extension API server](https://kubernetes.io/docs/tas
 To accomplish these tasks reliably and to offer a high quality of service, Gardener controls the main components of a Kubernetes cluster (etcd, API server, controller manager, scheduler). These so-called *control plane* components are hosted in Kubernetes clusters themselves (which are called **seed** clusters). This is the main difference compared to many other OSS cluster provisioning tools: The shoot clusters do not have dedicated master VMs. Instead, the control plane is deployed as a native Kubernetes workload into the seeds (the architecture is commonly referred to as kubeception or inception design). This does not only effectively reduce the total cost of ownership but also allows easier implementations for "day-2 operations" (like cluster updates or robustness) by relying on all the mature Kubernetes features and capabilities.
 
 Gardener reuses the identical Kubernetes design to span a scalable multi-cloud and multi-cluster landscape. Such familiarity with known concepts has proven to quickly ease the initial learning curve and accelerate developer productivity:
+
 * Kubernetes API Server = Gardener API Server
 * Kubernetes Controller Manager = Gardener Controller Manager
 * Kubernetes Scheduler = Gardener Scheduler

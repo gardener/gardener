@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -71,10 +72,7 @@ func (f *ClassFilter) FinalizerName() string {
 // Responsible checks whether an object should be managed by the actual controller instance
 func (f *ClassFilter) Responsible(o runtime.Object) bool {
 	r := o.(*resourcesv1alpha1.ManagedResource)
-	c := ""
-	if r.Spec.Class != nil && *r.Spec.Class != "" {
-		c = *r.Spec.Class
-	}
+	c := pointer.StringDeref(r.Spec.Class, "")
 	return c == f.resourceClass || (c == "" && f.resourceClass == resourcemanagerv1alpha1.DefaultResourceClass)
 }
 

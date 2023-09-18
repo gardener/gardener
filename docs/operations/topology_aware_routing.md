@@ -11,6 +11,7 @@ The topology-aware routing feature relies on the Kubernetes feature [`TopologyAw
 ##### EndpointSlice Hints Mutating Webhook
 
 The component that is responsible for providing hints in the EndpointSlices resources is the [kube-controller-manager](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-controller-manager/), in particular this is the [EndpointSlice controller](https://kubernetes.io/docs/concepts/services-networking/topology-aware-hints/). However, there are several drawbacks with the TopologyAwareHints feature that don't allow us to use it in its native way:
+
 - The algorithm in the EndpointSlice controller is based on a CPU-balance heuristic. From the TopologyAwareHints documentation:
    > The controller allocates a proportional amount of endpoints to each zone. This proportion is based on the allocatable CPU cores for nodes running in that zone. For example, if one zone had 2 CPU cores and another zone only had 1 CPU core, the controller would allocate twice as many endpoints to the zone with 2 CPU cores.
 
@@ -51,6 +52,7 @@ The `endpoint-slice-hints.resources.gardener.cloud/consider=true` label is neede
 The Gardener extensions can use this approach to make a Service they deploy topology-aware.
 
 Prerequisites for making a Service topology-aware:
+
 1. The Pods backing the Service should be spread on most of the available zones. This constraint should be ensured with appropriate scheduling constraints (topology spread constraints, (anti-)affinity). Enabling the feature for a Service with a single backing Pod or Pods all located in the same zone does not lead to a benefit.
 1. The component should be scaled up by `VerticalPodAutoscaler`. In case of an overload (a large portion of the of the traffic is originating from a given zone), the `VerticalPodAutoscaler` should provide better resource recommendations for the overloaded backing Pods.
 1. Consider the [`TopologyAwareHints` constraints](https://kubernetes.io/docs/concepts/services-networking/topology-aware-hints/#constraints).
