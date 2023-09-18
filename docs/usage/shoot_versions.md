@@ -48,7 +48,7 @@ Typically, after a fresh release of a new Kubernetes (e.g., v1.25.0) or Machine 
 After the operator has gained sufficient trust, the version can be manually promoted to `supported`.
 
 - **supported:** A `supported` version is the recommended version for new and existing Shoot clusters. This is the version that new Shoot clusters should use and existing clusters should update to.
-Typically for Kubernetes versions, the latest Kubernetes patch versions of the actual (if not still in `preview`) and the last 3 minor Kubernetes versions are maintained by the community. An operator could define these versions as being `supported` (e.g., v1.24.6, v1.23.12, and v1.22.15).
+Typically for Kubernetes versions, the latest Kubernetes patch versions of the actual (if not still in `preview`) and the last 3 minor Kubernetes versions are maintained by the community. An operator could define these versions as being `supported` (e.g., v1.27.6, v1.26.10, and v1.25.12).
 
 - **deprecated:** A `deprecated` version is a version that approaches the end of its lifecycle and can contain issues which are probably resolved in a supported version.
 New Shoots should not use this version anymore.
@@ -84,13 +84,6 @@ spec:
       - classification: deprecated
         expirationDate: "2022-11-30T23:59:59Z"
         version: 1.24.5
-      - classification: supported
-        version: 1.23.12
-      - classification: deprecated
-        expirationDate: "2023-01-31T23:59:59Z"
-        version: 1.23.11
-      - classification: supported
-        version: 1.22.15
 ```
 
 ## Version Requirements (Kubernetes and Machine Image)

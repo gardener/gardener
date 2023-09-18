@@ -20,7 +20,7 @@ usage() {
   echo "Usage:"
   echo "> compare-k8s-controllers.sh [ -h | <old version> <new version> ]"
   echo
-  echo ">> For example: compare-k8s-controllers.sh 1.22 1.23"
+  echo ">> For example: compare-k8s-controllers.sh 1.26 1.27"
 
   exit 0
 }
