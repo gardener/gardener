@@ -52,7 +52,7 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 				CacheUnauthorizedTTL: metav1.Duration{Duration: 30 * time.Second},
 			},
 		},
-		CgroupDriver:                     "cgroupfs",
+		CgroupDriver:                     getCgroupDriver(params),
 		CgroupRoot:                       "/",
 		CgroupsPerQOS:                    pointer.Bool(true),
 		ClusterDNS:                       []string{clusterDNSAddress},
@@ -158,6 +158,17 @@ func ShouldProtectKernelDefaultsBeEnabled(kubeletConfigParameters *components.Co
 		return *kubeletConfigParameters.ProtectKernelDefaults
 	}
 	return kubernetesVersion != nil && version.ConstraintK8sGreaterEqual126.Check(kubernetesVersion)
+}
+
+func getCgroupDriver(kubeletConfigParameters components.ConfigurableKubeletConfigParameters) string {
+	cgroupDriver := "cgroupfs"
+
+	// When KubeletCgroupDriverFromCRI feature gate is active CgroupDriver does not have to be specified: https://github.com/kubernetes/kubernetes/pull/118770
+	if kubeletConfigParameters.FeatureGates["KubeletCgroupDriverFromCRI"] {
+		cgroupDriver = ""
+	}
+
+	return cgroupDriver
 }
 
 func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters, kubernetesVersion *semver.Version) {
