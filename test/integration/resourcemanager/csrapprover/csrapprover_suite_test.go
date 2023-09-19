@@ -145,9 +145,9 @@ var _ = BeforeSuite(func() {
 	Expect((&csrapprover.Reconciler{
 		CertificatesClient: kubernetesClient.CertificatesV1().CertificateSigningRequests(),
 		Config: config.KubeletCSRApproverControllerConfig{
-			ConcurrentSyncs: pointer.Int(5),
+			ConcurrentSyncs:  pointer.Int(5),
+			MachineNamespace: testNamespace.Name,
 		},
-		SourceNamespace: testNamespace.Namespace,
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
 
 	By("Start manager")

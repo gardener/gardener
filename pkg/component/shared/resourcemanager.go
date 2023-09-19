@@ -130,6 +130,7 @@ func NewTargetGardenerResourceManager(
 	topologyAwareRoutingEnabled bool,
 	kubernetesServiceHost *string,
 	isWorkerless bool,
+	targetNamespaces []string,
 ) (
 	resourcemanager.Interface,
 	error,
@@ -163,7 +164,7 @@ func NewTargetGardenerResourceManager(
 		SyncPeriod:                           &metav1.Duration{Duration: time.Minute},
 		SystemComponentTolerations:           systemComponentsToleration,
 		TargetDiffersFromSourceCluster:       true,
-		TargetDisableCache:                   pointer.Bool(true),
+		TargetNamespaces:                     targetNamespaces,
 		RuntimeKubernetesVersion:             kubernetesVersion,
 		VPA: &resourcemanager.VPAConfig{
 			MinAllowed: corev1.ResourceList{

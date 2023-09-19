@@ -69,7 +69,10 @@ func New(
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	values Values,
-) (component.Deployer, error) {
+) (
+	component.Deployer,
+	error,
+) {
 	if client == nil {
 		return nil, errors.New("client cannot be nil")
 	}
@@ -133,29 +136,10 @@ func (l *eventLogger) reconcileRBACForShoot(ctx context.Context) error {
 	}
 
 	var (
-		eventLoggerSystemRoleBinding = &rbacv1.RoleBinding{
+		eventLoggerClusterRoleBinding = &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      roleName,
-				Namespace: metav1.NamespaceSystem,
-				Labels:    getLabels(),
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     name,
-			},
-			Subjects: []rbacv1.Subject{{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      eventLoggerShootAccessSecret.ServiceAccountName,
-				Namespace: metav1.NamespaceSystem,
-			}},
-		}
-
-		eventLoggerDefaultRoleBinding = &rbacv1.RoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      roleName,
-				Namespace: metav1.NamespaceDefault,
-				Labels:    getLabels(),
+				Name:   roleName,
+				Labels: getLabels(),
 			},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: rbacv1.GroupName,
@@ -196,8 +180,7 @@ func (l *eventLogger) reconcileRBACForShoot(ctx context.Context) error {
 
 	resources, err := registry.AddAllAndSerialize(
 		eventLoggerClusterRole,
-		eventLoggerSystemRoleBinding,
-		eventLoggerDefaultRoleBinding,
+		eventLoggerClusterRoleBinding,
 	)
 	if err != nil {
 		return err
@@ -253,16 +236,12 @@ func (l *eventLogger) reconcileRBACForSeed(ctx context.Context) error {
 }
 
 func (l *eventLogger) reconcileDeployment(ctx context.Context) error {
-	var (
-		deployment = l.emptyDeployment()
-	)
-
 	genericTokenKubeconfigSecret, found := l.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
 	}
 
-	// Deploy the Event Logger into the shoot control-plane
+	deployment := l.emptyDeployment()
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, l.client, deployment, func() error {
 		deployment.Labels = getLabels()
 		deployment.Spec = appsv1.DeploymentSpec{

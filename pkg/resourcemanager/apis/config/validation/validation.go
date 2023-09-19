@@ -33,9 +33,9 @@ import (
 func ValidateResourceManagerConfiguration(conf *config.ResourceManagerConfiguration) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, validateSourceClientConnection(conf.SourceClientConnection, field.NewPath("sourceClientConnection"))...)
+	allErrs = append(allErrs, validateClientConnection(conf.SourceClientConnection, field.NewPath("sourceClientConnection"))...)
 	if conf.TargetClientConnection != nil {
-		allErrs = append(allErrs, validateTargetClientConnection(*conf.TargetClientConnection, field.NewPath("targetClientConnection"))...)
+		allErrs = append(allErrs, validateClientConnection(*conf.TargetClientConnection, field.NewPath("targetClientConnection"))...)
 	}
 	allErrs = append(allErrs, validateServerConfiguration(conf.Server, field.NewPath("server"))...)
 	allErrs = append(allErrs, componentbaseconfigvalidation.ValidateLeaderElectionConfiguration(&conf.LeaderElection, field.NewPath("leaderElection"))...)
@@ -57,19 +57,7 @@ func ValidateResourceManagerConfiguration(conf *config.ResourceManagerConfigurat
 	return allErrs
 }
 
-func validateSourceClientConnection(conf config.SourceClientConnection, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if conf.CacheResyncPeriod != nil && conf.CacheResyncPeriod.Duration < 10*time.Second {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("cacheResyncPeriod"), conf.CacheResyncPeriod.Duration, "must be at least 10s"))
-	}
-
-	allErrs = append(allErrs, componentbaseconfigvalidation.ValidateClientConnectionConfiguration(&conf.ClientConnectionConfiguration, fldPath)...)
-
-	return allErrs
-}
-
-func validateTargetClientConnection(conf config.TargetClientConnection, fldPath *field.Path) field.ErrorList {
+func validateClientConnection(conf config.ClientConnection, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if conf.CacheResyncPeriod != nil && conf.CacheResyncPeriod.Duration < 10*time.Second {

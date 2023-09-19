@@ -37,10 +37,10 @@ func RegisterDefaults(scheme *runtime.Scheme) error {
 
 func SetObjectDefaults_ResourceManagerConfiguration(in *ResourceManagerConfiguration) {
 	SetDefaults_ResourceManagerConfiguration(in)
-	SetDefaults_SourceClientConnection(&in.SourceClientConnection)
+	SetDefaults_ClientConnection(&in.SourceClientConnection)
 	SetDefaults_ClientConnectionConfiguration(&in.SourceClientConnection.ClientConnectionConfiguration)
 	if in.TargetClientConnection != nil {
-		SetDefaults_TargetClientConnection(in.TargetClientConnection)
+		SetDefaults_ClientConnection(in.TargetClientConnection)
 		SetDefaults_ClientConnectionConfiguration(&in.TargetClientConnection.ClientConnectionConfiguration)
 	}
 	SetDefaults_LeaderElectionConfiguration(&in.LeaderElection)

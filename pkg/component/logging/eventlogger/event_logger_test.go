@@ -100,6 +100,31 @@ var _ = Describe("EventLogger", func() {
 			}
 		}
 
+		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: rbacv1.SchemeGroupVersion.String(),
+				Kind:       "ClusterRoleBinding",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:logging:event-logger",
+				Labels: map[string]string{
+					v1beta1constants.LabelApp:   name,
+					v1beta1constants.LabelRole:  v1beta1constants.LabelLogging,
+					v1beta1constants.GardenRole: v1beta1constants.GardenRoleLogging,
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     name,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      name,
+				Namespace: metav1.NamespaceSystem,
+			}},
+		}
+
 		roleBindingFor = func(clusterType component.ClusterType, namespace string, removeResourceVersion bool) *rbacv1.RoleBinding {
 			obj := &rbacv1.RoleBinding{
 				TypeMeta: metav1.TypeMeta{
@@ -312,13 +337,12 @@ var _ = Describe("EventLogger", func() {
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(3))
+			Expect(managedResourceSecret.Data).To(HaveLen(2))
 			Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			Expect(string(managedResourceSecret.Data["clusterrole____event-logger.yaml"])).To(Equal(test.Serialize(clusterRoleForShoot())))
-			Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_logging_event-logger.yaml"])).To(Equal(test.Serialize(roleBindingFor(component.ClusterTypeShoot, metav1.NamespaceSystem, true))))
-			Expect(string(managedResourceSecret.Data["rolebinding__default__gardener.cloud_logging_event-logger.yaml"])).To(Equal(test.Serialize(roleBindingFor(component.ClusterTypeShoot, metav1.NamespaceDefault, true))))
+			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_logging_event-logger.yaml"])).To(Equal(test.Serialize(clusterRoleBinding)))
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(eventLoggerServiceAccount), eventLoggerServiceAccount)).To(Succeed())
 			Expect(eventLoggerServiceAccount).To(DeepEqual(&corev1.ServiceAccount{

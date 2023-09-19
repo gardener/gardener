@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/Masterminds/semver"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -62,6 +63,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		b.Shoot.TopologyAwareRoutingEnabled,
 		pointer.String(b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)),
 		b.Shoot.IsWorkerless,
+		[]string{metav1.NamespaceSystem, v1beta1constants.KubernetesDashboardNamespace},
 	)
 }
 

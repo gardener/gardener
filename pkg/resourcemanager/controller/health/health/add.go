@@ -46,7 +46,7 @@ import (
 const ControllerName = "health"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, targetCacheDisabled bool, clusterID string) error {
+func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, clusterID string) error {
 	if r.SourceClient == nil {
 		r.SourceClient = sourceCluster.GetClient()
 	}
@@ -85,45 +85,38 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 		return err
 	}
 
-	if targetCacheDisabled {
-		// if the target cache is disable, we don't want to start additional informers
-		r.ensureWatchForGVK = func(gvk schema.GroupVersionKind, obj client.Object) error {
-			return nil
-		}
-	} else {
-		lock := sync.RWMutex{}
-		watchedObjectGVKs := make(map[schema.GroupVersionKind]struct{})
-		r.ensureWatchForGVK = func(gvk schema.GroupVersionKind, obj client.Object) error {
-			// fast-check: have we already added watch for this GVK?
-			lock.RLock()
-			if _, ok := watchedObjectGVKs[gvk]; ok {
-				lock.RUnlock()
-				return nil
-			}
+	lock := sync.RWMutex{}
+	watchedObjectGVKs := make(map[schema.GroupVersionKind]struct{})
+	r.ensureWatchForGVK = func(gvk schema.GroupVersionKind, obj client.Object) error {
+		// fast-check: have we already added watch for this GVK?
+		lock.RLock()
+		if _, ok := watchedObjectGVKs[gvk]; ok {
 			lock.RUnlock()
-
-			// slow-check: two goroutines might concurrently call this func. If neither exited early, the first one added
-			// the watch and the second one should return now.
-			lock.Lock()
-			defer lock.Unlock()
-			if _, ok := watchedObjectGVKs[gvk]; ok {
-				return nil
-			}
-
-			_, metadataOnly := obj.(*metav1.PartialObjectMetadata)
-			c.GetLogger().Info("Adding new watch for GroupVersionKind", "groupVersionKind", gvk, "metadataOnly", metadataOnly)
-
-			if err := c.Watch(
-				source.Kind(targetCluster.GetCache(), obj),
-				mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
-				utils.HealthStatusChanged(c.GetLogger()),
-			); err != nil {
-				return fmt.Errorf("error starting watch for GVK %s: %w", gvk.String(), err)
-			}
-
-			watchedObjectGVKs[gvk] = struct{}{}
 			return nil
 		}
+		lock.RUnlock()
+
+		// slow-check: two goroutines might concurrently call this func. If neither exited early, the first one added
+		// the watch and the second one should return now.
+		lock.Lock()
+		defer lock.Unlock()
+		if _, ok := watchedObjectGVKs[gvk]; ok {
+			return nil
+		}
+
+		_, metadataOnly := obj.(*metav1.PartialObjectMetadata)
+		c.GetLogger().Info("Adding new watch for GroupVersionKind", "groupVersionKind", gvk, "metadataOnly", metadataOnly)
+
+		if err := c.Watch(
+			source.Kind(targetCluster.GetCache(), obj),
+			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
+			utils.HealthStatusChanged(c.GetLogger()),
+		); err != nil {
+			return fmt.Errorf("error starting watch for GVK %s: %w", gvk.String(), err)
+		}
+
+		watchedObjectGVKs[gvk] = struct{}{}
+		return nil
 	}
 
 	return nil

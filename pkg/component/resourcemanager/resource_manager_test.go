@@ -119,6 +119,7 @@ var _ = Describe("ResourceManager", func() {
 		}
 		additionalNetworkPolicyNamespaceSelectors = []metav1.LabelSelector{{MatchLabels: map[string]string{"foo": "bar"}}}
 		kubernetesServiceHost                     = "some-host"
+		targetNamespaces                          = []string{"foo", "bar"}
 
 		allowAll                            []rbacv1.PolicyRule
 		allowManagedResources               []rbacv1.PolicyRule
@@ -368,9 +369,6 @@ var _ = Describe("ResourceManager", func() {
 			}
 
 			config := &resourcemanagerv1alpha1.ResourceManagerConfiguration{
-				SourceClientConnection: resourcemanagerv1alpha1.SourceClientConnection{
-					Namespace: watchedNamespace,
-				},
 				LeaderElection: componentbaseconfigv1alpha1.LeaderElectionConfiguration{
 					LeaderElect:       pointer.Bool(true),
 					ResourceName:      "gardener-resource-manager",
@@ -454,12 +452,17 @@ var _ = Describe("ResourceManager", func() {
 				},
 			}
 
+			if watchedNamespace != nil {
+				config.SourceClientConnection.Namespaces = []string{*watchedNamespace}
+				config.Controllers.KubeletCSRApprover.MachineNamespace = *watchedNamespace
+			}
+
 			if targetKubeconfig != nil {
-				config.TargetClientConnection = &resourcemanagerv1alpha1.TargetClientConnection{
+				config.TargetClientConnection = &resourcemanagerv1alpha1.ClientConnection{
 					ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 						Kubeconfig: gardenerutils.PathGenericKubeconfig,
 					},
-					DisableCachedClient: &targetDisableCache,
+					Namespaces: targetNamespaces,
 				}
 
 				config.Controllers.Node.Enabled = !isWorkerless
@@ -1867,6 +1870,7 @@ subjects:
 				configMap = configMapFor(&watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), false)
 				deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, &watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), true, nil)
 				cfg.RuntimeKubernetesVersion = semver.MustParse("1.24.0")
+				cfg.TargetNamespaces = targetNamespaces
 				resourceManager = New(c, deployNamespace, sm, cfg)
 				resourceManager.SetSecrets(secrets)
 			})
@@ -2034,6 +2038,7 @@ subjects:
 			BeforeEach(func() {
 				clusterRole.Rules = allowManagedResources
 				cfg.TargetDiffersFromSourceCluster = true
+				cfg.TargetNamespaces = targetNamespaces
 				cfg.WatchedNamespace = nil
 				configMap = configMapFor(nil, pointer.String(gardenerutils.PathGenericKubeconfig), false)
 				deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, nil, pointer.String(gardenerutils.PathGenericKubeconfig), true, nil)
@@ -2151,6 +2156,7 @@ subjects:
 			JustBeforeEach(func() {
 				clusterRole.Rules = allowManagedResources
 				cfg.TargetDiffersFromSourceCluster = true
+				cfg.TargetNamespaces = targetNamespaces
 				cfg.WatchedNamespace = nil
 				cfg.IsWorkerless = true
 				configMap = configMapFor(nil, pointer.String(gardenerutils.PathGenericKubeconfig), true)

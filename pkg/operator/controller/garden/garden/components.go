@@ -325,6 +325,7 @@ func (r *Reconciler) newVirtualGardenGardenerResourceManager(secretsManager secr
 		false,
 		nil,
 		true,
+		[]string{metav1.NamespaceSystem},
 	)
 }
 

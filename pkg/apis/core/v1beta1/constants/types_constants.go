@@ -559,6 +559,8 @@ const (
 	GardenNamespace = "garden"
 	// IstioSystemNamespace is the istio-system namespace.
 	IstioSystemNamespace = "istio-system"
+	// KubernetesDashboardNamespace is the kubernetes-dashboard namespace.
+	KubernetesDashboardNamespace = "kubernetes-dashboard"
 
 	// DefaultSNIIngressNamespace is the default sni ingress namespace.
 	DefaultSNIIngressNamespace = "istio-ingress"

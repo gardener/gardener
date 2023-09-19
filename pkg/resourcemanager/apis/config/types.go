@@ -27,10 +27,10 @@ type ResourceManagerConfiguration struct {
 	metav1.TypeMeta
 	// SourceClientConnection specifies the client connection settings for the proxy server
 	// to use when communicating with the source apiserver.
-	SourceClientConnection SourceClientConnection
+	SourceClientConnection ClientConnection
 	// TargetClientConnection specifies the client connection settings for the proxy server
 	// to use when communicating with the target apiserver.
-	TargetClientConnection *TargetClientConnection
+	TargetClientConnection *ClientConnection
 	// LeaderElection defines the configuration of leader election client.
 	LeaderElection componentbaseconfig.LeaderElectionConfiguration
 	// Server defines the configuration of the HTTP server.
@@ -47,26 +47,12 @@ type ResourceManagerConfiguration struct {
 	Webhooks ResourceManagerWebhookConfiguration
 }
 
-// SourceClientConnection specifies the client connection settings
-// for the proxy server to use when communicating with the seed apiserver.
-type SourceClientConnection struct {
+// ClientConnection specifies the client connection settings to use when communicating with an API server.
+type ClientConnection struct {
 	componentbaseconfig.ClientConnectionConfiguration
-	// Namespace in which the ManagedResources should be observed (defaults to "all namespaces").
-	Namespace *string
-	// CacheResyncPeriod specifies the duration how often the cache for the source cluster is resynced.
-	CacheResyncPeriod *metav1.Duration
-}
-
-// TargetClientConnection specifies the client connection settings
-// for the proxy server to use when communicating with the shoot apiserver.
-type TargetClientConnection struct {
-	componentbaseconfig.ClientConnectionConfiguration
-	// Namespace in which controllers for the target clusters act on objects (defaults to "all namespaces").
-	Namespace *string
-	// DisableCachedClient specifies whether the cache for the target cluster client should be disabled. If true, then
-	// each request is performed with a direct client.
-	DisableCachedClient *bool
-	// CacheResyncPeriod specifies the duration how often the cache for the target cluster is resynced.
+	// Namespaces in which the ManagedResources should be observed (defaults to "all namespaces").
+	Namespaces []string
+	// CacheResyncPeriod specifies the duration how often the cache for the cluster is resynced.
 	CacheResyncPeriod *metav1.Duration
 }
 
@@ -136,6 +122,8 @@ type KubeletCSRApproverControllerConfig struct {
 	Enabled bool
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	ConcurrentSyncs *int
+	// MachineNamespace is the namespace in the source cluster in which the Machine objects are stored.
+	MachineNamespace string
 }
 
 // GarbageCollectorControllerConfig is the configuration for the garbage-collector controller.
