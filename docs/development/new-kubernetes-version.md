@@ -109,7 +109,6 @@ After the PR in `gardener/gardener` for the support of the new version has been 
 Some of the cloud providers are not yet using upstream `cloud-controller-manager` images.
 Instead, we build and maintain them ourselves:
 
-- https://github.com/gardener/cloud-provider-aws
 - https://github.com/gardener/cloud-provider-gcp
 
 Until we switch to upstream images, you need to revendor the Kubernetes dependencies and release a new image.

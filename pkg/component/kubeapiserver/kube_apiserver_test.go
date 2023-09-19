@@ -115,7 +115,7 @@ var _ = Describe("KubeAPIServer", func() {
 		configMapNameTerminationHandler = "kube-apiserver-watchdog-f4f4b3d5"
 
 		deployment                 *appsv1.Deployment
-		horizontalPodAutoscalerV2  *autoscalingv2.HorizontalPodAutoscaler
+		horizontalPodAutoscaler    *autoscalingv2.HorizontalPodAutoscaler
 		verticalPodAutoscaler      *vpaautoscalingv1.VerticalPodAutoscaler
 		hvpa                       *hvpav1alpha1.Hvpa
 		podDisruptionBudget        *policyv1.PodDisruptionBudget
@@ -167,7 +167,7 @@ var _ = Describe("KubeAPIServer", func() {
 				Namespace: namespace,
 			},
 		}
-		horizontalPodAutoscalerV2 = &autoscalingv2.HorizontalPodAutoscaler{
+		horizontalPodAutoscaler = &autoscalingv2.HorizontalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kube-apiserver",
 				Namespace: namespace,
@@ -217,10 +217,10 @@ var _ = Describe("KubeAPIServer", func() {
 						Version: version},
 					)
 
-					Expect(c.Create(ctx, horizontalPodAutoscalerV2)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscalerV2), horizontalPodAutoscalerV2)).To(Succeed())
+					Expect(c.Create(ctx, horizontalPodAutoscaler)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(Succeed())
 					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscalerV2), horizontalPodAutoscalerV2)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv2.SchemeGroupVersion.Group, Resource: "horizontalpodautoscalers"}, horizontalPodAutoscalerV2.Name)))
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv2.SchemeGroupVersion.Group, Resource: "horizontalpodautoscalers"}, horizontalPodAutoscaler.Name)))
 				},
 
 				Entry("HVPA is enabled", apiserver.AutoscalingConfig{HVPAEnabled: true}),
@@ -240,17 +240,17 @@ var _ = Describe("KubeAPIServer", func() {
 			})
 
 			It("should successfully deploy the HPA resource", func() {
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscalerV2), horizontalPodAutoscalerV2)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv2.SchemeGroupVersion.Group, Resource: "horizontalpodautoscalers"}, horizontalPodAutoscalerV2.Name)))
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv2.SchemeGroupVersion.Group, Resource: "horizontalpodautoscalers"}, horizontalPodAutoscaler.Name)))
 				Expect(kapi.Deploy(ctx)).To(Succeed())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscalerV2), horizontalPodAutoscalerV2)).To(Succeed())
-				Expect(horizontalPodAutoscalerV2).To(DeepEqual(&autoscalingv2.HorizontalPodAutoscaler{
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(Succeed())
+				Expect(horizontalPodAutoscaler).To(DeepEqual(&autoscalingv2.HorizontalPodAutoscaler{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: autoscalingv2.SchemeGroupVersion.String(),
 						Kind:       "HorizontalPodAutoscaler",
 					},
 					ObjectMeta: metav1.ObjectMeta{
-						Name:            horizontalPodAutoscalerV2.Name,
-						Namespace:       horizontalPodAutoscalerV2.Namespace,
+						Name:            horizontalPodAutoscaler.Name,
+						Namespace:       horizontalPodAutoscaler.Namespace,
 						ResourceVersion: "1",
 					},
 					Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
@@ -3651,15 +3651,15 @@ rules:
 		})
 
 		It("should delete all the resources successfully", func() {
-			Expect(c.Create(ctx, horizontalPodAutoscalerV2)).To(Succeed())
+			Expect(c.Create(ctx, horizontalPodAutoscaler)).To(Succeed())
 			Expect(c.Create(ctx, podDisruptionBudget)).To(Succeed())
 
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscalerV2), horizontalPodAutoscalerV2)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(Succeed())
 
 			Expect(kapi.Destroy(ctx)).To(Succeed())
 
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscalerV2), horizontalPodAutoscalerV2)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv2.SchemeGroupVersion.Group, Resource: "horizontalpodautoscalers"}, horizontalPodAutoscalerV2.Name)))
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv2.SchemeGroupVersion.Group, Resource: "horizontalpodautoscalers"}, horizontalPodAutoscaler.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: policyv1.SchemeGroupVersion.Group, Resource: "poddisruptionbudgets"}, podDisruptionBudget.Name)))
 		})
 	})
