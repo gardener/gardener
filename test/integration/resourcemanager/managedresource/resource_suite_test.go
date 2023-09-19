@@ -39,7 +39,6 @@ import (
 	resourcemanagerv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/managedresource"
-	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
 	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -119,7 +118,7 @@ var _ = BeforeSuite(func() {
 
 	By("Register controller")
 	fakeClock = testclock.NewFakeClock(time.Now())
-	filter = predicate.NewClassFilter(resourcemanagerv1alpha1.DefaultResourceClass)
+	filter = resourcemanagerpredicate.NewClassFilter(resourcemanagerv1alpha1.DefaultResourceClass)
 
 	Expect((&managedresource.Reconciler{
 		Config: config.ManagedResourceControllerConfig{

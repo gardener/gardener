@@ -20,7 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	"github.com/gardener/gardener/extensions/pkg/webhook"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
@@ -41,15 +40,15 @@ type Args struct {
 	// Types is a list of resource types.
 	Types []extensionswebhook.Type
 	// Mutator is a mutator to be used by the admission handler.
-	Mutator webhook.Mutator
+	Mutator extensionswebhook.Mutator
 }
 
 // New creates a new network webhook with the given args.
-func New(mgr manager.Manager, args Args) (*webhook.Webhook, error) {
+func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 	logger := logger.WithValues("network-provider", args.NetworkProvider, "cloud-provider", args.CloudProvider)
 
 	// Create handler
-	handler, err := webhook.NewBuilder(mgr, logger).WithMutator(args.Mutator, args.Types...).Build()
+	handler, err := extensionswebhook.NewBuilder(mgr, logger).WithMutator(args.Mutator, args.Types...).Build()
 	if err != nil {
 		return nil, err
 	}

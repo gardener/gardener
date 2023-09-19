@@ -20,22 +20,21 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-var _ cache.Cache = &aggregator{}
+var _ runtimecache.Cache = &aggregator{}
 
 // aggregator is a cache that can hold different cache implementations depending on the objects' GVKs.
 type aggregator struct {
-	fallbackCache cache.Cache
-	gvkToCache    map[schema.GroupVersionKind]cache.Cache
+	fallbackCache runtimecache.Cache
+	gvkToCache    map[schema.GroupVersionKind]runtimecache.Cache
 	scheme        *runtime.Scheme
 }
 
-func (c *aggregator) cacheForObject(obj runtime.Object) cache.Cache {
+func (c *aggregator) cacheForObject(obj runtime.Object) runtimecache.Cache {
 	gvks, _, err := c.scheme.ObjectKinds(obj)
 	if err != nil || len(gvks) != 1 {
 		return c.fallbackCache
@@ -44,7 +43,7 @@ func (c *aggregator) cacheForObject(obj runtime.Object) cache.Cache {
 	return c.cacheForKind(gvks[0])
 }
 
-func (c *aggregator) cacheForKind(kind schema.GroupVersionKind) cache.Cache {
+func (c *aggregator) cacheForKind(kind schema.GroupVersionKind) runtimecache.Cache {
 	gvk := kind
 	gvk.Kind = strings.TrimSuffix(gvk.Kind, "List")
 
@@ -83,11 +82,11 @@ func (c *aggregator) List(ctx context.Context, list client.ObjectList, opts ...c
 	return nil
 }
 
-func (c *aggregator) GetInformer(ctx context.Context, obj client.Object) (cache.Informer, error) {
+func (c *aggregator) GetInformer(ctx context.Context, obj client.Object) (runtimecache.Informer, error) {
 	return c.cacheForObject(obj).GetInformer(ctx, obj)
 }
 
-func (c *aggregator) GetInformerForKind(ctx context.Context, gvk schema.GroupVersionKind) (cache.Informer, error) {
+func (c *aggregator) GetInformerForKind(ctx context.Context, gvk schema.GroupVersionKind) (runtimecache.Informer, error) {
 	return c.cacheForKind(gvk).GetInformerForKind(ctx, gvk)
 }
 
@@ -129,7 +128,7 @@ func (c *aggregator) IndexField(ctx context.Context, obj client.Object, field st
 }
 
 // NewAggregator creates a new instance of an aggregated cache.
-func NewAggregator(fallbackCache cache.Cache, gvkToCache map[schema.GroupVersionKind]cache.Cache, scheme *runtime.Scheme) cache.Cache {
+func NewAggregator(fallbackCache runtimecache.Cache, gvkToCache map[schema.GroupVersionKind]runtimecache.Cache, scheme *runtime.Scheme) runtimecache.Cache {
 	return &aggregator{
 		fallbackCache: fallbackCache,
 		gvkToCache:    gvkToCache,

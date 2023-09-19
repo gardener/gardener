@@ -29,7 +29,6 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -205,7 +204,7 @@ func (o *operatingSystemConfig) Deploy(ctx context.Context) error {
 
 // Restore uses the seed client and the ShootState to create the OperatingSystemConfig custom resources in the Shoot
 // namespace in the Seed and restore its state.
-func (o *operatingSystemConfig) Restore(ctx context.Context, shootState *v1beta1.ShootState) error {
+func (o *operatingSystemConfig) Restore(ctx context.Context, shootState *gardencorev1beta1.ShootState) error {
 	return o.reconcile(ctx, func(d deployer) error {
 		return extensions.RestoreExtensionWithDeployFunction(ctx, o.client, shootState, extensionsv1alpha1.OperatingSystemConfigResource, d.deploy)
 	})

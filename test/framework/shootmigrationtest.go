@@ -34,7 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -402,7 +401,7 @@ func (t *ShootMigrationTest) checkForOrphanedNonNamespacedResources(ctx context.
 
 	for _, obj := range []client.ObjectList{
 		&extensionsv1alpha1.ClusterList{},
-		&v1alpha1.BackupEntryList{},
+		&extensionsv1alpha1.BackupEntryList{},
 		&rbacv1.ClusterRoleBindingList{},
 		&rbacv1.ClusterRoleList{},
 	} {
