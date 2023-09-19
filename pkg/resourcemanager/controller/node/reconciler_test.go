@@ -33,7 +33,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -368,7 +367,7 @@ var _ = Describe("Reconciler", func() {
 			ctx  context.Context
 			node *corev1.Node
 
-			c runtimeclient.Client
+			c client.Client
 		)
 
 		BeforeEach(func() {
@@ -394,7 +393,7 @@ var _ = Describe("Reconciler", func() {
 		It("should remove the critical-components-not-ready taint if it's the only taint", func() {
 			Expect(RemoveTaint(ctx, c, node)).To(Succeed())
 
-			Expect(c.Get(ctx, runtimeclient.ObjectKeyFromObject(node), node)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
 			Expect(node.Spec.Taints).To(BeEmpty())
 		})
 
@@ -417,7 +416,7 @@ var _ = Describe("Reconciler", func() {
 
 			Expect(RemoveTaint(ctx, c, node)).To(Succeed())
 
-			Expect(c.Get(ctx, runtimeclient.ObjectKeyFromObject(node), node)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
 			Expect(node.Spec.Taints).To(HaveLen(2))
 			Expect(node.Spec.Taints).To(Equal([]corev1.Taint{
 				{

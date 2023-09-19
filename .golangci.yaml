@@ -46,6 +46,9 @@ issues:
     text: "SA1019:" # Excludes messages where deprecated variables are used
 
 linters-settings:
+  revive:
+    rules:
+    - name: duplicated-imports
   importas:
     alias:
       # External imported packages

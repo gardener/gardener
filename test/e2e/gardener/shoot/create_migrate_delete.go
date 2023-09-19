@@ -23,7 +23,6 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
 
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	. "github.com/gardener/gardener/test/framework"
@@ -68,7 +67,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 	})
 })
 
-func newDefaultShootMigrationTest(ctx context.Context, shoot *v1beta1.Shoot, gardenerFramework *GardenerFramework) (*ShootMigrationTest, error) {
+func newDefaultShootMigrationTest(ctx context.Context, shoot *gardencorev1beta1.Shoot, gardenerFramework *GardenerFramework) (*ShootMigrationTest, error) {
 	t, err := NewShootMigrationTest(ctx, gardenerFramework, &ShootMigrationConfig{
 		ShootName:               shoot.Name,
 		ShootNamespace:          shoot.Namespace,

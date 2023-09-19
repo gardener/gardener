@@ -21,7 +21,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	"github.com/onsi/gomega/types"
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testclock "k8s.io/utils/clock/testing"
@@ -87,7 +86,7 @@ var _ = Describe("Condition", func() {
 	})
 
 	DescribeTable("#FailedCondition",
-		func(thresholds map[gardencorev1beta1.ConditionType]time.Duration, lastOperation *gardencorev1beta1.LastOperation, now time.Time, condition gardencorev1beta1.Condition, reason, message string, expected types.GomegaMatcher) {
+		func(thresholds map[gardencorev1beta1.ConditionType]time.Duration, lastOperation *gardencorev1beta1.LastOperation, now time.Time, condition gardencorev1beta1.Condition, reason, message string, expected gomegatypes.GomegaMatcher) {
 			fakeClock.SetTime(now)
 			Expect(FailedCondition(fakeClock, lastOperation, thresholds, condition, reason, message)).To(expected)
 		},
@@ -478,6 +477,6 @@ var _ = Describe("Condition", func() {
 	})
 })
 
-func beConditionWithStatus(status gardencorev1beta1.ConditionStatus) types.GomegaMatcher {
+func beConditionWithStatus(status gardencorev1beta1.ConditionStatus) gomegatypes.GomegaMatcher {
 	return WithStatus(status)
 }
