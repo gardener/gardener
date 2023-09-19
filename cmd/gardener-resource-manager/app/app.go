@@ -45,6 +45,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	controllerwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/gardener/gardener/cmd/gardener-resource-manager/app/bootstrappers"
@@ -141,17 +142,28 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 		managerScheme = resourcemanagerclient.SourceScheme
 	}
 
+	var extraHandlers map[string]http.Handler
+	if cfg.Debugging != nil && cfg.Debugging.EnableProfiling {
+		extraHandlers = routes.ProfilingHandlers
+		if cfg.Debugging.EnableContentionProfiling {
+			goruntime.SetBlockProfileRate(1)
+		}
+	}
+
 	log.Info("Setting up manager")
 	mgr, err := manager.New(sourceRESTConfig, manager.Options{
 		Logger:                  log,
 		Scheme:                  managerScheme,
 		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
 		Cache: cache.Options{
-			Namespaces: cfg.SourceClientConnection.Namespaces,
-			SyncPeriod: &cfg.SourceClientConnection.CacheResyncPeriod.Duration,
+			DefaultNamespaces: getCacheConfig(cfg.SourceClientConnection.Namespaces),
+			SyncPeriod:        &cfg.SourceClientConnection.CacheResyncPeriod.Duration,
 		},
 		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(cfg.Server.HealthProbes.Port)),
-		MetricsBindAddress:     net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
+		Metrics: metricsserver.Options{
+			BindAddress:   net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
+			ExtraHandlers: extraHandlers,
+		},
 
 		LeaderElection:                cfg.LeaderElection.LeaderElect,
 		LeaderElectionResourceLock:    cfg.LeaderElection.ResourceLock,
@@ -173,15 +185,6 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 	})
 	if err != nil {
 		return err
-	}
-
-	if cfg.Debugging != nil && cfg.Debugging.EnableProfiling {
-		if err := (routes.Profiling{}).AddToManager(mgr); err != nil {
-			return fmt.Errorf("failed adding profiling handlers to manager: %w", err)
-		}
-		if cfg.Debugging.EnableContentionProfiling {
-			goruntime.SetBlockProfileRate(1)
-		}
 	}
 
 	log.Info("Setting up health check endpoints")
@@ -223,7 +226,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 				)
 			}
 
-			opts.Cache.Namespaces = cfg.TargetClientConnection.Namespaces
+			opts.Cache.DefaultNamespaces = getCacheConfig(cfg.TargetClientConnection.Namespaces)
 			opts.Cache.SyncPeriod = &cfg.TargetClientConnection.CacheResyncPeriod.Duration
 
 			opts.Client.Cache = &client.CacheOptions{
@@ -283,4 +286,14 @@ func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
 	}
 
 	return nil
+}
+
+func getCacheConfig(namespaces []string) map[string]cache.Config {
+	cacheConfig := map[string]cache.Config{}
+
+	for _, namespace := range namespaces {
+		cacheConfig[namespace] = cache.Config{}
+	}
+
+	return cacheConfig
 }

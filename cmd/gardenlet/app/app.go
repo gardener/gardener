@@ -50,6 +50,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/cmd/gardenlet/app/bootstrappers"
 	"github.com/gardener/gardener/pkg/api/indexer"
@@ -145,6 +146,14 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		return err
 	}
 
+	var extraHandlers map[string]http.Handler
+	if cfg.Debugging != nil && cfg.Debugging.EnableProfiling {
+		extraHandlers = routes.ProfilingHandlers
+		if cfg.Debugging.EnableContentionProfiling {
+			goruntime.SetBlockProfileRate(1)
+		}
+	}
+
 	log.Info("Setting up manager")
 	mgr, err := manager.New(seedRESTConfig, manager.Options{
 		Logger:                  log,
@@ -152,7 +161,10 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
 
 		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(cfg.Server.HealthProbes.Port)),
-		MetricsBindAddress:     net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
+		Metrics: metricsserver.Options{
+			BindAddress:   net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
+			ExtraHandlers: extraHandlers,
+		},
 
 		LeaderElection:                cfg.LeaderElection.LeaderElect,
 		LeaderElectionResourceLock:    cfg.LeaderElection.ResourceLock,
@@ -203,15 +215,6 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	}
 	if err := mgr.AddReadyzCheck("seed-informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
 		return err
-	}
-
-	if cfg.Debugging != nil && cfg.Debugging.EnableProfiling {
-		if err := (routes.Profiling{}).AddToManager(mgr); err != nil {
-			return fmt.Errorf("failed adding profiling handlers to manager: %w", err)
-		}
-		if cfg.Debugging.EnableContentionProfiling {
-			goruntime.SetBlockProfileRate(1)
-		}
 	}
 
 	log.Info("Adding runnables to manager for bootstrapping")
@@ -288,22 +291,18 @@ func (g *garden) Start(ctx context.Context) error {
 				&operationsv1alpha1.Bastion{}: {
 					Field: fields.SelectorFromSet(fields.Set{operations.BastionSeedName: g.config.SeedConfig.SeedTemplate.Name}),
 				},
+				// Gardenlet should watch secrets/serviceAccounts only in the seed namespace of the seed it is responsible for.
+				&corev1.Secret{}: {
+					Namespaces: map[string]cache.Config{seedNamespace: {}},
+				},
+				&corev1.ServiceAccount{}: {
+					Namespaces: map[string]cache.Config{seedNamespace: {}},
+				},
 			}
 
 			return kubernetes.AggregatorCacheFunc(
 				kubernetes.NewRuntimeCache,
 				map[client.Object]cache.NewCacheFunc{
-					// Gardenlet should watch secrets only in the seed namespace of the seed it is responsible for. We
-					// don't use any selector mechanism here since we want to still fall back to reading secrets with
-					// the API reader (i.e., not from cache) in case the respective secret is not found in the cache.
-					&corev1.Secret{}: func(c *rest.Config, o cache.Options) (cache.Cache, error) {
-						o.Namespaces = []string{seedNamespace}
-						return cache.New(c, o)
-					},
-					&corev1.ServiceAccount{}: func(c *rest.Config, o cache.Options) (cache.Cache, error) {
-						o.Namespaces = []string{seedNamespace}
-						return cache.New(c, o)
-					},
 					// Gardenlet does not have the required RBAC permissions for listing/watching the following
 					// resources on cluster level. Hence, we need to watch them individually with the help of a
 					// SingleObject cache.

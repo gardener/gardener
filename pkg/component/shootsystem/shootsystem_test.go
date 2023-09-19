@@ -317,7 +317,6 @@ spec:
       networking.gardener.cloud/to-apiserver: allowed
   policyTypes:
   - Egress
-status: {}
 `
 				networkPolicyToDNS = `apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -361,7 +360,6 @@ spec:
       networking.gardener.cloud/to-dns: allowed
   policyTypes:
   - Egress
-status: {}
 `
 				networkPolicyToKubelet = `apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -382,7 +380,6 @@ spec:
       networking.gardener.cloud/to-kubelet: allowed
   policyTypes:
   - Egress
-status: {}
 `
 				networkPolicyToPublicNetworks = `apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -403,7 +400,6 @@ spec:
       networking.gardener.cloud/to-public-networks: allowed
   policyTypes:
   - Egress
-status: {}
 `
 			)
 

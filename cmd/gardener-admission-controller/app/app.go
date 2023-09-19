@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	goruntime "runtime"
 	"strconv"
@@ -33,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	controllerwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
@@ -104,6 +106,14 @@ func run(ctx context.Context, log logr.Logger, cfg *config.AdmissionControllerCo
 		return err
 	}
 
+	var extraHandlers map[string]http.Handler
+	if cfg.Debugging != nil && cfg.Debugging.EnableProfiling {
+		extraHandlers = routes.ProfilingHandlers
+		if cfg.Debugging.EnableContentionProfiling {
+			goruntime.SetBlockProfileRate(1)
+		}
+	}
+
 	log.Info("Setting up manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Logger:                  log,
@@ -111,7 +121,10 @@ func run(ctx context.Context, log logr.Logger, cfg *config.AdmissionControllerCo
 		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
 
 		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(cfg.Server.HealthProbes.Port)),
-		MetricsBindAddress:     net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
+		Metrics: metricsserver.Options{
+			BindAddress:   net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
+			ExtraHandlers: extraHandlers,
+		},
 
 		LeaderElection: false,
 
@@ -123,15 +136,6 @@ func run(ctx context.Context, log logr.Logger, cfg *config.AdmissionControllerCo
 	})
 	if err != nil {
 		return err
-	}
-
-	if cfg.Debugging != nil && cfg.Debugging.EnableProfiling {
-		if err := (routes.Profiling{}).AddToManager(mgr); err != nil {
-			return fmt.Errorf("failed adding profiling handlers to manager: %w", err)
-		}
-		if cfg.Debugging.EnableContentionProfiling {
-			goruntime.SetBlockProfileRate(1)
-		}
 	}
 
 	log.Info("Setting up health check endpoints")

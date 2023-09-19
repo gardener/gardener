@@ -201,21 +201,19 @@ var _ = Describe("Options", func() {
 
 	Context("ManagerOptions", func() {
 		const (
-			name                       = "foo"
-			leaderElectionResourceLock = "leases"
-			leaderElectionID           = "id"
-			leaderElectionNamespace    = "namespace"
-			metricsBindAddress         = ":8080"
-			healthBindAddress          = ":8081"
-			logLevel                   = "debug"
-			logFormat                  = "text"
-			logLevelDefault            = "info"
-			logFormatDefault           = "json"
+			name                    = "foo"
+			leaderElectionID        = "id"
+			leaderElectionNamespace = "namespace"
+			metricsBindAddress      = ":8080"
+			healthBindAddress       = ":8081"
+			logLevel                = "debug"
+			logFormat               = "text"
+			logLevelDefault         = "info"
+			logFormatDefault        = "json"
 		)
 		command := test.NewCommandBuilder(name).
 			Flags(
 				test.BoolFlag("leader-election", true),
-				test.StringFlag("leader-election-resource-lock", leaderElectionResourceLock),
 				test.StringFlag("leader-election-id", leaderElectionID),
 				test.StringFlag("leader-election-namespace", leaderElectionNamespace),
 				test.StringFlag("metrics-bind-address", metricsBindAddress),
@@ -235,14 +233,13 @@ var _ = Describe("Options", func() {
 
 				Expect(fs.Parse(command)).NotTo(HaveOccurred())
 				Expect(opts).To(Equal(ManagerOptions{
-					LeaderElection:             true,
-					LeaderElectionResourceLock: leaderElectionResourceLock,
-					LeaderElectionID:           leaderElectionID,
-					LeaderElectionNamespace:    leaderElectionNamespace,
-					MetricsBindAddress:         metricsBindAddress,
-					HealthBindAddress:          healthBindAddress,
-					LogLevel:                   logLevel,
-					LogFormat:                  logFormat,
+					LeaderElection:          true,
+					LeaderElectionID:        leaderElectionID,
+					LeaderElectionNamespace: leaderElectionNamespace,
+					MetricsBindAddress:      metricsBindAddress,
+					HealthBindAddress:       healthBindAddress,
+					LogLevel:                logLevel,
+					LogFormat:               logFormat,
 				}))
 			})
 
@@ -263,14 +260,13 @@ var _ = Describe("Options", func() {
 						Slice(),
 				)).NotTo(HaveOccurred())
 				Expect(opts).To(Equal(ManagerOptions{
-					LeaderElection:             true,
-					LeaderElectionResourceLock: "leases",
-					LeaderElectionID:           leaderElectionID,
-					LeaderElectionNamespace:    leaderElectionNamespace,
-					MetricsBindAddress:         metricsBindAddress,
-					HealthBindAddress:          healthBindAddress,
-					LogLevel:                   logLevelDefault,
-					LogFormat:                  logFormatDefault,
+					LeaderElection:          true,
+					LeaderElectionID:        leaderElectionID,
+					LeaderElectionNamespace: leaderElectionNamespace,
+					MetricsBindAddress:      metricsBindAddress,
+					HealthBindAddress:       healthBindAddress,
+					LogLevel:                logLevelDefault,
+					LogFormat:               logFormatDefault,
 				}))
 			})
 		})
@@ -331,7 +327,6 @@ var _ = Describe("Options", func() {
 				Expect(fs.Parse(command)).NotTo(HaveOccurred())
 				Expect(opts.Complete()).NotTo(HaveOccurred())
 				Expect(opts.Completed()).To(HaveField("LeaderElection", true))
-				Expect(opts.Completed()).To(HaveField("LeaderElectionResourceLock", leaderElectionResourceLock))
 				Expect(opts.Completed()).To(HaveField("LeaderElectionID", leaderElectionID))
 				Expect(opts.Completed()).To(HaveField("LeaderElectionNamespace", leaderElectionNamespace))
 				Expect(opts.Completed()).To(HaveField("MetricsBindAddress", metricsBindAddress))
@@ -591,18 +586,16 @@ var _ = Describe("Options", func() {
 
 	Context("ManagerConfig", func() {
 		const (
-			leaderElectionResourceLock = "leases"
-			leaderElectionID           = "id"
-			leaderElectionNamespace    = "namespace"
+			leaderElectionID        = "id"
+			leaderElectionNamespace = "namespace"
 		)
 
 		Describe("#Apply", func() {
 			It("should apply the values to the given manager.Options", func() {
 				cfg := &ManagerConfig{
-					LeaderElection:             true,
-					LeaderElectionResourceLock: leaderElectionResourceLock,
-					LeaderElectionID:           leaderElectionID,
-					LeaderElectionNamespace:    leaderElectionNamespace,
+					LeaderElection:          true,
+					LeaderElectionID:        leaderElectionID,
+					LeaderElectionNamespace: leaderElectionNamespace,
 				}
 
 				opts := manager.Options{}
@@ -610,7 +603,7 @@ var _ = Describe("Options", func() {
 
 				Expect(opts).To(Equal(manager.Options{
 					LeaderElection:             true,
-					LeaderElectionResourceLock: leaderElectionResourceLock,
+					LeaderElectionResourceLock: "leases",
 					LeaderElectionID:           leaderElectionID,
 					LeaderElectionNamespace:    leaderElectionNamespace,
 					Controller: controllerconfig.Controller{
@@ -624,16 +617,14 @@ var _ = Describe("Options", func() {
 		Describe("#Options", func() {
 			It("should return manager.Options with the given values set", func() {
 				cfg := &ManagerConfig{
-					LeaderElection:             true,
-					LeaderElectionResourceLock: leaderElectionResourceLock,
-					LeaderElectionID:           leaderElectionID,
-					LeaderElectionNamespace:    leaderElectionNamespace,
+					LeaderElection:          true,
+					LeaderElectionID:        leaderElectionID,
+					LeaderElectionNamespace: leaderElectionNamespace,
 				}
 
 				opts := cfg.Options()
 
 				Expect(opts.LeaderElection).To(BeTrue())
-				Expect(opts.LeaderElectionResourceLock).To(Equal(leaderElectionResourceLock))
 				Expect(opts.LeaderElectionID).To(Equal(leaderElectionID))
 				Expect(opts.LeaderElectionNamespace).To(Equal(leaderElectionNamespace))
 			})

@@ -27,11 +27,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/cloudprovider"
@@ -114,12 +117,16 @@ var _ = BeforeSuite(func() {
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Port:               testEnv.WebhookInstallOptions.LocalServingPort,
-		Host:               testEnv.WebhookInstallOptions.LocalServingHost,
-		CertDir:            testEnv.WebhookInstallOptions.LocalServingCertDir,
-		Scheme:             kubernetes.SeedScheme,
-		MetricsBindAddress: "0",
-		Namespace:          testNamespace.Name,
+		WebhookServer: webhook.NewServer(webhook.Options{
+			Port:    testEnv.WebhookInstallOptions.LocalServingPort,
+			Host:    testEnv.WebhookInstallOptions.LocalServingHost,
+			CertDir: testEnv.WebhookInstallOptions.LocalServingCertDir,
+		}),
+		Scheme:  kubernetes.SeedScheme,
+		Metrics: metricsserver.Options{BindAddress: "0"},
+		Cache: cache.Options{
+			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
+		},
 	})
 	Expect(err).NotTo(HaveOccurred())
 

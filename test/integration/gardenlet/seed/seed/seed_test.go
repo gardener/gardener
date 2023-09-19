@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
@@ -91,8 +92,8 @@ var _ = Describe("Seed controller tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		mgr, err := manager.New(restConfig, manager.Options{
-			Scheme:             testScheme,
-			MetricsBindAddress: "0",
+			Scheme:  testScheme,
+			Metrics: metricsserver.Options{BindAddress: "0"},
 			Cache: cache.Options{
 				Mapper: mapper,
 				ByObject: map[client.Object]cache.ByObject{

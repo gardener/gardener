@@ -35,7 +35,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -88,14 +87,13 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 	var (
 		restOpts = &extensionscmdcontroller.RESTOptions{}
 		mgrOpts  = &extensionscmdcontroller.ManagerOptions{
-			LeaderElection:             true,
-			LeaderElectionResourceLock: resourcelock.LeasesResourceLock,
-			LeaderElectionID:           extensionscmdcontroller.LeaderElectionNameID(local.Name),
-			LeaderElectionNamespace:    os.Getenv("LEADER_ELECTION_NAMESPACE"),
-			WebhookServerPort:          443,
-			WebhookCertDir:             "/tmp/gardener-extensions-cert",
-			MetricsBindAddress:         ":8080",
-			HealthBindAddress:          ":8081",
+			LeaderElection:          true,
+			LeaderElectionID:        extensionscmdcontroller.LeaderElectionNameID(local.Name),
+			LeaderElectionNamespace: os.Getenv("LEADER_ELECTION_NAMESPACE"),
+			WebhookServerPort:       443,
+			WebhookCertDir:          "/tmp/gardener-extensions-cert",
+			MetricsBindAddress:      ":8080",
+			HealthBindAddress:       ":8081",
 		}
 		generalOpts = &extensionscmdcontroller.GeneralOptions{}
 

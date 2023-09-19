@@ -33,6 +33,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
 	"github.com/gardener/gardener/pkg/logger"
@@ -101,9 +102,9 @@ var _ = BeforeSuite(func() {
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		MetricsBindAddress: "0",
-		Namespace:          testNamespace.Name,
+		Metrics: metricsserver.Options{BindAddress: "0"},
 		Cache: cache.Options{
+			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
 			ByObject: map[client.Object]cache.ByObject{
 				&corev1.Node{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),

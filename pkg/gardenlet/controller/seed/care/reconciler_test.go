@@ -159,7 +159,7 @@ var _ = Describe("Seed Care Control", func() {
 					seed.Status = gardencorev1beta1.SeedStatus{
 						Conditions: []gardencorev1beta1.Condition{seedSystemComponentsCondition},
 					}
-					Expect(gardenClient.Update(ctx, seed)).To(Succeed())
+					Expect(gardenClient.Status().Update(ctx, seed)).To(Succeed())
 
 					Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 

@@ -33,6 +33,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -103,8 +104,8 @@ var _ = BeforeSuite(func() {
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             kubernetes.GardenScheme,
-		MetricsBindAddress: "0",
+		Scheme:  kubernetes.GardenScheme,
+		Metrics: metricsserver.Options{BindAddress: "0"},
 		Cache: cache.Options{
 			DefaultLabelSelector: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 		},

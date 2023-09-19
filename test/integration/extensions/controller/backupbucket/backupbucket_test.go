@@ -25,8 +25,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	extensionsbackupbucketcontroller "github.com/gardener/gardener/extensions/pkg/controller/backupbucket"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -96,9 +98,11 @@ func prepareAndRunTest(ignoreOperationAnnotation bool) {
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             kubernetes.SeedScheme,
-		MetricsBindAddress: "0",
-		Namespace:          testNamespace.Name,
+		Scheme:  kubernetes.SeedScheme,
+		Metrics: metricsserver.Options{BindAddress: "0"},
+		Cache: cache.Options{
+			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
+		},
 	})
 	Expect(err).NotTo(HaveOccurred())
 

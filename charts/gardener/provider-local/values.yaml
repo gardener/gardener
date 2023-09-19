@@ -68,9 +68,6 @@ webhookConfig:
 metricsPort: 8080
 healthPort: 8081
 
-leaderElection:
-  resourceLock: leases
-
 ## settings for metrics, e.g. scraping by seed-prometheus
 ##
 metrics:

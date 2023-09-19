@@ -252,7 +252,6 @@ spec:
   policyTypes:
   - Ingress
   - Egress
-status: {}
 `
 		deploymentYAMLFor = func(apiserverHost string, podAnnotations map[string]string, keepReplicas bool, useHALabel bool) string {
 			out := `apiVersion: apps/v1
