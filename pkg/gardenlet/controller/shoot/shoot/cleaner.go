@@ -34,11 +34,11 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
-const (
-	// defaultInterval is the default interval for retry operations.
-	defaultInterval = 5 * time.Second
-	// defaultTimeout is the default timeout for waiting for resources to be migrated or deleted.
-	defaultTimeout = 5 * time.Minute
+var (
+	// DefaultInterval is the default interval for retry operations.
+	DefaultInterval = 5 * time.Second
+	// DefaultTimeout is the default timeout for waiting for resources to be migrated or deleted.
+	DefaultTimeout = 5 * time.Minute
 )
 
 var (
@@ -62,16 +62,16 @@ var (
 	}
 )
 
-type cleaner struct {
+type Cleaner struct {
 	seedClient    client.Client
 	gardenClient  client.Client
 	seedNamespace string
 	log           logr.Logger
 }
 
-// NewCleaner creates a cleaner with the given clients and logger, for a shoot with the given namespace.
-func NewCleaner(seedClient, gardenClient client.Client, seedNamespace string, log logr.Logger) *cleaner {
-	return &cleaner{
+// NewCleaner creates a Cleaner with the given clients and logger, for a shoot with the given namespace.
+func NewCleaner(seedClient, gardenClient client.Client, seedNamespace string, log logr.Logger) *Cleaner {
+	return &Cleaner{
 		seedClient:    seedClient,
 		gardenClient:  gardenClient,
 		seedNamespace: seedNamespace,
@@ -80,7 +80,7 @@ func NewCleaner(seedClient, gardenClient client.Client, seedNamespace string, lo
 }
 
 // DeleteExtensionObjects deletes all extension objects in the shoot namespace.
-func (c *cleaner) DeleteExtensionObjects(ctx context.Context) error {
+func (c *Cleaner) DeleteExtensionObjects(ctx context.Context) error {
 	return utilclient.ApplyToObjectKinds(ctx, func(kind string, objectList client.ObjectList) flow.TaskFn {
 		return func(ctx context.Context) error {
 			c.log.Info("Deleting all extension resources", "kind", kind, "namespace", c.seedNamespace)
@@ -90,16 +90,16 @@ func (c *cleaner) DeleteExtensionObjects(ctx context.Context) error {
 }
 
 // WaitUntilExtensionObjectsDeleted waits until all extension objects in the shoot namespace have been deleted.
-func (c *cleaner) WaitUntilExtensionObjectsDeleted(ctx context.Context) error {
+func (c *Cleaner) WaitUntilExtensionObjectsDeleted(ctx context.Context) error {
 	return utilclient.ApplyToObjectKinds(ctx, func(kind string, objectList client.ObjectList) flow.TaskFn {
 		return func(ctx context.Context) error {
-			return extensions.WaitUntilExtensionObjectsDeleted(ctx, c.seedClient, c.log, objectList, kind, c.seedNamespace, defaultInterval, defaultTimeout, nil)
+			return extensions.WaitUntilExtensionObjectsDeleted(ctx, c.seedClient, c.log, objectList, kind, c.seedNamespace, DefaultInterval, DefaultTimeout, nil)
 		}
 	}, extensionKindToObjectList)
 }
 
 // DeleteMachineResources deletes all MachineControllerManager resources in the shoot namespace.
-func (c *cleaner) DeleteMachineResources(ctx context.Context) error {
+func (c *Cleaner) DeleteMachineResources(ctx context.Context) error {
 	return utilclient.ApplyToObjectKinds(ctx, func(kind string, objectList client.ObjectList) flow.TaskFn {
 		c.log.Info("Deleting all resources in namespace", "namespace", c.seedNamespace, "kind", kind)
 		return utilclient.ForceDeleteObjects(ctx, c.seedClient, kind, c.seedNamespace, objectList)
@@ -107,10 +107,10 @@ func (c *cleaner) DeleteMachineResources(ctx context.Context) error {
 }
 
 // WaitUntilMachineResourcesDeleted waits until all MachineControllerManager resources in the shoot namespace have been deleted.
-func (c *cleaner) WaitUntilMachineResourcesDeleted(ctx context.Context) error {
+func (c *Cleaner) WaitUntilMachineResourcesDeleted(ctx context.Context) error {
 	return utilclient.ApplyToObjectKinds(ctx, func(kind string, objectList client.ObjectList) flow.TaskFn {
 		return func(ctx context.Context) error {
-			return kubernetesutils.WaitUntilResourcesDeleted(ctx, c.seedClient, objectList, defaultInterval, client.InNamespace(c.seedNamespace))
+			return kubernetesutils.WaitUntilResourcesDeleted(ctx, c.seedClient, objectList, DefaultInterval, client.InNamespace(c.seedNamespace))
 		}
 	}, machineKindToObjectList)
 }
@@ -124,7 +124,7 @@ func (c *cleaner) SetKeepObjectsForManagedResources(ctx context.Context) error {
 }
 
 // DeleteManagedResources removes all remaining finalizers and deletes all ManagedResource resources in the shoot namespace.
-func (c *cleaner) DeleteManagedResources(ctx context.Context) error {
+func (c *Cleaner) DeleteManagedResources(ctx context.Context) error {
 	c.log.Info("Deleting all ManagedResource resources in namespace", "namespace", c.seedNamespace)
 	if err := c.seedClient.DeleteAllOf(ctx, &resourcesv1alpha1.ManagedResource{}, client.InNamespace(c.seedNamespace)); err != nil {
 		return err
@@ -134,12 +134,12 @@ func (c *cleaner) DeleteManagedResources(ctx context.Context) error {
 }
 
 // WaitUntilManagedResourcesDeleted waits until all ManagedResource resources in the shoot namespace have been deleted.
-func (c *cleaner) WaitUntilManagedResourcesDeleted(ctx context.Context) error {
-	return kubernetesutils.WaitUntilResourcesDeleted(ctx, c.seedClient, &resourcesv1alpha1.ManagedResourceList{}, defaultInterval, client.InNamespace(c.seedNamespace))
+func (c *Cleaner) WaitUntilManagedResourcesDeleted(ctx context.Context) error {
+	return kubernetesutils.WaitUntilResourcesDeleted(ctx, c.seedClient, &resourcesv1alpha1.ManagedResourceList{}, DefaultInterval, client.InNamespace(c.seedNamespace))
 }
 
 // DeleteSecrets removes all remaining finalizers and deletes all secrets in the shoot namespace.
-func (c *cleaner) DeleteSecrets(ctx context.Context) error {
+func (c *Cleaner) DeleteSecrets(ctx context.Context) error {
 	c.log.Info("Deleting all secrets in namespace", "namespace", c.seedNamespace)
 	if err := c.seedClient.DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(c.seedNamespace)); client.IgnoreNotFound(err) != nil {
 		return err
@@ -154,7 +154,7 @@ func (c *cleaner) DeleteSecrets(ctx context.Context) error {
 }
 
 // DeleteCluster deletes the shoot Cluster resource in the seed cluster.
-func (c *cleaner) DeleteCluster(ctx context.Context) error {
+func (c *Cleaner) DeleteCluster(ctx context.Context) error {
 	cluster := c.getEmptyCluster()
 
 	c.log.Info("Deleting Cluster resource", "cluster", cluster.Name)
@@ -166,15 +166,15 @@ func (c *cleaner) DeleteCluster(ctx context.Context) error {
 }
 
 // WaitUntilClusterDeleted waits until the shoot Cluster resource in the seed cluster has been deleted.
-func (c *cleaner) WaitUntilClusterDeleted(ctx context.Context) error {
-	return kubernetesutils.WaitUntilResourceDeleted(ctx, c.seedClient, c.getEmptyCluster(), defaultInterval)
+func (c *Cleaner) WaitUntilClusterDeleted(ctx context.Context) error {
+	return kubernetesutils.WaitUntilResourceDeleted(ctx, c.seedClient, c.getEmptyCluster(), DefaultInterval)
 }
 
-func (c *cleaner) getEmptyCluster() *extensionsv1alpha1.Cluster {
+func (c *Cleaner) getEmptyCluster() *extensionsv1alpha1.Cluster {
 	return &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: c.seedNamespace}}
 }
 
-func (c *cleaner) removeFinalizersFromObjects(ctx context.Context, objectList client.ObjectList) error {
+func (c *Cleaner) removeFinalizersFromObjects(ctx context.Context, objectList client.ObjectList) error {
 	return utilclient.ApplyToObjects(ctx, objectList, func(ctx context.Context, object client.Object) error {
 		if len(object.GetFinalizers()) > 0 {
 			c.log.Info("Removing finalizers", "kind", object.GetObjectKind().GroupVersionKind().Kind, "object", client.ObjectKeyFromObject(object))
@@ -184,7 +184,7 @@ func (c *cleaner) removeFinalizersFromObjects(ctx context.Context, objectList cl
 	})
 }
 
-func (c *cleaner) finalizeShootManagedResources(ctx context.Context, namespace string) error {
+func (c *Cleaner) finalizeShootManagedResources(ctx context.Context, namespace string) error {
 	mrList := &resourcesv1alpha1.ManagedResourceList{}
 	if err := c.seedClient.List(ctx, mrList, client.InNamespace(namespace)); err != nil {
 		return err
