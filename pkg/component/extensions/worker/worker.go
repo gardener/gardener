@@ -36,7 +36,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
 const (
@@ -389,11 +388,6 @@ func (w *worker) checkWorkerStatusMachineDeploymentsUpdated(o client.Object) err
 
 	if obj.Status.MachineDeploymentsLastUpdateTime != nil && (w.machineDeploymentsLastUpdateTime == nil || obj.Status.MachineDeploymentsLastUpdateTime.After(w.machineDeploymentsLastUpdateTime.Time)) {
 		return nil
-	}
-
-	// TODO(rishabh-11): Remove this check in a future release when it's ensured that all extensions were upgraded and follow the contract to maintain `MachineDeploymentsLastUpdateTime`.
-	if obj.Status.MachineDeploymentsLastUpdateTime == nil {
-		return health.CheckExtensionObject(o)
 	}
 
 	return fmt.Errorf("worker status machineDeployments has not been updated")
