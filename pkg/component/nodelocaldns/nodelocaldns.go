@@ -153,6 +153,9 @@ func (c *nodeLocalDNS) computeResourcesData() (map[string][]byte, error) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "node-local-dns",
 				Namespace: metav1.NamespaceSystem,
+				Labels: map[string]string{
+					labelKey: nodelocaldnsconstants.LabelValue,
+				},
 			},
 			Data: map[string]string{
 				configDataKey: domain + `:53 {
