@@ -85,6 +85,7 @@ func NewActuator(
 	if err != nil {
 		return nil, err
 	}
+
 	return &actuator{
 		providerName: providerName,
 
@@ -418,7 +419,8 @@ func (a *actuator) ForceDelete(
 	cluster *extensionscontroller.Cluster,
 ) error {
 	return utilclient.ApplyToObjectKinds(ctx, func(kind string, objectList client.ObjectList) flow.TaskFn {
-		return utilclient.ForceDeleteObjects(ctx, log, a.client, kind, cp.Namespace, objectList)
+		log.Info("Deleting all resources in namespace", "namespace", cp.Namespace, "kind", kind)
+		return utilclient.ForceDeleteObjects(ctx, a.client, kind, cp.Namespace, objectList)
 	}, a.extendedAPIsForCleanup)
 }
 

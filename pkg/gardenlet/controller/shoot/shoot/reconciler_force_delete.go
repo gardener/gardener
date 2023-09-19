@@ -81,7 +81,7 @@ func (r *Reconciler) runForceDeleteShootFlow(ctx context.Context, o *operation.O
 		defaultInterval = 5 * time.Second
 		defaultTimeout  = 30 * time.Second
 
-		cleaner = NewCleaner(botanist.SeedClientSet.Client(), r.GardenClient, botanist.Shoot.SeedNamespace, botanist.Shoot.GetInfo().Namespace, botanist.Shoot.BackupEntryName, logf.FromContext(ctx))
+		cleaner = NewCleaner(botanist.SeedClientSet.Client(), r.GardenClient, botanist.Shoot.SeedNamespace, logf.FromContext(ctx))
 
 		g = flow.NewGraph("Shoot cluster force deletion")
 
@@ -94,14 +94,14 @@ func (r *Reconciler) runForceDeleteShootFlow(ctx context.Context, o *operation.O
 			Fn:           cleaner.WaitUntilExtensionObjectsDeleted,
 			Dependencies: flow.NewTaskIDs(deleteExtensionObjects),
 		})
-		deleteMCMResources = g.Add(flow.Task{
+		deleteMachineResources = g.Add(flow.Task{
 			Name: "Deleting MCM resources",
-			Fn:   flow.TaskFn(cleaner.DeleteMCMResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:   flow.TaskFn(cleaner.DeleteMachineResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
 		})
-		waitUntilMCMResourcesDeleted = g.Add(flow.Task{
+		waitUntilMachineResourcesDeleted = g.Add(flow.Task{
 			Name:         "Waiting until MCM resources have been deleted",
-			Fn:           cleaner.WaitUntilMCMResourcesDeleted,
-			Dependencies: flow.NewTaskIDs(deleteMCMResources),
+			Fn:           cleaner.WaitUntilMachineResourcesDeleted,
+			Dependencies: flow.NewTaskIDs(deleteMachineResources),
 		})
 		deleteCluster = g.Add(flow.Task{
 			Name:         "Deleting Cluster resource",
@@ -130,7 +130,7 @@ func (r *Reconciler) runForceDeleteShootFlow(ctx context.Context, o *operation.O
 
 		syncPoint = flow.NewTaskIDs(
 			waitUntilExtensionObjectsDeleted,
-			waitUntilMCMResourcesDeleted,
+			waitUntilMachineResourcesDeleted,
 			waitUntilClusterDeleted,
 			waitUntilManagedResourcesDeleted,
 		)
@@ -186,6 +186,6 @@ func (r *Reconciler) runForceDeleteShootFlow(ctx context.Context, o *operation.O
 		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
 	}
 
-	o.Logger.Info("Successfully deleted Shoot cluster")
+	o.Logger.Info("Successfully force-deleted Shoot cluster")
 	return nil
 }

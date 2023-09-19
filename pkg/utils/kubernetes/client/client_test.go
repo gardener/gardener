@@ -20,7 +20,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-logr/logr"
 	volumesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -588,7 +587,7 @@ var _ = Describe("Cleaner", func() {
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(s).Build()
 		})
 
-		It("should apply the function all the objects in the list", func() {
+		It("should apply the function to all the objects in the list", func() {
 			for i := 1; i <= 5; i++ {
 				Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("secret-%d", i), Namespace: "default"}})).To(Succeed())
 			}
@@ -707,7 +706,7 @@ var _ = Describe("Cleaner", func() {
 			Expect(fakeClient.List(ctx, secretList)).To(Succeed())
 			Expect(secretList.Items).To(HaveLen(6))
 
-			taskFns := ForceDeleteObjects(ctx, logr.Discard(), fakeClient, "Secret", "default", &corev1.SecretList{}, client.MatchingLabels{"key": "value"})
+			taskFns := ForceDeleteObjects(ctx, fakeClient, "Secret", "default", &corev1.SecretList{}, client.MatchingLabels{"key": "value"})
 			Expect(flow.Parallel(taskFns)(ctx)).To(Succeed())
 
 			Expect(fakeClient.List(ctx, secretList)).To(Succeed())

@@ -137,7 +137,8 @@ func (a *genericActuator) ForceDelete(
 	cluster *extensionscontroller.Cluster,
 ) error {
 	return utilclient.ApplyToObjectKinds(ctx, func(kind string, objectList client.ObjectList) flow.TaskFn {
-		return utilclient.ForceDeleteObjects(ctx, log, a.client, kind, worker.Namespace, objectList)
+		log.Info("Deleting all resources in namespace", "namespace", worker.Namespace, "kind", kind)
+		return utilclient.ForceDeleteObjects(ctx, a.client, kind, worker.Namespace, objectList)
 	}, a.extendedAPIsForCleanup)
 }
 

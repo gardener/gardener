@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -434,9 +433,8 @@ func ApplyToObjectKinds(ctx context.Context, fn func(kind string, objectList cli
 }
 
 // ForceDeleteObjects lists and finalizes all the objects in the passed namespace and deletes them.
-func ForceDeleteObjects(ctx context.Context, log logr.Logger, c client.Client, kind string, namespace string, objectList client.ObjectList, opts ...client.ListOption) flow.TaskFn {
+func ForceDeleteObjects(ctx context.Context, c client.Client, kind string, namespace string, objectList client.ObjectList, opts ...client.ListOption) flow.TaskFn {
 	return func(ctx context.Context) error {
-		log.Info("Deleting all resources in namespace", "namespace", namespace, "kind", kind)
 		listOpts := &client.ListOptions{Namespace: namespace}
 		listOpts.ApplyOptions(opts)
 		if err := c.List(ctx, objectList, listOpts); err != nil {
@@ -444,7 +442,10 @@ func ForceDeleteObjects(ctx context.Context, log logr.Logger, c client.Client, k
 		}
 
 		return ApplyToObjects(ctx, objectList, func(ctx context.Context, object client.Object) error {
-			if err := c.Delete(ctx, object); client.IgnoreNotFound(err) != nil {
+			if err := c.Delete(ctx, object); err != nil {
+				if apierrors.IsNotFound(err) {
+					return nil
+				}
 				return err
 			}
 

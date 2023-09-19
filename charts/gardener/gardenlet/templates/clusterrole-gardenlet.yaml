@@ -446,4 +446,5 @@ rules:
   - watch
   - get
   - patch
+  - update
   - delete

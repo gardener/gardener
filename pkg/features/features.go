@@ -65,7 +65,7 @@ const (
 	WorkerlessShoots featuregate.Feature = "WorkerlessShoots"
 
 	// ShootForceDeletion allows force deletion of Shoots.
-	// See [Shoot Force Deletion](https://github.com/gardener/gardener/blob/master/docs/usage/shoot_operations.md#shoot-force-deletion) for more details.
+	// See https://github.com/gardener/gardener/blob/master/docs/usage/shoot_operations.md#shoot-force-deletion for more details.
 	// owner: @acumino @ary1992 @shafeeqes
 	// alpha: v1.80.0
 	ShootForceDeletion featuregate.Feature = "ShootForceDeletion"

@@ -53,9 +53,9 @@ It will also be removed even if the restart of one or more services failed.
 
 > ℹ️ In the example mentioned above, you could additionally verify when/whether the kubelet restarted by using `kubectl describe node <node-name>` and looking for such a `Starting kubelet` event.
 
-## Shoot Force Deletion
+## Force Deletion
 
-When the `ShootForceDeletion` feature gate in the gardener-apiserver is enabled, users will be able to force-delete the Shoot. This is only possible if the Shoot fails to be deleted normally. For forceful deletion, the following conditions should be met:
+When the `ShootForceDeletion` feature gate in the gardener-apiserver is enabled, users will be able to force-delete the Shoot. This is only possible if the Shoot fails to be deleted normally. For forceful deletion, the following conditions must be met:
 
 - Shoot has a deletion timestamp.
 - Shoot status contains at least one of the following [ErrorCodes](shoot_status.md#error-codes):

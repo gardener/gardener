@@ -25,7 +25,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
 )
 
@@ -41,13 +40,13 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 			f.Verify()
 
-			By("Patching Shoot to be ignored")
+			By("Patch Shoot to be ignored")
 			Expect(f.AnnotateShoot(ctx, f.Shoot, map[string]string{v1beta1constants.ShootIgnore: "true"})).To(Succeed())
 
 			By("Delete Shoot")
 			Expect(f.DeleteShoot(ctx, f.Shoot)).To(Succeed())
 
-			By("Patching the Shoot with an ErrorCode")
+			By("Patch the Shoot with an error code")
 			patch := client.MergeFrom(f.Shoot.DeepCopy())
 			f.Shoot.Status.LastErrors = []gardencorev1beta1.LastError{{
 				Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraDependencies},
@@ -56,13 +55,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				return f.GardenClient.Client().Status().Patch(ctx, f.Shoot, patch)
 			}).Should(Succeed())
 
-			By("Confirming force deletion")
-			Expect(gardenerutils.ConfirmDeletion(ctx, f.GardenClient.Client(), f.Shoot, true)).To(Succeed())
-
-			By("Patching Shoot to be not ignored")
+			By("Annotate Shoot with force-delete and to not be ignored")
 			Expect(f.AnnotateShoot(ctx, f.Shoot, map[string]string{
-				v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-				v1beta1constants.ShootIgnore:       "false",
+				v1beta1constants.AnnotationConfirmationForceDeletion: "true",
+				v1beta1constants.ShootIgnore:                         "false",
 			})).To(Succeed())
 
 			By("Wait for Shoot to be deleted")

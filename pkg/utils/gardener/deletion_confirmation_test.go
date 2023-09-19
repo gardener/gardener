@@ -89,9 +89,9 @@ var _ = Describe("DeletionConfirmation", func() {
 		})
 
 		It("should add the deletion confirmation annotation for an object without annotations", func() {
-			defer test.WithVars(
+			DeferCleanup(test.WithVars(
 				&TimeNow, mockNow.Do,
-			)()
+			))
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			expectedAnnotations := map[string]string{ConfirmationDeletion: "true", v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano)}
@@ -103,9 +103,9 @@ var _ = Describe("DeletionConfirmation", func() {
 		})
 
 		It("should add the deletion confirmation annotation for an object with annotations", func() {
-			defer test.WithVars(
+			DeferCleanup(test.WithVars(
 				&TimeNow, mockNow.Do,
-			)()
+			))
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			obj.SetAnnotations(map[string]string{"foo": "bar"})
@@ -120,9 +120,9 @@ var _ = Describe("DeletionConfirmation", func() {
 		})
 
 		It("should add the force deletion confirmation annotation also if forceDelete is set to true", func() {
-			defer test.WithVars(
+			DeferCleanup(test.WithVars(
 				&TimeNow, mockNow.Do,
-			)()
+			))
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			expectedAnnotations := map[string]string{ConfirmationDeletion: "true", v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano), v1beta1constants.AnnotationConfirmationForceDeletion: "true"}

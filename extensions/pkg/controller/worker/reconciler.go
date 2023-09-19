@@ -178,8 +178,7 @@ func (r *reconciler) delete(
 		return reconcile.Result{}, err
 	}
 
-	err = r.removeFinalizerFromWorker(ctx, log, worker)
-	return reconcile.Result{}, err
+	return reconcile.Result{}, r.removeFinalizerFromWorker(ctx, log, worker)
 }
 
 func (r *reconciler) reconcile(

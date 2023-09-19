@@ -172,8 +172,7 @@ func (r *reconciler) delete(
 		return reconcile.Result{}, err
 	}
 
-	err = r.removeFinalizerFromInfrastructure(ctx, log, infrastructure)
-	return reconcile.Result{}, err
+	return reconcile.Result{}, r.removeFinalizerFromInfrastructure(ctx, log, infrastructure)
 }
 
 func (r *reconciler) migrate(

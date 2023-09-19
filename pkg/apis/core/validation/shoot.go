@@ -2301,12 +2301,14 @@ func ValidateForceDeletion(newShoot, oldShoot *core.Shoot) *field.Error {
 		if newShoot.DeletionTimestamp == nil {
 			return field.Forbidden(fldPath, "force-deletion annotation cannot be set when Shoot deletionTimestamp is nil")
 		}
+
 		for _, lastError := range newShoot.Status.LastErrors {
 			if errorCodesAllowingForceDeletion.HasAny(lastError.Codes...) {
 				return nil
 			}
 		}
-		return field.Forbidden(fldPath, fmt.Sprintf("force-deletion annotation cannot be set when Shoot status does not contain one of these ErrorCode: %v", sets.List(errorCodesAllowingForceDeletion)))
+
+		return field.Forbidden(fldPath, fmt.Sprintf("force-deletion annotation cannot be set when Shoot status does not contain one of these error codes: %v", sets.List(errorCodesAllowingForceDeletion)))
 	}
 	return nil
 }
