@@ -66,23 +66,7 @@ func (b *Botanist) DeployLogging(ctx context.Context) error {
 
 	// check if vali is enabled in gardenlet config, default is true
 	if !gardenlethelper.IsValiEnabled(b.Config) {
-		// Because ShootNodeLogging is installed as part of the Vali pod
-		// we have to delete it too in case it was previously deployed
-		if err := b.Shoot.Components.Logging.ShootRBACProxy.Destroy(ctx); err != nil {
-			return err
-		}
-
 		return b.Shoot.Components.Logging.Vali.Destroy(ctx)
-	}
-
-	if b.isShootNodeLoggingEnabled() {
-		if err := b.Shoot.Components.Logging.ShootRBACProxy.Deploy(ctx); err != nil {
-			return err
-		}
-	} else {
-		if err := b.Shoot.Components.Logging.ShootRBACProxy.Destroy(ctx); err != nil {
-			return err
-		}
 	}
 
 	return b.Shoot.Components.Logging.Vali.Deploy(ctx)
@@ -90,10 +74,6 @@ func (b *Botanist) DeployLogging(ctx context.Context) error {
 
 // DestroySeedLogging will uninstall the logging stack for the Shoot in the Seed clusters.
 func (b *Botanist) DestroySeedLogging(ctx context.Context) error {
-	if err := b.Shoot.Components.Logging.ShootRBACProxy.Destroy(ctx); err != nil {
-		return err
-	}
-
 	if err := b.Shoot.Components.Logging.EventLogger.Destroy(ctx); err != nil {
 		return err
 	}
@@ -123,10 +103,6 @@ func (b *Botanist) destroyLokiBasedShootLoggingStackRetainingPvc(ctx context.Con
 }
 
 func (b *Botanist) destroyLokiBasedShootNodeLogging(ctx context.Context) error {
-	if err := b.Shoot.Components.Logging.ShootRBACProxy.Destroy(ctx); err != nil {
-		return err
-	}
-
 	return kubernetesutils.DeleteObjects(ctx, b.SeedClientSet.Client(),
 		&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: b.Shoot.SeedNamespace}},
 		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-from-prometheus-to-loki-telegraf", Namespace: b.Shoot.SeedNamespace}},

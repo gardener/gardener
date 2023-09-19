@@ -18,11 +18,9 @@ import (
 	"context"
 
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -66,25 +64,6 @@ func (c *customResources) Deploy(ctx context.Context) error {
 		registry  = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 		resources []client.Object
 	)
-
-	// TODO(rfranzke): Remove this block after v1.77 has been released.
-	{
-		resources = append(resources,
-			&fluentbitv1alpha2.ClusterFluentBitConfig{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit-config", Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}},
-
-			&fluentbitv1alpha2.ClusterFilter{ObjectMeta: metav1.ObjectMeta{Name: "01-docker", Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}},
-			&fluentbitv1alpha2.ClusterFilter{ObjectMeta: metav1.ObjectMeta{Name: "02-containerd", Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}},
-			&fluentbitv1alpha2.ClusterFilter{ObjectMeta: metav1.ObjectMeta{Name: "03-add-tag-to-record", Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}},
-			&fluentbitv1alpha2.ClusterFilter{ObjectMeta: metav1.ObjectMeta{Name: "zz-modify-severity", Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}},
-
-			&fluentbitv1alpha2.ClusterParser{ObjectMeta: metav1.ObjectMeta{Name: "docker-parser", Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}},
-			&fluentbitv1alpha2.ClusterParser{ObjectMeta: metav1.ObjectMeta{Name: "containerd-parser", Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}},
-
-			&fluentbitv1alpha2.ClusterInput{ObjectMeta: metav1.ObjectMeta{Name: "tail-kubernetes", Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}},
-
-			&fluentbitv1alpha2.ClusterOutput{ObjectMeta: metav1.ObjectMeta{Name: "journald", Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}},
-		)
-	}
 
 	for _, clusterInput := range c.values.Inputs {
 		resources = append(resources, clusterInput)

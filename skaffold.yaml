@@ -913,7 +913,6 @@ build:
         - pkg/component/logging/eventlogger
         - pkg/component/logging/fluentoperator
         - pkg/component/logging/fluentoperator/customresources
-        - pkg/component/logging/kuberbacproxy
         - pkg/component/logging/vali
         - pkg/component/machinecontrollermanager
         - pkg/component/metricsserver
