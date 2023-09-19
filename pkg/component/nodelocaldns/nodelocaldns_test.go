@@ -240,6 +240,7 @@ kind: ConfigMap
 metadata:
   creationTimestamp: null
   labels:
+    k8s-app: node-local-dns
     resources.gardener.cloud/garbage-collectable-reference: "true"
   name: node-local-dns-` + configMapHash + `
   namespace: kube-system
