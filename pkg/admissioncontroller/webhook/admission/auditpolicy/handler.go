@@ -152,13 +152,7 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting auditlog policy from ConfigMap %s/%s: %w", shoot.Namespace, newAuditPolicyConfigMapName, err))
 	}
 
-	var errCode int32
-	if request.Operation == admissionv1.Create || request.Operation == admissionv1.Update {
-		errCode, err = validateAuditPolicySemanticsForKubernetesVersions(auditPolicy)
-	} else {
-		errCode, err = validateAuditPolicySemantics(auditPolicy)
-	}
-	if err != nil {
+	if errCode, err := validateAuditPolicySemantics(auditPolicy); err != nil {
 		return admission.Errored(errCode, err)
 	}
 
@@ -210,7 +204,7 @@ func (h *Handler) admitConfigMap(ctx context.Context, request admission.Request)
 		return admissionwebhook.Allowed("audit policy not changed")
 	}
 
-	errCode, err := validateAuditPolicySemanticsForKubernetesVersions(auditPolicy)
+	errCode, err := validateAuditPolicySemantics(auditPolicy)
 	if err != nil {
 		return admission.Errored(errCode, err)
 	}
@@ -226,10 +220,6 @@ func (h *Handler) getOldObject(request admission.Request, oldObj runtime.Object)
 }
 
 func validateAuditPolicySemantics(auditPolicy string) (errCode int32, err error) {
-	return validateAuditPolicySemanticsForKubernetesVersions(auditPolicy)
-}
-
-func validateAuditPolicySemanticsForKubernetesVersions(auditPolicy string) (errCode int32, err error) {
 	auditPolicyObj, schemaVersion, err := policyDecoder.Decode([]byte(auditPolicy), nil, nil)
 	if err != nil {
 		return http.StatusUnprocessableEntity, fmt.Errorf("failed to decode the provided audit policy: %w", err)
