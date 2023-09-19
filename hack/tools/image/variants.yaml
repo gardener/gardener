@@ -1,0 +1,5 @@
+variants:
+  "1.20":
+    image: "golang:1.20.8"
+  "1.21":
+    image: "golang:1.21.1"
