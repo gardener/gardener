@@ -25,12 +25,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/extension"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
@@ -39,8 +41,9 @@ const (
 	// ApplicationName is the name of the application.
 	ApplicationName string = "local-ext-shoot"
 	// ManagedResourceNamesShoot is the name used to describe the managed shoot resources.
-	ManagedResourceNamesShoot string = ApplicationName
-	finalizer                 string = "extensions.gardener.cloud/local-ext-shoot"
+	ManagedResourceNamesShoot      string = ApplicationName
+	finalizer                      string = "extensions.gardener.cloud/local-ext-shoot"
+	AnnotationTestForceDeleteShoot string = "test-force-delete"
 )
 
 type actuator struct {
@@ -85,34 +88,42 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 		return err
 	}
 
-	configMap1 := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-configmap-1",
-			Namespace:  ex.Namespace,
-			Finalizers: []string{finalizer},
-		},
-	}
-
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, configMap1, func() error {
-		configMap1.Labels = getLabels()
-		return nil
-	}); err != nil {
+	cluster, err := extensionscontroller.GetCluster(ctx, a.client, ex.Namespace)
+	if err != nil {
 		return err
 	}
 
-	configMap2 := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-configmap-2",
-			Namespace:  ex.Namespace,
-			Finalizers: []string{finalizer},
-		},
-	}
+	// Create the resources only for force-delete e2e test
+	if kubernetesutils.HasMetaDataAnnotation(cluster.Shoot, AnnotationTestForceDeleteShoot, "true") {
+		configMap1 := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "test-configmap-1",
+				Namespace:  ex.Namespace,
+				Finalizers: []string{finalizer},
+			},
+		}
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, configMap2, func() error {
-		configMap2.Labels = getLabels()
-		return nil
-	}); err != nil {
-		return err
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, configMap1, func() error {
+			configMap1.Labels = getLabels()
+			return nil
+		}); err != nil {
+			return err
+		}
+
+		configMap2 := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "test-configmap-2",
+				Namespace:  ex.Namespace,
+				Finalizers: []string{finalizer},
+			},
+		}
+
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, configMap2, func() error {
+			configMap2.Labels = getLabels()
+			return nil
+		}); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -130,19 +141,7 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, ex *extensionsv1
 		return err
 	}
 
-	return flow.Parallel(
-		func(ctx context.Context) error {
-			return managedresources.WaitUntilDeleted(timeoutShootCtx, a.client, namespace, ManagedResourceNamesShoot)
-		},
-		utilclient.ForceDeleteObjects(
-			ctx,
-			a.client,
-			"ConfigMap",
-			ex.Namespace,
-			&corev1.ConfigMapList{},
-			client.MatchingLabels{"app.kubernetes.io/name": ApplicationName},
-		),
-	)(ctx)
+	return managedresources.WaitUntilDeleted(timeoutShootCtx, a.client, namespace, ManagedResourceNamesShoot)
 }
 
 // ForceDelete force deletes the extension resource.
