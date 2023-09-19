@@ -1212,7 +1212,12 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 			}
 			for i, issuer := range kubeAPIServer.ServiceAccountConfig.AcceptedIssuers {
 				if issuers.Has(issuer) {
-					allErrs = append(allErrs, field.Duplicate(fldPath.Child("serviceAccountConfig", "acceptedIssuers").Index(i), issuer))
+					path := fldPath.Child("serviceAccountConfig", "acceptedIssuers").Index(i)
+					if kubeAPIServer.ServiceAccountConfig.Issuer != nil && issuer == *kubeAPIServer.ServiceAccountConfig.Issuer {
+						allErrs = append(allErrs, field.Invalid(path, issuer, fmt.Sprintf("acceptedIssuers cannot contains the issuer field value: %s", issuer)))
+					} else {
+						allErrs = append(allErrs, field.Duplicate(path, issuer))
+					}
 				} else {
 					issuers.Insert(issuer)
 				}

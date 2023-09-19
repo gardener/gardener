@@ -1912,8 +1912,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 			It("should not allow to specify duplicates in accepted issuers", func() {
 				shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
 					AcceptedIssuers: []string{
-						"issuer",
-						"issuer",
+						"foo",
+						"foo",
 					},
 				}
 
@@ -1927,15 +1927,16 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should not allow to duplicate the issuer in accepted issuers", func() {
 				shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
-					Issuer:          pointer.String("issuer"),
-					AcceptedIssuers: []string{"issuer"},
+					Issuer:          pointer.String("foo"),
+					AcceptedIssuers: []string{"foo"},
 				}
 
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeDuplicate),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.acceptedIssuers[0]"),
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.acceptedIssuers[0]"),
+					"Detail": ContainSubstring("acceptedIssuers cannot contains the issuer field value: foo"),
 				}))))
 			})
 		})
