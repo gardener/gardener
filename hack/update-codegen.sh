@@ -525,20 +525,15 @@ else
   fi
 fi
 
-if [[ ${#valid_options[@]} -gt 0 ]]; then
-  printf "\n> Generating codegen for groups: %s\n" "${valid_options[*]}"
-  if [[ "$MODE" == "sequential" ]]; then
-    for target in "${valid_options[@]}"; do
-      "$target"
-    done
-  elif [[ "$MODE" == "parallel" ]]; then
-    parallel --will-cite ::: "${valid_options[@]}"
-  else
-    printf "ERROR: Invalid mode ('%s'). Specify either 'parallel' or 'sequential'\n\n" "$MODE"
-    exit 1
-  fi
+printf "\n> Generating codegen for groups: %s\n" "${valid_options[*]}"
+if [[ "$MODE" == "sequential" ]]; then
+  for target in "${valid_options[@]}"; do
+    "$target"
+  done
+elif [[ "$MODE" == "parallel" ]]; then
+  parallel --will-cite ::: "${valid_options[@]}"
 else
-  printf "!! No valid groups provided for codegen, Available groups are: %s\n\n"  "${AVAILABLE_CODEGEN_OPTIONS[*]}"
+  printf "ERROR: Invalid mode ('%s'). Specify either 'parallel' or 'sequential'\n\n" "$MODE"
   exit 1
 fi
 
