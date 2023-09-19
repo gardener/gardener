@@ -1827,7 +1827,7 @@ func ValidateSystemComponentWorkers(workers []core.Worker, kubernetesVersion str
 			continue
 		}
 
-		if worker.Minimum == 0 || worker.Maximum == 0 {
+		if worker.Maximum == 0 {
 			continue
 		}
 		atLeastOnePoolWithAllowedSystemComponents = true
