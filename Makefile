@@ -174,21 +174,23 @@ check: $(GO_ADD_LICENSE) $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS) $(
 tools-for-generate: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GOIMPORTS) $(GO_TO_PROTOBUF) $(HELM) $(MOCKGEN) $(OPENAPI_GEN) $(PROTOC) $(PROTOC_GEN_GOGO) $(YAML2JSON) $(YQ)
 
 define GENERATE_HELP_INFO
-# Usage: make generate [WHAT="<targets>"] [MODE="<mode>"] [CODEGEN_GROUPS="<groups>"] [MANIFESTS_FOLDERS="<folders>"]
+# Usage: make generate [WHAT="<targets>"] [MODE="<mode>"] [CODEGEN_GROUPS="<groups>"] [MANIFESTS_DIRS="<folders>"]
 #
 # Options:
 #   WHAT              - Specify the targets to run (e.g., "protobuf codegen manifests logcheck gomegacheck monitoring-docs")
-#   CODEGEN_GROUPS    - Specify which groups to run the 'codegen' target for, not applicable for other targets (e.g., "authentication core extensions resources operator seedmanagement operations settings operatorconfig controllermanager admissioncontroller scheduler gardenlet resourcemanager shoottolerationrestriction shootdnsrewriting provider_local extensions_config")
-#   MANIFESTS_FOLDERS - Specify which folders to run the 'manifests' target in, not applicable for other targets (Default folders are "charts cmd example extensions imagevector pkg plugin test")
-#   MODE              - Specify the mode for the 'manifests' or 'codegen' target (e.g., "parallel" or "sequential")
+#   CODEGEN_GROUPS    - Specify which groups to run the 'codegen' target for, not applicable for other targets (e.g., "authentication_groups core_groups extensions_groups resources_groups 
+#                       operator_groups seedmanagement_groups operations_groups settings_groups operatorconfig_groups controllermanager_groups admissioncontroller_groups scheduler_groups 
+#                       gardenlet_groups resourcemanager_groups shoottolerationrestriction_groups shootdnsrewriting_groups provider_local_groups extensions_config_groups")
+#   MANIFESTS_DIRS    - Specify which directories to run the 'manifests' target in, not applicable for other targets (Default directories are "charts cmd example extensions imagevector pkg plugin test")
+#   MODE              - Specify the mode for the 'manifests' (default=parallel) or 'codegen' (default=sequential) target (e.g., "parallel" or "sequential")
 #
 # Examples:
 #   make generate
 #   make generate WHAT="codegen protobuf"
 #   make generate WHAT="codegen protobuf" MODE="sequential"
-#   make generate WHAT="manifests" MANIFESTS_FOLDERS="pkg/component plugin" MODE="sequential"
-#   make generate WHAT="codegen" CODEGEN_GROUPS="core extensions" 
-#   make generate WHAT="codegen manifests" CODEGEN_GROUPS="operator controllermanager" MANIFESTS_FOLDERS="charts example/provider-local"
+#   make generate WHAT="manifests" MANIFESTS_DIRS="pkg/component plugin" MODE="sequential"
+#   make generate WHAT="codegen" CODEGEN_GROUPS="core_groups extensions_groups" 
+#   make generate WHAT="codegen manifests" CODEGEN_GROUPS="operator_groups controllermanager_groups" MANIFESTS_DIRS="charts extensions/pkg"
 #
 endef
 export GENERATE_HELP_INFO
@@ -198,8 +200,8 @@ generate:
 	@echo "$$GENERATE_HELP_INFO"
 else
 generate: tools-for-generate
-	@printf "\nFor more info on the generate command, Run 'make generate PRINT_HELP=y'\n\n"
-	@REPO_ROOT=$(REPO_ROOT) LOGCHECK_DIR=$(LOGCHECK_DIR) GOMEGACHECK_DIR=$(GOMEGACHECK_DIR) hack/generate.sh --what "$(WHAT)" --codegengroups "$(CODEGEN_GROUPS)" --manifestsfolders "$(MANIFESTS_FOLDERS)" --mode "$(MODE)"
+	@printf "\nFor more info on the generate command, Run 'make generate PRINT_HELP=y'\n"
+	@REPO_ROOT=$(REPO_ROOT) LOGCHECK_DIR=$(LOGCHECK_DIR) GOMEGACHECK_DIR=$(GOMEGACHECK_DIR) hack/generate.sh --what "$(WHAT)" --codegen-groups "$(CODEGEN_GROUPS)" --manifests-dirs "$(MANIFESTS_DIRS)" --mode "$(MODE)"
 	$(MAKE) format
 endif
 

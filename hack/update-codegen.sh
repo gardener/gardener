@@ -18,7 +18,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-WHICH=()
+GROUPS=()
 MODE="sequential"
 
 # Friendly reminder if workspace location is not in $GOPATH
@@ -39,17 +39,6 @@ CURRENT_DIR=$(dirname $0)
 PROJECT_ROOT="${CURRENT_DIR}"/..
 export PROJECT_ROOT
 
-get_groups() {
-  local which=("$@")
-  local groups=()
-
-  for entry in "${which[@]}"; do
-    groups+=("${entry}_groups")
-  done
-
-  echo "${groups[@]}"
-}
-
 parse_flags() {
   while test $# -gt 0; do
     case "$1" in
@@ -59,9 +48,9 @@ parse_flags() {
         MODE="$1"
         fi
         ;;
-      --which)
+      --groups)
         shift
-        WHICH="${1:-$WHICH}"
+        GROUPS="${1:-$GROUPS}"
         ;;
       *)
         echo "Unknown argument: $1"
@@ -487,15 +476,15 @@ export -f openapi_definitions
 
 parse_flags "$@"
 
-groups=($(get_groups $WHICH))
 if [[ "$MODE" == "sequential" ]]; then
-  for target in "${groups[@]}"; do
+  for target in "${GROUPS[@]}"; do
     "$target"
   done
 elif [[ "$MODE" == "parallel" ]]; then
-  parallel --will-cite ::: "${groups[@]}"
+  parallel --will-cite ::: "${GROUPS[@]}"
 else
-  printf "!! Invalid mode, Specify either 'parallel' or 'sequential'\n\n"
+  printf "ERROR: Invalid mode ('%s'). Specify either 'parallel' or 'sequential'\n\n" "$MODE"
+  exit 1
 fi
 
 openapi_definitions

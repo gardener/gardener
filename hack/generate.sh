@@ -18,29 +18,29 @@ set -e
 
 WHAT="protobuf codegen manifests logcheck gomegacheck monitoring-docs"
 CODEGEN_GROUPS=""
-MANIFESTS_FOLDERS=""
+MANIFESTS_DIRS=""
 MODE="parallel"
 AVAILABLE_CODEGEN_OPTIONS=(
-  "authentication"
-  "core"
-  "extensions"
-  "resources"
-  "operator"
-  "seedmanagement"
-  "operations"
-  "settings"
-  "operatorconfig"
-  "controllermanager"
-  "admissioncontroller"
-  "scheduler"
-  "gardenlet"
-  "resourcemanager"
-  "shoottolerationrestriction"
-  "shootdnsrewriting"
-  "provider_local"
-  "extensions_config"
+  "authentication_groups"
+  "core_groups"
+  "extensions_groups"
+  "resources_groups"
+  "operator_groups"
+  "seedmanagement_groups"
+  "operations_groups"
+  "settings_groups"
+  "operatorconfig_groups"
+  "controllermanager_groups"
+  "admissioncontroller_groups"
+  "scheduler_groups"
+  "gardenlet_groups"
+  "resourcemanager_groups"
+  "shoottolerationrestriction_groups"
+  "shootdnsrewriting_groups"
+  "provider_local_groups"
+  "extensions_config_groups"
 )
-DEFAULT_MANIFESTS_FOLDERS=(
+DEFAULT_MANIFESTS_DIRS=(
   "charts"
   "cmd"
   "example"
@@ -64,13 +64,13 @@ parse_flags() {
         MODE="$1"
         fi
         ;;
-      --codegengroups)
+      --codegen-groups)
         shift
         CODEGEN_GROUPS="${1:-$CODEGEN_GROUPS}"
         ;;
-      --manifestsfolders)
+      --manifests-dirs)
         shift
-        MANIFESTS_FOLDERS="${1:-$MANIFESTS_FOLDERS}"
+        MANIFESTS_DIRS="${1:-$MANIFESTS_DIRS}"
         ;;
       *)
         echo "Unknown argument: $1"
@@ -82,15 +82,13 @@ parse_flags() {
 }
 
 overwrite_paths() {
-  local options=()
-  IFS=' ' read -ra options <<< "$@"
   local updated_paths=()
 
-  for option in "${options[@]}"; do
+  for option in "${@}"; do
     updated_paths+=("./$option/...")
   done
 
-  echo "${updated_paths[*]}"
+  echo "${updated_paths[@]}"
 }
 
 run_target() {
@@ -111,37 +109,41 @@ run_target() {
         IFS=' ' read -ra WHICH_ARRAY <<< "$which"
         for option in "${WHICH_ARRAY[@]}"; do
             valid=false
-        
+
             for valid_option in "${AVAILABLE_CODEGEN_OPTIONS[@]}"; do
                 if [[ "$option" == "$valid_option" ]]; then
                     valid=true
                     break
                 fi
             done
-        
+
             if $valid; then
                 valid_options+=("$option")
             else
                 invalid_options+=("$option")
             fi
         done
-        
+
         if [[ ${#invalid_options[@]} -gt 0 ]]; then
-            printf "Skipping invalid options: %s, Available options are: %s\n\n" "${invalid_options[*]}" "${AVAILABLE_CODEGEN_OPTIONS[*]}"
+            printf "Invalid options: %s, Available options are: %s\n\n" "${invalid_options[*]}" "${AVAILABLE_CODEGEN_OPTIONS[*]}"
+            exit 1
         fi
       fi
 
       if [[ ${#valid_options[@]} -gt 0 ]]; then
         printf "\n> Generating codegen for groups: %s\n" "${valid_options[*]}"
-        $REPO_ROOT/hack/update-codegen.sh --which "${valid_options[*]}" --mode "$MODE"
+        $REPO_ROOT/hack/update-codegen.sh --groups "${valid_options[*]}" --mode "$MODE"
       else
         printf "!! No valid groups provided for codegen, Available groups are: %s\n\n"  "${AVAILABLE_CODEGEN_OPTIONS[*]}"
+        exit 1
       fi
       ;;
     manifests)
-      local which=$MANIFESTS_FOLDERS
-      if [[ -z "$which" ]]; then
-        which=("${DEFAULT_MANIFESTS_FOLDERS[@]}")
+      local which=()
+      if [[ -z "$MANIFESTS_DIRS" ]]; then
+        which=("${DEFAULT_MANIFESTS_DIRS[@]}")
+      else
+        IFS=' ' read -ra which <<< "$MANIFESTS_DIRS"
       fi
 
       printf "\n> Generating manifests for folders: %s\n" "${which[*]}"
@@ -151,7 +153,8 @@ run_target() {
       elif [[ "$MODE" == "parallel" ]]; then
         $REPO_ROOT/hack/generate-parallel.sh "${which[@]}"
       else
-        printf "!! Invalid mode, Specify either 'parallel' or 'sequential'\n\n"
+        printf "ERROR: Invalid mode ('%s'). Specify either 'parallel' or 'sequential'\n\n" "$MODE"
+        exit 1
       fi
       ;;
     logcheck)
