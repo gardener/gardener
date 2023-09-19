@@ -639,7 +639,7 @@ var _ = Describe("KubeAPIServer", func() {
 		})
 	})
 
-	// TODO(acumino): Enable this test again when fakeclient start supporting scale subresource.
+	// TODO(acumino): Enable this test again once https://github.com/kubernetes-sigs/controller-runtime/issues/2503 is fixed.
 
 	// Describe("#ScaleKubeAPIServerToOne", func() {
 	// 	deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: seedNamespace}}
