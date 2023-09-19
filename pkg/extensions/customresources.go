@@ -140,7 +140,7 @@ func DeleteExtensionObject(
 	obj extensionsv1alpha1.Object,
 	deleteOpts ...client.DeleteOption,
 ) error {
-	if err := gardenerutils.ConfirmDeletion(ctx, c, obj, false); err != nil {
+	if err := gardenerutils.ConfirmDeletion(ctx, c, obj); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
 		}

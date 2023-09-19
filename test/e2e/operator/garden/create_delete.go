@@ -62,7 +62,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			ctx, cancel = context.WithTimeout(parentCtx, 5*time.Minute)
 			defer cancel()
 
-			Expect(gardenerutils.ConfirmDeletion(ctx, runtimeClient, garden, false)).To(Succeed())
+			Expect(gardenerutils.ConfirmDeletion(ctx, runtimeClient, garden)).To(Succeed())
 			Expect(runtimeClient.Delete(ctx, garden)).To(Succeed())
 			Expect(runtimeClient.Delete(ctx, backupSecret)).To(Succeed())
 			waitForGardenToBeDeleted(ctx, garden)

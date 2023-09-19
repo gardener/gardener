@@ -86,7 +86,7 @@ func (c *crd) Destroy(ctx context.Context) error {
 		return fmt.Errorf("cannot delete etcd CRDs because there are still druidv1alpha1.Etcd resources left in the cluster")
 	}
 
-	if err := gardenerutils.ConfirmDeletion(ctx, c.client, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: etcdCRDName}}, false); client.IgnoreNotFound(err) != nil {
+	if err := gardenerutils.ConfirmDeletion(ctx, c.client, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: etcdCRDName}}); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
@@ -99,7 +99,7 @@ func (c *crd) Destroy(ctx context.Context) error {
 		return fmt.Errorf("cannot delete etcd CRDs because there are still druidv1alpha1.EtcdCopyBackupsTask resources left in the cluster")
 	}
 
-	if err := gardenerutils.ConfirmDeletion(ctx, c.client, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: etcdCopyBackupsTaskCRDName}}, false); client.IgnoreNotFound(err) != nil {
+	if err := gardenerutils.ConfirmDeletion(ctx, c.client, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: etcdCopyBackupsTaskCRDName}}); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 

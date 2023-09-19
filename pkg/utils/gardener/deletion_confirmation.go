@@ -54,14 +54,11 @@ func CheckIfDeletionIsConfirmed(obj client.Object) error {
 }
 
 // ConfirmDeletion adds Gardener's deletion confirmation and timestamp annotation to the given object and sends a PATCH
-// request. If forceDelete is set to true, it adds the force deletion annotation as well. It does not ignore `NotFound` errors while patching.
-func ConfirmDeletion(ctx context.Context, w client.Writer, obj client.Object, forceDelete bool) error {
+// request.
+func ConfirmDeletion(ctx context.Context, w client.Writer, obj client.Object) error {
 	patch := client.MergeFrom(obj.DeepCopyObject().(client.Object))
 	kubernetesutils.SetMetaDataAnnotation(obj, ConfirmationDeletion, "true")
 	kubernetesutils.SetMetaDataAnnotation(obj, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
-	if forceDelete {
-		kubernetesutils.SetMetaDataAnnotation(obj, v1beta1constants.AnnotationConfirmationForceDeletion, "true")
-	}
 	return w.Patch(ctx, obj, patch)
 }
 

@@ -119,7 +119,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		log.Info("Shoot cluster lifetime expired, deleting Shoot", "expirationTime", expirationTime)
 
 		// We have to annotate the Shoot to confirm the deletion.
-		if err := gardenerutils.ConfirmDeletion(ctx, r.Client, shoot, false); err != nil {
+		if err := gardenerutils.ConfirmDeletion(ctx, r.Client, shoot); err != nil {
 			if apierrors.IsNotFound(err) {
 				return reconcile.Result{}, nil
 			}

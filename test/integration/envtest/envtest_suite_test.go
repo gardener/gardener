@@ -105,7 +105,7 @@ var _ = BeforeSuite(func() {
 
 	DeferCleanup(func() {
 		By("Delete Project")
-		Expect(client.IgnoreNotFound(gardener.ConfirmDeletion(ctx, testClient, project, false))).To(Succeed())
+		Expect(client.IgnoreNotFound(gardener.ConfirmDeletion(ctx, testClient, project))).To(Succeed())
 		Expect(client.IgnoreNotFound(testClient.Delete(ctx, project))).To(Succeed())
 	})
 

@@ -32,7 +32,7 @@ var _ = Describe("GardenerTestEnvironment", func() {
 		project := &gardencorev1beta1.Project{ObjectMeta: metav1.ObjectMeta{GenerateName: "test-"}}
 		Expect(testClient.Create(ctx, project)).To(Succeed())
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(project), project)).To(Succeed())
-		Expect(gardenerutils.ConfirmDeletion(ctx, testClient, project, false)).To(Succeed())
+		Expect(gardenerutils.ConfirmDeletion(ctx, testClient, project)).To(Succeed())
 		Expect(testClient.Delete(ctx, project)).To(Succeed())
 	})
 

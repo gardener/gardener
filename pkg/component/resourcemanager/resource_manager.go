@@ -402,7 +402,7 @@ func (r *resourceManager) Destroy(ctx context.Context) error {
 			return err
 		}
 
-		if err := gardenerutils.ConfirmDeletion(ctx, r.client, crd, false); client.IgnoreNotFound(err) != nil {
+		if err := gardenerutils.ConfirmDeletion(ctx, r.client, crd); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 
