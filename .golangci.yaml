@@ -35,6 +35,7 @@ issues:
   - indent-error-flow # if block ends with a return statement, so drop this else and outdent its block
   - "exported: (type|func) name will be used as .* by other packages, and that stutters;"
   - unused-parameter # parameter '.*' seems to be unused, consider removing or renaming it as _
+  - 'duplicated-imports: Package "embed" already imported' # Allow duplicated import for "embed" package
   # typecheck:
   - "undeclared name: `.*`"
   - "\".*\" imported but not used"
@@ -46,6 +47,9 @@ issues:
     text: "SA1019:" # Excludes messages where deprecated variables are used
 
 linters-settings:
+  revive:
+    rules:
+    - name: duplicated-imports
   importas:
     alias:
       # External imported packages
