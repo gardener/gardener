@@ -18,8 +18,28 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-GROUPS=()
+CODEGEN_GROUPS=""
 MODE="sequential"
+AVAILABLE_CODEGEN_OPTIONS=(
+  "authentication_groups"
+  "core_groups"
+  "extensions_groups"
+  "resources_groups"
+  "operator_groups"
+  "seedmanagement_groups"
+  "operations_groups"
+  "settings_groups"
+  "operatorconfig_groups"
+  "controllermanager_groups"
+  "admissioncontroller_groups"
+  "scheduler_groups"
+  "gardenlet_groups"
+  "resourcemanager_groups"
+  "shoottolerationrestriction_groups"
+  "shootdnsrewriting_groups"
+  "provider_local_groups"
+  "extensions_config_groups"
+)
 
 # Friendly reminder if workspace location is not in $GOPATH
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
@@ -50,7 +70,7 @@ parse_flags() {
         ;;
       --groups)
         shift
-        GROUPS="${1:-$GROUPS}"
+        CODEGEN_GROUPS="${1:-$CODEGEN_GROUPS}"
         ;;
       *)
         echo "Unknown argument: $1"
@@ -476,14 +496,49 @@ export -f openapi_definitions
 
 parse_flags "$@"
 
-if [[ "$MODE" == "sequential" ]]; then
-  for target in "${GROUPS[@]}"; do
-    "$target"
-  done
-elif [[ "$MODE" == "parallel" ]]; then
-  parallel --will-cite ::: "${GROUPS[@]}"
+valid_options=()
+invalid_options=()
+
+if [[ -z "$CODEGEN_GROUPS" ]]; then
+  valid_options=("${AVAILABLE_CODEGEN_OPTIONS[@]}")
 else
-  printf "ERROR: Invalid mode ('%s'). Specify either 'parallel' or 'sequential'\n\n" "$MODE"
+  IFS=' ' read -ra OPTIONS_ARRAY <<< "$CODEGEN_GROUPS"
+  for option in "${OPTIONS_ARRAY[@]}"; do
+    valid=false
+    for valid_option in "${AVAILABLE_CODEGEN_OPTIONS[@]}"; do
+        if [[ "$option" == "$valid_option" ]]; then
+            valid=true
+            break
+        fi
+    done
+    
+    if $valid; then
+        valid_options+=("$option")
+    else
+        invalid_options+=("$option")
+    fi
+  done
+
+  if [[ ${#invalid_options[@]} -gt 0 ]]; then
+    printf "Invalid options: %s, Available options are: %s\n\n" "${invalid_options[*]}" "${AVAILABLE_CODEGEN_OPTIONS[*]}"
+    exit 1
+  fi
+fi
+
+if [[ ${#valid_options[@]} -gt 0 ]]; then
+  printf "\n> Generating codegen for groups: %s\n" "${valid_options[*]}"
+  if [[ "$MODE" == "sequential" ]]; then
+    for target in "${valid_options[@]}"; do
+      "$target"
+    done
+  elif [[ "$MODE" == "parallel" ]]; then
+    parallel --will-cite ::: "${valid_options[@]}"
+  else
+    printf "ERROR: Invalid mode ('%s'). Specify either 'parallel' or 'sequential'\n\n" "$MODE"
+    exit 1
+  fi
+else
+  printf "!! No valid groups provided for codegen, Available groups are: %s\n\n"  "${AVAILABLE_CODEGEN_OPTIONS[*]}"
   exit 1
 fi
 

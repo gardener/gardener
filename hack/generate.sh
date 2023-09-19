@@ -20,26 +20,6 @@ WHAT="protobuf codegen manifests logcheck gomegacheck monitoring-docs"
 CODEGEN_GROUPS=""
 MANIFESTS_DIRS=""
 MODE="parallel"
-AVAILABLE_CODEGEN_OPTIONS=(
-  "authentication_groups"
-  "core_groups"
-  "extensions_groups"
-  "resources_groups"
-  "operator_groups"
-  "seedmanagement_groups"
-  "operations_groups"
-  "settings_groups"
-  "operatorconfig_groups"
-  "controllermanager_groups"
-  "admissioncontroller_groups"
-  "scheduler_groups"
-  "gardenlet_groups"
-  "resourcemanager_groups"
-  "shoottolerationrestriction_groups"
-  "shootdnsrewriting_groups"
-  "provider_local_groups"
-  "extensions_config_groups"
-)
 DEFAULT_MANIFESTS_DIRS=(
   "charts"
   "cmd"
@@ -98,45 +78,7 @@ run_target() {
       $REPO_ROOT/hack/update-protobuf.sh
       ;;
     codegen)
-      local which=$CODEGEN_GROUPS
-      local valid_options=()
-      local invalid_options=()
-
-      if [[ -z "$which" ]]; then
-        which=("${AVAILABLE_CODEGEN_OPTIONS[@]}")
-        valid_options=("${AVAILABLE_CODEGEN_OPTIONS[@]}")
-      else
-        IFS=' ' read -ra WHICH_ARRAY <<< "$which"
-        for option in "${WHICH_ARRAY[@]}"; do
-            valid=false
-
-            for valid_option in "${AVAILABLE_CODEGEN_OPTIONS[@]}"; do
-                if [[ "$option" == "$valid_option" ]]; then
-                    valid=true
-                    break
-                fi
-            done
-
-            if $valid; then
-                valid_options+=("$option")
-            else
-                invalid_options+=("$option")
-            fi
-        done
-
-        if [[ ${#invalid_options[@]} -gt 0 ]]; then
-            printf "Invalid options: %s, Available options are: %s\n\n" "${invalid_options[*]}" "${AVAILABLE_CODEGEN_OPTIONS[*]}"
-            exit 1
-        fi
-      fi
-
-      if [[ ${#valid_options[@]} -gt 0 ]]; then
-        printf "\n> Generating codegen for groups: %s\n" "${valid_options[*]}"
-        $REPO_ROOT/hack/update-codegen.sh --groups "${valid_options[*]}" --mode "$MODE"
-      else
-        printf "!! No valid groups provided for codegen, Available groups are: %s\n\n"  "${AVAILABLE_CODEGEN_OPTIONS[*]}"
-        exit 1
-      fi
+      $REPO_ROOT/hack/update-codegen.sh --groups "$CODEGEN_GROUPS" --mode "$MODE"
       ;;
     manifests)
       local which=()
