@@ -19,7 +19,7 @@ set -e
 WHAT="protobuf codegen manifests logcheck gomegacheck monitoring-docs"
 CODEGEN_GROUPS=""
 MANIFESTS_DIRS=""
-MODE="parallel"
+MODE=""
 DEFAULT_MANIFESTS_DIRS=(
   "charts"
   "cmd"
@@ -78,10 +78,13 @@ run_target() {
       $REPO_ROOT/hack/update-protobuf.sh
       ;;
     codegen)
-      $REPO_ROOT/hack/update-codegen.sh --groups "$CODEGEN_GROUPS" --mode "$MODE"
+      local mode="${MODE:-sequential}"  
+      $REPO_ROOT/hack/update-codegen.sh --groups "$CODEGEN_GROUPS" --mode "$mode"
       ;;
     manifests)
       local which=()
+      local mode="${MODE:-parallel}"  
+
       if [[ -z "$MANIFESTS_DIRS" ]]; then
         which=("${DEFAULT_MANIFESTS_DIRS[@]}")
       else
@@ -89,13 +92,13 @@ run_target() {
       fi
 
       printf "\n> Generating manifests for folders: %s\n" "${which[*]}"
-      if [[ "$MODE" == "sequential" ]]; then
+      if [[ "$mode" == "sequential" ]]; then
         # In sequential mode, paths need to be converted to go package notation (e.g., ./charts/...)
         $REPO_ROOT/hack/generate-sequential.sh $(overwrite_paths "${which[@]}")
-      elif [[ "$MODE" == "parallel" ]]; then
+      elif [[ "$mode" == "parallel" ]]; then
         $REPO_ROOT/hack/generate-parallel.sh "${which[@]}"
       else
-        printf "ERROR: Invalid mode ('%s'). Specify either 'parallel' or 'sequential'\n\n" "$MODE"
+        printf "ERROR: Invalid mode ('%s'). Specify either 'parallel' or 'sequential'\n\n" "$mode"
         exit 1
       fi
       ;;
