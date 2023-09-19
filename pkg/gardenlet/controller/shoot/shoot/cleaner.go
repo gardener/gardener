@@ -192,6 +192,10 @@ func (c *Cleaner) finalizeShootManagedResources(ctx context.Context, namespace s
 
 	shootMRList := &resourcesv1alpha1.ManagedResourceList{}
 	for _, mr := range mrList.Items {
+		// TODO(rfranzke): Uncomment the next line after v1.85 has been released.
+		// if pointer.StringDeref(mr.Spec.Class, "") != resourcesv1alpha1.ResourceManagerClassShoot {
+		// 	continue
+		// }
 		if mr.Spec.Class != nil {
 			continue
 		}
