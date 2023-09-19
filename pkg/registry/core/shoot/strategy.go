@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/registry/rest"
@@ -72,6 +73,8 @@ func (shootStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	removeForbiddenFinalizers(shoot)
 	// TODO(acumino): Drop this after v1.83 has been released.
 	removeDuplicateExtensions(shoot)
+	// TODO(dimitar-kostadinov): Drop this after v1.83 has been released.
+	removeDuplicateServiceAccountIssuers(shoot)
 }
 
 func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
@@ -197,14 +200,14 @@ func removeDuplicateExtensions(shoot *core.Shoot) {
 func removeDuplicateServiceAccountIssuers(shoot *core.Shoot) {
 	apiSrv := shoot.Spec.Kubernetes.KubeAPIServer
 	if apiSrv != nil && apiSrv.ServiceAccountConfig != nil && len(apiSrv.ServiceAccountConfig.AcceptedIssuers) > 0 {
-		issuers := make(map[string]struct{})
+		issuers := sets.New[string]()
 		if apiSrv.ServiceAccountConfig.Issuer != nil {
-			issuers[*apiSrv.ServiceAccountConfig.Issuer] = struct{}{}
+			issuers.Insert(*apiSrv.ServiceAccountConfig.Issuer)
 		}
 		var acceptedIssuers []string
 		for _, issuer := range apiSrv.ServiceAccountConfig.AcceptedIssuers {
-			if _, ok := issuers[issuer]; !ok {
-				issuers[issuer] = struct{}{}
+			if !issuers.Has(issuer) {
+				issuers.Insert(issuer)
 				acceptedIssuers = append(acceptedIssuers, issuer)
 			}
 		}

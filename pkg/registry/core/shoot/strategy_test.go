@@ -131,6 +131,25 @@ var _ = Describe("Strategy", func() {
 					"Disabled": Equal(pointer.Bool(true)),
 				})))
 		})
+
+		It("should remove duplicate service account issuers", func() {
+			shoot := &core.Shoot{
+				Spec: core.ShootSpec{
+					Kubernetes: core.Kubernetes{
+						KubeAPIServer: &core.KubeAPIServerConfig{
+							ServiceAccountConfig: &core.ServiceAccountConfig{
+								Issuer:          pointer.String("foo"),
+								AcceptedIssuers: []string{"foo", "foo", "bar", "bar"},
+							},
+						},
+					},
+				},
+			}
+
+			shootregistry.NewStrategy(0).PrepareForCreate(context.TODO(), shoot)
+
+			Expect(shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.AcceptedIssuers).To(Equal([]string{"bar"}))
+		})
 	})
 
 	Describe("#PrepareForUpdate", func() {
