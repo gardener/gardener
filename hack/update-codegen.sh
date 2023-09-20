@@ -18,6 +18,29 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+CODEGEN_GROUPS=""
+MODE="sequential"
+AVAILABLE_CODEGEN_OPTIONS=(
+  "authentication_groups"
+  "core_groups"
+  "extensions_groups"
+  "resources_groups"
+  "operator_groups"
+  "seedmanagement_groups"
+  "operations_groups"
+  "settings_groups"
+  "operatorconfig_groups"
+  "controllermanager_groups"
+  "admissioncontroller_groups"
+  "scheduler_groups"
+  "gardenlet_groups"
+  "resourcemanager_groups"
+  "shoottolerationrestriction_groups"
+  "shootdnsrewriting_groups"
+  "provider_local_groups"
+  "extensions_config_groups"
+)
+
 # Friendly reminder if workspace location is not in $GOPATH
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 if [ "${SCRIPT_DIR}" != "$(realpath $GOPATH)/src/github.com/gardener/gardener/hack" ]; then
@@ -35,6 +58,28 @@ rm -f ${GOPATH}/bin/*-gen
 CURRENT_DIR=$(dirname $0)
 PROJECT_ROOT="${CURRENT_DIR}"/..
 export PROJECT_ROOT
+
+parse_flags() {
+  while test $# -gt 0; do
+    case "$1" in
+      --mode)
+        shift
+        if [[ -n "$1" ]]; then
+        MODE="$1"
+        fi
+        ;;
+      --groups)
+        shift
+        CODEGEN_GROUPS="${1:-$CODEGEN_GROUPS}"
+        ;;
+      *)
+        echo "Unknown argument: $1"
+        exit 1
+        ;;
+    esac
+    shift
+  done
+}
 
 # core.gardener.cloud APIs
 
@@ -422,9 +467,9 @@ export -f extensions_config_groups
 # OpenAPI definitions
 
 openapi_definitions() {
-  echo "Generating openapi definitions"
+  echo "> Generating openapi definitions"
   rm -Rf ./${PROJECT_ROOT}/openapi/openapi_generated.go
-  openapi-gen "$@" \
+  openapi-gen \
     --v 1 \
     --logtostderr \
     --input-dirs=github.com/gardener/gardener/pkg/apis/authentication/v1alpha1 \
@@ -449,46 +494,47 @@ openapi_definitions() {
 }
 export -f openapi_definitions
 
-if [[ $# -gt 0 && "$1" == "--parallel" ]]; then
-  shift 1
-  parallel --will-cite ::: \
-    authentication_groups \
-    core_groups \
-    extensions_groups \
-    resources_groups \
-    operator_groups \
-    seedmanagement_groups \
-    operations_groups \
-    settings_groups \
-    operatorconfig_groups \
-    controllermanager_groups \
-    admissioncontroller_groups \
-    scheduler_groups \
-    gardenlet_groups \
-    shoottolerationrestriction_groups \
-    shootdnsrewriting_groups \
-    provider_local_groups \
-    extensions_config_groups
-    resourcemanager_groups
+parse_flags "$@"
+
+valid_options=()
+invalid_options=()
+
+if [[ -z "$CODEGEN_GROUPS" ]]; then
+  valid_options=("${AVAILABLE_CODEGEN_OPTIONS[@]}")
 else
-  authentication_groups
-  core_groups
-  extensions_groups
-  resources_groups
-  operator_groups
-  seedmanagement_groups
-  operations_groups
-  settings_groups
-  operatorconfig_groups
-  controllermanager_groups
-  admissioncontroller_groups
-  scheduler_groups
-  gardenlet_groups
-  resourcemanager_groups
-  shoottolerationrestriction_groups
-  shootdnsrewriting_groups
-  provider_local_groups
-  extensions_config_groups
+  IFS=' ' read -ra OPTIONS_ARRAY <<< "$CODEGEN_GROUPS"
+  for option in "${OPTIONS_ARRAY[@]}"; do
+    valid=false
+    for valid_option in "${AVAILABLE_CODEGEN_OPTIONS[@]}"; do
+        if [[ "$option" == "$valid_option" ]]; then
+            valid=true
+            break
+        fi
+    done
+    
+    if $valid; then
+        valid_options+=("$option")
+    else
+        invalid_options+=("$option")
+    fi
+  done
+
+  if [[ ${#invalid_options[@]} -gt 0 ]]; then
+    printf "ERROR: Invalid options: %s, Available options are: %s\n\n" "${invalid_options[*]}" "${AVAILABLE_CODEGEN_OPTIONS[*]}"
+    exit 1
+  fi
 fi
 
-openapi_definitions "$@"
+printf "\n> Generating codegen for groups: %s\n" "${valid_options[*]}"
+if [[ "$MODE" == "sequential" ]]; then
+  for target in "${valid_options[@]}"; do
+    "$target"
+  done
+elif [[ "$MODE" == "parallel" ]]; then
+  parallel --will-cite ::: "${valid_options[@]}"
+else
+  printf "ERROR: Invalid mode ('%s'). Specify either 'parallel' or 'sequential'\n\n" "$MODE"
+  exit 1
+fi
+
+openapi_definitions

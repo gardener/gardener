@@ -17,8 +17,19 @@
 set -e
 
 WHAT="protobuf codegen manifests logcheck gomegacheck monitoring-docs"
-WHICH="charts cmd example extensions pkg plugin test"
-MODE="parallel"
+CODEGEN_GROUPS=""
+MANIFESTS_DIRS=""
+MODE=""
+DEFAULT_MANIFESTS_DIRS=(
+  "charts"
+  "cmd"
+  "example"
+  "extensions"
+  "imagevector"
+  "pkg"
+  "plugin"
+  "test"
+)
 
 parse_flags() {
   while test $# -gt 0; do
@@ -33,9 +44,13 @@ parse_flags() {
         MODE="$1"
         fi
         ;;
-      --which)
+      --codegen-groups)
         shift
-        WHICH="${1:-$WHICH}"
+        CODEGEN_GROUPS="${1:-$CODEGEN_GROUPS}"
+        ;;
+      --manifests-dirs)
+        shift
+        MANIFESTS_DIRS="${1:-$MANIFESTS_DIRS}"
         ;;
       *)
         echo "Unknown argument: $1"
@@ -47,12 +62,13 @@ parse_flags() {
 }
 
 overwrite_paths() {
-  local which=$WHICH
-  IFS=' ' read -ra entries <<< "$which"
-  for entry in "${entries[@]}"; do
-    which=${which//$entry/./$entry/...}
+  local updated_paths=()
+
+  for option in "${@}"; do
+    updated_paths+=("./$option/...")
   done
-  echo "$which"
+
+  echo "${updated_paths[@]}"
 }
 
 run_target() {
@@ -62,15 +78,28 @@ run_target() {
       $REPO_ROOT/hack/update-protobuf.sh
       ;;
     codegen)
-      $REPO_ROOT/hack/update-codegen.sh
+      local mode="${MODE:-sequential}"  
+      $REPO_ROOT/hack/update-codegen.sh --groups "$CODEGEN_GROUPS" --mode "$mode"
       ;;
     manifests)
-      if [[ "$MODE" == "sequential" ]]; then
-        # In sequential mode, paths need to be converted to go package notation (e.g., ./charts/...)
-        which=$(overwrite_paths)
-        $REPO_ROOT/hack/generate-sequential.sh $which
+      local which=()
+      local mode="${MODE:-parallel}"  
+
+      if [[ -z "$MANIFESTS_DIRS" ]]; then
+        which=("${DEFAULT_MANIFESTS_DIRS[@]}")
       else
-        $REPO_ROOT/hack/generate-parallel.sh $WHICH
+        IFS=' ' read -ra which <<< "$MANIFESTS_DIRS"
+      fi
+
+      printf "\n> Generating manifests for folders: %s\n" "${which[*]}"
+      if [[ "$mode" == "sequential" ]]; then
+        # In sequential mode, paths need to be converted to go package notation (e.g., ./charts/...)
+        $REPO_ROOT/hack/generate-sequential.sh $(overwrite_paths "${which[@]}")
+      elif [[ "$mode" == "parallel" ]]; then
+        $REPO_ROOT/hack/generate-parallel.sh "${which[@]}"
+      else
+        printf "ERROR: Invalid mode ('%s'). Specify either 'parallel' or 'sequential'\n\n" "$mode"
+        exit 1
       fi
       ;;
     logcheck)
@@ -83,7 +112,7 @@ run_target() {
       $REPO_ROOT/hack/generate-monitoring-docs.sh
       ;;
     *)
-      printf "Unknown target: $target. Available targets are 'protobuf', 'codegen', 'manifests', 'logcheck', 'gomegacheck', 'monitoring-docs'.\n\n"
+      printf "ERROR: Unknown target: $target. Available targets are 'protobuf', 'codegen', 'manifests', 'logcheck', 'gomegacheck', 'monitoring-docs'.\n\n"
       ;;
   esac
 }
