@@ -131,6 +131,36 @@ func computeGardenerData(
 	[]gardencorev1beta1.GardenerResourceData,
 	error,
 ) {
+	secretsToPersist, err := computeSecretsToPersist(ctx, seedClient, seedNamespace)
+	if err != nil {
+		return nil, err
+	}
+
+	machineState, err := computeMachineState(ctx, seedClient, seedNamespace)
+	if err != nil {
+		return nil, err
+	}
+
+	machineStateJSON, err := json.Marshal(machineState)
+	if err != nil {
+		return nil, fmt.Errorf("failed marshalling machine state to JSON: %w", err)
+	}
+
+	return append(secretsToPersist, gardencorev1beta1.GardenerResourceData{
+		Name: "machine-state",
+		Type: v1beta1constants.DataTypeMachineState,
+		Data: runtime.RawExtension{Raw: machineStateJSON},
+	}), nil
+}
+
+func computeSecretsToPersist(
+	ctx context.Context,
+	seedClient client.Client,
+	seedNamespace string,
+) (
+	[]gardencorev1beta1.GardenerResourceData,
+	error,
+) {
 	secretList := &corev1.SecretList{}
 	if err := seedClient.List(ctx, secretList, client.InNamespace(seedNamespace), client.MatchingLabels{
 		secretsmanager.LabelKeyManagedBy: secretsmanager.LabelValueSecretsManager,
@@ -150,7 +180,7 @@ func computeGardenerData(
 		dataList = append(dataList, gardencorev1beta1.GardenerResourceData{
 			Name:   secret.Name,
 			Labels: secret.Labels,
-			Type:   "secret",
+			Type:   v1beta1constants.DataTypeSecret,
 			Data:   runtime.RawExtension{Raw: dataJSON},
 		})
 	}

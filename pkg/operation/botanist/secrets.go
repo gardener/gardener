@@ -115,7 +115,7 @@ func (b *Botanist) restoreSecretsFromShootStateForSecretsManagerAdoption(ctx con
 		entry := v
 
 		if entry.Labels[secretsmanager.LabelKeyManagedBy] != secretsmanager.LabelValueSecretsManager ||
-			entry.Type != "secret" {
+			entry.Type != v1beta1constants.DataTypeSecret {
 			continue
 		}
 
