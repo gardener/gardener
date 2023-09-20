@@ -28,6 +28,7 @@ import (
 	extensionsworkercontroller "github.com/gardener/gardener/extensions/pkg/controller/worker"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -124,8 +125,8 @@ func addStateToMachineDeployment(worker *extensionsv1alpha1.Worker, wantedMachin
 	}
 
 	// Parse the worker state to MachineDeploymentStates
-	workerState := &extensionsworkercontroller.State{
-		MachineDeployments: make(map[string]*extensionsworkercontroller.MachineDeploymentState),
+	workerState := &shootstate.MachineState{
+		MachineDeployments: make(map[string]*shootstate.MachineDeploymentState),
 	}
 
 	if err := json.Unmarshal(worker.Status.State.Raw, &workerState); err != nil {

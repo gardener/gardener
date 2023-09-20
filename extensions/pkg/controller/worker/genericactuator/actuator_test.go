@@ -31,6 +31,7 @@ import (
 
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 )
 
 var _ = Describe("Actuator", func() {
@@ -83,14 +84,14 @@ var _ = Describe("Actuator", func() {
 	Describe("#removeWantedDeploymentWithoutState", func() {
 		var (
 			mdWithoutState            = worker.MachineDeployment{ClassName: "gcp", Name: "md-without-state"}
-			mdWithStateAndMachineSets = worker.MachineDeployment{ClassName: "gcp", Name: "md-with-state-machinesets", State: &worker.MachineDeploymentState{Replicas: 1, MachineSets: []machinev1alpha1.MachineSet{
+			mdWithStateAndMachineSets = worker.MachineDeployment{ClassName: "gcp", Name: "md-with-state-machinesets", State: &shootstate.MachineDeploymentState{Replicas: 1, MachineSets: []machinev1alpha1.MachineSet{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "machineSet",
 					},
 				},
 			}}}
-			mdWithEmptyState = worker.MachineDeployment{ClassName: "gcp", Name: "md-with-state", State: &worker.MachineDeploymentState{Replicas: 1, MachineSets: []machinev1alpha1.MachineSet{}}}
+			mdWithEmptyState = worker.MachineDeployment{ClassName: "gcp", Name: "md-with-state", State: &shootstate.MachineDeploymentState{Replicas: 1, MachineSets: []machinev1alpha1.MachineSet{}}}
 		)
 
 		It("should not panic for MachineDeployments without state", func() {
@@ -275,7 +276,7 @@ var _ = Describe("Actuator", func() {
 
 			machineDeployments = worker.MachineDeployments{
 				{
-					State: &worker.MachineDeploymentState{
+					State: &shootstate.MachineDeploymentState{
 						Replicas: 2,
 						MachineSets: []machinev1alpha1.MachineSet{
 							expectedMachineSet,
