@@ -41,6 +41,7 @@ import (
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/chart"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -327,7 +328,7 @@ const (
 //   - the machine set does not have a status that indicates (attempted) machine creation
 func isMachineControllerStuck(machineSets []machinev1alpha1.MachineSet, machineDeployments []machinev1alpha1.MachineDeployment) (bool, *string) {
 	// map the owner reference to the existing machine sets
-	ownerReferenceToMachineSet := extensionsworkerhelper.BuildOwnerToMachineSetsMap(machineSets)
+	ownerReferenceToMachineSet := gardenerutils.BuildOwnerToMachineSetsMap(machineSets)
 
 	for _, machineDeployment := range machineDeployments {
 		if !controllerutil.ContainsFinalizer(&machineDeployment, mcmFinalizer) {

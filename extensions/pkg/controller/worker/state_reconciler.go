@@ -32,10 +32,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	extensionsworkerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // TODO(rfranzke): Drop this stateReconciler after a few releases as soon as the shoot migrate flow persists the Shoot
@@ -163,7 +163,7 @@ func getExistingMachineSetsMap(ctx context.Context, c client.Client, namespace s
 		return cmp.Compare(a.Name, b.Name)
 	})
 
-	return extensionsworkerhelper.BuildOwnerToMachineSetsMap(existingMachineSets.Items), nil
+	return gardenerutils.BuildOwnerToMachineSetsMap(existingMachineSets.Items), nil
 }
 
 // getExistingMachinesMap returns a map of the existing Machines as values and the name of their owner
@@ -192,7 +192,7 @@ func getExistingMachinesMap(ctx context.Context, c client.Client, namespace stri
 		return cmp.Compare(a.Name, b.Name)
 	})
 
-	return extensionsworkerhelper.BuildOwnerToMachinesMap(filteredMachines), nil
+	return gardenerutils.BuildOwnerToMachinesMap(filteredMachines), nil
 }
 
 func addMachineSetToMachineDeploymentState(machineSets []machinev1alpha1.MachineSet, machineDeploymentState *MachineDeploymentState) {

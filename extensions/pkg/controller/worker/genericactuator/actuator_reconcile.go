@@ -35,6 +35,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 )
@@ -337,7 +338,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 		}
 
 		// map the owner reference to the machine sets
-		ownerReferenceToMachineSet := extensionsworkerhelper.BuildOwnerToMachineSetsMap(machineSets.Items)
+		ownerReferenceToMachineSet := gardenerutils.BuildOwnerToMachineSetsMap(machineSets.Items)
 
 		// Collect the numbers of available and desired replicas.
 		for _, deployment := range machineDeployments.Items {
