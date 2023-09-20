@@ -131,12 +131,9 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 			return reconcile.Result{}, err
 		}
 
-		progressing, description, err := r.checkProgressing(ctx, obj)
-		if err != nil {
+		if progressing, description, err := r.checkProgressing(ctx, obj); err != nil {
 			return reconcile.Result{}, err
-		}
-
-		if progressing {
+		} else if progressing {
 			var (
 				reason  = ref.Kind + "Progressing"
 				message = fmt.Sprintf("%s %q is progressing: %s", ref.Kind, objectKey.String(), description)
