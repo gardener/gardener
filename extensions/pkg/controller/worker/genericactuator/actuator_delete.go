@@ -90,7 +90,7 @@ func (a *genericActuator) Delete(ctx context.Context, log logr.Logger, worker *e
 
 	// Delete all machine classes.
 	log.Info("Deleting all machine classes")
-	if err := a.client.DeleteAllOf(ctx, workerDelegate.MachineClass(), client.InNamespace(worker.Namespace)); err != nil {
+	if err := a.client.DeleteAllOf(ctx, &machinev1alpha1.MachineClass{}, client.InNamespace(worker.Namespace)); err != nil {
 		return fmt.Errorf("cleaning up all machine classes failed: %w", err)
 	}
 
@@ -227,7 +227,7 @@ func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, 
 
 		// Check whether all machine classes have been deleted.
 		if countMachineClasses != 0 {
-			machineClassList := workerDelegate.MachineClassList()
+			machineClassList := &machinev1alpha1.MachineClassList{}
 			if err := a.reader.List(ctx, machineClassList, client.InNamespace(worker.Namespace)); err != nil {
 				return retryutils.SevereError(err)
 			}

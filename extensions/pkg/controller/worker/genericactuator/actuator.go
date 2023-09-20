@@ -113,7 +113,8 @@ func (a *genericActuator) cleanupMachineDeployments(ctx context.Context, logger 
 	return nil
 }
 
-func (a *genericActuator) listMachineClassNames(ctx context.Context, namespace string, machineClassList client.ObjectList) (sets.Set[string], error) {
+func (a *genericActuator) listMachineClassNames(ctx context.Context, namespace string) (sets.Set[string], error) {
+	machineClassList := &machinev1alpha1.MachineClassList{}
 	if err := a.client.List(ctx, machineClassList, client.InNamespace(namespace)); err != nil {
 		return nil, err
 	}
@@ -135,8 +136,9 @@ func (a *genericActuator) listMachineClassNames(ctx context.Context, namespace s
 	return classNames, nil
 }
 
-func (a *genericActuator) cleanupMachineClasses(ctx context.Context, logger logr.Logger, namespace string, machineClassList client.ObjectList, wantedMachineDeployments worker.MachineDeployments) error {
+func (a *genericActuator) cleanupMachineClasses(ctx context.Context, logger logr.Logger, namespace string, wantedMachineDeployments worker.MachineDeployments) error {
 	logger.Info("Cleaning up machine classes")
+	machineClassList := &machinev1alpha1.MachineClassList{}
 	if err := a.client.List(ctx, machineClassList, client.InNamespace(namespace)); err != nil {
 		return err
 	}

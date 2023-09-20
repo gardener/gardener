@@ -97,7 +97,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 	)
 
 	// Get list of existing machine class names
-	existingMachineClassNames, err := a.listMachineClassNames(ctx, worker.Namespace, workerDelegate.MachineClassList())
+	existingMachineClassNames, err := a.listMachineClassNames(ctx, worker.Namespace)
 	if err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 	}
 
 	// Generate machine deployment configuration based on previously computed list of deployments and deploy them.
-	if err := deployMachineDeployments(ctx, log, a.client, cluster, worker, existingMachineDeployments, wantedMachineDeployments, workerDelegate.MachineClassKind(), clusterAutoscalerUsed); err != nil {
+	if err := deployMachineDeployments(ctx, log, a.client, cluster, worker, existingMachineDeployments, wantedMachineDeployments, clusterAutoscalerUsed); err != nil {
 		return fmt.Errorf("failed to generate the machine deployment config: %w", err)
 	}
 
@@ -164,7 +164,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 	}
 
 	// Delete all old machine classes (i.e. those which were not previously computed but exist in the cluster).
-	if err := a.cleanupMachineClasses(ctx, log, worker.Namespace, workerDelegate.MachineClassList(), wantedMachineDeployments); err != nil {
+	if err := a.cleanupMachineClasses(ctx, log, worker.Namespace, wantedMachineDeployments); err != nil {
 		return fmt.Errorf("failed to cleanup the machine classes: %w", err)
 	}
 
@@ -209,7 +209,6 @@ func deployMachineDeployments(
 	worker *extensionsv1alpha1.Worker,
 	existingMachineDeployments *machinev1alpha1.MachineDeploymentList,
 	wantedMachineDeployments extensionsworkercontroller.MachineDeployments,
-	classKind string,
 	clusterAutoscalerUsed bool,
 ) error {
 	log.Info("Deploying machine deployments")
@@ -291,7 +290,7 @@ func deployMachineDeployments(
 					},
 					Spec: machinev1alpha1.MachineSpec{
 						Class: machinev1alpha1.ClassSpec{
-							Kind: classKind,
+							Kind: "MachineClass",
 							Name: deployment.ClassName,
 						},
 						NodeTemplateSpec: machinev1alpha1.NodeTemplateSpec{

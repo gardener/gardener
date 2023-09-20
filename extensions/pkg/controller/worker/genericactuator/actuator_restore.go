@@ -89,7 +89,7 @@ func RestoreWithoutReconcile(
 	}
 
 	// Generate machine deployment configuration based on previously computed list of deployments and deploy them.
-	if err := deployMachineDeployments(ctx, log, cl, cluster, worker, existingMachineDeployments, wantedMachineDeployments, workerDelegate.MachineClassKind(), true); err != nil {
+	if err := deployMachineDeployments(ctx, log, cl, cluster, worker, existingMachineDeployments, wantedMachineDeployments, true); err != nil {
 		return fmt.Errorf("failed to restore the machine deployment config: %w", err)
 	}
 

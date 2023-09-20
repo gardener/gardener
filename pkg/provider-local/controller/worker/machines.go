@@ -31,21 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/provider-local/local"
 )
 
-// MachineClassKind yields the name of the machine class kind used by local provider.
-func (w *workerDelegate) MachineClassKind() string {
-	return "MachineClass"
-}
-
-// MachineClassList yields a newly initialized MachineClassList object.
-func (w *workerDelegate) MachineClassList() client.ObjectList {
-	return &machinev1alpha1.MachineClassList{}
-}
-
-// MachineClass yields a newly initialized MachineClass object.
-func (w *workerDelegate) MachineClass() client.Object {
-	return &machinev1alpha1.MachineClass{}
-}
-
 // DeployMachineClasses generates and creates the local provider specific machine classes.
 func (w *workerDelegate) DeployMachineClasses(ctx context.Context) error {
 	if w.machineClasses == nil {

@@ -81,7 +81,7 @@ func (a *genericActuator) Migrate(ctx context.Context, log logr.Logger, worker *
 		return fmt.Errorf("shallow deletion of all machineDeployments failed: %w", err)
 	}
 
-	if err := a.shallowDeleteAllObjects(ctx, log, worker.Namespace, workerDelegate.MachineClassList()); err != nil {
+	if err := a.shallowDeleteAllObjects(ctx, log, worker.Namespace, &machinev1alpha1.MachineClassList{}); err != nil {
 		return fmt.Errorf("cleaning up machine classes failed: %w", err)
 	}
 

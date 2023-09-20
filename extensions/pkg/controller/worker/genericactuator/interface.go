@@ -17,8 +17,6 @@ package genericactuator
 import (
 	"context"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -33,12 +31,6 @@ type WorkerDelegate interface {
 	// that are required by the machine-controller-manager inside the shoot cluster itself.
 	GetMachineControllerManagerShootChartValues(context.Context) (map[string]interface{}, error)
 
-	// MachineClassKind yields the name of the provider specific machine class.
-	MachineClassKind() string
-	// MachineClass yields a newly initialized machine class object.
-	MachineClass() client.Object
-	// MachineClassList yields a newly initialized machine class list object.
-	MachineClassList() client.ObjectList
 	// DeployMachineClasses generates and creates the provider specific machine classes.
 	DeployMachineClasses(context.Context) error
 
