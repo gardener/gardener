@@ -2,11 +2,11 @@ images:
 - name: machine-controller-manager
   sourceRepository: github.com/gardener/machine-controller-manager
   repository: eu.gcr.io/gardener-project/gardener/machine-controller-manager
-  tag: "v0.47.0"
+  tag: "v0.49.3"
 - name: machine-controller-manager-provider-local
   sourceRepository: github.com/gardener/machine-controller-manager-provider-local
   repository: ghcr.io/gardener/machine-controller-manager-provider-local
-  tag: sha-8881d39
+  tag: sha-8e34e10
 - name: local-path-provisioner
   sourceRepository: github.com/kubernetes-sigs/kind/tree/main/images/local-path-provisioner
   repository: eu.gcr.io/gardener-project/3rd/kindest/local-path-provisioner

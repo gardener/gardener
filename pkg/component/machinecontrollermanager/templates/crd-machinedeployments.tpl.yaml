@@ -1,3 +1,4 @@
+# Source: https://github.com/gardener/machine-controller-manager/blob/5b9a383788ef0723ca12eb86c688cdf3b157277d/kubernetes/crds/machine.sapcloud.io_machinedeployments.yaml
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
@@ -46,17 +47,18 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Deployment enables declarative updates for machines and MachineSets.
+        description: MachineDeployment enables declarative updates for machines and
+          MachineSets.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
-                  of an object. Servers should convert recognized schemas to the latest
-                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
             description: 'Kind is a string value representing the REST resource this
-                  object represents. Servers may infer this from the endpoint the client
-                  submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
@@ -81,7 +83,7 @@ spec:
                   a condition with a ProgressDeadlineExceeded reason will be surfaced
                   in the MachineDeployment status. Note that progress will not be
                   estimated during the time a MachineDeployment is paused. This is
-                  not set by default.
+                  not set by default, which is treated as infinite deadline.
                 format: int32
                 type: integer
               replicas:
@@ -150,49 +152,50 @@ spec:
                       are ANDed.
                     type: object
                 type: object
+                x-kubernetes-map-type: atomic
               strategy:
                 description: The MachineDeployment strategy to use to replace existing
                   machines with new ones.
                 properties:
                   rollingUpdate:
                     description: 'Rolling update config params. Present only if MachineDeploymentStrategyType
-                          = RollingUpdate. --- TODO: Update this to follow our convention
-                          for oneOf, whatever we decide it to be.'
+                      = RollingUpdate. --- TODO: Update this to follow our convention
+                      for oneOf, whatever we decide it to be.'
                     properties:
                       maxSurge:
                         anyOf:
                         - type: integer
                         - type: string
                         description: 'The maximum number of machines that can be scheduled
-                              above the desired number of machines. Value can be an absolute
-                              number (ex: 5) or a percentage of desired machines (ex:
-                              10%). This can not be 0 if MaxUnavailable is 0. Absolute
-                              number is calculated from percentage by rounding up. By
-                              default, a value of 1 is used. Example: when this is set
-                              to 30%, the new MC can be scaled up immediately when the
-                              rolling update starts, such that the total number of old
-                              and new machines do not exceed 130% of desired machines.
-                              Once old machines have been killed, new MC can be scaled
-                              up further, ensuring that total number of machines running
-                              at any time during the update is atmost 130% of desired
-                              machines.'
+                          above the desired number of machines. Value can be an absolute
+                          number (ex: 5) or a percentage of desired machines (ex:
+                          10%). This can not be 0 if MaxUnavailable is 0. Absolute
+                          number is calculated from percentage by rounding up. By
+                          default, a value of 1 is used. Example: when this is set
+                          to 30%, the new MC can be scaled up immediately when the
+                          rolling update starts, such that the total number of old
+                          and new machines do not exceed 130% of desired machines.
+                          Once old machines have been killed, new MC can be scaled
+                          up further, ensuring that total number of machines running
+                          at any time during the update is atmost 130% of desired
+                          machines.'
                         x-kubernetes-int-or-string: true
                       maxUnavailable:
                         anyOf:
                         - type: integer
                         - type: string
                         description: 'The maximum number of machines that can be unavailable
-                              during the update. Value can be an absolute number (ex:
-                              5) or a percentage of desired machines (ex: 10%). Absolute
-                              number is calculated from percentage by rounding down. This
-                              can not be 0 if MaxSurge is 0. By default, a fixed value
-                              of 1 is used. Example: when this is set to 30%, the old
-                              MC can be scaled down to 70% of desired machines immediately
-                              when the rolling update starts. Once new machines are ready,
-                              old MC can be scaled down further, followed by scaling up
-                              the new MC, ensuring that the total number of machines available
-                              at all times during the update is at least 70% of desired
-                              machines.'
+                          during the update. Value can be an absolute number (ex:
+                          5) or a percentage of desired machines (ex: 10%). Absolute
+                          number is calculated from percentage by rounding down. This
+                          can not be 0 if MaxSurge is 0. By default, a fixed value
+                          of 1 is used. Example: when this is set to 30%, the old
+                          MC can be scaled down to 70% of desired machines immediately
+                          when the rolling update starts. Once new machines are ready,
+                          old MC can be scaled down further, followed by scaling up
+                          the new MC, ensuring that the total number of machines available
+                          at all times during the update is at least 70% of desired
+                          machines.'
                         x-kubernetes-int-or-string: true
                     type: object
                   type:
@@ -204,12 +207,12 @@ spec:
                 description: Template describes the machines that will be created.
                 properties:
                   metadata:
-                    description: 'Standard object''s metadata. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata'
+                    description: 'Standard object''s metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata'
                     type: object
                     x-kubernetes-preserve-unknown-fields: true
                   spec:
                     description: 'Specification of the desired behavior of the machine.
-                          More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status'
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status'
                     properties:
                       class:
                         description: Class contains the machineclass attributes of
@@ -259,10 +262,9 @@ spec:
                               node is created with.
                             properties:
                               configSource:
-                                description: If specified, the source to get node
-                                  configuration from The DynamicKubeletConfig feature
-                                  gate must be enabled for the Kubelet to use this
-                                  field
+                                description: 'Deprecated: Previously used to specify
+                                  the source of the node''s configuration for the
+                                  DynamicKubeletConfig feature. This feature is removed.'
                                 properties:
                                   configMap:
                                     description: ConfigMap is a reference to a Node's
@@ -303,7 +305,7 @@ spec:
                                 type: object
                               externalID:
                                 description: 'Deprecated. Not all kubelets will set
-                                      this field. Remove field after 1.13. see: https://issues.k8s.io/61966'
+                                  this field. Remove field after 1.13. see: https://issues.k8s.io/61966'
                                 type: string
                               podCIDR:
                                 description: PodCIDR represents the pod IP range assigned
@@ -320,7 +322,7 @@ spec:
                                 type: array
                               providerID:
                                 description: 'ID of the node assigned by the cloud
-                                      provider in the format: <ProviderName>://<ProviderSpecificNodeID>'
+                                  provider in the format: <ProviderName>://<ProviderSpecificNodeID>'
                                 type: string
                               taints:
                                 description: If specified, the node's taints.
@@ -356,8 +358,8 @@ spec:
                                 type: array
                               unschedulable:
                                 description: 'Unschedulable controls node schedulability
-                                      of new pods. By default, node is schedulable. More
-                                      info: https://kubernetes.io/docs/concepts/nodes/node/#manual-node-administration'
+                                  of new pods. By default, node is schedulable. More
+                                  info: https://kubernetes.io/docs/concepts/nodes/node/#manual-node-administration'
                                 type: boolean
                             type: object
                         type: object
@@ -430,6 +432,9 @@ spec:
                       properties:
                         description:
                           description: Description of the current operation
+                          type: string
+                        errorCode:
+                          description: ErrorCode of the current operation if any
                           type: string
                         lastUpdateTime:
                           description: Last update time of current operation
