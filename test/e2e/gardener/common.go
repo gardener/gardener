@@ -76,6 +76,7 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 			SecretBindingName: pointer.String("local"),
 			CloudProfileName:  "local",
 			Kubernetes: gardencorev1beta1.Kubernetes{
+				// TODO(oliver-goetz): Update to 1.28.2 after the merge of https://github.com/gardener/gardener/pull/8479 has been merged and released (after 1.80 has been released).
 				Version:                     "1.27.1",
 				EnableStaticTokenKubeconfig: pointer.Bool(false),
 				Kubelet: &gardencorev1beta1.KubeletConfig{

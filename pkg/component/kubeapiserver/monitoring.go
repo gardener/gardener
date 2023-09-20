@@ -26,6 +26,7 @@ import (
 
 // TODO: The etcd_object_counts metric is removed in K8s 1.25 (https://github.com/kubernetes/kubernetes/pull/110337). Remove this metric when we remove support for K8s 1.25.
 // TODO: The etcd_db_total_size_in_bytes metric is renamed to apiserver_storage_db_total_size_in_bytes in K8s 1.26 (https://github.com/kubernetes/kubernetes/pull/113310). Remove this metric when we remove support for K8s 1.26.
+// TODO: The apiserver_storage_db_total_size_in_bytes metric is replaced by apiserver_storage_size_bytes in K8s 1.28 (https://github.com/kubernetes/kubernetes/pull/118812). Remove this metric when we remove support for K8s 1.28.
 
 const (
 	monitoringPrometheusJobName = "kube-apiserver"
@@ -59,6 +60,7 @@ const (
 	monitoringMetricApiserverWatchDuration                               = "apiserver_watch_duration"
 	monitoringMetricEtcdDbTotalSizeInBytes                               = "etcd_db_total_size_in_bytes"
 	monitoringMetricApiserverStorageDbTotalSizeInBytes                   = "apiserver_storage_db_total_size_in_bytes"
+	monitoringMetricApiserverStorageSizeBytes                            = "apiserver_storage_size_bytes"
 	monitoringMetricEtcdObjectCounts                                     = "etcd_object_counts"
 	monitoringMetricApiserverStorageObjects                              = "apiserver_storage_objects"
 	monitoringMetricEtcdRequestDurationSeconds                           = "etcd_request_duration_seconds_.+"
@@ -233,6 +235,7 @@ var (
 		monitoringMetricApiserverWatchEventsTotal,
 		monitoringMetricEtcdDbTotalSizeInBytes,
 		monitoringMetricApiserverStorageDbTotalSizeInBytes,
+		monitoringMetricApiserverStorageSizeBytes,
 		monitoringMetricEtcdObjectCounts,
 		monitoringMetricApiserverStorageObjects,
 		monitoringMetricEtcdRequestDurationSeconds,
