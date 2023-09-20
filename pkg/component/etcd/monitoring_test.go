@@ -404,7 +404,20 @@ static_configs:
 
 	alertingRulesBackup = `  # etcd backup failure alerts
   - alert: KubeEtcdDeltaBackupFailed
-    expr: ((time() - etcdbr_snapshot_latest_timestamp{job="kube-etcd3-backup-restore-` + testRole + `",kind="Incr"} > bool 900) + (etcdbr_snapshot_required{job="kube-etcd3-backup-restore-` + testRole + `", kind="Incr"} >= bool 1) == 2) + on(pod,role) group_left 0 * (etcd_server_is_leader{job="kube-etcd3-` + testRole + `"} == 1 )
+    expr:
+        (
+            (
+                time() - etcdbr_snapshot_latest_timestamp{job="kube-etcd3-backup-restore-` + testRole + `",kind="Incr"}
+              > bool
+                900
+            )
+          +
+            (etcdbr_snapshot_required{job="kube-etcd3-backup-restore-` + testRole + `",kind="Incr"} >= bool 1)
+          ==
+            2
+        )
+      + on (pod, role) group_left ()
+        0 * (etcd_server_is_leader{job="kube-etcd3-` + testRole + `"} == 1)
     for: 15m
     labels:
       service: etcd
@@ -415,7 +428,20 @@ static_configs:
       description: No delta snapshot for the past at least 30 minutes taken by backup-restore leader.
       summary: Etcd delta snapshot failure.
   - alert: KubeEtcdFullBackupFailed
-    expr: ((time() - etcdbr_snapshot_latest_timestamp{job="kube-etcd3-backup-restore-` + testRole + `",kind="Full"} > bool 86400) + (etcdbr_snapshot_required{job="kube-etcd3-backup-restore-` + testRole + `", kind="Full"} >= bool 1) == 2) + on(pod,role) group_left 0 * (etcd_server_is_leader{job="kube-etcd3-` + testRole + `"} == 1 )
+    expr:
+        (
+            (
+                time() - etcdbr_snapshot_latest_timestamp{job="kube-etcd3-backup-restore-` + testRole + `",kind="Full"}
+              > bool
+                86400
+            )
+          +
+            (etcdbr_snapshot_required{job="kube-etcd3-backup-restore-` + testRole + `",kind="Full"} >= bool 1)
+          ==
+            2
+        )
+      + on (pod, role) group_left ()
+        0 * (etcd_server_is_leader{job="kube-etcd3-` + testRole + `"} == 1)
     for: 15m
     labels:
       service: etcd
