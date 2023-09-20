@@ -520,7 +520,7 @@ else
   done
 
   if [[ ${#invalid_options[@]} -gt 0 ]]; then
-    printf "Invalid options: %s, Available options are: %s\n\n" "${invalid_options[*]}" "${AVAILABLE_CODEGEN_OPTIONS[*]}"
+    printf "ERROR: Invalid options: %s, Available options are: %s\n\n" "${invalid_options[*]}" "${AVAILABLE_CODEGEN_OPTIONS[*]}"
     exit 1
   fi
 fi
