@@ -15,6 +15,8 @@
 package kubernetes_test
 
 import (
+	"context"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -23,8 +25,12 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	. "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -433,6 +439,61 @@ var _ = Describe("Pod Utils", func() {
 			}
 
 			Expect(HasEnvVar(container, envVarName)).To(BeTrue())
+		})
+	})
+
+	Describe("#GetDeploymentForPod", func() {
+		var (
+			ctx        = context.TODO()
+			fakeClient client.Client
+
+			deployment *appsv1.Deployment
+			replicaSet *appsv1.ReplicaSet
+		)
+
+		BeforeEach(func() {
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
+
+			deployment = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "deployment", Namespace: namespace}}
+			replicaSet = &appsv1.ReplicaSet{ObjectMeta: metav1.ObjectMeta{Name: "replicaset", Namespace: namespace, OwnerReferences: []metav1.OwnerReference{{APIVersion: "apps/v1", Kind: "Deployment", Name: deployment.Name}}}}
+		})
+
+		It("should return nil because pod has no owner reference to a ReplicaSet", func() {
+			deployment, err := GetDeploymentForPod(ctx, fakeClient, namespace, nil)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(deployment).To(BeNil())
+		})
+
+		It("should return an error because ReplicaSet does not exist", func() {
+			deployment, err := GetDeploymentForPod(ctx, fakeClient, namespace, []metav1.OwnerReference{{APIVersion: "apps/v1", Kind: "ReplicaSet", Name: replicaSet.Name}})
+			Expect(err).To(MatchError(ContainSubstring("failed reading ReplicaSet")))
+			Expect(deployment).To(BeNil())
+		})
+
+		It("should return nil because ReplicaSet has no owner reference to a Deployment", func() {
+			replicaSet.OwnerReferences = nil
+			Expect(fakeClient.Create(ctx, replicaSet)).To(Succeed())
+
+			deployment, err := GetDeploymentForPod(ctx, fakeClient, namespace, []metav1.OwnerReference{{APIVersion: "apps/v1", Kind: "ReplicaSet", Name: replicaSet.Name}})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(deployment).To(BeNil())
+		})
+
+		It("should return an error because Deployment does not exist", func() {
+			Expect(fakeClient.Create(ctx, replicaSet)).To(Succeed())
+
+			deployment, err := GetDeploymentForPod(ctx, fakeClient, namespace, []metav1.OwnerReference{{APIVersion: "apps/v1", Kind: "ReplicaSet", Name: replicaSet.Name}})
+			Expect(err).To(MatchError(ContainSubstring("failed reading Deployment")))
+			Expect(deployment).To(BeNil())
+		})
+
+		It("should return the owning deployment", func() {
+			Expect(fakeClient.Create(ctx, replicaSet)).To(Succeed())
+			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
+
+			deployment, err := GetDeploymentForPod(ctx, fakeClient, namespace, []metav1.OwnerReference{{APIVersion: "apps/v1", Kind: "ReplicaSet", Name: replicaSet.Name}})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(deployment).To(Equal(deployment))
 		})
 	})
 })

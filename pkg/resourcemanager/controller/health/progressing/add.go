@@ -17,21 +17,28 @@ package progressing
 import (
 	"context"
 
+	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/health/utils"
 	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // ControllerName is the name of the controller.
@@ -85,10 +92,17 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 	// in Shoot clusters, because they are controlled by the end user. In this case, we rely on periodic syncs only.
 	// If we want to have immediate updates for managed resources in Shoots in the future as well, we could consider
 	// adding labels to managed resources and watch them explicitly.
+	pod := &metav1.PartialObjectMetadata{}
+	pod.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Pod"))
+
 	b = b.WatchesRawSource(
 		source.Kind(targetCluster.GetCache(), &appsv1.Deployment{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
 		builder.WithPredicates(r.ProgressingStatusChanged(ctx)),
+	).WatchesRawSource(
+		source.Kind(targetCluster.GetCache(), pod),
+		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), r.MapPodToDeploymentToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
+		builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Delete)),
 	).WatchesRawSource(
 		source.Kind(targetCluster.GetCache(), &appsv1.StatefulSet{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
@@ -120,5 +134,23 @@ func (r *Reconciler) ProgressingStatusChanged(ctx context.Context) predicate.Pre
 		},
 		DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
 		GenericFunc: func(_ event.GenericEvent) bool { return false },
+	}
+}
+
+// MapPodToDeploymentToOriginManagedResource is a mapper.MapFunc for pods to their origin Deployment and origin
+// ManagedResource.
+func (r *Reconciler) MapPodToDeploymentToOriginManagedResource(clusterID string) mapper.MapFunc {
+	return func(ctx context.Context, log logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
+		deployment, err := kubernetesutils.GetDeploymentForPod(ctx, reader, obj.GetNamespace(), obj.GetOwnerReferences())
+		if err != nil {
+			log.Error(err, "Failed getting Deployment for Pod", "pod", client.ObjectKeyFromObject(obj))
+			return nil
+		}
+
+		if deployment == nil {
+			return nil
+		}
+
+		return utils.MapToOriginManagedResource(clusterID)(ctx, log, reader, deployment)
 	}
 }
