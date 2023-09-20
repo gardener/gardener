@@ -121,9 +121,13 @@ func (c *Cleaner) WaitUntilMachineResourcesDeleted(ctx context.Context) error {
 }
 
 // SetKeepObjectsForManagedResources sets keepObjects to false for all ManagedResource resources in the shoot namespace.
-func (c *cleaner) SetKeepObjectsForManagedResources(ctx context.Context) error {
-	return c.applyToObjects(ctx, c.seedNamespace, &resourcesv1alpha1.ManagedResourceList{}, func(ctx context.Context, object client.Object) error {
-		c.log.Info("Setting keepObjects to false for ManagedResource", "managedresource", client.ObjectKeyFromObject(object))
+func (c *Cleaner) SetKeepObjectsForManagedResources(ctx context.Context) error {
+	mrList := &resourcesv1alpha1.ManagedResourceList{}
+	if err := c.seedClient.List(ctx, mrList, client.InNamespace(c.seedNamespace)); err != nil {
+		return err
+	}
+
+	return utilclient.ApplyToObjects(ctx, mrList, func(ctx context.Context, object client.Object) error {
 		return managedresources.SetKeepObjects(ctx, c.seedClient, object.GetNamespace(), object.GetName(), false)
 	})
 }
