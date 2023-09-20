@@ -131,7 +131,12 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 			return reconcile.Result{}, err
 		}
 
-		if progressing, description := checkProgressing(obj); progressing {
+		progressing, description, err := r.checkProgressing(ctx, obj)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		if progressing {
 			var (
 				reason  = ref.Kind + "Progressing"
 				message = fmt.Sprintf("%s %q is progressing: %s", ref.Kind, objectKey.String(), description)
@@ -173,19 +178,39 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 
 // checkProgressing checks whether the given object is progressing. It returns a bool indicating whether the object is
 // progressing, a reason for it if so and an error if the check failed.
-func checkProgressing(obj client.Object) (bool, string) {
+func (r *Reconciler) checkProgressing(ctx context.Context, obj client.Object) (bool, string, error) {
 	if obj.GetAnnotations()[resourcesv1alpha1.SkipHealthCheck] == "true" {
-		return false, ""
+		return false, "", nil
 	}
+
+	var (
+		progressing bool
+		reason      string
+	)
 
 	switch o := obj.(type) {
 	case *appsv1.Deployment:
-		return health.IsDeploymentProgressing(o)
+		progressing, reason = health.IsDeploymentProgressing(o)
+		if progressing {
+			return true, reason, nil
+		}
+
+		// health.IsDeploymentProgressing might return false even if there are still (terminating) pods in the system
+		// belonging to an older ReplicaSet of the Deployment, hence, we have to check for this explicitly.
+		exactNumberOfPods, err := health.DeploymentHasExactNumberOfPods(ctx, r.TargetClient, o)
+		if err != nil {
+			return progressing, reason, err
+		}
+		if !exactNumberOfPods {
+			return true, "there are still non-terminated old pods", nil
+		}
+
 	case *appsv1.StatefulSet:
-		return health.IsStatefulSetProgressing(o)
+		progressing, reason = health.IsStatefulSetProgressing(o)
+
 	case *appsv1.DaemonSet:
-		return health.IsDaemonSetProgressing(o)
+		progressing, reason = health.IsDaemonSetProgressing(o)
 	}
 
-	return false, ""
+	return progressing, reason, nil
 }

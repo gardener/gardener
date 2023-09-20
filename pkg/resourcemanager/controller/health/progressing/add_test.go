@@ -15,11 +15,15 @@
 package progressing_test
 
 import (
+	"context"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -27,11 +31,22 @@ import (
 )
 
 var _ = Describe("Add", func() {
+	var (
+		ctx        = context.TODO()
+		fakeClient client.Client
+		reconciler *Reconciler
+	)
+
+	BeforeEach(func() {
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
+		reconciler = &Reconciler{TargetClient: fakeClient}
+	})
+
 	Describe("#ProgressingStatusChanged", func() {
 		var p predicate.Predicate
 
 		BeforeEach(func() {
-			p = (&Reconciler{}).ProgressingStatusChanged()
+			p = reconciler.ProgressingStatusChanged(ctx)
 		})
 
 		Describe("#Create", func() {
@@ -100,7 +115,7 @@ var _ = Describe("Add", func() {
 			Context("deployments", func() {
 				tests(
 					func() client.Object {
-						return &appsv1.Deployment{}
+						return &appsv1.Deployment{Spec: appsv1.DeploymentSpec{Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}}}}
 					},
 					func(obj client.Object) {
 						deploy := obj.(*appsv1.Deployment)

@@ -88,15 +88,15 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 	b = b.WatchesRawSource(
 		source.Kind(targetCluster.GetCache(), &appsv1.Deployment{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
-		builder.WithPredicates(r.ProgressingStatusChanged()),
+		builder.WithPredicates(r.ProgressingStatusChanged(ctx)),
 	).WatchesRawSource(
 		source.Kind(targetCluster.GetCache(), &appsv1.StatefulSet{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
-		builder.WithPredicates(r.ProgressingStatusChanged()),
+		builder.WithPredicates(r.ProgressingStatusChanged(ctx)),
 	).WatchesRawSource(
 		source.Kind(targetCluster.GetCache(), &appsv1.DaemonSet{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
-		builder.WithPredicates(r.ProgressingStatusChanged()),
+		builder.WithPredicates(r.ProgressingStatusChanged(ctx)),
 	)
 
 	return b.Complete(r)
@@ -104,7 +104,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 
 // ProgressingStatusChanged returns a predicate that filters for events that indicate a change in the object's
 // progressing status.
-func (r *Reconciler) ProgressingStatusChanged() predicate.Predicate {
+func (r *Reconciler) ProgressingStatusChanged(ctx context.Context) predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(_ event.CreateEvent) bool { return false },
 		UpdateFunc: func(e event.UpdateEvent) bool {
@@ -113,8 +113,8 @@ func (r *Reconciler) ProgressingStatusChanged() predicate.Predicate {
 				return true
 			}
 
-			oldProgressing, _ := checkProgressing(e.ObjectOld)
-			newProgressing, _ := checkProgressing(e.ObjectNew)
+			oldProgressing, _, _ := r.checkProgressing(ctx, e.ObjectOld)
+			newProgressing, _, _ := r.checkProgressing(ctx, e.ObjectNew)
 
 			return oldProgressing != newProgressing
 		},
