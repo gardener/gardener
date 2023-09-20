@@ -71,6 +71,9 @@ PROTOC_VERSION ?= 24.1
 SKAFFOLD_VERSION ?= v2.3.0
 YQ_VERSION ?= v4.35.1
 
+# default dir for importing tool binaries
+TOOLS_BIN_SOURCE_DIR ?= /gardenertools
+
 export TOOLS_BIN_DIR := $(TOOLS_BIN_DIR)
 export PATH := $(abspath $(TOOLS_BIN_DIR)):$(PATH)
 
@@ -97,6 +100,16 @@ $(TOOLS_BIN_DIR)/.version_%:
 .PHONY: clean-tools-bin
 clean-tools-bin:
 	rm -rf $(TOOLS_BIN_DIR)/*
+
+.PHONY: import-tools-bin
+import-tools-bin:
+ifeq ($(shell if [ -d $(TOOLS_BIN_SOURCE_DIR) ]; then echo "found"; fi),found)
+	@echo "Copying tool binaries from $(TOOLS_BIN_SOURCE_DIR)"
+	@cp -rp $(TOOLS_BIN_SOURCE_DIR)/* $(TOOLS_BIN_SOURCE_DIR)/.* $(TOOLS_BIN_DIR)
+endif
+
+.PHONY: create-tools-bin
+create-tools-bin: $(CONTROLLER_GEN) $(DOCFORGE) $(GEN_CRD_API_REFERENCE_DOCS) $(GINKGO) $(GOIMPORTS) $(GOIMPORTSREVISER) $(GOLANGCI_LINT) $(GOMEGACHECK) $(GO_ADD_LICENSE) $(GO_APIDIFF) $(GO_VULN_CHECK) $(GO_TO_PROTOBUF) $(HELM) $(IMPORT_BOSS) $(KIND) $(KUBECTL) $(LOGCHECK) $(MOCKGEN) $(OPENAPI_GEN) $(PROMTOOL) $(PROTOC) $(PROTOC_GEN_GOGO) $(REPORT_COLLECTOR) $(SETUP_ENVTEST) $(SKAFFOLD) $(YAML2JSON) $(YQ)
 
 #########################################
 # Tools                                 #
