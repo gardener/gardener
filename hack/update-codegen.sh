@@ -385,7 +385,7 @@ export -f resourcemanager_groups
 nodeagent_groups() {
   echo "Generating API groups for pkg/nodeagent/apis/config"
 
-  bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
+  bash "${PROJECT_ROOT}"/hack/generate-internal-groups.sh \
     deepcopy,defaulter \
     github.com/gardener/gardener/pkg/client/componentconfig \
     github.com/gardener/gardener/pkg/nodeagent/apis \
@@ -393,7 +393,7 @@ nodeagent_groups() {
     "config:v1alpha1" \
     -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
 
-  bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
+  bash "${PROJECT_ROOT}"/hack/generate-internal-groups.sh \
     conversion \
     github.com/gardener/gardener/pkg/client/componentconfig \
     github.com/gardener/gardener/pkg/nodeagent/apis \

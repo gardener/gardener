@@ -29,7 +29,7 @@ type NodeAgentConfiguration struct {
 	// access the shoot api server.
 	APIServer APIServer
 
-	// SecretName defines the name of the secret in the shoot cluster control plane, which contains
+	// OperatingSystemConfigSecretName defines the name of the secret in the shoot cluster control plane, which contains
 	// the Operating System Config (OSC) for the gardener-node-agent.
 	OperatingSystemConfigSecretName string
 
