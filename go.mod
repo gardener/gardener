@@ -38,7 +38,7 @@ require (
 	golang.org/x/time v0.3.0
 	golang.org/x/tools v0.13.0
 	gomodules.xyz/jsonpatch/v2 v2.4.0
-	gonum.org/v1/gonum v0.12.0
+	gonum.org/v1/gonum v0.14.0
 	google.golang.org/protobuf v1.30.0
 	istio.io/api v0.0.0-20230217221049-9d422bf48675
 	istio.io/client-go v1.17.1
