@@ -671,12 +671,7 @@ func FilterDifferentMajorMinorVersion(currentSemVerVersion semver.Version) Versi
 // returns true if v does not have a consecutive minor version
 func FilterNonConsecutiveMinorVersion(currentSemVerVersion semver.Version) VersionPredicate {
 	return func(_ gardencorev1beta1.ExpirableVersion, v *semver.Version) (bool, error) {
-		isWithinRange, err := versionutils.CompareVersions(v.String(), "^", currentSemVerVersion.String())
-		if err != nil {
-			return true, err
-		}
-
-		if !isWithinRange {
+		if v.Major() != currentSemVerVersion.Major() {
 			return true, nil
 		}
 
