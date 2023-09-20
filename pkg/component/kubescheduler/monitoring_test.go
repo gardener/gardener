@@ -17,7 +17,7 @@ package kubescheduler_test
 import (
 	"path/filepath"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 
 	. "github.com/gardener/gardener/pkg/component/kubescheduler"

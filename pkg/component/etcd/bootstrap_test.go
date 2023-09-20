@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

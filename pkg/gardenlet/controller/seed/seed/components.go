@@ -17,7 +17,7 @@ package seed
 import (
 	"context"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	proberapi "github.com/gardener/dependency-watchdog/api/prober"
 	weederapi "github.com/gardener/dependency-watchdog/api/weeder"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"

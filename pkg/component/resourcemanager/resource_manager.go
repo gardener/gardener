@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	admissionv1 "k8s.io/api/admission/v1"

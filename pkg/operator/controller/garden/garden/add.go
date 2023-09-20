@@ -17,7 +17,7 @@ package garden
 import (
 	"fmt"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/builder"

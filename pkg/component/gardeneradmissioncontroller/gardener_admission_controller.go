@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"

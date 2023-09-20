@@ -19,7 +19,7 @@ import (
 	_ "embed"
 	"text/template"
 
-	"github.com/Masterminds/sprig"
+	"github.com/Masterminds/sprig/v3"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/pointer"
 

@@ -17,7 +17,7 @@ package botanist
 import (
 	"context"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 

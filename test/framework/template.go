@@ -22,7 +22,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Masterminds/sprig"
+	"github.com/Masterminds/sprig/v3"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 )

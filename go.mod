@@ -3,8 +3,8 @@ module github.com/gardener/gardener
 go 1.21
 
 require (
-	github.com/Masterminds/semver v1.5.0
-	github.com/Masterminds/sprig v2.22.0+incompatible
+	github.com/Masterminds/semver/v3 v3.2.1
+	github.com/Masterminds/sprig/v3 v3.2.2
 	github.com/ahmetb/gen-crd-api-reference-docs v0.3.0
 	github.com/bronze1man/yaml2json v0.0.0-20211227013850-8972abeaea25
 	github.com/coreos/go-systemd/v22 v22.5.0
@@ -71,6 +71,8 @@ require (
 require (
 	github.com/BurntSushi/toml v1.0.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
+	github.com/Masterminds/semver v1.5.0 // indirect
+	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
 	github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df // indirect
 	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a // indirect
@@ -136,6 +138,7 @@ require (
 	github.com/prometheus/common v0.44.0 // indirect
 	github.com/prometheus/procfs v0.10.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
+	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/spf13/afero v1.8.2 // indirect
 	github.com/spf13/cast v1.4.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect

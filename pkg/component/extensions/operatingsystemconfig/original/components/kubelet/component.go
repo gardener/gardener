@@ -20,8 +20,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/Masterminds/semver"
-	"github.com/Masterminds/sprig"
+	"github.com/Masterminds/semver/v3"
+	"github.com/Masterminds/sprig/v3"
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/imagevector"

@@ -22,7 +22,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"

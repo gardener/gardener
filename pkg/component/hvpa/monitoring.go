@@ -18,7 +18,7 @@ import (
 	"bytes"
 	"text/template"
 
-	"github.com/Masterminds/sprig"
+	"github.com/Masterminds/sprig/v3"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"

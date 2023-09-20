@@ -15,7 +15,7 @@
 package shared
 
 import (
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"

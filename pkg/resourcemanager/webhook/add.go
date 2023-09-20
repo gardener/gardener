@@ -17,7 +17,7 @@ package webhook
 import (
 	"fmt"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"

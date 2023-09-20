@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"k8s.io/apimachinery/pkg/util/wait"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/utils/clock"

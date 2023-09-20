@@ -20,7 +20,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"

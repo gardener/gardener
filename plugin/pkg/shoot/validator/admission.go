@@ -25,7 +25,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -1139,8 +1139,8 @@ func hasDomainIntersection(domainA, domainB string) bool {
 func defaultKubernetesVersion(constraints []core.ExpirableVersion, shootVersion string, fldPath *field.Path) (*string, field.ErrorList) {
 	var (
 		allErrs           = field.ErrorList{}
-		shootVersionMajor *int64
-		shootVersionMinor *int64
+		shootVersionMajor *uint64
+		shootVersionMinor *uint64
 		versionParts      = strings.Split(shootVersion, ".")
 	)
 
@@ -1153,7 +1153,7 @@ func defaultKubernetesVersion(constraints []core.ExpirableVersion, shootVersion 
 			allErrs = append(allErrs, field.Invalid(fldPath, versionParts[1], "must be a semantic version"))
 			return nil, allErrs
 		}
-		shootVersionMinor = pointer.Int64(int64(v))
+		shootVersionMinor = pointer.Uint64(uint64(v))
 	}
 	if len(versionParts) >= 1 && len(versionParts[0]) > 0 {
 		v, err := strconv.Atoi(versionParts[0])
@@ -1161,7 +1161,7 @@ func defaultKubernetesVersion(constraints []core.ExpirableVersion, shootVersion 
 			allErrs = append(allErrs, field.Invalid(fldPath, versionParts[0], "must be a semantic version"))
 			return nil, allErrs
 		}
-		shootVersionMajor = pointer.Int64(int64(v))
+		shootVersionMajor = pointer.Uint64(uint64(v))
 	}
 
 	if latestVersion := findLatestVersion(constraints, shootVersionMajor, shootVersionMinor); latestVersion != nil {
@@ -1172,7 +1172,7 @@ func defaultKubernetesVersion(constraints []core.ExpirableVersion, shootVersion 
 	return nil, allErrs
 }
 
-func findLatestVersion(constraints []core.ExpirableVersion, major, minor *int64) *semver.Version {
+func findLatestVersion(constraints []core.ExpirableVersion, major, minor *uint64) *semver.Version {
 	var latestVersion *semver.Version
 	for _, versionConstraint := range constraints {
 		// ignore expired versions
