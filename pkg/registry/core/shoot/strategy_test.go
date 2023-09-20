@@ -131,6 +131,25 @@ var _ = Describe("Strategy", func() {
 					"Disabled": Equal(pointer.Bool(true)),
 				})))
 		})
+
+		It("should remove duplicate service account issuers", func() {
+			shoot := &core.Shoot{
+				Spec: core.ShootSpec{
+					Kubernetes: core.Kubernetes{
+						KubeAPIServer: &core.KubeAPIServerConfig{
+							ServiceAccountConfig: &core.ServiceAccountConfig{
+								Issuer:          pointer.String("foo"),
+								AcceptedIssuers: []string{"foo", "foo", "bar", "bar"},
+							},
+						},
+					},
+				},
+			}
+
+			shootregistry.NewStrategy(0).PrepareForCreate(context.TODO(), shoot)
+
+			Expect(shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.AcceptedIssuers).To(Equal([]string{"bar"}))
+		})
 	})
 
 	Describe("#PrepareForUpdate", func() {
@@ -525,6 +544,57 @@ var _ = Describe("Strategy", func() {
 						"Type":     Equal("arbitrary-1"),
 						"Disabled": Equal(pointer.Bool(true)),
 					})))
+			})
+		})
+
+		Context("remove duplicate service account issuers", func() {
+			var (
+				oldShoot *core.Shoot
+				newShoot *core.Shoot
+			)
+
+			BeforeEach(func() {
+				oldShoot = &core.Shoot{
+					Spec: core.ShootSpec{
+						Kubernetes: core.Kubernetes{
+							KubeAPIServer: &core.KubeAPIServerConfig{
+								ServiceAccountConfig: &core.ServiceAccountConfig{
+									AcceptedIssuers: []string{"foo", "foo", "bar", "bar"},
+								},
+							},
+						},
+					},
+				}
+				newShoot = oldShoot.DeepCopy()
+			})
+
+			It("should do nothing when kubeAPIServer is nil", func() {
+				newShoot.Spec.Kubernetes.KubeAPIServer = nil
+				shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				Expect(newShoot.Spec.Kubernetes.KubeAPIServer).To(BeNil())
+			})
+
+			It("should do nothing when ServiceAccountConfig is nil", func() {
+				newShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = nil
+				shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				Expect(newShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig).To(BeNil())
+			})
+
+			It("should do nothing when no duplicates exist", func() {
+				newShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.AcceptedIssuers = []string{"foo", "bar", "baz"}
+				shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				Expect(newShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.AcceptedIssuers).To(Equal([]string{"foo", "bar", "baz"}))
+			})
+
+			It("should remove duplicate accepted issuers", func() {
+				shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				Expect(newShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.AcceptedIssuers).To(Equal([]string{"foo", "bar"}))
+			})
+
+			It("should remove duplicate accepted issuers when a issuer is defined", func() {
+				newShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.Issuer = pointer.String("foo")
+				shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				Expect(newShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.AcceptedIssuers).To(Equal([]string{"bar"}))
 			})
 		})
 	})

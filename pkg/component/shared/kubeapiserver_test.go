@@ -1397,6 +1397,21 @@ exemptions:
 					false,
 					Not(HaveOccurred()),
 				),
+				Entry("Default Issuer is already part of AcceptedIssuers but no Issuer is provided",
+					func() {
+						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
+							ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
+								AcceptedIssuers: []string{"https://" + externalHostname},
+							},
+						}
+					},
+					kubeapiserver.ServiceAccountConfig{
+						Issuer:          "https://" + externalHostname,
+						AcceptedIssuers: []string{},
+					},
+					false,
+					Not(HaveOccurred()),
+				),
 				Entry("AcceptedIssuers is not provided",
 					func() {
 						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
