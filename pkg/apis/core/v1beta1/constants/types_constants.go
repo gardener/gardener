@@ -312,12 +312,6 @@ const (
 	// ShootNoCleanup is a constant for a label on a resource indicating that the Gardener cleaner should not delete this
 	// resource when cleaning a shoot during the deletion flow.
 	ShootNoCleanup = "shoot.gardener.cloud/no-cleanup"
-	// ShootAlphaScalingAPIServerClass is a constant for an annotation on the shoot stating the initial API server class.
-	// It influences the size of the initial resource requests/limits.
-	// Possible values are [small, medium, large, xlarge, 2xlarge].
-	// Note that this annotation is alpha and can be removed anytime without further notice. Only use it if you know
-	// what you do.
-	ShootAlphaScalingAPIServerClass = "alpha.kube-apiserver.scaling.shoot.gardener.cloud/class"
 
 	// ShootAlphaControlPlaneScaleDownDisabled is a constant for an annotation on the Shoot resource stating that the
 	// automatic scale-down shall be disabled for the etcd, kube-apiserver, kube-controller-manager.

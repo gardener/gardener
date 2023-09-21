@@ -31,7 +31,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | MachineControllerManagerDeployment  | `false` | `Alpha` | `1.73` |        |
 | MachineControllerManagerDeployment  | `true`  | `Beta`  | `1.81` |        |
 | DisableScalingClassesForShoots      | `false` | `Alpha` | `1.73` | `1.78` |
-| DisableScalingClassesForShoots      | `true`  | `Beta`  | `1.79` |        |
+| DisableScalingClassesForShoots      | `true`  | `Beta`  | `1.79` | `1.80` |
+| DisableScalingClassesForShoots      | `true`  | `GA`    | `1.81` |        |
 | ContainerdRegistryHostsDir          | `false` | `Alpha` | `1.77` |        |
 | ShootForceDeletion                  | `false` | `Alpha` | `1.81` |        |
 

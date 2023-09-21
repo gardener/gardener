@@ -401,15 +401,6 @@ func (s *Shoot) GetIngressFQDN(subDomain string) string {
 	return fmt.Sprintf("%s.%s.%s", subDomain, gardenerutils.IngressPrefix, *shoot.Spec.DNS.Domain)
 }
 
-// GetWorkerNames returns a list of names of the worker groups in the Shoot manifest.
-func (s *Shoot) GetWorkerNames() []string {
-	var workerNames []string
-	for _, worker := range s.GetInfo().Spec.Provider.Workers {
-		workerNames = append(workerNames, worker.Name)
-	}
-	return workerNames
-}
-
 // GetMinNodeCount returns the sum of all 'minimum' fields of all worker groups of the Shoot.
 func (s *Shoot) GetMinNodeCount() int32 {
 	var nodeCount int32
