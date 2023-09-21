@@ -158,16 +158,7 @@ func (c *Cleaner) DeleteCluster(ctx context.Context) error {
 	cluster := c.getEmptyCluster()
 
 	c.log.Info("Deleting Cluster resource", "cluster", cluster.Name)
-	if err := client.IgnoreNotFound(c.seedClient.Delete(ctx, cluster)); err != nil {
-		return err
-	}
-
-	return controllerutils.RemoveAllFinalizers(ctx, c.seedClient, cluster)
-}
-
-// WaitUntilClusterDeleted waits until the shoot Cluster resource in the seed cluster has been deleted.
-func (c *Cleaner) WaitUntilClusterDeleted(ctx context.Context) error {
-	return kubernetesutils.WaitUntilResourceDeleted(ctx, c.seedClient, c.getEmptyCluster(), DefaultInterval)
+	return client.IgnoreNotFound(c.seedClient.Delete(ctx, cluster))
 }
 
 func (c *Cleaner) getEmptyCluster() *extensionsv1alpha1.Cluster {

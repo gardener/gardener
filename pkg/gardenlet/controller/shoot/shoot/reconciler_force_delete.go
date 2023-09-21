@@ -108,11 +108,6 @@ func (r *Reconciler) runForceDeleteShootFlow(ctx context.Context, o *operation.O
 			Fn:           flow.TaskFn(cleaner.DeleteCluster).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilExtensionObjectsDeleted),
 		})
-		waitUntilClusterDeleted = g.Add(flow.Task{
-			Name:         "Waiting until Cluster resource has been deleted",
-			Fn:           cleaner.WaitUntilClusterDeleted,
-			Dependencies: flow.NewTaskIDs(deleteCluster),
-		})
 		setKeepObjectsForManagedResources = g.Add(flow.Task{
 			Name: "Configuring managed resources to keep their objects when deleted",
 			Fn:   flow.TaskFn(cleaner.SetKeepObjectsForManagedResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -131,7 +126,7 @@ func (r *Reconciler) runForceDeleteShootFlow(ctx context.Context, o *operation.O
 		syncPoint = flow.NewTaskIDs(
 			waitUntilExtensionObjectsDeleted,
 			waitUntilMachineResourcesDeleted,
-			waitUntilClusterDeleted,
+			deleteCluster,
 			waitUntilManagedResourcesDeleted,
 		)
 
