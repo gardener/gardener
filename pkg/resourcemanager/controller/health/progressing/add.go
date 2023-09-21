@@ -87,11 +87,6 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 
 	// Watch relevant objects for Progressing condition in order to immediately update the condition as soon as there is
 	// a change on managed resources.
-	// If the target cache is disabled (e.g. for Shoots), we don't want to watch workload objects (Deployment, DaemonSet,
-	// StatefulSet) because this would cache all of them in the entire cluster. This can potentially be a lot of objects
-	// in Shoot clusters, because they are controlled by the end user. In this case, we rely on periodic syncs only.
-	// If we want to have immediate updates for managed resources in Shoots in the future as well, we could consider
-	// adding labels to managed resources and watch them explicitly.
 	pod := &metav1.PartialObjectMetadata{}
 	pod.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Pod"))
 
