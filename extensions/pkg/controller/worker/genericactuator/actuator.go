@@ -63,8 +63,6 @@ type genericActuator struct {
 	chartApplier         kubernetesclient.ChartApplier
 	chartRendererFactory extensionscontroller.ChartRendererFactory
 	errorCodeCheckFunc   healthcheck.ErrorCodeCheckFunc
-
-	extendedAPIsForCleanup map[string]client.ObjectList
 }
 
 // NewActuator creates a new Actuator that reconciles
@@ -80,7 +78,6 @@ func NewActuator(
 	imageVector imagevector.ImageVector,
 	chartRendererFactory extensionscontroller.ChartRendererFactory,
 	errorCodeCheckFunc healthcheck.ErrorCodeCheckFunc,
-	extendedAPIsForCleanup map[string]client.ObjectList,
 ) (worker.Actuator, error) {
 	gardenerClientset, err := kubernetesclient.NewWithConfig(kubernetesclient.WithRESTConfig(mgr.GetConfig()))
 	if err != nil {
@@ -88,20 +85,19 @@ func NewActuator(
 	}
 
 	return &genericActuator{
-		delegateFactory:        delegateFactory,
-		mcmManaged:             mcmName != "" && mcmSeedChart != nil && mcmShootChart != nil && imageVector != nil && chartRendererFactory != nil,
-		mcmName:                mcmName,
-		mcmSeedChart:           mcmSeedChart,
-		mcmShootChart:          mcmShootChart,
-		imageVector:            imageVector,
-		client:                 mgr.GetClient(),
-		reader:                 mgr.GetAPIReader(),
-		scheme:                 mgr.GetScheme(),
-		gardenerClientset:      gardenerClientset,
-		chartApplier:           gardenerClientset.ChartApplier(),
-		chartRendererFactory:   chartRendererFactory,
-		errorCodeCheckFunc:     errorCodeCheckFunc,
-		extendedAPIsForCleanup: extendedAPIsForCleanup,
+		delegateFactory:      delegateFactory,
+		mcmManaged:           mcmName != "" && mcmSeedChart != nil && mcmShootChart != nil && imageVector != nil && chartRendererFactory != nil,
+		mcmName:              mcmName,
+		mcmSeedChart:         mcmSeedChart,
+		mcmShootChart:        mcmShootChart,
+		imageVector:          imageVector,
+		client:               mgr.GetClient(),
+		reader:               mgr.GetAPIReader(),
+		scheme:               mgr.GetScheme(),
+		gardenerClientset:    gardenerClientset,
+		chartApplier:         gardenerClientset.ChartApplier(),
+		chartRendererFactory: chartRendererFactory,
+		errorCodeCheckFunc:   errorCodeCheckFunc,
 	}, nil
 }
 

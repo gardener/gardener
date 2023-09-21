@@ -33,7 +33,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 )
 
@@ -129,17 +128,15 @@ func (a *genericActuator) Delete(ctx context.Context, log logr.Logger, worker *e
 	return nil
 }
 
-// ForceDelete finalizes and deletes all the objects in the extendedAPIsForCleanup in the actuator.
+// ForceDelete simply returns nil in case of forceful deletion since cleaning up the machines would never succeed in this case.
+// So we proceed to remove the finalizer without any action.
 func (a *genericActuator) ForceDelete(
 	ctx context.Context,
 	log logr.Logger,
 	worker *extensionsv1alpha1.Worker,
 	cluster *extensionscontroller.Cluster,
 ) error {
-	return utilclient.ApplyToObjectKinds(ctx, func(kind string, objectList client.ObjectList) flow.TaskFn {
-		log.Info("Deleting all resources in namespace", "namespace", worker.Namespace, "kind", kind)
-		return utilclient.ForceDeleteObjects(ctx, a.client, kind, worker.Namespace, objectList)
-	}, a.extendedAPIsForCleanup)
+	return nil
 }
 
 // Mark all existing machines to become forcefully deleted.

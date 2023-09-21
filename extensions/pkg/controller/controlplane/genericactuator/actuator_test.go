@@ -545,7 +545,6 @@ webhooks:
 				gardenerClientset:              gardenerClientset,
 				client:                         c,
 				newSecretsManager:              newSecretsManager,
-				extendedAPIsForCleanup:         nil,
 			}
 
 			// Call Reconcile method and check the result
@@ -649,7 +648,6 @@ webhooks:
 				gardenerClientset:              gardenerClientset,
 				client:                         client,
 				newSecretsManager:              newSecretsManager,
-				extendedAPIsForCleanup:         nil,
 			}
 
 			// Call Delete method and check the result
@@ -730,7 +728,6 @@ webhooks:
 				gardenerClientset:              gardenerClientset,
 				client:                         c,
 				newSecretsManager:              newSecretsManager,
-				extendedAPIsForCleanup:         nil,
 			}
 
 			// Call Reconcile method and check the result
@@ -784,7 +781,6 @@ webhooks:
 				gardenerClientset:              gardenerClientset,
 				client:                         client,
 				newSecretsManager:              newSecretsManager,
-				extendedAPIsForCleanup:         nil,
 			}
 
 			// Call Delete method and check the result

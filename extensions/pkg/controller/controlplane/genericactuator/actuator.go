@@ -38,11 +38,9 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/chart"
-	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -79,7 +77,6 @@ func NewActuator(
 	atomicShootWebhookConfig *atomic.Value,
 	webhookServerNamespace string,
 	webhookServerPort int,
-	extendedAPIsForCleanup map[string]client.ObjectList,
 ) (controlplane.Actuator, error) {
 	gardenerClientset, err := kubernetesclient.NewWithConfig(kubernetesclient.WithRESTConfig(mgr.GetConfig()))
 	if err != nil {
@@ -112,8 +109,6 @@ func NewActuator(
 		gardenerClientset: gardenerClientset,
 		client:            mgr.GetClient(),
 
-		extendedAPIsForCleanup: extendedAPIsForCleanup,
-
 		newSecretsManager: extensionssecretsmanager.SecretsManagerForCluster,
 	}, nil
 }
@@ -143,8 +138,6 @@ type actuator struct {
 	atomicShootWebhookConfig   *atomic.Value
 	webhookServerNamespace     string
 	webhookServerPort          int
-
-	extendedAPIsForCleanup map[string]client.ObjectList
 
 	gardenerClientset kubernetesclient.Interface
 	client            client.Client
@@ -411,17 +404,14 @@ func (a *actuator) Delete(
 	return sm.Cleanup(ctx)
 }
 
-// ForceDelete finalizes and deletes all the objects in the extendedAPIsForCleanup in the actuator.
+// ForceDelete forcefully deletes the controlplane.
 func (a *actuator) ForceDelete(
 	ctx context.Context,
 	log logr.Logger,
 	cp *extensionsv1alpha1.ControlPlane,
 	cluster *extensionscontroller.Cluster,
 ) error {
-	return utilclient.ApplyToObjectKinds(ctx, func(kind string, objectList client.ObjectList) flow.TaskFn {
-		log.Info("Deleting all resources in namespace", "namespace", cp.Namespace, "kind", kind)
-		return utilclient.ForceDeleteObjects(ctx, a.client, kind, cp.Namespace, objectList)
-	}, a.extendedAPIsForCleanup)
+	return a.Delete(ctx, log, cp, cluster)
 }
 
 func (a *actuator) delete(ctx context.Context, log logr.Logger, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) error {
