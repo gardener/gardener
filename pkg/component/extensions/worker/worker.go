@@ -262,10 +262,28 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 
 // Restore uses the seed client and the ShootState to create the Worker resources and restore their state.
 func (w *worker) Restore(ctx context.Context, shootState *gardencorev1beta1.ShootState) error {
+	// gardenlet persists the machine state in the ShootState's `.spec.gardener[]` list with `type=machine-state`.
+	// In order to use below function, we have to make the worker state appear under `.spec.extensions[]` list with
+	// the correct kind and name.
+	var (
+		shootStateCopy = shootState.DeepCopy()
+		gardenerData   = v1beta1helper.GardenerResourceDataList(shootStateCopy.Spec.Gardener)
+	)
+
+	if machineState := gardenerData.Get(v1beta1constants.DataTypeMachineState); machineState != nil && machineState.Type == v1beta1constants.DataTypeMachineState {
+		extensionsData := v1beta1helper.ExtensionResourceStateList(shootStateCopy.Spec.Extensions)
+		extensionsData.Upsert(&gardencorev1beta1.ExtensionResourceState{
+			Kind:  extensionsv1alpha1.WorkerResource,
+			Name:  &w.worker.Name,
+			State: &machineState.Data,
+		})
+		shootStateCopy.Spec.Extensions = extensionsData
+	}
+
 	return extensions.RestoreExtensionWithDeployFunction(
 		ctx,
 		w.client,
-		shootState,
+		shootStateCopy,
 		extensionsv1alpha1.WorkerResource,
 		w.deploy,
 	)

@@ -150,7 +150,7 @@ func computeGardenerData(
 	}
 
 	return append(secretsToPersist, gardencorev1beta1.GardenerResourceData{
-		Name: "machine-state",
+		Name: v1beta1constants.DataTypeMachineState,
 		Type: v1beta1constants.DataTypeMachineState,
 		Data: runtime.RawExtension{Raw: machineStateJSON},
 	}), nil
