@@ -101,16 +101,16 @@ metric_relabel_configs:
       summary: VPN Shoot deployment no pods
 
   - alert: VPNHAShootNoPods
-  expr: kube_statefulset_replicas{statefulset="vpn-shoot"} == 0
-  for: 30m
-  labels:
-    service: vpn
-    severity: critical
-    type: shoot
-    visibility: operator
-  annotations:
-    description: vpn-shoot statefulset in HA Shoot cluster has 0 available pods. VPN won't work.
-    summary: VPN HA Shoot statefulset no pods
+    expr: kube_statefulset_status_replicas_ready{statefulset="vpn-shoot"} == 0
+    for: 30m
+    labels:
+      service: vpn
+      severity: critical
+      type: shoot
+      visibility: operator
+    annotations:
+      description: vpn-shoot statefulset in HA Shoot cluster has 0 available pods. VPN won't work.
+      summary: VPN HA Shoot statefulset no pods
   
   - alert: VPNProbeAPIServerProxyFailed
     expr: absent(probe_success{job="tunnel-probe-apiserver-proxy"}) == 1 or probe_success{job="tunnel-probe-apiserver-proxy"} == 0 or probe_http_status_code{job="tunnel-probe-apiserver-proxy"} != 200

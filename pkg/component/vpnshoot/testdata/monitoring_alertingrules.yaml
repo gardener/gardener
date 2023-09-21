@@ -26,7 +26,7 @@ tests:
 - interval: 30s
   input_series:
   # VPNHAShootNoPods
-  - series: 'kube_statefulset_replicas{statefulset="vpn-shoot"}'
+  - series: 'kube_statefulset_status_replicas_ready{statefulset="vpn-shoot"}'
     values: '0+0x60'
   alert_rule_test:
   - eval_time: 30m

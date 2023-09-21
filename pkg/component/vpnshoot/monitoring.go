@@ -43,8 +43,8 @@ const (
       description: vpn-shoot deployment in Shoot cluster has 0 available pods. VPN won't work.
       summary: VPN Shoot deployment no pods
 
-  - alert: VPNHAShootNoPods
-    expr: kube_statefulset_replicas{statefulset="` + deploymentName + `"} == 0
+  - alert: VPNShootNoPods
+    expr: kube_statefulset_status_replicas_ready{statefulset="` + deploymentName + `"} == 0
     for: 30m
     labels:
       service: vpn
