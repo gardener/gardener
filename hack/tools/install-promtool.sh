@@ -21,7 +21,7 @@ echo "> Installing promtool"
 TOOLS_BIN_DIR=${TOOLS_BIN_DIR:-$(dirname $0)/bin}
 
 platform=$(uname -s | tr '[:upper:]' '[:lower:]')
-version="2.34.0"
+version=$PROMTOOL_VERSION
 case $(uname -m) in
   aarch64 | arm64)
     arch="arm64"
