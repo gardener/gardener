@@ -21,7 +21,7 @@ spec:
       cri:
         name: containerd
       minimum: 1
-      maximum: 1 # currently, only single-node clusters are supported
+      maximum: 2
       maxSurge: 1
       maxUnavailable: 0
   kubernetes:
