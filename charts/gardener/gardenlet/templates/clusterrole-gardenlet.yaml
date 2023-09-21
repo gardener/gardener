@@ -444,10 +444,10 @@ rules:
 - apiGroups:
   - machine.sapcloud.io
   resources:
+  - machineclasses
   - machinedeployments
   - machinesets
   - machines
-  - machineclasses
   verbs:
   - list
   - watch

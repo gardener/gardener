@@ -18,13 +18,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -32,6 +30,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 )
@@ -101,7 +100,7 @@ func (a *genericActuator) Delete(ctx context.Context, log logr.Logger, worker *e
 	}
 
 	// Wait until all machine resources have been properly deleted.
-	if err := a.waitUntilMachineResourcesDeleted(ctx, log, worker, workerDelegate); err != nil {
+	if err := gardenerutils.WaitUntilMachineResourcesDeleted(ctx, log, a.client, worker.Namespace); err != nil {
 		newError := fmt.Errorf("failed while waiting for all machine resources to be deleted: %w", err)
 		if a.errorCodeCheckFunc != nil {
 			return v1beta1helper.NewErrorWithCodes(newError, a.errorCodeCheckFunc(err)...)
@@ -170,100 +169,6 @@ func markMachineForcefulDeletion(ctx context.Context, cl client.Client, machine 
 
 	machine.Labels[forceDeletionLabelKey] = forceDeletionLabelValue
 	return cl.Update(ctx, machine)
-}
-
-// waitUntilMachineResourcesDeleted waits for a maximum of 30 minutes until all machine resources have been properly
-// deleted by the machine-controller-manager. It polls the status every 5 seconds.
-// TODO: Parallelise this?
-func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, workerDelegate WorkerDelegate) error {
-	var (
-		countMachines            = -1
-		countMachineSets         = -1
-		countMachineDeployments  = -1
-		countMachineClasses      = -1
-		countMachineClassSecrets = -1
-	)
-	log.Info("Waiting until all machine resources have been deleted")
-
-	return retryutils.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
-		msg := ""
-
-		// Check whether all machines have been deleted.
-		if countMachines != 0 {
-			existingMachines := &machinev1alpha1.MachineList{}
-			if err := a.reader.List(ctx, existingMachines, client.InNamespace(worker.Namespace)); err != nil {
-				return retryutils.SevereError(err)
-			}
-			countMachines = len(existingMachines.Items)
-			msg += fmt.Sprintf("%d machines, ", countMachines)
-		}
-
-		// Check whether all machine sets have been deleted.
-		if countMachineSets != 0 {
-			existingMachineSets := &machinev1alpha1.MachineSetList{}
-			if err := a.reader.List(ctx, existingMachineSets, client.InNamespace(worker.Namespace)); err != nil {
-				return retryutils.SevereError(err)
-			}
-			countMachineSets = len(existingMachineSets.Items)
-			msg += fmt.Sprintf("%d machine sets, ", countMachineSets)
-		}
-
-		// Check whether all machine deployments have been deleted.
-		if countMachineDeployments != 0 {
-			existingMachineDeployments := &machinev1alpha1.MachineDeploymentList{}
-			if err := a.reader.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
-				return retryutils.SevereError(err)
-			}
-			countMachineDeployments = len(existingMachineDeployments.Items)
-			msg += fmt.Sprintf("%d machine deployments, ", countMachineDeployments)
-
-			// Check whether an operation failed during the deletion process.
-			for _, existingMachineDeployment := range existingMachineDeployments.Items {
-				for _, failedMachine := range existingMachineDeployment.Status.FailedMachines {
-					return retryutils.SevereError(fmt.Errorf("machine %s failed: %s", failedMachine.Name, failedMachine.LastOperation.Description))
-				}
-			}
-		}
-
-		// Check whether all machine classes have been deleted.
-		if countMachineClasses != 0 {
-			machineClassList := &machinev1alpha1.MachineClassList{}
-			if err := a.reader.List(ctx, machineClassList, client.InNamespace(worker.Namespace)); err != nil {
-				return retryutils.SevereError(err)
-			}
-			machineClasses, err := meta.ExtractList(machineClassList)
-			if err != nil {
-				return retryutils.SevereError(err)
-			}
-			countMachineClasses = len(machineClasses)
-			msg += fmt.Sprintf("%d machine classes, ", countMachineClasses)
-		}
-
-		// Check whether all machine class secrets have been deleted.
-		if countMachineClassSecrets != 0 {
-			count := 0
-			existingMachineClassSecrets, err := a.listMachineClassSecrets(ctx, worker.Namespace)
-			if err != nil {
-				return retryutils.SevereError(err)
-			}
-			for _, machineClassSecret := range existingMachineClassSecrets.Items {
-				if len(machineClassSecret.Finalizers) != 0 {
-					count++
-				}
-			}
-			countMachineClassSecrets = count
-			msg += fmt.Sprintf("%d machine class secrets, ", countMachineClassSecrets)
-		}
-
-		if countMachines != 0 || countMachineSets != 0 || countMachineDeployments != 0 || countMachineClasses != 0 || countMachineClassSecrets != 0 {
-			log.Info("Waiting until machine resources have been deleted",
-				"machines", countMachines, "machineSets", countMachineSets, "machineDeployments", countMachineDeployments,
-				"machineClasses", countMachineClasses, "machineClassSecrets", countMachineClassSecrets)
-			return retryutils.MinorError(fmt.Errorf("waiting until the following machine resources have been deleted: %s", strings.TrimSuffix(msg, ", ")))
-		}
-
-		return retryutils.Ok()
-	})
 }
 
 func (a *genericActuator) waitUntilCredentialsSecretAcquiredOrReleased(ctx context.Context, acquired bool, worker *extensionsv1alpha1.Worker) error {
