@@ -18,21 +18,22 @@ The following tables are a summary of the feature gates that you can set on diff
 
 ## Feature Gates for Alpha or Beta Features
 
-| Feature                            | Default | Stage   | Since  | Until  |
-|------------------------------------|---------|---------|--------|--------|
-| HVPA                               | `false` | `Alpha` | `0.31` |        |
-| HVPAForShootedSeed                 | `false` | `Alpha` | `0.32` |        |
-| DefaultSeccompProfile              | `false` | `Alpha` | `1.54` |        |
-| CoreDNSQueryRewriting              | `false` | `Alpha` | `1.55` |        |
-| IPv6SingleStack                    | `false` | `Alpha` | `1.63` |        |
-| MutableShootSpecNetworkingNodes    | `false` | `Alpha` | `1.64` |        |
-| WorkerlessShoots                   | `false` | `Alpha` | `1.70` | `1.78` |
-| WorkerlessShoots                   | `false` | `Beta`  | `1.79` |        |
-| MachineControllerManagerDeployment | `false` | `Alpha` | `1.73` |        |
-| DisableScalingClassesForShoots     | `false` | `Alpha` | `1.73` | `1.78` |
-| DisableScalingClassesForShoots     | `true`  | `Beta`  | `1.79` |        |
-| ContainerdRegistryHostsDir         | `false` | `Alpha` | `1.77` |        |
-| ShootForceDeletion                 | `false` | `Alpha` | `1.81` |        |
+| Feature                             | Default | Stage   | Since  | Until  |
+|-------------------------------------|---------|---------|--------|--------|
+| HVPA                                | `false` | `Alpha` | `0.31` |        |
+| HVPAForShootedSeed                  | `false` | `Alpha` | `0.32` |        |
+| DefaultSeccompProfile               | `false` | `Alpha` | `1.54` |        |
+| CoreDNSQueryRewriting               | `false` | `Alpha` | `1.55` |        |
+| IPv6SingleStack                     | `false` | `Alpha` | `1.63` |        |
+| MutableShootSpecNetworkingNodes     | `false` | `Alpha` | `1.64` |        |
+| WorkerlessShoots                    | `false` | `Alpha` | `1.70` | `1.78` |
+| WorkerlessShoots                    | `false` | `Beta`  | `1.79` |        |
+| MachineControllerManagerDeployment  | `false` | `Alpha` | `1.73` |        |
+| MachineControllerManagerDeployment  | `true`  | `Beta`  | `1.81` |        |
+| DisableScalingClassesForShoots      | `false` | `Alpha` | `1.73` | `1.78` |
+| DisableScalingClassesForShoots      | `true`  | `Beta`  | `1.79` |        |
+| ContainerdRegistryHostsDir          | `false` | `Alpha` | `1.77` |        |
+| ShootForceDeletion                  | `false` | `Alpha` | `1.81` |        |
 
 ## Feature Gates for Graduated or Deprecated Features
 

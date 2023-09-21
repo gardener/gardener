@@ -96,7 +96,7 @@ var _ = Describe("health check", func() {
 				"kube-apiserver",
 				"kube-controller-manager",
 			}
-			commonDeploymentNames = append(workerlessDepoymentNames, "kube-scheduler")
+			commonDeploymentNames = append(workerlessDepoymentNames, "kube-scheduler", "machine-controller-manager")
 		)
 
 		tests := func(shoot *gardencorev1beta1.Shoot, names []interface{}, isWorkerless bool) {
@@ -107,11 +107,15 @@ var _ = Describe("health check", func() {
 				Expect(deploymentNames.UnsortedList()).To(ConsistOf(names...))
 			})
 
-			It("should return expected deployments for shoot when MCM management is enabled", func() {
-				defer test.WithFeatureGate(features.DefaultFeatureGate, features.MachineControllerManagerDeployment, true)()
+			It("should return expected deployments for shoot when MCM management is disabled", func() {
+				defer test.WithFeatureGate(features.DefaultFeatureGate, features.MachineControllerManagerDeployment, false)()
 				expectedDeploymentNames := names
 				if !isWorkerless {
-					expectedDeploymentNames = append(expectedDeploymentNames, "machine-controller-manager")
+					for i, name := range expectedDeploymentNames {
+						if name == "machine-controller-manager" {
+							expectedDeploymentNames = append(expectedDeploymentNames[:i], expectedDeploymentNames[i+1:]...)
+						}
+					}
 				}
 
 				deploymentNames, err := ComputeRequiredControlPlaneDeployments(shoot)
@@ -313,6 +317,12 @@ var _ = Describe("health check", func() {
 					*list = corev1.NodeList{Items: nodes}
 					return nil
 				})
+
+				Expect(fakeClient.Create(ctx, &machinev1alpha1.MachineDeployment{
+					ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: seedNamespace},
+					Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(len(nodes))},
+				})).To(Succeed())
+
 				cloudConfigSecretListOptions := []client.ListOption{
 					client.InNamespace(metav1.NamespaceSystem),
 					client.MatchingLabels{"gardener.cloud/role": "cloud-config"},

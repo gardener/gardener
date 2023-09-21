@@ -75,6 +75,7 @@ const (
 	// provider-specific MCM provider sidecar container into the deployment via the `controlplane` webhook.
 	// owner: @rfranzke @JensAc @mreiger
 	// alpha: v1.73.0
+	// beta: v1.81.0
 	MachineControllerManagerDeployment featuregate.Feature = "MachineControllerManagerDeployment"
 
 	// DisableScalingClassesForShoots disables assigning a ScalingClass to Shoots based on their maximum Node count
@@ -134,7 +135,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	MutableShootSpecNetworkingNodes:    {Default: false, PreRelease: featuregate.Alpha},
 	WorkerlessShoots:                   {Default: true, PreRelease: featuregate.Beta},
 	ShootForceDeletion:                 {Default: false, PreRelease: featuregate.Alpha},
-	MachineControllerManagerDeployment: {Default: false, PreRelease: featuregate.Alpha},
+	MachineControllerManagerDeployment: {Default: true, PreRelease: featuregate.Beta},
 	DisableScalingClassesForShoots:     {Default: true, PreRelease: featuregate.Beta},
 	ContainerdRegistryHostsDir:         {Default: false, PreRelease: featuregate.Alpha},
 }
