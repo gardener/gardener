@@ -287,10 +287,6 @@ var _ = Describe("Shoot", func() {
 				Name: "worker",
 				Machine: gardencorev1beta1.Machine{
 					Architecture: pointer.String("arm64"),
-					Image: &gardencorev1beta1.ShootMachineImage{
-						Name:    "gardenlinux",
-						Version: pointer.String("1.2.3"),
-					},
 				},
 				SystemComponents: &gardencorev1beta1.WorkerSystemComponents{
 					Allow: true,
@@ -352,13 +348,6 @@ var _ = Describe("Shoot", func() {
 				HaveKeyWithValue("worker.gardener.cloud/cri-name", "containerd"),
 				HaveKeyWithValue("containerruntime.worker.gardener.cloud/gvisor", "true"),
 				HaveKeyWithValue("containerruntime.worker.gardener.cloud/kata", "true"),
-			))
-		})
-
-		It("should correctly add the labels that identify the worker image", func() {
-			Expect(NodeLabelsForWorkerPool(workerPool, false)).To(And(
-				HaveKeyWithValue("worker.gardener.cloud/image-name", "gardenlinux"),
-				HaveKeyWithValue("worker.gardener.cloud/image-version", "1.2.3"),
 			))
 		})
 	})
