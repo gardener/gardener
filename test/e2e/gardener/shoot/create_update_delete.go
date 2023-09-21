@@ -43,8 +43,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 		// explicitly use one version below the latest supported minor version so that Kubernetes version update test can be
 		// performed
-		// TODO(oliver-goetz): Update to 1.27.1 after the merge of https://github.com/gardener/gardener/pull/8479 has been merged and released (after 1.80 has been released).
-		f.Shoot.Spec.Kubernetes.Version = "1.26.0"
+		f.Shoot.Spec.Kubernetes.Version = "1.27.1"
 
 		if !v1beta1helper.IsWorkerless(f.Shoot) {
 			// create two additional worker pools which explicitly specify the kubernetes version
@@ -53,8 +52,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			pool2.Name += "2"
 			pool2.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: &f.Shoot.Spec.Kubernetes.Version}
 			pool3.Name += "3"
-			// TODO(oliver-goetz): Update to 1.26.0 after the merge of https://github.com/gardener/gardener/pull/8479 has been merged and released (after 1.80 has been released).
-			pool3.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: pointer.String("1.25.4")}
+			pool3.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: pointer.String("1.26.0")}
 			f.Shoot.Spec.Provider.Workers = append(f.Shoot.Spec.Provider.Workers, *pool2, *pool3)
 		}
 
