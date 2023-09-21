@@ -139,7 +139,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 						Architecture: pointer.String(v1beta1constants.ArchitectureAMD64),
 						Image: &gardencorev1beta1.ShootMachineImage{
 							Name:           "type1",
-							Version:        pointer.String("1.2.3"),
 							ProviderConfig: &runtime.RawExtension{Raw: []byte(`{"foo":"bar"}`)},
 						},
 					},
@@ -150,8 +149,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					Machine: gardencorev1beta1.Machine{
 						Architecture: pointer.String(v1beta1constants.ArchitectureAMD64),
 						Image: &gardencorev1beta1.ShootMachineImage{
-							Name:    "type2",
-							Version: pointer.String("1.2.3"),
+							Name: "type2",
 						},
 					},
 					CRI: &gardencorev1beta1.CRI{
