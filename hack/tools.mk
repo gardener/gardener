@@ -105,7 +105,7 @@ clean-tools-bin:
 import-tools-bin:
 ifeq ($(shell if [ -d $(TOOLS_BIN_SOURCE_DIR) ]; then echo "found"; fi),found)
 	@echo "Copying tool binaries from $(TOOLS_BIN_SOURCE_DIR)"
-	@cp -rp $(TOOLS_BIN_SOURCE_DIR)/* $(TOOLS_BIN_SOURCE_DIR)/.* $(TOOLS_BIN_DIR)
+	@cp -rpT $(TOOLS_BIN_SOURCE_DIR) $(TOOLS_BIN_DIR)
 endif
 
 .PHONY: create-tools-bin
