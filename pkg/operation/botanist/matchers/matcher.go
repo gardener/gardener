@@ -78,7 +78,8 @@ var (
 		// Leader election of kube-controller-manager, kube-scheduler, cloud-controller-manager, cluster-autoscaler, ...
 		{GVR: corev1.SchemeGroupVersion.WithResource("configmaps"), NamespaceLabels: kubeSystemNamespaceLabels},
 		// kube-system and default namespaces for leader election and apiserver in-cluster discovery.
-		{GVR: corev1.SchemeGroupVersion.WithResource("endpoints")},
+		{GVR: corev1.SchemeGroupVersion.WithResource("endpoints"), NamespaceLabels: defaultNamespaceLabels},
+		{GVR: corev1.SchemeGroupVersion.WithResource("endpoints"), NamespaceLabels: kubeSystemNamespaceLabels},
 
 		{GVR: corev1.SchemeGroupVersion.WithResource("secrets"), NamespaceLabels: kubeSystemNamespaceLabels},
 		{GVR: corev1.SchemeGroupVersion.WithResource("serviceaccounts"), NamespaceLabels: kubeSystemNamespaceLabels},

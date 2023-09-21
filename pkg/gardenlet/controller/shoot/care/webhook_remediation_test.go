@@ -62,8 +62,9 @@ var _ = Describe("WebhookRemediation", func() {
 
 	Describe("#Remediate", func() {
 		var (
-			ignore = admissionregistrationv1.Ignore
-			fail   = admissionregistrationv1.Fail
+			ignore          = admissionregistrationv1.Ignore
+			fail            = admissionregistrationv1.Fail
+			namespacedScope = admissionregistrationv1.NamespacedScope
 
 			validatingWebhookConfiguration *admissionregistrationv1.ValidatingWebhookConfiguration
 			mutatingWebhookConfiguration   *admissionregistrationv1.MutatingWebhookConfiguration
@@ -134,6 +135,44 @@ var _ = Describe("WebhookRemediation", func() {
 
 			Expect(validatingWebhookConfiguration.Annotations).NotTo(HaveKey("gardener.cloud/warning"))
 			Expect(mutatingWebhookConfiguration.Annotations).NotTo(HaveKey("gardener.cloud/warning"))
+		})
+
+		It("should succeed when all webhooks are properly configured", func() {
+			validatingWebhookConfiguration.Webhooks = []admissionregistrationv1.ValidatingWebhook{{
+				Name:           "some-webhook.example.com",
+				FailurePolicy:  &fail,
+				TimeoutSeconds: pointer.Int32(10),
+				Rules: []admissionregistrationv1.RuleWithOperations{
+					{
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{""},
+							APIVersions: []string{"*"},
+							Resources:   []string{"*"},
+							Scope:       &namespacedScope,
+						},
+						Operations: []admissionregistrationv1.OperationType{
+							admissionregistrationv1.Create,
+							admissionregistrationv1.Update,
+						},
+					},
+				},
+				NamespaceSelector: &metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{
+						{
+							Key:      "kubernetes.io/metadata.name",
+							Values:   []string{"kube-system", "default"},
+							Operator: metav1.LabelSelectorOpNotIn,
+						},
+					},
+				},
+			}}
+
+			Expect(fakeClient.Create(ctx, validatingWebhookConfiguration)).To(Succeed())
+
+			Expect(remediator.Remediate(ctx)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(validatingWebhookConfiguration), validatingWebhookConfiguration)).To(Succeed())
+			Expect(validatingWebhookConfiguration.Annotations).NotTo(HaveKey("gardener.cloud/warning"))
 		})
 
 		Context("remediate offensive webhooks", func() {
