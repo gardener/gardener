@@ -7,8 +7,8 @@ resources:
 - project.yaml
 - secret-backup.yaml
 - secretbinding.yaml
-- https://raw.githubusercontent.com/gardener/gardener-extension-networking-cilium/v1.25.0/example/controller-registration.yaml
-- https://raw.githubusercontent.com/gardener/gardener-extension-networking-calico/v1.34.1/example/controller-registration.yaml
+- https://raw.githubusercontent.com/gardener/gardener-extension-networking-cilium/v1.28.0/example/controller-registration.yaml
+- https://raw.githubusercontent.com/gardener/gardener-extension-networking-calico/v1.36.0/example/controller-registration.yaml
 
 patchesStrategicMerge:
 - patch-controller-registrations.yaml
