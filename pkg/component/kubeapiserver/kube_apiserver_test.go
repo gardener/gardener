@@ -3785,6 +3785,7 @@ rules:
 
 			timer := time.AfterFunc(10*time.Millisecond, func() {
 				deploy.Generation = 24
+				deploy.Spec.Replicas = pointer.Int32(0)
 				deploy.Status.Conditions = []appsv1.DeploymentCondition{
 					{Type: appsv1.DeploymentProgressing, Status: "True", Reason: "NewReplicaSetAvailable"},
 					{Type: appsv1.DeploymentAvailable, Status: "True"},

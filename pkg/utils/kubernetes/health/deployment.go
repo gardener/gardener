@@ -156,5 +156,5 @@ func DeploymentHasExactNumberOfPods(ctx context.Context, reader client.Reader, d
 		return false, err
 	}
 
-	return int32(len(podList.Items)) == pointer.Int32Deref(deployment.Spec.Replicas, 0), nil
+	return int32(len(podList.Items)) == pointer.Int32Deref(deployment.Spec.Replicas, 1), nil
 }

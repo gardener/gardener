@@ -124,6 +124,12 @@ var _ = Describe("Add", func() {
 					func(obj client.Object) {
 						deploy := obj.(*appsv1.Deployment)
 						deploy.Generation++
+
+						pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{GenerateName: "pod-", Labels: map[string]string{"foo": "bar"}}}
+						Expect(fakeClient.Create(ctx, pod)).To(Succeed())
+						DeferCleanup(func() {
+							Expect(fakeClient.Delete(ctx, pod)).To(Succeed())
+						})
 					},
 					func(obj client.Object) {
 						deploy := obj.(*appsv1.Deployment)
