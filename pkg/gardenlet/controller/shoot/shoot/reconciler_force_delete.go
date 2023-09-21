@@ -140,15 +140,15 @@ func (r *Reconciler) runForceDeleteShootFlow(ctx context.Context, o *operation.O
 			Fn:           botanist.WaitUntilEtcdsDeleted,
 			Dependencies: flow.NewTaskIDs(deleteEtcds),
 		})
-		deleteSecrets = g.Add(flow.Task{
-			Name:         "Deleting secrets",
-			Fn:           flow.TaskFn(cleaner.DeleteSecrets).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		deleteKubernetesResources = g.Add(flow.Task{
+			Name:         "Deleting Kubernetes resources",
+			Fn:           flow.TaskFn(cleaner.DeleteKubernetesResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(syncPoint, waitUntilEtcdsDeleted),
 		})
 		deleteNamespace = g.Add(flow.Task{
 			Name:         "Deleting shoot namespace",
 			Fn:           flow.TaskFn(botanist.DeleteSeedNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(syncPoint, waitUntilEtcdsDeleted, deleteSecrets),
+			Dependencies: flow.NewTaskIDs(syncPoint, waitUntilEtcdsDeleted, deleteKubernetesResources),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until shoot namespace has been deleted",

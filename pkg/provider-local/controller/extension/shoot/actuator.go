@@ -20,6 +20,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -95,31 +96,31 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 
 	// Create the resources only for force-delete e2e test
 	if kubernetesutils.HasMetaDataAnnotation(cluster.Shoot, AnnotationTestForceDeleteShoot, "true") {
-		configMap1 := &corev1.ConfigMap{
+		netpol1 := &networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:       "test-configmap-1",
+				Name:       "test-netpol-1",
 				Namespace:  ex.Namespace,
 				Finalizers: []string{finalizer},
 			},
 		}
 
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, configMap1, func() error {
-			configMap1.Labels = getLabels()
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, netpol1, func() error {
+			netpol1.Labels = getLabels()
 			return nil
 		}); err != nil {
 			return err
 		}
 
-		configMap2 := &corev1.ConfigMap{
+		netpol2 := &networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:       "test-configmap-2",
+				Name:       "test-netpol-2",
 				Namespace:  ex.Namespace,
 				Finalizers: []string{finalizer},
 			},
 		}
 
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, configMap2, func() error {
-			configMap2.Labels = getLabels()
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, netpol2, func() error {
+			netpol2.Labels = getLabels()
 			return nil
 		}); err != nil {
 			return err
@@ -146,14 +147,14 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, ex *extensionsv1
 
 // ForceDelete force deletes the extension resource.
 func (a *actuator) ForceDelete(ctx context.Context, log logr.Logger, ex *extensionsv1alpha1.Extension) error {
-	log.Info("Deleting all test configmaps in namespace", "namespace", ex.Namespace)
+	log.Info("Deleting all test leases in namespace", "namespace", ex.Namespace)
 	return flow.Parallel(
 		utilclient.ForceDeleteObjects(
 			ctx,
 			a.client,
-			"ConfigMap",
+			"NetworkPolicy",
 			ex.Namespace,
-			&corev1.ConfigMapList{},
+			&networkingv1.NetworkPolicyList{},
 			client.MatchingLabels{"app.kubernetes.io/name": ApplicationName},
 		),
 	)(ctx)

@@ -60,6 +60,11 @@ var (
 		"MachineClass":      &machinev1alpha1.MachineClassList{},
 		"Machine":           &machinev1alpha1.MachineList{},
 	}
+
+	kubernetesKindToObjectList = map[string]client.ObjectList{
+		"ConfigMap": &corev1.ConfigMapList{},
+		"Secret":    &corev1.SecretList{},
+	}
 )
 
 type Cleaner struct {
@@ -138,19 +143,12 @@ func (c *Cleaner) WaitUntilManagedResourcesDeleted(ctx context.Context) error {
 	return kubernetesutils.WaitUntilResourcesDeleted(ctx, c.seedClient, &resourcesv1alpha1.ManagedResourceList{}, DefaultInterval, client.InNamespace(c.seedNamespace))
 }
 
-// DeleteSecrets removes all remaining finalizers and deletes all secrets in the shoot namespace.
-func (c *Cleaner) DeleteSecrets(ctx context.Context) error {
-	c.log.Info("Deleting all secrets in namespace", "namespace", c.seedNamespace)
-	if err := c.seedClient.DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(c.seedNamespace)); client.IgnoreNotFound(err) != nil {
-		return err
-	}
-
-	secretList := &corev1.SecretList{}
-	if err := c.seedClient.List(ctx, secretList, client.InNamespace(c.seedNamespace)); err != nil {
-		return err
-	}
-
-	return c.removeFinalizersFromObjects(ctx, secretList)
+// DeleteKubernetesResources removes all remaining finalizers and deletes all passed kubernetes resources in the shoot namespace.
+func (c *Cleaner) DeleteKubernetesResources(ctx context.Context) error {
+	return utilclient.ApplyToObjectKinds(ctx, func(kind string, objectList client.ObjectList) flow.TaskFn {
+		c.log.Info("Deleting all resources in namespace", "namespace", c.seedNamespace, "kind", kind)
+		return utilclient.ForceDeleteObjects(ctx, c.seedClient, kind, c.seedNamespace, objectList)
+	}, kubernetesKindToObjectList)
 }
 
 // DeleteCluster deletes the shoot Cluster resource in the seed cluster.
