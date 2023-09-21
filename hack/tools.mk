@@ -67,9 +67,21 @@ GO_VULN_CHECK_VERSION ?= latest
 HELM_VERSION ?= v3.11.2
 KIND_VERSION ?= v0.18.0
 KUBECTL_VERSION ?= v1.24.11
+PROMTOOL_VERSION ?= 2.34.0
 PROTOC_VERSION ?= 23.4
 SKAFFOLD_VERSION ?= v2.2.0
 YQ_VERSION ?= v4.31.2
+
+# tool versions from go.mod
+CONTROLLER_GEN_VERSION ?= $(call version_gomod,sigs.k8s.io/controller-tools)
+GINKGO_VERSION ?= $(call version_gomod,github.com/onsi/ginkgo/v2)
+GEN_CRD_API_REFERENCE_DOCS_VERSION ?= $(call version_gomod,github.com/ahmetb/gen-crd-api-reference-docs)
+GOIMPORTS_VERSION ?= $(call version_gomod,golang.org/x/tools)
+CODE_GENERATOR_VERSION ?= $(call version_gomod,k8s.io/code-generator)
+MOCKGEN_VERSION ?= $(call version_gomod,go.uber.org/mock)
+OPENAPI_GEN_VERSION ?= $(call version_gomod,k8s.io/kube-openapi)
+CONTROLLER_RUNTIME_VERSION ?= $(call version_gomod,sigs.k8s.io/controller-runtime)
+YAML2JSON_VERSION ?= $(call version_gomod,github.com/bronze1man/yaml2json)
 
 # default dir for importing tool binaries
 TOOLS_BIN_SOURCE_DIR ?= /gardenertools
@@ -91,6 +103,9 @@ export PATH := $(abspath $(TOOLS_BIN_DIR)):$(PATH)
 #   $(HELM): $(call tool_version_file,$(HELM),$(HELM_VERSION))
 tool_version_file = $(TOOLS_BIN_DIR)/.version_$(subst $(TOOLS_BIN_DIR)/,,$(1))_$(2)
 
+# Use this function to get the version of a go module from go.mod
+version_gomod = $(shell go list -mod=mod -f '{{ .Version }}' -m $(1))
+
 # This target cleans up any previous version files for the given tool and creates the given version file.
 # This way, we can generically determine, which version was installed without calling each and every binary explicitly.
 $(TOOLS_BIN_DIR)/.version_%:
@@ -109,26 +124,26 @@ ifeq ($(shell if [ -d $(TOOLS_BIN_SOURCE_DIR) ]; then echo "found"; fi),found)
 endif
 
 .PHONY: create-tools-bin
-create-tools-bin: $(DOCFORGE) $(GOIMPORTSREVISER) $(GO_ADD_LICENSE) $(GO_APIDIFF) $(GO_VULN_CHECK) $(HELM) $(KIND) $(KUBECTL) $(PROTOC) $(SKAFFOLD) $(YQ)
+create-tools-bin: $(CONTROLLER_GEN) $(DOCFORGE) $(GEN_CRD_API_REFERENCE_DOCS) $(GINKGO) $(GOIMPORTS) $(GOIMPORTSREVISER) $(GO_ADD_LICENSE) $(GO_APIDIFF) $(GO_VULN_CHECK) $(GO_TO_PROTOBUF) $(HELM) $(IMPORT_BOSS) $(KIND) $(KUBECTL) $(MOCKGEN) $(OPENAPI_GEN) $(PROMTOOL) $(PROTOC) $(PROTOC_GEN_GOGO) $(SETUP_ENVTEST) $(SKAFFOLD) $(YAML2JSON) $(YQ)
 
 #########################################
 # Tools                                 #
 #########################################
 
-$(CONTROLLER_GEN): go.mod
+$(CONTROLLER_GEN): $(call tool_version_file,$(CONTROLLER_GEN),$(CONTROLLER_GEN_VERSION))
 	go build -o $(CONTROLLER_GEN) sigs.k8s.io/controller-tools/cmd/controller-gen
 
 $(DOCFORGE): $(call tool_version_file,$(DOCFORGE),$(DOCFORGE_VERSION))
 	curl -L -o $(DOCFORGE) https://github.com/gardener/docforge/releases/download/$(DOCFORGE_VERSION)/docforge-$(shell uname -s | tr '[:upper:]' '[:lower:]')-$(shell uname -m | sed 's/x86_64/amd64/')
 	chmod +x $(DOCFORGE)
 
-$(GEN_CRD_API_REFERENCE_DOCS): go.mod
+$(GEN_CRD_API_REFERENCE_DOCS): $(call tool_version_file,$(GEN_CRD_API_REFERENCE_DOCS),$(GEN_CRD_API_REFERENCE_DOCS_VERSION))
 	go build -o $(GEN_CRD_API_REFERENCE_DOCS) github.com/ahmetb/gen-crd-api-reference-docs
 
-$(GINKGO): go.mod
+$(GINKGO): $(call tool_version_file,$(GINKGO),$(GINKGO_VERSION))
 	go build -o $(GINKGO) github.com/onsi/ginkgo/v2/ginkgo
 
-$(GOIMPORTS): go.mod
+$(GOIMPORTS): $(call tool_version_file,$(GOIMPORTS),$(GOIMPORTS_VERSION))
 	go build -o $(GOIMPORTS) golang.org/x/tools/cmd/goimports
 
 $(GOIMPORTSREVISER): $(call tool_version_file,$(GOIMPORTSREVISER),$(GOIMPORTSREVISER_VERSION))
@@ -156,13 +171,13 @@ $(GO_APIDIFF): $(call tool_version_file,$(GO_APIDIFF),$(GO_APIDIFF_VERSION))
 $(GO_VULN_CHECK): $(call tool_version_file,$(GO_VULN_CHECK),$(GO_VULN_CHECK_VERSION))
 	GOBIN=$(abspath $(TOOLS_BIN_DIR)) go install golang.org/x/vuln/cmd/govulncheck@$(GO_VULN_CHECK_VERSION)
 
-$(GO_TO_PROTOBUF): go.mod
+$(GO_TO_PROTOBUF): $(call tool_version_file,$(GO_TO_PROTOBUF),$(CODE_GENERATOR_VERSION))
 	go build -o $(GO_TO_PROTOBUF) k8s.io/code-generator/cmd/go-to-protobuf
 
 $(HELM): $(call tool_version_file,$(HELM),$(HELM_VERSION))
 	curl -sSfL https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | HELM_INSTALL_DIR=$(TOOLS_BIN_DIR) USE_SUDO=false bash -s -- --version $(HELM_VERSION)
 
-$(IMPORT_BOSS): go.mod
+$(IMPORT_BOSS): $(call tool_version_file,$(IMPORT_BOSS),$(CODE_GENERATOR_VERSION))
 	go build -o $(IMPORT_BOSS) k8s.io/code-generator/cmd/import-boss
 
 $(KIND): $(call tool_version_file,$(KIND),$(KIND_VERSION))
@@ -181,19 +196,19 @@ $(LOGCHECK): go.mod
 	CGO_ENABLED=1 go build -o $(LOGCHECK) -buildmode=plugin github.com/gardener/gardener/hack/tools/logcheck/plugin
 endif
 
-$(MOCKGEN): go.mod
+$(MOCKGEN): $(call tool_version_file,$(MOCKGEN),$(MOCKGEN_VERSION))
 	go build -o $(MOCKGEN) go.uber.org/mock/mockgen
 
-$(OPENAPI_GEN): go.mod
+$(OPENAPI_GEN): $(call tool_version_file,$(OPENAPI_GEN),$(OPENAPI_GEN_VERSION))
 	go build -o $(OPENAPI_GEN) k8s.io/kube-openapi/cmd/openapi-gen
 
-$(PROMTOOL): $(TOOLS_PKG_PATH)/install-promtool.sh
-	@$(TOOLS_PKG_PATH)/install-promtool.sh
+$(PROMTOOL): $(call tool_version_file,$(PROMTOOL),$(PROMTOOL_VERSION))
+	@PROMTOOL_VERSION=$(PROMTOOL_VERSION) $(TOOLS_PKG_PATH)/install-promtool.sh
 
 $(PROTOC): $(call tool_version_file,$(PROTOC),$(PROTOC_VERSION))
 	@PROTOC_VERSION=$(PROTOC_VERSION) $(TOOLS_PKG_PATH)/install-protoc.sh
 
-$(PROTOC_GEN_GOGO): go.mod
+$(PROTOC_GEN_GOGO): $(call tool_version_file,$(PROTOC_GEN_GOGO),$(CODE_GENERATOR_VERSION))
 	go build -o $(PROTOC_GEN_GOGO) k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo
 
 ifeq ($(strip $(shell go list -m 2>/dev/null)),github.com/gardener/gardener)
@@ -204,14 +219,14 @@ $(REPORT_COLLECTOR): go.mod
 	go build -o $(REPORT_COLLECTOR) github.com/gardener/gardener/hack/tools/report-collector
 endif
 
-$(SETUP_ENVTEST): go.mod
+$(SETUP_ENVTEST): $(call tool_version_file,$(SETUP_ENVTEST),$(CONTROLLER_RUNTIME_VERSION))
 	go build -o $(SETUP_ENVTEST) sigs.k8s.io/controller-runtime/tools/setup-envtest
 
 $(SKAFFOLD): $(call tool_version_file,$(SKAFFOLD),$(SKAFFOLD_VERSION))
 	curl -Lo $(SKAFFOLD) https://storage.googleapis.com/skaffold/releases/$(SKAFFOLD_VERSION)/skaffold-$(shell uname -s | tr '[:upper:]' '[:lower:]')-$(shell uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
 	chmod +x $(SKAFFOLD)
 
-$(YAML2JSON): go.mod
+$(YAML2JSON): $(call tool_version_file,$(YAML2JSON),$(YAML2JSON_VERSION))
 	go build -o $(YAML2JSON) github.com/bronze1man/yaml2json
 
 $(YQ): $(call tool_version_file,$(YQ),$(YQ_VERSION))
