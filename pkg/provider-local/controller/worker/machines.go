@@ -101,7 +101,7 @@ func (w *workerDelegate) generateMachineConfig() error {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      className,
 				Namespace: w.worker.Namespace,
-				Labels:    map[string]string{v1beta1constants.GardenerPurpose: genericworkeractuator.GardenPurposeMachineClass},
+				Labels:    map[string]string{v1beta1constants.GardenerPurpose: v1beta1constants.GardenPurposeMachineClass},
 			},
 			Type: corev1.SecretTypeOpaque,
 			Data: map[string][]byte{"userData": pool.UserData},

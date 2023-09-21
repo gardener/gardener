@@ -46,9 +46,6 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-// GardenPurposeMachineClass is a constant for the 'machineclass' value in a label.
-const GardenPurposeMachineClass = "machineclass"
-
 type genericActuator struct {
 	delegateFactory DelegateFactory
 	mcmManaged      bool
@@ -158,7 +155,7 @@ func (a *genericActuator) cleanupMachineClasses(ctx context.Context, logger logr
 }
 
 func getMachineClassSecretLabels() map[string]string {
-	return map[string]string{v1beta1constants.GardenerPurpose: GardenPurposeMachineClass}
+	return map[string]string{v1beta1constants.GardenerPurpose: v1beta1constants.GardenPurposeMachineClass}
 }
 
 func (a *genericActuator) listMachineClassSecrets(ctx context.Context, namespace string) (*corev1.SecretList, error) {

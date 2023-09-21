@@ -852,7 +852,10 @@ const (
 	TaintNodeCriticalComponentsNotReady = "node.gardener.cloud/critical-components-not-ready"
 	// LabelNodeCriticalComponent is the label key for marking node-critical component pods.
 	LabelNodeCriticalComponent = "node.gardener.cloud/critical-component"
-	// AnnotationWaitForCSINode is the annotation key for csi-driver-node pods,
-	// indicating they use the driver specified in the value.
+	// AnnotationPrefixWaitForCSINode is the annotation key for csi-driver-node pods, indicating they use the driver
+	// specified in the value.
 	AnnotationPrefixWaitForCSINode = "node.gardener.cloud/wait-for-csi-node-"
+
+	// GardenPurposeMachineClass is a constant for the 'machineclass' value in a label.
+	GardenPurposeMachineClass = "machineclass"
 )
