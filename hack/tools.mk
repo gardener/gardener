@@ -105,11 +105,11 @@ clean-tools-bin:
 import-tools-bin:
 ifeq ($(shell if [ -d $(TOOLS_BIN_SOURCE_DIR) ]; then echo "found"; fi),found)
 	@echo "Copying tool binaries from $(TOOLS_BIN_SOURCE_DIR)"
-	@cp -rp $(TOOLS_BIN_SOURCE_DIR)/* $(TOOLS_BIN_SOURCE_DIR)/.* $(TOOLS_BIN_DIR)
+	@cp -rpT $(TOOLS_BIN_SOURCE_DIR) $(TOOLS_BIN_DIR)
 endif
 
 .PHONY: create-tools-bin
-create-tools-bin: $(CONTROLLER_GEN) $(DOCFORGE) $(GEN_CRD_API_REFERENCE_DOCS) $(GINKGO) $(GOIMPORTS) $(GOIMPORTSREVISER) $(GOLANGCI_LINT) $(GOMEGACHECK) $(GO_ADD_LICENSE) $(GO_APIDIFF) $(GO_VULN_CHECK) $(GO_TO_PROTOBUF) $(HELM) $(IMPORT_BOSS) $(KIND) $(KUBECTL) $(LOGCHECK) $(MOCKGEN) $(OPENAPI_GEN) $(PROMTOOL) $(PROTOC) $(PROTOC_GEN_GOGO) $(REPORT_COLLECTOR) $(SETUP_ENVTEST) $(SKAFFOLD) $(YAML2JSON) $(YQ)
+create-tools-bin: $(DOCFORGE) $(GOIMPORTSREVISER) $(GO_ADD_LICENSE) $(GO_APIDIFF) $(GO_VULN_CHECK) $(HELM) $(KIND) $(KUBECTL) $(PROTOC) $(SKAFFOLD) $(YQ)
 
 #########################################
 # Tools                                 #
@@ -147,7 +147,7 @@ $(GOMEGACHECK): go.mod
 	CGO_ENABLED=1 go build -o $(GOMEGACHECK) -buildmode=plugin github.com/gardener/gardener/hack/tools/gomegacheck/plugin
 endif
 
-$(GO_ADD_LICENSE):
+$(GO_ADD_LICENSE):  $(call tool_version_file,$(GO_ADD_LICENSE),$(GO_ADD_LICENSE_VERSION))
 	GOBIN=$(abspath $(TOOLS_BIN_DIR)) go install github.com/google/addlicense@$(GO_ADD_LICENSE_VERSION)
 
 $(GO_APIDIFF): $(call tool_version_file,$(GO_APIDIFF),$(GO_APIDIFF_VERSION))
