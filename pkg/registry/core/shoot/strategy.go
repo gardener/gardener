@@ -69,8 +69,6 @@ func (shootStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	shoot.Generation = 1
 	shoot.Status = core.ShootStatus{}
 
-	// TODO(shafeeqes): Drop this after gardener v1.80 has been released.
-	removeForbiddenFinalizers(shoot)
 	// TODO(acumino): Drop this after v1.83 has been released.
 	removeDuplicateExtensions(shoot)
 	// TODO(dimitar-kostadinov): Drop this after v1.83 has been released.
@@ -163,19 +161,6 @@ func mustIncreaseGenerationForSpecChanges(oldShoot, newShoot *core.Shoot) bool {
 	}
 
 	return !apiequality.Semantic.DeepEqual(oldShoot.Spec, newShoot.Spec)
-}
-
-func removeForbiddenFinalizers(shoot *core.Shoot) {
-	finalizers := []string{}
-
-	for _, finalizer := range shoot.Finalizers {
-		if validation.ForbiddenShootFinalizersOnCreation.Has(finalizer) {
-			continue
-		}
-		finalizers = append(finalizers, finalizer)
-	}
-
-	shoot.Finalizers = finalizers
 }
 
 func removeDuplicateExtensions(shoot *core.Shoot) {

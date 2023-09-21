@@ -28,7 +28,6 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/features"
 	shootregistry "github.com/gardener/gardener/pkg/registry/core/shoot"
@@ -81,23 +80,6 @@ var _ = Describe("Strategy", func() {
 	})
 
 	Describe("#PrepareForCreate", func() {
-		It("should remove forbidden finalizers from the Shoot", func() {
-			shoot := &core.Shoot{
-				ObjectMeta: metav1.ObjectMeta{
-					Finalizers: []string{
-						"random",
-						gardencorev1beta1.GardenerName,
-						v1beta1constants.ReferenceProtectionFinalizerName,
-						"some-finalizer",
-					},
-				},
-			}
-
-			shootregistry.NewStrategy(0).PrepareForCreate(context.TODO(), shoot)
-
-			Expect(shoot.Finalizers).To(ConsistOf("random", "some-finalizer"))
-		})
-
 		It("should remove duplicated extensions and take the latest configuration of duplicate extensions", func() {
 			shoot := &core.Shoot{
 				Spec: core.ShootSpec{
