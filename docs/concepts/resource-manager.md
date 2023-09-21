@@ -166,6 +166,7 @@ A `ManagedResource` has a `ManagedResourceStatus`, which has an array of Conditi
 
 `ResourcesProgressing` may be `True` when:
 - a `Deployment`, `StatefulSet` or `DaemonSet` has not been fully rolled out yet, i.e. not all replicas have been updated with the latest changes to `spec.template`.
+- there are still old `Pod`s belonging to an older `ReplicaSet` of a `Deployment` which are not terminated yet.
 
 Each Kubernetes resources has different notion for being healthy. For example, a Deployment is considered healthy if the controller observed its current revision and if the number of updated replicas is equal to the number of replicas.
 

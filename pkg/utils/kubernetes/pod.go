@@ -15,6 +15,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -23,8 +24,10 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/utils"
 )
@@ -156,4 +159,42 @@ func HasEnvVar(container corev1.Container, name string) bool {
 	}
 
 	return envVars.Has(name)
+}
+
+// GetDeploymentForPod returns the deployment the pod belongs to by traversing its metadata.
+func GetDeploymentForPod(ctx context.Context, reader client.Reader, namespace string, podOwnerReferences []metav1.OwnerReference) (*appsv1.Deployment, error) {
+	var replicaSetName string
+	for _, ownerReference := range podOwnerReferences {
+		if ownerReference.APIVersion == appsv1.SchemeGroupVersion.String() && ownerReference.Kind == "ReplicaSet" {
+			replicaSetName = ownerReference.Name
+		}
+	}
+
+	if replicaSetName == "" {
+		return nil, nil
+	}
+
+	replicaSet := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{Name: replicaSetName, Namespace: namespace}}
+	replicaSet.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("ReplicaSet"))
+	if err := reader.Get(ctx, client.ObjectKeyFromObject(replicaSet), replicaSet); err != nil {
+		return nil, fmt.Errorf("failed reading ReplicaSet %s: %w", client.ObjectKeyFromObject(replicaSet), err)
+	}
+
+	var deploymentName string
+	for _, ownerReference := range replicaSet.OwnerReferences {
+		if ownerReference.APIVersion == appsv1.SchemeGroupVersion.String() && ownerReference.Kind == "Deployment" {
+			deploymentName = ownerReference.Name
+		}
+	}
+
+	if deploymentName == "" {
+		return nil, nil
+	}
+
+	deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: deploymentName, Namespace: replicaSet.Namespace}}
+	if err := reader.Get(ctx, client.ObjectKeyFromObject(deployment), deployment); err != nil {
+		return nil, fmt.Errorf("failed reading Deployment %s: %w", client.ObjectKeyFromObject(deployment), err)
+	}
+
+	return deployment, nil
 }

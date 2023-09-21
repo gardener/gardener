@@ -369,6 +369,7 @@ var _ = Describe("Health controller tests", func() {
 		Context("with existing resources", func() {
 			var (
 				deployment  *appsv1.Deployment
+				pod         *corev1.Pod
 				statefulSet *appsv1.StatefulSet
 				daemonSet   *appsv1.DaemonSet
 			)
@@ -380,6 +381,9 @@ var _ = Describe("Health controller tests", func() {
 				Expect(testClient.Create(ctx, deployment)).To(Succeed())
 				deployment.Status = *deploymentStatus
 				Expect(testClient.Status().Update(ctx, deployment)).To(Succeed())
+
+				pod = generatePodForDeployment(deployment)
+				Expect(testClient.Create(ctx, pod)).To(Succeed())
 
 				statefulSet = generateStatefulSetTestResource(managedResource.Name)
 				statefulSetStatus := statefulSet.Status.DeepCopy()
@@ -395,6 +399,7 @@ var _ = Describe("Health controller tests", func() {
 
 				DeferCleanup(func() {
 					By("Delete test resources")
+					Expect(testClient.Delete(ctx, pod)).To(Or(Succeed(), BeNotFoundError()))
 					Expect(testClient.Delete(ctx, deployment)).To(Or(Succeed(), BeNotFoundError()))
 					Expect(testClient.Delete(ctx, statefulSet)).To(Or(Succeed(), BeNotFoundError()))
 					Expect(testClient.Delete(ctx, daemonSet)).To(Or(Succeed(), BeNotFoundError()))
@@ -449,6 +454,21 @@ var _ = Describe("Health controller tests", func() {
 					Message: `ReplicaSet "nginx-946d57896" has timed out progressing.`,
 				}}
 				Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
+
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("DeploymentProgressing")),
+				)
+			})
+
+			It("sets Progressing to true as Deployment still has non-terminated pods", func() {
+				pod2 := generatePodForDeployment(deployment)
+				Expect(testClient.Create(ctx, pod2)).To(Succeed())
+				DeferCleanup(func() {
+					Expect(testClient.Delete(ctx, pod2)).To(Or(Succeed(), BeNotFoundError()))
+				})
 
 				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
@@ -589,6 +609,22 @@ func generateDeploymentTestResource(name string) *appsv1.Deployment {
 				Status:  corev1.ConditionTrue,
 				Reason:  "NewReplicaSetAvailable",
 				Message: `ReplicaSet "test-foo-abcdef" has successfully progressed.`,
+			}},
+		},
+	}
+}
+
+func generatePodForDeployment(deployment *appsv1.Deployment) *corev1.Pod {
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: deployment.Name + "-pod-",
+			Namespace:    deployment.Namespace,
+			Labels:       deployment.Spec.Selector.MatchLabels,
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{
+				Name:  "app",
+				Image: "app",
 			}},
 		},
 	}
