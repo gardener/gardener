@@ -666,10 +666,6 @@ const (
 	LabelPodMaintenanceRestart = "maintenance.gardener.cloud/restart"
 	// LabelWorkerPool is a constant for a label that indicates the worker pool the node belongs to
 	LabelWorkerPool = "worker.gardener.cloud/pool"
-	// LabelWorkerPoolImageName is a label that indicates the name of the OS image for that worker pool
-	LabelWorkerPoolImageName = "worker.gardener.cloud/image-name"
-	// LabelWorkerPoolImageVersion is a label that indicates the version of the OS image for that worker pool
-	LabelWorkerPoolImageVersion = "worker.gardener.cloud/image-version"
 	// LabelWorkerKubernetesVersion is a constant for a label that indicates the Kubernetes version used for the worker pool nodes.
 	LabelWorkerKubernetesVersion = "worker.gardener.cloud/kubernetes-version"
 	// LabelWorkerPoolDeprecated is a deprecated constant for a label that indicates the worker pool the node belongs to
