@@ -1,5 +1,8 @@
+# Debian versions of golang images must be in sync with these images to avoid problems with different `glibc` versions:
+# - https://github.com/gardener/ci-infra/blob/master/images/golang-test/variants.yaml
+# - https://github.com/gardener/ci-infra/blob/master/images/krte/Dockerfile
 variants:
   "1.20":
-    image: "golang:1.20.8"
+    image: golang:1.20.8-bookworm
   "1.21":
-    image: "golang:1.21.1"
+    image: golang:1.21.1-bookworm
