@@ -51,7 +51,7 @@ var _ = Describe("Kubernetes Dashboard", func() {
 					KubernetesDashboard: &gardencorev1beta1.KubernetesDashboard{},
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{
-					Version: "1.22.1",
+					Version: "1.26.1",
 				},
 			},
 		}

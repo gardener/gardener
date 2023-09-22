@@ -143,12 +143,6 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		return err
 	}
 
-	// Force containerd when shoot cluster is updated to k8s version >= 1.23
-	if versionutils.ConstraintK8sLess123.Check(oldShootKubernetesVersion) && versionutils.ConstraintK8sGreaterEqual123.Check(shootKubernetesVersion) {
-		reasonsForContainerdUpdate := updateToContainerd(maintainedShoot, fmt.Sprintf("Updating Kubernetes to %q", shootKubernetesVersion.String()))
-		operations = append(operations, reasonsForContainerdUpdate...)
-	}
-
 	// Disable PodSecurityPolicy Admission Controller when shoot cluster is updated to k8s version >= 1.25
 	if versionutils.ConstraintK8sLess125.Check(oldShootKubernetesVersion) && versionutils.ConstraintK8sGreaterEqual125.Check(shootKubernetesVersion) {
 		if maintainedShoot.Spec.Kubernetes.AllowPrivilegedContainers != nil {
@@ -693,21 +687,6 @@ func ensureSufficientMaxWorkers(shoot *gardencorev1beta1.Shoot, reason string) [
 		newMaximum := int32(len(worker.Zones))
 		reasonsForUpdate = append(reasonsForUpdate, fmt.Sprintf("Maximum of worker-pool %q upgraded from %d to %d. Reason: %s", worker.Name, worker.Maximum, newMaximum, reason))
 		shoot.Spec.Provider.Workers[i].Maximum = newMaximum
-	}
-
-	return reasonsForUpdate
-}
-
-// updateToContainerd updates the CRI of a Shoot's worker pools to containerd
-func updateToContainerd(shoot *gardencorev1beta1.Shoot, reason string) []string {
-	var reasonsForUpdate []string
-
-	for i, worker := range shoot.Spec.Provider.Workers {
-		if worker.CRI == nil || worker.CRI.Name != gardencorev1beta1.CRINameDocker {
-			continue
-		}
-		shoot.Spec.Provider.Workers[i].CRI.Name = gardencorev1beta1.CRINameContainerD
-		reasonsForUpdate = append(reasonsForUpdate, fmt.Sprintf("CRI of worker-pool %q upgraded from %q to %q. Reason: %s", worker.Name, gardencorev1beta1.CRINameDocker, gardencorev1beta1.CRINameContainerD, reason))
 	}
 
 	return reasonsForUpdate

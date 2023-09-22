@@ -20,11 +20,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
-	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
@@ -45,7 +43,6 @@ import (
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -101,8 +98,6 @@ type Values struct {
 	ClusterProportionalAutoscalerImage string
 	// WantsVerticalPodAutoscaler indicates whether vertical autoscaler should be used.
 	WantsVerticalPodAutoscaler bool
-	// KubernetesVersion is the Kubernetes version of the Shoot.
-	KubernetesVersion *semver.Version
 	// SearchPathRewritesEnabled indicates whether obviously invalid requests due to search path should be rewritten.
 	SearchPathRewritesEnabled bool
 	// SearchPathRewriteCommonSuffixes contains common suffixes to be rewritten when SearchPathRewritesEnabled is set.
@@ -649,10 +644,6 @@ import custom/*.server
 			},
 		}
 
-		horizontalPodAutoscaler client.Object
-	)
-
-	if version.ConstraintK8sGreaterEqual123.Check(c.values.KubernetesVersion) {
 		horizontalPodAutoscaler = &autoscalingv2.HorizontalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "coredns",
@@ -681,33 +672,7 @@ import custom/*.server
 				},
 			},
 		}
-	} else {
-		horizontalPodAutoscaler = &autoscalingv2beta1.HorizontalPodAutoscaler{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "coredns",
-				Namespace: metav1.NamespaceSystem,
-				Labels: map[string]string{
-					resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
-				},
-			},
-			Spec: autoscalingv2beta1.HorizontalPodAutoscalerSpec{
-				MinReplicas: pointer.Int32(2),
-				MaxReplicas: 5,
-				Metrics: []autoscalingv2beta1.MetricSpec{{
-					Type: autoscalingv2beta1.ResourceMetricSourceType,
-					Resource: &autoscalingv2beta1.ResourceMetricSource{
-						Name:                     corev1.ResourceCPU,
-						TargetAverageUtilization: pointer.Int32(70),
-					},
-				}},
-				ScaleTargetRef: autoscalingv2beta1.CrossVersionObjectReference{
-					APIVersion: appsv1.SchemeGroupVersion.String(),
-					Kind:       "Deployment",
-					Name:       deployment.Name,
-				},
-			},
-		}
-	}
+	)
 
 	managedObjects := []client.Object{
 		serviceAccount,

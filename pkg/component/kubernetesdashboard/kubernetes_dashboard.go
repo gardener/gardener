@@ -18,7 +18,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -35,7 +34,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -63,8 +61,6 @@ type Values struct {
 	VPAEnabled bool
 	// AuthenticationMode defines the authentication mode for the kubernetes-dashboard.
 	AuthenticationMode string
-	// KubernetesVersion is the Kubernetes version of the Shoot.
-	KubernetesVersion *semver.Version
 }
 
 // New creates a new instance of DeployWaiter for the kubernetes-dashboard.
@@ -427,6 +423,9 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 									ReadOnlyRootFilesystem:   pointer.Bool(true),
 									RunAsUser:                pointer.Int64(1001),
 									RunAsGroup:               pointer.Int64(2001),
+									SeccompProfile: &corev1.SeccompProfile{
+										Type: corev1.SeccompProfileTypeRuntimeDefault,
+									},
 								},
 								VolumeMounts: []corev1.VolumeMount{
 									{
@@ -511,14 +510,6 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 					},
 				},
 			},
-		}
-	}
-
-	if version.ConstraintK8sEqual122.Check(k.values.KubernetesVersion) {
-		deploymentMetricsScraper.Spec.Template.Annotations = map[string]string{corev1.SeccompPodAnnotationKey: corev1.SeccompProfileRuntimeDefault}
-	} else {
-		deploymentMetricsScraper.Spec.Template.Spec.Containers[0].SecurityContext.SeccompProfile = &corev1.SeccompProfile{
-			Type: corev1.SeccompProfileTypeRuntimeDefault,
 		}
 	}
 

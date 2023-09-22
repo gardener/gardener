@@ -32,6 +32,13 @@ import (
 	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 )
 
+var (
+	availableWorkerCRINamesForCloudProfile = sets.New(
+		string(core.CRINameDocker),
+		string(core.CRINameContainerD),
+	)
+)
+
 // ValidateCloudProfile validates a CloudProfile object.
 func ValidateCloudProfile(cloudProfile *core.CloudProfile) field.ErrorList {
 	allErrs := field.ErrorList{}
@@ -294,12 +301,13 @@ func validateContainerRuntimesInterfaces(cris []core.CRI, fldPath *field.Path) f
 			hasDocker = true
 		}
 
-		if !availableWorkerCRINames.Has(string(cri.Name)) {
-			allErrs = append(allErrs, field.NotSupported(criPath, cri, sets.List(availableWorkerCRINames)))
+		if !availableWorkerCRINamesForCloudProfile.Has(string(cri.Name)) {
+			allErrs = append(allErrs, field.NotSupported(criPath, cri, sets.List(availableWorkerCRINamesForCloudProfile)))
 		}
 		allErrs = append(allErrs, validateContainerRuntimes(cri.ContainerRuntimes, criPath.Child("containerRuntimes"))...)
 	}
 
+	// TODO(shafeeqes): Remove this once https://github.com/gardener/gardener/issues/4673 is resolved.
 	if !hasDocker {
 		allErrs = append(allErrs, field.Invalid(fldPath, cris, "must provide docker as supported container runtime"))
 	}

@@ -320,17 +320,17 @@ var (
 )
 
 // update
-shoot.Spec.Kubernetes.Version = "1.22"
+shoot.Spec.Kubernetes.Version = "1.26"
 err := c.Update(ctx, shoot)
 
 // json merge patch
 patch := client.MergeFrom(shoot.DeepCopy())
-shoot.Spec.Kubernetes.Version = "1.22"
+shoot.Spec.Kubernetes.Version = "1.26"
 err = c.Patch(ctx, shoot, patch)
 
 // strategic merge patch
 patch = client.StrategicMergeFrom(shoot.DeepCopy())
-shoot.Spec.Kubernetes.Version = "1.22"
+shoot.Spec.Kubernetes.Version = "1.26"
 err = c.Patch(ctx, shoot, patch)
 ```
 

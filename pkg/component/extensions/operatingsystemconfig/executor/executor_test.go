@@ -67,15 +67,15 @@ var _ = Describe("Executor", func() {
 		})
 
 		DescribeTable("should correctly render the executor script",
-			func(kubernetesVersion string, copyKubernetesBinariesFn func(*imagevector.Image) string, kubeletDataVol *gardencorev1beta1.DataVolume, kubeletDataVolSize *string) {
+			func(kubernetesVersion string, kubeletDataVol *gardencorev1beta1.DataVolume, kubeletDataVolSize *string) {
 				script, err := executor.Script(cloudConfigUserData, cloudConfigExecutionMaxDelaySeconds, hyperkubeImage, kubernetesVersion, kubeletDataVol, reloadConfigCommand, units, files)
 				Expect(err).ToNot(HaveOccurred())
-				testScript := scriptFor(cloudConfigUserData, hyperkubeImage, kubernetesVersion, copyKubernetesBinariesFn, kubeletDataVolSize, reloadConfigCommand, units, files)
+				testScript := scriptFor(cloudConfigUserData, hyperkubeImage, kubernetesVersion, kubeletDataVolSize, reloadConfigCommand, units, files)
 				Expect(string(script)).To(Equal(testScript))
 			},
 
-			Entry("k8s 1.22, w/o kubelet data volume", "1.22.8", copyKubernetesBinariesFromHyperkubeImageForVersionsGreaterEqual119, nil, nil),
-			Entry("k8s 1.22, w/ kubelet data volume", "1.22.8", copyKubernetesBinariesFromHyperkubeImageForVersionsGreaterEqual119, defaultKubeletDataVolume, defaultKubeletDataVolumeSize),
+			Entry("k8s 1.26, w/o kubelet data volume", "1.26.8", nil, nil),
+			Entry("k8s 1.26, w/ kubelet data volume", "1.26.8", defaultKubeletDataVolume, defaultKubeletDataVolumeSize),
 		)
 
 		It("should return an error because the data volume size cannot be parsed", func() {
@@ -120,7 +120,6 @@ func scriptFor(
 	cloudConfigUserData []byte,
 	hyperkubeImage *imagevector.Image,
 	kubernetesVersion string,
-	copyKubernetesBinariesFn func(*imagevector.Image) string,
 	kubeletDataVolumeSize *string,
 	reloadConfigCommand string,
 	units []string,
@@ -242,8 +241,12 @@ if [[ "$LAST_DOWNLOADED_HYPERKUBE_IMAGE" != "` + hyperkubeImage.String() + `" ]]
   # append image reference checksum to copied filenames in order to easily check if copying the binaries succeeded
   hyperkubeImageSHA="7eb590a802776879e4db84c42ec60a2bd2094659ed3773252753287b880912fb"
 
-  echo "Starting temporary hyperkube container to copy binaries to host"` +
-		copyKubernetesBinariesFn(hyperkubeImage) + `
+  echo "Starting temporary hyperkube container to copy binaries to host"
+  HYPERKUBE_CONTAINER_ID="$(/usr/bin/docker run -d -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "` + hyperkubeImage.String() + `")"
+  /usr/bin/docker cp   "$HYPERKUBE_CONTAINER_ID":/kubelet "$PATH_HYPERKUBE_DOWNLOADS/kubelet-$hyperkubeImageSHA"
+  /usr/bin/docker cp   "$HYPERKUBE_CONTAINER_ID":/kubectl "$PATH_HYPERKUBE_DOWNLOADS/kubectl-$hyperkubeImageSHA"
+  /usr/bin/docker stop "$HYPERKUBE_CONTAINER_ID"
+  /usr/bin/docker rm "$HYPERKUBE_CONTAINER_ID"
   chmod +x "$PATH_HYPERKUBE_DOWNLOADS/kubelet-$hyperkubeImageSHA"
   chmod +x "$PATH_HYPERKUBE_DOWNLOADS/kubectl-$hyperkubeImageSHA"
 
@@ -418,15 +421,6 @@ date +%s > "$PATH_EXECUTION_LAST_DATE"
 `
 
 	return headerPart + kubeletDataVolumePart + imagesPreloadingPart + footerPart
-}
-
-func copyKubernetesBinariesFromHyperkubeImageForVersionsGreaterEqual119(hyperkubeImage *imagevector.Image) string {
-	return `
-  HYPERKUBE_CONTAINER_ID="$(/usr/bin/docker run -d -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "` + hyperkubeImage.String() + `")"
-  /usr/bin/docker cp   "$HYPERKUBE_CONTAINER_ID":/kubelet "$PATH_HYPERKUBE_DOWNLOADS/kubelet-$hyperkubeImageSHA"
-  /usr/bin/docker cp   "$HYPERKUBE_CONTAINER_ID":/kubectl "$PATH_HYPERKUBE_DOWNLOADS/kubectl-$hyperkubeImageSHA"
-  /usr/bin/docker stop "$HYPERKUBE_CONTAINER_ID"
-  /usr/bin/docker rm "$HYPERKUBE_CONTAINER_ID"`
 }
 
 const scriptCopyKubernetesBinary = `#!/bin/bash -eu

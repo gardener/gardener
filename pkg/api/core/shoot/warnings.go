@@ -45,8 +45,7 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 
 		// Errors are ignored here because we cannot do anything meaningful with them - variables will default to `false`.
 		k8sLess125, _ := versionutils.CheckVersionMeetsConstraint(shoot.Spec.Kubernetes.Version, "< 1.25")
-		k8sGreaterEqual123, _ := versionutils.CheckVersionMeetsConstraint(shoot.Spec.Kubernetes.Version, ">= 1.23")
-		if k8sLess125 && k8sGreaterEqual123 {
+		if k8sLess125 {
 			if warning := getWarningsForPSPAdmissionPlugin(shoot); warning != "" {
 				warnings = append(warnings, warning)
 			}

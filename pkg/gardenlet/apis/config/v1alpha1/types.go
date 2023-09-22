@@ -126,7 +126,6 @@ type KubeconfigValidity struct {
 	// .spec.expirationSeconds in the created CertificateSigningRequest resource.
 	// This value is not defaulted, meaning that the value configured via `--cluster-signing-duration` on
 	// kube-controller-manager is used.
-	// Note that using this value will only have effect for garden clusters >= Kubernetes 1.22.
 	// Note that changing this value will only have effect after the next rotation of the gardenlet's kubeconfig secret.
 	// +optional
 	Validity *metav1.Duration `json:"validity,omitempty"`

@@ -56,7 +56,7 @@ There is a CI/CD job that runs periodically and releases a new `hyperkube` image
   - The list of supported versions is meanwhile maintained [here](../../pkg/utils/validation/kubernetesversion/version.go) in the `SupportedVersions` variable.
 - Maintain the Kubernetes feature gates used for validation of `Shoot` resources:
   - The feature gates are maintained in [this](https://github.com/gardener/gardener/blob/master/pkg/utils/validation/features/featuregates.go) file.
-  - To maintain this list for new Kubernetes versions, run `hack/compare-k8s-feature-gates.sh <old-version> <new-version>` (e.g. `hack/compare-k8s-feature-gates.sh v1.22 v1.23`).
+  - To maintain this list for new Kubernetes versions, run `hack/compare-k8s-feature-gates.sh <old-version> <new-version>` (e.g. `hack/compare-k8s-feature-gates.sh v1.26 v1.27`).
   - It will present 3 lists of feature gates: those added and those removed in `<new-version>` compared to `<old-version>` and feature gates that got locked to default in `<new-version>`.
   - Add all added feature gates to the map with `<new-version>` as `AddedInVersion` and no `RemovedInVersion`.
   - For any removed feature gates, add `<new-version>` as `RemovedInVersion` to the already existing feature gate in the map.
@@ -64,7 +64,7 @@ There is a CI/CD job that runs periodically and releases a new `hyperkube` image
   - See [this](https://github.com/gardener/gardener/pull/5255/commits/97923b0604300ff805def8eae981ed388d5e4a83) example commit.
 - Maintain the Kubernetes `kube-apiserver` admission plugins used for validation of `Shoot` resources:
   - The admission plugins are maintained in [this](https://github.com/gardener/gardener/blob/master/pkg/utils/validation/admissionplugins/admissionplugins.go) file.
-  - To maintain this list for new Kubernetes versions, run `hack/compare-k8s-admission-plugins.sh <old-version> <new-version>` (e.g. `hack/compare-k8s-admission-plugins.sh 1.24 1.25`).
+  - To maintain this list for new Kubernetes versions, run `hack/compare-k8s-admission-plugins.sh <old-version> <new-version>` (e.g. `hack/compare-k8s-admission-plugins.sh 1.26 1.27`).
   - It will present 2 lists of admission plugins: those added and those removed in `<new-version>` compared to `<old-version>`.
   - Add all added admission plugins to the `admissionPluginsVersionRanges` map with `<new-version>` as `AddedInVersion` and no `RemovedInVersion`.
   - For any removed admission plugins, add `<new-version>` as `RemovedInVersion` to the already existing admission plugin in the map.
@@ -72,7 +72,7 @@ There is a CI/CD job that runs periodically and releases a new `hyperkube` image
   - Flag any admission plugins that are forbidden by setting the `Forbidden` boolean variable to true for the admission plugin in the map.
 - Maintain the `ServiceAccount` names for the controllers part of `kube-controller-manager`:
   - The names are maintained in [this](https://github.com/gardener/gardener/blob/master/pkg/component/shootsystem/shootsystem.go) file.
-  - To maintain this list for new Kubernetes versions, run `hack/compare-k8s-controllers.sh <old-version> <new-version>` (e.g. `hack/compare-k8s-controllers.sh 1.22 1.23`).
+  - To maintain this list for new Kubernetes versions, run `hack/compare-k8s-controllers.sh <old-version> <new-version>` (e.g. `hack/compare-k8s-controllers.sh 1.26 1.27`).
   - It will present 2 lists of controllers: those added and those removed in `<new-version>` compared to `<old-version>`.
   - Double check whether such `ServiceAccount` indeed appears in the `kube-system` namespace when creating a cluster with `<new-version>`. Note that it sometimes might be hidden behind a default-off feature gate. You can create a local cluster with the new version using the [local provider](https://github.com/gardener/gardener/blob/master/docs/development/getting_started_locally.md).
   - If it appears, add all added controllers to the list based on the Kubernetes version ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/shootsystem/shootsystem.go#L253-L318)).
@@ -109,8 +109,6 @@ After the PR in `gardener/gardener` for the support of the new version has been 
 Some of the cloud providers are not yet using upstream `cloud-controller-manager` images.
 Instead, we build and maintain them ourselves:
 
-- https://github.com/gardener/cloud-provider-aws
-- https://github.com/gardener/cloud-provider-azure (since `v1.23`, we use the upstream image)
 - https://github.com/gardener/cloud-provider-gcp
 
 Until we switch to upstream images, you need to revendor the Kubernetes dependencies and release a new image.

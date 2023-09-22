@@ -1,8 +1,4 @@
-{{- if semverCompare ">= 1.23-0" .Capabilities.KubeVersion.GitVersion }}
 apiVersion: autoscaling/v2
-{{- else }}
-apiVersion: autoscaling/v2beta1
-{{- end }}
 kind: HorizontalPodAutoscaler
 metadata:
   name: istio-ingressgateway
@@ -21,10 +17,6 @@ spec:
   - type: Resource
     resource:
       name: cpu
-      {{- if semverCompare ">= 1.23-0" .Capabilities.KubeVersion.GitVersion }}
       target:
         averageUtilization: 80
         type: Utilization
-      {{- else }}
-      targetAverageUtilization: 80
-      {{- end }}

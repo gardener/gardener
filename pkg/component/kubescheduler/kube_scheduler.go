@@ -129,14 +129,13 @@ func New(
 	runtimeKubernetesVersion *semver.Version,
 ) Interface {
 	return &kubeScheduler{
-		client:                        client,
-		namespace:                     namespace,
-		secretsManager:                secretsManager,
-		version:                       version,
-		image:                         image,
-		replicas:                      replicas,
-		config:                        config,
-		runtimeVersionGreaterEqual123: versionutils.ConstraintK8sGreaterEqual123.Check(runtimeKubernetesVersion),
+		client:         client,
+		namespace:      namespace,
+		secretsManager: secretsManager,
+		version:        version,
+		image:          image,
+		replicas:       replicas,
+		config:         config,
 	}
 }
 
@@ -148,8 +147,6 @@ type kubeScheduler struct {
 	image          string
 	replicas       int32
 	config         *gardencorev1beta1.KubeSchedulerConfig
-
-	runtimeVersionGreaterEqual123 bool
 }
 
 func (k *kubeScheduler) Deploy(ctx context.Context) error {
@@ -487,10 +484,8 @@ func (k *kubeScheduler) computeComponentConfig() (string, error) {
 	var apiVersion string
 	if versionutils.ConstraintK8sGreaterEqual125.Check(k.version) {
 		apiVersion = "kubescheduler.config.k8s.io/v1"
-	} else if versionutils.ConstraintK8sGreaterEqual123.Check(k.version) {
-		apiVersion = "kubescheduler.config.k8s.io/v1beta3"
 	} else {
-		apiVersion = "kubescheduler.config.k8s.io/v1beta2"
+		apiVersion = "kubescheduler.config.k8s.io/v1beta3"
 	}
 
 	profile := gardencorev1beta1.SchedulingProfileBalanced
@@ -525,10 +520,6 @@ func (k *kubeScheduler) computeCommand(port int32) []string {
 		fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.DataKeyPrivateKey),
 		fmt.Sprintf("--secure-port=%d", port),
 	)
-
-	if versionutils.ConstraintK8sEqual122.Check(k.version) {
-		command = append(command, "--port=0")
-	}
 
 	if k.config != nil {
 		command = append(command, kubernetesutils.FeatureGatesToCommandLineParameter(k.config.FeatureGates))

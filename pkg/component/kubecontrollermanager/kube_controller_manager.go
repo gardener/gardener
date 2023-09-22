@@ -726,10 +726,6 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		command = append(command, kubernetesutils.FeatureGatesToCommandLineParameter(k.values.Config.FeatureGates))
 	}
 
-	if versionutils.ConstraintK8sLess124.Check(k.values.TargetVersion) {
-		command = append(command, "--port=0")
-	}
-
 	command = append(command,
 		fmt.Sprintf("--root-ca-file=%s/%s", volumeMountPathCA, secrets.DataKeyCertificateBundle),
 		fmt.Sprintf("--service-account-private-key-file=%s/%s", volumeMountPathServiceAccountKey, secrets.DataKeyRSAPrivateKey),
@@ -746,7 +742,7 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		"--profiling=false",
 		fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.DataKeyCertificate),
 		fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.DataKeyPrivateKey),
-		fmt.Sprintf("--tls-cipher-suites=%s", strings.Join(kubernetesutils.TLSCipherSuites(k.values.TargetVersion), ",")),
+		fmt.Sprintf("--tls-cipher-suites=%s", strings.Join(kubernetesutils.TLSCipherSuites, ",")),
 		"--use-service-account-credentials=true",
 		"--v=2",
 	)

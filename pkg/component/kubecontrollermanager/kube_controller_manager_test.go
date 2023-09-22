@@ -71,10 +71,10 @@ var _ = Describe("KubeControllerManager", func() {
 		_, podCIDR, _                 = net.ParseCIDR("100.96.0.0/11")
 		_, serviceCIDR, _             = net.ParseCIDR("100.64.0.0/13")
 		namespace                     = "shoot--foo--bar"
-		version                       = "1.22.2"
+		version                       = "1.25.3"
 		semverVersion, _              = semver.NewVersion(version)
 		runtimeKubernetesVersion      = semver.MustParse("1.25.0")
-		image                         = "registry.k8s.io/kube-controller-manager:v1.22.2"
+		image                         = "registry.k8s.io/kube-controller-manager:v1.25.3"
 		hvpaConfigDisabled            = &HVPAConfig{Enabled: false}
 		hvpaConfigEnabled             = &HVPAConfig{Enabled: true}
 		hvpaConfigEnabledScaleDownOff = &HVPAConfig{Enabled: true, ScaleDownUpdateMode: pointer.String(hvpav1alpha1.UpdateModeOff)}
@@ -1021,10 +1021,6 @@ func commandForKubernetesVersion(
 		command = append(command, featureGateFlags)
 	}
 
-	if versionutils.ConstraintK8sLess124.Check(semver.MustParse(version)) {
-		command = append(command, "--port=0")
-	}
-
 	command = append(command,
 		"--root-ca-file=/srv/kubernetes/ca/bundle.crt",
 		"--service-account-private-key-file=/srv/kubernetes/service-account-key/id_rsa",
@@ -1043,7 +1039,7 @@ func commandForKubernetesVersion(
 		"--tls-private-key-file=/var/lib/kube-controller-manager-server/tls.key",
 	)
 
-	command = append(command, "--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384")
+	command = append(command, "--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_CHACHA20_POLY1305_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305")
 
 	command = append(command,
 		"--use-service-account-credentials=true",

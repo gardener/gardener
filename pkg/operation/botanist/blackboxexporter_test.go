@@ -47,7 +47,7 @@ var _ = Describe("BlackboxExporter", func() {
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 			Spec: gardencorev1beta1.ShootSpec{
 				Kubernetes: gardencorev1beta1.Kubernetes{
-					Version: "1.22.1",
+					Version: "1.26.1",
 				},
 				Purpose: &shootPurposeEvaluation,
 			},

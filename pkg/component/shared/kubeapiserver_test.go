@@ -92,8 +92,8 @@ var _ = Describe("KubeAPIServer", func() {
 		BeforeEach(func() {
 			name = "bar"
 			objectMeta = metav1.ObjectMeta{Namespace: namespace, Name: name}
-			runtimeVersion = semver.MustParse("1.22.0")
-			targetVersion = semver.MustParse("1.22.1")
+			runtimeVersion = semver.MustParse("1.24.0")
+			targetVersion = semver.MustParse("1.24.0")
 			namePrefix = ""
 			serviceNetworkCIDR = "10.0.2.0/24"
 			autoscalingConfig = apiserver.AutoscalingConfig{}
@@ -114,7 +114,7 @@ var _ = Describe("KubeAPIServer", func() {
 				Data: map[string][]byte{"kubeconfig": []byte("kubeconfig-data")},
 			}
 
-			runtimeClientSet = fake.NewClientSetBuilder().WithClient(runtimeClient).WithVersion("1.22.0").Build()
+			runtimeClientSet = fake.NewClientSetBuilder().WithClient(runtimeClient).WithVersion("1.26.0").Build()
 			resourceConfigClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
 			sm = fakesecretsmanager.New(runtimeClient, namespace)
 		})
@@ -183,6 +183,7 @@ var _ = Describe("KubeAPIServer", func() {
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "LimitRanger"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "PodSecurityPolicy"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "PodSecurity"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ServiceAccount"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NodeRestriction"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "DefaultStorageClass"}},
@@ -200,6 +201,7 @@ var _ = Describe("KubeAPIServer", func() {
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Priority"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "LimitRanger"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "PodSecurity"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ServiceAccount"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NodeRestriction"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "DefaultStorageClass"}},
@@ -220,6 +222,7 @@ var _ = Describe("KubeAPIServer", func() {
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, KubeconfigSecretName: pointer.String("secret-1")}, Kubeconfig: []byte("kubeconfig-data")},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "LimitRanger"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "PodSecurityPolicy"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "PodSecurity"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ServiceAccount"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NodeRestriction"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "DefaultStorageClass"}},
@@ -243,6 +246,7 @@ var _ = Describe("KubeAPIServer", func() {
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "LimitRanger"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "PodSecurityPolicy"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "PodSecurity"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ServiceAccount"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NodeRestriction"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "DefaultStorageClass"}},
@@ -269,6 +273,7 @@ var _ = Describe("KubeAPIServer", func() {
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "LimitRanger"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "PodSecurityPolicy"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "PodSecurity"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ServiceAccount"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NodeRestriction"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "DefaultStorageClass"}},
@@ -295,6 +300,7 @@ var _ = Describe("KubeAPIServer", func() {
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Priority"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "LimitRanger"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "PodSecurity"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ServiceAccount", Disabled: pointer.Bool(false)}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NodeRestriction"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "DefaultStorageClass"}},
@@ -322,6 +328,7 @@ var _ = Describe("KubeAPIServer", func() {
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Priority"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "LimitRanger"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "PodSecurity"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ServiceAccount", Disabled: pointer.Bool(false)}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NodeRestriction"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "DefaultStorageClass"}},
@@ -447,7 +454,7 @@ defaults:
   enforce-version: "latest"
   audit-version: "latest"
   warn: "baseline"
-  warn-version: "v1.23"
+  warn-version: "v1.25"
 exemptions:
   usernames: ["admin"]
   runtimeClasses: ["random"]
@@ -469,7 +476,7 @@ exemptions:
 								// This field is defaulted by kubernetes
 								"Audit":       Equal("privileged"),
 								"Warn":        Equal("baseline"),
-								"WarnVersion": Equal("v1.23"),
+								"WarnVersion": Equal("v1.25"),
 							}))
 							Expect(admConfig.Exemptions.Usernames).To(ContainElement("admin"))
 							Expect(admConfig.Exemptions.Namespaces).To(ContainElements("kube-system", "random"))
@@ -488,7 +495,7 @@ defaults:
   enforce-version: "latest"
   audit-version: "latest"
   warn: "baseline"
-  warn-version: "v1.23"
+  warn-version: "v1.25"
 exemptions:
   usernames: ["admin"]
   runtimeClasses: ["random"]
@@ -510,7 +517,7 @@ exemptions:
 								// This field is defaulted by kubernetes
 								"Audit":       Equal("privileged"),
 								"Warn":        Equal("baseline"),
-								"WarnVersion": Equal("v1.23"),
+								"WarnVersion": Equal("v1.25"),
 							}))
 							Expect(admConfig.Exemptions.Usernames).To(ContainElement("admin"))
 							Expect(admConfig.Exemptions.Namespaces).To(ContainElements("kube-system", "random"))
@@ -529,7 +536,7 @@ defaults:
   enforce-version: "latest"
   audit-version: "latest"
   warn: "baseline"
-  warn-version: "v1.22"
+  warn-version: "v1.25"
 exemptions:
   usernames: ["admin"]
   runtimeClasses: ["random"]
@@ -551,7 +558,7 @@ exemptions:
 								// This field is defaulted by kubernetes
 								"Audit":       Equal("privileged"),
 								"Warn":        Equal("baseline"),
-								"WarnVersion": Equal("v1.22"),
+								"WarnVersion": Equal("v1.25"),
 							}))
 							Expect(admConfig.Exemptions.Usernames).To(ContainElement("admin"))
 							Expect(admConfig.Exemptions.Namespaces).To(ContainElements("kube-system", "random"))

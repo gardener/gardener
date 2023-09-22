@@ -40,7 +40,7 @@ var _ = Describe("Warnings", func() {
 			shoot = &core.Shoot{
 				Spec: core.ShootSpec{
 					Kubernetes: core.Kubernetes{
-						Version:                     "1.22.11",
+						Version:                     "1.26.5",
 						EnableStaticTokenKubeconfig: pointer.Bool(false),
 					},
 					Provider: core.Provider{
@@ -298,7 +298,7 @@ var _ = Describe("Warnings", func() {
 				shoot.CreationTimestamp = metav1.Now()
 			})
 
-			It("should return a warning when the PodSecurity admission plugin is not disabled for shoots >= 1.23 and < 1.25", func() {
+			It("should return a warning when the PodSecurity admission plugin is not disabled for shoots < 1.25", func() {
 				shoot.Spec.Kubernetes.Version = "1.24.2"
 
 				warnings := GetWarnings(ctx, shoot, shoot, credentialsRotationInterval)
@@ -307,7 +307,7 @@ var _ = Describe("Warnings", func() {
 				))
 			})
 
-			It("should not return a warning when the PodSecurity admission plugin is disabled for shoots >= 1.23 and < 1.25", func() {
+			It("should not return a warning when the PodSecurity admission plugin is disabled for shoots < 1.25", func() {
 				shoot.Spec.Kubernetes.Version = "1.24.2"
 				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
 					AdmissionPlugins: []core.AdmissionPlugin{
@@ -317,13 +317,6 @@ var _ = Describe("Warnings", func() {
 						},
 					},
 				}
-
-				warnings := GetWarnings(ctx, shoot, shoot, credentialsRotationInterval)
-				Expect(warnings).To(BeEmpty())
-			})
-
-			It("should not return a warning when the PodSecurity admission plugin is not disabled for shoots < 1.23", func() {
-				shoot.Spec.Kubernetes.Version = "1.22.11"
 
 				warnings := GetWarnings(ctx, shoot, shoot, credentialsRotationInterval)
 				Expect(warnings).To(BeEmpty())

@@ -41,7 +41,6 @@ func (b *Botanist) DefaultKubernetesDashboard() (kubernetesdashboard.Interface, 
 		Image:               image.String(),
 		MetricsScraperImage: scraperImage.String(),
 		VPAEnabled:          b.Shoot.WantsVerticalPodAutoscaler,
-		KubernetesVersion:   b.Shoot.KubernetesVersion,
 	}
 
 	if b.ShootUsesDNS() {

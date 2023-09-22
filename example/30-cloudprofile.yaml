@@ -20,8 +20,6 @@ spec:
     - version: 1.26.3
     - version: 1.25.8
     - version: 1.24.6
-    - version: 1.23.12
-    - version: 1.22.15
       expirationDate: 2022-11-30T01:02:03Z # optional
   machineImages:
   - name: suse-chost

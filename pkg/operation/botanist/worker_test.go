@@ -338,11 +338,11 @@ var _ = Describe("Worker", func() {
 			map[string][]corev1.Node{
 				"pool1": {{ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{"checksum/cloud-config-data": "uptodate1"},
-					Labels:      map[string]string{"worker.gardener.cloud/kubernetes-version": "1.24.0"},
+					Labels:      map[string]string{"worker.gardener.cloud/kubernetes-version": "1.26.0"},
 				}}},
 				"pool2": {{ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{"checksum/cloud-config-data": "uptodate2"},
-					Labels:      map[string]string{"worker.gardener.cloud/kubernetes-version": "1.23.0"},
+					Labels:      map[string]string{"worker.gardener.cloud/kubernetes-version": "1.25.0"},
 				}}},
 			},
 			map[string]metav1.ObjectMeta{
@@ -510,7 +510,7 @@ var _ = Describe("Worker", func() {
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
 								"worker.gardener.cloud/pool":               "pool1",
-								"worker.gardener.cloud/kubernetes-version": "1.23.0",
+								"worker.gardener.cloud/kubernetes-version": "1.26.0",
 							},
 							Annotations: map[string]string{"checksum/cloud-config-data": "foo"},
 						},

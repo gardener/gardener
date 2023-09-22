@@ -250,7 +250,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	var (
 		deployment                            = k.emptyDeployment()
 		podDisruptionBudget                   = k.emptyPodDisruptionBudget()
-		horizontalPodAutoscaler               client.Object
+		horizontalPodAutoscaler               = k.emptyHorizontalPodAutoscaler()
 		verticalPodAutoscaler                 = k.emptyVerticalPodAutoscaler()
 		hvpa                                  = k.emptyHVPA()
 		secretETCDEncryptionConfiguration     = k.emptySecret(v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration)
@@ -264,8 +264,6 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		configMapEgressSelector               = k.emptyConfigMap(configMapEgressSelectorNamePrefix)
 		configMapTerminationHandler           = k.emptyConfigMap(watchdogConfigMapNamePrefix)
 	)
-
-	horizontalPodAutoscaler = k.emptyHorizontalPodAutoscaler()
 
 	if err := k.reconcilePodDisruptionBudget(ctx, podDisruptionBudget); err != nil {
 		return err

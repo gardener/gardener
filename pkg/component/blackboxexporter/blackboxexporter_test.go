@@ -311,7 +311,7 @@ status: {}
 		})
 
 		BeforeEach(func() {
-			values.KubernetesVersion = semver.MustParse("1.22.0")
+			values.KubernetesVersion = semver.MustParse("1.26.0")
 			component = New(c, namespace, values)
 		})
 
