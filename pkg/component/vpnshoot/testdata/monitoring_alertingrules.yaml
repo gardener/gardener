@@ -30,7 +30,7 @@ tests:
     values: '0+0x60'
   alert_rule_test:
   - eval_time: 30m
-    alertname: VPNHAShootNoPods1
+    alertname: VPNHAShootNoPods
     exp_alerts:
     - exp_labels:
         service: vpn
