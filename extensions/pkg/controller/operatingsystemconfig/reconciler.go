@@ -95,7 +95,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	case operationType == gardencorev1beta1.LastOperationTypeMigrate:
 		return r.migrate(ctx, log, osc)
 	case osc.DeletionTimestamp != nil:
-		return r.delete(ctx, log, osc, v1beta1helper.ShootNeedsForceDeletion(cluster.Shoot))
+		return r.delete(ctx, log, osc, cluster != nil && v1beta1helper.ShootNeedsForceDeletion(cluster.Shoot))
 	case operationType == gardencorev1beta1.LastOperationTypeRestore:
 		return r.restore(ctx, log, osc)
 	default:

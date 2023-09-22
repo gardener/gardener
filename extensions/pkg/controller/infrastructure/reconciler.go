@@ -157,7 +157,7 @@ func (r *reconciler) delete(
 	}
 
 	var err error
-	if v1beta1helper.ShootNeedsForceDeletion(cluster.Shoot) {
+	if cluster != nil && v1beta1helper.ShootNeedsForceDeletion(cluster.Shoot) {
 		err = r.actuator.ForceDelete(ctx, log, infrastructure, cluster)
 	} else {
 		err = r.actuator.Delete(ctx, log, infrastructure, cluster)
