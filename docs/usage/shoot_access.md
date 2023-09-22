@@ -14,26 +14,17 @@ In order to request such a `kubeconfig`, you can run the following commands:
 export NAMESPACE=my-namespace
 export SHOOT_NAME=my-shoot
 kubectl create \
-    -f <path>/<to>/kubeconfig-request.json \
-    --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/adminkubeconfig | jq -r ".status.kubeconfig" | base64 -d
+    -f <(printf '{"spec":{"expirationSeconds":600}}') \
+    --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/adminkubeconfig | \
+    jq -r ".status.kubeconfig" | \
+    base64 -d
 ```
 
-Here, the `kubeconfig-request.json` has the following content:
-
-```json
-{
-    "apiVersion": "authentication.gardener.cloud/v1alpha1",
-    "kind": "AdminKubeconfigRequest",
-    "spec": {
-        "expirationSeconds": 1000
-    }
-}
-```
 
 You also can use controller-runtime `client` (>= v0.14.3) to create such a kubeconfig from your go code like so:
 
 ```go
-expiration := 8*time.Hour
+expiration := 10 * time.Minute
 expirationSeconds := int64(expiration.Seconds())
 adminKubeconfigRequest := &authenticationv1alpha1.AdminKubeconfigRequest{
   Spec: authenticationv1alpha1.AdminKubeconfigRequestSpec{
@@ -47,7 +38,7 @@ if err != nil {
 config = adminKubeconfigRequest.Status.Kubeconfig
 ```
 
-> **Note:** The [`gardenctl-v2`](https://github.com/gardener/gardenctl-v2/) tool makes it easy to target shoot clusters and automatically renews such `kubeconfig` when required.
+> **Note:** The [`gardenctl-v2`](https://github.com/gardener/gardenctl-v2) tool simplifies targeting shoot clusters. It automatically downloads a kubeconfig that uses the [gardenlogin](https://github.com/gardener/gardenlogin) kubectl auth plugin. This transparently manages authentication and certificate renewal without containing any credentials.
 
 ## OpenID Connect
 
