@@ -32,7 +32,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | DisableScalingClassesForShoots     | `false` | `Alpha` | `1.73` | `1.78` |
 | DisableScalingClassesForShoots     | `true`  | `Beta`  | `1.79` |        |
 | ContainerdRegistryHostsDir         | `false` | `Alpha` | `1.77` |        |
-| ShootForceDeletion                 | `false` | `Alpha` | `1.80` |        |
+| ShootForceDeletion                 | `false` | `Alpha` | `1.81` |        |
 
 ## Feature Gates for Graduated or Deprecated Features
 
