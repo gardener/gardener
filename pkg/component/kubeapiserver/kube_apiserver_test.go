@@ -1650,7 +1650,6 @@ rules:
 					"app":                 "kubernetes",
 					"role":                "apiserver",
 					"high-availability-config.resources.gardener.cloud/type": "server",
-					"core.gardener.cloud/apiserver-exposure":                 "gardener-managed",
 				}))
 			})
 

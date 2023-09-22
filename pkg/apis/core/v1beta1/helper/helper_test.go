@@ -737,34 +737,6 @@ var _ = Describe("Helper", func() {
 		})
 	})
 
-	DescribeTable("#IsAPIServerExposureManaged",
-		func(obj metav1.Object, expected bool) {
-			Expect(IsAPIServerExposureManaged(obj)).To(Equal(expected))
-		},
-		Entry("object is nil",
-			nil,
-			false,
-		),
-		Entry("label is not present",
-			&metav1.ObjectMeta{Labels: map[string]string{
-				"foo": "bar",
-			}},
-			false,
-		),
-		Entry("label's value is not the same",
-			&metav1.ObjectMeta{Labels: map[string]string{
-				"core.gardener.cloud/apiserver-exposure": "some-dummy-value",
-			}},
-			false,
-		),
-		Entry("label's value is gardener-managed",
-			&metav1.ObjectMeta{Labels: map[string]string{
-				"core.gardener.cloud/apiserver-exposure": "gardener-managed",
-			}},
-			true,
-		),
-	)
-
 	DescribeTable("#FindPrimaryDNSProvider",
 		func(providers []gardencorev1beta1.DNSProvider, matcher gomegatypes.GomegaMatcher) {
 			Expect(FindPrimaryDNSProvider(providers)).To(matcher)
