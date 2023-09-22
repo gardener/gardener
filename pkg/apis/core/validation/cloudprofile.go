@@ -307,6 +307,7 @@ func validateContainerRuntimesInterfaces(cris []core.CRI, fldPath *field.Path) f
 		allErrs = append(allErrs, validateContainerRuntimes(cri.ContainerRuntimes, criPath.Child("containerRuntimes"))...)
 	}
 
+	// TODO(shafeeqes): Remove this once https://github.com/gardener/gardener/issues/4673 is resolved.
 	if !hasDocker {
 		allErrs = append(allErrs, field.Invalid(fldPath, cris, "must provide docker as supported container runtime"))
 	}
