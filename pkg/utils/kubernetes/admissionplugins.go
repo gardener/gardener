@@ -17,7 +17,7 @@ package kubernetes
 import (
 	"fmt"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
@@ -115,7 +115,7 @@ func getDefaultPlugins(version string) []gardencorev1beta1.AdmissionPlugin {
 	return admissionPlugins
 }
 
-func formatMajorMinor(major, minor int64) string {
+func formatMajorMinor(major, minor uint64) string {
 	return fmt.Sprintf("%d.%d", major, minor)
 }
 

@@ -19,7 +19,7 @@ import (
 	_ "embed"
 	"text/template"
 
-	"github.com/Masterminds/sprig"
+	"github.com/Masterminds/sprig/v3"
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/imagevector"

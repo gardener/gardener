@@ -25,7 +25,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -132,10 +131,10 @@ type DecoderConfigOption func(*mapstructure.DecoderConfig)
 // DecodeHook returns a DecoderConfigOption which overrides the default
 // DecoderConfig.DecodeHook value, the default is:
 //
-//  mapstructure.ComposeDecodeHookFunc(
-//		mapstructure.StringToTimeDurationHookFunc(),
-//		mapstructure.StringToSliceHookFunc(","),
-//	)
+//	 mapstructure.ComposeDecodeHookFunc(
+//			mapstructure.StringToTimeDurationHookFunc(),
+//			mapstructure.StringToSliceHookFunc(","),
+//		)
 func DecodeHook(hook mapstructure.DecodeHookFunc) DecoderConfigOption {
 	return func(c *mapstructure.DecoderConfig) {
 		c.DecodeHook = hook
@@ -156,18 +155,18 @@ func DecodeHook(hook mapstructure.DecodeHookFunc) DecoderConfigOption {
 //
 // For example, if values from the following sources were loaded:
 //
-//  Defaults : {
-//  	"secret": "",
-//  	"user": "default",
-//  	"endpoint": "https://localhost"
-//  }
-//  Config : {
-//  	"user": "root"
-//  	"secret": "defaultsecret"
-//  }
-//  Env : {
-//  	"secret": "somesecretkey"
-//  }
+//	Defaults : {
+//		"secret": "",
+//		"user": "default",
+//		"endpoint": "https://localhost"
+//	}
+//	Config : {
+//		"user": "root"
+//		"secret": "defaultsecret"
+//	}
+//	Env : {
+//		"secret": "somesecretkey"
+//	}
 //
 // The resulting config will have the following values:
 //
@@ -206,6 +205,7 @@ type Viper struct {
 	envKeyReplacer      StringReplacer
 	allowEmptyEnv       bool
 
+	parents        []string
 	config         map[string]interface{}
 	override       map[string]interface{}
 	defaults       map[string]interface{}
@@ -232,6 +232,7 @@ func New() *Viper {
 	v.configPermissions = os.FileMode(0o644)
 	v.fs = afero.NewOsFs()
 	v.config = make(map[string]interface{})
+	v.parents = []string{}
 	v.override = make(map[string]interface{})
 	v.defaults = make(map[string]interface{})
 	v.kvstore = make(map[string]interface{})
@@ -300,7 +301,7 @@ func NewWithOptions(opts ...Option) *Viper {
 func Reset() {
 	v = New()
 	SupportedExts = []string{"json", "toml", "yaml", "yml", "properties", "props", "prop", "hcl", "tfvars", "dotenv", "env", "ini"}
-	SupportedRemoteProviders = []string{"etcd", "consul", "firestore"}
+	SupportedRemoteProviders = []string{"etcd", "etcd3", "consul", "firestore"}
 }
 
 // TODO: make this lazy initialization instead
@@ -419,28 +420,34 @@ type RemoteProvider interface {
 var SupportedExts = []string{"json", "toml", "yaml", "yml", "properties", "props", "prop", "hcl", "tfvars", "dotenv", "env", "ini"}
 
 // SupportedRemoteProviders are universally supported remote providers.
-var SupportedRemoteProviders = []string{"etcd", "consul", "firestore"}
+var SupportedRemoteProviders = []string{"etcd", "etcd3", "consul", "firestore"}
 
+// OnConfigChange sets the event handler that is called when a config file changes.
 func OnConfigChange(run func(in fsnotify.Event)) { v.OnConfigChange(run) }
+
+// OnConfigChange sets the event handler that is called when a config file changes.
 func (v *Viper) OnConfigChange(run func(in fsnotify.Event)) {
 	v.onConfigChange = run
 }
 
+// WatchConfig starts watching a config file for changes.
 func WatchConfig() { v.WatchConfig() }
 
+// WatchConfig starts watching a config file for changes.
 func (v *Viper) WatchConfig() {
 	initWG := sync.WaitGroup{}
 	initWG.Add(1)
 	go func() {
 		watcher, err := newWatcher()
 		if err != nil {
-			log.Fatal(err)
+			v.logger.Error(fmt.Sprintf("failed to create watcher: %s", err))
+			os.Exit(1)
 		}
 		defer watcher.Close()
 		// we have to watch the entire directory to pick up renames/atomic saves in a cross-platform way
 		filename, err := v.getConfigFile()
 		if err != nil {
-			log.Printf("error: %v\n", err)
+			v.logger.Error(fmt.Sprintf("get config file: %s", err))
 			initWG.Done()
 			return
 		}
@@ -463,27 +470,25 @@ func (v *Viper) WatchConfig() {
 					// we only care about the config file with the following cases:
 					// 1 - if the config file was modified or created
 					// 2 - if the real path to the config file changed (eg: k8s ConfigMap replacement)
-					const writeOrCreateMask = fsnotify.Write | fsnotify.Create
 					if (filepath.Clean(event.Name) == configFile &&
-						event.Op&writeOrCreateMask != 0) ||
+						(event.Has(fsnotify.Write) || event.Has(fsnotify.Create))) ||
 						(currentConfigFile != "" && currentConfigFile != realConfigFile) {
 						realConfigFile = currentConfigFile
 						err := v.ReadInConfig()
 						if err != nil {
-							log.Printf("error reading config file: %v\n", err)
+							v.logger.Error(fmt.Sprintf("read config file: %s", err))
 						}
 						if v.onConfigChange != nil {
 							v.onConfigChange(event)
 						}
-					} else if filepath.Clean(event.Name) == configFile &&
-						event.Op&fsnotify.Remove != 0 {
+					} else if filepath.Clean(event.Name) == configFile && event.Has(fsnotify.Remove) {
 						eventsWG.Done()
 						return
 					}
 
 				case err, ok := <-watcher.Errors:
 					if ok { // 'Errors' channel is not closed
-						log.Printf("watcher error: %v\n", err)
+						v.logger.Error(fmt.Sprintf("watcher error: %s", err))
 					}
 					eventsWG.Done()
 					return
@@ -573,7 +578,7 @@ func (v *Viper) AddConfigPath(in string) {
 
 // AddRemoteProvider adds a remote configuration source.
 // Remote Providers are searched in the order they are added.
-// provider is a string value: "etcd", "consul" or "firestore" are currently supported.
+// provider is a string value: "etcd", "etcd3", "consul" or "firestore" are currently supported.
 // endpoint is the url.  etcd requires http://ip:port  consul requires ip:port
 // path is the path in the k/v store to retrieve configuration
 // To retrieve a config file called myapp.json from /configs/myapp.json
@@ -604,7 +609,7 @@ func (v *Viper) AddRemoteProvider(provider, endpoint, path string) error {
 
 // AddSecureRemoteProvider adds a remote configuration source.
 // Secure Remote Providers are searched in the order they are added.
-// provider is a string value: "etcd", "consul" or "firestore" are currently supported.
+// provider is a string value: "etcd", "etcd3", "consul" or "firestore" are currently supported.
 // endpoint is the url.  etcd requires http://ip:port  consul requires ip:port
 // secretkeyring is the filepath to your openpgp secret keyring.  e.g. /etc/secrets/myring.gpg
 // path is the path in the k/v store to retrieve configuration
@@ -785,7 +790,8 @@ func (v *Viper) searchMapWithPathPrefixes(
 // isPathShadowedInDeepMap makes sure the given path is not shadowed somewhere
 // on its path in the map.
 // e.g., if "foo.bar" has a value in the given map, it “shadows”
-//       "foo.bar.baz" in a lower-priority map
+//
+//	"foo.bar.baz" in a lower-priority map
 func (v *Viper) isPathShadowedInDeepMap(path []string, m map[string]interface{}) string {
 	var parentVal interface{}
 	for i := 1; i < len(path); i++ {
@@ -810,7 +816,8 @@ func (v *Viper) isPathShadowedInDeepMap(path []string, m map[string]interface{})
 // isPathShadowedInFlatMap makes sure the given path is not shadowed somewhere
 // in a sub-path of the map.
 // e.g., if "foo.bar" has a value in the given map, it “shadows”
-//       "foo.bar.baz" in a lower-priority map
+//
+//	"foo.bar.baz" in a lower-priority map
 func (v *Viper) isPathShadowedInFlatMap(path []string, mi interface{}) string {
 	// unify input map
 	var m map[string]interface{}
@@ -835,7 +842,8 @@ func (v *Viper) isPathShadowedInFlatMap(path []string, mi interface{}) string {
 // isPathShadowedInAutoEnv makes sure the given path is not shadowed somewhere
 // in the environment, when automatic env is on.
 // e.g., if "foo.bar" has a value in the environment, it “shadows”
-//       "foo.bar.baz" in a lower-priority map
+//
+//	"foo.bar.baz" in a lower-priority map
 func (v *Viper) isPathShadowedInAutoEnv(path []string) string {
 	var parentKey string
 	for i := 1; i < len(path); i++ {
@@ -856,11 +864,11 @@ func (v *Viper) isPathShadowedInAutoEnv(path []string) string {
 // would return a string slice for the key if the key's type is inferred by
 // the default value and the Get function would return:
 //
-//   []string {"a", "b", "c"}
+//	[]string {"a", "b", "c"}
 //
 // Otherwise the Get function would return:
 //
-//   "a b c"
+//	"a b c"
 func SetTypeByDefaultValue(enable bool) { v.SetTypeByDefaultValue(enable) }
 
 func (v *Viper) SetTypeByDefaultValue(enable bool) {
@@ -922,6 +930,8 @@ func (v *Viper) Get(key string) interface{} {
 			return cast.ToStringSlice(val)
 		case []int:
 			return cast.ToIntSlice(val)
+		case []time.Duration:
+			return cast.ToDurationSlice(val)
 		}
 	}
 
@@ -940,6 +950,10 @@ func (v *Viper) Sub(key string) *Viper {
 	}
 
 	if reflect.TypeOf(data).Kind() == reflect.Map {
+		subv.parents = append(v.parents, strings.ToLower(key))
+		subv.automaticEnvApplied = v.automaticEnvApplied
+		subv.envPrefix = v.envPrefix
+		subv.envKeyReplacer = v.envKeyReplacer
 		subv.config = cast.ToStringMap(data)
 		return subv
 	}
@@ -986,6 +1000,13 @@ func GetUint(key string) uint { return v.GetUint(key) }
 
 func (v *Viper) GetUint(key string) uint {
 	return cast.ToUint(v.Get(key))
+}
+
+// GetUint16 returns the value associated with the key as an unsigned integer.
+func GetUint16(key string) uint16 { return v.GetUint16(key) }
+
+func (v *Viper) GetUint16(key string) uint16 {
+	return cast.ToUint16(v.Get(key))
 }
 
 // GetUint32 returns the value associated with the key as an unsigned integer.
@@ -1086,7 +1107,7 @@ func (v *Viper) Unmarshal(rawVal interface{}, opts ...DecoderConfigOption) error
 	return decode(v.AllSettings(), defaultDecoderConfig(rawVal, opts...))
 }
 
-// defaultDecoderConfig returns default mapsstructure.DecoderConfig with suppot
+// defaultDecoderConfig returns default mapstructure.DecoderConfig with support
 // of time.Duration values & string slices
 func defaultDecoderConfig(output interface{}, opts ...DecoderConfigOption) *mapstructure.DecoderConfig {
 	c := &mapstructure.DecoderConfig{
@@ -1137,9 +1158,8 @@ func (v *Viper) BindPFlags(flags *pflag.FlagSet) error {
 // BindPFlag binds a specific key to a pflag (as used by cobra).
 // Example (where serverCmd is a Cobra instance):
 //
-//	 serverCmd.Flags().Int("port", 1138, "Port to run Application server on")
-//	 Viper.BindPFlag("port", serverCmd.Flags().Lookup("port"))
-//
+//	serverCmd.Flags().Int("port", 1138, "Port to run Application server on")
+//	Viper.BindPFlag("port", serverCmd.Flags().Lookup("port"))
 func BindPFlag(key string, flag *pflag.Flag) error { return v.BindPFlag(key, flag) }
 
 func (v *Viper) BindPFlag(key string, flag *pflag.Flag) error {
@@ -1197,6 +1217,17 @@ func (v *Viper) BindEnv(input ...string) error {
 	return nil
 }
 
+// MustBindEnv wraps BindEnv in a panic.
+// If there is an error binding an environment variable, MustBindEnv will
+// panic.
+func MustBindEnv(input ...string) { v.MustBindEnv(input...) }
+
+func (v *Viper) MustBindEnv(input ...string) {
+	if err := v.BindEnv(input...); err != nil {
+		panic(fmt.Sprintf("error while binding environment variable: %v", err))
+	}
+}
+
 // Given a key, find the value.
 //
 // Viper will check to see if an alias exists first.
@@ -1251,8 +1282,15 @@ func (v *Viper) find(lcaseKey string, flagDefault bool) interface{} {
 			s = strings.TrimSuffix(s, "]")
 			res, _ := readAsCSV(s)
 			return cast.ToIntSlice(res)
+		case "durationSlice":
+			s := strings.TrimPrefix(flag.ValueString(), "[")
+			s = strings.TrimSuffix(s, "]")
+			slice := strings.Split(s, ",")
+			return cast.ToDurationSlice(slice)
 		case "stringToString":
 			return stringToStringConv(flag.ValueString())
+		case "stringToInt":
+			return stringToIntConv(flag.ValueString())
 		default:
 			return flag.ValueString()
 		}
@@ -1263,9 +1301,10 @@ func (v *Viper) find(lcaseKey string, flagDefault bool) interface{} {
 
 	// Env override next
 	if v.automaticEnvApplied {
+		envKey := strings.Join(append(v.parents, lcaseKey), ".")
 		// even if it hasn't been registered, if automaticEnv is used,
 		// check any Get request
-		if val, ok := v.getEnv(v.mergeWithEnvPrefix(lcaseKey)); ok {
+		if val, ok := v.getEnv(v.mergeWithEnvPrefix(envKey)); ok {
 			return val
 		}
 		if nested && v.isPathShadowedInAutoEnv(path) != "" {
@@ -1332,6 +1371,13 @@ func (v *Viper) find(lcaseKey string, flagDefault bool) interface{} {
 				return cast.ToIntSlice(res)
 			case "stringToString":
 				return stringToStringConv(flag.ValueString())
+			case "stringToInt":
+				return stringToIntConv(flag.ValueString())
+			case "durationSlice":
+				s := strings.TrimPrefix(flag.ValueString(), "[")
+				s = strings.TrimSuffix(s, "]")
+				slice := strings.Split(s, ",")
+				return cast.ToDurationSlice(slice)
 			default:
 				return flag.ValueString()
 			}
@@ -1371,6 +1417,30 @@ func stringToStringConv(val string) interface{} {
 			return nil
 		}
 		out[kv[0]] = kv[1]
+	}
+	return out
+}
+
+// mostly copied from pflag's implementation of this operation here https://github.com/spf13/pflag/blob/d5e0c0615acee7028e1e2740a11102313be88de1/string_to_int.go#L68
+// alterations are: errors are swallowed, map[string]interface{} is returned in order to enable cast.ToStringMap
+func stringToIntConv(val string) interface{} {
+	val = strings.Trim(val, "[]")
+	// An empty string would cause an empty map
+	if len(val) == 0 {
+		return map[string]interface{}{}
+	}
+	ss := strings.Split(val, ",")
+	out := make(map[string]interface{}, len(ss))
+	for _, pair := range ss {
+		kv := strings.SplitN(pair, "=", 2)
+		if len(kv) != 2 {
+			return nil
+		}
+		var err error
+		out[kv[0]], err = strconv.Atoi(kv[1])
+		if err != nil {
+			return nil
+		}
 	}
 	return out
 }
@@ -1798,8 +1868,13 @@ func mergeMaps(
 			tsv, ok := sv.(map[interface{}]interface{})
 			if !ok {
 				v.logger.Error(
-					"Could not cast sv to map[interface{}]interface{}; key=%s, st=%v, tt=%v, sv=%v, tv=%v",
-					sk, svType, tvType, sv, tv)
+					"Could not cast sv to map[interface{}]interface{}",
+					"key", sk,
+					"st", svType,
+					"tt", tvType,
+					"sv", sv,
+					"tv", tv,
+				)
 				continue
 			}
 
@@ -1811,8 +1886,13 @@ func mergeMaps(
 			tsv, ok := sv.(map[string]interface{})
 			if !ok {
 				v.logger.Error(
-					"Could not cast sv to map[string]interface{}; key=%s, st=%v, tt=%v, sv=%v, tv=%v",
-					sk, svType, tvType, sv, tv)
+					"Could not cast sv to map[string]interface{}",
+					"key", sk,
+					"st", svType,
+					"tt", tvType,
+					"sv", sv,
+					"tv", tv,
+				)
 				continue
 			}
 			mergeMaps(tsv, ttv, nil)
@@ -1849,6 +1929,10 @@ func (v *Viper) getKeyValueConfig() error {
 		return RemoteConfigError("Enable the remote features by doing a blank import of the viper/remote package: '_ github.com/spf13/viper/remote'")
 	}
 
+	if len(v.remoteProviders) == 0 {
+		return RemoteConfigError("No Remote Providers")
+	}
+
 	for _, rp := range v.remoteProviders {
 		val, err := v.getRemoteConfig(rp)
 		if err != nil {
@@ -1875,6 +1959,10 @@ func (v *Viper) getRemoteConfig(provider RemoteProvider) (map[string]interface{}
 
 // Retrieve the first found remote configuration.
 func (v *Viper) watchKeyValueConfigOnChannel() error {
+	if len(v.remoteProviders) == 0 {
+		return RemoteConfigError("No Remote Providers")
+	}
+
 	for _, rp := range v.remoteProviders {
 		respc, _ := RemoteConfig.WatchChannel(rp)
 		// Todo: Add quit channel
@@ -1892,9 +1980,15 @@ func (v *Viper) watchKeyValueConfigOnChannel() error {
 
 // Retrieve the first found remote configuration.
 func (v *Viper) watchKeyValueConfig() error {
+	if len(v.remoteProviders) == 0 {
+		return RemoteConfigError("No Remote Providers")
+	}
+
 	for _, rp := range v.remoteProviders {
 		val, err := v.watchRemoteConfig(rp)
 		if err != nil {
+			v.logger.Error(fmt.Errorf("watch remote config: %w", err).Error())
+
 			continue
 		}
 		v.kvstore = val
@@ -1937,9 +2031,10 @@ func (v *Viper) AllKeys() []string {
 
 // flattenAndMergeMap recursively flattens the given map into a map[string]bool
 // of key paths (used as a set, easier to manipulate than a []string):
-// - each path is merged into a single key string, delimited with v.keyDelim
-// - if a path is shadowed by an earlier value in the initial shadow map,
-//   it is skipped.
+//   - each path is merged into a single key string, delimited with v.keyDelim
+//   - if a path is shadowed by an earlier value in the initial shadow map,
+//     it is skipped.
+//
 // The resulting set of paths is merged to the given shadow set at the same time.
 func (v *Viper) flattenAndMergeMap(shadow map[string]bool, m map[string]interface{}, prefix string) map[string]bool {
 	if shadow != nil && prefix != "" && shadow[prefix] {
@@ -2090,14 +2185,17 @@ func (v *Viper) getConfigFile() (string, error) {
 
 // Debug prints all configuration registries for debugging
 // purposes.
-func Debug() { v.Debug() }
+func Debug()              { v.Debug() }
+func DebugTo(w io.Writer) { v.DebugTo(w) }
 
-func (v *Viper) Debug() {
-	fmt.Printf("Aliases:\n%#v\n", v.aliases)
-	fmt.Printf("Override:\n%#v\n", v.override)
-	fmt.Printf("PFlags:\n%#v\n", v.pflags)
-	fmt.Printf("Env:\n%#v\n", v.env)
-	fmt.Printf("Key/Value Store:\n%#v\n", v.kvstore)
-	fmt.Printf("Config:\n%#v\n", v.config)
-	fmt.Printf("Defaults:\n%#v\n", v.defaults)
+func (v *Viper) Debug() { v.DebugTo(os.Stdout) }
+
+func (v *Viper) DebugTo(w io.Writer) {
+	fmt.Fprintf(w, "Aliases:\n%#v\n", v.aliases)
+	fmt.Fprintf(w, "Override:\n%#v\n", v.override)
+	fmt.Fprintf(w, "PFlags:\n%#v\n", v.pflags)
+	fmt.Fprintf(w, "Env:\n%#v\n", v.env)
+	fmt.Fprintf(w, "Key/Value Store:\n%#v\n", v.kvstore)
+	fmt.Fprintf(w, "Config:\n%#v\n", v.config)
+	fmt.Fprintf(w, "Defaults:\n%#v\n", v.defaults)
 }

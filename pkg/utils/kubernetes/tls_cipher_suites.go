@@ -15,7 +15,7 @@
 package kubernetes
 
 import (
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 
 	"github.com/gardener/gardener/pkg/utils/version"
 )
