@@ -86,7 +86,7 @@ func getSecretConfigs(namespace string) []extensionssecretsmanager.SecretConfigW
 var (
 	controlPlaneShootChart = &chart.Chart{
 		Name:       "shoot-system-components",
-		EmbeddedFS: &charts.ChartShootSystemComponents,
+		EmbeddedFS: charts.ChartShootSystemComponents,
 		Path:       charts.ChartPathShootSystemComponents,
 		SubCharts: []*chart.Chart{
 			{
@@ -101,7 +101,7 @@ var (
 
 	storageClassChart = &chart.Chart{
 		Name:       "shoot-storageclasses",
-		EmbeddedFS: &charts.ChartShootStorageClasses,
+		EmbeddedFS: charts.ChartShootStorageClasses,
 		Path:       charts.ChartPathShootStorageClasses,
 	}
 )

@@ -21,10 +21,6 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-const (
-	chartsRootPath = "../../../../../charts"
-)
-
 func TestApplier(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Gardenlet Controller ManagedSeed ChartTest Suite")

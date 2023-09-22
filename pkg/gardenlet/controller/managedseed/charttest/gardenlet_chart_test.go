@@ -17,7 +17,6 @@ package charttest
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -39,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
@@ -133,9 +133,9 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 
 			mockChartApplier := mock.NewMockChartApplier(ctrl)
 
-			mockChartApplier.EXPECT().Delete(ctx, filepath.Join(chartsRootPath, "gardener", "gardenlet"), "garden", "gardenlet", kubernetes.Values(map[string]interface{}{}))
+			mockChartApplier.EXPECT().DeleteFromEmbeddedFS(ctx, charts.ChartGardenlet, charts.ChartPathGardenlet, "garden", "gardenlet", kubernetes.Values(map[string]interface{}{}))
 
-			deployer = NewGardenletChartApplier(mockChartApplier, map[string]interface{}{}, chartsRootPath)
+			deployer = NewGardenletChartApplier(mockChartApplier, map[string]interface{}{})
 			Expect(deployer.Destroy(ctx)).ToNot(HaveOccurred(), "Destroy Gardenlet resources succeeds")
 		})
 	})
@@ -257,7 +257,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				gardenletValues["vpa"] = *deploymentConfiguration.VPA
 			}
 
-			deployer = NewGardenletChartApplier(chartApplier, gardenletValues, chartsRootPath)
+			deployer = NewGardenletChartApplier(chartApplier, gardenletValues)
 
 			Expect(deployer.Deploy(ctx)).ToNot(HaveOccurred(), "Gardenlet chart deployment succeeds")
 

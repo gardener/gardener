@@ -69,29 +69,7 @@ func NewWithServerVersion(serverVersion *version.Info) Interface {
 	}
 }
 
-// DiscoverCapabilities discovers the capabilities required for chart renderers using the given
-// DiscoveryInterface.
-func DiscoverCapabilities(disc discovery.DiscoveryInterface) (*chartutil.Capabilities, error) {
-	sv, err := disc.ServerVersion()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get kubernetes server version %w", err)
-	}
-
-	return &chartutil.Capabilities{KubeVersion: sv}, nil
-}
-
-// Render loads the chart from the given location <chartPath> and calls the Render() function
-// to convert it into a ChartRelease object.
-// Deprecated: Use RenderEmbeddedFS for new code!
-func (r *chartRenderer) Render(chartPath, releaseName, namespace string, values interface{}) (*RenderedChart, error) {
-	chart, err := chartutil.Load(chartPath)
-	if err != nil {
-		return nil, fmt.Errorf("can't load chart from path %s:, %s", chartPath, err)
-	}
-	return r.renderRelease(chart, releaseName, namespace, values)
-}
-
-// RenderArchive loads the chart from the given location <chartPath> and calls the Render() function
+// RenderArchive loads the chart from the given location <chartPath> and calls the renderRelease() function
 // to convert it into a ChartRelease object.
 func (r *chartRenderer) RenderArchive(archive []byte, releaseName, namespace string, values interface{}) (*RenderedChart, error) {
 	chart, err := chartutil.LoadArchive(bytes.NewReader(archive))
@@ -101,7 +79,7 @@ func (r *chartRenderer) RenderArchive(archive []byte, releaseName, namespace str
 	return r.renderRelease(chart, releaseName, namespace, values)
 }
 
-// RenderEmbeddedFS loads the chart from the given embed.FS and calls the Render() function
+// RenderEmbeddedFS loads the chart from the given embed.FS and calls the renderRelease() function
 // to convert it into a ChartRelease object.
 func (r *chartRenderer) RenderEmbeddedFS(embeddedFS embed.FS, chartPath, releaseName, namespace string, values interface{}) (*RenderedChart, error) {
 	chart, err := loadEmbeddedFS(embeddedFS, chartPath)

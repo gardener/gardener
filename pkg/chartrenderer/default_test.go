@@ -54,22 +54,6 @@ var _ = Describe("ChartRenderer", func() {
 		renderer = chartrenderer.NewWithServerVersion(&version.Info{})
 	})
 
-	Describe("#Render", func() {
-		It("should return err when chartPath is missing", func() {
-			_, err := renderer.Render(filepath.Join("testdata", "missing"), "missing", "default", map[string]string{})
-			Expect(err).To(MatchError(ContainSubstring(`can't load chart from path testdata/missing`)))
-		})
-
-		It("should return rendered chart", func() {
-			chart, err := renderer.Render(alpineChartPath, "alpine", "default", map[string]string{})
-			Expect(err).ToNot(HaveOccurred())
-
-			files := chart.Files()
-			Expect(files).To(HaveLen(1))
-			Expect(files).To(HaveKeyWithValue("alpine/templates/alpine-pod.yaml", alpinePod))
-		})
-	})
-
 	Describe("#RenderEmbeddedFS", func() {
 		It("should return err when chartPath is missing", func() {
 			_, err := renderer.RenderEmbeddedFS(embeddedFS, filepath.Join("testdata", "missing"), "missing", "default", map[string]string{})
@@ -88,7 +72,7 @@ var _ = Describe("ChartRenderer", func() {
 
 	Describe("#FileContent", func() {
 		It("should return empty string when template file is missing", func() {
-			chart, err := renderer.Render(alpineChartPath, "alpine", "default", map[string]string{})
+			chart, err := renderer.RenderEmbeddedFS(embeddedFS, alpineChartPath, "alpine", "default", map[string]string{})
 			Expect(err).ToNot(HaveOccurred())
 
 			actual := chart.FileContent("missing.yaml")
@@ -96,7 +80,7 @@ var _ = Describe("ChartRenderer", func() {
 		})
 
 		It("should return the file content when template file exists", func() {
-			chart, err := renderer.Render(alpineChartPath, "alpine", "default", map[string]string{})
+			chart, err := renderer.RenderEmbeddedFS(embeddedFS, alpineChartPath, "alpine", "default", map[string]string{})
 			Expect(err).ToNot(HaveOccurred())
 
 			actual := chart.FileContent("alpine-pod.yaml")
