@@ -123,7 +123,7 @@ var _ = BeforeSuite(func() {
 		Clock:                 clock.RealClock{},
 		MinimumObjectLifetime: pointer.Duration(0),
 		// Use the same version as the envtest package
-		TargetKubernetesVersion: semver.MustParse("1.27.0"),
+		TargetKubernetesVersion: semver.MustParse("1.28.0"),
 	}).AddToManager(mgr, mgr)).To(Succeed())
 
 	By("Start manager")
