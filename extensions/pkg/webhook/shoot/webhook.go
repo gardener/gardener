@@ -21,16 +21,17 @@ import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -43,16 +44,21 @@ func ReconcileWebhookConfig(
 	extensionNamespace string,
 	extensionName string,
 	managedResourceName string,
-	serverPort int32,
 	shootWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration,
 	cluster *controller.Cluster,
 ) error {
-	if err := EnsureEgressNetworkPolicy(ctx, c, shootNamespace, extensionNamespace, extensionName, serverPort); err != nil {
-		return fmt.Errorf("could not create or update network policy for shoot webhooks in namespace '%s': %w", shootNamespace, err)
-	}
-
 	if cluster.Shoot == nil {
 		return fmt.Errorf("no shoot found in cluster resource")
+	}
+
+	// TODO(rfranzke): Remove this after Gardener v1.86 has been released.
+	{
+		if err := c.Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: shootNamespace, Name: "gardener-extension-" + extensionName}}); client.IgnoreNotFound(err) != nil {
+			return fmt.Errorf("could not delete old egress network policy for shoot webhooks in namespace '%s': %w", shootNamespace, err)
+		}
+		if err := c.Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: extensionNamespace, Name: "ingress-from-all-shoots-kube-apiserver"}}); client.IgnoreNotFound(err) != nil {
+			return fmt.Errorf("could not delete old ingress network policy for shoot webhooks in namespace '%s': %w", extensionNamespace, err)
+		}
 	}
 
 	data, err := managedresources.
@@ -79,7 +85,6 @@ func ReconcileWebhooksForAllNamespaces(
 	extensionName string,
 	managedResourceName string,
 	shootNamespaceSelector map[string]string,
-	port int32,
 	shootWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration,
 ) error {
 	namespaceList := &corev1.NamespaceList{}
@@ -91,23 +96,17 @@ func ReconcileWebhooksForAllNamespaces(
 
 	fns := make([]flow.TaskFn, 0, len(namespaceList.Items)+1)
 
-	fns = append(fns, func(ctx context.Context) error {
-		return EnsureIngressNetworkPolicy(ctx, c, extensionNamespace, extensionName, port)
-	})
-
 	for _, namespace := range namespaceList.Items {
-		var (
-			networkPolicy     = GetNetworkPolicyMeta(namespace.Name, extensionName)
-			namespaceName     = namespace.Name
-			networkPolicyName = networkPolicy.Name
-		)
+		namespaceName := namespace.Name
 
 		fns = append(fns, func(ctx context.Context) error {
-			if err := c.Get(ctx, kubernetesutils.Key(namespaceName, networkPolicyName), &networkingv1.NetworkPolicy{}); err != nil {
-				if !errors.IsNotFound(err) {
-					return err
+			managedResource := &metav1.PartialObjectMetadata{}
+			managedResource.SetGroupVersionKind(resourcesv1alpha1.SchemeGroupVersion.WithKind("ManagedResource"))
+			if err := c.Get(ctx, client.ObjectKey{Name: managedResourceName, Namespace: namespaceName}, managedResource); err != nil {
+				if apierrors.IsNotFound(err) {
+					return nil
 				}
-				return nil
+				return err
 			}
 
 			cluster, err := extensions.GetCluster(ctx, c, namespaceName)
@@ -115,7 +114,7 @@ func ReconcileWebhooksForAllNamespaces(
 				return err
 			}
 
-			return ReconcileWebhookConfig(ctx, c, namespaceName, extensionNamespace, extensionName, managedResourceName, port, shootWebhookConfig.DeepCopy(), cluster)
+			return ReconcileWebhookConfig(ctx, c, namespaceName, extensionNamespace, extensionName, managedResourceName, shootWebhookConfig.DeepCopy(), cluster)
 		})
 	}
 

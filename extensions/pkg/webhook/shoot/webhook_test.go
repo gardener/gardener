@@ -23,7 +23,6 @@ import (
 	. "github.com/onsi/gomega"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -49,10 +48,9 @@ var _ = Describe("Webhook", func() {
 		shootWebhookConfig    *admissionregistrationv1.MutatingWebhookConfiguration
 		shootWebhookConfigRaw map[string][]byte
 
-		extensionName             = "provider-test"
-		extensionNamespace        = "extension-provider-test-12345"
-		managedResourceName       = "extension-provider-test-shoot-webhooks"
-		serverPort          int32 = 1337
+		extensionName       = "provider-test"
+		extensionNamespace  = "extension-provider-test-12345"
+		managedResourceName = "extension-provider-test-shoot-webhooks"
 	)
 
 	BeforeEach(func() {
@@ -90,14 +88,13 @@ webhooks:
 		})
 
 		It("should reconcile the shoot webhook config", func() {
-			Expect(ReconcileWebhookConfig(ctx, fakeClient, namespace, extensionNamespace, extensionName, managedResourceName, serverPort, shootWebhookConfig, cluster)).To(Succeed())
+			Expect(ReconcileWebhookConfig(ctx, fakeClient, namespace, extensionNamespace, extensionName, managedResourceName, shootWebhookConfig, cluster)).To(Succeed())
 			expectWebhookConfigReconciliation(ctx, fakeClient, namespace, managedResourceName, shootWebhookConfigRaw)
 		})
 	})
 
 	Describe("#ReconcileWebhooksForAllNamespaces", func() {
 		var (
-			networkPolicyName      = "gardener-extension-" + extensionName
 			extensionType          = "test"
 			shootNamespaceSelector = map[string]string{"networking.shoot.gardener.cloud/provider": extensionType}
 
@@ -107,11 +104,9 @@ webhooks:
 			namespace4 *corev1.Namespace
 			namespace5 *corev1.Namespace
 
-			networkPolicy3 *networkingv1.NetworkPolicy
-			networkPolicy4 *networkingv1.NetworkPolicy
-
 			cluster3 *extensionsv1alpha1.Cluster
 			cluster4 *extensionsv1alpha1.Cluster
+			cluster5 *extensionsv1alpha1.Cluster
 		)
 
 		BeforeEach(func() {
@@ -163,12 +158,6 @@ webhooks:
 			Expect(fakeClient.Create(ctx, namespace4)).To(Succeed())
 			Expect(fakeClient.Create(ctx, namespace5)).To(Succeed())
 
-			networkPolicy3 = &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace3.Name, Name: networkPolicyName}}
-			networkPolicy4 = &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace4.Name, Name: networkPolicyName}}
-
-			Expect(fakeClient.Create(ctx, networkPolicy3)).To(Succeed())
-			Expect(fakeClient.Create(ctx, networkPolicy4)).To(Succeed())
-
 			cluster3 = &extensionsv1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{Name: namespace3.Name},
 				Spec: extensionsv1alpha1.ClusterSpec{
@@ -185,13 +174,25 @@ webhooks:
 					},
 				},
 			}
+			cluster5 = &extensionsv1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{Name: namespace5.Name},
+				Spec: extensionsv1alpha1.ClusterSpec{
+					Shoot: runtime.RawExtension{
+						Object: &gardencorev1beta1.Shoot{},
+					},
+				},
+			}
 
 			Expect(fakeClient.Create(ctx, cluster3)).To(Succeed())
 			Expect(fakeClient.Create(ctx, cluster4)).To(Succeed())
+			Expect(fakeClient.Create(ctx, cluster5)).To(Succeed())
 		})
 
 		It("should reconcile the webhook config for namespace3 and namespace4", func() {
-			Expect(ReconcileWebhooksForAllNamespaces(ctx, fakeClient, extensionNamespace, extensionName, managedResourceName, shootNamespaceSelector, serverPort, shootWebhookConfig)).To(Succeed())
+			Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: namespace3.Name, Name: managedResourceName}})).To(Succeed())
+			Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: namespace4.Name, Name: managedResourceName}})).To(Succeed())
+
+			Expect(ReconcileWebhooksForAllNamespaces(ctx, fakeClient, extensionNamespace, extensionName, managedResourceName, shootNamespaceSelector, shootWebhookConfig)).To(Succeed())
 
 			expectNoWebhookConfigReconciliation(ctx, fakeClient, namespace1.Name, managedResourceName)
 			expectNoWebhookConfigReconciliation(ctx, fakeClient, namespace2.Name, managedResourceName)
@@ -201,20 +202,23 @@ webhooks:
 		})
 
 		It("should return an error because cluster for namespace3 is missing", func() {
+			Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: namespace3.Name, Name: managedResourceName}})).To(Succeed())
 			Expect(fakeClient.Delete(ctx, cluster3)).To(Succeed())
 
-			err := ReconcileWebhooksForAllNamespaces(ctx, fakeClient, extensionNamespace, extensionName, managedResourceName, shootNamespaceSelector, serverPort, shootWebhookConfig)
+			err := ReconcileWebhooksForAllNamespaces(ctx, fakeClient, extensionNamespace, extensionName, managedResourceName, shootNamespaceSelector, shootWebhookConfig)
 
 			Expect(err).To(BeAssignableToTypeOf(&multierror.Error{}))
 			Expect(err.(*multierror.Error).Errors).To(ConsistOf(Equal(apierrors.NewNotFound(schema.GroupResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Resource: "clusters"}, namespace3.Name))))
 		})
 
 		It("should return an error because cluster for namespace4 is does not contain shoot", func() {
+			Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: namespace4.Name, Name: managedResourceName}})).To(Succeed())
+
 			patch := client.MergeFrom(cluster4.DeepCopy())
 			cluster4.Spec.Shoot = runtime.RawExtension{}
 			Expect(fakeClient.Patch(ctx, cluster4, patch)).To(Succeed())
 
-			err := ReconcileWebhooksForAllNamespaces(ctx, fakeClient, extensionNamespace, extensionName, managedResourceName, shootNamespaceSelector, serverPort, shootWebhookConfig)
+			err := ReconcileWebhooksForAllNamespaces(ctx, fakeClient, extensionNamespace, extensionName, managedResourceName, shootNamespaceSelector, shootWebhookConfig)
 
 			Expect(err).To(BeAssignableToTypeOf(&multierror.Error{}))
 			Expect(err.(*multierror.Error).Errors).To(ConsistOf(Equal(errors.New("no shoot found in cluster resource"))))

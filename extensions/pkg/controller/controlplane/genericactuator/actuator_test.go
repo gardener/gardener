@@ -46,7 +46,6 @@ import (
 	extensionsmockgenericactuator "github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator/mock"
 	extensionsmockcontroller "github.com/gardener/gardener/extensions/pkg/controller/mock"
 	extensionssecretsmanager "github.com/gardener/gardener/extensions/pkg/util/secret/manager"
-	extensionsshootwebhook "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -56,7 +55,6 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/chart"
 	mockchartutil "github.com/gardener/gardener/pkg/utils/chart/mocks"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -131,9 +129,8 @@ var _ = Describe("Actuator", func() {
 		fakeClient        client.Client
 		newSecretsManager newSecretsManagerFunc
 
-		ctx                          = context.TODO()
-		webhookServerNamespace       = "extension-foo-12345"
-		webhookServerPort      int32 = 443
+		ctx                    = context.TODO()
+		webhookServerNamespace = "extension-foo-12345"
 
 		cp         *extensionsv1alpha1.ControlPlane
 		cpExposure = &extensionsv1alpha1.ControlPlane{
@@ -175,10 +172,6 @@ var _ = Describe("Actuator", func() {
 		createdMRForStorageClassesChart       *resourcesv1alpha1.ManagedResource
 		deletedMRSecretForStorageClassesChart *corev1.Secret
 		deletedMRForStorageClassesChart       *resourcesv1alpha1.ManagedResource
-
-		resourceKeyShootWebhooksNetworkPolicy client.ObjectKey
-		createdNetworkPolicyForShootWebhooks  *networkingv1.NetworkPolicy
-		deletedNetworkPolicyForShootWebhooks  *networkingv1.NetworkPolicy
 
 		resourceKeyShootWebhooks        client.ObjectKey
 		createdMRForShootWebhooks       *resourcesv1alpha1.ManagedResource
@@ -348,12 +341,6 @@ var _ = Describe("Actuator", func() {
 			ObjectMeta: metav1.ObjectMeta{Name: StorageClassesChartResourceName, Namespace: namespace},
 		}
 
-		resourceKeyShootWebhooksNetworkPolicy = client.ObjectKey{Namespace: namespace, Name: "gardener-extension-" + providerName}
-		createdNetworkPolicyForShootWebhooks = constructNetworkPolicy(webhookServerNamespace, providerName, namespace, webhookServerPort)
-		deletedNetworkPolicyForShootWebhooks = &networkingv1.NetworkPolicy{
-			ObjectMeta: extensionsshootwebhook.GetNetworkPolicyMeta(namespace, providerName).ObjectMeta,
-		}
-
 		resourceKeyShootWebhooks = client.ObjectKey{Namespace: namespace, Name: ShootWebhooksResourceName}
 		createdMRForShootWebhooks = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{Name: ShootWebhooksResourceName, Namespace: namespace},
@@ -387,9 +374,6 @@ var _ = Describe("Actuator", func() {
 			c := mockclient.NewMockClient(ctrl)
 
 			if webhookConfig != nil {
-				c.EXPECT().Get(ctx, resourceKeyShootWebhooksNetworkPolicy, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Return(errNotFound)
-				c.EXPECT().Create(ctx, createdNetworkPolicyForShootWebhooks).Return(nil)
-
 				createdMRSecretForShootWebhooks := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{Name: ShootWebhooksResourceName, Namespace: namespace},
 					Data: map[string][]byte{"mutatingwebhookconfiguration____.yaml": []byte(`apiVersion: admissionregistration.k8s.io/v1
@@ -411,6 +395,8 @@ webhooks:
 				c.EXPECT().Get(ctx, resourceKeyShootWebhooks, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errNotFound)
 				createdMRForShootWebhooks.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: createdMRSecretForShootWebhooks.Name}}
 				utilruntime.Must(references.InjectAnnotations(createdMRForShootWebhooks))
+				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "gardener-extension-" + providerName}})
+				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: webhookServerNamespace, Name: "ingress-from-all-shoots-kube-apiserver"}})
 				c.EXPECT().Create(ctx, createdMRForShootWebhooks).Return(nil)
 				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(createdMRSecretForShootWebhooks), gomock.AssignableToTypeOf(&corev1.Secret{}))
 				c.EXPECT().Patch(ctx, objMatcher{obj: createdMRSecretForShootWebhooks}, gomock.Any())
@@ -541,7 +527,6 @@ webhooks:
 				configName:                     configName,
 				atomicShootWebhookConfig:       atomicWebhookConfig,
 				webhookServerNamespace:         webhookServerNamespace,
-				webhookServerPort:              webhookServerPort,
 				gardenerClientset:              gardenerClientset,
 				client:                         c,
 				newSecretsManager:              newSecretsManager,
@@ -616,7 +601,6 @@ webhooks:
 
 			if webhookConfig != nil {
 				client.EXPECT().Get(gomock.Any(), resourceKeyShootWebhooks, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{}))
-				client.EXPECT().Delete(ctx, deletedNetworkPolicyForShootWebhooks).Return(nil)
 				client.EXPECT().Delete(ctx, deletedMRForShootWebhooks).Return(nil)
 				client.EXPECT().Delete(ctx, deletedMRSecretForShootWebhooks).Return(nil)
 				client.EXPECT().Get(gomock.Any(), resourceKeyShootWebhooks, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, deletedMRForShootWebhooks.Name))
@@ -644,7 +628,6 @@ webhooks:
 				configName:                     configName,
 				atomicShootWebhookConfig:       atomicWebhookConfig,
 				webhookServerNamespace:         webhookServerNamespace,
-				webhookServerPort:              webhookServerPort,
 				gardenerClientset:              gardenerClientset,
 				client:                         client,
 				newSecretsManager:              newSecretsManager,
@@ -724,7 +707,6 @@ webhooks:
 				configName:                     "",
 				atomicShootWebhookConfig:       nil,
 				webhookServerNamespace:         "",
-				webhookServerPort:              0,
 				gardenerClientset:              gardenerClientset,
 				client:                         c,
 				newSecretsManager:              newSecretsManager,
@@ -777,7 +759,6 @@ webhooks:
 				configName:                     "",
 				atomicShootWebhookConfig:       nil,
 				webhookServerNamespace:         "",
-				webhookServerPort:              0,
 				gardenerClientset:              gardenerClientset,
 				client:                         client,
 				newSecretsManager:              newSecretsManager,
@@ -808,45 +789,6 @@ func getPurposeExposure() *extensionsv1alpha1.Purpose {
 	purpose := new(extensionsv1alpha1.Purpose)
 	*purpose = extensionsv1alpha1.Exposure
 	return purpose
-}
-
-func constructNetworkPolicy(webhookServerNamespace, providerName, shootNamespace string, webhookPort int32) *networkingv1.NetworkPolicy {
-	return &networkingv1.NetworkPolicy{
-		ObjectMeta: extensionsshootwebhook.GetNetworkPolicyMeta(shootNamespace, providerName).ObjectMeta,
-		Spec: networkingv1.NetworkPolicySpec{
-			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-			Egress: []networkingv1.NetworkPolicyEgressRule{
-				{
-					Ports: []networkingv1.NetworkPolicyPort{
-						{
-							Port:     utils.IntStrPtrFromInt32(webhookPort),
-							Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
-						},
-					},
-					To: []networkingv1.NetworkPolicyPeer{
-						{
-							NamespaceSelector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{
-									"kubernetes.io/metadata.name": webhookServerNamespace,
-								},
-							},
-							PodSelector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{
-									"app.kubernetes.io/name": "gardener-extension-" + providerName,
-								},
-							},
-						},
-					},
-				},
-			},
-			PodSelector: metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
-					v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer,
-				},
-			},
-		},
-	}
 }
 
 func getSecretsConfigs(namespace string) []extensionssecretsmanager.SecretConfigWithOptions {

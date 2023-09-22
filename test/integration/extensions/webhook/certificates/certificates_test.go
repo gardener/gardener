@@ -28,7 +28,6 @@ import (
 	. "github.com/onsi/gomega"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -81,7 +80,6 @@ var _ = Describe("Certificates tests", func() {
 		extensionNamespace *corev1.Namespace
 		shootNamespace     *corev1.Namespace
 		cluster            *extensionsv1alpha1.Cluster
-		shootNetworkPolicy *networkingv1.NetworkPolicy
 
 		seedWebhook              admissionregistrationv1.MutatingWebhook
 		shootWebhook             admissionregistrationv1.MutatingWebhook
@@ -127,6 +125,19 @@ var _ = Describe("Certificates tests", func() {
 		DeferCleanup(func() {
 			By("Delete shoot namespace")
 			Expect(testClient.Delete(ctx, shootNamespace)).To(Or(Succeed(), BeNotFoundError()))
+
+			By("Finalize shoot namespace and wait until it's gone")
+			Eventually(func(g Gomega) error {
+				// The tests create ManagedResources and Secrets in the shoot namespaces, but since kube-controller-manager
+				// is not running in envtest, nobody cleans them up on namespace deletion. Hence, let's simply finalize
+				// the namespace to get rid of it
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootNamespace), shootNamespace)).To(Succeed())
+				shootNamespace.SetFinalizers(nil)
+				shootNamespace.Spec.Finalizers = nil
+				g.Expect(testClient.SubResource("finalize").Update(ctx, shootNamespace)).To(Or(Succeed(), BeNotFoundError()))
+
+				return testClient.Get(ctx, client.ObjectKeyFromObject(shootNamespace), &corev1.Namespace{})
+			}).Should(BeNotFoundError())
 		})
 
 		// use unique extension name for each test,for unique webhook config name
@@ -144,7 +155,6 @@ var _ = Describe("Certificates tests", func() {
 				Shoot:        runtime.RawExtension{Object: &gardencorev1beta1.Shoot{}},
 			},
 		}
-		shootNetworkPolicy = extensionsshootwebhook.GetNetworkPolicyMeta(shootNamespace.Name, extensionName)
 
 		shootWebhook = admissionregistrationv1.MutatingWebhook{
 			Name: fmt.Sprintf("%s.%s.extensions.gardener.cloud", shootWebhookName, extensionType),
@@ -247,12 +257,10 @@ var _ = Describe("Certificates tests", func() {
 		Context("certificate rotation", func() {
 			BeforeEach(func() {
 				By("Prepare existing shoot webhook resources")
-				Expect(testClient.Create(ctx, shootNetworkPolicy)).To(Succeed())
 				Expect(testClient.Create(ctx, cluster)).To(Succeed())
-				Expect(extensionsshootwebhook.ReconcileWebhookConfig(ctx, testClient, shootNamespace.Name, extensionNamespace.Name, extensionName, shootWebhookManagedResourceName, servicePort, shootWebhookConfig, &extensions.Cluster{Shoot: &gardencorev1beta1.Shoot{}})).To(Succeed())
+				Expect(extensionsshootwebhook.ReconcileWebhookConfig(ctx, testClient, shootNamespace.Name, extensionNamespace.Name, extensionName, shootWebhookManagedResourceName, shootWebhookConfig, &extensions.Cluster{Shoot: &gardencorev1beta1.Shoot{}})).To(Succeed())
 
 				DeferCleanup(func() {
-					Expect(testClient.Delete(ctx, shootNetworkPolicy)).To(Or(Succeed(), BeNotFoundError()))
 					Expect(testClient.Delete(ctx, cluster)).To(Or(Succeed(), BeNotFoundError()))
 				})
 
@@ -267,7 +275,6 @@ var _ = Describe("Certificates tests", func() {
 				var serverCert1 []byte
 
 				By("Retrieve CA bundle (before first reconciliation)")
-
 				Eventually(func(g Gomega) []byte {
 					g.Expect(getShootWebhookConfig(codec, shootWebhookConfig, shootNamespace.Name)).To(Succeed())
 					return shootWebhookConfig.Webhooks[0].ClientConfig.CABundle
@@ -371,6 +378,9 @@ var _ = Describe("Certificates tests", func() {
 			atomicShootWebhookConfig, err = webhookConfig.AddToManager(ctx, mgr)
 			Expect(err).NotTo(HaveOccurred())
 
+			defaultServer, ok = mgr.GetWebhookServer().(*webhook.DefaultServer)
+			Expect(ok).To(BeTrue())
+
 			By("Verify certificates exist on disk")
 			Eventually(func(g Gomega) {
 				serverCert, err := os.ReadFile(filepath.Join(defaultServer.Options.CertDir, "tls.crt"))
@@ -392,7 +402,7 @@ var _ = Describe("Certificates tests", func() {
 
 			// Wait for the webhook server to start
 			Eventually(func() error {
-				checker := mgr.GetWebhookServer().StartedChecker()
+				checker := defaultServer.StartedChecker()
 				return checker(&http.Request{})
 			}).Should(BeNil())
 
@@ -434,12 +444,10 @@ var _ = Describe("Certificates tests", func() {
 		Context("certificate rotation", func() {
 			BeforeEach(func() {
 				By("Prepare existing shoot webhook resources")
-				Expect(testClient.Create(ctx, shootNetworkPolicy)).To(Succeed())
 				Expect(testClient.Create(ctx, cluster)).To(Succeed())
-				Expect(extensionsshootwebhook.ReconcileWebhookConfig(ctx, testClient, shootNamespace.Name, extensionNamespace.Name, extensionName, shootWebhookManagedResourceName, servicePort, shootWebhookConfig, &extensions.Cluster{Shoot: &gardencorev1beta1.Shoot{}})).To(Succeed())
+				Expect(extensionsshootwebhook.ReconcileWebhookConfig(ctx, testClient, shootNamespace.Name, extensionNamespace.Name, extensionName, shootWebhookManagedResourceName, shootWebhookConfig, &extensions.Cluster{Shoot: &gardencorev1beta1.Shoot{}})).To(Succeed())
 
 				DeferCleanup(func() {
-					Expect(testClient.Delete(ctx, shootNetworkPolicy)).To(Or(Succeed(), BeNotFoundError()))
 					Expect(testClient.Delete(ctx, cluster)).To(Or(Succeed(), BeNotFoundError()))
 				})
 

@@ -76,7 +76,6 @@ func NewActuator(
 	configName string,
 	atomicShootWebhookConfig *atomic.Value,
 	webhookServerNamespace string,
-	webhookServerPort int32,
 ) (
 	controlplane.Actuator,
 	error,
@@ -107,7 +106,6 @@ func NewActuator(
 		configName:                 configName,
 		atomicShootWebhookConfig:   atomicShootWebhookConfig,
 		webhookServerNamespace:     webhookServerNamespace,
-		webhookServerPort:          webhookServerPort,
 
 		gardenerClientset: gardenerClientset,
 		client:            mgr.GetClient(),
@@ -140,7 +138,6 @@ type actuator struct {
 	configName                 string
 	atomicShootWebhookConfig   *atomic.Value
 	webhookServerNamespace     string
-	webhookServerPort          int32
 
 	gardenerClientset kubernetesclient.Interface
 	client            client.Client
@@ -251,7 +248,7 @@ func (a *actuator) reconcileControlPlane(
 			return false, fmt.Errorf("expected *admissionregistrationv1.MutatingWebhookConfiguration, got %T", value)
 		}
 
-		if err := extensionsshootwebhook.ReconcileWebhookConfig(ctx, a.client, cp.Namespace, a.webhookServerNamespace, a.providerName, ShootWebhooksResourceName, a.webhookServerPort, webhookConfig, cluster); err != nil {
+		if err := extensionsshootwebhook.ReconcileWebhookConfig(ctx, a.client, cp.Namespace, a.webhookServerNamespace, a.providerName, ShootWebhooksResourceName, webhookConfig, cluster); err != nil {
 			return false, fmt.Errorf("could not reconcile shoot webhooks: %w", err)
 		}
 	}
@@ -530,11 +527,6 @@ func (a *actuator) deleteControlPlane(
 	}
 
 	if a.atomicShootWebhookConfig != nil {
-		networkPolicy := extensionsshootwebhook.GetNetworkPolicyMeta(cp.Namespace, a.providerName)
-		if err := a.client.Delete(ctx, networkPolicy); client.IgnoreNotFound(err) != nil {
-			return fmt.Errorf("could not delete network policy for shoot webhooks in namespace '%s': %w", cp.Namespace, err)
-		}
-
 		if err := managedresources.Delete(ctx, a.client, cp.Namespace, ShootWebhooksResourceName, false); err != nil {
 			return fmt.Errorf("could not delete managed resource containing shoot webhooks for controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
 		}
