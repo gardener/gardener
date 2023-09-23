@@ -20,7 +20,9 @@ import (
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -85,28 +87,40 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 		})
 
-	// Watch relevant objects for Progressing condition in order to immediately update the condition as soon as there is
-	// a change on managed resources.
-	pod := &metav1.PartialObjectMetadata{}
-	pod.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Pod"))
+	for resource, obj := range map[string]client.Object{
+		"deployments":  &appsv1.Deployment{},
+		"statefulsets": &appsv1.StatefulSet{},
+		"daemonsets":   &appsv1.DaemonSet{},
+	} {
+		gvr := schema.GroupVersionResource{Group: appsv1.SchemeGroupVersion.Group, Version: appsv1.SchemeGroupVersion.Version, Resource: resource}
 
-	b = b.WatchesRawSource(
-		source.Kind(targetCluster.GetCache(), &appsv1.Deployment{}),
-		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
-		builder.WithPredicates(r.ProgressingStatusChanged(ctx)),
-	).WatchesRawSource(
-		source.Kind(targetCluster.GetCache(), pod),
-		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), r.MapPodToDeploymentToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
-		builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Delete)),
-	).WatchesRawSource(
-		source.Kind(targetCluster.GetCache(), &appsv1.StatefulSet{}),
-		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
-		builder.WithPredicates(r.ProgressingStatusChanged(ctx)),
-	).WatchesRawSource(
-		source.Kind(targetCluster.GetCache(), &appsv1.DaemonSet{}),
-		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
-		builder.WithPredicates(r.ProgressingStatusChanged(ctx)),
-	)
+		if _, err := targetCluster.GetRESTMapper().KindFor(gvr); err != nil {
+			if !meta.IsNoMatchError(err) {
+				return err
+			}
+			mgr.GetLogger().Info("Resource is not available/enabled API of the target cluster, skip adding watches", "gvr", gvr)
+			continue
+		}
+
+		b = b.WatchesRawSource(
+			source.Kind(targetCluster.GetCache(), obj),
+			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
+			builder.WithPredicates(r.ProgressingStatusChanged(ctx)),
+		)
+
+		if resource == "deployments" {
+			// Watch relevant objects for Progressing condition in order to immediately update the condition as soon as
+			// there is a change on managed resources.
+			pod := &metav1.PartialObjectMetadata{}
+			pod.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Pod"))
+
+			b = b.WatchesRawSource(
+				source.Kind(targetCluster.GetCache(), pod),
+				mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), r.MapPodToDeploymentToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
+				builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Delete)),
+			)
+		}
+	}
 
 	return b.Complete(r)
 }

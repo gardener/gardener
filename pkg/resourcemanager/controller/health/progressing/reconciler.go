@@ -21,6 +21,7 @@ import (
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -124,7 +125,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 		)
 
 		if err := r.TargetClient.Get(checkCtx, objectKey, obj); err != nil {
-			if apierrors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) || meta.IsNoMatchError(err) {
 				// missing objects already handled by health controller, skip
 				continue
 			}
