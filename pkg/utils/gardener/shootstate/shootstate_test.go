@@ -88,14 +88,16 @@ var _ = Describe("ShootState", func() {
 			var (
 				existingGardenerData   = []gardencorev1beta1.GardenerResourceData{{Name: "some-data"}}
 				existingExtensionsData = []gardencorev1beta1.ExtensionResourceState{{Name: pointer.String("some-data")}}
-				existingResourcesData  = []gardencorev1beta1.ResourceData{{Data: runtime.RawExtension{Raw: []byte("{}")}}}
-				expectedSpec           gardencorev1beta1.ShootStateSpec
+				// TODO(rfranzke): Remove this `existingWorkerState` after Gardener v1.86 has been released.
+				existingWorkerState   = []gardencorev1beta1.ExtensionResourceState{{Kind: "Worker", Name: pointer.String("my-shoot")}}
+				existingResourcesData = []gardencorev1beta1.ResourceData{{Data: runtime.RawExtension{Raw: []byte("{}")}}}
+				expectedSpec          gardencorev1beta1.ShootStateSpec
 			)
 
 			BeforeEach(func() {
 				By("Create ShootState with some data")
 				shootState.Spec.Gardener = append(shootState.Spec.Gardener, existingGardenerData...)
-				shootState.Spec.Extensions = append(shootState.Spec.Extensions, existingExtensionsData...)
+				shootState.Spec.Extensions = append(shootState.Spec.Extensions, append(existingExtensionsData, existingWorkerState...)...)
 				shootState.Spec.Resources = append(shootState.Spec.Resources, existingResourcesData...)
 				Expect(fakeGardenClient.Create(ctx, shootState)).To(Succeed())
 
@@ -201,11 +203,12 @@ var _ = Describe("ShootState", func() {
 							Purpose: pointer.String(""),
 							State:   &runtime.RawExtension{Raw: []byte(`{"name":"osc"}`)},
 						},
-						{
-							Kind:  "Worker",
-							Name:  pointer.String("worker"),
-							State: &runtime.RawExtension{Raw: []byte(`{"name":"worker"}`)},
-						},
+						// TODO(rfranzke): Uncomment next lines after Gardener v1.86 has been released.
+						// {
+						// 	Kind:  "Worker",
+						// 	Name:  pointer.String("worker"),
+						// 	State: &runtime.RawExtension{Raw: []byte(`{"name":"worker"}`)},
+						// },
 					},
 					Resources: []gardencorev1beta1.ResourceData{{
 						CrossVersionObjectReference: autoscalingv1.CrossVersionObjectReference{
