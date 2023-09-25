@@ -131,9 +131,9 @@ data:
 			if rewritingEnabled {
 				out += `
       rewrite stop {
-        name regex ([^\.]+)\.([^\.]+)\.svc\.foo\.bar\.svc\.foo\.bar {1}.{2}.svc.foo.bar
-        answer name ([^\.]+)\.([^\.]+)\.svc\.foo\.bar {1}.{2}.svc.foo.bar.svc.foo.bar
-        answer value ([^\.]+)\.([^\.]+)\.svc\.foo\.bar {1}.{2}.svc.foo.bar.svc.foo.bar
+        name regex (^(?:[^\.]+\.)+)svc\.foo\.bar\.svc\.foo\.bar {1}svc.foo.bar
+        answer name (^(?:[^\.]+\.)+)svc\.foo\.bar {1}svc.foo.bar.svc.foo.bar
+        answer value (^(?:[^\.]+\.)+)svc\.foo\.bar {1}svc.foo.bar.svc.foo.bar
       }`
 				for _, suffix := range commonSuffixes {
 					out += `

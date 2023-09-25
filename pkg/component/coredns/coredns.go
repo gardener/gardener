@@ -756,8 +756,8 @@ func getSearchPathRewrites(enabled bool, clusterDomain string, commonSuffixes []
 	}
 	return `
   rewrite stop {
-    name regex ([^\.]+)\.([^\.]+)\.svc\.` + quotedClusterDomain + `\.svc\.` + quotedClusterDomain + ` {1}.{2}.svc.` + clusterDomain + `
-    answer name ([^\.]+)\.([^\.]+)\.svc\.` + quotedClusterDomain + ` {1}.{2}.svc.` + clusterDomain + `.svc.` + clusterDomain + `
-    answer value ([^\.]+)\.([^\.]+)\.svc\.` + quotedClusterDomain + ` {1}.{2}.svc.` + clusterDomain + `.svc.` + clusterDomain + `
+    name regex (^(?:[^\.]+\.)+)svc\.` + quotedClusterDomain + `\.svc\.` + quotedClusterDomain + ` {1}svc.` + clusterDomain + `
+    answer name (^(?:[^\.]+\.)+)svc\.` + quotedClusterDomain + ` {1}svc.` + clusterDomain + `.svc.` + clusterDomain + `
+    answer value (^(?:[^\.]+\.)+)svc\.` + quotedClusterDomain + ` {1}svc.` + clusterDomain + `.svc.` + clusterDomain + `
   }` + suffixRewrites
 }
