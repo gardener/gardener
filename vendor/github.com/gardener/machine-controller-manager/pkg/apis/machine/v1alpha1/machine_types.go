@@ -122,6 +122,10 @@ type LastOperation struct {
 	// Description of the current operation
 	Description string `json:"description,omitempty"`
 
+	// ErrorCode of the current operation if any
+	// +optional
+	ErrorCode string `json:"errorCode,omitempty"`
+
 	// Last update time of current operation
 	LastUpdateTime metav1.Time `json:"lastUpdateTime,omitempty"`
 
@@ -146,7 +150,7 @@ const (
 	// MachineRunning means node is ready and running successfully
 	MachineRunning MachinePhase = "Running"
 
-	// MachineRunning means node is terminating
+	// MachineTerminating means node is terminating
 	MachineTerminating MachinePhase = "Terminating"
 
 	// MachineUnknown indicates that the node is not ready at the movement
@@ -155,7 +159,7 @@ const (
 	// MachineFailed means operation failed leading to machine status failure
 	MachineFailed MachinePhase = "Failed"
 
-	// MachineCrashLoopBackOff means creation or deletion of the machine is failing.
+	// MachineCrashLoopBackOff means creation or deletion of the machine is failing. It means that machine object is present but there is no corresponding VM.
 	MachineCrashLoopBackOff MachinePhase = "CrashLoopBackOff"
 )
 
@@ -188,7 +192,7 @@ const (
 	// MachineOperationHealthCheck indicates that the operation was a create
 	MachineOperationHealthCheck MachineOperationType = "HealthCheck"
 
-	// MachineOperationDelete indicates that the operation was a create
+	// MachineOperationDelete indicates that the operation was a delete
 	MachineOperationDelete MachineOperationType = "Delete"
 )
 

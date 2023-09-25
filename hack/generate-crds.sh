@@ -57,6 +57,9 @@ get_group_package () {
   "fluentbit.fluent.io")
     echo "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
     ;;
+  "machine.sapcloud.io")
+    echo "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+    ;;
   *)
     >&2 echo "unknown group $1"
     return 1
@@ -70,6 +73,7 @@ generate_all_groups () {
   generate_group druid.gardener.cloud
   generate_group autoscaling.k8s.io
   generate_group fluentbit.fluent.io
+  generate_group machine.sapcloud.io
 }
 
 generate_group () {
