@@ -58,7 +58,7 @@ When using the `gardener-operator` for managing the garden runtime and virtual c
 | Name                                              | Priority   | Associated Components (Examples)                                                                                            |
 |---------------------------------------------------|------------|-----------------------------------------------------------------------------------------------------------------------------|
 | `system-node-critical` (created by Kubernetes)    | 2000001000 | `calico-node`, `kube-proxy`, `apiserver-proxy`, `csi-driver`, `egress-filter-applier`                                       |
-| `system-cluster-critical` (created by Kubernetes) | 2000000000 | `calico-typha`, `calico-kube-controllers`, `coredns`, `vpn-shoot`                                                           |
+| `system-cluster-critical` (created by Kubernetes) | 2000000000 | `calico-typha`, `calico-kube-controllers`, `coredns`, `vpn-shoot`, `registry-cache`                                         |
 | `gardener-shoot-system-900`                       | 999999900  | `node-problem-detector`                                                                                                     |
 | `gardener-shoot-system-800`                       | 999999800  | `calico-typha-horizontal-autoscaler`, `calico-typha-vertical-autoscaler`                                                    |
 | `gardener-shoot-system-700`                       | 999999700  | `blackbox-exporter`, `node-exporter`                                                                                        |
