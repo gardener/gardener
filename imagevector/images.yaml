@@ -249,6 +249,8 @@ images:
   sourceRepository: github.com/gardener/gardener-metrics-exporter
   repository: eu.gcr.io/gardener-project/gardener/metrics-exporter
   tag: "0.27.0"
+  resourceId:
+    name: metrics-exporter
 - name: node-exporter
   sourceRepository: github.com/prometheus/node_exporter
   repository: quay.io/prometheus/node-exporter
