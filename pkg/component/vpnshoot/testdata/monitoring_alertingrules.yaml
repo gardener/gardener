@@ -37,7 +37,7 @@ tests:
         severity: critical
         type: shoot
         visibility: operator
-        deployment: vpn-shoot
+        statefulset: vpn-shoot
       exp_annotations:
         description: vpn-shoot statefulset in HA Shoot cluster has 0 available pods. VPN won't work.
         summary: VPN HA Shoot statefulset no pods
