@@ -111,9 +111,14 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 
 		g = flow.NewGraph("Shoot cluster preparation for migration")
 
+		deployNamespace = g.Add(flow.Task{
+			Name: "Deploying Shoot namespace in Seed",
+			Fn:   flow.TaskFn(botanist.DeploySeedNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(nonTerminatingNamespace),
+		})
 		initializeSecretsManagement = g.Add(flow.Task{
-			Name: "Initializing secrets management",
-			Fn:   flow.TaskFn(botanist.InitializeSecretsManagement).DoIf(nonTerminatingNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Name:         "Initializing secrets management",
+			Fn:           flow.TaskFn(botanist.InitializeSecretsManagement).DoIf(nonTerminatingNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		deployETCD = g.Add(flow.Task{
 			Name:         "Deploying main and events etcd",
