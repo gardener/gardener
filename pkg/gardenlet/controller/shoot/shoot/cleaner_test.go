@@ -40,7 +40,7 @@ import (
 
 var _ = Describe("Cleaner", func() {
 	var (
-		ctx = context.TODO()
+		ctx = context.Background()
 
 		log          logr.Logger
 		seedClient   client.Client
