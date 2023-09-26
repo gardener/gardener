@@ -25,6 +25,25 @@ tests:
 
 - interval: 30s
   input_series:
+  # VPNHAShootNoPods
+  - series: 'kube_statefulset_status_replicas_ready{statefulset="vpn-shoot"}'
+    values: '0+0x60'
+  alert_rule_test:
+  - eval_time: 30m
+    alertname: VPNHAShootNoPods
+    exp_alerts:
+    - exp_labels:
+        service: vpn
+        severity: critical
+        type: shoot
+        visibility: operator
+        statefulset: vpn-shoot
+      exp_annotations:
+        description: vpn-shoot statefulset in HA Shoot cluster has 0 available pods. VPN won't work.
+        summary: VPN HA Shoot statefulset no pods
+
+- interval: 30s
+  input_series:
   # VPNConnectionDown
   - series: 'probe_success{job="tunnel-probe-apiserver-proxy"}'
     values: '0+0x20'
