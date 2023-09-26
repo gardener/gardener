@@ -73,18 +73,32 @@ In addition, extension controllers that use [referenced resources](referenced-re
 
 ### Migrate and Restore Actuator Methods
 
-Most extension controller implementations follow a common pattern where a generic `Reconciler` implementation delegates to an `Actuator` interface that contains the methods `Reconcile` and `Delete`, provided by the extension. The two new methods `Migrate` and `Restore` have been added to all such `Actuator` interfaces, see [the infrastructure `Actuator` interface](https://github.com/gardener/gardener/blob/master/extensions/pkg/controller/infrastructure/actuator.go) as an example. These methods are called by the generic reconcilers for the [migrate and restore operations](#migrate-and-restore-operations) respectively, and should be implemented by the extension according to the above guidelines.
-
-### Owner Checks
-
-The so called "bad case" scenario for control plane migration proposed in [GEP-17](../proposals/17-shoot-control-plane-migration-bad-case.md) introduced the requirement for extension controllers to check whether they are currently operating in the source or destination seed during reconciliations to avoid the case in which controllers from different seeds can operate on the same IaaS resources (split brain scenario). To that end, a special "owner checking" mechanism has been added to the `Reconciler` implementations of all extension controllers. For an example usage of this mechanism see [the infrastructure Reconciler implementation](https://github.com/gardener/gardener/blob/7ac4b04feec409f3e5a5208cd06af9a10c755337/extensions/pkg/controller/infrastructure/reconciler.go#L109-L121). The purpose of the owner check is to interrupt reconciliations of extension controllers that do not operate in the seed that is currently configured to host the shoot's control plane. Note that `Migrate` operations must not be interrupted, as they are required to clean up Kubernetes resources left in the shoot's control plane namespace and do not act on IaaS resources.
+Most extension controller implementations follow a common pattern where a generic `Reconciler` implementation delegates to an `Actuator` interface that contains the methods `Reconcile` and `Delete`, provided by the extension.
+The two new methods `Migrate` and `Restore` have been added to all such `Actuator` interfaces, see [the infrastructure `Actuator` interface](https://github.com/gardener/gardener/blob/master/extensions/pkg/controller/infrastructure/actuator.go) as an example.
+These methods are called by the generic reconcilers for the [migrate and restore operations](#migrate-and-restore-operations) respectively, and should be implemented by the extension according to the above guidelines.
 
 ### Extension Controllers Based on Generic Actuators
 
-In practice, the implementation of many extension controllers (for example, the controlplane and worker controllers in most provider extensions) are based on a *generic `Actuator` implementation* that only delegates to extension methods for behavior that is truly provider specific. In all such cases, the `Migrate` and `Restore` methods have already been implemented properly in the generic actuators and there is nothing more to do in the extension itself.
+In practice, the implementation of many extension controllers (for example, the `ControlPlane` and `Worker` controllers in most provider extensions) are based on a *generic `Actuator` implementation* that only delegates to extension methods for behavior that is truly provider specific.
+In all such cases, the `Migrate` and `Restore` methods have already been implemented properly in the generic actuators and there is nothing more to do in the extension itself.
 
-In some rare cases, extension controllers based on a generic actuator might still introduce a custom `Actuator` implementation to override some of the generic actuator methods in order to enhance or change their behavior in a certain way. In such cases, the `Migrate` and `Restore` methods might need to be overridden as well, see the [Azure controlplane controller](https://github.com/gardener/gardener-extension-provider-azure/tree/master/pkg/controller/controlplane) as an example.
+In some rare cases, extension controllers based on a generic actuator might still introduce a custom `Actuator` implementation to override some of the generic actuator methods in order to enhance or change their behavior in a certain way.
+In such cases, the `Migrate` and `Restore` methods might need to be overridden as well, see the [Azure controlplane controller](https://github.com/gardener/gardener-extension-provider-azure/tree/master/pkg/controller/controlplane) as an example.
+
+#### `Worker` State
+
+Note that the machine state is handled specially by `gardenlet` (i.e., all relevant objects in the `machine.sapcloud.io/v1alpha1` API are directly persisted by `gardenlet` and **NOT** by the generic actuators).
+In the past, they were persisted to the `Worker`'s `.status.state` field by the so-called "worker state reconciler", however, this reconciler was dropped and changed as part of [GEP-22](../proposals/22-improved-usage-of-shootstate-api.md#eliminating-the-worker-state-reconciler).
+Nowadays, `gardenlet` directly writes the state to the `ShootState` resource during the `Migrate` phase of a `Shoot` (without the detour of the `Worker`'s `.status.state` field).
+On restoration, unlike for other extension kinds, `gardenlet` no longer populates the machine state into the `Worker`'s `.status.state` field.
+Instead, the extension controller should read the machine state directly from the `ShootState` in the garden cluster (see [this document](garden-api-access.md) for information how to access the garden cluster) and use it to subsequently restore the relevant `machine.sapcloud.io/v1alpha1` resources.
+This flow is implemented in the [generic `Worker` actuator](../../extensions/pkg/controller/worker/genericactuator/actuator_restore.go).
+As a result, Extension controllers using this generic actuator do not need to implement any custom logic.
 
 ### Extension Controllers Not Based on Generic Actuators
 
-The implementation of some extension controllers (for example, the infrastructure controllers in all provider extensions) are not based on a generic `Actuator` implementation. Such extension controllers must always provide a proper implementation of the `Migrate` and `Restore` methods according to the above guidelines, see the [AWS infrastructure controller](https://github.com/gardener/gardener-extension-provider-aws/tree/master/pkg/controller/infrastructure) as an example. In practice, this might result in code duplication between the different extensions, since the `Migrate` and `Restore` code is usually not provider or OS-specific.
+The implementation of some extension controllers (for example, the infrastructure controllers in all provider extensions) are not based on a generic `Actuator` implementation.
+Such extension controllers must always provide a proper implementation of the `Migrate` and `Restore` methods according to the above guidelines, see the [AWS infrastructure controller](https://github.com/gardener/gardener-extension-provider-aws/tree/master/pkg/controller/infrastructure) as an example.
+In practice, this might result in code duplication between the different extensions, since the `Migrate` and `Restore` code is usually not provider or OS-specific.
+
+> If you do not use the generic `Worker` actuator, see [this section](#worker-state) for information how to handle the machine state related to the `Worker` resource.

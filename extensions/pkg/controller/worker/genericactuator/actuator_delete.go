@@ -77,30 +77,30 @@ func (a *genericActuator) Delete(ctx context.Context, log logr.Logger, worker *e
 
 	// Mark all existing machines to become forcefully deleted.
 	log.Info("Marking all machines to become forcefully deleted")
-	if err := markAllMachinesForcefulDeletion(ctx, log, a.client, worker.Namespace); err != nil {
+	if err := markAllMachinesForcefulDeletion(ctx, log, a.seedClient, worker.Namespace); err != nil {
 		return fmt.Errorf("marking all machines for forceful deletion failed: %w", err)
 	}
 
 	// Delete all machine deployments.
 	log.Info("Deleting all machine deployments")
-	if err := a.client.DeleteAllOf(ctx, &machinev1alpha1.MachineDeployment{}, client.InNamespace(worker.Namespace)); err != nil {
+	if err := a.seedClient.DeleteAllOf(ctx, &machinev1alpha1.MachineDeployment{}, client.InNamespace(worker.Namespace)); err != nil {
 		return fmt.Errorf("cleaning up all machine deployments failed: %w", err)
 	}
 
 	// Delete all machine classes.
 	log.Info("Deleting all machine classes")
-	if err := a.client.DeleteAllOf(ctx, &machinev1alpha1.MachineClass{}, client.InNamespace(worker.Namespace)); err != nil {
+	if err := a.seedClient.DeleteAllOf(ctx, &machinev1alpha1.MachineClass{}, client.InNamespace(worker.Namespace)); err != nil {
 		return fmt.Errorf("cleaning up all machine classes failed: %w", err)
 	}
 
 	// Delete all machine class secrets.
 	log.Info("Deleting all machine class secrets")
-	if err := a.client.DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(worker.Namespace), client.MatchingLabels(getMachineClassSecretLabels())); err != nil {
+	if err := a.seedClient.DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(worker.Namespace), client.MatchingLabels(getMachineClassSecretLabels())); err != nil {
 		return fmt.Errorf("cleaning up all machine class secrets failed: %w", err)
 	}
 
 	// Wait until all machine resources have been properly deleted.
-	if err := gardenerutils.WaitUntilMachineResourcesDeleted(ctx, log, a.client, worker.Namespace); err != nil {
+	if err := gardenerutils.WaitUntilMachineResourcesDeleted(ctx, log, a.seedClient, worker.Namespace); err != nil {
 		newError := fmt.Errorf("failed while waiting for all machine resources to be deleted: %w", err)
 		if a.errorCodeCheckFunc != nil {
 			return v1beta1helper.NewErrorWithCodes(newError, a.errorCodeCheckFunc(err)...)
@@ -176,7 +176,7 @@ func (a *genericActuator) waitUntilCredentialsSecretAcquiredOrReleased(ctx conte
 	return retryutils.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
 		// Check whether the finalizer of the machine class credentials secret has been added or removed.
 		if !acquiredOrReleased {
-			secret, err := kubernetesutils.GetSecretByReference(ctx, a.client, &worker.Spec.SecretRef)
+			secret, err := kubernetesutils.GetSecretByReference(ctx, a.seedClient, &worker.Spec.SecretRef)
 			if err != nil {
 				return retryutils.SevereError(fmt.Errorf("could not get the secret referenced by worker: %+v", err))
 			}

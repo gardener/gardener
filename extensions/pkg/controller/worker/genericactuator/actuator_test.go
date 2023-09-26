@@ -72,7 +72,7 @@ var _ = Describe("Actuator", func() {
 		})
 
 		It("should return secrets matching the label selector", func() {
-			a := &genericActuator{client: fake.NewClientBuilder().WithRuntimeObjects(all...).Build()}
+			a := &genericActuator{seedClient: fake.NewClientBuilder().WithRuntimeObjects(all...).Build()}
 			actual, err := a.listMachineClassSecrets(context.TODO(), ns)
 
 			Expect(err).ToNot(HaveOccurred())
@@ -245,7 +245,7 @@ var _ = Describe("Actuator", func() {
 			mockCtrl = gomock.NewController(GinkgoT())
 			mockClient = mockclient.NewMockClient(mockCtrl)
 
-			a = &genericActuator{client: mockClient}
+			a = &genericActuator{seedClient: mockClient}
 
 			expectedMachineSet = machinev1alpha1.MachineSet{
 				ObjectMeta: metav1.ObjectMeta{
@@ -299,7 +299,7 @@ var _ = Describe("Actuator", func() {
 			mockClient.EXPECT().Create(ctx, &expectedMachine1)
 			mockClient.EXPECT().Create(ctx, &expectedMachine2)
 
-			Expect(restoreMachineSetsAndMachines(ctx, logger, a.client, machineDeployments)).To(Succeed())
+			Expect(restoreMachineSetsAndMachines(ctx, logger, a.seedClient, machineDeployments)).To(Succeed())
 		})
 
 		It("should not return error if machineset and machines already exist", func() {
@@ -307,7 +307,7 @@ var _ = Describe("Actuator", func() {
 			mockClient.EXPECT().Create(ctx, &expectedMachine1).Return(alreadyExistsError)
 			mockClient.EXPECT().Create(ctx, &expectedMachine2).Return(alreadyExistsError)
 
-			Expect(restoreMachineSetsAndMachines(ctx, logger, a.client, machineDeployments)).To(Succeed())
+			Expect(restoreMachineSetsAndMachines(ctx, logger, a.seedClient, machineDeployments)).To(Succeed())
 		})
 	})
 })

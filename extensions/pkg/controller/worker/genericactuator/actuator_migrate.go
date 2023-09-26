@@ -31,7 +31,7 @@ func (a *genericActuator) Migrate(ctx context.Context, log logr.Logger, worker *
 	log = log.WithValues("operation", "migrate")
 
 	// Keep objects for shoot managed resources so that they are not deleted from the shoot during the migration
-	if err := managedresources.SetKeepObjects(ctx, a.client, worker.Namespace, McmShootResourceName, true); err != nil {
+	if err := managedresources.SetKeepObjects(ctx, a.seedClient, worker.Namespace, McmShootResourceName, true); err != nil {
 		return fmt.Errorf("could not keep objects of managed resource containing mcm chart for worker '%s': %w", kubernetesutils.ObjectName(worker), err)
 	}
 

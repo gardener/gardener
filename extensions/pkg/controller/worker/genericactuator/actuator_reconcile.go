@@ -55,7 +55,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 
 	// Get the list of all existing machine deployments.
 	existingMachineDeployments := &machinev1alpha1.MachineDeploymentList{}
-	if err := a.client.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
+	if err := a.seedClient.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
 		return err
 	}
 
@@ -120,7 +120,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 	}
 
 	// Generate machine deployment configuration based on previously computed list of deployments and deploy them.
-	if err := deployMachineDeployments(ctx, log, a.client, cluster, worker, existingMachineDeployments, wantedMachineDeployments, clusterAutoscalerUsed); err != nil {
+	if err := deployMachineDeployments(ctx, log, a.seedClient, cluster, worker, existingMachineDeployments, wantedMachineDeployments, clusterAutoscalerUsed); err != nil {
 		return fmt.Errorf("failed to generate the machine deployment config: %w", err)
 	}
 
@@ -140,12 +140,12 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 
 		if isStuck {
 			podList := corev1.PodList{}
-			if err2 := a.client.List(ctx, &podList, client.InNamespace(worker.Namespace), client.MatchingLabels{"role": "machine-controller-manager"}); err2 != nil {
+			if err2 := a.seedClient.List(ctx, &podList, client.InNamespace(worker.Namespace), client.MatchingLabels{"role": "machine-controller-manager"}); err2 != nil {
 				return fmt.Errorf("failed to list machine-controller-manager pods for worker (%s/%s): %w", worker.Namespace, worker.Name, err2)
 			}
 
 			for _, pod := range podList.Items {
-				if err2 := a.client.Delete(ctx, &pod); err2 != nil {
+				if err2 := a.seedClient.Delete(ctx, &pod); err2 != nil {
 					return fmt.Errorf("failed to delete stuck machine-controller-manager pod for worker (%s/%s): %w", worker.Namespace, worker.Name, err2)
 				}
 			}
@@ -189,7 +189,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 
 	// Scale down machine-controller-manager if shoot is hibernated.
 	if isHibernationEnabled {
-		if err := scaleMachineControllerManager(ctx, log, a.client, worker, 0); err != nil {
+		if err := scaleMachineControllerManager(ctx, log, a.seedClient, worker, 0); err != nil {
 			return err
 		}
 	}
@@ -327,13 +327,13 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 
 		// Get the list of all machine deployments
 		machineDeployments := &machinev1alpha1.MachineDeploymentList{}
-		if err := a.client.List(ctx, machineDeployments, client.InNamespace(worker.Namespace)); err != nil {
+		if err := a.seedClient.List(ctx, machineDeployments, client.InNamespace(worker.Namespace)); err != nil {
 			return retryutils.SevereError(err)
 		}
 
 		// Get the list of all machine sets
 		machineSets := &machinev1alpha1.MachineSetList{}
-		if err := a.client.List(ctx, machineSets, client.InNamespace(worker.Namespace)); err != nil {
+		if err := a.seedClient.List(ctx, machineSets, client.InNamespace(worker.Namespace)); err != nil {
 			return retryutils.SevereError(err)
 		}
 
@@ -432,7 +432,7 @@ func (a *genericActuator) waitUntilUnwantedMachineDeploymentsDeleted(ctx context
 	log.Info("Waiting until unwanted machine deployments are deleted")
 	return retryutils.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
 		existingMachineDeployments := &machinev1alpha1.MachineDeploymentList{}
-		if err := a.client.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
+		if err := a.seedClient.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
 			return retryutils.SevereError(err)
 		}
 
@@ -469,7 +469,7 @@ func (a *genericActuator) updateWorkerStatusMachineDeployments(ctx context.Conte
 	patch := client.MergeFrom(worker.DeepCopy())
 	worker.Status.MachineDeployments = statusMachineDeployments
 	worker.Status.MachineDeploymentsLastUpdateTime = &updateTime
-	return a.client.Status().Patch(ctx, worker, patch)
+	return a.seedClient.Status().Patch(ctx, worker, patch)
 }
 
 // Helper functions

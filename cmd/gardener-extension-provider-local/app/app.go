@@ -254,6 +254,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			ingressCtrlOpts.Completed().Apply(&localingress.DefaultAddOptions)
 			serviceCtrlOpts.Completed().Apply(&localservice.DefaultAddOptions)
 			workerCtrlOpts.Completed().Apply(&localworker.DefaultAddOptions.Controller)
+			localworker.DefaultAddOptions.GardenCluster = gardenCluster
 			localBackupBucketOptions.Completed().Apply(&localbackupbucket.DefaultAddOptions)
 			localBackupBucketOptions.Completed().Apply(&localbackupentry.DefaultAddOptions)
 			heartbeatCtrlOptions.Completed().Apply(&heartbeat.DefaultAddOptions)

@@ -263,8 +263,12 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 // Restore uses the seed client and the ShootState to create the Worker resources and restore their state.
 func (w *worker) Restore(ctx context.Context, shootState *gardencorev1beta1.ShootState) error {
 	// gardenlet persists the machine state in the ShootState's `.spec.gardener[]` list with `type=machine-state`.
-	// In order to use below function, we have to make the worker state appear under `.spec.extensions[]` list with
-	// the correct kind and name.
+	// In the future, the provider extension's Worker controller is expected to read the machine state directly from the
+	// ShootState resource in the garden cluster, and use it to recreate the actual machine.saploud.io/v1alpha1 objects.
+	// However: For backwards-compatibility, we have to make the machine state also available in the Worker object's
+	// `.status.state` field since older versions (< v1.81) of the generic `Worker` actuator's `Restore` function expect
+	// to find the state here, see https://github.com/gardener/gardener/blob/422e2bbedd23351383154bb733838a416f39f2b6/extensions/pkg/controller/worker/genericactuator/actuator_restore.go#L121C1-L141.
+	// TODO(rfranzke): Drop this code after Gardener v1.86 has been released.
 	var (
 		shootStateCopy = shootState.DeepCopy()
 		gardenerData   = v1beta1helper.GardenerResourceDataList(shootStateCopy.Spec.Gardener)
