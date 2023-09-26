@@ -51,7 +51,7 @@ get_group_package () {
   "druid.gardener.cloud")
     echo "github.com/gardener/etcd-druid/api/v1alpha1"
     ;;
-  "autoscaling.k8s.io")
+  "hvpaautoscaling.k8s.io")
     echo "github.com/gardener/hvpa-controller/api/v1alpha1"
     ;;
   "fluentbit.fluent.io")
@@ -71,7 +71,7 @@ generate_all_groups () {
   generate_group resources.gardener.cloud
   generate_group operator.gardener.cloud
   generate_group druid.gardener.cloud
-  generate_group autoscaling.k8s.io
+  generate_group hvpaautoscaling.k8s.io
   generate_group fluentbit.fluent.io
   generate_group machine.sapcloud.io
 }
@@ -115,7 +115,7 @@ generate_group () {
     if [[ ${group} =~ .*\.k8s\.io ]]; then
       sed -i '/^  annotations:.*/a\    api-approved.kubernetes.io: unapproved, temporarily squatting' "$crd_out"
     fi
-  done < <(ls "$output_dir/${group}"_*.yaml)
+  done < <(ls "$output_dir/${group/hvpa/}"_*.yaml)
 }
 
 if [ -n "${2:-}" ]; then
