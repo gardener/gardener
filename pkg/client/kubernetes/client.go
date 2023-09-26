@@ -378,7 +378,7 @@ func newClient(conf *Config, reader client.Reader) (client.Client, error) {
 var _ client.Client = &FallbackClient{}
 
 // FallbackClient holds a `client.Client` and a `client.Reader` which is meant as a fallback
-// in case Get/List requests with the ordinary `client.Client` fail (e.g. because of cache errors).
+// in case the kind of an object is configured in `KindToNamespaces` but the namespace isn't.
 type FallbackClient struct {
 	client.Client
 	Reader           client.Reader
@@ -386,7 +386,7 @@ type FallbackClient struct {
 }
 
 // Get retrieves an obj for a given object key from the Kubernetes Cluster.
-// In case of a cache error, the underlying API reader is used to execute the request again.
+// `client.Reader` is used in case the kind of an object is configured in `KindToNamespaces` but the namespace isn't.
 func (d *FallbackClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 	gvk, err := apiutil.GVKForObject(obj, GardenScheme)
 	if err != nil {
@@ -403,11 +403,10 @@ func (d *FallbackClient) Get(ctx context.Context, key client.ObjectKey, obj clie
 	}
 
 	// Otherwise, try to get the object from the cache.
-	return d.Client.Get(ctx, key, obj)
+	return d.Client.Get(ctx, key, obj, opts...)
 }
 
 // List retrieves list of objects for a given namespace and list options.
-// In case of a cache error, the underlying API reader is used to execute the request again.
 func (d *FallbackClient) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
 	return d.Client.List(ctx, list, opts...)
 }
