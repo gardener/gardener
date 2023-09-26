@@ -42,6 +42,7 @@ var _ = Describe("ActuatorRestore", func() {
 			fakeGardenClient client.Client
 
 			shoot                    *gardencorev1beta1.Shoot
+			shootState               *gardencorev1beta1.ShootState
 			worker                   *extensionsv1alpha1.Worker
 			wantedMachineDeployments extensionsworkercontroller.MachineDeployments
 
@@ -63,9 +64,10 @@ var _ = Describe("ActuatorRestore", func() {
 		)
 
 		BeforeEach(func() {
-			fakeGardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+			fakeGardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 
 			shoot = &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: "bar", Namespace: "foo"}}
+			shootState = &gardencorev1beta1.ShootState{ObjectMeta: metav1.ObjectMeta{Name: shoot.Name, Namespace: shoot.Namespace}}
 			worker = &extensionsv1alpha1.Worker{ObjectMeta: metav1.ObjectMeta{Namespace: "shoot--foo--bar"}}
 			wantedMachineDeployments = []extensionsworkercontroller.MachineDeployment{
 				{Name: "deploy1"},
@@ -76,6 +78,8 @@ var _ = Describe("ActuatorRestore", func() {
 			var err error
 			machineStateRaw, err = json.Marshal(machineState)
 			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeGardenClient.Create(ctx, shootState)).To(Succeed())
 		})
 
 		It("should do nothing because neither machine state exists in ShootState nor .status.state field is set", func() {
@@ -87,19 +91,15 @@ var _ = Describe("ActuatorRestore", func() {
 		})
 
 		It("should fetch the machine state from the ShootState", func() {
-			Expect(fakeGardenClient.Create(ctx, &gardencorev1beta1.ShootState{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      shoot.Name,
-					Namespace: shoot.Namespace,
-				},
-				Spec: gardencorev1beta1.ShootStateSpec{
-					Gardener: []gardencorev1beta1.GardenerResourceData{{
-						Name: "machine-state",
-						Type: "machine-state",
-						Data: runtime.RawExtension{Raw: machineStateRaw},
-					}},
-				},
-			})).To(Succeed())
+			patch := client.MergeFrom(shootState.DeepCopy())
+			shootState.Spec = gardencorev1beta1.ShootStateSpec{
+				Gardener: []gardencorev1beta1.GardenerResourceData{{
+					Name: "machine-state",
+					Type: "machine-state",
+					Data: runtime.RawExtension{Raw: machineStateRaw},
+				}},
+			}
+			Expect(fakeGardenClient.Patch(ctx, shootState, patch)).To(Succeed())
 
 			Expect(addStateToMachineDeployment(ctx, log, fakeGardenClient, shoot, worker, wantedMachineDeployments)).To(Succeed())
 
@@ -109,12 +109,6 @@ var _ = Describe("ActuatorRestore", func() {
 		})
 
 		It("should fetch the state from the Worker's .status.state field when machine state does not exist in ShootState", func() {
-			Expect(fakeGardenClient.Create(ctx, &gardencorev1beta1.ShootState{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      shoot.Name,
-					Namespace: shoot.Namespace,
-				},
-			})).To(Succeed())
 			worker.Status.State = &runtime.RawExtension{Raw: machineStateRaw}
 
 			Expect(addStateToMachineDeployment(ctx, log, fakeGardenClient, shoot, worker, wantedMachineDeployments)).To(Succeed())
