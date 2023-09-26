@@ -53,6 +53,8 @@ if [[ "$1" != "operator" ]]; then
     e2e-rotate-wl.local
     e2e-default.local
     e2e-default-wl.local
+    e2e-force-delete.local
+    e2e-fd-hib.local
     e2e-upd-node.local
     e2e-upd-node-wl.local
     e2e-upgrade.local

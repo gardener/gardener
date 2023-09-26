@@ -226,6 +226,10 @@ cat <<EOF | sudo tee -a /etc/hosts
 127.0.0.1 api.e2e-default.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-default-wl.local.external.local.gardener.cloud
 127.0.0.1 api.e2e-default-wl.local.internal.local.gardener.cloud
+127.0.0.1 api.e2e-force-delete.local.external.local.gardener.cloud
+127.0.0.1 api.e2e-force-delete.local.internal.local.gardener.cloud
+127.0.0.1 api.e2e-fd-hib.local.external.local.gardener.cloud
+127.0.0.1 api.e2e-fd-hib.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-upd-node.local.external.local.gardener.cloud
 127.0.0.1 api.e2e-upd-node.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-upd-node-wl.local.external.local.gardener.cloud

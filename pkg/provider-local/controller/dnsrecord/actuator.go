@@ -61,6 +61,10 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, dnsrecord *exten
 	return a.reconcile(ctx, log, dnsrecord, cluster, DeleteValuesInEtcHostsFile, deleteCoreDNSRewriteRule)
 }
 
+func (a *actuator) ForceDelete(ctx context.Context, log logr.Logger, dnsrecord *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster) error {
+	return a.Delete(ctx, log, dnsrecord, cluster)
+}
+
 func (a *actuator) reconcile(ctx context.Context, log logr.Logger, dnsRecord *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster, mutateEtcHosts func([]byte, *extensionsv1alpha1.DNSRecord) []byte, mutateCorednsRules func(corednsConfig *corev1.ConfigMap, dnsRecord *extensionsv1alpha1.DNSRecord, zone *string)) error {
 	if err := a.updateCoreDNSRewritingRules(ctx, log, dnsRecord, cluster, mutateCorednsRules); err != nil {
 		return err

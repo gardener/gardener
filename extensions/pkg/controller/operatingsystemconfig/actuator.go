@@ -28,6 +28,8 @@ type Actuator interface {
 	Reconcile(context.Context, logr.Logger, *extensionsv1alpha1.OperatingSystemConfig) ([]byte, *string, []string, []string, error)
 	// Delete the operating system config.
 	Delete(context.Context, logr.Logger, *extensionsv1alpha1.OperatingSystemConfig) error
+	// ForceDelete forcefully deletes the operating system config.
+	ForceDelete(context.Context, logr.Logger, *extensionsv1alpha1.OperatingSystemConfig) error
 	// Restore the operating system config.
 	Restore(context.Context, logr.Logger, *extensionsv1alpha1.OperatingSystemConfig) ([]byte, *string, []string, []string, error)
 	// Migrate the operating system config.

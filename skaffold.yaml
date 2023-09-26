@@ -665,6 +665,7 @@ build:
         - pkg/utils/gardener
         - pkg/utils/imagevector
         - pkg/utils/kubernetes
+        - pkg/utils/kubernetes/client
         - pkg/utils/kubernetes/health
         - pkg/utils/kubernetes/unstructured
         - pkg/utils/managedresources
@@ -672,6 +673,7 @@ build:
         - pkg/utils/retry
         - pkg/utils/secrets
         - pkg/utils/secrets/manager
+        - pkg/utils/time
         - pkg/utils/timewindow
         - pkg/utils/validation/kubernetesversion
         - pkg/utils/version

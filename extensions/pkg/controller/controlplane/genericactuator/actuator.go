@@ -404,6 +404,16 @@ func (a *actuator) Delete(
 	return sm.Cleanup(ctx)
 }
 
+// ForceDelete forcefully deletes the controlplane.
+func (a *actuator) ForceDelete(
+	ctx context.Context,
+	log logr.Logger,
+	cp *extensionsv1alpha1.ControlPlane,
+	cluster *extensionscontroller.Cluster,
+) error {
+	return a.Delete(ctx, log, cp, cluster)
+}
+
 func (a *actuator) delete(ctx context.Context, log logr.Logger, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) error {
 	if cp.Spec.Purpose != nil && *cp.Spec.Purpose == extensionsv1alpha1.Exposure {
 		return a.deleteControlPlaneExposure(ctx, log, cp)

@@ -234,7 +234,13 @@ func (r *reconciler) delete(
 	}
 
 	log.Info("Starting the deletion of ControlPlane")
-	if err := r.actuator.Delete(ctx, log, cp, cluster); err != nil {
+	var err error
+	if cluster != nil && v1beta1helper.ShootNeedsForceDeletion(cluster.Shoot) {
+		err = r.actuator.ForceDelete(ctx, log, cp, cluster)
+	} else {
+		err = r.actuator.Delete(ctx, log, cp, cluster)
+	}
+	if err != nil {
 		_ = r.statusUpdater.Error(ctx, log, cp, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error deleting ControlPlane")
 		return reconcilerutils.ReconcileErr(err)
 	}

@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 var _ = Describe("helper", func() {
@@ -244,6 +245,25 @@ var _ = Describe("helper", func() {
 		Entry("dns providers but no type", &core.DNS{Providers: []core.DNSProvider{{}}}, false),
 		Entry("dns providers but different type", &core.DNS{Providers: []core.DNSProvider{{Type: &differentType}}}, false),
 		Entry("dns providers and unmanaged type", &core.DNS{Providers: []core.DNSProvider{{Type: &unmanagedType}}}, true),
+	)
+
+	DescribeTable("#ShootNeedsForceDeletion",
+		func(shoot *core.Shoot, match gomegatypes.GomegaMatcher) {
+			Expect(ShootNeedsForceDeletion(shoot)).To(match)
+		},
+
+		Entry("shoot is nil",
+			nil,
+			BeFalse()),
+		Entry("no force-delete annotation present",
+			&core.Shoot{},
+			BeFalse()),
+		Entry("force-delete annotation present but value is false",
+			&core.Shoot{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.AnnotationConfirmationForceDeletion: "0"}}},
+			BeFalse()),
+		Entry("force-delete annotation present and value is true",
+			&core.Shoot{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.AnnotationConfirmationForceDeletion: "t"}}},
+			BeTrue()),
 	)
 
 	DescribeTable("#FindWorkerByName",

@@ -95,7 +95,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	case operationType == gardencorev1beta1.LastOperationTypeMigrate:
 		return r.migrate(ctx, log, osc)
 	case osc.DeletionTimestamp != nil:
-		return r.delete(ctx, log, osc)
+		return r.delete(ctx, log, osc, cluster != nil && v1beta1helper.ShootNeedsForceDeletion(cluster.Shoot))
 	case operationType == gardencorev1beta1.LastOperationTypeRestore:
 		return r.restore(ctx, log, osc)
 	default:
@@ -203,6 +203,7 @@ func (r *reconciler) delete(
 	ctx context.Context,
 	log logr.Logger,
 	osc *extensionsv1alpha1.OperatingSystemConfig,
+	forceDelete bool,
 ) (
 	reconcile.Result,
 	error,
@@ -217,7 +218,13 @@ func (r *reconciler) delete(
 	}
 
 	log.Info("Starting the deletion of OperatingSystemConfig")
-	if err := r.actuator.Delete(ctx, log, osc); err != nil {
+	var err error
+	if forceDelete {
+		err = r.actuator.ForceDelete(ctx, log, osc)
+	} else {
+		err = r.actuator.Delete(ctx, log, osc)
+	}
+	if err != nil {
 		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeDelete, "Error deleting OperatingSystemConfig")
 		return reconcilerutils.ReconcileErr(err)
 	}

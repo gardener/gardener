@@ -168,6 +168,7 @@
 * [Provider Local](extensions/provider-local.md)
 * [Access to the Garden Cluster](extensions/garden-api-access.md)
 * [Control plane migration](extensions/migration.md)
+* [Force Deletion](extensions/force-delete.md)
 * [Extending project roles](extensions/project-roles.md)
 * [Referenced resources](extensions/referenced-resources.md)
 

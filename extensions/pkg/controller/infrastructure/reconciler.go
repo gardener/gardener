@@ -156,7 +156,14 @@ func (r *reconciler) delete(
 		return reconcile.Result{}, err
 	}
 
-	if err := r.actuator.Delete(ctx, log, infrastructure, cluster); err != nil {
+	var err error
+	if cluster != nil && v1beta1helper.ShootNeedsForceDeletion(cluster.Shoot) {
+		err = r.actuator.ForceDelete(ctx, log, infrastructure, cluster)
+	} else {
+		err = r.actuator.Delete(ctx, log, infrastructure, cluster)
+	}
+
+	if err != nil {
 		_ = r.statusUpdater.Error(ctx, log, infrastructure, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeDelete, "Error deleting Infrastructure")
 		return reconcilerutils.ReconcileErr(err)
 	}
@@ -165,8 +172,7 @@ func (r *reconciler) delete(
 		return reconcile.Result{}, err
 	}
 
-	err := r.removeFinalizerFromInfrastructure(ctx, log, infrastructure)
-	return reconcile.Result{}, err
+	return reconcile.Result{}, r.removeFinalizerFromInfrastructure(ctx, log, infrastructure)
 }
 
 func (r *reconciler) migrate(

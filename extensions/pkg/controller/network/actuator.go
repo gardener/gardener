@@ -29,6 +29,8 @@ type Actuator interface {
 	Reconcile(context.Context, logr.Logger, *extensionsv1alpha1.Network, *extensionscontroller.Cluster) error
 	// Delete deletes the Network resource.
 	Delete(context.Context, logr.Logger, *extensionsv1alpha1.Network, *extensionscontroller.Cluster) error
+	// ForceDelete forcefully deletes the Network resource.
+	ForceDelete(context.Context, logr.Logger, *extensionsv1alpha1.Network, *extensionscontroller.Cluster) error
 	// Restore restores the Network resource.
 	Restore(context.Context, logr.Logger, *extensionsv1alpha1.Network, *extensionscontroller.Cluster) error
 	// Migrate migrates the Network resource.

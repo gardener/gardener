@@ -135,23 +135,23 @@ const (
 )
 
 const (
-	// EventReconciling indicates that the a Reconcile operation started.
+	// EventReconciling indicates that the Reconcile operation started.
 	EventReconciling = "Reconciling"
-	// EventReconciled indicates that the a Reconcile operation was successful.
+	// EventReconciled indicates that the Reconcile operation was successful.
 	EventReconciled = "Reconciled"
-	// EventReconcileError indicates that the a Reconcile operation failed.
+	// EventReconcileError indicates that the Reconcile operation failed.
 	EventReconcileError = "ReconcileError"
-	// EventDeleting indicates that the a Delete operation started.
+	// EventDeleting indicates that the Delete operation started.
 	EventDeleting = "Deleting"
-	// EventDeleted indicates that the a Delete operation was successful.
+	// EventDeleted indicates that the Delete operation was successful.
 	EventDeleted = "Deleted"
-	// EventDeleteError indicates that the a Delete operation failed.
+	// EventDeleteError indicates that the Delete operation failed.
 	EventDeleteError = "DeleteError"
-	// EventPrepareMigration indicates that a Prepare Migration operation started.
+	// EventPrepareMigration indicates that the Prepare Migration operation started.
 	EventPrepareMigration = "PrepareMigration"
-	// EventMigrationPrepared indicates that Migration preparation was successful.
+	// EventMigrationPrepared indicates that the Migration preparation was successful.
 	EventMigrationPrepared = "MigrationPrepared"
-	// EventMigrationPreparationFailed indicates that Migration preparation failed.
+	// EventMigrationPreparationFailed indicates that the Migration preparation failed.
 	EventMigrationPreparationFailed = "MigrationPreparationFailed"
 )
 

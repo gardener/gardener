@@ -20,15 +20,21 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/extension"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/utils/flow"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -36,7 +42,9 @@ const (
 	// ApplicationName is the name of the application.
 	ApplicationName string = "local-ext-shoot"
 	// ManagedResourceNamesShoot is the name used to describe the managed shoot resources.
-	ManagedResourceNamesShoot string = ApplicationName
+	ManagedResourceNamesShoot      string = ApplicationName
+	finalizer                      string = "extensions.gardener.cloud/local-ext-shoot"
+	AnnotationTestForceDeleteShoot string = "test-force-delete"
 )
 
 type actuator struct {
@@ -65,7 +73,7 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 		keepObjects          = false
 	)
 
-	return managedresources.Create(
+	if err := managedresources.Create(
 		ctx,
 		a.client,
 		namespace,
@@ -77,7 +85,36 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 		&keepObjects,
 		injectedLabels,
 		nil,
-	)
+	); err != nil {
+		return err
+	}
+
+	cluster, err := extensionscontroller.GetCluster(ctx, a.client, ex.Namespace)
+	if err != nil {
+		return err
+	}
+
+	// Create the resources only for force-delete e2e test
+	if kubernetesutils.HasMetaDataAnnotation(cluster.Shoot, AnnotationTestForceDeleteShoot, "true") {
+		for i := 1; i <= 2; i++ {
+			networkPolicy := &networkingv1.NetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "test-netpol-",
+					Namespace:    ex.Namespace,
+					Finalizers:   []string{finalizer},
+				},
+			}
+
+			if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, networkPolicy, func() error {
+				networkPolicy.Labels = getLabels()
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 // Delete the extension resource.
@@ -93,6 +130,21 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, ex *extensionsv1
 	}
 
 	return managedresources.WaitUntilDeleted(timeoutShootCtx, a.client, namespace, ManagedResourceNamesShoot)
+}
+
+// ForceDelete force deletes the extension resource.
+func (a *actuator) ForceDelete(ctx context.Context, log logr.Logger, ex *extensionsv1alpha1.Extension) error {
+	log.Info("Deleting all test NetworkPolicies in namespace", "namespace", ex.Namespace)
+	return flow.Parallel(
+		utilclient.ForceDeleteObjects(
+			ctx,
+			a.client,
+			"NetworkPolicy",
+			ex.Namespace,
+			&networkingv1.NetworkPolicyList{},
+			client.MatchingLabels(getLabels()),
+		),
+	)(ctx)
 }
 
 // Migrate the extension resource.
@@ -111,9 +163,7 @@ func (a *actuator) Restore(ctx context.Context, log logr.Logger, ex *extensionsv
 }
 
 func getLabels() map[string]string {
-	return map[string]string{
-		"app.kubernetes.io/name": ApplicationName,
-	}
+	return map[string]string{"app.kubernetes.io/name": ApplicationName}
 }
 
 func getShootResources() (map[string][]byte, error) {

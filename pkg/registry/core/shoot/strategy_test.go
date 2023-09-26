@@ -204,6 +204,12 @@ var _ = Describe("Strategy", func() {
 					},
 					true,
 				),
+				Entry("force-deletion annotation",
+					func(s *core.Shoot) {
+						metav1.SetMetaDataAnnotation(&s.ObjectMeta, v1beta1constants.AnnotationConfirmationForceDeletion, "true")
+					},
+					true,
+				),
 			)
 
 			Context("confine spec update rollout", func() {

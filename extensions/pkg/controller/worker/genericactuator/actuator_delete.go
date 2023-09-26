@@ -128,6 +128,17 @@ func (a *genericActuator) Delete(ctx context.Context, log logr.Logger, worker *e
 	return nil
 }
 
+// ForceDelete simply returns nil in case of forceful deletion since cleaning up the machines would never succeed in this case.
+// So we proceed to remove the finalizer without any action.
+func (a *genericActuator) ForceDelete(
+	ctx context.Context,
+	log logr.Logger,
+	worker *extensionsv1alpha1.Worker,
+	cluster *extensionscontroller.Cluster,
+) error {
+	return nil
+}
+
 // Mark all existing machines to become forcefully deleted.
 func markAllMachinesForcefulDeletion(ctx context.Context, log logr.Logger, cl client.Client, namespace string) error {
 	log.Info("Marking all machines for forceful deletion")

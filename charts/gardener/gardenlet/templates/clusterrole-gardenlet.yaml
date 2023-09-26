@@ -438,8 +438,13 @@ rules:
   - machine.sapcloud.io
   resources:
   - machinedeployments
+  - machinesets
   - machines
+  - machineclasses
   verbs:
   - list
   - watch
   - get
+  - patch
+  - update
+  - delete

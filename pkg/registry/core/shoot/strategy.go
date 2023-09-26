@@ -103,6 +103,12 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 		return true
 	}
 
+	// Force delete annotation is set.
+	// This is necessary because we want to trigger a reconciliation right away even if the Shoot is failed.
+	if !gardencorehelper.ShootNeedsForceDeletion(oldShoot) && gardencorehelper.ShootNeedsForceDeletion(newShoot) {
+		return true
+	}
+
 	if lastOperation := newShoot.Status.LastOperation; lastOperation != nil {
 		var (
 			mustIncrease                  bool
@@ -204,6 +210,9 @@ func (shootStrategy) Validate(_ context.Context, obj runtime.Object) field.Error
 	shoot := obj.(*core.Shoot)
 	allErrs := field.ErrorList{}
 	allErrs = append(allErrs, validation.ValidateShoot(shoot)...)
+	if err := validation.ValidateForceDeletion(shoot, nil); err != nil {
+		allErrs = append(allErrs, err)
+	}
 	allErrs = append(allErrs, validation.ValidateFinalizersOnCreation(shoot.Finalizers, field.NewPath("metadata", "finalizers"))...)
 	if gardencorehelper.IsWorkerless(shoot) {
 		if !utilfeature.DefaultFeatureGate.Enabled(features.WorkerlessShoots) {

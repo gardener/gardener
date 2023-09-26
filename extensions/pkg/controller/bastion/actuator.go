@@ -29,4 +29,6 @@ type Actuator interface {
 	Reconcile(context.Context, logr.Logger, *extensionsv1alpha1.Bastion, *extensionscontroller.Cluster) error
 	// Delete deletes the Bastion.
 	Delete(context.Context, logr.Logger, *extensionsv1alpha1.Bastion, *extensionscontroller.Cluster) error
+	// ForceDelete forcefully deletes the Bastion.
+	ForceDelete(context.Context, logr.Logger, *extensionsv1alpha1.Bastion, *extensionscontroller.Cluster) error
 }
