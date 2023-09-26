@@ -50,6 +50,7 @@ rules:
   - core.gardener.cloud
   resources:
   - shoots
+  - shoots/status
   verbs:
   - get
   - list

@@ -57,6 +57,7 @@ func (g *gardenerScheduler) clusterRole() *rbacv1.ClusterRole {
 				APIGroups: []string{gardencorev1beta1.GroupName},
 				Resources: []string{
 					"shoots",
+					"shoots/status",
 				},
 				Verbs: []string{"get", "list", "watch", "patch", "update"},
 			},

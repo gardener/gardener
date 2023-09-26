@@ -78,15 +78,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	// If no Seed is referenced, we try to determine an adequate one.
 	seed, err := r.determineSeed(ctx, log, shoot)
 	if err != nil {
-		r.reportFailedScheduling(shoot, err)
-		return reconcile.Result{}, err
+		r.reportFailedScheduling(ctx, log, shoot, err)
+		return reconcile.Result{}, fmt.Errorf("failed to determine seed for shoot: %w", err)
 	}
 
 	shoot.Spec.SeedName = &seed.Name
 	if err = r.Client.SubResource("binding").Update(ctx, shoot); err != nil {
-		log.Error(err, "Failed to bind shoot to seed")
-		r.reportFailedScheduling(shoot, err)
-		return reconcile.Result{}, err
+		r.reportFailedScheduling(ctx, log, shoot, err)
+		return reconcile.Result{}, fmt.Errorf("failed to bind shoot to seed: %w", err)
 	}
 
 	log.Info(
@@ -101,8 +100,21 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	return reconcile.Result{}, nil
 }
 
-func (r *Reconciler) reportFailedScheduling(shoot *gardencorev1beta1.Shoot, err error) {
-	r.reportEvent(shoot, corev1.EventTypeWarning, gardencorev1beta1.ShootEventSchedulingFailed, "Failed to schedule shoot '%s': %+v", shoot.Name, err)
+func (r *Reconciler) reportFailedScheduling(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot, err error) {
+	description := fmt.Sprintf("Failed to schedule Shoot: %s", err.Error())
+	r.reportEvent(shoot, corev1.EventTypeWarning, gardencorev1beta1.ShootEventSchedulingFailed, description)
+
+	patch := client.MergeFrom(shoot.DeepCopy())
+	if shoot.Status.LastOperation == nil {
+		shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{}
+	}
+	shoot.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeCreate
+	shoot.Status.LastOperation.State = gardencorev1beta1.LastOperationStatePending
+	shoot.Status.LastOperation.LastUpdateTime = metav1.Now()
+	shoot.Status.LastOperation.Description = description
+	if err := r.Client.Status().Patch(ctx, shoot, patch); err != nil {
+		log.Error(err, "Failed to report scheduling failure to shoot status")
+	}
 }
 
 func (r *Reconciler) reportEvent(shoot *gardencorev1beta1.Shoot, eventType string, eventReason, messageFmt string, args ...interface{}) {

@@ -153,6 +153,7 @@ This mechanism works as follows:
 ## Failure to Determine a Suitable Seed
 
 In case the scheduler fails to find a suitable seed, the operation is being retried with exponential backoff.
+The reason for the failure will be reported in the `Shoot`'s `.status.lastOperation` field as well as a Kubernetes event (which can be retrieved via `kubectl -n <namespace> describe shoot <shoot-name>`).
 
 ## Current Limitation / Future Plans
 

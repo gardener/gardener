@@ -222,6 +222,7 @@ var _ = Describe("GardenerScheduler", func() {
 					APIGroups: []string{gardencorev1beta1.GroupName},
 					Resources: []string{
 						"shoots",
+						"shoots/status",
 					},
 					Verbs: []string{"get", "list", "watch", "patch", "update"},
 				},
