@@ -12,6 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate ../../../../hack/generate-crds.sh crd- -l machine.sapcloud.io
+//go:generate ../../../../hack/generate-crds.sh -p crd- -l machine.sapcloud.io
 
 package templates

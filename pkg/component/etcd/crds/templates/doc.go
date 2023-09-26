@@ -12,6 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate ../../../../../hack/generate-crds.sh crd- -l druid.gardener.cloud
+//go:generate ../../../../../hack/generate-crds.sh -p crd- -l druid.gardener.cloud
 
 package templates

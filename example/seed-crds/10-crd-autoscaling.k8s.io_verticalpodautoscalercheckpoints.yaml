@@ -3,8 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    api-approved.kubernetes.io: https://github.com/kubernetes/kubernetes/pull/63797
-    resources.gardener.cloud/keep-object: "true"
+    api-approved.kubernetes.io: unapproved, temporarily squatting
     controller-gen.kubebuilder.io/version: v0.13.0
   name: verticalpodautoscalercheckpoints.autoscaling.k8s.io
 spec:
@@ -66,7 +65,6 @@ spec:
                   totalWeight:
                     description: Sum of samples to be used as denominator for weights
                       from BucketWeights.
-                    type: number
                 type: object
               firstSampleStart:
                 description: Timestamp of the fist sample from the histograms.
@@ -99,7 +97,6 @@ spec:
                   totalWeight:
                     description: Sum of samples to be used as denominator for weights
                       from BucketWeights.
-                    type: number
                 type: object
               totalSamplesCount:
                 description: Total number of samples in the histograms.
