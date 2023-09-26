@@ -380,6 +380,14 @@ func (g *garden) Start(ctx context.Context) error {
 		return fmt.Errorf("failed adding garden cluster to manager: %w", err)
 	}
 
+	waitForSyncCtx, waitForSyncCancel := context.WithTimeout(ctx, 5*time.Second)
+	defer waitForSyncCancel()
+
+	log.V(1).Info("Waiting for cache to be synced")
+	if !gardenCluster.GetCache().WaitForCacheSync(waitForSyncCtx) {
+		return fmt.Errorf("failed waiting for cache to be synced")
+	}
+
 	log.Info("Registering Seed object in garden cluster")
 	if err := g.registerSeed(ctx, gardenCluster.GetClient()); err != nil {
 		return err
