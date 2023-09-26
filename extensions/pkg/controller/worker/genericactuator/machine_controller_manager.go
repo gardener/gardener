@@ -92,7 +92,7 @@ func (a *genericActuator) deployMachineControllerManager(ctx context.Context, lo
 
 func (a *genericActuator) deleteMachineControllerManager(ctx context.Context, logger logr.Logger, workerObj *extensionsv1alpha1.Worker) error {
 	if !a.mcmManaged {
-		logger.Info("Skip machine-controller-manager deployment since gardenlet manages it - deleting monitoring ConfigMap and extension-worker-mcm-shoot ManagedResource")
+		logger.Info("Skip machine-controller-manager deletion since gardenlet manages it - deleting monitoring ConfigMap and extension-worker-mcm-shoot ManagedResource")
 		if err := a.client.Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager-monitoring-config", Namespace: workerObj.Namespace}}); client.IgnoreNotFound(err) != nil {
 			return err
 		}
