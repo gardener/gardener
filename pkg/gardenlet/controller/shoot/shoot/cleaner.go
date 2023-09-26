@@ -75,7 +75,7 @@ type Cleaner struct {
 }
 
 // NewCleaner creates a Cleaner with the given clients and logger, for a shoot with the given namespace.
-func NewCleaner(seedClient, gardenClient client.Client, seedNamespace string, log logr.Logger) *Cleaner {
+func NewCleaner(log logr.Logger, seedClient, gardenClient client.Client, seedNamespace string) *Cleaner {
 	return &Cleaner{
 		seedClient:    seedClient,
 		gardenClient:  gardenClient,
@@ -106,7 +106,7 @@ func (c *Cleaner) WaitUntilExtensionObjectsDeleted(ctx context.Context) error {
 // DeleteMachineResources deletes all MachineControllerManager resources in the shoot namespace.
 func (c *Cleaner) DeleteMachineResources(ctx context.Context) error {
 	return utilclient.ApplyToObjectKinds(ctx, func(kind string, objectList client.ObjectList) flow.TaskFn {
-		c.log.Info("Deleting all resources in namespace", "namespace", c.seedNamespace, "kind", kind)
+		c.log.Info("Deleting all machine resources in namespace", "namespace", c.seedNamespace, "kind", kind)
 		return utilclient.ForceDeleteObjects(ctx, c.seedClient, kind, c.seedNamespace, objectList)
 	}, machineKindToObjectList)
 }
@@ -159,7 +159,7 @@ func (c *Cleaner) DeleteKubernetesResources(ctx context.Context) error {
 func (c *Cleaner) DeleteCluster(ctx context.Context) error {
 	cluster := c.getEmptyCluster()
 
-	c.log.Info("Deleting Cluster resource", "cluster", cluster.Name)
+	c.log.Info("Deleting Cluster resource", "clusterName", cluster.Name)
 	return client.IgnoreNotFound(c.seedClient.Delete(ctx, cluster))
 }
 

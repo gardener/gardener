@@ -230,7 +230,7 @@ func (r *Reconciler) deleteShoot(ctx context.Context, log logr.Logger, shoot *ga
 	var flowErr *v1beta1helper.WrappedLastErrors
 
 	if v1beta1helper.ShootNeedsForceDeletion(shoot) {
-		flowErr = r.runForceDeleteShootFlow(ctx, o)
+		flowErr = r.runForceDeleteShootFlow(ctx, log, o)
 	} else {
 		flowErr = r.runDeleteShootFlow(ctx, o)
 	}

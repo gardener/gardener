@@ -77,7 +77,7 @@ var _ = Describe("Cleaner", func() {
 
 		seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
-		cleaner = NewCleaner(seedClient, gardenClient, namespace, log)
+		cleaner = NewCleaner(log, seedClient, gardenClient, namespace)
 
 		secret1 = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{

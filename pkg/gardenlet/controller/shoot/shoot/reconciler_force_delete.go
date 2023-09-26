@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"time"
 
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"github.com/go-logr/logr"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
@@ -33,7 +33,7 @@ import (
 
 // runForceDeleteShootFlow force deletes a Shoot cluster.
 // It receives an Operation object <o> which stores the Shoot object and an ErrorContext which contains error from the previous operation.
-func (r *Reconciler) runForceDeleteShootFlow(ctx context.Context, o *operation.Operation) *v1beta1helper.WrappedLastErrors {
+func (r *Reconciler) runForceDeleteShootFlow(ctx context.Context, log logr.Logger, o *operation.Operation) *v1beta1helper.WrappedLastErrors {
 	var (
 		botanist        *botanistpkg.Botanist
 		tasksWithErrors []string
@@ -81,7 +81,7 @@ func (r *Reconciler) runForceDeleteShootFlow(ctx context.Context, o *operation.O
 		defaultInterval = 5 * time.Second
 		defaultTimeout  = 30 * time.Second
 
-		cleaner = NewCleaner(botanist.SeedClientSet.Client(), r.GardenClient, botanist.Shoot.SeedNamespace, logf.FromContext(ctx))
+		cleaner = NewCleaner(log, botanist.SeedClientSet.Client(), r.GardenClient, botanist.Shoot.SeedNamespace)
 
 		g = flow.NewGraph("Shoot cluster force deletion")
 
@@ -95,11 +95,11 @@ func (r *Reconciler) runForceDeleteShootFlow(ctx context.Context, o *operation.O
 			Dependencies: flow.NewTaskIDs(deleteExtensionObjects),
 		})
 		deleteMachineResources = g.Add(flow.Task{
-			Name: "Deleting MCM resources",
+			Name: "Deleting machine resources",
 			Fn:   flow.TaskFn(cleaner.DeleteMachineResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
 		})
 		waitUntilMachineResourcesDeleted = g.Add(flow.Task{
-			Name:         "Waiting until MCM resources have been deleted",
+			Name:         "Waiting until machine resources have been deleted",
 			Fn:           cleaner.WaitUntilMachineResourcesDeleted,
 			Dependencies: flow.NewTaskIDs(deleteMachineResources),
 		})

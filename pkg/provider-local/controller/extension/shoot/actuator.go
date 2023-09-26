@@ -96,34 +96,21 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 
 	// Create the resources only for force-delete e2e test
 	if kubernetesutils.HasMetaDataAnnotation(cluster.Shoot, AnnotationTestForceDeleteShoot, "true") {
-		netpol1 := &networkingv1.NetworkPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:       "test-netpol-1",
-				Namespace:  ex.Namespace,
-				Finalizers: []string{finalizer},
-			},
-		}
+		for i := 1; i <= 2; i++ {
+			networkPolicy := &networkingv1.NetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "test-netpol-",
+					Namespace:    ex.Namespace,
+					Finalizers:   []string{finalizer},
+				},
+			}
 
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, netpol1, func() error {
-			netpol1.Labels = getLabels()
-			return nil
-		}); err != nil {
-			return err
-		}
-
-		netpol2 := &networkingv1.NetworkPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:       "test-netpol-2",
-				Namespace:  ex.Namespace,
-				Finalizers: []string{finalizer},
-			},
-		}
-
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, netpol2, func() error {
-			netpol2.Labels = getLabels()
-			return nil
-		}); err != nil {
-			return err
+			if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, networkPolicy, func() error {
+				networkPolicy.Labels = getLabels()
+				return nil
+			}); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -147,7 +134,7 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, ex *extensionsv1
 
 // ForceDelete force deletes the extension resource.
 func (a *actuator) ForceDelete(ctx context.Context, log logr.Logger, ex *extensionsv1alpha1.Extension) error {
-	log.Info("Deleting all test leases in namespace", "namespace", ex.Namespace)
+	log.Info("Deleting all test NetworkPolicies in namespace", "namespace", ex.Namespace)
 	return flow.Parallel(
 		utilclient.ForceDeleteObjects(
 			ctx,
@@ -155,7 +142,7 @@ func (a *actuator) ForceDelete(ctx context.Context, log logr.Logger, ex *extensi
 			"NetworkPolicy",
 			ex.Namespace,
 			&networkingv1.NetworkPolicyList{},
-			client.MatchingLabels{"app.kubernetes.io/name": ApplicationName},
+			client.MatchingLabels(getLabels()),
 		),
 	)(ctx)
 }
@@ -176,9 +163,7 @@ func (a *actuator) Restore(ctx context.Context, log logr.Logger, ex *extensionsv
 }
 
 func getLabels() map[string]string {
-	return map[string]string{
-		"app.kubernetes.io/name": ApplicationName,
-	}
+	return map[string]string{"app.kubernetes.io/name": ApplicationName}
 }
 
 func getShootResources() (map[string][]byte, error) {
