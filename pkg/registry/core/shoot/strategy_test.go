@@ -502,16 +502,12 @@ var _ = Describe("Strategy", func() {
 					Spec: core.ShootSpec{
 						Extensions: []core.Extension{
 							{
-								Type:     "arbitrary",
-								Disabled: pointer.Bool(false),
-							},
-							{
-								Type:     "arbitrary",
-								Disabled: pointer.Bool(true),
-							},
-							{
 								Type:     "arbitrary-1",
 								Disabled: pointer.Bool(true),
+							},
+							{
+								Type:     "arbitrary",
+								Disabled: pointer.Bool(false),
 							},
 						},
 					},
@@ -519,7 +515,21 @@ var _ = Describe("Strategy", func() {
 				newShoot = oldShoot.DeepCopy()
 			})
 
+			It("should not change order of extensions if there are no duplicate extensions", func() {
+				shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+
+				Expect(newShoot.Spec.Extensions).To(HaveLen(2))
+				Expect(newShoot.Spec.Extensions[0]).To(Equal(oldShoot.Spec.Extensions[0]))
+				Expect(newShoot.Spec.Extensions[1]).To(Equal(oldShoot.Spec.Extensions[1]))
+			})
+
 			It("should remove duplicated extensions and take the latest configuration of duplicate extensions", func() {
+				oldShoot.Spec.Extensions = append(oldShoot.Spec.Extensions, core.Extension{
+					Type:     "arbitrary",
+					Disabled: pointer.Bool(true),
+				})
+				newShoot = oldShoot.DeepCopy()
+
 				shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 
 				Expect(newShoot.Spec.Extensions).To(HaveLen(2))
