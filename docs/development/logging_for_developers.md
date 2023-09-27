@@ -1,3 +1,8 @@
+---
+aliases: 
+- /docs/gardener/development/logging
+---
+
 # Logging in Gardener Components
 
 This document aims at providing a general developer guideline on different aspects of logging practices and conventions used in the Gardener codebase.
