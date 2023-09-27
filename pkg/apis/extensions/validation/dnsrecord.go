@@ -110,20 +110,6 @@ func ValidateDNSRecordSpecUpdate(new, old *extensionsv1alpha1.DNSRecordSpec, del
 	return allErrs
 }
 
-// ValidateDNSRecordStatus validates the status of a DNSRecord object.
-func ValidateDNSRecordStatus(status *extensionsv1alpha1.DNSRecordStatus, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	return allErrs
-}
-
-// ValidateDNSRecordStatusUpdate validates the status field of a DNSRecord object before an update.
-func ValidateDNSRecordStatusUpdate(newStatus, oldStatus *extensionsv1alpha1.DNSRecordStatus, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	return allErrs
-}
-
 func validateValue(recordType extensionsv1alpha1.DNSRecordType, value string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	switch recordType {

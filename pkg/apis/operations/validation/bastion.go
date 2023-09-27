@@ -89,7 +89,7 @@ func ValidateBastionSpecUpdate(newSpec, oldSpec *operations.BastionSpec, fldPath
 }
 
 // ValidateBastionStatusUpdate validates the status field of a Bastion object.
-func ValidateBastionStatusUpdate(newBastion, oldBastion *operations.Bastion) field.ErrorList {
+func ValidateBastionStatusUpdate(newBastion, _ *operations.Bastion) field.ErrorList {
 	allErrs := field.ErrorList{}
 	now := time.Now()
 

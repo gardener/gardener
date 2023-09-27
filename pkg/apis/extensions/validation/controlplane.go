@@ -87,17 +87,3 @@ func ValidateControlPlaneSpecUpdate(new, old *extensionsv1alpha1.ControlPlaneSpe
 
 	return allErrs
 }
-
-// ValidateControlPlaneStatus validates the status of a ControlPlane object.
-func ValidateControlPlaneStatus(status *extensionsv1alpha1.ControlPlaneStatus, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	return allErrs
-}
-
-// ValidateControlPlaneStatusUpdate validates the status field of a ControlPlane object before an update.
-func ValidateControlPlaneStatusUpdate(newStatus, oldStatus *extensionsv1alpha1.ControlPlaneStatus, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	return allErrs
-}
