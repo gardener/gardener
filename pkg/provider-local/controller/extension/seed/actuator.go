@@ -50,7 +50,7 @@ func NewActuator(mgr manager.Manager) extension.Actuator {
 }
 
 // Reconcile the extension resource.
-func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extensionsv1alpha1.Extension) error {
+func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, ex *extensionsv1alpha1.Extension) error {
 	namespace := ex.Namespace
 	seedResources, err := getSeedResources(namespace)
 	if err != nil {
@@ -68,7 +68,7 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 }
 
 // Delete the extension resource.
-func (a *actuator) Delete(ctx context.Context, log logr.Logger, ex *extensionsv1alpha1.Extension) error {
+func (a *actuator) Delete(ctx context.Context, _ logr.Logger, ex *extensionsv1alpha1.Extension) error {
 	namespace := ex.GetNamespace()
 	twoMinutes := 2 * time.Minute
 

@@ -66,7 +66,7 @@ func (a *actuator) ForceDelete(ctx context.Context, log logr.Logger, dnsrecord *
 }
 
 func (a *actuator) reconcile(ctx context.Context, log logr.Logger, dnsRecord *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster, mutateEtcHosts func([]byte, *extensionsv1alpha1.DNSRecord) []byte, mutateCorednsRules func(corednsConfig *corev1.ConfigMap, dnsRecord *extensionsv1alpha1.DNSRecord, zone *string)) error {
-	if err := a.updateCoreDNSRewritingRules(ctx, log, dnsRecord, cluster, mutateCorednsRules); err != nil {
+	if err := a.updateCoreDNSRewritingRules(ctx, dnsRecord, cluster, mutateCorednsRules); err != nil {
 		return err
 	}
 
@@ -190,7 +190,12 @@ func reconcileEtcHostsFile(etcHostsContent []byte, name string, values []string,
 	return []byte(newContent)
 }
 
-func (a *actuator) updateCoreDNSRewritingRules(ctx context.Context, log logr.Logger, dnsRecord *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster, mutateCorednsRules func(corednsConfig *corev1.ConfigMap, dnsRecord *extensionsv1alpha1.DNSRecord, zone *string)) error {
+func (a *actuator) updateCoreDNSRewritingRules(
+	ctx context.Context,
+	dnsRecord *extensionsv1alpha1.DNSRecord,
+	cluster *extensionscontroller.Cluster,
+	mutateCorednsRules func(corednsConfig *corev1.ConfigMap, dnsRecord *extensionsv1alpha1.DNSRecord, zone *string),
+) error {
 	// Only handle dns records for kube-apiserver
 	if dnsRecord == nil || !strings.HasPrefix(dnsRecord.Spec.Name, "api.") || !strings.HasSuffix(dnsRecord.Spec.Name, ".local.gardener.cloud") {
 		return nil
@@ -217,7 +222,7 @@ func (a *actuator) updateCoreDNSRewritingRules(ctx context.Context, log logr.Log
 	return a.client.Patch(ctx, corednsConfig, client.MergeFrom(originalConfig))
 }
 
-func deleteCoreDNSRewriteRule(corednsConfig *corev1.ConfigMap, dnsRecord *extensionsv1alpha1.DNSRecord, zone *string) {
+func deleteCoreDNSRewriteRule(corednsConfig *corev1.ConfigMap, dnsRecord *extensionsv1alpha1.DNSRecord, _ *string) {
 	delete(corednsConfig.Data, dnsRecord.Spec.Name+".override")
 }
 
