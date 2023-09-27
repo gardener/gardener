@@ -240,7 +240,7 @@ func deleteValiPvc(ctx context.Context, k8sClient client.Client, namespace strin
 }
 
 // assertPvStillExists asserts that the PV formerly used by the "loki-loki-0" PVC still exists.
-func assertPvStillExists(ctx context.Context, k8sClient client.Client, namespace string, pv *corev1.PersistentVolume, log logr.Logger) (isDeleted bool, err error) {
+func assertPvStillExists(ctx context.Context, k8sClient client.Client, namespace string, pv *corev1.PersistentVolume) (isDeleted bool, err error) {
 	if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(pv), pv); err != nil {
 		if apierrors.IsNotFound(err) {
 			return true, fmt.Errorf("Loki2vali: %v: Loki PV is deleted, %w", namespace, err)
@@ -387,7 +387,7 @@ func RenameLokiPvcToValiPvc(ctx context.Context, k8sClient client.Client, namesp
 		return errs
 	}
 
-	isDeleted, err := assertPvStillExists(ctx, k8sClient, namespace, pv, log)
+	isDeleted, err := assertPvStillExists(ctx, k8sClient, namespace, pv)
 	if err != nil {
 		recoveryContext, cancel := context.WithDeadline(context.TODO(), time.Now().Add(1*time.Minute))
 		defer cancel()

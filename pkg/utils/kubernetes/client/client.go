@@ -433,7 +433,7 @@ func ApplyToObjectKinds(ctx context.Context, fn func(kind string, objectList cli
 }
 
 // ForceDeleteObjects lists and finalizes all the objects in the passed namespace and deletes them.
-func ForceDeleteObjects(ctx context.Context, c client.Client, kind string, namespace string, objectList client.ObjectList, opts ...client.ListOption) flow.TaskFn {
+func ForceDeleteObjects(c client.Client, namespace string, objectList client.ObjectList, opts ...client.ListOption) flow.TaskFn {
 	return func(ctx context.Context) error {
 		listOpts := &client.ListOptions{Namespace: namespace}
 		listOpts.ApplyOptions(opts)

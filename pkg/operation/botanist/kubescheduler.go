@@ -35,6 +35,5 @@ func (b *Botanist) DefaultKubeScheduler() (kubescheduler.Interface, error) {
 		image.String(),
 		b.Shoot.GetReplicas(1),
 		b.Shoot.GetInfo().Spec.Kubernetes.KubeScheduler,
-		b.Seed.KubernetesVersion,
 	), nil
 }

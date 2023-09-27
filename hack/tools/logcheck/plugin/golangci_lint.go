@@ -21,6 +21,6 @@ import (
 )
 
 // New returns the logcheck analyzer.
-func New(conf any) ([]*analysis.Analyzer, error) {
+func New(_ any) ([]*analysis.Analyzer, error) {
 	return []*analysis.Analyzer{logcheck.Analyzer}, nil
 }

@@ -126,7 +126,6 @@ func New(
 	image string,
 	replicas int32,
 	config *gardencorev1beta1.KubeSchedulerConfig,
-	runtimeKubernetesVersion *semver.Version,
 ) Interface {
 	return &kubeScheduler{
 		client:         client,

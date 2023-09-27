@@ -107,7 +107,7 @@ func (c *Cleaner) WaitUntilExtensionObjectsDeleted(ctx context.Context) error {
 func (c *Cleaner) DeleteMachineResources(ctx context.Context) error {
 	return utilclient.ApplyToObjectKinds(ctx, func(kind string, objectList client.ObjectList) flow.TaskFn {
 		c.log.Info("Deleting all machine resources in namespace", "namespace", c.seedNamespace, "kind", kind)
-		return utilclient.ForceDeleteObjects(ctx, c.seedClient, kind, c.seedNamespace, objectList)
+		return utilclient.ForceDeleteObjects(c.seedClient, c.seedNamespace, objectList)
 	}, machineKindToObjectList)
 }
 
@@ -151,7 +151,7 @@ func (c *Cleaner) WaitUntilManagedResourcesDeleted(ctx context.Context) error {
 func (c *Cleaner) DeleteKubernetesResources(ctx context.Context) error {
 	return utilclient.ApplyToObjectKinds(ctx, func(kind string, objectList client.ObjectList) flow.TaskFn {
 		c.log.Info("Deleting all resources in namespace", "namespace", c.seedNamespace, "kind", kind)
-		return utilclient.ForceDeleteObjects(ctx, c.seedClient, kind, c.seedNamespace, objectList)
+		return utilclient.ForceDeleteObjects(c.seedClient, c.seedNamespace, objectList)
 	}, kubernetesKindToObjectList)
 }
 

@@ -141,7 +141,7 @@ func (g *gardenerAPIServer) deployment(
 		},
 	}
 
-	apiserver.InjectDefaultSettings(deployment, "virtual-garden-", g.values.Values, nil, secretCAETCD, secretETCDClient, secretServer)
+	apiserver.InjectDefaultSettings(deployment, "virtual-garden-", g.values.Values, secretCAETCD, secretETCDClient, secretServer)
 	apiserver.InjectAuditSettings(deployment, configMapAuditPolicy, secretAuditWebhookKubeconfig, g.values.Audit)
 	apiserver.InjectAdmissionSettings(deployment, configMapAdmissionConfigs, secretAdmissionKubeconfigs, g.values.Values)
 	apiserver.InjectEncryptionSettings(deployment, secretETCDEncryptionConfiguration)

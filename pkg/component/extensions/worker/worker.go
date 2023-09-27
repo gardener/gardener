@@ -184,7 +184,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			workerPoolKubernetesVersion = *workerPool.Kubernetes.Version
 		}
 
-		nodeTemplate, machineType := w.findNodeTemplateAndMachineTypeByPoolName(ctx, obj, workerPool.Name)
+		nodeTemplate, machineType := w.findNodeTemplateAndMachineTypeByPoolName(obj, workerPool.Name)
 
 		if nodeTemplate == nil || machineType != workerPool.Machine.Type {
 			// initializing nodeTemplate by fetching details from cloudprofile, if present there
@@ -368,7 +368,7 @@ func (w *worker) MachineDeployments() []extensionsv1alpha1.MachineDeployment {
 	return w.machineDeployments
 }
 
-func (w *worker) findNodeTemplateAndMachineTypeByPoolName(ctx context.Context, obj *extensionsv1alpha1.Worker, poolName string) (*extensionsv1alpha1.NodeTemplate, string) {
+func (w *worker) findNodeTemplateAndMachineTypeByPoolName(obj *extensionsv1alpha1.Worker, poolName string) (*extensionsv1alpha1.NodeTemplate, string) {
 	for _, pool := range obj.Spec.Pools {
 		if pool.Name == poolName {
 			return pool.NodeTemplate, pool.MachineType

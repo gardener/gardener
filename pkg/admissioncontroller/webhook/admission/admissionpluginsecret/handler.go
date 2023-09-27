@@ -37,7 +37,7 @@ type Handler struct {
 }
 
 // ValidateCreate returns nil (not implemented by this handler).
-func (h *Handler) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (h *Handler) ValidateCreate(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
 	return nil, nil
 }
 

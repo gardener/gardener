@@ -706,7 +706,7 @@ var _ = Describe("Cleaner", func() {
 			Expect(fakeClient.List(ctx, secretList)).To(Succeed())
 			Expect(secretList.Items).To(HaveLen(6))
 
-			taskFns := ForceDeleteObjects(ctx, fakeClient, "Secret", "default", &corev1.SecretList{}, client.MatchingLabels{"key": "value"})
+			taskFns := ForceDeleteObjects(fakeClient, "default", &corev1.SecretList{}, client.MatchingLabels{"key": "value"})
 			Expect(flow.Parallel(taskFns)(ctx)).To(Succeed())
 
 			Expect(fakeClient.List(ctx, secretList)).To(Succeed())

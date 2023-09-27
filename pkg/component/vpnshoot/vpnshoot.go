@@ -299,7 +299,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 			v1beta1constants.LabelApp:       LabelValue,
 			managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
 		}
-		template = v.podTemplate(serviceAccount, secretsVPNShoot, secretCA, secretTLSAuth, secretDH)
+		template = v.podTemplate(serviceAccount, secretsVPNShoot, secretCA, secretTLSAuth)
 
 		networkPolicyFromSeed = &networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
@@ -501,7 +501,7 @@ func (v *vpnShoot) podDisruptionBudget() (client.Object, error) {
 	}, nil
 }
 
-func (v *vpnShoot) podTemplate(serviceAccount *corev1.ServiceAccount, secrets []vpnSecret, secretCA, secretTLSAuth, secretDH *corev1.Secret) *corev1.PodTemplateSpec {
+func (v *vpnShoot) podTemplate(serviceAccount *corev1.ServiceAccount, secrets []vpnSecret, secretCA, secretTLSAuth *corev1.Secret) *corev1.PodTemplateSpec {
 	template := &corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
@@ -522,7 +522,7 @@ func (v *vpnShoot) podTemplate(serviceAccount *corev1.ServiceAccount, secrets []
 				},
 			},
 			InitContainers: v.getInitContainers(),
-			Volumes:        v.getVolumes(secrets, secretCA, secretTLSAuth, secretDH),
+			Volumes:        v.getVolumes(secrets, secretCA, secretTLSAuth),
 		},
 	}
 
@@ -717,7 +717,7 @@ func (v *vpnShoot) getVolumeMounts(secrets []vpnSecret) []corev1.VolumeMount {
 	return volumeMounts
 }
 
-func (v *vpnShoot) getVolumes(secret []vpnSecret, secretCA, secretTLSAuth, secretDH *corev1.Secret) []corev1.Volume {
+func (v *vpnShoot) getVolumes(secret []vpnSecret, secretCA, secretTLSAuth *corev1.Secret) []corev1.Volume {
 	volumes := []corev1.Volume{}
 	for _, item := range secret {
 		volumes = append(volumes, corev1.Volume{

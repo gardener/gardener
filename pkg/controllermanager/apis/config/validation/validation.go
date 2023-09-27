@@ -133,32 +133,32 @@ func validateControllerManagerControllerConfiguration(conf config.ControllerMana
 	return allErrs
 }
 
-func validateBastionControllerConfiguration(conf *config.BastionControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateBastionControllerConfiguration(_ *config.BastionControllerConfiguration, _ *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	return allErrs
 }
 
-func validateCloudProfileControllerConfiguration(conf *config.CloudProfileControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateCloudProfileControllerConfiguration(_ *config.CloudProfileControllerConfiguration, _ *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	return allErrs
 }
 
-func validateControllerDeploymentControllerConfiguration(conf *config.ControllerDeploymentControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateControllerDeploymentControllerConfiguration(_ *config.ControllerDeploymentControllerConfiguration, _ *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	return allErrs
 }
 
-func validateControllerRegistrationControllerConfiguration(conf *config.ControllerRegistrationControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateControllerRegistrationControllerConfiguration(_ *config.ControllerRegistrationControllerConfiguration, _ *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	return allErrs
 }
 
-func validateEventControllerConfiguration(conf *config.EventControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateEventControllerConfiguration(_ *config.EventControllerConfiguration, _ *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	return allErrs
 }
 
-func validateExposureClassControllerConfiguration(conf *config.ExposureClassControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateExposureClassControllerConfiguration(_ *config.ExposureClassControllerConfiguration, _ *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	return allErrs
 }
@@ -183,57 +183,57 @@ func validateProjectQuotaConfiguration(conf config.QuotaConfiguration, fldPath *
 	return allErrs
 }
 
-func validateQuotaControllerConfiguration(conf *config.QuotaControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateQuotaControllerConfiguration(_ *config.QuotaControllerConfiguration, _ *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	return allErrs
 }
 
-func validateSecretBindingControllerConfiguration(conf *config.SecretBindingControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateSecretBindingControllerConfiguration(_ *config.SecretBindingControllerConfiguration, _ *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	return allErrs
 }
 
-func validateSeedControllerConfiguration(conf *config.SeedControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateSeedControllerConfiguration(_ *config.SeedControllerConfiguration, _ *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	return allErrs
 }
 
-func validateShootMaintenanceControllerConfiguration(conf config.ShootMaintenanceControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateShootMaintenanceControllerConfiguration(_ config.ShootMaintenanceControllerConfiguration, _ *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	return allErrs
 }
 
-func validateShootQuotaControllerConfiguration(conf *config.ShootQuotaControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateShootQuotaControllerConfiguration(_ *config.ShootQuotaControllerConfiguration, _ *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	return allErrs
 }
 
-func validateShootHibernationControllerConfiguration(conf config.ShootHibernationControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateShootHibernationControllerConfiguration(_ config.ShootHibernationControllerConfiguration, _ *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	return allErrs
 }
 
-func validateShootReferenceControllerConfiguration(conf *config.ShootReferenceControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateShootReferenceControllerConfiguration(_ *config.ShootReferenceControllerConfiguration, _ *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	return allErrs
 }
 
-func validateShootRetryControllerConfiguration(conf *config.ShootRetryControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateShootRetryControllerConfiguration(_ *config.ShootRetryControllerConfiguration, _ *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	return allErrs
 }
 
-func validateShootConditionsControllerConfiguration(conf *config.ShootConditionsControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateShootConditionsControllerConfiguration(_ *config.ShootConditionsControllerConfiguration, _ *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	return allErrs
 }
 
-func validateShootStatusLabelControllerConfiguration(conf *config.ShootStatusLabelControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateShootStatusLabelControllerConfiguration(_ *config.ShootStatusLabelControllerConfiguration, _ *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	return allErrs
 }
 
-func validateManagedSeedSetControllerConfiguration(conf *config.ManagedSeedSetControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateManagedSeedSetControllerConfiguration(_ *config.ManagedSeedSetControllerConfiguration, _ *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	return allErrs
 }

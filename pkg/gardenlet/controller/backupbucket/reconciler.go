@@ -171,7 +171,7 @@ func (r *Reconciler) reconcileBackupBucket(
 	}
 
 	if mustReconcileExtensionSecret {
-		if err := r.reconcileBackupBucketExtensionSecret(seedCtx, extensionSecret, gardenSecret, backupBucket); err != nil {
+		if err := r.reconcileBackupBucketExtensionSecret(seedCtx, extensionSecret, gardenSecret); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
@@ -284,7 +284,7 @@ func (r *Reconciler) deleteBackupBucket(
 	}
 
 	extensionSecret := r.emptyExtensionSecret(backupBucket.Name)
-	if err := r.reconcileBackupBucketExtensionSecret(seedCtx, extensionSecret, gardenSecret, backupBucket); err != nil {
+	if err := r.reconcileBackupBucketExtensionSecret(seedCtx, extensionSecret, gardenSecret); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -351,7 +351,7 @@ func (r *Reconciler) emptyExtensionSecret(backupBucketName string) *corev1.Secre
 	}
 }
 
-func (r *Reconciler) reconcileBackupBucketExtensionSecret(ctx context.Context, extensionSecret, gardenSecret *corev1.Secret, backupBucket *gardencorev1beta1.BackupBucket) error {
+func (r *Reconciler) reconcileBackupBucketExtensionSecret(ctx context.Context, extensionSecret, gardenSecret *corev1.Secret) error {
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.SeedClient, extensionSecret, func() error {
 		metav1.SetMetaDataAnnotation(&extensionSecret.ObjectMeta, v1beta1constants.GardenerTimestamp, r.Clock.Now().UTC().Format(time.RFC3339Nano))
 		extensionSecret.Data = gardenSecret.Data

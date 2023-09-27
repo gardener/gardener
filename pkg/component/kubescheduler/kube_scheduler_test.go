@@ -52,19 +52,18 @@ import (
 
 var _ = Describe("KubeScheduler", func() {
 	var (
-		c                        client.Client
-		sm                       secretsmanager.Interface
-		kubeScheduler            Interface
-		ctx                            = context.TODO()
-		namespace                      = "shoot--foo--bar"
-		version                        = "1.27.2"
-		semverVersion, _               = semver.NewVersion(version)
-		image                          = "registry.k8s.io/kube-scheduler:v1.27.2"
-		replicas                 int32 = 1
-		profileBinPacking              = gardencorev1beta1.SchedulingProfileBinPacking
-		runtimeKubernetesVersion       = semver.MustParse("1.25.0")
-		configEmpty              *gardencorev1beta1.KubeSchedulerConfig
-		configFull               = &gardencorev1beta1.KubeSchedulerConfig{
+		c                 client.Client
+		sm                secretsmanager.Interface
+		kubeScheduler     Interface
+		ctx                     = context.TODO()
+		namespace               = "shoot--foo--bar"
+		version                 = "1.27.2"
+		semverVersion, _        = semver.NewVersion(version)
+		image                   = "registry.k8s.io/kube-scheduler:v1.27.2"
+		replicas          int32 = 1
+		profileBinPacking       = gardencorev1beta1.SchedulingProfileBinPacking
+		configEmpty       *gardencorev1beta1.KubeSchedulerConfig
+		configFull        = &gardencorev1beta1.KubeSchedulerConfig{
 			KubernetesConfig: gardencorev1beta1.KubernetesConfig{
 				FeatureGates: map[string]bool{"Foo": true, "Bar": false, "Baz": false},
 			},
@@ -261,7 +260,7 @@ var _ = Describe("KubeScheduler", func() {
 									Name:            "kube-scheduler",
 									Image:           image,
 									ImagePullPolicy: corev1.PullIfNotPresent,
-									Command:         commandForKubernetesVersion(version, 10259, featureGateFlags(config)...),
+									Command:         commandForKubernetesVersion(10259, featureGateFlags(config)...),
 									LivenessProbe: &corev1.Probe{
 										ProbeHandler: corev1.ProbeHandler{
 											HTTPGet: &corev1.HTTPGetAction{
@@ -392,7 +391,7 @@ subjects:
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		sm = fakesecretsmanager.New(c, namespace)
-		kubeScheduler = New(c, namespace, sm, semverVersion, image, replicas, configEmpty, runtimeKubernetesVersion)
+		kubeScheduler = New(c, namespace, sm, semverVersion, image, replicas, configEmpty)
 
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-client", Namespace: namespace}})).To(Succeed())
@@ -431,7 +430,7 @@ subjects:
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 
-				kubeScheduler = New(c, namespace, sm, semverVersion, image, replicas, config, runtimeKubernetesVersion)
+				kubeScheduler = New(c, namespace, sm, semverVersion, image, replicas, config)
 				Expect(kubeScheduler.Deploy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
@@ -528,7 +527,7 @@ subjects:
 	})
 })
 
-func commandForKubernetesVersion(version string, port int32, featureGateFlags ...string) []string {
+func commandForKubernetesVersion(port int32, featureGateFlags ...string) []string {
 	var command []string
 
 	command = append(command,

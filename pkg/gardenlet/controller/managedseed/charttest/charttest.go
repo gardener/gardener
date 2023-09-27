@@ -107,7 +107,7 @@ func getEmptyPriorityClass() *schedulingv1.PriorityClass {
 }
 
 // ValidateGardenletChartRBAC validates the RBAC resources of the Gardenlet chart.
-func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLabels map[string]string, serviceAccountName string, featureGates map[string]bool) {
+func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLabels map[string]string, serviceAccountName string) {
 	// ClusterRoles
 	gardenletClusterRole := getGardenletClusterRole(expectedLabels)
 	apiServerSNIClusterRole := getAPIServerSNIClusterRole(expectedLabels)

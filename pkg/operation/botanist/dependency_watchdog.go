@@ -31,7 +31,7 @@ func (b *Botanist) DefaultDependencyWatchdogAccess() component.Deployer {
 		b.SecretsManager,
 		dependencywatchdog.AccessValues{
 			ServerInCluster:    b.Shoot.ComputeInClusterAPIServerAddress(false),
-			ServerOutOfCluster: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
+			ServerOutOfCluster: b.Shoot.ComputeOutOfClusterAPIServerAddress(true),
 		},
 	)
 }

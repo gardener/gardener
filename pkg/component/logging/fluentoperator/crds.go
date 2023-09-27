@@ -108,11 +108,11 @@ func (c *crds) Destroy(ctx context.Context) error {
 }
 
 // Wait does nothing
-func (c *crds) Wait(ctx context.Context) error {
+func (c *crds) Wait(_ context.Context) error {
 	return nil
 }
 
 // WaitCleanup does nothing
-func (c *crds) WaitCleanup(ctx context.Context) error {
+func (c *crds) WaitCleanup(_ context.Context) error {
 	return nil
 }

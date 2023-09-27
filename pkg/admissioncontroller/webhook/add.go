@@ -92,7 +92,7 @@ func AddToManager(
 	if err := (&admissionpluginsecret.Handler{
 		Logger: mgr.GetLogger().WithName("webhook").WithName(admissionpluginsecret.HandlerName),
 		Client: mgr.GetClient(),
-	}).AddToManager(ctx, mgr); err != nil {
+	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding %s webhook handler: %w", admissionpluginsecret.HandlerName, err)
 	}
 
