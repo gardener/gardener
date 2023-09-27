@@ -925,6 +925,7 @@ build:
         - pkg/component/nodelocaldns/constants
         - pkg/component/nodeproblemdetector
         - pkg/component/plutono
+        - pkg/component/plutono/constants
         - pkg/component/resourcemanager
         - pkg/component/resourcemanager/constants
         - pkg/component/seedsystem

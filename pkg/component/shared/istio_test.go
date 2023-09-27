@@ -39,6 +39,7 @@ type istioTestValues struct {
 	istiodEnabled                     bool
 	labels                            map[string]string
 	kubeAPIServerPolicyLabel          string
+	plutonoPolicyLabel                string
 	lbAnnotations                     map[string]string
 	externalTrafficPolicy             *corev1.ServiceExternalTrafficPolicyType
 	serviceExternalIP                 *string
@@ -65,7 +66,7 @@ func createIstio(testValues istioTestValues) istio.Interface {
 		testValues.priorityClassName,
 		testValues.istiodEnabled,
 		testValues.labels,
-		testValues.kubeAPIServerPolicyLabel,
+		[]string{testValues.kubeAPIServerPolicyLabel, testValues.plutonoPolicyLabel},
 		testValues.lbAnnotations,
 		testValues.externalTrafficPolicy,
 		testValues.serviceExternalIP,
@@ -90,6 +91,7 @@ func checkIstio(istioDeploy istio.Interface, testValues istioTestValues) {
 		"networking.gardener.cloud/to-dns":                                     "allowed",
 		"networking.resources.gardener.cloud/to-istio-system-istiod-tcp-15012": "allowed",
 		testValues.kubeAPIServerPolicyLabel:                                    "allowed",
+		testValues.plutonoPolicyLabel:                                          "allowed",
 	}
 
 	if testValues.vpnEnabled {
@@ -198,6 +200,7 @@ var _ = Describe("Istio", func() {
 			istiodEnabled:            true,
 			labels:                   map[string]string{"some": "labelValue"},
 			kubeAPIServerPolicyLabel: "to-all-test-kube-apiserver",
+			plutonoPolicyLabel:       "networking.resources.gardener.cloud/to-garden-plutono-tcp-3000",
 			lbAnnotations:            map[string]string{"some": "annotationValue"},
 			externalTrafficPolicy:    &trafficPolicy,
 			serviceExternalIP:        pointer.String("1.2.3.4"),

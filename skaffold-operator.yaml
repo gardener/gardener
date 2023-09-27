@@ -92,6 +92,7 @@ build:
         - pkg/component/nginxingress
         - pkg/component/nodelocaldns/constants
         - pkg/component/plutono
+        - pkg/component/plutono/constants
         - pkg/component/resourcemanager
         - pkg/component/resourcemanager/constants
         - pkg/component/shared
