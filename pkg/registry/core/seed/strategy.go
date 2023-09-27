@@ -45,7 +45,7 @@ func (Strategy) NamespaceScoped() bool {
 }
 
 // PrepareForCreate mutates some fields in the object before it's created.
-func (s Strategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
+func (s Strategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	seed := obj.(*core.Seed)
 
 	seed.Generation = 1
@@ -57,7 +57,7 @@ func (s Strategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 // the object.  For example: remove fields that are not to be persisted,
 // sort order-insensitive list fields, etc.  This should not remove fields
 // whose presence would be considered a validation error.
-func (s Strategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+func (s Strategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	newSeed := obj.(*core.Seed)
 	oldSeed := old.(*core.Seed)
 	syncDependencyWatchdogSettings(newSeed)
@@ -128,7 +128,7 @@ func syncDependencyWatchdogSettings(seed *core.Seed) {
 }
 
 // Validate validates the given object.
-func (Strategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
+func (Strategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {
 	seed := obj.(*core.Seed)
 	return validation.ValidateSeed(seed)
 }
@@ -138,7 +138,7 @@ func (Strategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorLis
 // form for things like comparison.  Canonicalize is invoked after
 // validation has succeeded but before the object has been persisted.
 // This method may mutate the object.
-func (Strategy) Canonicalize(obj runtime.Object) {
+func (Strategy) Canonicalize(_ runtime.Object) {
 }
 
 // AllowCreateOnUpdate returns true if the object can be created by a PUT.
@@ -154,18 +154,18 @@ func (Strategy) AllowUnconditionalUpdate() bool {
 }
 
 // ValidateUpdate validates the update on the given old and new object.
-func (Strategy) ValidateUpdate(ctx context.Context, newObj, oldObj runtime.Object) field.ErrorList {
+func (Strategy) ValidateUpdate(_ context.Context, newObj, oldObj runtime.Object) field.ErrorList {
 	oldSeed, newSeed := oldObj.(*core.Seed), newObj.(*core.Seed)
 	return validation.ValidateSeedUpdate(newSeed, oldSeed)
 }
 
 // WarningsOnCreate returns warnings to the client performing a create.
-func (Strategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
+func (Strategy) WarningsOnCreate(_ context.Context, _ runtime.Object) []string {
 	return nil
 }
 
 // WarningsOnUpdate returns warnings to the client performing the update.
-func (Strategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+func (Strategy) WarningsOnUpdate(_ context.Context, _, _ runtime.Object) []string {
 	return nil
 }
 
@@ -183,7 +183,7 @@ func NewStatusStrategy() StatusStrategy {
 // the object.  For example: remove fields that are not to be persisted,
 // sort order-insensitive list fields, etc.  This should not remove fields
 // whose presence would be considered a validation error.
-func (s StatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+func (s StatusStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	newSeed := obj.(*core.Seed)
 	oldSeed := old.(*core.Seed)
 	newSeed.Spec = oldSeed.Spec
@@ -191,6 +191,6 @@ func (s StatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.O
 }
 
 // ValidateUpdate validates the update on the given old and new object.
-func (StatusStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
+func (StatusStrategy) ValidateUpdate(_ context.Context, obj, old runtime.Object) field.ErrorList {
 	return validation.ValidateSeedStatusUpdate(obj.(*core.Seed), old.(*core.Seed))
 }

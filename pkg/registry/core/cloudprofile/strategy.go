@@ -39,25 +39,25 @@ func (cloudProfileStrategy) NamespaceScoped() bool {
 	return false
 }
 
-func (cloudProfileStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
+func (cloudProfileStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	cloudprofile := obj.(*core.CloudProfile)
 
 	dropExpiredVersions(cloudprofile)
 }
 
-func (cloudProfileStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
+func (cloudProfileStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {
 	cloudprofile := obj.(*core.CloudProfile)
 	return validation.ValidateCloudProfile(cloudprofile)
 }
 
-func (cloudProfileStrategy) Canonicalize(obj runtime.Object) {
+func (cloudProfileStrategy) Canonicalize(_ runtime.Object) {
 }
 
 func (cloudProfileStrategy) AllowCreateOnUpdate() bool {
 	return false
 }
 
-func (cloudProfileStrategy) PrepareForUpdate(ctx context.Context, newObj, oldObj runtime.Object) {
+func (cloudProfileStrategy) PrepareForUpdate(_ context.Context, newObj, oldObj runtime.Object) {
 	_ = oldObj.(*core.CloudProfile)
 	_ = newObj.(*core.CloudProfile)
 }
@@ -66,18 +66,18 @@ func (cloudProfileStrategy) AllowUnconditionalUpdate() bool {
 	return true
 }
 
-func (cloudProfileStrategy) ValidateUpdate(ctx context.Context, newObj, oldObj runtime.Object) field.ErrorList {
+func (cloudProfileStrategy) ValidateUpdate(_ context.Context, newObj, oldObj runtime.Object) field.ErrorList {
 	oldProfile, newProfile := oldObj.(*core.CloudProfile), newObj.(*core.CloudProfile)
 	return validation.ValidateCloudProfileUpdate(newProfile, oldProfile)
 }
 
 // WarningsOnCreate returns warnings to the client performing a create.
-func (cloudProfileStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
+func (cloudProfileStrategy) WarningsOnCreate(_ context.Context, _ runtime.Object) []string {
 	return nil
 }
 
 // WarningsOnUpdate returns warnings to the client performing the update.
-func (cloudProfileStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+func (cloudProfileStrategy) WarningsOnUpdate(_ context.Context, _, _ runtime.Object) []string {
 	return nil
 }
 

@@ -39,13 +39,13 @@ func (controllerRegistrationStrategy) NamespaceScoped() bool {
 	return false
 }
 
-func (controllerRegistrationStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
+func (controllerRegistrationStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	controllerRegistration := obj.(*core.ControllerRegistration)
 
 	controllerRegistration.Generation = 1
 }
 
-func (controllerRegistrationStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+func (controllerRegistrationStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	newControllerRegistration := obj.(*core.ControllerRegistration)
 	oldControllerRegistration := old.(*core.ControllerRegistration)
 
@@ -68,19 +68,19 @@ func mustIncreaseGeneration(oldControllerRegistration, newControllerRegistration
 	return false
 }
 
-func (controllerRegistrationStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
+func (controllerRegistrationStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {
 	controllerRegistration := obj.(*core.ControllerRegistration)
 	return validation.ValidateControllerRegistration(controllerRegistration)
 }
 
-func (controllerRegistrationStrategy) Canonicalize(obj runtime.Object) {
+func (controllerRegistrationStrategy) Canonicalize(_ runtime.Object) {
 }
 
 func (controllerRegistrationStrategy) AllowCreateOnUpdate() bool {
 	return false
 }
 
-func (controllerRegistrationStrategy) ValidateUpdate(ctx context.Context, newObj, oldObj runtime.Object) field.ErrorList {
+func (controllerRegistrationStrategy) ValidateUpdate(_ context.Context, newObj, oldObj runtime.Object) field.ErrorList {
 	newControllerRegistration := newObj.(*core.ControllerRegistration)
 	oldControllerRegistration := oldObj.(*core.ControllerRegistration)
 	return validation.ValidateControllerRegistrationUpdate(newControllerRegistration, oldControllerRegistration)
@@ -91,11 +91,11 @@ func (controllerRegistrationStrategy) AllowUnconditionalUpdate() bool {
 }
 
 // WarningsOnCreate returns warnings to the client performing a create.
-func (controllerRegistrationStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
+func (controllerRegistrationStrategy) WarningsOnCreate(_ context.Context, _ runtime.Object) []string {
 	return nil
 }
 
 // WarningsOnUpdate returns warnings to the client performing the update.
-func (controllerRegistrationStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+func (controllerRegistrationStrategy) WarningsOnUpdate(_ context.Context, _, _ runtime.Object) []string {
 	return nil
 }

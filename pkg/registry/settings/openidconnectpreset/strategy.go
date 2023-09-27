@@ -38,27 +38,27 @@ func (oidcPresetStrategy) NamespaceScoped() bool {
 	return true
 }
 
-func (oidcPresetStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
+func (oidcPresetStrategy) PrepareForCreate(_ context.Context, _ runtime.Object) {
 
 }
 
-func (oidcPresetStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+func (oidcPresetStrategy) PrepareForUpdate(_ context.Context, _, _ runtime.Object) {
 
 }
 
-func (oidcPresetStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
+func (oidcPresetStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {
 	oidcpreset := obj.(*settings.OpenIDConnectPreset)
 	return validation.ValidateOpenIDConnectPreset(oidcpreset)
 }
 
-func (oidcPresetStrategy) Canonicalize(obj runtime.Object) {
+func (oidcPresetStrategy) Canonicalize(_ runtime.Object) {
 }
 
 func (oidcPresetStrategy) AllowCreateOnUpdate() bool {
 	return false
 }
 
-func (oidcPresetStrategy) ValidateUpdate(ctx context.Context, newObj, oldObj runtime.Object) field.ErrorList {
+func (oidcPresetStrategy) ValidateUpdate(_ context.Context, newObj, oldObj runtime.Object) field.ErrorList {
 	newOIDCPreset := newObj.(*settings.OpenIDConnectPreset)
 	oldOIDCPreset := oldObj.(*settings.OpenIDConnectPreset)
 	return validation.ValidateOpenIDConnectPresetUpdate(newOIDCPreset, oldOIDCPreset)
@@ -69,11 +69,11 @@ func (oidcPresetStrategy) AllowUnconditionalUpdate() bool {
 }
 
 // WarningsOnCreate returns warnings to the client performing a create.
-func (oidcPresetStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
+func (oidcPresetStrategy) WarningsOnCreate(_ context.Context, _ runtime.Object) []string {
 	return nil
 }
 
 // WarningsOnUpdate returns warnings to the client performing the update.
-func (oidcPresetStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+func (oidcPresetStrategy) WarningsOnUpdate(_ context.Context, _, _ runtime.Object) []string {
 	return nil
 }

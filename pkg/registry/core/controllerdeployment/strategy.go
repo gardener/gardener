@@ -92,11 +92,11 @@ func (controllerDeploymentStrategy) AllowUnconditionalUpdate() bool {
 }
 
 // WarningsOnCreate returns warnings to the client performing a create.
-func (controllerDeploymentStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
+func (controllerDeploymentStrategy) WarningsOnCreate(_ context.Context, _ runtime.Object) []string {
 	return nil
 }
 
 // WarningsOnUpdate returns warnings to the client performing the update.
-func (controllerDeploymentStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+func (controllerDeploymentStrategy) WarningsOnUpdate(_ context.Context, _, _ runtime.Object) []string {
 	return nil
 }

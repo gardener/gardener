@@ -46,7 +46,7 @@ func newTableConvertor() rest.TableConvertor {
 }
 
 // ConvertToTable converts the output to a table.
-func (c *convertor) ConvertToTable(ctx context.Context, obj runtime.Object, tableOptions runtime.Object) (*metav1beta1.Table, error) {
+func (c *convertor) ConvertToTable(_ context.Context, obj runtime.Object, _ runtime.Object) (*metav1beta1.Table, error) {
 	var (
 		err   error
 		table = &metav1beta1.Table{

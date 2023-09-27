@@ -44,14 +44,14 @@ func (controllerInstallationStrategy) NamespaceScoped() bool {
 	return false
 }
 
-func (controllerInstallationStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
+func (controllerInstallationStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	controllerInstallation := obj.(*core.ControllerInstallation)
 
 	controllerInstallation.Generation = 1
 	controllerInstallation.Status = core.ControllerInstallationStatus{}
 }
 
-func (controllerInstallationStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+func (controllerInstallationStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	newControllerInstallation := obj.(*core.ControllerInstallation)
 	oldControllerInstallation := old.(*core.ControllerInstallation)
 	newControllerInstallation.Status = oldControllerInstallation.Status
@@ -75,19 +75,19 @@ func mustIncreaseGeneration(oldControllerInstallation, newControllerInstallation
 	return false
 }
 
-func (controllerInstallationStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
+func (controllerInstallationStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {
 	controllerInstallation := obj.(*core.ControllerInstallation)
 	return validation.ValidateControllerInstallation(controllerInstallation)
 }
 
-func (controllerInstallationStrategy) Canonicalize(obj runtime.Object) {
+func (controllerInstallationStrategy) Canonicalize(_ runtime.Object) {
 }
 
 func (controllerInstallationStrategy) AllowCreateOnUpdate() bool {
 	return false
 }
 
-func (controllerInstallationStrategy) ValidateUpdate(ctx context.Context, newObj, oldObj runtime.Object) field.ErrorList {
+func (controllerInstallationStrategy) ValidateUpdate(_ context.Context, newObj, oldObj runtime.Object) field.ErrorList {
 	newControllerInstallation := newObj.(*core.ControllerInstallation)
 	oldControllerInstallation := oldObj.(*core.ControllerInstallation)
 	return validation.ValidateControllerInstallationUpdate(newControllerInstallation, oldControllerInstallation)
@@ -98,12 +98,12 @@ func (controllerInstallationStrategy) AllowUnconditionalUpdate() bool {
 }
 
 // WarningsOnCreate returns warnings to the client performing a create.
-func (controllerInstallationStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
+func (controllerInstallationStrategy) WarningsOnCreate(_ context.Context, _ runtime.Object) []string {
 	return nil
 }
 
 // WarningsOnUpdate returns warnings to the client performing the update.
-func (controllerInstallationStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+func (controllerInstallationStrategy) WarningsOnUpdate(_ context.Context, _, _ runtime.Object) []string {
 	return nil
 }
 
@@ -114,13 +114,13 @@ type controllerInstallationStatusStrategy struct {
 // StatusStrategy defines the storage strategy for the status subresource of ControllerInstallations.
 var StatusStrategy = controllerInstallationStatusStrategy{Strategy}
 
-func (controllerInstallationStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+func (controllerInstallationStatusStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	newControllerInstallation := obj.(*core.ControllerInstallation)
 	oldControllerInstallation := old.(*core.ControllerInstallation)
 	newControllerInstallation.Spec = oldControllerInstallation.Spec
 }
 
-func (controllerInstallationStatusStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
+func (controllerInstallationStatusStrategy) ValidateUpdate(_ context.Context, obj, old runtime.Object) field.ErrorList {
 	return validation.ValidateControllerInstallationStatusUpdate(obj.(*core.ControllerInstallation).Status, old.(*core.ControllerInstallation).Status)
 }
 

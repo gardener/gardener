@@ -50,26 +50,24 @@ func (strategy) NamespaceScoped() bool {
 	return true
 }
 
-func (strategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
-	secret := obj.(*core.InternalSecret)
-	dropDisabledFields(secret, nil)
+func (strategy) PrepareForCreate(_ context.Context, _ runtime.Object) {
 }
 
-func (strategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
+func (strategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {
 	return validation.ValidateInternalSecret(obj.(*core.InternalSecret))
 }
 
 // WarningsOnCreate returns warnings for the creation of the given object.
-func (strategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string { return nil }
+func (strategy) WarningsOnCreate(_ context.Context, _ runtime.Object) []string { return nil }
 
-func (strategy) Canonicalize(obj runtime.Object) {
+func (strategy) Canonicalize(_ runtime.Object) {
 }
 
 func (strategy) AllowCreateOnUpdate() bool {
 	return false
 }
 
-func (strategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+func (strategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	newInternalSecret := obj.(*core.InternalSecret)
 	oldInternalSecret := old.(*core.InternalSecret)
 
@@ -77,20 +75,15 @@ func (strategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
 	if len(newInternalSecret.Type) == 0 {
 		newInternalSecret.Type = oldInternalSecret.Type
 	}
-
-	dropDisabledFields(newInternalSecret, oldInternalSecret)
 }
 
-func (strategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
+func (strategy) ValidateUpdate(_ context.Context, obj, old runtime.Object) field.ErrorList {
 	return validation.ValidateInternalSecretUpdate(obj.(*core.InternalSecret), old.(*core.InternalSecret))
 }
 
 // WarningsOnUpdate returns warnings for the given update.
-func (strategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+func (strategy) WarningsOnUpdate(_ context.Context, _, _ runtime.Object) []string {
 	return nil
-}
-
-func dropDisabledFields(secret *core.InternalSecret, oldInternalSecret *core.InternalSecret) {
 }
 
 func (strategy) AllowUnconditionalUpdate() bool {
