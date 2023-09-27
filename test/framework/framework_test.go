@@ -15,7 +15,6 @@
 package framework_test
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -57,7 +56,7 @@ var _ = Describe("Framework tests", func() {
 			err := framework.EnsureRepositoryDirectories(helmRepo)
 			Expect(err).NotTo(HaveOccurred())
 
-			err = f.DownloadChartArtifacts(context.TODO(), helmRepo, f.ChartDir, "stable/redis", "10.2.1")
+			err = f.DownloadChartArtifacts(helmRepo, f.ChartDir, "stable/redis", "10.2.1")
 			Expect(err).NotTo(HaveOccurred())
 
 			expectedCachePath := filepath.Join(f.ResourcesDir, "repository", "cache", "stable-index.yaml")
