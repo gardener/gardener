@@ -60,6 +60,13 @@ func (o *Operation) IstioLabels() map[string]string {
 	return sharedcomponent.GetIstioZoneLabels(o.sniConfig().Ingress.Labels, zone)
 }
 
+// DefaultIstioLabels contain the labels of the default istio ingress gateway.
+// This will always return the labels of a non-zonal/multi-zone istio ingress gateway.
+// It intentionally does not take exposure classes into account.
+func (o *Operation) DefaultIstioLabels() map[string]string {
+	return sharedcomponent.GetIstioZoneLabels(o.Config.SNI.Ingress.Labels, nil)
+}
+
 func (o *Operation) exposureClassHandler() *gardenletconfig.ExposureClassHandler {
 	if exposureClassName := o.Shoot.GetInfo().Spec.ExposureClassName; exposureClassName != nil {
 		for _, handler := range o.Config.ExposureClassHandlers {

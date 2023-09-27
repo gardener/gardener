@@ -103,7 +103,7 @@ var _ = Describe("istioconfig", func() {
 		})
 
 		DescribeTable("#component.IstioConfigInterface implementation",
-			func(zoneAnnotation *string, useExposureClass bool, matcherService, matcherNamespace, matchLabels, matchAnnotations gomegatypes.GomegaMatcher) {
+			func(zoneAnnotation *string, useExposureClass bool, matcherService, matcherNamespace, matchLabels, defaultMatchLabels, matchAnnotations gomegatypes.GomegaMatcher) {
 				if zoneAnnotation != nil {
 					operation.SeedNamespaceObject.Annotations[resourcesv1alpha1.HighAvailabilityConfigZones] = *zoneAnnotation
 				}
@@ -116,6 +116,7 @@ var _ = Describe("istioconfig", func() {
 				Expect(operation.IstioServiceName()).To(matcherService)
 				Expect(operation.IstioNamespace()).To(matcherNamespace)
 				Expect(operation.IstioLabels()).To(matchLabels)
+				Expect(operation.DefaultIstioLabels()).To(defaultMatchLabels)
 				Expect(operation.IstioLoadBalancerAnnotations()).To(matchAnnotations)
 			},
 
@@ -123,17 +124,20 @@ var _ = Describe("istioconfig", func() {
 				Equal(defaultServiceName),
 				Equal(defaultNamespaceName),
 				Equal(defaultLabels),
+				Equal(defaultLabels),
 				Equal(defaultAnnotations),
 			),
 			Entry("pinned control plane (single zone) without exposure class", &zoneName, false,
 				Equal(defaultServiceName),
 				Equal(defaultNamespaceName+"--"+zoneName),
 				Equal(utils.MergeStringMaps(defaultLabels, map[string]string{"istio": defaultLabels["istio"] + "--zone--" + zoneName})),
+				Equal(defaultLabels),
 				Equal(zoneAnnotations),
 			),
 			Entry("pinned control plane (multi zone) without exposure class", &multiZone, false,
 				Equal(defaultServiceName),
 				Equal(defaultNamespaceName),
+				Equal(defaultLabels),
 				Equal(defaultLabels),
 				Equal(defaultAnnotations),
 			),
@@ -141,18 +145,21 @@ var _ = Describe("istioconfig", func() {
 				Equal(exposureClassServiceName),
 				Equal(exposureClassNamespaceName),
 				Equal(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(exposureClassLabels, exposureClassHandlerName)),
+				Equal(defaultLabels),
 				Equal(utils.MergeStringMaps(defaultAnnotations, exposureClassAnnotations)),
 			),
 			Entry("pinned control plane (single zone) with exposure class", &zoneName, true,
 				Equal(exposureClassServiceName),
 				Equal(exposureClassNamespaceName+"--"+zoneName),
 				Equal(utils.MergeStringMaps(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(exposureClassLabels, exposureClassHandlerName), map[string]string{"gardener.cloud/role": "exposureclass-handler--zone--" + zoneName})),
+				Equal(defaultLabels),
 				Equal(utils.MergeStringMaps(exposureClassAnnotations, zoneAnnotations)),
 			),
 			Entry("pinned control plane (multi zone) with exposure class", &multiZone, true,
 				Equal(exposureClassServiceName),
 				Equal(exposureClassNamespaceName),
 				Equal(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(exposureClassLabels, exposureClassHandlerName)),
+				Equal(defaultLabels),
 				Equal(utils.MergeStringMaps(defaultAnnotations, exposureClassAnnotations)),
 			),
 		)
@@ -165,7 +172,7 @@ var _ = Describe("istioconfig", func() {
 			})
 
 			DescribeTable("#component.IstioConfigInterface implementation",
-				func(zoneAnnotation *string, useExposureClass bool, matcherService, matcherNamespace, matchLabels, matchAnnotations gomegatypes.GomegaMatcher) {
+				func(zoneAnnotation *string, useExposureClass bool, matcherService, matcherNamespace, matchLabels, defaultMatchLabels, matchAnnotations gomegatypes.GomegaMatcher) {
 					if zoneAnnotation != nil {
 						operation.SeedNamespaceObject.Annotations[resourcesv1alpha1.HighAvailabilityConfigZones] = *zoneAnnotation
 					}
@@ -178,6 +185,7 @@ var _ = Describe("istioconfig", func() {
 					Expect(operation.IstioServiceName()).To(matcherService)
 					Expect(operation.IstioNamespace()).To(matcherNamespace)
 					Expect(operation.IstioLabels()).To(matchLabels)
+					Expect(operation.DefaultIstioLabels()).To(defaultMatchLabels)
 					Expect(operation.IstioLoadBalancerAnnotations()).To(matchAnnotations)
 				},
 
@@ -185,12 +193,14 @@ var _ = Describe("istioconfig", func() {
 					Equal(defaultServiceName),
 					Equal(defaultNamespaceName),
 					Equal(utils.MergeStringMaps(defaultLabels, map[string]string{"istio": defaultLabels["istio"]})),
+					Equal(defaultLabels),
 					Equal(defaultAnnotations),
 				),
 				Entry("pinned control plane (single zone) with exposure class", &zoneName, true,
 					Equal(exposureClassServiceName),
 					Equal(exposureClassNamespaceName),
 					Equal(utils.MergeStringMaps(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(exposureClassLabels, exposureClassHandlerName), map[string]string{"gardener.cloud/role": "exposureclass-handler"})),
+					Equal(defaultLabels),
 					Equal(utils.MergeStringMaps(defaultAnnotations, exposureClassAnnotations)),
 				),
 			)
