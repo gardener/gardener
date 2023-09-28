@@ -170,17 +170,15 @@ func mustIncreaseGenerationForSpecChanges(oldShoot, newShoot *core.Shoot) bool {
 func removeDuplicateExtensions(shoot *core.Shoot) {
 	if len(shoot.Spec.Extensions) > 1 {
 		typeToExtension := make(map[string]core.Extension)
-		extensionsType := sets.New[string]()
 		for _, extension := range shoot.Spec.Extensions {
-			extensionsType.Insert(extension.Type)
 			typeToExtension[extension.Type] = extension
 		}
 
 		extensionsList := make([]core.Extension, 0, len(typeToExtension))
 		for _, extension := range shoot.Spec.Extensions {
-			if extensionsType.Has(extension.Type) {
-				extensionsType.Delete(extension.Type)
-				extensionsList = append(extensionsList, typeToExtension[extension.Type])
+			if ext, ok := typeToExtension[extension.Type]; ok {
+				extensionsList = append(extensionsList, ext)
+				delete(typeToExtension, extension.Type)
 			}
 		}
 
