@@ -22,7 +22,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -127,7 +126,7 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() apiserver.Autoscaling
 		nodeCount = b.Shoot.GetMaxNodeCount()
 	}
 
-	if hvpaEnabled && features.DefaultFeatureGate.Enabled(features.DisableScalingClassesForShoots) {
+	if hvpaEnabled {
 		apiServerResources = corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("500m"),
@@ -135,7 +134,7 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() apiserver.Autoscaling
 			},
 		}
 	} else {
-		apiServerResources = resourcesRequirementsForKubeAPIServer(nodeCount, b.Shoot.GetInfo().Annotations[v1beta1constants.ShootAlphaScalingAPIServerClass])
+		apiServerResources = resourcesRequirementsForKubeAPIServer(nodeCount)
 	}
 
 	if b.ManagedSeed != nil {
@@ -168,48 +167,20 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() apiserver.Autoscaling
 	}
 }
 
-func resourcesRequirementsForKubeAPIServer(nodeCount int32, scalingClass string) corev1.ResourceRequirements {
-	var (
-		validScalingClasses = sets.New("small", "medium", "large", "xlarge", "2xlarge")
-		cpuRequest          string
-		memoryRequest       string
-	)
-
-	if !validScalingClasses.Has(scalingClass) {
-		switch {
-		case nodeCount <= 2:
-			scalingClass = "small"
-		case nodeCount <= 10:
-			scalingClass = "medium"
-		case nodeCount <= 50:
-			scalingClass = "large"
-		case nodeCount <= 100:
-			scalingClass = "xlarge"
-		default:
-			scalingClass = "2xlarge"
-		}
-	}
+func resourcesRequirementsForKubeAPIServer(nodeCount int32) corev1.ResourceRequirements {
+	var cpuRequest, memoryRequest string
 
 	switch {
-	case scalingClass == "small":
-		cpuRequest = "800m"
-		memoryRequest = "800Mi"
-
-	case scalingClass == "medium":
-		cpuRequest = "1000m"
-		memoryRequest = "1100Mi"
-
-	case scalingClass == "large":
-		cpuRequest = "1200m"
-		memoryRequest = "1600Mi"
-
-	case scalingClass == "xlarge":
-		cpuRequest = "2500m"
-		memoryRequest = "5200Mi"
-
-	case scalingClass == "2xlarge":
-		cpuRequest = "3000m"
-		memoryRequest = "5200Mi"
+	case nodeCount <= 2:
+		cpuRequest, memoryRequest = "800m", "800Mi"
+	case nodeCount <= 10:
+		cpuRequest, memoryRequest = "1000m", "1100Mi"
+	case nodeCount <= 50:
+		cpuRequest, memoryRequest = "1200m", "1600Mi"
+	case nodeCount <= 100:
+		cpuRequest, memoryRequest = "2500m", "5200Mi"
+	default:
+		cpuRequest, memoryRequest = "3000m", "5200Mi"
 	}
 
 	return corev1.ResourceRequirements{

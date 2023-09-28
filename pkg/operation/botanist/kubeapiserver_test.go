@@ -194,7 +194,7 @@ var _ = Describe("KubeAPIServer", func() {
 					nil,
 					map[featuregate.Feature]bool{features.HVPA: false},
 					apiserver.AutoscalingConfig{
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(4, ""),
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(4),
 						HVPAEnabled:               false,
 						MinReplicas:               1,
 						MaxReplicas:               4,
@@ -202,22 +202,7 @@ var _ = Describe("KubeAPIServer", func() {
 						ScaleDownDisabledForHvpa:  false,
 					},
 				),
-				Entry("default behaviour, HVPA is enabled and DisableScalingClassesForShoots is disabled",
-					nil,
-					map[featuregate.Feature]bool{
-						features.HVPA:                           true,
-						features.DisableScalingClassesForShoots: false,
-					},
-					apiserver.AutoscalingConfig{
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(40, ""),
-						HVPAEnabled:               true,
-						MinReplicas:               1,
-						MaxReplicas:               4,
-						UseMemoryMetricForHvpaHPA: false,
-						ScaleDownDisabledForHvpa:  false,
-					},
-				),
-				Entry("default behaviour, HVPA is enabled and DisableScalingClassesForShoots is enabled",
+				Entry("default behaviour, HVPA is enabled",
 					nil,
 					map[featuregate.Feature]bool{
 						features.HVPA: true,
@@ -236,27 +221,13 @@ var _ = Describe("KubeAPIServer", func() {
 						ScaleDownDisabledForHvpa:  false,
 					},
 				),
-				Entry("default behaviour, HVPA is disabled and DisableScalingClassesForShoots is enabled",
-					nil,
-					map[featuregate.Feature]bool{
-						features.HVPA: false,
-					},
-					apiserver.AutoscalingConfig{
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(4, ""),
-						HVPAEnabled:               false,
-						MinReplicas:               1,
-						MaxReplicas:               4,
-						UseMemoryMetricForHvpaHPA: false,
-						ScaleDownDisabledForHvpa:  false,
-					},
-				),
 				Entry("shoot purpose production",
 					func() {
 						botanist.Shoot.Purpose = gardencorev1beta1.ShootPurposeProduction
 					},
 					nil,
 					apiserver.AutoscalingConfig{
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(4, ""),
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(4),
 						HVPAEnabled:               false,
 						MinReplicas:               2,
 						MaxReplicas:               4,
@@ -270,7 +241,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					nil,
 					apiserver.AutoscalingConfig{
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(4, ""),
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(4),
 						HVPAEnabled:               false,
 						MinReplicas:               4,
 						MaxReplicas:               4,
@@ -284,7 +255,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					map[featuregate.Feature]bool{features.HVPAForShootedSeed: false},
 					apiserver.AutoscalingConfig{
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(4, ""),
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(4),
 						HVPAEnabled:               false,
 						MinReplicas:               1,
 						MaxReplicas:               4,
@@ -292,48 +263,7 @@ var _ = Describe("KubeAPIServer", func() {
 						ScaleDownDisabledForHvpa:  false,
 					},
 				),
-				Entry("shoot is a managed seed and HVPAForShootedSeed is enabled and DisableScalingClassesForShoots is disabled",
-					func() {
-						botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
-					},
-					map[featuregate.Feature]bool{
-						features.HVPAForShootedSeed:             true,
-						features.DisableScalingClassesForShoots: false,
-					},
-					apiserver.AutoscalingConfig{
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(40, ""),
-						HVPAEnabled:               true,
-						MinReplicas:               1,
-						MaxReplicas:               4,
-						UseMemoryMetricForHvpaHPA: true,
-						ScaleDownDisabledForHvpa:  false,
-					},
-				),
-				Entry("shoot is a managed seed w/ APIServer settings and HVPAForShootedSeed is enabled and DisableScalingClassesForShoots is disabled",
-					func() {
-						botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
-						botanist.ManagedSeedAPIServer = &helper.ManagedSeedAPIServer{
-							Autoscaler: &helper.ManagedSeedAPIServerAutoscaler{
-								MinReplicas: pointer.Int32(16),
-								MaxReplicas: 32,
-							},
-							Replicas: pointer.Int32(24),
-						}
-					},
-					map[featuregate.Feature]bool{
-						features.HVPAForShootedSeed:             true,
-						features.DisableScalingClassesForShoots: false,
-					},
-					apiserver.AutoscalingConfig{
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(40, ""),
-						HVPAEnabled:               true,
-						MinReplicas:               16,
-						MaxReplicas:               32,
-						UseMemoryMetricForHvpaHPA: true,
-						ScaleDownDisabledForHvpa:  false,
-					},
-				),
-				Entry("shoot is a managed seed w/ APIServer settings and HVPAForShootedSeed is enabled and DisableScalingClassesForShoots is enabled",
+				Entry("shoot is a managed seed w/ APIServer settings and HVPAForShootedSeed is enabled",
 					func() {
 						botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
 						botanist.ManagedSeedAPIServer = &helper.ManagedSeedAPIServer{
@@ -388,7 +318,7 @@ var _ = Describe("KubeAPIServer", func() {
 						ScaleDownDisabledForHvpa:  false,
 					},
 				),
-				Entry("shoot is a managed seed w/ APIServer settings and HVPAForShootedSeed is disabled and DisableScalingClassesForShoots is enabled",
+				Entry("shoot is a managed seed w/ APIServer settings and HVPAForShootedSeed is disabled",
 					func() {
 						botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
 						botanist.ManagedSeedAPIServer = &helper.ManagedSeedAPIServer{
@@ -427,7 +357,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					nil,
 					apiserver.AutoscalingConfig{
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(4, ""),
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(4),
 						HVPAEnabled:               false,
 						MinReplicas:               3,
 						MaxReplicas:               4,
@@ -440,8 +370,8 @@ var _ = Describe("KubeAPIServer", func() {
 	})
 
 	DescribeTable("#resourcesRequirementsForKubeAPIServer",
-		func(nodes int, storageClass, expectedCPURequest, expectedMemoryRequest string) {
-			Expect(resourcesRequirementsForKubeAPIServer(int32(nodes), storageClass)).To(Equal(
+		func(nodes int, expectedCPURequest, expectedMemoryRequest string) {
+			Expect(resourcesRequirementsForKubeAPIServer(int32(nodes))).To(Equal(
 				corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
 						corev1.ResourceCPU:    resource.MustParse(expectedCPURequest),
@@ -450,32 +380,16 @@ var _ = Describe("KubeAPIServer", func() {
 				}))
 		},
 
-		// nodes tests
-		Entry("nodes <= 2", 2, "", "800m", "800Mi"),
-		Entry("nodes <= 10", 10, "", "1000m", "1100Mi"),
-		Entry("nodes <= 50", 50, "", "1200m", "1600Mi"),
-		Entry("nodes <= 100", 100, "", "2500m", "5200Mi"),
-		Entry("nodes > 100", 1000, "", "3000m", "5200Mi"),
-
-		// scaling class tests
-		Entry("scaling class small", -1, "small", "800m", "800Mi"),
-		Entry("scaling class medium", -1, "medium", "1000m", "1100Mi"),
-		Entry("scaling class large", -1, "large", "1200m", "1600Mi"),
-		Entry("scaling class xlarge", -1, "xlarge", "2500m", "5200Mi"),
-		Entry("scaling class 2xlarge", -1, "2xlarge", "3000m", "5200Mi"),
-
-		// scaling class always decides if provided
-		Entry("nodes > 100, scaling class small", 100, "small", "800m", "800Mi"),
-		Entry("nodes <= 100, scaling class medium", 100, "medium", "1000m", "1100Mi"),
-		Entry("nodes <= 50, scaling class large", 50, "large", "1200m", "1600Mi"),
-		Entry("nodes <= 10, scaling class xlarge", 10, "xlarge", "2500m", "5200Mi"),
-		Entry("nodes <= 2, scaling class 2xlarge", 2, "2xlarge", "3000m", "5200Mi"),
+		Entry("nodes <= 2", 2, "800m", "800Mi"),
+		Entry("nodes <= 10", 10, "1000m", "1100Mi"),
+		Entry("nodes <= 50", 50, "1200m", "1600Mi"),
+		Entry("nodes <= 100", 100, "2500m", "5200Mi"),
+		Entry("nodes > 100", 1000, "3000m", "5200Mi"),
 	)
 
 	Describe("#DeployKubeAPIServer", func() {
 		Describe("SNIConfig", func() {
-
-			var secret = &corev1.Secret{
+			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "wildcard-secret",
 					Namespace: seedNamespace,
