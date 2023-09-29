@@ -156,14 +156,14 @@ func (c *coreDNS) WaitCleanup(ctx context.Context) error {
 
 func (c *coreDNS) computeResourcesData() (map[string][]byte, error) {
 	var (
-		portAPIServer       = intstr.FromInt(kubeapiserverconstants.Port)
-		portDNSServerHost   = intstr.FromInt(53)
-		portDNSServer       = intstr.FromInt(corednsconstants.PortServer)
-		portMetricsEndpoint = intstr.FromInt(portMetrics)
+		portAPIServer       = intstr.FromInt32(kubeapiserverconstants.Port)
+		portDNSServerHost   = intstr.FromInt32(53)
+		portDNSServer       = intstr.FromInt32(corednsconstants.PortServer)
+		portMetricsEndpoint = intstr.FromInt32(portMetrics)
 		protocolTCP         = corev1.ProtocolTCP
 		protocolUDP         = corev1.ProtocolUDP
-		intStrOne           = intstr.FromInt(1)
-		intStrZero          = intstr.FromInt(0)
+		intStrOne           = intstr.FromInt32(1)
+		intStrZero          = intstr.FromInt32(0)
 
 		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
 		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
@@ -282,19 +282,19 @@ import custom/*.server
 					{
 						Name:       "dns",
 						Port:       int32(corednsconstants.PortServiceServer),
-						TargetPort: intstr.FromInt(corednsconstants.PortServer),
+						TargetPort: intstr.FromInt32(corednsconstants.PortServer),
 						Protocol:   corev1.ProtocolUDP,
 					},
 					{
 						Name:       "dns-tcp",
 						Port:       int32(corednsconstants.PortServiceServer),
-						TargetPort: intstr.FromInt(corednsconstants.PortServer),
+						TargetPort: intstr.FromInt32(corednsconstants.PortServer),
 						Protocol:   corev1.ProtocolTCP,
 					},
 					{
 						Name:       "metrics",
 						Port:       int32(portMetrics),
-						TargetPort: intstr.FromInt(portMetrics),
+						TargetPort: intstr.FromInt32(portMetrics),
 					},
 				},
 			},
@@ -415,7 +415,7 @@ import custom/*.server
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/health",
 										Scheme: corev1.URISchemeHTTP,
-										Port:   intstr.FromInt(8080),
+										Port:   intstr.FromInt32(8080),
 									},
 								},
 								SuccessThreshold:    1,
@@ -428,7 +428,7 @@ import custom/*.server
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/ready",
 										Scheme: corev1.URISchemeHTTP,
-										Port:   intstr.FromInt(8181),
+										Port:   intstr.FromInt32(8181),
 									},
 								},
 								SuccessThreshold:    1,

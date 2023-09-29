@@ -157,7 +157,7 @@ func (v *vpa) reconcileAdmissionControllerService(service *corev1.Service) {
 		metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, vpaconstants.AdmissionControllerPort))
 	case component.ClusterTypeShoot:
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForWebhookTargets(service, networkingv1.NetworkPolicyPort{
-			Port:     utils.IntStrPtrFromInt(vpaconstants.AdmissionControllerPort),
+			Port:     utils.IntStrPtrFromInt32(vpaconstants.AdmissionControllerPort),
 			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
 		}))
 	}
@@ -166,7 +166,7 @@ func (v *vpa) reconcileAdmissionControllerService(service *corev1.Service) {
 	desiredPorts := []corev1.ServicePort{
 		{
 			Port:       admissionControllerServicePort,
-			TargetPort: intstr.FromInt(vpaconstants.AdmissionControllerPort),
+			TargetPort: intstr.FromInt32(vpaconstants.AdmissionControllerPort),
 		},
 	}
 	service.Spec.Ports = kubernetesutils.ReconcileServicePorts(service.Spec.Ports, desiredPorts, "")

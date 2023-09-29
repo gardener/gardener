@@ -131,9 +131,9 @@ var _ = Describe("Actuator", func() {
 		fakeClient        client.Client
 		newSecretsManager newSecretsManagerFunc
 
-		ctx                    = context.TODO()
-		webhookServerNamespace = "extension-foo-12345"
-		webhookServerPort      = 443
+		ctx                          = context.TODO()
+		webhookServerNamespace       = "extension-foo-12345"
+		webhookServerPort      int32 = 443
 
 		cp         *extensionsv1alpha1.ControlPlane
 		cpExposure = &extensionsv1alpha1.ControlPlane{
@@ -810,7 +810,7 @@ func getPurposeExposure() *extensionsv1alpha1.Purpose {
 	return purpose
 }
 
-func constructNetworkPolicy(webhookServerNamespace, providerName, shootNamespace string, webhookPort int) *networkingv1.NetworkPolicy {
+func constructNetworkPolicy(webhookServerNamespace, providerName, shootNamespace string, webhookPort int32) *networkingv1.NetworkPolicy {
 	return &networkingv1.NetworkPolicy{
 		ObjectMeta: extensionsshootwebhook.GetNetworkPolicyMeta(shootNamespace, providerName).ObjectMeta,
 		Spec: networkingv1.NetworkPolicySpec{
@@ -819,7 +819,7 @@ func constructNetworkPolicy(webhookServerNamespace, providerName, shootNamespace
 				{
 					Ports: []networkingv1.NetworkPolicyPort{
 						{
-							Port:     utils.IntStrPtrFromInt(webhookPort),
+							Port:     utils.IntStrPtrFromInt32(webhookPort),
 							Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
 						},
 					},

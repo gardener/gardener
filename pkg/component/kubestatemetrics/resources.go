@@ -162,7 +162,7 @@ func (k *kubeStateMetrics) reconcileService(service *corev1.Service) {
 	service.Labels = k.getLabels()
 
 	metricsPort := networkingv1.NetworkPolicyPort{
-		Port:     utils.IntStrPtrFromInt(port),
+		Port:     utils.IntStrPtrFromInt32(port),
 		Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
 	}
 
@@ -179,7 +179,7 @@ func (k *kubeStateMetrics) reconcileService(service *corev1.Service) {
 		{
 			Name:       "metrics",
 			Port:       80,
-			TargetPort: intstr.FromInt(port),
+			TargetPort: intstr.FromInt32(port),
 			Protocol:   corev1.ProtocolTCP,
 		},
 	}, corev1.ServiceTypeClusterIP)
@@ -196,7 +196,7 @@ func (k *kubeStateMetrics) reconcileDeployment(
 	shootAccessSecret *gardenerutils.AccessSecret,
 ) {
 	var (
-		maxUnavailable = intstr.FromInt(1)
+		maxUnavailable = intstr.FromInt32(1)
 
 		deploymentLabels = k.getLabels()
 		podLabels        = map[string]string{
@@ -262,7 +262,7 @@ func (k *kubeStateMetrics) reconcileDeployment(
 					ProbeHandler: corev1.ProbeHandler{
 						HTTPGet: &corev1.HTTPGetAction{
 							Path: "/healthz",
-							Port: intstr.FromInt(port),
+							Port: intstr.FromInt32(port),
 						},
 					},
 					InitialDelaySeconds: 5,
@@ -272,7 +272,7 @@ func (k *kubeStateMetrics) reconcileDeployment(
 					ProbeHandler: corev1.ProbeHandler{
 						HTTPGet: &corev1.HTTPGetAction{
 							Path: "/healthz",
-							Port: intstr.FromInt(port),
+							Port: intstr.FromInt32(port),
 						},
 					},
 					InitialDelaySeconds: 5,

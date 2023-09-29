@@ -57,9 +57,9 @@ var _ = Describe("ExtAuthzServer", func() {
 		namespace        = "shoot--foo--bar"
 
 		image             = "some-image"
-		maxSurge          = intstr.FromInt(100)
-		maxUnavailable    = intstr.FromInt(0)
-		maxUnavailablePDB = intstr.FromInt(1)
+		maxSurge          = intstr.FromInt32(100)
+		maxUnavailable    = intstr.FromInt32(0)
+		maxUnavailablePDB = intstr.FromInt32(1)
 		vpaUpdateMode     = vpaautoscalingv1.UpdateModeAuto
 
 		deploymentName = "reversed-vpn-auth-server"
@@ -219,7 +219,7 @@ var _ = Describe("ExtAuthzServer", func() {
 					{
 						Name:       "grpc-authz",
 						Port:       9001,
-						TargetPort: intstr.FromInt(9001),
+						TargetPort: intstr.FromInt32(9001),
 						Protocol:   corev1.ProtocolTCP,
 					},
 				},

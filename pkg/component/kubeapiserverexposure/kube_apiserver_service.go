@@ -143,7 +143,7 @@ func (s *service) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, obj, func() error {
 		obj.Annotations = utils.MergeStringMaps(obj.Annotations, s.values.annotationsFunc())
 		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.istio.io/exportTo", "*")
-		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(obj, networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(kubeapiserverconstants.Port), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)}))
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(obj, networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt32(kubeapiserverconstants.Port), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)}))
 
 		namespaceSelectors := []metav1.LabelSelector{
 			{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
@@ -175,7 +175,7 @@ func (s *service) Deploy(ctx context.Context) error {
 				Name:       kubeapiserver.ServicePortName,
 				Protocol:   corev1.ProtocolTCP,
 				Port:       kubeapiserverconstants.Port,
-				TargetPort: intstr.FromInt(kubeapiserverconstants.Port),
+				TargetPort: intstr.FromInt32(kubeapiserverconstants.Port),
 			},
 		}, corev1.ServiceTypeClusterIP)
 		if obj.Spec.ClusterIP == "" && s.values.clusterIP != "" {

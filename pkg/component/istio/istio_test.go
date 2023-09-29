@@ -2638,7 +2638,7 @@ func makeIngressGateway(namespace string, annotations, labels map[string]string,
 			Labels:              labels,
 			NetworkPolicyLabels: networkPolicyLabels,
 			Ports: []corev1.ServicePort{
-				{Name: "foo", Port: 999, TargetPort: intstr.FromInt(999)},
+				{Name: "foo", Port: 999, TargetPort: intstr.FromInt32(999)},
 			},
 			Namespace:            namespace,
 			PriorityClassName:    v1beta1constants.PriorityClassNameSeedSystemCritical,

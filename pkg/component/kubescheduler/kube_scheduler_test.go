@@ -112,7 +112,7 @@ var _ = Describe("KubeScheduler", func() {
 			Type: corev1.SecretTypeOpaque,
 		}
 
-		pdbMaxUnavailable = intstr.FromInt(1)
+		pdbMaxUnavailable = intstr.FromInt32(1)
 		pdb               = &policyv1.PodDisruptionBudget{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: policyv1.SchemeGroupVersion.String(),
@@ -266,7 +266,7 @@ var _ = Describe("KubeScheduler", func() {
 											HTTPGet: &corev1.HTTPGetAction{
 												Path:   "/healthz",
 												Scheme: corev1.URISchemeHTTPS,
-												Port:   intstr.FromInt(10259),
+												Port:   intstr.FromInt32(10259),
 											},
 										},
 										SuccessThreshold:    1,

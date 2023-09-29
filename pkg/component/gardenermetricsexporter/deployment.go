@@ -86,7 +86,7 @@ func (g *gardenerMetricsExporter) deployment(secretGenericTokenKubeconfig, secre
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/",
-										Port:   intstr.FromInt(probePort),
+										Port:   intstr.FromInt32(probePort),
 										Scheme: corev1.URISchemeHTTP,
 									},
 								},
@@ -96,7 +96,7 @@ func (g *gardenerMetricsExporter) deployment(secretGenericTokenKubeconfig, secre
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/metrics",
-										Port:   intstr.FromInt(probePort),
+										Port:   intstr.FromInt32(probePort),
 										Scheme: corev1.URISchemeHTTP,
 									},
 								},

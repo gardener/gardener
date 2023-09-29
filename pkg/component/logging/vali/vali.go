@@ -528,13 +528,13 @@ func (v *vali) getService() *corev1.Service {
 					Name:       valiMetricsPortName,
 					Port:       ValiPort,
 					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(ValiPort),
+					TargetPort: intstr.FromInt32(ValiPort),
 				}},
 			},
 		}
 
 		networkPolicyPorts = []networkingv1.NetworkPolicyPort{{
-			Port:     utils.IntStrPtrFromInt(ValiPort),
+			Port:     utils.IntStrPtrFromInt32(ValiPort),
 			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
 		}}
 	)
@@ -544,19 +544,19 @@ func (v *vali) getService() *corev1.Service {
 			corev1.ServicePort{
 				Port:       kubeRBACProxyPort,
 				Protocol:   corev1.ProtocolTCP,
-				TargetPort: intstr.FromInt(kubeRBACProxyPort),
+				TargetPort: intstr.FromInt32(kubeRBACProxyPort),
 				Name:       "external",
 			},
 			corev1.ServicePort{
 				Port:       telegrafServicePort,
 				Protocol:   corev1.ProtocolTCP,
-				TargetPort: intstr.FromInt(telegrafServicePort),
+				TargetPort: intstr.FromInt32(telegrafServicePort),
 				Name:       telegrafName,
 			},
 		)
 
 		networkPolicyPorts = append(networkPolicyPorts, networkingv1.NetworkPolicyPort{
-			Port:     utils.IntStrPtrFromInt(telegrafServicePort),
+			Port:     utils.IntStrPtrFromInt32(telegrafServicePort),
 			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
 		})
 	}

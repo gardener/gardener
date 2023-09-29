@@ -210,7 +210,7 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 					Name:       portNameMetrics,
 					Protocol:   corev1.ProtocolTCP,
 					Port:       portMetrics,
-					TargetPort: intstr.FromInt(portMetrics),
+					TargetPort: intstr.FromInt32(portMetrics),
 				}},
 			},
 		}
@@ -290,7 +290,7 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 			},
 		}
 
-		maxUnavailable      = intstr.FromInt(1)
+		maxUnavailable      = intstr.FromInt32(1)
 		podDisruptionBudget = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      deploymentName,
@@ -305,7 +305,7 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 	)
 
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, networkingv1.NetworkPolicyPort{
-		Port:     utils.IntStrPtrFromInt(portMetrics),
+		Port:     utils.IntStrPtrFromInt32(portMetrics),
 		Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
 	}))
 

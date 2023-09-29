@@ -141,7 +141,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				},
 			},
 		}
-		pdbMaxUnavailable = intstr.FromInt(1)
+		pdbMaxUnavailable = intstr.FromInt32(1)
 		pdb               = &policyv1.PodDisruptionBudget{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: policyv1.SchemeGroupVersion.String(),

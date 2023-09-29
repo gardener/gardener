@@ -187,7 +187,7 @@ var _ = Describe("GardenerAPIServer", func() {
 				},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: gardenerutils.IntStrPtrFromInt(1),
+				MaxUnavailable: gardenerutils.IntStrPtrFromInt32(1),
 				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 					"app":  "gardener",
 					"role": "apiserver",
@@ -217,7 +217,7 @@ var _ = Describe("GardenerAPIServer", func() {
 				Ports: []corev1.ServicePort{{
 					Port:       443,
 					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(8443),
+					TargetPort: intstr.FromInt32(8443),
 				}},
 			},
 		}
@@ -412,8 +412,8 @@ var _ = Describe("GardenerAPIServer", func() {
 				Strategy: appsv1.DeploymentStrategy{
 					Type: appsv1.RollingUpdateDeploymentStrategyType,
 					RollingUpdate: &appsv1.RollingUpdateDeployment{
-						MaxSurge:       gardenerutils.IntStrPtrFromInt(1),
-						MaxUnavailable: gardenerutils.IntStrPtrFromInt(0),
+						MaxSurge:       gardenerutils.IntStrPtrFromInt32(1),
+						MaxUnavailable: gardenerutils.IntStrPtrFromInt32(0),
 					},
 				},
 				Template: corev1.PodTemplateSpec{
@@ -485,7 +485,7 @@ var _ = Describe("GardenerAPIServer", func() {
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/livez",
 										Scheme: "HTTPS",
-										Port:   intstr.FromInt(8443),
+										Port:   intstr.FromInt32(8443),
 									},
 								},
 								SuccessThreshold:    1,
@@ -499,7 +499,7 @@ var _ = Describe("GardenerAPIServer", func() {
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/readyz",
 										Scheme: "HTTPS",
-										Port:   intstr.FromInt(8443),
+										Port:   intstr.FromInt32(8443),
 									},
 								},
 								SuccessThreshold:    1,
@@ -626,7 +626,7 @@ var _ = Describe("GardenerAPIServer", func() {
 				Ports: []corev1.ServicePort{{
 					Port:       443,
 					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(8443),
+					TargetPort: intstr.FromInt32(8443),
 				}},
 			},
 		}

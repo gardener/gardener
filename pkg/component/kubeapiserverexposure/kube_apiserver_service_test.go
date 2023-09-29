@@ -92,7 +92,7 @@ var _ = Describe("#Service", func() {
 					Name:       "kube-apiserver",
 					Port:       443,
 					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(443),
+					TargetPort: intstr.FromInt32(443),
 				}},
 				Selector: map[string]string{
 					"app":  "kubernetes",

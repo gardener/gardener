@@ -143,9 +143,9 @@ baz`, spaces)).To(Equal(`foo
 		})
 	})
 
-	Describe("#IntStrPtrFromInt", func() {
+	Describe("#IntStrPtrFromInt32", func() {
 		It("should return a pointer", func() {
-			Expect(IntStrPtrFromInt(1234)).Should(gstruct.PointTo(Equal(intstr.FromInt(1234))))
+			Expect(IntStrPtrFromInt32(1234)).Should(gstruct.PointTo(Equal(intstr.FromInt32(1234))))
 		})
 	})
 

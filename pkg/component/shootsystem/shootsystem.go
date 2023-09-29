@@ -114,10 +114,10 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 			Data: s.shootInfoData(),
 		}
 
-		port53      = intstr.FromInt(53)
-		port443     = intstr.FromInt(kubeapiserverconstants.Port)
-		port8053    = intstr.FromInt(corednsconstants.PortServer)
-		port10250   = intstr.FromInt(10250)
+		port53      = intstr.FromInt32(53)
+		port443     = intstr.FromInt32(kubeapiserverconstants.Port)
+		port8053    = intstr.FromInt32(corednsconstants.PortServer)
+		port10250   = intstr.FromInt32(10250)
 		protocolUDP = corev1.ProtocolUDP
 		protocolTCP = corev1.ProtocolTCP
 

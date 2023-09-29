@@ -69,8 +69,8 @@ func (g *gardenerAPIServer) deployment(
 			Strategy: appsv1.DeploymentStrategy{
 				Type: appsv1.RollingUpdateDeploymentStrategyType,
 				RollingUpdate: &appsv1.RollingUpdateDeployment{
-					MaxSurge:       utils.IntStrPtrFromInt(1),
-					MaxUnavailable: utils.IntStrPtrFromInt(0),
+					MaxSurge:       utils.IntStrPtrFromInt32(1),
+					MaxUnavailable: utils.IntStrPtrFromInt32(0),
 				},
 			},
 			Template: corev1.PodTemplateSpec{
@@ -112,7 +112,7 @@ func (g *gardenerAPIServer) deployment(
 								HTTPGet: &corev1.HTTPGetAction{
 									Path:   "/livez",
 									Scheme: corev1.URISchemeHTTPS,
-									Port:   intstr.FromInt(port),
+									Port:   intstr.FromInt32(port),
 								},
 							},
 							SuccessThreshold:    1,
@@ -126,7 +126,7 @@ func (g *gardenerAPIServer) deployment(
 								HTTPGet: &corev1.HTTPGetAction{
 									Path:   "/readyz",
 									Scheme: corev1.URISchemeHTTPS,
-									Port:   intstr.FromInt(port),
+									Port:   intstr.FromInt32(port),
 								},
 							},
 							SuccessThreshold:    1,

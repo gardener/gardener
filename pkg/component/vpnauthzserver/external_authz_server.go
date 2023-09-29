@@ -83,8 +83,8 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 	)
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, deployment, func() error {
-		maxSurge := intstr.FromInt(100)
-		maxUnavailable := intstr.FromInt(0)
+		maxSurge := intstr.FromInt32(100)
+		maxUnavailable := intstr.FromInt32(0)
 		deployment.Labels = utils.MergeStringMaps(getLabels(), map[string]string{
 			resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
 		})
@@ -185,7 +185,7 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 			{
 				Name:       "grpc-authz",
 				Port:       ServerPort,
-				TargetPort: intstr.FromInt(ServerPort),
+				TargetPort: intstr.FromInt32(ServerPort),
 				Protocol:   corev1.ProtocolTCP,
 			},
 		}
@@ -281,7 +281,7 @@ func (a *authzServer) emptyPDB() *policyv1.PodDisruptionBudget {
 }
 
 func (a *authzServer) reconcilePodDisruptionBudget(ctx context.Context, pdb *policyv1.PodDisruptionBudget) error {
-	maxUnavailable := intstr.FromInt(1)
+	maxUnavailable := intstr.FromInt32(1)
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, pdb, func() error {
 		pdb.Labels = getLabels()

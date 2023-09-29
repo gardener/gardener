@@ -521,7 +521,7 @@ func (p *plutono) getService() *corev1.Service {
 					Name:       "web",
 					Port:       int32(port),
 					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(port),
+					TargetPort: intstr.FromInt32(port),
 				},
 			},
 			Selector: getLabels(),

@@ -76,8 +76,11 @@ func NewActuator(
 	configName string,
 	atomicShootWebhookConfig *atomic.Value,
 	webhookServerNamespace string,
-	webhookServerPort int,
-) (controlplane.Actuator, error) {
+	webhookServerPort int32,
+) (
+	controlplane.Actuator,
+	error,
+) {
 	gardenerClientset, err := kubernetesclient.NewWithConfig(kubernetesclient.WithRESTConfig(mgr.GetConfig()))
 	if err != nil {
 		return nil, err
@@ -137,7 +140,7 @@ type actuator struct {
 	configName                 string
 	atomicShootWebhookConfig   *atomic.Value
 	webhookServerNamespace     string
-	webhookServerPort          int
+	webhookServerPort          int32
 
 	gardenerClientset kubernetesclient.Interface
 	client            client.Client

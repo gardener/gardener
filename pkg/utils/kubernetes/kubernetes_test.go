@@ -423,13 +423,13 @@ var _ = Describe("kubernetes", func() {
 		port2 = corev1.ServicePort{
 			Name:       "port2",
 			Port:       1234,
-			TargetPort: intstr.FromInt(5678),
+			TargetPort: intstr.FromInt32(5678),
 		}
 		port3 = corev1.ServicePort{
 			Name:       "port3",
 			Protocol:   corev1.ProtocolTCP,
 			Port:       1234,
-			TargetPort: intstr.FromInt(5678),
+			TargetPort: intstr.FromInt32(5678),
 			NodePort:   9012,
 		}
 		desiredPorts = []corev1.ServicePort{port1, port2, port3}

@@ -239,7 +239,7 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 									ProbeHandler: corev1.ProbeHandler{
 										HTTPGet: &corev1.HTTPGetAction{
 											Path: "/",
-											Port: intstr.FromInt(int(portMetrics)),
+											Port: intstr.FromInt32(portMetrics),
 										},
 									},
 									InitialDelaySeconds: 5,
@@ -249,7 +249,7 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 									ProbeHandler: corev1.ProbeHandler{
 										HTTPGet: &corev1.HTTPGetAction{
 											Path: "/",
-											Port: intstr.FromInt(int(portMetrics)),
+											Port: intstr.FromInt32(portMetrics),
 										},
 									},
 									InitialDelaySeconds: 5,

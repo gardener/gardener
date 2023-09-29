@@ -228,7 +228,7 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 					{
 						Port:       servicePort,
 						Protocol:   corev1.ProtocolTCP,
-						TargetPort: intstr.FromInt(int(containerPort)),
+						TargetPort: intstr.FromInt32(containerPort),
 					},
 				},
 			},
@@ -251,7 +251,7 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 			},
 		}
 
-		maxUnavailable = intstr.FromInt(0)
+		maxUnavailable = intstr.FromInt32(0)
 		deployment     = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      deploymentName,
@@ -317,7 +317,7 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/readyz",
-										Port:   intstr.FromInt(int(containerPort)),
+										Port:   intstr.FromInt32(containerPort),
 										Scheme: corev1.URISchemeHTTPS,
 									},
 								},
@@ -329,7 +329,7 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/livez",
-										Port:   intstr.FromInt(int(containerPort)),
+										Port:   intstr.FromInt32(containerPort),
 										Scheme: corev1.URISchemeHTTPS,
 									},
 								},
@@ -364,7 +364,7 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 			},
 		}
 
-		intStrOne           = intstr.FromInt(1)
+		intStrOne           = intstr.FromInt32(1)
 		podDisruptionBudget = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "metrics-server",

@@ -262,7 +262,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 						Name:       "metrics",
 						Protocol:   corev1.ProtocolTCP,
 						Port:       metricsPort,
-						TargetPort: intstr.FromInt(int(metricsPort)),
+						TargetPort: intstr.FromInt32(metricsPort),
 					},
 				},
 			},
@@ -317,7 +317,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			},
 		}
 
-		maxUnavailable      = intstr.FromInt(1)
+		maxUnavailable      = intstr.FromInt32(1)
 		podDisruptionBudget = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      druidDeploymentName,
@@ -340,7 +340,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	)
 
 	portMetrics := networkingv1.NetworkPolicyPort{
-		Port:     utils.IntStrPtrFromInt(metricsPort),
+		Port:     utils.IntStrPtrFromInt32(metricsPort),
 		Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
 	}
 

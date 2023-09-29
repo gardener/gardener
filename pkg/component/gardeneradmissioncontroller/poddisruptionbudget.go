@@ -29,7 +29,7 @@ func (a *gardenerAdmissionController) podDisruptionBudget() *policyv1.PodDisrupt
 			Labels:    GetLabels(),
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: gardenerutils.IntStrPtrFromInt(1),
+			MaxUnavailable: gardenerutils.IntStrPtrFromInt32(1),
 			Selector:       &metav1.LabelSelector{MatchLabels: GetLabels()},
 		},
 	}

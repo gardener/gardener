@@ -102,7 +102,7 @@ var _ = Describe("VPA", func() {
 
 		vpaUpdateModeAuto   = vpaautoscalingv1.UpdateModeAuto
 		vpaControlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		maxUnavailable      = intstr.FromInt(1)
+		maxUnavailable      = intstr.FromInt32(1)
 
 		webhookFailurePolicy      = admissionregistrationv1.Ignore
 		webhookMatchPolicy        = admissionregistrationv1.Exact
@@ -537,7 +537,7 @@ var _ = Describe("VPA", func() {
 					Selector: map[string]string{"app": "vpa-recommender"},
 					Ports: []corev1.ServicePort{{
 						Port:       8942,
-						TargetPort: intstr.FromInt(8942),
+						TargetPort: intstr.FromInt32(8942),
 					}},
 				},
 			}
@@ -829,7 +829,7 @@ var _ = Describe("VPA", func() {
 					Selector: map[string]string{"app": "vpa-admission-controller"},
 					Ports: []corev1.ServicePort{{
 						Port:       443,
-						TargetPort: intstr.FromInt(10250),
+						TargetPort: intstr.FromInt32(10250),
 					}},
 				},
 			}

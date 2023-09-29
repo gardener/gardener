@@ -200,7 +200,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 						Name:       "metrics",
 						Port:       adminPort,
 						Protocol:   corev1.ProtocolTCP,
-						TargetPort: intstr.FromInt(adminPort),
+						TargetPort: intstr.FromInt32(adminPort),
 					},
 				},
 				Selector: getSelector(),
@@ -339,7 +339,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 									ProbeHandler: corev1.ProbeHandler{
 										HTTPGet: &corev1.HTTPGetAction{
 											Path: "/ready",
-											Port: intstr.FromInt(adminPort),
+											Port: intstr.FromInt32(adminPort),
 										},
 									},
 									InitialDelaySeconds: 1,
@@ -351,7 +351,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 									ProbeHandler: corev1.ProbeHandler{
 										HTTPGet: &corev1.HTTPGetAction{
 											Path: "/ready",
-											Port: intstr.FromInt(adminPort),
+											Port: intstr.FromInt32(adminPort),
 										},
 									},
 									InitialDelaySeconds: 1,

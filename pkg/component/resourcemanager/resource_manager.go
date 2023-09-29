@@ -719,7 +719,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 		service.Labels = utils.MergeStringMaps(service.Labels, r.getLabels())
 
 		portMetrics := networkingv1.NetworkPolicyPort{
-			Port:     utils.IntStrPtrFromInt(metricsPort),
+			Port:     utils.IntStrPtrFromInt32(metricsPort),
 			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
 		}
 
@@ -729,7 +729,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 		} else {
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, portMetrics))
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForWebhookTargets(service, networkingv1.NetworkPolicyPort{
-				Port:     utils.IntStrPtrFromInt(resourcemanagerconstants.ServerPort),
+				Port:     utils.IntStrPtrFromInt32(resourcemanagerconstants.ServerPort),
 				Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
 			}))
 		}
@@ -754,7 +754,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 				Name:       serverPortName,
 				Protocol:   corev1.ProtocolTCP,
 				Port:       serverServicePort,
-				TargetPort: intstr.FromInt(resourcemanagerconstants.ServerPort),
+				TargetPort: intstr.FromInt32(resourcemanagerconstants.ServerPort),
 			},
 		}
 		service.Spec.Ports = kubernetesutils.ReconcileServicePorts(service.Spec.Ports, desiredPorts, corev1.ServiceTypeClusterIP)
@@ -849,7 +849,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 								HTTPGet: &corev1.HTTPGetAction{
 									Path:   "/healthz",
 									Scheme: "HTTP",
-									Port:   intstr.FromInt(healthPort),
+									Port:   intstr.FromInt32(healthPort),
 								},
 							},
 							InitialDelaySeconds: 30,
@@ -863,7 +863,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 								HTTPGet: &corev1.HTTPGetAction{
 									Path:   "/readyz",
 									Scheme: "HTTP",
-									Port:   intstr.FromInt(healthPort),
+									Port:   intstr.FromInt32(healthPort),
 								},
 							},
 							InitialDelaySeconds: 10,
@@ -1091,7 +1091,7 @@ func (r *resourceManager) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 func (r *resourceManager) ensurePodDisruptionBudget(ctx context.Context) error {
 	pdb := r.emptyPodDisruptionBudget()
 
-	maxUnavailable := intstr.FromInt(1)
+	maxUnavailable := intstr.FromInt32(1)
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, pdb, func() error {
 		pdb.Labels = r.getLabels()

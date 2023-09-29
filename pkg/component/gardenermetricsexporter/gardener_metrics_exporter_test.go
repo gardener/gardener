@@ -129,7 +129,7 @@ var _ = Describe("GardenerMetricsExporter", func() {
 				Ports: []corev1.ServicePort{{
 					Port:       2718,
 					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(2718),
+					TargetPort: intstr.FromInt32(2718),
 				}},
 			},
 		}
@@ -663,7 +663,7 @@ func deployment(namespace string, testValues Values) string {
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/",
-										Port:   intstr.FromInt(2718),
+										Port:   intstr.FromInt32(2718),
 										Scheme: corev1.URISchemeHTTP,
 									},
 								},
@@ -673,7 +673,7 @@ func deployment(namespace string, testValues Values) string {
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/metrics",
-										Port:   intstr.FromInt(2718),
+										Port:   intstr.FromInt32(2718),
 										Scheme: corev1.URISchemeHTTP,
 									},
 								},

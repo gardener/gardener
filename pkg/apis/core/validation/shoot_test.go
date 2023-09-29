@@ -56,8 +56,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Enabled: true,
 			}
 
-			maxSurge         = intstr.FromInt(1)
-			maxUnavailable   = intstr.FromInt(0)
+			maxSurge         = intstr.FromInt32(1)
+			maxUnavailable   = intstr.FromInt32(0)
 			systemComponents = &core.WorkerSystemComponents{
 				Allow: true,
 			}
@@ -4998,8 +4998,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 	Describe("#ValidateWorker", func() {
 		DescribeTable("validate worker machine",
 			func(machine core.Machine, matcher gomegatypes.GomegaMatcher) {
-				maxSurge := intstr.FromInt(1)
-				maxUnavailable := intstr.FromInt(0)
+				maxSurge := intstr.FromInt32(1)
+				maxUnavailable := intstr.FromInt32(0)
 				worker := core.Worker{
 					Name:           "worker-name",
 					Machine:        machine,
@@ -5089,23 +5089,23 @@ var _ = Describe("Shoot Validation Tests", func() {
 			},
 
 			// double zero values (percent or int)
-			Entry("two zero integers", intstr.FromInt(0), intstr.FromInt(0), field.ErrorTypeInvalid),
-			Entry("zero int and zero percent", intstr.FromInt(0), intstr.FromString("0%"), field.ErrorTypeInvalid),
-			Entry("zero percent and zero int", intstr.FromString("0%"), intstr.FromInt(0), field.ErrorTypeInvalid),
+			Entry("two zero integers", intstr.FromInt32(0), intstr.FromInt32(0), field.ErrorTypeInvalid),
+			Entry("zero int and zero percent", intstr.FromInt32(0), intstr.FromString("0%"), field.ErrorTypeInvalid),
+			Entry("zero percent and zero int", intstr.FromString("0%"), intstr.FromInt32(0), field.ErrorTypeInvalid),
 			Entry("two zero percents", intstr.FromString("0%"), intstr.FromString("0%"), field.ErrorTypeInvalid),
 
 			// greater than 100
 			Entry("maxUnavailable greater than 100 percent", intstr.FromString("101%"), intstr.FromString("100%"), field.ErrorTypeInvalid),
 
 			// below zero tests
-			Entry("values are not below zero", intstr.FromInt(-1), intstr.FromInt(0), field.ErrorTypeInvalid),
+			Entry("values are not below zero", intstr.FromInt32(-1), intstr.FromInt32(0), field.ErrorTypeInvalid),
 			Entry("percentage is not less than zero", intstr.FromString("-90%"), intstr.FromString("90%"), field.ErrorTypeInvalid),
 		)
 
 		DescribeTable("reject when labels are invalid",
 			func(labels map[string]string, expectType field.ErrorType) {
-				maxSurge := intstr.FromInt(1)
-				maxUnavailable := intstr.FromInt(0)
+				maxSurge := intstr.FromInt32(1)
+				maxUnavailable := intstr.FromInt32(0)
 				worker := core.Worker{
 					Name: "worker-name",
 					Machine: core.Machine{
@@ -5140,8 +5140,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		DescribeTable("reject when annotations are invalid",
 			func(annotations map[string]string, expectType field.ErrorType) {
-				maxSurge := intstr.FromInt(1)
-				maxUnavailable := intstr.FromInt(0)
+				maxSurge := intstr.FromInt32(1)
+				maxUnavailable := intstr.FromInt32(0)
 				worker := core.Worker{
 					Name: "worker-name",
 					Machine: core.Machine{
@@ -5175,8 +5175,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		DescribeTable("reject when taints are invalid",
 			func(taints []corev1.Taint, expectType field.ErrorType) {
-				maxSurge := intstr.FromInt(1)
-				maxUnavailable := intstr.FromInt(0)
+				maxSurge := intstr.FromInt32(1)
+				maxUnavailable := intstr.FromInt32(0)
 				worker := core.Worker{
 					Name: "worker-name",
 					Machine: core.Machine{
@@ -5218,8 +5218,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 		)
 
 		It("should reject if volume is undefined and data volumes are defined", func() {
-			maxSurge := intstr.FromInt(1)
-			maxUnavailable := intstr.FromInt(0)
+			maxSurge := intstr.FromInt32(1)
+			maxUnavailable := intstr.FromInt32(0)
 			dataVolumes := []core.DataVolume{{Name: "vol1-name", VolumeSize: "75Gi"}}
 			worker := core.Worker{
 				Name: "worker-name",
@@ -5243,8 +5243,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		It("should reject if data volume size does not match size regex", func() {
-			maxSurge := intstr.FromInt(1)
-			maxUnavailable := intstr.FromInt(0)
+			maxSurge := intstr.FromInt32(1)
+			maxUnavailable := intstr.FromInt32(0)
 			name := "vol1-name"
 			vol := core.Volume{Name: &name, VolumeSize: "75Gi"}
 			dataVolumes := []core.DataVolume{{Name: name, VolumeSize: "75Gi"}, {Name: "vol2-name", VolumeSize: "12MiB"}}
@@ -5272,8 +5272,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		It("should reject if data volume name is invalid", func() {
-			maxSurge := intstr.FromInt(1)
-			maxUnavailable := intstr.FromInt(0)
+			maxSurge := intstr.FromInt32(1)
+			maxUnavailable := intstr.FromInt32(0)
 			name1 := "vol1-name-is-too-long-for-test"
 			name2 := "not%dns/1123"
 			vol := core.Volume{Name: &name1, VolumeSize: "75Gi"}
@@ -5311,8 +5311,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		It("should accept if kubeletDataVolumeName refers to defined data volume", func() {
-			maxSurge := intstr.FromInt(1)
-			maxUnavailable := intstr.FromInt(0)
+			maxSurge := intstr.FromInt32(1)
+			maxUnavailable := intstr.FromInt32(0)
 			name := "vol1-name"
 			vol := core.Volume{Name: &name, VolumeSize: "75Gi"}
 			dataVolumes := []core.DataVolume{{Name: name, VolumeSize: "75Gi"}}
@@ -5337,8 +5337,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		It("should reject if kubeletDataVolumeName refers to undefined data volume", func() {
-			maxSurge := intstr.FromInt(1)
-			maxUnavailable := intstr.FromInt(0)
+			maxSurge := intstr.FromInt32(1)
+			maxUnavailable := intstr.FromInt32(0)
 			name1 := "vol1-name"
 			name2 := "vol2-name"
 			name3 := "vol3-name"
@@ -5370,8 +5370,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		It("should reject if data volume names are duplicated", func() {
-			maxSurge := intstr.FromInt(1)
-			maxUnavailable := intstr.FromInt(0)
+			maxSurge := intstr.FromInt32(1)
+			maxUnavailable := intstr.FromInt32(0)
 			name1 := "vol1-name"
 			name2 := "vol2-name"
 			vol := core.Volume{Name: &name1, VolumeSize: "75Gi"}
@@ -5405,8 +5405,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		It("should reject if kubelet feature gates are invalid", func() {
-			maxSurge := intstr.FromInt(1)
-			maxUnavailable := intstr.FromInt(0)
+			maxSurge := intstr.FromInt32(1)
+			maxUnavailable := intstr.FromInt32(0)
 			worker := core.Worker{
 				Name: "worker-name",
 				Machine: core.Machine{

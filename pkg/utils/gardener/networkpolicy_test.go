@@ -32,7 +32,7 @@ var _ = Describe("NetworkPolicy", func() {
 
 			Expect(InjectNetworkPolicyAnnotationsForScrapeTargets(
 				obj,
-				networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(1234), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)},
+				networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt32(1234), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)},
 				networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromString("foo"), Protocol: utils.ProtocolPtr(corev1.ProtocolUDP)},
 			)).Should(Succeed())
 
@@ -48,7 +48,7 @@ var _ = Describe("NetworkPolicy", func() {
 
 			Expect(InjectNetworkPolicyAnnotationsForSeedScrapeTargets(
 				obj,
-				networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(1234), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)},
+				networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt32(1234), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)},
 				networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromString("foo"), Protocol: utils.ProtocolPtr(corev1.ProtocolUDP)},
 			)).Should(Succeed())
 
@@ -64,7 +64,7 @@ var _ = Describe("NetworkPolicy", func() {
 
 			Expect(InjectNetworkPolicyAnnotationsForWebhookTargets(
 				obj,
-				networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(1234), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)},
+				networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt32(1234), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)},
 				networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromString("foo"), Protocol: utils.ProtocolPtr(corev1.ProtocolUDP)},
 			)).Should(Succeed())
 

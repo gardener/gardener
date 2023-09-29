@@ -117,7 +117,7 @@ func (b *blackboxExporter) WaitCleanup(ctx context.Context) error {
 
 func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 	var (
-		intStrOne = intstr.FromInt(1)
+		intStrOne = intstr.FromInt32(1)
 
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 

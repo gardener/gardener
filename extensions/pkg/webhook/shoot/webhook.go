@@ -43,7 +43,7 @@ func ReconcileWebhookConfig(
 	extensionNamespace string,
 	extensionName string,
 	managedResourceName string,
-	serverPort int,
+	serverPort int32,
 	shootWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration,
 	cluster *controller.Cluster,
 ) error {
@@ -79,7 +79,7 @@ func ReconcileWebhooksForAllNamespaces(
 	extensionName string,
 	managedResourceName string,
 	shootNamespaceSelector map[string]string,
-	port int,
+	port int32,
 	shootWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration,
 ) error {
 	namespaceList := &corev1.NamespaceList{}

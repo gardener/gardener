@@ -47,7 +47,7 @@ func GetEgressRules(subsets ...corev1.EndpointSubset) []networkingv1.NetworkPoli
 
 		for _, port := range subset.Ports {
 			// do not use named port as this is e.g not support on Weave
-			parse := intstr.FromInt(int(port.Port))
+			parse := intstr.FromInt32(port.Port)
 			networkPolicyPort := networkingv1.NetworkPolicyPort{
 				Port:     &parse,
 				Protocol: &port.Protocol,

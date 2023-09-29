@@ -834,7 +834,7 @@ func getService(isRBACProxyEnabled bool, clusterType string) *corev1.Service {
 				{
 					Port:       3100,
 					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(3100),
+					TargetPort: intstr.FromInt32(3100),
 					Name:       "metrics",
 				},
 			},
@@ -847,13 +847,13 @@ func getService(isRBACProxyEnabled bool, clusterType string) *corev1.Service {
 			{
 				Port:       8080,
 				Protocol:   corev1.ProtocolTCP,
-				TargetPort: intstr.FromInt(8080),
+				TargetPort: intstr.FromInt32(8080),
 				Name:       "external",
 			},
 			{
 				Port:       9273,
 				Protocol:   corev1.ProtocolTCP,
-				TargetPort: intstr.FromInt(9273),
+				TargetPort: intstr.FromInt32(9273),
 				Name:       "telegraf",
 			},
 		}...)

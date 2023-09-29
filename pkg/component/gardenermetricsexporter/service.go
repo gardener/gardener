@@ -35,7 +35,7 @@ func (g *gardenerMetricsExporter) service() *corev1.Service {
 				{
 					Protocol:   corev1.ProtocolTCP,
 					Port:       probePort,
-					TargetPort: intstr.FromInt(probePort),
+					TargetPort: intstr.FromInt32(probePort),
 				},
 			},
 		},

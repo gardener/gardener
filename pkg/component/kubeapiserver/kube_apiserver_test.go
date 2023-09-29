@@ -630,7 +630,7 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 					},
 					Spec: policyv1.PodDisruptionBudgetSpec{
-						MaxUnavailable: utils.IntStrPtrFromInt(1),
+						MaxUnavailable: utils.IntStrPtrFromInt32(1),
 						Selector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								"app":  "kubernetes",
@@ -1761,7 +1761,7 @@ rules:
 				var (
 					replicas        int32 = 1337
 					intStr25Percent       = intstr.FromString("25%")
-					intStrZero            = intstr.FromInt(0)
+					intStrZero            = intstr.FromInt32(0)
 				)
 
 				kapi = New(kubernetesInterface, namespace, sm, Values{
@@ -3328,7 +3328,7 @@ rules:
 					validateProbe := func(probe *corev1.Probe, path string, initialDelaySeconds int32) {
 						Expect(probe.ProbeHandler.HTTPGet.Path).To(Equal(path))
 						Expect(probe.ProbeHandler.HTTPGet.Scheme).To(Equal(corev1.URISchemeHTTPS))
-						Expect(probe.ProbeHandler.HTTPGet.Port).To(Equal(intstr.FromInt(443)))
+						Expect(probe.ProbeHandler.HTTPGet.Port).To(Equal(intstr.FromInt32(443)))
 						Expect(probe.ProbeHandler.HTTPGet.HTTPHeaders).To(HaveLen(1))
 						Expect(probe.ProbeHandler.HTTPGet.HTTPHeaders[0].Name).To(Equal("Authorization"))
 						Expect(probe.ProbeHandler.HTTPGet.HTTPHeaders[0].Value).To(ContainSubstring("Bearer "))

@@ -278,7 +278,7 @@ func (v *vpa) reconcileRecommenderService(service *corev1.Service) {
 	switch v.values.ClusterType {
 	case component.ClusterTypeSeed:
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, networkingv1.NetworkPolicyPort{
-			Port:     utils.IntStrPtrFromInt(recommenderPortMetrics),
+			Port:     utils.IntStrPtrFromInt32(recommenderPortMetrics),
 			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
 		}))
 
@@ -293,7 +293,7 @@ func (v *vpa) reconcileRecommenderService(service *corev1.Service) {
 	service.Spec.Selector = getAppLabel(recommender)
 	desiredPorts := []corev1.ServicePort{{
 		Port:       recommenderPortMetrics,
-		TargetPort: intstr.FromInt(recommenderPortMetrics),
+		TargetPort: intstr.FromInt32(recommenderPortMetrics),
 	}}
 	service.Spec.Ports = kubernetesutils.ReconcileServicePorts(service.Spec.Ports, desiredPorts, "")
 }

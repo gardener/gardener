@@ -79,7 +79,7 @@ var _ = Describe("ResourceManager", func() {
 		replicas                    int32 = 2
 		healthPort                  int32 = 8081
 		metricsPort                 int32 = 8080
-		serverPort                        = 10250
+		serverPort                  int32 = 10250
 		version                           = semver.MustParse("1.26.1")
 		binPackingSchedulingProfile       = gardencorev1beta1.SchedulingProfileBinPacking
 
@@ -105,7 +105,7 @@ var _ = Describe("ResourceManager", func() {
 		syncPeriod                           = metav1.Duration{Duration: time.Second * 80}
 		watchedNamespace                     = "fake-ns"
 		targetDisableCache                   = true
-		maxUnavailable                       = intstr.FromInt(1)
+		maxUnavailable                       = intstr.FromInt32(1)
 		failurePolicyFail                    = admissionregistrationv1.Fail
 		failurePolicyIgnore                  = admissionregistrationv1.Ignore
 		reinvocationPolicyNever              = admissionregistrationv1.NeverReinvocationPolicy
@@ -305,7 +305,7 @@ var _ = Describe("ResourceManager", func() {
 					{
 						Name:       "server",
 						Port:       443,
-						TargetPort: intstr.FromInt(serverPort),
+						TargetPort: intstr.FromInt32(serverPort),
 						Protocol:   corev1.ProtocolTCP,
 					},
 				},
@@ -383,7 +383,7 @@ var _ = Describe("ResourceManager", func() {
 					},
 					Webhooks: resourcemanagerv1alpha1.HTTPSServer{
 						Server: resourcemanagerv1alpha1.Server{
-							Port: serverPort,
+							Port: int(serverPort),
 						},
 						TLS: resourcemanagerv1alpha1.TLSServer{
 							ServerCertDir: secretMountPathServer,
@@ -560,7 +560,7 @@ var _ = Describe("ResourceManager", func() {
 											HTTPGet: &corev1.HTTPGetAction{
 												Path:   "/healthz",
 												Scheme: "HTTP",
-												Port:   intstr.FromInt(int(healthPort)),
+												Port:   intstr.FromInt32(healthPort),
 											},
 										},
 										InitialDelaySeconds: 30,
@@ -587,7 +587,7 @@ var _ = Describe("ResourceManager", func() {
 											HTTPGet: &corev1.HTTPGetAction{
 												Path:   "/readyz",
 												Scheme: "HTTP",
-												Port:   intstr.FromInt(int(healthPort)),
+												Port:   intstr.FromInt32(healthPort),
 											},
 										},
 										InitialDelaySeconds: 10,

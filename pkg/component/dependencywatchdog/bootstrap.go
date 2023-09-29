@@ -487,7 +487,7 @@ func (b *bootstrapper) getDeployment(serviceAccountName string, configMapName st
 }
 
 func (b *bootstrapper) getPDB(deployment *appsv1.Deployment) *policyv1.PodDisruptionBudget {
-	maxUnavailable := intstr.FromInt(1)
+	maxUnavailable := intstr.FromInt32(1)
 
 	return &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{

@@ -25,9 +25,9 @@ func ServiceName(role string) string {
 
 var (
 	// PortEtcdClient is the port exposed by etcd for client communication.
-	PortEtcdClient = 2379
+	PortEtcdClient int32 = 2379
 	// PortEtcdPeer is the port exposed by etcd for server-to-server communication.
-	PortEtcdPeer = 2380
+	PortEtcdPeer int32 = 2380
 	// PortBackupRestore is the client port exposed by the backup-restore sidecar container.
-	PortBackupRestore = 8080
+	PortBackupRestore int32 = 8080
 )

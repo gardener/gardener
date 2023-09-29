@@ -35,10 +35,10 @@ var _ = Describe("NetworkPolicy", func() {
 	var (
 		ctx                = context.TODO()
 		fakeClient         client.Client
-		shootNamespace     = "shoot--bar--foo"
-		extensionNamespace = "extension-foo-bar"
-		extensionName      = "provider-test"
-		serverPort         = 1337
+		shootNamespace           = "shoot--bar--foo"
+		extensionNamespace       = "extension-foo-bar"
+		extensionName            = "provider-test"
+		serverPort         int32 = 1337
 	)
 
 	BeforeEach(func() {
@@ -58,7 +58,7 @@ var _ = Describe("NetworkPolicy", func() {
 					{
 						Ports: []networkingv1.NetworkPolicyPort{
 							{
-								Port:     utils.IntStrPtrFromInt(serverPort),
+								Port:     utils.IntStrPtrFromInt32(serverPort),
 								Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
 							},
 						},
@@ -101,7 +101,7 @@ var _ = Describe("NetworkPolicy", func() {
 					{
 						Ports: []networkingv1.NetworkPolicyPort{
 							{
-								Port:     utils.IntStrPtrFromInt(serverPort),
+								Port:     utils.IntStrPtrFromInt32(serverPort),
 								Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
 							},
 						},

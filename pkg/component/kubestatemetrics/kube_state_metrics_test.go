@@ -194,7 +194,7 @@ var _ = Describe("KubeStateMetrics", func() {
 					Ports: []corev1.ServicePort{{
 						Name:       "metrics",
 						Port:       80,
-						TargetPort: intstr.FromInt(8080),
+						TargetPort: intstr.FromInt32(8080),
 						Protocol:   corev1.ProtocolTCP,
 					}},
 				},
@@ -211,7 +211,7 @@ var _ = Describe("KubeStateMetrics", func() {
 		}
 		deploymentFor = func(clusterType component.ClusterType) *appsv1.Deployment {
 			var (
-				maxUnavailable = intstr.FromInt(1)
+				maxUnavailable = intstr.FromInt32(1)
 				selectorLabels = map[string]string{
 					"component": "kube-state-metrics",
 					"type":      string(clusterType),
@@ -351,7 +351,7 @@ var _ = Describe("KubeStateMetrics", func() {
 									ProbeHandler: corev1.ProbeHandler{
 										HTTPGet: &corev1.HTTPGetAction{
 											Path: "/healthz",
-											Port: intstr.FromInt(8080),
+											Port: intstr.FromInt32(8080),
 										},
 									},
 									InitialDelaySeconds: 5,
@@ -361,7 +361,7 @@ var _ = Describe("KubeStateMetrics", func() {
 									ProbeHandler: corev1.ProbeHandler{
 										HTTPGet: &corev1.HTTPGetAction{
 											Path: "/healthz",
-											Port: intstr.FromInt(8080),
+											Port: intstr.FromInt32(8080),
 										},
 									},
 									InitialDelaySeconds: 5,
