@@ -45,7 +45,7 @@ type mutator struct {
 }
 
 // Mutate validates and if needed mutates the given object.
-func (m *mutator) Mutate(ctx context.Context, new, old client.Object) error {
+func (m *mutator) Mutate(_ context.Context, new, old client.Object) error {
 	var (
 		newNetwork, oldNetwork *extensionsv1alpha1.Network
 		ok                     bool

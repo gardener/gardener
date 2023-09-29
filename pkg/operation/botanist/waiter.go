@@ -96,15 +96,14 @@ func (b *Botanist) WaitUntilNoPodRunning(ctx context.Context) error {
 func (b *Botanist) WaitUntilEndpointsDoNotContainPodIPs(ctx context.Context) error {
 	b.Logger.Info("Waiting until there are no Endpoints containing Pod IPs in the shoot cluster")
 
-	var podsNetwork *net.IPNet
-	if val := b.Shoot.GetInfo().Spec.Networking.Pods; val != nil {
-		var err error
-		_, podsNetwork, err = net.ParseCIDR(*val)
-		if err != nil {
-			return fmt.Errorf("unable to check if there are still Endpoints containing Pod IPs in the shoot cluster. Shoots's Pods network could not be parsed: %+v", err)
-		}
-	} else {
+	val := b.Shoot.GetInfo().Spec.Networking.Pods
+	if val == nil {
 		return fmt.Errorf("unable to check if there are still Endpoints containing Pod IPs in the shoot cluster. Shoot's Pods network is empty")
+	}
+
+	_, podsNetwork, err := net.ParseCIDR(*val)
+	if err != nil {
+		return fmt.Errorf("unable to check if there are still Endpoints containing Pod IPs in the shoot cluster. Shoots's Pods network could not be parsed: %+v", err)
 	}
 
 	return retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {

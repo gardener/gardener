@@ -45,7 +45,7 @@ func (f *CommonFramework) RenderAndDeployChart(ctx context.Context, k8sClient ku
 	}
 
 	ginkgo.By("Download chart artifacts")
-	err = f.DownloadChartArtifacts(ctx, helmRepo, f.ChartDir, c.Name, c.Version)
+	err = f.DownloadChartArtifacts(helmRepo, f.ChartDir, c.Name, c.Version)
 	if err != nil {
 		return fmt.Errorf("unable to download chart artifacts for chart %s with version %s: %w", c.Name, c.Version, err)
 	}
@@ -60,7 +60,7 @@ func (f *CommonFramework) DeployChart(ctx context.Context, k8sClient kubernetes.
 }
 
 // DownloadChartArtifacts downloads a helm chart from helm stable repo url available in resources/repositories
-func (f *CommonFramework) DownloadChartArtifacts(ctx context.Context, helm Helm, chartRepoDestination, chartNameToDownload, chartVersionToDownload string) error {
+func (f *CommonFramework) DownloadChartArtifacts(helm Helm, chartRepoDestination, chartNameToDownload, chartVersionToDownload string) error {
 	exists, err := Exists(chartRepoDestination)
 	if err != nil {
 		return err
@@ -90,7 +90,7 @@ func (f *CommonFramework) DownloadChartArtifacts(ctx context.Context, helm Helm,
 	}
 
 	if !chartDownloaded {
-		chartPath, err = downloadChart(ctx, chartNameToDownload, chartVersionToDownload, chartRepoDestination, stableRepo.URL, HelmAccess{
+		chartPath, err = downloadChart(chartNameToDownload, chartVersionToDownload, chartRepoDestination, stableRepo.URL, HelmAccess{
 			HelmPath: helm,
 		})
 		if err != nil {
@@ -120,7 +120,7 @@ func (h Helm) Path(elem ...string) string {
 }
 
 // Path returns the home for the helm repo with.
-func (h Helm) String(elem ...string) string {
+func (h Helm) String() string {
 	return string(h)
 }
 
@@ -170,7 +170,7 @@ func EnsureRepositoryDirectories(helm Helm) error {
 }
 
 // downloadChart downloads a native chart with <name> to <downloadDestination> from <stableRepoURL>
-func downloadChart(ctx context.Context, name, version, downloadDestination, stableRepoURL string, helmSettings HelmAccess) (string, error) {
+func downloadChart(name, version, downloadDestination, stableRepoURL string, helmSettings HelmAccess) (string, error) {
 	providers := getter.All(environment.EnvSettings{})
 	dl := downloader.ChartDownloader{
 		Getters:  providers,
@@ -178,7 +178,7 @@ func downloadChart(ctx context.Context, name, version, downloadDestination, stab
 		Out:      os.Stdout,
 	}
 
-	err := ensureCacheIndex(ctx, helmSettings, stableRepoURL, providers)
+	err := ensureCacheIndex(helmSettings, stableRepoURL, providers)
 	if err != nil {
 		return "", err
 	}
@@ -206,7 +206,7 @@ func downloadChart(ctx context.Context, name, version, downloadDestination, stab
 	return lname, nil
 }
 
-func ensureCacheIndex(ctx context.Context, helmSettings HelmAccess, stableRepoURL string, providers getter.Providers) error {
+func ensureCacheIndex(helmSettings HelmAccess, stableRepoURL string, providers getter.Providers) error {
 	// This will download the cache index file only if it does not exist
 	stableRepoCacheIndexPath := helmSettings.HelmPath.CacheIndex(stableRepository)
 	if _, err := os.Stat(stableRepoCacheIndexPath); err != nil {
@@ -216,7 +216,7 @@ func ensureCacheIndex(ctx context.Context, helmSettings HelmAccess, stableRepoUR
 			if err != nil {
 				return err
 			}
-			_, err = downloadCacheIndex(ctx, stableRepoCacheIndexPath, stableRepoURL, providers)
+			_, err = downloadCacheIndex(stableRepoCacheIndexPath, stableRepoURL, providers)
 			if err != nil {
 				return err
 			}
@@ -228,7 +228,7 @@ func ensureCacheIndex(ctx context.Context, helmSettings HelmAccess, stableRepoUR
 }
 
 // downloadCacheIndex downloads the cache index for repository
-func downloadCacheIndex(ctx context.Context, cacheFile, stableRepositoryURL string, providers getter.Providers) (*repo.Entry, error) {
+func downloadCacheIndex(cacheFile, stableRepositoryURL string, providers getter.Providers) (*repo.Entry, error) {
 	c := repo.Entry{
 		Name:  stableRepository,
 		URL:   stableRepositoryURL,

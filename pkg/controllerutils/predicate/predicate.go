@@ -160,12 +160,13 @@ func LastOperationChanged(getLastOperation func(client.Object) *gardencorev1beta
 			// so if the oldObject doesn't have the same annotation, don't enqueue it.
 			if v1beta1helper.HasOperationAnnotation(e.ObjectNew.GetAnnotations()) {
 				operation := e.ObjectNew.GetAnnotations()[v1beta1constants.GardenerOperation]
-				if operation == v1beta1constants.GardenerOperationMigrate || operation == v1beta1constants.GardenerOperationRestore {
-					// if the oldObject doesn't have the same annotation skip
-					if e.ObjectOld.GetAnnotations()[v1beta1constants.GardenerOperation] != operation {
-						return false
-					}
-				} else {
+
+				if operation != v1beta1constants.GardenerOperationMigrate && operation != v1beta1constants.GardenerOperationRestore {
+					return false
+				}
+
+				// if the oldObject doesn't have the same annotation skip
+				if e.ObjectOld.GetAnnotations()[v1beta1constants.GardenerOperation] != operation {
 					return false
 				}
 			}

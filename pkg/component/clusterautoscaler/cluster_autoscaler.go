@@ -96,9 +96,8 @@ type clusterAutoscaler struct {
 	replicas       int32
 	config         *gardencorev1beta1.ClusterAutoscaler
 
-	runtimeVersionGreaterEqual121 bool
-	namespaceUID                  types.UID
-	machineDeployments            []extensionsv1alpha1.MachineDeployment
+	namespaceUID       types.UID
+	machineDeployments []extensionsv1alpha1.MachineDeployment
 }
 
 func (c *clusterAutoscaler) Deploy(ctx context.Context) error {

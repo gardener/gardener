@@ -79,7 +79,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 }
 
 // MapExtensionsBastionToOperationsBastion  is a mapper.MapFunc for mapping extensions Bastion in the seed cluster to operations Bastion in the project namespace.
-func (r *Reconciler) MapExtensionsBastionToOperationsBastion(ctx context.Context, log logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
+func (r *Reconciler) MapExtensionsBastionToOperationsBastion(ctx context.Context, log logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
 	shoot, err := extensions.GetShoot(ctx, r.SeedClient, obj.GetNamespace())
 	if err != nil {
 		log.Error(err, "Failed to get shoot from cluster", "shootTechnicalID", obj.GetNamespace())

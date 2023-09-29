@@ -119,9 +119,9 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		return err
 	}
 	serviceAccount := b.getServiceAccount()
-	clusterRole := b.getClusterRole(serviceAccount)
+	clusterRole := b.getClusterRole()
 	clusterRoleBinding := b.getClusterRoleBinding(serviceAccount, clusterRole)
-	role := b.getRole(serviceAccount)
+	role := b.getRole()
 	roleBinding := b.getRoleBinding(serviceAccount, role)
 	deployment := b.getDeployment(serviceAccount.Name, configMap.Name)
 	vpa := b.getVPA(deployment.Name)
@@ -240,7 +240,7 @@ func (b *bootstrapper) getServiceAccount() *corev1.ServiceAccount {
 	}
 }
 
-func (b *bootstrapper) getClusterRole(serviceAccount *corev1.ServiceAccount) *rbacv1.ClusterRole {
+func (b *bootstrapper) getClusterRole() *rbacv1.ClusterRole {
 	clusterRole := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: fmt.Sprintf("gardener.cloud:%s", b.name()),
@@ -269,7 +269,7 @@ func (b *bootstrapper) getClusterRoleBinding(serviceAccount *corev1.ServiceAccou
 	return clusterRoleBinding
 }
 
-func (b *bootstrapper) getRole(serviceAccount *corev1.ServiceAccount) *rbacv1.Role {
+func (b *bootstrapper) getRole() *rbacv1.Role {
 	role := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("gardener.cloud:%s", b.name()),

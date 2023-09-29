@@ -44,13 +44,6 @@ func ValidateQuotaUpdate(newQuota, oldQuota *core.Quota) field.ErrorList {
 	return allErrs
 }
 
-// ValidateQuotaStatusUpdate validates the status field of a Quota object.
-func ValidateQuotaStatusUpdate(newQuota, oldQuota *core.Quota) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	return allErrs
-}
-
 // ValidateQuotaSpec validates the specification of a Quota object.
 func ValidateQuotaSpec(quotaSpec *core.QuotaSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}

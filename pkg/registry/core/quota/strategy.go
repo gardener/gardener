@@ -38,27 +38,27 @@ func (quotaStrategy) NamespaceScoped() bool {
 	return true
 }
 
-func (quotaStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
+func (quotaStrategy) PrepareForCreate(_ context.Context, _ runtime.Object) {
 }
 
-func (quotaStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
+func (quotaStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {
 	quota := obj.(*core.Quota)
 	return validation.ValidateQuota(quota)
 }
 
-func (quotaStrategy) Canonicalize(obj runtime.Object) {
+func (quotaStrategy) Canonicalize(_ runtime.Object) {
 }
 
 func (quotaStrategy) AllowCreateOnUpdate() bool {
 	return false
 }
 
-func (quotaStrategy) PrepareForUpdate(ctx context.Context, newObj, oldObj runtime.Object) {
+func (quotaStrategy) PrepareForUpdate(_ context.Context, newObj, oldObj runtime.Object) {
 	_ = oldObj.(*core.Quota)
 	_ = newObj.(*core.Quota)
 }
 
-func (quotaStrategy) ValidateUpdate(ctx context.Context, newObj, oldObj runtime.Object) field.ErrorList {
+func (quotaStrategy) ValidateUpdate(_ context.Context, newObj, oldObj runtime.Object) field.ErrorList {
 	oldQuota, newQuota := oldObj.(*core.Quota), newObj.(*core.Quota)
 	return validation.ValidateQuotaUpdate(newQuota, oldQuota)
 }
@@ -68,11 +68,11 @@ func (quotaStrategy) AllowUnconditionalUpdate() bool {
 }
 
 // WarningsOnCreate returns warnings to the client performing a create.
-func (quotaStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
+func (quotaStrategy) WarningsOnCreate(_ context.Context, _ runtime.Object) []string {
 	return nil
 }
 
 // WarningsOnUpdate returns warnings to the client performing the update.
-func (quotaStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+func (quotaStrategy) WarningsOnUpdate(_ context.Context, _, _ runtime.Object) []string {
 	return nil
 }

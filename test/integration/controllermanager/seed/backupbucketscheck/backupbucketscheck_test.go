@@ -122,8 +122,8 @@ var _ = Describe("Seed BackupBucketsCheck controller tests", func() {
 	})
 
 	JustBeforeEach(func() {
-		createBackupBucket(bb1, seed)
-		createBackupBucket(bb2, seed)
+		createBackupBucket(bb1)
+		createBackupBucket(bb2)
 
 		By("Wait until BackupBucketsReady condition is set to True")
 		Eventually(func(g Gomega) {
@@ -193,7 +193,7 @@ var _ = Describe("Seed BackupBucketsCheck controller tests", func() {
 	})
 })
 
-func createBackupBucket(backupBucket *gardencorev1beta1.BackupBucket, seed *gardencorev1beta1.Seed) {
+func createBackupBucket(backupBucket *gardencorev1beta1.BackupBucket) {
 	By("Create BackupBucket")
 	Expect(testClient.Create(ctx, backupBucket)).To(Succeed(), backupBucket.Name+" should be created")
 	log.Info("Created BackupBucket for test", "backupBucket", client.ObjectKeyFromObject(backupBucket))

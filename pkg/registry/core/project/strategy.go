@@ -61,12 +61,12 @@ func (projectStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Obje
 	}
 }
 
-func (projectStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
+func (projectStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {
 	project := obj.(*core.Project)
 	return validation.ValidateProject(project)
 }
 
-func (projectStrategy) Canonicalize(obj runtime.Object) {
+func (projectStrategy) Canonicalize(_ runtime.Object) {
 }
 
 func (projectStrategy) AllowCreateOnUpdate() bool {
@@ -77,18 +77,18 @@ func (projectStrategy) AllowUnconditionalUpdate() bool {
 	return true
 }
 
-func (projectStrategy) ValidateUpdate(ctx context.Context, newObj, oldObj runtime.Object) field.ErrorList {
+func (projectStrategy) ValidateUpdate(_ context.Context, newObj, oldObj runtime.Object) field.ErrorList {
 	oldProject, newProject := oldObj.(*core.Project), newObj.(*core.Project)
 	return validation.ValidateProjectUpdate(newProject, oldProject)
 }
 
 // WarningsOnCreate returns warnings to the client performing a create.
-func (projectStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
+func (projectStrategy) WarningsOnCreate(_ context.Context, _ runtime.Object) []string {
 	return nil
 }
 
 // WarningsOnUpdate returns warnings to the client performing the update.
-func (projectStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+func (projectStrategy) WarningsOnUpdate(_ context.Context, _, _ runtime.Object) []string {
 	return nil
 }
 
@@ -99,13 +99,13 @@ type projectStatusStrategy struct {
 // StatusStrategy defines the storage strategy for the status subresource of Projects.
 var StatusStrategy = projectStatusStrategy{Strategy}
 
-func (projectStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+func (projectStatusStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	newProject := obj.(*core.Project)
 	oldProject := old.(*core.Project)
 	newProject.Spec = oldProject.Spec
 }
 
-func (projectStatusStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
+func (projectStatusStrategy) ValidateUpdate(_ context.Context, obj, old runtime.Object) field.ErrorList {
 	return validation.ValidateProjectStatusUpdate(obj.(*core.Project), old.(*core.Project))
 }
 

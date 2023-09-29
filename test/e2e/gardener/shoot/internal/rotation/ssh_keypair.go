@@ -118,10 +118,10 @@ func (v *SSHKeypairVerifier) AfterPrepared(ctx context.Context) {
 // hence, there is nothing to check in the second part of the credentials rotation
 
 // ExpectCompletingStatus is called while waiting for the Completing status.
-func (v *SSHKeypairVerifier) ExpectCompletingStatus(g Gomega) {}
+func (v *SSHKeypairVerifier) ExpectCompletingStatus(_ Gomega) {}
 
 // AfterCompleted is called when the Shoot is in Completed status.
-func (v *SSHKeypairVerifier) AfterCompleted(ctx context.Context) {}
+func (v *SSHKeypairVerifier) AfterCompleted(_ context.Context) {}
 
 // Since we can't (and do not want ;-)) trying to really SSH into the machine pods from our test environment, we can
 // only check whether the `.ssh/authorized_keys` file on the worker nodes has the expected content.

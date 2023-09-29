@@ -15,7 +15,6 @@
 package apiserver_test
 
 import (
-	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -35,7 +34,6 @@ var _ = Describe("Deployment", func() {
 
 			var (
 				namePrefix       = "foo"
-				k8sVersion       = semver.MustParse("1.24.5")
 				secretCAETCD     = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd"}}
 				secretETCDClient = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client"}}
 				secretServer     = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "server"}}
@@ -59,7 +57,7 @@ var _ = Describe("Deployment", func() {
 				}
 			)
 
-			InjectDefaultSettings(deployment, namePrefix, values, k8sVersion, secretCAETCD, secretETCDClient, secretServer)
+			InjectDefaultSettings(deployment, namePrefix, values, secretCAETCD, secretETCDClient, secretServer)
 
 			Expect(deployment).To(Equal(&appsv1.Deployment{
 				Spec: appsv1.DeploymentSpec{

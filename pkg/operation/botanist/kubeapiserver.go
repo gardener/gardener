@@ -232,7 +232,7 @@ func (b *Botanist) computeKubeAPIServerSNIConfig() kubeapiserver.SNIConfig {
 
 // DeployKubeAPIServer deploys the Kubernetes API server.
 func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
-	externalServer := b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, false)
+	externalServer := b.Shoot.ComputeOutOfClusterAPIServerAddress(false)
 
 	if err := shared.DeployKubeAPIServer(
 		ctx,
@@ -242,7 +242,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer,
 		b.computeKubeAPIServerServerCertificateConfig(),
 		b.computeKubeAPIServerSNIConfig(),
-		b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
+		b.Shoot.ComputeOutOfClusterAPIServerAddress(true),
 		externalServer,
 		v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials),
 		v1beta1helper.GetShootServiceAccountKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials),

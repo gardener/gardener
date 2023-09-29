@@ -77,7 +77,7 @@ var _ = Describe("Strategy", func() {
 
 var _ = Describe("ToSelectableFields", func() {
 	It("should return correct fields", func() {
-		result := ToSelectableFields(newManagedSeedSet("foo"))
+		result := ToSelectableFields(newManagedSeedSet())
 
 		Expect(result).To(HaveLen(2))
 	})
@@ -90,7 +90,7 @@ var _ = Describe("GetAttrs", func() {
 	})
 
 	It("should return correct result", func() {
-		ls, _, err := GetAttrs(newManagedSeedSet("foo"))
+		ls, _, err := GetAttrs(newManagedSeedSet())
 
 		Expect(ls).To(HaveLen(1))
 		Expect(ls.Get("foo")).To(Equal("bar"))
@@ -108,7 +108,7 @@ var _ = Describe("MatchManagedSeedSet", func() {
 	})
 })
 
-func newManagedSeedSet(shootName string) *seedmanagement.ManagedSeedSet {
+func newManagedSeedSet() *seedmanagement.ManagedSeedSet {
 	return &seedmanagement.ManagedSeedSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",

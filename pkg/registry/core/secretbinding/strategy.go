@@ -38,10 +38,10 @@ func (secretBindingStrategy) NamespaceScoped() bool {
 	return true
 }
 
-func (secretBindingStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
+func (secretBindingStrategy) PrepareForCreate(_ context.Context, _ runtime.Object) {
 }
 
-func (secretBindingStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
+func (secretBindingStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {
 	binding := obj.(*core.SecretBinding)
 	allErrs := field.ErrorList{}
 	allErrs = append(allErrs, validation.ValidateSecretBinding(binding)...)
@@ -49,14 +49,14 @@ func (secretBindingStrategy) Validate(ctx context.Context, obj runtime.Object) f
 	return allErrs
 }
 
-func (secretBindingStrategy) Canonicalize(obj runtime.Object) {
+func (secretBindingStrategy) Canonicalize(_ runtime.Object) {
 }
 
 func (secretBindingStrategy) AllowCreateOnUpdate() bool {
 	return false
 }
 
-func (secretBindingStrategy) PrepareForUpdate(ctx context.Context, newObj, oldObj runtime.Object) {
+func (secretBindingStrategy) PrepareForUpdate(_ context.Context, newObj, oldObj runtime.Object) {
 	_ = oldObj.(*core.SecretBinding)
 	_ = newObj.(*core.SecretBinding)
 }
@@ -65,17 +65,17 @@ func (secretBindingStrategy) AllowUnconditionalUpdate() bool {
 	return true
 }
 
-func (secretBindingStrategy) ValidateUpdate(ctx context.Context, newObj, oldObj runtime.Object) field.ErrorList {
+func (secretBindingStrategy) ValidateUpdate(_ context.Context, newObj, oldObj runtime.Object) field.ErrorList {
 	oldBinding, newBinding := oldObj.(*core.SecretBinding), newObj.(*core.SecretBinding)
 	return validation.ValidateSecretBindingUpdate(newBinding, oldBinding)
 }
 
 // WarningsOnCreate returns warnings to the client performing a create.
-func (secretBindingStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
+func (secretBindingStrategy) WarningsOnCreate(_ context.Context, _ runtime.Object) []string {
 	return nil
 }
 
 // WarningsOnUpdate returns warnings to the client performing the update.
-func (secretBindingStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+func (secretBindingStrategy) WarningsOnUpdate(_ context.Context, _, _ runtime.Object) []string {
 	return nil
 }

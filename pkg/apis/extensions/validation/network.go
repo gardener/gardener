@@ -104,20 +104,6 @@ func ValidateNetworkSpecUpdate(new, old *extensionsv1alpha1.NetworkSpec, deletio
 	return allErrs
 }
 
-// ValidateNetworkStatus validates the status of a Network object.
-func ValidateNetworkStatus(status *extensionsv1alpha1.NetworkStatus, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	return allErrs
-}
-
-// ValidateNetworkStatusUpdate validates the status field of a Network object before an update.
-func ValidateNetworkStatusUpdate(newStatus, oldStatus *extensionsv1alpha1.NetworkStatus, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	return allErrs
-}
-
 var availableIPFamilies = sets.New(
 	string(extensionsv1alpha1.IPFamilyIPv4),
 	string(extensionsv1alpha1.IPFamilyIPv6),

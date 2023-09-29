@@ -54,7 +54,7 @@ type ensurer struct {
 }
 
 // EnsureMachineControllerManagerDeployment ensures that the machine-controller-manager deployment conforms to the provider requirements.
-func (e *ensurer) EnsureMachineControllerManagerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newObj, _ *appsv1.Deployment) error {
+func (e *ensurer) EnsureMachineControllerManagerDeployment(_ context.Context, _ extensionscontextwebhook.GardenContext, newObj, _ *appsv1.Deployment) error {
 	if !e.gardenletManagesMCM {
 		return nil
 	}
@@ -105,7 +105,7 @@ func (e *ensurer) EnsureKubeletConfiguration(_ context.Context, _ extensionscont
 	return nil
 }
 
-func (e *ensurer) EnsureAdditionalFiles(ctx context.Context, gc extensionscontextwebhook.GardenContext, new, _ *[]extensionsv1alpha1.File) error {
+func (e *ensurer) EnsureAdditionalFiles(_ context.Context, _ extensionscontextwebhook.GardenContext, new, _ *[]extensionsv1alpha1.File) error {
 	mirrors := []RegistryMirror{
 		{UpstreamHost: "localhost:5001", UpstreamServer: "http://localhost:5001", MirrorHost: "http://garden.local.gardener.cloud:5001"},
 		{UpstreamHost: "gcr.io", UpstreamServer: "https://gcr.io", MirrorHost: "http://garden.local.gardener.cloud:5003"},

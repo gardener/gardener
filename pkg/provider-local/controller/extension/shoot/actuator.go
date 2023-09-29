@@ -42,8 +42,10 @@ const (
 	// ApplicationName is the name of the application.
 	ApplicationName string = "local-ext-shoot"
 	// ManagedResourceNamesShoot is the name used to describe the managed shoot resources.
-	ManagedResourceNamesShoot      string = ApplicationName
-	finalizer                      string = "extensions.gardener.cloud/local-ext-shoot"
+	ManagedResourceNamesShoot string = ApplicationName
+	finalizer                 string = "extensions.gardener.cloud/local-ext-shoot"
+	// AnnotationTestForceDeleteShoot is an annotation used in the force-deletion e2e test which makes this actuator
+	// deploy two empty NetworkPolicies with a finalizer.
 	AnnotationTestForceDeleteShoot string = "test-force-delete"
 )
 
@@ -59,7 +61,7 @@ func NewActuator(mgr manager.Manager) extension.Actuator {
 }
 
 // Reconcile the extension resource.
-func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extensionsv1alpha1.Extension) error {
+func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, ex *extensionsv1alpha1.Extension) error {
 	namespace := ex.Namespace
 
 	shootResources, err := getShootResources()
@@ -118,7 +120,7 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 }
 
 // Delete the extension resource.
-func (a *actuator) Delete(ctx context.Context, log logr.Logger, ex *extensionsv1alpha1.Extension) error {
+func (a *actuator) Delete(ctx context.Context, _ logr.Logger, ex *extensionsv1alpha1.Extension) error {
 	namespace := ex.GetNamespace()
 	twoMinutes := 2 * time.Minute
 
@@ -136,14 +138,7 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, ex *extensionsv1
 func (a *actuator) ForceDelete(ctx context.Context, log logr.Logger, ex *extensionsv1alpha1.Extension) error {
 	log.Info("Deleting all test NetworkPolicies in namespace", "namespace", ex.Namespace)
 	return flow.Parallel(
-		utilclient.ForceDeleteObjects(
-			ctx,
-			a.client,
-			"NetworkPolicy",
-			ex.Namespace,
-			&networkingv1.NetworkPolicyList{},
-			client.MatchingLabels(getLabels()),
-		),
+		utilclient.ForceDeleteObjects(a.client, ex.Namespace, &networkingv1.NetworkPolicyList{}, client.MatchingLabels(getLabels())),
 	)(ctx)
 }
 

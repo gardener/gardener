@@ -160,7 +160,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), prepareShootLoggingService(shootLoggingService, "logging-shoot", shootValiLabels)))
 		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), shootValiPriorityClass))
 		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), prepareShootValiConfigMap(shootValiConfMap)))
-		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), prepareShootValiStatefulSet(shootValiSts, gardenValiSts, shootValiName, shootValiConfMap.Name, valiPersistentVolumeName, emptyDirSize, shootValiLabels, gardenValiLabels)))
+		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), prepareShootValiStatefulSet(shootValiSts, gardenValiSts, shootValiName, valiPersistentVolumeName, emptyDirSize, shootValiLabels, gardenValiLabels)))
 
 		ginkgo.By("Wait until Vali StatefulSet for Garden namespace is ready")
 		framework.ExpectNoError(f.WaitUntilStatefulSetIsRunning(ctx, gardenValiSts.Name, v1beta1constants.GardenNamespace, f.ShootClient))
@@ -321,7 +321,7 @@ func prepareShootValiConfigMap(confMap *corev1.ConfigMap) *corev1.ConfigMap {
 	return confMap
 }
 
-func prepareShootValiStatefulSet(shootValiSts, gardenValiSts *appsv1.StatefulSet, name, configMapNAme, valiPersistentVolumeName, emptyDirSize string, newLabels, antiAffinityLabels map[string]string) *appsv1.StatefulSet {
+func prepareShootValiStatefulSet(shootValiSts, gardenValiSts *appsv1.StatefulSet, name, valiPersistentVolumeName, emptyDirSize string, newLabels, antiAffinityLabels map[string]string) *appsv1.StatefulSet {
 	// Extract the containers related only to the seed logging stack
 	var containers []corev1.Container
 	for _, gardenCon := range gardenValiSts.Spec.Template.Spec.Containers {

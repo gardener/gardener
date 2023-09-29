@@ -314,7 +314,7 @@ type fakeGetter struct {
 	err error
 }
 
-func (f *fakeGetter) Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
+func (f *fakeGetter) Get(_ context.Context, _ string, _ *metav1.GetOptions) (runtime.Object, error) {
 	return f.obj, f.err
 }
 
@@ -328,7 +328,7 @@ func (f fakeSecretLister) Secrets(string) kubecorev1listers.SecretNamespaceListe
 	return f
 }
 
-func (f fakeSecretLister) Get(name string) (*corev1.Secret, error) {
+func (f fakeSecretLister) Get(_ string) (*corev1.Secret, error) {
 	return f.obj, f.err
 }
 
@@ -342,6 +342,6 @@ func (f fakeInternalSecretLister) InternalSecrets(string) gardencorelisters.Inte
 	return f
 }
 
-func (f fakeInternalSecretLister) Get(name string) (*gardencore.InternalSecret, error) {
+func (f fakeInternalSecretLister) Get(_ string) (*gardencore.InternalSecret, error) {
 	return f.obj, f.err
 }

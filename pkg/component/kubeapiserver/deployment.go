@@ -367,7 +367,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 			},
 		}
 
-		apiserver.InjectDefaultSettings(deployment, k.values.NamePrefix, k.values.Values, k.values.Version, secretCAETCD, secretETCDClient, secretServer)
+		apiserver.InjectDefaultSettings(deployment, k.values.NamePrefix, k.values.Values, secretCAETCD, secretETCDClient, secretServer)
 		apiserver.InjectAuditSettings(deployment, configMapAuditPolicy, secretAuditWebhookKubeconfig, k.values.Audit)
 		apiserver.InjectAdmissionSettings(deployment, configMapAdmissionConfigs, secretAdmissionKubeconfigs, k.values.Values)
 		apiserver.InjectEncryptionSettings(deployment, secretETCDEncryptionConfiguration)

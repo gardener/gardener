@@ -272,6 +272,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	return b.chartApplier.ApplyFromEmbeddedFS(ctx, chartBootstrap, chartPathBootstrap, b.namespace, "monitoring", values, applierOptions)
 }
 
-func (b *bootstrapper) Destroy(ctx context.Context) error {
+func (b *bootstrapper) Destroy(_ context.Context) error {
 	return nil
 }

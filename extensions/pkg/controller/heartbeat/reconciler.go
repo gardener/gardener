@@ -50,7 +50,7 @@ func NewReconciler(mgr manager.Manager, extensionName string, namespace string, 
 }
 
 // Reconcile renews the heartbeat lease resource.
-func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+func (r *reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 	lease := &coordinationv1.Lease{
 		ObjectMeta: metav1.ObjectMeta{

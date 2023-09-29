@@ -238,7 +238,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	)
 
 	allErrs = append(allErrs, validateProvider(spec.Provider, spec.Kubernetes, spec.Networking, workerless, fldPath.Child("provider"), inTemplate)...)
-	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Kubernetes, spec.Purpose, workerless, fldPath.Child("addons"))...)
+	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Purpose, workerless, fldPath.Child("addons"))...)
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateExtensions(spec.Extensions, fldPath.Child("extensions"))...)
 	allErrs = append(allErrs, validateResources(spec.Resources, fldPath.Child("resources"))...)
@@ -439,7 +439,7 @@ func validateAdvertisedURL(URL string, fldPath *field.Path) field.ErrorList {
 	return allErrors
 }
 
-func validateAddons(addons *core.Addons, kubernetes core.Kubernetes, purpose *core.ShootPurpose, workerless bool, fldPath *field.Path) field.ErrorList {
+func validateAddons(addons *core.Addons, purpose *core.ShootPurpose, workerless bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if workerless && addons != nil {
@@ -651,13 +651,12 @@ func ValidateKubernetesVersionUpdate(new, old string, fldPath *field.Path) field
 func validateNetworkingUpdate(newNetworking, oldNetworking *core.Networking, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if oldNetworking != nil {
-		if newNetworking == nil {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "networking cannot be set to nil if it's already set"))
-			return allErrs
-		}
-	} else {
+	if oldNetworking == nil {
 		// if the old networking is nil, we cannot validate immutability anyway, so exit early
+		return allErrs
+	}
+	if newNetworking == nil {
+		allErrs = append(allErrs, field.Forbidden(fldPath, "networking cannot be set to nil if it's already set"))
 		return allErrs
 	}
 
@@ -835,7 +834,7 @@ func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking,
 		}
 
 		if clusterAutoscaler := kubernetes.ClusterAutoscaler; clusterAutoscaler != nil {
-			allErrs = append(allErrs, ValidateClusterAutoscaler(*clusterAutoscaler, kubernetes.Version, fldPath.Child("clusterAutoscaler"))...)
+			allErrs = append(allErrs, ValidateClusterAutoscaler(*clusterAutoscaler, fldPath.Child("clusterAutoscaler"))...)
 		}
 
 		if verticalPodAutoscaler := kubernetes.VerticalPodAutoscaler; verticalPodAutoscaler != nil {
@@ -1017,7 +1016,7 @@ func ValidateAPIServerRequests(requests *core.APIServerRequests, fldPath *field.
 }
 
 // ValidateClusterAutoscaler validates the given ClusterAutoscaler fields.
-func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, k8sVersion string, fldPath *field.Path) field.ErrorList {
+func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if threshold := autoScaler.ScaleDownUtilizationThreshold; threshold != nil {
 		if *threshold < 0.0 {

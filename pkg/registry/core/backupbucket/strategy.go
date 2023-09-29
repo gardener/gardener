@@ -46,14 +46,14 @@ func (backupBucketStrategy) NamespaceScoped() bool {
 	return false
 }
 
-func (backupBucketStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
+func (backupBucketStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	backupBucket := obj.(*core.BackupBucket)
 
 	backupBucket.Generation = 1
 	backupBucket.Status = core.BackupBucketStatus{}
 }
 
-func (backupBucketStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+func (backupBucketStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	newBackupBucket := obj.(*core.BackupBucket)
 	oldBackupBucket := old.(*core.BackupBucket)
 	newBackupBucket.Status = oldBackupBucket.Status
@@ -82,19 +82,19 @@ func mustIncreaseGeneration(oldBackupBucket, newBackupBucket *core.BackupBucket)
 	return false
 }
 
-func (backupBucketStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
+func (backupBucketStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {
 	backupBucket := obj.(*core.BackupBucket)
 	return validation.ValidateBackupBucket(backupBucket)
 }
 
-func (backupBucketStrategy) Canonicalize(obj runtime.Object) {
+func (backupBucketStrategy) Canonicalize(_ runtime.Object) {
 }
 
 func (backupBucketStrategy) AllowCreateOnUpdate() bool {
 	return false
 }
 
-func (backupBucketStrategy) ValidateUpdate(ctx context.Context, newObj, oldObj runtime.Object) field.ErrorList {
+func (backupBucketStrategy) ValidateUpdate(_ context.Context, newObj, oldObj runtime.Object) field.ErrorList {
 	oldBackupBucket, newBackupBucket := oldObj.(*core.BackupBucket), newObj.(*core.BackupBucket)
 	return validation.ValidateBackupBucketUpdate(newBackupBucket, oldBackupBucket)
 }
@@ -104,12 +104,12 @@ func (backupBucketStrategy) AllowUnconditionalUpdate() bool {
 }
 
 // WarningsOnCreate returns warnings to the client performing a create.
-func (backupBucketStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
+func (backupBucketStrategy) WarningsOnCreate(_ context.Context, _ runtime.Object) []string {
 	return nil
 }
 
 // WarningsOnUpdate returns warnings to the client performing the update.
-func (backupBucketStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+func (backupBucketStrategy) WarningsOnUpdate(_ context.Context, _, _ runtime.Object) []string {
 	return nil
 }
 
@@ -120,13 +120,13 @@ type backupBucketStatusStrategy struct {
 // StatusStrategy defines the storage strategy for the status subresource of BackupBuckets.
 var StatusStrategy = backupBucketStatusStrategy{Strategy}
 
-func (backupBucketStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+func (backupBucketStatusStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	newBackupBucket := obj.(*core.BackupBucket)
 	oldBackupBucket := old.(*core.BackupBucket)
 	newBackupBucket.Spec = oldBackupBucket.Spec
 }
 
-func (backupBucketStatusStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
+func (backupBucketStatusStrategy) ValidateUpdate(_ context.Context, obj, old runtime.Object) field.ErrorList {
 	return validation.ValidateBackupBucketStatusUpdate(obj.(*core.BackupBucket), old.(*core.BackupBucket))
 }
 

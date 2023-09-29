@@ -70,7 +70,7 @@ func (b *Botanist) DeployKubeProxy(ctx context.Context) error {
 	kubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kubernetesutils.NewKubeconfig(
 		b.Shoot.SeedNamespace,
 		clientcmdv1.Cluster{
-			Server:                   b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
+			Server:                   b.Shoot.ComputeOutOfClusterAPIServerAddress(true),
 			CertificateAuthorityData: caSecret.Data[secrets.DataKeyCertificateBundle],
 		},
 		clientcmdv1.AuthInfo{TokenFile: "/var/run/secrets/kubernetes.io/serviceaccount/token"},

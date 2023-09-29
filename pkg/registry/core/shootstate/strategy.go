@@ -39,13 +39,13 @@ func (shootStateStrategy) NamespaceScoped() bool {
 	return true
 }
 
-func (shootStateStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
+func (shootStateStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	shootState := obj.(*core.ShootState)
 
 	shootState.Generation = 1
 }
 
-func (shootStateStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+func (shootStateStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	newShootState := obj.(*core.ShootState)
 	oldShootState := old.(*core.ShootState)
 
@@ -68,19 +68,19 @@ func mustIncreaseGeneration(oldShootState, newShootState *core.ShootState) bool 
 	return false
 }
 
-func (shootStateStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
+func (shootStateStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {
 	shootState := obj.(*core.ShootState)
 	return validation.ValidateShootState(shootState)
 }
 
-func (shootStateStrategy) Canonicalize(obj runtime.Object) {
+func (shootStateStrategy) Canonicalize(_ runtime.Object) {
 }
 
 func (shootStateStrategy) AllowCreateOnUpdate() bool {
 	return false
 }
 
-func (shootStateStrategy) ValidateUpdate(ctx context.Context, newObj, oldObj runtime.Object) field.ErrorList {
+func (shootStateStrategy) ValidateUpdate(_ context.Context, newObj, oldObj runtime.Object) field.ErrorList {
 	newShootState := newObj.(*core.ShootState)
 	oldShootState := oldObj.(*core.ShootState)
 	return validation.ValidateShootStateUpdate(newShootState, oldShootState)
@@ -91,11 +91,11 @@ func (shootStateStrategy) AllowUnconditionalUpdate() bool {
 }
 
 // WarningsOnCreate returns warnings to the client performing a create.
-func (shootStateStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
+func (shootStateStrategy) WarningsOnCreate(_ context.Context, _ runtime.Object) []string {
 	return nil
 }
 
 // WarningsOnUpdate returns warnings to the client performing the update.
-func (shootStateStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+func (shootStateStrategy) WarningsOnUpdate(_ context.Context, _, _ runtime.Object) []string {
 	return nil
 }

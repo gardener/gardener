@@ -353,7 +353,7 @@ func (r *Reconciler) deleteBackupEntry(
 			if !apierrors.IsNotFound(err) {
 				return reconcile.Result{}, err
 			}
-		} else {
+		} else if err == nil {
 			if lastError := extensionBackupEntry.Status.LastError; lastError != nil {
 				r.Recorder.Event(backupEntry, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, lastError.Description)
 

@@ -43,7 +43,7 @@ func (v *EncryptedDataVerifier) Before(ctx context.Context) {
 }
 
 // ExpectPreparingStatus is called while waiting for the Preparing status.
-func (v *EncryptedDataVerifier) ExpectPreparingStatus(g Gomega) {}
+func (v *EncryptedDataVerifier) ExpectPreparingStatus(_ Gomega) {}
 
 // AfterPrepared is called when the Shoot is in Prepared status.
 func (v *EncryptedDataVerifier) AfterPrepared(ctx context.Context) {
@@ -52,7 +52,7 @@ func (v *EncryptedDataVerifier) AfterPrepared(ctx context.Context) {
 }
 
 // ExpectCompletingStatus is called while waiting for the Completing status.
-func (v *EncryptedDataVerifier) ExpectCompletingStatus(g Gomega) {}
+func (v *EncryptedDataVerifier) ExpectCompletingStatus(_ Gomega) {}
 
 // AfterCompleted is called when the Shoot is in Completed status.
 func (v *EncryptedDataVerifier) AfterCompleted(ctx context.Context) {

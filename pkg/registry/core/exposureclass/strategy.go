@@ -47,29 +47,29 @@ func (ExposureClassStrategy) NamespaceScoped() bool {
 
 // PrepareForCreate mutates the object before creation.
 // It is called before Validate.
-func (ExposureClassStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
+func (ExposureClassStrategy) PrepareForCreate(_ context.Context, _ runtime.Object) {
 }
 
 // PrepareForUpdate allows to modify an object before it get stored.
 // It is called before ValidateUpdate.
-func (ExposureClassStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+func (ExposureClassStrategy) PrepareForUpdate(_ context.Context, _, _ runtime.Object) {
 }
 
 // Validate allow to validate the object.
-func (ExposureClassStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
+func (ExposureClassStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {
 	exposureClass := obj.(*core.ExposureClass)
 	return validation.ValidateExposureClass(exposureClass)
 }
 
 // ValidateUpdate validates the update on the object.
 // The old and the new version of the object are passed in.
-func (ExposureClassStrategy) ValidateUpdate(ctx context.Context, newObj, oldObj runtime.Object) field.ErrorList {
+func (ExposureClassStrategy) ValidateUpdate(_ context.Context, newObj, oldObj runtime.Object) field.ErrorList {
 	oldExposureClass, newExposureClass := oldObj.(*core.ExposureClass), newObj.(*core.ExposureClass)
 	return validation.ValidateExposureClassUpdate(newExposureClass, oldExposureClass)
 }
 
 // Canonicalize can be used to transfrom the object into its cannoical format.
-func (ExposureClassStrategy) Canonicalize(obj runtime.Object) {
+func (ExposureClassStrategy) Canonicalize(_ runtime.Object) {
 }
 
 // AllowCreateOnUpdate indicates if the object can be created via a PUT operation.
@@ -84,11 +84,11 @@ func (ExposureClassStrategy) AllowUnconditionalUpdate() bool {
 }
 
 // WarningsOnCreate returns warnings to the client performing a create.
-func (ExposureClassStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
+func (ExposureClassStrategy) WarningsOnCreate(_ context.Context, _ runtime.Object) []string {
 	return nil
 }
 
 // WarningsOnUpdate returns warnings to the client performing the update.
-func (ExposureClassStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+func (ExposureClassStrategy) WarningsOnUpdate(_ context.Context, _, _ runtime.Object) []string {
 	return nil
 }

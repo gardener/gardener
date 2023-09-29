@@ -365,7 +365,7 @@ func (g *garden) Start(ctx context.Context) error {
 
 	log.Info("Cleaning bootstrap authentication data used to request a certificate if needed")
 	if len(g.kubeconfigBootstrapResult.CSRName) > 0 && len(g.kubeconfigBootstrapResult.SeedName) > 0 {
-		if err := bootstrap.DeleteBootstrapAuth(ctx, gardenCluster.GetClient(), gardenCluster.GetClient(), g.kubeconfigBootstrapResult.CSRName, g.kubeconfigBootstrapResult.SeedName); err != nil {
+		if err := bootstrap.DeleteBootstrapAuth(ctx, gardenCluster.GetClient(), gardenCluster.GetClient(), g.kubeconfigBootstrapResult.CSRName); err != nil {
 			return fmt.Errorf("failed cleaning bootstrap auth data: %w", err)
 		}
 	}

@@ -56,7 +56,7 @@ func (bastionStrategy) NamespaceScoped() bool {
 	return true
 }
 
-func (s bastionStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
+func (s bastionStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	bastion := obj.(*operations.Bastion)
 	bastion.Generation = 1
 
@@ -75,7 +75,7 @@ func (s bastionStrategy) heartbeat(bastion *operations.Bastion) {
 	}
 }
 
-func (s bastionStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+func (s bastionStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	newBastion := obj.(*operations.Bastion)
 	oldBastion := old.(*operations.Bastion)
 	newBastion.Status = oldBastion.Status
@@ -107,19 +107,19 @@ func mustIncreaseGeneration(oldBastion, newBastion *operations.Bastion) bool {
 	return false
 }
 
-func (bastionStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
+func (bastionStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {
 	bastion := obj.(*operations.Bastion)
 	return operationsvalidation.ValidateBastion(bastion)
 }
 
-func (bastionStrategy) Canonicalize(obj runtime.Object) {
+func (bastionStrategy) Canonicalize(_ runtime.Object) {
 }
 
 func (bastionStrategy) AllowCreateOnUpdate() bool {
 	return false
 }
 
-func (bastionStrategy) ValidateUpdate(ctx context.Context, newObj, oldObj runtime.Object) field.ErrorList {
+func (bastionStrategy) ValidateUpdate(_ context.Context, newObj, oldObj runtime.Object) field.ErrorList {
 	oldBastion, newBastion := oldObj.(*operations.Bastion), newObj.(*operations.Bastion)
 	return operationsvalidation.ValidateBastionUpdate(newBastion, oldBastion)
 }
@@ -129,12 +129,12 @@ func (bastionStrategy) AllowUnconditionalUpdate() bool {
 }
 
 // WarningsOnCreate returns warnings to the client performing a create.
-func (bastionStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
+func (bastionStrategy) WarningsOnCreate(_ context.Context, _ runtime.Object) []string {
 	return nil
 }
 
 // WarningsOnUpdate returns warnings to the client performing the update.
-func (bastionStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+func (bastionStrategy) WarningsOnUpdate(_ context.Context, _, _ runtime.Object) []string {
 	return nil
 }
 
@@ -145,7 +145,7 @@ type bastionStatusStrategy struct {
 // StatusStrategy defines the storage strategy for the status subresource of Bastions.
 var StatusStrategy = bastionStatusStrategy{Strategy}
 
-func (s bastionStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+func (s bastionStatusStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	newBastion := obj.(*operations.Bastion)
 	oldBastion := old.(*operations.Bastion)
 	newBastion.Spec = oldBastion.Spec
@@ -155,7 +155,7 @@ func (s bastionStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old ru
 	newBastion.Status.ExpirationTimestamp = &expires
 }
 
-func (bastionStatusStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
+func (bastionStatusStrategy) ValidateUpdate(_ context.Context, obj, old runtime.Object) field.ErrorList {
 	return operationsvalidation.ValidateBastionStatusUpdate(obj.(*operations.Bastion), old.(*operations.Bastion))
 }
 

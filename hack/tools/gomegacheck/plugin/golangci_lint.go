@@ -21,6 +21,6 @@ import (
 )
 
 // New returns the gomegacheck analyzer.
-func New(conf any) ([]*analysis.Analyzer, error) {
+func New(_ any) ([]*analysis.Analyzer, error) {
 	return []*analysis.Analyzer{gomegacheck.Analyzer}, nil
 }

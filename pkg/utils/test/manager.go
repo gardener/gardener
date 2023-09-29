@@ -42,7 +42,7 @@ func (f FakeManager) GetCache() cache.Cache {
 }
 
 // GetEventRecorderFor returns the given eventRecorder.
-func (f FakeManager) GetEventRecorderFor(name string) record.EventRecorder {
+func (f FakeManager) GetEventRecorderFor(_ string) record.EventRecorder {
 	return f.EventRecorder
 }
 

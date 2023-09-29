@@ -47,7 +47,7 @@ type errorClient struct {
 	err error
 }
 
-func (e *errorClient) Delete(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
+func (e *errorClient) Delete(_ context.Context, _ client.Object, _ ...client.DeleteOption) error {
 	return e.err
 }
 

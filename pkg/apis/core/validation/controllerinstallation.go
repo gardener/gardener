@@ -80,15 +80,8 @@ func ValidateControllerInstallationSpecUpdate(new, old *core.ControllerInstallat
 	return allErrs
 }
 
-// ValidateControllerInstallationStatus validates the status of a ControllerInstallation object.
-func ValidateControllerInstallationStatus(spec *core.ControllerInstallationStatus, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	return allErrs
-}
-
 // ValidateControllerInstallationStatusUpdate validates the status field of a ControllerInstallation object.
-func ValidateControllerInstallationStatusUpdate(newStatus, oldStatus core.ControllerInstallationStatus) field.ErrorList {
+func ValidateControllerInstallationStatusUpdate(_, _ core.ControllerInstallationStatus) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	return allErrs

@@ -50,10 +50,10 @@ func (c *crds) Destroy(ctx context.Context) error {
 	return c.DeleteFromEmbeddedFS(ctx, chartCRDs, chartPathCRDs, "", "istio")
 }
 
-func (c *crds) Wait(ctx context.Context) error {
+func (c *crds) Wait(_ context.Context) error {
 	return nil
 }
 
-func (c *crds) WaitCleanup(ctx context.Context) error {
+func (c *crds) WaitCleanup(_ context.Context) error {
 	return nil
 }

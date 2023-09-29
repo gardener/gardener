@@ -52,14 +52,14 @@ func (backupEntryStrategy) NamespaceScoped() bool {
 	return true
 }
 
-func (backupEntryStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
+func (backupEntryStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	backupEntry := obj.(*core.BackupEntry)
 
 	backupEntry.Generation = 1
 	backupEntry.Status = core.BackupEntryStatus{}
 }
 
-func (backupEntryStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+func (backupEntryStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	newBackupEntry := obj.(*core.BackupEntry)
 	oldBackupEntry := old.(*core.BackupEntry)
 	newBackupEntry.Status = oldBackupEntry.Status
@@ -104,19 +104,19 @@ func mustIncreaseGeneration(oldBackupEntry, newBackupEntry *core.BackupEntry) bo
 	return false
 }
 
-func (backupEntryStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
+func (backupEntryStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {
 	backupEntry := obj.(*core.BackupEntry)
 	return validation.ValidateBackupEntry(backupEntry)
 }
 
-func (backupEntryStrategy) Canonicalize(obj runtime.Object) {
+func (backupEntryStrategy) Canonicalize(_ runtime.Object) {
 }
 
 func (backupEntryStrategy) AllowCreateOnUpdate() bool {
 	return false
 }
 
-func (backupEntryStrategy) ValidateUpdate(ctx context.Context, newObj, oldObj runtime.Object) field.ErrorList {
+func (backupEntryStrategy) ValidateUpdate(_ context.Context, newObj, oldObj runtime.Object) field.ErrorList {
 	oldBackupEntry, newBackupEntry := oldObj.(*core.BackupEntry), newObj.(*core.BackupEntry)
 	return validation.ValidateBackupEntryUpdate(newBackupEntry, oldBackupEntry)
 }
@@ -126,12 +126,12 @@ func (backupEntryStrategy) AllowUnconditionalUpdate() bool {
 }
 
 // WarningsOnCreate returns warnings to the client performing a create.
-func (backupEntryStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
+func (backupEntryStrategy) WarningsOnCreate(_ context.Context, _ runtime.Object) []string {
 	return nil
 }
 
 // WarningsOnUpdate returns warnings to the client performing the update.
-func (backupEntryStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+func (backupEntryStrategy) WarningsOnUpdate(_ context.Context, _, _ runtime.Object) []string {
 	return nil
 }
 
@@ -142,13 +142,13 @@ type backupEntryStatusStrategy struct {
 // StatusStrategy defines the storage strategy for the status subresource of BackupEntries.
 var StatusStrategy = backupEntryStatusStrategy{Strategy}
 
-func (backupEntryStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+func (backupEntryStatusStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	newBackupEntry := obj.(*core.BackupEntry)
 	oldBackupEntry := old.(*core.BackupEntry)
 	newBackupEntry.Spec = oldBackupEntry.Spec
 }
 
-func (backupEntryStatusStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
+func (backupEntryStatusStrategy) ValidateUpdate(_ context.Context, obj, old runtime.Object) field.ErrorList {
 	return validation.ValidateBackupEntryStatusUpdate(obj.(*core.BackupEntry), old.(*core.BackupEntry))
 }
 

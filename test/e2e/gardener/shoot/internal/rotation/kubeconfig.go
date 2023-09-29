@@ -92,7 +92,7 @@ func (v *KubeconfigVerifier) AfterPrepared(ctx context.Context) {
 }
 
 // ExpectCompletingStatus is called while waiting for the Completing status.
-func (v *KubeconfigVerifier) ExpectCompletingStatus(g Gomega) {
+func (v *KubeconfigVerifier) ExpectCompletingStatus(_ Gomega) {
 	// there is no second phase for the kubeconfig rotation
 }
 

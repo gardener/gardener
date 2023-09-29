@@ -2590,7 +2590,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		Context("ClusterAutoscaler validation", func() {
 			DescribeTable("cluster autoscaler values",
 				func(clusterAutoscaler core.ClusterAutoscaler, supportedVersionForIgnoreTaints string, matcher gomegatypes.GomegaMatcher) {
-					Expect(ValidateClusterAutoscaler(clusterAutoscaler, supportedVersionForIgnoreTaints, nil)).To(matcher)
+					Expect(ValidateClusterAutoscaler(clusterAutoscaler, nil)).To(matcher)
 				},
 				Entry("valid", core.ClusterAutoscaler{}, version, BeEmpty()),
 				Entry("valid with threshold", core.ClusterAutoscaler{
@@ -2651,7 +2651,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				)
 
 				It("should allow empty ignore taints list", func() {
-					errList := ValidateClusterAutoscaler(clusterAutoscaler, version, fldPath)
+					errList := ValidateClusterAutoscaler(clusterAutoscaler, fldPath)
 
 					Expect(errList).To(BeEmpty())
 				})
@@ -2662,7 +2662,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"allowed-2",
 					}
 
-					errList := ValidateClusterAutoscaler(clusterAutoscaler, version, fldPath)
+					errList := ValidateClusterAutoscaler(clusterAutoscaler, fldPath)
 
 					Expect(errList).To(BeEmpty())
 				})
@@ -2673,7 +2673,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"allowed-1",
 					}
 
-					errList := ValidateClusterAutoscaler(clusterAutoscaler, version, fldPath)
+					errList := ValidateClusterAutoscaler(clusterAutoscaler, fldPath)
 
 					Expect(errList).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{

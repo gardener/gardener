@@ -255,7 +255,7 @@ var _ = Describe("Bootstrap", func() {
 				Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
 				Return(apierrors.NewNotFound(schema.GroupResource{Resource: "CertificateSigningRequests"}, csrName))
 
-			Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName, "")).NotTo(Succeed())
+			Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName)).NotTo(Succeed())
 		})
 
 		It("should delete nothing because the username in the CSR does not match a known pattern", func() {
@@ -263,7 +263,7 @@ var _ = Describe("Bootstrap", func() {
 				Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
 				Return(nil)
 
-			Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName, "")).To(Succeed())
+			Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName)).To(Succeed())
 		})
 
 		It("should delete the bootstrap token secret", func() {
@@ -285,7 +285,7 @@ var _ = Describe("Bootstrap", func() {
 					Delete(ctx, bootstrapTokenSecret),
 			)
 
-			Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName, "")).To(Succeed())
+			Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName)).To(Succeed())
 		})
 
 		It("should delete the service account and cluster role binding", func() {
@@ -312,7 +312,7 @@ var _ = Describe("Bootstrap", func() {
 					Delete(ctx, clusterRoleBinding),
 			)
 
-			Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName, seedName)).To(Succeed())
+			Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName)).To(Succeed())
 		})
 	})
 })

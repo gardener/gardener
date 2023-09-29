@@ -72,7 +72,7 @@ func (a *genericActuator) Delete(ctx context.Context, log logr.Logger, worker *e
 
 	// Wait until the machine class credentials secret has been acquired.
 	log.Info("Waiting until the machine class credentials secret has been acquired")
-	if err := a.waitUntilCredentialsSecretAcquiredOrReleased(ctx, true, worker, workerDelegate); err != nil {
+	if err := a.waitUntilCredentialsSecretAcquiredOrReleased(ctx, true, worker); err != nil {
 		return fmt.Errorf("failed while waiting for the machine class credentials secret to be acquired: %w", err)
 	}
 
@@ -111,7 +111,7 @@ func (a *genericActuator) Delete(ctx context.Context, log logr.Logger, worker *e
 
 	// Wait until the machine class credentials secret has been released.
 	log.Info("Waiting until the machine class credentials secret has been released")
-	if err := a.waitUntilCredentialsSecretAcquiredOrReleased(ctx, false, worker, workerDelegate); err != nil {
+	if err := a.waitUntilCredentialsSecretAcquiredOrReleased(ctx, false, worker); err != nil {
 		return fmt.Errorf("failed while waiting for the machine class credentials secret to be released: %w", err)
 	}
 
@@ -130,12 +130,7 @@ func (a *genericActuator) Delete(ctx context.Context, log logr.Logger, worker *e
 
 // ForceDelete simply returns nil in case of forceful deletion since cleaning up the machines would never succeed in this case.
 // So we proceed to remove the finalizer without any action.
-func (a *genericActuator) ForceDelete(
-	ctx context.Context,
-	log logr.Logger,
-	worker *extensionsv1alpha1.Worker,
-	cluster *extensionscontroller.Cluster,
-) error {
+func (a *genericActuator) ForceDelete(_ context.Context, _ logr.Logger, _ *extensionsv1alpha1.Worker, _ *extensionscontroller.Cluster) error {
 	return nil
 }
 
@@ -271,7 +266,7 @@ func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, 
 	})
 }
 
-func (a *genericActuator) waitUntilCredentialsSecretAcquiredOrReleased(ctx context.Context, acquired bool, worker *extensionsv1alpha1.Worker, workerDelegate WorkerDelegate) error {
+func (a *genericActuator) waitUntilCredentialsSecretAcquiredOrReleased(ctx context.Context, acquired bool, worker *extensionsv1alpha1.Worker) error {
 	acquiredOrReleased := false
 	return retryutils.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
 		// Check whether the finalizer of the machine class credentials secret has been added or removed.

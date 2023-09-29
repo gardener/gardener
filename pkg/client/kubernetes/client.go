@@ -403,16 +403,16 @@ func (d *FallbackClient) Get(ctx context.Context, key client.ObjectKey, obj clie
 	// If there are specific namespaces for this kind in the cache and the object's namespace is not cached,
 	// use the API reader to get the object.
 	if ok && !namespaces.Has(obj.GetNamespace()) {
-		return d.Reader.Get(ctx, key, obj)
+		return d.Reader.Get(ctx, key, obj, opts...)
 	}
 
 	// Otherwise, try to get the object from the cache.
-	err = d.Client.Get(ctx, key, obj)
+	err = d.Client.Get(ctx, key, obj, opts...)
 
 	// If an error occurs and it's a cache error, log it and use the API reader as a fallback.
 	if err != nil && errors.As(err, &cacheError) {
 		logf.Log.V(1).Info("Falling back to API reader because a cache error occurred", "error", err)
-		return d.Reader.Get(ctx, key, obj)
+		return d.Reader.Get(ctx, key, obj, opts...)
 	}
 	return err
 }

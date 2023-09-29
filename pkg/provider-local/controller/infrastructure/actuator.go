@@ -42,7 +42,7 @@ func NewActuator(mgr manager.Manager) infrastructure.Actuator {
 	}
 }
 
-func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
+func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, _ *extensionscontroller.Cluster) error {
 	networkPolicyAllowToMachinePods := emptyNetworkPolicy("allow-to-machine-pods", infrastructure.Namespace)
 	networkPolicyAllowToMachinePods.Spec = networkingv1.NetworkPolicySpec{
 		Egress: []networkingv1.NetworkPolicyEgressRule{{

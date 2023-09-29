@@ -439,7 +439,7 @@ func (s *Shoot) ComputeInClusterAPIServerAddress(runsInShootNamespace bool) stri
 
 // ComputeOutOfClusterAPIServerAddress returns the external address for the shoot API server depending on whether
 // the caller wants to use the internal cluster domain and whether DNS is disabled on this seed.
-func (s *Shoot) ComputeOutOfClusterAPIServerAddress(apiServerAddress string, useInternalClusterDomain bool) string {
+func (s *Shoot) ComputeOutOfClusterAPIServerAddress(useInternalClusterDomain bool) string {
 	if v1beta1helper.ShootUsesUnmanagedDNS(s.GetInfo()) {
 		return gardenerutils.GetAPIServerDomain(s.InternalClusterDomain)
 	}
@@ -481,13 +481,13 @@ func ToNetworks(s *gardencorev1beta1.Shoot, workerless bool) (*Networks, error) 
 		return nil, fmt.Errorf("shoot's pods cidr is empty")
 	}
 
-	if s.Spec.Networking.Services != nil {
-		_, svc, err = net.ParseCIDR(*s.Spec.Networking.Services)
-		if err != nil {
-			return nil, fmt.Errorf("cannot parse shoot's network cidr %w", err)
-		}
-	} else {
+	if s.Spec.Networking.Services == nil {
 		return nil, fmt.Errorf("shoot's service cidr is empty")
+	}
+
+	_, svc, err = net.ParseCIDR(*s.Spec.Networking.Services)
+	if err != nil {
+		return nil, fmt.Errorf("cannot parse shoot's network cidr %w", err)
 	}
 
 	apiserver, err := utils.ComputeOffsetIP(svc, 1)

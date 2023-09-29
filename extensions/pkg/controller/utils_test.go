@@ -19,7 +19,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	gomegatypes "github.com/onsi/gomega/types"
 	"go.uber.org/mock/gomock"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -285,36 +284,4 @@ var _ = Describe("Utils", func() {
 			Expect(secret).To(Equal(refSecret))
 		})
 	})
-
-	DescribeTable("#UseTokenRequestor",
-		func(gardenerVersion string, matcher gomegatypes.GomegaMatcher) {
-			Expect(UseTokenRequestor(gardenerVersion)).To(matcher)
-		},
-
-		Entry("return true", "v1.36.0-dev", BeTrue()),
-		Entry("return true", "v1.36.0", BeTrue()),
-		Entry("return true", "v1.36.1", BeTrue()),
-		Entry("return true", "v1.37.0", BeTrue()),
-		Entry("return true", "v1.37.1", BeTrue()),
-		Entry("return true", "v1.38.0-dev", BeTrue()),
-		Entry("return false", "v1.35.0", BeTrue()),
-		Entry("return false", "v1.35.9", BeTrue()),
-		Entry("return false", "", BeTrue()),
-	)
-
-	DescribeTable("#UseServiceAccountTokenVolumeProjection",
-		func(gardenerVersion string, matcher gomegatypes.GomegaMatcher) {
-			Expect(UseServiceAccountTokenVolumeProjection(gardenerVersion)).To(matcher)
-		},
-
-		Entry("return true", "v1.37.0-dev", BeTrue()),
-		Entry("return true", "v1.37.0", BeTrue()),
-		Entry("return true", "v1.37.1", BeTrue()),
-		Entry("return true", "v1.38.0", BeTrue()),
-		Entry("return true", "v1.38.1", BeTrue()),
-		Entry("return true", "v1.39.0-dev", BeTrue()),
-		Entry("return false", "v1.36.0", BeTrue()),
-		Entry("return false", "v1.36.9", BeTrue()),
-		Entry("return false", "", BeTrue()),
-	)
 })

@@ -259,5 +259,5 @@ func (b *Botanist) RequiredExtensionsReady(ctx context.Context) error {
 // with dot "." suffix. It'll prevent extra requests to the DNS in case the record is not
 // available.
 func (b *Botanist) outOfClusterAPIServerFQDN() string {
-	return fmt.Sprintf("%s.", b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true))
+	return fmt.Sprintf("%s.", b.Shoot.ComputeOutOfClusterAPIServerAddress(true))
 }

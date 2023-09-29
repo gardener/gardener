@@ -106,10 +106,10 @@ func (v *ObservabilityVerifier) AfterPrepared(ctx context.Context) {
 // hence, there is nothing to check in the second part of the credentials rotation
 
 // ExpectCompletingStatus is called while waiting for the Completing status.
-func (v *ObservabilityVerifier) ExpectCompletingStatus(g Gomega) {}
+func (v *ObservabilityVerifier) ExpectCompletingStatus(_ Gomega) {}
 
 // AfterCompleted is called when the Shoot is in Completed status.
-func (v *ObservabilityVerifier) AfterCompleted(ctx context.Context) {}
+func (v *ObservabilityVerifier) AfterCompleted(_ context.Context) {}
 
 func accessEndpoint(ctx context.Context, url string, username, password []byte) (*http.Response, error) {
 	httpClient := &http.Client{

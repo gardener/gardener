@@ -233,10 +233,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 	}
 
 	podTemplate := v.podTemplate(configMap, dhSecret, secretCAVPN, secretServer, secretTLSAuth)
-	labels := map[string]string{
-		v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-		v1beta1constants.LabelApp:   DeploymentName,
-	}
+	labels := getLabels()
 
 	if v.values.HighAvailabilityEnabled {
 		if err := v.deployStatefulSet(ctx, labels, podTemplate); err != nil {
@@ -283,14 +280,12 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secre
 	hostPathCharDev := corev1.HostPathCharDev
 	template := &corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels: map[string]string{
-				v1beta1constants.GardenRole:                          v1beta1constants.GardenRoleControlPlane,
-				v1beta1constants.LabelApp:                            DeploymentName,
-				v1beta1constants.LabelNetworkPolicyToShootNetworks:   v1beta1constants.LabelNetworkPolicyAllowed,
-				v1beta1constants.LabelNetworkPolicyToDNS:             v1beta1constants.LabelNetworkPolicyAllowed,
-				v1beta1constants.LabelNetworkPolicyToPrivateNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
+			Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+				v1beta1constants.LabelNetworkPolicyToShootNetworks:                                                          v1beta1constants.LabelNetworkPolicyAllowed,
+				v1beta1constants.LabelNetworkPolicyToDNS:                                                                    v1beta1constants.LabelNetworkPolicyAllowed,
+				v1beta1constants.LabelNetworkPolicyToPrivateNetworks:                                                        v1beta1constants.LabelNetworkPolicyAllowed,
 				gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port): v1beta1constants.LabelNetworkPolicyAllowed,
-			},
+			}),
 		},
 		Spec: corev1.PodSpec{
 			AutomountServiceAccountToken: pointer.Bool(false),

@@ -38,27 +38,27 @@ func (clusterOIDCPresetStrategy) NamespaceScoped() bool {
 	return false
 }
 
-func (clusterOIDCPresetStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
+func (clusterOIDCPresetStrategy) PrepareForCreate(_ context.Context, _ runtime.Object) {
 
 }
 
-func (clusterOIDCPresetStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+func (clusterOIDCPresetStrategy) PrepareForUpdate(_ context.Context, _, _ runtime.Object) {
 
 }
 
-func (clusterOIDCPresetStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
+func (clusterOIDCPresetStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {
 	oidcpreset := obj.(*settings.ClusterOpenIDConnectPreset)
 	return validation.ValidateClusterOpenIDConnectPreset(oidcpreset)
 }
 
-func (clusterOIDCPresetStrategy) Canonicalize(obj runtime.Object) {
+func (clusterOIDCPresetStrategy) Canonicalize(_ runtime.Object) {
 }
 
 func (clusterOIDCPresetStrategy) AllowCreateOnUpdate() bool {
 	return false
 }
 
-func (clusterOIDCPresetStrategy) ValidateUpdate(ctx context.Context, newObj, oldObj runtime.Object) field.ErrorList {
+func (clusterOIDCPresetStrategy) ValidateUpdate(_ context.Context, newObj, oldObj runtime.Object) field.ErrorList {
 	newOIDCPreset := newObj.(*settings.ClusterOpenIDConnectPreset)
 	oldOIDCPreset := oldObj.(*settings.ClusterOpenIDConnectPreset)
 	return validation.ValidateClusterOpenIDConnectPresetUpdate(newOIDCPreset, oldOIDCPreset)
@@ -69,11 +69,11 @@ func (clusterOIDCPresetStrategy) AllowUnconditionalUpdate() bool {
 }
 
 // WarningsOnCreate returns warnings to the client performing a create.
-func (clusterOIDCPresetStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
+func (clusterOIDCPresetStrategy) WarningsOnCreate(_ context.Context, _ runtime.Object) []string {
 	return nil
 }
 
 // WarningsOnUpdate returns warnings to the client performing the update.
-func (clusterOIDCPresetStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+func (clusterOIDCPresetStrategy) WarningsOnUpdate(_ context.Context, _, _ runtime.Object) []string {
 	return nil
 }

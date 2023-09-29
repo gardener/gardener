@@ -14,10 +14,9 @@ run:
   - "openapi_generated\\.go$"
 
 linters:
-  disable:
-  - unused
   enable:
   - revive
+  - unused
   - importas
   - logcheck
   - gomegacheck
@@ -34,7 +33,6 @@ issues:
   - unexported-return # exported func .* returns unexported type .*, which can be annoying to use
   - indent-error-flow # if block ends with a return statement, so drop this else and outdent its block
   - "exported: (type|func) name will be used as .* by other packages, and that stutters;"
-  - unused-parameter # parameter '.*' seems to be unused, consider removing or renaming it as _
   # typecheck:
   - "undeclared name: `.*`"
   - "\".*\" imported but not used"
@@ -49,6 +47,11 @@ linters-settings:
   revive:
     rules:
     - name: duplicated-imports
+    - name: unused-parameter
+    - name: unreachable-code
+    - name: context-as-argument
+    - name: early-return
+    - name: exported
   importas:
     alias:
       # External imported packages
