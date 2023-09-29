@@ -136,7 +136,7 @@ func (f *GardenerFramework) CreateShoot(ctx context.Context, shoot *gardencorev1
 	return nil
 }
 
-// DeleteShootAndWaitForDeletion deletes the test shoot and waits until it cannot be found any more
+// DeleteShootAndWaitForDeletion deletes the test shoot and waits until it cannot be found anymore.
 func (f *GardenerFramework) DeleteShootAndWaitForDeletion(ctx context.Context, shoot *gardencorev1beta1.Shoot) (rErr error) {
 	if f.Config.ExistingShootName != "" {
 		f.Logger.Info("Skip deletion of existing shoot", "shoot", client.ObjectKey{Name: f.Config.ExistingShootName, Namespace: f.ProjectNamespace})
@@ -169,6 +169,54 @@ func (f *GardenerFramework) DeleteShootAndWaitForDeletion(ctx context.Context, s
 	}
 
 	log.Info("Shoot was deleted successfully")
+	return nil
+}
+
+// ForceDeleteShootAndWaitForDeletion forcefully deletes the test shoot and waits until it cannot be found anymore.
+func (f *GardenerFramework) ForceDeleteShootAndWaitForDeletion(ctx context.Context, shoot *gardencorev1beta1.Shoot) (rErr error) {
+	log := f.Logger.WithValues("shoot", client.ObjectKeyFromObject(shoot))
+
+	if err := f.AnnotateShoot(ctx, shoot, map[string]string{v1beta1constants.ShootIgnore: "true"}); err != nil {
+		return fmt.Errorf("failed patching Shoot to be ignored")
+	}
+
+	if err := f.DeleteShoot(ctx, shoot); err != nil {
+		return err
+	}
+
+	patch := client.MergeFrom(shoot.DeepCopy())
+	shoot.Status.LastErrors = []gardencorev1beta1.LastError{{
+		Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraDependencies},
+	}}
+	if err := f.GardenClient.Client().Status().Patch(ctx, shoot, patch); err != nil {
+		return err
+	}
+
+	if err := f.AnnotateShoot(ctx, shoot, map[string]string{
+		v1beta1constants.AnnotationConfirmationForceDeletion: "true",
+		v1beta1constants.ShootIgnore:                         "false",
+	}); err != nil {
+		return fmt.Errorf("failed annotating Shoot with force-delete and to not be ignored")
+	}
+
+	if err := f.WaitForShootToBeDeleted(ctx, shoot); err != nil {
+		return fmt.Errorf("failed waiting for Shoot to be deleted")
+	}
+
+	defer func() {
+		if rErr != nil {
+			dumpCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+			defer cancel()
+
+			if shootFramework, err := f.NewShootFramework(dumpCtx, shoot); err != nil {
+				log.Error(err, "Cannot dump shoot state")
+			} else {
+				shootFramework.DumpState(dumpCtx)
+			}
+		}
+	}()
+
+	log.Info("Shoot was force-deleted successfully")
 	return nil
 }
 
