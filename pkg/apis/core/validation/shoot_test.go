@@ -2656,11 +2656,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"Field": Equal("expander"),
 					}))),
 				),
-				Entry("incorrect multiple expander string", 
+				Entry("incorrect multiple expander string",
 					core.ClusterAutoscaler{
 						Expander: &invalidMultipleExpanderString,
-					}, 
-					version, 
+					},
+					version,
 					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeNotSupported),
 						"Field": Equal("expander"),
