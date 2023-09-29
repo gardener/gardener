@@ -49,6 +49,7 @@ linters-settings:
     - name: duplicated-imports
     - name: unused-parameter
     - name: unreachable-code
+    - name: context-as-argument
   importas:
     alias:
       # External imported packages
