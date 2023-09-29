@@ -296,7 +296,7 @@ func (r *Reconciler) deleteBackupBucket(
 		if !apierrors.IsNotFound(err) {
 			return reconcile.Result{}, err
 		}
-	} else {
+	} else if err == nil {
 		if lastError := extensionBackupBucket.Status.LastError; lastError != nil {
 			r.Recorder.Event(backupBucket, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, lastError.Description)
 

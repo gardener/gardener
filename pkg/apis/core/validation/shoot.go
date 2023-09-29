@@ -651,13 +651,12 @@ func ValidateKubernetesVersionUpdate(new, old string, fldPath *field.Path) field
 func validateNetworkingUpdate(newNetworking, oldNetworking *core.Networking, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if oldNetworking != nil {
-		if newNetworking == nil {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "networking cannot be set to nil if it's already set"))
-			return allErrs
-		}
-	} else {
+	if oldNetworking == nil {
 		// if the old networking is nil, we cannot validate immutability anyway, so exit early
+		return allErrs
+	}
+	if newNetworking == nil {
+		allErrs = append(allErrs, field.Forbidden(fldPath, "networking cannot be set to nil if it's already set"))
 		return allErrs
 	}
 
