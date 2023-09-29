@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package shoot_test
+package shoot
 
 import (
 	"context"
@@ -33,12 +33,11 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("Cleaner", func() {
+var _ = Describe("cleaner", func() {
 	var (
 		ctx = context.Background()
 
@@ -49,7 +48,7 @@ var _ = Describe("Cleaner", func() {
 		namespace      = "some-namespace"
 		otherNamespace = "other-namespace"
 		finalizer      = "some-finalizer"
-		cleaner        *Cleaner
+		cleaner        *cleaner
 
 		secret1              *corev1.Secret
 		secret2              *corev1.Secret

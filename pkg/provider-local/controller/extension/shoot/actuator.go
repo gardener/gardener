@@ -42,8 +42,10 @@ const (
 	// ApplicationName is the name of the application.
 	ApplicationName string = "local-ext-shoot"
 	// ManagedResourceNamesShoot is the name used to describe the managed shoot resources.
-	ManagedResourceNamesShoot      string = ApplicationName
-	finalizer                      string = "extensions.gardener.cloud/local-ext-shoot"
+	ManagedResourceNamesShoot string = ApplicationName
+	finalizer                 string = "extensions.gardener.cloud/local-ext-shoot"
+	// AnnotationTestForceDeleteShoot is an annotation used in the force-deletion e2e test which makes this actuator
+	// deploy two empty NetworkPolicies with a finalizer.
 	AnnotationTestForceDeleteShoot string = "test-force-delete"
 )
 
