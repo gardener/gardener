@@ -51,6 +51,7 @@ linters-settings:
     - name: unreachable-code
     - name: context-as-argument
     - name: early-return
+    - name: exported
   importas:
     alias:
       # External imported packages
