@@ -340,5 +340,6 @@ func getFluentBitLabels() map[string]string {
 		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                v1beta1constants.LabelNetworkPolicyAllowed,
 		gardenerutils.NetworkPolicyLabel(vali.ServiceName, vali.ValiPort):    v1beta1constants.LabelNetworkPolicyAllowed,
 		"networking.resources.gardener.cloud/to-all-shoots-logging-tcp-3100": v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelNetworkPolicyToPublicNetworks:                  v1beta1constants.LabelNetworkPolicyAllowed,
 	}
 }
