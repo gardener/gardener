@@ -1077,9 +1077,11 @@ build:
         - pkg/utils/gardener
         - pkg/utils/imagevector
         - pkg/utils/kubernetes
+        - pkg/utils/kubernetes/client
         - pkg/utils/kubernetes/health
         - pkg/utils/retry
         - pkg/utils/secrets
+        - pkg/utils/time
         - pkg/utils/timewindow
         - pkg/utils/validation/cidr
         - pkg/utils/validation/kubernetes/core
