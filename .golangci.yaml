@@ -14,10 +14,9 @@ run:
   - "openapi_generated\\.go$"
 
 linters:
-  disable:
-  - unused
   enable:
   - revive
+  - unused
   - importas
   - logcheck
   - gomegacheck
