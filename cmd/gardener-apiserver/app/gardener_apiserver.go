@@ -386,10 +386,16 @@ func (o *Options) ApplyTo(config *apiserver.Config) error {
 	gardenerAPIServerConfig := config.GenericConfig
 
 	gardenerVersion := version.Get()
+	gardenerAPIServerConfig.Version = &gardenerVersion
 	gardenerAPIServerConfig.OpenAPIV3Config = genericapiserver.DefaultOpenAPIV3Config(openapi.GetOpenAPIDefinitions, openapinamer.NewDefinitionNamer(api.Scheme))
 	gardenerAPIServerConfig.OpenAPIV3Config.Info.Title = "Gardener"
 	gardenerAPIServerConfig.OpenAPIV3Config.Info.Version = gardenerVersion.GitVersion
-	gardenerAPIServerConfig.Version = &gardenerVersion
+
+	// For backward-compatibility, we also have to keep serving the /openapi/v2 endpoint since kubectl < 1.27 rely on
+	// this endpoint.
+	gardenerAPIServerConfig.OpenAPIConfig = gardenerAPIServerConfig.OpenAPIV3Config
+	gardenerAPIServerConfig.OpenAPIConfig.Info.Title = gardenerAPIServerConfig.OpenAPIV3Config.Info.Title
+	gardenerAPIServerConfig.OpenAPIConfig.Info.Version = gardenerAPIServerConfig.OpenAPIV3Config.Info.Version
 
 	if err := o.ServerRunOptions.ApplyTo(&gardenerAPIServerConfig.Config); err != nil {
 		return err
