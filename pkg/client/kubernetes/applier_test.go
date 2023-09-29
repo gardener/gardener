@@ -204,7 +204,7 @@ spec:
 									Name:       "foo",
 									Protocol:   corev1.ProtocolTCP,
 									Port:       123,
-									TargetPort: intstr.FromInt(456),
+									TargetPort: intstr.FromInt32(456),
 								},
 							},
 						},
@@ -239,11 +239,11 @@ spec:
 						"ClusterIP with changed ports", func() {
 							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							newService.Spec.Ports[0].Port = 999
-							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
-							expected.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							expected.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 						}),
 					Entry(
 						"ClusterIP with changed ClusterIP, should not update it", func() {
@@ -261,24 +261,24 @@ spec:
 							newService.Spec.Type = ""
 							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							newService.Spec.Ports[0].Port = 999
-							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
-							expected.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							expected.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 						}),
 					Entry(
 						"NodePort with changed ports", func() {
 							newService.Spec.Type = corev1.ServiceTypeNodePort
 							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							newService.Spec.Ports[0].Port = 999
-							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							newService.Spec.Ports[0].NodePort = 444
 
 							expected.Spec.Type = corev1.ServiceTypeNodePort
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
-							expected.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							expected.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							expected.Spec.Ports[0].NodePort = 444
 						}),
 					Entry(
@@ -287,7 +287,7 @@ spec:
 							newService.Spec.Selector = nil
 							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							newService.Spec.Ports[0].Port = 999
-							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							newService.Spec.Ports[0].NodePort = 0
 							newService.Spec.ClusterIP = ""
 							newService.Spec.ExternalName = "foo.com"
@@ -297,7 +297,7 @@ spec:
 							expected.Spec.Selector = nil
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
-							expected.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							expected.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							expected.Spec.Ports[0].NodePort = 0
 							expected.Spec.ClusterIP = ""
 							expected.Spec.ExternalName = "foo.com"
@@ -337,13 +337,13 @@ spec:
 							newService.Spec.Type = corev1.ServiceTypeClusterIP
 							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							newService.Spec.Ports[0].Port = 999
-							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							newService.Spec.Ports[0].NodePort = 0
 
 							expected.Spec.Type = corev1.ServiceTypeClusterIP
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
-							expected.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							expected.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							expected.Spec.Ports[0].NodePort = 0
 						}),
 					Entry(
@@ -362,24 +362,24 @@ spec:
 						"NodePort with changed ports", func() {
 							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							newService.Spec.Ports[0].Port = 999
-							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							newService.Spec.Ports[0].NodePort = 444
 
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
-							expected.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							expected.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							expected.Spec.Ports[0].NodePort = 444
 						}),
 					Entry(
 						"NodePort with changed ports and without nodePort", func() {
 							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							newService.Spec.Ports[0].Port = 999
-							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							newService.Spec.Ports[0].NodePort = 0
 
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
-							expected.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							expected.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 						}),
 					Entry(
 						"ExternalName removes ClusterIP", func() {
@@ -387,7 +387,7 @@ spec:
 							newService.Spec.Selector = nil
 							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							newService.Spec.Ports[0].Port = 999
-							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							newService.Spec.Ports[0].NodePort = 0
 							newService.Spec.ClusterIP = ""
 							newService.Spec.ExternalName = "foo.com"
@@ -397,7 +397,7 @@ spec:
 							expected.Spec.Selector = nil
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
-							expected.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							expected.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							expected.Spec.Ports[0].NodePort = 0
 							expected.Spec.ClusterIP = ""
 							expected.Spec.ExternalName = "foo.com"
@@ -437,13 +437,13 @@ spec:
 							newService.Spec.Type = corev1.ServiceTypeClusterIP
 							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							newService.Spec.Ports[0].Port = 999
-							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							newService.Spec.Ports[0].NodePort = 0
 
 							expected.Spec.Type = corev1.ServiceTypeClusterIP
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
-							expected.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							expected.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							expected.Spec.Ports[0].NodePort = 0
 						}),
 					Entry(
@@ -462,24 +462,24 @@ spec:
 						"NodePort with changed ports", func() {
 							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							newService.Spec.Ports[0].Port = 999
-							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							newService.Spec.Ports[0].NodePort = 444
 
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
-							expected.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							expected.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							expected.Spec.Ports[0].NodePort = 444
 						}),
 					Entry(
 						"NodePort with changed ports and without nodePort", func() {
 							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							newService.Spec.Ports[0].Port = 999
-							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							newService.Spec.Ports[0].NodePort = 0
 
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
-							expected.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							expected.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 						}),
 					Entry(
 						"ExternalName removes ClusterIP", func() {
@@ -487,7 +487,7 @@ spec:
 							newService.Spec.Selector = nil
 							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							newService.Spec.Ports[0].Port = 999
-							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							newService.Spec.Ports[0].NodePort = 0
 							newService.Spec.ClusterIP = ""
 							newService.Spec.ExternalName = "foo.com"
@@ -497,7 +497,7 @@ spec:
 							expected.Spec.Selector = nil
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
-							expected.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							expected.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							expected.Spec.Ports[0].NodePort = 0
 							expected.Spec.ClusterIP = ""
 							expected.Spec.ExternalName = "foo.com"
@@ -568,7 +568,7 @@ spec:
 							newService.Spec.Type = corev1.ServiceTypeClusterIP
 							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							newService.Spec.Ports[0].Port = 999
-							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							newService.Spec.Ports[0].NodePort = 0
 							newService.Spec.ExternalName = ""
 							newService.Spec.ClusterIP = "3.4.5.6"
@@ -576,7 +576,7 @@ spec:
 							expected.Spec.Type = corev1.ServiceTypeClusterIP
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
-							expected.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							expected.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							expected.Spec.Ports[0].NodePort = 0
 							expected.Spec.ExternalName = ""
 							expected.Spec.ClusterIP = "3.4.5.6"
@@ -586,7 +586,7 @@ spec:
 							newService.Spec.Type = corev1.ServiceTypeNodePort
 							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							newService.Spec.Ports[0].Port = 999
-							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							newService.Spec.Ports[0].NodePort = 444
 							newService.Spec.ExternalName = ""
 							newService.Spec.ClusterIP = "3.4.5.6"
@@ -594,7 +594,7 @@ spec:
 							expected.Spec.Type = corev1.ServiceTypeNodePort
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
-							expected.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							expected.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							expected.Spec.Ports[0].NodePort = 444
 							expected.Spec.ExternalName = ""
 							expected.Spec.ClusterIP = "3.4.5.6"

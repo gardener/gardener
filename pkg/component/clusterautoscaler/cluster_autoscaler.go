@@ -111,7 +111,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		deployment          = c.emptyDeployment()
 		podDisruptionBudget = c.emptyPodDisruptionBudget()
 
-		pdbMaxUnavailable = intstr.FromInt(1)
+		pdbMaxUnavailable = intstr.FromInt32(1)
 		vpaUpdateMode     = vpaautoscalingv1.UpdateModeAuto
 		controlledValues  = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		command           = c.computeCommand()
@@ -157,7 +157,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		service.Labels = getLabels()
 
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
-			Port:     utils.IntStrPtrFromInt(int(portMetrics)),
+			Port:     utils.IntStrPtrFromInt32(portMetrics),
 			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
 		}))
 

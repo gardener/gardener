@@ -252,7 +252,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		probeURIScheme           = corev1.URISchemeHTTPS
 		command                  = k.computeCommand(port)
 		controlledValues         = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		pdbMaxUnavailable        = intstr.FromInt(1)
+		pdbMaxUnavailable        = intstr.FromInt32(1)
 		hvpaResourcePolicy       = &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
 				ContainerName: containerName,
@@ -290,7 +290,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		service.Labels = getLabels()
 
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
-			Port:     utils.IntStrPtrFromInt(int(port)),
+			Port:     utils.IntStrPtrFromInt32(port),
 			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
 		}))
 
@@ -345,7 +345,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 								HTTPGet: &corev1.HTTPGetAction{
 									Path:   "/healthz",
 									Scheme: probeURIScheme,
-									Port:   intstr.FromInt(int(port)),
+									Port:   intstr.FromInt32(port),
 								},
 							},
 							SuccessThreshold:    1,

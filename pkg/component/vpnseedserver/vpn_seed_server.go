@@ -341,14 +341,14 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secre
 					ReadinessProbe: &corev1.Probe{
 						ProbeHandler: corev1.ProbeHandler{
 							TCPSocket: &corev1.TCPSocketAction{
-								Port: intstr.FromInt(OpenVPNPort),
+								Port: intstr.FromInt32(OpenVPNPort),
 							},
 						},
 					},
 					LivenessProbe: &corev1.Probe{
 						ProbeHandler: corev1.ProbeHandler{
 							TCPSocket: &corev1.TCPSocketAction{
-								Port: intstr.FromInt(OpenVPNPort),
+								Port: intstr.FromInt32(OpenVPNPort),
 							},
 						},
 					},
@@ -474,14 +474,14 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secre
 			ReadinessProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					TCPSocket: &corev1.TCPSocketAction{
-						Port: intstr.FromInt(EnvoyPort),
+						Port: intstr.FromInt32(EnvoyPort),
 					},
 				},
 			},
 			LivenessProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					TCPSocket: &corev1.TCPSocketAction{
-						Port: intstr.FromInt(EnvoyPort),
+						Port: intstr.FromInt32(EnvoyPort),
 					},
 				},
 			},
@@ -545,14 +545,14 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secre
 			ReadinessProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					TCPSocket: &corev1.TCPSocketAction{
-						Port: intstr.FromInt(MetricsPort),
+						Port: intstr.FromInt32(MetricsPort),
 					},
 				},
 			},
 			LivenessProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					TCPSocket: &corev1.TCPSocketAction{
-						Port: intstr.FromInt(MetricsPort),
+						Port: intstr.FromInt32(MetricsPort),
 					},
 				},
 			},
@@ -641,7 +641,7 @@ func (v *vpnSeedServer) deployStatefulSet(ctx context.Context, labels map[string
 }
 
 func (v *vpnSeedServer) deployPodDisruptionBudget(ctx context.Context, podLabels map[string]string) error {
-	pdbMaxUnavailable := intstr.FromInt(1)
+	pdbMaxUnavailable := intstr.FromInt32(1)
 
 	pdb := v.emptyPodDisruptionBudget()
 
@@ -660,8 +660,8 @@ func (v *vpnSeedServer) deployPodDisruptionBudget(ctx context.Context, podLabels
 func (v *vpnSeedServer) deployDeployment(ctx context.Context, labels map[string]string, template *corev1.PodTemplateSpec) error {
 	deployment := v.emptyDeployment()
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, deployment, func() error {
-		maxSurge := intstr.FromInt(100)
-		maxUnavailable := intstr.FromInt(0)
+		maxSurge := intstr.FromInt32(100)
+		maxUnavailable := intstr.FromInt32(0)
 		deployment.Labels = labels
 		deployment.Spec = appsv1.DeploymentSpec{
 			Replicas:             pointer.Int32(v.values.Replicas),
@@ -694,24 +694,24 @@ func (v *vpnSeedServer) deployService(ctx context.Context, idx *int) error {
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(service,
 			metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
 			metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}}))
-		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(MetricsPort), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)}))
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt32(MetricsPort), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)}))
 
 		service.Spec.Type = corev1.ServiceTypeClusterIP
 		service.Spec.Ports = []corev1.ServicePort{
 			{
 				Name:       DeploymentName,
 				Port:       OpenVPNPort,
-				TargetPort: intstr.FromInt(OpenVPNPort),
+				TargetPort: intstr.FromInt32(OpenVPNPort),
 			},
 			{
 				Name:       "http-proxy",
 				Port:       EnvoyPort,
-				TargetPort: intstr.FromInt(EnvoyPort),
+				TargetPort: intstr.FromInt32(EnvoyPort),
 			},
 			{
 				Name:       metricsPortName,
 				Port:       MetricsPort,
-				TargetPort: intstr.FromInt(MetricsPort),
+				TargetPort: intstr.FromInt32(MetricsPort),
 			},
 		}
 

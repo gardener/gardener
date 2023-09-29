@@ -235,7 +235,7 @@ var _ = Describe("MachineControllerManager", func() {
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/healthz",
-										Port:   intstr.FromInt(10258),
+										Port:   intstr.FromInt32(10258),
 										Scheme: corev1.URISchemeHTTP,
 									},
 								},
@@ -283,7 +283,7 @@ var _ = Describe("MachineControllerManager", func() {
 				},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: utils.IntStrPtrFromInt(1),
+				MaxUnavailable: utils.IntStrPtrFromInt32(1),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						"app":  "kubernetes",

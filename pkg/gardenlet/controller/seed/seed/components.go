@@ -98,9 +98,9 @@ func defaultIstio(
 		seed.GetLoadBalancerServiceExternalTrafficPolicy(),
 		conf.SNI.Ingress.ServiceExternalIP,
 		[]corev1.ServicePort{
-			{Name: "proxy", Port: 8443, TargetPort: intstr.FromInt(8443)},
-			{Name: "tcp", Port: 443, TargetPort: intstr.FromInt(9443)},
-			{Name: "tls-tunnel", Port: vpnseedserver.GatewayPort, TargetPort: intstr.FromInt(vpnseedserver.GatewayPort)},
+			{Name: "proxy", Port: 8443, TargetPort: intstr.FromInt32(8443)},
+			{Name: "tcp", Port: 443, TargetPort: intstr.FromInt32(9443)},
+			{Name: "tls-tunnel", Port: vpnseedserver.GatewayPort, TargetPort: intstr.FromInt32(vpnseedserver.GatewayPort)},
 		},
 		true,
 		true,

@@ -247,7 +247,7 @@ func (v *vpa) reconcileGeneralMutatingWebhookConfiguration(mutatingWebhookConfig
 }
 
 func (v *vpa) reconcilePodDisruptionBudget(pdb *policyv1.PodDisruptionBudget, deployment *appsv1.Deployment) {
-	maxUnavailable := intstr.FromInt(1)
+	maxUnavailable := intstr.FromInt32(1)
 
 	pdb.Labels = getRoleLabel()
 	pdb.Spec = policyv1.PodDisruptionBudgetSpec{

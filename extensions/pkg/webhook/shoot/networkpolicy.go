@@ -38,7 +38,7 @@ func GetNetworkPolicyMeta(shootNamespace, extensionName string) *networkingv1.Ne
 // Deprecated: This function is deprecated and will be removed after Gardener v1.80 has been released. Extensions should
 // make sure that they can be accessed via the 'all-webhook-targets' alias.
 // TODO(rfranzke): Drop this after v1.80 has been released.
-func EnsureEgressNetworkPolicy(ctx context.Context, c client.Client, shootNamespace, extensionNamespace, extensionName string, port int) error {
+func EnsureEgressNetworkPolicy(ctx context.Context, c client.Client, shootNamespace, extensionNamespace, extensionName string, port int32) error {
 	networkPolicy := GetNetworkPolicyMeta(shootNamespace, extensionName)
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c, networkPolicy, func() error {
 		networkPolicy.Spec = networkingv1.NetworkPolicySpec{
@@ -47,7 +47,7 @@ func EnsureEgressNetworkPolicy(ctx context.Context, c client.Client, shootNamesp
 				{
 					Ports: []networkingv1.NetworkPolicyPort{
 						{
-							Port:     utils.IntStrPtrFromInt(port),
+							Port:     utils.IntStrPtrFromInt32(port),
 							Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
 						},
 					},
@@ -84,7 +84,7 @@ func EnsureEgressNetworkPolicy(ctx context.Context, c client.Client, shootNamesp
 // Deprecated: This function is deprecated and will be removed after Gardener v1.80 has been released. Extensions should
 // make sure that they can be accessed via the 'all-webhook-targets' alias.
 // TODO(rfranzke): Drop this after v1.80 has been released.
-func EnsureIngressNetworkPolicy(ctx context.Context, c client.Client, extensionNamespace, extensionName string, port int) error {
+func EnsureIngressNetworkPolicy(ctx context.Context, c client.Client, extensionNamespace, extensionName string, port int32) error {
 	networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: extensionNamespace, Name: "ingress-from-all-shoots-kube-apiserver"}}
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c, networkPolicy, func() error {
 		networkPolicy.Spec = networkingv1.NetworkPolicySpec{
@@ -93,7 +93,7 @@ func EnsureIngressNetworkPolicy(ctx context.Context, c client.Client, extensionN
 				{
 					Ports: []networkingv1.NetworkPolicyPort{
 						{
-							Port:     utils.IntStrPtrFromInt(port),
+							Port:     utils.IntStrPtrFromInt32(port),
 							Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
 						},
 					},

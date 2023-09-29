@@ -51,7 +51,7 @@ func ProviderSidecarContainer(namespace, providerName, image string) corev1.Cont
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   "/healthz",
-					Port:   intstr.FromInt(metricsPort),
+					Port:   intstr.FromInt32(metricsPort),
 					Scheme: corev1.URISchemeHTTP,
 				},
 			},

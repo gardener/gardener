@@ -224,7 +224,7 @@ func DistributePositiveIntOrPercent(zoneIndex int32, intOrPercent intstr.IntOrSt
 	if intOrPercent.Type == intstr.String {
 		return intstr.FromString(DistributePercentOverZones(zoneIndex, intOrPercent.StrVal, zoneSize, total))
 	}
-	return intstr.FromInt(int(DistributeOverZones(zoneIndex, intOrPercent.IntVal, zoneSize)))
+	return intstr.FromInt32(DistributeOverZones(zoneIndex, intOrPercent.IntVal, zoneSize))
 }
 
 // DiskSize extracts the numerical component of DiskSize strings, i.e. strings like "10Gi" and

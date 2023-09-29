@@ -321,14 +321,14 @@ admin:
 							ReadinessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									TCPSocket: &corev1.TCPSocketAction{
-										Port: intstr.FromInt(1194),
+										Port: intstr.FromInt32(1194),
 									},
 								},
 							},
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									TCPSocket: &corev1.TCPSocketAction{
-										Port: intstr.FromInt(1194),
+										Port: intstr.FromInt32(1194),
 									},
 								},
 							},
@@ -480,14 +480,14 @@ admin:
 					ReadinessProbe: &corev1.Probe{
 						ProbeHandler: corev1.ProbeHandler{
 							TCPSocket: &corev1.TCPSocketAction{
-								Port: intstr.FromInt(15000),
+								Port: intstr.FromInt32(15000),
 							},
 						},
 					},
 					LivenessProbe: &corev1.Probe{
 						ProbeHandler: corev1.ProbeHandler{
 							TCPSocket: &corev1.TCPSocketAction{
-								Port: intstr.FromInt(15000),
+								Port: intstr.FromInt32(15000),
 							},
 						},
 					},
@@ -537,14 +537,14 @@ admin:
 					ReadinessProbe: &corev1.Probe{
 						ProbeHandler: corev1.ProbeHandler{
 							TCPSocket: &corev1.TCPSocketAction{
-								Port: intstr.FromInt(9443),
+								Port: intstr.FromInt32(9443),
 							},
 						},
 					},
 					LivenessProbe: &corev1.Probe{
 						ProbeHandler: corev1.ProbeHandler{
 							TCPSocket: &corev1.TCPSocketAction{
-								Port: intstr.FromInt(9443),
+								Port: intstr.FromInt32(9443),
 							},
 						},
 					},
@@ -583,8 +583,8 @@ admin:
 		}
 
 		deployment = func(nodeNetwork string) *appsv1.Deployment {
-			maxSurge := intstr.FromInt(100)
-			maxUnavailable := intstr.FromInt(0)
+			maxSurge := intstr.FromInt32(100)
+			maxUnavailable := intstr.FromInt32(0)
 			deploy := &appsv1.Deployment{
 				ObjectMeta: *deploymentObjectMeta,
 				Spec: appsv1.DeploymentSpec{
@@ -673,7 +673,7 @@ admin:
 			return destRule
 		}
 
-		maxUnavailable      = intstr.FromInt(1)
+		maxUnavailable      = intstr.FromInt32(1)
 		podDisruptionBudget = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      DeploymentName,
@@ -709,17 +709,17 @@ admin:
 					{
 						Name:       DeploymentName,
 						Port:       1194,
-						TargetPort: intstr.FromInt(1194),
+						TargetPort: intstr.FromInt32(1194),
 					},
 					{
 						Name:       "http-proxy",
 						Port:       9443,
-						TargetPort: intstr.FromInt(9443),
+						TargetPort: intstr.FromInt32(9443),
 					},
 					{
 						Name:       "metrics",
 						Port:       15000,
-						TargetPort: intstr.FromInt(15000),
+						TargetPort: intstr.FromInt32(15000),
 					},
 				},
 				Selector: map[string]string{

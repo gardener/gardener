@@ -130,7 +130,7 @@ var _ = Describe("GardenerScheduler", func() {
 				},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: gardenerutils.IntStrPtrFromInt(1),
+				MaxUnavailable: gardenerutils.IntStrPtrFromInt32(1),
 				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 					"app":  "gardener",
 					"role": "scheduler",
@@ -156,7 +156,7 @@ var _ = Describe("GardenerScheduler", func() {
 					Name:       "metrics",
 					Port:       19251,
 					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(19251),
+					TargetPort: intstr.FromInt32(19251),
 				}},
 			},
 		}
@@ -807,7 +807,7 @@ func deployment(namespace, configSecretName string, testValues Values) string {
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/healthz",
-										Port:   intstr.FromInt(10251),
+										Port:   intstr.FromInt32(10251),
 										Scheme: corev1.URISchemeHTTP,
 									},
 								},
@@ -818,7 +818,7 @@ func deployment(namespace, configSecretName string, testValues Values) string {
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/readyz",
-										Port:   intstr.FromInt(10251),
+										Port:   intstr.FromInt32(10251),
 										Scheme: corev1.URISchemeHTTP,
 									},
 								},

@@ -316,7 +316,7 @@ var _ = Describe("Machines", func() {
 		},
 
 		Entry("percent", 2, intstr.FromString("75%"), 3, 5, intstr.FromString("45%")),
-		Entry("positive int", 2, intstr.FromInt(10), 3, 3, intstr.FromInt(3)),
+		Entry("positive int", 2, intstr.FromInt32(10), 3, 3, intstr.FromInt32(3)),
 	)
 
 	DescribeTable("#DiskSize",

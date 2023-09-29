@@ -116,8 +116,8 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
-		maxSurge         = intstr.FromInt(0)
-		maxUnavailable   = intstr.FromInt(1)
+		maxSurge         = intstr.FromInt32(0)
+		maxUnavailable   = intstr.FromInt32(1)
 		updateMode       = vpaautoscalingv1.UpdateModeAuto
 		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 
@@ -323,7 +323,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 										HTTPGet: &corev1.HTTPGetAction{
 											Scheme: corev1.URISchemeHTTPS,
 											Path:   "/",
-											Port:   intstr.FromInt(8443),
+											Port:   intstr.FromInt32(8443),
 										},
 									},
 									InitialDelaySeconds: int32(30),
@@ -412,7 +412,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 										HTTPGet: &corev1.HTTPGetAction{
 											Scheme: corev1.URISchemeHTTP,
 											Path:   "/",
-											Port:   intstr.FromInt(8000),
+											Port:   intstr.FromInt32(8000),
 										},
 									},
 									InitialDelaySeconds: int32(30),
@@ -459,7 +459,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 				Ports: []corev1.ServicePort{
 					{
 						Port:       int32(443),
-						TargetPort: intstr.FromInt(8443),
+						TargetPort: intstr.FromInt32(8443),
 					},
 				},
 				Selector: map[string]string{labelKey: name},
@@ -476,7 +476,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 				Ports: []corev1.ServicePort{
 					{
 						Port:       int32(8000),
-						TargetPort: intstr.FromInt(8000),
+						TargetPort: intstr.FromInt32(8000),
 					},
 				},
 				Selector: map[string]string{labelKey: scraperName},

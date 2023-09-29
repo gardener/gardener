@@ -49,10 +49,10 @@ var _ = Describe("Webhook", func() {
 		shootWebhookConfig    *admissionregistrationv1.MutatingWebhookConfiguration
 		shootWebhookConfigRaw map[string][]byte
 
-		extensionName       = "provider-test"
-		extensionNamespace  = "extension-provider-test-12345"
-		managedResourceName = "extension-provider-test-shoot-webhooks"
-		serverPort          = 1337
+		extensionName             = "provider-test"
+		extensionNamespace        = "extension-provider-test-12345"
+		managedResourceName       = "extension-provider-test-shoot-webhooks"
+		serverPort          int32 = 1337
 	)
 
 	BeforeEach(func() {

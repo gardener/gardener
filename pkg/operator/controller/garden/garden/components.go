@@ -716,7 +716,7 @@ func (r *Reconciler) newIstio(garden *operatorv1alpha1.Garden) (istio.Interface,
 		nil,
 		nil,
 		[]corev1.ServicePort{
-			{Name: "tcp", Port: 443, TargetPort: intstr.FromInt(9443)},
+			{Name: "tcp", Port: 443, TargetPort: intstr.FromInt32(9443)},
 		},
 		false,
 		false,

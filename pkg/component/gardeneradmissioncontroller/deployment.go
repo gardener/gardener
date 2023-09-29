@@ -83,7 +83,7 @@ func (a *gardenerAdmissionController) deployment(secretServerCert, secretGeneric
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/healthz",
-										Port:   intstr.FromInt(probePort),
+										Port:   intstr.FromInt32(probePort),
 										Scheme: corev1.URISchemeHTTP,
 									},
 								},
@@ -94,7 +94,7 @@ func (a *gardenerAdmissionController) deployment(secretServerCert, secretGeneric
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/readyz",
-										Port:   intstr.FromInt(probePort),
+										Port:   intstr.FromInt32(probePort),
 										Scheme: corev1.URISchemeHTTP,
 									},
 								},

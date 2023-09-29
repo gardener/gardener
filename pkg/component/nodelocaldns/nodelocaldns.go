@@ -227,13 +227,13 @@ ip6.arpa:53 {
 					{
 						Name:       "dns",
 						Port:       int32(portServiceServer),
-						TargetPort: intstr.FromInt(portServer),
+						TargetPort: intstr.FromInt32(portServer),
 						Protocol:   corev1.ProtocolUDP,
 					},
 					{
 						Name:       "dns-tcp",
 						Port:       int32(portServiceServer),
-						TargetPort: intstr.FromInt(portServer),
+						TargetPort: intstr.FromInt32(portServer),
 						Protocol:   corev1.ProtocolTCP,
 					},
 				},
@@ -354,7 +354,7 @@ ip6.arpa:53 {
 										HTTPGet: &corev1.HTTPGetAction{
 											Host: nodelocaldnsconstants.IPVSAddress,
 											Path: "/health",
-											Port: intstr.FromInt(livenessProbePort),
+											Port: intstr.FromInt32(livenessProbePort),
 										},
 									},
 									InitialDelaySeconds: int32(60),

@@ -43,7 +43,7 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 
 		port1Protocol          = corev1.ProtocolTCP
 		port1ServicePort int32 = 1234
-		port1TargetPort        = intstr.FromInt(5678)
+		port1TargetPort        = intstr.FromInt32(5678)
 		port1Suffix            = fmt.Sprintf("-%s-%s", strings.ToLower(string(port1Protocol)), port1TargetPort.String())
 
 		port2Protocol          = corev1.ProtocolUDP
@@ -56,15 +56,15 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 		port3Suffix     = fmt.Sprintf("-%s-%s", strings.ToLower(string(port3Protocol)), port3TargetPort.String())
 
 		port4Protocol   = corev1.ProtocolTCP
-		port4TargetPort = intstr.FromInt(3456)
+		port4TargetPort = intstr.FromInt32(3456)
 		port4Suffix     = fmt.Sprintf("-%s-%s", strings.ToLower(string(port4Protocol)), port4TargetPort.String())
 
 		port5Protocol   = corev1.ProtocolUDP
-		port5TargetPort = intstr.FromInt(7891)
+		port5TargetPort = intstr.FromInt32(7891)
 		port5Suffix     = fmt.Sprintf("-%s-%s", strings.ToLower(string(port5Protocol)), port5TargetPort.String())
 
 		port6Protocol   = corev1.ProtocolTCP
-		port6TargetPort = intstr.FromInt(1023)
+		port6TargetPort = intstr.FromInt32(1023)
 		port6Suffix     = fmt.Sprintf("-%s-%s", strings.ToLower(string(port6Protocol)), port6TargetPort.String())
 
 		ensureNetworkPolicies = func(asyncAssertion func(int, interface{}, ...interface{}) AsyncAssertion, should bool) func() {
@@ -366,7 +366,7 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 			By("Patch Service")
 			patch := client.MergeFrom(service.DeepCopy())
 			service.Spec.Ports = []corev1.ServicePort{service.Spec.Ports[1]}
-			service.Spec.Ports = append(service.Spec.Ports, corev1.ServicePort{Name: "newport", Port: 1357, Protocol: corev1.ProtocolUDP, TargetPort: intstr.FromInt(2468)})
+			service.Spec.Ports = append(service.Spec.Ports, corev1.ServicePort{Name: "newport", Port: 1357, Protocol: corev1.ProtocolUDP, TargetPort: intstr.FromInt32(2468)})
 			Expect(testClient.Patch(ctx, service, patch)).To(Succeed())
 
 			By("Wait until all policies were reconciled")
@@ -563,7 +563,7 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 			By("Patch Service")
 			patch := client.MergeFrom(service.DeepCopy())
 			service.Spec.Ports = []corev1.ServicePort{service.Spec.Ports[1]}
-			service.Spec.Ports = append(service.Spec.Ports, corev1.ServicePort{Name: "newport", Port: 1357, Protocol: corev1.ProtocolUDP, TargetPort: intstr.FromInt(2468)})
+			service.Spec.Ports = append(service.Spec.Ports, corev1.ServicePort{Name: "newport", Port: 1357, Protocol: corev1.ProtocolUDP, TargetPort: intstr.FromInt32(2468)})
 			Expect(testClient.Patch(ctx, service, patch)).To(Succeed())
 
 			By("Wait until cross-namespace policies were reconciled")
@@ -1271,7 +1271,7 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 			ensureExposedViaIngressNetworkPoliciesGetCreated()
 
 			By("Patch Service")
-			newTargetPort := intstr.FromInt(2468)
+			newTargetPort := intstr.FromInt32(2468)
 			patch := client.MergeFrom(service.DeepCopy())
 			service.Spec.Ports[0].TargetPort = newTargetPort
 			Expect(testClient.Patch(ctx, service, patch)).To(Succeed())

@@ -141,7 +141,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 ) error {
 	var (
 		maxSurge       = intstr.FromString("25%")
-		maxUnavailable = intstr.FromInt(0)
+		maxUnavailable = intstr.FromInt32(0)
 	)
 
 	var healthCheckToken string
@@ -243,7 +243,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 								HTTPGet: &corev1.HTTPGetAction{
 									Path:   "/livez",
 									Scheme: corev1.URISchemeHTTPS,
-									Port:   intstr.FromInt(kubeapiserverconstants.Port),
+									Port:   intstr.FromInt32(kubeapiserverconstants.Port),
 									HTTPHeaders: []corev1.HTTPHeader{{
 										Name:  "Authorization",
 										Value: "Bearer " + healthCheckToken,
@@ -261,7 +261,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 								HTTPGet: &corev1.HTTPGetAction{
 									Path:   "/readyz",
 									Scheme: corev1.URISchemeHTTPS,
-									Port:   intstr.FromInt(kubeapiserverconstants.Port),
+									Port:   intstr.FromInt32(kubeapiserverconstants.Port),
 									HTTPHeaders: []corev1.HTTPHeader{{
 										Name:  "Authorization",
 										Value: "Bearer " + healthCheckToken,

@@ -84,7 +84,7 @@ var _ = Describe("Logging", func() {
 							ProbeHandler: corev1.ProbeHandler{
 								HTTPGet: &corev1.HTTPGetAction{
 									Path: "/api/v1/metrics/prometheus",
-									Port: intstr.FromInt(2020),
+									Port: intstr.FromInt32(2020),
 								},
 							},
 							PeriodSeconds: 10,
@@ -93,7 +93,7 @@ var _ = Describe("Logging", func() {
 							ProbeHandler: corev1.ProbeHandler{
 								HTTPGet: &corev1.HTTPGetAction{
 									Path: "/healthz",
-									Port: intstr.FromInt(2021),
+									Port: intstr.FromInt32(2021),
 								},
 							},
 							PeriodSeconds:       300,

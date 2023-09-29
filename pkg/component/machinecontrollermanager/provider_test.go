@@ -56,7 +56,7 @@ var _ = Describe("Provider", func() {
 				ProbeHandler: corev1.ProbeHandler{
 					HTTPGet: &corev1.HTTPGetAction{
 						Path:   "/healthz",
-						Port:   intstr.FromInt(10259),
+						Port:   intstr.FromInt32(10259),
 						Scheme: "HTTP",
 					},
 				},

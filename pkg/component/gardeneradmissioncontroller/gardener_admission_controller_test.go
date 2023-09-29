@@ -584,7 +584,7 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/healthz",
-										Port:   intstr.FromInt(2722),
+										Port:   intstr.FromInt32(2722),
 										Scheme: corev1.URISchemeHTTP,
 									},
 								},
@@ -595,7 +595,7 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/readyz",
-										Port:   intstr.FromInt(2722),
+										Port:   intstr.FromInt32(2722),
 										Scheme: corev1.URISchemeHTTP,
 									},
 								},
@@ -704,13 +704,13 @@ func service(namespace string, testValues Values) string {
 					Name:       "https",
 					Protocol:   corev1.ProtocolTCP,
 					Port:       443,
-					TargetPort: intstr.FromInt(2719),
+					TargetPort: intstr.FromInt32(2719),
 				},
 				{
 					Name:       "metrics",
 					Protocol:   corev1.ProtocolTCP,
 					Port:       2723,
-					TargetPort: intstr.FromInt(2723),
+					TargetPort: intstr.FromInt32(2723),
 				},
 			},
 		},

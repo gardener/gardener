@@ -30,7 +30,7 @@ func (k *kubeAPIServer) emptyPodDisruptionBudget() *policyv1.PodDisruptionBudget
 }
 
 func (k *kubeAPIServer) reconcilePodDisruptionBudget(ctx context.Context, pdb *policyv1.PodDisruptionBudget) error {
-	var pdbMaxUnavailable = intstr.FromInt(1)
+	var pdbMaxUnavailable = intstr.FromInt32(1)
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), pdb, func() error {
 		pdb.Labels = getLabels()

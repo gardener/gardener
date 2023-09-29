@@ -651,7 +651,7 @@ var _ = Describe("Garden controller tests", func() {
 			},
 			Spec: corev1.ServiceSpec{
 				Type:     corev1.ServiceTypeClusterIP,
-				Ports:    []corev1.ServicePort{{Port: 443, TargetPort: intstr.FromInt(443)}},
+				Ports:    []corev1.ServicePort{{Port: 443, TargetPort: intstr.FromInt32(443)}},
 				Selector: map[string]string{"foo": "bar"},
 			},
 		}

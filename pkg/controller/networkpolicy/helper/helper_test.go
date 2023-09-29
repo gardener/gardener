@@ -151,7 +151,7 @@ var _ = Describe("helper", func() {
 
 			egressRules := GetEgressRules(subsets...)
 
-			port443 := intstr.FromInt(443)
+			port443 := intstr.FromInt32(443)
 			expectedRules := []networkingv1.NetworkPolicyEgressRule{
 				{
 					To: []networkingv1.NetworkPolicyPeer{
@@ -212,8 +212,8 @@ var _ = Describe("helper", func() {
 			)
 
 			egressRules := GetEgressRules(subsets...)
-			port443 := intstr.FromInt(443)
-			port161 := intstr.FromInt(161)
+			port443 := intstr.FromInt32(443)
+			port161 := intstr.FromInt32(161)
 			expectedRules := []networkingv1.NetworkPolicyEgressRule{
 				{
 					Ports: []networkingv1.NetworkPolicyPort{

@@ -26,7 +26,7 @@ import (
 )
 
 var _ = Describe("DaemonSet", func() {
-	oneUnavailable := intstr.FromInt(1)
+	oneUnavailable := intstr.FromInt32(1)
 
 	DescribeTable("#CheckDaemonSet",
 		func(daemonSet *appsv1.DaemonSet, matcher types.GomegaMatcher) {

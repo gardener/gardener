@@ -157,7 +157,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 		service.Labels = utils.MergeStringMaps(service.Labels, getLabels())
 
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
-			Port:     utils.IntStrPtrFromInt(portMetrics),
+			Port:     utils.IntStrPtrFromInt32(portMetrics),
 			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
 		}))
 
@@ -219,7 +219,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 						ProbeHandler: corev1.ProbeHandler{
 							HTTPGet: &corev1.HTTPGetAction{
 								Path:   "/healthz",
-								Port:   intstr.FromInt(portMetrics),
+								Port:   intstr.FromInt32(portMetrics),
 								Scheme: corev1.URISchemeHTTP,
 							},
 						},
@@ -259,7 +259,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, m.client, podDisruptionBudget, func() error {
 		podDisruptionBudget.Labels = utils.MergeStringMaps(podDisruptionBudget.Labels, getLabels())
 		podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: utils.IntStrPtrFromInt(1),
+			MaxUnavailable: utils.IntStrPtrFromInt32(1),
 			Selector:       deployment.Spec.Selector,
 		}
 		return nil

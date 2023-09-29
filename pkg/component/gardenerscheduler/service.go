@@ -36,7 +36,7 @@ func (g *gardenerScheduler) service() *corev1.Service {
 				Name:       "metrics",
 				Port:       int32(metricsPort),
 				Protocol:   corev1.ProtocolTCP,
-				TargetPort: intstr.FromInt(metricsPort),
+				TargetPort: intstr.FromInt32(metricsPort),
 			}},
 		},
 	}

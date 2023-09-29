@@ -79,7 +79,7 @@ type reconciler struct {
 	// URL is the URL that is used to register the webhooks in Kubernetes.
 	URL string
 
-	serverPort int
+	serverPort int32
 	client     client.Client
 }
 
@@ -92,7 +92,7 @@ func (r *reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		return fmt.Errorf("expected *webhook.DefaultServer, got %T", webhookServer)
 	}
 
-	r.serverPort = defaultServer.Options.Port
+	r.serverPort = int32(defaultServer.Options.Port)
 	r.client = mgr.GetClient()
 
 	present, err := isWebhookServerSecretPresent(ctx, mgr.GetAPIReader(), r.ServerSecretName, r.Namespace, r.Identity)

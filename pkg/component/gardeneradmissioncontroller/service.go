@@ -40,20 +40,20 @@ func (a *gardenerAdmissionController) service() *corev1.Service {
 					Name:       "https",
 					Protocol:   corev1.ProtocolTCP,
 					Port:       443,
-					TargetPort: intstr.FromInt(serverPort),
+					TargetPort: intstr.FromInt32(serverPort),
 				},
 				{
 					Name:       "metrics",
 					Protocol:   corev1.ProtocolTCP,
 					Port:       int32(metricsPort),
-					TargetPort: intstr.FromInt(metricsPort),
+					TargetPort: intstr.FromInt32(metricsPort),
 				},
 			},
 		},
 	}
 
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForWebhookTargets(svc, networkingv1.NetworkPolicyPort{
-		Port:     utils.IntStrPtrFromInt(serverPort),
+		Port:     utils.IntStrPtrFromInt32(serverPort),
 		Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
 	}))
 

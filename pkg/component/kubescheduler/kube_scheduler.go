@@ -192,7 +192,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		deployment          = k.emptyDeployment()
 		podDisruptionBudget = k.emptyPodDisruptionBudget()
 
-		pdbMaxUnavailable       = intstr.FromInt(1)
+		pdbMaxUnavailable       = intstr.FromInt32(1)
 		vpaUpdateMode           = vpaautoscalingv1.UpdateModeAuto
 		controlledValues        = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		port              int32 = 10259
@@ -209,7 +209,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		service.Labels = getLabels()
 
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
-			Port:     utils.IntStrPtrFromInt(int(port)),
+			Port:     utils.IntStrPtrFromInt32(port),
 			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
 		}))
 
@@ -261,7 +261,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 								HTTPGet: &corev1.HTTPGetAction{
 									Path:   "/healthz",
 									Scheme: probeURIScheme,
-									Port:   intstr.FromInt(int(port)),
+									Port:   intstr.FromInt32(port),
 								},
 							},
 							SuccessThreshold:    1,

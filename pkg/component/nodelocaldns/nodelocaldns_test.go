@@ -391,7 +391,7 @@ status:
 												HTTPGet: &corev1.HTTPGetAction{
 													Host: ipvsAddress,
 													Path: "/health",
-													Port: intstr.FromInt(livenessProbePort),
+													Port: intstr.FromInt32(int32(livenessProbePort)),
 												},
 											},
 											InitialDelaySeconds: int32(60),

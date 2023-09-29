@@ -210,8 +210,8 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		roleBindingAnnotations            map[string]string
 		schedulerName                     string
 
-		intStrOne            = intstr.FromInt(1)
-		healthProbePort      = intstr.FromInt(10254)
+		intStrOne            = intstr.FromInt32(1)
+		healthProbePort      = intstr.FromInt32(10254)
 		resourceRequirements = corev1.ResourceRequirements{
 			Limits: corev1.ResourceList{
 				corev1.ResourceMemory: resource.MustParse("1500Mi"),
@@ -269,13 +269,13 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 						Name:       "http",
 						Port:       servicePortControllerHttp,
 						Protocol:   corev1.ProtocolTCP,
-						TargetPort: intstr.FromInt(int(containerPortControllerHttp)),
+						TargetPort: intstr.FromInt32(containerPortControllerHttp),
 					},
 					{
 						Name:       "https",
 						Port:       servicePortControllerHttps,
 						Protocol:   corev1.ProtocolTCP,
-						TargetPort: intstr.FromInt(int(containerPortControllerHttps)),
+						TargetPort: intstr.FromInt32(containerPortControllerHttps),
 					},
 				},
 				Selector: n.getLabels(LabelValueController, false),
@@ -292,7 +292,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				Type: corev1.ServiceTypeClusterIP,
 				Ports: []corev1.ServicePort{{
 					Port:       servicePortBackend,
-					TargetPort: intstr.FromInt(int(containerPortBackend)),
+					TargetPort: intstr.FromInt32(containerPortBackend),
 				}},
 				Selector: n.getLabels(labelValueBackend, false),
 			},
@@ -460,7 +460,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/healthy",
-										Port:   intstr.FromInt(int(containerPortBackend)),
+										Port:   intstr.FromInt32(containerPortBackend),
 										Scheme: corev1.URISchemeHTTP,
 									},
 								},
@@ -619,9 +619,9 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			references.AnnotationKey(references.KindConfigMap, configMap.Name): configMap.Name,
 		}
 		deploymentController.Spec.Template.Labels = utils.MergeStringMaps(deploymentController.Spec.Template.Labels, map[string]string{
-			v1beta1constants.LabelNetworkPolicyToDNS:                                                v1beta1constants.LabelNetworkPolicyAllowed,
-			v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                                   v1beta1constants.LabelNetworkPolicyAllowed,
-			gardenerutils.NetworkPolicyLabel(n.getName("Service", true), int(containerPortBackend)): v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyToDNS:                                           v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                              v1beta1constants.LabelNetworkPolicyAllowed,
+			gardenerutils.NetworkPolicyLabel(n.getName("Service", true), containerPortBackend): v1beta1constants.LabelNetworkPolicyAllowed,
 
 			// Skipped until https://github.com/kubernetes/ingress-nginx/issues/8640 is resolved
 			// and special seccomp profile is implemented for the nginx-ingress

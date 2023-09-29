@@ -614,7 +614,7 @@ func ValidateGardenletChartServiceAccount(ctx context.Context, c client.Client, 
 
 // ValidateGardenletChartPodDisruptionBudget validates the PodDisruptionBudget of the Gardenlet chart.
 func ValidateGardenletChartPodDisruptionBudget(ctx context.Context, c client.Client, expectedLabels map[string]string, replicaCount *int32) {
-	maxUnavailable := intstr.FromInt(1)
+	maxUnavailable := intstr.FromInt32(1)
 
 	pdb := &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{

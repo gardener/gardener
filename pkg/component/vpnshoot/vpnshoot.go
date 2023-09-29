@@ -486,7 +486,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 }
 
 func (v *vpnShoot) podDisruptionBudget() (client.Object, error) {
-	pdbMaxUnavailable := intstr.FromInt(1)
+	pdbMaxUnavailable := intstr.FromInt32(1)
 
 	return &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{

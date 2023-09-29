@@ -159,9 +159,9 @@ func TimePtrDeref(ptr *time.Time, def time.Time) time.Time {
 	return def
 }
 
-// IntStrPtrFromInt returns an intstr.IntOrString pointer to its argument.
-func IntStrPtrFromInt(port int) *intstr.IntOrString {
-	v := intstr.FromInt(port)
+// IntStrPtrFromInt32 returns an intstr.IntOrString pointer to its argument.
+func IntStrPtrFromInt32(port int32) *intstr.IntOrString {
+	v := intstr.FromInt32(port)
 	return &v
 }
 

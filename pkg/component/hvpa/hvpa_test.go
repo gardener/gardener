@@ -219,7 +219,7 @@ var _ = Describe("HVPA", func() {
 					Name:       "metrics",
 					Protocol:   corev1.ProtocolTCP,
 					Port:       9569,
-					TargetPort: intstr.FromInt(9569),
+					TargetPort: intstr.FromInt32(9569),
 				}},
 			},
 		}
@@ -281,7 +281,7 @@ var _ = Describe("HVPA", func() {
 			},
 		}
 
-		maxUnavailable := intstr.FromInt(1)
+		maxUnavailable := intstr.FromInt32(1)
 		podDisruptionBudget = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "hvpa-controller",

@@ -841,7 +841,7 @@ var _ = Describe("merger", func() {
 							Name:       "foo",
 							Protocol:   corev1.ProtocolTCP,
 							Port:       123,
-							TargetPort: intstr.FromInt(919),
+							TargetPort: intstr.FromInt32(919),
 						},
 					},
 					Type:            corev1.ServiceTypeClusterIP,
@@ -863,7 +863,7 @@ var _ = Describe("merger", func() {
 			Entry("ClusterIP with changed ports", func() {
 				newService.Spec.Ports[0].Port = 1234
 				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-				newService.Spec.Ports[0].TargetPort = intstr.FromInt(989)
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt32(989)
 				newService.Annotations = old.Annotations
 
 				expected = newService.DeepCopy()
@@ -879,7 +879,7 @@ var _ = Describe("merger", func() {
 			Entry("ClusterIP without passing any type", func() {
 				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 				newService.Spec.Ports[0].Port = 999
-				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 				newService.Annotations = old.Annotations
 
 				expected = newService.DeepCopy()
@@ -890,7 +890,7 @@ var _ = Describe("merger", func() {
 				newService.Spec.Type = corev1.ServiceTypeNodePort
 				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 				newService.Spec.Ports[0].Port = 999
-				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 				newService.Spec.Ports[0].NodePort = 444
 				newService.Annotations = old.Annotations
 
@@ -902,7 +902,7 @@ var _ = Describe("merger", func() {
 				newService.Spec.Selector = nil
 				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 				newService.Spec.Ports[0].Port = 999
-				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 				newService.Spec.Ports[0].NodePort = 0
 				newService.Spec.ClusterIP = ""
 				newService.Spec.ExternalName = "foo.com"
@@ -930,7 +930,7 @@ var _ = Describe("merger", func() {
 				newService.Spec.Type = corev1.ServiceTypeClusterIP
 				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 				newService.Spec.Ports[0].Port = 999
-				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 				newService.Spec.Ports[0].NodePort = 0
 
 				expected = newService.DeepCopy()
@@ -948,7 +948,7 @@ var _ = Describe("merger", func() {
 			Entry("NodePort with changed ports", func() {
 				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 				newService.Spec.Ports[0].Port = 999
-				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 				newService.Spec.Ports[0].NodePort = 444
 
 				expected = newService.DeepCopy()
@@ -956,7 +956,7 @@ var _ = Describe("merger", func() {
 			Entry("NodePort with changed ports and without nodePort", func() {
 				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 				newService.Spec.Ports[0].Port = 999
-				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 
 				expected = newService.DeepCopy()
 				newService.Spec.Ports[0].NodePort = 0
@@ -966,7 +966,7 @@ var _ = Describe("merger", func() {
 				newService.Spec.Selector = nil
 				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 				newService.Spec.Ports[0].Port = 999
-				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 				newService.Spec.Ports[0].NodePort = 0
 				newService.Spec.ClusterIP = ""
 				newService.Spec.ExternalName = "foo.com"
@@ -992,7 +992,7 @@ var _ = Describe("merger", func() {
 				newService.Spec.Type = corev1.ServiceTypeClusterIP
 				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 				newService.Spec.Ports[0].Port = 999
-				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 				newService.Spec.Ports[0].NodePort = 0
 
 				expected = newService.DeepCopy()
@@ -1009,7 +1009,7 @@ var _ = Describe("merger", func() {
 			Entry("NodePort with changed ports", func() {
 				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 				newService.Spec.Ports[0].Port = 999
-				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 				newService.Spec.Ports[0].NodePort = 444
 
 				expected = newService.DeepCopy()
@@ -1017,7 +1017,7 @@ var _ = Describe("merger", func() {
 			Entry("NodePort with changed ports and without nodePort", func() {
 				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 				newService.Spec.Ports[0].Port = 999
-				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 
 				expected = newService.DeepCopy()
 				newService.Spec.Ports[0].NodePort = 0
@@ -1027,7 +1027,7 @@ var _ = Describe("merger", func() {
 				newService.Spec.Selector = nil
 				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 				newService.Spec.Ports[0].Port = 999
-				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 				newService.Spec.Ports[0].NodePort = 0
 				newService.Spec.ClusterIP = ""
 				newService.Spec.ExternalName = "foo.com"
@@ -1077,7 +1077,7 @@ var _ = Describe("merger", func() {
 				newService.Spec.Type = corev1.ServiceTypeClusterIP
 				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 				newService.Spec.Ports[0].Port = 999
-				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 				newService.Spec.Ports[0].NodePort = 0
 				newService.Spec.ExternalName = ""
 				newService.Spec.ClusterIP = "3.4.5.6"
@@ -1088,7 +1088,7 @@ var _ = Describe("merger", func() {
 				newService.Spec.Type = corev1.ServiceTypeNodePort
 				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 				newService.Spec.Ports[0].Port = 999
-				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 				newService.Spec.Ports[0].NodePort = 444
 				newService.Spec.ExternalName = ""
 				newService.Spec.ClusterIP = "3.4.5.6"

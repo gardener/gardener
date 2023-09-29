@@ -369,7 +369,7 @@ func (c *AddToManagerConfig) reconcileShootWebhookConfigs(mgr manager.Manager, s
 				return fmt.Errorf("expected *webhook.DefaultServer, got %T", webhookServer)
 			}
 
-			if err := extensionsshootwebhook.ReconcileWebhooksForAllNamespaces(ctx, mgr.GetClient(), c.Server.Namespace, c.extensionName, c.shootWebhookManagedResourceName, c.shootNamespaceSelector, defaultServer.Options.Port, shootWebhookConfig); err != nil {
+			if err := extensionsshootwebhook.ReconcileWebhooksForAllNamespaces(ctx, mgr.GetClient(), c.Server.Namespace, c.extensionName, c.shootWebhookManagedResourceName, c.shootNamespaceSelector, int32(defaultServer.Options.Port), shootWebhookConfig); err != nil {
 				return fmt.Errorf("error reconciling all shoot webhook configs: %w", err)
 			}
 		}
