@@ -48,7 +48,8 @@ func (g *gardenerScheduler) deployment(secretGenericTokenKubeconfig, secretVirtu
 			}),
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: pointer.Int32(1),
+			Replicas:             pointer.Int32(1),
+			RevisionHistoryLimit: pointer.Int32(2),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: GetLabels(),
 			},
