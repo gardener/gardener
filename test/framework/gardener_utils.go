@@ -136,7 +136,7 @@ func (f *GardenerFramework) CreateShoot(ctx context.Context, shoot *gardencorev1
 	return nil
 }
 
-// DeleteShootAndWaitForDeletion deletes the test shoot and waits until it cannot be found any more
+// DeleteShootAndWaitForDeletion deletes the test shoot and waits until it cannot be found anymore.
 func (f *GardenerFramework) DeleteShootAndWaitForDeletion(ctx context.Context, shoot *gardencorev1beta1.Shoot) (rErr error) {
 	if f.Config.ExistingShootName != "" {
 		f.Logger.Info("Skip deletion of existing shoot", "shoot", client.ObjectKey{Name: f.Config.ExistingShootName, Namespace: f.ProjectNamespace})
@@ -172,7 +172,7 @@ func (f *GardenerFramework) DeleteShootAndWaitForDeletion(ctx context.Context, s
 	return nil
 }
 
-// ForceDeleteShootAndWaitForDeletion forcefully deletes the test shoot and waits until it cannot be found any more
+// ForceDeleteShootAndWaitForDeletion forcefully deletes the test shoot and waits until it cannot be found anymore.
 func (f *GardenerFramework) ForceDeleteShootAndWaitForDeletion(ctx context.Context, shoot *gardencorev1beta1.Shoot) (rErr error) {
 	log := f.Logger.WithValues("shoot", client.ObjectKeyFromObject(shoot))
 
