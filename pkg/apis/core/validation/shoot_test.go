@@ -2591,7 +2591,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		)
 
 		Context("ClusterAutoscaler validation", func() {
-			FDescribeTable("cluster autoscaler values",
+			DescribeTable("cluster autoscaler values",
 				func(clusterAutoscaler core.ClusterAutoscaler, supportedVersionForIgnoreTaints string, matcher gomegatypes.GomegaMatcher) {
 					Expect(ValidateClusterAutoscaler(clusterAutoscaler, supportedVersionForIgnoreTaints, nil)).To(matcher)
 				},
