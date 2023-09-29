@@ -197,7 +197,8 @@ func computeExtensionsDataAndResources(
 				return fmt.Errorf("failed accessing extension object: %w", err)
 			}
 
-			if extensionObj.GetDeletionTimestamp() != nil {
+			if extensionObj.GetDeletionTimestamp() != nil ||
+				(extensionObj.GetExtensionStatus().GetState() == nil && len(extensionObj.GetExtensionStatus().GetResources()) == 0) {
 				return nil
 			}
 

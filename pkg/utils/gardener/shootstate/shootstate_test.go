@@ -102,19 +102,20 @@ var _ = Describe("ShootState", func() {
 				Expect(fakeSeedClient.Create(ctx, newSecret("secret3", seedNamespace, true))).To(Succeed())
 
 				By("Creating extensions data")
-				purposeNormal := extensionsv1alpha1.Normal
-				purposeExposure := extensionsv1alpha1.Exposure
-				createExtensionObject(ctx, fakeSeedClient, "backupentry", seedNamespace, &extensionsv1alpha1.BackupEntry{})
-				createExtensionObject(ctx, fakeSeedClient, "containerruntime", seedNamespace, &extensionsv1alpha1.ContainerRuntime{})
-				createExtensionObject(ctx, fakeSeedClient, "controlplane", seedNamespace, &extensionsv1alpha1.ControlPlane{Spec: extensionsv1alpha1.ControlPlaneSpec{Purpose: &purposeNormal}})
-				createExtensionObject(ctx, fakeSeedClient, "controlplane-exposure", seedNamespace, &extensionsv1alpha1.ControlPlane{Spec: extensionsv1alpha1.ControlPlaneSpec{Purpose: &purposeExposure}})
-				createExtensionObject(ctx, fakeSeedClient, "dnsrecord", seedNamespace, &extensionsv1alpha1.DNSRecord{})
-				createExtensionObject(ctx, fakeSeedClient, "extension", seedNamespace, &extensionsv1alpha1.Extension{}, gardencorev1beta1.NamedResourceReference{Name: "resource-ref1", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "ConfigMap", APIVersion: "v1", Name: "extension-configmap"}})
+				purposeNormal, purposeExposure := extensionsv1alpha1.Normal, extensionsv1alpha1.Exposure
+
+				createExtensionObject(ctx, fakeSeedClient, "backupentry", seedNamespace, &extensionsv1alpha1.BackupEntry{}, &runtime.RawExtension{Raw: []byte(`{"name":"backupentry"}`)})
+				createExtensionObject(ctx, fakeSeedClient, "containerruntime", seedNamespace, &extensionsv1alpha1.ContainerRuntime{}, &runtime.RawExtension{Raw: []byte(`{"name":"containerruntime"}`)})
+				createExtensionObject(ctx, fakeSeedClient, "controlplane", seedNamespace, &extensionsv1alpha1.ControlPlane{Spec: extensionsv1alpha1.ControlPlaneSpec{Purpose: &purposeNormal}}, &runtime.RawExtension{Raw: []byte(`{"name":"controlplane"}`)})
+				createExtensionObject(ctx, fakeSeedClient, "controlplane-exposure", seedNamespace, &extensionsv1alpha1.ControlPlane{Spec: extensionsv1alpha1.ControlPlaneSpec{Purpose: &purposeExposure}}, &runtime.RawExtension{Raw: []byte(`{"name":"controlplane-exposure"}`)})
+				createExtensionObject(ctx, fakeSeedClient, "dnsrecord", seedNamespace, &extensionsv1alpha1.DNSRecord{}, &runtime.RawExtension{Raw: []byte(`{"name":"dnsrecord"}`)})
+				createExtensionObject(ctx, fakeSeedClient, "extension", seedNamespace, &extensionsv1alpha1.Extension{}, &runtime.RawExtension{Raw: []byte(`{"name":"extension"}`)}, gardencorev1beta1.NamedResourceReference{Name: "resource-ref1", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "ConfigMap", APIVersion: "v1", Name: "extension-configmap"}})
 				Expect(fakeSeedClient.Create(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "extension-configmap", Namespace: seedNamespace}, Data: map[string]string{"some-data": "for-extension"}})).To(Succeed())
-				createExtensionObject(ctx, fakeSeedClient, "infrastructure", seedNamespace, &extensionsv1alpha1.Infrastructure{})
-				createExtensionObject(ctx, fakeSeedClient, "network", seedNamespace, &extensionsv1alpha1.Network{})
-				createExtensionObject(ctx, fakeSeedClient, "osc", seedNamespace, &extensionsv1alpha1.OperatingSystemConfig{})
-				createExtensionObject(ctx, fakeSeedClient, "worker", seedNamespace, &extensionsv1alpha1.Worker{})
+				createExtensionObject(ctx, fakeSeedClient, "infrastructure", seedNamespace, &extensionsv1alpha1.Infrastructure{}, &runtime.RawExtension{Raw: []byte(`{"name":"infrastructure"}`)})
+				createExtensionObject(ctx, fakeSeedClient, "network", seedNamespace, &extensionsv1alpha1.Network{}, &runtime.RawExtension{Raw: []byte(`{"name":"network"}`)})
+				createExtensionObject(ctx, fakeSeedClient, "osc", seedNamespace, &extensionsv1alpha1.OperatingSystemConfig{}, &runtime.RawExtension{Raw: []byte(`{"name":"osc"}`)})
+				createExtensionObject(ctx, fakeSeedClient, "osc2", seedNamespace, &extensionsv1alpha1.OperatingSystemConfig{}, nil)
+				createExtensionObject(ctx, fakeSeedClient, "worker", seedNamespace, &extensionsv1alpha1.Worker{}, &runtime.RawExtension{Raw: []byte(`{"name":"worker"}`)})
 
 				expectedSpec = gardencorev1beta1.ShootStateSpec{
 					Gardener: []gardencorev1beta1.GardenerResourceData{
@@ -259,6 +260,7 @@ func createExtensionObject(
 	fakeSeedClient client.Client,
 	name, namespace string,
 	obj client.Object,
+	state *runtime.RawExtension,
 	namedResourceReferences ...gardencorev1beta1.NamedResourceReference,
 ) {
 	acc, err := extensions.Accessor(obj)
@@ -269,7 +271,7 @@ func createExtensionObject(
 	ExpectWithOffset(1, fakeSeedClient.Create(ctx, obj)).To(Succeed())
 
 	patch := client.MergeFrom(obj.DeepCopyObject().(client.Object))
-	acc.GetExtensionStatus().SetState(&runtime.RawExtension{Raw: []byte(`{"name":"` + name + `"}`)})
+	acc.GetExtensionStatus().SetState(state)
 	acc.GetExtensionStatus().SetResources(namedResourceReferences)
 	ExpectWithOffset(1, fakeSeedClient.Patch(ctx, obj, patch)).To(Succeed())
 }
