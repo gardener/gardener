@@ -37,7 +37,7 @@ import (
 var _ = Describe("ActuatorRestore", func() {
 	Describe("#addStateToMachineDeployment", func() {
 		var (
-			ctx              = context.TODO()
+			ctx              = context.Background()
 			log              = logr.Discard()
 			fakeGardenClient client.Client
 

@@ -38,8 +38,7 @@ const (
 	MachineDeploymentKind = "MachineDeployment"
 )
 
-// BuildOwnerToMachinesMap builds a map from a slice of machinev1alpha1.Machine, that maps the owner reference
-// to a slice of machines with the same owner reference
+// BuildOwnerToMachinesMap returns a map that associates `MachineSet` names to the given `machines`.
 func BuildOwnerToMachinesMap(machines []machinev1alpha1.Machine) map[string][]machinev1alpha1.Machine {
 	ownerToMachines := make(map[string][]machinev1alpha1.Machine)
 	for index, machine := range machines {
@@ -58,8 +57,7 @@ func BuildOwnerToMachinesMap(machines []machinev1alpha1.Machine) map[string][]ma
 	return ownerToMachines
 }
 
-// BuildOwnerToMachineSetsMap builds a map from a slice of machinev1alpha1.MachineSet, that maps the owner reference
-// to a slice of MachineSets with the same owner reference
+// BuildOwnerToMachineSetsMap returns a map that associates `MachineDeployment` names to the given `machineSets`.
 func BuildOwnerToMachineSetsMap(machineSets []machinev1alpha1.MachineSet) map[string][]machinev1alpha1.MachineSet {
 	ownerToMachineSets := make(map[string][]machinev1alpha1.MachineSet)
 	for index, machineSet := range machineSets {

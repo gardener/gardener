@@ -74,7 +74,7 @@ In addition, extension controllers that use [referenced resources](referenced-re
 ### Migrate and Restore Actuator Methods
 
 Most extension controller implementations follow a common pattern where a generic `Reconciler` implementation delegates to an `Actuator` interface that contains the methods `Reconcile` and `Delete`, provided by the extension.
-The two new methods `Migrate` and `Restore` have been added to all such `Actuator` interfaces, see [the infrastructure `Actuator` interface](https://github.com/gardener/gardener/blob/master/extensions/pkg/controller/infrastructure/actuator.go) as an example.
+Two methods `Migrate` and `Restore` are available in all such `Actuator` interfaces, see [the infrastructure `Actuator` interface](https://github.com/gardener/gardener/blob/master/extensions/pkg/controller/infrastructure/actuator.go) as an example.
 These methods are called by the generic reconcilers for the [migrate and restore operations](#migrate-and-restore-operations) respectively, and should be implemented by the extension according to the above guidelines.
 
 ### Extension Controllers Based on Generic Actuators

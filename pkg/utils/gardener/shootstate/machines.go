@@ -26,7 +26,7 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-// MachineDeploymentState stores the last versions of the machine sets and machine to which the machine deployment
+// MachineDeploymentState stores the last versions of the machine sets and machines to which the machine deployment
 // corresponds.
 type MachineDeploymentState struct {
 	Replicas    int32                        `json:"replicas,omitempty"`
