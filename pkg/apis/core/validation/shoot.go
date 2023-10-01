@@ -1033,8 +1033,13 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, fldPath *field
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxGracefulTerminationSeconds"), *maxGracefulTerminationSeconds, "can not be negative"))
 	}
 
-	if expander := autoScaler.Expander; expander != nil && !availableClusterAutoscalerExpanderModes.Has(string(*expander)) {
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("expander"), *expander, sets.List(availableClusterAutoscalerExpanderModes)))
+	if expander := autoScaler.Expander; expander != nil {
+		expanderArray := strings.Split(string(*expander), ",")
+		for _, exp := range expanderArray {
+			if !availableClusterAutoscalerExpanderModes.Has(exp) {
+				allErrs = append(allErrs, field.NotSupported(fldPath.Child("expander"), *expander, sets.List(availableClusterAutoscalerExpanderModes)))
+			}
+		}
 	}
 
 	if ignoreTaints := autoScaler.IgnoreTaints; ignoreTaints != nil {

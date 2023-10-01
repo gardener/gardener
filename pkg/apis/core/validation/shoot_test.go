@@ -2574,17 +2574,20 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		var (
-			negativeDuration            = metav1.Duration{Duration: -time.Second}
-			negativeInteger       int32 = -100
-			positiveInteger       int32 = 100
-			expanderLeastWaste          = core.ClusterAutoscalerExpanderLeastWaste
-			expanderMostPods            = core.ClusterAutoscalerExpanderMostPods
-			expanderPriority            = core.ClusterAutoscalerExpanderPriority
-			expanderRandom              = core.ClusterAutoscalerExpanderRandom
-			ignoreTaintsUnique          = []string{"taint-1", "taint-2"}
-			ignoreTaintsDuplicate       = []string{"taint-1", "taint-1"}
-			ignoreTaintsInvalid         = []string{"taint 1", "taint-1"}
-			version                     = "1.24"
+			negativeDuration                    = metav1.Duration{Duration: -time.Second}
+			negativeInteger               int32 = -100
+			positiveInteger               int32 = 100
+			expanderLeastWaste                  = core.ClusterAutoscalerExpanderLeastWaste
+			expanderMostPods                    = core.ClusterAutoscalerExpanderMostPods
+			expanderPriority                    = core.ClusterAutoscalerExpanderPriority
+			expanderRandom                      = core.ClusterAutoscalerExpanderRandom
+			expanderPriorityAndLeastWaste       = core.ExpanderMode(core.ClusterAutoscalerExpanderPriority + "," + core.ClusterAutoscalerExpanderLeastWaste)
+			invalidExpander                     = core.ExpanderMode(core.ClusterAutoscalerExpanderPriority + ", test-expander")
+			invalidMultipleExpanderString       = core.ExpanderMode(core.ClusterAutoscalerExpanderPriority + ", " + core.ClusterAutoscalerExpanderLeastWaste)
+			ignoreTaintsUnique                  = []string{"taint-1", "taint-2"}
+			ignoreTaintsDuplicate               = []string{"taint-1", "taint-1"}
+			ignoreTaintsInvalid                 = []string{"taint 1", "taint-1"}
+			version                             = "1.24"
 		)
 
 		Context("ClusterAutoscaler validation", func() {
@@ -2640,6 +2643,27 @@ var _ = Describe("Shoot Validation Tests", func() {
 					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("ignoreTaints[0]"),
+					}))),
+				),
+				Entry("valid with expander priority and least-waste", core.ClusterAutoscaler{Expander: &expanderPriorityAndLeastWaste}, version, BeEmpty()),
+				Entry("invalid expander in multiple expander string",
+					core.ClusterAutoscaler{
+						Expander: &invalidExpander,
+					},
+					version,
+					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal("expander"),
+					}))),
+				),
+				Entry("incorrect multiple expander string",
+					core.ClusterAutoscaler{
+						Expander: &invalidMultipleExpanderString,
+					},
+					version,
+					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal("expander"),
 					}))),
 				),
 			)
