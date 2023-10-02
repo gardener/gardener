@@ -35,7 +35,7 @@ import (
 func (m *manager) Generate(ctx context.Context, config secretsutils.ConfigInterface, opts ...GenerateOption) (*corev1.Secret, error) {
 	options := &GenerateOptions{}
 	if err := options.ApplyOptions(m, config, opts); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed applying generate options for config %s: %w", config.GetName(), err)
 	}
 
 	var bundleFor *string
@@ -54,46 +54,46 @@ func (m *manager) Generate(ctx context.Context, config secretsutils.ConfigInterf
 		bundleFor,
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed computing object metadata for config %s: %w", config.GetName(), err)
 	}
 	desiredLabels := utils.MergeStringMaps(objectMeta.Labels) // copy labels map
 
-	secret := &corev1.Secret{}
-	if err := m.client.Get(ctx, kubernetesutils.Key(objectMeta.Namespace, objectMeta.Name), secret); err != nil {
+	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: objectMeta.Name, Namespace: objectMeta.Namespace}}
+	if err := m.client.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
 		if !apierrors.IsNotFound(err) {
-			return nil, err
+			return nil, fmt.Errorf("failed reading secret %s for config %s: %w", client.ObjectKeyFromObject(secret), config.GetName(), err)
 		}
 
 		secret, err = m.generateAndCreate(ctx, config, objectMeta)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed generating and creating new secret %s for config %s: %w", client.ObjectKey{Name: objectMeta.Name, Namespace: objectMeta.Namespace}, config.GetName(), err)
 		}
 	}
 
 	if err := m.maintainLifetimeLabels(config, secret, desiredLabels, options.Validity); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed maintaining lifetime labels on secret %s for config %s: %w", client.ObjectKeyFromObject(secret), config.GetName(), err)
 	}
 
 	if !options.isBundleSecret {
 		if err := m.addToStore(config.GetName(), secret, current); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed adding current secret %s for config %s to internal store: %w", client.ObjectKeyFromObject(secret), config.GetName(), err)
 		}
 
 		if ignore, err := m.shouldIgnoreOldSecrets(desiredLabels[LabelKeyIssuedAtTime], options); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed checking whether old secrets should be ignored for config %s: %w", config.GetName(), err)
 		} else if !ignore {
 			if err := m.storeOldSecrets(ctx, config.GetName(), secret.Name); err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed adding old secrets for config %s to internal store: %w", config.GetName(), err)
 			}
 		}
 
 		if err := m.generateBundleSecret(ctx, config); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed generating bundle secret for config %s: %w", config.GetName(), err)
 		}
 	}
 
 	if err := m.reconcileSecret(ctx, secret, desiredLabels); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed reconciling existing secret %s for config %s: %w", client.ObjectKeyFromObject(secret), config.GetName(), err)
 	}
 
 	return secret, nil
@@ -107,22 +107,22 @@ func (m *manager) generateAndCreate(ctx context.Context, config secretsutils.Con
 
 	data, err := config.Generate()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed generating data: %w", err)
 	}
 
 	dataMap, err := m.keepExistingSecretsIfNeeded(ctx, config.GetName(), data.SecretData())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed taking over data from existing secret when needed: %w", err)
 	}
 
 	secret := Secret(objectMeta, dataMap)
 	if err := m.client.Create(ctx, secret); err != nil {
 		if !apierrors.IsAlreadyExists(err) {
-			return nil, err
+			return nil, fmt.Errorf("failed creating new secret: %w", err)
 		}
 
 		if err := m.client.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed reading existing secret: %w", err)
 		}
 	}
 
@@ -271,12 +271,12 @@ func (m *manager) maintainLifetimeLabels(
 		if secret.Labels[LabelKeyValidUntilTime] != "" {
 			issuedAtTime, err := strconv.ParseInt(issuedAt, 10, 64)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed converting %s to int64: %w", issuedAt, err)
 			}
 
 			existingValidUntilTime, err := strconv.ParseInt(secret.Labels[LabelKeyValidUntilTime], 10, 64)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed converting %s from label %s to int64: %w", secret.Labels[LabelKeyValidUntilTime], LabelKeyValidUntilTime, err)
 			}
 
 			if oldValidity := time.Duration(existingValidUntilTime - issuedAtTime); oldValidity != validity {
@@ -305,7 +305,7 @@ func (m *manager) maintainLifetimeLabels(
 
 	certificate, err := utils.DecodeCertificate(secret.Data[dataKeyCertificate])
 	if err != nil {
-		return fmt.Errorf("error decoding certificate when trying to maintain lifetime labels: %w", err)
+		return fmt.Errorf("error decoding certificate from data key %s: %w", dataKeyCertificate, err)
 	}
 
 	desiredLabels[LabelKeyIssuedAtTime] = unixTime(certificate.NotBefore)
