@@ -23,10 +23,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
-	"go.uber.org/mock/gomock"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
@@ -38,7 +36,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -126,46 +123,6 @@ var _ = Describe("utils", func() {
 			result, err := GetWildcardCertificate(ctx, fakeClient)
 			Expect(result).To(BeNil())
 			Expect(err).NotTo(HaveOccurred())
-		})
-	})
-
-	Describe("#SeedIsGarden", func() {
-		var (
-			ctx        context.Context
-			mockReader *mockclient.MockReader
-			ctrl       *gomock.Controller
-		)
-
-		BeforeEach(func() {
-			ctx = context.Background()
-			ctrl = gomock.NewController(GinkgoT())
-			mockReader = mockclient.NewMockReader(ctrl)
-		})
-
-		AfterEach(func() {
-			ctrl.Finish()
-		})
-
-		It("should return that seed is a garden cluster", func() {
-			mockReader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), client.Limit(1)).DoAndReturn(
-				func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
-					list.Items = []metav1.PartialObjectMetadata{{}}
-					return nil
-				})
-			Expect(SeedIsGarden(ctx, mockReader)).To(BeTrue())
-		})
-
-		It("should return that seed is a not a garden cluster because no garden object found", func() {
-			mockReader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), client.Limit(1))
-			Expect(SeedIsGarden(ctx, mockReader)).To(BeFalse())
-		})
-
-		It("should return that seed is a not a garden cluster because of a no match error", func() {
-			mockReader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), client.Limit(1)).DoAndReturn(
-				func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
-					return &meta.NoResourceMatchError{}
-				})
-			Expect(SeedIsGarden(ctx, mockReader)).To(BeFalse())
 		})
 	})
 

@@ -36,7 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	operatorutils "github.com/gardener/gardener/pkg/utils/gardener/operator"
 )
 
 // SeedIsGardenCheckInterval is the interval how often it should be checked whether the seed cluster has been registered
@@ -53,7 +53,7 @@ func AddToManager(
 	networks gardencore.SeedNetworks,
 	resolver hostnameresolver.HostResolver,
 ) error {
-	seedIsGarden, err := gardenerutils.SeedIsGarden(ctx, seedCluster.GetAPIReader())
+	seedIsGarden, err := operatorutils.SeedIsGarden(ctx, seedCluster.GetAPIReader())
 	if err != nil {
 		return fmt.Errorf("failed checking whether the seed is the garden cluster: %w", err)
 	}
@@ -92,7 +92,7 @@ func AddToManager(
 	// again.
 	return mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
 		wait.Until(func() {
-			seedIsGarden, err = gardenerutils.SeedIsGarden(ctx, seedCluster.GetClient())
+			seedIsGarden, err = operatorutils.SeedIsGarden(ctx, seedCluster.GetClient())
 			if err != nil {
 				mgr.GetLogger().Error(err, "Failed checking whether the seed cluster is the garden cluster at the same time")
 				return
