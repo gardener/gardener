@@ -71,7 +71,7 @@ var ForbiddenFinalizersOnCreation = sets.New(
 
 // ValidateCreate performs the validation.
 func (h *Handler) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	otherGardensAlreadyExist, err := kubernetesutils.ResourcesExist(ctx, h.RuntimeClient, operatorv1alpha1.SchemeGroupVersion.WithKind("GardenList"))
+	otherGardensAlreadyExist, err := kubernetesutils.ResourcesExist(ctx, h.RuntimeClient, &operatorv1alpha1.GardenList{}, h.RuntimeClient.Scheme())
 	if err != nil {
 		return nil, apierrors.NewInternalError(err)
 	}

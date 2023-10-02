@@ -331,7 +331,7 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, project *garde
 	if namespace := project.Spec.Namespace; namespace != nil {
 		log = log.WithValues("namespaceName", *namespace)
 
-		inUse, err := kubernetesutils.ResourcesExist(ctx, r.Client, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"), client.InNamespace(*namespace))
+		inUse, err := kubernetesutils.ResourcesExist(ctx, r.Client, &gardencorev1beta1.ShootList{}, r.Client.Scheme(), client.InNamespace(*namespace))
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to check if namespace is empty: %w", err)
 		}

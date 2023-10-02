@@ -35,6 +35,7 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -68,7 +69,7 @@ var _ = Describe("handler", func() {
 
 		ctx = admission.NewContextWithRequest(ctx, admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{Name: resourceName}})
 		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
-		handler = &Handler{Logger: log, APIReader: mockReader}
+		handler = &Handler{Logger: log, APIReader: mockReader, Scheme: kubernetes.GardenScheme}
 
 		secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -296,11 +297,11 @@ var _ = Describe("handler", func() {
 		It("should forbid because the domain in seed namespace is changed but shoots using the seed exist", func() {
 			mockReader.EXPECT().List(
 				gomock.Any(),
-				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
+				gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}),
 				client.MatchingFields{gardencore.ShootSeedName: seedName},
 				client.Limit(1),
-			).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
-				(&metav1.PartialObjectMetadataList{Items: []metav1.PartialObjectMetadata{{}}}).DeepCopyInto(list.(*metav1.PartialObjectMetadataList))
+			).DoAndReturn(func(_ context.Context, shoots *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
+				shoots.Items = []gardencorev1beta1.Shoot{{}}
 				return nil
 			})
 
@@ -370,11 +371,11 @@ var _ = Describe("handler", func() {
 		It("should fail because at least one shoot on the seed exists", func() {
 			mockReader.EXPECT().List(
 				gomock.Any(),
-				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
+				gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}),
 				client.MatchingFields{gardencore.ShootSeedName: seedName},
 				client.Limit(1),
-			).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
-				(&metav1.PartialObjectMetadataList{Items: []metav1.PartialObjectMetadata{{}}}).DeepCopyInto(list.(*metav1.PartialObjectMetadataList))
+			).DoAndReturn(func(_ context.Context, shoots *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
+				shoots.Items = []gardencorev1beta1.Shoot{{}}
 				return nil
 			})
 

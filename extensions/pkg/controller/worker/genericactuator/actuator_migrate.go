@@ -59,7 +59,7 @@ func (a *genericActuator) Migrate(ctx context.Context, log logr.Logger, worker *
 	//  This is only to prevent that subsequent executions of Migrate don't overwrite/delete previously persisted state.
 	//  We cannot do it this way yet since gardenlet does not persist the ShootState after all extension resources have
 	//  been migrated. It is planned to do so after v1.79 has been released, hence we have to wait a bit longer.
-	machineObjectsExist, err := kubernetesutils.ResourcesExist(ctx, a.client, machinev1alpha1.SchemeGroupVersion.WithKind("MachineList"), client.InNamespace(worker.Namespace))
+	machineObjectsExist, err := kubernetesutils.ResourcesExist(ctx, a.client, &machinev1alpha1.MachineList{}, a.client.Scheme(), client.InNamespace(worker.Namespace))
 	if err != nil {
 		return fmt.Errorf("failed checking whether machine objects exist: %w", err)
 	}

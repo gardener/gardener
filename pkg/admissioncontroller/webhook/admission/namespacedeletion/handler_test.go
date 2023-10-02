@@ -34,6 +34,7 @@ import (
 
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/namespacedeletion"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -74,7 +75,7 @@ var _ = Describe("handler", func() {
 		shootMetadataList = &metav1.PartialObjectMetadataList{}
 		shootMetadataList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
 
-		handler = &Handler{Logger: log, APIReader: mockReader, Client: mockCache}
+		handler = &Handler{Logger: log, APIReader: mockReader, Client: mockCache, Scheme: kubernetes.GardenScheme}
 	})
 
 	AfterEach(func() {

@@ -37,6 +37,7 @@ type Handler struct {
 	Logger    logr.Logger
 	APIReader client.Reader
 	Client    client.Reader
+	Scheme    *runtime.Scheme
 }
 
 // ValidateCreate returns nil (not implemented by this handler).
@@ -91,7 +92,7 @@ func (h *Handler) admitNamespace(ctx context.Context, namespaceName string) erro
 
 	case project.DeletionTimestamp != nil:
 		// if project is marked for deletion we need to wait until all shoots in the namespace are gone
-		namespaceInUse, err := kubernetesutils.ResourcesExist(ctx, h.APIReader, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"), client.InNamespace(namespace.Name))
+		namespaceInUse, err := kubernetesutils.ResourcesExist(ctx, h.APIReader, &gardencorev1beta1.ShootList{}, h.Scheme, client.InNamespace(namespace.Name))
 		if err != nil {
 			return apierrors.NewInternalError(err)
 		}
