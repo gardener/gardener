@@ -390,6 +390,14 @@ func (c *clusterAutoscaler) computeCommand() []string {
 		fmt.Sprintf("--scan-interval=%s", c.config.ScanInterval.Duration),
 	)
 
+	if c.config.MaxEmptyBulkDelete != nil {
+		command = append(command, fmt.Sprintf("--max-empty-bulk-delete=%d", *c.config.MaxEmptyBulkDelete))
+	}
+
+	if c.config.NewPodScaleupDelay != nil {
+		command = append(command, fmt.Sprintf("--new-pod-scale-up-delay=%s", c.config.NewPodScaleupDelay.Duration))
+	}
+
 	for _, taint := range c.config.IgnoreTaints {
 		command = append(command, fmt.Sprintf("--ignore-taint=%s", taint))
 	}

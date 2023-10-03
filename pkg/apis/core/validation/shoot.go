@@ -1046,6 +1046,14 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, fldPath *field
 		allErrs = append(allErrs, validateClusterAutoscalerIgnoreTaints(ignoreTaints, fldPath.Child("ignoreTaints"))...)
 	}
 
+	if newPodScaleupDelay := autoScaler.NewPodScaleupDelay; newPodScaleupDelay != nil && newPodScaleupDelay.Duration < 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("newPodScaleupDelay"), *newPodScaleupDelay, "can not be negative"))
+	}
+
+	if maxEmptyBulkDelete := autoScaler.MaxEmptyBulkDelete; maxEmptyBulkDelete != nil && *maxEmptyBulkDelete < 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxEmptyBulkDelete"), *maxEmptyBulkDelete, "can not be negative"))
+	}
+
 	return allErrs
 }
 
