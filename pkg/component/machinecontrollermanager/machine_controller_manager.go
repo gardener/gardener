@@ -213,7 +213,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 						"--safety-up=2",
 						"--safety-down=1",
 						"--target-kubeconfig=" + gardenerutils.PathGenericKubeconfig,
-						"--v=4",
+						"--v=3",
 					},
 					LivenessProbe: &corev1.Probe{
 						ProbeHandler: corev1.ProbeHandler{
