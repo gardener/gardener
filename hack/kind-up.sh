@@ -171,8 +171,9 @@ if [[ "$CLUSTER_NAME" == "gardener-local2-ha-single-zone" ]]; then
   garden_cluster="gardener-local-ha-single-zone"
 fi
 
-if [[ -n "$(docker ps -aq -f name="$garden_cluster"-control-plane)" ]]; then
+if [[ "$CLUSTER_NAME" == "gardener-extensions" ]] && [[ -n "$(docker ps -aq -f name="$garden_cluster"-control-plane)" ]]; then
     docker start "$garden_cluster"-control-plane
+    exit 0
 fi
 
 mkdir -m 0755 -p \
