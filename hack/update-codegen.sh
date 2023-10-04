@@ -39,6 +39,7 @@ AVAILABLE_CODEGEN_OPTIONS=(
   "shootdnsrewriting_groups"
   "provider_local_groups"
   "extensions_config_groups"
+  "nodeagent_groups"
 )
 
 # Friendly reminder if workspace location is not in $GOPATH
@@ -378,6 +379,30 @@ resourcemanager_groups() {
     -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
 }
 export -f resourcemanager_groups
+
+# Componentconfig for node-agent
+
+nodeagent_groups() {
+  echo "Generating API groups for pkg/nodeagent/apis/config"
+
+  bash "${PROJECT_ROOT}"/hack/generate-internal-groups.sh \
+    deepcopy,defaulter \
+    github.com/gardener/gardener/pkg/client/componentconfig \
+    github.com/gardener/gardener/pkg/nodeagent/apis \
+    github.com/gardener/gardener/pkg/nodeagent/apis \
+    "config:v1alpha1" \
+    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+
+  bash "${PROJECT_ROOT}"/hack/generate-internal-groups.sh \
+    conversion \
+    github.com/gardener/gardener/pkg/client/componentconfig \
+    github.com/gardener/gardener/pkg/nodeagent/apis \
+    github.com/gardener/gardener/pkg/nodeagent/apis \
+    "config:v1alpha1" \
+    --extra-peer-dirs=github.com/gardener/gardener/pkg/nodeagent/apis/config,github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion,k8s.io/apimachinery/pkg/runtime,k8s.io/component-base/config,k8s.io/component-base/config/v1alpha1 \
+    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+}
+export -f nodeagent_groups
 
 # Componentconfig for admission plugins
 
