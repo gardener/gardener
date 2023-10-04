@@ -58,19 +58,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 		r.Clock = clock.RealClock{}
 	}
 
-	c, err := controller.New(
-		ControllerName,
-		mgr,
-		controller.Options{
-			Reconciler:              r,
-			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
-		},
-	)
-	if err != nil {
-		return err
-	}
-
-	b := builder.
+	c, err := builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		For(&resourcesv1alpha1.ManagedResource{}, builder.WithPredicates(
@@ -85,7 +73,11 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 		)).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
-		})
+		}).
+		Build(r)
+	if err != nil {
+		return err
+	}
 
 	for resource, obj := range map[string]client.Object{
 		"deployments":  &appsv1.Deployment{},
@@ -98,15 +90,17 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 			if !meta.IsNoMatchError(err) {
 				return err
 			}
-			mgr.GetLogger().Info("Resource is not available/enabled API of the target cluster, skip adding watches", "gvr", gvr)
+			c.GetLogger().Info("Resource is not available/enabled API of the target cluster, skip adding watches", "gvr", gvr)
 			continue
 		}
 
-		b = b.WatchesRawSource(
+		if err := c.Watch(
 			source.Kind(targetCluster.GetCache(), obj),
 			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
-			builder.WithPredicates(r.ProgressingStatusChanged(ctx)),
-		)
+			r.ProgressingStatusChanged(ctx),
+		); err != nil {
+			return err
+		}
 
 		if resource == "deployments" {
 			// Watch relevant objects for Progressing condition in order to immediately update the condition as soon as
@@ -114,15 +108,17 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 			pod := &metav1.PartialObjectMetadata{}
 			pod.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Pod"))
 
-			b = b.WatchesRawSource(
+			if err := c.Watch(
 				source.Kind(targetCluster.GetCache(), pod),
 				mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), r.MapPodToDeploymentToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
-				builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Delete)),
-			)
+				predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Delete),
+			); err != nil {
+				return err
+			}
 		}
 	}
 
-	return b.Complete(r)
+	return nil
 }
 
 // ProgressingStatusChanged returns a predicate that filters for events that indicate a change in the object's
