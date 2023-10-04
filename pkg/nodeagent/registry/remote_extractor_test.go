@@ -146,6 +146,9 @@ func fsToTarLayer(layerFs afero.Fs) ([]containerregistryv1.Layer, error) {
 	tarWriter := tar.NewWriter(&layerBuffer)
 
 	err := afero.Walk(layerFs, "/", func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 		header, err := tar.FileInfoHeader(info, path)
 		if err != nil {
 			return err
