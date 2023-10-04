@@ -28,6 +28,7 @@ reviewers:
     - [Goals](#goals)
     - [Non-Goals](#non-goals)
   - [Proposal](#proposal)
+    - [0. Add PoolSize Validation / Fix Existing Clusters](#0-add-poolsize-validation--fix-existing-clusters)
     - [1. Extend MCM MachineDeployment](#1-extend-mcm-machinedeployment)
     - [1.1 Remove Minimum/Maximum Static Computation](#11-remove-minimummaximum-static-computation)
     - [2. Node Group Auto Discovery](#2-node-group-auto-discovery)
@@ -162,8 +163,8 @@ The above cases are not un-common. Thre are `~65` Worker Pools in LIVE Landscape
 1. We remove the current static node group assignment and move to a dynamic node group policy leveraging [node-group-auto-discovery](https://github.com/gardener/autoscaler/blob/053c0d5176cb2d195e3baf333b05ceea99eedb58/cluster-autoscaler/main.go#L156)
 2. We change our MCM [CloudProvider](https://github.com/gardener/autoscaler/blob/053c0d5176cb2d195e3baf333b05ceea99eedb58/cluster-autoscaler/cloudprovider/mcm/mcm_cloud_provider.go#L52) implementaion to support dynamic node groups and node group auto-discovery.
 3. We change the deployment of the CA Deployer to construct the command string differently.
-4. We ask operator of live clusters to correct shoot configuration where `WorkerPool.Maximum<WorkerPool.NumZones`
-5. We introduce validation for new shoot clusters to ensure `WorkerPool.Maxium >= WorkerPool.NumZones`
+4. We fix invalid shoot clusters on all landscapes where `WorkerPool.Maxium >= WorkerPool.NumZones` 
+   1. We also introduce validation for new shoot clusters to ensure this constraint is honored.
 
 ### Non-Goals
 
@@ -171,6 +172,9 @@ The above cases are not un-common. Thre are `~65` Worker Pools in LIVE Landscape
 
 ## Proposal
 
+### 0. Add PoolSize Validation / Fix Existing Clusters 
+
+As was described earlier, our current distribution logic for worker pools can result in creating non-sensical NodeGroups where the `MaxSize` of the NodeGroup is computed as `0`. Since we will preserve the current distribution logic in our `Backward-Compatible` NodeGroup sizing strateg, we should add a validation check to reject shoot specs where `WorkerPool.Maximum > WorkerPool.NumZones`. We should also fix existing shoot specs.
 
 ### 1. Extend MCM MachineDeployment
 
