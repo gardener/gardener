@@ -91,7 +91,6 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 
 	var (
 		items             []metav1.PartialObjectMetadata
-		mrGVK             = resourcesv1alpha1.SchemeGroupVersion.WithKind("ManagedResourceList")
 		groupVersionKinds = []schema.GroupVersionKind{
 			appsv1.SchemeGroupVersion.WithKind("DeploymentList"),
 			appsv1.SchemeGroupVersion.WithKind("StatefulSetList"),
@@ -99,7 +98,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 			batchv1.SchemeGroupVersion.WithKind("JobList"),
 			corev1.SchemeGroupVersion.WithKind("PodList"),
 			batchv1.SchemeGroupVersion.WithKind("CronJobList"),
-			mrGVK,
+			resourcesv1alpha1.SchemeGroupVersion.WithKind("ManagedResourceList"),
 		}
 	)
 
@@ -111,12 +110,9 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 		objList := &metav1.PartialObjectMetadataList{}
 		objList.SetGroupVersionKind(gvk)
 		if err := r.TargetReader.List(ctx, objList); err != nil {
-			if meta.IsNoMatchError(err) && gvk == mrGVK {
-				// ignore the error if the resource is not matched since
-				// not all clusters have the managed resource CRD installed
-				continue
+			if !meta.IsNoMatchError(err) {
+				return reconcile.Result{}, err
 			}
-			return reconcile.Result{}, err
 		}
 		items = append(items, objList.Items...)
 	}
