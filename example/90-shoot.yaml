@@ -289,7 +289,7 @@ spec:
   #   ignoreTaints: 
   #     - "node.kubernetes.io/memory-pressure"
   #     - "node.kubernetes.io/disk-pressure"
-  #   newPodScaleupDelay: 10s
+  #   newPodScaleUpDelay: 10s
   #   maxEmptyBulkDelete: 10
   # verticalPodAutoscaler:
   #   enabled: true

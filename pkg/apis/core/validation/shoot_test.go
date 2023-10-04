@@ -2666,12 +2666,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"Field": Equal("expander"),
 					}))),
 				),
-				Entry("valid with newPodScaleupDelay", core.ClusterAutoscaler{
-					NewPodScaleupDelay: &metav1.Duration{Duration: time.Minute},
+				Entry("valid with newPodScaleUpDelay", core.ClusterAutoscaler{
+					NewPodScaleUpDelay: &metav1.Duration{Duration: time.Minute},
 				}, version, BeEmpty()),
-				Entry("invalid with negative newPodScaleupDelay", core.ClusterAutoscaler{
-					NewPodScaleupDelay: &negativeDuration,
-				}, version, ConsistOf(field.Invalid(field.NewPath("newPodScaleupDelay"), negativeDuration, "can not be negative"))),
+				Entry("invalid with negative newPodScaleUpDelay", core.ClusterAutoscaler{
+					NewPodScaleUpDelay: &negativeDuration,
+				}, version, ConsistOf(field.Invalid(field.NewPath("newPodScaleUpDelay"), negativeDuration, "can not be negative"))),
 				Entry("valid with maxEmptyBulkDelete", core.ClusterAutoscaler{
 					MaxEmptyBulkDelete: &positiveInteger,
 				}, version, BeEmpty()),

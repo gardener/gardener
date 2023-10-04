@@ -3142,7 +3142,7 @@ int32
 </tr>
 <tr>
 <td>
-<code>newPodScaleupDelay</code></br>
+<code>newPodScaleUpDelay</code></br>
 <em>
 <a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
 Kubernetes meta/v1.Duration
@@ -3151,7 +3151,7 @@ Kubernetes meta/v1.Duration
 </td>
 <td>
 <em>(Optional)</em>
-<p>NewPodScaleupDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up</p>
+<p>NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up</p>
 </td>
 </tr>
 <tr>

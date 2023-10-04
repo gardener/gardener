@@ -407,9 +407,9 @@ message ClusterAutoscaler {
   // +optional
   repeated string ignoreTaints = 10;
 
-  // NewPodScaleupDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up
+  // NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration newPodScaleupDelay = 11;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration newPodScaleUpDelay = 11;
 
   // MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: 10)
   // +optional

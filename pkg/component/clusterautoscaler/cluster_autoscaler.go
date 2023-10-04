@@ -394,8 +394,8 @@ func (c *clusterAutoscaler) computeCommand() []string {
 		command = append(command, fmt.Sprintf("--max-empty-bulk-delete=%d", *c.config.MaxEmptyBulkDelete))
 	}
 
-	if c.config.NewPodScaleupDelay != nil {
-		command = append(command, fmt.Sprintf("--new-pod-scale-up-delay=%s", c.config.NewPodScaleupDelay.Duration))
+	if c.config.NewPodScaleUpDelay != nil {
+		command = append(command, fmt.Sprintf("--new-pod-scale-up-delay=%s", c.config.NewPodScaleUpDelay.Duration))
 	}
 
 	for _, taint := range c.config.IgnoreTaints {
