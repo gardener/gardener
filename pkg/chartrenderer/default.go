@@ -287,6 +287,5 @@ func loadEmbeddedFS(embeddedFS embed.FS, chartPath string) (*chart.Chart, error)
 		return nil, err
 	}
 
-	// TODO (galantsev): helm
 	return chartloader.LoadFiles(files)
 }
