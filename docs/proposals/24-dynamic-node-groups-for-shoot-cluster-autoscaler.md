@@ -94,22 +94,22 @@ Most garden extension providers have a helper method [generateMachineConfig](htt
 
 ```go
 for _, pool := range w.worker.Spec.Pools {
-		zoneLen := int32(len(pool.Zones))
+  zoneLen := int32(len(pool.Zones))
 deploymentName = fmt.Sprintf("%s-%s-z%d", w.worker.Namespace, pool.Name, zoneIndex+1)
-    for zoneIndex, zone := range pool.Zones {
+  for zoneIndex, zone := range pool.Zones {
+    //...
+    machineDeployments = append(machineDeployments, worker.MachineDeployment{
       //...
-      	machineDeployments = append(machineDeployments, worker.MachineDeployment{
-          //...
-  				Name:                 deploymentName,
-				  Minimum:              worker.DistributeOverZones(zoneIdx, pool.Minimum, zoneLen),
-				  Maximum:              worker.DistributeOverZones(zoneIdx, pool.Maximum, zoneLen),
-				  MaxSurge:             worker.DistributePositiveIntOrPercent(zoneIdx, pool.MaxSurge, zoneLen, pool.Maximum),
-				  MaxUnavailable:       worker.DistributePositiveIntOrPercent(zoneIdx, pool.MaxUnavailable, zoneLen, pool.Minimum),
-				  Labels:               addTopologyLabel(pool.Labels, zone),
-				  Annotations:          pool.Annotations,
-          //...
-			})
-    }
+      Name:                 deploymentName,
+      Minimum:              worker.DistributeOverZones(zoneIdx, pool.Minimum, zoneLen),
+      Maximum:              worker.DistributeOverZones(zoneIdx, pool.Maximum, zoneLen),
+      MaxSurge:             worker.DistributePositiveIntOrPercent(zoneIdx, pool.MaxSurge, zoneLen, pool.Maximum),
+      MaxUnavailable:       worker.DistributePositiveIntOrPercent(zoneIdx, pool.MaxUnavailable, zoneLen, pool.Minimum),
+      Labels:               addTopologyLabel(pool.Labels, zone),
+      Annotations:          pool.Annotations,
+      //...
+    })
+  }
 }
 ```
 
@@ -163,7 +163,7 @@ The above cases are not un-common. Thre are `~65` Worker Pools in LIVE Landscape
 1. We remove the current static node group assignment and move to a dynamic node group policy leveraging [node-group-auto-discovery](https://github.com/gardener/autoscaler/blob/053c0d5176cb2d195e3baf333b05ceea99eedb58/cluster-autoscaler/main.go#L156)
 2. We change our MCM [CloudProvider](https://github.com/gardener/autoscaler/blob/053c0d5176cb2d195e3baf333b05ceea99eedb58/cluster-autoscaler/cloudprovider/mcm/mcm_cloud_provider.go#L52) implementaion to support dynamic node groups and node group auto-discovery.
 3. We change the deployment of the CA Deployer to construct the command string differently.
-4. We fix invalid shoot clusters on all landscapes where `WorkerPool.Maxium >= WorkerPool.NumZones` 
+4. We fix invalid shoot clusters on all landscapes where `WorkerPool.Maxium < WorkerPool.NumZones` 
    1. We also introduce validation for new shoot clusters to ensure this constraint is honored.
 
 ### Non-Goals
@@ -174,7 +174,7 @@ The above cases are not un-common. Thre are `~65` Worker Pools in LIVE Landscape
 
 ### 0. Add PoolSize Validation / Fix Existing Clusters 
 
-As was described earlier, our current distribution logic for worker pools can result in creating non-sensical NodeGroups where the `MaxSize` of the NodeGroup is computed as `0`. Since we will preserve the current distribution logic in our `Backward-Compatible` NodeGroup sizing strateg, we should add a validation check to reject shoot specs where `WorkerPool.Maximum > WorkerPool.NumZones`. We should also fix existing shoot specs.
+As was described earlier, our current distribution logic for worker pools can result in creating non-sensical NodeGroups where the `MaxSize` of the NodeGroup is computed as `0`. Since we will preserve the current distribution logic in our `Backward-Compatible` NodeGroup sizing strateg, we should add a validation check to reject shoot specs where `WorkerPool.Maximum < WorkerPool.NumZones`. We should also fix existing shoot specs.
 
 ### 1. Extend MCM MachineDeployment
 
@@ -225,7 +225,7 @@ We will offer 2 strategies for node-group sizing: *Lax Greedy Sizing* and *Equit
 #### Pros/Cons
 1. Pro: This strategy has the primary advantage that workload can be provisioned within the zone for the NodeGroup. It can be considered as work-load friendly
 2. Pro: It can handle back-off well. If nodes can't be provisioned in one node group, the other node group can take up the slack.
-3. Con: It isn't backward compatabile with our current distribution logic.
+3. Con: All instances may stay in one availability zone even if multiple are configured. While this may be advantageous short-term, it may impact availability if the zone goes down.
 4. Con: We need to add support for scale from zero for extended/ephmeral resources. We have [Gardener CA #132](https://github.com/gardener/autoscaler/issues/132) for this.
 
 #### Examples
