@@ -29,6 +29,7 @@ reviewers:
     - [Non-Goals](#non-goals)
   - [Proposal](#proposal)
     - [1. Extend MCM MachineDeployment](#1-extend-mcm-machinedeployment)
+    - [1.1 Remove Minimum/Maximum Static Computation](#11-remove-minimummaximum-static-computation)
     - [2. Node Group Auto Discovery](#2-node-group-auto-discovery)
     - [3. Dynamic Node Group Sizing.](#3-dynamic-node-group-sizing)
     - [3.1 Lax-Greedy Sizing](#31-lax-greedy-sizing)
@@ -173,8 +174,11 @@ The above cases are not un-common. Thre are `~65` Worker Pools in LIVE Landscape
 
 ### 1. Extend MCM MachineDeployment
 
-Unlike the [worker MachineDeployment](https://github.com/gardener/gardener/blob/a3632ea5315d104d0ed3dd47e6d17f53cfe0e877/extensions/pkg/controller/worker/machines.go#L39), the [MCM MachineDeployment](https://pkg.go.dev/github.com/gardener/machine-controller-manager@v0.50.0/pkg/apis/machine/v1alpha1#MachineDeployment) as of today does not preserve the statically computed `Minimum` and `Maximum`.  It only possesses a `Replicas` field. We propose extending [MachineDeploymentSpec](https://github.com/gardener/machine-controller-manager/blob/d0fdc315087158d41f31d0c4bbbb25af9845eb0f/pkg/apis/machine/types.go#L412) with a `PoolMinimum` and `PoolMaximum`. These would be set as usual during the MCD generation in the garden extension provider.
+Unlike the [worker MachineDeployment](https://github.com/gardener/gardener/blob/a3632ea5315d104d0ed3dd47e6d17f53cfe0e877/extensions/pkg/controller/worker/machines.go#L39), the [MCM MachineDeployment](https://pkg.go.dev/github.com/gardener/machine-controller-manager@v0.50.0/pkg/apis/machine/v1alpha1#MachineDeployment) as of today does not preserve the statically computed `Minimum` and `Maximum`.  It only possesses a `Replicas` field. We propose extending [MachineDeploymentSpec](https://github.com/gardener/machine-controller-manager/blob/d0fdc315087158d41f31d0c4bbbb25af9845eb0f/pkg/apis/machine/types.go#L412) with a `PoolMinimum` and `PoolMaximum`, making sure these are populated in the garden extension provider and computing `NodeGroup` `Minimum` and `Maximum` at runtime in the CA. These would be set as usual during the MCD generation in the garden extension provider.
 
+### 1.1 Remove Minimum/Maximum Static Computation
+
+The existing code in the garden extension provider which statically computes Worker MachineDeployment Minimum/Maximum can be removed. If we are using a distribution based strategy, we can always do this at runtime in the CA.
 
 ### 2. Node Group Auto Discovery
 
