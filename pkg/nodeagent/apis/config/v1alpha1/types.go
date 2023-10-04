@@ -15,8 +15,9 @@
 package v1alpha1
 
 import (
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 )
 
 const (
@@ -57,42 +58,37 @@ const (
 
 // NodeAgentConfiguration defines the configuration for the gardener-node-agent.
 type NodeAgentConfiguration struct {
-	metav1.TypeMeta
-
-	// APIServer contains the connection configuration for the gardener-node-agent to
-	// access the shoot api server.
-	APIServer APIServer `json:"apiServer"`
-
+	metav1.TypeMeta `json:",inline"`
+	// ClientConnection specifies the kubeconfig file and the client connection settings for the proxy server to use
+	// when communicating with the kube-apiserver of the shoot cluster.
+	ClientConnection componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:"clientConnection"`
+	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
+	LogLevel string `json:"logLevel"`
+	// LogFormat is the output format for the logs. Must be one of [text,json].
+	LogFormat string `json:"logFormat"`
+	// Debugging holds configuration for Debugging related features.
+	// +optional
+	Debugging *componentbaseconfigv1alpha1.DebuggingConfiguration `json:"debugging,omitempty"`
+	// FeatureGates is a map of feature names to bools that enable or disable alpha/experimental features. This field
+	// modifies piecemeal the built-in default values from "github.com/gardener/gardener/pkg/operator/features/features.go".
+	// Default: nil
+	// +optional
+	FeatureGates map[string]bool `json:"featureGates,omitempty"`
 	// OperatingSystemConfigSecretName defines the name of the secret in the shoot cluster control plane, which contains
 	// the Operating System Config (OSC) for the gardener-node-agent.
-	OperatingSystemConfigSecretName string
-
+	OperatingSystemConfigSecretName string `json:"operatingSystemConfigSecretName"`
 	// AccessTokenSecretName defines the name of the secret in the shoot cluster control plane, which contains
 	// the `kube-apiserver` access token for the gardener-node-agent.
-	AccessTokenSecretName string
-
+	AccessTokenSecretName string `json:"accessTokenSecretName"`
 	// Image is the container image reference to the gardener-node-agent.
 	Image string `json:"image"`
 	// HyperkubeImage is the container image reference to the hyperkube containing kubelet.
 	HyperkubeImage string `json:"hyperkubeImage"`
-
-	// KubernetesVersion contains the kubernetes version of the kubelet, used for annotating
-	// the corresponding node resource with a kubernetes version annotation.
+	// KubernetesVersion contains the kubernetes version of the kubelet, used for annotating the corresponding node
+	// resource with a kubernetes version annotation.
 	KubernetesVersion *semver.Version `json:"kubernetesVersion"`
-
-	// KubeletDataVolumeSize sets the data volume size of an unformatted disk on the worker node,
-	// which is used for /var/lib on the worker.
+	// KubeletDataVolumeSize sets the data volume size of an unformatted disk on the worker node, which is used for
+	// /var/lib on the worker.
 	// +optional
 	KubeletDataVolumeSize *int64 `json:"kubeletDataVolumeSize,omitempty"`
-}
-
-// APIServer contains the connection configuration for the gardener-node-agent to
-type APIServer struct {
-	// URL is the url to the api server.
-	URL string `json:"url"`
-	// CABundle is the ca certificate for the api server.
-	CABundle []byte `json:"caBundle"`
-	// BootstrapToken is the initial token to fetch the shoot access token for
-	// kubelet and the gardener-node-agent.
-	BootstrapToken string `json:"bootstrapToken"`
 }

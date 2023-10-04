@@ -29,11 +29,16 @@ import (
 	"github.com/spf13/afero"
 )
 
+// NewExtractor returns a new Extractor.
+func NewExtractor() Extractor {
+	return &remoteExtractor{}
+}
+
 type remoteExtractor struct {
 	fs afero.Fs
 }
 
-func (ext *remoteExtractor) ExtractFromLayer(image, pathSuffix, dest string) error {
+func (r *remoteExtractor) ExtractFromLayer(image, pathSuffix, dest string) error {
 	// In the local environment, we pull Gardener images built via skaffold from the local registry running in the kind
 	// cluster. However, on local machine pods, `localhost:5001` does obviously not lead to this registry. Hence, we
 	// have to replace it with `garden.local.gardener.cloud:5001` which allows accessing the registry from both local
@@ -49,10 +54,10 @@ func (ext *remoteExtractor) ExtractFromLayer(image, pathSuffix, dest string) err
 	if err != nil {
 		return fmt.Errorf("unable access remote image reference: %w", err)
 	}
-	return ext.extractFromDownloadedImage(remoteImage, pathSuffix, dest)
+	return r.extractFromDownloadedImage(remoteImage, pathSuffix, dest)
 }
 
-func (ext *remoteExtractor) extractFromDownloadedImage(remoteImage containerregistryv1.Image, pathSuffix, dest string) error {
+func (r *remoteExtractor) extractFromDownloadedImage(remoteImage containerregistryv1.Image, pathSuffix, dest string) error {
 	layers, err := remoteImage.Layers()
 	if err != nil {
 		return fmt.Errorf("unable retrieve image layers: %w", err)
@@ -66,7 +71,7 @@ func (ext *remoteExtractor) extractFromDownloadedImage(remoteImage containerregi
 			return fmt.Errorf("unable to get reader for uncompressed layer: %w", err)
 		}
 
-		if err = ext.extractFileFromTar(buffer, pathSuffix, dest); err != nil {
+		if err := r.extractFileFromTar(buffer, pathSuffix, dest); err != nil {
 			if errors.Is(err, errNotFound) {
 				continue
 			}
@@ -81,7 +86,7 @@ func (ext *remoteExtractor) extractFromDownloadedImage(remoteImage containerregi
 
 var errNotFound = errors.New("file not contained in tar")
 
-func (ext *remoteExtractor) extractFileFromTar(uncompressedStream io.Reader, searchSuffix, targetFile string) error {
+func (r *remoteExtractor) extractFileFromTar(uncompressedStream io.Reader, searchSuffix, targetFile string) error {
 	var (
 		tarReader = tar.NewReader(uncompressedStream)
 		header    *tar.Header
@@ -97,7 +102,7 @@ func (ext *remoteExtractor) extractFileFromTar(uncompressedStream io.Reader, sea
 
 			tmpDest := targetFile + ".tmp"
 
-			outFile, err := ext.fs.OpenFile(tmpDest, os.O_CREATE|os.O_RDWR, 0755)
+			outFile, err := r.fs.OpenFile(tmpDest, os.O_CREATE|os.O_RDWR, 0755)
 			if err != nil {
 				return fmt.Errorf("create file failed: %w", err)
 			}
@@ -108,7 +113,7 @@ func (ext *remoteExtractor) extractFileFromTar(uncompressedStream io.Reader, sea
 				return fmt.Errorf("copying file from tarball failed: %w", err)
 			}
 
-			return ext.fs.Rename(tmpDest, targetFile)
+			return r.fs.Rename(tmpDest, targetFile)
 		default:
 			continue
 		}

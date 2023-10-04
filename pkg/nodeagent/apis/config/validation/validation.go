@@ -24,40 +24,30 @@ import (
 // ValidateNodeAgentConfiguration validates the given `NodeAgentConfiguration`.
 func ValidateNodeAgentConfiguration(conf *config.NodeAgentConfiguration) field.ErrorList {
 	allErrs := field.ErrorList{}
-	fldPath := field.NewPath("nodeAgent")
 
-	configFldPath := fldPath.Child("config")
+	if conf.ClientConnection.Kubeconfig == "" {
+		allErrs = append(allErrs, field.Required(field.NewPath("clientConnection").Child("kubeconfig"), "must provide a path to a kubeconfig"))
+	}
 
 	if conf.HyperkubeImage == "" {
-		allErrs = append(allErrs, field.Required(configFldPath.Child("hyperkubeImage"), "must provide a hyperkubeImage"))
+		allErrs = append(allErrs, field.Required(field.NewPath("hyperkubeImage"), "must provide a hyperkube image"))
 	}
 	if conf.Image == "" {
-		allErrs = append(allErrs, field.Required(configFldPath.Child("image"), "must provide an image"))
+		allErrs = append(allErrs, field.Required(field.NewPath("image"), "must provide an image"))
 	}
 
 	if conf.KubernetesVersion == nil {
-		allErrs = append(allErrs, field.Required(configFldPath.Child("kubernetesVersion"), "must provide a supported kubernetesVersion"))
+		allErrs = append(allErrs, field.Required(field.NewPath("kubernetesVersion"), "must provide a supported kubernetes version"))
 	} else if err := kubernetesversion.CheckIfSupported(conf.KubernetesVersion.String()); err != nil {
-		allErrs = append(allErrs, field.Invalid(configFldPath.Child("kubernetesVersion"), conf.KubernetesVersion, err.Error()))
+		allErrs = append(allErrs, field.Invalid(field.NewPath("kubernetesVersion"), conf.KubernetesVersion, err.Error()))
 	}
 
 	if conf.OperatingSystemConfigSecretName == "" {
-		allErrs = append(allErrs, field.Required(configFldPath.Child("oscSecretName"), "must provide a oscSecretName"))
+		allErrs = append(allErrs, field.Required(field.NewPath("operatingSystemConfigSecretName"), "must provide the secret name for the operating system config"))
 	}
 	if conf.AccessTokenSecretName == "" {
-		allErrs = append(allErrs, field.Required(configFldPath.Child("tokenSecretName"), "must provide a tokenSecretName"))
+		allErrs = append(allErrs, field.Required(field.NewPath("accessTokenSecretName"), "must provide the secret name for the access token"))
 	}
 
-	apiServerFldPath := configFldPath.Child("apiServer")
-
-	if conf.APIServer.URL == "" {
-		allErrs = append(allErrs, field.Required(apiServerFldPath.Child("url"), "must provide a url"))
-	}
-	if len(conf.APIServer.CABundle) == 0 {
-		allErrs = append(allErrs, field.Required(apiServerFldPath.Child("ca"), "must provide a ca"))
-	}
-	if conf.APIServer.BootstrapToken == "" {
-		allErrs = append(allErrs, field.Required(apiServerFldPath.Child("bootstrapToken"), "must provide a bootstrapToken"))
-	}
 	return allErrs
 }

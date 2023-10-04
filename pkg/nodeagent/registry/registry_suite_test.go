@@ -23,5 +23,5 @@ import (
 
 func TestRegistry(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Registry Extractors")
+	RunSpecs(t, "NodeAgent Registry Suite")
 }

@@ -1,0 +1,19 @@
+---
+apiVersion: nodeagent.config.gardener.cloud/v1alpha1
+kind: NodeAgentConfiguration
+clientConnection:
+  qps: 100
+  burst: 130
+  kubeconfig: path/to/kubeconfig
+logLevel: info
+logFormat: text
+debugging:
+  enableProfiling: false
+  enableContentionProfiling: false
+featureGates: {}
+operatingSystemConfigSecretName: name-of-osc-secret
+accessTokenSecretName: name-of-access-token-secret
+image: gardener-node-agent-image:v1
+hyperkubeImage: hyperkube-image:v2
+kubernetesVersion: 1.28.2
+# kubeletDataVolumeSize: 50Gi

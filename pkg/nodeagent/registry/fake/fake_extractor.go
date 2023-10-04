@@ -12,23 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package registry
+package fake
 
-// FakeRegistryExtractor is a fake implementation of Extractor. Do not use this in production.
-type FakeRegistryExtractor struct {
-	Extractions []FakeExtraction
-}
+import (
+	"github.com/gardener/gardener/pkg/nodeagent/registry"
+)
 
-// FakeExtraction is a fake implementation of Extractor. Do not use this in production.
-type FakeExtraction struct {
+// Extraction is a fake implementation of Extractor for unit tests.
+type Extraction struct {
 	Image      string
 	PathSuffix string
 	Dest       string
 }
 
-// ExtractFromLayer implements Extractor.
-func (f *FakeRegistryExtractor) ExtractFromLayer(image, pathSuffix, dest string) error {
-	f.Extractions = append(f.Extractions, FakeExtraction{
+type fakeRegistryExtractor struct {
+	extractions []Extraction
+}
+
+var _ registry.Extractor = &fakeRegistryExtractor{}
+
+// New returns a simple implementation of registry.Extractor which can be used to fake the registry extractor in unit
+// tests.
+func New(extractions ...Extraction) *fakeRegistryExtractor {
+	return &fakeRegistryExtractor{extractions: extractions}
+}
+
+func (f *fakeRegistryExtractor) ExtractFromLayer(image, pathSuffix, dest string) error {
+	f.extractions = append(f.extractions, Extraction{
 		Image:      image,
 		PathSuffix: pathSuffix,
 		Dest:       dest,

@@ -25,30 +25,30 @@ import (
 
 const done = "done"
 
-// Dbus is an interface for interacting with systemd via dbus
-type Dbus interface {
-	// Enable the given units, same as executing systemctl enable unit
-	Enable(ctx context.Context, unitNames ...string) error
-	// Disable the given units, same as executing systemctl disable unit
-	Disable(ctx context.Context, unitNames ...string) error
-	// Start the given unit and record an event to the node object, same as executing systemctl start unit
-	Start(ctx context.Context, recorder record.EventRecorder, node *corev1.Node, unitName string) error
-	// Stop the given unit and record an event to the node object, same as executing systemctl stop unit
-	Stop(ctx context.Context, recorder record.EventRecorder, node *corev1.Node, unitName string) error
-	// Restart the given unit and record an event to the node object, same as executing systemctl restart unit
-	Restart(ctx context.Context, recorder record.EventRecorder, node *corev1.Node, unitName string) error
-	// DaemonReload reload the systemd configuration, same as executing systemctl daemon-reload
+// DBus is an interface for interacting with systemd via dbus.
+type DBus interface {
+	// DaemonReload reload the systemd configuration, same as executing "systemctl daemon-reload".
 	DaemonReload(ctx context.Context) error
+	// Enable the given units, same as executing "systemctl enable unit".
+	Enable(ctx context.Context, unitNames ...string) error
+	// Disable the given units, same as executing "systemctl disable unit".
+	Disable(ctx context.Context, unitNames ...string) error
+	// Start the given unit and record an event to the node object, same as executing "systemctl start unit".
+	Start(ctx context.Context, recorder record.EventRecorder, node *corev1.Node, unitName string) error
+	// Stop the given unit and record an event to the node object, same as executing "systemctl stop unit".
+	Stop(ctx context.Context, recorder record.EventRecorder, node *corev1.Node, unitName string) error
+	// Restart the given unit and record an event to the node object, same as executing "systemctl restart unit".
+	Restart(ctx context.Context, recorder record.EventRecorder, node *corev1.Node, unitName string) error
 }
 
 type db struct{}
 
-// New returns a new working Dbus
-func New() Dbus {
+// New returns a new working DBus
+func New() DBus {
 	return &db{}
 }
 
-func (*db) Enable(ctx context.Context, unitNames ...string) error {
+func (_ *db) Enable(ctx context.Context, unitNames ...string) error {
 	dbc, err := dbus.NewWithContext(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to connect to dbus: %w", err)
@@ -59,7 +59,7 @@ func (*db) Enable(ctx context.Context, unitNames ...string) error {
 	return err
 }
 
-func (*db) Disable(ctx context.Context, unitNames ...string) error {
+func (_ *db) Disable(ctx context.Context, unitNames ...string) error {
 	dbc, err := dbus.NewWithContext(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to connect to dbus: %w", err)
@@ -70,7 +70,7 @@ func (*db) Disable(ctx context.Context, unitNames ...string) error {
 	return err
 }
 
-func (*db) Stop(ctx context.Context, recorder record.EventRecorder, node *corev1.Node, unitName string) error {
+func (_ *db) Stop(ctx context.Context, recorder record.EventRecorder, node *corev1.Node, unitName string) error {
 	dbc, err := dbus.NewWithContext(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to connect to dbus: %w", err)
@@ -91,7 +91,7 @@ func (*db) Stop(ctx context.Context, recorder record.EventRecorder, node *corev1
 	return err
 }
 
-func (*db) Start(ctx context.Context, recorder record.EventRecorder, node *corev1.Node, unitName string) error {
+func (_ *db) Start(ctx context.Context, recorder record.EventRecorder, node *corev1.Node, unitName string) error {
 	dbc, err := dbus.NewWithContext(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to connect to dbus: %w", err)
@@ -113,7 +113,7 @@ func (*db) Start(ctx context.Context, recorder record.EventRecorder, node *corev
 	return err
 }
 
-func (*db) Restart(ctx context.Context, recorder record.EventRecorder, node *corev1.Node, unitName string) error {
+func (_ *db) Restart(ctx context.Context, recorder record.EventRecorder, node *corev1.Node, unitName string) error {
 	dbc, err := dbus.NewWithContext(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to connect to dbus: %w", err)
@@ -135,7 +135,7 @@ func (*db) Restart(ctx context.Context, recorder record.EventRecorder, node *cor
 	return nil
 }
 
-func (*db) DaemonReload(ctx context.Context) error {
+func (_ *db) DaemonReload(ctx context.Context) error {
 	dbc, err := dbus.NewWithContext(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to connect to dbus: %w", err)
@@ -149,12 +149,18 @@ func (*db) DaemonReload(ctx context.Context) error {
 	return nil
 }
 
-func recordEvent(recorder record.EventRecorder, node *corev1.Node, err error, unitName, reason, msg string) {
+func recordEvent(recorder record.EventRecorder, node *corev1.Node, err error, unitName, reason, operation string) {
 	if recorder != nil && node != nil {
-		eventType := corev1.EventTypeNormal
+		var (
+			eventType = corev1.EventTypeNormal
+			message   = fmt.Sprintf("processed %s of unit %s", operation, unitName)
+		)
+
 		if err != nil {
 			eventType = corev1.EventTypeWarning
+			message += fmt.Sprintf(" failed with error %+v", err)
 		}
-		recorder.Eventf(node, eventType, reason, "processed %s of unit %q with error %v", msg, unitName, err)
+
+		recorder.Eventf(node, eventType, reason, message)
 	}
 }

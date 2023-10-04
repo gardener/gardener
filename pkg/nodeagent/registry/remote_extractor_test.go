@@ -27,7 +27,7 @@ import (
 	"github.com/spf13/afero"
 )
 
-var _ = Describe("#exctractFromDownloadedImage", func() {
+var _ = Describe("RemoteExtractor", func() {
 	var (
 		extractor remoteExtractor
 		image     *fake.FakeImage
@@ -41,102 +41,90 @@ var _ = Describe("#exctractFromDownloadedImage", func() {
 		image = &fake.FakeImage{}
 	})
 
-	Context("with single layer fs", func() {
-		var imageFs afero.Fs
+	Describe("#extractFromDownloadedImage", func() {
+		Context("with single layer fs", func() {
+			var imageFs afero.Fs
 
-		BeforeEach(func() {
-			imageFs = afero.NewMemMapFs()
-			image.LayersStub = func() ([]containerregistryv1.Layer, error) {
-				return fsToTarLayer(imageFs)
-			}
-		})
-
-		It("extracts gardener-node-agent from image to destination", func() {
-			Expect(afero.WriteFile(imageFs, "/bin/gardener-node-agent", []byte("[binary data]"), fs.ModePerm)).Should(Succeed())
-
-			Expect(
-				extractor.extractFromDownloadedImage(image, "gardener-node-agent", "/out/gardener-node-agent"),
-			).Should(Succeed())
-
-			data, err := afero.ReadFile(extractor.fs, "/out/gardener-node-agent")
-			Expect(err).ShouldNot(HaveOccurred())
-
-			Expect(string(data)).To(Equal("[binary data]"))
-		})
-
-		It("extracts specific config from image to destination", func() {
-			Expect(afero.WriteFile(imageFs, "/etc/correct.config", []byte("{\"expected\":true}"), fs.ModePerm)).Should(Succeed())
-			Expect(afero.WriteFile(imageFs, "/etc/wrong.config", []byte("{\"expected\":false}"), fs.ModePerm)).Should(Succeed())
-
-			Expect(
-				extractor.extractFromDownloadedImage(image, "correct.config", "/out/got.config"),
-			).Should(Succeed())
-
-			data, err := afero.ReadFile(extractor.fs, "/out/got.config")
-			Expect(err).ShouldNot(HaveOccurred())
-
-			Expect(string(data)).To(Equal("{\"expected\":true}"))
-		})
-
-		It("fails to extract on miss", func() {
-			Expect(
-				extractor.extractFromDownloadedImage(image, "missing.config", "/out/got.config"),
-			).Should(MatchError(ContainSubstring("could not find file %q in layer", "missing.config")))
-
-			_, err := afero.ReadFile(extractor.fs, "/out/got.config")
-			Expect(err).Should(HaveOccurred())
-		})
-	})
-
-	Context("with multi layer fs", func() {
-		var fsLayers []afero.Fs
-
-		BeforeEach(func() {
-			fsLayers = make([]afero.Fs, 0)
-			image.LayersStub = func() ([]containerregistryv1.Layer, error) {
-				layers := make([]containerregistryv1.Layer, 0, len(fsLayers))
-				for _, layerFs := range fsLayers {
-					ls, err := fsToTarLayer(layerFs)
-					if err != nil {
-						return nil, err
-					}
-					layers = append(layers, ls...)
+			BeforeEach(func() {
+				imageFs = afero.NewMemMapFs()
+				image.LayersStub = func() ([]containerregistryv1.Layer, error) {
+					return fsToTarLayer(imageFs)
 				}
-				return layers, nil
-			}
+			})
+
+			It("extracts gardener-node-agent from image to destination", func() {
+				Expect(afero.WriteFile(imageFs, "/bin/gardener-node-agent", []byte("[binary data]"), fs.ModePerm)).Should(Succeed())
+
+				Expect(extractor.extractFromDownloadedImage(image, "gardener-node-agent", "/out/gardener-node-agent")).Should(Succeed())
+
+				data, err := afero.ReadFile(extractor.fs, "/out/gardener-node-agent")
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(string(data)).To(Equal("[binary data]"))
+			})
+
+			It("extracts specific config from image to destination", func() {
+				Expect(afero.WriteFile(imageFs, "/etc/correct.config", []byte(`{"expected":true}`), fs.ModePerm)).Should(Succeed())
+				Expect(afero.WriteFile(imageFs, "/etc/wrong.config", []byte(`{"expected":false}`), fs.ModePerm)).Should(Succeed())
+
+				Expect(extractor.extractFromDownloadedImage(image, "correct.config", "/out/got.config")).Should(Succeed())
+
+				data, err := afero.ReadFile(extractor.fs, "/out/got.config")
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(string(data)).To(Equal(`{"expected":true}`))
+			})
+
+			It("fails to extract on miss", func() {
+				Expect(extractor.extractFromDownloadedImage(image, "missing.config", "/out/got.config")).Should(MatchError(ContainSubstring("could not find file %q in layer", "missing.config")))
+
+				_, err := afero.ReadFile(extractor.fs, "/out/got.config")
+				Expect(err).Should(HaveOccurred())
+			})
 		})
 
-		It("ignores empty layers", func() {
-			baseLayer := afero.NewMemMapFs()
-			Expect(afero.WriteFile(baseLayer, "/bin/gardener-node-agent", []byte("[binary data]"), fs.ModePerm)).Should(Succeed())
-			emptyLayer := afero.NewMemMapFs()
-			fsLayers = append(fsLayers, baseLayer, emptyLayer)
+		Context("with multi layer fs", func() {
+			var fsLayers []afero.Fs
 
-			Expect(
-				extractor.extractFromDownloadedImage(image, "gardener-node-agent", "/out/gardener-node-agent"),
-			).Should(Succeed())
+			BeforeEach(func() {
+				fsLayers = make([]afero.Fs, 0)
+				image.LayersStub = func() ([]containerregistryv1.Layer, error) {
+					layers := make([]containerregistryv1.Layer, 0, len(fsLayers))
+					for _, layerFs := range fsLayers {
+						ls, err := fsToTarLayer(layerFs)
+						if err != nil {
+							return nil, err
+						}
+						layers = append(layers, ls...)
+					}
+					return layers, nil
+				}
+			})
 
-			data, err := afero.ReadFile(extractor.fs, "/out/gardener-node-agent")
-			Expect(err).ShouldNot(HaveOccurred())
+			It("ignores empty layers", func() {
+				baseLayer := afero.NewMemMapFs()
+				Expect(afero.WriteFile(baseLayer, "/bin/gardener-node-agent", []byte("[binary data]"), fs.ModePerm)).Should(Succeed())
+				emptyLayer := afero.NewMemMapFs()
+				fsLayers = append(fsLayers, baseLayer, emptyLayer)
 
-			Expect(string(data)).To(Equal("[binary data]"))
-		})
+				Expect(extractor.extractFromDownloadedImage(image, "gardener-node-agent", "/out/gardener-node-agent")).Should(Succeed())
 
-		It("top layers override base layer", func() {
-			baseLayer := afero.NewMemMapFs()
-			Expect(afero.WriteFile(baseLayer, "/bin/gardener-node-agent", []byte("[base data]"), fs.ModePerm)).Should(Succeed())
-			topLayer := afero.NewMemMapFs()
-			Expect(afero.WriteFile(baseLayer, "/bin/gardener-node-agent", []byte("[top data]"), fs.ModePerm)).Should(Succeed())
-			fsLayers = append(fsLayers, baseLayer, topLayer)
+				data, err := afero.ReadFile(extractor.fs, "/out/gardener-node-agent")
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(string(data)).To(Equal("[binary data]"))
+			})
 
-			Expect(
-				extractor.extractFromDownloadedImage(image, "gardener-node-agent", "/out/gardener-node-agent"),
-			).Should(Succeed())
+			It("top layers override base layer", func() {
+				baseLayer := afero.NewMemMapFs()
+				Expect(afero.WriteFile(baseLayer, "/bin/gardener-node-agent", []byte("[base data]"), fs.ModePerm)).Should(Succeed())
+				topLayer := afero.NewMemMapFs()
+				Expect(afero.WriteFile(baseLayer, "/bin/gardener-node-agent", []byte("[top data]"), fs.ModePerm)).Should(Succeed())
+				fsLayers = append(fsLayers, baseLayer, topLayer)
 
-			data, err := afero.ReadFile(extractor.fs, "/out/gardener-node-agent")
-			Expect(err).ShouldNot(HaveOccurred())
+				Expect(extractor.extractFromDownloadedImage(image, "gardener-node-agent", "/out/gardener-node-agent")).Should(Succeed())
 
-			Expect(string(data)).To(Equal("[top data]"))
+				data, err := afero.ReadFile(extractor.fs, "/out/gardener-node-agent")
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(string(data)).To(Equal("[top data]"))
+			})
 		})
 	})
 })
