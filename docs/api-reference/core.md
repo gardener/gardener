@@ -3151,7 +3151,7 @@ Kubernetes meta/v1.Duration
 </td>
 <td>
 <em>(Optional)</em>
-<p>NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up</p>
+<p>NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up.</p>
 </td>
 </tr>
 <tr>
@@ -3163,7 +3163,7 @@ int32
 </td>
 <td>
 <em>(Optional)</em>
-<p>MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: 10)</p>
+<p>MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: 10).</p>
 </td>
 </tr>
 </tbody>

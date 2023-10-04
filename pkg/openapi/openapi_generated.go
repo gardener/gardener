@@ -1730,13 +1730,13 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 					},
 					"newPodScaleUpDelay": {
 						SchemaProps: spec.SchemaProps{
-							Description: "NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up",
+							Description: "NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 					"maxEmptyBulkDelete": {
 						SchemaProps: spec.SchemaProps{
-							Description: "MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: 10)",
+							Description: "MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: 10).",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
