@@ -71,7 +71,7 @@ Let us first study how `MachineDeployments` are currently generated and how node
 
 #### Worker Actuator Reconciliation 
 
-The Worker [generic.Actuator.Reconcile](https://github.com/gardener/gardener/blob/a3632ea5315d104d0ed3dd47e6d17f53cfe0e877/extensions/pkg/controller/worker/genericactuator/actuator_reconcile.go#L42) implementation delegates to [genericactuator.GenerateMachineDeployments](https://github.com/gardener/gardener/blob/a3632ea5315d104d0ed3dd47e6d17f53cfe0e877/extensions/pkg/controller/worker/genericactuator/interface.go#L46) to generate [worker.MachineDeployments](https://github.com/gardener/gardener/blob/a3632ea5315d104d0ed3dd47e6d17f53cfe0e877/extensions/pkg/controller/worker/machines.go#L39) for a shoot clulster during shoot reconciliation.
+The Worker [generic.Actuator.Reconcile](https://github.com/gardener/gardener/blob/a3632ea5315d104d0ed3dd47e6d17f53cfe0e877/extensions/pkg/controller/worker/genericactuator/actuator_reconcile.go#L42) implementation delegates to [genericactuator.GenerateMachineDeployments](https://github.com/gardener/gardener/blob/a3632ea5315d104d0ed3dd47e6d17f53cfe0e877/extensions/pkg/controller/worker/genericactuator/interface.go#L46) to generate [worker.MachineDeployments](https://github.com/gardener/gardener/blob/a3632ea5315d104d0ed3dd47e6d17f53cfe0e877/extensions/pkg/controller/worker/machines.go#L39) for a shoot cluster during shoot reconciliation.
 
 These Worker MachineDeployments's are converted into MCM [MachineDeployments](https://pkg.go.dev/github.com/gardener/machine-controller-manager@v0.50.0/pkg/apis/machine/v1alpha1#MachineDeployment)'s and then deployed into the shoot control plane.
 
