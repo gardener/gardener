@@ -32,29 +32,25 @@ reviewers:
     - [2. Node Group Auto Discovery](#2-node-group-auto-discovery)
     - [3. Dynamic Node Group Sizing.](#3-dynamic-node-group-sizing)
     - [3.1 Lax-Greedy Sizing](#31-lax-greedy-sizing)
+      - [Pros/Cons](#proscons)
       - [Examples](#examples)
         - [Pool-3:4:2:2:3 (min:max:maxsurge:maxunavail:numzones)](#pool-34223-minmaxmaxsurgemaxunavailnumzones)
           - [Scan-0](#scan-0)
           - [Scan-1](#scan-1)
           - [Scan-2](#scan-2)
           - [Scan-3](#scan-3)
-          - [Pool-0:1:1:1:2 (min:max:maxsurge:maxunavail:numzones)](#pool-01112-minmaxmaxsurgemaxunavailnumzones-1)
+    - [3.2 Backward-Compatible](#32-backward-compatible)
+      - [Pros/Cons](#proscons-1)
+      - [Examples](#examples-1)
+        - [Pool-3:4:2:2:3 (min:max:maxsurge:maxunavail:numzones)](#pool-34223-minmaxmaxsurgemaxunavailnumzones-1)
           - [Scan-0](#scan-0-1)
           - [Scan-1](#scan-1-1)
-    - [3.2 Backward-Compatible](#32-backward-compatible)
-      - [Examples](#examples-1)
-          - [Pool-0:1:1:1:2 (min:max:maxsurge:maxunavail:numzones)](#pool-01112-minmaxmaxsurgemaxunavailnumzones-2)
+          - [Scan-2](#scan-2-1)
+          - [Pool-0:2:1:1:2 (min:max:maxsurge:maxunavail:numzones)](#pool-02112-minmaxmaxsurgemaxunavailnumzones)
           - [Scan-0](#scan-0-2)
           - [Scan-1](#scan-1-2)
-        - [Pool-3:4:2:2:3 (min:max:maxsurge:maxunavail:numzones)](#pool-34223-minmaxmaxsurgemaxunavailnumzones-1)
-          - [Scan-0](#scan-0-3)
-          - [Scan-1](#scan-1-3)
-          - [Scan-2](#scan-2-1)
-          - [Pool-1:2:1:1:3 (min:max:maxsurge:maxunavail:numzones)](#pool-12113-minmaxmaxsurgemaxunavailnumzones)
-          - [Scan-0](#scan-0-4)
-          - [Scan-1](#scan-1-4)
-          - [Scan-2](#scan-2-2)
     - [4. Shoot Spec Enhancement](#4-shoot-spec-enhancement)
+    - [TODO](#todo)
 
 ## Summary
 
@@ -217,7 +213,11 @@ We will offer 2 strategies for node-group sizing: *Lax Greedy Sizing* and *Equit
 1. For the next scane, we compute `NodeGroup.MaxSize()` as follows
      1. `NodeGroup.MaxSize()=      PoolMaximum-CountOfAllNodesMaterializedInOtherNodeGroups)`
 
-This strategy has the primary advantage that workload can be provisioned within the zone for the NodeGroup. It can be considered as work-load friendly
+
+#### Pros/Cons
+1. Pro: This strategy has the primary advantage that workload can be provisioned within the zone for the NodeGroup. It can be considered as work-load friendly
+2. Pro: It can handle back-off well. If nodes can't be provisioned in one node group, the other node group can take up the slack.
+3. Con: It isn't backward compatabile with our current distribution logic.
 
 #### Examples
 
@@ -256,90 +256,20 @@ NG-1: Min:0, Max:1, Launched: 1
 NG-2: Min:0, Max:1, Launched: 1
 ```
 
-###### Pool-0:1:1:1:2 (min:max:maxsurge:maxunavail:numzones)
-
-
-###### Scan-0
-```
-NG-0: Min:0, Max:1, Launched: 0
-NG-1: Min:0, Max:1, Launched: 0
-```
-
-###### Scan-1
-
-```
-NG-0: Min:0, Max:1, Launched: 1
-NG-1: Min:0, Max:0, Launched: 0
-```
-
-<!-- ###### Pool-2:3:1:1:4 (min:max:maxsurge:maxunavail:numzones)
-```
-MachineDeployment_Z0(Minimum=1|Maximum:1|MaxSurge:1|MaxUnavailable:1)
-MachineDeployment_Z1(Minimum=1|Maximum:1|MaxSurge:0|MaxUnavailable:0)
-MachineDeployment_Z2(Minimum=0|Maximum:1|MaxSurge:0|MaxUnavailable:0)
-MachineDeployment_Z3(Minimum=0|Maximum:0|MaxSurge:0|MaxUnavailable:0)
-PoolMax=3
-```
-
-###### Scan-0
-```
-NG-0: Min:1, Max:3, Launched: 0
-NG-1: Min:1, Max:3, Launched: 0
-NG-2: Min:0, Max:3, Launched: 0
-NG-3: Min:0, Max:3, Launched: 0
-```
-
-###### Scan-1
-
-```
-NG-0: Min:1, Max:3, Launched: 1
-NG-1: Min:1, Max:3, Launched: 1
-NG-2: Min:1, Max:1, Launched: 0
-NG-3: Min:1, Max:1, Launched: 0
-```
-
-###### Scan-2
-
-```
-NG-0: Min:1, Max:3, Launched: 2
-NG-1: Min:1, Max:1, Launched: 1
-NG-2: Min:1, Max:1, Launched: 1
-NG-4: Min:1, Max:1, Launched: 1
-``` -->
-
-
 
 ### 3.2 Backward-Compatible
 1. The backward compatible sizing strategy honours our current distrubition logic as much as possible.
 1. Effectively for each `NodeGroup`, we compute the `NodeGroup.MaxSize` and `NodeGroup.MinSize` using the existing `DistributeOverZones` function 
-   1. There is only one difference in that *initially* the maximum will not be permitted to be zero for any NodeGroup. This will be handled by validation.
-2. The CA will execute scale-up/scale-down activities for the node groups if needed. If a NodeGroup does not have quota it will back-off and try another NodeGroup.
-3. For the next scan, we compute `NodeGroup.MaxSize()` as follows:
-   1. If `CountOfAllNodesMaterialized` matches/exceeds pool-size, return `NodeGroup.MaxSize()=MachineDeployment.Spec.Maximum`
-   2. Else continue to return `1` for those node groups whose `MachineDeployment.Spec.Maximum` is `0`.
+    1. There is only one difference in that the maximum will not be permitted to be zero for any NodeGroup. This will be handled by validation and migration of existing clusters that break this rule (`PoolMaximum<numZones`).
+    1. `NodeGroup.MaxSize()=DistributeOverZones(zoneIdx,machineDeployment.Spec.PoolMaximum,numZones)`
+    1. `NodeGroup.MaxSize()=DistributeOverZones(zoneIdx,machineDeployment.Spec.PoolMinimum,numZones)`
+1. The CA will execute scale-up/scale-down activities for the node groups if needed. If a NodeGroup does not have quota it will back-off and try another NodeGroup.
 
-This strategy has the primary advantage that we start off as close to our current distribution logic. It can be considered as backward-friendly.
+#### Pros/Cons
+1. Pro: This strategy has the primary advantage that we remain backward-compatible with our current distribution logic. However, it does not handle 
+2. Con: Unfortunately, it doesn't handle back-off well.
 
 #### Examples
-
-###### Pool-0:1:1:1:2 (min:max:maxsurge:maxunavail:numzones)
-```
-MachineDeployment_Z0(Minimum=0|Maximum:1|MaxSurge:1|MaxUnavailable:1)
-MachineDeployment_Z1(Minimum=0|Maximum:0|MaxSurge:0|MaxUnavailable:0)
-```
-
-###### Scan-0
-```
-NG-0: Min:0, Max:1, Launched: 0
-NG-1: Min:0, Max:1, Launched: 0
-```
-
-###### Scan-1
-
-```
-NG-0: Min:0, Max:1, Launched: 1
-NG-1: Min:0, Max:0, Launched: 0
-```
 
 
 ##### Pool-3:4:2:2:3 (min:max:maxsurge:maxunavail:numzones)
@@ -367,36 +297,23 @@ NG-1: Min:1, Max:1, Launched: 1
 NG-2: Min:1, Max:1, Launched: 1
 ```
 
-###### Pool-1:2:1:1:3 (min:max:maxsurge:maxunavail:numzones)
-```
-MachineDeployment_Z0(Minimum=1|Maximum:1|MaxSurge:1|MaxUnavailable:1)
-MachineDeployment_Z1(Minimum=0|Maximum:1|MaxSurge:0|MaxUnavailable:0)
-MachineDeployment_Z2(Minimum=0|Maximum:0|MaxSurge:0|MaxUnavailable:0)
-PoolMax:2
-```
+###### Pool-0:2:1:1:2 (min:max:maxsurge:maxunavail:numzones)
+
+* PoolMax=2
+* Let us take the case where `NG-0` is out of quota
 
 ###### Scan-0
 ```
-NG-0: Min:1, Max:1, Launched: 0
+NG-0: Min:0, Max:1, Launched: 0
 NG-1: Min:0, Max:1, Launched: 0
-NG-2: Min:0, Max:1, Launched: 0
 ```
 
 ###### Scan-1
 ```
-NG-0: Min:1, Max:1, Launched: 0
-NG-1: Min:0, Max:1, Launched: 0
-NG-2: Min:0, Max:1, Launched: 1
+NG-0: Min:0, Max:1, Launched: 0 (backoff)
+NG-1: Min:0, Max:1, Launched: 1
 ```
-
-###### Scan-2
-NG-0, NG-1 backoff..but NG-2 is maxed
-so pool max is not met. (This is our current behaviour too)
-```
-NG-0: Min:1, Max:1, Launched: 0 
-NG-1: Min:0, Max:1, Launched: 0 
-NG-2: Min:0, Max:1, Launched: 1
-```
+* No further progress since `NG-1` has reached its computed `Max` and no nodes can be provisioned in `NG-0`.  This is our current behaviour unfortunately.
 
 ### 4. Shoot Spec Enhancement
 
@@ -406,3 +323,7 @@ We add a `nodeGroupSizingStrategy` in our the `clusterAutoscaler` section of our
 clusterAutoscaler:
   sizing: Lax-Greedy|Backward-Compatible
 ```
+
+### TODO
+1. Discuss `MaxUnavailable` and `MaxSurge` handling. SHould this be copied or distributed ?
+2. Do we need further `NodeGroup` sizing strategies ?
