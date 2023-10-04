@@ -22,7 +22,6 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -33,7 +32,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/client/kubernetes/cache"
 	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Aggregator", func() {
@@ -96,21 +94,12 @@ var _ = Describe("Aggregator", func() {
 			Expect(aggregator.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 		})
 
-		It("should return a non-cache error", func() {
+		It("should return an error", func() {
 			shoot := &gardencorev1beta1.Shoot{
 				ObjectMeta: objectMeta,
 			}
-			fallback.EXPECT().Get(ctx, client.ObjectKeyFromObject(shoot), shoot).Return(apierrors.NewNotFound(gardencorev1beta1.Resource("shoots"), ""))
-			Expect(aggregator.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(BeNotFoundError())
-		})
-
-		It("should return a cache error for non API errors", func() {
-			shoot := &gardencorev1beta1.Shoot{
-				ObjectMeta: objectMeta,
-			}
-			fallback.EXPECT().Get(ctx, client.ObjectKeyFromObject(shoot), shoot).Return(fmt.Errorf("foo"))
-			err := aggregator.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
-			Expect(err).To(BeCacheError())
+			fallback.EXPECT().Get(ctx, client.ObjectKeyFromObject(shoot), shoot).Return(fmt.Errorf("some error"))
+			Expect(aggregator.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(MatchError("some error"))
 		})
 	})
 

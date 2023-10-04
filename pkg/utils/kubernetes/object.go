@@ -23,10 +23,11 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
@@ -87,17 +88,54 @@ func DeleteObjectsFromListConditionally(ctx context.Context, c client.Client, li
 	return flow.Parallel(fns...)(ctx)
 }
 
-// ResourcesExist checks if there is at least one object of the given gvk. The kind in the gvk must be the list kind,
-// for example corev1.SchemeGroupVersion.WithKind("PodList").
-func ResourcesExist(ctx context.Context, reader client.Reader, gvk schema.GroupVersionKind, listOpts ...client.ListOption) (bool, error) {
-	objects := &metav1.PartialObjectMetadataList{}
-	objects.SetGroupVersionKind(gvk)
+// ResourcesExist checks if there is at least one object of the given objList.
+func ResourcesExist(ctx context.Context, reader client.Reader, objList client.ObjectList, scheme *runtime.Scheme, listOpts ...client.ListOption) (bool, error) {
+	objects := objList
+
+	// Use `PartialObjectMetadata` if no or metadata only field selectors are passed (informer's indexers only have access to metadata fields).
+	if hasNoOrMetadataOnlyFieldSelector(listOpts...) {
+		gvk, err := apiutil.GVKForObject(objList, scheme)
+		if err != nil {
+			return false, err
+		}
+
+		objects = &metav1.PartialObjectMetadataList{}
+		objects.(*metav1.PartialObjectMetadataList).SetGroupVersionKind(gvk)
+	}
 
 	if err := reader.List(ctx, objects, append(listOpts, client.Limit(1))...); err != nil {
 		return true, err
 	}
 
-	return len(objects.Items) > 0, nil
+	switch o := objects.(type) {
+	case *metav1.PartialObjectMetadataList:
+		return len(o.Items) > 0, nil
+	default:
+		items, err := meta.ExtractList(objList)
+		if err != nil {
+			return false, err
+		}
+		return len(items) > 0, err
+	}
+}
+
+func hasNoOrMetadataOnlyFieldSelector(listOpts ...client.ListOption) bool {
+	listOptions := &client.ListOptions{}
+	for _, opt := range listOpts {
+		opt.ApplyToList(listOptions)
+	}
+
+	if listOptions.FieldSelector == nil {
+		return true
+	}
+
+	for _, req := range listOptions.FieldSelector.Requirements() {
+		if !strings.HasPrefix(req.Field, "metadata") && req.Field != cache.NamespaceIndex {
+			return false
+		}
+	}
+
+	return true
 }
 
 // MakeUnique takes either a *corev1.ConfigMap or a *corev1.Secret object and makes it immutable, i.e., it sets

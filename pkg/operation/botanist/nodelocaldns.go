@@ -79,7 +79,7 @@ func (b *Botanist) ReconcileNodeLocalDNS(ctx context.Context) error {
 
 // isNodeLocalDNSStillDesired indicates whether any node still requires node-local-dns components.
 func (b *Botanist) isNodeLocalDNSStillDesired(ctx context.Context) (bool, error) {
-	return kubernetesutils.ResourcesExist(ctx, b.ShootClientSet.Client(), corev1.SchemeGroupVersion.WithKind("NodeList"), client.MatchingLabels{
+	return kubernetesutils.ResourcesExist(ctx, b.ShootClientSet.Client(), &corev1.NodeList{}, b.ShootClientSet.Client().Scheme(), client.MatchingLabels{
 		v1beta1constants.LabelNodeLocalDNS: strconv.FormatBool(true),
 	})
 }

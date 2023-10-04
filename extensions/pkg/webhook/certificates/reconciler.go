@@ -23,6 +23,7 @@ import (
 	"github.com/go-logr/logr"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
@@ -95,7 +96,7 @@ func (r *reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	r.serverPort = int32(defaultServer.Options.Port)
 	r.client = mgr.GetClient()
 
-	present, err := isWebhookServerSecretPresent(ctx, mgr.GetAPIReader(), r.ServerSecretName, r.Namespace, r.Identity)
+	present, err := isWebhookServerSecretPresent(ctx, mgr.GetAPIReader(), mgr.GetScheme(), r.ServerSecretName, r.Namespace, r.Identity)
 	if err != nil {
 		return err
 	}
@@ -220,8 +221,8 @@ func (r *reconciler) reconcileSourceWebhookConfig(ctx context.Context, sourceWeb
 	return r.client.Patch(ctx, config, patch)
 }
 
-func isWebhookServerSecretPresent(ctx context.Context, c client.Reader, secretName, namespace, identity string) (bool, error) {
-	return kubernetesutils.ResourcesExist(ctx, c, corev1.SchemeGroupVersion.WithKind("SecretList"), client.InNamespace(namespace), client.MatchingLabels{
+func isWebhookServerSecretPresent(ctx context.Context, c client.Reader, scheme *runtime.Scheme, secretName, namespace, identity string) (bool, error) {
+	return kubernetesutils.ResourcesExist(ctx, c, &corev1.SecretList{}, scheme, client.InNamespace(namespace), client.MatchingLabels{
 		secretsmanager.LabelKeyName:            secretName,
 		secretsmanager.LabelKeyManagedBy:       secretsmanager.LabelValueSecretsManager,
 		secretsmanager.LabelKeyManagerIdentity: identity,

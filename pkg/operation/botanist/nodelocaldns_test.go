@@ -138,7 +138,7 @@ var _ = Describe("NodeLocalDNS", func() {
 					}
 					Expect(c.Create(ctx, &node)).To(Succeed())
 
-					kubernetesClient.EXPECT().Client().Return(c)
+					kubernetesClient.EXPECT().Client().Return(c).Times(2)
 
 					Expect(botanist.ReconcileNodeLocalDNS(ctx)).To(Succeed())
 				})
@@ -152,7 +152,7 @@ var _ = Describe("NodeLocalDNS", func() {
 					}
 					Expect(c.Create(ctx, &node)).To(Succeed())
 
-					kubernetesClient.EXPECT().Client().Return(c)
+					kubernetesClient.EXPECT().Client().Return(c).Times(2)
 
 					nodelocaldns.EXPECT().Destroy(ctx)
 
@@ -161,7 +161,7 @@ var _ = Describe("NodeLocalDNS", func() {
 			})
 
 			It("should fail when the destroy function fails", func() {
-				kubernetesClient.EXPECT().Client().Return(c)
+				kubernetesClient.EXPECT().Client().Return(c).Times(2)
 
 				nodelocaldns.EXPECT().Destroy(ctx).Return(fakeErr)
 
@@ -169,7 +169,7 @@ var _ = Describe("NodeLocalDNS", func() {
 			})
 
 			It("should successfully destroy", func() {
-				kubernetesClient.EXPECT().Client().Return(c)
+				kubernetesClient.EXPECT().Client().Return(c).Times(2)
 
 				nodelocaldns.EXPECT().Destroy(ctx)
 

@@ -811,7 +811,7 @@ func (r *Reconciler) patchShootStatusOperationError(
 }
 
 func (r *Reconciler) shootHasBastions(ctx context.Context, shoot *gardencorev1beta1.Shoot) (bool, error) {
-	return kubernetesutils.ResourcesExist(ctx, r.GardenClient, operationsv1alpha1.SchemeGroupVersion.WithKind("BastionList"), client.MatchingFields{operations.BastionShootName: shoot.Name})
+	return kubernetesutils.ResourcesExist(ctx, r.GardenClient, &operationsv1alpha1.BastionList{}, r.GardenClient.Scheme(), client.MatchingFields{operations.BastionShootName: shoot.Name})
 }
 
 // isHibernationActive uses the Cluster resource in the Seed to determine whether the Shoot is hibernated

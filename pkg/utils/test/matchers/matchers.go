@@ -15,15 +15,11 @@
 package matchers
 
 import (
-	"errors"
-
 	"github.com/onsi/gomega/format"
 	"github.com/onsi/gomega/types"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
-
-	kubernetescache "github.com/gardener/gardener/pkg/client/kubernetes/cache"
 )
 
 func init() {
@@ -118,17 +114,6 @@ func BeInvalidError() types.GomegaMatcher {
 	return &kubernetesErrors{
 		checkFunc: apierrors.IsInvalid,
 		message:   "Invalid",
-	}
-}
-
-// BeCacheError checks if error is a CacheError.
-func BeCacheError() types.GomegaMatcher {
-	return &kubernetesErrors{
-		checkFunc: func(err error) bool {
-			cacheErr := &kubernetescache.CacheError{}
-			return errors.As(err, &cacheErr)
-		},
-		message: "",
 	}
 }
 

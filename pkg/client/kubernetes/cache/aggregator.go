@@ -54,32 +54,16 @@ func (c *aggregator) cacheForKind(kind schema.GroupVersionKind) cache.Cache {
 	return cache
 }
 
-func processError(err error) error {
-	if !IsAPIError(err) {
-		// Return every other, unspecified error as a `CacheError` to allow users to follow up with a proper error handling.
-		// For instance, a `Multinamespace` cache returns an unspecified error for unknown namespaces.
-		// https://github.com/kubernetes-sigs/controller-runtime/blob/b5065bd85190e92864522fcc85aa4f6a3cce4f82/pkg/cache/multi_namespace_cache.go#L132
-		return NewCacheError(err)
-	}
-	return err
-}
-
 // Get retrieves an obj for the given object key from the Kubernetes Cluster.
 // Every non-API related error is returned as a `CacheError`.
 func (c *aggregator) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-	if err := c.cacheForObject(obj).Get(ctx, key, obj, opts...); err != nil {
-		return processError(err)
-	}
-	return nil
+	return c.cacheForObject(obj).Get(ctx, key, obj, opts...)
 }
 
 // List retrieves list of objects for a given namespace and list options.
 // Every non-API related error is returned as a `CacheError`.
 func (c *aggregator) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
-	if err := c.cacheForObject(list).List(ctx, list, opts...); err != nil {
-		return processError(err)
-	}
-	return nil
+	return c.cacheForObject(list).List(ctx, list, opts...)
 }
 
 func (c *aggregator) GetInformer(ctx context.Context, obj client.Object, opts ...cache.InformerGetOption) (cache.Informer, error) {

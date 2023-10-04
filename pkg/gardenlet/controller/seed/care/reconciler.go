@@ -29,7 +29,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 )
 
 var (
@@ -77,7 +77,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 	seedConditions := NewSeedConditions(r.Clock, seed.Status)
 
 	// Trigger health check
-	seedIsGarden, err := gardenerutils.SeedIsGarden(ctx, r.SeedClient)
+	seedIsGarden, err := gardenletutils.SeedIsGarden(ctx, r.SeedClient)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

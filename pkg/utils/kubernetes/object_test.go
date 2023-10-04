@@ -29,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -156,39 +157,76 @@ var _ = Describe("Object", func() {
 
 	Describe("#ResourcesExist", func() {
 		var (
-			group                     = "group"
-			version                   = "v43"
-			kind                      = "kind"
-			gvk                       = schema.GroupVersionKind{Group: group, Version: version, Kind: kind}
-			partialObjectMetadataList = &metav1.PartialObjectMetadataList{TypeMeta: metav1.TypeMeta{APIVersion: group + "/" + version, Kind: kind}}
-			listOpts                  = []client.ListOption{client.InNamespace(namespace)}
+			scheme   *runtime.Scheme
+			objList  client.ObjectList
+			listOpts []client.ListOption
 		)
 
-		It("should return an error because the listing failed", func() {
-			c.EXPECT().List(ctx, partialObjectMetadataList, client.InNamespace(namespace), client.Limit(1)).Return(fakeErr)
+		BeforeEach(func() {
+			scheme = kubernetesscheme.Scheme
+			objList = &corev1.SecretList{}
+			listOpts = []client.ListOption{client.InNamespace(namespace)}
+		})
 
-			inUse, err := ResourcesExist(ctx, c, gvk, listOpts...)
+		It("should return an error because the listing failed", func() {
+			c.EXPECT().List(ctx, gomock.Any(), client.InNamespace(namespace), client.Limit(1)).Return(fakeErr)
+
+			inUse, err := ResourcesExist(ctx, c, objList, scheme, listOpts...)
 			Expect(err).To(MatchError(fakeErr))
 			Expect(inUse).To(BeTrue())
 		})
 
-		It("should return true because objects found", func() {
-			c.EXPECT().List(ctx, partialObjectMetadataList, client.InNamespace(namespace), client.Limit(1)).DoAndReturn(func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
-				(&metav1.PartialObjectMetadataList{Items: []metav1.PartialObjectMetadata{{}}}).DeepCopyInto(list)
-				return nil
+		Context("with partialObjectMetadataList", func() {
+			var partialObjectMetadataList *metav1.PartialObjectMetadataList
+
+			BeforeEach(func() {
+				partialObjectMetadataList = &metav1.PartialObjectMetadataList{TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "SecretList"}}
+				listOpts = append(listOpts, client.MatchingFields{"metadata.name": "foo"})
 			})
 
-			inUse, err := ResourcesExist(ctx, c, gvk, listOpts...)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(inUse).To(BeTrue())
+			It("should return true because objects found", func() {
+				c.EXPECT().List(ctx, partialObjectMetadataList, client.InNamespace(namespace), client.MatchingFields{"metadata.name": "foo"}, client.Limit(1)).DoAndReturn(func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
+					(&metav1.PartialObjectMetadataList{Items: []metav1.PartialObjectMetadata{{}}}).DeepCopyInto(list)
+					return nil
+				})
+
+				inUse, err := ResourcesExist(ctx, c, objList, scheme, listOpts...)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(inUse).To(BeTrue())
+			})
+
+			It("should return false because no objects found", func() {
+				c.EXPECT().List(ctx, partialObjectMetadataList, client.InNamespace(namespace), client.MatchingFields{"metadata.name": "foo"}, client.Limit(1))
+
+				inUse, err := ResourcesExist(ctx, c, objList, scheme, listOpts...)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(inUse).To(BeFalse())
+			})
 		})
 
-		It("should return false because no objects found", func() {
-			c.EXPECT().List(ctx, partialObjectMetadataList, client.InNamespace(namespace), client.Limit(1))
+		Context("with objectList", func() {
+			BeforeEach(func() {
+				listOpts = append(listOpts, client.MatchingFields{"data.foo": "bar"})
+			})
 
-			inUse, err := ResourcesExist(ctx, c, gvk, listOpts...)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(inUse).To(BeFalse())
+			It("should return true because objects found", func() {
+				c.EXPECT().List(ctx, objList, client.InNamespace(namespace), client.MatchingFields{"data.foo": "bar"}, client.Limit(1)).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
+					list.Items = []corev1.Secret{{}}
+					return nil
+				})
+
+				inUse, err := ResourcesExist(ctx, c, objList, scheme, listOpts...)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(inUse).To(BeTrue())
+			})
+
+			It("should return false because no objects found", func() {
+				c.EXPECT().List(ctx, objList, client.InNamespace(namespace), client.MatchingFields{"data.foo": "bar"}, client.Limit(1))
+
+				inUse, err := ResourcesExist(ctx, c, objList, scheme, listOpts...)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(inUse).To(BeFalse())
+			})
 		})
 	})
 

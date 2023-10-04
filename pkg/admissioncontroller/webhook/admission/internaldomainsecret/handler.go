@@ -38,6 +38,7 @@ import (
 type Handler struct {
 	Logger    logr.Logger
 	APIReader client.Reader
+	Scheme    *runtime.Scheme
 }
 
 // ValidateCreate performs the check.
@@ -159,11 +160,11 @@ func (h *Handler) atLeastOneShootExists(ctx context.Context, seedName string) (b
 		})
 	}
 
-	return kubernetesutils.ResourcesExist(ctx, h.APIReader, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"), listOpts...)
+	return kubernetesutils.ResourcesExist(ctx, h.APIReader, &gardencorev1beta1.ShootList{}, h.Scheme, listOpts...)
 }
 
 func (h *Handler) internalDomainSecretExists(ctx context.Context, namespace string) (bool, error) {
-	return kubernetesutils.ResourcesExist(ctx, h.APIReader, corev1.SchemeGroupVersion.WithKind("SecretList"), client.InNamespace(namespace), client.MatchingLabels{
+	return kubernetesutils.ResourcesExist(ctx, h.APIReader, &corev1.SecretList{}, h.Scheme, client.InNamespace(namespace), client.MatchingLabels{
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleInternalDomain,
 	})
 }
