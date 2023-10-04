@@ -76,6 +76,7 @@ const (
 	// owner: @rfranzke @JensAc @mreiger
 	// alpha: v1.73.0
 	// beta: v1.81.0
+	// GA: v1.82.0
 	MachineControllerManagerDeployment featuregate.Feature = "MachineControllerManagerDeployment"
 
 	// ContainerdRegistryHostsDir enables registry configuration in containerd based on the hosts directory pattern.
@@ -127,7 +128,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	MutableShootSpecNetworkingNodes:    {Default: false, PreRelease: featuregate.Alpha},
 	WorkerlessShoots:                   {Default: true, PreRelease: featuregate.Beta},
 	ShootForceDeletion:                 {Default: false, PreRelease: featuregate.Alpha},
-	MachineControllerManagerDeployment: {Default: true, PreRelease: featuregate.Beta},
+	MachineControllerManagerDeployment: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	ContainerdRegistryHostsDir:         {Default: false, PreRelease: featuregate.Alpha},
 }
 

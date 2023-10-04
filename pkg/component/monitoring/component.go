@@ -86,8 +86,6 @@ type Values struct {
 	Components []component.MonitoringComponent
 	// Config is the monitoring config.
 	Config *gardenletconfig.MonitoringConfig
-	// GardenletManagesMCM specifies whether MCM is managed by gardenlet.
-	GardenletManagesMCM bool
 	// GlobalShootRemoteWriteSecret is the global secret for remote write config.
 	GlobalShootRemoteWriteSecret *corev1.Secret
 	// IgnoreAlerts specifies whether alerts should be ignored.
@@ -234,7 +232,6 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 			"nodeLocalDNS": map[string]interface{}{
 				"enabled": m.values.NodeLocalDNSEnabled,
 			},
-			"gardenletManagesMCM": m.values.GardenletManagesMCM,
 			"ingress": map[string]interface{}{
 				"class":          v1beta1constants.SeedNginxIngressClass,
 				"authSecretName": credentialsSecret.Name,

@@ -11,9 +11,7 @@ Generally, there are provider-specific `MachineClass` objects (`AWSMachineClass`
 A machine class describes **where** and **how** to create virtual machines (in which networks, region, availability zone, SSH key, user-data for bootstrapping, etc.), while a `Machine` results in an actual virtual machine.
 You can read up [more information](https://github.com/gardener/machine-controller-manager) in the machine-controller-manager's [repository](https://github.com/gardener/machine-controller-manager).
 
-The `gardenlet` has a feature gate `MachineControllerManagerDeployment` which controls whether it is deploying the `machine-controller-manager`.
-If set to `true`, provider extensions only have to inject their specific out-of-tree `machine-controller-manager` sidecar container into the `Deployment`.
-If set to `false`, provider extensions have to take care of th full deployment (including the generic `machine-controller-manager` container).
+The `gardenlet` deploys the `machine-controller-manager`, hence, provider extensions only have to inject their specific out-of-tree `machine-controller-manager` sidecar container into the `Deployment`.
 
 ## What needs to be implemented to support a new worker provider?
 
@@ -117,7 +115,7 @@ The `spec.pools[].nodeTemplate.capacity` field contains the resource information
 
 The `spec.pools[].machineControllerManager` field allows to configure the settings for machine-controller-manager component. Providers must populate these settings on worker-pool to the related [fields](https://github.com/gardener/machine-controller-manager/blob/master/kubernetes/machine_objects/machine-deployment.yaml#L30-L34) in MachineDeployment.
 
-When observing such a resource, the controller must make sure that it deploys the machine-controller-manager next to the control plane in the seed cluster (only if `gardenlet`'s `MachineControllerManagerDeployment` feature gate is disabled). If the feature gate is enabled, the controller must only inject its provider-specific sidecar container into the `machine-controller-manager` `Deployment` managed by `gardenlet`.
+The controller must only inject its provider-specific sidecar container into the `machine-controller-manager` `Deployment` managed by `gardenlet`.
 
 After that, it must compute the desired machine classes and the desired machine deployments.
 Typically, one class maps to one deployment, and one class/deployment is created per availability zone.

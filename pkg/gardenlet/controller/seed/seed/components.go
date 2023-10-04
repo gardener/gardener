@@ -385,7 +385,6 @@ func defaultPlutono(
 		authSecret,
 		ingressHot,
 		v1beta1constants.PriorityClassNameSeedSystem600,
-		false,
 		true,
 		false,
 		false,
@@ -458,7 +457,6 @@ func getFluentOperatorCustomResources(
 	loggingEnabled bool,
 	seedIsGarden bool,
 	isEventLoggingEnabled bool,
-	isMCMDeploymentEnabled bool,
 ) (
 	deployer component.DeployWaiter,
 	err error,
@@ -473,6 +471,7 @@ func getFluentOperatorCustomResources(
 		clusterautoscaler.CentralLoggingConfiguration,
 		vpnseedserver.CentralLoggingConfiguration,
 		kubescheduler.CentralLoggingConfiguration,
+		machinecontrollermanager.CentralLoggingConfiguration,
 		// shoot worker components
 		downloader.CentralLoggingConfiguration,
 		// shoot system components
@@ -491,9 +490,6 @@ func getFluentOperatorCustomResources(
 	}
 	if isEventLoggingEnabled {
 		centralLoggingConfigurations = append(centralLoggingConfigurations, eventlogger.CentralLoggingConfiguration)
-	}
-	if isMCMDeploymentEnabled {
-		centralLoggingConfigurations = append(centralLoggingConfigurations, machinecontrollermanager.CentralLoggingConfiguration)
 	}
 
 	return shared.NewFluentOperatorCustomResources(

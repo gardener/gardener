@@ -31,10 +31,13 @@ func NewPlutono(
 	clusterType component.ClusterType,
 	replicas int32,
 	authSecretName, ingressHost, priorityClassName string,
-	gardenletManagesMCM, includeIstioDashboards, isWorkerless bool,
+	includeIstioDashboards, isWorkerless bool,
 	isGardenCluster, nodeLocalDNSEnabled, vpnHighAvailabilityEnabled, vpaEnabled bool,
 	wildcardCertName *string,
-) (plutono.Interface, error) {
+) (
+	plutono.Interface,
+	error,
+) {
 	plutonoImage, err := imagevector.ImageVector().FindImage(imagevector.ImageNamePlutono)
 	if err != nil {
 		return nil, err
@@ -47,7 +50,6 @@ func NewPlutono(
 		plutono.Values{
 			AuthSecretName:             authSecretName,
 			ClusterType:                clusterType,
-			GardenletManagesMCM:        gardenletManagesMCM,
 			Image:                      plutonoImage.String(),
 			IngressHost:                ingressHost,
 			IncludeIstioDashboards:     includeIstioDashboards,

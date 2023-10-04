@@ -53,13 +53,8 @@ func (a *genericActuator) Delete(ctx context.Context, log logr.Logger, worker *e
 		return fmt.Errorf("pre worker deletion hook failed: %w", err)
 	}
 
-	// Make sure machine-controller-manager is awake before deleting the machines.
-	var replicaFunc = func() int32 {
-		return 1
-	}
-
-	// Deploy the machine-controller-manager into the cluster to make sure worker nodes can be removed.
-	if err := a.deployMachineControllerManager(ctx, log, worker, cluster, workerDelegate, replicaFunc); err != nil {
+	// Cleanup legacy machine-controller-manager resources.
+	if err := a.cleanupLegacyMachineControllerManagerResources(ctx, log, worker); err != nil {
 		return err
 	}
 
@@ -112,11 +107,6 @@ func (a *genericActuator) Delete(ctx context.Context, log logr.Logger, worker *e
 	log.Info("Waiting until the machine class credentials secret has been released")
 	if err := a.waitUntilCredentialsSecretAcquiredOrReleased(ctx, false, worker); err != nil {
 		return fmt.Errorf("failed while waiting for the machine class credentials secret to be released: %w", err)
-	}
-
-	// Delete the machine-controller-manager.
-	if err := a.deleteMachineControllerManager(ctx, log, worker); err != nil {
-		return fmt.Errorf("failed deleting machine-controller-manager: %w", err)
 	}
 
 	// Call post deletion hook after Worker deletion has happened.

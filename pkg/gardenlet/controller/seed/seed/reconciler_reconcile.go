@@ -444,7 +444,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying machine-controller-manager resources",
-			Fn:   flow.TaskFn(machinecontrollermanager.NewBootstrapper(seedClient, r.GardenNamespace).Deploy).DoIf(features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment)),
+			Fn:   machinecontrollermanager.NewBootstrapper(seedClient, r.GardenNamespace).Deploy,
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying dependency-watchdog-weeder",
@@ -562,7 +562,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			loggingEnabled,
 			seedIsGarden,
 			gardenlethelper.IsEventLoggingEnabled(&r.Config),
-			features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment),
 		)
 		if err != nil {
 			return err

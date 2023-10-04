@@ -29,7 +29,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | WorkerlessShoots                    | `false` | `Alpha` | `1.70` | `1.78` |
 | WorkerlessShoots                    | `false` | `Beta`  | `1.79` |        |
 | MachineControllerManagerDeployment  | `false` | `Alpha` | `1.73` |        |
-| MachineControllerManagerDeployment  | `true`  | `Beta`  | `1.81` |        |
+| MachineControllerManagerDeployment  | `true`  | `Beta`  | `1.81` | `1.81` |
+| MachineControllerManagerDeployment  | `true`  | `GA`    | `1.82` |        |
 | ContainerdRegistryHostsDir          | `false` | `Alpha` | `1.77` |        |
 | ShootForceDeletion                  | `false` | `Alpha` | `1.81` |        |
 

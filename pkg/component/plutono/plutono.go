@@ -97,8 +97,6 @@ type Values struct {
 	AuthSecretName string
 	// ClusterType specifies the type of the cluster to which plutono is being deployed.
 	ClusterType component.ClusterType
-	// GardenletManagesMCM specifies whether MCM is managed by gardenlet.
-	GardenletManagesMCM bool
 	// Image is the container image used for plutono.
 	Image string
 	// IngressHost is the host name of plutono.
@@ -432,7 +430,12 @@ func (p *plutono) getDashboardsConfigMap(ctx context.Context, suffix string) (*c
 			ignorePaths.Insert("istio")
 		}
 	} else if p.values.ClusterType == component.ClusterTypeShoot {
-		requiredDashboards = map[string]embed.FS{shootDashboardsPath: shootDashboards, gardenAndShootDashboardsPath: gardenAndShootDashboards, commonDashboardsPath: commonDashboards}
+		requiredDashboards = map[string]embed.FS{
+			shootDashboardsPath:          shootDashboards,
+			gardenAndShootDashboardsPath: gardenAndShootDashboards,
+			commonDashboardsPath:         commonDashboards,
+		}
+
 		if !p.values.VPAEnabled {
 			ignorePaths.Insert("vpa")
 		}
@@ -445,9 +448,6 @@ func (p *plutono) getDashboardsConfigMap(ctx context.Context, suffix string) (*c
 			}
 			if !p.values.IncludeIstioDashboards {
 				ignorePaths.Insert("istio")
-			}
-			if !p.values.GardenletManagesMCM {
-				ignorePaths.Insert("machine-controller-manager")
 			}
 			if !p.values.VPNHighAvailabilityEnabled {
 				ignorePaths.Insert("ha-vpn")

@@ -24,13 +24,6 @@ import (
 
 // WorkerDelegate is used for the Worker reconciliation.
 type WorkerDelegate interface {
-	// GetMachineControllerManagerChartValues should return the chart and the values for the machine-controller-manager
-	// deployment.
-	GetMachineControllerManagerChartValues(context.Context) (map[string]interface{}, error)
-	// GetMachineControllerManagerShootChartValues should return the values to render the chart containing resources
-	// that are required by the machine-controller-manager inside the shoot cluster itself.
-	GetMachineControllerManagerShootChartValues(context.Context) (map[string]interface{}, error)
-
 	// DeployMachineClasses generates and creates the provider specific machine classes.
 	DeployMachineClasses(context.Context) error
 

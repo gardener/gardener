@@ -816,7 +816,6 @@ func (r *Reconciler) newPlutono(secretsManager secretsmanager.Interface, ingress
 		v1beta1constants.PriorityClassNameGardenSystem100,
 		false,
 		false,
-		false,
 		true,
 		false,
 		false,
