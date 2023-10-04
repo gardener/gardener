@@ -32,7 +32,7 @@ func ValidateNodeAgentConfiguration(conf *config.NodeAgentConfiguration) field.E
 		allErrs = append(allErrs, field.Required(configFldPath.Child("hyperkubeImage"), "must provide a hyperkubeImage"))
 	}
 	if conf.Image == "" {
-		allErrs = append(allErrs, field.Required(configFldPath.Child("image"), "must provide a image"))
+		allErrs = append(allErrs, field.Required(configFldPath.Child("image"), "must provide an image"))
 	}
 
 	if conf.KubernetesVersion == nil {
