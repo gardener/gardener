@@ -174,7 +174,7 @@ The above cases are not un-common. Thre are `~65` Worker Pools in LIVE Landscape
 
 ### 0. Add PoolSize Validation / Fix Existing Clusters 
 
-As was described earlier, our current distribution logic for worker pools can result in creating non-sensical NodeGroups where the `MaxSize` of the NodeGroup is computed as `0`. Since we will preserve the current distribution logic in our `Backward-Compatible` NodeGroup sizing strateg, we should add a validation check to reject shoot specs where `WorkerPool.Maximum < WorkerPool.NumZones`. We should also fix existing shoot specs.
+As was described earlier, our current distribution logic for worker pools can result in creating non-sensical NodeGroups where the `MaxSize` of the NodeGroup is computed as `0`. Since we will preserve the current distribution logic in our `Backward-Compatible` NodeGroup sizing strategy, we should add a validation check to reject shoot specs where `WorkerPool.Maximum < WorkerPool.NumZones`. We should also fix existing shoot specs.
 
 ### 1. Extend MCM MachineDeployment
 
