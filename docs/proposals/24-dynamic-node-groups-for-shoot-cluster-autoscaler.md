@@ -73,16 +73,16 @@ Let us first study how `MachineDeployments` are currently generated and how node
 
 The Worker [generic.Actuator.Reconcile](https://github.com/gardener/gardener/blob/a3632ea5315d104d0ed3dd47e6d17f53cfe0e877/extensions/pkg/controller/worker/genericactuator/actuator_reconcile.go#L42) implementation delegates to [genericactuator.GenerateMachineDeployments](https://github.com/gardener/gardener/blob/a3632ea5315d104d0ed3dd47e6d17f53cfe0e877/extensions/pkg/controller/worker/genericactuator/interface.go#L46) to generate [worker.MachineDeployments](https://github.com/gardener/gardener/blob/a3632ea5315d104d0ed3dd47e6d17f53cfe0e877/extensions/pkg/controller/worker/machines.go#L39) for a shoot clulster during shoot reconciliation.
 
-These worker MCD's are converted into MCM [MachineDeployments](https://pkg.go.dev/github.com/gardener/machine-controller-manager@v0.50.0/pkg/apis/machine/v1alpha1#MachineDeployment)'s and then deployed into the shoot control plane.
+These Worker MachineDeployments's are converted into MCM [MachineDeployments](https://pkg.go.dev/github.com/gardener/machine-controller-manager@v0.50.0/pkg/apis/machine/v1alpha1#MachineDeployment)'s and then deployed into the shoot control plane.
 
 These worker deployments are also set on the [Worker Status](https://github.com/gardener/gardener/blob/a3632ea5315d104d0ed3dd47e6d17f53cfe0e877/extensions/pkg/controller/worker/genericactuator/actuator_reconcile.go#L470).
 
 The [Cluster Autoscaler Deployer](https://github.com/gardener/gardener/blob/a3632ea5315d104d0ed3dd47e6d17f53cfe0e877/pkg/component/clusterautoscaler/cluster_autoscaler.go#L103) then constructs the deployment command string via [computeCommand](https://github.com/gardener/gardener/blob/a3632ea5315d104d0ed3dd47e6d17f53cfe0e877/pkg/component/clusterautoscaler/cluster_autoscaler.go#L397) to iterate through these worker deployments and create static node groups as follows:
 
 ```go
-	for _, machineDeployment := range c.machineDeployments {
-		command = append(command, fmt.Sprintf("--nodes=%d:%d:%s.%s", machineDeployment.Minimum, machineDeployment.Maximum, c.namespace, machineDeployment.Name))
-	}
+for _, machineDeployment := range c.machineDeployments {
+  command = append(command, fmt.Sprintf("--nodes=%d:%d:%s.%s", machineDeployment.Minimum, machineDeployment.Maximum, c.namespace, machineDeployment.Name))
+}
 ```
 This is the format `--nodes=nodeGroupMin:nodeGroupMax:nodeGroupName`
 Effectively we currently have a `1:1` correspondence between a `MachineDeployment` and a CA `NodeGroup`. The `NodeGroup` is the abstraction used by the CA to represent a set of nodes that have the same capacity and set of labels and within which scale-up and scale-down operations can be performed.
@@ -90,7 +90,7 @@ Effectively we currently have a `1:1` correspondence between a `MachineDeploymen
 
 #### MachineDeployment Creation Details
 
-Most garden extension providers have a helper method [generateMachineConfig](https://github.com/gardener/gardener-extension-provider-gcp/blob/c3439f0a7e6bd76dda464be529396e0590983c55/pkg/controller/worker/machines.go#L87) that iterates over the worker pools and the pool zones and generates the [worker.MachineDeployment]'s for each worker pool and zone combination as can be seen from the snippet below.
+Most garden extension providers have a helper method [generateMachineConfig](https://github.com/gardener/gardener-extension-provider-gcp/blob/c3439f0a7e6bd76dda464be529396e0590983c55/pkg/controller/worker/machines.go#L87) that iterates over the worker pools and the pool zones and generates the [worker.MachineDeployment](https://github.com/gardener/gardener/blob/da46645d62e8487c7000d72208afcde8c293fc70/extensions/pkg/controller/worker/machines.go#L39)'s for each worker pool and zone combination as can be seen from the snippet below.
 
 ```go
 for _, pool := range w.worker.Spec.Pools {
