@@ -200,6 +200,12 @@ In some cases, it is not desirable to update or re-apply some of the cluster com
 For these resources, the annotation "resources.gardener.cloud/ignore" needs to be set to "true" or a truthy value (Truthy values are "1", "t", "T", "true", "TRUE", "True") in the corresponding managed resource secrets.
 This can be done from the components that create the managed resource secrets, for example Gardener extensions or Gardener. Once this is done, the resource will be initially created and later ignored during reconciliation.
 
+#### Finalizing Deletion of Resources After Grace Period
+
+When a `ManagedResource` is deleted, the controller deletes all managed resources from the target cluster.
+In case the resources still have entries in their `.metadata.finalizers[]` list, they will remain stuck in the system until another entity removes the finalizers.
+If you want the controller to forcefully finalize the deletion after some grace period (i.e., setting `.metadata.finalizers=null`), you can annotate the managed resources with `resources.gardener.cloud/finalize-deletion-after=<duration>`, e.g., `resources.gardener.cloud/finalize-deletion-after=1h`.
+
 #### Preserving `replicas` or `resources` in Workload Resources
 
 The objects which are part of the `ManagedResource` can be annotated with:

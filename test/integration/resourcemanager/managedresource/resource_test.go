@@ -541,6 +541,55 @@ var _ = Describe("ManagedResource controller tests", func() {
 			})
 		})
 
+		Describe("Finalize Deletion", func() {
+			finalizeDeletionAfter := time.Hour
+
+			BeforeEach(func() {
+				configMap.SetAnnotations(map[string]string{resourcesv1alpha1.FinalizeDeletionAfter: finalizeDeletionAfter.String()})
+				configMap.Finalizers = []string{"some.finalizer.to/make-the-deletion-stuck"}
+				secretForManagedResource.Data = secretDataForObject(configMap, dataKey)
+			})
+
+			JustBeforeEach(func() {
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(ContainCondition(
+					OfType(resourcesv1alpha1.ResourcesApplied),
+					WithStatus(gardencorev1beta1.ConditionTrue),
+					WithReason(resourcesv1alpha1.ConditionApplySucceeded),
+				))
+			})
+
+			JustAfterEach(func() {
+				patch := client.MergeFrom(configMap.DeepCopy())
+				configMap.Finalizers = nil
+				Expect(testClient.Patch(ctx, configMap, patch)).To(Or(Succeed(), BeNotFoundError()))
+				Expect(testClient.Delete(ctx, configMap)).To(Or(Succeed(), BeNotFoundError()))
+			})
+
+			It("should forcefully finalize the deletion after the grace period has elapsed", func() {
+				By("Delete ManagedResource")
+				Expect(testClient.Delete(ctx, managedResource)).To(Succeed())
+
+				By("Stepping fake clock")
+				fakeClock.Step(finalizeDeletionAfter - time.Second)
+
+				By("Expect ConfigMap to remain in the system")
+				Consistently(func() error {
+					return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
+				}).Should(Succeed())
+
+				By("Stepping fake clock")
+				fakeClock.Step(2 * time.Second)
+
+				By("Expect ConfigMap to disappear from the system")
+				Eventually(func() error {
+					return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
+				}).Should(BeNotFoundError())
+			})
+		})
+
 		Describe("Keep garbage-collectable object", func() {
 			var node *corev1.Node
 
