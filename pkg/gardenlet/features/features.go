@@ -35,7 +35,6 @@ func GetFeatures() []featuregate.Feature {
 		features.CoreDNSQueryRewriting,
 		features.IPv6SingleStack,
 		features.MachineControllerManagerDeployment,
-		features.DisableScalingClassesForShoots,
 		features.ContainerdRegistryHostsDir,
 	}
 }
