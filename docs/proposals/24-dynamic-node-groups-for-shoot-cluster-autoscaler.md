@@ -163,7 +163,7 @@ The above cases are not un-common. Thre are `~65` Worker Pools in LIVE Landscape
 1. We remove the current static node group assignment and move to a dynamic node group policy leveraging [node-group-auto-discovery](https://github.com/gardener/autoscaler/blob/053c0d5176cb2d195e3baf333b05ceea99eedb58/cluster-autoscaler/main.go#L156)
 2. We change our MCM [CloudProvider](https://github.com/gardener/autoscaler/blob/053c0d5176cb2d195e3baf333b05ceea99eedb58/cluster-autoscaler/cloudprovider/mcm/mcm_cloud_provider.go#L52) implementaion to support dynamic node groups and node group auto-discovery.
 3. We change the deployment of the CA Deployer to construct the command string differently.
-4. We fix invalid shoot clusters on all landscapes where `WorkerPool.Maxium < WorkerPool.NumZones` 
+4. We fix invalid shoot clusters on all landscapes where `WorkerPool.Maximum < WorkerPool.NumZones` 
    1. We also introduce validation for new shoot clusters to ensure this constraint is honored.
 
 ### Non-Goals
