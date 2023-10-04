@@ -479,6 +479,10 @@ type ClusterAutoscaler struct {
 	MaxGracefulTerminationSeconds *int32
 	// IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
 	IgnoreTaints []string
+	// NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up.
+	NewPodScaleUpDelay *metav1.Duration
+	// MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: 10).
+	MaxEmptyBulkDelete *int32
 }
 
 // ExpanderMode is type used for Expander values

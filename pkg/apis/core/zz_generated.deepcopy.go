@@ -729,6 +729,16 @@ func (in *ClusterAutoscaler) DeepCopyInto(out *ClusterAutoscaler) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.NewPodScaleUpDelay != nil {
+		in, out := &in.NewPodScaleUpDelay, &out.NewPodScaleUpDelay
+		*out = new(metav1.Duration)
+		**out = **in
+	}
+	if in.MaxEmptyBulkDelete != nil {
+		in, out := &in.MaxEmptyBulkDelete, &out.MaxEmptyBulkDelete
+		*out = new(int32)
+		**out = **in
+	}
 	return
 }
 

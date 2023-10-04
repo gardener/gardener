@@ -3140,6 +3140,32 @@ int32
 <p>IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>newPodScaleUpDelay</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maxEmptyBulkDelete</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: 10).</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.Condition">Condition

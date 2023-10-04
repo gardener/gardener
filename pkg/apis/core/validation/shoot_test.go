@@ -2666,6 +2666,18 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"Field": Equal("expander"),
 					}))),
 				),
+				Entry("valid with newPodScaleUpDelay", core.ClusterAutoscaler{
+					NewPodScaleUpDelay: &metav1.Duration{Duration: time.Minute},
+				}, version, BeEmpty()),
+				Entry("invalid with negative newPodScaleUpDelay", core.ClusterAutoscaler{
+					NewPodScaleUpDelay: &negativeDuration,
+				}, version, ConsistOf(field.Invalid(field.NewPath("newPodScaleUpDelay"), negativeDuration, "can not be negative"))),
+				Entry("valid with maxEmptyBulkDelete", core.ClusterAutoscaler{
+					MaxEmptyBulkDelete: &positiveInteger,
+				}, version, BeEmpty()),
+				Entry("invalid with negative maxEmptyBulkDelete", core.ClusterAutoscaler{
+					MaxEmptyBulkDelete: &negativeInteger,
+				}, version, ConsistOf(field.Invalid(field.NewPath("maxEmptyBulkDelete"), negativeInteger, "can not be negative"))),
 			)
 
 			Describe("taint validation", func() {

@@ -23,6 +23,8 @@ The `Shoot` API allows to configure a few flags of the `cluster-autoscaler`:
 * `.spec.kubernetes.clusterAutoscaler.scaleDownUtilizationThreshold` defines the threshold under which a node is being removed (default: `0.5`).
 * `.spec.kubernetes.clusterAutoscaler.scanInterval` defines how often cluster is reevaluated for scale up or down (default: `10s`). 
 * `.spec.kubernetes.clusterAutoscaler.ignoreTaints` specifies a list of taint keys to ignore in node templates when considering to scale a node group (default: `nil`). 
+* `.spec.kubernetes.clusterAutoscaler.newPodScaleupDelay` specifies how long CA should ignore newly created pods before they have to be considered for scale-up.
+* `.spec.kubernetes.clusterAutoscaler.maxEmptyBulkDelete` specifies the maximum number of empty nodes that can be deleted at the same time (default: 10).
 
 ## Vertical Pod Auto-Scaling
 

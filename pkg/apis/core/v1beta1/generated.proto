@@ -406,6 +406,14 @@ message ClusterAutoscaler {
   // IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
   // +optional
   repeated string ignoreTaints = 10;
+
+  // NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration newPodScaleUpDelay = 11;
+
+  // MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: 10).
+  // +optional
+  optional int32 maxEmptyBulkDelete = 12;
 }
 
 // Condition holds the information about the state of a resource.

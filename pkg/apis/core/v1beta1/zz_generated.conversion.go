@@ -2328,6 +2328,8 @@ func autoConvert_v1beta1_ClusterAutoscaler_To_core_ClusterAutoscaler(in *Cluster
 	out.MaxNodeProvisionTime = (*metav1.Duration)(unsafe.Pointer(in.MaxNodeProvisionTime))
 	out.MaxGracefulTerminationSeconds = (*int32)(unsafe.Pointer(in.MaxGracefulTerminationSeconds))
 	out.IgnoreTaints = *(*[]string)(unsafe.Pointer(&in.IgnoreTaints))
+	out.NewPodScaleUpDelay = (*metav1.Duration)(unsafe.Pointer(in.NewPodScaleUpDelay))
+	out.MaxEmptyBulkDelete = (*int32)(unsafe.Pointer(in.MaxEmptyBulkDelete))
 	return nil
 }
 
@@ -2347,6 +2349,8 @@ func autoConvert_core_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler(in *core.Cl
 	out.MaxNodeProvisionTime = (*metav1.Duration)(unsafe.Pointer(in.MaxNodeProvisionTime))
 	out.MaxGracefulTerminationSeconds = (*int32)(unsafe.Pointer(in.MaxGracefulTerminationSeconds))
 	out.IgnoreTaints = *(*[]string)(unsafe.Pointer(&in.IgnoreTaints))
+	out.NewPodScaleUpDelay = (*metav1.Duration)(unsafe.Pointer(in.NewPodScaleUpDelay))
+	out.MaxEmptyBulkDelete = (*int32)(unsafe.Pointer(in.MaxEmptyBulkDelete))
 	return nil
 }
 
