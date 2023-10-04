@@ -572,13 +572,16 @@ var _ = Describe("ManagedResource controller tests", func() {
 				By("Delete ManagedResource")
 				Expect(testClient.Delete(ctx, managedResource)).To(Succeed())
 
+				By("Stepping fake clock")
+				fakeClock.Step(finalizeDeletionAfter - time.Second)
+
 				By("Expect ConfigMap to remain in the system")
 				Consistently(func() error {
 					return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
 				}).Should(Succeed())
 
 				By("Stepping fake clock")
-				fakeClock.Step(finalizeDeletionAfter + time.Second)
+				fakeClock.Step(2 * time.Second)
 
 				By("Expect ConfigMap to disappear from the system")
 				Eventually(func() error {
