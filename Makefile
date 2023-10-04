@@ -42,7 +42,7 @@ SEED_NAME                                  := provider-extensions
 SEED_KUBECONFIG                            := $(REPO_ROOT)/example/provider-extensions/seed/kubeconfig
 DEV_SETUP_WITH_WEBHOOKS                    := false
 IPFAMILY                                   := ipv4
-PARALLEL_E2E_TESTS                         := 15
+PARALLEL_E2E_TESTS                         := 5
 GARDENER_RELEASE_DOWNLOAD_PATH             := $(REPO_ROOT)/dev
 PRINT_HELP ?=
 
