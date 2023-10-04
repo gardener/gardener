@@ -20,18 +20,6 @@ import (
 )
 
 var (
-	// ChartMachineControllerManagerSeed is the Helm chart for the machine-controller-manager/seed chart.
-	//go:embed machine-controller-manager/seed
-	ChartMachineControllerManagerSeed embed.FS
-	// ChartPathMachineControllerManagerSeed is the path to the machine-controller-manager/seed chart.
-	ChartPathMachineControllerManagerSeed = filepath.Join("machine-controller-manager", "seed")
-
-	// ChartMachineControllerManagerShoot is the Helm chart for the machine-controller-manager/shoot chart.
-	//go:embed machine-controller-manager/shoot
-	ChartMachineControllerManagerShoot embed.FS
-	// ChartPathMachineControllerManagerShoot is the path to the machine-controller-manager/shoot chart.
-	ChartPathMachineControllerManagerShoot = filepath.Join("machine-controller-manager", "shoot")
-
 	// ChartShootStorageClasses is the Helm chart for the shoot-storageclasses chart.
 	//go:embed shoot-storageclasses
 	ChartShootStorageClasses embed.FS
