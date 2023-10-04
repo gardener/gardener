@@ -75,7 +75,7 @@ The Worker [generic.Actuator.Reconcile](https://github.com/gardener/gardener/blo
 
 These worker MCD's are converted into MCM [MachineDeployments](https://pkg.go.dev/github.com/gardener/machine-controller-manager@v0.50.0/pkg/apis/machine/v1alpha1#MachineDeployment)'s and then deployed into the shoot control plane.
 
-These worker deployments are also set on the [Worker Status](https://github.com/gardener/gardener/blob/a3632ea5315d104d0ed3dd47e6d17f53cfe0e877/extensions/pkg/controller/worker/genericactuator/actuator_reconcile.go#L470)
+These worker deployments are also set on the [Worker Status](https://github.com/gardener/gardener/blob/a3632ea5315d104d0ed3dd47e6d17f53cfe0e877/extensions/pkg/controller/worker/genericactuator/actuator_reconcile.go#L470).
 
 The [Cluster Autoscaler Deployer](https://github.com/gardener/gardener/blob/a3632ea5315d104d0ed3dd47e6d17f53cfe0e877/pkg/component/clusterautoscaler/cluster_autoscaler.go#L103) then constructs the deployment command string via [computeCommand](https://github.com/gardener/gardener/blob/a3632ea5315d104d0ed3dd47e6d17f53cfe0e877/pkg/component/clusterautoscaler/cluster_autoscaler.go#L397) to iterate through these worker deployments and create static node groups as follows:
 
@@ -85,7 +85,7 @@ The [Cluster Autoscaler Deployer](https://github.com/gardener/gardener/blob/a363
 	}
 ```
 This is the format `--nodes=nodeGroupMin:nodeGroupMax:nodeGroupName`
-Effectively we currently have a `1:1` correspondence between a `MachineDeployment` and a CA `NodeGroup`. The `NodeGroup` is the abstraction used by the CA to represent a set of nodes that have the same capacity and set of labels and within which scale-up and scale-down oeprations cna be performed.
+Effectively we currently have a `1:1` correspondence between a `MachineDeployment` and a CA `NodeGroup`. The `NodeGroup` is the abstraction used by the CA to represent a set of nodes that have the same capacity and set of labels and within which scale-up and scale-down operations can be performed.
 
 
 #### MachineDeployment Creation Details
@@ -210,7 +210,7 @@ The [cloudprovider.CloudProvider](https://github.com/gardener/autoscaler/blob/05
 
 The CA carries out scale-down and scale-up operations within a `NodeGroups` respecting the constraints given by the `NodeGroup.MinSize()` and `NodeGroup.MaxSize()` methods.
 
-The CA runs a reconcile loop every `scanPeriod` interval (default: `10s`). At the beginningo of the reconcile loop, the CA invokes `CloudProvider.Refresh()` to permit the cloud provider implementation to update its cache and then issues a call to `CloudProvider.NodeGroups()` to retrieve the latest `[]NodeGroup`.  The MCM CloudProvider implements this by interrogating the machine deployments.
+The CA runs a reconcile loop every `scanPeriod` interval (default: `10s`). At the beginning of the reconcile loop, the CA invokes `CloudProvider.Refresh()` to permit the cloud provider implementation to update its cache and then issues a call to `CloudProvider.NodeGroups()` to retrieve the latest `[]NodeGroup`.  The MCM CloudProvider implements this by interrogating the machine deployments.
 Each `NodeGroup` continues to be associated with its corresponding `MachineDeployment` for the zone.
 
 We will offer 2 strategies for node-group sizing: *Lax Greedy Sizing* and *Equitable Sizing*
@@ -218,15 +218,15 @@ We will offer 2 strategies for node-group sizing: *Lax Greedy Sizing* and *Equit
 ### 3.1 Lax-Greedy Sizing
 1. If this strategy is selected, then for each `NodeGroup` the `NodeGroup.MaxSize()` is initially returned as the `MachineDeployment.Spec.PoolMaximum` and the `NodeGroup.MinSize()` is given as the `0` if there are no nodes provisioned for the shoot cluster.
 1. The CA will execute scale-up/scale-down activities for the node groups if needed. If a NodeGroup does not have quota it will back-off and try another NodeGroup.
-1. For the next scane, we compute `NodeGroup.MaxSize()` as follows
-     1. `NodeGroup.MaxSize()=      PoolMaximum-CountOfAllNodesMaterializedInOtherNodeGroups)`
+1. For the next scan, we compute `NodeGroup.MaxSize()` as follows
+     1. `NodeGroup.MaxSize() = PoolMaximum-CountOfAllNodesMaterializedInOtherNodeGroups)`
 
 
 #### Pros/Cons
 1. Pro: This strategy has the primary advantage that workload can be provisioned within the zone for the NodeGroup. It can be considered as work-load friendly
 2. Pro: It can handle back-off well. If nodes can't be provisioned in one node group, the other node group can take up the slack.
-3. Con: It isn't backward compatabile with our current distribution logic.
-4. Con: We need to add support for scale from zero for extended/ephmeral resources. We have [Gardener CA #132](https://github.com/gardener/autoscaler/issues/132) for this.
+3. Con: It isn't backward compatible with our current distribution logic.
+4. Con: We need to add support for scale from zero for extended/ephemeral resources. We have [Gardener CA #132](https://github.com/gardener/autoscaler/issues/132) for this.
 
 #### Examples
 
@@ -334,5 +334,5 @@ clusterAutoscaler:
 ```
 
 ### TODO
-1. Discuss `MaxUnavailable` and `MaxSurge` handling. SHould this be copied or distributed ?
+1. Discuss `MaxUnavailable` and `MaxSurge` handling. Should this be copied or distributed ?
 2. Do we need further `NodeGroup` sizing strategies ?
