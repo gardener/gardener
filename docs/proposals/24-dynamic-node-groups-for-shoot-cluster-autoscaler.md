@@ -226,6 +226,7 @@ We will offer 2 strategies for node-group sizing: *Lax Greedy Sizing* and *Equit
 1. Pro: This strategy has the primary advantage that workload can be provisioned within the zone for the NodeGroup. It can be considered as work-load friendly
 2. Pro: It can handle back-off well. If nodes can't be provisioned in one node group, the other node group can take up the slack.
 3. Con: It isn't backward compatabile with our current distribution logic.
+4. Con: We need to add support for scale from zero for extended/ephmeral resources. We have [Gardener CA #132](https://github.com/gardener/autoscaler/issues/132) for this.
 
 #### Examples
 
