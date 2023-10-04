@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package operator_test
+package gardenlet_test
 
 import (
 	"context"
@@ -25,10 +25,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	. "github.com/gardener/gardener/pkg/utils/gardener/operator"
+	. "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 )
 
-var _ = Describe("Operator", func() {
+var _ = Describe("Gardenlet", func() {
 	Describe("#SeedIsGarden", func() {
 		var (
 			ctx        context.Context

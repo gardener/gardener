@@ -36,20 +36,19 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
-	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("handler", func() {
 	var (
-		ctx = context.TODO()
+		ctx = context.Background()
 		log logr.Logger
 
 		handler *Handler
 
 		ctrl       *gomock.Controller
-		mockCache  *mockcache.MockCache
+		mockClient *mockclient.MockClient
 		mockReader *mockclient.MockReader
 
 		namespaceName     = "foo"
@@ -62,7 +61,7 @@ var _ = Describe("handler", func() {
 		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 
 		ctrl = gomock.NewController(GinkgoT())
-		mockCache = mockcache.NewMockCache(ctrl)
+		mockClient = mockclient.NewMockClient(ctrl)
 		mockReader = mockclient.NewMockReader(ctrl)
 
 		namespace = &corev1.Namespace{
@@ -75,7 +74,7 @@ var _ = Describe("handler", func() {
 		shootMetadataList = &metav1.PartialObjectMetadataList{}
 		shootMetadataList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
 
-		handler = &Handler{Logger: log, APIReader: mockReader, Client: mockCache, Scheme: kubernetes.GardenScheme}
+		handler = &Handler{Logger: log, APIReader: mockReader, Client: mockClient}
 	})
 
 	AfterEach(func() {
@@ -90,17 +89,17 @@ var _ = Describe("handler", func() {
 	}
 
 	It("should pass because no projects available", func() {
-		mockCache.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
+		mockClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
 			namespace.DeepCopyInto(obj)
 			return nil
 		})
-		mockCache.EXPECT().Get(gomock.Any(), kubernetesutils.Key(projectName), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+		mockClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(projectName), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 
 		test(admissionv1.Delete, Succeed())
 	})
 
 	It("should pass because namespace is not project related", func() {
-		mockCache.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
+		mockClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
 			(&corev1.Namespace{}).DeepCopyInto(obj)
 			return nil
 		})
@@ -109,23 +108,23 @@ var _ = Describe("handler", func() {
 	})
 
 	It("should fail because get namespace fails", func() {
-		mockCache.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(fmt.Errorf("fake"))
+		mockClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(fmt.Errorf("fake"))
 
 		test(admissionv1.Delete, MatchError(ContainSubstring("fake")))
 	})
 
 	It("should fail because getting the projects fails", func() {
-		mockCache.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
+		mockClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
 			namespace.DeepCopyInto(obj)
 			return nil
 		})
-		mockCache.EXPECT().Get(gomock.Any(), kubernetesutils.Key(projectName), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).Return(fmt.Errorf("fake"))
+		mockClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(projectName), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).Return(fmt.Errorf("fake"))
 
 		test(admissionv1.Delete, MatchError(ContainSubstring("fake")))
 	})
 
 	It("should pass because namespace is already gone", func() {
-		mockCache.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+		mockClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 
 		test(admissionv1.Delete, Succeed())
 	})
@@ -134,23 +133,23 @@ var _ = Describe("handler", func() {
 		var relatedProject gardencorev1beta1.Project
 
 		It("should pass because namespace is already marked for deletion", func() {
-			mockCache.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
+			mockClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
 				now := metav1.Now()
 				namespace.SetDeletionTimestamp(&now)
 				namespace.DeepCopyInto(obj)
 				return nil
 			})
-			mockCache.EXPECT().Get(gomock.Any(), kubernetesutils.Key(projectName), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}))
+			mockClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(projectName), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}))
 
 			test(admissionv1.Delete, Succeed())
 		})
 
 		It("should forbid namespace deletion because project is not marked for deletion", func() {
-			mockCache.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
+			mockClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
 				namespace.DeepCopyInto(obj)
 				return nil
 			})
-			mockCache.EXPECT().Get(gomock.Any(), kubernetesutils.Key(projectName), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}))
+			mockClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(projectName), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}))
 
 			test(admissionv1.Delete, MatchError(ContainSubstring("direct deletion of namespace")))
 		})
@@ -160,14 +159,15 @@ var _ = Describe("handler", func() {
 				now := metav1.Now()
 				relatedProject.SetDeletionTimestamp(&now)
 
-				mockCache.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
+				mockClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
 					namespace.DeepCopyInto(obj)
 					return nil
 				})
-				mockCache.EXPECT().Get(gomock.Any(), kubernetesutils.Key(projectName), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Project, _ ...client.GetOption) error {
+				mockClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(projectName), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Project, _ ...client.GetOption) error {
 					relatedProject.DeepCopyInto(obj)
 					return nil
 				})
+				mockClient.EXPECT().Scheme().Return(kubernetes.GardenScheme)
 			})
 
 			It("should fail because listing shoots fails", func() {

@@ -100,7 +100,7 @@ func ResourcesExist(ctx context.Context, reader client.Reader, objList client.Ob
 		}
 
 		objects = &metav1.PartialObjectMetadataList{}
-		(objects.(*metav1.PartialObjectMetadataList)).SetGroupVersionKind(gvk)
+		objects.(*metav1.PartialObjectMetadataList).SetGroupVersionKind(gvk)
 	}
 
 	if err := reader.List(ctx, objects, append(listOpts, client.Limit(1))...); err != nil {
@@ -111,14 +111,11 @@ func ResourcesExist(ctx context.Context, reader client.Reader, objList client.Ob
 	case *metav1.PartialObjectMetadataList:
 		return len(o.Items) > 0, nil
 	default:
-		var objFound bool
-		if err := meta.EachListItem(objList, func(_ runtime.Object) error {
-			objFound = true
-			return nil
-		}); err != nil {
+		items, err := meta.ExtractList(objList)
+		if err != nil {
 			return false, err
 		}
-		return objFound, nil
+		return len(items) > 0, err
 	}
 }
 
@@ -133,7 +130,7 @@ func hasNoOrMetadataOnlyFieldSelector(listOpts ...client.ListOption) bool {
 	}
 
 	for _, req := range listOptions.FieldSelector.Requirements() {
-		if !strings.HasPrefix(req.Field, "metadata") && !(req.Field == cache.NamespaceIndex) {
+		if !strings.HasPrefix(req.Field, "metadata") && req.Field != cache.NamespaceIndex {
 			return false
 		}
 	}

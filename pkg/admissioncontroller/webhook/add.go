@@ -65,7 +65,6 @@ func AddToManager(
 		Logger:    mgr.GetLogger().WithName("webhook").WithName(namespacedeletion.HandlerName),
 		APIReader: mgr.GetAPIReader(),
 		Client:    mgr.GetClient(),
-		Scheme:    mgr.GetScheme(),
 	}).AddToManager(ctx, mgr); err != nil {
 		return fmt.Errorf("failed adding %s webhook handler: %w", namespacedeletion.HandlerName, err)
 	}

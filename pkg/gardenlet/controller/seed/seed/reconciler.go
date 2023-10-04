@@ -37,7 +37,7 @@ import (
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	operatorutils "github.com/gardener/gardener/pkg/utils/gardener/operator"
+	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -100,7 +100,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 	}
 
-	seedIsGarden, err := operatorutils.SeedIsGarden(ctx, r.SeedClientSet.Client())
+	seedIsGarden, err := gardenletutils.SeedIsGarden(ctx, r.SeedClientSet.Client())
 	if err != nil {
 		return reconcile.Result{}, r.updateStatusOperationError(ctx, seed, err, operationType)
 	}
