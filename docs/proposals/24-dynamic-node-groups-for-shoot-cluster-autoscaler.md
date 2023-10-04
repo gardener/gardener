@@ -208,7 +208,7 @@ The [cloudprovider.CloudProvider](https://github.com/gardener/autoscaler/blob/05
 
 [cloudprovider.NodeGroup](https://github.com/gardener/autoscaler/blob/053c0d5176cb2d195e3baf333b05ceea99eedb58/cluster-autoscaler/cloudprovider/cloud_provider.go#L163) is the CA abstraction used to represent the set of cloud-provider nodes which are in-turn represented by [cloudprovider.Instances](https://github.com/gardener/autoscaler/blob/053c0d5176cb2d195e3baf333b05ceea99eedb58/cluster-autoscaler/cloudprovider/cloud_provider.go#L238)
 
-The CA carries out scale-down and scale-up operations within a `NodeGroups` respecting the constraints given by the `NodeGroup.MinSize()` and `NodeGroup.MaxSize()` methods.
+The CA carries out scale-down and scale-up operations within a `NodeGroup` respecting the constraints given by the `NodeGroup.MinSize()` and `NodeGroup.MaxSize()` methods.
 
 The CA runs a reconcile loop every `scanPeriod` interval (default: `10s`). At the beginning of the reconcile loop, the CA invokes `CloudProvider.Refresh()` to permit the cloud provider implementation to update its cache and then issues a call to `CloudProvider.NodeGroups()` to retrieve the latest `[]NodeGroup`.  The MCM CloudProvider implements this by interrogating the machine deployments.
 Each `NodeGroup` continues to be associated with its corresponding `MachineDeployment` for the zone.
