@@ -563,7 +563,6 @@ func (k *kubeAPIServer) handleSNISettings(deployment *appsv1.Deployment) {
 		return
 	}
 
-	deployment.Labels[v1beta1constants.LabelAPIServerExposure] = v1beta1constants.LabelAPIServerExposureGardenerManaged
 	deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--advertise-address=%s", k.values.SNI.AdvertiseAddress))
 }
 

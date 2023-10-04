@@ -44,7 +44,7 @@ type Interface interface {
 type Chart struct {
 	Name       string
 	Path       string
-	EmbeddedFS *embed.FS
+	EmbeddedFS embed.FS
 	Images     []string
 	Objects    []*Object
 	SubCharts  []*Chart
@@ -66,7 +66,6 @@ func (c *Chart) Apply(
 	runtimeVersion, targetVersion string,
 	additionalValues map[string]interface{},
 ) error {
-
 	// Get values with injected images
 	values, err := c.injectImages(imageVector, runtimeVersion, targetVersion)
 	if err != nil {
@@ -74,14 +73,8 @@ func (c *Chart) Apply(
 	}
 
 	// Apply chart
-	if c.EmbeddedFS != nil {
-		if err := chartApplier.ApplyFromEmbeddedFS(ctx, *c.EmbeddedFS, c.Path, namespace, c.Name, kubernetesclient.Values(utils.MergeMaps(values, additionalValues))); err != nil {
-			return fmt.Errorf("could not apply embedded chart '%s' in namespace '%s': %w", c.Name, namespace, err)
-		}
-	} else {
-		if err := chartApplier.Apply(ctx, c.Path, namespace, c.Name, kubernetesclient.Values(utils.MergeMaps(values, additionalValues))); err != nil {
-			return fmt.Errorf("could not apply chart '%s' in namespace '%s': %w", c.Name, namespace, err)
-		}
+	if err := chartApplier.ApplyFromEmbeddedFS(ctx, c.EmbeddedFS, c.Path, namespace, c.Name, kubernetesclient.Values(utils.MergeMaps(values, additionalValues))); err != nil {
+		return fmt.Errorf("could not apply embedded chart '%s' in namespace '%s': %w", c.Name, namespace, err)
 	}
 
 	return nil
@@ -95,7 +88,11 @@ func (c *Chart) Render(
 	imageVector imagevector.ImageVector,
 	runtimeVersion, targetVersion string,
 	additionalValues map[string]interface{},
-) (string, []byte, error) {
+) (
+	string,
+	[]byte,
+	error,
+) {
 	// Get values with injected images
 	values, err := c.injectImages(imageVector, runtimeVersion, targetVersion)
 	if err != nil {
@@ -104,16 +101,9 @@ func (c *Chart) Render(
 
 	// Render chart
 	var rc *chartrenderer.RenderedChart
-	if c.EmbeddedFS != nil {
-		rc, err = chartRenderer.RenderEmbeddedFS(*c.EmbeddedFS, c.Path, c.Name, namespace, utils.MergeMaps(values, additionalValues))
-		if err != nil {
-			return "", nil, fmt.Errorf("could not render chart '%s' in namespace '%s': %w", c.Name, namespace, err)
-		}
-	} else {
-		rc, err = chartRenderer.Render(c.Path, c.Name, namespace, utils.MergeMaps(values, additionalValues))
-		if err != nil {
-			return "", nil, fmt.Errorf("could not render chart '%s' in namespace '%s': %w", c.Name, namespace, err)
-		}
+	rc, err = chartRenderer.RenderEmbeddedFS(c.EmbeddedFS, c.Path, c.Name, namespace, utils.MergeMaps(values, additionalValues))
+	if err != nil {
+		return "", nil, fmt.Errorf("could not render chart '%s' in namespace '%s': %w", c.Name, namespace, err)
 	}
 
 	return rc.ChartName, rc.Manifest(), nil
@@ -123,8 +113,10 @@ func (c *Chart) Render(
 func (c *Chart) injectImages(
 	imageVector imagevector.ImageVector,
 	runtimeVersion, targetVersion string,
-) (map[string]interface{}, error) {
-
+) (
+	map[string]interface{},
+	error,
+) {
 	// Inject images
 	values := make(map[string]interface{})
 	var err error

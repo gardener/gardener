@@ -62,7 +62,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	// First remove all existing seed conditions and then add the current seed conditions
 	// if the shoot is still registered as seed
 	seedConditionTypes := []gardencorev1beta1.ConditionType{
-		"Bootstrapped", // TODO(rfranzke): Drop this line after v1.80 has been released.
 		gardencorev1beta1.SeedBackupBucketsReady,
 		gardencorev1beta1.SeedExtensionsReady,
 		gardencorev1beta1.SeedGardenletReady,

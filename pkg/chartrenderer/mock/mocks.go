@@ -36,21 +36,6 @@ func (m *MockInterface) EXPECT() *MockInterfaceMockRecorder {
 	return m.recorder
 }
 
-// Render mocks base method.
-func (m *MockInterface) Render(arg0, arg1, arg2 string, arg3 interface{}) (*chartrenderer.RenderedChart, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Render", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(*chartrenderer.RenderedChart)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Render indicates an expected call of Render.
-func (mr *MockInterfaceMockRecorder) Render(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Render", reflect.TypeOf((*MockInterface)(nil).Render), arg0, arg1, arg2, arg3)
-}
-
 // RenderArchive mocks base method.
 func (m *MockInterface) RenderArchive(arg0 []byte, arg1, arg2 string, arg3 interface{}) (*chartrenderer.RenderedChart, error) {
 	m.ctrl.T.Helper()

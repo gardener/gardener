@@ -16,9 +16,11 @@ package applications
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"io"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -32,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/test/framework"
@@ -44,9 +47,13 @@ const (
 
 	// RedisMaster is the name of the redis master deployed by the helm chart
 	RedisMaster = "redis-master"
+)
 
-	redisChart        = "stable/redis"
-	redisChartVersion = "10.2.1"
+var (
+	// Copied from https://github.com/helm/charts/tree/cb5f95d7453432e0ecd7adc60ea5965cf90adc28/stable/redis/templates
+	//go:embed charts/redis
+	chartRedis     embed.FS
+	chartPathRedis = filepath.Join("charts", "redis")
 )
 
 // GuestBookTest is simple application tests.
@@ -163,12 +170,7 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 		"master": masterValues,
 	}
 
-	err := t.framework.RenderAndDeployChart(ctx, t.framework.ShootClient, framework.Chart{
-		Name:        redisChart,
-		ReleaseName: "redis",
-		Namespace:   t.framework.Namespace,
-		Version:     redisChartVersion,
-	}, values)
+	err := t.framework.ShootClient.ChartApplier().ApplyFromEmbeddedFS(ctx, chartRedis, chartPathRedis, t.framework.Namespace, "redis", kubernetes.Values(values), kubernetes.ForceNamespace)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	t.WaitUntilRedisIsReady(ctx)

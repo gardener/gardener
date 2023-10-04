@@ -81,9 +81,8 @@ var _ = Describe("#Service", func() {
 				Name:      expectedName,
 				Namespace: namespace,
 				Labels: map[string]string{
-					"app":                                    "kubernetes",
-					"role":                                   "apiserver",
-					"core.gardener.cloud/apiserver-exposure": "gardener-managed",
+					"app":  "kubernetes",
+					"role": "apiserver",
 				},
 			},
 			Spec: corev1.ServiceSpec{
@@ -229,8 +228,7 @@ var _ = Describe("#Service", func() {
 				expected.Labels = map[string]string{
 					"app": "kubernetes",
 					"endpoint-slice-hints.resources.gardener.cloud/consider": "true",
-					"core.gardener.cloud/apiserver-exposure":                 "gardener-managed",
-					"role":                                                   "apiserver",
+					"role": "apiserver",
 				}
 				expected.Spec.Type = corev1.ServiceTypeClusterIP
 				Expect(actual).To(DeepEqual(expected))

@@ -32,7 +32,7 @@ import (
 var (
 	mcmChart = &chart.Chart{
 		Name:       local.MachineControllerManagerName,
-		EmbeddedFS: &charts.ChartMachineControllerManagerSeed,
+		EmbeddedFS: charts.ChartMachineControllerManagerSeed,
 		Path:       charts.ChartPathMachineControllerManagerSeed,
 		Images:     []string{localimagevector.ImageNameMachineControllerManager, localimagevector.ImageNameMachineControllerManagerProviderLocal},
 		Objects: []*chart.Object{
@@ -47,7 +47,7 @@ var (
 
 	mcmShootChart = &chart.Chart{
 		Name:       local.MachineControllerManagerName,
-		EmbeddedFS: &charts.ChartMachineControllerManagerShoot,
+		EmbeddedFS: charts.ChartMachineControllerManagerShoot,
 		Path:       charts.ChartPathMachineControllerManagerShoot,
 	}
 )

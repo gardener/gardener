@@ -542,24 +542,6 @@ func WrapWithLastError(err error, lastError *gardencorev1beta1.LastError) error 
 	return fmt.Errorf("last error: %w: %s", err, lastError.Description)
 }
 
-// IsAPIServerExposureManaged returns true, if the Object is managed by Gardener for API server exposure.
-// This indicates to extensions that they should not mutate the object.
-// Gardener marks the kube-apiserver Service and Deployment as managed by it when it uses SNI to expose them.
-// Deprecated: This function is deprecated and will be removed after Gardener v1.80 has been released.
-// TODO(rfranzke): Drop this after v1.80 has been released.
-func IsAPIServerExposureManaged(obj metav1.Object) bool {
-	if obj == nil {
-		return false
-	}
-
-	if v, found := obj.GetLabels()[v1beta1constants.LabelAPIServerExposure]; found &&
-		v == v1beta1constants.LabelAPIServerExposureGardenerManaged {
-		return true
-	}
-
-	return false
-}
-
 // FindPrimaryDNSProvider finds the primary provider among the given `providers`.
 // It returns the first provider if multiple candidates are found.
 func FindPrimaryDNSProvider(providers []gardencorev1beta1.DNSProvider) *gardencorev1beta1.DNSProvider {

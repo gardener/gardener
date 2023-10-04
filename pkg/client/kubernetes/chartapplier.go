@@ -25,13 +25,8 @@ import (
 
 // ChartApplier is an interface that describes needed methods that render and apply
 // Helm charts in Kubernetes clusters.
-// TODO(rfranzke): Drop the deprecated methods after Gardener v1.80 has been released.
 type ChartApplier interface {
 	chartrenderer.Interface
-	// Deprecated: Use ApplyFromEmbeddedFS for new code!
-	Apply(ctx context.Context, chartPath, namespace, name string, opts ...ApplyOption) error
-	// Deprecated: Use DeleteFromEmbeddedFS for new code!
-	Delete(ctx context.Context, chartPath, namespace, name string, opts ...DeleteOption) error
 	ApplyFromEmbeddedFS(ctx context.Context, embeddedFS embed.FS, chartPath, namespace, name string, opts ...ApplyOption) error
 	DeleteFromEmbeddedFS(ctx context.Context, embeddedFS embed.FS, chartPath, namespace, name string, opts ...DeleteOption) error
 }
@@ -60,20 +55,7 @@ func NewChartApplierForConfig(config *rest.Config) (ChartApplier, error) {
 	return NewChartApplier(renderer, applier), nil
 }
 
-// Apply takes a path to a chart <chartPath>, name of the release <name>,
-// release's namespace <namespace> and renders the template based value.
-// The resulting manifest will be applied to the cluster the Kubernetes client has been created for.
-// <options> can be used to enchance the existing functionality.
-// Deprecated: Use ApplyFromEmbeddedFS for new code!
-func (c *chartApplier) Apply(ctx context.Context, chartPath, namespace, name string, opts ...ApplyOption) error {
-	return c.apply(ctx, nil, chartPath, namespace, name, opts...)
-}
-
 func (c *chartApplier) ApplyFromEmbeddedFS(ctx context.Context, embeddedFS embed.FS, chartPath, namespace, name string, opts ...ApplyOption) error {
-	return c.apply(ctx, &embeddedFS, chartPath, namespace, name, opts...)
-}
-
-func (c *chartApplier) apply(ctx context.Context, embeddedFS *embed.FS, chartPath, namespace, name string, opts ...ApplyOption) error {
 	applyOpts := &ApplyOptions{}
 
 	for _, o := range opts {
@@ -98,19 +80,7 @@ func (c *chartApplier) apply(ctx context.Context, embeddedFS *embed.FS, chartPat
 	return c.ApplyManifest(ctx, manifestReader, applyOpts.MergeFuncs)
 }
 
-// Delete takes a path to a chart <chartPath>, name of the release <name>,
-// release's namespace <namespace> and renders the template.
-// The resulting manifest will be deleted from the cluster the Kubernetes client has been created for.
-// Deprecated: Use DeleteFromEmbeddedFS for new code!
-func (c *chartApplier) Delete(ctx context.Context, chartPath, namespace, name string, opts ...DeleteOption) error {
-	return c.delete(ctx, nil, chartPath, namespace, name, opts...)
-}
-
 func (c *chartApplier) DeleteFromEmbeddedFS(ctx context.Context, embeddedFS embed.FS, chartPath, namespace, name string, opts ...DeleteOption) error {
-	return c.delete(ctx, &embeddedFS, chartPath, namespace, name, opts...)
-}
-
-func (c *chartApplier) delete(ctx context.Context, embeddedFS *embed.FS, chartPath, namespace, name string, opts ...DeleteOption) error {
 	deleteOpts := &DeleteOptions{}
 
 	for _, o := range opts {
@@ -139,22 +109,15 @@ func (c *chartApplier) delete(ctx context.Context, embeddedFS *embed.FS, chartPa
 	return c.DeleteManifest(ctx, manifestReader, deleteManifestOpts...)
 }
 
-func (c *chartApplier) newManifestReader(embeddedFS *embed.FS, chartPath, namespace, name string, values interface{}) (UnstructuredReader, error) {
+func (c *chartApplier) newManifestReader(embeddedFS embed.FS, chartPath, namespace, name string, values interface{}) (UnstructuredReader, error) {
 	var (
 		release *chartrenderer.RenderedChart
 		err     error
 	)
 
-	if embeddedFS != nil {
-		release, err = c.RenderEmbeddedFS(*embeddedFS, chartPath, name, namespace, values)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		release, err = c.Render(chartPath, name, namespace, values)
-		if err != nil {
-			return nil, err
-		}
+	release, err = c.RenderEmbeddedFS(embeddedFS, chartPath, name, namespace, values)
+	if err != nil {
+		return nil, err
 	}
 
 	return NewManifestReader(release.Manifest()), nil
