@@ -211,7 +211,7 @@ fi
 
 echo "Create host and client keys for SSH reverse tunnel"
 "$SCRIPT_DIR"/../ssh-reverse-tunnel/prepare-seed-dir.sh "$seed_name"
-"$SCRIPT_DIR"/../ssh-reverse-tunnel/create-host-keys.sh "$seed_name" "$relay_domain" 6222
+"$SCRIPT_DIR"/../ssh-reverse-tunnel/create-host-keys.sh "$seed_name" "$relay_domain" 443
 "$SCRIPT_DIR"/../ssh-reverse-tunnel/create-client-keys.sh "$seed_name" "$relay_domain"
 
 echo "Deploying kyverno, SSH reverse tunnel and container registry"

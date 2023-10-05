@@ -40,7 +40,7 @@ spec:
         - name: https
           containerPort: 6443
         - name: ssh
-          containerPort: 6222
+          containerPort: 433
       volumes:
       - name: gardener-apiserver-sshd
         configMap:
