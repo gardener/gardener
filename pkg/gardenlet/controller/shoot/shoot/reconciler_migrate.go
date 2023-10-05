@@ -112,49 +112,58 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		g = flow.NewGraph("Shoot cluster preparation for migration")
 
 		deployNamespace = g.Add(flow.Task{
-			Name: "Deploying Shoot namespace in Seed",
-			Fn:   flow.TaskFn(botanist.DeploySeedNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(nonTerminatingNamespace),
+			Name:   "Deploying Shoot namespace in Seed",
+			Fn:     flow.TaskFn(botanist.DeploySeedNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf: !nonTerminatingNamespace,
 		})
 		initializeSecretsManagement = g.Add(flow.Task{
 			Name:         "Initializing secrets management",
-			Fn:           flow.TaskFn(botanist.InitializeSecretsManagement).DoIf(nonTerminatingNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.InitializeSecretsManagement).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       !nonTerminatingNamespace,
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		deployETCD = g.Add(flow.Task{
 			Name:         "Deploying main and events etcd",
-			Fn:           flow.TaskFn(botanist.DeployEtcd).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(cleanupShootResources || etcdSnapshotRequired),
+			Fn:           flow.TaskFn(botanist.DeployEtcd).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       !(cleanupShootResources || etcdSnapshotRequired),
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
 		})
 		scaleUpETCD = g.Add(flow.Task{
 			Name:         "Scaling etcd up",
-			Fn:           flow.TaskFn(botanist.ScaleUpETCD).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(wakeupRequired),
+			Fn:           flow.TaskFn(botanist.ScaleUpETCD).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       !wakeupRequired,
 			Dependencies: flow.NewTaskIDs(deployETCD),
 		})
 		waitUntilEtcdReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event etcd report readiness",
-			Fn:           flow.TaskFn(botanist.WaitUntilEtcdsReady).DoIf(cleanupShootResources || etcdSnapshotRequired),
+			Fn:           flow.TaskFn(botanist.WaitUntilEtcdsReady),
+			SkipIf:       !(cleanupShootResources || etcdSnapshotRequired),
 			Dependencies: flow.NewTaskIDs(deployETCD, scaleUpETCD),
 		})
 		wakeUpKubeAPIServer = g.Add(flow.Task{
 			Name:         "Scaling Kubernetes API Server up and waiting until ready",
-			Fn:           flow.TaskFn(botanist.WakeUpKubeAPIServer).DoIf(wakeupRequired),
+			Fn:           flow.TaskFn(botanist.WakeUpKubeAPIServer),
+			SkipIf:       !wakeupRequired,
 			Dependencies: flow.NewTaskIDs(deployETCD, scaleUpETCD, initializeSecretsManagement),
 		})
 		// Deploy gardener-resource-manager to re-run the bootstrap logic if needed (e.g. when the token is expired because of hibernation).
 		// This fixes https://github.com/gardener/gardener/issues/7606
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying gardener-resource-manager",
-			Fn:           flow.TaskFn(botanist.DeployGardenerResourceManager).DoIf(cleanupShootResources),
+			Fn:           flow.TaskFn(botanist.DeployGardenerResourceManager),
+			SkipIf:       !cleanupShootResources,
 			Dependencies: flow.NewTaskIDs(wakeUpKubeAPIServer),
 		})
 		ensureResourceManagerScaledUp = g.Add(flow.Task{
 			Name:         "Ensuring that the gardener-resource-manager is scaled to 1",
-			Fn:           flow.TaskFn(botanist.ScaleGardenerResourceManagerToOne).DoIf(cleanupShootResources),
+			Fn:           flow.TaskFn(botanist.ScaleGardenerResourceManagerToOne),
+			SkipIf:       !cleanupShootResources,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
 		keepManagedResourcesObjectsInShoot = g.Add(flow.Task{
 			Name:         "Configuring Managed Resources objects to be kept in the Shoot",
-			Fn:           flow.TaskFn(botanist.KeepObjectsForManagedResources).DoIf(cleanupShootResources),
+			Fn:           flow.TaskFn(botanist.KeepObjectsForManagedResources),
+			SkipIf:       !cleanupShootResources,
 			Dependencies: flow.NewTaskIDs(ensureResourceManagerScaledUp),
 		})
 		deleteManagedResources = g.Add(flow.Task{
@@ -278,7 +287,8 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		})
 		waitUntilShootManagedResourcesDeleted = g.Add(flow.Task{
 			Name:         "Waiting until shoot managed resources have been deleted",
-			Fn:           flow.TaskFn(botanist.WaitUntilShootManagedResourcesDeleted).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.WaitUntilShootManagedResourcesDeleted).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       !cleanupShootResources,
 			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneDeleted),
 		})
 		deleteKubeAPIServer = g.Add(flow.Task{
@@ -372,12 +382,14 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		)
 		destroyDNSRecords = g.Add(flow.Task{
 			Name:         "Deleting DNSRecords from the Shoot namespace",
-			Fn:           flow.TaskFn(botanist.DestroyDNSRecords).DoIf(nonTerminatingNamespace),
+			Fn:           flow.TaskFn(botanist.DestroyDNSRecords),
+			SkipIf:       !nonTerminatingNamespace,
 			Dependencies: flow.NewTaskIDs(syncPoint, migrateIngressDNSRecord, migrateExternalDNSRecord, migrateInternalDNSRecord),
 		})
 		createETCDSnapshot = g.Add(flow.Task{
 			Name:         "Creating ETCD Snapshot",
-			Fn:           flow.TaskFn(botanist.SnapshotEtcd).DoIf(etcdSnapshotRequired),
+			Fn:           flow.TaskFn(botanist.SnapshotEtcd),
+			SkipIf:       !etcdSnapshotRequired,
 			Dependencies: flow.NewTaskIDs(syncPoint, waitUntilKubeAPIServerDeleted),
 		})
 		migrateBackupEntryInGarden = g.Add(flow.Task{
