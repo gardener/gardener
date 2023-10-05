@@ -28,6 +28,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	extensionsconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
@@ -46,10 +47,11 @@ import (
 )
 
 type delegateFactory struct {
-	client     client.Client
-	decoder    runtime.Decoder
-	restConfig *rest.Config
-	scheme     *runtime.Scheme
+	gardenReader client.Reader
+	seedClient   client.Client
+	decoder      runtime.Decoder
+	restConfig   *rest.Config
+	scheme       *runtime.Scheme
 }
 
 type actuator struct {
@@ -58,7 +60,7 @@ type actuator struct {
 }
 
 // NewActuator creates a new Actuator that updates the status of the handled WorkerPoolConfigs.
-func NewActuator(mgr manager.Manager, gardenletManagesMCM bool) (worker.Actuator, error) {
+func NewActuator(mgr manager.Manager, gardenCluster cluster.Cluster, gardenletManagesMCM bool) (worker.Actuator, error) {
 	var (
 		mcmName              string
 		mcmChartSeed         *chart.Chart
@@ -66,10 +68,11 @@ func NewActuator(mgr manager.Manager, gardenletManagesMCM bool) (worker.Actuator
 		imageVector          imagevector.ImageVector
 		chartRendererFactory extensionscontroller.ChartRendererFactory
 		workerDelegate       = &delegateFactory{
-			client:     mgr.GetClient(),
-			decoder:    serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder(),
-			restConfig: mgr.GetConfig(),
-			scheme:     mgr.GetScheme(),
+			gardenReader: gardenCluster.GetAPIReader(),
+			seedClient:   mgr.GetClient(),
+			decoder:      serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder(),
+			restConfig:   mgr.GetConfig(),
+			scheme:       mgr.GetScheme(),
 		}
 	)
 
@@ -83,6 +86,7 @@ func NewActuator(mgr manager.Manager, gardenletManagesMCM bool) (worker.Actuator
 
 	genericactuator, err := genericactuator.NewActuator(
 		mgr,
+		gardenCluster,
 		workerDelegate,
 		mcmName,
 		mcmChartSeed,
@@ -102,7 +106,7 @@ func NewActuator(mgr manager.Manager, gardenletManagesMCM bool) (worker.Actuator
 }
 
 func (a *actuator) Restore(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
-	if err := genericactuator.RestoreWithoutReconcile(ctx, log, a.workerDelegate.client, a.workerDelegate, worker, cluster); err != nil {
+	if err := genericactuator.RestoreWithoutReconcile(ctx, log, a.workerDelegate.gardenReader, a.workerDelegate.seedClient, a.workerDelegate, worker, cluster); err != nil {
 		return fmt.Errorf("failed restoring the worker state: %w", err)
 	}
 
@@ -124,18 +128,18 @@ func (a *actuator) Restore(ctx context.Context, log logr.Logger, worker *extensi
 }
 
 func (a *actuator) deleteNoLongerNeededMachines(ctx context.Context, log logr.Logger, namespace string) error {
-	_, shootClient, err := util.NewClientForShoot(ctx, a.workerDelegate.client, namespace, client.Options{}, extensionsconfig.RESTOptions{})
+	_, shootClient, err := util.NewClientForShoot(ctx, a.workerDelegate.seedClient, namespace, client.Options{}, extensionsconfig.RESTOptions{})
 	if err != nil {
 		return fmt.Errorf("failed creating client for shoot cluster: %w", err)
 	}
 
 	machineList := &machinev1alpha1.MachineList{}
-	if err := a.workerDelegate.client.List(ctx, machineList, client.InNamespace(namespace)); err != nil {
+	if err := a.workerDelegate.seedClient.List(ctx, machineList, client.InNamespace(namespace)); err != nil {
 		return fmt.Errorf("failed listing machines: %w", err)
 	}
 
 	podList := &corev1.PodList{}
-	if err := a.workerDelegate.client.List(ctx, podList, client.InNamespace(namespace), client.MatchingLabels{"app": "machine"}); err != nil {
+	if err := a.workerDelegate.seedClient.List(ctx, podList, client.InNamespace(namespace), client.MatchingLabels{"app": "machine"}); err != nil {
 		return fmt.Errorf("failed listing pods: %w", err)
 	}
 
@@ -156,7 +160,7 @@ func (a *actuator) deleteNoLongerNeededMachines(ctx context.Context, log logr.Lo
 			return fmt.Errorf("failed deleting node %q for machine %q: %w", nodeName, machine.Name, err)
 		}
 
-		if err := a.workerDelegate.client.Delete(ctx, machine.DeepCopy()); err != nil {
+		if err := a.workerDelegate.seedClient.Delete(ctx, machine.DeepCopy()); err != nil {
 			return fmt.Errorf("failed deleting machine %q: %w", machine.Name, err)
 		}
 	}
@@ -181,7 +185,7 @@ func (d *delegateFactory) WorkerDelegate(_ context.Context, worker *extensionsv1
 	}
 
 	return NewWorkerDelegate(
-		d.client,
+		d.seedClient,
 		d.decoder,
 		d.scheme,
 		seedChartApplier,

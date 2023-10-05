@@ -19,15 +19,21 @@ import (
 	"errors"
 	"fmt"
 
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mockbackupentry "github.com/gardener/gardener/pkg/component/backupentry/mock"
 	mocketcd "github.com/gardener/gardener/pkg/component/etcd/mock"
 	mockcontainerruntime "github.com/gardener/gardener/pkg/component/extensions/containerruntime/mock"
@@ -40,6 +46,7 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("migration", func() {
@@ -56,8 +63,10 @@ var _ = Describe("migration", func() {
 
 		botanist *Botanist
 
-		ctx     = context.TODO()
-		fakeErr = fmt.Errorf("fake")
+		ctx                     = context.TODO()
+		fakeErr                 = fmt.Errorf("fake")
+		fakeClient              client.Client
+		fakeKubernetesInterface kubernetes.Interface
 	)
 
 	BeforeEach(func() {
@@ -71,7 +80,11 @@ var _ = Describe("migration", func() {
 		operatingSystemConfig = mockoperatingsystemconfig.NewMockInterface(ctrl)
 		worker = mockworker.NewMockInterface(ctrl)
 
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		fakeKubernetesInterface = kubernetesfake.NewClientSetBuilder().WithClient(fakeClient).Build()
+
 		botanist = &Botanist{Operation: &operation.Operation{
+			SeedClientSet: fakeKubernetesInterface,
 			Shoot: &shootpkg.Shoot{
 				Components: &shootpkg.Components{
 					Extensions: &shootpkg.Extensions{
@@ -348,6 +361,40 @@ var _ = Describe("migration", func() {
 		It("should return false", func() {
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{LastOperation: &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeCreate}}})
 			Expect(botanist.IsRestorePhase()).To(BeFalse())
+		})
+	})
+
+	Describe("#ShallowDeleteMachineResources", func() {
+		It("should delete most of the resources and remove MCM finalizers", func() {
+			var (
+				machine             = &machinev1alpha1.Machine{ObjectMeta: metav1.ObjectMeta{GenerateName: "obj-", Namespace: shootNamespace, Finalizers: []string{"machine.sapcloud.io/machine-controller-manager", "machine.sapcloud.io/machine-controller"}}}
+				machineSet          = &machinev1alpha1.MachineSet{ObjectMeta: metav1.ObjectMeta{GenerateName: "obj-", Namespace: shootNamespace, Finalizers: []string{"machine.sapcloud.io/machine-controller-manager", "machine.sapcloud.io/machine-controller"}}}
+				machineDeployment   = &machinev1alpha1.MachineDeployment{ObjectMeta: metav1.ObjectMeta{GenerateName: "obj-", Namespace: shootNamespace, Finalizers: []string{"machine.sapcloud.io/machine-controller-manager", "machine.sapcloud.io/machine-controller"}}}
+				machineClass        = &machinev1alpha1.MachineClass{ObjectMeta: metav1.ObjectMeta{GenerateName: "obj-", Namespace: shootNamespace, Finalizers: []string{"machine.sapcloud.io/machine-controller-manager", "machine.sapcloud.io/machine-controller"}}}
+				machineClassSecret  = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{GenerateName: "obj-", Namespace: shootNamespace, Finalizers: []string{"machine.sapcloud.io/machine-controller-manager", "machine.sapcloud.io/machine-controller"}, Labels: map[string]string{"gardener.cloud/purpose": "machineclass"}}}
+				cloudProviderSecret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{GenerateName: "obj-", Namespace: shootNamespace, Finalizers: []string{"machine.sapcloud.io/machine-controller-manager", "machine.sapcloud.io/machine-controller", "do-not-remove-me"}, Labels: map[string]string{"gardener.cloud/purpose": "cloudprovider"}}}
+				unrelatedSecret     = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{GenerateName: "obj-", Namespace: shootNamespace}}
+			)
+
+			Expect(fakeClient.Create(ctx, machine)).To(Succeed())
+			Expect(fakeClient.Create(ctx, machineSet)).To(Succeed())
+			Expect(fakeClient.Create(ctx, machineDeployment)).To(Succeed())
+			Expect(fakeClient.Create(ctx, machineClass)).To(Succeed())
+			Expect(fakeClient.Create(ctx, machineClassSecret)).To(Succeed())
+			Expect(fakeClient.Create(ctx, cloudProviderSecret)).To(Succeed())
+			Expect(fakeClient.Create(ctx, unrelatedSecret)).To(Succeed())
+
+			Expect(botanist.ShallowDeleteMachineResources(ctx)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(machine), machine)).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(machineSet), machineSet)).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(machineDeployment), machineDeployment)).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(machineClass), machineClass)).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(machineClassSecret), machineClassSecret)).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(cloudProviderSecret), cloudProviderSecret)).To(Succeed())
+			Expect(cloudProviderSecret.DeletionTimestamp).To(BeNil())
+			Expect(cloudProviderSecret.Finalizers).To(ConsistOf("do-not-remove-me"))
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(unrelatedSecret), unrelatedSecret)).To(Succeed())
 		})
 	})
 })

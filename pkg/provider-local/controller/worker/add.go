@@ -19,6 +19,7 @@ import (
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -33,6 +34,8 @@ var (
 
 // AddOptions are options to apply when adding the local worker controller to the manager.
 type AddOptions struct {
+	// GardenCluster is the garden cluster object.
+	GardenCluster cluster.Cluster
 	// Controller are the controller.Options.
 	Controller controller.Options
 	// IgnoreOperationAnnotation specifies whether to ignore the operation annotation or not.
@@ -52,7 +55,7 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddO
 		return err
 	}
 
-	actuator, err := NewActuator(mgr, opts.GardenletManagesMCM)
+	actuator, err := NewActuator(mgr, opts.GardenCluster, opts.GardenletManagesMCM)
 	if err != nil {
 		return err
 	}

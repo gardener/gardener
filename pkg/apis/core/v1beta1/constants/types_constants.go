@@ -553,6 +553,13 @@ const (
 	// DefaultIngressGatewayAppLabelValue is the ingress gateway value for the app label.
 	DefaultIngressGatewayAppLabelValue = "istio-ingressgateway"
 
+	// DataTypeSecret is a constant for a value of the 'Type' field in 'GardenerResourceData' structs describing that
+	// the data is a secret.
+	DataTypeSecret = "secret"
+	// DataTypeMachineState is a constant for a value of the 'Type' field in 'GardenerResourceData' structs describing
+	// that the data is machine state.
+	DataTypeMachineState = "machine-state"
+
 	// DefaultSchedulerName is the name of the default scheduler.
 	DefaultSchedulerName = "default-scheduler"
 	// SchedulingPurpose is a constant for the key in a label describing the purpose of the scheduler related object.
@@ -835,7 +842,10 @@ const (
 	TaintNodeCriticalComponentsNotReady = "node.gardener.cloud/critical-components-not-ready"
 	// LabelNodeCriticalComponent is the label key for marking node-critical component pods.
 	LabelNodeCriticalComponent = "node.gardener.cloud/critical-component"
-	// AnnotationWaitForCSINode is the annotation key for csi-driver-node pods,
-	// indicating they use the driver specified in the value.
+	// AnnotationPrefixWaitForCSINode is the annotation key for csi-driver-node pods, indicating they use the driver
+	// specified in the value.
 	AnnotationPrefixWaitForCSINode = "node.gardener.cloud/wait-for-csi-node-"
+
+	// GardenPurposeMachineClass is a constant for the 'machineclass' value in a label.
+	GardenPurposeMachineClass = "machineclass"
 )

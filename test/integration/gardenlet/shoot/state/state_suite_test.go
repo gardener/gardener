@@ -37,7 +37,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -91,6 +90,10 @@ var _ = BeforeSuite(func() {
 					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_networks.yaml"),
 					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_operatingsystemconfigs.yaml"),
 					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_workers.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-machine.sapcloud.io_machines.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-machine.sapcloud.io_machinesets.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-machine.sapcloud.io_machinedeployments.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-machine.sapcloud.io_machineclasses.yaml"),
 				},
 			},
 			ErrorIfCRDPathMissing: true,
@@ -114,7 +117,7 @@ var _ = BeforeSuite(func() {
 
 	testSchemeBuilder := runtime.NewSchemeBuilder(
 		kubernetes.AddGardenSchemeToScheme,
-		extensionsv1alpha1.AddToScheme,
+		kubernetes.AddSeedSchemeToScheme,
 	)
 	testScheme := runtime.NewScheme()
 	Expect(testSchemeBuilder.AddToScheme(testScheme)).To(Succeed())

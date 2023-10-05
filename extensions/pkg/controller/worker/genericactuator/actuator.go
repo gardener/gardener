@@ -17,18 +17,16 @@ package genericactuator
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -39,14 +37,10 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/chart"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
-
-// GardenPurposeMachineClass is a constant for the 'machineclass' value in a label.
-const GardenPurposeMachineClass = "machineclass"
 
 type genericActuator struct {
 	delegateFactory DelegateFactory
@@ -56,8 +50,9 @@ type genericActuator struct {
 	mcmShootChart   chart.Interface
 	imageVector     imagevector.ImageVector
 
-	client               client.Client
-	reader               client.Reader
+	gardenReader         client.Reader
+	seedClient           client.Client
+	seedReader           client.Reader
 	scheme               *runtime.Scheme
 	gardenerClientset    kubernetesclient.Interface
 	chartApplier         kubernetesclient.ChartApplier
@@ -71,6 +66,7 @@ type genericActuator struct {
 // If machine-controller-manager should not be managed then only the delegateFactory must be provided.
 func NewActuator(
 	mgr manager.Manager,
+	gardenCluster cluster.Cluster,
 	delegateFactory DelegateFactory,
 	mcmName string,
 	mcmSeedChart,
@@ -78,7 +74,10 @@ func NewActuator(
 	imageVector imagevector.ImageVector,
 	chartRendererFactory extensionscontroller.ChartRendererFactory,
 	errorCodeCheckFunc healthcheck.ErrorCodeCheckFunc,
-) (worker.Actuator, error) {
+) (
+	worker.Actuator,
+	error,
+) {
 	gardenerClientset, err := kubernetesclient.NewWithConfig(kubernetesclient.WithRESTConfig(mgr.GetConfig()))
 	if err != nil {
 		return nil, err
@@ -91,8 +90,9 @@ func NewActuator(
 		mcmSeedChart:         mcmSeedChart,
 		mcmShootChart:        mcmShootChart,
 		imageVector:          imageVector,
-		client:               mgr.GetClient(),
-		reader:               mgr.GetAPIReader(),
+		gardenReader:         gardenCluster.GetAPIReader(),
+		seedClient:           mgr.GetClient(),
+		seedReader:           mgr.GetAPIReader(),
 		scheme:               mgr.GetScheme(),
 		gardenerClientset:    gardenerClientset,
 		chartApplier:         gardenerClientset.ChartApplier(),
@@ -105,7 +105,7 @@ func (a *genericActuator) cleanupMachineDeployments(ctx context.Context, logger 
 	logger.Info("Cleaning up machine deployments")
 	for _, existingMachineDeployment := range existingMachineDeployments.Items {
 		if !wantedMachineDeployments.HasDeployment(existingMachineDeployment.Name) {
-			if err := a.client.Delete(ctx, &existingMachineDeployment); err != nil {
+			if err := a.seedClient.Delete(ctx, &existingMachineDeployment); err != nil {
 				return err
 			}
 		}
@@ -113,8 +113,9 @@ func (a *genericActuator) cleanupMachineDeployments(ctx context.Context, logger 
 	return nil
 }
 
-func (a *genericActuator) listMachineClassNames(ctx context.Context, namespace string, machineClassList client.ObjectList) (sets.Set[string], error) {
-	if err := a.client.List(ctx, machineClassList, client.InNamespace(namespace)); err != nil {
+func (a *genericActuator) listMachineClassNames(ctx context.Context, namespace string) (sets.Set[string], error) {
+	machineClassList := &machinev1alpha1.MachineClassList{}
+	if err := a.seedClient.List(ctx, machineClassList, client.InNamespace(namespace)); err != nil {
 		return nil, err
 	}
 
@@ -135,9 +136,10 @@ func (a *genericActuator) listMachineClassNames(ctx context.Context, namespace s
 	return classNames, nil
 }
 
-func (a *genericActuator) cleanupMachineClasses(ctx context.Context, logger logr.Logger, namespace string, machineClassList client.ObjectList, wantedMachineDeployments worker.MachineDeployments) error {
+func (a *genericActuator) cleanupMachineClasses(ctx context.Context, logger logr.Logger, namespace string, wantedMachineDeployments worker.MachineDeployments) error {
 	logger.Info("Cleaning up machine classes")
-	if err := a.client.List(ctx, machineClassList, client.InNamespace(namespace)); err != nil {
+	machineClassList := &machinev1alpha1.MachineClassList{}
+	if err := a.seedClient.List(ctx, machineClassList, client.InNamespace(namespace)); err != nil {
 		return err
 	}
 
@@ -145,7 +147,7 @@ func (a *genericActuator) cleanupMachineClasses(ctx context.Context, logger logr
 		machineClass := obj.(client.Object)
 		if !wantedMachineDeployments.HasClass(machineClass.GetName()) {
 			logger.Info("Deleting machine class", "machineClass", machineClass)
-			if err := a.client.Delete(ctx, machineClass); err != nil {
+			if err := a.seedClient.Delete(ctx, machineClass); err != nil {
 				return err
 			}
 		}
@@ -155,12 +157,12 @@ func (a *genericActuator) cleanupMachineClasses(ctx context.Context, logger logr
 }
 
 func getMachineClassSecretLabels() map[string]string {
-	return map[string]string{v1beta1constants.GardenerPurpose: GardenPurposeMachineClass}
+	return map[string]string{v1beta1constants.GardenerPurpose: v1beta1constants.GardenPurposeMachineClass}
 }
 
 func (a *genericActuator) listMachineClassSecrets(ctx context.Context, namespace string) (*corev1.SecretList, error) {
 	secretList := &corev1.SecretList{}
-	if err := a.client.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels(getMachineClassSecretLabels())); err != nil {
+	if err := a.seedClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels(getMachineClassSecretLabels())); err != nil {
 		return nil, err
 	}
 
@@ -179,64 +181,9 @@ func (a *genericActuator) cleanupMachineClassSecrets(ctx context.Context, logger
 	// Cleanup all secrets which were used for machine classes that do not exist anymore.
 	for _, secret := range secretList.Items {
 		if !wantedMachineDeployments.HasSecret(secret.Name) {
-			if err := a.client.Delete(ctx, &secret); err != nil {
+			if err := a.seedClient.Delete(ctx, &secret); err != nil {
 				return err
 			}
-		}
-	}
-
-	return nil
-}
-
-// shallowDeleteMachineClassSecrets deletes all unused machine class secrets (i.e., those which are not part
-// of the provided list <usedSecrets>) without waiting for MCM to do this.
-func (a *genericActuator) shallowDeleteMachineClassSecrets(ctx context.Context, log logr.Logger, namespace string, wantedMachineDeployments worker.MachineDeployments) error {
-	log.Info("Shallow deleting machine class secrets")
-	secretList, err := a.listMachineClassSecrets(ctx, namespace)
-	if err != nil {
-		return err
-	}
-	// Delete the finalizers to all secrets which were used for machine classes that do not exist anymore.
-	for _, secret := range secretList.Items {
-		if !wantedMachineDeployments.HasSecret(secret.Name) {
-			log.Info("Removing all finalizers from machine class secret", "secret", client.ObjectKeyFromObject(&secret))
-			if err := controllerutils.RemoveAllFinalizers(ctx, a.client, &secret); err != nil {
-				return fmt.Errorf("error removing all finalizers from machine class secret: %s/%s: %w", secret.Namespace, secret.Name, err)
-			}
-			if err := a.client.Delete(ctx, &secret); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
-// removeFinalizerFromWorkerSecretRef removes the MCM finalizers from the secret that is referenced by the worker
-func (a *genericActuator) removeFinalizerFromWorkerSecretRef(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker) error {
-	secret, err := kubernetesutils.GetSecretByReference(ctx, a.client, &worker.Spec.SecretRef)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		return err
-	}
-
-	finalizersToRemove := []string{}
-	if controllerutil.ContainsFinalizer(secret, mcmFinalizer) {
-		finalizersToRemove = append(finalizersToRemove, mcmFinalizer)
-	}
-	if controllerutil.ContainsFinalizer(secret, mcmProviderFinalizer) {
-		finalizersToRemove = append(finalizersToRemove, mcmProviderFinalizer)
-	}
-	if len(finalizersToRemove) == 0 {
-		return nil
-	}
-
-	if len(finalizersToRemove) > 0 {
-		log.Info("Removing finalizers from secret", "secret", client.ObjectKeyFromObject(secret))
-		if err := controllerutils.RemoveFinalizers(ctx, a.client, secret, finalizersToRemove...); err != nil {
-			return fmt.Errorf("failed to remove finalizer from secret: %w", err)
 		}
 	}
 
@@ -247,14 +194,14 @@ func (a *genericActuator) removeFinalizerFromWorkerSecretRef(ctx context.Context
 func (a *genericActuator) cleanupMachineSets(ctx context.Context, logger logr.Logger, namespace string) error {
 	logger.Info("Cleaning up machine sets")
 	machineSetList := &machinev1alpha1.MachineSetList{}
-	if err := a.client.List(ctx, machineSetList, client.InNamespace(namespace)); err != nil {
+	if err := a.seedClient.List(ctx, machineSetList, client.InNamespace(namespace)); err != nil {
 		return err
 	}
 
 	for _, machineSet := range machineSetList.Items {
 		if machineSet.Spec.Replicas == 0 && machineSet.Status.Replicas == 0 {
 			logger.Info("Deleting MachineSet as the number of desired and actual replicas is 0", "machineSet", &machineSet)
-			if err := a.client.Delete(ctx, machineSet.DeepCopy()); client.IgnoreNotFound(err) != nil {
+			if err := a.seedClient.Delete(ctx, machineSet.DeepCopy()); client.IgnoreNotFound(err) != nil {
 				return err
 			}
 		}
@@ -262,44 +209,15 @@ func (a *genericActuator) cleanupMachineSets(ctx context.Context, logger logr.Lo
 	return nil
 }
 
-func (a *genericActuator) shallowDeleteAllObjects(ctx context.Context, log logr.Logger, namespace string, objectList client.ObjectList) error {
-	var objectKind interface{} = strings.TrimSuffix(fmt.Sprintf("%T", objectList), "List")
-	if gvk, err := apiutil.GVKForObject(objectList, a.scheme); err == nil {
-		objectKind = gvk
-	}
-
-	log = log.WithValues("kind", objectKind)
-	log.Info("Shallow deleting all objects of kind")
-
-	if err := a.client.List(ctx, objectList, client.InNamespace(namespace)); err != nil {
-		return err
-	}
-
-	return meta.EachListItem(objectList, func(obj runtime.Object) error {
-		object := obj.(client.Object)
-		if err := controllerutils.RemoveAllFinalizers(ctx, a.client, object); err != nil {
-			return err
-		}
-		log.Info("Removing all finalizers from object", "object", client.ObjectKeyFromObject(object))
-		if err := controllerutils.RemoveAllFinalizers(ctx, a.client, object); err != nil {
-			return fmt.Errorf("error removing all finalizers from object: %s/%s: %w", object.GetNamespace(), object.GetName(), err)
-		}
-		if err := a.client.Delete(ctx, object); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-		return nil
-	})
-}
-
 // IsMachineControllerStuck determines if the machine controller pod is stuck.
 func (a *genericActuator) IsMachineControllerStuck(ctx context.Context, worker *extensionsv1alpha1.Worker) (bool, *string, error) {
 	machineDeployments := &machinev1alpha1.MachineDeploymentList{}
-	if err := a.client.List(ctx, machineDeployments, client.InNamespace(worker.Namespace)); err != nil {
+	if err := a.seedClient.List(ctx, machineDeployments, client.InNamespace(worker.Namespace)); err != nil {
 		return false, nil, err
 	}
 
 	machineSets := &machinev1alpha1.MachineSetList{}
-	if err := a.client.List(ctx, machineSets, client.InNamespace(worker.Namespace)); err != nil {
+	if err := a.seedClient.List(ctx, machineSets, client.InNamespace(worker.Namespace)); err != nil {
 		return false, nil, err
 	}
 
@@ -325,7 +243,7 @@ const (
 //   - the machine set does not have a status that indicates (attempted) machine creation
 func isMachineControllerStuck(machineSets []machinev1alpha1.MachineSet, machineDeployments []machinev1alpha1.MachineDeployment) (bool, *string) {
 	// map the owner reference to the existing machine sets
-	ownerReferenceToMachineSet := extensionsworkerhelper.BuildOwnerToMachineSetsMap(machineSets)
+	ownerReferenceToMachineSet := gardenerutils.BuildOwnerToMachineSetsMap(machineSets)
 
 	for _, machineDeployment := range machineDeployments {
 		if !controllerutil.ContainsFinalizer(&machineDeployment, mcmFinalizer) {

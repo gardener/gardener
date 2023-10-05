@@ -20,113 +20,13 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var _ = Describe("Helper Tests", func() {
-	machineSetName := "machine-set-1"
-	machineDeploymentName := "machine-deployment-1"
 	var (
-		machineSetReference = machinev1alpha1.Machine{
-			ObjectMeta: metav1.ObjectMeta{
-				OwnerReferences: []metav1.OwnerReference{
-					{
-						Kind: MachineSetKind,
-						Name: machineSetName,
-					},
-				},
-			},
-		}
-
-		machineDeploymentReference = machinev1alpha1.Machine{
-			ObjectMeta: metav1.ObjectMeta{
-				OwnerReferences: []metav1.OwnerReference{
-					{
-						Kind: MachineDeploymentKind,
-						Name: machineDeploymentName,
-					},
-				},
-			},
-		}
-
-		machineLabelReference = machinev1alpha1.Machine{
-			ObjectMeta: metav1.ObjectMeta{
-				Labels: map[string]string{
-					nameLabel: machineDeploymentName,
-				},
-			},
-		}
-	)
-
-	DescribeTable("#BuildOwnerToMachinesMap", func(machines []machinev1alpha1.Machine, expected map[string][]machinev1alpha1.Machine) {
-		result := BuildOwnerToMachinesMap(machines)
-		Expect(result).To(Equal(expected))
-	},
-		Entry("should map using reference kind = `MachineSet`", []machinev1alpha1.Machine{machineSetReference, machineLabelReference}, map[string][]machinev1alpha1.Machine{
-			machineSetName: {machineSetReference}, machineDeploymentName: {machineLabelReference},
-		}),
-
-		Entry("should map using label with key `name`", []machinev1alpha1.Machine{machineLabelReference}, map[string][]machinev1alpha1.Machine{
-			machineDeploymentName: {machineLabelReference},
-		}),
-
-		Entry("should not consider machines with machine deployment reference", []machinev1alpha1.Machine{machineSetReference, machineDeploymentReference, machineLabelReference}, map[string][]machinev1alpha1.Machine{
-			machineSetName: {machineSetReference}, machineDeploymentName: {machineLabelReference},
-		}),
-	)
-
-	var (
-		machineSetWithOwnerReference = machinev1alpha1.MachineSet{
-			ObjectMeta: metav1.ObjectMeta{
-				OwnerReferences: []metav1.OwnerReference{
-					{
-						Kind: MachineDeploymentKind,
-						Name: machineDeploymentName,
-					},
-				},
-			},
-		}
-
-		machineSetWithWrongOwnerReference = machinev1alpha1.MachineSet{
-			ObjectMeta: metav1.ObjectMeta{
-				OwnerReferences: []metav1.OwnerReference{
-					{
-						Kind: MachineSetKind,
-						Name: machineDeploymentName,
-					},
-				},
-			},
-		}
-
-		machineSetWithLabelReference = machinev1alpha1.MachineSet{
-			ObjectMeta: metav1.ObjectMeta{
-				Labels: map[string]string{
-					nameLabel: machineDeploymentName,
-				},
-			},
-		}
-	)
-
-	DescribeTable("#BuildOwnerToMachineSetsMap", func(machines []machinev1alpha1.MachineSet, expected map[string][]machinev1alpha1.MachineSet) {
-		result := BuildOwnerToMachineSetsMap(machines)
-		Expect(result).To(Equal(expected))
-	},
-		Entry("should map using reference kind = `MachineDeployment", []machinev1alpha1.MachineSet{machineSetWithOwnerReference}, map[string][]machinev1alpha1.MachineSet{
-			machineDeploymentName: {machineSetWithOwnerReference},
-		}),
-
-		Entry("should map using label with key `name`", []machinev1alpha1.MachineSet{machineSetWithLabelReference}, map[string][]machinev1alpha1.MachineSet{
-			machineDeploymentName: {machineSetWithLabelReference},
-		}),
-
-		Entry("should not consider machines with machine set reference", []machinev1alpha1.MachineSet{machineSetWithOwnerReference, machineSetWithLabelReference, machineSetWithWrongOwnerReference}, map[string][]machinev1alpha1.MachineSet{
-			machineDeploymentName: {machineSetWithOwnerReference, machineSetWithLabelReference},
-		}),
-	)
-
-	var (
-		machineClassName   = "test-machine-class"
-		expectedMachineSet = machinev1alpha1.MachineSet{Spec: machinev1alpha1.MachineSetSpec{
+		machineDeploymentName = "machine-deployment-1"
+		machineClassName      = "test-machine-class"
+		expectedMachineSet    = machinev1alpha1.MachineSet{Spec: machinev1alpha1.MachineSetSpec{
 			Template: machinev1alpha1.MachineTemplateSpec{
 				Spec: machinev1alpha1.MachineSpec{
 					Class: machinev1alpha1.ClassSpec{

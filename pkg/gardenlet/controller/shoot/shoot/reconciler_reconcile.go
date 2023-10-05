@@ -20,12 +20,14 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -822,6 +824,26 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		if err := shootstate.Delete(ctx, botanist.GardenClient, botanist.Shoot.GetInfo()); err != nil {
 			err = fmt.Errorf("failed to delete shoot state: %w", err)
 			return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
+		}
+	}
+
+	// TODO(rfranzke): Drop this code after Gardener v1.89 has been released.
+	{
+		o.Logger.Info("Removing state from Worker status now that shoot was successfully reconciled or restored")
+		worker := &extensionsv1alpha1.Worker{ObjectMeta: metav1.ObjectMeta{Namespace: botanist.Shoot.SeedNamespace, Name: botanist.Shoot.GetInfo().Name}}
+		if err := botanist.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(worker), worker); err != nil {
+			if !apierrors.IsNotFound(err) {
+				err = fmt.Errorf("failed to read Worker object: %w", err)
+				return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
+			}
+			// Not all Shoots have `Worker` objects, e.g., workerless clusters.
+		} else if worker.Status.State != nil {
+			patch := client.MergeFromWithOptions(worker.DeepCopy(), client.MergeFromWithOptimisticLock{})
+			worker.Status.State = nil
+			if err := botanist.SeedClientSet.Client().Status().Patch(ctx, worker, patch); err != nil {
+				err = fmt.Errorf("failed to patch .status.state field of Worker object to nil: %w", err)
+				return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
+			}
 		}
 	}
 

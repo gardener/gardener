@@ -51,32 +51,20 @@ var _ = Describe("CRD", func() {
 	Describe("#Deploy", func() {
 		It("should deploy the CRDs", func() {
 			Expect(crdDeployer.Deploy(ctx)).To(Succeed())
-			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: "alicloudmachineclasses.machine.sapcloud.io"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
-			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: "awsmachineclasses.machine.sapcloud.io"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
-			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: "azuremachineclasses.machine.sapcloud.io"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
-			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: "gcpmachineclasses.machine.sapcloud.io"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: "machineclasses.machine.sapcloud.io"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: "machinedeployments.machine.sapcloud.io"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: "machines.machine.sapcloud.io"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: "machinesets.machine.sapcloud.io"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
-			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: "openstackmachineclasses.machine.sapcloud.io"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
-			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: "packetmachineclasses.machine.sapcloud.io"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
 		})
 	})
 
 	Describe("#Destroy", func() {
 		It("should delete the CRDs", func() {
 			Expect(crdDeployer.Destroy(ctx)).To(Succeed())
-			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: "alicloudmachineclasses.machine.sapcloud.io"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
-			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: "awsmachineclasses.machine.sapcloud.io"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
-			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: "azuremachineclasses.machine.sapcloud.io"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
-			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: "gcpmachineclasses.machine.sapcloud.io"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: "machineclasses.machine.sapcloud.io"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: "machinedeployments.machine.sapcloud.io"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: "machines.machine.sapcloud.io"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: "machinesets.machine.sapcloud.io"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
-			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: "openstackmachineclasses.machine.sapcloud.io"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
-			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: "packetmachineclasses.machine.sapcloud.io"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
 		})
 	})
 })

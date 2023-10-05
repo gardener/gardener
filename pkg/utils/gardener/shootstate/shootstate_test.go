@@ -18,6 +18,7 @@ import (
 	"context"
 	"time"
 
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -74,10 +75,12 @@ var _ = Describe("ShootState", func() {
 	})
 
 	Describe("#Deploy", func() {
-		It("should deploy a ShootState with an empty spec when there is nothing to persist", func() {
+		It("should deploy an empty ShootState when there is nothing to persist", func() {
 			Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot, true)).To(Succeed())
 			Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
-			Expect(shootState.Spec).To(Equal(gardencorev1beta1.ShootStateSpec{}))
+			Expect(shootState.Spec).To(Equal(gardencorev1beta1.ShootStateSpec{
+				Gardener: []gardencorev1beta1.GardenerResourceData{{Name: "machine-state", Type: "machine-state", Data: runtime.RawExtension{Raw: []byte("{}")}}},
+			}))
 			Expect(shootState.Annotations).To(HaveKeyWithValue("gardener.cloud/timestamp", fakeClock.Now().UTC().Format(time.RFC3339)))
 		})
 
@@ -85,14 +88,16 @@ var _ = Describe("ShootState", func() {
 			var (
 				existingGardenerData   = []gardencorev1beta1.GardenerResourceData{{Name: "some-data"}}
 				existingExtensionsData = []gardencorev1beta1.ExtensionResourceState{{Name: pointer.String("some-data")}}
-				existingResourcesData  = []gardencorev1beta1.ResourceData{{Data: runtime.RawExtension{Raw: []byte("{}")}}}
-				expectedSpec           gardencorev1beta1.ShootStateSpec
+				// TODO(rfranzke): Remove this `existingWorkerState` after Gardener v1.86 has been released.
+				existingWorkerState   = []gardencorev1beta1.ExtensionResourceState{{Kind: "Worker", Name: pointer.String("my-shoot")}}
+				existingResourcesData = []gardencorev1beta1.ResourceData{{Data: runtime.RawExtension{Raw: []byte("{}")}}}
+				expectedSpec          gardencorev1beta1.ShootStateSpec
 			)
 
 			BeforeEach(func() {
 				By("Create ShootState with some data")
 				shootState.Spec.Gardener = append(shootState.Spec.Gardener, existingGardenerData...)
-				shootState.Spec.Extensions = append(shootState.Spec.Extensions, existingExtensionsData...)
+				shootState.Spec.Extensions = append(shootState.Spec.Extensions, append(existingExtensionsData, existingWorkerState...)...)
 				shootState.Spec.Resources = append(shootState.Spec.Resources, existingResourcesData...)
 				Expect(fakeGardenClient.Create(ctx, shootState)).To(Succeed())
 
@@ -118,6 +123,9 @@ var _ = Describe("ShootState", func() {
 				// this extension object has no state, hence it should not be persisted in the ShootState
 				createExtensionObject(ctx, fakeSeedClient, "osc2", seedNamespace, &extensionsv1alpha1.OperatingSystemConfig{}, nil)
 
+				By("Creating machine data")
+				createMachineObjects(ctx, fakeSeedClient, seedNamespace)
+
 				expectedSpec = gardencorev1beta1.ShootStateSpec{
 					Gardener: []gardencorev1beta1.GardenerResourceData{
 						{
@@ -131,6 +139,11 @@ var _ = Describe("ShootState", func() {
 							Type:   "secret",
 							Data:   runtime.RawExtension{Raw: []byte(`{"secret3":"c29tZS1kYXRh"}`)},
 							Labels: map[string]string{"managed-by": "secrets-manager", "persist": "true"},
+						},
+						{
+							Name: "machine-state",
+							Type: "machine-state",
+							Data: runtime.RawExtension{Raw: []byte(`{"machineDeployments":{"deploy1":{"machineSets":[{"metadata":{"annotations":{"some":"annotation"},"creationTimestamp":null,"name":"deploy1-set1","namespace":"shoot--my-project--my-shoot"},"spec":{"machineClass":{},"template":{"metadata":{"creationTimestamp":null},"spec":{"class":{},"nodeTemplate":{"metadata":{"creationTimestamp":null},"spec":{}}}}},"status":{"lastOperation":{"lastUpdateTime":null}}},{"metadata":{"annotations":{"some":"annotation"},"creationTimestamp":null,"labels":{"name":"deploy1"},"name":"deploy1-set2","namespace":"shoot--my-project--my-shoot"},"spec":{"machineClass":{},"template":{"metadata":{"creationTimestamp":null},"spec":{"class":{},"nodeTemplate":{"metadata":{"creationTimestamp":null},"spec":{}}}}},"status":{"lastOperation":{"lastUpdateTime":null}}}],"machines":[{"metadata":{"annotations":{"some":"annotation"},"creationTimestamp":null,"labels":{"node":"nodename"},"name":"deploy1-set1-machine1","namespace":"shoot--my-project--my-shoot"},"spec":{"class":{},"nodeTemplate":{"metadata":{"creationTimestamp":null},"spec":{}}},"status":{"currentStatus":{"lastUpdateTime":null},"lastOperation":{"lastUpdateTime":null}}},{"metadata":{"annotations":{"some":"annotation"},"creationTimestamp":null,"labels":{"name":"deploy1"},"name":"deploy1-set2-machine2","namespace":"shoot--my-project--my-shoot"},"spec":{"class":{},"nodeTemplate":{"metadata":{"creationTimestamp":null},"spec":{}},"providerID":"provider-id"},"status":{"currentStatus":{"lastUpdateTime":null},"lastOperation":{"lastUpdateTime":null}}},{"metadata":{"annotations":{"some":"annotation"},"creationTimestamp":null,"labels":{"name":"deploy1"},"name":"deploy1-set2-machine2","namespace":"shoot--my-project--my-shoot"},"spec":{"class":{},"nodeTemplate":{"metadata":{"creationTimestamp":null},"spec":{}},"providerID":"provider-id"},"status":{"currentStatus":{"lastUpdateTime":null},"lastOperation":{"lastUpdateTime":null}}}],"replicas":3}}}`)},
 						},
 					},
 					Extensions: []gardencorev1beta1.ExtensionResourceState{
@@ -190,11 +203,12 @@ var _ = Describe("ShootState", func() {
 							Purpose: pointer.String(""),
 							State:   &runtime.RawExtension{Raw: []byte(`{"name":"osc"}`)},
 						},
-						{
-							Kind:  "Worker",
-							Name:  pointer.String("worker"),
-							State: &runtime.RawExtension{Raw: []byte(`{"name":"worker"}`)},
-						},
+						// TODO(rfranzke): Uncomment next lines after Gardener v1.86 has been released.
+						// {
+						// 	Kind:  "Worker",
+						// 	Name:  pointer.String("worker"),
+						// 	State: &runtime.RawExtension{Raw: []byte(`{"name":"worker"}`)},
+						// },
 					},
 					Resources: []gardencorev1beta1.ResourceData{{
 						CrossVersionObjectReference: autoscalingv1.CrossVersionObjectReference{
@@ -275,4 +289,93 @@ func createExtensionObject(
 	acc.GetExtensionStatus().SetState(state)
 	acc.GetExtensionStatus().SetResources(namedResourceReferences)
 	ExpectWithOffset(1, fakeSeedClient.Patch(ctx, obj, patch)).To(Succeed())
+}
+
+func createMachineObjects(
+	ctx context.Context,
+	fakeSeedClient client.Client,
+	namespace string,
+) {
+	machineDeployment1 := &machinev1alpha1.MachineDeployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "deploy1",
+			Namespace: namespace,
+		},
+		Spec: machinev1alpha1.MachineDeploymentSpec{Replicas: 3},
+	}
+	ExpectWithOffset(1, fakeSeedClient.Create(ctx, machineDeployment1)).To(Succeed())
+
+	machineSet1 := &machinev1alpha1.MachineSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "deploy1-set1",
+			Namespace:       namespace,
+			OwnerReferences: []metav1.OwnerReference{{Kind: "MachineDeployment", Name: machineDeployment1.Name}},
+			Annotations:     map[string]string{"some": "annotation"},
+		},
+		Status: machinev1alpha1.MachineSetStatus{
+			Replicas:      1234,
+			ReadyReplicas: 5678,
+		},
+	}
+	ExpectWithOffset(1, fakeSeedClient.Create(ctx, machineSet1)).To(Succeed())
+
+	machineSet2 := &machinev1alpha1.MachineSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "deploy1-set2",
+			Namespace:   namespace,
+			Labels:      map[string]string{"name": machineDeployment1.Name},
+			Annotations: map[string]string{"some": "annotation"},
+		},
+		Status: machinev1alpha1.MachineSetStatus{
+			Replicas:      1234,
+			ReadyReplicas: 5678,
+		},
+	}
+	ExpectWithOffset(1, fakeSeedClient.Create(ctx, machineSet2)).To(Succeed())
+
+	machine1 := &machinev1alpha1.Machine{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "deploy1-set1-machine1",
+			Namespace:       namespace,
+			OwnerReferences: []metav1.OwnerReference{{Kind: "MachineSet", Name: machineSet1.Name}},
+			Labels:          map[string]string{"node": "nodename"},
+			Annotations:     map[string]string{"some": "annotation"},
+		},
+		Status: machinev1alpha1.MachineStatus{
+			CurrentStatus: machinev1alpha1.CurrentStatus{TimeoutActive: true},
+		},
+	}
+	ExpectWithOffset(1, fakeSeedClient.Create(ctx, machine1)).To(Succeed())
+
+	machine2 := &machinev1alpha1.Machine{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "deploy1-set2-machine2",
+			Namespace:   namespace,
+			Labels:      map[string]string{"name": machineDeployment1.Name},
+			Annotations: map[string]string{"some": "annotation"},
+		},
+		Spec: machinev1alpha1.MachineSpec{ProviderID: "provider-id"},
+		Status: machinev1alpha1.MachineStatus{
+			CurrentStatus: machinev1alpha1.CurrentStatus{TimeoutActive: true},
+		},
+	}
+	ExpectWithOffset(1, fakeSeedClient.Create(ctx, machine2)).To(Succeed())
+
+	machine3 := &machinev1alpha1.Machine{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "deploy1-set2-machine3",
+			Namespace:       namespace,
+			OwnerReferences: []metav1.OwnerReference{{Kind: "MachineSet", Name: machineSet2.Name}},
+		},
+	}
+	ExpectWithOffset(1, fakeSeedClient.Create(ctx, machine3)).To(Succeed())
+
+	machineDeployment2 := &machinev1alpha1.MachineDeployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "deploy2",
+			Namespace: namespace,
+		},
+		Spec: machinev1alpha1.MachineDeploymentSpec{Replicas: 3},
+	}
+	ExpectWithOffset(1, fakeSeedClient.Create(ctx, machineDeployment2)).To(Succeed())
 }

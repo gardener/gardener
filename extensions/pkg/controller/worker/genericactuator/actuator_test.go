@@ -30,8 +30,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
-	extensionsworkerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 )
 
 var _ = Describe("Actuator", func() {
@@ -72,7 +72,7 @@ var _ = Describe("Actuator", func() {
 		})
 
 		It("should return secrets matching the label selector", func() {
-			a := &genericActuator{client: fake.NewClientBuilder().WithRuntimeObjects(all...).Build()}
+			a := &genericActuator{seedClient: fake.NewClientBuilder().WithRuntimeObjects(all...).Build()}
 			actual, err := a.listMachineClassSecrets(context.TODO(), ns)
 
 			Expect(err).ToNot(HaveOccurred())
@@ -84,14 +84,14 @@ var _ = Describe("Actuator", func() {
 	Describe("#removeWantedDeploymentWithoutState", func() {
 		var (
 			mdWithoutState            = worker.MachineDeployment{ClassName: "gcp", Name: "md-without-state"}
-			mdWithStateAndMachineSets = worker.MachineDeployment{ClassName: "gcp", Name: "md-with-state-machinesets", State: &worker.MachineDeploymentState{Replicas: 1, MachineSets: []machinev1alpha1.MachineSet{
+			mdWithStateAndMachineSets = worker.MachineDeployment{ClassName: "gcp", Name: "md-with-state-machinesets", State: &shootstate.MachineDeploymentState{Replicas: 1, MachineSets: []machinev1alpha1.MachineSet{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "machineSet",
 					},
 				},
 			}}}
-			mdWithEmptyState = worker.MachineDeployment{ClassName: "gcp", Name: "md-with-state", State: &worker.MachineDeploymentState{Replicas: 1, MachineSets: []machinev1alpha1.MachineSet{}}}
+			mdWithEmptyState = worker.MachineDeployment{ClassName: "gcp", Name: "md-with-state", State: &shootstate.MachineDeploymentState{Replicas: 1, MachineSets: []machinev1alpha1.MachineSet{}}}
 		)
 
 		It("should not panic for MachineDeployments without state", func() {
@@ -128,7 +128,7 @@ var _ = Describe("Actuator", func() {
 	Describe("#isMachineControllerStuck", func() {
 		var (
 			machineDeploymentName           = "machine-deployment-1"
-			machineDeploymentOwnerReference = []metav1.OwnerReference{{Name: machineDeploymentName, Kind: extensionsworkerhelper.MachineDeploymentKind}}
+			machineDeploymentOwnerReference = []metav1.OwnerReference{{Name: machineDeploymentName, Kind: "MachineDeployment"}}
 
 			machineClassName      = "machine-class-new"
 			machineDeploymentSpec = machinev1alpha1.MachineDeploymentSpec{
@@ -245,7 +245,7 @@ var _ = Describe("Actuator", func() {
 			mockCtrl = gomock.NewController(GinkgoT())
 			mockClient = mockclient.NewMockClient(mockCtrl)
 
-			a = &genericActuator{client: mockClient}
+			a = &genericActuator{seedClient: mockClient}
 
 			expectedMachineSet = machinev1alpha1.MachineSet{
 				ObjectMeta: metav1.ObjectMeta{
@@ -276,7 +276,7 @@ var _ = Describe("Actuator", func() {
 
 			machineDeployments = worker.MachineDeployments{
 				{
-					State: &worker.MachineDeploymentState{
+					State: &shootstate.MachineDeploymentState{
 						Replicas: 2,
 						MachineSets: []machinev1alpha1.MachineSet{
 							expectedMachineSet,
@@ -299,7 +299,7 @@ var _ = Describe("Actuator", func() {
 			mockClient.EXPECT().Create(ctx, &expectedMachine1)
 			mockClient.EXPECT().Create(ctx, &expectedMachine2)
 
-			Expect(restoreMachineSetsAndMachines(ctx, logger, a.client, machineDeployments)).To(Succeed())
+			Expect(restoreMachineSetsAndMachines(ctx, logger, a.seedClient, machineDeployments)).To(Succeed())
 		})
 
 		It("should not return error if machineset and machines already exist", func() {
@@ -307,7 +307,7 @@ var _ = Describe("Actuator", func() {
 			mockClient.EXPECT().Create(ctx, &expectedMachine1).Return(alreadyExistsError)
 			mockClient.EXPECT().Create(ctx, &expectedMachine2).Return(alreadyExistsError)
 
-			Expect(restoreMachineSetsAndMachines(ctx, logger, a.client, machineDeployments)).To(Succeed())
+			Expect(restoreMachineSetsAndMachines(ctx, logger, a.seedClient, machineDeployments)).To(Succeed())
 		})
 	})
 })

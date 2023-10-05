@@ -35,6 +35,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 )
@@ -54,7 +55,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 
 	// Get the list of all existing machine deployments.
 	existingMachineDeployments := &machinev1alpha1.MachineDeploymentList{}
-	if err := a.client.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
+	if err := a.seedClient.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
 		return err
 	}
 
@@ -97,7 +98,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 	)
 
 	// Get list of existing machine class names
-	existingMachineClassNames, err := a.listMachineClassNames(ctx, worker.Namespace, workerDelegate.MachineClassList())
+	existingMachineClassNames, err := a.listMachineClassNames(ctx, worker.Namespace)
 	if err != nil {
 		return err
 	}
@@ -119,7 +120,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 	}
 
 	// Generate machine deployment configuration based on previously computed list of deployments and deploy them.
-	if err := deployMachineDeployments(ctx, log, a.client, cluster, worker, existingMachineDeployments, wantedMachineDeployments, workerDelegate.MachineClassKind(), clusterAutoscalerUsed); err != nil {
+	if err := deployMachineDeployments(ctx, log, a.seedClient, cluster, worker, existingMachineDeployments, wantedMachineDeployments, clusterAutoscalerUsed); err != nil {
 		return fmt.Errorf("failed to generate the machine deployment config: %w", err)
 	}
 
@@ -139,12 +140,12 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 
 		if isStuck {
 			podList := corev1.PodList{}
-			if err2 := a.client.List(ctx, &podList, client.InNamespace(worker.Namespace), client.MatchingLabels{"role": "machine-controller-manager"}); err2 != nil {
+			if err2 := a.seedClient.List(ctx, &podList, client.InNamespace(worker.Namespace), client.MatchingLabels{"role": "machine-controller-manager"}); err2 != nil {
 				return fmt.Errorf("failed to list machine-controller-manager pods for worker (%s/%s): %w", worker.Namespace, worker.Name, err2)
 			}
 
 			for _, pod := range podList.Items {
-				if err2 := a.client.Delete(ctx, &pod); err2 != nil {
+				if err2 := a.seedClient.Delete(ctx, &pod); err2 != nil {
 					return fmt.Errorf("failed to delete stuck machine-controller-manager pod for worker (%s/%s): %w", worker.Namespace, worker.Name, err2)
 				}
 			}
@@ -164,7 +165,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 	}
 
 	// Delete all old machine classes (i.e. those which were not previously computed but exist in the cluster).
-	if err := a.cleanupMachineClasses(ctx, log, worker.Namespace, workerDelegate.MachineClassList(), wantedMachineDeployments); err != nil {
+	if err := a.cleanupMachineClasses(ctx, log, worker.Namespace, wantedMachineDeployments); err != nil {
 		return fmt.Errorf("failed to cleanup the machine classes: %w", err)
 	}
 
@@ -188,7 +189,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 
 	// Scale down machine-controller-manager if shoot is hibernated.
 	if isHibernationEnabled {
-		if err := scaleMachineControllerManager(ctx, log, a.client, worker, 0); err != nil {
+		if err := scaleMachineControllerManager(ctx, log, a.seedClient, worker, 0); err != nil {
 			return err
 		}
 	}
@@ -209,7 +210,6 @@ func deployMachineDeployments(
 	worker *extensionsv1alpha1.Worker,
 	existingMachineDeployments *machinev1alpha1.MachineDeploymentList,
 	wantedMachineDeployments extensionsworkercontroller.MachineDeployments,
-	classKind string,
 	clusterAutoscalerUsed bool,
 ) error {
 	log.Info("Deploying machine deployments")
@@ -291,7 +291,7 @@ func deployMachineDeployments(
 					},
 					Spec: machinev1alpha1.MachineSpec{
 						Class: machinev1alpha1.ClassSpec{
-							Kind: classKind,
+							Kind: "MachineClass",
 							Name: deployment.ClassName,
 						},
 						NodeTemplateSpec: machinev1alpha1.NodeTemplateSpec{
@@ -327,18 +327,18 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 
 		// Get the list of all machine deployments
 		machineDeployments := &machinev1alpha1.MachineDeploymentList{}
-		if err := a.client.List(ctx, machineDeployments, client.InNamespace(worker.Namespace)); err != nil {
+		if err := a.seedClient.List(ctx, machineDeployments, client.InNamespace(worker.Namespace)); err != nil {
 			return retryutils.SevereError(err)
 		}
 
 		// Get the list of all machine sets
 		machineSets := &machinev1alpha1.MachineSetList{}
-		if err := a.client.List(ctx, machineSets, client.InNamespace(worker.Namespace)); err != nil {
+		if err := a.seedClient.List(ctx, machineSets, client.InNamespace(worker.Namespace)); err != nil {
 			return retryutils.SevereError(err)
 		}
 
 		// map the owner reference to the machine sets
-		ownerReferenceToMachineSet := extensionsworkerhelper.BuildOwnerToMachineSetsMap(machineSets.Items)
+		ownerReferenceToMachineSet := gardenerutils.BuildOwnerToMachineSetsMap(machineSets.Items)
 
 		// Collect the numbers of available and desired replicas.
 		for _, deployment := range machineDeployments.Items {
@@ -432,7 +432,7 @@ func (a *genericActuator) waitUntilUnwantedMachineDeploymentsDeleted(ctx context
 	log.Info("Waiting until unwanted machine deployments are deleted")
 	return retryutils.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
 		existingMachineDeployments := &machinev1alpha1.MachineDeploymentList{}
-		if err := a.client.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
+		if err := a.seedClient.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
 			return retryutils.SevereError(err)
 		}
 
@@ -469,7 +469,7 @@ func (a *genericActuator) updateWorkerStatusMachineDeployments(ctx context.Conte
 	patch := client.MergeFrom(worker.DeepCopy())
 	worker.Status.MachineDeployments = statusMachineDeployments
 	worker.Status.MachineDeploymentsLastUpdateTime = &updateTime
-	return a.client.Status().Patch(ctx, worker, patch)
+	return a.seedClient.Status().Patch(ctx, worker, patch)
 }
 
 // Helper functions

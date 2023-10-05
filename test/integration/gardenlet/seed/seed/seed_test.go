@@ -498,16 +498,10 @@ var _ = Describe("Seed controller tests", func() {
 					var (
 						crdsOnlyForSeedClusters = []gomegatypes.GomegaMatcher{
 							// machine-controller-manager
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("alicloudmachineclasses.machine.sapcloud.io")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("awsmachineclasses.machine.sapcloud.io")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("azuremachineclasses.machine.sapcloud.io")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gcpmachineclasses.machine.sapcloud.io")})}),
 							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("machineclasses.machine.sapcloud.io")})}),
 							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("machinedeployments.machine.sapcloud.io")})}),
 							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("machines.machine.sapcloud.io")})}),
 							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("machinesets.machine.sapcloud.io")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("openstackmachineclasses.machine.sapcloud.io")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("packetmachineclasses.machine.sapcloud.io")})}),
 							// extensions
 							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("backupbuckets.extensions.gardener.cloud")})}),
 							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("backupentries.extensions.gardener.cloud")})}),

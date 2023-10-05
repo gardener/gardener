@@ -31,6 +31,7 @@ import (
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
 	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
@@ -181,19 +182,10 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			}).SkipIf(o.Shoot.IsWorkerless).DoIf(features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment)),
 			Dependencies: flow.NewTaskIDs(deleteMachineControllerManager),
 		})
-		// TODO(rfranzke): Make the 'persistShootState' task dependent on 'waitUntilExtensionResourcesMigrated' after
-		//  v1.79 has been released.
-		persistShootState = g.Add(flow.Task{
-			Name: "Persisting ShootState in garden cluster",
-			Fn: func(ctx context.Context) error {
-				return shootstate.Deploy(ctx, r.Clock, botanist.GardenClient, botanist.SeedClientSet.Client(), botanist.Shoot.GetInfo(), false)
-			},
-			Dependencies: flow.NewTaskIDs(waitUntilMachineControllerManagerDeleted),
-		})
 		migrateExtensionResources = g.Add(flow.Task{
 			Name:         "Migrating extension resources",
 			Fn:           botanist.MigrateExtensionResourcesInParallel,
-			Dependencies: flow.NewTaskIDs(persistShootState),
+			Dependencies: flow.NewTaskIDs(waitUntilMachineControllerManagerDeleted),
 		})
 		waitUntilExtensionResourcesMigrated = g.Add(flow.Task{
 			Name:         "Waiting until extension resources have been migrated",
@@ -210,15 +202,34 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			Fn:           botanist.Shoot.Components.Extensions.Extension.WaitMigrateBeforeKubeAPIServer,
 			Dependencies: flow.NewTaskIDs(migrateExtensionsBeforeKubeAPIServer),
 		})
+		persistShootState = g.Add(flow.Task{
+			Name: "Persisting ShootState in garden cluster",
+			Fn: func(ctx context.Context) error {
+				return shootstate.Deploy(ctx, r.Clock, botanist.GardenClient, botanist.SeedClientSet.Client(), botanist.Shoot.GetInfo(), false)
+			},
+			Dependencies: flow.NewTaskIDs(waitUntilExtensionResourcesMigrated),
+		})
 		deleteExtensionResources = g.Add(flow.Task{
 			Name:         "Deleting extension resources from the Shoot namespace",
 			Fn:           botanist.DestroyExtensionResourcesInParallel,
-			Dependencies: flow.NewTaskIDs(waitUntilExtensionResourcesMigrated),
+			Dependencies: flow.NewTaskIDs(persistShootState),
 		})
 		waitUntilExtensionResourcesDeleted = g.Add(flow.Task{
 			Name:         "Waiting until extension resources have been deleted",
 			Fn:           botanist.WaitUntilExtensionResourcesDeleted,
 			Dependencies: flow.NewTaskIDs(deleteExtensionResources),
+		})
+		deleteMachineResources = g.Add(flow.Task{
+			Name:         "Shallow-deleting machine resources from the Shoot namespace",
+			Fn:           botanist.ShallowDeleteMachineResources,
+			Dependencies: flow.NewTaskIDs(persistShootState),
+		})
+		waitUntilMachineResourcesDeleted = g.Add(flow.Task{
+			Name: "Waiting until machine resources have been deleted",
+			Fn: func(ctx context.Context) error {
+				return gardenerutils.WaitUntilMachineResourcesDeleted(ctx, botanist.Logger, botanist.SeedClientSet.Client(), botanist.Shoot.SeedNamespace)
+			},
+			Dependencies: flow.NewTaskIDs(deleteMachineResources),
 		})
 		deleteExtensionsBeforeKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deleting extensions before kube-apiserver",
@@ -347,6 +358,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		})
 		syncPoint = flow.NewTaskIDs(
 			waitUntilExtensionsAfterKubeAPIServerDeleted,
+			waitUntilMachineResourcesDeleted,
 			waitUntilExtensionsDeleted,
 			waitUntilInfrastructureDeleted,
 		)

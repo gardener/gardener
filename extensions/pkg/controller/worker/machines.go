@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 )
 
 var diskSizeRegex = regexp.MustCompile(`^(\d+)`)
@@ -47,25 +48,12 @@ type MachineDeployment struct {
 	Labels               map[string]string
 	Annotations          map[string]string
 	Taints               []corev1.Taint
-	State                *MachineDeploymentState
+	State                *shootstate.MachineDeploymentState
 	MachineConfiguration *machinev1alpha1.MachineConfiguration
 }
 
 // MachineDeployments is a list of machine deployments.
 type MachineDeployments []MachineDeployment
-
-// MachineDeploymentState stores the last versions of the machine sets and machine which
-// the machine deployment corresponds
-type MachineDeploymentState struct {
-	Replicas    int32                        `json:"replicas,omitempty"`
-	MachineSets []machinev1alpha1.MachineSet `json:"machineSets,omitempty"`
-	Machines    []machinev1alpha1.Machine    `json:"machines,omitempty"`
-}
-
-// State represent the last known state of a Worker
-type State struct {
-	MachineDeployments map[string]*MachineDeploymentState `json:"machineDeployments,omitempty"`
-}
 
 // HasDeployment checks whether the <name> is part of the <machineDeployments>
 // list, i.e. whether there is an entry whose 'Name' attribute matches <name>. It returns true or false.

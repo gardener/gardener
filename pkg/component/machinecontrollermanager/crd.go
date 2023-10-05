@@ -19,33 +19,24 @@ import (
 	_ "embed"
 	"fmt"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var (
-	//go:embed templates/crd-alicloudmachineclasses.tpl.yaml
-	machineClassAlicloudCRD string
-	//go:embed templates/crd-awsmachineclasses.tpl.yaml
-	machineClassAWSCRD string
-	//go:embed templates/crd-azuremachineclasses.tpl.yaml
-	machineClassAzureCRD string
-	//go:embed templates/crd-gcpmachineclasses.tpl.yaml
-	machineClassGCPCRD string
-	//go:embed templates/crd-openstackmachineclasses.tpl.yaml
-	machineClassOpenStackCRD string
-	//go:embed templates/crd-packetmachineclasses.tpl.yaml
-	machineClassPacketCRD string
-	//go:embed templates/crd-machineclasses.tpl.yaml
+	//go:embed templates/crd-machine.sapcloud.io_machineclasses.yaml
 	machineClassCRD string
-	//go:embed templates/crd-machinedeployments.tpl.yaml
+	//go:embed templates/crd-machine.sapcloud.io_machinedeployments.yaml
 	machineDeploymentCRD string
-	//go:embed templates/crd-machinesets.tpl.yaml
+	//go:embed templates/crd-machine.sapcloud.io_machinesets.yaml
 	machineSetCRD string
-	//go:embed templates/crd-machines.tpl.yaml
+	//go:embed templates/crd-machine.sapcloud.io_machines.yaml
 	machineCRD string
 
 	crdResources []string
@@ -53,12 +44,6 @@ var (
 
 func init() {
 	crdResources = []string{
-		machineClassAlicloudCRD,
-		machineClassAWSCRD,
-		machineClassAzureCRD,
-		machineClassGCPCRD,
-		machineClassOpenStackCRD,
-		machineClassPacketCRD,
 		machineClassCRD,
 		machineDeploymentCRD,
 		machineSetCRD,
@@ -87,7 +72,7 @@ func (c *crd) Deploy(ctx context.Context) error {
 		}
 	}
 
-	return nil
+	return c.deleteLegacyCRDs(ctx)
 }
 
 func (c *crd) Destroy(ctx context.Context) error {
@@ -104,6 +89,28 @@ func (c *crd) Destroy(ctx context.Context) error {
 		}
 
 		if err := c.applier.DeleteManifest(ctx, reader); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+
+	return c.deleteLegacyCRDs(ctx)
+}
+
+// TODO(rfranzke): Remove this code after Gardener v1.83 has been released.
+func (c *crd) deleteLegacyCRDs(ctx context.Context) error {
+	for _, name := range []string{
+		"alicloudmachineclasses.machine.sapcloud.io",
+		"awsmachineclasses.machine.sapcloud.io",
+		"azuremachineclasses.machine.sapcloud.io",
+		"gcpmachineclasses.machine.sapcloud.io",
+		"openstackmachineclasses.machine.sapcloud.io",
+		"packetmachineclasses.machine.sapcloud.io",
+	} {
+		obj := &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: name}}
+		if err := gardenerutils.ConfirmDeletion(ctx, c.client, obj); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+		if err := kubernetesutils.DeleteObject(ctx, c.client, obj); err != nil {
 			return err
 		}
 	}

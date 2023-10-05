@@ -28,7 +28,7 @@ In multi-instance setups of Gardener, the newest and oldest `gardener-apiserver`
 Example:
 
 - newest `gardener-apiserver` is at **1.37**
-- other `gardener-apiserver` instances are supported at **1.37** and **v1.36**
+- other `gardener-apiserver` instances are supported at **1.37** and **1.36**
 
 #### gardener-controller-manager, gardener-scheduler, gardener-admission-controller, gardenlet
 
@@ -37,8 +37,8 @@ They are expected to match the `gardener-apiserver` minor version, but may be up
 
 Example:
 
-- `gardener-apiserver` is at **v1.37**
-- `gardener-controller-manager`, `gardener-scheduler`, `gardener-admission-controller`, and `gardenlet` are supported at **1.37** and **v1.36**
+- `gardener-apiserver` is at **1.37**
+- `gardener-controller-manager`, `gardener-scheduler`, `gardener-admission-controller`, and `gardenlet` are supported at **1.37** and **1.36**
 
 #### gardener-operator
 
@@ -86,6 +86,26 @@ Prerequisites:
 Actions:
 
 - Upgrade `gardener-operator` to **1.38**.
+
+## Supported Gardener Extension Versions
+
+Extensions are maintained and released separately and independently of the `gardener/gardener` repository.
+Consequently, providing version constraints is not possible in this document.
+Sometimes, the documentation of extensions contains compatibility information (e.g., "this extension version is only compatible with Gardener versions higher than **1.80**", see [this example](https://github.com/gardener/gardener-extension-provider-aws#compatibility)).
+
+However, since all extensions typically make use of the [extensions library](../../extensions) ([example](https://github.com/gardener/gardener-extension-provider-aws/blob/cb96b60c970c2e20615dffb3018dc0571cab764d/go.mod#L12)), a general constraint is that _no extension must depend on a version of the extensions library higher than the version of `gardenlet`_.
+
+Example 1:
+
+- `gardener-apiserver` and other Gardener control plane components are at **1.37**.
+- All `gardenlet`s are at **1.37**.
+- Only extensions are supported which depend on **1.37** or lower of the extensions library.
+
+Example 2:
+
+- `gardener-apiserver` and other Gardener control plane components are at **1.37**.
+- Some `gardenlet`s are at **1.37**, others are at **1.36**.
+- Only extensions are supported which depend on **1.36** or lower of the extensions library.
 
 ## Supported Kubernetes Versions
 

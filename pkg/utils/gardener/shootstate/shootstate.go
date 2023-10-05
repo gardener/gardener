@@ -73,6 +73,9 @@ func Deploy(ctx context.Context, clock clock.Clock, gardenClient, seedClient cli
 		for _, data := range spec.Extensions {
 			extensionsData.Upsert(data.DeepCopy())
 		}
+		// Temporarily not persist the Worker state since this data is already explicitly persisted by gardenlet in `.spec.gardener[]`.
+		// TODO(rfranzke): Delete the next line after Gardener v1.86 has been released.
+		extensionsData.Delete(extensionsv1alpha1.WorkerResource, &shoot.Name, nil)
 		shootState.Spec.Extensions = extensionsData
 
 		resourcesData := v1beta1helper.ResourceDataList(shootState.Spec.Resources)
@@ -131,6 +134,36 @@ func computeGardenerData(
 	[]gardencorev1beta1.GardenerResourceData,
 	error,
 ) {
+	secretsToPersist, err := computeSecretsToPersist(ctx, seedClient, seedNamespace)
+	if err != nil {
+		return nil, err
+	}
+
+	machineState, err := computeMachineState(ctx, seedClient, seedNamespace)
+	if err != nil {
+		return nil, err
+	}
+
+	machineStateJSON, err := json.Marshal(machineState)
+	if err != nil {
+		return nil, fmt.Errorf("failed marshalling machine state to JSON: %w", err)
+	}
+
+	return append(secretsToPersist, gardencorev1beta1.GardenerResourceData{
+		Name: v1beta1constants.DataTypeMachineState,
+		Type: v1beta1constants.DataTypeMachineState,
+		Data: runtime.RawExtension{Raw: machineStateJSON},
+	}), nil
+}
+
+func computeSecretsToPersist(
+	ctx context.Context,
+	seedClient client.Client,
+	seedNamespace string,
+) (
+	[]gardencorev1beta1.GardenerResourceData,
+	error,
+) {
 	secretList := &corev1.SecretList{}
 	if err := seedClient.List(ctx, secretList, client.InNamespace(seedNamespace), client.MatchingLabels{
 		secretsmanager.LabelKeyManagedBy: secretsmanager.LabelValueSecretsManager,
@@ -150,7 +183,7 @@ func computeGardenerData(
 		dataList = append(dataList, gardencorev1beta1.GardenerResourceData{
 			Name:   secret.Name,
 			Labels: secret.Labels,
-			Type:   "secret",
+			Type:   v1beta1constants.DataTypeSecret,
 			Data:   runtime.RawExtension{Raw: dataJSON},
 		})
 	}
@@ -184,7 +217,9 @@ func computeExtensionsDataAndResources(
 		{extensionsv1alpha1.InfrastructureResource, func() client.ObjectList { return &extensionsv1alpha1.InfrastructureList{} }},
 		{extensionsv1alpha1.NetworkResource, func() client.ObjectList { return &extensionsv1alpha1.NetworkList{} }},
 		{extensionsv1alpha1.OperatingSystemConfigResource, func() client.ObjectList { return &extensionsv1alpha1.OperatingSystemConfigList{} }},
-		{extensionsv1alpha1.WorkerResource, func() client.ObjectList { return &extensionsv1alpha1.WorkerList{} }},
+		// Temporarily not persist the Worker state since this data is already explicitly persisted by gardenlet in `.spec.gardener[]`.
+		// TODO(rfranzke): Uncomment next line after Gardener v1.86 has been released.
+		// {extensionsv1alpha1.WorkerResource, func() client.ObjectList { return &extensionsv1alpha1.WorkerList{} }},
 	} {
 		objList := extension.newObjectListFunc()
 		if err := seedClient.List(ctx, objList, client.InNamespace(seedNamespace)); err != nil {

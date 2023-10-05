@@ -668,14 +668,14 @@ var _ = Describe("Worker", func() {
 
 	Describe("#Restore", func() {
 		var (
-			state      = &runtime.RawExtension{Raw: []byte(`{"dummy":"state"}`)}
+			state      = runtime.RawExtension{Raw: []byte(`{"dummy":"state"}`)}
 			shootState = &gardencorev1beta1.ShootState{
 				Spec: gardencorev1beta1.ShootStateSpec{
-					Extensions: []gardencorev1beta1.ExtensionResourceState{
+					Gardener: []gardencorev1beta1.GardenerResourceData{
 						{
-							Name:  &name,
-							Kind:  extensionsv1alpha1.WorkerResource,
-							State: state,
+							Name: "machine-state",
+							Type: "machine-state",
+							Data: state,
 						},
 					},
 				},
@@ -711,7 +711,7 @@ var _ = Describe("Worker", func() {
 
 			// restore state
 			expectedWithState := obj.DeepCopy()
-			expectedWithState.Status.State = state
+			expectedWithState.Status.State = &state
 			test.EXPECTStatusPatch(ctx, mockStatusWriter, expectedWithState, obj, types.MergePatchType)
 
 			// annotate with restore annotation
