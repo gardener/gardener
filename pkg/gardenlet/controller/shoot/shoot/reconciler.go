@@ -210,6 +210,17 @@ func (r *Reconciler) deleteShoot(ctx context.Context, log logr.Logger, shoot *ga
 		return reconcile.Result{}, fmt.Errorf("failed to check for related Bastions: %w", err)
 	}
 	if hasBastions {
+		if v1beta1helper.ShootNeedsForceDeletion(shoot) {
+			bastionsPatched, err := r.patchBastions(ctx, shoot)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+
+			if bastionsPatched {
+				return reconcile.Result{RequeueAfter: 15 * time.Second}, nil
+			}
+		}
+
 		hasBastionErr := errors.New("shoot has still Bastions")
 		updateErr := r.patchShootStatusOperationError(ctx, shoot, hasBastionErr.Error(), operationType, shoot.Status.LastErrors...)
 		return reconcile.Result{}, errorsutils.WithSuppressed(hasBastionErr, updateErr)
@@ -878,6 +889,40 @@ func needsControlPlaneDeployment(ctx context.Context, o *operation.Operation, ku
 	default:
 		return false, nil
 	}
+}
+
+func (r *Reconciler) patchBastions(ctx context.Context, shoot *gardencorev1beta1.Shoot) (bool, error) {
+	var (
+		fns             []flow.TaskFn
+		bastions        = &operationsv1alpha1.BastionList{}
+		bastionsPatched bool
+	)
+
+	if err := r.GardenClient.List(ctx, bastions, client.MatchingFields{operations.BastionShootName: shoot.Name}); err != nil {
+		return false, fmt.Errorf("failed to list related Bastions: %w", err)
+	}
+
+	for _, b := range bastions.Items {
+		bastion := b
+
+		if !kubernetesutils.HasMetaDataAnnotation(&bastion, v1beta1constants.AnnotationConfirmationForceDeletion, "true") {
+			fns = append(fns, func(ctx context.Context) error {
+				patch := client.MergeFrom(bastion.DeepCopy())
+				metav1.SetMetaDataAnnotation(&bastion.ObjectMeta, v1beta1constants.AnnotationConfirmationForceDeletion, "true")
+				if err := r.GardenClient.Patch(ctx, &bastion, patch); err != nil {
+					return fmt.Errorf("failed to patch bastion %s: %w", client.ObjectKeyFromObject(&bastion), err)
+				}
+				bastionsPatched = true
+				return nil
+			})
+		}
+	}
+
+	if err := flow.Parallel(fns...)(ctx); err != nil {
+		return false, fmt.Errorf("failed to patch Bastions: %w", err)
+	}
+
+	return bastionsPatched, nil
 }
 
 func extensionResourceStillExists(ctx context.Context, reader client.Reader, obj client.Object, namespace, name string) (bool, bool, error) {

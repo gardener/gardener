@@ -43,7 +43,6 @@ var (
 
 var (
 	extensionKindToObjectList = map[string]client.ObjectList{
-		extensionsv1alpha1.BastionResource:               &extensionsv1alpha1.BastionList{},
 		extensionsv1alpha1.ContainerRuntimeResource:      &extensionsv1alpha1.ContainerRuntimeList{},
 		extensionsv1alpha1.ControlPlaneResource:          &extensionsv1alpha1.ControlPlaneList{},
 		extensionsv1alpha1.DNSRecordResource:             &extensionsv1alpha1.DNSRecordList{},

@@ -54,7 +54,6 @@ var _ = Describe("cleaner", func() {
 		secret2              *corev1.Secret
 		configMap1           *corev1.ConfigMap
 		configMap2           *corev1.ConfigMap
-		bastion              *extensionsv1alpha1.Bastion
 		cluster              *extensionsv1alpha1.Cluster
 		controlPlane         *extensionsv1alpha1.ControlPlane
 		extension            *extensionsv1alpha1.Extension
@@ -99,12 +98,6 @@ var _ = Describe("cleaner", func() {
 		configMap2 = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-cm-2",
-				Namespace: namespace,
-			},
-		}
-		bastion = &extensionsv1alpha1.Bastion{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-obj",
 				Namespace: namespace,
 			},
 		}
@@ -172,19 +165,18 @@ var _ = Describe("cleaner", func() {
 
 	Describe("#DeleteExtensionObjects", func() {
 		It("should successfully delete all extension objects in the given namespace", func() {
-			bastion.Finalizers = []string{finalizer}
 			controlPlane.Finalizers = []string{finalizer}
 			extension.Finalizers = []string{finalizer}
 
-			copies := makeCopies(otherNamespace, bastion.DeepCopy(), controlPlane.DeepCopy(), extension.DeepCopy())
+			copies := makeCopies(otherNamespace, controlPlane.DeepCopy(), extension.DeepCopy())
 
-			for _, object := range append([]client.Object{bastion, controlPlane, extension}, copies...) {
+			for _, object := range append([]client.Object{controlPlane, extension}, copies...) {
 				Expect(seedClient.Create(ctx, object)).To(Succeed())
 			}
 
 			Expect(cleaner.DeleteExtensionObjects(ctx)).To(Succeed())
 
-			for _, object := range []client.Object{bastion, controlPlane, extension} {
+			for _, object := range []client.Object{controlPlane, extension} {
 				Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(object), object)).To(Succeed())
 				Expect(object.GetDeletionTimestamp()).NotTo(BeNil())
 			}
@@ -198,9 +190,6 @@ var _ = Describe("cleaner", func() {
 
 	Describe("#WaitUntilExtensionObjectsDeleted", func() {
 		It("should fail to delete if extension has status.lastError", func() {
-			bastion.Status.LastError = &gardencorev1beta1.LastError{
-				Description: "invalid credentials",
-			}
 			controlPlane.Status.LastError = &gardencorev1beta1.LastError{
 				Description: "invalid credentials",
 			}
@@ -208,13 +197,12 @@ var _ = Describe("cleaner", func() {
 				Description: "invalid credentials",
 			}
 
-			for _, object := range []client.Object{bastion, controlPlane, extension} {
+			for _, object := range []client.Object{controlPlane, extension} {
 				Expect(seedClient.Create(ctx, object)).To(Succeed())
 			}
 
 			err := cleaner.WaitUntilExtensionObjectsDeleted(ctx)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("Failed to delete Bastion"))
 			Expect(err.Error()).To(ContainSubstring("Failed to delete ControlPlane"))
 			Expect(err.Error()).To(ContainSubstring("Failed to delete Extension"))
 		})
