@@ -24,7 +24,7 @@ spec:
             command:
             - sh
             - "-c"
-            - "netstat | 443"
+            - "netstat | grep gardener-apiserver-tunnel-ssh"
         volumeMounts:
         - name: gardener-apiserver-ssh
           mountPath: /gardener_apiserver_ssh
