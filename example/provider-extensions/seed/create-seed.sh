@@ -41,7 +41,7 @@ if [[ "$seed_name" != "provider-extensions" ]]; then
   registry_domain_file="$SCRIPT_DIR/registrydomain-$seed_name"
   seed_values=values-"$seed_name".yaml
 fi
-registry_domain=$(cat $registry_domain_file)
+registry_domain=$(cat "$registry_domain_file")
 
 echo "Skaffolding seed"
 GARDENER_LOCAL_KUBECONFIG=$garden_kubeconfig \
