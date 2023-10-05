@@ -78,10 +78,11 @@ var _ = Describe("Etcd", func() {
 				Workers: pointer.Int64(3),
 			},
 			BackupCompactionController: &config.BackupCompactionController{
-				Workers:                pointer.Int64(3),
-				EnableBackupCompaction: pointer.Bool(true),
-				EventsThreshold:        pointer.Int64(1000000),
-				ActiveDeadlineDuration: &metav1.Duration{Duration: time.Hour * 3},
+				Workers:                   pointer.Int64(3),
+				EnableBackupCompaction:    pointer.Bool(true),
+				EventsThreshold:           pointer.Int64(1000000),
+				MetricsScrapeWaitDuration: &metav1.Duration{Duration: time.Second * 60},
+				ActiveDeadlineDuration:    &metav1.Duration{Duration: time.Hour * 3},
 			},
 		}
 
@@ -354,6 +355,7 @@ spec:
         - --compaction-workers=3
         - --enable-backup-compaction=true
         - --etcd-events-threshold=1000000
+        - --metrics-scrape-wait-duration=1m0s
         - --active-deadline-duration=3h0m0s
         image: ` + etcdDruidImage + `
         imagePullPolicy: IfNotPresent
@@ -409,6 +411,7 @@ spec:
         - --compaction-workers=3
         - --enable-backup-compaction=true
         - --etcd-events-threshold=1000000
+        - --metrics-scrape-wait-duration=1m0s
         - --active-deadline-duration=3h0m0s
         env:
         - name: IMAGEVECTOR_OVERWRITE
@@ -471,6 +474,7 @@ spec:
         - --compaction-workers=3
         - --enable-backup-compaction=true
         - --etcd-events-threshold=1000000
+        - --metrics-scrape-wait-duration=1m0s
         - --active-deadline-duration=3h0m0s
         - --feature-gates=UseEtcdWrapper=true
         image: ` + etcdDruidImage + `
