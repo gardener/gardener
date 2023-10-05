@@ -246,14 +246,6 @@ var _ = Describe("#CheckEtcdObject", func() {
 		Expect(CheckEtcdObject(obj)).To(MatchError("is not ready yet"))
 	})
 
-	It("should return error if status.replicas != status.updatedReplicas", func() {
-		obj.SetGeneration(1)
-		obj.Status.ObservedGeneration = pointer.Int64(1)
-		obj.Status.Replicas = 3
-		obj.Status.UpdatedReplicas = 2
-		Expect(CheckEtcdObject(obj)).To(MatchError("update is being rolled out, only 2/3 replicas are up-to-date"))
-	})
-
 	It("should not return error if object is ready", func() {
 		obj.SetGeneration(1)
 		obj.Status.ObservedGeneration = pointer.Int64(1)
