@@ -11,6 +11,6 @@ spec:
   ports:
   - name: gardener-apiserver-tunnel
     protocol: TCP
-    port: 6222
-    targetPort: 6222
+    port: 443
+    targetPort: 443
   type: LoadBalancer
