@@ -1,11 +1,10 @@
 /*
 Copyright The Helm Authors.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-	http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,15 +13,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package manifest
+package release
 
-import (
-	"k8s.io/helm/pkg/releaseutil"
-)
-
-// Manifest represents a manifest file, which has a name and some content.
-type Manifest struct {
-	Name    string
-	Content string
-	Head    *releaseutil.SimpleHead
+// UninstallReleaseResponse represents a successful response to an uninstall request.
+type UninstallReleaseResponse struct {
+	// Release is the release that was marked deleted.
+	Release *Release `json:"release,omitempty"`
+	// Info is an uninstall message
+	Info string `json:"info,omitempty"`
 }

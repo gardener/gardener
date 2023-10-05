@@ -28,11 +28,11 @@ import (
 	chartloader "helm.sh/helm/v3/pkg/chart/loader"
 	v3chartutil "helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/engine"
+	"helm.sh/helm/v3/pkg/releaseutil"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"k8s.io/helm/pkg/ignore"
-	"k8s.io/helm/pkg/manifest"
 )
 
 const notesFileSuffix = "NOTES.txt"
@@ -169,8 +169,11 @@ func (r *chartRenderer) renderResources(ch *chart.Chart, values v3chartutil.Valu
 		}
 	}
 
-	manifests := manifest.SplitManifests(files)
-	manifests = SortByKind(manifests)
+	// Split and sort manifests by Kind based on releaseutil.InstallOrder
+	_, manifests, err := releaseutil.SortManifests(files, v3chartutil.DefaultVersionSet, releaseutil.InstallOrder)
+	if err != nil {
+		return nil, err
+	}
 
 	return &RenderedChart{
 		ChartName: ch.Name(),

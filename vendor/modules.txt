@@ -873,6 +873,9 @@ helm.sh/helm/v3/pkg/chart
 helm.sh/helm/v3/pkg/chart/loader
 helm.sh/helm/v3/pkg/chartutil
 helm.sh/helm/v3/pkg/engine
+helm.sh/helm/v3/pkg/release
+helm.sh/helm/v3/pkg/releaseutil
+helm.sh/helm/v3/pkg/time
 # istio.io/api v0.0.0-20230217221049-9d422bf48675
 ## explicit; go 1.18
 istio.io/api/analysis/v1alpha1
@@ -1574,13 +1577,10 @@ k8s.io/helm/pkg/getter
 k8s.io/helm/pkg/helm/environment
 k8s.io/helm/pkg/helm/helmpath
 k8s.io/helm/pkg/ignore
-k8s.io/helm/pkg/manifest
 k8s.io/helm/pkg/plugin
 k8s.io/helm/pkg/proto/hapi/chart
-k8s.io/helm/pkg/proto/hapi/release
 k8s.io/helm/pkg/proto/hapi/version
 k8s.io/helm/pkg/provenance
-k8s.io/helm/pkg/releaseutil
 k8s.io/helm/pkg/repo
 k8s.io/helm/pkg/resolver
 k8s.io/helm/pkg/sympath

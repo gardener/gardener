@@ -22,7 +22,7 @@ package chartrenderer
 import (
 	"sort"
 
-	"k8s.io/helm/pkg/manifest"
+	"helm.sh/helm/v3/pkg/releaseutil"
 )
 
 // SortOrder is an ordering of Kinds.
@@ -72,10 +72,10 @@ var InstallOrder SortOrder = []string{
 
 type kindSorter struct {
 	ordering  map[string]int
-	manifests []manifest.Manifest
+	manifests []releaseutil.Manifest
 }
 
-func newKindSorter(m []manifest.Manifest, s SortOrder) *kindSorter {
+func newKindSorter(m []releaseutil.Manifest, s SortOrder) *kindSorter {
 	o := make(map[string]int, len(s))
 	for v, k := range s {
 		o[k] = v
@@ -122,7 +122,7 @@ func (k *kindSorter) Less(i, j int) bool {
 }
 
 // SortByKind sorts manifests in InstallOrder
-func SortByKind(manifests []manifest.Manifest) []manifest.Manifest {
+func SortByKind(manifests []releaseutil.Manifest) []releaseutil.Manifest {
 	ordering := InstallOrder
 	ks := newKindSorter(manifests, ordering)
 	sort.Sort(ks)

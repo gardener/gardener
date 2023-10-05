@@ -25,7 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 )
 
-const alpinePod = `apiVersion: v1
+const alpinePod string = `apiVersion: v1
 kind: Pod
 metadata:
   name: alpine
@@ -38,8 +38,7 @@ spec:
   containers:
   - name: waiter
     image: alpine:3.3
-    command: ["/bin/sleep", "9000"]
-`
+    command: ["/bin/sleep", "9000"]`
 
 //go:embed testdata/alpine/*
 var embeddedFS embed.FS
