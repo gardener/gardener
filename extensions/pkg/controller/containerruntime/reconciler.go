@@ -185,7 +185,13 @@ func (r *reconciler) delete(
 		return reconcile.Result{}, err
 	}
 
-	if err := r.actuator.Delete(ctx, log, cr, cluster); err != nil {
+	var err error
+	if cluster != nil && v1beta1helper.ShootNeedsForceDeletion(cluster.Shoot) {
+		err = r.actuator.ForceDelete(ctx, log, cr, cluster)
+	} else {
+		err = r.actuator.Delete(ctx, log, cr, cluster)
+	}
+	if err != nil {
 		_ = r.statusUpdater.Error(ctx, log, cr, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeDelete, "Error deleting ContainerRuntime")
 		return reconcilerutils.ReconcileErr(err)
 	}
