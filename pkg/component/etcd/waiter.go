@@ -79,10 +79,6 @@ func CheckEtcdObject(obj client.Object) error {
 		return fmt.Errorf("observed generation outdated (%d/%d)", *observedGeneration, generation)
 	}
 
-	if etcd.Status.Replicas != etcd.Status.UpdatedReplicas {
-		return fmt.Errorf("update is being rolled out, only %d/%d replicas are up-to-date", etcd.Status.UpdatedReplicas, etcd.Status.Replicas)
-	}
-
 	if op, ok := etcd.Annotations[v1beta1constants.GardenerOperation]; ok {
 		return fmt.Errorf("gardener operation %q is not yet picked up by etcd-druid", op)
 	}
