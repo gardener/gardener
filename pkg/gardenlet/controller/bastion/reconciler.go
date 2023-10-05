@@ -213,8 +213,22 @@ func (r *Reconciler) cleanupBastion(
 		return fmt.Errorf("failed patching ready condition of Bastion: %w", err)
 	}
 
-	// delete bastion extension resource in seed cluster
 	extensionBastion := newBastionExtension(bastion, shoot)
+
+	if kubernetesutils.HasMetaDataAnnotation(&bastion.ObjectMeta, v1beta1constants.AnnotationConfirmationForceDeletion, "true") {
+		if err := r.SeedClient.Get(seedCtx, client.ObjectKeyFromObject(extensionBastion), extensionBastion); client.IgnoreNotFound(err) != nil {
+			return fmt.Errorf("failed getting extension bastion %s: %w", client.ObjectKeyFromObject(extensionBastion), err)
+		}
+
+		if !kubernetesutils.HasMetaDataAnnotation(&extensionBastion.ObjectMeta, v1beta1constants.AnnotationConfirmationForceDeletion, "true") {
+			patch := client.MergeFrom(extensionBastion.DeepCopy())
+			metav1.SetMetaDataAnnotation(&extensionBastion.ObjectMeta, v1beta1constants.AnnotationConfirmationForceDeletion, "true")
+			if err := r.SeedClient.Patch(seedCtx, extensionBastion, patch); client.IgnoreNotFound(err) != nil {
+				return fmt.Errorf("failed patching extension bastion %s: %w", client.ObjectKeyFromObject(extensionBastion), err)
+			}
+		}
+	}
+
 	if err := r.SeedClient.Delete(seedCtx, extensionBastion); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("Successfully deleted")

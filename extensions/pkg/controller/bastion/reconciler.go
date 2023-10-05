@@ -29,11 +29,13 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/gardener/gardener/pkg/extensions"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 type reconciler struct {
@@ -148,7 +150,7 @@ func (r *reconciler) delete(
 
 	log.Info("Starting the deletion of Bastion")
 	var err error
-	if cluster != nil && v1beta1helper.ShootNeedsForceDeletion(cluster.Shoot) {
+	if kubernetesutils.HasMetaDataAnnotation(&bastion.ObjectMeta, v1beta1constants.AnnotationConfirmationForceDeletion, "true") {
 		err = r.actuator.ForceDelete(ctx, log, bastion, cluster)
 	} else {
 		err = r.actuator.Delete(ctx, log, bastion, cluster)
