@@ -66,6 +66,8 @@ type NodeAgentConfiguration struct {
 	LogLevel string `json:"logLevel"`
 	// LogFormat is the output format for the logs. Must be one of [text,json].
 	LogFormat string `json:"logFormat"`
+	// Server defines the configuration of the HTTP server.
+	Server ServerConfiguration `json:"server"`
 	// Debugging holds configuration for Debugging related features.
 	// +optional
 	Debugging *componentbaseconfigv1alpha1.DebuggingConfiguration `json:"debugging,omitempty"`
@@ -91,4 +93,22 @@ type NodeAgentConfiguration struct {
 	// /var/lib on the worker.
 	// +optional
 	KubeletDataVolumeSize *int64 `json:"kubeletDataVolumeSize,omitempty"`
+}
+
+// ServerConfiguration contains details for the HTTP(S) servers.
+type ServerConfiguration struct {
+	// HealthProbes is the configuration for serving the healthz and readyz endpoints.
+	// +optional
+	HealthProbes *Server `json:"healthProbes,omitempty"`
+	// Metrics is the configuration for serving the metrics endpoint.
+	// +optional
+	Metrics *Server `json:"metrics,omitempty"`
+}
+
+// Server contains information for HTTP(S) server configuration.
+type Server struct {
+	// BindAddress is the IP address on which to listen for the specified port.
+	BindAddress string `json:"bindAddress"`
+	// Port is the port on which to serve requests.
+	Port int `json:"port"`
 }

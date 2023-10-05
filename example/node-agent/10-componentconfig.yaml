@@ -7,6 +7,11 @@ clientConnection:
   kubeconfig: path/to/kubeconfig
 logLevel: info
 logFormat: text
+server:
+  healthProbes:
+    port: 2751
+  metrics:
+    port: 2752
 debugging:
   enableProfiling: false
   enableContentionProfiling: false
