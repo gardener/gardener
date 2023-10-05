@@ -233,7 +233,8 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Name: "Destroying nginx-ingress",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return component.OpDestroyAndWait(nginxIngress).Destroy(ctx)
-			}).DoIf(!seedIsGarden),
+			}),
+			SkipIf: seedIsGarden,
 		})
 		destroyDWDWeeder = g.Add(flow.Task{
 			Name: "Destroy dependency-watchdog-weeder",
@@ -263,7 +264,8 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Name: "Destroy Istio CRDs",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return component.OpDestroyAndWait(istioCRDs).Destroy(ctx)
-			}).DoIf(!seedIsGarden),
+			}),
+			SkipIf:       seedIsGarden,
 			Dependencies: flow.NewTaskIDs(destroyIstio),
 		})
 		destroyMachineControllerManagerCRDs = g.Add(flow.Task{
