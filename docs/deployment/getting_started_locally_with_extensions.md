@@ -26,9 +26,9 @@ Based on [Skaffold](https://skaffold.dev/), the container images for all require
 
 ## Provide Infrastructure Credentials and Configuration
 
-As this setup is running on a real infrastructure, you have to provide credentials for DNS, the infrastructure, and the kubeconfig for the Gardener cluster you want to use as seed.
+As this setup is running on a real infrastructure, you have to provide credentials for DNS, the infrastructure, and the kubeconfig for the Kubernetes cluster you want to use as seed.
 
-> There are `.gitignore` entries for all files and directories which include credentials. Nevertheless, please double check and make sure that credentials are not commited.
+> There are `.gitignore` entries for all files and directories which include credentials. Nevertheless, please double check and make sure that credentials are not committed to the version control system.
 
 ### DNS
 
@@ -52,7 +52,7 @@ There are templates with `.tmpl` suffixes for the files in the same folder.
 The `kubeconfig` of your Kubernetes cluster you would like to use as seed should be placed at `./example/provider-extensions/seed/kubeconfig`.
 Additionally, please maintain the configuration of your seed in `./example/provider-extensions/gardenlet/values.yaml`. It is automatically copied from `values.yaml.tmpl` in the same directory when you run `make gardener-extensions-up` for the first time. It also includes explanations of the properties you should set.
 
-Using a Gardener cluster as seed simplifies the process, because some configuration options can be taken from `shoot-info` and creating DNS entries and TLS certificates is automated.
+Using a Gardener Shoot cluster as seed simplifies the process, because some configuration options can be taken from `shoot-info` and creating DNS entries and TLS certificates is automated.
 
 However, you can use different Kubernetes clusters for your seed too and configure these things manually. Please configure the options of `./example/provider-extensions/gardenlet/values.yaml` upfront. For configuring DNS and TLS certificates, `make gardener-extensions-up`, which is explained later, will pause and tell you what to do.
 
