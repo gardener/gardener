@@ -1,5 +1,5 @@
 # builder
-FROM golang:1.21.1 AS builder
+FROM golang:1.21.2 AS builder
 WORKDIR /go/src/github.com/gardener/gardener
 COPY . .
 ARG EFFECTIVE_VERSION
