@@ -10,7 +10,7 @@ require (
 	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/fluent/fluent-operator/v2 v2.2.0
 	github.com/gardener/dependency-watchdog v1.1.2
-	github.com/gardener/etcd-druid v0.19.2
+	github.com/gardener/etcd-druid v0.20.1
 	github.com/gardener/hvpa-controller/api v0.5.0
 	github.com/gardener/machine-controller-manager v0.50.0
 	github.com/go-logr/logr v1.2.4
@@ -54,7 +54,7 @@ require (
 	k8s.io/code-generator v0.28.2
 	k8s.io/component-base v0.28.2
 	k8s.io/component-helpers v0.28.2
-	k8s.io/helm v2.16.1+incompatible
+	k8s.io/helm v2.17.0+incompatible
 	k8s.io/klog/v2 v2.100.1
 	k8s.io/kube-aggregator v0.28.2
 	k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9

@@ -26,10 +26,13 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig"
+	"github.com/pkg/errors"
 
 	"k8s.io/helm/pkg/chartutil"
 	"k8s.io/helm/pkg/proto/hapi/chart"
 )
+
+const recursionMaxNums = 1000
 
 // Engine is an implementation of 'cmd/tiller/environment'.Engine that uses Go templates.
 type Engine struct {
@@ -144,12 +147,23 @@ func (e *Engine) alterFuncMap(t *template.Template, referenceTpls map[string]ren
 		funcMap[k] = v
 	}
 
+	includedNames := make(map[string]int)
+
 	// Add the 'include' function here so we can close over t.
 	funcMap["include"] = func(name string, data interface{}) (string, error) {
 		buf := bytes.NewBuffer(nil)
+		if v, ok := includedNames[name]; ok {
+			if v > recursionMaxNums {
+				return "", errors.Wrapf(fmt.Errorf("unable to execute template"), "rendering template has a nested reference name: %s", name)
+			}
+			includedNames[name]++
+		} else {
+			includedNames[name] = 1
+		}
 		if err := t.ExecuteTemplate(buf, name, data); err != nil {
 			return "", err
 		}
+		includedNames[name]--
 		return buf.String(), nil
 	}
 
