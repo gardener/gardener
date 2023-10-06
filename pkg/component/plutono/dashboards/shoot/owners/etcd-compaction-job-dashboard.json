@@ -464,7 +464,7 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "sum(container_memory_working_set_bytes{pod=~\".*compact-job.+\"}) by (pod)",
+            "expr": "sum(container_memory_working_set_bytes{pod=~\"etcd-main-compactor.+\"}) by (pod)",
             "interval": "",
             "legendFormat": "{{pod}}",
             "refId": "A"
@@ -560,7 +560,7 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\".*compact-job.+\"}[$__rate_interval])) by (pod)",
+            "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"etcd-main-compactor.+\"}[$__rate_interval])) by (pod)",
             "interval": "",
             "legendFormat": "{{pod}}",
             "refId": "A"
