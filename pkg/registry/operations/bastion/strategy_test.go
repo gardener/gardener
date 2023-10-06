@@ -132,6 +132,61 @@ var _ = Describe("PrepareForUpdate", func() {
 		Expect(bastion.Status.ExpirationTimestamp).NotTo(BeNil())
 		Expect(bastion.Annotations[v1beta1constants.GardenerOperation]).To(BeEmpty())
 	})
+
+	Context("generation increment", func() {
+		var (
+			oldBastion *operations.Bastion
+			newBastion *operations.Bastion
+		)
+
+		BeforeEach(func() {
+			oldBastion = &operations.Bastion{}
+			newBastion = oldBastion.DeepCopy()
+		})
+
+		DescribeTable("standard tests",
+			func(mutateNewBastion func(*operations.Bastion), shouldIncreaseGeneration bool) {
+				if mutateNewBastion != nil {
+					mutateNewBastion(newBastion)
+				}
+
+				Strategy.PrepareForUpdate(context.TODO(), newBastion, oldBastion)
+
+				expectedGeneration := oldBastion.Generation
+				if shouldIncreaseGeneration {
+					expectedGeneration++
+				}
+
+				Expect(newBastion.Generation).To(Equal(expectedGeneration))
+			},
+
+			Entry("no change",
+				nil,
+				false,
+			),
+			Entry("only label change",
+				func(b *operations.Bastion) { b.Labels = map[string]string{"foo": "bar"} },
+				false,
+			),
+			Entry("some spec change",
+				func(b *operations.Bastion) { b.Spec.SSHPublicKey = "foo" },
+				true,
+			),
+			Entry("deletion timestamp gets set",
+				func(b *operations.Bastion) {
+					deletionTimestamp := metav1.Now()
+					b.DeletionTimestamp = &deletionTimestamp
+				},
+				true,
+			),
+			Entry("force-deletion annotation",
+				func(b *operations.Bastion) {
+					metav1.SetMetaDataAnnotation(&b.ObjectMeta, v1beta1constants.AnnotationConfirmationForceDeletion, "true")
+				},
+				true,
+			),
+		)
+	})
 })
 
 var _ = Describe("heartbeat", func() {
