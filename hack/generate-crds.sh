@@ -107,13 +107,23 @@ generate_group () {
   fi
 
   generate="controller-gen crd"$crd_options" paths="$package_path" output:crd:dir="$output_dir" output:stdout"
-  if [[ "$group" != "autoscaling.k8s.io" ]]; then
+
+  if [[ "$group" == "druid.gardener.cloud" ]]; then
+    # /scale subresource is intentionally removed from this CRD, although it is specified in the original CRD from
+    # etcd-druid, due to adverse interaction with VPA.
+    # See https://github.com/gardener/gardener/pull/6850 and https://github.com/gardener/gardener/pull/8560#discussion_r1347470394
+    # TODO(shreyas-s-rao): Remove this workaround as soon as the scale subresource is supported properly.
+    etcd_api_types_file="$(dirname "$0")/../vendor/github.com/gardener/etcd-druid/api/v1alpha1/types_etcd.go"
+    sed -i '/\/\/ +kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas,selectorpath=.status.labelSelector/d' "$etcd_api_types_file"
     $generate
-  else
+    git checkout "$etcd_api_types_file"
+  elif [[ "$group" == "autoscaling.k8s.io" ]]; then
     # See https://github.com/kubernetes/autoscaler/blame/master/vertical-pod-autoscaler/hack/generate-crd-yaml.sh#L43-L45
     generator_output="$(mktemp -d)/controller-gen.log"
     $generate &> "$generator_output" ||:
     grep -v -e 'map keys must be strings, not int' -e 'not all generators ran successfully' -e 'usage' "$generator_output" && { echo "Failed to generate CRD YAMLs."; exit 1; }
+  else
+    $generate
   fi
 
   while IFS= read -r crd; do
