@@ -863,9 +863,10 @@ func ComputeExpectedGardenletConfiguration(
 		},
 		ETCDConfig: &gardenletv1alpha1.ETCDConfig{
 			BackupCompactionController: &gardenletv1alpha1.BackupCompactionController{
-				EnableBackupCompaction: pointer.Bool(false),
-				EventsThreshold:        pointer.Int64(1000000),
-				Workers:                pointer.Int64(3),
+				EnableBackupCompaction:    pointer.Bool(false),
+				EventsThreshold:           pointer.Int64(1000000),
+				MetricsScrapeWaitDuration: &metav1.Duration{Duration: 60 * time.Second},
+				Workers:                   pointer.Int64(3),
 			},
 			CustodianController: &gardenletv1alpha1.CustodianController{
 				Workers: pointer.Int64(10),
