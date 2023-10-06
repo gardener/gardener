@@ -41,28 +41,28 @@ var _ = Describe("Bastion controller tests", func() {
 		seed              *gardencorev1beta1.Seed
 		shoot             *gardencorev1beta1.Shoot
 		operationsBastion *operationsv1alpha1.Bastion
-		extensionsBastion *extensionsv1alpha1.Bastion
+		extensionBastion  *extensionsv1alpha1.Bastion
 		cluster           *extensionsv1alpha1.Cluster
 		seedNamespace     *corev1.Namespace
 
-		reconcileExtensionsBastion = func() {
+		reconcileExtensionBastion = func() {
 			EventuallyWithOffset(1, func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(operationsBastion), operationsBastion)).To(Succeed())
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionsBastion), extensionsBastion)).To(Succeed())
-				g.Expect(extensionsBastion.Spec.Type).To(Equal(*operationsBastion.Spec.ProviderType))
-				g.Expect(extensionsBastion.Spec.UserData).To(Equal(createUserData(operationsBastion)))
-				g.Expect(extensionsBastion.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionBastion), extensionBastion)).To(Succeed())
+				g.Expect(extensionBastion.Spec.Type).To(Equal(*operationsBastion.Spec.ProviderType))
+				g.Expect(extensionBastion.Spec.UserData).To(Equal(createUserData(operationsBastion)))
+				g.Expect(extensionBastion.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
 			}).Should(Succeed())
 
 			By("Patch the extension Bastion to satisfy the condition for readiness as there is no extension controller running in test")
-			patch := client.MergeFrom(extensionsBastion.DeepCopy())
-			delete(extensionsBastion.Annotations, v1beta1constants.GardenerOperation)
-			ExpectWithOffset(1, testClient.Patch(ctx, extensionsBastion, patch)).To(Succeed())
+			patch := client.MergeFrom(extensionBastion.DeepCopy())
+			delete(extensionBastion.Annotations, v1beta1constants.GardenerOperation)
+			ExpectWithOffset(1, testClient.Patch(ctx, extensionBastion, patch)).To(Succeed())
 
-			patch = client.MergeFrom(extensionsBastion.DeepCopy())
-			extensionsBastion.Status = extensionsv1alpha1.BastionStatus{
+			patch = client.MergeFrom(extensionBastion.DeepCopy())
+			extensionBastion.Status = extensionsv1alpha1.BastionStatus{
 				DefaultStatus: extensionsv1alpha1.DefaultStatus{
-					ObservedGeneration: extensionsBastion.Generation,
+					ObservedGeneration: extensionBastion.Generation,
 					LastOperation: &gardencorev1beta1.LastOperation{
 						LastUpdateTime: metav1.NewTime(fakeClock.Now()),
 						State:          gardencorev1beta1.LastOperationStateSucceeded,
@@ -70,7 +70,7 @@ var _ = Describe("Bastion controller tests", func() {
 				},
 				Ingress: &corev1.LoadBalancerIngress{},
 			}
-			ExpectWithOffset(1, testClient.Status().Patch(ctx, extensionsBastion, patch)).To(Succeed())
+			ExpectWithOffset(1, testClient.Status().Patch(ctx, extensionBastion, patch)).To(Succeed())
 		}
 	)
 
@@ -252,7 +252,7 @@ var _ = Describe("Bastion controller tests", func() {
 		Expect(testClient.Create(ctx, operationsBastion)).To(Succeed())
 		log.Info("Created Bastion for test", "bastion", client.ObjectKeyFromObject(operationsBastion))
 
-		extensionsBastion = &extensionsv1alpha1.Bastion{
+		extensionBastion = &extensionsv1alpha1.Bastion{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      operationsBastion.Name,
 				Namespace: seedNamespace.Name,
@@ -279,22 +279,22 @@ var _ = Describe("Bastion controller tests", func() {
 	Context("reconciliation", func() {
 		It("should create or patch the Bastion in the Seed cluster", func() {
 			Eventually(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionsBastion), extensionsBastion)).To(Succeed())
-				g.Expect(extensionsBastion.GetAnnotations()).To(And(
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionBastion), extensionBastion)).To(Succeed())
+				g.Expect(extensionBastion.GetAnnotations()).To(And(
 					HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile),
 					HaveKey(v1beta1constants.GardenerTimestamp),
 				))
-				g.Expect(extensionsBastion.Spec.Type).To(Equal(*operationsBastion.Spec.ProviderType))
-				g.Expect(extensionsBastion.Spec.UserData).To(Equal(createUserData(operationsBastion)))
+				g.Expect(extensionBastion.Spec.Type).To(Equal(*operationsBastion.Spec.ProviderType))
+				g.Expect(extensionBastion.Spec.UserData).To(Equal(createUserData(operationsBastion)))
 			}).Should(Succeed())
 		})
 
 		It("should set BastionReady to True once extension Bastion is ready", func() {
-			reconcileExtensionsBastion()
+			reconcileExtensionBastion()
 
 			Eventually(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionsBastion), extensionsBastion)).To(Succeed())
-				g.Expect(extensionsBastion.Status.ObservedGeneration).To(Equal((extensionsBastion.Generation)))
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionBastion), extensionBastion)).To(Succeed())
+				g.Expect(extensionBastion.Status.ObservedGeneration).To(Equal((extensionBastion.Generation)))
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(operationsBastion), operationsBastion)).To(Succeed())
 				g.Expect(operationsBastion.Status.Conditions).To(ContainElement(MatchFields(IgnoreExtras, Fields{
 					"Type":    Equal(operationsv1alpha1.BastionReady),
@@ -308,17 +308,59 @@ var _ = Describe("Bastion controller tests", func() {
 	})
 
 	Context("deletion", func() {
-		It("should delete the extensions Bastions and the operations Bastion resource", func() {
+		It("should delete the extension Bastion and the operations Bastion resource", func() {
+			reconcileExtensionBastion()
+
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(operationsBastion), operationsBastion)).To(Succeed())
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionsBastion), extensionsBastion)).To(Succeed())
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionBastion), extensionBastion)).To(Succeed())
 			}).Should(Succeed())
 
 			By("Mark Bastion for deletion")
 			Expect(testClient.Delete(ctx, operationsBastion)).To(Succeed())
 
 			Eventually(func() error {
-				return testClient.Get(ctx, client.ObjectKeyFromObject(extensionsBastion), extensionsBastion)
+				return testClient.Get(ctx, client.ObjectKeyFromObject(extensionBastion), extensionBastion)
+			}).Should(BeNotFoundError())
+
+			Eventually(func() error {
+				return testClient.Get(ctx, client.ObjectKeyFromObject(operationsBastion), operationsBastion)
+			}).Should(BeNotFoundError())
+		})
+
+		It("should add the force delete annotation to the extension Bastion if the operation's Bastion has it", func() {
+			reconcileExtensionBastion()
+
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(operationsBastion), operationsBastion)).To(Succeed())
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionBastion), extensionBastion)).To(Succeed())
+			}).Should(Succeed())
+
+			By("Patching extension bastion with some finalizer")
+			patch := client.MergeFrom(extensionBastion.DeepCopy())
+			extensionBastion.Finalizers = append(extensionBastion.Finalizers, "random")
+			Expect(testClient.Patch(ctx, extensionBastion, patch)).To(Succeed())
+
+			By("Delete Bastion")
+			Expect(testClient.Delete(ctx, operationsBastion)).To(Succeed())
+
+			By("Patching Bastion with ForceDeletion annotation")
+			patch = client.MergeFrom(operationsBastion.DeepCopy())
+			metav1.SetMetaDataAnnotation(&operationsBastion.ObjectMeta, v1beta1constants.AnnotationConfirmationForceDeletion, "true")
+			Expect(testClient.Patch(ctx, operationsBastion, patch)).To(Succeed())
+
+			Eventually(func(g Gomega) map[string]string {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionBastion), extensionBastion)).To(Succeed())
+				return extensionBastion.Annotations
+			}).Should(HaveKeyWithValue(v1beta1constants.AnnotationConfirmationForceDeletion, "true"))
+
+			By("Removing finalizer from extension bastion")
+			patch = client.MergeFrom(extensionBastion.DeepCopy())
+			extensionBastion.Finalizers = nil
+			Expect(testClient.Patch(ctx, extensionBastion, patch)).To(Succeed())
+
+			Eventually(func() error {
+				return testClient.Get(ctx, client.ObjectKeyFromObject(extensionBastion), extensionBastion)
 			}).Should(BeNotFoundError())
 
 			Eventually(func() error {

@@ -104,6 +104,11 @@ func mustIncreaseGeneration(oldBastion, newBastion *operations.Bastion) bool {
 		return true
 	}
 
+	if kubernetesutils.HasMetaDataAnnotation(&newBastion.ObjectMeta, v1beta1constants.AnnotationConfirmationForceDeletion, "true") &&
+		!kubernetesutils.HasMetaDataAnnotation(&oldBastion.ObjectMeta, v1beta1constants.AnnotationConfirmationForceDeletion, "true") {
+		return true
+	}
+
 	return false
 }
 
