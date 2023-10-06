@@ -493,7 +493,6 @@ type BackupCompactionController struct {
 	ActiveDeadlineDuration *metav1.Duration
 	// MetricsScrapeWaitDuration is the duration to wait for after compaction job is completed, to allow Prometheus metrics to be scraped
 	// Defaults to 60 seconds
-	// +optional
 	MetricsScrapeWaitDuration *metav1.Duration
 }
 

@@ -497,4 +497,7 @@ func SetDefaults_ETCDConfig(obj *ETCDConfig) {
 	if obj.BackupCompactionController.EventsThreshold == nil {
 		obj.BackupCompactionController.EventsThreshold = pointer.Int64(1000000)
 	}
+	if obj.BackupCompactionController.MetricsScrapeWaitDuration == nil {
+		obj.BackupCompactionController.MetricsScrapeWaitDuration = &metav1.Duration{Duration: 60 * time.Second}
+	}
 }
