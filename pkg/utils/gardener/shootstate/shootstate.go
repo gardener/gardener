@@ -149,10 +149,15 @@ func computeGardenerData(
 		return nil, fmt.Errorf("failed marshalling machine state to JSON: %w", err)
 	}
 
+	machineStateJSONCompressed, err := compressMachineState(machineStateJSON)
+	if err != nil {
+		return nil, fmt.Errorf("failed compressing machine state data: %w", err)
+	}
+
 	return append(secretsToPersist, gardencorev1beta1.GardenerResourceData{
 		Name: v1beta1constants.DataTypeMachineState,
 		Type: v1beta1constants.DataTypeMachineState,
-		Data: runtime.RawExtension{Raw: machineStateJSON},
+		Data: runtime.RawExtension{Raw: machineStateJSONCompressed},
 	}), nil
 }
 

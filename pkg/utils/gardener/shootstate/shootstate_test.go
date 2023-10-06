@@ -79,7 +79,7 @@ var _ = Describe("ShootState", func() {
 			Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot, true)).To(Succeed())
 			Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 			Expect(shootState.Spec).To(Equal(gardencorev1beta1.ShootStateSpec{
-				Gardener: []gardencorev1beta1.GardenerResourceData{{Name: "machine-state", Type: "machine-state", Data: runtime.RawExtension{Raw: []byte("{}")}}},
+				Gardener: []gardencorev1beta1.GardenerResourceData{{Name: "machine-state", Type: "machine-state"}},
 			}))
 			Expect(shootState.Annotations).To(HaveKeyWithValue("gardener.cloud/timestamp", fakeClock.Now().UTC().Format(time.RFC3339)))
 		})
@@ -143,7 +143,7 @@ var _ = Describe("ShootState", func() {
 						{
 							Name: "machine-state",
 							Type: "machine-state",
-							Data: runtime.RawExtension{Raw: []byte(`{"machineDeployments":{"deploy1":{"machineSets":[{"metadata":{"annotations":{"some":"annotation"},"creationTimestamp":null,"name":"deploy1-set1","namespace":"shoot--my-project--my-shoot"},"spec":{"machineClass":{},"template":{"metadata":{"creationTimestamp":null},"spec":{"class":{},"nodeTemplate":{"metadata":{"creationTimestamp":null},"spec":{}}}}},"status":{"lastOperation":{"lastUpdateTime":null}}},{"metadata":{"annotations":{"some":"annotation"},"creationTimestamp":null,"labels":{"name":"deploy1"},"name":"deploy1-set2","namespace":"shoot--my-project--my-shoot"},"spec":{"machineClass":{},"template":{"metadata":{"creationTimestamp":null},"spec":{"class":{},"nodeTemplate":{"metadata":{"creationTimestamp":null},"spec":{}}}}},"status":{"lastOperation":{"lastUpdateTime":null}}}],"machines":[{"metadata":{"annotations":{"some":"annotation"},"creationTimestamp":null,"labels":{"node":"nodename"},"name":"deploy1-set1-machine1","namespace":"shoot--my-project--my-shoot"},"spec":{"class":{},"nodeTemplate":{"metadata":{"creationTimestamp":null},"spec":{}}},"status":{"currentStatus":{"lastUpdateTime":null},"lastOperation":{"lastUpdateTime":null}}},{"metadata":{"annotations":{"some":"annotation"},"creationTimestamp":null,"labels":{"name":"deploy1"},"name":"deploy1-set2-machine2","namespace":"shoot--my-project--my-shoot"},"spec":{"class":{},"nodeTemplate":{"metadata":{"creationTimestamp":null},"spec":{}},"providerID":"provider-id"},"status":{"currentStatus":{"lastUpdateTime":null},"lastOperation":{"lastUpdateTime":null}}},{"metadata":{"annotations":{"some":"annotation"},"creationTimestamp":null,"labels":{"name":"deploy1"},"name":"deploy1-set2-machine2","namespace":"shoot--my-project--my-shoot"},"spec":{"class":{},"nodeTemplate":{"metadata":{"creationTimestamp":null},"spec":{}},"providerID":"provider-id"},"status":{"currentStatus":{"lastUpdateTime":null},"lastOperation":{"lastUpdateTime":null}}}],"replicas":3}}}`)},
+							Data: runtime.RawExtension{Raw: []byte(`{"state":"H4sIAAAAAAAC/+yUPU8DMQyG/4vnZChst9KFiaFlQgwmsdSgfCl2kaoq/x0lvX4gVEGrG5DoLZfYb177nli3hYBm5SLNKfu0CRSFYdiC7dtZWxbK3hlkGO7VXr2gJnvZQiBBi4JNGDEQDPujmklmoHqUM5qW4lVKonXY6FzSO5ndukdBgSmE4lJcukAsGDIMce29AowxSU/13jj1Osco1KqAM5mWHTt88MhNXRUIhexRqGdP+j1T78TLHE1isrS81qi2RwELyrp/gkeWp0xl1/4YeM4WhZrJeL5W9RPhu2kIe3wjz99LQP3P9F8P8/6rYdejeDb5nSTbfNqrl730UiYEeTlGBWZdCkVZfDl41bDvCf+1qT8BnEv6cJbK4xyGw0Y7Czf2N/ZnfjO11s8AAAD//7Qj9vuIBwAA"}`)},
 						},
 					},
 					Extensions: []gardencorev1beta1.ExtensionResourceState{
