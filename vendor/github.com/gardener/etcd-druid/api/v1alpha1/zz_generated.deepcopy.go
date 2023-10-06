@@ -83,6 +83,11 @@ func (in *BackupSpec) DeepCopyInto(out *BackupSpec) {
 		x := (*in).DeepCopy()
 		*out = &x
 	}
+	if in.DeltaSnapshotRetentionPeriod != nil {
+		in, out := &in.DeltaSnapshotRetentionPeriod, &out.DeltaSnapshotRetentionPeriod
+		*out = new(metav1.Duration)
+		**out = **in
+	}
 	if in.SnapshotCompression != nil {
 		in, out := &in.SnapshotCompression, &out.SnapshotCompression
 		*out = new(CompressionSpec)

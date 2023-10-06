@@ -1,13 +1,12 @@
-# Source: https://github.com/gardener/etcd-druid/blob/v0.19.2/charts/druid/charts/crds/templates/10-crd-druid.gardener.cloud_etcds.yaml
+---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  annotations:
-    controller-gen.kubebuilder.io/version: v0.11.3
-  creationTimestamp: null
-  name: etcds.druid.gardener.cloud
   labels:
     gardener.cloud/deletion-protected: "true"
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.13.0
+  name: etcds.druid.gardener.cloud
 spec:
   group: druid.gardener.cloud
   names:
@@ -119,7 +118,8 @@ spec:
                         description: 'Requests describes the minimum amount of compute
                           resources required. If Requests is omitted for a container,
                           it defaults to Limits if that is explicitly specified, otherwise
-                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                          to an implementation-defined value. Requests cannot exceed
+                          Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                     type: object
                   compression:
@@ -148,6 +148,13 @@ spec:
                   deltaSnapshotPeriod:
                     description: DeltaSnapshotPeriod defines the period after which
                       delta snapshots will be taken
+                    type: string
+                  deltaSnapshotRetentionPeriod:
+                    description: DeltaSnapshotRetentionPeriod defines the duration
+                      for which delta snapshots will be retained, excluding the latest
+                      snapshot set. The value should be a string formatted as a duration
+                      (e.g., '1s', '2m', '3h', '4d')
+                    pattern: ^([0-9][0-9]*([.][0-9]+)?(s|m|h|d))+$
                     type: string
                   enableProfiling:
                     description: EnableProfiling defines if profiling should be enabled
@@ -239,7 +246,8 @@ spec:
                         description: 'Requests describes the minimum amount of compute
                           resources required. If Requests is omitted for a container,
                           it defaults to Limits if that is explicitly specified, otherwise
-                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                          to an implementation-defined value. Requests cannot exceed
+                          Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                     type: object
                   store:
@@ -546,7 +554,8 @@ spec:
                         description: 'Requests describes the minimum amount of compute
                           resources required. If Requests is omitted for a container,
                           it defaults to Limits if that is explicitly specified, otherwise
-                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                          to an implementation-defined value. Requests cannot exceed
+                          Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                     type: object
                   serverPort:
@@ -1495,14 +1504,19 @@ spec:
                           type: object
                           x-kubernetes-map-type: atomic
                         matchLabelKeys:
-                          description: MatchLabelKeys is a set of pod label keys to
-                            select the pods over which spreading will be calculated.
+                          description: "MatchLabelKeys is a set of pod label keys
+                            to select the pods over which spreading will be calculated.
                             The keys are used to lookup values from the incoming pod
                             labels, those key-value labels are ANDed with labelSelector
                             to select the group of existing pods over which spreading
-                            will be calculated for the incoming pod. Keys that don't
-                            exist in the incoming pod labels will be ignored. A null
-                            or empty list means only match against labelSelector.
+                            will be calculated for the incoming pod. The same key
+                            is forbidden to exist in both MatchLabelKeys and LabelSelector.
+                            MatchLabelKeys cannot be set when LabelSelector isn't
+                            set. Keys that don't exist in the incoming pod labels
+                            will be ignored. A null or empty list means only match
+                            against labelSelector. \n This is a beta field and requires
+                            the MatchLabelKeysInPodTopologySpread feature gate to
+                            be enabled (enabled by default)."
                           items:
                             type: string
                           type: array
@@ -1889,7 +1903,4 @@ spec:
     served: true
     storage: true
     subresources:
-      # /scale subresource is intentionally removed from this CRD, although it is specified
-      # in the original CRD from etcd-druid, due to adverse interaction with VPA.
-      # See https://github.com/gardener/gardener/pull/6850 for details.
       status: {}

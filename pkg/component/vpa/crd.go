@@ -24,9 +24,9 @@ import (
 )
 
 var (
-	//go:embed templates/crd-verticalpodautoscalers.tpl.yaml
+	//go:embed templates/crd-autoscaling.k8s.io_verticalpodautoscalers.yaml
 	verticalPodAutoscalerCRD string
-	//go:embed templates/crd-verticalpodautoscalercheckpoints.tpl.yaml
+	//go:embed templates/crd-autoscaling.k8s.io_verticalpodautoscalercheckpoints.yaml
 	verticalPodAutoscalerCheckpointCRD string
 
 	crdResources map[string]string

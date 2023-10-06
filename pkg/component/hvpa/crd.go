@@ -24,7 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 )
 
-//go:embed templates/crd.tpl.yaml
+//go:embed templates/crd-autoscaling.k8s.io_hvpas.yaml
 var crd string
 
 type crdDeployer struct {

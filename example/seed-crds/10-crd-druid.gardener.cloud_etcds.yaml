@@ -147,6 +147,13 @@ spec:
                     description: DeltaSnapshotPeriod defines the period after which
                       delta snapshots will be taken
                     type: string
+                  deltaSnapshotRetentionPeriod:
+                    description: DeltaSnapshotRetentionPeriod defines the duration
+                      for which delta snapshots will be retained, excluding the latest
+                      snapshot set. The value should be a string formatted as a duration
+                      (e.g., '1s', '2m', '3h', '4d')
+                    pattern: ^([0-9][0-9]*([.][0-9]+)?(s|m|h|d))+$
+                    type: string
                   enableProfiling:
                     description: EnableProfiling defines if profiling should be enabled
                       for the etcd-backup-restore-sidecar
@@ -1894,8 +1901,4 @@ spec:
     served: true
     storage: true
     subresources:
-      scale:
-        labelSelectorPath: .status.labelSelector
-        specReplicasPath: .spec.replicas
-        statusReplicasPath: .status.replicas
       status: {}
