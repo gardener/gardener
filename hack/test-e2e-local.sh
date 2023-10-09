@@ -30,7 +30,7 @@ if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
   mkdir -p "$ARTIFACTS"
   ginkgo_flags="--output-dir=$ARTIFACTS --junit-report=junit.xml"
   if [ "${JOB_TYPE:-}" != "periodic" ]; then
-    ginkgo_flags+=" --failFast"
+    ginkgo_flags+=" --fail-fast"
   fi
 fi
 
