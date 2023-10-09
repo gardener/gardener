@@ -200,15 +200,7 @@ func fetchAccessTokenViaBootstrapToken(ctx context.Context, log logr.Logger, res
 		return fmt.Errorf("secret key %q does not exist or empty", resourcesv1alpha1.DataKeyToken)
 	}
 
-	log.Info("Successfully fetched access token from API server, writing it to disk", "path", nodeagentv1alpha1.TokenFilePath)
-	if err := os.WriteFile(nodeagentv1alpha1.TokenFilePath, token, 0600); err != nil {
-		return fmt.Errorf("unable to write access token to %s: %w", nodeagentv1alpha1.TokenFilePath, err)
-	}
-	log.Info("Token written to disk")
-
-	log.Info("Overwriting kubeconfig to no longer use bootstrap token file", "path", cfg.ClientConnection.Kubeconfig)
 	restConfig.BearerTokenFile = nodeagentv1alpha1.TokenFilePath
-
 	kubeconfigRaw, err := runtime.Encode(clientcmdlatest.Codec, kubernetesutils.NewKubeconfig(
 		Name,
 		clientcmdv1.Cluster{Server: restConfig.Host, CertificateAuthorityData: restConfig.CAData},
@@ -218,10 +210,17 @@ func fetchAccessTokenViaBootstrapToken(ctx context.Context, log logr.Logger, res
 		return fmt.Errorf("failed encoding kubeconfig: %w", err)
 	}
 
+	log.Info("Writing downloaded access token to disk", "path", nodeagentv1alpha1.TokenFilePath)
+	if err := os.WriteFile(nodeagentv1alpha1.TokenFilePath, token, 0600); err != nil {
+		return fmt.Errorf("unable to write access token to %s: %w", nodeagentv1alpha1.TokenFilePath, err)
+	}
+	log.Info("Token written to disk")
+
+	log.Info("Overwriting kubeconfig on disk to no longer use bootstrap token file", "path", cfg.ClientConnection.Kubeconfig)
 	if err := os.WriteFile(cfg.ClientConnection.Kubeconfig, kubeconfigRaw, 0600); err != nil {
 		return fmt.Errorf("unable to write kubeconfig to %s: %w", cfg.ClientConnection.Kubeconfig, err)
 	}
-
 	log.Info("Kubeconfig written to disk")
+
 	return nil
 }
