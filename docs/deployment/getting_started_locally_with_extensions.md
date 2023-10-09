@@ -47,6 +47,12 @@ Infrastructure secrets and the corresponding secret bindings should be maintaine
 
 There are templates with `.tmpl` suffixes for the files in the same folder.
 
+### Projects
+
+The projects and the namespaces associated with them should be maintained at `./example/provider-extensions/garden/project/project.yaml`.
+
+You can find a template for the file at `./example/provider-extensions/garden/project/project.yaml.tmpl`.
+
 ### Seed Cluster Preparation
 
 The `kubeconfig` of your Kubernetes cluster you would like to use as seed should be placed at `./example/provider-extensions/seed/kubeconfig`.

@@ -1,0 +1,26 @@
+##########
+# Please use this template to maintain your projects and
+# save the resulting file at project.yaml file in the same directory.
+##########
+---
+apiVersion: core.gardener.cloud/v1beta1
+kind: Project
+metadata:
+  name: garden
+spec:
+  namespace: garden
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: garden-<project-name>
+  labels:
+    gardener.cloud/role: project
+    project.gardener.cloud/name: <project-name>
+---
+apiVersion: core.gardener.cloud/v1beta1
+kind: Project
+metadata:
+  name: <project-name>
+spec:
+  namespace: garden-<project-name>

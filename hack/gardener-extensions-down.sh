@@ -60,10 +60,11 @@ if [[ "$remaining_seeds" != "" ]]; then
   echo "No clean up of kind cluster because of remaining seeds: ${remaining_seeds//$'\n'/,}"
 else
   echo "Cleaning up admission controllers"
-  "$SCRIPT_DIR"/../example/provider-extensions/garden/configure-admission.sh "$PATH_GARDEN_KUBECONFIG" delete
+  "$SCRIPT_DIR"/../example/provider-extensions/garden/configure-admission.sh "$PATH_GARDEN_KUBECONFIG" delete --ignore-not-found
   echo "Cleaning up kind cluster"
   kubectl --kubeconfig="$PATH_GARDEN_KUBECONFIG" delete validatingwebhookconfiguration/gardener-admission-controller --ignore-not-found
-  kubectl --kubeconfig="$PATH_GARDEN_KUBECONFIG" annotate project local garden confirmation.gardener.cloud/deletion=true
+  kubectl --kubeconfig="$PATH_GARDEN_KUBECONFIG" annotate project garden confirmation.gardener.cloud/deletion=true
+  kubectl --kubeconfig="$PATH_GARDEN_KUBECONFIG" annotate -f "$SCRIPT_DIR"/../example/provider-extensions/garden/project/project.yaml confirmation.gardener.cloud/deletion=true
   skaffold --kubeconfig="$PATH_GARDEN_KUBECONFIG" delete -m extensions-env -p extensions
   skaffold --kubeconfig="$PATH_GARDEN_KUBECONFIG" delete -m etcd,controlplane -p extensions
   kubectl --kubeconfig="$PATH_GARDEN_KUBECONFIG" delete ns garden gardener-system-seed-lease --ignore-not-found

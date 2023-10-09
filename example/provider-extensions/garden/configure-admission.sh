@@ -21,9 +21,9 @@ REPO_ROOT_DIR="$(realpath "$SCRIPT_DIR"/../../..)"
 
 usage() {
   echo "Usage:"
-  echo "> configure-admission.sh [ -h | <garden-kubeconfig> <apply|delete> ]"
+  echo "> configure-admission.sh [ -h | <garden-kubeconfig> <apply|delete> ] [kubectl options]"
   echo
-  echo ">> For example: configure-admission.sh ~/.kube/garden-kubeconfig.yaml apply"
+  echo ">> For example: configure-admission.sh ~/.kube/garden-kubeconfig.yaml delete --ignore-not-found"
 
   exit 0
 }
@@ -38,6 +38,7 @@ fi
 
 garden_kubeconfig=$1
 command=$2
+shift 2
 
 for p in $(yq '. | select(.kind == "ControllerDeployment") | select(.metadata.name == "provider-*") | .metadata.name' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controllerregistrations/* | grep -v -E "^---$"); do
   echo "Found \"$p\" in $REPO_ROOT_DIR/example/provider-extensions/garden/controllerregistrations. Trying to configure its admission controller..."
@@ -54,8 +55,8 @@ for p in $(yq '. | select(.kind == "ControllerDeployment") | select(.metadata.na
     TLS_KEY=$(cat "$ADMISSION_GIT_ROOT/example/$ADMISSION_NAME-certs/tls.key")
     helm template --namespace garden --set global.image.tag="$LATEST_RELEASE" --set global.webhookConfig.caBundle="$CA_BUNDLE" --set global.webhookConfig.tls.crt="$TLS_CRT" --set global.webhookConfig.tls.key="$TLS_KEY" gardener-extension-"$ADMISSION_NAME" "$ADMISSION_GIT_ROOT"/charts/gardener-extension-"$ADMISSION_NAME"/charts/application > "$ADMISSION_GIT_ROOT"/virtual-resources.yaml
     helm template --namespace garden --set global.image.tag="$LATEST_RELEASE" --set global.webhookConfig.caBundle="$CA_BUNDLE" --set global.webhookConfig.tls.crt="$TLS_CRT" --set global.webhookConfig.tls.key="$TLS_KEY" --set global.kubeconfig="$(cat "$garden_kubeconfig" | sed 's/127.0.0.1:.*$/kubernetes.default.svc.cluster.local/g')" --set global.vpa.enabled="false" gardener-extension-"$ADMISSION_NAME" "$ADMISSION_GIT_ROOT"/charts/gardener-extension-"$ADMISSION_NAME"/charts/runtime > "$ADMISSION_GIT_ROOT"/runtime-resources.yaml
-    kubectl --kubeconfig "$garden_kubeconfig" "$command" -f "$ADMISSION_GIT_ROOT/virtual-resources.yaml"
-    kubectl --kubeconfig "$garden_kubeconfig" "$command" -f "$ADMISSION_GIT_ROOT/runtime-resources.yaml"
+    kubectl --kubeconfig "$garden_kubeconfig" "$command" "$@" -f "$ADMISSION_GIT_ROOT/virtual-resources.yaml"
+    kubectl --kubeconfig "$garden_kubeconfig" "$command" "$@" -f "$ADMISSION_GIT_ROOT/runtime-resources.yaml"
     if [ "$command" == "apply" ]; then
       kubectl --kubeconfig "$garden_kubeconfig" wait --for=condition=available deployment -l app.kubernetes.io/name=gardener-extension-"$ADMISSION_NAME" -n garden --timeout 5m
     fi
