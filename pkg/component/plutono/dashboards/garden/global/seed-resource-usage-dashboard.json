@@ -15,8 +15,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 1,
-  "id": 3,
-  "iteration": 1602083986345,
+  "id": 5,
+  "iteration": 1696848484420,
   "links": [],
   "panels": [
     {
@@ -41,7 +41,6 @@
           "color": {
             "mode": "thresholds"
           },
-          "custom": {},
           "mappings": [],
           "max": 100,
           "min": 0,
@@ -72,13 +71,16 @@
         "displayMode": "gradient",
         "orientation": "horizontal",
         "reduceOptions": {
-          "calcs": ["last"],
+          "calcs": [
+            "last"
+          ],
           "fields": "",
           "values": false
         },
-        "showUnfilled": true
+        "showUnfilled": true,
+        "text": {}
       },
-      "pluginVersion": "7.0.3",
+      "pluginVersion": "7.5.24",
       "targets": [
         {
           "expr": "count(garden_shoot_info{seed=~\"$seed\"}) by (seed)",
@@ -102,7 +104,7 @@
       "description": "Shows the number of shoots per seed (does not count hibernated shoots).",
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -131,9 +133,10 @@
       "linewidth": 1,
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.24",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -201,7 +204,7 @@
       "description": "How much of the seed CPU is utilized for control planes.",
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -230,9 +233,10 @@
       "linewidth": 1,
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.24",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -298,7 +302,7 @@
       "description": "How much of the seed memory is utilized for control planes.",
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -327,9 +331,10 @@
       "linewidth": 1,
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.24",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -395,7 +400,7 @@
       "description": "How much of the seed CPU is utilized based on requests.",
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -424,9 +429,10 @@
       "linewidth": 1,
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.24",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -493,7 +499,7 @@
       "description": "How much of the seed memory is utilized based on requests.",
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -522,9 +528,10 @@
       "linewidth": 1,
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.24",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -605,7 +612,7 @@
       "description": "Shows the total CPU usage of each seed.",
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -635,9 +642,10 @@
       "linewidth": 1,
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.24",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -703,7 +711,7 @@
       "description": "Shows the total memory usage of each seed.",
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -733,9 +741,10 @@
       "linewidth": 1,
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.24",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -800,7 +809,6 @@
           "color": {
             "mode": "thresholds"
           },
-          "custom": {},
           "decimals": 0,
           "mappings": [],
           "max": 100,
@@ -832,13 +840,16 @@
         "displayMode": "gradient",
         "orientation": "horizontal",
         "reduceOptions": {
-          "calcs": ["mean"],
+          "calcs": [
+            "mean"
+          ],
           "fields": "",
           "values": false
         },
-        "showUnfilled": true
+        "showUnfilled": true,
+        "text": {}
       },
-      "pluginVersion": "7.0.3",
+      "pluginVersion": "7.5.24",
       "targets": [
         {
           "expr": "sum(shoot:kube_node_info:count{project=\"garden\", shoot_name=~\"$seed\"}) by (shoot_name)",
@@ -862,7 +873,7 @@
       "description": "Shows the total number of nodes for each seed.",
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -891,9 +902,10 @@
       "linewidth": 1,
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.24",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -960,7 +972,7 @@
       "description": "Shows how many controlplanes are hosted on each node on average.",
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -989,9 +1001,10 @@
       "linewidth": 1,
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.24",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1567,7 +1580,7 @@
       "description": "Shows how many CPU cores each extension uses.",
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -1595,10 +1608,8 @@
       "lines": true,
       "linewidth": 1,
       "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
       "percentage": false,
+      "pluginVersion": "7.5.24",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1664,7 +1675,7 @@
       "description": "Shows how much memory each extension is using.",
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -1692,10 +1703,8 @@
       "lines": true,
       "linewidth": 1,
       "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
       "percentage": false,
+      "pluginVersion": "7.5.24",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1754,27 +1763,39 @@
     }
   ],
   "refresh": false,
-  "schemaVersion": 25,
+  "schemaVersion": 27,
   "style": "dark",
-  "tags": ["seed", "usage"],
+  "tags": [
+    "seed",
+    "usage"
+  ],
   "templating": {
     "list": [
       {
         "allValue": null,
         "current": {
           "selected": true,
-          "text": "All",
-          "value": ["$__all"]
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "prometheus",
         "definition": "label_values(seed:container_cpu_usage_seconds_total:sum, seed)",
+        "description": null,
+        "error": null,
         "hide": 0,
         "includeAll": true,
         "label": null,
         "multi": true,
         "name": "seed",
         "options": [],
-        "query": "label_values(seed:container_cpu_usage_seconds_total:sum, seed)",
+        "query": {
+          "query": "label_values(seed:container_cpu_usage_seconds_total:sum, seed)",
+          "refId": "prometheus-seed-Variable-Query"
+        },
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
