@@ -78,8 +78,10 @@
       "pluginVersion": "7.5.24",
       "targets": [
         {
-          "expr": "count(garden_shoot_info{seed=~\"$seed\"}) by (seed)",
+          "exemplar": true,
+          "expr": "sort_desc(count(garden_shoot_info{seed=~\"$seed\"}) by (seed))",
           "instant": true,
+          "interval": "",
           "legendFormat": "{{ seed }}",
           "refId": "A"
         }
