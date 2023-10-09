@@ -12,24 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controller
+package token_test
 
 import (
-	"fmt"
+	"testing"
 
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-
-	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
-	"github.com/gardener/gardener/pkg/nodeagent/controller/token"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-// AddToManager adds all controllers to the given manager.
-func AddToManager(mgr manager.Manager, cfg *config.NodeAgentConfiguration) error {
-	if err := (&token.Reconciler{
-		AccessTokenSecretName: cfg.AccessTokenSecretName,
-	}).AddToManager(mgr); err != nil {
-		return fmt.Errorf("failed adding token controller: %w", err)
-	}
-
-	return nil
+func TestToken(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "NodeAgent Controller Token Suite")
 }
