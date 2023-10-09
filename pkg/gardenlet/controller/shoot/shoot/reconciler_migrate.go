@@ -125,7 +125,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		deployETCD = g.Add(flow.Task{
 			Name:         "Deploying main and events etcd",
 			Fn:           flow.TaskFn(botanist.DeployEtcd).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       !(cleanupShootResources || etcdSnapshotRequired),
+			SkipIf:       !cleanupShootResources && etcdSnapshotRequired,
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
 		})
 		scaleUpETCD = g.Add(flow.Task{
@@ -137,7 +137,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		waitUntilEtcdReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event etcd report readiness",
 			Fn:           flow.TaskFn(botanist.WaitUntilEtcdsReady),
-			SkipIf:       !(cleanupShootResources || etcdSnapshotRequired),
+			SkipIf:       !cleanupShootResources && !etcdSnapshotRequired,
 			Dependencies: flow.NewTaskIDs(deployETCD, scaleUpETCD),
 		})
 		wakeUpKubeAPIServer = g.Add(flow.Task{

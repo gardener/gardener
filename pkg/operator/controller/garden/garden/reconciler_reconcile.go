@@ -381,7 +381,7 @@ func (r *Reconciler) reconcile(
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return secretsrotation.SnapshotETCDAfterRewritingEncryptedData(ctx, r.RuntimeClientSet.Client(), r.snapshotETCDFunc(secretsManager, c.etcdMain), r.GardenNamespace, namePrefix+v1beta1constants.DeploymentNameKubeAPIServer)
 			}),
-			SkipIf:       !(allowBackup && helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationPreparing),
+			SkipIf:       !allowBackup || helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing,
 			Dependencies: flow.NewTaskIDs(rewriteSecretsAddLabel),
 		})
 		_ = g.Add(flow.Task{

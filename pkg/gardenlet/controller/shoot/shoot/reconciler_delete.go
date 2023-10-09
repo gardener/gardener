@@ -238,7 +238,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		deployControlPlane = g.Add(flow.Task{
 			Name:         "Deploying Shoot control plane",
 			Fn:           flow.TaskFn(botanist.DeployControlPlane).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       botanist.Shoot.IsWorkerless || !(cleanupShootResources && controlPlaneDeploymentNeeded),
+			SkipIf:       botanist.Shoot.IsWorkerless || !cleanupShootResources || !controlPlaneDeploymentNeeded,
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, ensureShootClusterIdentity),
 		})
 		waitUntilControlPlaneReady = g.Add(flow.Task{
@@ -246,7 +246,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return botanist.Shoot.Components.Extensions.ControlPlane.Wait(ctx)
 			}),
-			SkipIf:       botanist.Shoot.IsWorkerless || !(cleanupShootResources && controlPlaneDeploymentNeeded),
+			SkipIf:       botanist.Shoot.IsWorkerless || !cleanupShootResources || !controlPlaneDeploymentNeeded,
 			Dependencies: flow.NewTaskIDs(deployControlPlane),
 		})
 		deployKubeAPIServer = g.Add(flow.Task{
@@ -264,7 +264,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		scaleUpKubeAPIServer = g.Add(flow.Task{
 			Name:         "Scaling up Kubernetes API server",
 			Fn:           flow.TaskFn(botanist.ScaleKubeAPIServerToOne).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       !(cleanupShootResources && kubeAPIServerDeploymentReplicas == 0),
+			SkipIf:       !cleanupShootResources || kubeAPIServerDeploymentReplicas != 0,
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
 		})
 		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{
@@ -326,13 +326,13 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		deployKubeControllerManager = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes controller manager",
 			Fn:           flow.TaskFn(botanist.DeployKubeControllerManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       !(cleanupShootResources && kubeControllerManagerDeploymentFound),
+			SkipIf:       !cleanupShootResources || !kubeControllerManagerDeploymentFound,
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, waitUntilControlPlaneReady, initializeShootClients),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Scaling up Kubernetes controller manager",
 			Fn:           flow.TaskFn(botanist.ScaleKubeControllerManagerToOne),
-			SkipIf:       !(cleanupShootResources && kubeControllerManagerDeploymentFound),
+			SkipIf:       !cleanupShootResources || !kubeControllerManagerDeploymentFound,
 			Dependencies: flow.NewTaskIDs(deployKubeControllerManager),
 		})
 		deleteSeedMonitoring = g.Add(flow.Task{
@@ -358,13 +358,13 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		waitForControllersToBeActive = g.Add(flow.Task{
 			Name:         "Waiting until kube-controller-manager is active",
 			Fn:           flow.TaskFn(botanist.WaitForKubeControllerManagerToBeActive).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       !(cleanupShootResources && kubeControllerManagerDeploymentFound),
+			SkipIf:       !cleanupShootResources || kubeControllerManagerDeploymentFound,
 			Dependencies: flow.NewTaskIDs(initializeShootClients, cleanupWebhooks, deployControlPlane, deployKubeControllerManager),
 		})
 		cleanExtendedAPIs = g.Add(flow.Task{
 			Name:         "Cleaning extended API groups",
 			Fn:           flow.TaskFn(botanist.CleanExtendedAPIs).Timeout(10 * time.Minute),
-			SkipIf:       !(cleanupShootResources && !metav1.HasAnnotation(botanist.Shoot.GetInfo().ObjectMeta, v1beta1constants.AnnotationShootSkipCleanup)),
+			SkipIf:       !cleanupShootResources || metav1.HasAnnotation(botanist.Shoot.GetInfo().ObjectMeta, v1beta1constants.AnnotationShootSkipCleanup),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, deleteClusterAutoscaler, waitForControllersToBeActive),
 		})
 
