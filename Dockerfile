@@ -45,6 +45,12 @@ COPY --from=builder /go/bin/gardener-resource-manager /gardener-resource-manager
 WORKDIR /
 ENTRYPOINT ["/gardener-resource-manager"]
 
+# node-agent
+FROM distroless-static AS node-agent
+COPY --from=builder /go/bin/gardener-node-agent /gardener-node-agent
+WORKDIR /
+ENTRYPOINT ["/gardener-node-agent"]
+
 # operator
 FROM distroless-static AS operator
 COPY --from=builder /go/bin/gardener-operator /gardener-operator

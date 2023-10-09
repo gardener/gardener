@@ -32,6 +32,8 @@ type NodeAgentConfiguration struct {
 	LogLevel string
 	// LogFormat is the output format for the logs. Must be one of [text,json].
 	LogFormat string
+	// Server defines the configuration of the HTTP server.
+	Server ServerConfiguration
 	// Debugging holds configuration for Debugging related features.
 	Debugging *componentbaseconfig.DebuggingConfiguration
 	// FeatureGates is a map of feature names to bools that enable or disable alpha/experimental features. This field
@@ -54,4 +56,20 @@ type NodeAgentConfiguration struct {
 	// KubeletDataVolumeSize sets the data volume size of an unformatted disk on the worker node, which is used for
 	// /var/lib on the worker.
 	KubeletDataVolumeSize *int64
+}
+
+// ServerConfiguration contains details for the HTTP(S) servers.
+type ServerConfiguration struct {
+	// HealthProbes is the configuration for serving the healthz and readyz endpoints.
+	HealthProbes *Server
+	// Metrics is the configuration for serving the metrics endpoint.
+	Metrics *Server
+}
+
+// Server contains information for HTTP(S) server configuration.
+type Server struct {
+	// BindAddress is the IP address on which to listen for the specified port.
+	BindAddress string
+	// Port is the port on which to serve requests.
+	Port int
 }
