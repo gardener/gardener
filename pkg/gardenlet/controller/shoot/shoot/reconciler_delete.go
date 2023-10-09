@@ -170,7 +170,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		// existing machine class secrets.
 		deployCloudProviderSecret = g.Add(flow.Task{
 			Name:         "Deploying cloud provider account secret",
-			Fn:           flow.TaskFn(botanist.DeployCloudProviderSecret),
+			Fn:           botanist.DeployCloudProviderSecret,
 			SkipIf:       botanist.Shoot.IsWorkerless || !nonTerminatingNamespace,
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
@@ -188,7 +188,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		waitUntilKubeAPIServerServiceIsReady = g.Add(flow.Task{
 			Name:         "Waiting until Kubernetes API LoadBalancer in the Seed cluster has reported readiness",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeAPIServerService.Wait),
+			Fn:           botanist.Shoot.Components.ControlPlane.KubeAPIServerService.Wait,
 			SkipIf:       !cleanupShootResources,
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServerService),
 		})
@@ -211,7 +211,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		deployInternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Deploying internal domain DNS record",
-			Fn:           flow.TaskFn(botanist.DeployOrDestroyInternalDNSRecord),
+			Fn:           botanist.DeployOrDestroyInternalDNSRecord,
 			SkipIf:       !cleanupShootResources,
 			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady),
 		})
@@ -229,7 +229,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		waitUntilEtcdReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event etcd report readiness",
-			Fn:           flow.TaskFn(botanist.WaitUntilEtcdsReady),
+			Fn:           botanist.WaitUntilEtcdsReady,
 			SkipIf:       !cleanupShootResources,
 			Dependencies: flow.NewTaskIDs(scaleETCD),
 		})
@@ -269,7 +269,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{
 			Name:         "Waiting until Kubernetes API server reports readiness",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeAPIServer.Wait),
+			Fn:           botanist.Shoot.Components.ControlPlane.KubeAPIServer.Wait,
 			SkipIf:       !cleanupShootResources,
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer, scaleUpKubeAPIServer),
 		})
@@ -284,13 +284,13 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying gardener-resource-manager",
-			Fn:           flow.TaskFn(botanist.DeployGardenerResourceManager),
+			Fn:           botanist.DeployGardenerResourceManager,
 			SkipIf:       !cleanupShootResources,
 			Dependencies: flow.NewTaskIDs(setGardenerResourceManagerReplicas),
 		})
 		waitUntilGardenerResourceManagerReady = g.Add(flow.Task{
 			Name:         "Waiting until gardener-resource-manager reports readiness",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.ResourceManager.Wait),
+			Fn:           botanist.Shoot.Components.ControlPlane.ResourceManager.Wait,
 			SkipIf:       !cleanupShootResources,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
@@ -331,7 +331,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Scaling up Kubernetes controller manager",
-			Fn:           flow.TaskFn(botanist.ScaleKubeControllerManagerToOne),
+			Fn:           botanist.ScaleKubeControllerManagerToOne,
 			SkipIf:       !cleanupShootResources || !kubeControllerManagerDeploymentFound,
 			Dependencies: flow.NewTaskIDs(deployKubeControllerManager),
 		})
@@ -607,7 +607,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying Kubernetes API server ingress with trusted certificate",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeAPIServerIngress.Destroy),
+			Fn:           botanist.Shoot.Components.ControlPlane.KubeAPIServerIngress.Destroy,
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
 		_ = g.Add(flow.Task{
@@ -617,7 +617,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying gardener-resource-manager",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.ResourceManager.Destroy),
+			Fn:           botanist.Shoot.Components.ControlPlane.ResourceManager.Destroy,
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
 
@@ -640,7 +640,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 
 		destroyIngressDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying nginx ingress DNS record",
-			Fn:           flow.TaskFn(botanist.DestroyIngressDNSRecord),
+			Fn:           botanist.DestroyIngressDNSRecord,
 			SkipIf:       botanist.Shoot.IsWorkerless || !nonTerminatingNamespace,
 			Dependencies: flow.NewTaskIDs(syncPointCleaned),
 		})
@@ -662,7 +662,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		destroyExternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying external domain DNS record",
-			Fn:           flow.TaskFn(botanist.DestroyExternalDNSRecord),
+			Fn:           botanist.DestroyExternalDNSRecord,
 			SkipIf:       !nonTerminatingNamespace,
 			Dependencies: flow.NewTaskIDs(syncPointCleaned, waitUntilKubeAPIServerDeleted),
 		})
@@ -693,7 +693,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 
 		destroyInternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying internal domain DNS record",
-			Fn:           flow.TaskFn(botanist.DestroyInternalDNSRecord),
+			Fn:           botanist.DestroyInternalDNSRecord,
 			SkipIf:       !nonTerminatingNamespace,
 			Dependencies: flow.NewTaskIDs(syncPoint),
 		})

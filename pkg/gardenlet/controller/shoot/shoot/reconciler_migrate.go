@@ -136,13 +136,13 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		})
 		waitUntilEtcdReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event etcd report readiness",
-			Fn:           flow.TaskFn(botanist.WaitUntilEtcdsReady),
+			Fn:           botanist.WaitUntilEtcdsReady,
 			SkipIf:       !cleanupShootResources && !etcdSnapshotRequired,
 			Dependencies: flow.NewTaskIDs(deployETCD, scaleUpETCD),
 		})
 		wakeUpKubeAPIServer = g.Add(flow.Task{
 			Name:         "Scaling Kubernetes API Server up and waiting until ready",
-			Fn:           flow.TaskFn(botanist.WakeUpKubeAPIServer),
+			Fn:           botanist.WakeUpKubeAPIServer,
 			SkipIf:       !wakeupRequired,
 			Dependencies: flow.NewTaskIDs(deployETCD, scaleUpETCD, initializeSecretsManagement),
 		})
@@ -150,25 +150,25 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		// This fixes https://github.com/gardener/gardener/issues/7606
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying gardener-resource-manager",
-			Fn:           flow.TaskFn(botanist.DeployGardenerResourceManager),
+			Fn:           botanist.DeployGardenerResourceManager,
 			SkipIf:       !cleanupShootResources,
 			Dependencies: flow.NewTaskIDs(wakeUpKubeAPIServer),
 		})
 		ensureResourceManagerScaledUp = g.Add(flow.Task{
 			Name:         "Ensuring that the gardener-resource-manager is scaled to 1",
-			Fn:           flow.TaskFn(botanist.ScaleGardenerResourceManagerToOne),
+			Fn:           botanist.ScaleGardenerResourceManagerToOne,
 			SkipIf:       !cleanupShootResources,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
 		keepManagedResourcesObjectsInShoot = g.Add(flow.Task{
 			Name:         "Configuring Managed Resources objects to be kept in the Shoot",
-			Fn:           flow.TaskFn(botanist.KeepObjectsForManagedResources),
+			Fn:           botanist.KeepObjectsForManagedResources,
 			SkipIf:       !cleanupShootResources,
 			Dependencies: flow.NewTaskIDs(ensureResourceManagerScaledUp),
 		})
 		deleteManagedResources = g.Add(flow.Task{
 			Name:         "Deleting all Managed Resources from the Shoot's namespace",
-			Fn:           flow.TaskFn(botanist.DeleteManagedResources),
+			Fn:           botanist.DeleteManagedResources,
 			Dependencies: flow.NewTaskIDs(keepManagedResourcesObjectsInShoot, ensureResourceManagerScaledUp),
 		})
 		waitForManagedResourcesDeletion = g.Add(flow.Task{
@@ -313,7 +313,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		})
 		deleteExtensionsAfterKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deleting extensions after kube-apiserver",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Extension.DestroyAfterKubeAPIServer),
+			Fn:           botanist.Shoot.Components.Extensions.Extension.DestroyAfterKubeAPIServer,
 			Dependencies: flow.NewTaskIDs(waitUntilExtensionsAfterKubeAPIServerMigrated),
 		})
 		waitUntilExtensionsAfterKubeAPIServerDeleted = g.Add(flow.Task{
@@ -382,13 +382,13 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		)
 		destroyDNSRecords = g.Add(flow.Task{
 			Name:         "Deleting DNSRecords from the Shoot namespace",
-			Fn:           flow.TaskFn(botanist.DestroyDNSRecords),
+			Fn:           botanist.DestroyDNSRecords,
 			SkipIf:       !nonTerminatingNamespace,
 			Dependencies: flow.NewTaskIDs(syncPoint, migrateIngressDNSRecord, migrateExternalDNSRecord, migrateInternalDNSRecord),
 		})
 		createETCDSnapshot = g.Add(flow.Task{
 			Name:         "Creating ETCD Snapshot",
-			Fn:           flow.TaskFn(botanist.SnapshotEtcd),
+			Fn:           botanist.SnapshotEtcd,
 			SkipIf:       !etcdSnapshotRequired,
 			Dependencies: flow.NewTaskIDs(syncPoint, waitUntilKubeAPIServerDeleted),
 		})
