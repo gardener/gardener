@@ -6,7 +6,7 @@ ARG EFFECTIVE_VERSION
 RUN make install EFFECTIVE_VERSION=$EFFECTIVE_VERSION
 
 # distroless-static
-FROM gcr.io/distroless/static-debian11:nonroot as distroless-static
+FROM gcr.io/distroless/static-debian12:nonroot as distroless-static
 
 # apiserver
 FROM distroless-static AS apiserver
