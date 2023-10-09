@@ -685,8 +685,8 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 
 		scaleClusterAutoscalerToZero = g.Add(flow.Task{
 			Name:         "Scaling down cluster autoscaler",
-			Fn:           flow.TaskFn(botanist.ScaleClusterAutoscalerToZero).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(o.Shoot.HibernationEnabled),
-			SkipIf:       o.Shoot.IsWorkerless,
+			Fn:           flow.TaskFn(botanist.ScaleClusterAutoscalerToZero).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       o.Shoot.IsWorkerless || !o.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(deployManagedResourcesForAddons, deployManagedResourceForCloudConfigExecutor),
 		})
 		deployMachineControllerManager = g.Add(flow.Task{
@@ -737,8 +737,8 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		})
 		nginxLBReady = g.Add(flow.Task{
 			Name:         "Waiting until nginx ingress LoadBalancer is ready",
-			Fn:           flow.TaskFn(botanist.WaitUntilNginxIngressServiceIsReady).DoIf(v1beta1helper.NginxIngressEnabled(botanist.Shoot.GetInfo().Spec.Addons)),
-			SkipIf:       o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled,
+			Fn:           flow.TaskFn(botanist.WaitUntilNginxIngressServiceIsReady),
+			SkipIf:       o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled || !v1beta1helper.NginxIngressEnabled(botanist.Shoot.GetInfo().Spec.Addons),
 			Dependencies: flow.NewTaskIDs(deployManagedResourcesForAddons, initializeShootClients, waitUntilWorkerReady, ensureShootClusterIdentity),
 		})
 		_ = g.Add(flow.Task{
@@ -783,7 +783,8 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 
 		hibernateControlPlane = g.Add(flow.Task{
 			Name:         "Hibernating control plane",
-			Fn:           flow.TaskFn(botanist.HibernateControlPlane).RetryUntilTimeout(defaultInterval, 2*time.Minute).DoIf(o.Shoot.HibernationEnabled),
+			Fn:           flow.TaskFn(botanist.HibernateControlPlane).RetryUntilTimeout(defaultInterval, 2*time.Minute),
+			SkipIf:       !o.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(initializeShootClients, deploySeedMonitoring, deploySeedLogging, deployClusterAutoscaler, waitUntilWorkerReady, waitUntilExtensionResourcesAfterKAPIReady),
 		})
 
@@ -791,28 +792,32 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		// extensions that are deployed before the kube-apiserver are hibernated after it
 		hibernateExtensionResourcesAfterKAPIHibernation = g.Add(flow.Task{
 			Name:         "Hibernating extension resources after kube-apiserver hibernation",
-			Fn:           flow.TaskFn(botanist.DeployExtensionsBeforeKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(o.Shoot.HibernationEnabled),
+			Fn:           flow.TaskFn(botanist.DeployExtensionsBeforeKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       !o.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(hibernateControlPlane),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until extension resources hibernated after kube-apiserver hibernation are ready",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Extension.WaitBeforeKubeAPIServer).DoIf(o.Shoot.HibernationEnabled),
-			SkipIf:       skipReadiness,
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Extension.WaitBeforeKubeAPIServer),
+			SkipIf:       skipReadiness || !o.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(hibernateExtensionResourcesAfterKAPIHibernation),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying ingress domain DNS record if hibernated",
-			Fn:           flow.TaskFn(botanist.DestroyIngressDNSRecord).DoIf(o.Shoot.HibernationEnabled),
+			Fn:           flow.TaskFn(botanist.DestroyIngressDNSRecord),
+			SkipIf:       !o.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(hibernateControlPlane),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying external domain DNS record if hibernated",
-			Fn:           flow.TaskFn(botanist.DestroyExternalDNSRecord).DoIf(o.Shoot.HibernationEnabled),
+			Fn:           flow.TaskFn(botanist.DestroyExternalDNSRecord),
+			SkipIf:       !o.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(hibernateControlPlane),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying internal domain DNS record if hibernated",
-			Fn:           flow.TaskFn(botanist.DestroyInternalDNSRecord).DoIf(o.Shoot.HibernationEnabled),
+			Fn:           flow.TaskFn(botanist.DestroyInternalDNSRecord),
+			SkipIf:       !o.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(hibernateControlPlane),
 		})
 		deleteStaleExtensionResources = g.Add(flow.Task{
@@ -863,7 +868,8 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 					return err
 				}
 				return removeTaskAnnotation(ctx, o, generation, v1beta1constants.ShootTaskRestartControlPlanePods)
-			}).DoIf(requestControlPlanePodsRestart),
+			}),
+			SkipIf:       !requestControlPlanePodsRestart,
 			Dependencies: flow.NewTaskIDs(deployKubeControllerManager, deployControlPlane, deployControlPlaneExposure),
 		})
 	)
