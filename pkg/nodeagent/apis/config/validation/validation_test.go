@@ -20,7 +20,6 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	componentbaseconfig "k8s.io/component-base/config"
 
 	. "github.com/gardener/gardener/pkg/nodeagent/apis/config"
 	. "github.com/gardener/gardener/pkg/nodeagent/apis/config/validation"
@@ -31,23 +30,12 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 
 	BeforeEach(func() {
 		config = &NodeAgentConfiguration{
-			ClientConnection:                componentbaseconfig.ClientConnectionConfiguration{Kubeconfig: "path/to/kubeconfig"},
 			KubernetesVersion:               semver.MustParse("v1.27.0"),
 			HyperkubeImage:                  "registry.com/hyperkube:v1.27.0",
 			Image:                           "registry.com/node-agent:v1.73.0",
 			OperatingSystemConfigSecretName: "osc-secret",
 			AccessTokenSecretName:           "token-secret",
 		}
-	})
-
-	It("should fail because clientConnection.kubeconfig config is not specified", func() {
-		config.ClientConnection.Kubeconfig = ""
-		Expect(ValidateNodeAgentConfiguration(config)).To(ConsistOf(
-			PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("clientConnection.kubeconfig"),
-			})),
-		))
 	})
 
 	It("should pass because all necessary fields is specified", func() {

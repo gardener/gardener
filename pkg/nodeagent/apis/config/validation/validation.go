@@ -25,10 +25,6 @@ import (
 func ValidateNodeAgentConfiguration(conf *config.NodeAgentConfiguration) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if conf.ClientConnection.Kubeconfig == "" {
-		allErrs = append(allErrs, field.Required(field.NewPath("clientConnection").Child("kubeconfig"), "must provide a path to a kubeconfig"))
-	}
-
 	if conf.HyperkubeImage == "" {
 		allErrs = append(allErrs, field.Required(field.NewPath("hyperkubeImage"), "must provide a hyperkube image"))
 	}
