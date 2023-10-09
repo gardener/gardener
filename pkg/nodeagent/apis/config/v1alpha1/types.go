@@ -21,37 +21,34 @@ import (
 )
 
 const (
-	// NodeAgentBaseDir is the directory on the worker node that contains gardener-node-agent
-	// relevant files.
-	NodeAgentBaseDir = "/var/lib/gardener-node-agent"
-	// NodeAgentConfigPath is the file path on the worker node that contains the configuration
+	// BaseDir is the directory on the worker node that contains gardener-node-agent relevant files.
+	BaseDir = "/var/lib/gardener-node-agent"
+
+	// CredentialsDir is the directory on the worker node that contains credentials for the gardener-node-agent.
+	CredentialsDir = BaseDir + "/credentials"
+	// BootstrapTokenFilePath is the file path on the worker node that contains the bootstrap token for the node.
+	BootstrapTokenFilePath = CredentialsDir + "/bootstrap-token"
+	// TokenFilePath is the file path on the worker node that contains the access token of the gardener-node-agent.
+	TokenFilePath = CredentialsDir + "/token"
+
+	// ConfigPath is the file path on the worker node that contains the configuration
 	// of the gardener-node-agent.
-	NodeAgentConfigPath = NodeAgentBaseDir + "/configuration.yaml"
-	// NodeAgentInitScriptPath is the file path on the worker node that contains the init script
+	ConfigPath = BaseDir + "/config.yaml"
+	// InitScriptPath is the file path on the worker node that contains the init script
 	// of the gardener-node-agent.
-	NodeAgentInitScriptPath = NodeAgentBaseDir + "/gardener-node-init.sh"
+	InitScriptPath = BaseDir + "/gardener-node-init.sh"
 
 	// NodeInitUnitName is the name of the gardener-node-init systemd service.
 	NodeInitUnitName = "gardener-node-init.service"
-	// NodeAgentUnitName is the name of the gardener-node-agent systemd service.
-	NodeAgentUnitName = "gardener-node-agent.service"
+	// UnitName is the name of the gardener-node-agent systemd service.
+	UnitName = "gardener-node-agent.service"
 
-	// NodeAgentOSCSecretKey is the key inside the gardener-node-agent osc secret to access
+	// OSCSecretKey is the key inside the gardener-node-agent osc secret to access
 	// the encoded osc.
-	NodeAgentOSCSecretKey = "gardener-node-agent"
-	// NodeAgentOSCOldConfigPath is the file path on the worker node that contains the
+	OSCSecretKey = "gardener-node-agent"
+	// OSCOldConfigPath is the file path on the worker node that contains the
 	// previous content of the osc
-	NodeAgentOSCOldConfigPath = NodeAgentBaseDir + "/previous-osc.yaml"
-
-	// NodeAgentTokenFilePath is the file path on the worker node that contains the shoot access
-	// token of the gardener-node-agent.
-	NodeAgentTokenFilePath = NodeAgentBaseDir + "/token"
-	// NodeAgentTokenSecretName is the name of the secret that contains the shoot access
-	// token of the gardener-node-agent.
-	NodeAgentTokenSecretName = "gardener-node-agent"
-	// NodeAgentTokenSecretKey is the key inside the gardener-node-agent token secret to access
-	// the token.
-	NodeAgentTokenSecretKey = "token"
+	OSCOldConfigPath = BaseDir + "/previous-osc.yaml"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
