@@ -1,8 +1,9 @@
-# Debian versions of golang images must be in sync with these images to avoid problems with different `glibc` versions:
-# - https://github.com/gardener/ci-infra/blob/master/images/golang-test/variants.yaml
-# - https://github.com/gardener/ci-infra/blob/master/images/krte/Dockerfile
+# Debian versions of golang images should be `bookworm`.
+# The Kubernetes upstream `krte` images uses the same version and we should keep this in sync.
+# - https://github.com/kubernetes/test-infra/blob/master/images/krte/Dockerfile
+# - https://github.com/gardener/ci-infra/blob/master/images/krte
 variants:
   "1.20":
-    image: golang:1.20.8-bookworm
+    image: golang:1.20.9-bookworm
   "1.21":
-    image: golang:1.21.1-bookworm
+    image: golang:1.21.2-bookworm
