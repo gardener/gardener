@@ -15,8 +15,12 @@
 package shootstate
 
 import (
+	"bytes"
 	"cmp"
+	"compress/gzip"
 	"context"
+	"encoding/json"
+	"fmt"
 	"slices"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -143,4 +147,59 @@ func getMachineSetToMachinesMap(ctx context.Context, seedClient client.Client, n
 	})
 
 	return gardenerutils.BuildOwnerToMachinesMap(filteredMachines), nil
+}
+
+type compressedMachineState struct {
+	State []byte `json:"state"`
+}
+
+func compressMachineState(state []byte) ([]byte, error) {
+	if len(state) == 0 || string(state) == "{}" {
+		return nil, nil
+	}
+
+	var stateCompressed bytes.Buffer
+	gzipWriter, err := gzip.NewWriterLevel(&stateCompressed, gzip.BestCompression)
+	if err != nil {
+		return nil, fmt.Errorf("failed creating gzip writer for compressing machine state data: %w", err)
+	}
+	defer gzipWriter.Close()
+
+	if _, err := gzipWriter.Write(state); err != nil {
+		return nil, fmt.Errorf("failed writing machine state data for compression: %w", err)
+	}
+
+	// Close ensures any unwritten data is flushed and the gzip footer is written. Without this, the `stateCompressed`
+	// buffer would not contain any data. Hence, we have to call it explicitly here after writing, in addition to the
+	// 'defer' call above.
+	if err := gzipWriter.Close(); err != nil {
+		return nil, fmt.Errorf("failed closing the gzip writer after compressing the machine state data: %w", err)
+	}
+
+	return json.Marshal(&compressedMachineState{State: stateCompressed.Bytes()})
+}
+
+// DecompressMachineState decompresses the machine state data.
+func DecompressMachineState(stateCompressed []byte) ([]byte, error) {
+	if len(stateCompressed) == 0 {
+		return nil, nil
+	}
+
+	var machineState compressedMachineState
+	if err := json.Unmarshal(stateCompressed, &machineState); err != nil {
+		return nil, fmt.Errorf("failed unmarshalling JSON to compressed machine state structure: %w", err)
+	}
+
+	gzipReader, err := gzip.NewReader(bytes.NewReader(machineState.State))
+	if err != nil {
+		return nil, fmt.Errorf("failed creating gzip reader for decompressing machine state data: %w", err)
+	}
+	defer gzipReader.Close()
+
+	var state bytes.Buffer
+	if _, err := state.ReadFrom(gzipReader); err != nil {
+		return nil, fmt.Errorf("failed reading machine state data for decompression: %w", err)
+	}
+
+	return state.Bytes(), nil
 }

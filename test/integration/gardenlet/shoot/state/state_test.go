@@ -21,7 +21,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -41,7 +40,7 @@ var _ = Describe("Shoot State controller tests", func() {
 
 		lastOperation *gardencorev1beta1.LastOperation
 
-		emptyMachineState = gardencorev1beta1.GardenerResourceData{Name: "machine-state", Type: "machine-state", Data: runtime.RawExtension{Raw: []byte("{}")}}
+		emptyMachineState = gardencorev1beta1.GardenerResourceData{Name: "machine-state", Type: "machine-state"}
 	)
 
 	BeforeEach(func() {

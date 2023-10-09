@@ -138,7 +138,11 @@ func addStateToMachineDeployment(
 	gardenerData := v1beta1helper.GardenerResourceDataList(shootState.Spec.Gardener)
 	if machineState := gardenerData.Get(v1beta1constants.DataTypeMachineState); machineState != nil && machineState.Type == v1beta1constants.DataTypeMachineState {
 		log.Info("Fetching machine state from ShootState succeeded", "shootState", client.ObjectKeyFromObject(shootState))
-		state = machineState.Data.Raw
+		var err error
+		state, err = shootstate.DecompressMachineState(machineState.Data.Raw)
+		if err != nil {
+			return err
+		}
 	} else {
 		// TODO(rfranzke): Drop this code after Gardener v1.86 has been released.
 		log.Info("Fetching machine state from ShootState not possible since the machine state was not found, falling back to Worker's .status.state field", "shootState", client.ObjectKeyFromObject(shootState))

@@ -36,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 )
 
 const (
@@ -275,11 +276,15 @@ func (w *worker) Restore(ctx context.Context, shootState *gardencorev1beta1.Shoo
 	)
 
 	if machineState := gardenerData.Get(v1beta1constants.DataTypeMachineState); machineState != nil && machineState.Type == v1beta1constants.DataTypeMachineState {
+		machineStateDecompressed, err := shootstate.DecompressMachineState(machineState.Data.Raw)
+		if err != nil {
+			return err
+		}
 		extensionsData := v1beta1helper.ExtensionResourceStateList(shootStateCopy.Spec.Extensions)
 		extensionsData.Upsert(&gardencorev1beta1.ExtensionResourceState{
 			Kind:  extensionsv1alpha1.WorkerResource,
 			Name:  &w.worker.Name,
-			State: &machineState.Data,
+			State: &runtime.RawExtension{Raw: machineStateDecompressed},
 		})
 		shootStateCopy.Spec.Extensions = extensionsData
 	}

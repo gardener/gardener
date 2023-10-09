@@ -15,6 +15,8 @@
 package genericactuator
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 
@@ -31,6 +33,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 )
 
@@ -60,7 +63,8 @@ var _ = Describe("ActuatorRestore", func() {
 				"deploy1": stateDeployment1,
 				"deploy2": stateDeployment2,
 			}}
-			machineStateRaw []byte
+			machineStateRaw        []byte
+			machineStateCompressed []byte
 		)
 
 		BeforeEach(func() {
@@ -79,6 +83,14 @@ var _ = Describe("ActuatorRestore", func() {
 			machineStateRaw, err = json.Marshal(machineState)
 			Expect(err).NotTo(HaveOccurred())
 
+			var buffer bytes.Buffer
+			gzipWriter, err := gzip.NewWriterLevel(&buffer, gzip.BestCompression)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = gzipWriter.Write(machineStateRaw)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(gzipWriter.Close()).To(Succeed())
+			machineStateCompressed = []byte(`{"state":"` + utils.EncodeBase64(buffer.Bytes()) + `"}`)
+
 			Expect(fakeGardenClient.Create(ctx, shootState)).To(Succeed())
 		})
 
@@ -96,7 +108,7 @@ var _ = Describe("ActuatorRestore", func() {
 				Gardener: []gardencorev1beta1.GardenerResourceData{{
 					Name: "machine-state",
 					Type: "machine-state",
-					Data: runtime.RawExtension{Raw: machineStateRaw},
+					Data: runtime.RawExtension{Raw: machineStateCompressed},
 				}},
 			}
 			Expect(fakeGardenClient.Patch(ctx, shootState, patch)).To(Succeed())
