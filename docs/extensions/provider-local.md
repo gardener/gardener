@@ -24,7 +24,7 @@ Please note that all of them are not technical limitations/blockers, but simply 
 
 2. No load balancers for Shoot clusters.
 
-   _We have not yet developed a `cloud-controller-manager` which could reconcile load balancer `Service`s in the shoot cluster.
+   _We have not yet developed a `cloud-controller-manager` which could reconcile load balancer `Service`s in the shoot cluster._
 
 3. In case a seed cluster with multiple availability zones, i.e. multiple entries in `.spec.provider.zones`, is used in conjunction with a single-zone shoot control plane, i.e. a shoot cluster without `.spec.controlPlane.highAvailability` or with `.spec.controlPlane.highAvailability.failureTolerance.type` set to `node`, the local address of the API server endpoint needs to be determined manually or via the in-cluster `coredns`.
 
@@ -141,7 +141,7 @@ It makes important LoadBalancer Services (e.g. `istio-ingress/istio-ingressgatew
 In case the seed has multiple availability zones (`.spec.provider.zones`) and it uses SNI, the different zone-specific `istio-ingressgateway` loadbalancers are exposed via different IP addresses. Per default, IP addresses `127.0.0.10`, `127.0.0.11`, and `127.0.0.12` are used for the zones `0`, `1`, and `2` respectively.
 
 #### ETCD Backups
-This controller reconciles the `BackuBucket` and `BackupEntry` of the shoot allowing the `etcd-backup-restore` to create and copy backups using the `local` provider functionality. The backups are stored on the host file system. This is achieved by mounting that directory to the `etcd-backup-restore` container.
+This controller reconciles the `BackupBucket` and `BackupEntry` of the shoot allowing the `etcd-backup-restore` to create and copy backups using the `local` provider functionality. The backups are stored on the host file system. This is achieved by mounting that directory to the `etcd-backup-restore` container.
 
 #### Extension Seed
 This controller reconciles `Extensions` of type `local-ext-seed`. It creates a single `serviceaccount` named `local-ext-seed` in the shoot's namespace in the seed. The extension is reconciled before the `kube-apiserver`. More on extension lifecycle strategies can be read in [Registering Extension Controllers](controllerregistration.md#extension-lifecycle).
