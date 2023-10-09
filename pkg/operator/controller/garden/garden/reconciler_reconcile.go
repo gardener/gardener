@@ -137,7 +137,7 @@ func (r *Reconciler) reconcile(
 		})
 		deployVPACRD = g.Add(flow.Task{
 			Name:   "Deploying custom resource definitions for VPA",
-			Fn:     flow.TaskFn(c.vpaCRD.Deploy),
+			Fn:     c.vpaCRD.Deploy,
 			SkipIf: !vpaEnabled(garden.Spec.RuntimeCluster.Settings),
 		})
 		reconcileHVPACRD = g.Add(flow.Task{
