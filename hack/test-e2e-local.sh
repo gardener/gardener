@@ -29,6 +29,9 @@ ginkgo_flags=
 if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
   mkdir -p "$ARTIFACTS"
   ginkgo_flags="--output-dir=$ARTIFACTS --junit-report=junit.xml"
+  if [ "${JOB_TYPE:-}" != "periodic" ]; then
+    ginkgo_flags+=" --fail-fast"
+  fi
 fi
 
 # If we are not running the gardener-operator tests then we have to make the shoot domains accessible.
