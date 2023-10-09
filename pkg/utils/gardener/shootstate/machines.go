@@ -163,11 +163,15 @@ func compressMachineState(state []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed creating gzip writer for compressing machine state data: %w", err)
 	}
+	defer gzipWriter.Close()
 
 	if _, err := gzipWriter.Write(state); err != nil {
 		return nil, fmt.Errorf("failed writing machine state data for compression: %w", err)
 	}
 
+	// Close ensures any unwritten data is flushed and the gzip footer is written. Without this, the `stateCompressed`
+	// buffer would not contain any data. Hence, we have to call it explicitly here after writing, in addition to the
+	// 'defer' call above.
 	if err := gzipWriter.Close(); err != nil {
 		return nil, fmt.Errorf("failed closing the gzip writer after compressing the machine state data: %w", err)
 	}
@@ -190,14 +194,11 @@ func DecompressMachineState(stateCompressed []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed creating gzip reader for decompressing machine state data: %w", err)
 	}
+	defer gzipReader.Close()
 
 	var state bytes.Buffer
 	if _, err := state.ReadFrom(gzipReader); err != nil {
 		return nil, fmt.Errorf("failed reading machine state data for decompression: %w", err)
-	}
-
-	if err := gzipReader.Close(); err != nil {
-		return nil, fmt.Errorf("failed closing the gzip reader after decompressing the machine state data: %w", err)
 	}
 
 	return state.Bytes(), nil
