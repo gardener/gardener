@@ -24,6 +24,17 @@ Along with the init script, a configuration for the `gardener-node-agent` is car
 
 In a bootstrapping phase, the `gardener-node-agent` sets itself up as a systemd service. It also executes tasks that need to be executed before any other components are installed, e.g. formatting the data device for the `kubelet`.
 
+## Controllers
+
+This section describes the controllers in more details.
+
+### [Token Controller](../../pkg/nodeagent/controller/token)
+
+This controller watches the access token `Secret` in the `kube-system` namespace whose name is provided via the `gardener-node-agent`'s component configuration (`.accessTokenSecret` field).
+Whenever the `.data.token` field changes, it writes the new content to the `/var/lib/gardener-node-agent/credentials/token` file on the host file system.
+Since the underlying client is based on `k8s.io/client-go` and the kubeconfig points to this token file, it is dynamically reloaded without further doing.
+This procedure ensures that the most up-to-date token is always present on the host and used by the `gardener-node-agent`.
+
 ## Reasoning
 
 The `gardener-node-agent` is a replacement for what was called the `cloud-config-downloader` and the `cloud-config-executor`, both written in `bash`. The `gardener-node-agent` implements this functionality as a regular controller and feels more uniform in terms of maintenance.
