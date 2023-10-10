@@ -148,13 +148,6 @@ func (h *DefaultHealthChecker) Check(ctx context.Context, request types.Namespac
 		}
 	}
 
-	// First check if the MachineDeployments report failed machines. If false then check if the MachineDeployments are
-	// "available". If false then check if there is a regular scale-up happening or if there are machines with an erroneous
-	// phase. Only then check the other MachineDeployment conditions. As last check, check if there is a scale-down happening
-	// (e.g., in case of an rolling-update).
-
-	checkScaleUp := false
-
 	for _, deployment := range machineDeploymentList.Items {
 		for _, failedMachine := range deployment.Status.FailedMachines {
 			err := fmt.Errorf("machine %q failed: %s", failedMachine.Name, failedMachine.LastOperation.Description)
@@ -164,25 +157,6 @@ func (h *DefaultHealthChecker) Check(ctx context.Context, request types.Namespac
 				Detail: err.Error(),
 			}, nil
 		}
-
-		for _, condition := range deployment.Status.Conditions {
-			if condition.Type == machinev1alpha1.MachineDeploymentAvailable && condition.Status != machinev1alpha1.ConditionTrue {
-				checkScaleUp = true
-				break
-			}
-		}
-	}
-
-	if checkScaleUp {
-		// TODO(rfranzke): Remove this flag when the MachineControllerManagerDeployment feature gate is promoted to GA.
-		if status, err := checkNodesScalingUp(machineList, readyNodes, desiredMachines); status != gardencorev1beta1.ConditionTrue {
-			h.logger.Error(err, "Health check failed")
-			return &healthcheck.SingleCheckResult{
-				Status:               status,
-				Detail:               err.Error(),
-				ProgressingThreshold: h.scaleUpProgressingThreshold,
-			}, nil
-		}
 	}
 
 	if isHealthy, err := checkMachineDeploymentsHealthy(machineDeploymentList.Items); !isHealthy {
@@ -190,16 +164,6 @@ func (h *DefaultHealthChecker) Check(ctx context.Context, request types.Namespac
 		return &healthcheck.SingleCheckResult{
 			Status: gardencorev1beta1.ConditionFalse,
 			Detail: err.Error(),
-		}, nil
-	}
-
-	// TODO(rfranzke): Remove this flag when the MachineControllerManagerDeployment feature gate is promoted to GA.
-	if status, err := checkNodesScalingDown(machineList, nodeList, registeredNodes, desiredMachines); status != gardencorev1beta1.ConditionTrue {
-		h.logger.Error(err, "Health check failed")
-		return &healthcheck.SingleCheckResult{
-			Status:               status,
-			Detail:               err.Error(),
-			ProgressingThreshold: h.scaleDownProgressingThreshold,
 		}, nil
 	}
 

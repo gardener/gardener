@@ -26,7 +26,6 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/plutono"
 	"github.com/gardener/gardener/pkg/component/shared"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/common"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -43,7 +42,6 @@ func (b *Botanist) DefaultPlutono() (plutono.Interface, error) {
 		"",
 		b.ComputePlutonoHost(),
 		v1beta1constants.PriorityClassNameShootControlPlane100,
-		features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment),
 		b.ShootUsesDNS(),
 		b.Shoot.IsWorkerless,
 		false,

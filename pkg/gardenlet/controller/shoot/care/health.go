@@ -43,7 +43,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/features"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/operation/botanist"
@@ -581,10 +580,6 @@ func (h *Health) CheckClusterNodes(
 		return &c, nil
 	}
 
-	if !features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment) {
-		return nil, nil
-	}
-
 	machineDeploymentList := &machinev1alpha1.MachineDeploymentList{}
 	if err := h.seedClient.Client().List(ctx, machineDeploymentList, client.InNamespace(h.shoot.SeedNamespace)); err != nil {
 		return nil, err
@@ -765,6 +760,7 @@ func ComputeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot) (set
 
 	if !v1beta1helper.IsWorkerless(shoot) {
 		requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameKubeScheduler)
+		requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameMachineControllerManager)
 
 		shootWantsClusterAutoscaler, err := v1beta1helper.ShootWantsClusterAutoscaler(shoot)
 		if err != nil {
@@ -780,15 +776,6 @@ func ComputeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot) (set
 				requiredControlPlaneDeployments.Insert(vpaDeployment)
 			}
 		}
-
-		if features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment) {
-			requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameMachineControllerManager)
-		}
-
-		// TODO(rfranzke): Uncomment this code once the MachineControllerManagerDeployment feature gate gets removed.
-		// if features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment) {
-		// 	requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameMachineControllerManager)
-		// }
 	}
 
 	return requiredControlPlaneDeployments, nil

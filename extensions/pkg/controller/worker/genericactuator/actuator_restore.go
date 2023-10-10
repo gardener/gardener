@@ -85,7 +85,7 @@ func RestoreWithoutReconcile(
 		return fmt.Errorf("failed to deploy the machine classes: %w", err)
 	}
 
-	if err := kubernetes.WaitUntilDeploymentScaledToDesiredReplicas(ctx, seedClient, kubernetesutils.Key(worker.Namespace, McmDeploymentName), 0); err != nil && !apierrors.IsNotFound(err) {
+	if err := kubernetes.WaitUntilDeploymentScaledToDesiredReplicas(ctx, seedClient, kubernetesutils.Key(worker.Namespace, v1beta1constants.DeploymentNameMachineControllerManager), 0); err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("deadline exceeded while scaling down machine-controller-manager: %w", err)
 	}
 

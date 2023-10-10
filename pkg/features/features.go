@@ -76,16 +76,8 @@ const (
 	// owner: @rfranzke @JensAc @mreiger
 	// alpha: v1.73.0
 	// beta: v1.81.0
+	// GA: v1.82.0
 	MachineControllerManagerDeployment featuregate.Feature = "MachineControllerManagerDeployment"
-
-	// DisableScalingClassesForShoots disables assigning a ScalingClass to Shoots based on their maximum Node count
-	// All Shoot kube-apiservers will get the same initial resource requests for CPU and memory instead of making this
-	// depend on the ScalingClass
-	// owner: @voelzmo, @andrerun
-	// alpha: v1.73.0
-	// beta: v1.79.0
-	// GA: v1.81.0
-	DisableScalingClassesForShoots featuregate.Feature = "DisableScalingClassesForShoots"
 
 	// ContainerdRegistryHostsDir enables registry configuration in containerd based on the hosts directory pattern.
 	// The hosts directory pattern is the new way of configuring registries/mirrors in containerd.
@@ -136,8 +128,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	MutableShootSpecNetworkingNodes:    {Default: false, PreRelease: featuregate.Alpha},
 	WorkerlessShoots:                   {Default: true, PreRelease: featuregate.Beta},
 	ShootForceDeletion:                 {Default: false, PreRelease: featuregate.Alpha},
-	MachineControllerManagerDeployment: {Default: true, PreRelease: featuregate.Beta},
-	DisableScalingClassesForShoots:     {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
+	MachineControllerManagerDeployment: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	ContainerdRegistryHostsDir:         {Default: false, PreRelease: featuregate.Alpha},
 }
 

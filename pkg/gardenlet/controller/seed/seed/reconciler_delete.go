@@ -53,7 +53,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/vpa"
 	"github.com/gardener/gardener/pkg/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -228,7 +227,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 		})
 		destroyMachineControllerManager = g.Add(flow.Task{
 			Name: "Destroying machine-controller-manager resources",
-			Fn:   flow.TaskFn(component.OpDestroyAndWait(machineControllerManager).Destroy).DoIf(features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment)),
+			Fn:   component.OpDestroyAndWait(machineControllerManager).Destroy,
 		})
 		destroyNginxIngress = g.Add(flow.Task{
 			Name: "Destroying nginx-ingress",

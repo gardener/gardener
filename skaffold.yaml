@@ -556,7 +556,6 @@ build:
         - extensions/pkg/controller/dnsrecord
         - extensions/pkg/controller/extension
         - extensions/pkg/controller/healthcheck
-        - extensions/pkg/controller/healthcheck/general
         - extensions/pkg/controller/healthcheck/worker
         - extensions/pkg/controller/heartbeat
         - extensions/pkg/controller/heartbeat/cmd

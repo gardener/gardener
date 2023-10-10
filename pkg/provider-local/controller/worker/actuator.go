@@ -40,10 +40,6 @@ import (
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
 	"github.com/gardener/gardener/pkg/provider-local/apis/local/helper"
-	localimagevector "github.com/gardener/gardener/pkg/provider-local/imagevector"
-	"github.com/gardener/gardener/pkg/provider-local/local"
-	"github.com/gardener/gardener/pkg/utils/chart"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 type delegateFactory struct {
@@ -60,49 +56,19 @@ type actuator struct {
 }
 
 // NewActuator creates a new Actuator that updates the status of the handled WorkerPoolConfigs.
-func NewActuator(mgr manager.Manager, gardenCluster cluster.Cluster, gardenletManagesMCM bool) (worker.Actuator, error) {
-	var (
-		mcmName              string
-		mcmChartSeed         *chart.Chart
-		mcmChartShoot        *chart.Chart
-		imageVector          imagevector.ImageVector
-		chartRendererFactory extensionscontroller.ChartRendererFactory
-		workerDelegate       = &delegateFactory{
-			gardenReader: gardenCluster.GetAPIReader(),
-			seedClient:   mgr.GetClient(),
-			decoder:      serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder(),
-			restConfig:   mgr.GetConfig(),
-			scheme:       mgr.GetScheme(),
-		}
-	)
-
-	if !gardenletManagesMCM {
-		mcmName = local.MachineControllerManagerName
-		mcmChartSeed = mcmChart
-		mcmChartShoot = mcmShootChart
-		imageVector = localimagevector.ImageVector()
-		chartRendererFactory = extensionscontroller.ChartRendererFactoryFunc(util.NewChartRendererForShoot)
-	}
-
-	genericactuator, err := genericactuator.NewActuator(
-		mgr,
-		gardenCluster,
-		workerDelegate,
-		mcmName,
-		mcmChartSeed,
-		mcmChartShoot,
-		imageVector,
-		chartRendererFactory,
-		nil,
-	)
-	if err != nil {
-		return nil, err
+func NewActuator(mgr manager.Manager, gardenCluster cluster.Cluster) worker.Actuator {
+	workerDelegate := &delegateFactory{
+		gardenReader: gardenCluster.GetAPIReader(),
+		seedClient:   mgr.GetClient(),
+		decoder:      serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder(),
+		restConfig:   mgr.GetConfig(),
+		scheme:       mgr.GetScheme(),
 	}
 
 	return &actuator{
-		Actuator:       genericactuator,
+		Actuator:       genericactuator.NewActuator(mgr, gardenCluster, workerDelegate, nil),
 		workerDelegate: workerDelegate,
-	}, nil
+	}
 }
 
 func (a *actuator) Restore(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {

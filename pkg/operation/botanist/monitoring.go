@@ -24,7 +24,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/monitoring"
-	"github.com/gardener/gardener/pkg/features"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -59,7 +58,6 @@ func (b *Botanist) DefaultMonitoring() (monitoring.Interface, error) {
 		APIServerDomain:              gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 		APIServerHost:                b.SeedClientSet.RESTConfig().Host,
 		Config:                       b.Config.Monitoring,
-		GardenletManagesMCM:          features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment),
 		GlobalShootRemoteWriteSecret: b.LoadSecret(v1beta1constants.GardenRoleGlobalShootRemoteWriteMonitoring),
 		IgnoreAlerts:                 b.Shoot.IgnoreAlerts,
 		ImageAlertmanager:            imageAlertmanager.String(),
@@ -139,13 +137,14 @@ func (b *Botanist) getMonitoringComponents() []component.MonitoringComponent {
 
 	if !b.Shoot.IsWorkerless {
 		monitoringComponents = append(monitoringComponents,
-			b.Shoot.Components.SystemComponents.BlackboxExporter,
 			b.Shoot.Components.ControlPlane.KubeScheduler,
+			b.Shoot.Components.ControlPlane.MachineControllerManager,
+			b.Shoot.Components.ControlPlane.VPNSeedServer,
+			b.Shoot.Components.SystemComponents.BlackboxExporter,
 			b.Shoot.Components.SystemComponents.CoreDNS,
 			b.Shoot.Components.SystemComponents.KubeProxy,
 			b.Shoot.Components.SystemComponents.NodeExporter,
 			b.Shoot.Components.SystemComponents.VPNShoot,
-			b.Shoot.Components.ControlPlane.VPNSeedServer,
 		)
 
 		if b.ShootUsesDNS() {
@@ -158,10 +157,6 @@ func (b *Botanist) getMonitoringComponents() []component.MonitoringComponent {
 
 		if b.Shoot.WantsClusterAutoscaler {
 			monitoringComponents = append(monitoringComponents, b.Shoot.Components.ControlPlane.ClusterAutoscaler)
-		}
-
-		if features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment) {
-			monitoringComponents = append(monitoringComponents, b.Shoot.Components.ControlPlane.MachineControllerManager)
 		}
 	}
 

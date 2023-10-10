@@ -30,75 +30,36 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/healthcheck"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	extensionsworkerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/chart"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 type genericActuator struct {
-	delegateFactory DelegateFactory
-	mcmManaged      bool
-	mcmName         string
-	mcmSeedChart    chart.Interface
-	mcmShootChart   chart.Interface
-	imageVector     imagevector.ImageVector
-
-	gardenReader         client.Reader
-	seedClient           client.Client
-	seedReader           client.Reader
-	scheme               *runtime.Scheme
-	gardenerClientset    kubernetesclient.Interface
-	chartApplier         kubernetesclient.ChartApplier
-	chartRendererFactory extensionscontroller.ChartRendererFactory
-	errorCodeCheckFunc   healthcheck.ErrorCodeCheckFunc
+	delegateFactory    DelegateFactory
+	gardenReader       client.Reader
+	seedClient         client.Client
+	seedReader         client.Reader
+	scheme             *runtime.Scheme
+	errorCodeCheckFunc healthcheck.ErrorCodeCheckFunc
 }
 
 // NewActuator creates a new Actuator that reconciles
 // Worker resources of Gardener's `extensions.gardener.cloud` API group.
 // It provides a default implementation that allows easier integration of providers.
 // If machine-controller-manager should not be managed then only the delegateFactory must be provided.
-func NewActuator(
-	mgr manager.Manager,
-	gardenCluster cluster.Cluster,
-	delegateFactory DelegateFactory,
-	mcmName string,
-	mcmSeedChart,
-	mcmShootChart chart.Interface,
-	imageVector imagevector.ImageVector,
-	chartRendererFactory extensionscontroller.ChartRendererFactory,
-	errorCodeCheckFunc healthcheck.ErrorCodeCheckFunc,
-) (
-	worker.Actuator,
-	error,
-) {
-	gardenerClientset, err := kubernetesclient.NewWithConfig(kubernetesclient.WithRESTConfig(mgr.GetConfig()))
-	if err != nil {
-		return nil, err
-	}
-
+func NewActuator(mgr manager.Manager, gardenCluster cluster.Cluster, delegateFactory DelegateFactory, errorCodeCheckFunc healthcheck.ErrorCodeCheckFunc) worker.Actuator {
 	return &genericActuator{
-		delegateFactory:      delegateFactory,
-		mcmManaged:           mcmName != "" && mcmSeedChart != nil && mcmShootChart != nil && imageVector != nil && chartRendererFactory != nil,
-		mcmName:              mcmName,
-		mcmSeedChart:         mcmSeedChart,
-		mcmShootChart:        mcmShootChart,
-		imageVector:          imageVector,
-		gardenReader:         gardenCluster.GetAPIReader(),
-		seedClient:           mgr.GetClient(),
-		seedReader:           mgr.GetAPIReader(),
-		scheme:               mgr.GetScheme(),
-		gardenerClientset:    gardenerClientset,
-		chartApplier:         gardenerClientset.ChartApplier(),
-		chartRendererFactory: chartRendererFactory,
-		errorCodeCheckFunc:   errorCodeCheckFunc,
-	}, nil
+		delegateFactory:    delegateFactory,
+		gardenReader:       gardenCluster.GetAPIReader(),
+		seedClient:         mgr.GetClient(),
+		seedReader:         mgr.GetAPIReader(),
+		scheme:             mgr.GetScheme(),
+		errorCodeCheckFunc: errorCodeCheckFunc,
+	}
 }
 
 func (a *genericActuator) cleanupMachineDeployments(ctx context.Context, logger logr.Logger, existingMachineDeployments *machinev1alpha1.MachineDeploymentList, wantedMachineDeployments worker.MachineDeployments) error {

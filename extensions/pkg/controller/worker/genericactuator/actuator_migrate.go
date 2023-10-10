@@ -16,35 +16,17 @@ package genericactuator
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/go-logr/logr"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 // Migrate ensures that the MCM is deleted in case it is managed.
 func (a *genericActuator) Migrate(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, _ *controller.Cluster) error {
 	log = log.WithValues("operation", "migrate")
 
-	// Keep objects for shoot managed resources so that they are not deleted from the shoot during the migration
-	if err := managedresources.SetKeepObjects(ctx, a.seedClient, worker.Namespace, McmShootResourceName, true); err != nil {
-		return fmt.Errorf("could not keep objects of managed resource containing mcm chart for worker '%s': %w", kubernetesutils.ObjectName(worker), err)
-	}
-
-	// Make sure machine-controller-manager is deleted before deleting the machines.
-	if err := a.deleteMachineControllerManager(ctx, log, worker); err != nil {
-		return fmt.Errorf("failed deleting machine-controller-manager: %w", err)
-	}
-
-	if a.mcmManaged {
-		if err := a.waitUntilMachineControllerManagerIsDeleted(ctx, log, worker.Namespace); err != nil {
-			return fmt.Errorf("failed deleting machine-controller-manager: %w", err)
-		}
-	}
-
-	return nil
+	// Cleanup legacy machine-controller-manager resources.
+	return a.cleanupLegacyMachineControllerManagerResources(ctx, log, worker)
 }

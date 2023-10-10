@@ -23,14 +23,17 @@ import (
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	extensionsworkercontroller "github.com/gardener/gardener/extensions/pkg/controller/worker"
 	extensionsworkerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
@@ -59,29 +62,8 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 		return err
 	}
 
-	// mcmReplicaFunc returns the desired replicas for machine controller manager
-	var mcmReplicaFunc = func() int32 {
-		switch {
-		// if there are any existing machine deployments present with a positive replica count then MCM is needed.
-		case isExistingMachineDeploymentWithPositiveReplicaCountPresent(existingMachineDeployments):
-			return 1
-		// If the cluster is hibernated then there is no further need of MCM and therefore its desired replicas is 0
-		case extensionscontroller.IsHibernated(cluster):
-			return 0
-		// If the cluster is created with hibernation enabled, then desired replicas for MCM is 0
-		case extensionscontroller.IsHibernationEnabled(cluster) && extensionscontroller.IsCreationInProcess(cluster):
-			return 0
-		// If shoot is either waking up or in the process of hibernation then, MCM is required and therefore its desired replicas is 1
-		case extensionscontroller.IsHibernatingOrWakingUp(cluster):
-			return 1
-		// If the shoot is awake then MCM should be available and therefore its desired replicas is 1
-		default:
-			return 1
-		}
-	}
-
-	// Deploy the machine-controller-manager into the cluster.
-	if err := a.deployMachineControllerManager(ctx, log, worker, cluster, workerDelegate, mcmReplicaFunc); err != nil {
+	// Cleanup legacy machine-controller-manager resources.
+	if err := a.cleanupLegacyMachineControllerManagerResources(ctx, log, worker); err != nil {
 		return err
 	}
 
@@ -174,8 +156,11 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 		return fmt.Errorf("failed to cleanup the orphaned machine class secrets: %w", err)
 	}
 
-	replicas := mcmReplicaFunc()
-	if replicas > 0 {
+	deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameMachineControllerManager, Namespace: worker.Namespace}}
+	if err := a.seedClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment); client.IgnoreNotFound(err) != nil {
+		return fmt.Errorf("failed reading deployment %s: %w", client.ObjectKeyFromObject(deployment), err)
+	}
+	if pointer.Int32Deref(deployment.Spec.Replicas, 0) > 0 {
 		// Wait until all unwanted machine deployments are deleted from the system.
 		if err := a.waitUntilUnwantedMachineDeploymentsDeleted(ctx, log, worker, wantedMachineDeployments); err != nil {
 			return fmt.Errorf("error while waiting for all undesired machine deployments to be deleted: %w", err)
@@ -503,15 +488,6 @@ func getExistingMachineDeployment(existingMachineDeployments *machinev1alpha1.Ma
 		}
 	}
 	return nil
-}
-
-func isExistingMachineDeploymentWithPositiveReplicaCountPresent(existingMachineDeployments *machinev1alpha1.MachineDeploymentList) bool {
-	for _, machineDeployment := range existingMachineDeployments.Items {
-		if machineDeployment.Status.Replicas > 0 {
-			return true
-		}
-	}
-	return false
 }
 
 // ReadMachineConfiguration reads the configuration from worker-pool and returns the corresponding configuration of machine-deployment.
