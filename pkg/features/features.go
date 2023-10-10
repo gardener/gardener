@@ -99,6 +99,12 @@ const (
 	// owner: @oliver-goetz
 	// beta: v1.82.0
 	APIServerFastRollout featuregate.Feature = "APIServerFastRollout"
+
+	// UseGardenerNodeAgent enables the `gardener-node-agent` instead of the `cloud-config-downloader` for shoot worker
+	// nodes.
+	// owner: @rfranzke @oliver-goetz
+	// alpha: v1.82.0
+	UseGardenerNodeAgent featuregate.Feature = "UseGardenerNodeAgent"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -137,6 +143,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	MachineControllerManagerDeployment: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	ContainerdRegistryHostsDir:         {Default: false, PreRelease: featuregate.Alpha},
 	APIServerFastRollout:               {Default: true, PreRelease: featuregate.Beta},
+	UseGardenerNodeAgent:               {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
