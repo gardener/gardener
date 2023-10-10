@@ -32,7 +32,7 @@ This section describes the controllers in more details.
 
 This controller watches the access token `Secret` in the `kube-system` namespace whose name is provided via the `gardener-node-agent`'s component configuration (`.accessTokenSecret` field).
 Whenever the `.data.token` field changes, it writes the new content to the `/var/lib/gardener-node-agent/credentials/token` file on the host file system.
-Since the underlying client is based on `k8s.io/client-go` and the kubeconfig points to this token file, it is dynamically reloaded without further doing.
+Since the underlying client is based on `k8s.io/client-go` and the kubeconfig points to this token file, it is dynamically reloaded without the necessity of explicit configuration or code changes.
 This procedure ensures that the most up-to-date token is always present on the host and used by the `gardener-node-agent`.
 
 ## Reasoning

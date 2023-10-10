@@ -57,7 +57,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	token := secret.Data[resourcesv1alpha1.DataKeyToken]
 	if len(token) == 0 {
-		return reconcile.Result{}, fmt.Errorf("secret key %q does not exist or empty", resourcesv1alpha1.DataKeyToken)
+		return reconcile.Result{}, fmt.Errorf("secret key %q does not exist or is empty", resourcesv1alpha1.DataKeyToken)
 	}
 
 	currentToken, err := afero.ReadFile(r.FS, nodeagentv1alpha1.TokenFilePath)

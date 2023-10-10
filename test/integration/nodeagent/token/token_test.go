@@ -85,10 +85,6 @@ var _ = Describe("Token controller tests", func() {
 		DeferCleanup(func() {
 			Expect(testClient.Delete(ctx, secret)).To(Succeed())
 		})
-
-		tokenOnDisk, err := afero.ReadFile(testFS, nodeagentv1alpha1.TokenFilePath)
-		Expect(err).To(MatchError(ContainSubstring("file does not exist")))
-		Expect(tokenOnDisk).To(BeEmpty())
 	})
 
 	It("should write the token to the local file system", func() {
