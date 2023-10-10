@@ -134,53 +134,10 @@ func (e *ensurer) EnsureAdditionalFiles(_ context.Context, _ extensionscontextwe
 	return nil
 }
 
-// TODO(ialidzhikov): Drop the containerd-configuration-local-setup.service unit in 1.81.
-// It is preserved only for graceful migration purposes. Currently it is a no-op unit that only sleeps 1s.
-
-const unitNameInitializer = "containerd-configuration-local-setup.service"
-
-func (e *ensurer) EnsureAdditionalUnits(_ context.Context, _ extensionscontextwebhook.GardenContext, new, _ *[]extensionsv1alpha1.Unit) error {
-	unit := extensionsv1alpha1.Unit{
-		Name:    unitNameInitializer,
-		Command: pointer.String("start"),
-		Enable:  pointer.Bool(true),
-		Content: pointer.String(`[Unit]
-Description=Containerd config configuration for local-setup
-
-[Install]
-WantedBy=multi-user.target
-
-[Unit]
-After=containerd-initializer.service
-Requires=containerd-initializer.service
-
-[Service]
-Type=oneshot
-RemainAfterExit=no
-ExecStart=sleep 1s`)}
-
-	appendUniqueUnit(new, unit)
-
-	return nil
-}
-
 func appendFileIfNotPresent(files *[]extensionsv1alpha1.File, file extensionsv1alpha1.File) {
 	if !containsFilePath(files, file.Path) {
 		*files = append(*files, file)
 	}
-}
-
-// appendUniqueUnit appends a unit only if it does not exist, otherwise overwrite content of previous unit
-func appendUniqueUnit(units *[]extensionsv1alpha1.Unit, unit extensionsv1alpha1.Unit) {
-	resFiles := make([]extensionsv1alpha1.Unit, 0, len(*units))
-
-	for _, f := range *units {
-		if f.Name != unit.Name {
-			resFiles = append(resFiles, f)
-		}
-	}
-
-	*units = append(resFiles, unit)
 }
 
 func containsFilePath(files *[]extensionsv1alpha1.File, filePath string) bool {
