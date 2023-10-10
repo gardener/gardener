@@ -55,13 +55,19 @@ func (b *Botanist) InitializeSecretsManagement(ctx context.Context) error {
 		}
 	}
 
-	return flow.Sequential(
+	taskFns := []flow.TaskFn{
 		b.generateCertificateAuthorities,
-		flow.TaskFn(b.generateSSHKeypair).DoIf(v1beta1helper.ShootEnablesSSHAccess(b.Shoot.GetInfo())),
-		flow.TaskFn(b.deleteSSHKeypair).SkipIf(v1beta1helper.ShootEnablesSSHAccess(b.Shoot.GetInfo())),
 		b.generateGenericTokenKubeconfig,
 		b.reconcileWildcardIngressCertificate,
-	)(ctx)
+	}
+
+	if v1beta1helper.ShootEnablesSSHAccess(b.Shoot.GetInfo()) {
+		taskFns = append(taskFns, b.generateSSHKeypair)
+	} else {
+		taskFns = append(taskFns, b.deleteSSHKeypair)
+	}
+
+	return flow.Sequential(taskFns...)(ctx)
 }
 
 func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {

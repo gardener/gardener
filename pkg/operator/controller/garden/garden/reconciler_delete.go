@@ -243,12 +243,14 @@ func (r *Reconciler) delete(
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for VPA",
-			Fn:           flow.TaskFn(c.vpaCRD.Destroy).DoIf(vpaEnabled(garden.Spec.RuntimeCluster.Settings)),
+			Fn:           c.vpaCRD.Destroy,
+			SkipIf:       !vpaEnabled(garden.Spec.RuntimeCluster.Settings),
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for HVPA",
-			Fn:           flow.TaskFn(c.hvpaCRD.Destroy).DoIf(hvpaEnabled()),
+			Fn:           c.hvpaCRD.Destroy,
+			SkipIf:       !hvpaEnabled(),
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{

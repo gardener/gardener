@@ -472,7 +472,8 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 				// remove operation annotation from seed after successful operation
 				return removeSeedOperationAnnotation(ctx, r.GardenClient, seed)
-			}).DoIf(seed.GetInfo().Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.SeedOperationRenewGardenAccessSecrets),
+			}),
+			SkipIf: seed.GetInfo().Annotations[v1beta1constants.GardenerOperation] != v1beta1constants.SeedOperationRenewGardenAccessSecrets,
 		})
 
 		_ = g.Add(flow.Task{
@@ -484,7 +485,8 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 				// remove operation annotation from seed after successful operation
 				return removeSeedOperationAnnotation(ctx, r.GardenClient, seed)
-			}).DoIf(seed.GetInfo().Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRenewKubeconfig),
+			}),
+			SkipIf: seed.GetInfo().Annotations[v1beta1constants.GardenerOperation] != v1beta1constants.GardenerOperationRenewKubeconfig,
 		})
 	)
 
