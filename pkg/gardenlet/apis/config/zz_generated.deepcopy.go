@@ -73,6 +73,11 @@ func (in *BackupCompactionController) DeepCopyInto(out *BackupCompactionControll
 		*out = new(v1.Duration)
 		**out = **in
 	}
+	if in.MetricsScrapeWaitDuration != nil {
+		in, out := &in.MetricsScrapeWaitDuration, &out.MetricsScrapeWaitDuration
+		*out = new(v1.Duration)
+		**out = **in
+	}
 	return
 }
 

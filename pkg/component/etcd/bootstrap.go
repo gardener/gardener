@@ -397,6 +397,10 @@ func getDruidDeployCommands(etcdConfig *config.ETCDConfig) []string {
 		"--etcd-events-threshold=" + strconv.FormatInt(*etcdConfig.BackupCompactionController.EventsThreshold, 10),
 	}
 
+	if etcdConfig.BackupCompactionController.MetricsScrapeWaitDuration != nil {
+		command = append(command, "--metrics-scrape-wait-duration="+etcdConfig.BackupCompactionController.MetricsScrapeWaitDuration.Duration.String())
+	}
+
 	if etcdConfig.BackupCompactionController.ActiveDeadlineDuration != nil {
 		command = append(command, "--active-deadline-duration="+etcdConfig.BackupCompactionController.ActiveDeadlineDuration.Duration.String())
 	}

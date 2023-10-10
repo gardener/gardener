@@ -521,6 +521,7 @@ func autoConvert_v1alpha1_BackupCompactionController_To_config_BackupCompactionC
 	out.EnableBackupCompaction = (*bool)(unsafe.Pointer(in.EnableBackupCompaction))
 	out.EventsThreshold = (*int64)(unsafe.Pointer(in.EventsThreshold))
 	out.ActiveDeadlineDuration = (*v1.Duration)(unsafe.Pointer(in.ActiveDeadlineDuration))
+	out.MetricsScrapeWaitDuration = (*v1.Duration)(unsafe.Pointer(in.MetricsScrapeWaitDuration))
 	return nil
 }
 
@@ -534,6 +535,7 @@ func autoConvert_config_BackupCompactionController_To_v1alpha1_BackupCompactionC
 	out.EnableBackupCompaction = (*bool)(unsafe.Pointer(in.EnableBackupCompaction))
 	out.EventsThreshold = (*int64)(unsafe.Pointer(in.EventsThreshold))
 	out.ActiveDeadlineDuration = (*v1.Duration)(unsafe.Pointer(in.ActiveDeadlineDuration))
+	out.MetricsScrapeWaitDuration = (*v1.Duration)(unsafe.Pointer(in.MetricsScrapeWaitDuration))
 	return nil
 }
 

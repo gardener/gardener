@@ -44,6 +44,7 @@ controllers:
         enableBackupCompaction: false
         eventsThreshold: 1000000
         activeDeadlineDuration: "3h"
+        metricsScrapeWaitDuration: "60s"
     # featureGates:
     #   UseEtcdWrapper: true
   gardenCare:
