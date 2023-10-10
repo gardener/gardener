@@ -177,9 +177,9 @@ kind create cluster \
 # adjust Kind's CRI default OCI runtime spec for new containers to include the cgroup namespace
 # this is required for nesting kubelets on cgroupsv2, as the kindest-node entrypoint script assumes an existing cgroupns when the host kernel uses cgroupsv2
 # See containerd CRI: https://github.com/containerd/containerd/commit/687469d3cee18bf0e12defa5c6d0c7b9139a2dbd
-if [ -f "/sys/fs/cgroup/cgroup.controllers" ]; then
+if [ -f "/sys/fs/cgroup/cgroup.controllers" ] || [ "$(uname -s)" == "Darwin" ]; then
     echo "Host uses cgroupsv2"
-    cat << 'EOF' > adjust_cri_base.sh
+    cat << 'EOF' > "$(dirname "$0")/../dev/adjust_cri_base.sh"
 #!/bin/bash
 if [ -f /etc/containerd/cri-base.json ]; then
   key=$(cat /etc/containerd/cri-base.json | jq '.linux.namespaces | map(select(.type == "cgroup"))[0]')
@@ -201,7 +201,7 @@ EOF
         echo "Adjusting containerd config for kind node $node_name"
 
         # copy script to the kind's docker container and execute it
-        docker cp adjust_cri_base.sh "$node_name":/etc/containerd/adjust_cri_base.sh
+        docker cp "$(dirname "$0")/../dev/adjust_cri_base.sh" "$node_name":/etc/containerd/adjust_cri_base.sh
         docker exec "$node_name" bash -c "chmod +x /etc/containerd/adjust_cri_base.sh && /etc/containerd/adjust_cri_base.sh && systemctl restart containerd"
     done
 fi
