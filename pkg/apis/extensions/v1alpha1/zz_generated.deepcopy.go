@@ -1468,6 +1468,20 @@ func (in *OperatingSystemConfigSpec) DeepCopy() *OperatingSystemConfigSpec {
 func (in *OperatingSystemConfigStatus) DeepCopyInto(out *OperatingSystemConfigStatus) {
 	*out = *in
 	in.DefaultStatus.DeepCopyInto(&out.DefaultStatus)
+	if in.AdditionalUnits != nil {
+		in, out := &in.AdditionalUnits, &out.AdditionalUnits
+		*out = make([]Unit, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.AdditionalFiles != nil {
+		in, out := &in.AdditionalFiles, &out.AdditionalFiles
+		*out = make([]File, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.CloudConfig != nil {
 		in, out := &in.CloudConfig, &out.CloudConfig
 		*out = new(CloudConfig)
