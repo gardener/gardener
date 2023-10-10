@@ -82,7 +82,7 @@ type ReversedVPNValues struct {
 	Endpoint string
 	// OpenVPNPort is the port for the ReversedVPN.
 	OpenVPNPort int32
-	// IPFamilies are the IPFamilies of the shoot
+	// IPFamilies are the IPFamilies of the shoot.
 	IPFamilies []gardencorev1beta1.IPFamily
 }
 

@@ -709,7 +709,6 @@ status: {}
 				Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"], deployment)).To(Succeed())
 				Expect(deployment).To(DeepEqual(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuth, values.VPAEnabled)))
 			})
-
 		})
 
 		Context("VPNShoot with ReversedVPN enabled", func() {
