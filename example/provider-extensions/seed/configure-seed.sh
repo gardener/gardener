@@ -104,6 +104,7 @@ ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlpl
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/infrastructure-secrets.yaml
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/secretbindings.yaml
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml.tmpl
+ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/project.yaml
 
 echo "Check if essential config options are initialized"
 check-not-initial "$seed_kubeconfig" ""
