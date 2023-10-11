@@ -59,7 +59,7 @@ const (
 )
 
 // CertificateSecretConfig contains the specification a to-be-generated CA, server, or client certificate.
-// It always contains a 2048-bit RSA private key.
+// It always contains a 3072-bit RSA private key.
 type CertificateSecretConfig struct {
 	Name string
 
@@ -116,7 +116,7 @@ func (s *CertificateSecretConfig) GenerateCertificate() (*Certificate, error) {
 
 	// If no cert type is given then we only return a certificate object that contains the CA.
 	if s.CertType != "" {
-		privateKey, err := GenerateKey(rand.Reader, 2048)
+		privateKey, err := GenerateKey(rand.Reader, 3072)
 		if err != nil {
 			return nil, err
 		}
