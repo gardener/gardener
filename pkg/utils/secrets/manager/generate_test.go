@@ -721,7 +721,7 @@ var _ = Describe("Generate", func() {
 			BeforeEach(func() {
 				config = &secretsutils.RSASecretConfig{
 					Name: name,
-					Bits: 2048,
+					Bits: 3072,
 				}
 			})
 
