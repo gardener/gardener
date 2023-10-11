@@ -19,13 +19,27 @@ set -e
 namespace="garden-local"
 shoot_name="local"
 
-if [[ -n $1 ]] ; then
-    namespace=$1
-fi
+parse_flags() {
+  while test $# -gt 0; do
+    case "$1" in
+      --namespace)
+        shift
+        namespace="${1:-$namespace}"
+        ;;
+      --shoot-name)
+        shift
+        shoot_name="${1:-$shoot_name}"
+        ;;
+      *)
+        echo "Unknown argument: $1"
+        exit 1
+        ;;
+    esac
+    shift
+  done
+}
 
-if [[ -n $2 ]] ; then
-    shoot_name=$2
-fi
+parse_flags "$@"
 
 cat << EOF | kubectl create --raw /apis/core.gardener.cloud/v1beta1/namespaces/"${namespace}"/shoots/"${shoot_name}"/adminkubeconfig -f - | jq -r '.status.kubeconfig' | base64 -d
 {
