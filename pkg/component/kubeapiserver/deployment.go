@@ -138,11 +138,16 @@ func (k *kubeAPIServer) reconcileDeployment(
 	secretAuthenticationWebhookKubeconfig *corev1.Secret,
 	secretAuthorizationWebhookKubeconfig *corev1.Secret,
 	tlsSNISecrets []tlsSNISecret,
+	fastRollout bool,
 ) error {
 	var (
 		maxSurge       = intstr.FromString("25%")
 		maxUnavailable = intstr.FromInt32(0)
 	)
+
+	if fastRollout {
+		maxSurge = intstr.FromString("100%")
+	}
 
 	var healthCheckToken string
 	if secretStaticToken != nil {

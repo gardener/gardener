@@ -1788,6 +1788,30 @@ rules:
 				}))
 			})
 
+			It("should have the expected deployment settings when rolling out fast", func() {
+				var (
+					intStr100Percent = intstr.FromString("100%")
+					intStrZero       = intstr.FromInt32(0)
+				)
+
+				kapi = New(kubernetesInterface, namespace, sm, Values{
+					Values: apiserver.Values{
+						RuntimeVersion: runtimeVersion,
+					},
+					FastRollout: true,
+					Version:     version,
+				})
+				deployAndRead()
+
+				Expect(deployment.Spec.Strategy).To(Equal(appsv1.DeploymentStrategy{
+					Type: appsv1.RollingUpdateDeploymentStrategyType,
+					RollingUpdate: &appsv1.RollingUpdateDeployment{
+						MaxSurge:       &intStr100Percent,
+						MaxUnavailable: &intStrZero,
+					},
+				}))
+			})
+
 			Context("expected pod template labels", func() {
 				var defaultLabels map[string]string
 
