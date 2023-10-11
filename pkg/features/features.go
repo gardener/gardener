@@ -93,6 +93,12 @@ const (
 	// owner: @ialidzhikov, @dimitar-kostadinov
 	// alpha: v1.77.0
 	ContainerdRegistryHostsDir featuregate.Feature = "ContainerdRegistryHostsDir"
+
+	// APIServerFastRollout enables fast rollouts for Shoot kube-apiservers on the given Seed.
+	// When enabled, maxSurge for Shoot kube-apiserver deployments is set to 100%.
+	// owner: @oliver-goetz
+	// beta: v1.82.0
+	APIServerFastRollout featuregate.Feature = "APIServerFastRollout"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -130,6 +136,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	ShootForceDeletion:                 {Default: false, PreRelease: featuregate.Alpha},
 	MachineControllerManagerDeployment: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	ContainerdRegistryHostsDir:         {Default: false, PreRelease: featuregate.Alpha},
+	APIServerFastRollout:               {Default: true, PreRelease: featuregate.Beta},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
