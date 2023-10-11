@@ -12,7 +12,7 @@ spec:
       automountServiceAccountToken: false
       containers:
       - name: registry
-        image: eu.gcr.io/gardener-project/3rd/registry:2.8.1
+        image: eu.gcr.io/gardener-project/3rd/registry:2.8.3
         imagePullPolicy: IfNotPresent
         ports:
         - name: registry
