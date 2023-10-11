@@ -729,7 +729,7 @@ var _ = Describe("Generate", func() {
 				By("Generate new secret")
 				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(secret.Name).To(Equal(name + "-16163da7"))
+				Expect(secret.Name).To(Equal(name + "-c34363f0"))
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
 				By("Find created bundle secret")
@@ -755,7 +755,7 @@ var _ = Describe("Generate", func() {
 				By("Generate new secret")
 				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(secret.Name).To(Equal(name + "-fc4f9932"))
+				Expect(secret.Name).To(Equal(name + "-c0d53d4a"))
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
 				By("Verify internal store reflects changes")
