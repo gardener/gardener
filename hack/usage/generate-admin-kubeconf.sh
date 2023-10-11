@@ -24,9 +24,15 @@ if [[ -n $1 ]] ; then
 fi
 
 if [[ -n $2 ]] ; then
-    shoot_name=$1
+    shoot_name=$2
 fi
 
-kubectl create \
-    -f "$(dirname "${0}")"/kubeconfig-request.json \
-    --raw /apis/core.gardener.cloud/v1beta1/namespaces/"${namespace}"/shoots/"${shoot_name}"/adminkubeconfig | jq -r ".status.kubeconfig" | base64 -d
+cat << EOF | kubectl create --raw /apis/core.gardener.cloud/v1beta1/namespaces/"${namespace}"/shoots/"${shoot_name}"/adminkubeconfig -f - | jq -r '.status.kubeconfig' | base64 -d
+{
+    "apiVersion": "authentication.gardener.cloud/v1alpha1",
+    "kind": "AdminKubeconfigRequest",
+    "spec": {
+        "expirationSeconds": 3600
+    }
+}
+EOF
