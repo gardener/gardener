@@ -1,4 +1,4 @@
-apiVersion: skaffold/v4beta3
+apiVersion: skaffold/v4beta7
 kind: Config
 metadata:
   name: gardener-operator

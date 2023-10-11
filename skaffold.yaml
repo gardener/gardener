@@ -1,4 +1,4 @@
-apiVersion: skaffold/v4beta3
+apiVersion: skaffold/v4beta7
 kind: Config
 metadata:
   name: etcd
@@ -11,7 +11,7 @@ manifests:
 deploy:
   kubectl: {}
 ---
-apiVersion: skaffold/v4beta3
+apiVersion: skaffold/v4beta7
 kind: Config
 metadata:
   name: controlplane
@@ -533,7 +533,7 @@ profiles:
       global.scheduler.config.leaderElection.leaderElect: false
       global.scheduler.config.server.healthProbes.enable: false
 ---
-apiVersion: skaffold/v4beta3
+apiVersion: skaffold/v4beta7
 kind: Config
 metadata:
   name: provider-local
@@ -720,7 +720,7 @@ profiles:
       - example/provider-local/garden/skaffold
       - example/provider-local/seed-kind-ha-multi-zone/skaffold
 ---
-apiVersion: skaffold/v4beta3
+apiVersion: skaffold/v4beta7
 kind: Config
 metadata:
   name: kind2-env
@@ -735,7 +735,7 @@ profiles:
   deploy:
     kubectl: {}
 ---
-apiVersion: skaffold/v4beta3
+apiVersion: skaffold/v4beta7
 kind: Config
 metadata:
   name: extensions-env
@@ -750,7 +750,7 @@ profiles:
   deploy:
     kubectl: {}
 ---
-apiVersion: skaffold/v4beta3
+apiVersion: skaffold/v4beta7
 kind: Config
 metadata:
   name: kind2-ha-single-zone-env
@@ -763,7 +763,7 @@ profiles:
   deploy:
     kubectl: {}
 ---
-apiVersion: skaffold/v4beta3
+apiVersion: skaffold/v4beta7
 kind: Config
 metadata:
   name: gardenlet
