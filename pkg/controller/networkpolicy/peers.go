@@ -34,6 +34,17 @@ func allPrivateNetworkBlocksV4() []net.IPNet {
 	}
 }
 
+// allPrivateNetworkBlocksV6 returns a list of all private reserved IPv6 network blocks.
+// See https://en.wikipedia.org/wiki/Reserved_IP_addresses#IPv6.
+func allPrivateNetworkBlocksV6() []net.IPNet {
+	return []net.IPNet{
+		// fe80::/10 (Link Local)
+		{IP: net.IP{0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, Mask: net.CIDRMask(10, 128)},
+		// fc00::/7 (Unique Local (ULA))
+		{IP: net.IP{0xfc, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, Mask: net.CIDRMask(7, 128)},
+	}
+}
+
 // toCIDRStrings takes a list of net.IPNet and returns their CIDR representations in a string slice.
 func toCIDRStrings(networks ...net.IPNet) []string {
 	var out []string
@@ -71,7 +82,7 @@ func networkPolicyPeersWithExceptions(networks []string, except ...string) ([]ne
 	var ipNets []net.IPNet
 
 	for _, n := range networks {
-		_, net, err := net.ParseCIDR(string(n))
+		_, net, err := net.ParseCIDR(n)
 		if err != nil {
 			return nil, err
 		}

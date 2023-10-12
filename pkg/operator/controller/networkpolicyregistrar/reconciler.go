@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
@@ -57,6 +58,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		ConcurrentSyncs:              r.Config.ConcurrentSyncs,
 		AdditionalNamespaceSelectors: r.Config.AdditionalNamespaceSelectors,
 		RuntimeNetworks: networkpolicy.RuntimeNetworkConfig{
+			// gardener-operator only supports IPv4 single-stack networking in the runtime cluster for now.
+			IPFamilies: []gardencore.IPFamily{gardencore.IPFamilyIPv4},
 			Nodes:      garden.Spec.RuntimeCluster.Networking.Nodes,
 			Pods:       garden.Spec.RuntimeCluster.Networking.Pods,
 			Services:   garden.Spec.RuntimeCluster.Networking.Services,
