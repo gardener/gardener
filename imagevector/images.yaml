@@ -634,7 +634,7 @@ images:
 - name: ext-authz-server
   sourceRepository: github.com/gardener/ext-authz-server
   repository: eu.gcr.io/gardener-project/gardener/ext-authz-server
-  tag: "0.8.0"
+  tag: "0.9.0"
 
 # API Server SNI
 - name: apiserver-proxy
