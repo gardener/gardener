@@ -18,21 +18,32 @@ set -e
 
 echo "> Check Skaffold Dependencies"
 
-REPO_ROOT="$(git rev-parse --show-toplevel)"
+check_successful=true
+repo_root="$(git rev-parse --show-toplevel)"
+
+function check() {
+  if ! $repo_root/hack/check-skaffold-deps-for-binary.sh --skaffold-file $1 --binary $2 --skaffold-config $3; then
+    check_successful=false
+  fi
+}
 
 # skaffold.yaml
-$REPO_ROOT/hack/check-skaffold-deps-for-binary.sh --skaffold-file "skaffold.yaml" --binary "gardener-admission-controller"     --skaffold-config "controlplane"
-$REPO_ROOT/hack/check-skaffold-deps-for-binary.sh --skaffold-file "skaffold.yaml" --binary "gardener-apiserver"                --skaffold-config "controlplane"
-$REPO_ROOT/hack/check-skaffold-deps-for-binary.sh --skaffold-file "skaffold.yaml" --binary "gardener-controller-manager"       --skaffold-config "controlplane"
-$REPO_ROOT/hack/check-skaffold-deps-for-binary.sh --skaffold-file "skaffold.yaml" --binary "gardener-extension-provider-local" --skaffold-config "provider-local"
-$REPO_ROOT/hack/check-skaffold-deps-for-binary.sh --skaffold-file "skaffold.yaml" --binary "gardener-resource-manager"         --skaffold-config "gardenlet"
-$REPO_ROOT/hack/check-skaffold-deps-for-binary.sh --skaffold-file "skaffold.yaml" --binary "gardener-scheduler"                --skaffold-config "controlplane"
-$REPO_ROOT/hack/check-skaffold-deps-for-binary.sh --skaffold-file "skaffold.yaml" --binary "gardenlet"                         --skaffold-config "gardenlet"
+check "skaffold.yaml" "gardener-admission-controller"      "controlplane"
+check "skaffold.yaml" "gardener-apiserver"                 "controlplane"
+check "skaffold.yaml" "gardener-controller-manager"        "controlplane"
+check "skaffold.yaml" "gardener-extension-provider-local"  "provider-local"
+check "skaffold.yaml" "gardener-resource-manager"          "gardenlet"
+check "skaffold.yaml" "gardener-scheduler"                 "controlplane"
+check "skaffold.yaml" "gardenlet"                          "gardenlet"
 
 # skaffold-operator.yaml
-$REPO_ROOT/hack/check-skaffold-deps-for-binary.sh --skaffold-file "skaffold-operator.yaml" --binary "gardener-operator"             --skaffold-config "gardener-operator"
-$REPO_ROOT/hack/check-skaffold-deps-for-binary.sh --skaffold-file "skaffold-operator.yaml" --binary "gardener-resource-manager"     --skaffold-config "gardener-operator"
-$REPO_ROOT/hack/check-skaffold-deps-for-binary.sh --skaffold-file "skaffold-operator.yaml" --binary "gardener-admission-controller" --skaffold-config "gardener-operator"
-$REPO_ROOT/hack/check-skaffold-deps-for-binary.sh --skaffold-file "skaffold-operator.yaml" --binary "gardener-apiserver"            --skaffold-config "gardener-operator"
-$REPO_ROOT/hack/check-skaffold-deps-for-binary.sh --skaffold-file "skaffold-operator.yaml" --binary "gardener-controller-manager"   --skaffold-config "gardener-operator"
-$REPO_ROOT/hack/check-skaffold-deps-for-binary.sh --skaffold-file "skaffold-operator.yaml" --binary "gardener-scheduler"            --skaffold-config "gardener-operator"
+check "skaffold-operator.yaml" "gardener-operator"             "gardener-operator"
+check "skaffold-operator.yaml" "gardener-resource-manager"     "gardener-operator"
+check "skaffold-operator.yaml" "gardener-admission-controller" "gardener-operator"
+check "skaffold-operator.yaml" "gardener-apiserver"            "gardener-operator"
+check "skaffold-operator.yaml" "gardener-controller-manager"   "gardener-operator"
+check "skaffold-operator.yaml" "gardener-scheduler"            "gardener-operator"
+
+if [ "$check_successful" = false ] ; then
+  exit 1
+fi

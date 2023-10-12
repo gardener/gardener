@@ -16,9 +16,9 @@
 
 set -e
 
-skaffold_file="$1"
-binary_name="$2"
-skaffold_config_name="$3"
+skaffold_file=""
+binary_name=""
+skaffold_config_name=""
 
 parse_flags() {
   while test $# -gt 0; do
