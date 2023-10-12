@@ -33,26 +33,32 @@ reviewers:
     - [1.1 Remove Minimum/Maximum Static Computation](#11-remove-minimummaximum-static-computation)
     - [2. Node Group Auto Discovery](#2-node-group-auto-discovery)
     - [3. Dynamic Node Group Sizing.](#3-dynamic-node-group-sizing)
-    - [3.1 Lax-Greedy Sizing](#31-lax-greedy-sizing)
+    - [3.1  Adaptive Sizing](#31--adaptive-sizing)
       - [Pros/Cons](#proscons)
       - [Examples](#examples)
-        - [Pool-3:4:2:2:3 (min:max:maxsurge:maxunavail:numzones)](#pool-34223-minmaxmaxsurgemaxunavailnumzones)
+        - [(Good) Pool-3:4:2:2:3 (min:max:maxsurge:maxunavail:numzones)](#good-pool-34223-minmaxmaxsurgemaxunavailnumzones)
           - [Scan-0](#scan-0)
           - [Scan-1](#scan-1)
           - [Scan-2](#scan-2)
           - [Scan-3](#scan-3)
-    - [3.2 Backward-Compatible](#32-backward-compatible)
-      - [Pros/Cons](#proscons-1)
-      - [Examples](#examples-1)
-        - [Pool-3:4:2:2:3 (min:max:maxsurge:maxunavail:numzones)](#pool-34223-minmaxmaxsurgemaxunavailnumzones-1)
+        - [(Backoff) Pool-3:4:2:2:3 (min:max:maxsurge:maxunavail:numzones)](#backoff-pool-34223-minmaxmaxsurgemaxunavailnumzones)
           - [Scan-0](#scan-0-1)
           - [Scan-1](#scan-1-1)
           - [Scan-2](#scan-2-1)
-          - [Pool-0:2:1:1:2 (min:max:maxsurge:maxunavail:numzones)](#pool-02112-minmaxmaxsurgemaxunavailnumzones)
+          - [Scan-3](#scan-3-1)
+          - [Scan-4](#scan-4)
+    - [3.2 Backward-Compatible](#32-backward-compatible)
+      - [Pros/Cons](#proscons-1)
+      - [Examples](#examples-1)
+        - [Pool-3:4:2:2:3 (min:max:maxsurge:maxunavail:numzones)](#pool-34223-minmaxmaxsurgemaxunavailnumzones)
           - [Scan-0](#scan-0-2)
           - [Scan-1](#scan-1-2)
-    - [4. Shoot Spec Enhancement](#4-shoot-spec-enhancement)
-    - [TODO](#todo)
+          - [Scan-2](#scan-2-2)
+          - [Pool-0:2:1:1:2 (min:max:maxsurge:maxunavail:numzones)](#pool-02112-minmaxmaxsurgemaxunavailnumzones)
+          - [Scan-0](#scan-0-3)
+          - [Scan-1](#scan-1-3)
+    - [4. Change behaviour of MaxSurge and MaxUnavailable.](#4-change-behaviour-of-maxsurge-and-maxunavailable)
+    - [5. Shoot Spec Enhancement](#5-shoot-spec-enhancement)
 
 ## Summary
 
@@ -213,56 +219,118 @@ The CA carries out scale-down and scale-up operations within a `NodeGroup` respe
 The CA runs a reconcile loop every `scanPeriod` interval (default: `10s`). At the beginning of the reconcile loop, the CA invokes `CloudProvider.Refresh()` to permit the cloud provider implementation to update its cache and then issues a call to `CloudProvider.NodeGroups()` to retrieve the latest `[]NodeGroup`.  The MCM CloudProvider implements this by interrogating the machine deployments.
 Each `NodeGroup` continues to be associated with its corresponding `MachineDeployment` for the zone.
 
-We will offer 2 strategies for node-group sizing: *Lax Greedy Sizing* and *Equitable Sizing*
+We will offer 2 strategies for node-group sizing: *Adaptive Sizing* and *Backward Compatible*
 
-### 3.1 Lax-Greedy Sizing
-1. If this strategy is selected, then for each `NodeGroup` the `NodeGroup.MaxSize()` is initially returned as the `MachineDeployment.Spec.PoolMaximum` and the `NodeGroup.MinSize()` is given as the `0` if there are no nodes provisioned for the shoot cluster.
-1. The CA will execute scale-up/scale-down activities for the node groups if needed. If a NodeGroup does not have quota it will back-off and try another NodeGroup.
-1. For the next scan, we compute `NodeGroup.MaxSize()` as follows
-     1. `NodeGroup.MaxSize() = PoolMaximum-CountOfAllNodesMaterializedInOtherNodeGroups)`
+### 3.1  Adaptive Sizing
+1. If this strategy is selected, then initially for each `NodeGroup`:
+   1. `NodeGroup.MaxSize() = MachineDeployment.Spec.PoolMaximum`
+   1. `NodeGroup.MinSize() = DistributeOverZones(zoneIndex,machineDeployment.Spec.PoolMinimum,numZones)`. Effectively, we distribute the pool minimum across node groups.
+2. The CA will execute scale-up/scale-down activities for the node groups if needed. If there are errors scaling up a NodeGroup, CA will mark these for back-off and try another NodeGroup. 
+3. Let us say that we could not scale-up some NodeGroups. Let us call the sum of the minimums assigned to these _bad_ NodeGroups marked by the CA for backoff as `badMinSum`. Let us call the number of good NodeGroups as `goodCount`. The index of a good NodeGroup will be `goodIndex`. 
+4. We will adjust `NodeGroup.MinSize` and `NodeGroup.MaxSize()` for the next scan as follows:
+   1. compute `maxDecrement=CountOfAllNodesAssignedToOtherNodeGroups`
+   1. compute `minIncrement=DistributeOverZones(goodIndex, badMinSum, goodCount)`
+   1. `NodeGroup.MaxSize() = PoolMaximum - maxDecrement`
+   1. `NodeGroup.MinSize() = 0` if in backoff, otherwise
+      1. `NodeGroup.MinSize() =` `initialNodeGroupMinSize + minIncrement` 
+   1. As can be seen, the sum of minimums assigned to backed-off NodeGroups is distributed as `minIncrement` to the minimum of other NodeGroups. The count of all nodes assigned to other node groups becomes the `maxDecrement` for a specific node group.
 
 
 #### Pros/Cons
 1. Pro: This strategy has the primary advantage that workload can be provisioned within the zone for the NodeGroup. It can be considered as work-load friendly
-2. Pro: It can handle back-off well. If nodes can't be provisioned in one node group, the other node group can take up the slack.
-3. Con: All instances may stay in one availability zone even if multiple are configured. While this may be advantageous short-term, it may impact availability if the zone goes down.
-4. Con: We need to add support for scale from zero for extended/ephmeral resources. We have [Gardener CA #132](https://github.com/gardener/autoscaler/issues/132) for this.
+1. Pro: It can handle back-off well. If nodes can't be provisioned in one node group, the other node group can take up the slack. We increase the max
+1. Con: All instances may stay in one availability zone even if multiple are configured. While this may be advantageous short-term, it may impact availability if the zone goes down. However, it is expected that users ensure that their workload have topology spread constraints set.
+1. Con: We need to add support for scale from zero for extended/ephmeral resources. We have [Gardener CA #132](https://github.com/gardener/autoscaler/issues/132) for this.
 
-#### Examples
+#### Examples 
 
-##### Pool-3:4:2:2:3 (min:max:maxsurge:maxunavail:numzones)
+We will take a good case (no NodeGroups backoff), followed by a bad case (NodeGroups backoff)
 
-* PoolMax:4
+##### (Good) Pool-3:4:2:2:3 (min:max:maxsurge:maxunavail:numzones)
+
+* PoolMin:3, PoolMax:4
+* Initial Min for a NG: `DistributeOverZones(zoneIndex,poolMinSize,numZones)`
+* Initial Max for NG: `PoolMax`
 
 ###### Scan-0
 ```
-NG-0: Min:0, Max:4, Launched: 0
-NG-1: Min:0, Max:4, Launched: 0
-NG-2: Min:0, Max:4, Launched: 0
+NG0: Min:1, Max:4, Assigned: 0
+NG1: Min:1, Max:4, Assigned: 0
+NG2: Min:1, Max:4, Assigned: 0
 ```
 
 ###### Scan-1
 
 ```
-NG-0: Min:0, Max:4, Launched: 1
-NG-1: Min:0, Max:3, Launched: 0
-NG-2: Min:0, Max:3, Launched: 0
+NG0: Min:1, Max:4, Assigned: 1
+NG1: Min:1, Max:3, Assigned: 0 (decrementMax:1)
+NG2: Min:1, Max:3, Assigned: 0 (decrementMax:1)
 ```
 
 ###### Scan-2
 
 ```
-NG-0: Min:0, Max:3, Launched: 2
-NG-1: Min:0, Max:2, Launched: 1
-NG-2: Min:0, Max:1, Launched: 0
+NG0: Min:1, Max:3, Assigned: 2 (decrementMax:1)
+NG1: Min:1, Max:2, Assigned: 1 (decrementMax:2)
+NG2: Min:1, Max:1, Assigned: 0
 ```
 
 ###### Scan-3
 
 ```
-NG-0: Min:0, Max:2, Launched: 2
-NG-1: Min:0, Max:1, Launched: 1
-NG-2: Min:0, Max:1, Launched: 1
+NG0: Min:1, Max:2, Assigned: 2 (decrementMax:2)
+NG1: Min:1, Max:1, Assigned: 1 (decrementMax:3)
+NG2: Min:1, Max:1, Assigned: 1 (decrementMax:3)
+```
+
+##### (Backoff) Pool-3:4:2:2:3 (min:max:maxsurge:maxunavail:numzones)
+
+* PoolMin:3, PoolMax:4
+* Initial Min for a NG: `DistributeOverZones(zoneIndex,poolMinSize,numZones)`
+* Initial Max for NG: `PoolMax`
+
+###### Scan-0
+
+```
+NG0: Min:1, Max:4, Assigned: 0
+NG1: Min:1, Max:4, Assigned: 0
+NG2: Min:1, Max:4, Assigned: 0
+```
+
+###### Scan-1
+
+goodZoneCount: 2, badMinSum: 1
+```
+NG0: Min:0, Max:3, Assigned: 0 (backoff)
+NG1: Min:2, Max:4, Assigned: 1 (goodIndex:0, incrementMin:1)
+NG2: Min:1, Max:3, Assigned: 0 (goodIndex:1, decrementMax:1)
+```
+
+###### Scan-2
+
+goodZoneCount: 2, badMinSum: 1
+```
+NG0: Min:0, Max:2, Assigned: 0 (backoff)
+NG1: Min:2, Max:4, Assigned: 2 (goodIndex:0,incrementMin:1)
+NG2: Min:1, Max:2, Assigned: 0 (goodIndex:1,decrementMax:2)
+```
+
+###### Scan-3
+
+goodZoneCount: 2, badMinSum: 1
+```
+NG0: Min:0, Max:1, Assigned: 0 (backoff)
+NG1: Min:2, Max:3, Assigned: 2 (goodIndex:0,incrementMin:1,decrementMax:1)
+NG2: Min:1, Max:2, Assigned: 1 (goodIndex:1,decrementMax:2)
+```
+
+###### Scan-4
+
+goodZoneCount: 2, badMinSum: 1
+```
+NG0: Min:0, Max:0, Assigned: 0 (backoff)
+NG1: Min:1, Max:2, Assigned: 2 (goodIndex:0,incrementMin:1,decrementMax:2)
+NG2: Min:1, Max:2, Assigned: 2 (goodIndex:1,decrementMax:2)
 ```
 
 
@@ -270,13 +338,14 @@ NG-2: Min:0, Max:1, Launched: 1
 1. The backward compatible sizing strategy honours our current distrubition logic as much as possible.
 1. Effectively for each `NodeGroup`, we compute the `NodeGroup.MaxSize` and `NodeGroup.MinSize` using the existing `DistributeOverZones` function 
     1. There is only one difference in that the maximum will not be permitted to be zero for any NodeGroup. This will be handled by validation and migration of existing clusters that break this rule (`PoolMaximum<numZones`).
-    1. `NodeGroup.MaxSize()=DistributeOverZones(zoneIdx,machineDeployment.Spec.PoolMaximum,numZones)`
-    1. `NodeGroup.MaxSize()=DistributeOverZones(zoneIdx,machineDeployment.Spec.PoolMinimum,numZones)`
+    1. `NodeGroup.MaxSize()=DistributeOverZones(zoneIndex,machineDeployment.Spec.PoolMaximum,numZones)`
+    1. `NodeGroup.MinSize()=DistributeOverZones(zoneIndex,machineDeployment.Spec.PoolMinimum,numZones)`
 1. The CA will execute scale-up/scale-down activities for the node groups if needed. If a NodeGroup does not have quota it will back-off and try another NodeGroup.
 
 #### Pros/Cons
 1. Pro: This strategy has the primary advantage that we remain backward-compatible with our current distribution logic. However, it does not handle 
-2. Con: Unfortunately, it doesn't handle back-off well.
+2. Pro: With additional validation, we prevent any Node Group being assigned `0` Min and Max like it can happen today.
+3. Con: Unfortunately, it doesn't handle back-off well.
 
 #### Examples
 
@@ -285,54 +354,82 @@ NG-2: Min:0, Max:1, Launched: 1
 
 ###### Scan-0
 ```
-NG-0: Min:1, Max:2, Launched: 0
-NG-1: Min:1, Max:1, Launched: 0
-NG-2: Min:1, Max:1, Launched: 0
+NG0: Min:1, Max:2, Assigned: 0
+NG1: Min:1, Max:1, Assigned: 0
+NG2: Min:1, Max:1, Assigned: 0
 ```
 
 ###### Scan-1
 
 ```
-NG-0: Min:1, Max:2, Launched: 1
-NG-1: Min:1, Max:1, Launched: 1
-NG-2: Min:1, Max:1, Launched: 0
+NG0: Min:1, Max:2, Assigned: 1
+NG1: Min:1, Max:1, Assigned: 1
+NG2: Min:1, Max:1, Assigned: 0
 ```
 
 ###### Scan-2
 
 ```
-NG-0: Min:1, Max:2, Launched: 2
-NG-1: Min:1, Max:1, Launched: 1
-NG-2: Min:1, Max:1, Launched: 1
+NG0: Min:1, Max:2, Assigned: 2
+NG1: Min:1, Max:1, Assigned: 1
+NG2: Min:1, Max:1, Assigned: 1
 ```
 
 ###### Pool-0:2:1:1:2 (min:max:maxsurge:maxunavail:numzones)
 
 * PoolMax=2
-* Let us take the case where `NG-0` is out of quota
+* Let us take the case where `NG0` is out of quota
 
 ###### Scan-0
 ```
-NG-0: Min:0, Max:1, Launched: 0
-NG-1: Min:0, Max:1, Launched: 0
+NG0: Min:0, Max:1, Assigned: 0
+NG1: Min:0, Max:1, Assigned: 0
 ```
 
 ###### Scan-1
 ```
-NG-0: Min:0, Max:1, Launched: 0 (backoff)
-NG-1: Min:0, Max:1, Launched: 1
+NG0: Min:0, Max:1, Assigned: 0 (backoff)
+NG1: Min:0, Max:1, Assigned: 1
 ```
-* No further progress since `NG-1` has reached its computed `Max` and no nodes can be provisioned in `NG-0`.  This is our current behaviour unfortunately.
+* No further progress since `NG1` has reached its computed `Max` and no nodes can be provisioned in `NG0`.  This is our current behaviour unfortunately.
 
-### 4. Shoot Spec Enhancement
+### 4. Change behaviour of MaxSurge and MaxUnavailable.
 
-We add a `nodeGroupSizingStrategy` in our the `clusterAutoscaler` section of our `shoot` YAML
+Today, worker `MaxSurge` and `MaxUnavailable` are also distributed across Machine Deployments statically.
+
+Example for the pool below
+ - Pool-3:4:2:2:3 (min:max:maxsurge:maxunavail:numzones)
+ - MachineDeployment_Z0(Minimum=1|Maximum:2|MaxSurge:1|MaxUnavailable:1)
+ - MachineDeployment_Z1(Minimum=1|Maximum:1|MaxSurge:1|MaxUnavailable:1)
+ - MachineDeployment_Z2(Minimum=1|Maximum:1|MaxSurge:0|MaxUnavailable:0)
+
+The is not ideal since these 2 properties are semanticaly meant for the _whole_ worker pool during a rolling update /scale-up/scale-down and not meant for individual zones.
+
+During a rolling-update, we have 2 or more  `MachineSets`:  older machine set(s) for the current set of machines and a newer machine set for the new set of machines. We scale-up the newer machine set and scale-down the older machine set(s), while respecting max-surge and max-unavailability.
+
+We propose that for the `Adaptive` strategy, we change the behaviour of rolling-update in the MCM to reflect adaptive sizing of `MaxSurge` and `MaxUnavailable`.  Initially, the `MaxSurge` and `MaxUnavailable` will be set to the pool `MaxSurge` and `MaxUnavailable`. 
+
+When a rolling update is initiated:
+- We create semaphores `maxSurgeSempahore` and `maxUnavailableSemaphore` initialized to the worker pool `MaxSurge` and `MaxUnavailable`.
+- During rolling update, when we scale up the newer machine set, we pick as many permits as we can from the `maxSurgeSemaphore` during computation of the scale-up for the newer machine set:
+  - `scaleUpCount = deployment.Spec.Replicas + permitsAcquiredFromMaxSurge - sumOfReplicasAssignedToAllMachineSets` . 
+    - NOTE: This is simplified logic, there are other checks too which are considred.
+  - After new machine set is scaled up, we release the acquired permits back to the `maxSurgeSemaphore`.
+  - If there are no permits gained from `maxSurgeSemaphore`, then we do not scale-up the newer machine set.
+- During rolling update,  when we scale down the older machine set(s), we pick as many permits as we can from the `maxUnavailableSemaphore` during computation of the scale-down for the older machine set(s):
+  - `scaleDownCount = sumOfReplicasAssignedToAllMachineSets`
+    `- deployment.Spec.Replicas`
+    `+ permitsAcquiredFromMaxUnavailable`
+    `- unavailableMachinesInNewerMachineSet`
+    - NOTE: This is simplified logic, there are other checks too which are considred.
+ - After older machine set(s)   are scaled-down, we  release the acquired permits back to the `maxUnavailableSemaphore``.
+  - If there are no permits gained from `maxUnavailableSemaphore```, then we do not scale-down the older machine set(s).
+
+### 5. Shoot Spec Enhancement
+
+We add a `sizingStrategy` in our the `clusterAutoscaler` section of our `shoot` YAML
 
 ```yaml
 clusterAutoscaler:
-  sizing: Lax-Greedy|Backward-Compatible
+  sizingStrategy: Adaptive | Backward-Compatible
 ```
-
-### TODO
-1. Discuss `MaxUnavailable` and `MaxSurge` handling. Should this be copied or distributed ?
-2. Do we need further `NodeGroup` sizing strategies ?
