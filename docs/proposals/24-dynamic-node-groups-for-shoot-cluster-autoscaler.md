@@ -68,7 +68,6 @@ This document outlines deficiences in the existing solution and proposes moving 
 
 ## Motivation
 
-TODO: Add Sequence Diagram for the below.
 
 Let us first study how `MachineDeployments` are currently generated and how node groups are currently computed for the `cluster-autoscaler`.
 
