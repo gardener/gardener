@@ -257,16 +257,16 @@ extendedKeyUsage = clientAuth
 EOF
 
   # Create a certificate authority
-  openssl genrsa -out ca.key 2048
+  openssl genrsa -out ca.key 3072
   openssl req -x509 -new -nodes -key ca.key -days 100000 -out ca.crt -subj "/CN=quic-tunnel-ca"
 
   # Create a server certiticate
-  openssl genrsa -out tls.key 2048
+  openssl genrsa -out tls.key 3072
   openssl req -new -key tls.key -out server.csr -subj "/CN=quic-tunnel-server" -config server.conf
   openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out tls.crt -days 100000 -extensions v3_req -extfile server.conf
 
   # Create a client certiticate
-  openssl genrsa -out client.key 2048
+  openssl genrsa -out client.key 3072
   openssl req -new -key client.key -out client.csr -subj "/CN=quic-tunnel-client" -config client.conf
   openssl x509 -req -in client.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out client.crt -days 100000 -extensions v3_req -extfile client.conf
 
