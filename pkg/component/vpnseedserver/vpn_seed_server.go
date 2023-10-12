@@ -20,7 +20,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	istionetworkingv1beta1 "istio.io/api/networking/v1beta1"
@@ -40,6 +39,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
@@ -876,7 +876,6 @@ func (v *vpnSeedServer) emptyEnvoyFilter() *networkingv1alpha3.EnvoyFilter {
 	return &networkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Name: v.namespace + "-vpn", Namespace: v.istioNamespaceFunc()}}
 }
 
-//TODO: unused function?
 func getLabels() map[string]string {
 	return map[string]string{
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
@@ -903,7 +902,7 @@ func (v *vpnSeedServer) getEnvoyConfig() string {
     address:
       socket_address:
         protocol: TCP
-        address: ` + fmt.Sprintf("%q", listenAddress) + `
+        address: "` + listenAddress + `"
         port_value: ` + fmt.Sprintf("%d", EnvoyPort) + `
     listener_filters:
     - name: "envoy.filters.listener.tls_inspector"
@@ -980,7 +979,7 @@ func (v *vpnSeedServer) getEnvoyConfig() string {
   - name: metrics_listener
     address:
       socket_address:
-        address: ` + fmt.Sprintf("%q", listenAddress) + `
+        address: "` + listenAddress + `"
         port_value: ` + fmt.Sprintf("%d", MetricsPort) + `
     filter_chains:
     - filters:

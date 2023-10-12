@@ -17,7 +17,6 @@ package kubeapiserverexposure_test
 import (
 	"context"
 
-	netutils "github.com/gardener/gardener/pkg/utils/net"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -42,6 +41,7 @@ import (
 	. "github.com/gardener/gardener/pkg/component/kubeapiserverexposure"
 	comptest "github.com/gardener/gardener/pkg/component/test"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	netutils "github.com/gardener/gardener/pkg/utils/net"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
