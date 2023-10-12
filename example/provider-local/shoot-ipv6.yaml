@@ -7,21 +7,15 @@ metadata:
     shoot.gardener.cloud/infrastructure-cleanup-wait-period-seconds: "0"
     shoot.gardener.cloud/cloud-config-execution-max-delay-seconds: "0"
 spec:
-  seedName: local
   cloudProfileName: local
   secretBindingName: local # dummy, doesn't contain any credentials
   region: local
   networking:
     type: calico
-    pods: 2002:db8:1::/48
-#    nodes: 2002:db8:2::/64 -> it doesn't make sense to specify this, node IPs are given by the seed cluster's pod CIDR
-    services: 2002:db8:3::/108
     ipFamilies:
     - IPv6
-    # TODO(scheererj): Drop this once v1.32 has been released and https://github.com/gardener/gardener-extension-networking-calico/pull/250 is available as release
-    providerConfig:
-      apiVersion: calico.networking.extensions.gardener.cloud/v1alpha1
-      kind: NetworkConfig
+    pods: 2002:db8:1::/48
+    services: 2002:db8:3::/108
   provider:
     type: local
     workers:
@@ -31,11 +25,10 @@ spec:
       cri:
         name: containerd
       minimum: 1
-      maximum: 1 # currently, only single-node clusters are supported
+      maximum: 2
       maxSurge: 1
       maxUnavailable: 0
   kubernetes:
-    version: 1.26.0
     kubelet:
       seccompDefault: true
       serializeImagePulls: false
