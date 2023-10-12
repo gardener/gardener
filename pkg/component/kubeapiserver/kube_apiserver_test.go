@@ -79,7 +79,6 @@ var _ = Describe("KubeAPIServer", func() {
 		namespace         = "some-namespace"
 		vpaUpdateMode     = vpaautoscalingv1.UpdateModeOff
 		controlledValues  = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		directoryOrCreate = corev1.HostPathDirectoryOrCreate
 		priorityClassName = "some-priority-class"
 
 		kubernetesInterface kubernetes.Interface
@@ -2479,26 +2478,6 @@ rules:
 							MountPath: "/etc/kubernetes/etcd-encryption-secret",
 							ReadOnly:  true,
 						},
-						corev1.VolumeMount{
-							Name:      "fedora-rhel6-openelec-cabundle",
-							MountPath: "/etc/pki/tls",
-							ReadOnly:  true,
-						},
-						corev1.VolumeMount{
-							Name:      "centos-rhel7-cabundle",
-							MountPath: "/etc/pki/ca-trust/extracted/pem",
-							ReadOnly:  true,
-						},
-						corev1.VolumeMount{
-							Name:      "etc-ssl",
-							MountPath: "/etc/ssl",
-							ReadOnly:  true,
-						},
-						corev1.VolumeMount{
-							Name:      "usr-share-cacerts",
-							MountPath: "/usr/share/ca-certificates",
-							ReadOnly:  true,
-						},
 					))
 					Expect(deployment.Spec.Template.Spec.Volumes).To(ConsistOf(
 						corev1.Volume{
@@ -2614,42 +2593,6 @@ rules:
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName: secretNameServer,
-								},
-							},
-						},
-						corev1.Volume{
-							Name: "fedora-rhel6-openelec-cabundle",
-							VolumeSource: corev1.VolumeSource{
-								HostPath: &corev1.HostPathVolumeSource{
-									Path: "/etc/pki/tls",
-									Type: &directoryOrCreate,
-								},
-							},
-						},
-						corev1.Volume{
-							Name: "centos-rhel7-cabundle",
-							VolumeSource: corev1.VolumeSource{
-								HostPath: &corev1.HostPathVolumeSource{
-									Path: "/etc/pki/ca-trust/extracted/pem",
-									Type: &directoryOrCreate,
-								},
-							},
-						},
-						corev1.Volume{
-							Name: "etc-ssl",
-							VolumeSource: corev1.VolumeSource{
-								HostPath: &corev1.HostPathVolumeSource{
-									Path: "/etc/ssl",
-									Type: &directoryOrCreate,
-								},
-							},
-						},
-						corev1.Volume{
-							Name: "usr-share-cacerts",
-							VolumeSource: corev1.VolumeSource{
-								HostPath: &corev1.HostPathVolumeSource{
-									Path: "/usr/share/ca-certificates",
-									Type: &directoryOrCreate,
 								},
 							},
 						},
@@ -3161,81 +3104,6 @@ rules:
 					Expect(deployment.Spec.Template.Spec.Containers[0].Args).NotTo(ContainElements(
 						ContainSubstring("--vmodule=httplog"),
 						ContainSubstring("--v="),
-					))
-				})
-
-				It("should mount the host pki directories", func() {
-					directoryOrCreate := corev1.HostPathDirectoryOrCreate
-
-					kapi = New(kubernetesInterface, namespace, sm, Values{
-						Values: apiserver.Values{
-							RuntimeVersion: runtimeVersion,
-						},
-						Images:  images,
-						Version: version,
-					})
-					deployAndRead()
-
-					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElements(
-						corev1.VolumeMount{
-							Name:      "fedora-rhel6-openelec-cabundle",
-							MountPath: "/etc/pki/tls",
-							ReadOnly:  true,
-						},
-						corev1.VolumeMount{
-							Name:      "centos-rhel7-cabundle",
-							MountPath: "/etc/pki/ca-trust/extracted/pem",
-							ReadOnly:  true,
-						},
-						corev1.VolumeMount{
-							Name:      "etc-ssl",
-							MountPath: "/etc/ssl",
-							ReadOnly:  true,
-						},
-						corev1.VolumeMount{
-							Name:      "usr-share-cacerts",
-							MountPath: "/usr/share/ca-certificates",
-							ReadOnly:  true,
-						},
-					))
-
-					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
-						corev1.Volume{
-							Name: "fedora-rhel6-openelec-cabundle",
-							VolumeSource: corev1.VolumeSource{
-								HostPath: &corev1.HostPathVolumeSource{
-									Path: "/etc/pki/tls",
-									Type: &directoryOrCreate,
-								},
-							},
-						},
-						corev1.Volume{
-							Name: "centos-rhel7-cabundle",
-							VolumeSource: corev1.VolumeSource{
-								HostPath: &corev1.HostPathVolumeSource{
-									Path: "/etc/pki/ca-trust/extracted/pem",
-									Type: &directoryOrCreate,
-								},
-							},
-						},
-						corev1.Volume{
-							Name: "etc-ssl",
-							VolumeSource: corev1.VolumeSource{
-								HostPath: &corev1.HostPathVolumeSource{
-									Path: "/etc/ssl",
-									Type: &directoryOrCreate,
-								},
-							},
-						},
-						corev1.Volume{
-							Name: "usr-share-cacerts",
-							VolumeSource: corev1.VolumeSource{
-								HostPath: &corev1.HostPathVolumeSource{
-									Path: "/usr/share/ca-certificates",
-									Type: &directoryOrCreate,
-								},
-							},
-						},
 					))
 				})
 

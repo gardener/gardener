@@ -78,10 +78,6 @@ const (
 	volumeNameAPIServerAccess                 = "kube-api-access-gardener"
 	volumeNameVPNSeedTLSAuth                  = "vpn-seed-tlsauth"
 	volumeNameDevNetTun                       = "dev-net-tun"
-	volumeNameFedora                          = "fedora-rhel6-openelec-cabundle"
-	volumeNameCentOS                          = "centos-rhel7-cabundle"
-	volumeNameEtcSSL                          = "etc-ssl"
-	volumeNameUsrShareCaCerts                 = "usr-share-cacerts"
 	volumeNameWatchdog                        = "watchdog"
 
 	volumeMountPathAuthenticationWebhookKubeconfig = "/etc/kubernetes/webhook/authentication"
@@ -372,7 +368,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 		apiserver.InjectAdmissionSettings(deployment, configMapAdmissionConfigs, secretAdmissionKubeconfigs, k.values.Values)
 		apiserver.InjectEncryptionSettings(deployment, secretETCDEncryptionConfiguration)
 		k.handleLifecycleSettings(deployment)
-		k.handleHostCertVolumes(deployment)
 		k.handleSNISettings(deployment)
 		k.handleTLSSNISettings(deployment, tlsSNISecrets)
 		k.handleOIDCSettings(deployment, secretOIDCCABundle)
@@ -488,74 +483,6 @@ func (k *kubeAPIServer) etcdServersOverrides() string {
 		overrides = append(overrides, fmt.Sprintf("%s/%s#https://%s%s:%d", resource.Group, resource.Resource, k.values.NamePrefix, etcdconstants.ServiceName(v1beta1constants.ETCDRoleEvents), etcdconstants.PortEtcdClient))
 	}
 	return strings.Join(overrides, ",")
-}
-
-func (k *kubeAPIServer) handleHostCertVolumes(deployment *appsv1.Deployment) {
-	directoryOrCreate := corev1.HostPathDirectoryOrCreate
-
-	// locations are taken from
-	// https://github.com/golang/go/blob/1bb247a469e306c57a5e0eaba788efb8b3b1acef/src/crypto/x509/root_linux.go#L7-L15
-	// we cannot be sure on which Node OS the Seed Cluster is running so, it's safer to mount them all
-	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
-		{
-			Name:      volumeNameFedora,
-			MountPath: volumeMountPathFedora,
-			ReadOnly:  true,
-		},
-		{
-			Name:      volumeNameCentOS,
-			MountPath: volumeMountPathCentOS,
-			ReadOnly:  true,
-		},
-		{
-			Name:      volumeNameEtcSSL,
-			MountPath: volumeMountPathEtcSSL,
-			ReadOnly:  true,
-		},
-		{
-			Name:      volumeNameUsrShareCaCerts,
-			MountPath: volumeMountPathUsrShareCaCerts,
-			ReadOnly:  true,
-		},
-	}...)
-	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
-		{
-			Name: volumeNameFedora,
-			VolumeSource: corev1.VolumeSource{
-				HostPath: &corev1.HostPathVolumeSource{
-					Path: volumeMountPathFedora,
-					Type: &directoryOrCreate,
-				},
-			},
-		},
-		{
-			Name: volumeNameCentOS,
-			VolumeSource: corev1.VolumeSource{
-				HostPath: &corev1.HostPathVolumeSource{
-					Path: volumeMountPathCentOS,
-					Type: &directoryOrCreate,
-				},
-			},
-		},
-		{
-			Name: volumeNameEtcSSL,
-			VolumeSource: corev1.VolumeSource{
-				HostPath: &corev1.HostPathVolumeSource{
-					Path: volumeMountPathEtcSSL,
-					Type: &directoryOrCreate,
-				},
-			},
-		},
-		{
-			Name: volumeNameUsrShareCaCerts,
-			VolumeSource: corev1.VolumeSource{
-				HostPath: &corev1.HostPathVolumeSource{
-					Path: volumeMountPathUsrShareCaCerts,
-					Type: &directoryOrCreate,
-				},
-			},
-		},
-	}...)
 }
 
 func (k *kubeAPIServer) handleSNISettings(deployment *appsv1.Deployment) {
