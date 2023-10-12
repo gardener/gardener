@@ -502,6 +502,7 @@ spec:
         - --configmap=` + namespace + `/` + configMapName + `
         - --ingress-class=` + v1beta1constants.SeedNginxIngressClass + `
         - --controller-class=k8s.io/` + v1beta1constants.SeedNginxIngressClass + `
+        - --enable-annotation-validation=true
         env:
         - name: POD_NAME
           valueFrom:
@@ -976,6 +977,7 @@ spec:
         - --configmap=kube-system/addons-nginx-ingress-controller
         - --ingress-class=nginx
         - --controller-class=k8s.io/nginx
+        - --enable-annotation-validation=true
         - --watch-ingress-without-class=true
         env:
         - name: POD_NAME
