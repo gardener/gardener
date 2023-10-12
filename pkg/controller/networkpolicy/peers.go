@@ -20,34 +20,27 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 )
 
-// private8BitBlock returns a private network (RFC1918) 10.0.0.0/8 IPv4 block.
-func private8BitBlock() *net.IPNet {
-	return &net.IPNet{IP: net.IP{10, 0, 0, 0}, Mask: net.CIDRMask(8, 32)}
-}
-
-// private12BitBlock returns a private network (RFC1918) 172.16.0.0/12 IPv4 block.
-func private12BitBlock() *net.IPNet {
-	return &net.IPNet{IP: net.IP{172, 16, 0, 0}, Mask: net.CIDRMask(12, 32)}
-}
-
-// private16BitBlock returns a private network (RFC1918) 192.168.0.0/16 IPv4 block.
-func private16BitBlock() *net.IPNet {
-	return &net.IPNet{IP: net.IP{192, 168, 0, 0}, Mask: net.CIDRMask(16, 32)}
-}
-
-// carrierGradeNATBlock returns a Carrier-grade NAT (RFC6598) 100.64.0.0/10 IPv4 block.
-func carrierGradeNATBlock() *net.IPNet {
-	return &net.IPNet{IP: net.IP{100, 64, 0, 0}, Mask: net.CIDRMask(10, 32)}
-}
-
-// allPrivateNetworkBlocks returns a list of all Private network (RFC1918) and Carrier-grade NAT (RFC6598) IPv4 blocks.
-func allPrivateNetworkBlocks() []net.IPNet {
+// allPrivateNetworkBlocksV4 returns a list of all Private network (RFC1918) and Carrier-grade NAT (RFC6598) IPv4 blocks.
+func allPrivateNetworkBlocksV4() []net.IPNet {
 	return []net.IPNet{
-		*private8BitBlock(),
-		*private12BitBlock(),
-		*private16BitBlock(),
-		*carrierGradeNATBlock(),
+		// 10.0.0.0/8 (private network (RFC1918))
+		{IP: net.IP{10, 0, 0, 0}, Mask: net.CIDRMask(8, 32)},
+		// 172.16.0.0/12 (private network (RFC1918))
+		{IP: net.IP{172, 16, 0, 0}, Mask: net.CIDRMask(12, 32)},
+		// 192.168.0.0/16 (private network (RFC1918))
+		{IP: net.IP{192, 168, 0, 0}, Mask: net.CIDRMask(16, 32)},
+		// 100.64.0.0/10 (Carrier-grade NAT (RFC6598))
+		{IP: net.IP{100, 64, 0, 0}, Mask: net.CIDRMask(10, 32)},
 	}
+}
+
+// toCIDRStrings takes a list of net.IPNet and returns their CIDR representations in a string slice.
+func toCIDRStrings(networks ...net.IPNet) []string {
+	var out []string
+	for _, network := range networks {
+		out = append(out, network.String())
+	}
+	return out
 }
 
 // toNetworkPolicyPeersWithExceptions returns a list of networkingv1.NetworkPolicyPeers whose ipBlock.cidr points to

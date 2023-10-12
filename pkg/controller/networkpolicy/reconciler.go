@@ -285,12 +285,10 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToPublicNetworks(ctx context.Con
 				To: []networkingv1.NetworkPolicyPeer{{
 					IPBlock: &networkingv1.IPBlock{
 						CIDR: "0.0.0.0/0",
-						Except: append([]string{
-							private8BitBlock().String(),
-							private12BitBlock().String(),
-							private16BitBlock().String(),
-							carrierGradeNATBlock().String(),
-						}, r.RuntimeNetworks.BlockCIDRs...),
+						Except: append(
+							toCIDRStrings(allPrivateNetworkBlocksV4()...),
+							r.RuntimeNetworks.BlockCIDRs...,
+						),
 					},
 				}, {
 					IPBlock: &networkingv1.IPBlock{
