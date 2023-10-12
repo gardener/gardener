@@ -412,7 +412,7 @@ When a rolling update is initiated:
 - We create semaphores `maxSurgeSempahore` and `maxUnavailableSemaphore` initialized to the worker pool `MaxSurge` and `MaxUnavailable`.
 - During rolling update, when we scale up the newer machine set, we pick as many permits as we can from the `maxSurgeSemaphore` during computation of the scale-up for the newer machine set:
   - `scaleUpCount = deployment.Spec.Replicas + permitsAcquiredFromMaxSurge - sumOfReplicasAssignedToAllMachineSets` . 
-    - NOTE: This is simplified logic, there are other checks too which are considred.
+    - NOTE: This is simplified logic, there are other checks too which are considered.
   - After new machine set is scaled up, we release the acquired permits back to the `maxSurgeSemaphore`.
   - If there are no permits gained from `maxSurgeSemaphore`, then we do not scale-up the newer machine set.
 - During rolling update,  when we scale down the older machine set(s), we pick as many permits as we can from the `maxUnavailableSemaphore` during computation of the scale-down for the older machine set(s):
@@ -420,7 +420,7 @@ When a rolling update is initiated:
     `- deployment.Spec.Replicas`
     `+ permitsAcquiredFromMaxUnavailable`
     `- unavailableMachinesInNewerMachineSet`
-    - NOTE: This is simplified logic, there are other checks too which are considred.
+    - NOTE: This is simplified logic, there are other checks too which are considered.
  - After older machine set(s)   are scaled-down, we  release the acquired permits back to the `maxUnavailableSemaphore``.
   - If there are no permits gained from `maxUnavailableSemaphore```, then we do not scale-down the older machine set(s).
 
