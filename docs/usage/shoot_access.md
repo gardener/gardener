@@ -11,7 +11,7 @@ The username associated with such `kubeconfig` will be the same which is used fo
 In order to request such a `kubeconfig`, you can run the following commands:
 
 ```bash
-export NAMESPACE=my-namespace
+export NAMESPACE=garden-my-namespace
 export SHOOT_NAME=my-shoot
 kubectl create \
     -f <(printf '{"spec":{"expirationSeconds":600}}') \
@@ -51,7 +51,7 @@ import yaml
 
 # Set configuration options
 shoot_name="my-shoot" # Name of the shoot
-project_namespace="my-namespace" # Namespace of the project
+project_namespace="garden-my-namespace" # Namespace of the project
 
 # Load kubeconfig from default ~/.kube/config
 config.load_kube_config()
@@ -61,7 +61,9 @@ api = client.ApiClient()
 kubeconfig_request = {
     'apiVersion': 'authentication.gardener.cloud/v1alpha1',
     'kind': 'AdminKubeconfigRequest',
-    'spec': {'expirationSeconds': 600}
+    'spec': {
+      'expirationSeconds': 600
+    }
 }
 
 response = api.call_api(resource_path=f'/apis/core.gardener.cloud/v1beta1/namespaces/{project_namespace}/shoots/{shoot_name}/adminkubeconfig',
