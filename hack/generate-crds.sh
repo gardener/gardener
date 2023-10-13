@@ -62,7 +62,7 @@ get_group_package () {
     echo "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
     ;;
   "autoscaling.k8s.io")
-    echo "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+    echo "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/..."
     ;;
   "machine.sapcloud.io")
     echo "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -92,7 +92,7 @@ generate_group () {
   if [ -z "$package" ] ; then
     exit 1
   fi
-  local package_path="$(go list -f '{{ .Dir }}' "$package")"
+  local package_path="$(go list -f '{{ .Dir }}' "$package" | tr '\n' ';')"
   if [ -z "$package_path" ] ; then
     exit 1
   fi
