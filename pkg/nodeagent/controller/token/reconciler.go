@@ -29,14 +29,15 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 )
 
 // Reconciler fetches the shoot access token for gardener-node-agent and writes it to disk.
 type Reconciler struct {
-	Client                client.Client
-	FS                    afero.Fs
-	AccessTokenSecretName string
+	Client client.Client
+	Config config.TokenControllerConfig
+	FS     afero.Fs
 }
 
 // Reconcile fetches the shoot access token for gardener-node-agent and writes it to disk.

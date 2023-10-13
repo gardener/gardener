@@ -15,9 +15,19 @@
 package v1alpha1
 
 import (
+	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func addDefaultingFuncs(scheme *runtime.Scheme) error {
 	return RegisterDefaults(scheme)
+}
+
+// SetDefaults_OperatingSystemConfigControllerConfig sets defaults for the OperatingSystemConfigControllerConfig object.
+func SetDefaults_OperatingSystemConfigControllerConfig(obj *OperatingSystemConfigControllerConfig) {
+	if obj.SyncPeriod == nil {
+		obj.SyncPeriod = &metav1.Duration{Duration: 10 * time.Minute}
+	}
 }

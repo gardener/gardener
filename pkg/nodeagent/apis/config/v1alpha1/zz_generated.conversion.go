@@ -26,6 +26,7 @@ import (
 
 	v3 "github.com/Masterminds/semver/v3"
 	config "github.com/gardener/gardener/pkg/nodeagent/apis/config"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	componentbaseconfig "k8s.io/component-base/config"
@@ -39,6 +40,36 @@ func init() {
 // RegisterConversions adds conversion functions to the given scheme.
 // Public to allow building arbitrary schemes.
 func RegisterConversions(s *runtime.Scheme) error {
+	if err := s.AddGeneratedConversionFunc((*BootstrapConfiguration)(nil), (*config.BootstrapConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_BootstrapConfiguration_To_config_BootstrapConfiguration(a.(*BootstrapConfiguration), b.(*config.BootstrapConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.BootstrapConfiguration)(nil), (*BootstrapConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_BootstrapConfiguration_To_v1alpha1_BootstrapConfiguration(a.(*config.BootstrapConfiguration), b.(*BootstrapConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ControllerConfiguration)(nil), (*config.ControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ControllerConfiguration_To_config_ControllerConfiguration(a.(*ControllerConfiguration), b.(*config.ControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.ControllerConfiguration)(nil), (*ControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_ControllerConfiguration_To_v1alpha1_ControllerConfiguration(a.(*config.ControllerConfiguration), b.(*ControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*KubeletUpgradeControllerConfig)(nil), (*config.KubeletUpgradeControllerConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_KubeletUpgradeControllerConfig_To_config_KubeletUpgradeControllerConfig(a.(*KubeletUpgradeControllerConfig), b.(*config.KubeletUpgradeControllerConfig), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.KubeletUpgradeControllerConfig)(nil), (*KubeletUpgradeControllerConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_KubeletUpgradeControllerConfig_To_v1alpha1_KubeletUpgradeControllerConfig(a.(*config.KubeletUpgradeControllerConfig), b.(*KubeletUpgradeControllerConfig), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*NodeAgentConfiguration)(nil), (*config.NodeAgentConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_NodeAgentConfiguration_To_config_NodeAgentConfiguration(a.(*NodeAgentConfiguration), b.(*config.NodeAgentConfiguration), scope)
 	}); err != nil {
@@ -46,6 +77,26 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*config.NodeAgentConfiguration)(nil), (*NodeAgentConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_config_NodeAgentConfiguration_To_v1alpha1_NodeAgentConfiguration(a.(*config.NodeAgentConfiguration), b.(*NodeAgentConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*OperatingSystemConfigControllerConfig)(nil), (*config.OperatingSystemConfigControllerConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_OperatingSystemConfigControllerConfig_To_config_OperatingSystemConfigControllerConfig(a.(*OperatingSystemConfigControllerConfig), b.(*config.OperatingSystemConfigControllerConfig), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.OperatingSystemConfigControllerConfig)(nil), (*OperatingSystemConfigControllerConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_OperatingSystemConfigControllerConfig_To_v1alpha1_OperatingSystemConfigControllerConfig(a.(*config.OperatingSystemConfigControllerConfig), b.(*OperatingSystemConfigControllerConfig), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*SelfUpgradeControllerConfig)(nil), (*config.SelfUpgradeControllerConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_SelfUpgradeControllerConfig_To_config_SelfUpgradeControllerConfig(a.(*SelfUpgradeControllerConfig), b.(*config.SelfUpgradeControllerConfig), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.SelfUpgradeControllerConfig)(nil), (*SelfUpgradeControllerConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_SelfUpgradeControllerConfig_To_v1alpha1_SelfUpgradeControllerConfig(a.(*config.SelfUpgradeControllerConfig), b.(*SelfUpgradeControllerConfig), scope)
 	}); err != nil {
 		return err
 	}
@@ -69,7 +120,99 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*TokenControllerConfig)(nil), (*config.TokenControllerConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_TokenControllerConfig_To_config_TokenControllerConfig(a.(*TokenControllerConfig), b.(*config.TokenControllerConfig), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.TokenControllerConfig)(nil), (*TokenControllerConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_TokenControllerConfig_To_v1alpha1_TokenControllerConfig(a.(*config.TokenControllerConfig), b.(*TokenControllerConfig), scope)
+	}); err != nil {
+		return err
+	}
 	return nil
+}
+
+func autoConvert_v1alpha1_BootstrapConfiguration_To_config_BootstrapConfiguration(in *BootstrapConfiguration, out *config.BootstrapConfiguration, s conversion.Scope) error {
+	out.KubeletDataVolumeSize = (*int64)(unsafe.Pointer(in.KubeletDataVolumeSize))
+	return nil
+}
+
+// Convert_v1alpha1_BootstrapConfiguration_To_config_BootstrapConfiguration is an autogenerated conversion function.
+func Convert_v1alpha1_BootstrapConfiguration_To_config_BootstrapConfiguration(in *BootstrapConfiguration, out *config.BootstrapConfiguration, s conversion.Scope) error {
+	return autoConvert_v1alpha1_BootstrapConfiguration_To_config_BootstrapConfiguration(in, out, s)
+}
+
+func autoConvert_config_BootstrapConfiguration_To_v1alpha1_BootstrapConfiguration(in *config.BootstrapConfiguration, out *BootstrapConfiguration, s conversion.Scope) error {
+	out.KubeletDataVolumeSize = (*int64)(unsafe.Pointer(in.KubeletDataVolumeSize))
+	return nil
+}
+
+// Convert_config_BootstrapConfiguration_To_v1alpha1_BootstrapConfiguration is an autogenerated conversion function.
+func Convert_config_BootstrapConfiguration_To_v1alpha1_BootstrapConfiguration(in *config.BootstrapConfiguration, out *BootstrapConfiguration, s conversion.Scope) error {
+	return autoConvert_config_BootstrapConfiguration_To_v1alpha1_BootstrapConfiguration(in, out, s)
+}
+
+func autoConvert_v1alpha1_ControllerConfiguration_To_config_ControllerConfiguration(in *ControllerConfiguration, out *config.ControllerConfiguration, s conversion.Scope) error {
+	if err := Convert_v1alpha1_KubeletUpgradeControllerConfig_To_config_KubeletUpgradeControllerConfig(&in.KubeletUpgrade, &out.KubeletUpgrade, s); err != nil {
+		return err
+	}
+	if err := Convert_v1alpha1_OperatingSystemConfigControllerConfig_To_config_OperatingSystemConfigControllerConfig(&in.OperatingSystemConfig, &out.OperatingSystemConfig, s); err != nil {
+		return err
+	}
+	if err := Convert_v1alpha1_SelfUpgradeControllerConfig_To_config_SelfUpgradeControllerConfig(&in.SelfUpgrade, &out.SelfUpgrade, s); err != nil {
+		return err
+	}
+	if err := Convert_v1alpha1_TokenControllerConfig_To_config_TokenControllerConfig(&in.Token, &out.Token, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_v1alpha1_ControllerConfiguration_To_config_ControllerConfiguration is an autogenerated conversion function.
+func Convert_v1alpha1_ControllerConfiguration_To_config_ControllerConfiguration(in *ControllerConfiguration, out *config.ControllerConfiguration, s conversion.Scope) error {
+	return autoConvert_v1alpha1_ControllerConfiguration_To_config_ControllerConfiguration(in, out, s)
+}
+
+func autoConvert_config_ControllerConfiguration_To_v1alpha1_ControllerConfiguration(in *config.ControllerConfiguration, out *ControllerConfiguration, s conversion.Scope) error {
+	if err := Convert_config_KubeletUpgradeControllerConfig_To_v1alpha1_KubeletUpgradeControllerConfig(&in.KubeletUpgrade, &out.KubeletUpgrade, s); err != nil {
+		return err
+	}
+	if err := Convert_config_OperatingSystemConfigControllerConfig_To_v1alpha1_OperatingSystemConfigControllerConfig(&in.OperatingSystemConfig, &out.OperatingSystemConfig, s); err != nil {
+		return err
+	}
+	if err := Convert_config_SelfUpgradeControllerConfig_To_v1alpha1_SelfUpgradeControllerConfig(&in.SelfUpgrade, &out.SelfUpgrade, s); err != nil {
+		return err
+	}
+	if err := Convert_config_TokenControllerConfig_To_v1alpha1_TokenControllerConfig(&in.Token, &out.Token, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_config_ControllerConfiguration_To_v1alpha1_ControllerConfiguration is an autogenerated conversion function.
+func Convert_config_ControllerConfiguration_To_v1alpha1_ControllerConfiguration(in *config.ControllerConfiguration, out *ControllerConfiguration, s conversion.Scope) error {
+	return autoConvert_config_ControllerConfiguration_To_v1alpha1_ControllerConfiguration(in, out, s)
+}
+
+func autoConvert_v1alpha1_KubeletUpgradeControllerConfig_To_config_KubeletUpgradeControllerConfig(in *KubeletUpgradeControllerConfig, out *config.KubeletUpgradeControllerConfig, s conversion.Scope) error {
+	out.Image = in.Image
+	return nil
+}
+
+// Convert_v1alpha1_KubeletUpgradeControllerConfig_To_config_KubeletUpgradeControllerConfig is an autogenerated conversion function.
+func Convert_v1alpha1_KubeletUpgradeControllerConfig_To_config_KubeletUpgradeControllerConfig(in *KubeletUpgradeControllerConfig, out *config.KubeletUpgradeControllerConfig, s conversion.Scope) error {
+	return autoConvert_v1alpha1_KubeletUpgradeControllerConfig_To_config_KubeletUpgradeControllerConfig(in, out, s)
+}
+
+func autoConvert_config_KubeletUpgradeControllerConfig_To_v1alpha1_KubeletUpgradeControllerConfig(in *config.KubeletUpgradeControllerConfig, out *KubeletUpgradeControllerConfig, s conversion.Scope) error {
+	out.Image = in.Image
+	return nil
+}
+
+// Convert_config_KubeletUpgradeControllerConfig_To_v1alpha1_KubeletUpgradeControllerConfig is an autogenerated conversion function.
+func Convert_config_KubeletUpgradeControllerConfig_To_v1alpha1_KubeletUpgradeControllerConfig(in *config.KubeletUpgradeControllerConfig, out *KubeletUpgradeControllerConfig, s conversion.Scope) error {
+	return autoConvert_config_KubeletUpgradeControllerConfig_To_v1alpha1_KubeletUpgradeControllerConfig(in, out, s)
 }
 
 func autoConvert_v1alpha1_NodeAgentConfiguration_To_config_NodeAgentConfiguration(in *NodeAgentConfiguration, out *config.NodeAgentConfiguration, s conversion.Scope) error {
@@ -91,12 +234,10 @@ func autoConvert_v1alpha1_NodeAgentConfiguration_To_config_NodeAgentConfiguratio
 		out.Debugging = nil
 	}
 	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
-	out.OperatingSystemConfigSecretName = in.OperatingSystemConfigSecretName
-	out.AccessTokenSecretName = in.AccessTokenSecretName
-	out.Image = in.Image
-	out.HyperkubeImage = in.HyperkubeImage
-	out.KubernetesVersion = (*v3.Version)(unsafe.Pointer(in.KubernetesVersion))
-	out.KubeletDataVolumeSize = (*int64)(unsafe.Pointer(in.KubeletDataVolumeSize))
+	out.Bootstrap = (*config.BootstrapConfiguration)(unsafe.Pointer(in.Bootstrap))
+	if err := Convert_v1alpha1_ControllerConfiguration_To_config_ControllerConfiguration(&in.Controllers, &out.Controllers, s); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -124,18 +265,60 @@ func autoConvert_config_NodeAgentConfiguration_To_v1alpha1_NodeAgentConfiguratio
 		out.Debugging = nil
 	}
 	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
-	out.OperatingSystemConfigSecretName = in.OperatingSystemConfigSecretName
-	out.AccessTokenSecretName = in.AccessTokenSecretName
-	out.Image = in.Image
-	out.HyperkubeImage = in.HyperkubeImage
-	out.KubernetesVersion = (*v3.Version)(unsafe.Pointer(in.KubernetesVersion))
-	out.KubeletDataVolumeSize = (*int64)(unsafe.Pointer(in.KubeletDataVolumeSize))
+	out.Bootstrap = (*BootstrapConfiguration)(unsafe.Pointer(in.Bootstrap))
+	if err := Convert_config_ControllerConfiguration_To_v1alpha1_ControllerConfiguration(&in.Controllers, &out.Controllers, s); err != nil {
+		return err
+	}
 	return nil
 }
 
 // Convert_config_NodeAgentConfiguration_To_v1alpha1_NodeAgentConfiguration is an autogenerated conversion function.
 func Convert_config_NodeAgentConfiguration_To_v1alpha1_NodeAgentConfiguration(in *config.NodeAgentConfiguration, out *NodeAgentConfiguration, s conversion.Scope) error {
 	return autoConvert_config_NodeAgentConfiguration_To_v1alpha1_NodeAgentConfiguration(in, out, s)
+}
+
+func autoConvert_v1alpha1_OperatingSystemConfigControllerConfig_To_config_OperatingSystemConfigControllerConfig(in *OperatingSystemConfigControllerConfig, out *config.OperatingSystemConfigControllerConfig, s conversion.Scope) error {
+	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
+	out.SecretName = in.SecretName
+	out.KubernetesVersion = (*v3.Version)(unsafe.Pointer(in.KubernetesVersion))
+	return nil
+}
+
+// Convert_v1alpha1_OperatingSystemConfigControllerConfig_To_config_OperatingSystemConfigControllerConfig is an autogenerated conversion function.
+func Convert_v1alpha1_OperatingSystemConfigControllerConfig_To_config_OperatingSystemConfigControllerConfig(in *OperatingSystemConfigControllerConfig, out *config.OperatingSystemConfigControllerConfig, s conversion.Scope) error {
+	return autoConvert_v1alpha1_OperatingSystemConfigControllerConfig_To_config_OperatingSystemConfigControllerConfig(in, out, s)
+}
+
+func autoConvert_config_OperatingSystemConfigControllerConfig_To_v1alpha1_OperatingSystemConfigControllerConfig(in *config.OperatingSystemConfigControllerConfig, out *OperatingSystemConfigControllerConfig, s conversion.Scope) error {
+	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
+	out.SecretName = in.SecretName
+	out.KubernetesVersion = (*v3.Version)(unsafe.Pointer(in.KubernetesVersion))
+	return nil
+}
+
+// Convert_config_OperatingSystemConfigControllerConfig_To_v1alpha1_OperatingSystemConfigControllerConfig is an autogenerated conversion function.
+func Convert_config_OperatingSystemConfigControllerConfig_To_v1alpha1_OperatingSystemConfigControllerConfig(in *config.OperatingSystemConfigControllerConfig, out *OperatingSystemConfigControllerConfig, s conversion.Scope) error {
+	return autoConvert_config_OperatingSystemConfigControllerConfig_To_v1alpha1_OperatingSystemConfigControllerConfig(in, out, s)
+}
+
+func autoConvert_v1alpha1_SelfUpgradeControllerConfig_To_config_SelfUpgradeControllerConfig(in *SelfUpgradeControllerConfig, out *config.SelfUpgradeControllerConfig, s conversion.Scope) error {
+	out.Image = in.Image
+	return nil
+}
+
+// Convert_v1alpha1_SelfUpgradeControllerConfig_To_config_SelfUpgradeControllerConfig is an autogenerated conversion function.
+func Convert_v1alpha1_SelfUpgradeControllerConfig_To_config_SelfUpgradeControllerConfig(in *SelfUpgradeControllerConfig, out *config.SelfUpgradeControllerConfig, s conversion.Scope) error {
+	return autoConvert_v1alpha1_SelfUpgradeControllerConfig_To_config_SelfUpgradeControllerConfig(in, out, s)
+}
+
+func autoConvert_config_SelfUpgradeControllerConfig_To_v1alpha1_SelfUpgradeControllerConfig(in *config.SelfUpgradeControllerConfig, out *SelfUpgradeControllerConfig, s conversion.Scope) error {
+	out.Image = in.Image
+	return nil
+}
+
+// Convert_config_SelfUpgradeControllerConfig_To_v1alpha1_SelfUpgradeControllerConfig is an autogenerated conversion function.
+func Convert_config_SelfUpgradeControllerConfig_To_v1alpha1_SelfUpgradeControllerConfig(in *config.SelfUpgradeControllerConfig, out *SelfUpgradeControllerConfig, s conversion.Scope) error {
+	return autoConvert_config_SelfUpgradeControllerConfig_To_v1alpha1_SelfUpgradeControllerConfig(in, out, s)
 }
 
 func autoConvert_v1alpha1_Server_To_config_Server(in *Server, out *config.Server, s conversion.Scope) error {
@@ -180,4 +363,24 @@ func autoConvert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration(in *
 // Convert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration is an autogenerated conversion function.
 func Convert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration(in *config.ServerConfiguration, out *ServerConfiguration, s conversion.Scope) error {
 	return autoConvert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration(in, out, s)
+}
+
+func autoConvert_v1alpha1_TokenControllerConfig_To_config_TokenControllerConfig(in *TokenControllerConfig, out *config.TokenControllerConfig, s conversion.Scope) error {
+	out.SecretName = in.SecretName
+	return nil
+}
+
+// Convert_v1alpha1_TokenControllerConfig_To_config_TokenControllerConfig is an autogenerated conversion function.
+func Convert_v1alpha1_TokenControllerConfig_To_config_TokenControllerConfig(in *TokenControllerConfig, out *config.TokenControllerConfig, s conversion.Scope) error {
+	return autoConvert_v1alpha1_TokenControllerConfig_To_config_TokenControllerConfig(in, out, s)
+}
+
+func autoConvert_config_TokenControllerConfig_To_v1alpha1_TokenControllerConfig(in *config.TokenControllerConfig, out *TokenControllerConfig, s conversion.Scope) error {
+	out.SecretName = in.SecretName
+	return nil
+}
+
+// Convert_config_TokenControllerConfig_To_v1alpha1_TokenControllerConfig is an autogenerated conversion function.
+func Convert_config_TokenControllerConfig_To_v1alpha1_TokenControllerConfig(in *config.TokenControllerConfig, out *TokenControllerConfig, s conversion.Scope) error {
+	return autoConvert_config_TokenControllerConfig_To_v1alpha1_TokenControllerConfig(in, out, s)
 }

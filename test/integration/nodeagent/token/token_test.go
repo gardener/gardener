@@ -28,6 +28,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/token"
 )
@@ -53,8 +54,10 @@ var _ = Describe("Token controller tests", func() {
 		By("Register controller")
 		testFS = afero.NewMemMapFs()
 		Expect((&token.Reconciler{
-			FS:                    testFS,
-			AccessTokenSecretName: testRunID,
+			FS: testFS,
+			Config: config.TokenControllerConfig{
+				SecretName: testRunID,
+			},
 		}).AddToManager(mgr)).To(Succeed())
 
 		By("Start manager")

@@ -73,23 +73,63 @@ type NodeAgentConfiguration struct {
 	// Default: nil
 	// +optional
 	FeatureGates map[string]bool `json:"featureGates,omitempty"`
-	// OperatingSystemConfigSecretName defines the name of the secret in the shoot cluster control plane, which contains
-	// the Operating System Config (OSC) for the gardener-node-agent.
-	OperatingSystemConfigSecretName string `json:"operatingSystemConfigSecretName"`
-	// AccessTokenSecretName defines the name of the secret in the shoot cluster control plane, which contains
-	// the `kube-apiserver` access token for the gardener-node-agent.
-	AccessTokenSecretName string `json:"accessTokenSecretName"`
-	// Image is the container image reference to the gardener-node-agent.
-	Image string `json:"image"`
-	// HyperkubeImage is the container image reference to the hyperkube containing kubelet.
-	HyperkubeImage string `json:"hyperkubeImage"`
-	// KubernetesVersion contains the kubernetes version of the kubelet, used for annotating the corresponding node
-	// resource with a kubernetes version annotation.
-	KubernetesVersion *semver.Version `json:"kubernetesVersion"`
+	// Bootstrap contains configuration for the bootstrap command.
+	// +optional
+	Bootstrap *BootstrapConfiguration `json:"bootstrap,omitempty"`
+	// Controllers defines the configuration of the controllers.
+	Controllers ControllerConfiguration `json:"controllers"`
+}
+
+// BootstrapConfiguration contains configuration for the bootstrap command.
+type BootstrapConfiguration struct {
 	// KubeletDataVolumeSize sets the data volume size of an unformatted disk on the worker node, which is used for
 	// /var/lib on the worker.
 	// +optional
 	KubeletDataVolumeSize *int64 `json:"kubeletDataVolumeSize,omitempty"`
+}
+
+// ControllerConfiguration defines the configuration of the controllers.
+type ControllerConfiguration struct {
+	// KubeletUpgrade is the configuration for the kubelet upgrade controller.
+	KubeletUpgrade KubeletUpgradeControllerConfig `json:"kubeletUpgrade"`
+	// OperatingSystemConfig is the configuration for the operating system config controller.
+	OperatingSystemConfig OperatingSystemConfigControllerConfig `json:"operatingSystemConfig"`
+	// SelfUpgrade is the configuration for the self-upgrade controller.
+	SelfUpgrade SelfUpgradeControllerConfig `json:"selfUpgrade"`
+	// Token is the configuration for the access token controller.
+	Token TokenControllerConfig `json:"token"`
+}
+
+// OperatingSystemConfigControllerConfig defines the configuration of the operating system config controller.
+type OperatingSystemConfigControllerConfig struct {
+	// SyncPeriod is the duration how often the operating system config is applied.
+	// +optional
+	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
+	// SecretName defines the name of the secret in the shoot cluster control plane, which contains the operating system
+	// config (OSC) for the gardener-node-agent.
+	SecretName string `json:"secretName"`
+	// KubernetesVersion contains the Kubernetes version of the kubelet, used for annotating the corresponding node
+	// resource with a kubernetes version annotation.
+	KubernetesVersion *semver.Version `json:"kubernetesVersion"`
+}
+
+// KubeletUpgradeControllerConfig defines the configuration of the kubelet upgrade controller.
+type KubeletUpgradeControllerConfig struct {
+	// Image is the container image reference to the image containing the kubelet binary (hyperkube image).
+	Image string `json:"image"`
+}
+
+// SelfUpgradeControllerConfig defines the configuration of the self-upgrade controller.
+type SelfUpgradeControllerConfig struct {
+	// Image is the container image reference to the gardener-node-agent.
+	Image string `json:"image"`
+}
+
+// TokenControllerConfig defines the configuration of the access token controller.
+type TokenControllerConfig struct {
+	// SecretName defines the name of the secret in the shoot cluster control plane, which contains the `kube-apiserver`
+	// access token for the gardener-node-agent.
+	SecretName string `json:"secretName"`
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

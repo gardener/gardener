@@ -46,7 +46,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		Named(ControllerName).
 		For(&corev1.Secret{}, builder.WithPredicates(
 			predicate.NewPredicateFuncs(func(obj client.Object) bool {
-				return obj.GetNamespace() == metav1.NamespaceSystem && obj.GetName() == r.AccessTokenSecretName
+				return obj.GetNamespace() == metav1.NamespaceSystem && obj.GetName() == r.Config.SecretName
 			}),
 			r.SecretPredicate(),
 		)).
