@@ -29,6 +29,7 @@ import (
 	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
@@ -138,6 +139,12 @@ func run(ctx context.Context, log logr.Logger, cfg *config.NodeAgentConfiguratio
 		}
 	}
 
+	log.Info("Fetching node name based on hostname")
+	nodeName, err := getNodeName(ctx, log, restConfig)
+	if err != nil {
+		return err
+	}
+
 	log.Info("Setting up manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Logger:                  log,
@@ -154,6 +161,9 @@ func run(ctx context.Context, log logr.Logger, cfg *config.NodeAgentConfiguratio
 			ByObject: map[client.Object]cache.ByObject{
 				&corev1.Secret{}: {
 					Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}},
+				},
+				&corev1.Node{}: {
+					Field: fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: nodeName}),
 				},
 			},
 		},
@@ -223,4 +233,32 @@ func fetchAccessTokenViaBootstrapToken(ctx context.Context, log logr.Logger, res
 	log.Info("Kubeconfig written to disk")
 
 	return nil
+}
+
+func getNodeName(ctx context.Context, log logr.Logger, restConfig *rest.Config) (string, error) {
+	hostname, err := os.Hostname()
+	if err != nil {
+		return "", fmt.Errorf("failed fetching hostname: %w", err)
+	}
+
+	cl, err := client.New(restConfig, client.Options{})
+	if err != nil {
+		return "", fmt.Errorf("unable to create client: %w", err)
+	}
+
+	nodeList := &metav1.PartialObjectMetadataList{}
+	nodeList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NodeList"))
+	if err := cl.List(ctx, nodeList, client.MatchingLabels{corev1.LabelHostname: hostname}); err != nil {
+		return "", err
+	}
+
+	switch len(nodeList.Items) {
+	case 0:
+		return "", fmt.Errorf("could not find any node with label %s=%s", corev1.LabelHostname, hostname)
+	case 1:
+		log.Info("Found node name based on hostname", "hostname", hostname, "nodeName", nodeList.Items[0].Name)
+		return nodeList.Items[0].Name, nil
+	default:
+		return "", fmt.Errorf("found more than one node with label %s=%s", corev1.LabelHostname, hostname)
+	}
 }

@@ -28,6 +28,16 @@ In a bootstrapping phase, the `gardener-node-agent` sets itself up as a systemd 
 
 This section describes the controllers in more details.
 
+### [`Node` Controller](../../pkg/nodeagent/controller/node)
+
+This controller watches the `Node` object for the machine it runs on.
+The correct `Node` is identified based on the hostname of the machine (`Node`s have the `kubernetes.io/hostname` label).
+Whenever the `worker.gardener.cloud/restart-systemd-services` annotation changes, the controller performs the desired changes by restarting the specified systemd unit files.
+See also [this document](../usage/shoot_operations.md#restart-systemd-services-on-particular-worker-nodes) for more information.
+After restarting all units, the annotation is removed.
+
+> ℹ️ When the `gardener-node-agent` systemd service itself is requested to be restarted, the annotation is removed first to ensure it does not restart itself indefinitely.
+
 ### [Token Controller](../../pkg/nodeagent/controller/token)
 
 This controller watches the access token `Secret` in the `kube-system` namespace whose name is provided via the `gardener-node-agent`'s component configuration (`.accessTokenSecret` field).
