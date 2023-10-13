@@ -38,6 +38,40 @@ if err != nil {
 config = adminKubeconfigRequest.Status.Kubeconfig
 ```
 
+You also can use native [`kubernetes` client](https://github.com/kubernetes-client/python) to create such a kubeconfig from your python code like so:
+
+```python
+from kubernetes import client, config
+import json
+import base64
+
+# Set configuration options
+shoot_name="my-shoot" # Name of the shoot
+project_namespace="my-namespace" # Namespace of the project
+
+# Load kubeconfig from default ~/.kube/config
+config.load_kube_config()
+api = client.ApiClient()
+
+# Create kubeconfig request
+kubeconfig_request = {
+    'apiVersion': 'authentication.gardener.cloud/v1alpha1',
+    'kind': 'AdminKubeconfigRequest',
+    'spec': {'expirationSeconds': 600}
+}
+
+response = api.call_api(resource_path=f'/apis/core.gardener.cloud/v1beta1/namespaces/{project_namespace}/shoots/{shoot_name}/adminkubeconfig',
+                        method='POST',
+                        body=kubeconfig_request,
+                        auth_settings=['BearerToken'],
+                        _preload_content=False,
+                        _return_http_data_only=True,
+                       )
+
+decoded_kubeconfig = base64.b64decode(json.loads(response.read().decode("utf-8"))["status"]["kubeconfig"]).decode('utf-8')
+print(decoded_kubeconfig)
+```
+
 > **Note:** The [`gardenctl-v2`](https://github.com/gardener/gardenctl-v2) tool simplifies targeting shoot clusters. It automatically downloads a kubeconfig that uses the [gardenlogin](https://github.com/gardener/gardenlogin) kubectl auth plugin. This transparently manages authentication and certificate renewal without containing any credentials.
 
 ## OpenID Connect
