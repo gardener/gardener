@@ -247,6 +247,18 @@ EOF
 
 To access the `Shoot`, you can acquire a `kubeconfig` by using the [`shoots/adminkubeconfig` subresource](../usage/shoot_access.md#shootsadminkubeconfig-subresource).
 
+For convenience a [helper script](../../hack/usage/generate-admin-kubeconf.sh) is provided in the `hack` directory. By default the script will generate a kubeconfig for a `Shoot` named "local" in the `garden-local` namespace valid for one hour.
+
+```bash
+./hack/usage/generate-admin-kubeconf.sh > admin-kubeconf.yaml
+```
+
+If you want to change the default namespace or shoot name, you can do so by passing different values as arguments.
+
+```bash
+./hack/usage/generate-admin-kubeconf.sh --namespace <namespace> --shoot-name <shootname> > admin-kubeconf.yaml
+```
+
 ## (Optional): Setting Up a Second Seed Cluster
 
 There are cases where you would want to create a second seed cluster in your local setup. For example, if you want to test the [control plane migration](../operations/control_plane_migration.md) feature. The following steps describe how to do that.
