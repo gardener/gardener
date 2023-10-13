@@ -7,20 +7,192 @@ MCM does not have any restrictions regarding supported operating systems as it d
 Consequently, Gardener needs to provide this information when interacting with the machine-controller-manager.
 This means that basically every operating system is possible to be used, as long as there is some implementation that generates the OS-specific configuration in order to provision/bootstrap the machines.
 
-:warning: Currently, there are a few requirements:
+:warning: Currently, there are a few requirements of pre-installed components that must be present in all OS images:
 
-1) The operating system must have built-in [Docker](https://www.docker.com/) support.
-2) The operating system must have [systemd](https://www.freedesktop.org/wiki/Software/systemd/) support.
-3) The operating system must have [`wget`](https://www.gnu.org/software/wget/) pre-installed.
-4) The operating system must have [`jq`](https://stedolan.github.io/jq/) pre-installed.
+1. [Docker](https://www.docker.com/)
+2. [containerd](https://containerd.io/)
+   1. [containerd client CLI](https://github.com/projectatomic/containerd/blob/master/docs/cli.md/)
+   1. `containerd` must listen on its default socket path: `unix:///run/containerd/containerd.sock`
+   1. `containerd` must be configured to work with the default configuration file in: `/etc/containerd/config.toml` (eventually created by Gardener).
+2. [systemd](https://www.freedesktop.org/wiki/Software/systemd/)
+3. [`wget`](https://www.gnu.org/software/wget/)
+4. [`jq`](https://stedolan.github.io/jq/)
 
 The reasons for that will become evident later.
 
 ## What does the user-data bootstrapping the machines contain?
 
 Gardener installs a few components onto every worker machine in order to allow it to join the shoot cluster.
-There is the `kubelet` process, some scripts for continuously checking the health of `kubelet` and `docker`, but also configuration for log rotation, CA certificates, etc.
-The complete configuration you can find [at the components folder](../../pkg/component/extensions/operatingsystemconfig/original/components). We are calling this the "original" user-data.
+There is the `kubelet` process, some scripts for continuously checking the health of `kubelet` and `containerd`, but also configuration for log rotation, CA certificates, etc.
+You can find the complete configuration [at the components folder](../../pkg/component/extensions/operatingsystemconfig/original/components). We are calling this the "original" user-data.
+
+## How does Gardener bootstrap the machines?
+
+When the [`UseGardenerNodeAgent`](../deployment/feature_gates.md) feature gate is enabled, `gardenlet` makes use of `gardener-node-agent` to perform the bootstrapping and reconciliation of systemd units and files on the machine.
+Please refer to [this document](../concepts/node-agent.md#installation-and-bootstrapping) for a first overview.
+
+Usually, you would submit all the components you want to install onto the machine as part of the user-data during creation time.
+However, some providers do have a size limitation (around ~16KB) for that user-data.
+However, some providers do have a size limitation (around ~16KB) for that user-data.
+That's why we do not send the "original" user-data to the machine-controller-manager (who then forwards it to the provider's API).
+Instead, we only send a small "init" script that downloads the "original" data and applies it on the machine directly.
+This way we can extend the "original" user-data without any size restrictions.
+
+The high-level flow is as follows:
+
+1. For every worker pool `X` in the `Shoot` specification, Gardener creates a `Secret` named `cloud-config-<X>` in the `kube-system` namespace of the shoot cluster. The secret contains the "original" `OperatingSystemConfig` (i.e., systemd units and files for `kubelet`, etc.).
+2. Gardener generates a kubeconfig with minimal permissions just allowing reading these secrets. It is used by the `gardener-node-agent` later.
+3. Gardener provides the `gardener-node-init.sh` bash script and the machine image stated in the `Shoot` specification to the machine-controller-manager.
+4. Based on this information, the machine-controller-manager creates the VM.
+5. After the VM has been provisioned, the `gardener-node-init.sh` script starts, fetches the `gardener-node-agent` binary, and starts it.
+6. The `gardener-node-agent` will read the `cloud-config-<X>` `Secret` for its worker pool (containing the "original" `OperatingSystemConfig`), and reconciles it.
+
+The `gardener-node-agent` can update itself in case of newer Gardener versions, and it performs a continuous reconciliation of the systemd units and files in the provided `OperatingSystemConfig` (just like any other Kubernetes controller).
+
+## What needs to be implemented to support a new operating system?
+
+As part of the [`Shoot` reconciliation flow](../concepts/gardenlet.md#shoot-controller), `gardenlet` will create a special CRD in the seed cluster that needs to be reconciled by an extension controller, for example:
+
+```yaml
+---
+apiVersion: extensions.gardener.cloud/v1alpha1
+kind: OperatingSystemConfig
+metadata:
+  name: pool-01-original
+  namespace: default
+spec:
+  type: <my-operating-system>
+  purpose: reconcile
+  reloadConfigFilePath: /var/lib/cloud-config-downloader/cloud-config
+  units:
+  - name: containerd.service
+    dropIns:
+    - name: 10-containerd-opts.conf
+      content: |
+        [Service]
+        Environment="SOME_OPTS=--foo=bar"
+  - name: containerd-monitor.service
+    command: start
+    enable: true
+    content: |
+      [Unit]
+      Description=Docker-monitor daemon
+      After=kubelet.service
+      [Install]
+      WantedBy=multi-user.target
+      [Service]
+      Restart=always
+      EnvironmentFile=/etc/environment
+      ExecStart=/opt/bin/health-monitor containerd
+  files:
+  - path: /var/lib/kubelet/ca.crt
+    permissions: 0644
+    encoding: b64
+    content:
+      secretRef:
+        name: default-token-5dtjz
+        dataKey: token
+  - path: /etc/sysctl.d/99-k8s-general.conf
+    permissions: 0644
+    content:
+      inline:
+        data: |
+          # A higher vm.max_map_count is great for elasticsearch, mongo, or other mmap users
+          # See https://github.com/kubernetes/kops/issues/1340
+          vm.max_map_count = 135217728
+```
+
+In order to support a new operating system, you need to write a controller that watches all `OperatingSystemConfig`s with `.spec.type=<my-operating-system>`.
+For those it shall generate a configuration blob that fits to your operating system.
+
+`OperatingSystemConfig`s can have two purposes: either `provision` or `reconcile`.
+
+### `provision` Purpose
+
+The `provision` purpose is used by `gardenlet` for the user-data that it later passes to the machine-controller-manager (and then to the provider's API) when creating new VMs.
+It contains the `gardener-node-init.sh` script and systemd unit.
+
+The OS controller has to translate the `.spec.units` and `.spec.files` into configuration that fits to the operating system.
+For example, a Flatcar controller might generate a [CoreOS cloud-config](https://github.com/flatcar/coreos-cloudinit/blob/flatcar-master/Documentation/cloud-config-examples.md) or [Ignition](https://coreos.com/ignition/docs/latest/what-is-ignition.html), SLES might generate [cloud-init](https://cloudinit.readthedocs.io/en/latest/), and others might simply generate a bash script translating the `.spec.units` into `systemd` units, and `.spec.files` into real files on the disk.
+
+> ⚠️ Please avoid mixing in additional systemd units or files - this step should just translate what `gardenlet` put into `.spec.units` and `.spec.files`. 
+
+After generation, extension controllers are asked to store their OS config inside a `Secret` (as it might contain confidential data) in the same namespace.
+The secret's `.data` could look like this:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: osc-result-pool-01-original
+  namespace: default
+  ownerReferences:
+  - apiVersion: extensions.gardener.cloud/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: OperatingSystemConfig
+    name: pool-01-original
+    uid: 99c0c5ca-19b9-11e9-9ebd-d67077b40f82
+data:
+  cloud_config: base64(generated-user-data)
+```
+
+Finally, the secret's metadata must be provided in the `OperatingSystemConfig`'s `.status` field:
+
+```yaml
+...
+status:
+  cloudConfig:
+    secretRef:
+      name: osc-result-pool-01-original
+      namespace: default
+  lastOperation:
+    description: Successfully generated cloud config
+    lastUpdateTime: "2019-01-23T07:45:23Z"
+    progress: 100
+    state: Succeeded
+    type: Reconcile
+  observedGeneration: 5
+```
+
+### `reconcile` Purpose
+
+The `reconcile` purpose contains the "original" `OperatingSystemConfig` (which is later stored in `Secret`s in the shoot's `kube-system` namespace (see step 1)).
+
+The OS controller does not need to translate anything here, but it has the option to provide additional systemd units or files via the `.status` field:
+
+```yaml
+status:
+  additionalUnits:
+  - name: my-custom-service.service
+    command: start
+    enable: true
+    content: |
+      [Unit]
+      // some systemd unit content
+  files:
+  - path: /etc/some/file
+    permissions: 0644
+    content:
+      inline:
+        data: some-file-content
+  lastOperation:
+    description: Successfully generated cloud config
+    lastUpdateTime: "2019-01-23T07:45:23Z"
+    progress: 100
+    state: Succeeded
+    type: Reconcile
+  observedGeneration: 5
+```
+
+The `gardener-node-agent` will merge `.spec.units` and `.status.additionalUnits` as well as `.spec.files` and `.status.additionalFiles` when applying.
+
+You can find an example implementation [here](../../pkg/provider-local/controller/operatingsystemconfig/actuator.go).
+
+---
+
+> ❗️Below section is only relevant when the [`UseGardenerNodeAgent`](../deployment/feature_gates.md) feature gate is disabled.
+> Once the feature gate has been promoted to GA, it will become obsolete and gets deleted.
 
 ## How does Gardener bootstrap the machines?
 
@@ -57,23 +229,6 @@ As part of the user-data, the bootstrap-token is placed on the newly created VM 
 The cloud-config-script will then refer to the file path of the added bootstrap token in the kubelet-bootstrap script.
 
 ![Bootstrap flow with shortlived bootstrapTokens](./images/bootstrap_token.png)
-
-### Compatibility Matrix for Node bootstrap-token
-
-With Gardener v1.23, we replaced the long-valid bootstrap-token shared between nodes with a short-lived token unique for each node, ref: [#3898](https://github.com/gardener/gardener/issues/3898).
-
-❗ When updating to Gardener version >=1.35, the old bootstrap-token will be removed. You are required to update your extensions to the following versions when updating Gardener:
-
-| Extension   | Version   | Release Date   | Pull Request |
-|---|---|---|---|
-| os-gardenlinux   |  v0.9.0  |   2 Jul  |  https://github.com/gardener/gardener-extension-os-gardenlinux/pull/29  |
-| os-suse-chost   | v1.11.0 |  2 Jul  |  https://github.com/gardener/gardener-extension-os-suse-chost/pull/41 |
-| os-ubuntu   | v1.11.0   |  2 Jul   |  https://github.com/gardener/gardener-extension-os-ubuntu/pull/42 |
-| os-flatcar   |  v1.7.0  |  2 Jul   |   https://github.com/gardener/gardener-extension-os-coreos/pull/24 |
-| infrastructure-provider using Machine Controller Manager |  varies | ~ end of 2019   | https://github.com/gardener/machine-controller-manager/pull/351  |
-
-⚠️ If you run a provider extension that does not use Machine Controller Manager (MCM), you need to implement the functionality of creating a temporary bootstrap-token before updating your Gardener version to v1.35 or higher.
-All provider extensions maintained in the [gardener GitHub repo](https://github.com/gardener/) use MCM.
 
 ## How does Gardener update the user-data on already existing machines?
 
