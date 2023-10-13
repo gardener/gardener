@@ -40,7 +40,7 @@ var _ = Describe("Component", func() {
 			Expect(units).To(ConsistOf(
 				extensionsv1alpha1.Unit{
 					Name:    "containerd-monitor.service",
-					Command: pointer.String("start"),
+					Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 					Enable:  pointer.Bool(true),
 					Content: pointer.String(`[Unit]
 Description=Containerd-monitor daemon
@@ -64,7 +64,7 @@ WantedBy=multi-user.target`),
 				},
 				extensionsv1alpha1.Unit{
 					Name:    "containerd-logrotate.timer",
-					Command: pointer.String("start"),
+					Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 					Enable:  pointer.Bool(true),
 					Content: pointer.String(`[Unit]
 Description=Log Rotation at each 10 minutes

@@ -78,7 +78,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	return []extensionsv1alpha1.Unit{
 			{
 				Name:    "updatecacerts.service",
-				Command: pointer.String("start"),
+				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 				Content: pointer.String(`[Unit]
 Description=Update local certificate authorities
 # Since other services depend on the certificate store run this early

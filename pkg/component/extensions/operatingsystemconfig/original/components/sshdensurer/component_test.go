@@ -45,7 +45,7 @@ var _ = Describe("Component", func() {
 				[]extensionsv1alpha1.Unit{
 					{
 						Name:    "sshd-ensurer.service",
-						Command: pointer.String("start"),
+						Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 						Content: pointer.String(`[Unit]
 Description=Ensure SSHD service is enabled or disabled
 DefaultDependencies=no
@@ -84,7 +84,7 @@ WantedBy=multi-user.target`),
 				[]extensionsv1alpha1.Unit{
 					{
 						Name:    "sshd-ensurer.service",
-						Command: pointer.String("start"),
+						Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 						Content: pointer.String(`[Unit]
 Description=Ensure SSHD service is enabled or disabled
 DefaultDependencies=no

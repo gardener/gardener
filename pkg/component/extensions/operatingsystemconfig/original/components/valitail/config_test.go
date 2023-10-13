@@ -60,7 +60,7 @@ var _ = Describe("Valitail", func() {
 			Expect(units).To(ConsistOf(
 				extensionsv1alpha1.Unit{
 					Name:    UnitName,
-					Command: pointer.String("start"),
+					Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 					Enable:  pointer.Bool(true),
 					Content: pointer.String(`[Unit]
 Description=valitail daemon
@@ -87,7 +87,7 @@ ExecStart=/opt/bin/valitail -config.file=` + PathConfig),
 				},
 				extensionsv1alpha1.Unit{
 					Name:    "valitail-fetch-token.service",
-					Command: pointer.String("start"),
+					Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 					Enable:  pointer.Bool(true),
 					Content: pointer.String(`[Unit]
 Description=valitail token fetcher
@@ -312,7 +312,7 @@ exit $?
 			Expect(units).To(ConsistOf(
 				extensionsv1alpha1.Unit{
 					Name:    "valitail.service",
-					Command: pointer.String("start"),
+					Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 					Enable:  pointer.Bool(true),
 					Content: pointer.String(`[Unit]
 Description=valitail daemon
@@ -339,7 +339,7 @@ ExecStart=/bin/sh -c "echo service valitail.service is removed!; while true; do 
 				},
 				extensionsv1alpha1.Unit{
 					Name:    "valitail-fetch-token.service",
-					Command: pointer.String("start"),
+					Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 					Enable:  pointer.Bool(true),
 					Content: pointer.String(`[Unit]
 Description=valitail token fetcher

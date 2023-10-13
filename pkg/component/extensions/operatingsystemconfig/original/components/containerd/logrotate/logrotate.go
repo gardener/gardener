@@ -45,7 +45,7 @@ WantedBy=multi-user.target`),
 		},
 		{
 			Name:    prefix + "-logrotate.timer",
-			Command: pointer.String("start"),
+			Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 			Enable:  pointer.Bool(true),
 			Content: pointer.String(`[Unit]
 Description=Log Rotation at each 10 minutes

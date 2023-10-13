@@ -110,7 +110,7 @@ type Unit struct {
 	Name string `json:"name"`
 	// Command is the unit's command.
 	// +optional
-	Command *string `json:"command,omitempty"`
+	Command *UnitCommand `json:"command,omitempty"`
 	// Enable describes whether the unit is enabled or not.
 	// +optional
 	Enable *bool `json:"enable,omitempty"`
@@ -122,6 +122,23 @@ type Unit struct {
 	// +patchStrategy=merge
 	// +optional
 	DropIns []DropIn `json:"dropIns,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+}
+
+// UnitCommand is a string alias.
+type UnitCommand string
+
+const (
+	// CommandStart is the 'start' command for a unit.
+	CommandStart UnitCommand = "start"
+	// CommandRestart is the 'restart' command for a unit.
+	CommandRestart UnitCommand = "restart"
+	// CommandStop is the 'stop' command for a unit.
+	CommandStop UnitCommand = "stop"
+)
+
+// UnitCommandPtr returns a pointer to the provided unit command.
+func UnitCommandPtr(c UnitCommand) *UnitCommand {
+	return &c
 }
 
 // DropIn is a drop-in configuration for a systemd unit.

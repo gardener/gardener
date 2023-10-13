@@ -109,7 +109,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	return []extensionsv1alpha1.Unit{
 			{
 				Name:    UnitName,
-				Command: pointer.String("start"),
+				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 				Enable:  pointer.Bool(true),
 				Content: pointer.String(`[Unit]
 Description=kubelet daemon
@@ -128,7 +128,7 @@ ExecStart=` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `/kubelet
 			},
 			{
 				Name:    "kubelet-monitor.service",
-				Command: pointer.String("start"),
+				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 				Enable:  pointer.Bool(true),
 				Content: pointer.String(`[Unit]
 Description=Kubelet-monitor daemon

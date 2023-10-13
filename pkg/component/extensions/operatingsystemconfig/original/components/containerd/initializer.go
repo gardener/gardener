@@ -77,7 +77,7 @@ func (initializer) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []
 	return []extensionsv1alpha1.Unit{
 			{
 				Name:    unitNameInitializer,
-				Command: pointer.String("start"),
+				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 				Enable:  pointer.Bool(true),
 				Content: pointer.String(`[Unit]
 Description=Containerd initializer

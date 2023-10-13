@@ -32,7 +32,7 @@ var _ = Describe("Downloader", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(units).To(ConsistOf(extensionsv1alpha1.Unit{
 				Name:    "cloud-config-downloader.service",
-				Command: pointer.String("start"),
+				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 				Enable:  pointer.Bool(true),
 				Content: pointer.String(unitContent),
 			}))
