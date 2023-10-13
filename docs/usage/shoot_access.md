@@ -20,6 +20,7 @@ kubectl create \
     base64 -d
 ```
 
+
 You also can use controller-runtime `client` (>= v0.14.3) to create such a kubeconfig from your go code like so:
 
 ```go
@@ -78,6 +79,7 @@ print(decoded_kubeconfig)
 shoot_api_client = config.new_client_from_config_dict(yaml.safe_load(decoded_kubeconfig))
 v1 = client.CoreV1Api(shoot_api_client)
 ```
+
 > **Note:** The [`gardenctl-v2`](https://github.com/gardener/gardenctl-v2) tool simplifies targeting shoot clusters. It automatically downloads a kubeconfig that uses the [gardenlogin](https://github.com/gardener/gardenlogin) kubectl auth plugin. This transparently manages authentication and certificate renewal without containing any credentials.
 
 ## OpenID Connect
