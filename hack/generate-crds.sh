@@ -118,11 +118,11 @@ generate_group () {
     $generate
   fi
 
-  local files_in_use=("$@")
+  local relevant_files=("$@")
   while IFS= read -r crd; do
     crd_out="$output_dir/$file_name_prefix$(basename $crd)"
     mv "$crd" "$crd_out"
-    files_in_use+=("$(basename "$crd_out")")
+    relevant_files+=("$(basename "$crd_out")")
 
     if $add_deletion_protection_label; then
       if grep -q "clusters.extensions.gardener.cloud"  "$crd_out"; then
@@ -149,18 +149,19 @@ generate_group () {
     pattern=".*${group}_v.*\.yaml"
   fi
 
-  while IFS= read -r crd; do
-    delete=true
-    for file_name_in_use in "${files_in_use[@]}"; do
-      file_name=$(basename "$crd")
-      if [[ $file_name == "$file_name_in_use" ]] || [[ ! $file_name =~ $pattern ]]; then
-        delete=false
+  while IFS= read -r file; do
+    file_name=$(basename "$file")
+    delete_no_longer_needed_file=true
+
+    for relevant_file_name in "${relevant_files[@]}"; do
+      if [[ $file_name == "$relevant_file_name" ]] || [[ ! $file_name =~ $pattern ]]; then
+        delete_no_longer_needed_file=false
         break
       fi
     done
 
-    if $delete; then
-      rm "$crd"
+    if $delete_no_longer_needed_file; then
+      rm "$file"
     fi
   done < <(ls "$output_dir")
 }
