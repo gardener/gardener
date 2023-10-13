@@ -16,6 +16,7 @@ package node
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -40,10 +41,13 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		r.DBus = dbus.New()
 	}
 
+	node := &metav1.PartialObjectMetadata{}
+	node.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Node"))
+
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		For(&corev1.Node{}, builder.WithPredicates(r.NodePredicate())).
+		For(node, builder.WithPredicates(r.NodePredicate())).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		Complete(r)
 }
@@ -52,7 +56,9 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 // changed. When it's removed, 'false' is returned.
 func (r *Reconciler) NodePredicate() predicate.Predicate {
 	return predicate.Funcs{
-		CreateFunc: func(_ event.CreateEvent) bool { return true },
+		CreateFunc: func(e event.CreateEvent) bool {
+			return e.Object.GetAnnotations()[annotationRestartSystemdServices] != ""
+		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			return e.ObjectOld.GetAnnotations()[annotationRestartSystemdServices] != e.ObjectNew.GetAnnotations()[annotationRestartSystemdServices] &&
 				e.ObjectNew.GetAnnotations()[annotationRestartSystemdServices] != ""

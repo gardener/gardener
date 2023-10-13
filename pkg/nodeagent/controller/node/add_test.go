@@ -38,8 +38,13 @@ var _ = Describe("Add", func() {
 		})
 
 		Describe("#Create", func() {
-			It("should return true", func() {
-				Expect(p.Create(event.CreateEvent{})).To(BeTrue())
+			It("should return false because annotation is not present", func() {
+				Expect(p.Create(event.CreateEvent{Object: node})).To(BeFalse())
+			})
+
+			It("should return true because annotation is present", func() {
+				metav1.SetMetaDataAnnotation(&node.ObjectMeta, "worker.gardener.cloud/restart-systemd-services", "foo")
+				Expect(p.Create(event.CreateEvent{Object: node})).To(BeTrue())
 			})
 		})
 

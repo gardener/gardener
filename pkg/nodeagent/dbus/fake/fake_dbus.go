@@ -17,7 +17,7 @@ package fake
 import (
 	"context"
 
-	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
@@ -87,7 +87,7 @@ func (d *DBus) Enable(_ context.Context, unitNames ...string) error {
 }
 
 // Restart implements dbus.DBus.
-func (d *DBus) Restart(_ context.Context, _ record.EventRecorder, _ *corev1.Node, unitName string) error {
+func (d *DBus) Restart(_ context.Context, _ record.EventRecorder, _ runtime.Object, unitName string) error {
 	d.Actions = append(d.Actions, SystemdAction{
 		Action:    ActionRestart,
 		UnitNames: []string{unitName},
@@ -96,7 +96,7 @@ func (d *DBus) Restart(_ context.Context, _ record.EventRecorder, _ *corev1.Node
 }
 
 // Start implements dbus.DBus.
-func (d *DBus) Start(_ context.Context, _ record.EventRecorder, _ *corev1.Node, unitName string) error {
+func (d *DBus) Start(_ context.Context, _ record.EventRecorder, _ runtime.Object, unitName string) error {
 	d.Actions = append(d.Actions, SystemdAction{
 		Action:    ActionStart,
 		UnitNames: []string{unitName},
@@ -105,7 +105,7 @@ func (d *DBus) Start(_ context.Context, _ record.EventRecorder, _ *corev1.Node, 
 }
 
 // Stop implements dbus.DBus.
-func (d *DBus) Stop(_ context.Context, _ record.EventRecorder, _ *corev1.Node, unitName string) error {
+func (d *DBus) Stop(_ context.Context, _ record.EventRecorder, _ runtime.Object, unitName string) error {
 	d.Actions = append(d.Actions, SystemdAction{
 		Action:    ActionStop,
 		UnitNames: []string{unitName},

@@ -20,6 +20,7 @@ import (
 
 	"github.com/coreos/go-systemd/v22/dbus"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 )
 
@@ -34,11 +35,11 @@ type DBus interface {
 	// Disable the given units, same as executing "systemctl disable unit".
 	Disable(ctx context.Context, unitNames ...string) error
 	// Start the given unit and record an event to the node object, same as executing "systemctl start unit".
-	Start(ctx context.Context, recorder record.EventRecorder, node *corev1.Node, unitName string) error
+	Start(ctx context.Context, recorder record.EventRecorder, node runtime.Object, unitName string) error
 	// Stop the given unit and record an event to the node object, same as executing "systemctl stop unit".
-	Stop(ctx context.Context, recorder record.EventRecorder, node *corev1.Node, unitName string) error
+	Stop(ctx context.Context, recorder record.EventRecorder, node runtime.Object, unitName string) error
 	// Restart the given unit and record an event to the node object, same as executing "systemctl restart unit".
-	Restart(ctx context.Context, recorder record.EventRecorder, node *corev1.Node, unitName string) error
+	Restart(ctx context.Context, recorder record.EventRecorder, node runtime.Object, unitName string) error
 }
 
 type db struct{}
@@ -70,7 +71,7 @@ func (_ *db) Disable(ctx context.Context, unitNames ...string) error {
 	return err
 }
 
-func (_ *db) Stop(ctx context.Context, recorder record.EventRecorder, node *corev1.Node, unitName string) error {
+func (_ *db) Stop(ctx context.Context, recorder record.EventRecorder, node runtime.Object, unitName string) error {
 	dbc, err := dbus.NewWithContext(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to connect to dbus: %w", err)
@@ -91,7 +92,7 @@ func (_ *db) Stop(ctx context.Context, recorder record.EventRecorder, node *core
 	return err
 }
 
-func (_ *db) Start(ctx context.Context, recorder record.EventRecorder, node *corev1.Node, unitName string) error {
+func (_ *db) Start(ctx context.Context, recorder record.EventRecorder, node runtime.Object, unitName string) error {
 	dbc, err := dbus.NewWithContext(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to connect to dbus: %w", err)
@@ -113,7 +114,7 @@ func (_ *db) Start(ctx context.Context, recorder record.EventRecorder, node *cor
 	return err
 }
 
-func (_ *db) Restart(ctx context.Context, recorder record.EventRecorder, node *corev1.Node, unitName string) error {
+func (_ *db) Restart(ctx context.Context, recorder record.EventRecorder, node runtime.Object, unitName string) error {
 	dbc, err := dbus.NewWithContext(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to connect to dbus: %w", err)
@@ -149,7 +150,7 @@ func (_ *db) DaemonReload(ctx context.Context) error {
 	return nil
 }
 
-func recordEvent(recorder record.EventRecorder, node *corev1.Node, err error, unitName, reason, operation string) {
+func recordEvent(recorder record.EventRecorder, node runtime.Object, err error, unitName, reason, operation string) {
 	if recorder != nil && node != nil {
 		var (
 			eventType = corev1.EventTypeNormal
