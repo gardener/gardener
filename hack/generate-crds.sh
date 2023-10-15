@@ -36,6 +36,7 @@ if ! command -v controller-gen &> /dev/null ; then
 fi
 
 output_dir="$(pwd)"
+output_dir_temp="$(mktemp -d)"
 add_deletion_protection_label=false
 add_keep_object_annotation=false
 k8s_io_api_approval_reason="unapproved, temporarily squatting"
@@ -62,7 +63,7 @@ get_group_package () {
     echo "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
     ;;
   "autoscaling.k8s.io")
-    echo "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+    echo "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/..."
     ;;
   "machine.sapcloud.io")
     echo "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -92,21 +93,12 @@ generate_group () {
   if [ -z "$package" ] ; then
     exit 1
   fi
-  local package_path="$(go list -f '{{ .Dir }}' "$package")"
+  local package_path="$(go list -f '{{ .Dir }}' "$package" | tr '\n' ';')"
   if [ -z "$package_path" ] ; then
     exit 1
   fi
 
-  # clean all generated files for this group to account for changed prefix or removed resources
-  pattern="*${group}_*.yaml"
-  if [[ "$group" == "autoscaling.k8s.io" ]]; then
-    pattern="*${group}_v*.yaml"
-  fi
-  if ls "$output_dir"/$pattern >/dev/null 2>&1; then
-    rm "$output_dir"/$pattern
-  fi
-
-  generate="controller-gen crd"$crd_options" paths="$package_path" output:crd:dir="$output_dir" output:stdout"
+  generate="controller-gen crd"$crd_options" paths="$package_path" output:crd:dir="$output_dir_temp" output:stdout"
 
   if [[ "$group" == "druid.gardener.cloud" ]]; then
     # /scale subresource is intentionally removed from this CRD, although it is specified in the original CRD from
@@ -126,11 +118,11 @@ generate_group () {
     $generate
   fi
 
+  local relevant_files=("$@")
   while IFS= read -r crd; do
     crd_out="$output_dir/$file_name_prefix$(basename $crd)"
-    if [ "$crd" != "$crd_out" ]; then
-      mv "$crd" "$crd_out"
-    fi
+    mv "$crd" "$crd_out"
+    relevant_files+=("$(basename "$crd_out")")
 
     if $add_deletion_protection_label; then
       if grep -q "clusters.extensions.gardener.cloud"  "$crd_out"; then
@@ -149,7 +141,29 @@ generate_group () {
     if [[ ${group} =~ .*\.k8s\.io ]]; then
       sed -i "/^  annotations:.*/a\    api-approved.kubernetes.io: $k8s_io_api_approval_reason" "$crd_out"
     fi
-  done < <(ls "$output_dir/${group/hvpa/}"_*.yaml)
+  done < <(ls "$output_dir_temp/${group/hvpa/}"_*.yaml)
+
+  # garbage collection - clean all generated files for this group to account for changed prefix or removed resources
+  local pattern=".*${group}_.*\.yaml"
+  if [[ "$group" == "autoscaling.k8s.io" ]]; then
+    pattern=".*${group}_v.*\.yaml"
+  fi
+
+  while IFS= read -r file; do
+    file_name=$(basename "$file")
+    delete_no_longer_needed_file=true
+
+    for relevant_file_name in "${relevant_files[@]}"; do
+      if [[ $file_name == "$relevant_file_name" ]] || [[ ! $file_name =~ $pattern ]]; then
+        delete_no_longer_needed_file=false
+        break
+      fi
+    done
+
+    if $delete_no_longer_needed_file; then
+      rm "$file"
+    fi
+  done < <(ls "$output_dir")
 }
 
 parse_flags() {
