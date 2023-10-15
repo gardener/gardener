@@ -412,7 +412,7 @@ var _ = Describe("GardenerAPIServer", func() {
 				Strategy: appsv1.DeploymentStrategy{
 					Type: appsv1.RollingUpdateDeploymentStrategyType,
 					RollingUpdate: &appsv1.RollingUpdateDeployment{
-						MaxSurge:       gardenerutils.IntStrPtrFromInt32(1),
+						MaxSurge:       gardenerutils.IntStrPtrFromString("100%"),
 						MaxUnavailable: gardenerutils.IntStrPtrFromInt32(0),
 					},
 				},

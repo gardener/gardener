@@ -36,5 +36,6 @@ func GetFeatures() []featuregate.Feature {
 		features.IPv6SingleStack,
 		features.MachineControllerManagerDeployment,
 		features.ContainerdRegistryHostsDir,
+		features.APIServerFastRollout,
 	}
 }

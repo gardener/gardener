@@ -33,6 +33,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | MachineControllerManagerDeployment  | `true`  | `GA`    | `1.82` |        |
 | ContainerdRegistryHostsDir          | `false` | `Alpha` | `1.77` |        |
 | ShootForceDeletion                  | `false` | `Alpha` | `1.81` |        |
+| APIServerFastRollout                | `true`  | `Beta`  | `1.82` |        |
 
 ## Feature Gates for Graduated or Deprecated Features
 
@@ -185,3 +186,4 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | MachineControllerManagerDeployment | `gardenlet`                       | Enables Gardener to take over the deployment of the machine-controller-manager. If enabled, all registered provider extensions must support injecting the provider-specific MCM sidecar container into the deployment via the `controlplane` webhook.                                                                                                                              |
 | ContainerdRegistryHostsDir         | `gardenlet`                       | Enables registry configuration in containerd based on the hosts directory pattern. The hosts directory pattern is the new way of configuring registries/mirrors in containerd. Ref https://github.com/containerd/containerd/blob/main/docs/hosts.md.                                                                                                                               |
 | ShootForceDeletion                 | `gardener-apiserver`              | Allows forceful deletion of Shoots by annotating them with the `confirmation.gardener.cloud/force-deletion` annotation.                                                                                                                                                                                                                                                            |
+| APIServerFastRollout               | `gardenlet`                       | Enables fast rollouts for Shoot kube-apiservers on the given Seed. When enabled, `maxSurge` for Shoot kube-apiserver deployments is set to 100%.                                                                                                                                                                                                                                                                  |

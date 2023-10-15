@@ -96,6 +96,8 @@ type Values struct {
 	ExternalHostname string
 	// ExternalServer is the external server which should be used when generating the user kubeconfig.
 	ExternalServer string
+	// FastRollout defines whether kube-apiserver deployment uses maxSurge=100% or not.
+	FastRollout bool
 	// Images is a set of container images used for the containers of the kube-apiserver pods.
 	Images Images
 	// IsWorkerless specifies whether the cluster managed by this API server has worker nodes.
@@ -411,6 +413,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		secretAuthenticationWebhookKubeconfig,
 		secretAuthorizationWebhookKubeconfig,
 		tlsSNISecrets,
+		k.values.FastRollout,
 	); err != nil {
 		return err
 	}

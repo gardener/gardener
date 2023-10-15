@@ -98,6 +98,7 @@ func NewKubeAPIServer(
 	authenticationWebhookConfig *kubeapiserver.AuthenticationWebhook,
 	authorizationWebhookConfig *kubeapiserver.AuthorizationWebhook,
 	resourcesToStoreInETCDEvents []schema.GroupResource,
+	fastRollout bool,
 ) (
 	kubeapiserver.Interface,
 	error,
@@ -194,6 +195,7 @@ func NewKubeAPIServer(
 			StaticTokenKubeconfigEnabled:        staticTokenKubeconfigEnabled,
 			Version:                             targetVersion,
 			VPN:                                 vpnConfig,
+			FastRollout:                         fastRollout,
 		},
 	), nil
 }
