@@ -777,6 +777,7 @@ func (n *nginxIngress) getArgs(configMapName, serviceNameController string) []st
 		"--configmap=" + n.values.TargetNamespace + "/" + configMapName,
 		"--ingress-class=" + n.values.IngressClass,
 		"--controller-class=k8s.io/" + n.values.IngressClass,
+		"--enable-annotation-validation=true",
 	}
 
 	if n.values.ClusterType == component.ClusterTypeShoot {
