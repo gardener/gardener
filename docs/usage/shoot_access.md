@@ -11,7 +11,7 @@ The username associated with such `kubeconfig` will be the same which is used fo
 In order to request such a `kubeconfig`, you can run the following commands:
 
 ```bash
-export NAMESPACE=my-namespace
+export NAMESPACE=garden-my-namespace
 export SHOOT_NAME=my-shoot
 kubectl create \
     -f <(printf '{"spec":{"expirationSeconds":600}}') \
@@ -36,6 +36,50 @@ if err != nil {
   return err
 }
 config = adminKubeconfigRequest.Status.Kubeconfig
+```
+
+In Python you can use the native [`kubernetes` client](https://github.com/kubernetes-client/python) to create such a kubeconfig like this:
+
+```python
+# This script first loads an existing kubeconfig from your system, and then sends a request to the Gardener API to create a new kubeconfig for a shoot cluster. 
+# The received kubeconfig is then decoded and a new API client is created for interacting with the shoot cluster.
+
+import base64
+import json
+from kubernetes import client, config
+import yaml
+
+# Set configuration options
+shoot_name="my-shoot" # Name of the shoot
+project_namespace="garden-my-namespace" # Namespace of the project
+
+# Load kubeconfig from default ~/.kube/config
+config.load_kube_config()
+api = client.ApiClient()
+
+# Create kubeconfig request
+kubeconfig_request = {
+    'apiVersion': 'authentication.gardener.cloud/v1alpha1',
+    'kind': 'AdminKubeconfigRequest',
+    'spec': {
+      'expirationSeconds': 600
+    }
+}
+
+response = api.call_api(resource_path=f'/apis/core.gardener.cloud/v1beta1/namespaces/{project_namespace}/shoots/{shoot_name}/adminkubeconfig',
+                        method='POST',
+                        body=kubeconfig_request,
+                        auth_settings=['BearerToken'],
+                        _preload_content=False,
+                        _return_http_data_only=True,
+                       )
+
+decoded_kubeconfig = base64.b64decode(json.loads(response.data)["status"]["kubeconfig"]).decode('utf-8')
+print(decoded_kubeconfig)
+
+# Create an API client to interact with the shoot cluster
+shoot_api_client = config.new_client_from_config_dict(yaml.safe_load(decoded_kubeconfig))
+v1 = client.CoreV1Api(shoot_api_client)
 ```
 
 > **Note:** The [`gardenctl-v2`](https://github.com/gardener/gardenctl-v2) tool simplifies targeting shoot clusters. It automatically downloads a kubeconfig that uses the [gardenlogin](https://github.com/gardener/gardenlogin) kubectl auth plugin. This transparently manages authentication and certificate renewal without containing any credentials.
