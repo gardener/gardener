@@ -33,7 +33,6 @@ Please refer to [this document](../concepts/node-agent.md#installation-and-boots
 
 Usually, you would submit all the components you want to install onto the machine as part of the user-data during creation time.
 However, some providers do have a size limitation (around ~16KB) for that user-data.
-However, some providers do have a size limitation (around ~16KB) for that user-data.
 That's why we do not send the "original" user-data to the machine-controller-manager (who then forwards it to the provider's API).
 Instead, we only send a small "init" script that downloads the "original" data and applies it on the machine directly.
 This way we can extend the "original" user-data without any size restrictions.
@@ -163,14 +162,14 @@ The OS controller does not need to translate anything here, but it has the optio
 
 ```yaml
 status:
-  additionalUnits:
+  extensionUnits:
   - name: my-custom-service.service
     command: start
     enable: true
     content: |
       [Unit]
       // some systemd unit content
-  files:
+  extensionFiles:
   - path: /etc/some/file
     permissions: 0644
     content:
@@ -185,16 +184,16 @@ status:
   observedGeneration: 5
 ```
 
-The `gardener-node-agent` will merge `.spec.units` and `.status.additionalUnits` as well as `.spec.files` and `.status.additionalFiles` when applying.
+The `gardener-node-agent` will merge `.spec.units` and `.status.extensionUnits` as well as `.spec.files` and `.status.extensionFiles` when applying.
 
 You can find an example implementation [here](../../pkg/provider-local/controller/operatingsystemconfig/actuator.go).
 
 ---
 
+## How does Gardener bootstrap the machines?
+
 > ❗️Below section is only relevant when the [`UseGardenerNodeAgent`](../deployment/feature_gates.md) feature gate is disabled.
 > Once the feature gate has been promoted to GA, it will become obsolete and gets deleted.
-
-## How does Gardener bootstrap the machines?
 
 Usually, you would submit all the components you want to install onto the machine as part of the user-data during creation time.
 However, some providers do have a size limitation (around ~16KB) for that user-data.

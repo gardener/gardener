@@ -124,7 +124,7 @@ func (r *reconciler) reconcile(
 	}
 
 	log.Info("Starting the reconciliation of OperatingSystemConfig")
-	userData, command, unitNames, fileNames, additionalUnits, additionalFiles, err := r.actuator.Reconcile(ctx, log, osc)
+	userData, command, unitNames, fileNames, extensionUnits, extensionFiles, err := r.actuator.Reconcile(ctx, log, osc)
 	if err != nil {
 		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling OperatingSystemConfig")
 		return reconcilerutils.ReconcileErr(err)
@@ -140,7 +140,7 @@ func (r *reconciler) reconcile(
 	}
 
 	patch := client.MergeFrom(osc.DeepCopy())
-	setOSCStatus(osc, secret, command, unitNames, fileNames, additionalUnits, additionalFiles)
+	setOSCStatus(osc, secret, command, unitNames, fileNames, extensionUnits, extensionFiles)
 	if err := r.client.Status().Patch(ctx, osc, patch); err != nil {
 		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not update status")
 		return reconcilerutils.ReconcileErr(err)
@@ -172,7 +172,7 @@ func (r *reconciler) restore(
 	}
 
 	log.Info("Starting the restoration of OperatingSystemConfig")
-	userData, command, units, files, additionalUnits, additionalFiles, err := r.actuator.Restore(ctx, log, osc)
+	userData, command, units, files, extensionUnits, extensionFiles, err := r.actuator.Restore(ctx, log, osc)
 	if err != nil {
 		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Error restoring OperatingSystemConfig")
 		return reconcilerutils.ReconcileErr(err)
@@ -188,7 +188,7 @@ func (r *reconciler) restore(
 	}
 
 	patch := client.MergeFrom(osc.DeepCopy())
-	setOSCStatus(osc, secret, command, units, files, additionalUnits, additionalFiles)
+	setOSCStatus(osc, secret, command, units, files, extensionUnits, extensionFiles)
 	if err := r.client.Status().Patch(ctx, osc, patch); err != nil {
 		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not update units and secret ref.")
 		return reconcilerutils.ReconcileErr(err)
@@ -307,8 +307,8 @@ func setOSCStatus(
 	secret *corev1.Secret,
 	command *string,
 	units, files []string,
-	additionalUnits []extensionsv1alpha1.Unit,
-	additionalFiles []extensionsv1alpha1.File,
+	extensionUnits []extensionsv1alpha1.Unit,
+	extensionFiles []extensionsv1alpha1.File,
 ) {
 	if secret != nil {
 		osc.Status.CloudConfig = &extensionsv1alpha1.CloudConfig{
@@ -323,6 +323,6 @@ func setOSCStatus(
 	}
 	osc.Status.Units = units
 	osc.Status.Files = files
-	osc.Status.AdditionalUnits = additionalUnits
-	osc.Status.AdditionalFiles = additionalFiles
+	osc.Status.ExtensionUnits = extensionUnits
+	osc.Status.ExtensionFiles = extensionFiles
 }

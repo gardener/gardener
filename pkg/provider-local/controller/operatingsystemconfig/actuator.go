@@ -79,8 +79,8 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, osc *extensio
 		return []byte(userData), nil, nil, nil, nil, nil, err
 
 	case extensionsv1alpha1.OperatingSystemConfigPurposeReconcile:
-		additionalUnits, additionalFiles, err := a.handleReconcileOSC(osc)
-		return nil, nil, nil, nil, additionalUnits, additionalFiles, err
+		extensionUnits, extensionFiles, err := a.handleReconcileOSC(osc)
+		return nil, nil, nil, nil, extensionUnits, extensionFiles, err
 
 	default:
 		return nil, nil, nil, nil, nil, nil, fmt.Errorf("unknown purpose: %s", purpose)
@@ -114,7 +114,7 @@ func (a *actuator) handleProvisionOSC(ctx context.Context, osc *extensionsv1alph
 ` + writeFilesToDiskScript + `
 ` + writeUnitsToDiskScript + `
 systemctl daemon-reload
-systemctl enable gardener-node-agent && systemctl restart gardener-node-agent
+systemctl enable gardener-node-init && systemctl start gardener-node-init
 `, nil
 }
 

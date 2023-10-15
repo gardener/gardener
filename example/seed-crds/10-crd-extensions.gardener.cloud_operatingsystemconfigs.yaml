@@ -199,109 +199,6 @@ spec:
             description: OperatingSystemConfigStatus is the status for a OperatingSystemConfig
               resource.
             properties:
-              additionalFiles:
-                description: AdditionalFiles is a list of additional files provided
-                  by the extension.
-                items:
-                  description: File is a file that should get written to the host's
-                    file system. The content can either be inlined or referenced from
-                    a secret in the same namespace.
-                  properties:
-                    content:
-                      description: Content describe the file's content.
-                      properties:
-                        inline:
-                          description: Inline is a struct that contains information
-                            about the inlined data.
-                          properties:
-                            data:
-                              description: Data is the file's data.
-                              type: string
-                            encoding:
-                              description: Encoding is the file's encoding (e.g. base64).
-                              type: string
-                          required:
-                          - data
-                          - encoding
-                          type: object
-                        secretRef:
-                          description: SecretRef is a struct that contains information
-                            about the referenced secret.
-                          properties:
-                            dataKey:
-                              description: DataKey is the key in the secret's `.data`
-                                field that should be read.
-                              type: string
-                            name:
-                              description: Name is the name of the secret.
-                              type: string
-                          required:
-                          - dataKey
-                          - name
-                          type: object
-                        transmitUnencoded:
-                          description: TransmitUnencoded set to true will ensure that
-                            the os-extension does not encode the file content when
-                            sent to the node. This for example can be used to manipulate
-                            the clear-text content before it reaches the node.
-                          type: boolean
-                      type: object
-                    path:
-                      description: Path is the path of the file system where the file
-                        should get written to.
-                      type: string
-                    permissions:
-                      description: Permissions describes with which permissions the
-                        file should get written to the file system. Should be defaulted
-                        to octal 0644.
-                      format: int32
-                      type: integer
-                  required:
-                  - content
-                  - path
-                  type: object
-                type: array
-              additionalUnits:
-                description: AdditionalUnits is a list of additional systemd units
-                  provided by the extension.
-                items:
-                  description: Unit is a unit for the operating system configuration
-                    (usually, a systemd unit).
-                  properties:
-                    command:
-                      description: Command is the unit's command.
-                      type: string
-                    content:
-                      description: Content is the unit's content.
-                      type: string
-                    dropIns:
-                      description: DropIns is a list of drop-ins for this unit.
-                      items:
-                        description: DropIn is a drop-in configuration for a systemd
-                          unit.
-                        properties:
-                          content:
-                            description: Content is the content of the drop-in.
-                            type: string
-                          name:
-                            description: Name is the name of the drop-in.
-                            type: string
-                        required:
-                        - content
-                        - name
-                        type: object
-                      type: array
-                    enable:
-                      description: Enable describes whether the unit is enabled or
-                        not.
-                      type: boolean
-                    name:
-                      description: Name is the name of a unit.
-                      type: string
-                  required:
-                  - name
-                  type: object
-                type: array
               cloudConfig:
                 description: CloudConfig is a structure for containing the generated
                   output for the given operating system config spec. It contains a
@@ -375,6 +272,109 @@ spec:
                   - reason
                   - status
                   - type
+                  type: object
+                type: array
+              extensionFiles:
+                description: ExtensionFiles is a list of additional files provided
+                  by the extension.
+                items:
+                  description: File is a file that should get written to the host's
+                    file system. The content can either be inlined or referenced from
+                    a secret in the same namespace.
+                  properties:
+                    content:
+                      description: Content describe the file's content.
+                      properties:
+                        inline:
+                          description: Inline is a struct that contains information
+                            about the inlined data.
+                          properties:
+                            data:
+                              description: Data is the file's data.
+                              type: string
+                            encoding:
+                              description: Encoding is the file's encoding (e.g. base64).
+                              type: string
+                          required:
+                          - data
+                          - encoding
+                          type: object
+                        secretRef:
+                          description: SecretRef is a struct that contains information
+                            about the referenced secret.
+                          properties:
+                            dataKey:
+                              description: DataKey is the key in the secret's `.data`
+                                field that should be read.
+                              type: string
+                            name:
+                              description: Name is the name of the secret.
+                              type: string
+                          required:
+                          - dataKey
+                          - name
+                          type: object
+                        transmitUnencoded:
+                          description: TransmitUnencoded set to true will ensure that
+                            the os-extension does not encode the file content when
+                            sent to the node. This for example can be used to manipulate
+                            the clear-text content before it reaches the node.
+                          type: boolean
+                      type: object
+                    path:
+                      description: Path is the path of the file system where the file
+                        should get written to.
+                      type: string
+                    permissions:
+                      description: Permissions describes with which permissions the
+                        file should get written to the file system. Should be defaulted
+                        to octal 0644.
+                      format: int32
+                      type: integer
+                  required:
+                  - content
+                  - path
+                  type: object
+                type: array
+              extensionUnits:
+                description: ExtensionUnits is a list of additional systemd units
+                  provided by the extension.
+                items:
+                  description: Unit is a unit for the operating system configuration
+                    (usually, a systemd unit).
+                  properties:
+                    command:
+                      description: Command is the unit's command.
+                      type: string
+                    content:
+                      description: Content is the unit's content.
+                      type: string
+                    dropIns:
+                      description: DropIns is a list of drop-ins for this unit.
+                      items:
+                        description: DropIn is a drop-in configuration for a systemd
+                          unit.
+                        properties:
+                          content:
+                            description: Content is the content of the drop-in.
+                            type: string
+                          name:
+                            description: Name is the name of the drop-in.
+                            type: string
+                        required:
+                        - content
+                        - name
+                        type: object
+                      type: array
+                    enable:
+                      description: Enable describes whether the unit is enabled or
+                        not.
+                      type: boolean
+                    name:
+                      description: Name is the name of a unit.
+                      type: string
+                  required:
+                  - name
                   type: object
                 type: array
               files:

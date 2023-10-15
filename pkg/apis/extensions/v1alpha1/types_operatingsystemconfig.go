@@ -179,16 +179,16 @@ type FileContentInline struct {
 type OperatingSystemConfigStatus struct {
 	// DefaultStatus is a structure containing common fields used by all extension resources.
 	DefaultStatus `json:",inline"`
-	// AdditionalUnits is a list of additional systemd units provided by the extension.
+	// ExtensionUnits is a list of additional systemd units provided by the extension.
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	// +optional
-	AdditionalUnits []Unit `json:"additionalUnits,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
-	// AdditionalFiles is a list of additional files provided by the extension.
+	ExtensionUnits []Unit `json:"extensionUnits,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	// ExtensionFiles is a list of additional files provided by the extension.
 	// +patchMergeKey=path
 	// +patchStrategy=merge
 	// +optional
-	AdditionalFiles []File `json:"additionalFiles,omitempty" patchStrategy:"merge" patchMergeKey:"path"`
+	ExtensionFiles []File `json:"extensionFiles,omitempty" patchStrategy:"merge" patchMergeKey:"path"`
 	// CloudConfig is a structure for containing the generated output for the given operating system
 	// config spec. It contains a reference to a secret as the result may contain confidential data.
 	// +optional

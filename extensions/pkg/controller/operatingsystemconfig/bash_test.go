@@ -16,6 +16,10 @@ package operatingsystemconfig_test
 
 import (
 	"context"
+	"io/fs"
+	"os"
+	"os/exec"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -57,6 +61,20 @@ var _ = Describe("Bash", func() {
 		})
 
 		It("should generate the expected output", func() {
+			var (
+				folder1 = "/foo"
+				file1   = folder1 + "/bar.txt"
+
+				folder2 = "/bar"
+				file2   = folder2 + "/baz"
+
+				folder3 = "/baz"
+				file3   = folder3 + "/foo"
+
+				folder4 = "/foobar"
+				file4   = folder4 + "/baz"
+			)
+
 			Expect(fakeClient.Create(ctx, &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
@@ -67,7 +85,7 @@ var _ = Describe("Bash", func() {
 
 			files := []extensionsv1alpha1.File{
 				{
-					Path: "/foo/bar.txt",
+					Path: file1,
 					Content: extensionsv1alpha1.FileContent{
 						SecretRef: &extensionsv1alpha1.FileContentSecretRef{
 							Name:    "foo",
@@ -76,7 +94,7 @@ var _ = Describe("Bash", func() {
 					},
 				},
 				{
-					Path: "/bar/baz",
+					Path: file2,
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "",
@@ -85,7 +103,7 @@ var _ = Describe("Bash", func() {
 					},
 				},
 				{
-					Path: "/bar/baz",
+					Path: file3,
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
@@ -94,7 +112,7 @@ var _ = Describe("Bash", func() {
 					},
 				},
 				{
-					Path: "/baz/foo",
+					Path: file4,
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "",
@@ -105,68 +123,120 @@ var _ = Describe("Bash", func() {
 				},
 			}
 
+			By("Ensure the function generated the expected bash script")
 			script, err := FilesToDiskScript(ctx, fakeClient, namespace, files)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(script).To(Equal(`
-mkdir -p "/foo"
+mkdir -p "` + folder1 + `"
 
-cat << EOF | base64 -d > "/foo/bar.txt"
+cat << EOF | base64 -d > "` + file1 + `"
 YmFyLWNvbnRlbnQ=
 EOF
-mkdir -p "/bar"
+mkdir -p "` + folder2 + `"
 
-cat << EOF | base64 -d > "/bar/baz"
+cat << EOF | base64 -d > "` + file2 + `"
 cGxhaW4tdGV4dA==
 EOF
-mkdir -p "/bar"
+mkdir -p "` + folder3 + `"
 
-cat << EOF | base64 -d > "/bar/baz"
+cat << EOF | base64 -d > "` + file3 + `"
 YmFzZTY0
 EOF
-mkdir -p "/baz"
+mkdir -p "` + folder4 + `"
 
-cat << EOF > "/baz/foo"
+cat << EOF > "` + file4 + `"
 transmit-unencoded
 EOF`))
+
+			By("Ensure that the bash script can be executed and performs the desired operations")
+			tempDir, err := os.MkdirTemp("", "tempdir")
+			Expect(err).NotTo(HaveOccurred())
+			defer os.RemoveAll(tempDir)
+
+			script = strings.ReplaceAll(script, `"`+folder1, `"`+tempDir+folder1)
+			script = strings.ReplaceAll(script, `"`+folder2, `"`+tempDir+folder2)
+			script = strings.ReplaceAll(script, `"`+folder3, `"`+tempDir+folder3)
+			script = strings.ReplaceAll(script, `"`+folder4, `"`+tempDir+folder4)
+
+			runScriptAndCheckFiles(script,
+				tempDir+file1,
+				tempDir+file2,
+				tempDir+file3,
+				tempDir+file4,
+			)
 		})
 	})
 
 	Describe("#UnitsToDiskScript", func() {
 		It("should generate the expected output", func() {
-			units := []extensionsv1alpha1.Unit{
-				{
-					Name: "unit1",
-					DropIns: []extensionsv1alpha1.DropIn{
-						{
-							Name:    "dropin1",
-							Content: "dropdrop",
-						},
-						{
-							Name:    "dropin2",
-							Content: "dropeldidrop",
+			var (
+				unit1        = "unit1"
+				unit1DropIn1 = "dropin1"
+				unit1DropIn2 = "dropin2"
+
+				unit2 = "unit2"
+
+				units = []extensionsv1alpha1.Unit{
+					{
+						Name: unit1,
+						DropIns: []extensionsv1alpha1.DropIn{
+							{
+								Name:    unit1DropIn1,
+								Content: "dropdrop",
+							},
+							{
+								Name:    unit1DropIn2,
+								Content: "dropeldidrop",
+							},
 						},
 					},
-				},
-				{
-					Name:    "unit2",
-					Content: pointer.String("content2"),
-				},
-			}
+					{
+						Name:    unit2,
+						Content: pointer.String("content2"),
+					},
+				}
+			)
 
-			Expect(UnitsToDiskScript(units)).To(Equal(`
-mkdir -p "/etc/systemd/system/unit1.d"
+			By("Ensure the function generated the expected bash script")
+			script := UnitsToDiskScript(units)
+			Expect(script).To(Equal(`
+mkdir -p "/etc/systemd/system/` + unit1 + `.d"
 
-cat << EOF | base64 -d > "/etc/systemd/system/unit1.d/dropin1"
+cat << EOF | base64 -d > "/etc/systemd/system/` + unit1 + `.d/` + unit1DropIn1 + `"
 ZHJvcGRyb3A=
 EOF
 
-cat << EOF | base64 -d > "/etc/systemd/system/unit1.d/dropin2"
+cat << EOF | base64 -d > "/etc/systemd/system/` + unit1 + `.d/` + unit1DropIn2 + `"
 ZHJvcGVsZGlkcm9w
 EOF
 
-cat << EOF | base64 -d > "/etc/systemd/system/unit2"
+cat << EOF | base64 -d > "/etc/systemd/system/` + unit2 + `"
 Y29udGVudDI=
 EOF`))
+
+			By("Ensure that the bash script can be executed and performs the desired operations")
+			tempDir, err := os.MkdirTemp("", "tempdir")
+			Expect(err).NotTo(HaveOccurred())
+			defer os.RemoveAll(tempDir)
+
+			script = strings.ReplaceAll(script, "/etc/systemd/system/", tempDir+"/etc/systemd/system/")
+
+			runScriptAndCheckFiles(script,
+				tempDir+"/etc/systemd/system/"+unit2,
+				tempDir+"/etc/systemd/system/"+unit1+".d/"+unit1DropIn1,
+				tempDir+"/etc/systemd/system/"+unit1+".d/"+unit1DropIn2,
+			)
 		})
 	})
 })
+
+func runScriptAndCheckFiles(script string, filePaths ...string) {
+	ExpectWithOffset(1, exec.Command("bash", "-c", script).Run()).To(Succeed())
+
+	for _, filePath := range filePaths {
+		fileInfo, err := os.Stat(filePath)
+		ExpectWithOffset(1, err).NotTo(HaveOccurred(), "file at path "+filePath)
+		ExpectWithOffset(1, fileInfo.Mode().IsRegular()).To(BeTrue(), "file at path "+filePath)
+		ExpectWithOffset(1, fileInfo.Mode().Perm()).To(Equal(fs.FileMode(0644)), "file at path "+filePath)
+	}
+}

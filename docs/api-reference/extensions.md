@@ -3672,7 +3672,7 @@ DefaultStatus
 </tr>
 <tr>
 <td>
-<code>additionalUnits</code></br>
+<code>extensionUnits</code></br>
 <em>
 <a href="#extensions.gardener.cloud/v1alpha1.Unit">
 []Unit
@@ -3681,12 +3681,12 @@ DefaultStatus
 </td>
 <td>
 <em>(Optional)</em>
-<p>AdditionalUnits is a list of additional systemd units provided by the extension.</p>
+<p>ExtensionUnits is a list of additional systemd units provided by the extension.</p>
 </td>
 </tr>
 <tr>
 <td>
-<code>additionalFiles</code></br>
+<code>extensionFiles</code></br>
 <em>
 <a href="#extensions.gardener.cloud/v1alpha1.File">
 []File
@@ -3695,7 +3695,7 @@ DefaultStatus
 </td>
 <td>
 <em>(Optional)</em>
-<p>AdditionalFiles is a list of additional files provided by the extension.</p>
+<p>ExtensionFiles is a list of additional files provided by the extension.</p>
 </td>
 </tr>
 <tr>
