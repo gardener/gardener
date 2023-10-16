@@ -33,7 +33,7 @@ import (
 
 var _ = Describe("Secrets", func() {
 	var (
-		ctx = context.TODO()
+		ctx = context.Background()
 
 		namespace          = "foo-bar"
 		c                  client.Client
@@ -44,7 +44,8 @@ var _ = Describe("Secrets", func() {
 		c = fakeclient.NewClientBuilder().Build()
 		fakeSecretsManager = fakesecretsmanager.New(c, namespace)
 
-		_, err := fakeSecretsManager.Generate(
+		var err error
+		_, err = fakeSecretsManager.Generate(
 			ctx,
 			&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCACluster, CommonName: "kubernetes", CertType: secretsutils.CACert},
 		)
@@ -57,6 +58,28 @@ var _ = Describe("Secrets", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+		})
+
+		It("should generate a new the generic token kubeconfig while keeping the old one", func() {
+			By("create kubeconfig with existing CA")
+			secretBefore, err := GenerateGenericTokenKubeconfig(ctx, fakeSecretsManager, namespace, "kube-apiserver")
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
+
+			By("update CA with new bundle.crt data")
+			ca, found := fakeSecretsManager.Get(v1beta1constants.SecretNameCACluster)
+			Expect(found).To(BeTrue())
+			ca.Data["bundle.crt"] = []byte("====rotatedCA")
+			Expect(c.Update(ctx, ca)).To(BeNil())
+
+			By("create kubeconfig with new CA data")
+			secretAfter, err := GenerateGenericTokenKubeconfig(ctx, fakeSecretsManager, namespace, "kube-apiserver")
+			Expect(err).ShouldNot(HaveOccurred())
+
+			By("check results")
+			Expect(secretBefore.Name).NotTo(Equal(secretAfter.Name))
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(secretBefore), secretBefore)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(secretAfter), secretAfter)).To(Succeed())
 		})
 	})
 
