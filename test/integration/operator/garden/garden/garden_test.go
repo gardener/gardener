@@ -344,6 +344,12 @@ var _ = Describe("Garden controller tests", func() {
 			g.Expect(testNamespace.Annotations).To(HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "a,b,c"))
 		}).Should(Succeed())
 
+		By("Verify that garden has generic token kubeconfig annotation")
+		Eventually(func(g Gomega) map[string]string {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
+			return garden.Annotations
+		}).Should(HaveKey("generic-token-kubeconfig.secret.gardener.cloud/name"))
+
 		// The garden controller waits for the gardener-resource-manager Deployment to be healthy, so let's fake this here.
 		By("Patch gardener-resource-manager deployment to report healthiness")
 		Eventually(func(g Gomega) {

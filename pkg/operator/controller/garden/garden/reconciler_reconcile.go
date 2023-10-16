@@ -128,7 +128,7 @@ func (r *Reconciler) reconcile(
 		generateGenericTokenKubeconfig = g.Add(flow.Task{
 			Name: "Generating generic token kubeconfig",
 			Fn: func(ctx context.Context) error {
-				return r.generateGenericTokenKubeconfig(ctx, secretsManager)
+				return r.generateGenericTokenKubeconfig(ctx, garden, secretsManager)
 			},
 		})
 		deployEtcdCRD = g.Add(flow.Task{
