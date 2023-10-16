@@ -244,7 +244,7 @@ func (r *Reconciler) reconcile(
 		})
 		deployKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes API Server",
-			Fn:           r.deployKubeAPIServerFunc(ctx, garden, c.kubeAPIServer),
+			Fn:           r.deployKubeAPIServerFunc(garden, c.kubeAPIServer),
 			Dependencies: flow.NewTaskIDs(waitUntilEtcdsReady),
 		})
 		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{
@@ -261,10 +261,8 @@ func (r *Reconciler) reconcile(
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
 		})
 		deployVirtualGardenGardenerResourceManager = g.Add(flow.Task{
-			Name: "Deploying gardener-resource-manager for virtual garden",
-			Fn: func(ctx context.Context) error {
-				return r.deployVirtualGardenGardenerResourceManager(ctx, secretsManager, c.virtualGardenGardenerResourceManager)
-			},
+			Name:         "Deploying gardener-resource-manager for virtual garden",
+			Fn:           r.deployVirtualGardenGardenerResourceManager(secretsManager, c.virtualGardenGardenerResourceManager),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
 		})
 		waitUntilVirtualGardenGardenerResourceManagerIsReady = g.Add(flow.Task{
@@ -275,7 +273,7 @@ func (r *Reconciler) reconcile(
 
 		deployGardenerAPIServer = g.Add(flow.Task{
 			Name:         "Deploying Gardener API Server",
-			Fn:           r.deployGardenerAPIServerFunc(ctx, garden, c.gardenerAPIServer),
+			Fn:           r.deployGardenerAPIServerFunc(garden, c.gardenerAPIServer),
 			Dependencies: flow.NewTaskIDs(waitUntilEtcdsReady, waitUntilKubeAPIServerIsReady, waitUntilVirtualGardenGardenerResourceManagerIsReady),
 		})
 		waitUntilGardenerAPIServerReady = g.Add(flow.Task{
@@ -378,9 +376,9 @@ func (r *Reconciler) reconcile(
 		})
 		_ = g.Add(flow.Task{
 			Name: "Snapshotting ETCD after encrypted resources were re-encrypted with new ETCD encryption key",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
+			Fn: func(ctx context.Context) error {
 				return secretsrotation.SnapshotETCDAfterRewritingEncryptedData(ctx, r.RuntimeClientSet.Client(), r.snapshotETCDFunc(secretsManager, c.etcdMain), r.GardenNamespace, namePrefix+v1beta1constants.DeploymentNameKubeAPIServer)
-			}),
+			},
 			SkipIf:       !allowBackup || helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing,
 			Dependencies: flow.NewTaskIDs(rewriteSecretsAddLabel),
 		})
@@ -479,8 +477,8 @@ func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, 
 	}
 }
 
-func (r *Reconciler) deployKubeAPIServerFunc(ctx context.Context, garden *operatorv1alpha1.Garden, kubeAPIServer kubeapiserver.Interface) flow.TaskFn {
-	return func(context.Context) error {
+func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, kubeAPIServer kubeapiserver.Interface) flow.TaskFn {
+	return func(ctx context.Context) error {
 		var (
 			apiServerConfig *gardencorev1beta1.KubeAPIServerConfig
 			sniConfig       = kubeapiserver.SNIConfig{Enabled: false}
@@ -522,21 +520,23 @@ func (r *Reconciler) snapshotETCDFunc(secretsManager secretsmanager.Interface, e
 	}
 }
 
-func (r *Reconciler) deployVirtualGardenGardenerResourceManager(ctx context.Context, secretsManager secretsmanager.Interface, resourceManager resourcemanager.Interface) error {
-	return shared.DeployGardenerResourceManager(
-		ctx,
-		r.RuntimeClientSet.Client(),
-		secretsManager,
-		resourceManager,
-		r.GardenNamespace,
-		func(ctx context.Context) (int32, error) {
-			return 2, nil
-		},
-		func() string { return namePrefix + v1beta1constants.DeploymentNameKubeAPIServer })
+func (r *Reconciler) deployVirtualGardenGardenerResourceManager(secretsManager secretsmanager.Interface, resourceManager resourcemanager.Interface) flow.TaskFn {
+	return func(ctx context.Context) error {
+		return shared.DeployGardenerResourceManager(
+			ctx,
+			r.RuntimeClientSet.Client(),
+			secretsManager,
+			resourceManager,
+			r.GardenNamespace,
+			func(ctx context.Context) (int32, error) {
+				return 2, nil
+			},
+			func() string { return namePrefix + v1beta1constants.DeploymentNameKubeAPIServer })
+	}
 }
 
-func (r *Reconciler) deployGardenerAPIServerFunc(ctx context.Context, garden *operatorv1alpha1.Garden, gardenerAPIServer gardenerapiserver.Interface) flow.TaskFn {
-	return func(context.Context) error {
+func (r *Reconciler) deployGardenerAPIServerFunc(garden *operatorv1alpha1.Garden, gardenerAPIServer gardenerapiserver.Interface) flow.TaskFn {
+	return func(ctx context.Context) error {
 		return shared.DeployGardenerAPIServer(
 			ctx,
 			r.RuntimeClientSet.Client(),
