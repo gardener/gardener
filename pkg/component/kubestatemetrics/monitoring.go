@@ -49,7 +49,7 @@ const (
 	monitoringMetricKubeNamespaceAnnotations                                                        = "kube_namespace_annotations"
 	monitoringMetricKubeNodeInfo                                                                    = "kube_node_info"
 	monitoringMetricKubeNodeLabels                                                                  = "kube_node_labels"
-	monitoringMetricKubeNodeSpecTaint                                                               = "kube_node_spec_taint"	
+	monitoringMetricKubeNodeSpecTaint                                                               = "kube_node_spec_taint"
 	monitoringMetricKubeNodeSpecUnschedulable                                                       = "kube_node_spec_unschedulable"
 	monitoringMetricKubeNodeStatusAllocatable                                                       = "kube_node_status_allocatable"
 	monitoringMetricKubeNodeStatusCapacity                                                          = "kube_node_status_capacity"
