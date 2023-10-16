@@ -54,6 +54,10 @@ const (
 	portMetrics         = int32(16909)
 	volumeNameHost      = "host"
 	volumeMountPathHost = "/host"
+
+	volumeNameTextFileCollector      = "textfile"
+	volumeMountPathTextFileCollector = "/textfile-collector"
+	hostPathTextFileCollector        = "/var/lib/node-exporter/textfile-collector"
 )
 
 // Interface contains functions for a node-exporter deployer.
@@ -226,6 +230,8 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 									"--collector.uname",
 									"--collector.stat",
 									"--collector.pressure",
+									"--collector.textfile",
+									fmt.Sprintf("--collector.textfile.directory=%s", volumeMountPathTextFileCollector),
 								},
 								Ports: []corev1.ContainerPort{
 									{
@@ -270,6 +276,11 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 										ReadOnly:  true,
 										MountPath: volumeMountPathHost,
 									},
+									{
+										Name:      volumeNameTextFileCollector,
+										ReadOnly:  true,
+										MountPath: volumeMountPathTextFileCollector,
+									},
 								},
 							},
 						},
@@ -279,6 +290,14 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 								VolumeSource: corev1.VolumeSource{
 									HostPath: &corev1.HostPathVolumeSource{
 										Path: "/",
+									},
+								},
+							},
+							{
+								Name: volumeNameTextFileCollector,
+								VolumeSource: corev1.VolumeSource{
+									HostPath: &corev1.HostPathVolumeSource{
+										Path: hostPathTextFileCollector,
 									},
 								},
 							},

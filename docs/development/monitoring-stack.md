@@ -30,6 +30,8 @@ The alerts for all Shoot clusters hosted on a Seed are routed to a central Alert
 
 The Alertmanager in the Shoot namespace on the Seed is only responsible for forwarding alerts from its Shoot cluster to a cluster owner/cluster alert receiver via email. The Alertmanager is optional and the conditions for a deployment are already described in [Alerting](../monitoring/alerting.md).
 
+The node-exporter's [textfile collector](https://github.com/prometheus/node_exporter#textfile-collector) is enabled and configured to parse all `*.prom` files in the `/var/lib/node-exporter/textfile-collector` directory on each Shoot node. Scripts and programs which run on Shoot nodes and cannot expose an endpoint to be scraped by prometheus can use this directory to export metrics in files that match the glob `*.prom` using the [text format](https://prometheus.io/docs/instrumenting/exposition_formats/).
+
 ## Adding New Monitoring Targets
 
 After exploring the metrics which your component provides or adding new metrics, you should be aware which metrics are required to write the needed alerts and dashboards.
