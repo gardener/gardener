@@ -70,6 +70,7 @@ func getConfig(seed *gardencorev1beta1.Seed) (map[string]string, error) {
 			"server-name-hash-bucket-size": "256",
 			"use-proxy-protocol":           "false",
 			"worker-processes":             "2",
+			"allow-snippet-annotations":    "true",
 		}
 		providerConfig = map[string]interface{}{}
 	)
