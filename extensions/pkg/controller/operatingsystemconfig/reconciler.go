@@ -124,22 +124,25 @@ func (r *reconciler) reconcile(
 	}
 
 	log.Info("Starting the reconciliation of OperatingSystemConfig")
-	userData, command, units, files, err := r.actuator.Reconcile(ctx, log, osc)
+	userData, command, unitNames, fileNames, extensionUnits, extensionFiles, err := r.actuator.Reconcile(ctx, log, osc)
 	if err != nil {
 		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling OperatingSystemConfig")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	secret, err := r.reconcileOSCResultSecret(ctx, osc, userData)
-	if err != nil {
-		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Could not apply secret for generated cloud config")
-		return reconcilerutils.ReconcileErr(err)
+	var secret *corev1.Secret
+	if len(userData) > 0 {
+		secret, err = r.reconcileOSCResultSecret(ctx, osc, userData)
+		if err != nil {
+			_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Could not apply secret for generated cloud config")
+			return reconcilerutils.ReconcileErr(err)
+		}
 	}
 
 	patch := client.MergeFrom(osc.DeepCopy())
-	setOSCStatus(osc, secret, command, units, files)
+	setOSCStatus(osc, secret, command, unitNames, fileNames, extensionUnits, extensionFiles)
 	if err := r.client.Status().Patch(ctx, osc, patch); err != nil {
-		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not update units and secret ref.")
+		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not update status")
 		return reconcilerutils.ReconcileErr(err)
 	}
 	if err := r.statusUpdater.Success(ctx, log, osc, operationType, "Successfully reconciled OperatingSystemConfig"); err != nil {
@@ -169,20 +172,23 @@ func (r *reconciler) restore(
 	}
 
 	log.Info("Starting the restoration of OperatingSystemConfig")
-	userData, command, units, files, err := r.actuator.Restore(ctx, log, osc)
+	userData, command, units, files, extensionUnits, extensionFiles, err := r.actuator.Restore(ctx, log, osc)
 	if err != nil {
 		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Error restoring OperatingSystemConfig")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	secret, err := r.reconcileOSCResultSecret(ctx, osc, userData)
-	if err != nil {
-		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not apply secret for generated cloud config")
-		return reconcilerutils.ReconcileErr(err)
+	var secret *corev1.Secret
+	if len(userData) > 0 {
+		secret, err = r.reconcileOSCResultSecret(ctx, osc, userData)
+		if err != nil {
+			_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not apply secret for generated cloud config")
+			return reconcilerutils.ReconcileErr(err)
+		}
 	}
 
 	patch := client.MergeFrom(osc.DeepCopy())
-	setOSCStatus(osc, secret, command, units, files)
+	setOSCStatus(osc, secret, command, units, files, extensionUnits, extensionFiles)
 	if err := r.client.Status().Patch(ctx, osc, patch); err != nil {
 		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not update units and secret ref.")
 		return reconcilerutils.ReconcileErr(err)
@@ -296,16 +302,27 @@ func (r *reconciler) reconcileOSCResultSecret(ctx context.Context, osc *extensio
 	return secret, nil
 }
 
-func setOSCStatus(osc *extensionsv1alpha1.OperatingSystemConfig, secret *corev1.Secret, command *string, units, files []string) {
-	osc.Status.CloudConfig = &extensionsv1alpha1.CloudConfig{
-		SecretRef: corev1.SecretReference{
-			Name:      secret.Name,
-			Namespace: secret.Namespace,
-		},
+func setOSCStatus(
+	osc *extensionsv1alpha1.OperatingSystemConfig,
+	secret *corev1.Secret,
+	command *string,
+	units, files []string,
+	extensionUnits []extensionsv1alpha1.Unit,
+	extensionFiles []extensionsv1alpha1.File,
+) {
+	if secret != nil {
+		osc.Status.CloudConfig = &extensionsv1alpha1.CloudConfig{
+			SecretRef: corev1.SecretReference{
+				Name:      secret.Name,
+				Namespace: secret.Namespace,
+			},
+		}
 	}
-	osc.Status.Units = units
-	osc.Status.Files = files
 	if command != nil {
 		osc.Status.Command = command
 	}
+	osc.Status.Units = units
+	osc.Status.Files = files
+	osc.Status.ExtensionUnits = extensionUnits
+	osc.Status.ExtensionFiles = extensionFiles
 }

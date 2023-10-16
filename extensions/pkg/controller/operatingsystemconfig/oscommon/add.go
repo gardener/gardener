@@ -38,6 +38,9 @@ type AddOptions struct {
 
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
 // The opts.Reconciler is being set with a newly instantiated actuator.
+// Deprecated: The `oscommon` package is deprecated and will be removed as soon as the UseGardenerNodeAgent feature gate
+// has been promoted to GA.
+// TODO(rfranzke): Remove the `oscommon` package after the UseGardenerNodeAgent feature gate has been promoted to GA.
 func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, ctrlName string, osTypes []string, generator generator.Generator, opts AddOptions) error {
 	return operatingsystemconfig.Add(mgr, operatingsystemconfig.AddArgs{
 		Actuator:          actuator.NewActuator(mgr, ctrlName, generator),
@@ -48,6 +51,9 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, ctrlName 
 }
 
 // AddToManager adds a controller with the default Options.
+// Deprecated: The `oscommon` package is deprecated and will be removed as soon as the UseGardenerNodeAgent feature gate
+// has been promoted to GA.
+// TODO(rfranzke): Remove the `oscommon` package after the UseGardenerNodeAgent feature gate has been promoted to GA.
 func AddToManager(ctx context.Context, mgr manager.Manager, ctrlName string, osTypes []string, generator generator.Generator) error {
 	return AddToManagerWithOptions(ctx, mgr, ctrlName, osTypes, generator, DefaultAddOptions)
 }

@@ -89,6 +89,7 @@ type OperatingSystemConfigSpec struct {
 	// are asked to use it when determining the .status.command of this resource. For example, if for CoreOS
 	// the reload-path might be "/var/lib/config"; then the controller shall set .status.command to
 	// "/usr/bin/coreos-cloudinit --from-file=/var/lib/config".
+	// TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is promoted to GA.
 	// +optional
 	ReloadConfigFilePath *string `json:"reloadConfigFilePath,omitempty"`
 	// Units is a list of unit for the operating system configuration (usually, a systemd unit).
@@ -178,6 +179,16 @@ type FileContentInline struct {
 type OperatingSystemConfigStatus struct {
 	// DefaultStatus is a structure containing common fields used by all extension resources.
 	DefaultStatus `json:",inline"`
+	// ExtensionUnits is a list of additional systemd units provided by the extension.
+	// +patchMergeKey=name
+	// +patchStrategy=merge
+	// +optional
+	ExtensionUnits []Unit `json:"extensionUnits,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	// ExtensionFiles is a list of additional files provided by the extension.
+	// +patchMergeKey=path
+	// +patchStrategy=merge
+	// +optional
+	ExtensionFiles []File `json:"extensionFiles,omitempty" patchStrategy:"merge" patchMergeKey:"path"`
 	// CloudConfig is a structure for containing the generated output for the given operating system
 	// config spec. It contains a reference to a secret as the result may contain confidential data.
 	// +optional
@@ -185,14 +196,17 @@ type OperatingSystemConfigStatus struct {
 	// Command is the command whose execution renews/reloads the cloud config on an existing VM, e.g.
 	// "/usr/bin/reload-cloud-config -from-file=<path>". The <path> is optionally provided by Gardener
 	// in the .spec.reloadConfigFilePath field.
+	// TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is promoted to GA.
 	// +optional
 	Command *string `json:"command,omitempty"`
 	// Units is a list of systemd unit names that are part of the generated Cloud Config and shall be
 	// restarted when a new version has been downloaded.
+	// TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is promoted to GA.
 	// +optional
 	Units []string `json:"units,omitempty"`
 	// Files is a list of file paths that are part of the generated Cloud Config and shall be
 	// written to the host's file system.
+	// TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is promoted to GA.
 	// +optional
 	Files []string `json:"files,omitempty"`
 }

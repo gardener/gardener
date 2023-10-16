@@ -1439,7 +1439,8 @@ string
 <p>ReloadConfigFilePath is the path to the generated operating system configuration. If set, controllers
 are asked to use it when determining the .status.command of this resource. For example, if for CoreOS
 the reload-path might be &ldquo;/var/lib/config&rdquo;; then the controller shall set .status.command to
-&ldquo;/usr/bin/coreos-cloudinit &ndash;from-file=/var/lib/config&rdquo;.</p>
+&ldquo;/usr/bin/coreos-cloudinit &ndash;from-file=/var/lib/config&rdquo;.
+TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is promoted to GA.</p>
 </td>
 </tr>
 <tr>
@@ -2949,7 +2950,8 @@ DefaultStatus
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigSpec">OperatingSystemConfigSpec</a>)
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigSpec">OperatingSystemConfigSpec</a>, 
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigStatus">OperatingSystemConfigStatus</a>)
 </p>
 <p>
 <p>File is a file that should get written to the host&rsquo;s file system. The content can either be inlined or
@@ -3601,7 +3603,8 @@ string
 <p>ReloadConfigFilePath is the path to the generated operating system configuration. If set, controllers
 are asked to use it when determining the .status.command of this resource. For example, if for CoreOS
 the reload-path might be &ldquo;/var/lib/config&rdquo;; then the controller shall set .status.command to
-&ldquo;/usr/bin/coreos-cloudinit &ndash;from-file=/var/lib/config&rdquo;.</p>
+&ldquo;/usr/bin/coreos-cloudinit &ndash;from-file=/var/lib/config&rdquo;.
+TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is promoted to GA.</p>
 </td>
 </tr>
 <tr>
@@ -3669,6 +3672,34 @@ DefaultStatus
 </tr>
 <tr>
 <td>
+<code>extensionUnits</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.Unit">
+[]Unit
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ExtensionUnits is a list of additional systemd units provided by the extension.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>extensionFiles</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.File">
+[]File
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ExtensionFiles is a list of additional files provided by the extension.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>cloudConfig</code></br>
 <em>
 <a href="#extensions.gardener.cloud/v1alpha1.CloudConfig">
@@ -3693,7 +3724,8 @@ string
 <em>(Optional)</em>
 <p>Command is the command whose execution renews/reloads the cloud config on an existing VM, e.g.
 &ldquo;/usr/bin/reload-cloud-config -from-file=<path>&rdquo;. The <path> is optionally provided by Gardener
-in the .spec.reloadConfigFilePath field.</p>
+in the .spec.reloadConfigFilePath field.
+TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is promoted to GA.</p>
 </td>
 </tr>
 <tr>
@@ -3706,7 +3738,8 @@ in the .spec.reloadConfigFilePath field.</p>
 <td>
 <em>(Optional)</em>
 <p>Units is a list of systemd unit names that are part of the generated Cloud Config and shall be
-restarted when a new version has been downloaded.</p>
+restarted when a new version has been downloaded.
+TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is promoted to GA.</p>
 </td>
 </tr>
 <tr>
@@ -3719,7 +3752,8 @@ restarted when a new version has been downloaded.</p>
 <td>
 <em>(Optional)</em>
 <p>Files is a list of file paths that are part of the generated Cloud Config and shall be
-written to the host&rsquo;s file system.</p>
+written to the host&rsquo;s file system.
+TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is promoted to GA.</p>
 </td>
 </tr>
 </tbody>
@@ -3747,7 +3781,8 @@ written to the host&rsquo;s file system.</p>
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigSpec">OperatingSystemConfigSpec</a>)
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigSpec">OperatingSystemConfigSpec</a>, 
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigStatus">OperatingSystemConfigStatus</a>)
 </p>
 <p>
 <p>Unit is a unit for the operating system configuration (usually, a systemd unit).</p>

@@ -561,7 +561,6 @@ build:
         - extensions/pkg/controller/heartbeat/cmd
         - extensions/pkg/controller/infrastructure
         - extensions/pkg/controller/operatingsystemconfig
-        - extensions/pkg/controller/operatingsystemconfig/oscommon
         - extensions/pkg/controller/operatingsystemconfig/oscommon/actuator
         - extensions/pkg/controller/operatingsystemconfig/oscommon/generator
         - extensions/pkg/controller/operatingsystemconfig/oscommon/template

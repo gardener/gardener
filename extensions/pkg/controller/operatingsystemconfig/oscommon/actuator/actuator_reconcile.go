@@ -24,11 +24,11 @@ import (
 )
 
 // Reconcile reconciles the update of a OperatingSystemConfig regenerating the os-specific format
-func (a *Actuator) Reconcile(ctx context.Context, log logr.Logger, config *extensionsv1alpha1.OperatingSystemConfig) ([]byte, *string, []string, []string, error) {
+func (a *Actuator) Reconcile(ctx context.Context, log logr.Logger, config *extensionsv1alpha1.OperatingSystemConfig) ([]byte, *string, []string, []string, []extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 	cloudConfig, cmd, err := CloudConfigFromOperatingSystemConfig(ctx, log, a.client, config, a.generator)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("could not generate cloud config: %w", err)
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("could not generate cloud config: %w", err)
 	}
 
-	return cloudConfig, cmd, OperatingSystemConfigUnitNames(config), OperatingSystemConfigFilePaths(config), nil
+	return cloudConfig, cmd, OperatingSystemConfigUnitNames(config), OperatingSystemConfigFilePaths(config), nil, nil, nil
 }

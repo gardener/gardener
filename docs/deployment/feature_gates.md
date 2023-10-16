@@ -34,6 +34,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | ContainerdRegistryHostsDir          | `false` | `Alpha` | `1.77` |        |
 | ShootForceDeletion                  | `false` | `Alpha` | `1.81` |        |
 | APIServerFastRollout                | `true`  | `Beta`  | `1.82` |        |
+| UseGardenerNodeAgent                | `false` | `Alpha` | `1.82` |        |
 
 ## Feature Gates for Graduated or Deprecated Features
 
@@ -187,3 +188,4 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | ContainerdRegistryHostsDir         | `gardenlet`                       | Enables registry configuration in containerd based on the hosts directory pattern. The hosts directory pattern is the new way of configuring registries/mirrors in containerd. Ref https://github.com/containerd/containerd/blob/main/docs/hosts.md.                                                                                                                               |
 | ShootForceDeletion                 | `gardener-apiserver`              | Allows forceful deletion of Shoots by annotating them with the `confirmation.gardener.cloud/force-deletion` annotation.                                                                                                                                                                                                                                                            |
 | APIServerFastRollout               | `gardenlet`                       | Enables fast rollouts for Shoot kube-apiservers on the given Seed. When enabled, `maxSurge` for Shoot kube-apiserver deployments is set to 100%.                                                                                                                                                                                                                                                                  |
+| UseGardenerNodeAgent               |                                   | Enables the `gardener-node-agent` instead of the `cloud-config-downloader` for shoot worker nodes.                                                                                                                                                                                                                                                                                 |
