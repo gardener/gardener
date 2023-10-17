@@ -280,8 +280,4 @@ const (
 	PlainFileCodecID FileCodecID = ""
 	// B64FileCodecID is the base64 file codec id.
 	B64FileCodecID FileCodecID = "b64"
-	// GZIPFileCodecID is the gzip file codec id.
-	GZIPFileCodecID FileCodecID = "gzip"
-	// GZIPB64FileCodecID is the gzip combined with base64 codec id.
-	GZIPB64FileCodecID FileCodecID = "gzip+b64"
 )

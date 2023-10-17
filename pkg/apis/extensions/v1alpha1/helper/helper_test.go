@@ -92,6 +92,5 @@ var _ = Describe("filecodec", func() {
 
 		Entry("plain", extensionsv1alpha1.FileContentInline{Encoding: "", Data: "plain data input"}),
 		Entry("base64", extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: "base64 data input"}),
-		Entry("gzip", extensionsv1alpha1.FileContentInline{Encoding: "gzip", Data: "gzip data input"}),
 	)
 })
