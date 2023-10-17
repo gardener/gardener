@@ -13,14 +13,18 @@ spec:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: garden-<project-name>
+  name: ""
+    # The name of the project prefixed with `garden-`, e.g. garden-<project-name>
   labels:
     gardener.cloud/role: project
-    project.gardener.cloud/name: <project-name>
+    project.gardener.cloud/name: ""
+      # The name of the project, e.g. <project-name>
 ---
 apiVersion: core.gardener.cloud/v1beta1
 kind: Project
 metadata:
-  name: <project-name>
+  name: ""
+    # The name of the project, e.g. <project-name>
 spec:
-  namespace: garden-<project-name>
+  namespace: ""
+    # The name of the project prefixed with `garden-`, e.g. garden-<project-name>
