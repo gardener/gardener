@@ -61,7 +61,7 @@ kubectl --kubeconfig "$kubeconfig" --server-side=true apply -f "$SCRIPT_DIR"/reg
 echo "Waiting max 5m until registry endpoint is available"
 start_time=$(date +%s)
 until [ "$(curl --write-out '%{http_code}' --silent --output /dev/null https://"$registry"/v2/)" -eq "401" ]; do
-  elapsed_time=$(($(date +%s) - "$start_time"))
+  elapsed_time=$(($(date +%s) - ${start_time}))
   if [ $elapsed_time -gt 300 ]; then
     echo "Timeout"
     exit 1
@@ -71,4 +71,3 @@ done
 
 echo "Run docker login for registry $registry"
 docker login "$registry" -u gardener -p "$password"
-

@@ -104,6 +104,7 @@ ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlpl
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/infrastructure-secrets.yaml
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/secretbindings.yaml
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml.tmpl
+ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/project.yaml
 
 echo "Check if essential config options are initialized"
 check-not-initial "$seed_kubeconfig" ""
@@ -113,6 +114,15 @@ check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlpla
 check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml 'select(document_index == 1) | .metadata.annotations.["dns.gardener.cloud/domain"]'
 check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml 'select(document_index == 0) | .metadata.annotations.["dns.gardener.cloud/provider"]'
 check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml 'select(document_index == 1) | .metadata.annotations.["dns.gardener.cloud/provider"]'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/project.yaml 'select(document_index == 1) | .metadata.name'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/project.yaml 'select(document_index == 1) | .metadata.labels["project.gardener.cloud/name"]'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/project.yaml 'select(document_index == 2) | .metadata.name'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/project.yaml 'select(document_index == 2) | .spec.namespace'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/infrastructure-secrets.yaml '.metadata.namespace'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/infrastructure-secrets.yaml '.data'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/secretbindings.yaml '.metadata.namespace'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/secretbindings.yaml '.provider.type'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/secretbindings.yaml '.secretRef.namespace'
 
 role1=$(yq 'select(document_index == 0) | .metadata.labels.["gardener.cloud/role"]' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml)
 role2=$(yq 'select(document_index == 1) | .metadata.labels.["gardener.cloud/role"]' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml)
