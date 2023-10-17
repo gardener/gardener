@@ -12,6 +12,10 @@ spec:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
+    - containerName: prometheus
+      maxAllowed:
+        cpu: "4"
+        memory: 28G
     # Due to CVE-2019-5736 runC is initially loaded into memory when the container starts.
     # After some time VPA recommends less memory (2,3Mb) than the size of runC binary (about 10Mb).
     # This results in an error when trying to start the container:

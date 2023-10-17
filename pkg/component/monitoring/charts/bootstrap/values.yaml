@@ -20,6 +20,9 @@ prometheus:
     enabled: false
     minAllowed:
       memory: 1000M
+    maxAllowed:
+      cpu: "4"
+      memory: 28G
     targetAverageUtilizationCpu: 80
     targetAverageUtilizationMemory: 80
     scaleUpStabilization:
@@ -72,6 +75,9 @@ aggregatePrometheus:
     enabled: false
     minAllowed:
       memory: 1000M
+    maxAllowed:
+      cpu: "4"
+      memory: 28G
     targetAverageUtilizationCpu: 80
     targetAverageUtilizationMemory: 80
     scaleUpStabilization:
