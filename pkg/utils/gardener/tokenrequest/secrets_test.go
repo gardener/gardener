@@ -60,7 +60,7 @@ var _ = Describe("Secrets", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 		})
 
-		It("should generate a new the generic token kubeconfig while keeping the old one", func() {
+		It("should generate a new generic token kubeconfig while keeping the old one", func() {
 			By("create kubeconfig with existing CA")
 			secretBefore, err := GenerateGenericTokenKubeconfig(ctx, fakeSecretsManager, namespace, "kube-apiserver")
 			Expect(err).ShouldNot(HaveOccurred())
