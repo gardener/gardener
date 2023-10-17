@@ -330,9 +330,18 @@ func (r *Reconciler) updateStatusOperationError(ctx context.Context, garden *ope
 	return err
 }
 
-func (r *Reconciler) generateGenericTokenKubeconfig(ctx context.Context, secretsManager secretsmanager.Interface) error {
-	_, err := tokenrequest.GenerateGenericTokenKubeconfig(ctx, secretsManager, r.GardenNamespace, namePrefix+v1beta1constants.DeploymentNameKubeAPIServer)
-	return err
+func (r *Reconciler) generateGenericTokenKubeconfig(ctx context.Context, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) error {
+	genericTokenKubeconfigSecret, err := tokenrequest.GenerateGenericTokenKubeconfig(ctx, secretsManager, r.GardenNamespace, namePrefix+v1beta1constants.DeploymentNameKubeAPIServer)
+	if err != nil {
+		return err
+	}
+
+	if secretName := garden.Annotations[v1beta1constants.AnnotationKeyGenericTokenKubeconfigSecretName]; secretName != genericTokenKubeconfigSecret.Name {
+		patch := client.MergeFrom(garden.DeepCopy())
+		metav1.SetMetaDataAnnotation(&garden.ObjectMeta, v1beta1constants.AnnotationKeyGenericTokenKubeconfigSecretName, genericTokenKubeconfigSecret.Name)
+		return r.RuntimeClientSet.Client().Patch(ctx, garden, patch)
+	}
+	return nil
 }
 
 func (r *Reconciler) cleanupGenericTokenKubeconfig(ctx context.Context, secretsManager secretsmanager.Interface) error {

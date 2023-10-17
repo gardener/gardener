@@ -43,7 +43,8 @@ func init() {
 	utilruntime.Must(err)
 }
 
-// GenerateGenericTokenKubeconfig generates a generic token kubeconfig in the given namespace for the given kube-apiserver address
+// GenerateGenericTokenKubeconfig generates a generic token kubeconfig in the given namespace for the given kube-apiserver address.
+// In case of a rotation, the old kubeconfig is kept in the cluster.
 func GenerateGenericTokenKubeconfig(ctx context.Context, secretsManager secretsmanager.Interface, namespace, kubeAPIServerAddress string) (*corev1.Secret, error) {
 	clusterCABundleSecret, found := secretsManager.Get(v1beta1constants.SecretNameCACluster)
 	if !found {
@@ -62,7 +63,8 @@ func GenerateGenericTokenKubeconfig(ctx context.Context, secretsManager secretsm
 		},
 	}
 
-	return secretsManager.Generate(ctx, config, secretsmanager.Rotate(secretsmanager.InPlace))
+	// Keep old kubeconfig secret to give components outside `gardener/gardener` the chance to update their secret refs.
+	return secretsManager.Generate(ctx, config, secretsmanager.Rotate(secretsmanager.KeepOld))
 }
 
 // RenewAccessSecrets drops the serviceaccount.resources.gardener.cloud/token-renew-timestamp annotation from all
