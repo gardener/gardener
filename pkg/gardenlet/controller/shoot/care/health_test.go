@@ -39,11 +39,9 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/executor"
-	"github.com/gardener/gardener/pkg/features"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -104,19 +102,6 @@ var _ = Describe("health check", func() {
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(deploymentNames.UnsortedList()).To(ConsistOf(names...))
-			})
-
-			It("should return expected deployments for shoot when MCM management is enabled", func() {
-				defer test.WithFeatureGate(features.DefaultFeatureGate, features.MachineControllerManagerDeployment, true)()
-				expectedDeploymentNames := names
-				if !isWorkerless {
-					expectedDeploymentNames = append(expectedDeploymentNames, "machine-controller-manager")
-				}
-
-				deploymentNames, err := ComputeRequiredControlPlaneDeployments(shoot)
-
-				Expect(err).ToNot(HaveOccurred())
-				Expect(deploymentNames.UnsortedList()).To(ConsistOf(expectedDeploymentNames...))
 			})
 
 			It("should return expected deployments for shoot with Cluster Autoscaler", func() {
