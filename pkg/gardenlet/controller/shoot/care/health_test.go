@@ -96,7 +96,7 @@ var _ = Describe("health check", func() {
 				"kube-apiserver",
 				"kube-controller-manager",
 			}
-			commonDeploymentNames = append(workerlessDepoymentNames, "kube-scheduler", "machine-controller-manager")
+			commonDeploymentNames = append(workerlessDepoymentNames, "kube-scheduler")
 		)
 
 		tests := func(shoot *gardencorev1beta1.Shoot, names []interface{}, isWorkerless bool) {
