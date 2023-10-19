@@ -45,61 +45,6 @@ func SetDefaults_SecretBinding(obj *SecretBinding) {
 	}
 }
 
-// SetDefaults_Seed sets default values for Seed objects.
-func SetDefaults_Seed(obj *Seed) {
-	if obj.Spec.Settings == nil {
-		obj.Spec.Settings = &SeedSettings{}
-	}
-
-	var defaultExcessCapacityReservationConfigs = []SeedSettingExcessCapacityReservationConfig{
-		// This roughly corresponds to a single, moderately large control-plane.
-		{Resources: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("2"), corev1.ResourceMemory: resource.MustParse("6Gi")}},
-	}
-
-	if obj.Spec.Settings.ExcessCapacityReservation == nil {
-		obj.Spec.Settings.ExcessCapacityReservation = &SeedSettingExcessCapacityReservation{
-			Configs: defaultExcessCapacityReservationConfigs,
-		}
-	}
-
-	if pointer.BoolDeref(obj.Spec.Settings.ExcessCapacityReservation.Enabled, true) && len(obj.Spec.Settings.ExcessCapacityReservation.Configs) == 0 {
-		obj.Spec.Settings.ExcessCapacityReservation.Configs = defaultExcessCapacityReservationConfigs
-	}
-
-	if obj.Spec.Settings.Scheduling == nil {
-		obj.Spec.Settings.Scheduling = &SeedSettingScheduling{Visible: true}
-	}
-
-	if obj.Spec.Settings.VerticalPodAutoscaler == nil {
-		obj.Spec.Settings.VerticalPodAutoscaler = &SeedSettingVerticalPodAutoscaler{Enabled: true}
-	}
-
-	if obj.Spec.Settings.DependencyWatchdog == nil {
-		obj.Spec.Settings.DependencyWatchdog = &SeedSettingDependencyWatchdog{}
-	}
-
-	if obj.Spec.Settings.TopologyAwareRouting == nil {
-		obj.Spec.Settings.TopologyAwareRouting = &SeedSettingTopologyAwareRouting{Enabled: false}
-	}
-}
-
-// SetDefaults_SeedNetworks sets default values for SeedNetworks objects.
-func SetDefaults_SeedNetworks(obj *SeedNetworks) {
-	if len(obj.IPFamilies) == 0 {
-		obj.IPFamilies = []IPFamily{IPFamilyIPv4}
-	}
-}
-
-// SetDefaults_SeedSettingDependencyWatchdog sets defaults for SeedSettingDependencyWatchdog objects.
-func SetDefaults_SeedSettingDependencyWatchdog(obj *SeedSettingDependencyWatchdog) {
-	if obj.Weeder == nil {
-		obj.Weeder = &SeedSettingDependencyWatchdogWeeder{Enabled: true}
-	}
-	if obj.Prober == nil {
-		obj.Prober = &SeedSettingDependencyWatchdogProber{Enabled: true}
-	}
-}
-
 // SetDefaults_Shoot sets default values for Shoot objects.
 func SetDefaults_Shoot(obj *Shoot) {
 	if obj.Spec.Kubernetes.KubeAPIServer == nil {
