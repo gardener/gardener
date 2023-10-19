@@ -8,9 +8,9 @@ resources:
 namespace: relay
 
 secretGenerator:
-- name: gardener-apiserver-ssh-keys
-  files:
+- files:
   - client-keys/host
   - client-keys/known_hosts
   - client-keys/seed_id_rsa
   - client-keys/seed_id_rsa.pub
+  name: gardener-apiserver-ssh-keys

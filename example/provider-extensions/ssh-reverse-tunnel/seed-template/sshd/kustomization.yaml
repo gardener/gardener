@@ -5,9 +5,7 @@ resources:
 - ../../../base/sshd
 
 secretGenerator:
-- name: gardener-apiserver-sshd-keys
-  namespace: relay
-  files:
+- files:
   - host-keys/authorized_keys
   - host-keys/ssh_host_ecdsa_key
   - host-keys/ssh_host_ecdsa_key.pub
@@ -15,3 +13,5 @@ secretGenerator:
   - host-keys/ssh_host_ed25519_key.pub
   - host-keys/ssh_host_rsa_key
   - host-keys/ssh_host_rsa_key.pub
+  name: gardener-apiserver-sshd-keys
+  namespace: relay
