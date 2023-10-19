@@ -50,7 +50,7 @@ func Deploy(ctx context.Context, clock clock.Clock, gardenClient, seedClient cli
 		},
 	}
 
-	spec, err := computeSpec(ctx, seedClient, shoot.Status.TechnicalID)
+	spec, err := computeSpec(ctx, seedClient, shoot.Status.TechnicalID, shoot.Name)
 	if err != nil {
 		return fmt.Errorf("failed computing spec of ShootState for shoot %s: %w", client.ObjectKeyFromObject(shoot), err)
 	}
@@ -108,8 +108,8 @@ func Delete(ctx context.Context, gardenClient client.Client, shoot *gardencorev1
 	return client.IgnoreNotFound(gardenClient.Delete(ctx, shootState))
 }
 
-func computeSpec(ctx context.Context, seedClient client.Client, seedNamespace string) (*gardencorev1beta1.ShootStateSpec, error) {
-	gardener, err := computeGardenerData(ctx, seedClient, seedNamespace)
+func computeSpec(ctx context.Context, seedClient client.Client, seedNamespace, shootName string) (*gardencorev1beta1.ShootStateSpec, error) {
+	gardener, err := computeGardenerData(ctx, seedClient, seedNamespace, shootName)
 	if err != nil {
 		return nil, fmt.Errorf("failed computing Gardener data: %w", err)
 	}
@@ -130,6 +130,7 @@ func computeGardenerData(
 	ctx context.Context,
 	seedClient client.Client,
 	seedNamespace string,
+	shootName string,
 ) (
 	[]gardencorev1beta1.GardenerResourceData,
 	error,
@@ -139,7 +140,7 @@ func computeGardenerData(
 		return nil, err
 	}
 
-	machineState, err := computeMachineState(ctx, seedClient, seedNamespace)
+	machineState, err := computeMachineState(ctx, seedClient, seedNamespace, shootName)
 	if err != nil {
 		return nil, err
 	}
