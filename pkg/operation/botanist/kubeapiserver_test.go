@@ -22,6 +22,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -639,19 +640,17 @@ var _ = Describe("KubeAPIServer", func() {
 		})
 	})
 
-	// TODO(acumino): Enable this test again once https://github.com/kubernetes-sigs/controller-runtime/issues/2503 is fixed.
+	Describe("#ScaleKubeAPIServerToOne", func() {
+		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: seedNamespace}}
 
-	// Describe("#ScaleKubeAPIServerToOne", func() {
-	// 	deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: seedNamespace}}
+		It("should scale the deployment", func() {
+			Expect(seedClient.Create(ctx, deployment)).To(Succeed())
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 
-	// 	It("should scale the KAPI deployment", func() {
-	// 		Expect(seedClient.Create(ctx, deployment)).To(Succeed())
-	// 		Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+			Expect(botanist.ScaleKubeAPIServerToOne(ctx)).To(Succeed())
 
-	// 		Expect(botanist.ScaleKubeAPIServerToOne(ctx)).To(Succeed())
-
-	// 		Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-	// 		Expect(deployment.Spec.Replicas).To(Equal(pointer.Int32(1)))
-	// 	})
-	// })
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+			Expect(deployment.Spec.Replicas).To(Equal(pointer.Int32(1)))
+		})
+	})
 })
