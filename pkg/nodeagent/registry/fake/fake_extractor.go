@@ -15,33 +15,36 @@
 package fake
 
 import (
+	"context"
+	"fmt"
+	"path"
+
+	"github.com/spf13/afero"
+
 	"github.com/gardener/gardener/pkg/nodeagent/registry"
 )
 
-// Extraction is a fake implementation of Extractor for unit tests.
-type Extraction struct {
-	Image      string
-	PathSuffix string
-	Dest       string
-}
-
 type fakeRegistryExtractor struct {
-	extractions []Extraction
+	aferoFS         afero.Afero
+	sourceDirectory string
 }
 
 var _ registry.Extractor = &fakeRegistryExtractor{}
 
-// New returns a simple implementation of registry.Extractor which can be used to fake the registry extractor in unit
-// tests.
-func New(extractions ...Extraction) *fakeRegistryExtractor {
-	return &fakeRegistryExtractor{extractions: extractions}
+// NewExtractor returns a simple implementation of registry.Extractor which can be used to fake the registry extractor in unit tests.
+func NewExtractor(aferoFS afero.Afero, sourceDirectory string) registry.Extractor {
+	return &fakeRegistryExtractor{aferoFS: aferoFS, sourceDirectory: sourceDirectory}
 }
 
-func (f *fakeRegistryExtractor) ExtractFromLayer(image, pathSuffix, dest string) error {
-	f.extractions = append(f.extractions, Extraction{
-		Image:      image,
-		PathSuffix: pathSuffix,
-		Dest:       dest,
-	})
+// CopyFromImage copies files from a given image reference to the destination folder.
+func (e *fakeRegistryExtractor) CopyFromImage(_ context.Context, _ string, files []string, destination string) error {
+	for _, file := range files {
+		sourceFile := path.Join(e.sourceDirectory, file)
+		destinationFile := path.Join(destination, path.Base(file))
+		if err := registry.CopyFile(e.aferoFS, sourceFile, destinationFile); err != nil {
+			return fmt.Errorf("error copying file %s to %s: %w", sourceFile, destinationFile, err)
+		}
+	}
+
 	return nil
 }

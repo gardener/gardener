@@ -14,7 +14,10 @@
 
 package registry
 
-// Extractor is an interface for extracting files from a container image layer.
+import "context"
+
+// Extractor is an interface for extracting files from a container image.
 type Extractor interface {
-	ExtractFromLayer(image, pathSuffix, dest string) error
+	// CopyFromImage copies files from a given image reference to the destination folder.
+	CopyFromImage(ctx context.Context, imageRef string, files []string, destination string) error
 }
