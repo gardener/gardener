@@ -40,3 +40,26 @@ func GatewayWithTLSPassthrough(gateway *istionetworkingv1beta1.Gateway, labels m
 		return nil
 	}
 }
+
+// GatewayWithTLSTermination returns a function setting the given attributes to a gateway object.
+func GatewayWithTLSTermination(gateway *istionetworkingv1beta1.Gateway, labels map[string]string, istioLabels map[string]string, hosts []string, port uint32, tlsSecret string) func() error {
+	return func() error {
+		gateway.Labels = labels
+		gateway.Spec = istioapinetworkingv1beta1.Gateway{
+			Selector: istioLabels,
+			Servers: []*istioapinetworkingv1beta1.Server{{
+				Hosts: hosts,
+				Port: &istioapinetworkingv1beta1.Port{
+					Number:   port,
+					Name:     "tls",
+					Protocol: "HTTPS",
+				},
+				Tls: &istioapinetworkingv1beta1.ServerTLSSettings{
+					Mode:           istioapinetworkingv1beta1.ServerTLSSettings_SIMPLE,
+					CredentialName: tlsSecret,
+				},
+			}},
+		}
+		return nil
+	}
+}

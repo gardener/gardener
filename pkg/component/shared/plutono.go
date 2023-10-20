@@ -15,6 +15,7 @@
 package shared
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -30,10 +31,12 @@ func NewPlutono(
 	secretsManager secretsmanager.Interface,
 	clusterType component.ClusterType,
 	replicas int32,
-	authSecretName, ingressHost, priorityClassName string,
+	authSecret *corev1.Secret, ingressHost, priorityClassName string,
 	includeIstioDashboards, isWorkerless bool,
 	isGardenCluster, nodeLocalDNSEnabled, vpnHighAvailabilityEnabled, vpaEnabled bool,
-	wildcardCertName *string,
+	wildcardCert *corev1.Secret,
+	istioIngressGatewayLabels map[string]string,
+	istioIngressGatewayNamespace string,
 ) (
 	plutono.Interface,
 	error,
@@ -48,19 +51,21 @@ func NewPlutono(
 		namespace,
 		secretsManager,
 		plutono.Values{
-			AuthSecretName:             authSecretName,
-			ClusterType:                clusterType,
-			Image:                      plutonoImage.String(),
-			IngressHost:                ingressHost,
-			IncludeIstioDashboards:     includeIstioDashboards,
-			IsGardenCluster:            isGardenCluster,
-			IsWorkerless:               isWorkerless,
-			NodeLocalDNSEnabled:        nodeLocalDNSEnabled,
-			PriorityClassName:          priorityClassName,
-			Replicas:                   replicas,
-			VPNHighAvailabilityEnabled: vpnHighAvailabilityEnabled,
-			VPAEnabled:                 vpaEnabled,
-			WildcardCertName:           wildcardCertName,
+			AuthSecret:                   authSecret,
+			ClusterType:                  clusterType,
+			Image:                        plutonoImage.String(),
+			IngressHost:                  ingressHost,
+			IncludeIstioDashboards:       includeIstioDashboards,
+			IsGardenCluster:              isGardenCluster,
+			IsWorkerless:                 isWorkerless,
+			NodeLocalDNSEnabled:          nodeLocalDNSEnabled,
+			PriorityClassName:            priorityClassName,
+			Replicas:                     replicas,
+			VPNHighAvailabilityEnabled:   vpnHighAvailabilityEnabled,
+			VPAEnabled:                   vpaEnabled,
+			WildcardCert:                 wildcardCert,
+			IstioIngressGatewayLabels:    istioIngressGatewayLabels,
+			IstioIngressGatewayNamespace: istioIngressGatewayNamespace,
 		},
 	), nil
 }

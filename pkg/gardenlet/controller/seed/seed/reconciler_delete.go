@@ -311,7 +311,10 @@ func (r *Reconciler) runDeleteSeedFlow(
 	// When the seed is the garden cluster then these components are reconciled by the gardener-operator.
 	if !seedIsGarden {
 		var (
-			plutono               = plutono.New(seedClient, r.GardenNamespace, nil, plutono.Values{})
+			plutono = plutono.New(seedClient, r.GardenNamespace, nil, plutono.Values{
+				IstioIngressGatewayNamespace: istioIngressGateway[0].Namespace,
+				ClusterType:                  component.ClusterTypeSeed,
+			})
 			kubeStateMetrics      = kubestatemetrics.New(seedClient, r.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
 			etcdCRD               = etcd.NewCRD(seedClient, r.SeedClientSet.Applier())
 			etcdDruid             = etcd.NewBootstrapper(seedClient, r.GardenNamespace, nil, r.Config.ETCDConfig, "", nil, "")

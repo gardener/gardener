@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "go.uber.org/mock/gomock"
+	v1 "k8s.io/api/core/v1"
 )
 
 // MockInterface is a mock of Interface interface.
@@ -62,16 +63,16 @@ func (mr *MockInterfaceMockRecorder) Destroy(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), arg0)
 }
 
-// SetWildcardCertName mocks base method.
-func (m *MockInterface) SetWildcardCertName(arg0 *string) {
+// SetWildcardCert mocks base method.
+func (m *MockInterface) SetWildcardCert(arg0 *v1.Secret) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetWildcardCertName", arg0)
+	m.ctrl.Call(m, "SetWildcardCert", arg0)
 }
 
-// SetWildcardCertName indicates an expected call of SetWildcardCertName.
-func (mr *MockInterfaceMockRecorder) SetWildcardCertName(arg0 interface{}) *gomock.Call {
+// SetWildcardCert indicates an expected call of SetWildcardCert.
+func (mr *MockInterfaceMockRecorder) SetWildcardCert(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetWildcardCertName", reflect.TypeOf((*MockInterface)(nil).SetWildcardCertName), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetWildcardCert", reflect.TypeOf((*MockInterface)(nil).SetWildcardCert), arg0)
 }
 
 // Wait mocks base method.

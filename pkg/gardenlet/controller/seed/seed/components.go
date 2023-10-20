@@ -79,6 +79,8 @@ func defaultIstio(
 	isGardenCluster bool,
 ) (
 	component.DeployWaiter,
+	map[string]string,
+	string,
 	error,
 ) {
 	var (
@@ -111,7 +113,7 @@ func defaultIstio(
 		seedObj.Spec.Provider.Zones,
 	)
 	if err != nil {
-		return nil, err
+		return nil, nil, "", err
 	}
 
 	// Automatically create ingress gateways for single-zone control planes on multi-zonal seeds
@@ -126,7 +128,7 @@ func defaultIstio(
 				nil,
 				&zone,
 			); err != nil {
-				return nil, err
+				return nil, nil, "", err
 			}
 		}
 	}
@@ -143,7 +145,7 @@ func defaultIstio(
 			handler.SNI.Ingress.ServiceExternalIP,
 			nil,
 		); err != nil {
-			return nil, err
+			return nil, nil, "", err
 		}
 
 		// Automatically create ingress gateways for single-zone control planes on multi-zonal seeds
@@ -159,13 +161,13 @@ func defaultIstio(
 					nil,
 					&zone,
 				); err != nil {
-					return nil, err
+					return nil, nil, "", err
 				}
 			}
 		}
 	}
 
-	return istioDeployer, nil
+	return istioDeployer, labels, istioDeployer.GetValues().IngressGateway[0].Namespace, nil
 }
 
 func defaultDependencyWatchdogs(
@@ -374,8 +376,10 @@ func defaultPlutono(
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	ingressHot string,
-	authSecret string,
-	wildcardCertName *string,
+	authSecret *corev1.Secret,
+	wildcardCert *corev1.Secret,
+	istioIngressGatewayLabels map[string]string,
+	istioIngressGatewayNamespace string,
 ) (
 	plutono.Interface,
 	error,
@@ -395,7 +399,9 @@ func defaultPlutono(
 		false,
 		false,
 		false,
-		wildcardCertName,
+		wildcardCert,
+		istioIngressGatewayLabels,
+		istioIngressGatewayNamespace,
 	)
 }
 

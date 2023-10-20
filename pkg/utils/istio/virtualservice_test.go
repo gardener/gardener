@@ -49,4 +49,39 @@ var _ = Describe("VirtualService", func() {
 		Entry("Nil values", nil, nil, "", uint32(0), "", uint32(0)),
 		Entry("Some values", map[string]string{"foo": "bar", "key": "value"}, []string{"host-1", "host-2"}, "my-gateway", uint32(123456), "destination.namespace.svc.cluster.local", uint32(654321)),
 	)
+
+	DescribeTable("#VirtualServiceWithSNIMatchAndBasicAuth", func(labels map[string]string, hosts []string, gatewayName string, externalPort uint32, destinationHost string, destinationPort uint32, user string, password string) {
+		virtualService := &istionetworkingv1beta1.VirtualService{}
+
+		function := VirtualServiceWithSNIMatchAndBasicAuth(virtualService, labels, hosts, gatewayName, externalPort, destinationHost, destinationPort, user, password)
+
+		Expect(function).NotTo(BeNil())
+
+		err := function()
+
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(virtualService.Labels).To(Equal(labels))
+		Expect(virtualService.Spec.Hosts).To(Equal(hosts))
+		Expect(len(virtualService.Spec.Gateways)).To(Equal(1))
+		Expect(virtualService.Spec.Gateways[0]).To(Equal(gatewayName))
+		Expect(len(virtualService.Spec.Tls)).To(Equal(1))
+		Expect(len(virtualService.Spec.Tls[0].Match)).To(Equal(1))
+		Expect(virtualService.Spec.Tls[0].Match[0].Port).To(Equal(externalPort))
+		Expect(virtualService.Spec.Tls[0].Match[0].SniHosts).To(Equal(hosts))
+		Expect(len(virtualService.Spec.Tls[0].Route)).To(Equal(1))
+		Expect(virtualService.Spec.Tls[0].Route[0].Destination.Host).To(Equal(destinationHost))
+		Expect(virtualService.Spec.Tls[0].Route[0].Destination.Port.Number).To(Equal(destinationPort))
+		Expect(len(virtualService.Spec.Http)).To(Equal(2))
+		Expect(len(virtualService.Spec.Http[0].Match)).To(Equal(1))
+		Expect(virtualService.Spec.Http[0].Match[0].Headers["Authorization"]).NotTo(BeNil())
+		Expect(virtualService.Spec.Http[0].Route[0].Destination.Host).To(Equal(destinationHost))
+		Expect(virtualService.Spec.Http[0].Route[0].Destination.Port.Number).To(Equal(destinationPort))
+		Expect(len(virtualService.Spec.Http[1].Match)).To(Equal(1))
+		Expect(virtualService.Spec.Http[1].DirectResponse.Status).To(Equal(uint32(401)))
+		Expect(virtualService.Spec.Http[1].Headers.Response.Set["Www-Authenticate"]).NotTo(BeNil())
+	},
+
+		Entry("Nil values", nil, nil, "", uint32(0), "", uint32(0), "", ""),
+		Entry("Some values", map[string]string{"foo": "bar", "key": "value"}, []string{"host-1", "host-2"}, "my-gateway", uint32(123456), "destination.namespace.svc.cluster.local", uint32(654321), "my-user", "secret-password"),
+	)
 })

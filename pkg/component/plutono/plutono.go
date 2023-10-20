@@ -23,9 +23,11 @@ import (
 	"strings"
 	"time"
 
+	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -37,15 +39,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/logging/vali"
+	"github.com/gardener/gardener/pkg/component/plutono/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/istio"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -58,8 +65,10 @@ const (
 
 	name                          = "plutono"
 	plutonoMountPathDashboards    = "/var/lib/plutono/dashboards"
-	port                          = 3000
+	externalPort                  = 443
+	port                          = constants.Port
 	ingressTLSCertificateValidity = 730 * 24 * time.Hour
+	labelTLSSecretOwner           = "owner"
 )
 
 var (
@@ -87,14 +96,14 @@ var (
 // Interface contains functions for a Plutono Deployer
 type Interface interface {
 	component.DeployWaiter
-	// SetWildcardCertName sets the WildcardCertName components.
-	SetWildcardCertName(*string)
+	// SetWildcardCert sets the wildcard tls certificate which is issued for the seed's ingress domain.
+	SetWildcardCert(*corev1.Secret)
 }
 
 // Values is a set of configuration values for the plutono component.
 type Values struct {
-	// AuthSecretName is the secret name of plutono credentials.
-	AuthSecretName string
+	// AuthSecret is the secret containing plutono credentials.
+	AuthSecret *corev1.Secret
 	// ClusterType specifies the type of the cluster to which plutono is being deployed.
 	ClusterType component.ClusterType
 	// Image is the container image used for plutono.
@@ -117,8 +126,12 @@ type Values struct {
 	VPAEnabled bool
 	// VPNHighAvailabilityEnabled specifies whether the cluster is configured with HA VPN.
 	VPNHighAvailabilityEnabled bool
-	// WildcardCertName is name of wildcard tls certificate which is issued for the seed's ingress domain.
-	WildcardCertName *string
+	// WildcardCert is the wildcard tls certificate which is issued for the seed's ingress domain.
+	WildcardCert *corev1.Secret
+	// IstioIngressGatewayLabels are the labels for identifying the used istio ingress gateway.
+	IstioIngressGatewayLabels map[string]string
+	// IstioIngressGatewayNamespace is the namespace of the used istio ingress gateway.
+	IstioIngressGatewayNamespace string
 }
 
 // New creates a new instance of DeployWaiter for plutono.
@@ -144,7 +157,7 @@ type plutono struct {
 }
 
 func (p *plutono) Deploy(ctx context.Context) error {
-	dashboardConfigMaps, data, err := p.computeResourcesData(ctx)
+	dashboardConfigMaps, tlsSecret, data, err := p.computeResourcesData(ctx)
 	if err != nil {
 		return err
 	}
@@ -162,11 +175,19 @@ func (p *plutono) Deploy(ctx context.Context) error {
 		}
 	}
 
-	return managedresources.CreateForSeed(ctx, p.client, p.namespace, ManagedResourceName, false, data)
+	if err := managedresources.CreateForSeed(ctx, p.client, p.namespace, ManagedResourceName, false, data); err != nil {
+		return err
+	}
+
+	return p.cleanupOldIstioTLSSecrets(ctx, tlsSecret)
 }
 
 func (p *plutono) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForSeed(ctx, p.client, p.namespace, ManagedResourceName)
+	if err := managedresources.DeleteForSeed(ctx, p.client, p.namespace, ManagedResourceName); err != nil {
+		return err
+	}
+
+	return p.cleanupOldIstioTLSSecrets(ctx, nil)
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
@@ -187,11 +208,11 @@ func (p *plutono) WaitCleanup(ctx context.Context) error {
 	return managedresources.WaitUntilDeleted(timeoutCtx, p.client, p.namespace, ManagedResourceName)
 }
 
-func (p *plutono) SetWildcardCertName(secretName *string) {
-	p.values.WildcardCertName = secretName
+func (p *plutono) SetWildcardCert(secret *corev1.Secret) {
+	p.values.WildcardCert = secret
 }
 
-func (p *plutono) computeResourcesData(ctx context.Context) ([]*corev1.ConfigMap, map[string][]byte, error) {
+func (p *plutono) computeResourcesData(ctx context.Context) ([]*corev1.ConfigMap, *corev1.Secret, map[string][]byte, error) {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 		err      error
@@ -223,13 +244,13 @@ func (p *plutono) computeResourcesData(ctx context.Context) ([]*corev1.ConfigMap
 
 	if p.values.IsGardenCluster {
 		if configMap, err := p.getDashboardsConfigMap(ctx, "garden"); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		} else {
 			dashboardConfigMap = configMap
 		}
 
 		if configMap, err := p.getDashboardsConfigMap(ctx, "global"); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		} else {
 			dashboardConfigMapGlobal = configMap
 		}
@@ -237,7 +258,7 @@ func (p *plutono) computeResourcesData(ctx context.Context) ([]*corev1.ConfigMap
 		utilruntime.Must(kubernetesutils.MakeUnique(dashboardConfigMapGlobal))
 	} else {
 		if configMap, err := p.getDashboardsConfigMap(ctx, ""); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		} else {
 			dashboardConfigMap = configMap
 		}
@@ -248,17 +269,20 @@ func (p *plutono) computeResourcesData(ctx context.Context) ([]*corev1.ConfigMap
 	utilruntime.Must(kubernetesutils.MakeUnique(dataSourceConfigMap))
 
 	var (
-		deployment *appsv1.Deployment
-		service    *corev1.Service
-		ingress    *networkingv1.Ingress
+		deployment      *appsv1.Deployment
+		service         *corev1.Service
+		gateway         *istionetworkingv1beta1.Gateway
+		virtualService  *istionetworkingv1beta1.VirtualService
+		destinationRule *istionetworkingv1beta1.DestinationRule
+		tlsSecret       *corev1.Secret
 	)
 
 	deployment = p.getDeployment(providerConfigMap, dataSourceConfigMap, dashboardConfigMap, dashboardConfigMapGlobal)
 	service = p.getService()
 
-	ingress, err = p.getIngress(ctx)
+	gateway, virtualService, destinationRule, tlsSecret, err = p.getIngressResources(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	data, err := registry.AddAllAndSerialize(
@@ -266,13 +290,15 @@ func (p *plutono) computeResourcesData(ctx context.Context) ([]*corev1.ConfigMap
 		dataSourceConfigMap,
 		deployment,
 		service,
-		ingress,
+		gateway,
+		virtualService,
+		destinationRule,
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	return []*corev1.ConfigMap{dashboardConfigMap, dashboardConfigMapGlobal}, data, nil
+	return []*corev1.ConfigMap{dashboardConfigMap, dashboardConfigMapGlobal}, tlsSecret, data, nil
 }
 
 func (p *plutono) getDashboardsProviders() string {
@@ -510,9 +536,10 @@ func (p *plutono) getDashboardsConfigMap(ctx context.Context, suffix string) (*c
 func (p *plutono) getService() *corev1.Service {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: p.namespace,
-			Labels:    getLabels(),
+			Name:        name,
+			Namespace:   p.namespace,
+			Labels:      getLabels(),
+			Annotations: map[string]string{"networking.istio.io/exportTo": "*"},
 		},
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceTypeClusterIP,
@@ -531,6 +558,13 @@ func (p *plutono) getService() *corev1.Service {
 	if p.values.ClusterType == component.ClusterTypeSeed {
 		service.Labels = utils.MergeStringMaps(service.Labels, map[string]string{v1beta1constants.LabelRole: v1beta1constants.LabelMonitoring})
 	}
+
+	if strings.HasPrefix(p.namespace, v1beta1constants.TechnicalIDPrefix) {
+		metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
+	}
+	utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(service, []metav1.LabelSelector{
+		{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
+	}...))
 
 	return service
 }
@@ -697,15 +731,13 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap, dashboar
 	return deployment
 }
 
-func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error) {
+func (p *plutono) getIngressResources(ctx context.Context) (*istionetworkingv1beta1.Gateway, *istionetworkingv1beta1.VirtualService, *istionetworkingv1beta1.DestinationRule, *corev1.Secret, error) {
 	var (
-		pathType              = networkingv1.PathTypePrefix
-		credentialsSecretName = p.values.AuthSecretName
-		caName                = v1beta1constants.SecretNameCASeed
+		authSecret = p.values.AuthSecret
+		caName     = v1beta1constants.SecretNameCASeed
 	)
 
 	if p.values.IsGardenCluster {
-		pathType = networkingv1.PathTypeImplementationSpecific
 		credentialsSecret, err := p.secretsManager.Generate(ctx, &secrets.BasicAuthSecretConfig{
 			Name:           v1beta1constants.SecretNameObservabilityIngress,
 			Format:         secrets.BasicAuthFormatNormal,
@@ -714,10 +746,10 @@ func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error)
 		}, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.InPlace),
 		)
 		if err != nil {
-			return nil, err
+			return nil, nil, nil, nil, err
 		}
 
-		credentialsSecretName = credentialsSecret.Name
+		authSecret = credentialsSecret
 		caName = operatorv1alpha1.SecretNameCARuntime
 	}
 
@@ -731,16 +763,16 @@ func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error)
 			secretsmanager.Rotate(secretsmanager.InPlace),
 		)
 		if err != nil {
-			return nil, err
+			return nil, nil, nil, nil, err
 		}
 
-		credentialsSecretName = credentialsSecret.Name
+		authSecret = credentialsSecret
 		caName = v1beta1constants.SecretNameCACluster
 	}
 
-	var ingressTLSSecretName string
-	if p.values.WildcardCertName != nil {
-		ingressTLSSecretName = *p.values.WildcardCertName
+	var tlsSecret *corev1.Secret
+	if p.values.WildcardCert != nil {
+		tlsSecret = p.values.WildcardCert
 	} else {
 		ingressTLSSecret, err := p.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
 			Name:                        "plutono-tls",
@@ -752,59 +784,63 @@ func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error)
 			SkipPublishingCACertificate: true,
 		}, secretsmanager.SignedByCA(caName))
 		if err != nil {
-			return nil, err
+			return nil, nil, nil, nil, err
 		}
-		ingressTLSSecretName = ingressTLSSecret.Name
+		tlsSecret = ingressTLSSecret
 	}
 
-	ingress := &networkingv1.Ingress{
+	istioTLSSecret := tlsSecret.DeepCopy()
+	istioTLSSecret.Type = tlsSecret.Type
+	istioTLSSecret.ObjectMeta = metav1.ObjectMeta{
+		Name:      fmt.Sprintf("%s-%s", p.getOwnerId(), tlsSecret.Name),
+		Namespace: p.values.IstioIngressGatewayNamespace,
+		Labels:    p.getIstioTLSSecretLabels(),
+	}
+	if err := p.ensureIstioTLSSecret(ctx, istioTLSSecret); err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	gateway := &istionetworkingv1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: p.namespace,
-			Annotations: map[string]string{
-				"nginx.ingress.kubernetes.io/auth-realm":  "Authentication Required",
-				"nginx.ingress.kubernetes.io/auth-secret": credentialsSecretName,
-				"nginx.ingress.kubernetes.io/auth-type":   "basic",
-			},
-		},
-		Spec: networkingv1.IngressSpec{
-			IngressClassName: pointer.String(v1beta1constants.SeedNginxIngressClass),
-			TLS: []networkingv1.IngressTLS{{
-				SecretName: ingressTLSSecretName,
-				Hosts:      []string{p.values.IngressHost},
-			}},
-			Rules: []networkingv1.IngressRule{{
-				Host: p.values.IngressHost,
-				IngressRuleValue: networkingv1.IngressRuleValue{
-					HTTP: &networkingv1.HTTPIngressRuleValue{
-						Paths: []networkingv1.HTTPIngressPath{
-							{
-								Backend: networkingv1.IngressBackend{
-									Service: &networkingv1.IngressServiceBackend{
-										Name: name,
-										Port: networkingv1.ServiceBackendPort{
-											Number: int32(port),
-										},
-									},
-								},
-								Path:     "/",
-								PathType: &pathType,
-							},
-						},
-					},
-				},
-			}},
 		},
 	}
+	if err := istio.GatewayWithTLSTermination(gateway, getLabels(), p.values.IstioIngressGatewayLabels, []string{p.values.IngressHost}, externalPort, istioTLSSecret.Name)(); err != nil {
+		return nil, nil, nil, nil, err
+	}
 
+	virtualService := &istionetworkingv1beta1.VirtualService{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: p.namespace,
+		},
+	}
+	destinationHost := fmt.Sprintf("%s.%s.svc.%s", name, p.namespace, gardencorev1beta1.DefaultDomain)
+	if err := istio.VirtualServiceWithSNIMatchAndBasicAuth(virtualService, getLabels(), []string{p.values.IngressHost}, name, externalPort, destinationHost, port, string(authSecret.Data[corev1.BasicAuthUsernameKey]), string(authSecret.Data[corev1.BasicAuthPasswordKey]))(); err != nil {
+		return nil, nil, nil, nil, err
+	}
 	if p.values.ClusterType == component.ClusterTypeShoot {
-		ingress.Labels = getLabels()
-		ingress.Annotations = utils.MergeStringMaps(ingress.Annotations, map[string]string{
-			"nginx.ingress.kubernetes.io/configuration-snippet": "proxy_set_header X-Scope-OrgID operator;",
-		})
+		if virtualService.Spec.Http[0].Headers == nil {
+			virtualService.Spec.Http[0].Headers = &istioapinetworkingv1beta1.Headers{}
+		}
+		if virtualService.Spec.Http[0].Headers.Request == nil {
+			virtualService.Spec.Http[0].Headers.Request = &istioapinetworkingv1beta1.Headers_HeaderOperations{}
+		}
+		virtualService.Spec.Http[0].Headers.Request.Set = map[string]string{"X-Scope-OrgID": "operator"}
 	}
 
-	return ingress, nil
+	destinationRule := &istionetworkingv1beta1.DestinationRule{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: p.namespace,
+		},
+	}
+	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, getLabels(), destinationHost)(); err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	return gateway, virtualService, destinationRule, istioTLSSecret, nil
 }
 
 func getLabels() map[string]string {
@@ -892,4 +928,62 @@ func (p *plutono) getAdditionalDashboards(ctx context.Context, labelSelector lab
 	}
 
 	return dashboards, nil
+}
+
+func (p *plutono) getOwnerId() string {
+	if p.values.IsGardenCluster {
+		return "garden"
+	}
+	if p.values.ClusterType == component.ClusterTypeSeed {
+		return "seed"
+	}
+	if p.values.ClusterType == component.ClusterTypeShoot {
+		return p.namespace
+	}
+	return ""
+}
+
+func (p *plutono) getIstioTLSSecretLabels() map[string]string {
+	return utils.MergeStringMaps(getLabels(), map[string]string{labelTLSSecretOwner: p.getOwnerId()})
+}
+
+func (p *plutono) ensureIstioTLSSecret(ctx context.Context, tlsSecret *corev1.Secret) error {
+	secret := &corev1.Secret{}
+	if err := p.client.Get(ctx, client.ObjectKeyFromObject(tlsSecret), secret); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+
+		if err := p.client.Create(ctx, tlsSecret); err != nil {
+			if !apierrors.IsAlreadyExists(err) {
+				return err
+			}
+
+			if err := p.client.Get(ctx, client.ObjectKeyFromObject(tlsSecret), secret); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (p *plutono) cleanupOldIstioTLSSecrets(ctx context.Context, tlsSecret *corev1.Secret) error {
+	secretList := &corev1.SecretList{}
+	if err := p.client.List(ctx, secretList, client.InNamespace(p.values.IstioIngressGatewayNamespace), client.MatchingLabels(p.getIstioTLSSecretLabels())); err != nil {
+		return err
+	}
+
+	var fns []flow.TaskFn
+
+	for _, s := range secretList.Items {
+		secret := s
+
+		if tlsSecret != nil && tlsSecret.Name == secret.Name {
+			continue
+		}
+
+		fns = append(fns, func(ctx context.Context) error { return client.IgnoreNotFound(p.client.Delete(ctx, &secret)) })
+	}
+
+	return flow.Parallel(fns...)(ctx)
 }

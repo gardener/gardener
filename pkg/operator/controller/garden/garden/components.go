@@ -247,7 +247,7 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 
-	c.plutono, err = r.newPlutono(secretsManager, garden.Spec.RuntimeCluster.Ingress.Domain, wildcardCert)
+	c.plutono, err = r.newPlutono(secretsManager, garden.Spec.RuntimeCluster.Ingress.Domain, wildcardCert, c.istio.GetValues().IngressGateway)
 	if err != nil {
 		return
 	}
@@ -800,10 +800,9 @@ func (r *Reconciler) newGardenerMetricsExporter(secretsManager secretsmanager.In
 	return gardenermetricsexporter.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, gardenermetricsexporter.Values{Image: image.String()}), nil
 }
 
-func (r *Reconciler) newPlutono(secretsManager secretsmanager.Interface, ingressDomain string, wildcardCert *corev1.Secret) (plutono.Interface, error) {
-	var wildcardCertName *string
-	if wildcardCert != nil {
-		wildcardCertName = pointer.String(wildcardCert.GetName())
+func (r *Reconciler) newPlutono(secretsManager secretsmanager.Interface, ingressDomain string, wildcardCert *corev1.Secret, ingressGatewayValues []istio.IngressGatewayValues) (plutono.Interface, error) {
+	if len(ingressGatewayValues) != 1 {
+		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the SNI config")
 	}
 
 	return sharedcomponent.NewPlutono(
@@ -812,7 +811,7 @@ func (r *Reconciler) newPlutono(secretsManager secretsmanager.Interface, ingress
 		secretsManager,
 		component.ClusterTypeSeed,
 		1,
-		"",
+		nil,
 		fmt.Sprintf("%s.%s", "plutono-garden", ingressDomain),
 		v1beta1constants.PriorityClassNameGardenSystem100,
 		false,
@@ -821,7 +820,9 @@ func (r *Reconciler) newPlutono(secretsManager secretsmanager.Interface, ingress
 		false,
 		false,
 		false,
-		wildcardCertName,
+		wildcardCert,
+		ingressGatewayValues[0].Labels,
+		ingressGatewayValues[0].Namespace,
 	)
 }
 
