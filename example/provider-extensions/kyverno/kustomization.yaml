@@ -5,6 +5,6 @@ resources:
 - https://github.com/kyverno/kyverno/releases/download/v1.9.5/install.yaml
 - kyverno-poddisruptionbudget.yaml
 
-patchesStrategicMerge:
-- kyverno-configmap.yaml
-- kyverno-deployment.yaml
+patches:
+- path: kyverno-configmap.yaml
+- path: kyverno-deployment.yaml

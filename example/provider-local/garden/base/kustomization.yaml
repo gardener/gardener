@@ -10,15 +10,9 @@ resources:
 - https://raw.githubusercontent.com/gardener/gardener-extension-networking-cilium/v1.28.0/example/controller-registration.yaml
 - https://raw.githubusercontent.com/gardener/gardener-extension-networking-calico/v1.36.0/example/controller-registration.yaml
 
-patchesStrategicMerge:
-- patch-controller-registrations.yaml
 
 patches:
-- target:
-    group: core.gardener.cloud
-    kind: ControllerRegistration
-    name: provider-local
-  patch: |
+- patch: |
     - op: add
       path: /spec/resources/-
       value:
@@ -35,3 +29,8 @@ patches:
         kind: Extension
         type: local-ext-shoot
         workerlessSupported: true
+  target:
+    group: core.gardener.cloud
+    kind: ControllerRegistration
+    name: provider-local
+- path: patch-controller-registrations.yaml
