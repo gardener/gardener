@@ -279,6 +279,7 @@ func Convert_config_NodeAgentConfiguration_To_v1alpha1_NodeAgentConfiguration(in
 
 func autoConvert_v1alpha1_OperatingSystemConfigControllerConfig_To_config_OperatingSystemConfigControllerConfig(in *OperatingSystemConfigControllerConfig, out *config.OperatingSystemConfigControllerConfig, s conversion.Scope) error {
 	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
+	out.SyncJitterPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncJitterPeriod))
 	out.SecretName = in.SecretName
 	out.KubernetesVersion = (*v3.Version)(unsafe.Pointer(in.KubernetesVersion))
 	return nil
@@ -291,6 +292,7 @@ func Convert_v1alpha1_OperatingSystemConfigControllerConfig_To_config_OperatingS
 
 func autoConvert_config_OperatingSystemConfigControllerConfig_To_v1alpha1_OperatingSystemConfigControllerConfig(in *config.OperatingSystemConfigControllerConfig, out *OperatingSystemConfigControllerConfig, s conversion.Scope) error {
 	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
+	out.SyncJitterPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncJitterPeriod))
 	out.SecretName = in.SecretName
 	out.KubernetesVersion = (*v3.Version)(unsafe.Pointer(in.KubernetesVersion))
 	return nil

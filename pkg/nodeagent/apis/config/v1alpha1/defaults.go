@@ -30,4 +30,8 @@ func SetDefaults_OperatingSystemConfigControllerConfig(obj *OperatingSystemConfi
 	if obj.SyncPeriod == nil {
 		obj.SyncPeriod = &metav1.Duration{Duration: 10 * time.Minute}
 	}
+
+	if obj.SyncJitterPeriod == nil {
+		obj.SyncJitterPeriod = &metav1.Duration{Duration: 5 * time.Minute}
+	}
 }

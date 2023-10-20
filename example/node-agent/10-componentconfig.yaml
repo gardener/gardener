@@ -25,6 +25,7 @@ controllers:
     secretName: name-of-osc-secret
     kubernetesVersion: 1.28.2
   # syncPeriod: 10m
+  # syncJitterPeriod: 5m
   selfUpgrade:
     image: gardener-node-agent-image:v1
   token:

@@ -69,6 +69,10 @@ type ControllerConfiguration struct {
 type OperatingSystemConfigControllerConfig struct {
 	// SyncPeriod is the duration how often the operating system config is applied.
 	SyncPeriod *metav1.Duration
+	// SyncJitterPeriod is a jitter duration for the reconciler sync that can be used to distribute the syncs randomly.
+	// If its value is greater than 0 then the OSC secret will not be enqueued immediately but only after a random
+	// duration between 0 and the configured value. It is defaulted to 5m.
+	SyncJitterPeriod *metav1.Duration
 	// SecretName defines the name of the secret in the shoot cluster control plane, which contains the operating system
 	// config (OSC) for the gardener-node-agent.
 	SecretName string

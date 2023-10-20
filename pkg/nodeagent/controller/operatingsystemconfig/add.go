@@ -15,18 +15,28 @@
 package operatingsystemconfig
 
 import (
+	"context"
+
+	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 // ControllerName is the name of this controller.
@@ -50,12 +60,17 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		For(&corev1.Secret{}, builder.WithPredicates(
-			predicate.NewPredicateFuncs(func(obj client.Object) bool {
-				return obj.GetNamespace() == metav1.NamespaceSystem && obj.GetName() == r.Config.SecretName
-			}),
-			r.SecretPredicate(),
-		)).
+		WatchesRawSource(
+			source.Kind(mgr.GetCache(), &corev1.Secret{}),
+			r.EnqueueWithJitterDelay(mgr.GetLogger().WithValues("controller", ControllerName).WithName("jitterEventHandler")),
+			builder.WithPredicates(
+				predicate.NewPredicateFuncs(func(obj client.Object) bool {
+					return obj.GetNamespace() == metav1.NamespaceSystem && obj.GetName() == r.Config.SecretName
+				}),
+				r.SecretPredicate(),
+				predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
+			),
+		).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		Complete(r)
 }
@@ -79,5 +94,54 @@ func (r *Reconciler) SecretPredicate() predicate.Predicate {
 		},
 		DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
 		GenericFunc: func(_ event.GenericEvent) bool { return false },
+	}
+}
+
+func reconcileRequest(obj client.Object) reconcile.Request {
+	return reconcile.Request{NamespacedName: types.NamespacedName{
+		Name:      obj.GetName(),
+		Namespace: obj.GetNamespace(),
+	}}
+}
+
+// RandomDurationWithMetaDuration is an alias for `utils.RandomDurationWithMetaDuration`. Exposed for unit tests.
+var RandomDurationWithMetaDuration = utils.RandomDurationWithMetaDuration
+
+// EnqueueWithJitterDelay returns handler.Funcs which enqueues the object with a random jitter duration for 'update'
+// events. 'Create' events are enqueued immediately.
+func (r *Reconciler) EnqueueWithJitterDelay(log logr.Logger) handler.EventHandler {
+	return &handler.Funcs{
+		CreateFunc: func(_ context.Context, evt event.CreateEvent, q workqueue.RateLimitingInterface) {
+			if evt.Object == nil {
+				return
+			}
+			q.Add(reconcileRequest(evt.Object))
+		},
+
+		UpdateFunc: func(_ context.Context, evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+			oldSecret, ok := evt.ObjectOld.(*corev1.Secret)
+			if !ok {
+				return
+			}
+			newSecret, ok := evt.ObjectNew.(*corev1.Secret)
+			if !ok {
+				return
+			}
+
+			_, _, oldOSCChecksum, err := extractOSCFromSecret(oldSecret)
+			if err != nil {
+				log.Error(err, "Failed to get OSC checksum for old secret")
+				return
+			}
+			_, _, newOSCChecksum, err := extractOSCFromSecret(newSecret)
+			if err != nil {
+				log.Error(err, "Failed to get OSC checksum for new secret")
+				return
+			}
+
+			if oldOSCChecksum != newOSCChecksum {
+				q.AddAfter(reconcileRequest(evt.ObjectNew), RandomDurationWithMetaDuration(r.Config.SyncJitterPeriod))
+			}
+		},
 	}
 }

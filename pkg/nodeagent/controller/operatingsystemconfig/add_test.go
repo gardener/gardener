@@ -15,13 +15,25 @@
 package operatingsystemconfig_test
 
 import (
+	"context"
+	"time"
+
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	mockworkqueue "github.com/gardener/gardener/pkg/mock/client-go/util/workqueue"
+	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
 	. "github.com/gardener/gardener/pkg/nodeagent/controller/operatingsystemconfig"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Add", func() {
@@ -71,6 +83,90 @@ var _ = Describe("Add", func() {
 		Describe("#Generic", func() {
 			It("should return false", func() {
 				Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
+			})
+		})
+	})
+
+	Describe("#EnqueueWithJitterDelay", func() {
+		var (
+			ctx = context.Background()
+			log = logr.Discard()
+
+			hdlr  handler.EventHandler
+			queue *mockworkqueue.MockRateLimitingInterface
+			obj   *corev1.Secret
+			req   reconcile.Request
+			cfg   config.OperatingSystemConfigControllerConfig
+
+			randomDuration = 10 * time.Millisecond
+		)
+
+		BeforeEach(func() {
+			cfg = config.OperatingSystemConfigControllerConfig{
+				SyncJitterPeriod: &metav1.Duration{Duration: 50 * time.Millisecond},
+			}
+
+			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay(log)
+			queue = mockworkqueue.NewMockRateLimitingInterface(gomock.NewController(GinkgoT()))
+			obj = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "osc-secret", Namespace: "namespace"}}
+			req = reconcile.Request{NamespacedName: types.NamespacedName{Name: obj.Name, Namespace: obj.Namespace}}
+
+			DeferCleanup(func() {
+				test.WithVar(&RandomDurationWithMetaDuration, func(_ *metav1.Duration) time.Duration { return randomDuration })
+			})
+		})
+
+		Context("Create events", func() {
+			It("should enqueue the object without delay", func() {
+				queue.EXPECT().Add(req)
+
+				hdlr.Create(ctx, event.CreateEvent{Object: obj}, queue)
+			})
+		})
+
+		Context("Update events", func() {
+			It("should not enqueue the object when the OSC did not change", func() {
+				hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
+			})
+
+			It("should not enqueue the object when the old secret has no OSC in data", func() {
+				hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
+			})
+
+			It("should not enqueue the object when the new secret has no OSC in data", func() {
+				oldObj := obj.DeepCopy()
+				oldObj.Data = map[string][]byte{"osc.yaml": []byte(`{"apiVersion":"extensions.gardener.cloud/v1alpha1","kind":"OperatingSystemConfig"}`)}
+
+				hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: oldObj}, queue)
+			})
+
+			It("should not enqueue the object when the OSC is the same", func() {
+				obj.Data = map[string][]byte{"osc.yaml": []byte(`{"apiVersion":"extensions.gardener.cloud/v1alpha1","kind":"OperatingSystemConfig"}`)}
+				oldObj := obj.DeepCopy()
+
+				hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: oldObj}, queue)
+			})
+
+			It("should enqueue the object when the OSC changed", func() {
+				queue.EXPECT().AddAfter(req, randomDuration)
+
+				obj.Data = map[string][]byte{"osc.yaml": []byte(`{"apiVersion":"extensions.gardener.cloud/v1alpha1","kind":"OperatingSystemConfig"}`)}
+				oldObj := obj.DeepCopy()
+				oldObj.Data = map[string][]byte{"osc.yaml": []byte(`{"apiVersion":"extensions.gardener.cloud/v1alpha1","kind":"OperatingSystemConfig","generation":1}`)}
+
+				hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: oldObj}, queue)
+			})
+		})
+
+		Context("Delete events", func() {
+			It("should not enqueue the object", func() {
+				hdlr.Delete(ctx, event.DeleteEvent{Object: obj}, queue)
+			})
+		})
+
+		Context("Generic events", func() {
+			It("should not enqueue the object", func() {
+				hdlr.Generic(ctx, event.GenericEvent{Object: obj}, queue)
 			})
 		})
 	})
