@@ -42,13 +42,6 @@ const (
 	NodeInitUnitName = "gardener-node-init.service"
 	// UnitName is the name of the gardener-node-agent systemd service.
 	UnitName = "gardener-node-agent.service"
-
-	// OSCSecretKey is the key inside the gardener-node-agent osc secret to access
-	// the encoded osc.
-	OSCSecretKey = "gardener-node-agent"
-	// OSCOldConfigPath is the file path on the worker node that contains the
-	// previous content of the osc
-	OSCOldConfigPath = BaseDir + "/previous-osc.yaml"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
