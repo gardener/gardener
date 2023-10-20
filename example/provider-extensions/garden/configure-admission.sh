@@ -39,17 +39,20 @@ fi
 garden_kubeconfig=$1
 command=$2
 
-for p in $(yq '. | select(.kind == "ControllerDeployment") | select(.metadata.name == "provider-*") | .metadata.name' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controllerregistrations/* | grep -v -E "^---$"); do
+for p in $(yq '. | select(.kind == "ControllerDeployment") | select(.metadata.name == "provider-*" or .metadata.name == "networking-cilium") | .metadata.name' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controllerregistrations/* | grep -v -E "^---$"); do
   echo "Found \"$p\" in $REPO_ROOT_DIR/example/provider-extensions/garden/controllerregistrations. Trying to configure its admission controller..."
   if PROVIDER_RELEASES=$(curl --fail -s -L -H "Accept: application/vnd.github+json" "https://api.github.com/repos/gardener/gardener-extension-$p/releases"); then
     LATEST_RELEASE=$(jq -r '.[].tag_name' <<< "$PROVIDER_RELEASES" | head -n 1)
     ADMISSION_NAME=${p/provider/admission}
+    if [ "$ADMISSION_NAME" == "networking-cilium" ]; then
+      ADMISSION_NAME="admission-cilium"
+    fi
     echo "Identified $LATEST_RELEASE as latest release of $ADMISSION_NAME. Trying to deploy it..."
     ADMISSION_GIT_ROOT=$(mktemp -d)
     ADMISSION_FILE=$(mktemp)
     curl --fail -L -o "$ADMISSION_FILE" "https://github.com/gardener/gardener-extension-$p/archive/refs/tags/$LATEST_RELEASE.tar.gz"
     tar xfz "$ADMISSION_FILE" -C "$ADMISSION_GIT_ROOT" --strip-components 1
-    CA_BUNDLE=$(yq ".webhooks[0].clientConfig.caBundle" "$ADMISSION_GIT_ROOT/example/50-mutatingwebhookconfiguration.yaml" | base64 -d)
+    CA_BUNDLE=$(yq ".webhooks[0].clientConfig.caBundle" "$ADMISSION_GIT_ROOT/example/"*"-mutatingwebhookconfiguration.yaml" | base64 -d)
     TLS_CRT=$(cat "$ADMISSION_GIT_ROOT/example/$ADMISSION_NAME-certs/tls.crt")
     TLS_KEY=$(cat "$ADMISSION_GIT_ROOT/example/$ADMISSION_NAME-certs/tls.key")
     helm template --namespace garden --set global.image.tag="$LATEST_RELEASE" --set global.webhookConfig.caBundle="$CA_BUNDLE" --set global.webhookConfig.tls.crt="$TLS_CRT" --set global.webhookConfig.tls.key="$TLS_KEY" gardener-extension-"$ADMISSION_NAME" "$ADMISSION_GIT_ROOT"/charts/gardener-extension-"$ADMISSION_NAME"/charts/application > "$ADMISSION_GIT_ROOT"/virtual-resources.yaml
