@@ -55,8 +55,6 @@ func validateControllerConfiguration(conf config.ControllerConfiguration, fldPat
 
 	allErrs = append(allErrs, validateOperatingSystemConfigControllerConfiguration(conf.OperatingSystemConfig, fldPath.Child("operatingSystemConfig"))...)
 	allErrs = append(allErrs, validateTokenControllerConfiguration(conf.Token, fldPath.Child("token"))...)
-	allErrs = append(allErrs, validateKubeletUpgradeControllerConfiguration(conf.KubeletUpgrade, fldPath.Child("kubeletUpgrade"))...)
-	allErrs = append(allErrs, validateSelfUpgradeControllerConfiguration(conf.SelfUpgrade, fldPath.Child("selfUpgrade"))...)
 
 	return allErrs
 }
@@ -74,26 +72,6 @@ func validateOperatingSystemConfigControllerConfiguration(conf config.OperatingS
 		allErrs = append(allErrs, field.Required(fldPath.Child("kubernetesVersion"), "must provide a supported kubernetes version"))
 	} else if err := kubernetesversion.CheckIfSupported(conf.KubernetesVersion.String()); err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("kubernetesVersion"), conf.KubernetesVersion, err.Error()))
-	}
-
-	return allErrs
-}
-
-func validateKubeletUpgradeControllerConfiguration(conf config.KubeletUpgradeControllerConfig, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if conf.Image == "" {
-		allErrs = append(allErrs, field.Required(fldPath.Child("image"), "must provide an image for kubelet"))
-	}
-
-	return allErrs
-}
-
-func validateSelfUpgradeControllerConfiguration(conf config.SelfUpgradeControllerConfig, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if conf.Image == "" {
-		allErrs = append(allErrs, field.Required(fldPath.Child("image"), "must provide an image for gardener-node-agent"))
 	}
 
 	return allErrs

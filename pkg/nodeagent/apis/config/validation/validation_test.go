@@ -42,12 +42,6 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 				Token: TokenControllerConfig{
 					SecretName: "token-secret",
 				},
-				KubeletUpgrade: KubeletUpgradeControllerConfig{
-					Image: "registry.com/hyperkube:v1.27.0",
-				},
-				SelfUpgrade: SelfUpgradeControllerConfig{
-					Image: "registry.com/node-agent:v1.73.0",
-				},
 			},
 		}
 	})
@@ -75,32 +69,6 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("controllers.operatingSystemConfig.secretName"),
-				})),
-			))
-		})
-	})
-
-	Context("Kubelet Upgrade Controller", func() {
-		It("should fail because hyperkube image config is not specified", func() {
-			config.Controllers.KubeletUpgrade.Image = ""
-
-			Expect(ValidateNodeAgentConfiguration(config)).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("controllers.kubeletUpgrade.image"),
-				})),
-			))
-		})
-	})
-
-	Context("Self Upgrade Controller", func() {
-		It("should fail because image config is not specified", func() {
-			config.Controllers.SelfUpgrade.Image = ""
-
-			Expect(ValidateNodeAgentConfiguration(config)).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("controllers.selfUpgrade.image"),
 				})),
 			))
 		})

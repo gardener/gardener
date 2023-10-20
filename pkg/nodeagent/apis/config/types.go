@@ -55,12 +55,8 @@ type BootstrapConfiguration struct {
 
 // ControllerConfiguration defines the configuration of the controllers.
 type ControllerConfiguration struct {
-	// KubeletUpgrade is the configuration for the kubelet upgrade controller.
-	KubeletUpgrade KubeletUpgradeControllerConfig
 	// OperatingSystemConfig is the configuration for the operating system config controller.
 	OperatingSystemConfig OperatingSystemConfigControllerConfig
-	// SelfUpgrade is the configuration for the self-upgrade controller.
-	SelfUpgrade SelfUpgradeControllerConfig
 	// Token is the configuration for the access token controller.
 	Token TokenControllerConfig
 }
@@ -79,18 +75,6 @@ type OperatingSystemConfigControllerConfig struct {
 	// KubernetesVersion contains the Kubernetes version of the kubelet, used for annotating the corresponding node
 	// resource with a kubernetes version annotation.
 	KubernetesVersion *semver.Version
-}
-
-// KubeletUpgradeControllerConfig defines the configuration of the kubelet upgrade controller.
-type KubeletUpgradeControllerConfig struct {
-	// Image is the container image reference to the image containing the kubelet binary (hyperkube image).
-	Image string
-}
-
-// SelfUpgradeControllerConfig defines the configuration of the self-upgrade controller.
-type SelfUpgradeControllerConfig struct {
-	// Image is the container image reference to the gardener-node-agent.
-	Image string
 }
 
 // TokenControllerConfig defines the configuration of the access token controller.

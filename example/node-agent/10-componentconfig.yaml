@@ -19,14 +19,10 @@ featureGates: {}
 #bootstrap:
 #  kubeletDataVolumeSize: 50Gi
 controllers:
-  kubeletUpgrade:
-    image: hyperkube-image:v2
   operatingSystemConfig:
     secretName: name-of-osc-secret
     kubernetesVersion: 1.28.2
   # syncPeriod: 10m
   # syncJitterPeriod: 5m
-  selfUpgrade:
-    image: gardener-node-agent-image:v1
   token:
     secretName: name-of-access-token-secret
