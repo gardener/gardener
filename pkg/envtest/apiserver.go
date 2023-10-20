@@ -45,6 +45,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
 	apiserverapp "github.com/gardener/gardener/cmd/gardener-apiserver/app"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	"github.com/gardener/gardener/pkg/apiserver"
 	"github.com/gardener/gardener/pkg/apiserver/features"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -368,7 +372,7 @@ func (g *GardenerAPIServer) registerGardenerAPIs(ctx context.Context) error {
 		undiscoverableGardenerAPIGroups.Insert(gv.String())
 	}
 
-	return retry.Until(ctx, waitPollInterval, func(ctx context.Context) (bool, error) {
+	if err := retry.Until(ctx, waitPollInterval, func(ctx context.Context) (bool, error) {
 		apiGroupResources, err := restmapper.GetAPIGroupResources(discoveryClient)
 		if err != nil {
 			return retry.MinorError(err)
@@ -386,6 +390,31 @@ func (g *GardenerAPIServer) registerGardenerAPIs(ctx context.Context) error {
 			return retry.MinorError(fmt.Errorf("the following Gardener API GroupVersions are not discoverable: %v", sets.List(undiscoverableGardenerAPIGroups)))
 		}
 		log.V(1).Info("All Gardener APIs discoverable")
+		return retry.Ok()
+	}); err != nil {
+		return err
+	}
+
+	// ensure that we can really list objects in the Gardener API
+	// after https://github.com/kubernetes/kubernetes/pull/119824 (first available in v0.28.3), we have seen that GAPI
+	// sometimes fails to communicate with etcd even if we have passed all prior checks here, see
+	// https://github.com/gardener/gardener/pull/8666
+	// TODO: Revisit this once sigs.k8s.io/controller-runtime has upgraded their envtest version to v1.28.3+ (currently,
+	//  only v1.28.0 is used, hence the kube-apiserver does not yet suffer from the same issue).
+	return retry.Until(ctx, waitPollInterval, func(ctx context.Context) (bool, error) {
+		for _, gvk := range []schema.GroupVersionKind{
+			gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"),
+			operationsv1alpha1.SchemeGroupVersion.WithKind("BastionList"),
+			seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeedList"),
+			settingsv1alpha1.SchemeGroupVersion.WithKind("OpenIDConnectPresetList"),
+		} {
+			objList := &metav1.PartialObjectMetadataList{}
+			objList.SetGroupVersionKind(gvk)
+			if err := c.List(ctx, objList, client.Limit(1)); err != nil {
+				return retry.MinorError(err)
+			}
+			log.V(1).Info("Listing resources is possible", "gvk", gvk)
+		}
 		return retry.Ok()
 	})
 }
