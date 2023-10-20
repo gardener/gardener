@@ -25,131 +25,136 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-var _ = Describe("Defaults", func() {
-	Describe("#SetObjectDefaults_Seed", func() {
-		var obj *Seed
+var _ = Describe("Seed defaulting", func() {
+	var obj *Seed
 
-		BeforeEach(func() {
-			obj = &Seed{}
-		})
+	BeforeEach(func() {
+		obj = &Seed{}
+	})
 
-		It("should default the seed settings (w/o taints)", func() {
-			var excessCapacityReservation = SeedSettingExcessCapacityReservation{
+	It("should default the seed settings (w/o taints)", func() {
+		var excessCapacityReservation = SeedSettingExcessCapacityReservation{
+			Configs: []SeedSettingExcessCapacityReservationConfig{
+				{Resources: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("2"), corev1.ResourceMemory: resource.MustParse("6Gi")}},
+			},
+		}
+
+		SetObjectDefaults_Seed(obj)
+
+		Expect(obj.Spec.Settings.DependencyWatchdog).NotTo(BeNil())
+		Expect(obj.Spec.Settings.ExcessCapacityReservation).To(PointTo(Equal(excessCapacityReservation)))
+		Expect(obj.Spec.Settings.Scheduling.Visible).To(BeTrue())
+		Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(BeTrue())
+		Expect(obj.Spec.Settings.TopologyAwareRouting.Enabled).To(BeFalse())
+	})
+
+	It("should allow taints that were not allowed in version v1.12", func() {
+		var (
+			excessCapacityReservation = SeedSettingExcessCapacityReservation{
 				Configs: []SeedSettingExcessCapacityReservationConfig{
 					{Resources: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("2"), corev1.ResourceMemory: resource.MustParse("6Gi")}},
 				},
 			}
-
-			SetObjectDefaults_Seed(obj)
-
-			Expect(obj.Spec.Settings.DependencyWatchdog).NotTo(BeNil())
-			Expect(obj.Spec.Settings.ExcessCapacityReservation).To(PointTo(Equal(excessCapacityReservation)))
-			Expect(obj.Spec.Settings.Scheduling.Visible).To(BeTrue())
-			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(BeTrue())
-			Expect(obj.Spec.Settings.TopologyAwareRouting.Enabled).To(BeFalse())
-		})
-
-		It("should allow taints that were not allowed in version v1.12", func() {
-			var (
-				excessCapacityReservation = SeedSettingExcessCapacityReservation{
-					Configs: []SeedSettingExcessCapacityReservationConfig{
-						{Resources: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("2"), corev1.ResourceMemory: resource.MustParse("6Gi")}},
-					},
-				}
-				taints = []SeedTaint{
-					{Key: "seed.gardener.cloud/disable-capacity-reservation"},
-					{Key: "seed.gardener.cloud/disable-dns"},
-					{Key: "seed.gardener.cloud/invisible"},
-				}
-			)
-
-			obj.Spec.Taints = taints
-
-			SetObjectDefaults_Seed(obj)
-
-			Expect(obj.Spec.Settings.DependencyWatchdog).NotTo(BeNil())
-			Expect(obj.Spec.Settings.ExcessCapacityReservation).To(PointTo(Equal(excessCapacityReservation)))
-			Expect(obj.Spec.Settings.Scheduling.Visible).To(BeTrue())
-			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(BeTrue())
-			Expect(obj.Spec.Settings.TopologyAwareRouting.Enabled).To(BeFalse())
-			Expect(obj.Spec.Taints).To(HaveLen(3))
-			Expect(obj.Spec.Taints).To(Equal(taints))
-		})
-
-		It("should not default the seed settings because they were provided", func() {
-			var (
-				dwdWeederEnabled          = false
-				dwdProberEnabled          = false
-				topologyAwareRouting      = true
-				scheduling                = true
-				vpaEnabled                = false
-				excessCapacityReservation = SeedSettingExcessCapacityReservation{
-					Enabled: pointer.Bool(true),
-					Configs: []SeedSettingExcessCapacityReservationConfig{
-						{Resources: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("4"), corev1.ResourceMemory: resource.MustParse("16Gi")}},
-					},
-				}
-			)
-
-			obj.Spec.Settings = &SeedSettings{
-				DependencyWatchdog: &SeedSettingDependencyWatchdog{
-					Weeder: &SeedSettingDependencyWatchdogWeeder{Enabled: dwdWeederEnabled},
-					Prober: &SeedSettingDependencyWatchdogProber{Enabled: dwdProberEnabled},
-				},
-				TopologyAwareRouting: &SeedSettingTopologyAwareRouting{
-					Enabled: topologyAwareRouting,
-				},
-				ExcessCapacityReservation: &excessCapacityReservation,
-				Scheduling:                &SeedSettingScheduling{Visible: scheduling},
-				VerticalPodAutoscaler:     &SeedSettingVerticalPodAutoscaler{Enabled: vpaEnabled},
+			taints = []SeedTaint{
+				{Key: "seed.gardener.cloud/disable-capacity-reservation"},
+				{Key: "seed.gardener.cloud/disable-dns"},
+				{Key: "seed.gardener.cloud/invisible"},
 			}
+		)
 
-			SetObjectDefaults_Seed(obj)
+		obj.Spec.Taints = taints
 
-			Expect(obj.Spec.Settings.DependencyWatchdog.Weeder.Enabled).To(Equal(dwdWeederEnabled))
-			Expect(obj.Spec.Settings.DependencyWatchdog.Prober.Enabled).To(Equal(dwdProberEnabled))
-			Expect(obj.Spec.Settings.ExcessCapacityReservation).To(PointTo(Equal(excessCapacityReservation)))
-			Expect(obj.Spec.Settings.Scheduling.Visible).To(Equal(scheduling))
-			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(Equal(vpaEnabled))
-			Expect(obj.Spec.Settings.TopologyAwareRouting.Enabled).To(Equal(topologyAwareRouting))
-		})
+		SetObjectDefaults_Seed(obj)
 
+		Expect(obj.Spec.Settings.DependencyWatchdog).NotTo(BeNil())
+		Expect(obj.Spec.Settings.ExcessCapacityReservation).To(PointTo(Equal(excessCapacityReservation)))
+		Expect(obj.Spec.Settings.Scheduling.Visible).To(BeTrue())
+		Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(BeTrue())
+		Expect(obj.Spec.Settings.TopologyAwareRouting.Enabled).To(BeFalse())
+		Expect(obj.Spec.Taints).To(HaveLen(3))
+		Expect(obj.Spec.Taints).To(Equal(taints))
+	})
+
+	It("should not default the seed settings because they were provided", func() {
+		var (
+			dwdWeederEnabled          = false
+			dwdProberEnabled          = false
+			topologyAwareRouting      = true
+			scheduling                = true
+			vpaEnabled                = false
+			excessCapacityReservation = SeedSettingExcessCapacityReservation{
+				Enabled: pointer.Bool(true),
+				Configs: []SeedSettingExcessCapacityReservationConfig{
+					{Resources: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("4"), corev1.ResourceMemory: resource.MustParse("16Gi")}},
+				},
+			}
+		)
+
+		obj.Spec.Settings = &SeedSettings{
+			DependencyWatchdog: &SeedSettingDependencyWatchdog{
+				Weeder: &SeedSettingDependencyWatchdogWeeder{Enabled: dwdWeederEnabled},
+				Prober: &SeedSettingDependencyWatchdogProber{Enabled: dwdProberEnabled},
+			},
+			TopologyAwareRouting: &SeedSettingTopologyAwareRouting{
+				Enabled: topologyAwareRouting,
+			},
+			ExcessCapacityReservation: &excessCapacityReservation,
+			Scheduling:                &SeedSettingScheduling{Visible: scheduling},
+			VerticalPodAutoscaler:     &SeedSettingVerticalPodAutoscaler{Enabled: vpaEnabled},
+		}
+
+		SetObjectDefaults_Seed(obj)
+
+		Expect(obj.Spec.Settings.DependencyWatchdog.Weeder.Enabled).To(Equal(dwdWeederEnabled))
+		Expect(obj.Spec.Settings.DependencyWatchdog.Prober.Enabled).To(Equal(dwdProberEnabled))
+		Expect(obj.Spec.Settings.ExcessCapacityReservation).To(PointTo(Equal(excessCapacityReservation)))
+		Expect(obj.Spec.Settings.Scheduling.Visible).To(Equal(scheduling))
+		Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(Equal(vpaEnabled))
+		Expect(obj.Spec.Settings.TopologyAwareRouting.Enabled).To(Equal(topologyAwareRouting))
+	})
+
+	Describe("SeedNetworks defaulting", func() {
 		It("should default ipFamilies setting to IPv4 single-stack", func() {
 			SetObjectDefaults_Seed(obj)
 
 			Expect(obj.Spec.Networks.IPFamilies).To(ConsistOf(IPFamilyIPv4))
 		})
+
+		It("should not overwrite ipFamilies setting", func() {
+			obj.Spec.Networks.IPFamilies = []IPFamily{IPFamilyIPv6}
+			SetObjectDefaults_Seed(obj)
+
+			Expect(obj.Spec.Networks.IPFamilies).To(ConsistOf(IPFamilyIPv6))
+		})
 	})
 
-	Describe("#SetDefaults_SeedSettingDependencyWatchdog", func() {
-		var obj *SeedSettingDependencyWatchdog
-
-		BeforeEach(func() {
-			obj = &SeedSettingDependencyWatchdog{}
-		})
-
+	Describe("SeedSettingDependencyWatchdog defaulting", func() {
 		It("should default the settings", func() {
-			SetDefaults_SeedSettingDependencyWatchdog(obj)
+			SetObjectDefaults_Seed(obj)
 
-			Expect(obj.Weeder.Enabled).To(BeTrue())
-			Expect(obj.Prober.Enabled).To(BeTrue())
+			Expect(obj.Spec.Settings.DependencyWatchdog.Weeder.Enabled).To(BeTrue())
+			Expect(obj.Spec.Settings.DependencyWatchdog.Prober.Enabled).To(BeTrue())
 		})
 
-		It("should not default the seed settings because they were provided", func() {
+		It("should not default the SeedSettingDependencyWatchdog field if it is already set", func() {
 			var (
 				dwdWeederEnabled = false
 				dwdProberEnabled = false
 			)
 
-			obj = &SeedSettingDependencyWatchdog{
-				Weeder: &SeedSettingDependencyWatchdogWeeder{Enabled: dwdWeederEnabled},
-				Prober: &SeedSettingDependencyWatchdogProber{Enabled: dwdProberEnabled},
+			obj = &Seed{
+				Spec: SeedSpec{
+					Settings: &SeedSettings{
+						DependencyWatchdog: &SeedSettingDependencyWatchdog{
+							Weeder: &SeedSettingDependencyWatchdogWeeder{Enabled: dwdWeederEnabled},
+							Prober: &SeedSettingDependencyWatchdogProber{Enabled: dwdProberEnabled},
+						},
+					},
+				},
 			}
 
-			SetDefaults_SeedSettingDependencyWatchdog(obj)
-
-			Expect(obj.Weeder.Enabled).To(Equal(dwdWeederEnabled))
-			Expect(obj.Prober.Enabled).To(Equal(dwdProberEnabled))
+			Expect(obj.Spec.Settings.DependencyWatchdog.Weeder.Enabled).To(Equal(dwdWeederEnabled))
+			Expect(obj.Spec.Settings.DependencyWatchdog.Prober.Enabled).To(Equal(dwdProberEnabled))
 		})
 	})
 })
