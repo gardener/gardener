@@ -28,6 +28,7 @@ import (
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/snapshots"
 	"github.com/opencontainers/image-spec/identity"
+	"github.com/spf13/afero"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
 
@@ -40,6 +41,8 @@ func NewExtractor() Extractor {
 
 // CopyFromImage copies files from a given image reference to the destination folder.
 func (e *containerdExtractor) CopyFromImage(ctx context.Context, imageRef string, files []string, destination string) error {
+	aferoFS := afero.Afero{Fs: afero.NewOsFs()}
+
 	address := os.Getenv("CONTAINERD_ADDRESS")
 	if address == "" {
 		address = defaults.DefaultAddress
@@ -66,7 +69,7 @@ func (e *containerdExtractor) CopyFromImage(ctx context.Context, imageRef string
 
 	snapshotter := client.SnapshotService(containerd.DefaultSnapshotter)
 
-	imageMountDirectory, err := os.MkdirTemp("", "node-agent-")
+	imageMountDirectory, err := aferoFS.TempDir("", "node-agent-")
 	if err != nil {
 		return fmt.Errorf("error creating temp image: %w", err)
 	}
@@ -79,7 +82,7 @@ func (e *containerdExtractor) CopyFromImage(ctx context.Context, imageRef string
 	for _, file := range files {
 		sourceFile := path.Join(imageMountDirectory, file)
 		destinationFile := path.Join(destination, path.Base(file))
-		if err := CopyFile(sourceFile, destinationFile); err != nil {
+		if err := CopyFile(aferoFS, sourceFile, destinationFile); err != nil {
 			return fmt.Errorf("error copying file %s to %s: %w", sourceFile, destinationFile, err)
 		}
 	}
@@ -122,8 +125,8 @@ func unmountImage(ctx context.Context, snapshotter snapshots.Snapshotter, direct
 }
 
 // CopyFile copies a source file to destination file and sets the executable flag.
-func CopyFile(sourceFile, destinationFile string) error {
-	sourceFileStat, err := os.Stat(sourceFile)
+func CopyFile(aferoFS afero.Afero, sourceFile, destinationFile string) error {
+	sourceFileStat, err := aferoFS.Stat(sourceFile)
 	if err != nil {
 		return err
 	}
@@ -132,7 +135,7 @@ func CopyFile(sourceFile, destinationFile string) error {
 		return fmt.Errorf("source %q is not a regular file", sourceFile)
 	}
 
-	if destinationFileStat, err := os.Stat(destinationFile); err == nil {
+	if destinationFileStat, err := aferoFS.Stat(destinationFile); err == nil {
 		if !destinationFileStat.Mode().IsRegular() {
 			return fmt.Errorf("destination %q exists but is not a regular file", destinationFile)
 		}
@@ -140,26 +143,25 @@ func CopyFile(sourceFile, destinationFile string) error {
 		return err
 	}
 
-	srcFile, err := os.Open(sourceFile)
+	srcFile, err := aferoFS.Open(sourceFile)
 	if err != nil {
 		return err
 	}
 	defer srcFile.Close()
 
-	if err := os.MkdirAll(path.Dir(destinationFile), 0755); err != nil {
+	if err := aferoFS.MkdirAll(path.Dir(destinationFile), 0755); err != nil {
 		return fmt.Errorf("destination directory %q could not be created", path.Dir(destinationFile))
 	}
 
-	dstFile, err := os.OpenFile(destinationFile, os.O_CREATE|os.O_RDWR, 0755)
+	dstFile, err := aferoFS.OpenFile(destinationFile, os.O_CREATE|os.O_RDWR, 0755)
 	if err != nil {
 		return err
 	}
 	defer dstFile.Close()
 
-	_, err = io.Copy(dstFile, srcFile)
-	if err != nil {
+	if _, err = io.Copy(dstFile, srcFile); err != nil {
 		return err
 	}
 
-	return dstFile.Chmod(0755)
+	return aferoFS.Chmod(dstFile.Name(), 0755)
 }

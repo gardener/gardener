@@ -21,6 +21,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/spf13/afero"
 
 	. "github.com/gardener/gardener/pkg/nodeagent/registry"
 )
@@ -33,19 +34,23 @@ var _ = Describe("ContainerdExtractor", func() {
 			sourceFile      string
 			destinationFile string
 			content         string
+			aferoFS         afero.Afero
 		)
 
 		BeforeEach(func() {
 			var err error
 
-			sourceDirectory, err := os.MkdirTemp("", "copy-file-sourcedir-")
+			aferoFS = afero.Afero{Fs: afero.NewMemMapFs()}
+			destinationDirectory := "/copy-file-destdir"
+
+			sourceDirectory, err := aferoFS.TempDir("", "copy-file-sourcedir-")
 			Expect(err).ToNot(HaveOccurred())
-			destinationDirectory, err := os.MkdirTemp("", "copy-file-destdir-")
+			err = aferoFS.Mkdir(destinationDirectory, 0755)
 			Expect(err).ToNot(HaveOccurred())
 
 			DeferCleanup(func() {
-				Expect(os.RemoveAll(sourceDirectory)).To(Succeed())
-				Expect(os.RemoveAll(destinationDirectory)).To(Succeed())
+				Expect(aferoFS.RemoveAll(sourceDirectory)).To(Succeed())
+				Expect(aferoFS.RemoveAll(destinationDirectory)).To(Succeed())
 			})
 
 			filename := "foobar"
@@ -55,69 +60,69 @@ var _ = Describe("ContainerdExtractor", func() {
 		})
 
 		It("should copy new files into an existing directory", func() {
-			createFile(sourceFile, content, 0755)
-			Expect(CopyFile(sourceFile, destinationFile)).To(Succeed())
-			checkFile(destinationFile, content)
+			createFile(aferoFS, sourceFile, content, 0755)
+			Expect(CopyFile(aferoFS, sourceFile, destinationFile)).To(Succeed())
+			checkFile(aferoFS, destinationFile, content)
 		})
 
 		It("should copy new files into a new directory", func() {
-			createFile(sourceFile, content, 0755)
+			createFile(aferoFS, sourceFile, content, 0755)
 			destinationFile = path.Join(destinationFile, "more-foobar")
-			Expect(CopyFile(sourceFile, destinationFile)).To(Succeed())
-			checkFile(destinationFile, content)
+			Expect(CopyFile(aferoFS, sourceFile, destinationFile)).To(Succeed())
+			checkFile(aferoFS, destinationFile, content)
 		})
 
 		It("should overwrite an existing file in an existing directory", func() {
 			content = "foobar content: existing"
-			createFile(destinationFile, content, 0755)
-			checkFile(destinationFile, content)
+			createFile(aferoFS, destinationFile, content, 0755)
+			checkFile(aferoFS, destinationFile, content)
 
 			content = "foobar content: new"
-			createFile(sourceFile, content, 0755)
-			Expect(CopyFile(sourceFile, destinationFile)).To(Succeed())
-			checkFile(destinationFile, content)
+			createFile(aferoFS, sourceFile, content, 0755)
+			Expect(CopyFile(aferoFS, sourceFile, destinationFile)).To(Succeed())
+			checkFile(aferoFS, destinationFile, content)
 		})
 
 		It("should copy new files into an existing directory and correct its mode", func() {
-			createFile(sourceFile, content, 0644)
-			Expect(CopyFile(sourceFile, destinationFile)).To(Succeed())
-			checkFile(destinationFile, content)
+			createFile(aferoFS, sourceFile, content, 0644)
+			Expect(CopyFile(aferoFS, sourceFile, destinationFile)).To(Succeed())
+			checkFile(aferoFS, destinationFile, content)
 		})
 
 		It("should overwrite an existing file with wrong mode in an existing directory", func() {
-			createFile(destinationFile, "mode is 0600", 0600)
+			createFile(aferoFS, destinationFile, "mode is 0600", 0600)
 
-			createFile(sourceFile, content, 0755)
-			Expect(CopyFile(sourceFile, destinationFile)).To(Succeed())
-			checkFile(destinationFile, content)
+			createFile(aferoFS, sourceFile, content, 0755)
+			Expect(CopyFile(aferoFS, sourceFile, destinationFile)).To(Succeed())
+			checkFile(aferoFS, destinationFile, content)
 		})
 
 		It("should not copy a source directory", func() {
-			Expect(os.Mkdir(sourceFile, 0755)).To(Succeed())
-			Expect(CopyFile(sourceFile, destinationFile)).To(MatchError(ContainSubstring("is not a regular file")))
+			Expect(aferoFS.Mkdir(sourceFile, 0755)).To(Succeed())
+			Expect(CopyFile(aferoFS, sourceFile, destinationFile)).To(MatchError(ContainSubstring("is not a regular file")))
 		})
 
 		It("should not overwrite a destination if it is a directory", func() {
-			Expect(os.Mkdir(destinationFile, 0755)).To(Succeed())
-			createFile(sourceFile, content, 0755)
-			Expect(CopyFile(sourceFile, destinationFile)).To(MatchError(ContainSubstring("exists but is not a regular file")))
+			Expect(aferoFS.Mkdir(destinationFile, 0755)).To(Succeed())
+			createFile(aferoFS, sourceFile, content, 0755)
+			Expect(CopyFile(aferoFS, sourceFile, destinationFile)).To(MatchError(ContainSubstring("exists but is not a regular file")))
 		})
 	})
 })
 
-func createFile(name, content string, mode os.FileMode) {
-	file, err := os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_TRUNC, mode)
+func createFile(aferoFS afero.Fs, name, content string, mode os.FileMode) {
+	file, err := aferoFS.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_TRUNC, mode)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 	defer file.Close()
 	_, err = file.WriteString(content)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 }
 
-func checkFile(name, content string) {
-	fileInfo, err := os.Stat(name)
+func checkFile(aferoFS afero.Fs, name, content string) {
+	fileInfo, err := aferoFS.Stat(name)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 	ExpectWithOffset(1, fileInfo.Mode()).To(Equal(fs.FileMode(0755)))
-	file, err := os.Open(name)
+	file, err := aferoFS.Open(name)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 	defer file.Close()
 	var fileContent []byte

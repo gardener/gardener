@@ -19,18 +19,21 @@ import (
 	"fmt"
 	"path"
 
+	"github.com/spf13/afero"
+
 	"github.com/gardener/gardener/pkg/nodeagent/registry"
 )
 
 type fakeRegistryExtractor struct {
+	aferoFS         afero.Afero
 	sourceDirectory string
 }
 
 var _ registry.Extractor = &fakeRegistryExtractor{}
 
 // NewExtractor returns a simple implementation of registry.Extractor which can be used to fake the registry extractor in unit tests.
-func NewExtractor(sourceDirectory string) registry.Extractor {
-	return &fakeRegistryExtractor{sourceDirectory: sourceDirectory}
+func NewExtractor(aferoFS afero.Afero, sourceDirectory string) registry.Extractor {
+	return &fakeRegistryExtractor{aferoFS: aferoFS, sourceDirectory: sourceDirectory}
 }
 
 // CopyFromImage copies files from a given image reference to the destination folder.
@@ -38,7 +41,7 @@ func (e *fakeRegistryExtractor) CopyFromImage(_ context.Context, _ string, files
 	for _, file := range files {
 		sourceFile := path.Join(e.sourceDirectory, file)
 		destinationFile := path.Join(destination, path.Base(file))
-		if err := registry.CopyFile(sourceFile, destinationFile); err != nil {
+		if err := registry.CopyFile(e.aferoFS, sourceFile, destinationFile); err != nil {
 			return fmt.Errorf("error copying file %s to %s: %w", sourceFile, destinationFile, err)
 		}
 	}
