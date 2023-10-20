@@ -101,14 +101,12 @@ var _ = Describe("Node controller tests", func() {
 		}).ShouldNot(HaveKey("worker.gardener.cloud/restart-systemd-services"))
 
 		By("Assert that the systemd services were restarted")
-		Eventually(func(g Gomega) {
-			g.Expect(fakeDBus.Actions).To(HaveLen(3))
-			g.Expect(fakeDBus.Actions[0].Action).To(Equal(fake.ActionRestart))
-			g.Expect(fakeDBus.Actions[0].UnitNames).To(ConsistOf(svc2))
-			g.Expect(fakeDBus.Actions[1].Action).To(Equal(fake.ActionRestart))
-			g.Expect(fakeDBus.Actions[1].UnitNames).To(ConsistOf(svc3))
-			g.Expect(fakeDBus.Actions[2].Action).To(Equal(fake.ActionRestart))
-			g.Expect(fakeDBus.Actions[2].UnitNames).To(ConsistOf(svc1 + ".service"))
-		}).Should(Succeed())
+		Eventually(func() []fake.SystemdAction {
+			return fakeDBus.Actions
+		}).Should(ConsistOf(
+			fake.SystemdAction{Action: fake.ActionRestart, UnitNames: []string{svc2}},
+			fake.SystemdAction{Action: fake.ActionRestart, UnitNames: []string{svc3}},
+			fake.SystemdAction{Action: fake.ActionRestart, UnitNames: []string{svc1 + ".service"}},
+		))
 	})
 })
