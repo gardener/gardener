@@ -108,14 +108,12 @@ tests:
     - exp_labels:
         pod: etcd
         role: test
-        job: kube-etcd3-backup-restore-main
-        kind: Incr
         service: etcd
         severity: critical
         type: seed
         visibility: operator
       exp_annotations:
-        description: No delta snapshot for the past at least 30 minutes taken by backup-restore leader.
+        description: No delta snapshot for the past 30 minutes have been taken by backup-restore leader.
         summary: Etcd delta snapshot failure.
   - eval_time: 1456m
     alertname: KubeEtcdFullBackupFailed
@@ -123,14 +121,12 @@ tests:
     - exp_labels:
         pod: etcd
         role: test
-        job: kube-etcd3-backup-restore-main
-        kind: Full
         service: etcd
         severity: critical
         type: seed
         visibility: operator
       exp_annotations:
-        description: No full snapshot taken in the past day taken by backup-restore leader.
+        description: No full snapshot for at least last 24 hours have been taken by backup-restore leader.
         summary: Etcd full snapshot failure.
   - eval_time: 5m
     alertname: KubeEtcdRestorationFailed
