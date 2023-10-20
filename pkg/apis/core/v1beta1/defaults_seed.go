@@ -26,19 +26,13 @@ func SetDefaults_Seed(obj *Seed) {
 		obj.Spec.Settings = &SeedSettings{}
 	}
 
-	var defaultExcessCapacityReservationConfigs = []SeedSettingExcessCapacityReservationConfig{
-		// This roughly corresponds to a single, moderately large control-plane.
-		{Resources: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("2"), corev1.ResourceMemory: resource.MustParse("6Gi")}},
-	}
-
 	if obj.Spec.Settings.ExcessCapacityReservation == nil {
-		obj.Spec.Settings.ExcessCapacityReservation = &SeedSettingExcessCapacityReservation{
-			Configs: defaultExcessCapacityReservationConfigs,
-		}
+		obj.Spec.Settings.ExcessCapacityReservation = &SeedSettingExcessCapacityReservation{}
+		setDefaults_ExcessCapacityReservationConfig(obj.Spec.Settings.ExcessCapacityReservation)
 	}
 
 	if pointer.BoolDeref(obj.Spec.Settings.ExcessCapacityReservation.Enabled, true) && len(obj.Spec.Settings.ExcessCapacityReservation.Configs) == 0 {
-		obj.Spec.Settings.ExcessCapacityReservation.Configs = defaultExcessCapacityReservationConfigs
+		setDefaults_ExcessCapacityReservationConfig(obj.Spec.Settings.ExcessCapacityReservation)
 	}
 
 	if obj.Spec.Settings.Scheduling == nil {
@@ -72,5 +66,17 @@ func SetDefaults_SeedSettingDependencyWatchdog(obj *SeedSettingDependencyWatchdo
 	}
 	if obj.Prober == nil {
 		obj.Prober = &SeedSettingDependencyWatchdogProber{Enabled: true}
+	}
+}
+
+func setDefaults_ExcessCapacityReservationConfig(excessCapacityReservation *SeedSettingExcessCapacityReservation) {
+	excessCapacityReservation.Configs = []SeedSettingExcessCapacityReservationConfig{
+		// This roughly corresponds to a single, moderately large control-plane.
+		{
+			Resources: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("2"),
+				corev1.ResourceMemory: resource.MustParse("6Gi"),
+			},
+		},
 	}
 }
