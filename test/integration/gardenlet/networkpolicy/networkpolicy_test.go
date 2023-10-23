@@ -204,9 +204,9 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 		})
 	})
 
-	PContext("garden namespace", func() {
+	Context("garden namespace", func() {
 		It("should have the expected network policies", func() {
-			By("Verify that all expected NetworkPolicys get created")
+			By("Verify that all expected NetworkPolicies get created")
 			Eventually(func(g Gomega) []networkingv1.NetworkPolicy {
 				networkPolicyList := &networkingv1.NetworkPolicyList{}
 				g.Expect(testClient.List(ctx, networkPolicyList, client.InNamespace(gardenNamespace.Name))).To(Succeed())
@@ -217,18 +217,17 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("allow-to-private-networks")})}),
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("allow-to-blocked-cidrs")})}),
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("allow-to-dns")})}),
+				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("deny-all")})}),
 			))
 
-			By("Verify that no unexpected NetworkPolicys get created")
+			By("Verify that no unexpected NetworkPolicies get created")
 			Consistently(func(g Gomega) []networkingv1.NetworkPolicy {
 				networkPolicyList := &networkingv1.NetworkPolicyList{}
 				g.Expect(testClient.List(ctx, networkPolicyList, client.InNamespace(gardenNamespace.Name))).To(Succeed())
 				return networkPolicyList.Items
-			}).Should(ConsistOf(
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("deny-all")})}),
+			}).ShouldNot(ConsistOf(
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("allow-to-shoot-networks")})}),
 			))
-
 		})
 	})
 
