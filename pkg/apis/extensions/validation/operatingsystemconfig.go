@@ -32,6 +32,9 @@ func ValidateOperatingSystemConfig(osc *extensionsv1alpha1.OperatingSystemConfig
 	allErrs := field.ErrorList{}
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&osc.ObjectMeta, true, apivalidation.NameIsDNSSubdomain, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidateOperatingSystemConfigSpec(&osc.Spec, field.NewPath("spec"))...)
+	allErrs = append(allErrs, ValidateOperatingSystemConfigStatus(&osc.Status, field.NewPath("status"))...)
+
+	allErrs = append(allErrs, validateFileDuplicates(osc.Spec.Files, osc.Status.ExtensionFiles, field.NewPath("spec.files"), field.NewPath("status.extensionFiles"))...)
 
 	return allErrs
 }
@@ -69,6 +72,16 @@ func ValidateOperatingSystemConfigSpec(spec *extensionsv1alpha1.OperatingSystemC
 	return allErrs
 }
 
+// ValidateOperatingSystemConfigStatus validates the status of a OperatingSystemConfig object.
+func ValidateOperatingSystemConfigStatus(status *extensionsv1alpha1.OperatingSystemConfigStatus, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, ValidateUnits(status.ExtensionUnits, fldPath.Child("extensionUnits"))...)
+	allErrs = append(allErrs, ValidateFiles(status.ExtensionFiles, fldPath.Child("extensionFiles"))...)
+
+	return allErrs
+}
+
 // ValidateUnits validates operating system config units.
 func ValidateUnits(units []extensionsv1alpha1.Unit, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
@@ -95,22 +108,39 @@ func ValidateUnits(units []extensionsv1alpha1.Unit, fldPath *field.Path) field.E
 	return allErrs
 }
 
-// ValidateFiles validates operating system config files.
-func ValidateFiles(files []extensionsv1alpha1.File, fldPath *field.Path) field.ErrorList {
+func validateFileDuplicates(specFiles, statusFiles []extensionsv1alpha1.File, fldPathSpec, fldPathStatus *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	paths := sets.New[string]()
+
+	check := func(files []extensionsv1alpha1.File, fldPath *field.Path) {
+		for i, file := range files {
+			idxPath := fldPath.Index(i)
+
+			if file.Path != "" {
+				if paths.Has(file.Path) {
+					allErrs = append(allErrs, field.Duplicate(idxPath.Child("path"), file.Path))
+				}
+				paths.Insert(file.Path)
+			}
+		}
+	}
+
+	check(specFiles, fldPathSpec)
+	check(statusFiles, fldPathStatus)
+
+	return allErrs
+}
+
+// ValidateFiles validates operating system config files.
+func ValidateFiles(files []extensionsv1alpha1.File, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
 
 	for i, file := range files {
 		idxPath := fldPath.Index(i)
 
 		if len(file.Path) == 0 {
 			allErrs = append(allErrs, field.Required(idxPath.Child("path"), "field is required"))
-		} else {
-			if paths.Has(file.Path) {
-				allErrs = append(allErrs, field.Duplicate(idxPath.Child("path"), file.Path))
-			}
-			paths.Insert(file.Path)
 		}
 
 		switch {
