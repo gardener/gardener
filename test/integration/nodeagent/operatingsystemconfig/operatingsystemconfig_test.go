@@ -50,8 +50,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		node *corev1.Node
 
-		file1, file2                      extensionsv1alpha1.File
-		unit1, unit2, unit3, unit4, unit5 extensionsv1alpha1.Unit
+		file1, file2                                        extensionsv1alpha1.File
+		unit1, unit2, unit3, unit4, unit5, unit5DropInsOnly extensionsv1alpha1.Unit
 
 		operatingSystemConfig *extensionsv1alpha1.OperatingSystemConfig
 		oscRaw                []byte
@@ -169,11 +169,18 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 				},
 			},
 		}
+		unit5DropInsOnly = extensionsv1alpha1.Unit{
+			Name: "unit5",
+			DropIns: []extensionsv1alpha1.DropIn{{
+				Name:    "extensionsdrop",
+				Content: "#unit5extensionsdrop",
+			}},
+		}
 
 		operatingSystemConfig = &extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 				Files: []extensionsv1alpha1.File{file1},
-				Units: []extensionsv1alpha1.Unit{unit1, unit2, unit5},
+				Units: []extensionsv1alpha1.Unit{unit1, unit2, unit5, unit5DropInsOnly},
 			},
 			Status: extensionsv1alpha1.OperatingSystemConfigStatus{
 				ExtensionFiles: []extensionsv1alpha1.File{file2},
@@ -226,6 +233,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit5.Name, "#unit5", 0600)
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit5.Name+".d/"+unit5.DropIns[0].Name, "#unit5drop1", 0600)
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit5.Name+".d/"+unit5.DropIns[1].Name, "#unit5drop2", 0600)
+		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit5.Name+".d/"+unit5DropInsOnly.DropIns[0].Name, "#unit5extensionsdrop", 0600)
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(

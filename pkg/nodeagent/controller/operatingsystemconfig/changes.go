@@ -87,7 +87,7 @@ func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alp
 		}
 
 		var unitChanges []changedUnit
-		for _, unit := range append(newOSC.Spec.Units, newOSC.Status.ExtensionUnits...) {
+		for _, unit := range mergeUnits(newOSC.Spec.Units, newOSC.Status.ExtensionUnits) {
 			unitChanges = append(unitChanges, changedUnit{
 				Unit:    unit,
 				dropIns: dropIns{changed: unit.DropIns},
@@ -105,8 +105,8 @@ func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alp
 	}
 
 	changes.units = computeUnitDiffs(
-		append(oldOSC.Spec.Units, oldOSC.Status.ExtensionUnits...),
-		append(newOSC.Spec.Units, newOSC.Status.ExtensionUnits...),
+		mergeUnits(oldOSC.Spec.Units, oldOSC.Status.ExtensionUnits),
+		mergeUnits(newOSC.Spec.Units, newOSC.Status.ExtensionUnits),
 	)
 	changes.files = computeFileDiffs(
 		append(oldOSC.Spec.Files, oldOSC.Status.ExtensionFiles...),
@@ -191,4 +191,32 @@ func computeFileDiffs(oldFiles, newFiles []extensionsv1alpha1.File) files {
 	}
 
 	return f
+}
+
+func mergeUnits(specUnits, statusUnits []extensionsv1alpha1.Unit) []extensionsv1alpha1.Unit {
+	var out []extensionsv1alpha1.Unit
+
+	for _, unit := range append(specUnits, statusUnits...) {
+		unitIndex := slices.IndexFunc(out, func(existingUnit extensionsv1alpha1.Unit) bool {
+			return existingUnit.Name == unit.Name
+		})
+
+		if unitIndex == -1 {
+			out = append(out, unit)
+			continue
+		}
+
+		if unit.Enable != nil {
+			out[unitIndex].Enable = unit.Enable
+		}
+		if unit.Command != nil {
+			out[unitIndex].Command = unit.Command
+		}
+		if unit.Content != nil {
+			out[unitIndex].Content = unit.Content
+		}
+		out[unitIndex].DropIns = append(out[unitIndex].DropIns, unit.DropIns...)
+	}
+
+	return out
 }
