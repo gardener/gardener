@@ -161,7 +161,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 var (
-	etcdSystemdSystem                  = path.Join("/", "etc", "systemd", "system")
+	etcSystemdSystem                   = path.Join("/", "etc", "systemd", "system")
 	defaultFilePermissions os.FileMode = 0600
 )
 
@@ -220,7 +220,7 @@ func (r *Reconciler) removeDeletedFiles(log logr.Logger, files []extensionsv1alp
 
 func (r *Reconciler) applyChangedUnits(ctx context.Context, log logr.Logger, units []changedUnit) error {
 	for _, unit := range units {
-		unitFilePath := path.Join(etcdSystemdSystem, unit.Name)
+		unitFilePath := path.Join(etcSystemdSystem, unit.Name)
 
 		if unit.Content != nil {
 			oldUnitContent, err := r.FS.ReadFile(unitFilePath)
@@ -242,25 +242,45 @@ func (r *Reconciler) applyChangedUnits(ctx context.Context, log logr.Logger, uni
 			}
 		}
 
-		for _, dropIn := range unit.DropIns {
-			dropInFilePath := path.Join(unitFilePath+".d", dropIn.Name)
+		dropInDirectory := unitFilePath + ".d"
 
-			oldDropInContent, err := r.FS.ReadFile(dropInFilePath)
-			if err != nil && !errors.Is(err, afero.ErrFileNotFound) {
-				return fmt.Errorf("unable to read existing drop-in file %q for unit %q: %w", dropInFilePath, unit.Name, err)
+		if len(unit.DropIns) == 0 {
+			if err := r.FS.RemoveAll(dropInDirectory); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+				return fmt.Errorf("unable to delete systemd drop-in folder for unit %q: %w", unit.Name, err)
+			}
+		} else {
+			if err := r.FS.MkdirAll(dropInDirectory, fs.ModeDir); err != nil {
+				return fmt.Errorf("unable to create drop-in directory %q for unit %q: %w", dropInDirectory, unit.Name, err)
 			}
 
-			newDropInContent := []byte(dropIn.Content)
-			if !bytes.Equal(newDropInContent, oldDropInContent) {
-				if err := r.FS.WriteFile(dropInFilePath, newDropInContent, defaultFilePermissions); err != nil {
-					return fmt.Errorf("unable to write drop-in file %q for unit %q: %w", dropInFilePath, unit.Name, err)
+			for _, dropIn := range unit.dropIns.changed {
+				dropInFilePath := path.Join(dropInDirectory, dropIn.Name)
+
+				oldDropInContent, err := r.FS.ReadFile(dropInFilePath)
+				if err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+					return fmt.Errorf("unable to read existing drop-in file %q for unit %q: %w", dropInFilePath, unit.Name, err)
 				}
-				log.Info("Successfully applied new or changed drop-in file for unit", "path", dropInFilePath, "unit", unit.Name)
+
+				newDropInContent := []byte(dropIn.Content)
+				if !bytes.Equal(newDropInContent, oldDropInContent) {
+					if err := r.FS.WriteFile(dropInFilePath, newDropInContent, defaultFilePermissions); err != nil {
+						return fmt.Errorf("unable to write drop-in file %q for unit %q: %w", dropInFilePath, unit.Name, err)
+					}
+					log.Info("Successfully applied new or changed drop-in file for unit", "path", dropInFilePath, "unit", unit.Name)
+				}
+
+				// ensure file permissions are restored in case somebody changed them manually
+				if err := r.FS.Chmod(dropInFilePath, defaultFilePermissions); err != nil {
+					return fmt.Errorf("unable to ensure permissions for drop-in file %q for unit %q: %w", unitFilePath, unit.Name, err)
+				}
 			}
 
-			// ensure file permissions are restored in case somebody changed them manually
-			if err := r.FS.Chmod(dropInFilePath, defaultFilePermissions); err != nil {
-				return fmt.Errorf("unable to ensure permissions for drop-in file %q for unit %q: %w", unitFilePath, unit.Name, err)
+			for _, dropIn := range unit.dropIns.deleted {
+				dropInFilePath := path.Join(dropInDirectory, dropIn.Name)
+				if err := r.FS.Remove(dropInFilePath); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+					return fmt.Errorf("unable to delete drop-in file %q for unit %q: %w", dropInFilePath, unit.Name, err)
+				}
+				log.Info("Successfully removed no longer needed drop-in file for unit", "path", dropInFilePath, "unitName", unit.Name)
 			}
 		}
 
@@ -290,8 +310,12 @@ func (r *Reconciler) removeDeletedUnits(ctx context.Context, log logr.Logger, no
 			return fmt.Errorf("unable to stop deleted unit %q: %w", unit.Name, err)
 		}
 
-		if err := r.FS.Remove(path.Join(etcdSystemdSystem, unit.Name)); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
-			return fmt.Errorf("unable to delete systemd unit of deleted %q: %w", unit.Name, err)
+		if err := r.FS.Remove(path.Join(etcSystemdSystem, unit.Name)); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+			return fmt.Errorf("unable to delete systemd unit file of deleted unit %q: %w", unit.Name, err)
+		}
+
+		if err := r.FS.RemoveAll(path.Join(etcSystemdSystem, unit.Name+".d")); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+			return fmt.Errorf("unable to delete systemd drop-in folder of deleted unit %q: %w", unit.Name, err)
 		}
 
 		log.Info("Successfully removed no longer needed unit", "unitName", unit.Name)
