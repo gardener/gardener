@@ -57,6 +57,24 @@ func PrefixedName(componentName string) string {
 	return componentName
 }
 
+// Configs contains mutating and validating webhook configurations.
+type Configs struct {
+	MutatingWebhookConfig   *admissionregistrationv1.MutatingWebhookConfiguration
+	ValidatingWebhookConfig *admissionregistrationv1.ValidatingWebhookConfiguration
+}
+
+// GetWebhookConfigs returns a slice of webhook configurations.
+func (c *Configs) GetWebhookConfigs() []client.Object {
+	configs := make([]client.Object, 0, 2)
+	if c.MutatingWebhookConfig != nil {
+		configs = append(configs, c.MutatingWebhookConfig)
+	}
+	if c.ValidatingWebhookConfig != nil {
+		configs = append(configs, c.ValidatingWebhookConfig)
+	}
+	return configs
+}
+
 // BuildWebhookConfigs builds MutatingWebhookConfiguration objects for seed and shoots from the given webhooks slice.
 func BuildWebhookConfigs(
 	webhooks []*Webhook,
@@ -66,17 +84,21 @@ func BuildWebhookConfigs(
 	mode, url string,
 	caBundle []byte,
 ) (
-	seedWebhookConfig client.Object,
+	seedWebhookConfig Configs,
 	shootWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration,
 	err error,
 ) {
 	var (
 		exact       = admissionregistrationv1.Exact
 		sideEffects = admissionregistrationv1.SideEffectClassNone
+		shootMode   = ModeURLWithServiceName
 
-		seedWebhooks  []admissionregistrationv1.MutatingWebhook
 		shootWebhooks []admissionregistrationv1.MutatingWebhook
 	)
+
+	if mode == ModeURL {
+		shootMode = ModeURL
+	}
 
 	for _, webhook := range webhooks {
 		var rules []admissionregistrationv1.RuleWithOperations
@@ -84,55 +106,48 @@ func BuildWebhookConfigs(
 		for _, t := range webhook.Types {
 			rule, err := buildRule(c, t)
 			if err != nil {
-				return nil, nil, err
+				return seedWebhookConfig, nil, err
 			}
 			rules = append(rules, *rule)
 		}
-
-		webhookToRegister := admissionregistrationv1.MutatingWebhook{
-			AdmissionReviewVersions: []string{"v1", "v1beta1"},
-			Name:                    fmt.Sprintf("%s.%s.extensions.gardener.cloud", webhook.Name, strings.TrimPrefix(providerName, "provider-")),
-			NamespaceSelector:       webhook.Selector,
-			ObjectSelector:          webhook.ObjectSelector,
-			Rules:                   rules,
-			SideEffects:             &sideEffects,
-			TimeoutSeconds:          pointer.Int32(10),
-		}
-
-		if webhook.TimeoutSeconds != nil {
-			webhookToRegister.TimeoutSeconds = webhook.TimeoutSeconds
-		}
-
-		shootMode := ModeURLWithServiceName
-		if mode == ModeURL {
-			shootMode = ModeURL
-		}
-
 		switch webhook.Target {
 		case TargetSeed:
-			webhookToRegister.FailurePolicy = getFailurePolicy(admissionregistrationv1.Fail, webhook.FailurePolicy)
-			webhookToRegister.MatchPolicy = &exact
-			webhookToRegister.ClientConfig = BuildClientConfigFor(webhook.Path, namespace, providerName, servicePort, mode, url, caBundle)
-			seedWebhooks = append(seedWebhooks, webhookToRegister)
+			// if all webhooks for one target are removed in a new version, extensions need to explicitly delete the respective
+			// webhook config
+			if err := createAndAddToWebhookConfig(
+				&seedWebhookConfig,
+				*webhook,
+				providerName,
+				rules,
+				getFailurePolicy(admissionregistrationv1.Fail, webhook.FailurePolicy),
+				&exact,
+				BuildClientConfigFor(webhook.Path, namespace, providerName, servicePort, mode, url, caBundle),
+				&sideEffects,
+			); err != nil {
+				return seedWebhookConfig, nil, err
+			}
+
 		case TargetShoot:
+			webhookToRegister := admissionregistrationv1.MutatingWebhook{
+				AdmissionReviewVersions: []string{"v1", "v1beta1"},
+				Name:                    fmt.Sprintf("%s.%s.extensions.gardener.cloud", webhook.Name, strings.TrimPrefix(providerName, "provider-")),
+				NamespaceSelector:       webhook.Selector,
+				ObjectSelector:          webhook.ObjectSelector,
+				Rules:                   rules,
+				SideEffects:             &sideEffects,
+				TimeoutSeconds:          pointer.Int32(10),
+			}
+
+			if webhook.TimeoutSeconds != nil {
+				webhookToRegister.TimeoutSeconds = webhook.TimeoutSeconds
+			}
+
 			webhookToRegister.FailurePolicy = getFailurePolicy(admissionregistrationv1.Ignore, webhook.FailurePolicy)
 			webhookToRegister.MatchPolicy = &exact
 			webhookToRegister.ClientConfig = BuildClientConfigFor(webhook.Path, namespace, providerName, servicePort, shootMode, url, caBundle)
 			shootWebhooks = append(shootWebhooks, webhookToRegister)
 		default:
-			return nil, nil, fmt.Errorf("invalid webhook target: %s", webhook.Target)
-		}
-	}
-
-	// if all webhooks for one target are removed in a new version, extensions need to explicitly delete the respective
-	// webhook config
-	if len(seedWebhooks) > 0 {
-		seedWebhookConfig = &admissionregistrationv1.MutatingWebhookConfiguration{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   NamePrefix + providerName,
-				Labels: map[string]string{v1beta1constants.LabelExcludeWebhookFromRemediation: "true"},
-			},
-			Webhooks: seedWebhooks,
+			return seedWebhookConfig, nil, fmt.Errorf("invalid webhook target: %s", webhook.Target)
 		}
 	}
 
@@ -344,4 +359,76 @@ func BuildClientConfigFor(webhookPath string, namespace, componentName string, s
 	}
 
 	return clientConfig
+}
+
+func createAndAddToWebhookConfig(
+	webhookConfigs *Configs,
+	webhook Webhook,
+	providerName string,
+	rules []admissionregistrationv1.RuleWithOperations,
+	failurePolicy *admissionregistrationv1.FailurePolicyType,
+	matchPolicy *admissionregistrationv1.MatchPolicyType,
+	clientConfig admissionregistrationv1.WebhookClientConfig,
+	sideEffects *admissionregistrationv1.SideEffectClass,
+) error {
+	objectMeta := metav1.ObjectMeta{
+		Name:   NamePrefix + providerName,
+		Labels: map[string]string{v1beta1constants.LabelExcludeWebhookFromRemediation: "true"},
+	}
+
+	switch webhook.Action {
+	case ActionMutating:
+		if webhookConfigs.MutatingWebhookConfig == nil {
+			webhookConfigs.MutatingWebhookConfig = &admissionregistrationv1.MutatingWebhookConfiguration{
+				ObjectMeta: objectMeta,
+			}
+		}
+
+		webhookToRegister := admissionregistrationv1.MutatingWebhook{
+			AdmissionReviewVersions: []string{"v1", "v1beta1"},
+			Name:                    fmt.Sprintf("%s.%s.extensions.gardener.cloud", webhook.Name, strings.TrimPrefix(providerName, "provider-")),
+			NamespaceSelector:       webhook.Selector,
+			ObjectSelector:          webhook.ObjectSelector,
+			Rules:                   rules,
+			SideEffects:             sideEffects,
+			TimeoutSeconds:          pointer.Int32(10),
+		}
+
+		if webhook.TimeoutSeconds != nil {
+			webhookToRegister.TimeoutSeconds = webhook.TimeoutSeconds
+		}
+
+		webhookToRegister.FailurePolicy = failurePolicy
+		webhookToRegister.MatchPolicy = matchPolicy
+		webhookToRegister.ClientConfig = clientConfig
+		webhookConfigs.MutatingWebhookConfig.Webhooks = append(webhookConfigs.MutatingWebhookConfig.Webhooks, webhookToRegister)
+	case ActionValidating:
+		if webhookConfigs.ValidatingWebhookConfig == nil {
+			webhookConfigs.ValidatingWebhookConfig = &admissionregistrationv1.ValidatingWebhookConfiguration{
+				ObjectMeta: objectMeta,
+			}
+		}
+		webhookToRegister := admissionregistrationv1.ValidatingWebhook{
+			AdmissionReviewVersions: []string{"v1", "v1beta1"},
+			Name:                    fmt.Sprintf("%s.%s.extensions.gardener.cloud", webhook.Name, strings.TrimPrefix(providerName, "provider-")),
+			NamespaceSelector:       webhook.Selector,
+			ObjectSelector:          webhook.ObjectSelector,
+			Rules:                   rules,
+			SideEffects:             sideEffects,
+			TimeoutSeconds:          pointer.Int32(10),
+		}
+
+		if webhook.TimeoutSeconds != nil {
+			webhookToRegister.TimeoutSeconds = webhook.TimeoutSeconds
+		}
+
+		webhookToRegister.FailurePolicy = failurePolicy
+		webhookToRegister.MatchPolicy = matchPolicy
+		webhookToRegister.ClientConfig = clientConfig
+		webhookConfigs.ValidatingWebhookConfig.Webhooks = append(webhookConfigs.ValidatingWebhookConfig.Webhooks, webhookToRegister)
+	default:
+		return fmt.Errorf("invalid webhook type: %s", webhook.Target)
+	}
+
+	return nil
 }

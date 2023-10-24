@@ -23,7 +23,6 @@ import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
@@ -264,7 +263,7 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 		}
 	}
 
-	seedWebhookConfig, shootWebhookConfig, err := extensionswebhook.BuildWebhookConfigs(
+	seedWebhookConfigs, shootWebhookConfig, err := extensionswebhook.BuildWebhookConfigs(
 		webhooks,
 		mgr.GetClient(),
 		c.Server.Namespace,
@@ -301,7 +300,7 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 		// register seed webhook config once we become leader – with the CA bundle we just generated
 		// also reconcile all shoot webhook configs to update the CA bundle
 		if err := mgr.Add(runOnceWithLeaderElection(flow.Sequential(
-			c.reconcileSeedWebhookConfig(mgr, seedWebhookConfig, caBundle),
+			c.reconcileSeedWebhookConfig(mgr, seedWebhookConfigs, caBundle),
 			c.reconcileShootWebhookConfigs(mgr, shootWebhookConfig, caBundle),
 		))); err != nil {
 			return nil, err
@@ -315,21 +314,16 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 	// reconciler. That's why we also don't reconcile the shoot webhook configs here. They are registered in the
 	// ControlPlane actuator and our reconciler will update the included CA bundles if necessary.
 	if err := mgr.Add(runOnceWithLeaderElection(
-		c.reconcileSeedWebhookConfig(mgr, seedWebhookConfig, nil),
+		c.reconcileSeedWebhookConfig(mgr, seedWebhookConfigs, nil),
 	)); err != nil {
 		return nil, err
-	}
-
-	var sourceWebhookConfigs []client.Object
-	if seedWebhookConfig != nil {
-		sourceWebhookConfigs = append(sourceWebhookConfigs, seedWebhookConfig)
 	}
 
 	if err := certificates.AddCertificateManagementToManager(
 		ctx,
 		mgr,
 		c.Clock,
-		sourceWebhookConfigs,
+		seedWebhookConfigs.GetWebhookConfigs(),
 		shootWebhookConfig,
 		atomicShootWebhookConfig,
 		c.shootNamespaceSelector,
@@ -345,10 +339,10 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 	return atomicShootWebhookConfig, nil
 }
 
-func (c *AddToManagerConfig) reconcileSeedWebhookConfig(mgr manager.Manager, seedWebhookConfig client.Object, caBundle []byte) func(ctx context.Context) error {
+func (c *AddToManagerConfig) reconcileSeedWebhookConfig(mgr manager.Manager, webhookConfigs extensionswebhook.Configs, caBundle []byte) func(ctx context.Context) error {
 	return func(ctx context.Context) error {
-		if seedWebhookConfig != nil {
-			if err := extensionswebhook.ReconcileSeedWebhookConfig(ctx, mgr.GetClient(), seedWebhookConfig, c.Server.Namespace, caBundle); err != nil {
+		for _, webhookConfig := range webhookConfigs.GetWebhookConfigs() {
+			if err := extensionswebhook.ReconcileSeedWebhookConfig(ctx, mgr.GetClient(), webhookConfig, c.Server.Namespace, caBundle); err != nil {
 				return fmt.Errorf("error reconciling seed webhook config: %w", err)
 			}
 		}
