@@ -233,6 +233,10 @@ func (k *kubeAPIServer) reconcileDeployment(
 						Args:                     k.computeKubeAPIServerArgs(),
 						TerminationMessagePath:   corev1.TerminationMessagePathDefault,
 						TerminationMessagePolicy: corev1.TerminationMessageReadFile,
+						SecurityContext: &corev1.SecurityContext{
+							RunAsNonRoot: pointer.Bool(true),
+							RunAsUser:    pointer.Int64(65532),
+						},
 						Ports: []corev1.ContainerPort{{
 							Name:          "https",
 							ContainerPort: kubeapiserverconstants.Port,

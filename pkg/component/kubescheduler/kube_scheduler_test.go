@@ -261,6 +261,10 @@ var _ = Describe("KubeScheduler", func() {
 									Image:           image,
 									ImagePullPolicy: corev1.PullIfNotPresent,
 									Command:         commandForKubernetesVersion(10259, featureGateFlags(config)...),
+									SecurityContext: &corev1.SecurityContext{
+										RunAsNonRoot: pointer.Bool(true),
+										RunAsUser:    pointer.Int64(65532),
+									},
 									LivenessProbe: &corev1.Probe{
 										ProbeHandler: corev1.ProbeHandler{
 											HTTPGet: &corev1.HTTPGetAction{

@@ -397,6 +397,10 @@ var _ = Describe("KubeControllerManager", func() {
 									Image:           image,
 									ImagePullPolicy: corev1.PullIfNotPresent,
 									Command:         commandForKubernetesVersion(version, 10257, config.NodeCIDRMaskSize, config.PodEvictionTimeout, config.NodeMonitorGracePeriod, namespace, isWorkerless, serviceCIDR, podCIDR, getHorizontalPodAutoscalerConfig(config.HorizontalPodAutoscalerConfig), kubernetesutils.FeatureGatesToCommandLineParameter(config.FeatureGates), clusterSigningDuration, controllerWorkers, controllerSyncPeriods),
+									SecurityContext: &corev1.SecurityContext{
+										RunAsNonRoot: pointer.Bool(true),
+										RunAsUser:    pointer.Int64(65532),
+									},
 									LivenessProbe: &corev1.Probe{
 										ProbeHandler: corev1.ProbeHandler{
 											HTTPGet: &corev1.HTTPGetAction{

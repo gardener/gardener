@@ -340,6 +340,10 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						Image:           k.values.Image,
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						Command:         command,
+						SecurityContext: &corev1.SecurityContext{
+							RunAsNonRoot: pointer.Bool(true),
+							RunAsUser:    pointer.Int64(65532),
+						},
 						LivenessProbe: &corev1.Probe{
 							ProbeHandler: corev1.ProbeHandler{
 								HTTPGet: &corev1.HTTPGetAction{

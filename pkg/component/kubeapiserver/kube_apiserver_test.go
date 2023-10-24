@@ -2436,6 +2436,8 @@ rules:
 					Expect(issuerIdx).To(BeNumerically(">=", 0))
 					Expect(issuerIdx).To(BeNumerically("<", issuerIdx1))
 					Expect(issuerIdx).To(BeNumerically("<", issuerIdx2))
+					Expect(deployment.Spec.Template.Spec.Containers[0].SecurityContext.RunAsNonRoot).To(Equal(pointer.Bool(true)))
+					Expect(deployment.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser).To(Equal(pointer.Int64(65532)))
 					Expect(deployment.Spec.Template.Spec.Containers[0].TerminationMessagePath).To(Equal("/dev/termination-log"))
 					Expect(deployment.Spec.Template.Spec.Containers[0].TerminationMessagePolicy).To(Equal(corev1.TerminationMessageReadFile))
 					Expect(deployment.Spec.Template.Spec.Containers[0].Ports).To(ConsistOf(corev1.ContainerPort{

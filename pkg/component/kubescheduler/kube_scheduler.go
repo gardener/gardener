@@ -255,6 +255,10 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 						Image:           k.image,
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						Command:         command,
+						SecurityContext: &corev1.SecurityContext{
+							RunAsNonRoot: pointer.Bool(true),
+							RunAsUser:    pointer.Int64(65532),
+						},
 						LivenessProbe: &corev1.Probe{
 							ProbeHandler: corev1.ProbeHandler{
 								HTTPGet: &corev1.HTTPGetAction{
