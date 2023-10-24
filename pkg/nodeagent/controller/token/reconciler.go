@@ -37,7 +37,7 @@ import (
 type Reconciler struct {
 	Client client.Client
 	Config config.TokenControllerConfig
-	FS     afero.Fs
+	FS     afero.Afero
 }
 
 // Reconcile fetches the shoot access token for gardener-node-agent and writes it to disk.
@@ -61,14 +61,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("secret key %q does not exist or is empty", resourcesv1alpha1.DataKeyToken)
 	}
 
-	currentToken, err := afero.ReadFile(r.FS, nodeagentv1alpha1.TokenFilePath)
+	currentToken, err := r.FS.ReadFile(nodeagentv1alpha1.TokenFilePath)
 	if err != nil && !errors.Is(err, afero.ErrFileNotFound) {
 		return reconcile.Result{}, fmt.Errorf("failed reading token file %s: %w", nodeagentv1alpha1.TokenFilePath, err)
 	}
 
 	if !bytes.Equal(currentToken, token) {
 		log.Info("Access token differs from the one currently stored on the disk, updating it", "path", nodeagentv1alpha1.TokenFilePath)
-		if err := afero.WriteFile(r.FS, nodeagentv1alpha1.TokenFilePath, token, 0600); err != nil {
+		if err := r.FS.WriteFile(nodeagentv1alpha1.TokenFilePath, token, 0600); err != nil {
 			return reconcile.Result{}, fmt.Errorf("unable to write access token to %s: %w", nodeagentv1alpha1.TokenFilePath, err)
 		}
 		log.Info("Updated token written to disk")

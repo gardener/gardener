@@ -129,17 +129,6 @@ var _ = Describe("Add", func() {
 				hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
 			})
 
-			It("should not enqueue the object when the old secret has no OSC in data", func() {
-				hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
-			})
-
-			It("should not enqueue the object when the new secret has no OSC in data", func() {
-				oldObj := obj.DeepCopy()
-				oldObj.Data = map[string][]byte{"osc.yaml": []byte(`{"apiVersion":"extensions.gardener.cloud/v1alpha1","kind":"OperatingSystemConfig"}`)}
-
-				hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: oldObj}, queue)
-			})
-
 			It("should not enqueue the object when the OSC is the same", func() {
 				obj.Data = map[string][]byte{"osc.yaml": []byte(`{"apiVersion":"extensions.gardener.cloud/v1alpha1","kind":"OperatingSystemConfig"}`)}
 				oldObj := obj.DeepCopy()

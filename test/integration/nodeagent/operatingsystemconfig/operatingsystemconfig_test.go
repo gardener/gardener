@@ -43,18 +43,15 @@ import (
 var _ = Describe("OperatingSystemConfig controller tests", func() {
 	var (
 		fakeDBus *fake.DBus
-		fakeFS   afero.Fs
+		fakeFS   afero.Afero
 
 		oscSecretName     = testRunID
 		kubernetesVersion = semver.MustParse("1.2.3")
 
 		node *corev1.Node
 
-		file1 extensionsv1alpha1.File
-		file2 extensionsv1alpha1.File
-		unit1 extensionsv1alpha1.Unit
-		unit2 extensionsv1alpha1.Unit
-		unit3 extensionsv1alpha1.Unit
+		file1, file2               extensionsv1alpha1.File
+		unit1, unit2, unit3, unit4 extensionsv1alpha1.Unit
 
 		operatingSystemConfig *extensionsv1alpha1.OperatingSystemConfig
 		oscRaw                []byte
@@ -63,7 +60,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 	BeforeEach(func() {
 		fakeDBus = fake.New()
-		fakeFS = afero.NewMemMapFs()
+		fakeFS = afero.Afero{Fs: afero.NewMemMapFs()}
 
 		By("Setup manager")
 		mgr, err := manager.New(restConfig, manager.Options{
@@ -142,6 +139,12 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 				Content: "#unit3drop",
 			}},
 		}
+		unit4 = extensionsv1alpha1.Unit{
+			Name:    "unit4",
+			Enable:  pointer.Bool(true),
+			Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+			Content: pointer.String("#unit4"),
+		}
 
 		operatingSystemConfig = &extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
@@ -150,7 +153,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			},
 			Status: extensionsv1alpha1.OperatingSystemConfigStatus{
 				ExtensionFiles: []extensionsv1alpha1.File{file2},
-				ExtensionUnits: []extensionsv1alpha1.Unit{unit3},
+				ExtensionUnits: []extensionsv1alpha1.Unit{unit3, unit4},
 			},
 		}
 
@@ -193,29 +196,37 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit1.Name, "#unit1", 0600)
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit2.Name, "#unit2", 0600)
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit3.Name+".d/"+unit3.DropIns[0].Name, "#unit3drop", 0600)
+		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit4.Name, "#unit4", 0600)
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(
 			fake.SystemdAction{Action: fake.ActionEnable, UnitNames: []string{unit1.Name}},
 			fake.SystemdAction{Action: fake.ActionDisable, UnitNames: []string{unit2.Name}},
 			fake.SystemdAction{Action: fake.ActionEnable, UnitNames: []string{unit3.Name}},
+			fake.SystemdAction{Action: fake.ActionEnable, UnitNames: []string{unit4.Name}},
 			fake.SystemdAction{Action: fake.ActionDaemonReload},
 			fake.SystemdAction{Action: fake.ActionRestart, UnitNames: []string{unit1.Name}},
 			fake.SystemdAction{Action: fake.ActionStop, UnitNames: []string{unit2.Name}},
 			fake.SystemdAction{Action: fake.ActionRestart, UnitNames: []string{unit3.Name}},
+			fake.SystemdAction{Action: fake.ActionRestart, UnitNames: []string{unit4.Name}},
 		))
 	})
 
 	It("should reconcile the configuration when there is a previous OSC", func() {
 		fakeDBus.Actions = nil // reset actions on dbus to not repeat assertions from above for update scenario
 
+		// manually change permissions of unit and drop-in file (should be restored on next reconciliation)
+		Expect(fakeFS.Chmod("/etc/systemd/system/"+unit2.Name, 0777)).To(Succeed())
+
 		By("Update Operating System Config")
 		unit2.Enable = pointer.Bool(true)
 		unit2.Command = extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart)
 		unit2.DropIns = []extensionsv1alpha1.DropIn{{Name: "dropdropdrop", Content: "#unit2drop"}}
+		unit4.Enable = pointer.Bool(false)
 
-		// delete unit1 and file2, add drop-in to unit2 and enable+start it. file1 and unit3 are unchanged
+		// delete unit1 and file2, add drop-in to unit2 and enable+start it, disable unit4. file1 and unit3 are unchanged
 		operatingSystemConfig.Spec.Units = []extensionsv1alpha1.Unit{unit2}
+		operatingSystemConfig.Status.ExtensionUnits = []extensionsv1alpha1.Unit{unit3, unit4}
 		operatingSystemConfig.Status.ExtensionFiles = nil
 
 		var err error
@@ -244,14 +255,17 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit2.Name, "#unit2", 0600)
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit2.Name+".d/"+unit2.DropIns[0].Name, "#unit2drop", 0600)
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit3.Name+".d/"+unit3.DropIns[0].Name, "#unit3drop", 0600)
+		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit4.Name, "#unit4", 0600)
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(
 			fake.SystemdAction{Action: fake.ActionEnable, UnitNames: []string{unit2.Name}},
-			fake.SystemdAction{Action: fake.ActionStop, UnitNames: []string{unit1.Name}},
+			fake.SystemdAction{Action: fake.ActionDisable, UnitNames: []string{unit4.Name}},
 			fake.SystemdAction{Action: fake.ActionDisable, UnitNames: []string{unit1.Name}},
+			fake.SystemdAction{Action: fake.ActionStop, UnitNames: []string{unit1.Name}},
 			fake.SystemdAction{Action: fake.ActionDaemonReload},
 			fake.SystemdAction{Action: fake.ActionRestart, UnitNames: []string{unit2.Name}},
+			fake.SystemdAction{Action: fake.ActionStop, UnitNames: []string{unit4.Name}},
 		))
 	})
 })

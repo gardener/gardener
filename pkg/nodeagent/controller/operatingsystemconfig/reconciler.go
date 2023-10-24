@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"os"
 	"path"
 	"path/filepath"
 	"time"
@@ -29,6 +30,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -58,7 +60,7 @@ type Reconciler struct {
 	Config   config.OperatingSystemConfigControllerConfig
 	Recorder record.EventRecorder
 	DBus     dbus.DBus
-	FS       afero.Fs
+	FS       afero.Afero
 	NodeName string
 }
 
@@ -141,7 +143,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	)
 
 	log.Info("Persisting current operating system config as 'last-applied' file to the disk", "path", lastAppliedOperatingSystemConfigFilePath)
-	if err := afero.WriteFile(r.FS, lastAppliedOperatingSystemConfigFilePath, oscRaw, 0644); err != nil {
+	if err := r.FS.WriteFile(lastAppliedOperatingSystemConfigFilePath, oscRaw, 0644); err != nil {
 		return reconcile.Result{}, fmt.Errorf("unable to write current OSC to file path %q: %w", lastAppliedOperatingSystemConfigFilePath, err)
 	}
 
@@ -158,13 +160,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, r.Client.Patch(ctx, node, patch)
 }
 
-var etcdSystemdSystem = path.Join("/", "etc", "systemd", "system")
+var (
+	etcdSystemdSystem                  = path.Join("/", "etc", "systemd", "system")
+	defaultFilePermissions os.FileMode = 0600
+)
 
 func (r *Reconciler) applyChangedFiles(log logr.Logger, files []extensionsv1alpha1.File) error {
-	tmpDir, err := afero.TempDir(r.FS, "/tmp", "gardener-node-agent-*")
+	tmpDir, err := r.FS.TempDir("", "gardener-node-agent-*")
 	if err != nil {
 		return fmt.Errorf("unable to create temporary directory: %w", err)
 	}
+	defer func() { utilruntime.HandleError(r.FS.RemoveAll(tmpDir)) }()
 
 	for _, file := range files {
 		if file.Content.Inline == nil {
@@ -175,7 +181,7 @@ func (r *Reconciler) applyChangedFiles(log logr.Logger, files []extensionsv1alph
 			return fmt.Errorf("unable to create directory %q: %w", file.Path, err)
 		}
 
-		permissions := fs.FileMode(0600)
+		permissions := defaultFilePermissions
 		if file.Permissions != nil {
 			permissions = fs.FileMode(*file.Permissions)
 		}
@@ -186,7 +192,7 @@ func (r *Reconciler) applyChangedFiles(log logr.Logger, files []extensionsv1alph
 		}
 
 		tmpFilePath := filepath.Join(tmpDir, filepath.Base(file.Path))
-		if err := afero.WriteFile(r.FS, tmpFilePath, data, permissions); err != nil {
+		if err := r.FS.WriteFile(tmpFilePath, data, permissions); err != nil {
 			return fmt.Errorf("unable to create temporary file %q: %w", tmpFilePath, err)
 		}
 
@@ -217,34 +223,44 @@ func (r *Reconciler) applyChangedUnits(ctx context.Context, log logr.Logger, uni
 		unitFilePath := path.Join(etcdSystemdSystem, unit.Name)
 
 		if unit.Content != nil {
-			oldUnitContent, err := afero.ReadFile(r.FS, unitFilePath)
+			oldUnitContent, err := r.FS.ReadFile(unitFilePath)
 			if err != nil && !errors.Is(err, afero.ErrFileNotFound) {
 				return fmt.Errorf("unable to read existing unit file %q for %q: %w", unitFilePath, unit.Name, err)
 			}
 
 			newUnitContent := []byte(*unit.Content)
 			if !bytes.Equal(newUnitContent, oldUnitContent) {
-				if err := afero.WriteFile(r.FS, unitFilePath, newUnitContent, 0600); err != nil {
+				if err := r.FS.WriteFile(unitFilePath, newUnitContent, defaultFilePermissions); err != nil {
 					return fmt.Errorf("unable to write unit file %q for %q: %w", unitFilePath, unit.Name, err)
 				}
 				log.Info("Successfully applied new or changed unit file", "path", unitFilePath)
+			}
+
+			// ensure file permissions are restored in case somebody changed them manually
+			if err := r.FS.Chmod(unitFilePath, defaultFilePermissions); err != nil {
+				return fmt.Errorf("unable to ensure permissions for unit file %q for %q: %w", unitFilePath, unit.Name, err)
 			}
 		}
 
 		for _, dropIn := range unit.DropIns {
 			dropInFilePath := path.Join(unitFilePath+".d", dropIn.Name)
 
-			oldDropInContent, err := afero.ReadFile(r.FS, dropInFilePath)
+			oldDropInContent, err := r.FS.ReadFile(dropInFilePath)
 			if err != nil && !errors.Is(err, afero.ErrFileNotFound) {
 				return fmt.Errorf("unable to read existing drop-in file %q for unit %q: %w", dropInFilePath, unit.Name, err)
 			}
 
 			newDropInContent := []byte(dropIn.Content)
 			if !bytes.Equal(newDropInContent, oldDropInContent) {
-				if err := afero.WriteFile(r.FS, dropInFilePath, newDropInContent, 0600); err != nil {
+				if err := r.FS.WriteFile(dropInFilePath, newDropInContent, defaultFilePermissions); err != nil {
 					return fmt.Errorf("unable to write drop-in file %q for unit %q: %w", dropInFilePath, unit.Name, err)
 				}
 				log.Info("Successfully applied new or changed drop-in file for unit", "path", dropInFilePath, "unit", unit.Name)
+			}
+
+			// ensure file permissions are restored in case somebody changed them manually
+			if err := r.FS.Chmod(dropInFilePath, defaultFilePermissions); err != nil {
+				return fmt.Errorf("unable to ensure permissions for drop-in file %q for unit %q: %w", unitFilePath, unit.Name, err)
 			}
 		}
 
@@ -266,12 +282,12 @@ func (r *Reconciler) applyChangedUnits(ctx context.Context, log logr.Logger, uni
 
 func (r *Reconciler) removeDeletedUnits(ctx context.Context, log logr.Logger, node client.Object, units []extensionsv1alpha1.Unit) error {
 	for _, unit := range units {
-		if err := r.DBus.Stop(ctx, r.Recorder, node, unit.Name); err != nil {
-			return fmt.Errorf("unable to stop deleted unit %q: %w", unit.Name, err)
-		}
-
 		if err := r.DBus.Disable(ctx, unit.Name); err != nil {
 			return fmt.Errorf("unable to disable deleted unit %q: %w", unit.Name, err)
+		}
+
+		if err := r.DBus.Stop(ctx, r.Recorder, node, unit.Name); err != nil {
+			return fmt.Errorf("unable to stop deleted unit %q: %w", unit.Name, err)
 		}
 
 		if err := r.FS.Remove(path.Join(etcdSystemdSystem, unit.Name)); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
@@ -290,24 +306,17 @@ func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, n
 	for _, u := range units {
 		unit := u
 
-		command := extensionsv1alpha1.CommandRestart
-		if unit.Command != nil {
-			command = *unit.Command
-		}
-
 		fns = append(fns, func(ctx context.Context) error {
-			switch command {
-			case extensionsv1alpha1.CommandStart, extensionsv1alpha1.CommandRestart:
-				if err := r.DBus.Restart(ctx, r.Recorder, node, unit.Name); err != nil {
-					return fmt.Errorf("unable to restart unit %q: %w", unit.Name, err)
-				}
-				log.Info("Successfully restarted unit", "unitName", unit.Name)
-
-			case extensionsv1alpha1.CommandStop:
+			if !pointer.BoolDeref(unit.Enable, true) || (unit.Command != nil && *unit.Command == extensionsv1alpha1.CommandStop) {
 				if err := r.DBus.Stop(ctx, r.Recorder, node, unit.Name); err != nil {
 					return fmt.Errorf("unable to stop unit %q: %w", unit.Name, err)
 				}
 				log.Info("Successfully stopped unit", "unitName", unit.Name)
+			} else {
+				if err := r.DBus.Restart(ctx, r.Recorder, node, unit.Name); err != nil {
+					return fmt.Errorf("unable to restart unit %q: %w", unit.Name, err)
+				}
+				log.Info("Successfully restarted unit", "unitName", unit.Name)
 			}
 
 			return nil

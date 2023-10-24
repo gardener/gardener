@@ -77,10 +77,10 @@ type files struct {
 	deleted []extensionsv1alpha1.File
 }
 
-func computeOperatingSystemConfigChanges(fs afero.Fs, newOSC *extensionsv1alpha1.OperatingSystemConfig) (*operatingSystemConfigChanges, error) {
+func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alpha1.OperatingSystemConfig) (*operatingSystemConfigChanges, error) {
 	changes := &operatingSystemConfigChanges{}
 
-	oldOSCRaw, err := afero.ReadFile(fs, lastAppliedOperatingSystemConfigFilePath)
+	oldOSCRaw, err := fs.ReadFile(lastAppliedOperatingSystemConfigFilePath)
 	if err != nil {
 		if !errors.Is(err, afero.ErrFileNotFound) {
 			return nil, fmt.Errorf("error reading last applied OSC from file path %s: %w", lastAppliedOperatingSystemConfigFilePath, err)

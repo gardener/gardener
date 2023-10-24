@@ -15,12 +15,12 @@
 package operatingsystemconfig
 
 import (
+	"bytes"
 	"context"
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
 	corev1 "k8s.io/api/core/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
@@ -53,8 +53,8 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	if r.DBus == nil {
 		r.DBus = dbus.New()
 	}
-	if r.FS == nil {
-		r.FS = afero.NewOsFs()
+	if r.FS.Fs == nil {
+		r.FS = afero.Afero{Fs: afero.NewOsFs()}
 	}
 
 	return builder.
@@ -90,7 +90,7 @@ func (r *Reconciler) SecretPredicate() predicate.Predicate {
 				return false
 			}
 
-			return !apiequality.Semantic.DeepEqual(oldSecret.Data[dataKeyOperatingSystemConfig], newSecret.Data[dataKeyOperatingSystemConfig])
+			return !bytes.Equal(oldSecret.Data[dataKeyOperatingSystemConfig], newSecret.Data[dataKeyOperatingSystemConfig])
 		},
 		DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
 		GenericFunc: func(_ event.GenericEvent) bool { return false },
@@ -128,19 +128,10 @@ func (r *Reconciler) EnqueueWithJitterDelay(log logr.Logger) handler.EventHandle
 				return
 			}
 
-			_, _, oldOSCChecksum, err := extractOSCFromSecret(oldSecret)
-			if err != nil {
-				log.Error(err, "Failed to get OSC checksum for old secret")
-				return
-			}
-			_, _, newOSCChecksum, err := extractOSCFromSecret(newSecret)
-			if err != nil {
-				log.Error(err, "Failed to get OSC checksum for new secret")
-				return
-			}
-
-			if oldOSCChecksum != newOSCChecksum {
-				q.AddAfter(reconcileRequest(evt.ObjectNew), RandomDurationWithMetaDuration(r.Config.SyncJitterPeriod))
+			if !bytes.Equal(oldSecret.Data[dataKeyOperatingSystemConfig], newSecret.Data[dataKeyOperatingSystemConfig]) {
+				duration := RandomDurationWithMetaDuration(r.Config.SyncJitterPeriod)
+				log.Info("Enqueued secret with operating system config with a jitter period", "duration", duration)
+				q.AddAfter(reconcileRequest(evt.ObjectNew), duration)
 			}
 		},
 	}
