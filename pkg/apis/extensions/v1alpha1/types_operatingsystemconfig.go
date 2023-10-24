@@ -122,6 +122,12 @@ type Unit struct {
 	// +patchStrategy=merge
 	// +optional
 	DropIns []DropIn `json:"dropIns,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	// Files is a list of files the unit depends on that should get written to the host's file system.
+	// If any file changes a restart of the dependent unit will be triggered.
+	// +patchMergeKey=path
+	// +patchStrategy=merge
+	// +optional
+	Files []File `json:"files,omitempty" patchStrategy:"merge" patchMergeKey:"path"`
 }
 
 // UnitCommand is a string alias.
@@ -174,6 +180,9 @@ type FileContent struct {
 	// This for example can be used to manipulate the clear-text content before it reaches the node.
 	// +optional
 	TransmitUnencoded *bool `json:"transmitUnencoded,omitempty"`
+	// ImageRef describes a container image which contains a file
+	// +optional
+	ImageRef *FileContentImageRef `json:"imageRef,omitempty"`
 }
 
 // FileContentSecretRef contains keys for referencing a file content's data from a secret in the same namespace.
@@ -190,6 +199,12 @@ type FileContentInline struct {
 	Encoding string `json:"encoding"`
 	// Data is the file's data.
 	Data string `json:"data"`
+}
+
+// FileContentImageRef describes a container image which contains a file
+type FileContentImageRef struct {
+	Image           string `json:"image"`
+	FilePathInImage string `json:"filePathInImage"`
 }
 
 // OperatingSystemConfigStatus is the status for a OperatingSystemConfig resource.
