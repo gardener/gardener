@@ -3810,7 +3810,9 @@ string
 <td>
 <code>command</code></br>
 <em>
-string
+<a href="#extensions.gardener.cloud/v1alpha1.UnitCommand">
+UnitCommand
+</a>
 </em>
 </td>
 <td>
@@ -3858,6 +3860,15 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="extensions.gardener.cloud/v1alpha1.UnitCommand">UnitCommand
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.Unit">Unit</a>)
+</p>
+<p>
+<p>UnitCommand is a string alias.</p>
+</p>
 <h3 id="extensions.gardener.cloud/v1alpha1.Volume">Volume
 </h3>
 <p>

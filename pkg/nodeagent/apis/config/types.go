@@ -40,22 +40,48 @@ type NodeAgentConfiguration struct {
 	// modifies piecemeal the built-in default values from "github.com/gardener/gardener/pkg/operator/features/features.go".
 	// Default: nil
 	FeatureGates map[string]bool
-	// OperatingSystemConfigSecretName defines the name of the secret in the shoot cluster control plane, which contains
-	// the Operating System Config (OSC) for the gardener-node-agent.
-	OperatingSystemConfigSecretName string
-	// AccessTokenSecretName defines the name of the secret in the shoot cluster control plane, which contains
-	// the `kube-apiserver` access token for the gardener-node-agent.
-	AccessTokenSecretName string
-	// Image is the container image reference to the gardener-node-agent.
-	Image string
-	// HyperkubeImage is the container image reference to the hyperkube containing kubelet.
-	HyperkubeImage string
-	// KubernetesVersion contains the kubernetes version of the kubelet, used for annotating the corresponding node
-	// resource with a kubernetes version annotation.
-	KubernetesVersion *semver.Version
+	// Bootstrap contains configuration for the bootstrap command.
+	Bootstrap *BootstrapConfiguration
+	// Controllers defines the configuration of the controllers.
+	Controllers ControllerConfiguration
+}
+
+// BootstrapConfiguration contains configuration for the bootstrap command.
+type BootstrapConfiguration struct {
 	// KubeletDataVolumeSize sets the data volume size of an unformatted disk on the worker node, which is used for
 	// /var/lib on the worker.
 	KubeletDataVolumeSize *int64
+}
+
+// ControllerConfiguration defines the configuration of the controllers.
+type ControllerConfiguration struct {
+	// OperatingSystemConfig is the configuration for the operating system config controller.
+	OperatingSystemConfig OperatingSystemConfigControllerConfig
+	// Token is the configuration for the access token controller.
+	Token TokenControllerConfig
+}
+
+// OperatingSystemConfigControllerConfig defines the configuration of the operating system config controller.
+type OperatingSystemConfigControllerConfig struct {
+	// SyncPeriod is the duration how often the operating system config is applied.
+	SyncPeriod *metav1.Duration
+	// SyncJitterPeriod is a jitter duration for the reconciler sync that can be used to distribute the syncs randomly.
+	// If its value is greater than 0 then the OSC secret will not be enqueued immediately but only after a random
+	// duration between 0 and the configured value. It is defaulted to 5m.
+	SyncJitterPeriod *metav1.Duration
+	// SecretName defines the name of the secret in the shoot cluster control plane, which contains the operating system
+	// config (OSC) for the gardener-node-agent.
+	SecretName string
+	// KubernetesVersion contains the Kubernetes version of the kubelet, used for annotating the corresponding node
+	// resource with a kubernetes version annotation.
+	KubernetesVersion *semver.Version
+}
+
+// TokenControllerConfig defines the configuration of the access token controller.
+type TokenControllerConfig struct {
+	// SecretName defines the name of the secret in the shoot cluster control plane, which contains the `kube-apiserver`
+	// access token for the gardener-node-agent.
+	SecretName string
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

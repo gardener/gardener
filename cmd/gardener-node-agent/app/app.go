@@ -185,7 +185,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.NodeAgentConfiguratio
 	}
 
 	log.Info("Adding controllers to manager")
-	if err := controller.AddToManager(mgr, cfg); err != nil {
+	if err := controller.AddToManager(mgr, cfg, nodeName); err != nil {
 		return fmt.Errorf("failed adding controllers to manager: %w", err)
 	}
 
@@ -199,7 +199,7 @@ func fetchAccessTokenViaBootstrapToken(ctx context.Context, log logr.Logger, res
 		return fmt.Errorf("unable to create client with bootstrap token: %w", err)
 	}
 
-	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: cfg.AccessTokenSecretName, Namespace: metav1.NamespaceSystem}}
+	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: cfg.Controllers.Token.SecretName, Namespace: metav1.NamespaceSystem}}
 	log.Info("Fetching access token secret", "secret", client.ObjectKeyFromObject(secret))
 	if err := c.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
 		return fmt.Errorf("failed fetching access token from API server: %w", err)

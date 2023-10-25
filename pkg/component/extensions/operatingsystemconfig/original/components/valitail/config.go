@@ -118,7 +118,7 @@ func getValitailCAFile(ctx components.Context) extensionsv1alpha1.File {
 func getValitailUnit(execStartPre, execStart string) extensionsv1alpha1.Unit {
 	return extensionsv1alpha1.Unit{
 		Name:    UnitName,
-		Command: pointer.String("start"),
+		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 		Enable:  pointer.Bool(true),
 		Content: pointer.String(`[Unit]
 Description=valitail daemon
@@ -193,7 +193,7 @@ ExecStart=` + execStart
 
 	return extensionsv1alpha1.Unit{
 		Name:    unitNameFetchToken,
-		Command: pointer.String("start"),
+		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 		Enable:  pointer.Bool(true),
 		Content: &unitContent,
 	}

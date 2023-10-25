@@ -88,7 +88,7 @@ var _ = Describe("Component", func() {
 		Expect(units).To(ConsistOf(
 			extensionsv1alpha1.Unit{
 				Name:    "systemd-sysctl.service",
-				Command: pointer.String("restart"),
+				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandRestart),
 				Enable:  pointer.Bool(true),
 			},
 		))

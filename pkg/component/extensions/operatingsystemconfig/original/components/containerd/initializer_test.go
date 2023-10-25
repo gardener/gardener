@@ -58,7 +58,7 @@ var _ = Describe("Initializer", func() {
 				Expect(units).To(ConsistOf(
 					extensionsv1alpha1.Unit{
 						Name:    "containerd-initializer.service",
-						Command: pointer.String("start"),
+						Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 						Enable:  pointer.Bool(true),
 						Content: pointer.String(`[Unit]
 Description=Containerd initializer

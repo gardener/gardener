@@ -16,9 +16,13 @@ debugging:
   enableProfiling: false
   enableContentionProfiling: false
 featureGates: {}
-operatingSystemConfigSecretName: name-of-osc-secret
-accessTokenSecretName: name-of-access-token-secret
-image: gardener-node-agent-image:v1
-hyperkubeImage: hyperkube-image:v2
-kubernetesVersion: 1.28.2
-# kubeletDataVolumeSize: 50Gi
+#bootstrap:
+#  kubeletDataVolumeSize: 50Gi
+controllers:
+  operatingSystemConfig:
+    secretName: name-of-osc-secret
+    kubernetesVersion: 1.28.2
+  # syncPeriod: 10m
+  # syncJitterPeriod: 5m
+  token:
+    secretName: name-of-access-token-secret

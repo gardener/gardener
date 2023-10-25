@@ -78,7 +78,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 			{
 				// it needs to be reloaded, because the /etc/sysctl.d/ files are not present, when this is started for a first time
 				Name:    "systemd-sysctl.service",
-				Command: pointer.String("restart"),
+				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandRestart),
 				Enable:  pointer.Bool(true),
 			},
 		},

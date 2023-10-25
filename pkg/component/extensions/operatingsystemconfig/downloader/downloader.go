@@ -146,7 +146,7 @@ func Config(cloudConfigUserDataSecretName, apiServerURL, clusterCASecretName str
 	units := []extensionsv1alpha1.Unit{
 		{
 			Name:    Name + ".service",
-			Command: pointer.String("start"),
+			Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 			Enable:  pointer.Bool(true),
 			Content: pointer.String(`[Unit]
 Description=Downloads the actual cloud config from the Shoot API server and executes it

@@ -42,13 +42,6 @@ const (
 	NodeInitUnitName = "gardener-node-init.service"
 	// UnitName is the name of the gardener-node-agent systemd service.
 	UnitName = "gardener-node-agent.service"
-
-	// OSCSecretKey is the key inside the gardener-node-agent osc secret to access
-	// the encoded osc.
-	OSCSecretKey = "gardener-node-agent"
-	// OSCOldConfigPath is the file path on the worker node that contains the
-	// previous content of the osc
-	OSCOldConfigPath = BaseDir + "/previous-osc.yaml"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -73,23 +66,52 @@ type NodeAgentConfiguration struct {
 	// Default: nil
 	// +optional
 	FeatureGates map[string]bool `json:"featureGates,omitempty"`
-	// OperatingSystemConfigSecretName defines the name of the secret in the shoot cluster control plane, which contains
-	// the Operating System Config (OSC) for the gardener-node-agent.
-	OperatingSystemConfigSecretName string `json:"operatingSystemConfigSecretName"`
-	// AccessTokenSecretName defines the name of the secret in the shoot cluster control plane, which contains
-	// the `kube-apiserver` access token for the gardener-node-agent.
-	AccessTokenSecretName string `json:"accessTokenSecretName"`
-	// Image is the container image reference to the gardener-node-agent.
-	Image string `json:"image"`
-	// HyperkubeImage is the container image reference to the hyperkube containing kubelet.
-	HyperkubeImage string `json:"hyperkubeImage"`
-	// KubernetesVersion contains the kubernetes version of the kubelet, used for annotating the corresponding node
-	// resource with a kubernetes version annotation.
-	KubernetesVersion *semver.Version `json:"kubernetesVersion"`
+	// Bootstrap contains configuration for the bootstrap command.
+	// +optional
+	Bootstrap *BootstrapConfiguration `json:"bootstrap,omitempty"`
+	// Controllers defines the configuration of the controllers.
+	Controllers ControllerConfiguration `json:"controllers"`
+}
+
+// BootstrapConfiguration contains configuration for the bootstrap command.
+type BootstrapConfiguration struct {
 	// KubeletDataVolumeSize sets the data volume size of an unformatted disk on the worker node, which is used for
 	// /var/lib on the worker.
 	// +optional
 	KubeletDataVolumeSize *int64 `json:"kubeletDataVolumeSize,omitempty"`
+}
+
+// ControllerConfiguration defines the configuration of the controllers.
+type ControllerConfiguration struct {
+	// OperatingSystemConfig is the configuration for the operating system config controller.
+	OperatingSystemConfig OperatingSystemConfigControllerConfig `json:"operatingSystemConfig"`
+	// Token is the configuration for the access token controller.
+	Token TokenControllerConfig `json:"token"`
+}
+
+// OperatingSystemConfigControllerConfig defines the configuration of the operating system config controller.
+type OperatingSystemConfigControllerConfig struct {
+	// SyncPeriod is the duration how often the operating system config is applied.
+	// +optional
+	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
+	// SyncJitterPeriod is a jitter duration for the reconciler sync that can be used to distribute the syncs randomly.
+	// If its value is greater than 0 then the OSC secret will not be enqueued immediately but only after a random
+	// duration between 0 and the configured value. It is defaulted to 5m.
+	// +optional
+	SyncJitterPeriod *metav1.Duration `json:"syncJitterPeriod,omitempty"`
+	// SecretName defines the name of the secret in the shoot cluster control plane, which contains the operating system
+	// config (OSC) for the gardener-node-agent.
+	SecretName string `json:"secretName"`
+	// KubernetesVersion contains the Kubernetes version of the kubelet, used for annotating the corresponding node
+	// resource with a kubernetes version annotation.
+	KubernetesVersion *semver.Version `json:"kubernetesVersion"`
+}
+
+// TokenControllerConfig defines the configuration of the access token controller.
+type TokenControllerConfig struct {
+	// SecretName defines the name of the secret in the shoot cluster control plane, which contains the `kube-apiserver`
+	// access token for the gardener-node-agent.
+	SecretName string `json:"secretName"`
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

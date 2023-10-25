@@ -91,7 +91,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 
 		It("should forbid OperatingSystemConfig resources with invalid purpose", func() {
 			oscCopy := osc.DeepCopy()
-			oscCopy.Spec.Purpose = extensionsv1alpha1.OperatingSystemConfigPurpose("foo")
+			oscCopy.Spec.Purpose = "foo"
 
 			errorList := ValidateOperatingSystemConfig(oscCopy)
 
@@ -103,22 +103,39 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 
 		It("should forbid OperatingSystemConfig resources with invalid units", func() {
 			oscCopy := osc.DeepCopy()
-			oscCopy.Spec.Units[0].Name = ""
-			oscCopy.Spec.Units[0].DropIns[0].Name = ""
-			oscCopy.Spec.Units[0].DropIns[0].Content = ""
+			oscCopy.Spec.Units = []extensionsv1alpha1.Unit{{
+				DropIns: []extensionsv1alpha1.DropIn{
+					{},
+				},
+			}}
+			oscCopy.Status.ExtensionUnits = []extensionsv1alpha1.Unit{{
+				DropIns: []extensionsv1alpha1.DropIn{
+					{},
+				},
+			}}
 
-			errorList := ValidateOperatingSystemConfig(oscCopy)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.units[0].name"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.units[0].dropIns[0].name"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.units[0].dropIns[0].content"),
-			}))))
+			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.units[0].name"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.units[0].dropIns[0].name"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.units[0].dropIns[0].content"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("status.extensionUnits[0].name"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("status.extensionUnits[0].dropIns[0].name"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("status.extensionUnits[0].dropIns[0].content"),
+				})),
+			))
 		})
 
 		It("should forbid OperatingSystemConfig resources with invalid files", func() {
@@ -151,33 +168,105 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 					Content: osc.Spec.Files[0].Content,
 				},
 			}
+			oscCopy.Status.ExtensionFiles = []extensionsv1alpha1.File{
+				{},
+				{
+					Path: "path4",
+					Content: extensionsv1alpha1.FileContent{
+						SecretRef: &extensionsv1alpha1.FileContentSecretRef{},
+						Inline:    &extensionsv1alpha1.FileContentInline{},
+					},
+				},
+				{
+					Path: "path5",
+					Content: extensionsv1alpha1.FileContent{
+						SecretRef: &extensionsv1alpha1.FileContentSecretRef{},
+					},
+				},
+				{
+					Path: "path6",
+					Content: extensionsv1alpha1.FileContent{
+						Inline: &extensionsv1alpha1.FileContentInline{
+							Encoding: "foo",
+						},
+					},
+				},
+				{
+					Path:    "path6",
+					Content: osc.Spec.Files[0].Content,
+				},
+			}
 
-			errorList := ValidateOperatingSystemConfig(oscCopy)
+			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.files[0].path"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.files[0].content"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.files[1].content"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.files[2].content.secretRef.name"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.files[2].content.secretRef.dataKey"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("spec.files[3].content.inline.encoding"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.files[3].content.inline.data"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.files[4].path"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("status.extensionFiles[0].path"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("status.extensionFiles[0].content"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("status.extensionFiles[1].content"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("status.extensionFiles[2].content.secretRef.name"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("status.extensionFiles[2].content.secretRef.dataKey"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("status.extensionFiles[3].content.inline.encoding"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("status.extensionFiles[3].content.inline.data"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("status.extensionFiles[4].path"),
+				})),
+			))
+		})
 
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.files[0].path"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.files[0].content"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.files[1].content"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.files[2].content.secretRef.name"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.files[2].content.secretRef.dataKey"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeNotSupported),
-				"Field": Equal("spec.files[3].content.inline.encoding"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.files[3].content.inline.data"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
+		It("should forbid OperatingSystemConfigs with duplicate files in status.extensionFiles", func() {
+			oscCopy := osc.DeepCopy()
+			oscCopy.Spec.Files = []extensionsv1alpha1.File{{
+				Path: "path1",
+				Content: extensionsv1alpha1.FileContent{
+					Inline: &extensionsv1alpha1.FileContentInline{
+						Encoding: "b64",
+						Data:     "some-data",
+					},
+				},
+			}}
+			oscCopy.Status.ExtensionFiles = oscCopy.Spec.Files
+
+			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeDuplicate),
-				"Field": Equal("spec.files[4].path"),
+				"Field": Equal("status.extensionFiles[0].path"),
 			}))))
 		})
 

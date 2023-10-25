@@ -28,13 +28,14 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/token"
 )
 
 var _ = Describe("Token controller tests", func() {
 	var (
-		testFS afero.Fs
+		testFS afero.Afero
 
 		accessToken = []byte("access-token")
 		secret      *corev1.Secret
@@ -51,10 +52,12 @@ var _ = Describe("Token controller tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Register controller")
-		testFS = afero.NewMemMapFs()
+		testFS = afero.Afero{Fs: afero.NewMemMapFs()}
 		Expect((&token.Reconciler{
-			FS:                    testFS,
-			AccessTokenSecretName: testRunID,
+			FS: testFS,
+			Config: config.TokenControllerConfig{
+				SecretName: testRunID,
+			},
 		}).AddToManager(mgr)).To(Succeed())
 
 		By("Start manager")

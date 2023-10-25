@@ -1520,7 +1520,7 @@ func (in *Unit) DeepCopyInto(out *Unit) {
 	*out = *in
 	if in.Command != nil {
 		in, out := &in.Command, &out.Command
-		*out = new(string)
+		*out = new(UnitCommand)
 		**out = **in
 	}
 	if in.Enable != nil {

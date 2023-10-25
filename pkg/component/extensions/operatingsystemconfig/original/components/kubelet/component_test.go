@@ -73,7 +73,7 @@ var _ = Describe("Component", func() {
 			Expect(units).To(ConsistOf(
 				extensionsv1alpha1.Unit{
 					Name:    "kubelet.service",
-					Command: pointer.String("start"),
+					Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 					Enable:  pointer.Bool(true),
 					Content: pointer.String(`[Unit]
 Description=kubelet daemon
@@ -92,7 +92,7 @@ ExecStart=/opt/bin/kubelet \
 				},
 				extensionsv1alpha1.Unit{
 					Name:    "kubelet-monitor.service",
-					Command: pointer.String("start"),
+					Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 					Enable:  pointer.Bool(true),
 					Content: pointer.String(`[Unit]
 Description=Kubelet-monitor daemon

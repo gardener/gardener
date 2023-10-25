@@ -15,10 +15,13 @@
 package validation_test
 
 import (
+	"time"
+
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	. "github.com/gardener/gardener/pkg/nodeagent/apis/config"
@@ -30,11 +33,16 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 
 	BeforeEach(func() {
 		config = &NodeAgentConfiguration{
-			KubernetesVersion:               semver.MustParse("v1.27.0"),
-			HyperkubeImage:                  "registry.com/hyperkube:v1.27.0",
-			Image:                           "registry.com/node-agent:v1.73.0",
-			OperatingSystemConfigSecretName: "osc-secret",
-			AccessTokenSecretName:           "token-secret",
+			Controllers: ControllerConfiguration{
+				OperatingSystemConfig: OperatingSystemConfigControllerConfig{
+					SecretName:        "osc-secret",
+					SyncPeriod:        &metav1.Duration{Duration: time.Minute},
+					KubernetesVersion: semver.MustParse("v1.27.0"),
+				},
+				Token: TokenControllerConfig{
+					SecretName: "token-secret",
+				},
+			},
 		}
 	})
 
@@ -42,69 +50,40 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 		Expect(ValidateNodeAgentConfiguration(config)).To(BeEmpty())
 	})
 
-	It("should fail because hyperkube image config is not specified", func() {
-		config.HyperkubeImage = ""
+	Context("Operating System Config Controller", func() {
+		It("should fail because kubernetes version is empty", func() {
+			config.Controllers.OperatingSystemConfig.KubernetesVersion = nil
 
-		Expect(ValidateNodeAgentConfiguration(config)).To(ConsistOf(
-			PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("hyperkubeImage"),
-			})),
-		))
+			Expect(ValidateNodeAgentConfiguration(config)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("controllers.operatingSystemConfig.kubernetesVersion"),
+				})),
+			))
+		})
+
+		It("should fail because operating system config secret name is not specified", func() {
+			config.Controllers.OperatingSystemConfig.SecretName = ""
+
+			Expect(ValidateNodeAgentConfiguration(config)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("controllers.operatingSystemConfig.secretName"),
+				})),
+			))
+		})
 	})
 
-	It("should fail because image config is not specified", func() {
-		config.Image = ""
+	Context("Token Controller", func() {
+		It("should fail because access token secret name is not specified", func() {
+			config.Controllers.Token.SecretName = ""
 
-		Expect(ValidateNodeAgentConfiguration(config)).To(ConsistOf(
-			PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("image"),
-			})),
-		))
-	})
-
-	It("should fail because kubernetes version is empty", func() {
-		config.KubernetesVersion = nil
-
-		Expect(ValidateNodeAgentConfiguration(config)).To(ConsistOf(
-			PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("kubernetesVersion"),
-			})),
-		))
-	})
-
-	It("should fail because kubernetes version is unsupported", func() {
-		config.KubernetesVersion = semver.MustParse("0.0.1+unsupported")
-
-		Expect(ValidateNodeAgentConfiguration(config)).To(ConsistOf(
-			PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("kubernetesVersion"),
-			})),
-		))
-	})
-
-	It("should fail because operating system config secret name is not specified", func() {
-		config.OperatingSystemConfigSecretName = ""
-
-		Expect(ValidateNodeAgentConfiguration(config)).To(ConsistOf(
-			PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("operatingSystemConfigSecretName"),
-			})),
-		))
-	})
-
-	It("should fail because access token secret name is not specified", func() {
-		config.AccessTokenSecretName = ""
-
-		Expect(ValidateNodeAgentConfiguration(config)).To(ConsistOf(
-			PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("accessTokenSecretName"),
-			})),
-		))
+			Expect(ValidateNodeAgentConfiguration(config)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("controllers.token.secretName"),
+				})),
+			))
+		})
 	})
 })

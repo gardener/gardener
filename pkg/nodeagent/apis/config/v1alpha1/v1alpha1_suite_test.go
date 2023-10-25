@@ -12,26 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1alpha1
+package v1alpha1_test
 
 import (
-	"time"
+	"testing"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-func addDefaultingFuncs(scheme *runtime.Scheme) error {
-	return RegisterDefaults(scheme)
-}
-
-// SetDefaults_OperatingSystemConfigControllerConfig sets defaults for the OperatingSystemConfigControllerConfig object.
-func SetDefaults_OperatingSystemConfigControllerConfig(obj *OperatingSystemConfigControllerConfig) {
-	if obj.SyncPeriod == nil {
-		obj.SyncPeriod = &metav1.Duration{Duration: 10 * time.Minute}
-	}
-
-	if obj.SyncJitterPeriod == nil {
-		obj.SyncJitterPeriod = &metav1.Duration{Duration: 5 * time.Minute}
-	}
+func TestV1alpha1(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "NodeAgent APIs Config V1alpha1 Suite")
 }

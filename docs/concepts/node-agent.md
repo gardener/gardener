@@ -38,6 +38,23 @@ After restarting all units, the annotation is removed.
 
 > ℹ️ When the `gardener-node-agent` systemd service itself is requested to be restarted, the annotation is removed first to ensure it does not restart itself indefinitely.
 
+### [Operating System Config Controller](../../pkg/nodeagent/controller/operatingsystemconfig)
+
+This controller contains the main logic of `gardener-node-agent`.
+It watches `Secret`s whose `data` map contains the [`OperatingSystemConfig`](../extensions/operatingsystemconfig.md#reconcile-purpose) which consists of all systemd units and files that are relevant for the node configuration.
+Amongst others, a prominent example is the configuration file for `kubelet` and its unit file for the `kubelet.service`.
+
+The controller decodes the configuration and computes the files and units that have changed since its last reconciliation.
+It writes or update the files and units to the file system, removes no longer needed files and units, reloads the systemd daemon, and starts or stops the units accordingly.
+
+After successful reconciliation, it persists the just applied `OperatingSystemConfig` into a file on the host.
+This file will be used for future reconciliations to compute file/unit changes.
+
+The controller also maintains two annotations on the `Node`:
+
+- `worker.gardener.cloud/kubernetes-version`, describing the version of the installed `kubelet`.
+- `checksum/cloud-config-data`, describing the checksum of the applied `OperatingSystemConfig` (used in future reconciliations to determine whether it needs to reconcile, and to report that this node is up-to-date).
+
 ### [Token Controller](../../pkg/nodeagent/controller/token)
 
 This controller watches the access token `Secret` in the `kube-system` namespace whose name is provided via the `gardener-node-agent`'s component configuration (`.accessTokenSecret` field).
