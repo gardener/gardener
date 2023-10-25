@@ -17,6 +17,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync/atomic"
 
 	"github.com/spf13/pflag"
@@ -256,10 +257,17 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 	}
 
 	for _, wh := range webhooks {
+		path := wh.Path
+		if path == "" {
+			path = "/" + wh.Name
+		} else if !strings.HasPrefix("/", path) {
+			path = "/" + path
+		}
+
 		if wh.Handler != nil {
-			webhookServer.Register("/"+wh.Name, wh.Handler)
+			webhookServer.Register(path, wh.Handler)
 		} else {
-			webhookServer.Register("/"+wh.Name, wh.Webhook)
+			webhookServer.Register(path, wh.Webhook)
 		}
 	}
 
