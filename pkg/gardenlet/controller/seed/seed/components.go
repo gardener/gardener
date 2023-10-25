@@ -49,6 +49,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/logging"
 	"github.com/gardener/gardener/pkg/component/logging/eventlogger"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator/customresources"
+	valiconstants "github.com/gardener/gardener/pkg/component/logging/vali/constants"
 	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/metricsserver"
 	"github.com/gardener/gardener/pkg/component/monitoring"
@@ -102,6 +103,7 @@ func defaultIstio(
 			gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-"+v1beta1constants.DeploymentNamePlutono, plutonoconstants.Port),
 			gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-"+v1beta1constants.StatefulSetNameAlertManager+"-client", monitoringconstants.AlertManagerPort),
 			gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-"+v1beta1constants.StatefulSetNamePrometheus+"-web", monitoringconstants.PrometheusPort),
+			gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-"+valiconstants.ServiceName, valiconstants.Port),
 		},
 		seed.GetLoadBalancerServiceAnnotations(),
 		seed.GetLoadBalancerServiceExternalTrafficPolicy(),

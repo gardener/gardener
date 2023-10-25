@@ -42,6 +42,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
+	"github.com/gardener/gardener/pkg/component/logging/vali/constants"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -55,7 +56,7 @@ const (
 	// ValiPort is the port exposed by the vali.
 	ValiPort = 3100
 	// ServiceName is the name of the logging service.
-	ServiceName = "logging"
+	ServiceName = constants.ServiceName
 
 	// ManagedResourceNameRuntime is the name of the managed resource which deploys Vali statefulSet.
 	ManagedResourceNameRuntime = "vali"
@@ -92,7 +93,7 @@ const (
 	telegrafVolumeName         = "telegraf-config-volume"
 
 	kubeRBACProxyName = "kube-rbac-proxy"
-	kubeRBACProxyPort = 8080
+	kubeRBACProxyPort = constants.Port
 
 	initLargeDirName = "init-large-dir"
 )
