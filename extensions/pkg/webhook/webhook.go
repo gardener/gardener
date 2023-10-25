@@ -61,13 +61,15 @@ type Type struct {
 
 // Args contains Webhook creation arguments.
 type Args struct {
-	Provider   string
-	Name       string
-	Path       string
-	Target     string
-	Predicates []predicate.Predicate
-	Validators map[Validator][]Type
-	Mutators   map[Mutator][]Type
+	Provider       string
+	Name           string
+	Path           string
+	Target         string
+	Selector       *metav1.LabelSelector
+	ObjectSelector *metav1.LabelSelector
+	Predicates     []predicate.Predicate
+	Validators     map[Validator][]Type
+	Mutators       map[Mutator][]Type
 }
 
 // New creates a new Webhook with the given args.
@@ -105,10 +107,13 @@ func New(mgr manager.Manager, args Args) (*Webhook, error) {
 	logger.Info("Creating webhook")
 
 	return &Webhook{
-		Action:  actionType,
-		Path:    args.Path,
-		Target:  args.Target,
-		Webhook: &admission.Webhook{Handler: handler, RecoverPanic: true},
-		Types:   objTypes,
+		Name:           args.Name,
+		Action:         actionType,
+		Selector:       args.Selector,
+		ObjectSelector: args.ObjectSelector,
+		Path:           args.Path,
+		Target:         args.Target,
+		Webhook:        &admission.Webhook{Handler: handler, RecoverPanic: true},
+		Types:          objTypes,
 	}, nil
 }
