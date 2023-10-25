@@ -51,7 +51,7 @@ Gardener (gardener-controller-manager) populates the `lastMaintenance` field in 
 
 ```yaml
 Last Maintenance:
-    Description:     "Control Plane: Updated Kubernetes version from 1.26.4 to 1.27.1. Reason: Kubernetes version expired - force update required"
+    Description:     "All maintenance operations successful. Control Plane: Updated Kubernetes version from 1.26.4 to 1.27.1. Reason: Kubernetes version expired - force update required"
     State:           Succeeded
     Triggered Time:  2023-07-28T09:07:27Z
 ```
@@ -60,12 +60,22 @@ Additionally, Gardener creates events with the type `MachineImageVersionMaintena
 
 ```text
 LAST SEEN   TYPE      REASON                           OBJECT          MESSAGE
-30m         Normal    MachineImageVersionMaintenance   shoot/local     Worker pool "local": Updated image from 'coreos' version 'xy' to version 'abc'. Reason: Automatic update of the machine image version is co
+30m         Normal    MachineImageVersionMaintenance   shoot/local     Worker pool "local": Updated image from 'gardenlinux' version 'xy' to version 'abc'. Reason: Automatic update of the machine image version is co
 nfigured (image update strategy: major).
 
 30m         Normal    KubernetesVersionMaintenance     shoot/local     Control Plane: Updated Kubernetes version from "1.26.4" to "1.27.1". Reason: Kubernetes version expired - force update required.
 
 15m         Normal    KubernetesVersionMaintenance     shoot/local     Worker pool "local": Updated Kubernetes version '1.26.3' to version '1.27.1'. Reason: Kubernetes version expired - force update required.
+```
+
+If at least one maintenance operation fails, the `lastMaintenance` field in the Shoot status is set to `Failed`:
+
+```yaml
+Last Maintenance:
+  Description:     "(1/2) maintenance operations successful: Control Plane: Updated Kubernetes version from 1.26.4 to 1.27.1. Reason: Kubernetes version expired - force update required, Worker pool x: 'gardenlinux' machine image version maintenance failed. Reason for update: machine image version expired"
+  FailureReason:   "Worker pool x: either the machine image 'gardenlinux' is reaching end of life and migration to another machine image is required or there is a misconfiguration in the CloudProfile."
+  State:           Failed
+  Triggered Time:  2023-07-28T09:07:27Z
 ```
 
 Please refer to the [Shoot Kubernetes and Operating System Versioning in Gardener](./shoot_versions.md) topic for more information about Kubernetes and machine image versions in Gardener.
