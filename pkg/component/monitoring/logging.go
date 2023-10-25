@@ -28,8 +28,8 @@ import (
 )
 
 var (
-	alermanagerName = "alertmanager"
-	prometheusName  = "prometheus"
+	alertmanagerName = "alertmanager"
+	prometheusName   = "prometheus"
 )
 
 // CentralLoggingConfiguration returns a fluent-bit parser and filter for the monitoring logs.
@@ -41,16 +41,16 @@ func generateClusterFilters() []*fluentbitv1alpha2.ClusterFilter {
 	return []*fluentbitv1alpha2.ClusterFilter{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   alermanagerName,
+				Name:   alertmanagerName,
 				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
 			},
 			Spec: fluentbitv1alpha2.FilterSpec{
-				Match: fmt.Sprintf("kubernetes.*%s*%s*", alermanagerName, alermanagerName),
+				Match: fmt.Sprintf("kubernetes.*%s*%s*", alertmanagerName, alertmanagerName),
 				FilterItems: []fluentbitv1alpha2.FilterItem{
 					{
 						Parser: &fluentbitv1alpha2filter.Parser{
 							KeyName:     "log",
-							Parser:      alermanagerName + "-parser",
+							Parser:      alertmanagerName + "-parser",
 							ReserveData: pointer.Bool(true),
 						},
 					},
@@ -100,7 +100,7 @@ func generateClusterParsers() []*fluentbitv1alpha2.ClusterParser {
 	return []*fluentbitv1alpha2.ClusterParser{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   alermanagerName + "-parser",
+				Name:   alertmanagerName + "-parser",
 				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
 			},
 			Spec: fluentbitv1alpha2.ParserSpec{
