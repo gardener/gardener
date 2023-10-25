@@ -17,6 +17,7 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -72,6 +73,21 @@ func (b *Botanist) DeployPlutono(ctx context.Context) error {
 	if err := common.DeleteGrafana(ctx, b.SeedClientSet, b.Shoot.SeedNamespace); err != nil {
 		return err
 	}
+
+	dnsConfig := &plutono.DNSConfig{
+		SecretName:      "seed-ingress",
+		SecretNamespace: v1beta1constants.GardenNamespace,
+	}
+	if dns := b.Seed.GetInfo().Spec.DNS; dns.Provider != nil {
+		dnsConfig.ProviderType = dns.Provider.Type
+	}
+	// Always use the default istio ingress gateway and do not consider exposure classes for observability components
+	address, err := kubernetesutils.WaitUntilLoadBalancerIsReady(ctx, b.Logger, b.SeedClientSet.Client(), *b.Config.SNI.Ingress.Namespace, v1beta1constants.DefaultSNIIngressServiceName, time.Minute)
+	if err != nil {
+		return err
+	}
+	dnsConfig.Value = address
+	b.Operation.Shoot.Components.ControlPlane.Plutono.SetDNSConfig(dnsConfig)
 
 	if err := b.Shoot.Components.ControlPlane.Plutono.Deploy(ctx); err != nil {
 		return err

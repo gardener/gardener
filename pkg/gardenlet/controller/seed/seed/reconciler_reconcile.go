@@ -52,6 +52,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/kubeapiserverexposure"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
+	"github.com/gardener/gardener/pkg/component/plutono"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/component/vpa"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -421,8 +422,8 @@ func (r *Reconciler) runReconcileSeedFlow(
 	}
 
 	var (
-		g = flow.NewGraph("Seed cluster creation")
-		_ = g.Add(flow.Task{
+		g             = flow.NewGraph("Seed cluster creation")
+		istioDeployed = g.Add(flow.Task{
 			Name: "Deploying Istio",
 			Fn:   istio.Deploy,
 		})
@@ -433,7 +434,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 				return err
 			},
 		})
-		_ = g.Add(flow.Task{
+		ingressDNSRecordDeployed = g.Add(flow.Task{
 			Name:         "Deploying managed ingress DNS record",
 			Fn:           func(ctx context.Context) error { return deployDNSResources(ctx, dnsRecord) },
 			Dependencies: flow.NewTaskIDs(nginxLBReady),
@@ -569,7 +570,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			return err
 		}
 
-		plutono, err := defaultPlutono(
+		defaultPlutono, err := defaultPlutono(
 			seedClient,
 			r.GardenNamespace,
 			secretsManager,
@@ -636,9 +637,30 @@ func (r *Reconciler) runReconcileSeedFlow(
 				Fn:           component.OpWait(fluentOperatorCustomResources).Deploy,
 				Dependencies: flow.NewTaskIDs(deployFluentOperator),
 			})
+			plutonoDNSConfigSet = g.Add(flow.Task{
+				Name: "Deploying Plutono DNS record",
+				Fn: flow.TaskFn(func(ctx context.Context) error {
+					dnsConfig := &plutono.DNSConfig{
+						SecretName:      "seed-ingress",
+						SecretNamespace: v1beta1constants.GardenNamespace,
+					}
+					if dns := seed.GetInfo().Spec.DNS; dns.Provider != nil {
+						dnsConfig.ProviderType = dns.Provider.Type
+					}
+					address, err := WaitUntilLoadBalancerIsReady(ctx, log, seedClient, istioDefaultNamespace, v1beta1constants.DefaultSNIIngressServiceName, time.Minute)
+					if err != nil {
+						return err
+					}
+					dnsConfig.Value = address
+					defaultPlutono.SetDNSConfig(dnsConfig)
+					return nil
+				}),
+				Dependencies: flow.NewTaskIDs(istioDeployed),
+			})
 			_ = g.Add(flow.Task{
-				Name: "Deploying Plutono",
-				Fn:   plutono.Deploy,
+				Name:         "Deploying Plutono",
+				Fn:           defaultPlutono.Deploy,
+				Dependencies: flow.NewTaskIDs(plutonoDNSConfigSet, ingressDNSRecordDeployed),
 			})
 			_ = g.Add(flow.Task{
 				Name: "Deploying Vali",

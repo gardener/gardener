@@ -8,6 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	plutono "github.com/gardener/gardener/pkg/component/plutono"
 	gomock "go.uber.org/mock/gomock"
 	v1 "k8s.io/api/core/v1"
 )
@@ -61,6 +62,18 @@ func (m *MockInterface) Destroy(arg0 context.Context) error {
 func (mr *MockInterfaceMockRecorder) Destroy(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), arg0)
+}
+
+// SetDNSConfig mocks base method.
+func (m *MockInterface) SetDNSConfig(arg0 *plutono.DNSConfig) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetDNSConfig", arg0)
+}
+
+// SetDNSConfig indicates an expected call of SetDNSConfig.
+func (mr *MockInterfaceMockRecorder) SetDNSConfig(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDNSConfig", reflect.TypeOf((*MockInterface)(nil).SetDNSConfig), arg0)
 }
 
 // SetWildcardCert mocks base method.

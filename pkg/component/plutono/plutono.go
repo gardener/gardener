@@ -41,6 +41,8 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -98,6 +100,8 @@ type Interface interface {
 	component.DeployWaiter
 	// SetWildcardCert sets the wildcard tls certificate which is issued for the seed's ingress domain.
 	SetWildcardCert(*corev1.Secret)
+	// SetDNSConfig sets the DNSConfig.
+	SetDNSConfig(*DNSConfig)
 }
 
 // Values is a set of configuration values for the plutono component.
@@ -132,6 +136,20 @@ type Values struct {
 	IstioIngressGatewayLabels map[string]string
 	// IstioIngressGatewayNamespace is the namespace of the used istio ingress gateway.
 	IstioIngressGatewayNamespace string
+	// DNSConfig contains the configuration values used to create a DNS record.
+	DNSConfig *DNSConfig
+}
+
+// DNSConfig contains the configuration values used to create a DNS record.
+type DNSConfig struct {
+	// ProviderType is the type of the DNS provider.
+	ProviderType string
+	// Value is the value of the DNS record.
+	Value string
+	// SecretName is the name of the secret referenced by the DNS record resource.
+	SecretName string
+	// SecretNamespace is the namespace of the secret used by the DNS record.
+	SecretNamespace string
 }
 
 // New creates a new instance of DeployWaiter for plutono.
@@ -212,6 +230,10 @@ func (p *plutono) SetWildcardCert(secret *corev1.Secret) {
 	p.values.WildcardCert = secret
 }
 
+func (p *plutono) SetDNSConfig(dnsConfig *DNSConfig) {
+	p.values.DNSConfig = dnsConfig
+}
+
 func (p *plutono) computeResourcesData(ctx context.Context) ([]*corev1.ConfigMap, *corev1.Secret, map[string][]byte, error) {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
@@ -275,6 +297,7 @@ func (p *plutono) computeResourcesData(ctx context.Context) ([]*corev1.ConfigMap
 		virtualService  *istionetworkingv1beta1.VirtualService
 		destinationRule *istionetworkingv1beta1.DestinationRule
 		tlsSecret       *corev1.Secret
+		dnsRecord       *extensionsv1alpha1.DNSRecord
 	)
 
 	deployment = p.getDeployment(providerConfigMap, dataSourceConfigMap, dashboardConfigMap, dashboardConfigMapGlobal)
@@ -285,6 +308,14 @@ func (p *plutono) computeResourcesData(ctx context.Context) ([]*corev1.ConfigMap
 		return nil, nil, nil, err
 	}
 
+	// TODO(scheererj): Remove in next release after all shoot clusters have been moved
+	// Migration is performed in multiple steps
+	// 0. DNS record handled via wildcard record for nginx-ingress-controller (before)
+	// 1. Overwrite DNS record with more specific record to point to istio after first reconciliation (all shoots)
+	// 2. Add wildcard DNS entry for istio
+	// 3. Remove specific DNS records for all shoots
+	dnsRecord = p.getDNSRecord()
+
 	data, err := registry.AddAllAndSerialize(
 		providerConfigMap,
 		dataSourceConfigMap,
@@ -293,6 +324,7 @@ func (p *plutono) computeResourcesData(ctx context.Context) ([]*corev1.ConfigMap
 		gateway,
 		virtualService,
 		destinationRule,
+		dnsRecord,
 	)
 	if err != nil {
 		return nil, nil, nil, err
@@ -986,4 +1018,31 @@ func (p *plutono) cleanupOldIstioTLSSecrets(ctx context.Context, tlsSecret *core
 	}
 
 	return flow.Parallel(fns...)(ctx)
+}
+
+func (p *plutono) getDNSRecord() *extensionsv1alpha1.DNSRecord {
+	if p.values.DNSConfig == nil {
+		// DNS record for garden cluster is created externally.
+		return nil
+	}
+	return &extensionsv1alpha1.DNSRecord{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: p.namespace,
+			// Allow deletion via managed resource by directly setting the confirmation annotation
+			Annotations: map[string]string{gardenerutils.ConfirmationDeletion: "true"},
+		},
+		Spec: extensionsv1alpha1.DNSRecordSpec{
+			DefaultSpec: extensionsv1alpha1.DefaultSpec{
+				Type: p.values.DNSConfig.ProviderType,
+			},
+			SecretRef: corev1.SecretReference{
+				Name:      p.values.DNSConfig.SecretName,
+				Namespace: p.values.DNSConfig.SecretNamespace,
+			},
+			Name:       p.values.IngressHost,
+			RecordType: extensionsv1alpha1helper.GetDNSRecordType(p.values.DNSConfig.Value),
+			Values:     []string{p.values.DNSConfig.Value},
+		},
+	}
 }

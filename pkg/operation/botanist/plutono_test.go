@@ -29,8 +29,10 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/component/plutono"
 	mockplutono "github.com/gardener/gardener/pkg/component/plutono/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation"
@@ -62,6 +64,8 @@ var _ = Describe("Plutono", func() {
 		projectNamespace = "garden-foo"
 		seedNamespace    = "shoot--foo--bar"
 		shootName        = "bar"
+		istioNamespace   = "istio-namespace"
+		istioIP          = "1.2.3.4"
 
 		shootPurposeEvaluation = gardencorev1beta1.ShootPurposeEvaluation
 		shootPurposeTesting    = gardencorev1beta1.ShootPurposeTesting
@@ -90,6 +94,21 @@ var _ = Describe("Plutono", func() {
 			Data: map[string][]byte{"username": {}, "password": {}, "auth": {}},
 		})).To(Succeed())
 
+		By("Create istio loadbalancer service whose IP address will be used the DNS record")
+		Expect(seedClient.Create(ctx, &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      v1beta1constants.DefaultSNIIngressServiceName,
+				Namespace: istioNamespace,
+			},
+			Status: corev1.ServiceStatus{
+				LoadBalancer: corev1.LoadBalancerStatus{
+					Ingress: []corev1.LoadBalancerIngress{{
+						IP: istioIP,
+					}},
+				},
+			},
+		})).To(Succeed())
+
 		mockPlutono = mockplutono.NewMockInterface(ctrl)
 
 		botanist = &Botanist{
@@ -97,7 +116,13 @@ var _ = Describe("Plutono", func() {
 				GardenClient:   gardenClient,
 				SeedClientSet:  seedClientSet,
 				SecretsManager: sm,
-				Config:         &config.GardenletConfiguration{},
+				Config: &config.GardenletConfiguration{
+					SNI: &config.SNI{
+						Ingress: &config.SNIIngress{
+							Namespace: &istioNamespace,
+						},
+					},
+				},
 				Garden: &garden.Garden{
 					Project: &gardencorev1beta1.Project{},
 				},
@@ -145,6 +170,11 @@ var _ = Describe("Plutono", func() {
 	Describe("#DeployPlutono", func() {
 		It("should successfully deploy plutono sync the ingress credentials for the users observability to the garden project namespace", func() {
 			Expect(gardenClient.Get(ctx, kubernetesutils.Key(projectNamespace, shootName+".monitoring"), &corev1.Secret{})).To(BeNotFoundError())
+			mockPlutono.EXPECT().SetDNSConfig(&plutono.DNSConfig{
+				SecretName:      "seed-ingress",
+				SecretNamespace: v1beta1constants.GardenNamespace,
+				Value:           istioIP,
+			})
 			mockPlutono.EXPECT().Deploy(ctx)
 			Expect(botanist.DeployPlutono(ctx)).To(Succeed())
 
@@ -157,6 +187,11 @@ var _ = Describe("Plutono", func() {
 
 		It("should cleanup the secrets when shoot purpose is changed", func() {
 			Expect(gardenClient.Get(ctx, kubernetesutils.Key(projectNamespace, shootName+".monitoring"), &corev1.Secret{})).To(BeNotFoundError())
+			mockPlutono.EXPECT().SetDNSConfig(&plutono.DNSConfig{
+				SecretName:      "seed-ingress",
+				SecretNamespace: v1beta1constants.GardenNamespace,
+				Value:           istioIP,
+			})
 			mockPlutono.EXPECT().Deploy(ctx)
 			Expect(botanist.DeployPlutono(ctx)).To(Succeed())
 			Expect(gardenClient.Get(ctx, kubernetesutils.Key(projectNamespace, shootName+".monitoring"), &corev1.Secret{})).To(Succeed())
