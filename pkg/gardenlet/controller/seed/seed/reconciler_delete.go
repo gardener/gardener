@@ -45,6 +45,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
+	"github.com/gardener/gardener/pkg/component/monitoring"
 	"github.com/gardener/gardener/pkg/component/nginxingress"
 	"github.com/gardener/gardener/pkg/component/plutono"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
@@ -208,6 +209,9 @@ func (r *Reconciler) runDeleteSeedFlow(
 		})
 		mcmCRDs                       = machinecontrollermanager.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
 		fluentOperatorCustomResources = fluentoperator.NewCustomResources(seedClient, r.GardenNamespace, fluentoperator.CustomResourcesValues{})
+		defaultMonitoring             = monitoring.NewBootstrap(seedClient, nil, nil, r.GardenNamespace, monitoring.ValuesBootstrap{
+			IstioIngressGatewayNamespace: istioIngressGateway[0].Namespace,
+		})
 	)
 
 	var (
@@ -272,6 +276,10 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Name: "Destroy Fluent Operator Custom Resources",
 			Fn:   component.OpDestroyAndWait(fluentOperatorCustomResources).Destroy,
 		})
+		destroyMonitoring = g.Add(flow.Task{
+			Name: "Destroy monitoring components",
+			Fn:   component.OpDestroyAndWait(defaultMonitoring).Destroy,
+		})
 		syncPointCleanedUp = flow.NewTaskIDs(
 			destroyNginxIngress,
 			destroyClusterAutoscaler,
@@ -285,6 +293,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 			destroyIstioCRDs,
 			destroyMachineControllerManagerCRDs,
 			destroyFluentOperatorResources,
+			destroyMonitoring,
 			noControllerInstallations,
 		)
 		destroySystemResources = g.Add(flow.Task{

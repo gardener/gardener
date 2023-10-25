@@ -347,11 +347,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return err
 	}
 
-	var wildCardSecretName *string
-	if wildcardCert != nil {
-		wildCardSecretName = pointer.String(wildcardCert.GetName())
-	}
-
 	seedIsOriginOfClusterIdentity, err := clusteridentity.IsClusterIdentityEmptyOrFromOrigin(ctx, seedClient, v1beta1constants.ClusterIdentityOriginSeed)
 	if err != nil {
 		return err
@@ -415,7 +410,9 @@ func (r *Reconciler) runReconcileSeedFlow(
 		globalMonitoringSecretSeed,
 		hvpaEnabled,
 		seed.GetIngressFQDN("p-seed"),
-		wildCardSecretName,
+		wildcardCert,
+		istioDefaultLabels,
+		istioDefaultNamespace,
 	)
 	if err != nil {
 		return err

@@ -6,6 +6,9 @@ metadata:
   labels:
     app: prometheus
     role: monitoring
+  annotations:
+    networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}}]'
+    networking.istio.io/exportTo: "*"
 spec:
   ports:
   - name: web

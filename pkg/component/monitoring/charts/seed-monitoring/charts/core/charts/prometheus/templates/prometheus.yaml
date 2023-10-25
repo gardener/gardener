@@ -18,7 +18,8 @@ metadata:
     role: monitoring
   annotations:
     networking.resources.gardener.cloud/pod-label-selector-namespace-alias: all-shoots
-    networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]'
+    networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}},{"matchLabels":{"gardener.cloud/role":"istio-ingress"}}]'
+    networking.istio.io/exportTo: "*"
 spec:
   ports:
   - name: metrics

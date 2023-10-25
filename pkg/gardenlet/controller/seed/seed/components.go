@@ -418,7 +418,9 @@ func defaultMonitoring(
 	globalMonitoringSecret *corev1.Secret,
 	hvpaEnabled bool,
 	ingressHost string,
-	wildcardCertName *string,
+	wildcardCert *corev1.Secret,
+	istioIngressGatewayLabels map[string]string,
+	istioIngressGatewayNamespace string,
 ) (
 	component.Deployer,
 	error,
@@ -458,7 +460,9 @@ func defaultMonitoring(
 			StorageCapacityAlertmanager:        seed.GetValidVolumeSize("1Gi"),
 			StorageCapacityPrometheus:          seed.GetValidVolumeSize("10Gi"),
 			StorageCapacityAggregatePrometheus: seed.GetValidVolumeSize("20Gi"),
-			WildcardCertName:                   wildcardCertName,
+			WildcardCert:                       wildcardCert,
+			IstioIngressGatewayLabels:          istioIngressGatewayLabels,
+			IstioIngressGatewayNamespace:       istioIngressGatewayNamespace,
 		},
 	), nil
 }

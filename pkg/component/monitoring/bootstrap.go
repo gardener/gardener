@@ -21,7 +21,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -29,6 +31,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
@@ -37,9 +40,16 @@ import (
 	"github.com/gardener/gardener/pkg/component/istio"
 	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/utils"
+	istioutils "github.com/gardener/gardener/pkg/utils/istio"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+)
+
+const (
+	aggregatePrometheusName                = "aggregate-" + prometheusName
+	managedResourceNameAggregatePrometheus = aggregatePrometheusName
 )
 
 var (
@@ -74,8 +84,12 @@ type ValuesBootstrap struct {
 	StorageCapacityPrometheus string
 	// StorageCapacityAggregatePrometheus is the storage capacity of AggregatePrometheus.
 	StorageCapacityAggregatePrometheus string
-	// WildcardCertName is name of wildcard tls certificate which is issued for the seed's ingress domain.
-	WildcardCertName *string
+	// WildcardCert is the wildcard tls certificate which is issued for the seed's ingress domain.
+	WildcardCert *corev1.Secret
+	// IstioIngressGatewayLabels are the labels for identifying the used istio ingress gateway.
+	IstioIngressGatewayLabels map[string]string
+	// IstioIngressGatewayNamespace is the namespace of the used istio ingress gateway.
+	IstioIngressGatewayNamespace string
 }
 
 // NewBootstrap creates a new instance of Deployer for the monitoring components.
@@ -214,9 +228,9 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	applierOptions[hvpaGK] = retainStatusInformation
 	applierOptions[issuerGK] = retainStatusInformation
 
-	var ingressTLSSecretName string
-	if b.values.WildcardCertName != nil {
-		ingressTLSSecretName = *b.values.WildcardCertName
+	var aggregatePrometheusIngressTLSSecret *corev1.Secret
+	if b.values.WildcardCert != nil {
+		aggregatePrometheusIngressTLSSecret = b.values.WildcardCert
 	} else {
 		ingressTLSSecret, err := b.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 			Name:                        "aggregate-prometheus-tls",
@@ -230,12 +244,11 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		ingressTLSSecretName = ingressTLSSecret.Name
+		aggregatePrometheusIngressTLSSecret = ingressTLSSecret
 	}
 
 	values := kubernetes.Values(map[string]interface{}{
 		"global": map[string]interface{}{
-			"ingressClass": v1beta1constants.SeedNginxIngressClass,
 			"images": map[string]string{
 				"alertmanager":       b.values.ImageAlertmanager,
 				"alpine":             b.values.ImageAlpine,
@@ -253,8 +266,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			"resources":               monitoringResources["aggregate-prometheus"],
 			"storage":                 b.values.StorageCapacityAggregatePrometheus,
 			"seed":                    b.values.SeedName,
-			"hostName":                b.values.IngressHost,
-			"secretName":              ingressTLSSecretName,
 			"additionalScrapeConfigs": aggregateScrapeConfigs.String(),
 		},
 		"alertmanager": alertManagerConfig,
@@ -264,14 +275,103 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		"istio": map[string]interface{}{
 			"enabled": true,
 		},
-		"ingress": map[string]interface{}{
-			"authSecretName": b.values.GlobalMonitoringSecret.Name,
-		},
 	})
 
-	return b.chartApplier.ApplyFromEmbeddedFS(ctx, chartBootstrap, chartPathBootstrap, b.namespace, "monitoring", values, applierOptions)
+	istioTLSSecret := aggregatePrometheusIngressTLSSecret.DeepCopy()
+	istioTLSSecret.Type = aggregatePrometheusIngressTLSSecret.Type
+	istioTLSSecret.ObjectMeta = metav1.ObjectMeta{
+		Name:      fmt.Sprintf("seed-%s", aggregatePrometheusIngressTLSSecret.Name),
+		Namespace: b.values.IstioIngressGatewayNamespace,
+		Labels:    b.getIstioTLSSecretLabels(),
+	}
+	if err := b.ensureIstioTLSSecret(ctx, istioTLSSecret); err != nil {
+		return err
+	}
+
+	gateway := &istionetworkingv1beta1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      aggregatePrometheusName,
+			Namespace: b.namespace,
+		},
+	}
+	if err := istioutils.GatewayWithTLSTermination(gateway, getAggregatePrometheusLabels(), b.values.IstioIngressGatewayLabels, []string{b.values.IngressHost}, externalPort, istioTLSSecret.Name)(); err != nil {
+		return err
+	}
+
+	virtualService := &istionetworkingv1beta1.VirtualService{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      aggregatePrometheusName,
+			Namespace: b.namespace,
+		},
+	}
+	destinationHost := fmt.Sprintf("%s-web.%s.svc.%s", aggregatePrometheusName, b.namespace, gardencorev1beta1.DefaultDomain)
+	if err := istioutils.VirtualServiceWithSNIMatchAndBasicAuth(virtualService, getAggregatePrometheusLabels(), []string{b.values.IngressHost}, aggregatePrometheusName, externalPort, destinationHost, prometheusServicePort, string(b.values.GlobalMonitoringSecret.Data[corev1.BasicAuthUsernameKey]), string(b.values.GlobalMonitoringSecret.Data[corev1.BasicAuthPasswordKey]))(); err != nil {
+		return err
+	}
+
+	destinationRule := &istionetworkingv1beta1.DestinationRule{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      aggregatePrometheusName,
+			Namespace: b.namespace,
+		},
+	}
+	if err := istioutils.DestinationRuleWithLocalityPreference(destinationRule, getAggregatePrometheusLabels(), destinationHost)(); err != nil {
+		return err
+	}
+
+	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+	data, err := registry.AddAllAndSerialize(
+		gateway,
+		virtualService,
+		destinationRule,
+	)
+	if err != nil {
+		return err
+	}
+	if err := managedresources.CreateForSeed(ctx, b.client, b.namespace, managedResourceNameAggregatePrometheus, false, data); err != nil {
+		return err
+	}
+
+	// TODO(scheererj): Remove with next release after all ingress objects have been deleted.
+	if err := kubernetesutils.DeleteObjects(ctx, b.client, &networkingv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      aggregatePrometheusName,
+			Namespace: b.namespace,
+		},
+	}); err != nil {
+		return err
+	}
+
+	if err := b.chartApplier.ApplyFromEmbeddedFS(ctx, chartBootstrap, chartPathBootstrap, b.namespace, "monitoring", values, applierOptions); err != nil {
+		return err
+	}
+
+	return b.cleanupOldIstioTLSSecrets(ctx, istioTLSSecret)
 }
 
-func (b *bootstrapper) Destroy(_ context.Context) error {
-	return nil
+func (b *bootstrapper) Destroy(ctx context.Context) error {
+	if err := managedresources.DeleteForSeed(ctx, b.client, b.namespace, managedResourceNameAggregatePrometheus); err != nil {
+		return err
+	}
+
+	return b.cleanupOldIstioTLSSecrets(ctx, nil)
+}
+
+func getAggregatePrometheusLabels() map[string]string {
+	return map[string]string{
+		v1beta1constants.LabelApp:  aggregatePrometheusName,
+		v1beta1constants.LabelRole: v1beta1constants.GardenRoleMonitoring,
+	}
+}
+
+func (b *bootstrapper) getIstioTLSSecretLabels() map[string]string {
+	return utils.MergeStringMaps(getAggregatePrometheusLabels(), map[string]string{labelTLSSecretOwner: "seed"})
+}
+
+func (b *bootstrapper) ensureIstioTLSSecret(ctx context.Context, tlsSecret *corev1.Secret) error {
+	return ensureIstioTLSSecret(ctx, b.client, tlsSecret)
+}
+
+func (b *bootstrapper) cleanupOldIstioTLSSecrets(ctx context.Context, tlsSecret *corev1.Secret) error {
+	return cleanupOldIstioTLSSecrets(ctx, b.client, tlsSecret, b.values.IstioIngressGatewayNamespace, b.getIstioTLSSecretLabels)
 }

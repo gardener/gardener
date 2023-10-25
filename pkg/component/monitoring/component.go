@@ -56,10 +56,12 @@ import (
 )
 
 const (
-	managedResourceNamePrometheus   = "shoot-core-prometheus"
-	managedResourceNameAlertManager = alertmanagerName
+	managedResourceNamePrometheus     = "shoot-core-prometheus"
+	managedResourceNameSeedPrometheus = prometheusName
+	managedResourceNameAlertManager   = alertmanagerName
 
-	externalPort = 443
+	externalPort          = 443
+	prometheusServicePort = 80
 
 	labelTLSSecretOwner = "owner"
 )
@@ -218,9 +220,9 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	var ingressTLSSecretName string
+	var prometheusIngressTLSSecret *corev1.Secret
 	if m.values.WildcardCert != nil {
-		ingressTLSSecretName = m.values.WildcardCert.Name
+		prometheusIngressTLSSecret = m.values.WildcardCert
 	} else {
 		ingressTLSSecret, err := m.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 			Name:                        "prometheus-tls",
@@ -234,7 +236,7 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		ingressTLSSecretName = ingressTLSSecret.Name
+		prometheusIngressTLSSecret = ingressTLSSecret
 	}
 
 	clusterCASecret, found := m.secretsManager.Get(v1beta1constants.SecretNameCACluster)
@@ -268,14 +270,7 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 				"enabled": m.values.NodeLocalDNSEnabled,
 			},
 			"ingress": map[string]interface{}{
-				"class":          v1beta1constants.SeedNginxIngressClass,
-				"authSecretName": credentialsSecret.Name,
-				"hosts": []map[string]interface{}{
-					{
-						"hostName":   m.values.IngressHostPrometheus,
-						"secretName": ingressTLSSecretName,
-					},
-				},
+				"host": m.values.IngressHostPrometheus,
 			},
 			"namespace": map[string]interface{}{
 				"uid": m.values.NamespaceUID,
@@ -370,11 +365,108 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 		"prometheus": prometheusConfig,
 	}
 
+	istioTLSSecret := prometheusIngressTLSSecret.DeepCopy()
+	istioTLSSecret.Type = prometheusIngressTLSSecret.Type
+	istioTLSSecret.ObjectMeta = metav1.ObjectMeta{
+		Name:      fmt.Sprintf("%s-%s", m.namespace, prometheusIngressTLSSecret.Name),
+		Namespace: m.values.IstioIngressGatewayNamespace,
+		Labels:    m.getIstioTLSSecretLabels(getPrometheusLabels),
+	}
+	if err := m.ensureIstioTLSSecret(ctx, istioTLSSecret); err != nil {
+		return err
+	}
+
+	gateway := &istionetworkingv1beta1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      prometheusName,
+			Namespace: m.namespace,
+		},
+	}
+	if err := istio.GatewayWithTLSTermination(gateway, getPrometheusLabels(), m.values.IstioIngressGatewayLabels, []string{m.values.IngressHostPrometheus}, externalPort, istioTLSSecret.Name)(); err != nil {
+		return err
+	}
+
+	virtualService := &istionetworkingv1beta1.VirtualService{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      prometheusName,
+			Namespace: m.namespace,
+		},
+	}
+	destinationHost := fmt.Sprintf("%s-web.%s.svc.%s", prometheusName, m.namespace, gardencorev1beta1.DefaultDomain)
+	if err := istio.VirtualServiceWithSNIMatchAndBasicAuth(virtualService, getPrometheusLabels(), []string{m.values.IngressHostPrometheus}, prometheusName, externalPort, destinationHost, prometheusServicePort, string(credentialsSecret.Data[corev1.BasicAuthUsernameKey]), string(credentialsSecret.Data[corev1.BasicAuthPasswordKey]))(); err != nil {
+		return err
+	}
+	virtualService.Spec.Http = append([]*istioapinetworkingv1beta1.HTTPRoute{{
+		Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{
+			{
+				Uri: &istioapinetworkingv1beta1.StringMatch{
+					MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+						Prefix: "/-/reload",
+					},
+				},
+			},
+			{
+				Uri: &istioapinetworkingv1beta1.StringMatch{
+					MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+						Prefix: "/-/quit",
+					},
+				},
+			},
+			{
+				Uri: &istioapinetworkingv1beta1.StringMatch{
+					MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+						Prefix: "/api/v1/targets",
+					},
+				},
+			},
+		},
+		DirectResponse: &istioapinetworkingv1beta1.HTTPDirectResponse{
+			Status: 403,
+		},
+	}}, virtualService.Spec.Http...)
+
+	destinationRule := &istionetworkingv1beta1.DestinationRule{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      prometheusName,
+			Namespace: m.namespace,
+		},
+	}
+	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, getPrometheusLabels(), destinationHost)(); err != nil {
+		return err
+	}
+
+	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+	data, err := registry.AddAllAndSerialize(
+		gateway,
+		virtualService,
+		destinationRule,
+	)
+	if err != nil {
+		return err
+	}
+	if err := managedresources.CreateForSeed(ctx, m.client, m.namespace, managedResourceNameSeedPrometheus, false, data); err != nil {
+		return err
+	}
+
+	// TODO(scheererj): Remove with next release after all ingress objects have been deleted.
+	if err := kubernetesutils.DeleteObjects(ctx, m.client, &networkingv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      prometheusName,
+			Namespace: m.namespace,
+		},
+	}); err != nil {
+		return err
+	}
+
 	if err := m.chartApplier.ApplyFromEmbeddedFS(ctx, chartCore, chartPathCore, m.namespace, "core", kubernetes.Values(coreValues)); err != nil {
 		return err
 	}
 
 	if err := m.reconcilePrometheusShootResources(ctx, shootAccessSecret.ServiceAccountName); err != nil {
+		return err
+	}
+
+	if err := m.cleanupOldIstioTLSSecrets(ctx, istioTLSSecret, getPrometheusLabels); err != nil {
 		return err
 	}
 
@@ -537,6 +629,14 @@ func (m *monitoring) Destroy(ctx context.Context) error {
 	}
 
 	if err := m.cleanupOldIstioTLSSecrets(ctx, nil, getAlertManagerLabels); err != nil {
+		return err
+	}
+
+	if err := managedresources.DeleteForSeed(ctx, m.client, m.namespace, managedResourceNameSeedPrometheus); err != nil {
+		return err
+	}
+
+	if err := m.cleanupOldIstioTLSSecrets(ctx, nil, getPrometheusLabels); err != nil {
 		return err
 	}
 
@@ -836,23 +936,34 @@ func getAlertManagerLabels() map[string]string {
 	}
 }
 
+func getPrometheusLabels() map[string]string {
+	return map[string]string{
+		v1beta1constants.LabelApp:  prometheusName,
+		v1beta1constants.LabelRole: v1beta1constants.GardenRoleMonitoring,
+	}
+}
+
 func (m *monitoring) getIstioTLSSecretLabels(labelsFunc func() map[string]string) map[string]string {
 	return utils.MergeStringMaps(labelsFunc(), map[string]string{labelTLSSecretOwner: m.namespace})
 }
 
 func (m *monitoring) ensureIstioTLSSecret(ctx context.Context, tlsSecret *corev1.Secret) error {
+	return ensureIstioTLSSecret(ctx, m.client, tlsSecret)
+}
+
+func ensureIstioTLSSecret(ctx context.Context, c client.Client, tlsSecret *corev1.Secret) error {
 	secret := &corev1.Secret{}
-	if err := m.client.Get(ctx, client.ObjectKeyFromObject(tlsSecret), secret); err != nil {
+	if err := c.Get(ctx, client.ObjectKeyFromObject(tlsSecret), secret); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return err
 		}
 
-		if err := m.client.Create(ctx, tlsSecret); err != nil {
+		if err := c.Create(ctx, tlsSecret); err != nil {
 			if !apierrors.IsAlreadyExists(err) {
 				return err
 			}
 
-			if err := m.client.Get(ctx, client.ObjectKeyFromObject(tlsSecret), secret); err != nil {
+			if err := c.Get(ctx, client.ObjectKeyFromObject(tlsSecret), secret); err != nil {
 				return err
 			}
 		}
@@ -861,8 +972,12 @@ func (m *monitoring) ensureIstioTLSSecret(ctx context.Context, tlsSecret *corev1
 }
 
 func (m *monitoring) cleanupOldIstioTLSSecrets(ctx context.Context, tlsSecret *corev1.Secret, labelsFunc func() map[string]string) error {
+	return cleanupOldIstioTLSSecrets(ctx, m.client, tlsSecret, m.values.IstioIngressGatewayNamespace, func() map[string]string { return m.getIstioTLSSecretLabels(labelsFunc) })
+}
+
+func cleanupOldIstioTLSSecrets(ctx context.Context, c client.Client, tlsSecret *corev1.Secret, istioNamespace string, labelsFunc func() map[string]string) error {
 	secretList := &corev1.SecretList{}
-	if err := m.client.List(ctx, secretList, client.InNamespace(m.values.IstioIngressGatewayNamespace), client.MatchingLabels(m.getIstioTLSSecretLabels(labelsFunc))); err != nil {
+	if err := c.List(ctx, secretList, client.InNamespace(istioNamespace), client.MatchingLabels(labelsFunc())); err != nil {
 		return err
 	}
 
@@ -875,7 +990,7 @@ func (m *monitoring) cleanupOldIstioTLSSecrets(ctx context.Context, tlsSecret *c
 			continue
 		}
 
-		fns = append(fns, func(ctx context.Context) error { return client.IgnoreNotFound(m.client.Delete(ctx, &secret)) })
+		fns = append(fns, func(ctx context.Context) error { return client.IgnoreNotFound(c.Delete(ctx, &secret)) })
 	}
 
 	return flow.Parallel(fns...)(ctx)

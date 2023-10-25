@@ -69,8 +69,6 @@ aggregatePrometheus:
   port: 9090
   storage: 20Gi
   seed: seed
-  hostName: p.seed-1.example.com
-  secretName: prometheus-tls
   hvpa:
     enabled: false
     minAllowed:
@@ -198,10 +196,6 @@ allowedMetrics:
   - vali_logql_querystats_duplicates_total
   - vali_logql_querystats_ingester_sent_lines_total
   - prometheus_target_scrapes_sample_out_of_order_total
-
-ingress:
-  # admin : admin base64 encoded
-  authSecretName: auth-secret-name
 
 global:
   images:

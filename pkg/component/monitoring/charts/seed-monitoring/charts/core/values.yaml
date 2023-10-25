@@ -13,7 +13,7 @@ prometheus:
     configmap-reloader: image-repository:image-tag
     vpn-seed: image-repository:image-tag
   ingress:
-    class: nginx
+    host: p.seed-1.example.com
   secretNameClusterCA: ca
   secretNameEtcdCA: ca-etcd
   secretNameEtcdClientCert: etcd-client-tls
