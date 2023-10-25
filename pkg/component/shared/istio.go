@@ -28,6 +28,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/component/istio"
+	monitoringconstants "github.com/gardener/gardener/pkg/component/monitoring/constants"
 	plutonoconstants "github.com/gardener/gardener/pkg/component/plutono/constants"
 	"github.com/gardener/gardener/pkg/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/component/vpnseedserver"
@@ -245,8 +246,9 @@ func IsZonalIstioExtension(labels map[string]string) (bool, string) {
 func commonIstioIngressNetworkPolicyLabels(vpnEnabled bool) map[string]string {
 	labels := map[string]string{
 		v1beta1constants.LabelNetworkPolicyToDNS: v1beta1constants.LabelNetworkPolicyAllowed,
-		gardenerutils.NetworkPolicyLabel(v1beta1constants.IstioSystemNamespace+"-"+istio.IstiodServiceName, istio.IstiodPort):                v1beta1constants.LabelNetworkPolicyAllowed,
-		gardenerutils.NetworkPolicyLabel(v1beta1constants.GardenNamespace+"-"+v1beta1constants.DeploymentNamePlutono, plutonoconstants.Port): v1beta1constants.LabelNetworkPolicyAllowed,
+		gardenerutils.NetworkPolicyLabel(v1beta1constants.IstioSystemNamespace+"-"+istio.IstiodServiceName, istio.IstiodPort):                                                  v1beta1constants.LabelNetworkPolicyAllowed,
+		gardenerutils.NetworkPolicyLabel(v1beta1constants.GardenNamespace+"-"+v1beta1constants.DeploymentNamePlutono, plutonoconstants.Port):                                   v1beta1constants.LabelNetworkPolicyAllowed,
+		gardenerutils.NetworkPolicyLabel(v1beta1constants.GardenNamespace+"-aggregate-"+v1beta1constants.StatefulSetNamePrometheus+"-web", monitoringconstants.PrometheusPort): v1beta1constants.LabelNetworkPolicyAllowed,
 	}
 	if vpnEnabled {
 		labels[gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-"+v1beta1constants.DeploymentNameVPNSeedServer, vpnseedserver.OpenVPNPort)] = v1beta1constants.LabelNetworkPolicyAllowed

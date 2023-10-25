@@ -17,4 +17,6 @@ package constants
 const (
 	// AlertManagerPort is the port exposed by alertmanager.
 	AlertManagerPort = 9093
+	// PrometheusPort is the port exposed by the prometheus pods.
+	PrometheusPort = 9090
 )

@@ -40,6 +40,7 @@ type istioTestValues struct {
 	labels                            map[string]string
 	kubeAPIServerPolicyLabel          string
 	plutonoPolicyLabel                string
+	prometheusPolicyLabel             string
 	lbAnnotations                     map[string]string
 	externalTrafficPolicy             *corev1.ServiceExternalTrafficPolicyType
 	serviceExternalIP                 *string
@@ -66,7 +67,7 @@ func createIstio(testValues istioTestValues) istio.Interface {
 		testValues.priorityClassName,
 		testValues.istiodEnabled,
 		testValues.labels,
-		[]string{testValues.kubeAPIServerPolicyLabel, testValues.plutonoPolicyLabel},
+		[]string{testValues.kubeAPIServerPolicyLabel, testValues.plutonoPolicyLabel, testValues.prometheusPolicyLabel},
 		testValues.lbAnnotations,
 		testValues.externalTrafficPolicy,
 		testValues.serviceExternalIP,
@@ -92,6 +93,7 @@ func checkIstio(istioDeploy istio.Interface, testValues istioTestValues) {
 		"networking.resources.gardener.cloud/to-istio-system-istiod-tcp-15012": "allowed",
 		testValues.kubeAPIServerPolicyLabel:                                    "allowed",
 		testValues.plutonoPolicyLabel:                                          "allowed",
+		testValues.prometheusPolicyLabel:                                       "allowed",
 	}
 
 	if testValues.vpnEnabled {
@@ -201,6 +203,7 @@ var _ = Describe("Istio", func() {
 			labels:                   map[string]string{"some": "labelValue"},
 			kubeAPIServerPolicyLabel: "to-all-test-kube-apiserver",
 			plutonoPolicyLabel:       "networking.resources.gardener.cloud/to-garden-plutono-tcp-3000",
+			prometheusPolicyLabel:    "networking.resources.gardener.cloud/to-garden-aggregate-prometheus-web-tcp-9090",
 			lbAnnotations:            map[string]string{"some": "annotationValue"},
 			externalTrafficPolicy:    &trafficPolicy,
 			serviceExternalIP:        pointer.String("1.2.3.4"),
