@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/workqueue"
@@ -53,14 +52,14 @@ type reconciler struct {
 	// SyncPeriod is the frequency with which to reload the server cert. Defaults to 5m.
 	SyncPeriod time.Duration
 	// SourceWebhookConfigs are the webhook configurations to reconcile in the Source cluster.
-	SourceWebhookConfigs []client.Object
-	// ShootWebhookConfig is the webhook configuration to reconcile in all Shoot clusters.
-	ShootWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration
-	// AtomicShootWebhookConfig is an atomic value in which this reconciler will store the updated ShootWebhookConfig.
+	SourceWebhookConfigs extensionswebhook.Configs
+	// ShootWebhookConfigs are the webhook configurations to reconcile in all Shoot clusters.
+	ShootWebhookConfigs *extensionswebhook.Configs
+	// AtomicShootWebhookConfigs is an atomic value in which this reconciler will store the updated ShootWebhookConfigs.
 	// It is supposed to be shared with the ControlPlane actuator. I.e. if the CA bundle changes, this reconciler
 	// updates the CA bundle in this value so that the ControlPlane actuator can configure the correct (the new) CA
 	// bundle for newly created shoots by loading this value.
-	AtomicShootWebhookConfig *atomic.Value
+	AtomicShootWebhookConfigs *atomic.Value
 	// CASecretName is the CA config name.
 	CASecretName string
 	// ServerSecretName is the server certificate config name.
@@ -175,29 +174,35 @@ func (r *reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 	}
 	log.Info("Generated webhook server cert", "serverSecretName", serverSecret.Name)
 
-	for _, sourceWebhookConfig := range r.SourceWebhookConfigs {
-		if sourceWebhookConfig == nil {
-			continue
-		}
+	for _, sourceWebhookConfig := range r.SourceWebhookConfigs.GetWebhookConfigs() {
 		if err := r.reconcileSourceWebhookConfig(ctx, sourceWebhookConfig, caBundleSecret); err != nil {
 			return reconcile.Result{}, fmt.Errorf("error reconciling source webhook config %s: %w", client.ObjectKeyFromObject(sourceWebhookConfig), err)
 		}
 		log.Info("Updated source webhook config with new CA bundle", "webhookConfig", sourceWebhookConfig)
 	}
 
-	if r.ShootWebhookConfig != nil {
-		// update shoot webhook config object (in memory) with the freshly created CA bundle which is also used by the
-		// ControlPlane actuator
-		if err := extensionswebhook.InjectCABundleIntoWebhookConfig(r.ShootWebhookConfig, caBundleSecret.Data[secretsutils.DataKeyCertificateBundle]); err != nil {
-			return reconcile.Result{}, err
+	if r.ShootWebhookConfigs != nil && r.ShootWebhookConfigs.HasWebhookConfig() {
+		for _, shootWebhookConfig := range r.ShootWebhookConfigs.GetWebhookConfigs() {
+			// update shoot webhook config object (in memory) with the freshly created CA bundle which is also used by the
+			// ControlPlane actuator
+			if err := extensionswebhook.InjectCABundleIntoWebhookConfig(shootWebhookConfig, caBundleSecret.Data[secretsutils.DataKeyCertificateBundle]); err != nil {
+				return reconcile.Result{}, err
+			}
 		}
-		r.AtomicShootWebhookConfig.Store(r.ShootWebhookConfig.DeepCopy())
+
+		r.AtomicShootWebhookConfigs.Store(r.ShootWebhookConfigs.DeepCopy())
 
 		// reconcile all shoot webhook configs with the freshly created CA bundle
-		if err := extensionsshootwebhook.ReconcileWebhooksForAllNamespaces(ctx, r.client, r.Namespace, r.ComponentName, r.ShootWebhookManagedResourceName, r.ShootNamespaceSelector, r.ShootWebhookConfig); err != nil {
+		if err := extensionsshootwebhook.ReconcileWebhooksForAllNamespaces(ctx, r.client, r.Namespace, r.ComponentName, r.ShootWebhookManagedResourceName, r.ShootNamespaceSelector, *r.ShootWebhookConfigs); err != nil {
 			return reconcile.Result{}, fmt.Errorf("error reconciling all shoot webhook configs: %w", err)
 		}
-		log.Info("Updated all shoot webhook configs with new CA bundle", "webhookConfig", r.ShootWebhookConfig)
+
+		if r.ShootWebhookConfigs.MutatingWebhookConfig != nil {
+			log.Info("Updated all shoot mutating webhook configs with new CA bundle", "webhookConfig", r.ShootWebhookConfigs.MutatingWebhookConfig)
+		}
+		if r.ShootWebhookConfigs.ValidatingWebhookConfig != nil {
+			log.Info("Updated all shoot validating webhook configs with new CA bundle", "webhookConfig", r.ShootWebhookConfigs.ValidatingWebhookConfig)
+		}
 	}
 
 	if err := sm.Cleanup(ctx); err != nil {

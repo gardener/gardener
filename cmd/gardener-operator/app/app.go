@@ -168,7 +168,10 @@ func run(ctx context.Context, log logr.Logger, cfg *config.OperatorConfiguration
 		ctx,
 		mgr,
 		clock.RealClock{},
-		[]client.Object{validatingWebhookConfiguration, mutatingWebhookConfiguration},
+		extensionswebhook.Configs{
+			MutatingWebhookConfig:   mutatingWebhookConfiguration,
+			ValidatingWebhookConfig: validatingWebhookConfiguration,
+		},
 		nil,
 		nil,
 		nil,

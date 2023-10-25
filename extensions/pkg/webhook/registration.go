@@ -76,6 +76,23 @@ func (c *Configs) GetWebhookConfigs() []client.Object {
 	return configs
 }
 
+// DeepCopy returns a deep copy of the 'Configs' object.
+func (c *Configs) DeepCopy() *Configs {
+	deepCopy := Configs{}
+	if c.MutatingWebhookConfig != nil {
+		deepCopy.MutatingWebhookConfig = c.MutatingWebhookConfig.DeepCopy()
+	}
+	if c.ValidatingWebhookConfig != nil {
+		deepCopy.ValidatingWebhookConfig = c.ValidatingWebhookConfig.DeepCopy()
+	}
+	return &deepCopy
+}
+
+// HasWebhookConfig returns true if 'Configs' contains at least one webhook configuration.
+func (c *Configs) HasWebhookConfig() bool {
+	return c.MutatingWebhookConfig != nil || c.ValidatingWebhookConfig != nil
+}
+
 // BuildWebhookConfigs builds MutatingWebhookConfiguration objects for seed and shoots from the given webhooks slice.
 func BuildWebhookConfigs(
 	webhooks []*Webhook,
@@ -86,15 +103,13 @@ func BuildWebhookConfigs(
 	caBundle []byte,
 ) (
 	seedWebhookConfig Configs,
-	shootWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration,
+	shootWebhookConfig Configs,
 	err error,
 ) {
 	var (
 		exact       = admissionregistrationv1.Exact
 		sideEffects = admissionregistrationv1.SideEffectClassNone
 		shootMode   = ModeURLWithServiceName
-
-		shootWebhooks []admissionregistrationv1.MutatingWebhook
 	)
 
 	if mode == ModeURL {
@@ -107,7 +122,7 @@ func BuildWebhookConfigs(
 		for _, t := range webhook.Types {
 			rule, err := buildRule(c, t)
 			if err != nil {
-				return seedWebhookConfig, nil, err
+				return seedWebhookConfig, shootWebhookConfig, err
 			}
 			rules = append(rules, *rule)
 		}
@@ -117,6 +132,9 @@ func BuildWebhookConfigs(
 			// webhook config
 			createAndAddToWebhookConfig(
 				&seedWebhookConfig,
+				func() string {
+					return NamePrefix + providerName
+				},
 				*webhook,
 				providerName,
 				rules,
@@ -127,36 +145,21 @@ func BuildWebhookConfigs(
 			)
 
 		case TargetShoot:
-			webhookToRegister := admissionregistrationv1.MutatingWebhook{
-				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				Name:                    fmt.Sprintf("%s.%s.extensions.gardener.cloud", webhook.Name, strings.TrimPrefix(providerName, "provider-")),
-				NamespaceSelector:       webhook.Selector,
-				ObjectSelector:          webhook.ObjectSelector,
-				Rules:                   rules,
-				SideEffects:             &sideEffects,
-				TimeoutSeconds:          pointer.Int32(10),
-			}
-
-			if webhook.TimeoutSeconds != nil {
-				webhookToRegister.TimeoutSeconds = webhook.TimeoutSeconds
-			}
-
-			webhookToRegister.FailurePolicy = getFailurePolicy(admissionregistrationv1.Ignore, webhook.FailurePolicy)
-			webhookToRegister.MatchPolicy = &exact
-			webhookToRegister.ClientConfig = BuildClientConfigFor(webhook.Path, namespace, providerName, servicePort, shootMode, url, caBundle)
-			shootWebhooks = append(shootWebhooks, webhookToRegister)
+			createAndAddToWebhookConfig(
+				&shootWebhookConfig,
+				func() string {
+					return NamePrefix + providerName + NameSuffixShoot
+				},
+				*webhook,
+				providerName,
+				rules,
+				getFailurePolicy(admissionregistrationv1.Ignore, webhook.FailurePolicy),
+				&exact,
+				BuildClientConfigFor(webhook.Path, namespace, providerName, servicePort, shootMode, url, caBundle),
+				&sideEffects,
+			)
 		default:
-			return seedWebhookConfig, nil, fmt.Errorf("invalid webhook target: %s", webhook.Target)
-		}
-	}
-
-	if len(shootWebhooks) > 0 {
-		shootWebhookConfig = &admissionregistrationv1.MutatingWebhookConfiguration{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   NamePrefix + providerName + NameSuffixShoot,
-				Labels: map[string]string{v1beta1constants.LabelExcludeWebhookFromRemediation: "true"},
-			},
-			Webhooks: shootWebhooks,
+			return seedWebhookConfig, shootWebhookConfig, fmt.Errorf("invalid webhook target: %s", webhook.Target)
 		}
 	}
 
@@ -368,6 +371,7 @@ func BuildClientConfigFor(webhookPath string, namespace, componentName string, s
 
 func createAndAddToWebhookConfig(
 	webhookConfigs *Configs,
+	nameFunc func() string,
 	webhook Webhook,
 	providerName string,
 	rules []admissionregistrationv1.RuleWithOperations,
@@ -377,7 +381,7 @@ func createAndAddToWebhookConfig(
 	sideEffects *admissionregistrationv1.SideEffectClass,
 ) {
 	objectMeta := metav1.ObjectMeta{
-		Name:   NamePrefix + providerName,
+		Name:   nameFunc(),
 		Labels: map[string]string{v1beta1constants.LabelExcludeWebhookFromRemediation: "true"},
 	}
 

@@ -20,9 +20,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/utils/clock"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/extensions/pkg/webhook"
@@ -38,9 +36,9 @@ func AddCertificateManagementToManager(
 	ctx context.Context,
 	mgr manager.Manager,
 	clock clock.Clock,
-	sourceWebhookConfigs []client.Object,
-	shootWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration,
-	atomicShootWebhookConfig *atomic.Value,
+	sourceWebhookConfigs webhook.Configs,
+	shootWebhookConfigs *webhook.Configs,
+	atomicShootWebhookConfigs *atomic.Value,
 	shootNamespaceSelector map[string]string,
 	shootWebhookManagedResourceName string,
 	componentName string,
@@ -60,8 +58,8 @@ func AddCertificateManagementToManager(
 		Clock:                           clock,
 		SyncPeriod:                      DefaultSyncPeriod,
 		SourceWebhookConfigs:            sourceWebhookConfigs,
-		ShootWebhookConfig:              shootWebhookConfig,
-		AtomicShootWebhookConfig:        atomicShootWebhookConfig,
+		ShootWebhookConfigs:             shootWebhookConfigs,
+		AtomicShootWebhookConfigs:       atomicShootWebhookConfigs,
 		CASecretName:                    caSecretName,
 		ServerSecretName:                serverSecretName,
 		Namespace:                       namespace,

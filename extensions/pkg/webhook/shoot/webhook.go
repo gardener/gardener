@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -26,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
+	"github.com/gardener/gardener/extensions/pkg/webhook"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -44,7 +44,7 @@ func ReconcileWebhookConfig(
 	extensionNamespace string,
 	extensionName string,
 	managedResourceName string,
-	shootWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration,
+	shootWebhookConfigs webhook.Configs,
 	cluster *controller.Cluster,
 ) error {
 	if cluster.Shoot == nil {
@@ -63,7 +63,7 @@ func ReconcileWebhookConfig(
 
 	data, err := managedresources.
 		NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer).
-		AddAllAndSerialize(shootWebhookConfig)
+		AddAllAndSerialize(shootWebhookConfigs.GetWebhookConfigs()...)
 	if err != nil {
 		return err
 	}
@@ -85,7 +85,7 @@ func ReconcileWebhooksForAllNamespaces(
 	extensionName string,
 	managedResourceName string,
 	shootNamespaceSelector map[string]string,
-	shootWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration,
+	shootWebhookConfigs webhook.Configs,
 ) error {
 	namespaceList := &corev1.NamespaceList{}
 	if err := c.List(ctx, namespaceList, client.MatchingLabels(utils.MergeStringMaps(map[string]string{
@@ -114,7 +114,7 @@ func ReconcileWebhooksForAllNamespaces(
 				return err
 			}
 
-			return ReconcileWebhookConfig(ctx, c, namespaceName, extensionNamespace, extensionName, managedResourceName, shootWebhookConfig.DeepCopy(), cluster)
+			return ReconcileWebhookConfig(ctx, c, namespaceName, extensionNamespace, extensionName, managedResourceName, *shootWebhookConfigs.DeepCopy(), cluster)
 		})
 	}
 
