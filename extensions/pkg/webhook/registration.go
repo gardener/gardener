@@ -23,6 +23,7 @@ import (
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -306,10 +307,16 @@ func buildRule(c client.Client, t Type) (*admissionregistrationv1.RuleWithOperat
 		return nil, fmt.Errorf("could not get GroupVersionKind from object %v: %w", t.Obj, err)
 	}
 
-	// Get REST mapping from GVK
-	mapping, err := c.RESTMapper().RESTMapping(gvk.GroupKind(), gvk.Version)
+	// Get REST mapping from GVK. Don't specify a version to retrieve a mapping since this fails for '__internal' versions.
+	mapping, err := c.RESTMapper().RESTMapping(gvk.GroupKind())
 	if err != nil {
 		return nil, fmt.Errorf("could not get REST mapping from GroupVersionKind '%s': %w", gvk.String(), err)
+	}
+
+	apiVersions := gvk.Version
+	// The internal API version ('__internal') cannot be considered in the webhook rule, take all versions instead.
+	if apiVersions == runtime.APIVersionInternal {
+		apiVersions = "*"
 	}
 
 	resource := mapping.Resource.Resource
@@ -325,7 +332,7 @@ func buildRule(c client.Client, t Type) (*admissionregistrationv1.RuleWithOperat
 		},
 		Rule: admissionregistrationv1.Rule{
 			APIGroups:   []string{gvk.Group},
-			APIVersions: []string{gvk.Version},
+			APIVersions: []string{apiVersions},
 			Resources:   []string{resource},
 		},
 	}, nil
