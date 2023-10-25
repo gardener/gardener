@@ -34,7 +34,7 @@ func ValidateOperatingSystemConfig(osc *extensionsv1alpha1.OperatingSystemConfig
 	allErrs = append(allErrs, ValidateOperatingSystemConfigSpec(&osc.Spec, field.NewPath("spec"))...)
 	allErrs = append(allErrs, ValidateOperatingSystemConfigStatus(&osc.Status, field.NewPath("status"))...)
 
-	allErrs = append(allErrs, validateFileDuplicates(osc.Spec.Files, osc.Status.ExtensionFiles, field.NewPath("spec.files"), field.NewPath("status.extensionFiles"))...)
+	allErrs = append(allErrs, validateFileDuplicates(osc)...)
 
 	return allErrs
 }
@@ -103,12 +103,14 @@ func ValidateUnits(units []extensionsv1alpha1.Unit, fldPath *field.Path) field.E
 				allErrs = append(allErrs, field.Required(jdxPath.Child("content"), "field is required"))
 			}
 		}
+
+		allErrs = append(allErrs, ValidateFiles(unit.Files, idxPath.Child("files"))...)
 	}
 
 	return allErrs
 }
 
-func validateFileDuplicates(specFiles, statusFiles []extensionsv1alpha1.File, fldPathSpec, fldPathStatus *field.Path) field.ErrorList {
+func validateFileDuplicates(osc *extensionsv1alpha1.OperatingSystemConfig) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	paths := sets.New[string]()
@@ -126,8 +128,16 @@ func validateFileDuplicates(specFiles, statusFiles []extensionsv1alpha1.File, fl
 		}
 	}
 
-	check(specFiles, fldPathSpec)
-	check(statusFiles, fldPathStatus)
+	check(osc.Spec.Files, field.NewPath("spec.files"))
+	unitsPath := field.NewPath("spec.units")
+	for i, unit := range osc.Spec.Units {
+		check(unit.Files, unitsPath.Index(i).Child("files"))
+	}
+	check(osc.Status.ExtensionFiles, field.NewPath("status.extensionFiles"))
+	extensionUnitsPath := field.NewPath("status.extensionUnits")
+	for i, unit := range osc.Status.ExtensionUnits {
+		check(unit.Files, extensionUnitsPath.Index(i).Child("files"))
+	}
 
 	return allErrs
 }
@@ -144,10 +154,10 @@ func ValidateFiles(files []extensionsv1alpha1.File, fldPath *field.Path) field.E
 		}
 
 		switch {
-		case file.Content.SecretRef == nil && file.Content.Inline == nil:
-			allErrs = append(allErrs, field.Required(idxPath.Child("content"), "either 'secretRef' or 'inline' must be provided"))
-		case file.Content.SecretRef != nil && file.Content.Inline != nil:
-			allErrs = append(allErrs, field.Invalid(idxPath.Child("content"), file.Content, "either 'secretRef' or 'inline' must be provided, not both at the same time"))
+		case file.Content.SecretRef == nil && file.Content.Inline == nil && file.Content.ImageRef == nil:
+			allErrs = append(allErrs, field.Required(idxPath.Child("content"), "either 'secretRef', 'inline' or 'imageRef' must be provided"))
+		case file.Content.SecretRef != nil && file.Content.Inline != nil || file.Content.SecretRef != nil && file.Content.ImageRef != nil || file.Content.Inline != nil && file.Content.ImageRef != nil:
+			allErrs = append(allErrs, field.Invalid(idxPath.Child("content"), file.Content, "either 'secretRef', 'inline' or 'imageRef' must be provided, not multiple at the same time"))
 		case file.Content.SecretRef != nil:
 			if len(file.Content.SecretRef.Name) == 0 {
 				allErrs = append(allErrs, field.Required(idxPath.Child("content", "secretRef", "name"), "field is required"))
@@ -163,6 +173,13 @@ func ValidateFiles(files []extensionsv1alpha1.File, fldPath *field.Path) field.E
 
 			if len(file.Content.Inline.Data) == 0 {
 				allErrs = append(allErrs, field.Required(idxPath.Child("content", "inline", "data"), "field is required"))
+			}
+		case file.Content.ImageRef != nil:
+			if len(file.Content.ImageRef.Image) == 0 {
+				allErrs = append(allErrs, field.Required(idxPath.Child("content", "imageRef", "image"), "field is required"))
+			}
+			if len(file.Content.ImageRef.FilePathInImage) == 0 {
+				allErrs = append(allErrs, field.Required(idxPath.Child("content", "imageRef", "filePathInImage"), "field is required"))
 			}
 		}
 	}
