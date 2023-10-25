@@ -58,6 +58,13 @@ var (
 	chartPathBootstrap = filepath.Join("charts", "bootstrap")
 )
 
+// BootstrapInterface contains functions for a bootstrap monitoring deployer.
+type BootstrapInterface interface {
+	component.Deployer
+	// SetDNSConfig sets the DNSConfig.
+	SetDNSConfig(*DNSConfig)
+}
+
 // ValuesBootstrap is a set of configuration values for the monitoring components.
 type ValuesBootstrap struct {
 	// AlertingSMTPSecret is the alerting SMTP secret..
@@ -90,6 +97,8 @@ type ValuesBootstrap struct {
 	IstioIngressGatewayLabels map[string]string
 	// IstioIngressGatewayNamespace is the namespace of the used istio ingress gateway.
 	IstioIngressGatewayNamespace string
+	// DNSConfig contains the configuration values used to create a DNS record.
+	DNSConfig *DNSConfig
 }
 
 // NewBootstrap creates a new instance of Deployer for the monitoring components.
@@ -99,7 +108,7 @@ func NewBootstrap(
 	secretsManager secretsmanager.Interface,
 	namespace string,
 	values ValuesBootstrap,
-) component.Deployer {
+) BootstrapInterface {
 	return &bootstrapper{
 		client:         client,
 		chartApplier:   chartApplier,
@@ -319,11 +328,20 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	// TODO(scheererj): Remove in next release after all shoot clusters have been moved
+	// Migration is performed in multiple steps
+	// 0. DNS record handled via wildcard record for nginx-ingress-controller (before)
+	// 1. Overwrite DNS record with more specific record to point to istio after first reconciliation (all shoots)
+	// 2. Add wildcard DNS entry for istio
+	// 3. Remove specific DNS records for all shoots
+	dnsRecord := getDNSRecord(aggregatePrometheusName, b.namespace, b.values.IngressHost, b.values.DNSConfig)
+
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 	data, err := registry.AddAllAndSerialize(
 		gateway,
 		virtualService,
 		destinationRule,
+		dnsRecord,
 	)
 	if err != nil {
 		return err
@@ -375,3 +393,5 @@ func (b *bootstrapper) ensureIstioTLSSecret(ctx context.Context, tlsSecret *core
 func (b *bootstrapper) cleanupOldIstioTLSSecrets(ctx context.Context, tlsSecret *corev1.Secret) error {
 	return cleanupOldIstioTLSSecrets(ctx, b.client, tlsSecret, b.values.IstioIngressGatewayNamespace, b.getIstioTLSSecretLabels)
 }
+
+func (b *bootstrapper) SetDNSConfig(dnsConfig *DNSConfig) { b.values.DNSConfig = dnsConfig }

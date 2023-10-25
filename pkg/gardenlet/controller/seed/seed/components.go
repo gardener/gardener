@@ -422,7 +422,7 @@ func defaultMonitoring(
 	istioIngressGatewayLabels map[string]string,
 	istioIngressGatewayNamespace string,
 ) (
-	component.Deployer,
+	monitoring.BootstrapInterface,
 	error,
 ) {
 	imageAlertmanager, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlertmanager)

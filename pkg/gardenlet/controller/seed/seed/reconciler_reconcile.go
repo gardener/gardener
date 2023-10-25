@@ -52,6 +52,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/kubeapiserverexposure"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
+	"github.com/gardener/gardener/pkg/component/monitoring"
 	"github.com/gardener/gardener/pkg/component/plutono"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/component/vpa"
@@ -400,7 +401,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	if err != nil {
 		return err
 	}
-	monitoring, err := defaultMonitoring(
+	defaultMonitoring, err := defaultMonitoring(
 		seedClient,
 		chartApplier,
 		secretsManager,
@@ -456,9 +457,30 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Name: "Deploying VPN authorization server",
 			Fn:   vpnAuthzServer.Deploy,
 		})
+		monitoringDNSConfigSet = g.Add(flow.Task{
+			Name: "Deploying Aggregate Prometheus DNS record",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				dnsConfig := &monitoring.DNSConfig{
+					SecretName:      "seed-ingress",
+					SecretNamespace: v1beta1constants.GardenNamespace,
+				}
+				if dns := seed.GetInfo().Spec.DNS; dns.Provider != nil {
+					dnsConfig.ProviderType = dns.Provider.Type
+				}
+				address, err := WaitUntilLoadBalancerIsReady(ctx, log, seedClient, istioDefaultNamespace, v1beta1constants.DefaultSNIIngressServiceName, time.Minute)
+				if err != nil {
+					return err
+				}
+				dnsConfig.Value = address
+				defaultMonitoring.SetDNSConfig(dnsConfig)
+				return nil
+			}),
+			Dependencies: flow.NewTaskIDs(istioDeployed),
+		})
 		_ = g.Add(flow.Task{
-			Name: "Deploying monitoring components",
-			Fn:   monitoring.Deploy,
+			Name:         "Deploying monitoring components",
+			Fn:           defaultMonitoring.Deploy,
+			Dependencies: flow.NewTaskIDs(monitoringDNSConfigSet, ingressDNSRecordDeployed),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Renewing garden access secrets",
