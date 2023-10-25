@@ -37,6 +37,12 @@ var (
 		string(core.CRINameDocker),
 		string(core.CRINameContainerD),
 	)
+
+	availableUpdateStrategiesForMachineImage = sets.New(
+		string(core.UpdateStrategyPatch),
+		string(core.UpdateStrategyMinor),
+		string(core.UpdateStrategyMajor),
+	)
 )
 
 // ValidateCloudProfile validates a CloudProfile object.
@@ -247,6 +253,12 @@ func validateMachineImages(machineImages []core.MachineImage, fldPath *field.Pat
 
 		if len(image.Versions) == 0 {
 			allErrs = append(allErrs, field.Required(idxPath.Child("versions"), fmt.Sprintf("must provide at least one version for the machine image '%s'", image.Name)))
+		}
+
+		if image.UpdateStrategy != nil {
+			if !availableUpdateStrategiesForMachineImage.Has(string(*image.UpdateStrategy)) {
+				allErrs = append(allErrs, field.NotSupported(idxPath.Child("updateStrategy"), *image.UpdateStrategy, sets.List(availableUpdateStrategiesForMachineImage)))
+			}
 		}
 
 		for index, machineVersion := range image.Versions {
