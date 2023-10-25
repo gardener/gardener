@@ -27,7 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 )
 
-var (
+const (
 	alertmanagerName = "alertmanager"
 	prometheusName   = "prometheus"
 )

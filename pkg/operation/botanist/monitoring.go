@@ -77,7 +77,9 @@ func (b *Botanist) DefaultMonitoring() (monitoring.Interface, error) {
 		StorageCapacityAlertmanager:  b.Seed.GetValidVolumeSize("1Gi"),
 		TargetName:                   b.Shoot.GetInfo().Name,
 		TargetProviderType:           b.Shoot.GetInfo().Spec.Provider.Type,
-		WildcardCertName:             nil,
+		WildcardCert:                 nil,
+		IstioIngressGatewayLabels:    b.DefaultIstioLabels(),
+		IstioIngressGatewayNamespace: *b.Config.SNI.Ingress.Namespace,
 	}
 
 	if b.Shoot.Networks != nil {
@@ -113,7 +115,7 @@ func (b *Botanist) DeployMonitoring(ctx context.Context) error {
 	}
 
 	if b.ControlPlaneWildcardCert != nil {
-		b.Operation.Shoot.Components.Monitoring.Monitoring.SetWildcardCertName(pointer.String(b.ControlPlaneWildcardCert.GetName()))
+		b.Operation.Shoot.Components.Monitoring.Monitoring.SetWildcardCert(b.ControlPlaneWildcardCert)
 	}
 	b.Shoot.Components.Monitoring.Monitoring.SetNamespaceUID(b.SeedNamespaceObject.UID)
 	b.Shoot.Components.Monitoring.Monitoring.SetComponents(b.getMonitoringComponents())

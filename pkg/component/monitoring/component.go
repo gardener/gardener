@@ -21,10 +21,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
@@ -37,14 +40,26 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/etcd"
+	"github.com/gardener/gardener/pkg/component/monitoring/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/istio"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+)
+
+const (
+	managedResourceNamePrometheus   = "shoot-core-prometheus"
+	managedResourceNameAlertManager = alertmanagerName
+
+	externalPort = 443
+
+	labelTLSSecretOwner = "owner"
 )
 
 var (
@@ -55,8 +70,6 @@ var (
 	//go:embed charts/seed-monitoring/charts/core
 	chartCore     embed.FS
 	chartPathCore = filepath.Join("charts", "seed-monitoring", "charts", "core")
-
-	managedResourceNamePrometheus = "shoot-core-prometheus"
 )
 
 // Interface contains functions for a monitoring deployer.
@@ -66,8 +79,8 @@ type Interface interface {
 	SetNamespaceUID(types.UID)
 	// SetComponents sets the monitoring components.
 	SetComponents([]component.MonitoringComponent)
-	// SetWildcardCertName sets the WildcardCertName components.
-	SetWildcardCertName(*string)
+	// SetWildcardCert sets the wildcard tls certificate which is issued for the seed's ingress domain.
+	SetWildcardCert(*corev1.Secret)
 }
 
 // Values is a set of configuration values for the monitoring components.
@@ -132,8 +145,12 @@ type Values struct {
 	TargetName string
 	// TargetProviderType is the provider type of the target cluster.
 	TargetProviderType string
-	// WildcardCertName is name of wildcard tls certificate which is issued for the seed's ingress domain.
-	WildcardCertName *string
+	// WildcardCert is the wildcard tls certificate which is issued for the seed's ingress domain.
+	WildcardCert *corev1.Secret
+	// IstioIngressGatewayLabels are the labels for identifying the used istio ingress gateway.
+	IstioIngressGatewayLabels map[string]string
+	// IstioIngressGatewayNamespace is the namespace of the used istio ingress gateway.
+	IstioIngressGatewayNamespace string
 }
 
 // New creates a new instance of Interface for the monitoring components.
@@ -184,8 +201,8 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 	}
 
 	var ingressTLSSecretName string
-	if m.values.WildcardCertName != nil {
-		ingressTLSSecretName = *m.values.WildcardCertName
+	if m.values.WildcardCert != nil {
+		ingressTLSSecretName = m.values.WildcardCert.Name
 	} else {
 		ingressTLSSecret, err := m.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 			Name:                        "prometheus-tls",
@@ -364,9 +381,9 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 			}
 		}
 
-		var alertManagerIngressTLSSecretName string
-		if m.values.WildcardCertName != nil {
-			alertManagerIngressTLSSecretName = *m.values.WildcardCertName
+		var alertManagerIngressTLSSecret *corev1.Secret
+		if m.values.WildcardCert != nil {
+			alertManagerIngressTLSSecret = m.values.WildcardCert
 		} else {
 			ingressTLSSecret, err := m.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 				Name:                        "alertmanager-tls",
@@ -380,7 +397,7 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-			alertManagerIngressTLSSecretName = ingressTLSSecret.Name
+			alertManagerIngressTLSSecret = ingressTLSSecret
 		}
 
 		alertManagerValues := map[string]interface{}{
@@ -389,21 +406,95 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 				"configmap-reloader": m.values.ImageConfigmapReloader,
 			},
 			"ingress": map[string]interface{}{
-				"class":          v1beta1constants.SeedNginxIngressClass,
-				"authSecretName": credentialsSecret.Name,
-				"hosts": []map[string]interface{}{
-					{
-						"hostName":   m.values.IngressHostAlertmanager,
-						"secretName": alertManagerIngressTLSSecretName,
-					},
-				},
+				"host": m.values.IngressHostAlertmanager,
 			},
 			"replicas":     m.values.Replicas,
 			"storage":      m.values.StorageCapacityAlertmanager,
 			"emailConfigs": emailConfigs,
 		}
 
-		return m.chartApplier.ApplyFromEmbeddedFS(ctx, chartAlertmanager, chartPathAlertmanager, m.namespace, "alertmanager", kubernetes.Values(alertManagerValues))
+		istioTLSSecret := alertManagerIngressTLSSecret.DeepCopy()
+		istioTLSSecret.Type = alertManagerIngressTLSSecret.Type
+		istioTLSSecret.ObjectMeta = metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-%s", m.namespace, alertManagerIngressTLSSecret.Name),
+			Namespace: m.values.IstioIngressGatewayNamespace,
+			Labels:    m.getIstioTLSSecretLabels(getAlertManagerLabels),
+		}
+		if err := m.ensureIstioTLSSecret(ctx, istioTLSSecret); err != nil {
+			return err
+		}
+
+		gateway := &istionetworkingv1beta1.Gateway{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      alertmanagerName,
+				Namespace: m.namespace,
+			},
+		}
+		if err := istio.GatewayWithTLSTermination(gateway, getAlertManagerLabels(), m.values.IstioIngressGatewayLabels, []string{m.values.IngressHostAlertmanager}, externalPort, istioTLSSecret.Name)(); err != nil {
+			return err
+		}
+
+		virtualService := &istionetworkingv1beta1.VirtualService{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      alertmanagerName,
+				Namespace: m.namespace,
+			},
+		}
+		destinationHost := fmt.Sprintf("%s-client.%s.svc.%s", alertmanagerName, m.namespace, gardencorev1beta1.DefaultDomain)
+		if err := istio.VirtualServiceWithSNIMatchAndBasicAuth(virtualService, getAlertManagerLabels(), []string{m.values.IngressHostAlertmanager}, alertmanagerName, externalPort, destinationHost, constants.AlertManagerPort, string(credentialsSecret.Data[corev1.BasicAuthUsernameKey]), string(credentialsSecret.Data[corev1.BasicAuthPasswordKey]))(); err != nil {
+			return err
+		}
+		virtualService.Spec.Http = append([]*istioapinetworkingv1beta1.HTTPRoute{{
+			Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{{
+				Uri: &istioapinetworkingv1beta1.StringMatch{
+					MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+						Prefix: "/-/reload",
+					},
+				},
+			}},
+			DirectResponse: &istioapinetworkingv1beta1.HTTPDirectResponse{
+				Status: 403,
+			},
+		}}, virtualService.Spec.Http...)
+
+		destinationRule := &istionetworkingv1beta1.DestinationRule{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      alertmanagerName,
+				Namespace: m.namespace,
+			},
+		}
+		if err := istio.DestinationRuleWithLocalityPreference(destinationRule, getAlertManagerLabels(), destinationHost)(); err != nil {
+			return err
+		}
+
+		registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+		data, err := registry.AddAllAndSerialize(
+			gateway,
+			virtualService,
+			destinationRule,
+		)
+		if err != nil {
+			return err
+		}
+		if err := managedresources.CreateForSeed(ctx, m.client, m.namespace, managedResourceNameAlertManager, false, data); err != nil {
+			return err
+		}
+
+		// TODO(scheererj): Remove with next release after all ingress objects have been deleted.
+		if err := kubernetesutils.DeleteObjects(ctx, m.client, &networkingv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      alertmanagerName,
+				Namespace: m.namespace,
+			},
+		}); err != nil {
+			return err
+		}
+
+		if err := m.chartApplier.ApplyFromEmbeddedFS(ctx, chartAlertmanager, chartPathAlertmanager, m.namespace, "alertmanager", kubernetes.Values(alertManagerValues)); err != nil {
+			return err
+		}
+
+		return m.cleanupOldIstioTLSSecrets(ctx, istioTLSSecret, getAlertManagerLabels)
 	}
 
 	return deleteAlertmanager(ctx, m.client, m.namespace)
@@ -411,6 +502,14 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 
 func (m *monitoring) Destroy(ctx context.Context) error {
 	if err := deleteAlertmanager(ctx, m.client, m.namespace); err != nil {
+		return err
+	}
+
+	if err := managedresources.DeleteForSeed(ctx, m.client, m.namespace, managedResourceNameAlertManager); err != nil {
+		return err
+	}
+
+	if err := m.cleanupOldIstioTLSSecrets(ctx, nil, getAlertManagerLabels); err != nil {
 		return err
 	}
 
@@ -505,7 +604,7 @@ func (m *monitoring) Destroy(ctx context.Context) error {
 
 func (m *monitoring) SetNamespaceUID(uid types.UID)                   { m.values.NamespaceUID = uid }
 func (m *monitoring) SetComponents(c []component.MonitoringComponent) { m.values.Components = c }
-func (m *monitoring) SetWildcardCertName(secretName *string)          { m.values.WildcardCertName = secretName }
+func (m *monitoring) SetWildcardCert(secret *corev1.Secret)           { m.values.WildcardCert = secret }
 
 func (m *monitoring) newShootAccessSecret() *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret(v1beta1constants.StatefulSetNamePrometheus, m.namespace)
@@ -674,4 +773,56 @@ func (m *monitoring) getAlertingRulesAndScrapeConfigs(ctx context.Context) (aler
 	}
 
 	return
+}
+
+func getAlertManagerLabels() map[string]string {
+	return map[string]string{
+		"component":                alertmanagerName,
+		v1beta1constants.LabelRole: v1beta1constants.GardenRoleMonitoring,
+	}
+}
+
+func (m *monitoring) getIstioTLSSecretLabels(labelsFunc func() map[string]string) map[string]string {
+	return utils.MergeStringMaps(labelsFunc(), map[string]string{labelTLSSecretOwner: m.namespace})
+}
+
+func (m *monitoring) ensureIstioTLSSecret(ctx context.Context, tlsSecret *corev1.Secret) error {
+	secret := &corev1.Secret{}
+	if err := m.client.Get(ctx, client.ObjectKeyFromObject(tlsSecret), secret); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+
+		if err := m.client.Create(ctx, tlsSecret); err != nil {
+			if !apierrors.IsAlreadyExists(err) {
+				return err
+			}
+
+			if err := m.client.Get(ctx, client.ObjectKeyFromObject(tlsSecret), secret); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (m *monitoring) cleanupOldIstioTLSSecrets(ctx context.Context, tlsSecret *corev1.Secret, labelsFunc func() map[string]string) error {
+	secretList := &corev1.SecretList{}
+	if err := m.client.List(ctx, secretList, client.InNamespace(m.values.IstioIngressGatewayNamespace), client.MatchingLabels(m.getIstioTLSSecretLabels(labelsFunc))); err != nil {
+		return err
+	}
+
+	var fns []flow.TaskFn
+
+	for _, s := range secretList.Items {
+		secret := s
+
+		if tlsSecret != nil && tlsSecret.Name == secret.Name {
+			continue
+		}
+
+		fns = append(fns, func(ctx context.Context) error { return client.IgnoreNotFound(m.client.Delete(ctx, &secret)) })
+	}
+
+	return flow.Parallel(fns...)(ctx)
 }
