@@ -246,10 +246,6 @@ check-vulnerabilities: $(GO_VULN_CHECK)
 test-prometheus: $(PROMTOOL)
 	@./hack/test-prometheus.sh
 
-.PHONY: check-docforge
-check-docforge: $(DOCFORGE)
-	@./hack/check-docforge.sh
-
 .PHONY: verify
 verify: check format test test-integration test-prometheus
 
