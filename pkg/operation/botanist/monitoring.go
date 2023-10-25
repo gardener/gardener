@@ -16,6 +16,7 @@ package botanist
 
 import (
 	"context"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
@@ -26,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/monitoring"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // DefaultMonitoring creates a new monitoring component.
@@ -119,6 +121,22 @@ func (b *Botanist) DeployMonitoring(ctx context.Context) error {
 	}
 	b.Shoot.Components.Monitoring.Monitoring.SetNamespaceUID(b.SeedNamespaceObject.UID)
 	b.Shoot.Components.Monitoring.Monitoring.SetComponents(b.getMonitoringComponents())
+
+	dnsConfig := &monitoring.DNSConfig{
+		SecretName:      "seed-ingress",
+		SecretNamespace: v1beta1constants.GardenNamespace,
+	}
+	if dns := b.Seed.GetInfo().Spec.DNS; dns.Provider != nil {
+		dnsConfig.ProviderType = dns.Provider.Type
+	}
+	// Always use the default istio ingress gateway and do not consider exposure classes for observability components
+	address, err := kubernetesutils.WaitUntilLoadBalancerIsReady(ctx, b.Logger, b.SeedClientSet.Client(), *b.Config.SNI.Ingress.Namespace, v1beta1constants.DefaultSNIIngressServiceName, time.Minute)
+	if err != nil {
+		return err
+	}
+	dnsConfig.Value = address
+	b.Operation.Shoot.Components.Monitoring.Monitoring.SetDNSConfig(dnsConfig)
+
 	return b.Shoot.Components.Monitoring.Monitoring.Deploy(ctx)
 }
 

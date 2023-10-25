@@ -36,6 +36,8 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
@@ -81,6 +83,8 @@ type Interface interface {
 	SetComponents([]component.MonitoringComponent)
 	// SetWildcardCert sets the wildcard tls certificate which is issued for the seed's ingress domain.
 	SetWildcardCert(*corev1.Secret)
+	// SetDNSConfig sets the DNSConfig.
+	SetDNSConfig(*DNSConfig)
 }
 
 // Values is a set of configuration values for the monitoring components.
@@ -151,6 +155,20 @@ type Values struct {
 	IstioIngressGatewayLabels map[string]string
 	// IstioIngressGatewayNamespace is the namespace of the used istio ingress gateway.
 	IstioIngressGatewayNamespace string
+	// DNSConfig contains the configuration values used to create a DNS record.
+	DNSConfig *DNSConfig
+}
+
+// DNSConfig contains the configuration values used to create a DNS record.
+type DNSConfig struct {
+	// ProviderType is the type of the DNS provider.
+	ProviderType string
+	// Value is the value of the DNS record.
+	Value string
+	// SecretName is the name of the secret referenced by the DNS record resource.
+	SecretName string
+	// SecretNamespace is the namespace of the secret used by the DNS record.
+	SecretNamespace string
 }
 
 // New creates a new instance of Interface for the monitoring components.
@@ -467,11 +485,20 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 			return err
 		}
 
+		// TODO(scheererj): Remove in next release after all shoot clusters have been moved
+		// Migration is performed in multiple steps
+		// 0. DNS record handled via wildcard record for nginx-ingress-controller (before)
+		// 1. Overwrite DNS record with more specific record to point to istio after first reconciliation (all shoots)
+		// 2. Add wildcard DNS entry for istio
+		// 3. Remove specific DNS records for all shoots
+		dnsRecord := m.getDNSRecord(alertmanagerName, m.values.IngressHostAlertmanager)
+
 		registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 		data, err := registry.AddAllAndSerialize(
 			gateway,
 			virtualService,
 			destinationRule,
+			dnsRecord,
 		)
 		if err != nil {
 			return err
@@ -605,6 +632,7 @@ func (m *monitoring) Destroy(ctx context.Context) error {
 func (m *monitoring) SetNamespaceUID(uid types.UID)                   { m.values.NamespaceUID = uid }
 func (m *monitoring) SetComponents(c []component.MonitoringComponent) { m.values.Components = c }
 func (m *monitoring) SetWildcardCert(secret *corev1.Secret)           { m.values.WildcardCert = secret }
+func (m *monitoring) SetDNSConfig(dnsConfig *DNSConfig)               { m.values.DNSConfig = dnsConfig }
 
 func (m *monitoring) newShootAccessSecret() *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret(v1beta1constants.StatefulSetNamePrometheus, m.namespace)
@@ -773,6 +801,32 @@ func (m *monitoring) getAlertingRulesAndScrapeConfigs(ctx context.Context) (aler
 	}
 
 	return
+}
+
+func (m *monitoring) getDNSRecord(name, host string) *extensionsv1alpha1.DNSRecord {
+	if m.values.DNSConfig == nil {
+		return nil
+	}
+	return &extensionsv1alpha1.DNSRecord{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: m.namespace,
+			// Allow deletion via managed resource by directly setting the confirmation annotation
+			Annotations: map[string]string{gardenerutils.ConfirmationDeletion: "true"},
+		},
+		Spec: extensionsv1alpha1.DNSRecordSpec{
+			DefaultSpec: extensionsv1alpha1.DefaultSpec{
+				Type: m.values.DNSConfig.ProviderType,
+			},
+			SecretRef: corev1.SecretReference{
+				Name:      m.values.DNSConfig.SecretName,
+				Namespace: m.values.DNSConfig.SecretNamespace,
+			},
+			Name:       host,
+			RecordType: extensionsv1alpha1helper.GetDNSRecordType(m.values.DNSConfig.Value),
+			Values:     []string{m.values.DNSConfig.Value},
+		},
+	}
 }
 
 func getAlertManagerLabels() map[string]string {
