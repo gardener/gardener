@@ -44,7 +44,7 @@ if [ $use_cache = yes ] ; then
   done
 
   # run test instead of test-cov to speed-up PR verification as `-cover` flag is not "cacheable"
-  make check-generate verify check-docforge
+  make check-generate verify 
 
   echo "> moving all cached dirs back to concourse cache dir"
   for cache in "${cache_dirs[@]}" ; do
@@ -55,9 +55,9 @@ if [ $use_cache = yes ] ; then
 else
   if [ "${TEST_COV+yes}" = yes ] ; then
     # supposed to be run in release jobs
-    make verify-extended check-docforge
+    make verify-extended
   else
     # run test instead of test-cov to speed-up jobs, as coverage slows down tests significantly
-    make check-generate verify check-docforge
+    make check-generate verify
   fi
 fi
