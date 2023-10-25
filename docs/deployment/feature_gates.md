@@ -28,9 +28,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | MutableShootSpecNetworkingNodes     | `false` | `Alpha` | `1.64` |        |
 | WorkerlessShoots                    | `false` | `Alpha` | `1.70` | `1.78` |
 | WorkerlessShoots                    | `false` | `Beta`  | `1.79` |        |
-| MachineControllerManagerDeployment  | `false` | `Alpha` | `1.73` |        |
-| MachineControllerManagerDeployment  | `true`  | `Beta`  | `1.81` | `1.81` |
-| MachineControllerManagerDeployment  | `true`  | `GA`    | `1.82` |        |
 | ContainerdRegistryHostsDir          | `false` | `Alpha` | `1.77` |        |
 | ShootForceDeletion                  | `false` | `Alpha` | `1.81` |        |
 | APIServerFastRollout                | `true`  | `Beta`  | `1.82` |        |
@@ -138,6 +135,10 @@ The following tables are a summary of the feature gates that you can set on diff
 | DisableScalingClassesForShoots               | `true`  | `Beta`       | `1.79` | `1.80` |
 | DisableScalingClassesForShoots               | `true`  | `GA`         | `1.81` | `1.81` |
 | DisableScalingClassesForShoots               | `true`  | `Removed`    | `1.82` |        |
+| MachineControllerManagerDeployment           | `false` | `Alpha`      | `1.73` |        |
+| MachineControllerManagerDeployment           | `true`  | `Beta`       | `1.81` | `1.81` |
+| MachineControllerManagerDeployment           | `true`  | `GA`         | `1.82` | `1.82` |
+| MachineControllerManagerDeployment           | `true`  | `Removed`    | `1.83` |        |
 
 ## Using a Feature
 
@@ -184,7 +185,6 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | IPv6SingleStack                    | `gardener-apiserver`, `gardenlet` | Allows creating seed and shoot clusters with [IPv6 single-stack networking](../usage/ipv6.md) enabled in their spec ([GEP-21](../proposals/21-ipv6-singlestack-local.md)). If enabled in gardenlet, the default behavior is unchanged, but setting `ipFamilies=[IPv6]` in the `seedConfig` is allowed. Only if the `ipFamilies` setting is changed, gardenlet behaves differently. |
 | MutableShootSpecNetworkingNodes    | `gardener-apiserver`              | Allows updating the field `spec.networking.nodes`. The validity of the values has to be checked in the provider extensions. Only enable this feature gate when your system runs provider extensions which have implemented the validation.                                                                                                                                         |
 | WorkerlessShoots                   | `gardener-apiserver`              | WorkerlessShoots allows creation of Shoot clusters with no worker pools.                                                                                                                                                                                                                                                                                                           |
-| MachineControllerManagerDeployment | `gardenlet`                       | Enables Gardener to take over the deployment of the machine-controller-manager. If enabled, all registered provider extensions must support injecting the provider-specific MCM sidecar container into the deployment via the `controlplane` webhook.                                                                                                                              |
 | ContainerdRegistryHostsDir         | `gardenlet`                       | Enables registry configuration in containerd based on the hosts directory pattern. The hosts directory pattern is the new way of configuring registries/mirrors in containerd. Ref https://github.com/containerd/containerd/blob/main/docs/hosts.md.                                                                                                                               |
 | ShootForceDeletion                 | `gardener-apiserver`              | Allows forceful deletion of Shoots by annotating them with the `confirmation.gardener.cloud/force-deletion` annotation.                                                                                                                                                                                                                                                            |
 | APIServerFastRollout               | `gardenlet`                       | Enables fast rollouts for Shoot kube-apiservers on the given Seed. When enabled, `maxSurge` for Shoot kube-apiserver deployments is set to 100%.                                                                                                                                                                                                                                                                  |
