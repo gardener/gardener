@@ -918,6 +918,7 @@ build:
         - pkg/component/machinecontrollermanager
         - pkg/component/metricsserver
         - pkg/component/monitoring
+        - pkg/component/monitoring/constants
         - pkg/component/namespaces
         - pkg/component/nginxingress
         - pkg/component/nodeexporter
