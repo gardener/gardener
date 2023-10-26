@@ -15,11 +15,12 @@
 package v1beta1_test
 
 import (
-	. "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	. "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 var _ = Describe("SecretBinding defaulting", func() {
