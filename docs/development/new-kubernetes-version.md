@@ -70,6 +70,13 @@ There is a CI/CD job that runs periodically and releases a new `hyperkube` image
   - For any removed admission plugins, add `<new-version>` as `RemovedInVersion` to the already existing admission plugin in the map.
   - Flag any admission plugins that are required (plugins that must not be disabled in the `Shoot` spec) by setting the `Required` boolean variable to true for the admission plugin in the map.
   - Flag any admission plugins that are forbidden by setting the `Forbidden` boolean variable to true for the admission plugin in the map.
+- Maintain the Kubernetes `kube-apiserver` API groups used for validation of `Shoot` resources:
+  - The API groups are maintained in [this](https://github.com/gardener/gardener/blob/master/pkg/utils/validation/apigroups/apigroups.go) file.
+  - To maintain this list for new Kubernetes versions, run `hack/compare-k8s-api-groups.sh <old-version> <new-version>` (e.g. `hack/compare-k8s-api-groups.sh 1.26 1.27`).
+  - It will present 2 lists of API GroupVersions and 2 lists of API GroupVersionResources: those added and those removed in `<new-version>` compared to `<old-version>`.
+  - Add all added group versions to the `apiGroupVersionRanges` map and group version resources to the `apiGVRVersionRanges` map with `<new-version>` as `AddedInVersion` and no `RemovedInVersion`.
+  - For any removed APIs, add `<new-version>` as `RemovedInVersion` to the already existing API in the corresponding map.
+  - Flag any APIs that are required (APIs that must not be disabled in the `Shoot` spec) by setting the `Required` and `RequiredForWorkerless` boolean variable to true for the API in the `apiGVRVersionRanges` map. If the whole API is required, then mark it in the `apiGroupVersionRanges` map.
 - Maintain the `ServiceAccount` names for the controllers part of `kube-controller-manager`:
   - The names are maintained in [this](https://github.com/gardener/gardener/blob/master/pkg/component/shootsystem/shootsystem.go) file.
   - To maintain this list for new Kubernetes versions, run `hack/compare-k8s-controllers.sh <old-version> <new-version>` (e.g. `hack/compare-k8s-controllers.sh 1.26 1.27`).
@@ -109,7 +116,7 @@ After the PR in `gardener/gardener` for the support of the new version has been 
 Some of the cloud providers are not yet using upstream `cloud-controller-manager` images.
 Instead, we build and maintain them ourselves:
 
-- https://github.com/gardener/cloud-provider-gcp
+- [cloud-provider-gcp](https://github.com/gardener/cloud-provider-gcp)
 
 Until we switch to upstream images, you need to revendor the Kubernetes dependencies and release a new image.
 The required steps are as follows:
