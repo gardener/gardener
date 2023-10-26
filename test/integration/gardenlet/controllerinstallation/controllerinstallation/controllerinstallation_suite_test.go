@@ -78,6 +78,7 @@ var (
 	mgrClient     client.Client
 
 	seed                  *gardencorev1beta1.Seed
+	seedNamespace         *corev1.Namespace
 	gardenNamespace       *corev1.Namespace
 	identity              = &gardencorev1beta1.Gardener{Version: "1.2.3"}
 	gardenClusterIdentity = "test-garden"
@@ -169,6 +170,20 @@ var _ = BeforeSuite(func() {
 		Expect(testClient.Delete(ctx, seed)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
+	By("Create seed namespace")
+	seedNamespace = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "seed-" + seed.Name,
+		},
+	}
+	Expect(testClient.Create(ctx, seedNamespace)).To(Succeed())
+	log.Info("Created seed namespace for test", "namespaceName", seedNamespace)
+
+	DeferCleanup(func() {
+		By("Delete seed namespace")
+		Expect(testClient.Delete(ctx, seedNamespace)).To(Or(Succeed(), BeNotFoundError()))
+	})
+
 	By("Create garden namespace")
 	gardenNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -176,7 +191,7 @@ var _ = BeforeSuite(func() {
 		},
 	}
 	Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
-	log.Info("Created namespace for test", "namespaceName", gardenNamespace)
+	log.Info("Created garden namespace for test", "namespaceName", gardenNamespace)
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
