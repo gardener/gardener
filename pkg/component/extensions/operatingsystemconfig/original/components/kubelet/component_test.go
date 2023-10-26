@@ -25,8 +25,10 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Component", func() {
@@ -44,7 +46,8 @@ var _ = Describe("Component", func() {
 	})
 
 	DescribeTable("#Config",
-		func(kubernetesVersion string, criName extensionsv1alpha1.CRIName, kubeletConfig string) {
+		func(kubernetesVersion string, criName extensionsv1alpha1.CRIName, kubeletConfig string, useGardenerNodeAgentEnabled bool) {
+			defer test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, useGardenerNodeAgentEnabled)()
 
 			ctx.CRIName = criName
 			ctx.KubernetesVersion = semver.MustParse(kubernetesVersion)
@@ -70,74 +73,19 @@ var _ = Describe("Component", func() {
 			units, files, err := component.Config(ctx)
 
 			Expect(err).NotTo(HaveOccurred())
+
 			Expect(units).To(ConsistOf(
-				extensionsv1alpha1.Unit{
-					Name:    "kubelet.service",
-					Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-					Enable:  pointer.Bool(true),
-					Content: pointer.String(`[Unit]
-Description=kubelet daemon
-Documentation=https://kubernetes.io/docs/admin/kubelet
-` + unitConfigAfterCRI(criName) + `
-[Install]
-WantedBy=multi-user.target
-[Service]
-Restart=always
-RestartSec=5
-EnvironmentFile=/etc/environment
-EnvironmentFile=-/var/lib/kubelet/extra_args
-ExecStartPre=/var/lib/kubelet/copy-kubernetes-binary.sh kubelet
-ExecStart=/opt/bin/kubelet \
-    ` + utils.Indent(strings.Join(cliFlags, " \\\n"), 4) + ` $KUBELET_EXTRA_ARGS`),
-				},
-				extensionsv1alpha1.Unit{
-					Name:    "kubelet-monitor.service",
-					Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-					Enable:  pointer.Bool(true),
-					Content: pointer.String(`[Unit]
-Description=Kubelet-monitor daemon
-After=kubelet.service
-[Install]
-WantedBy=multi-user.target
-[Service]
-Restart=always
-EnvironmentFile=/etc/environment
-ExecStartPre=/var/lib/kubelet/copy-kubernetes-binary.sh kubectl
-ExecStart=/opt/bin/health-monitor-kubelet`),
-				},
+				kubeletUnit(ctx, criName, cliFlags, kubeletConfig, kubeletCABundleBase64, useGardenerNodeAgentEnabled),
+				kubeletMonitorUnit(ctx, useGardenerNodeAgentEnabled),
 			))
-			Expect(files).To(ConsistOf(
-				extensionsv1alpha1.File{
-					Path:        "/var/lib/kubelet/ca.crt",
-					Permissions: pointer.Int32(0644),
-					Content: extensionsv1alpha1.FileContent{
-						Inline: &extensionsv1alpha1.FileContentInline{
-							Encoding: "b64",
-							Data:     kubeletCABundleBase64,
-						},
-					},
-				},
-				extensionsv1alpha1.File{
-					Path:        "/var/lib/kubelet/config/kubelet",
-					Permissions: pointer.Int32(0644),
-					Content: extensionsv1alpha1.FileContent{
-						Inline: &extensionsv1alpha1.FileContentInline{
-							Encoding: "b64",
-							Data:     utils.EncodeBase64([]byte(kubeletConfig)),
-						},
-					},
-				},
-				extensionsv1alpha1.File{
-					Path:        "/opt/bin/health-monitor-kubelet",
-					Permissions: pointer.Int32(0755),
-					Content: extensionsv1alpha1.FileContent{
-						Inline: &extensionsv1alpha1.FileContentInline{
-							Encoding: "b64",
-							Data:     utils.EncodeBase64([]byte(healthMonitorScript)),
-						},
-					},
-				},
-			))
+
+			if useGardenerNodeAgentEnabled {
+				Expect(files).To(BeEmpty())
+			} else {
+				Expect(files).To(ConsistOf(
+					append(kubeletFiles(ctx, kubeletConfig, kubeletCABundleBase64, useGardenerNodeAgentEnabled), kubeletMonitorFiles(ctx, useGardenerNodeAgentEnabled)...),
+				))
+			}
 		},
 
 		Entry(
@@ -145,24 +93,42 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"1.25.1",
 			extensionsv1alpha1.CRINameDocker,
 			kubeletConfig(true, true, false),
+			false,
 		),
 		Entry(
 			"kubernetes 1.25, w/ containerd",
 			"1.25.1",
 			extensionsv1alpha1.CRINameContainerD,
 			kubeletConfig(true, true, false),
+			false,
+		),
+		Entry(
+			"kubernetes 1.25, w/ containerd + node-agent",
+			"1.25.1",
+			extensionsv1alpha1.CRINameContainerD,
+			kubeletConfig(true, true, false),
+			true,
 		),
 		Entry(
 			"kubernetes 1.26, w/ docker",
 			"1.26.1",
 			extensionsv1alpha1.CRINameDocker,
 			kubeletConfig(true, true, true),
+			false,
 		),
 		Entry(
 			"kubernetes 1.26, w/ containerd",
 			"1.26.1",
 			extensionsv1alpha1.CRINameContainerD,
 			kubeletConfig(true, true, true),
+			false,
+		),
+		Entry(
+			"kubernetes 1.26, w/ containerd + node-agent",
+			"1.26.1",
+			extensionsv1alpha1.CRINameContainerD,
+			kubeletConfig(true, true, true),
+			true,
 		),
 	)
 })
@@ -440,4 +406,136 @@ volumeStatsAggPeriod: 1m0s
 `
 
 	return out
+}
+
+func kubeletUnit(ctx components.Context, criName extensionsv1alpha1.CRIName, cliFlags []string, kubeletConfig, kubeletCABundleBase64 string, useGardenerNodeAgentEnabled bool) extensionsv1alpha1.Unit {
+	var kubeletStartPre string
+	if !useGardenerNodeAgentEnabled {
+		kubeletStartPre = `
+ExecStartPre=` + PathScriptCopyKubernetesBinary + ` kubelet`
+	}
+
+	unit := extensionsv1alpha1.Unit{
+		Name:    "kubelet.service",
+		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+		Enable:  pointer.Bool(true),
+		Content: pointer.String(`[Unit]
+Description=kubelet daemon
+Documentation=https://kubernetes.io/docs/admin/kubelet
+` + unitConfigAfterCRI(criName) + `
+[Install]
+WantedBy=multi-user.target
+[Service]
+Restart=always
+RestartSec=5
+EnvironmentFile=/etc/environment
+EnvironmentFile=-/var/lib/kubelet/extra_args` + kubeletStartPre + `
+ExecStart=/opt/bin/kubelet \
+    ` + utils.Indent(strings.Join(cliFlags, " \\\n"), 4) + ` $KUBELET_EXTRA_ARGS`),
+	}
+
+	if useGardenerNodeAgentEnabled {
+		unit.Files = kubeletFiles(ctx, kubeletConfig, kubeletCABundleBase64, useGardenerNodeAgentEnabled)
+	}
+
+	return unit
+}
+
+func kubeletFiles(ctx components.Context, kubeletConfig, kubeletCABundleBase64 string, useGardenerNodeAgentEnabled bool) []extensionsv1alpha1.File {
+	files := []extensionsv1alpha1.File{
+		{
+			Path:        "/var/lib/kubelet/ca.crt",
+			Permissions: pointer.Int32(0644),
+			Content: extensionsv1alpha1.FileContent{
+				Inline: &extensionsv1alpha1.FileContentInline{
+					Encoding: "b64",
+					Data:     kubeletCABundleBase64,
+				},
+			},
+		},
+		{
+			Path:        "/var/lib/kubelet/config/kubelet",
+			Permissions: pointer.Int32(0644),
+			Content: extensionsv1alpha1.FileContent{
+				Inline: &extensionsv1alpha1.FileContentInline{
+					Encoding: "b64",
+					Data:     utils.EncodeBase64([]byte(kubeletConfig)),
+				},
+			},
+		},
+	}
+
+	if useGardenerNodeAgentEnabled {
+		files = append(files, extensionsv1alpha1.File{
+			Path:        "/opt/bin/kubelet",
+			Permissions: pointer.Int32(0755),
+			Content: extensionsv1alpha1.FileContent{
+				ImageRef: &extensionsv1alpha1.FileContentImageRef{
+					Image:           ctx.Images["hyperkube"].String(),
+					FilePathInImage: "/kubelet",
+				},
+			},
+		})
+	}
+
+	return files
+}
+
+func kubeletMonitorUnit(ctx components.Context, useGardenerNodeAgentEnabled bool) extensionsv1alpha1.Unit {
+	var healthMonitorStartPre string
+	if !useGardenerNodeAgentEnabled {
+		healthMonitorStartPre = `
+ExecStartPre=` + PathScriptCopyKubernetesBinary + ` kubectl`
+	}
+
+	unit := extensionsv1alpha1.Unit{
+		Name:    "kubelet-monitor.service",
+		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+		Enable:  pointer.Bool(true),
+		Content: pointer.String(`[Unit]
+Description=Kubelet-monitor daemon
+After=kubelet.service
+[Install]
+WantedBy=multi-user.target
+[Service]
+Restart=always
+EnvironmentFile=/etc/environment` + healthMonitorStartPre + `
+ExecStart=/opt/bin/health-monitor-kubelet`),
+	}
+
+	if useGardenerNodeAgentEnabled {
+		unit.Files = kubeletMonitorFiles(ctx, useGardenerNodeAgentEnabled)
+	}
+
+	return unit
+}
+
+func kubeletMonitorFiles(ctx components.Context, useGardenerNodeAgentEnabled bool) []extensionsv1alpha1.File {
+	files := []extensionsv1alpha1.File{
+		{
+			Path:        "/opt/bin/health-monitor-kubelet",
+			Permissions: pointer.Int32(0755),
+			Content: extensionsv1alpha1.FileContent{
+				Inline: &extensionsv1alpha1.FileContentInline{
+					Encoding: "b64",
+					Data:     utils.EncodeBase64([]byte(healthMonitorScript)),
+				},
+			},
+		},
+	}
+
+	if useGardenerNodeAgentEnabled {
+		files = append(files, extensionsv1alpha1.File{
+			Path:        "/opt/bin/kubectl",
+			Permissions: pointer.Int32(0755),
+			Content: extensionsv1alpha1.FileContent{
+				ImageRef: &extensionsv1alpha1.FileContentImageRef{
+					Image:           ctx.Images["hyperkube"].String(),
+					FilePathInImage: "/kubectl",
+				},
+			},
+		})
+	}
+
+	return files
 }

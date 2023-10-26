@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/containerd"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/docker"
 	oscutils "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/utils"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -88,6 +89,14 @@ func (component) Name() string {
 }
 
 func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
+	var (
+		units []extensionsv1alpha1.Unit
+		files []extensionsv1alpha1.File
+
+		kubeletStartPre       string
+		healthMonitorStartPre string
+	)
+
 	const pathHealthMonitor = v1beta1constants.OperatingSystemConfigFilePathBinaries + "/health-monitor-kubelet"
 
 	var healthMonitorScript bytes.Buffer
@@ -106,12 +115,18 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 
 	cliFlags := CLIFlags(ctx.KubernetesVersion, ctx.NodeLabels, ctx.CRIName, ctx.Images[imagevector.ImageNamePauseContainer], ctx.KubeletCLIFlags)
 
-	return []extensionsv1alpha1.Unit{
-			{
-				Name:    UnitName,
-				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-				Enable:  pointer.Bool(true),
-				Content: pointer.String(`[Unit]
+	if !features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+		kubeletStartPre = `
+ExecStartPre=` + PathScriptCopyKubernetesBinary + ` kubelet`
+		healthMonitorStartPre = `
+ExecStartPre=` + PathScriptCopyKubernetesBinary + ` kubectl`
+	}
+
+	kubeletUnit := extensionsv1alpha1.Unit{
+		Name:    UnitName,
+		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+		Enable:  pointer.Bool(true),
+		Content: pointer.String(`[Unit]
 Description=kubelet daemon
 Documentation=https://kubernetes.io/docs/admin/kubelet
 ` + unitConfigAfterCRI(ctx.CRIName) + `
@@ -121,57 +136,89 @@ WantedBy=multi-user.target
 Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
-EnvironmentFile=-/var/lib/kubelet/extra_args
-ExecStartPre=` + PathScriptCopyKubernetesBinary + ` kubelet
+EnvironmentFile=-/var/lib/kubelet/extra_args` + kubeletStartPre + `
 ExecStart=` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `/kubelet \
     ` + utils.Indent(strings.Join(cliFlags, " \\\n"), 4) + ` $KUBELET_EXTRA_ARGS`),
-			},
-			{
-				Name:    "kubelet-monitor.service",
-				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-				Enable:  pointer.Bool(true),
-				Content: pointer.String(`[Unit]
+	}
+
+	healthMonitorUnit := extensionsv1alpha1.Unit{
+		Name:    "kubelet-monitor.service",
+		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+		Enable:  pointer.Bool(true),
+		Content: pointer.String(`[Unit]
 Description=Kubelet-monitor daemon
 After=` + UnitName + `
 [Install]
 WantedBy=multi-user.target
 [Service]
 Restart=always
-EnvironmentFile=/etc/environment
-ExecStartPre=` + PathScriptCopyKubernetesBinary + ` kubectl
+EnvironmentFile=/etc/environment` + healthMonitorStartPre + `
 ExecStart=` + pathHealthMonitor),
-			},
-		},
-		[]extensionsv1alpha1.File{
-			{
-				Path:        PathKubeletCACert,
-				Permissions: pointer.Int32(0644),
-				Content: extensionsv1alpha1.FileContent{
-					Inline: &extensionsv1alpha1.FileContentInline{
-						Encoding: "b64",
-						Data:     utils.EncodeBase64(ctx.KubeletCABundle),
-					},
-				},
-			},
-			{
-				Path:        PathKubeletConfig,
-				Permissions: pointer.Int32(0644),
-				Content: extensionsv1alpha1.FileContent{
-					Inline: fileContentKubeletConfig,
-				},
-			},
-			{
-				Path:        pathHealthMonitor,
-				Permissions: pointer.Int32(0755),
-				Content: extensionsv1alpha1.FileContent{
-					Inline: &extensionsv1alpha1.FileContentInline{
-						Encoding: "b64",
-						Data:     utils.EncodeBase64(healthMonitorScript.Bytes()),
-					},
+	}
+
+	kubeletFiles := []extensionsv1alpha1.File{
+		{
+			Path:        PathKubeletCACert,
+			Permissions: pointer.Int32(0644),
+			Content: extensionsv1alpha1.FileContent{
+				Inline: &extensionsv1alpha1.FileContentInline{
+					Encoding: "b64",
+					Data:     utils.EncodeBase64(ctx.KubeletCABundle),
 				},
 			},
 		},
-		nil
+		{
+			Path:        PathKubeletConfig,
+			Permissions: pointer.Int32(0644),
+			Content: extensionsv1alpha1.FileContent{
+				Inline: fileContentKubeletConfig,
+			},
+		},
+	}
+
+	healthMonitorFiles := []extensionsv1alpha1.File{
+		{
+			Path:        pathHealthMonitor,
+			Permissions: pointer.Int32(0755),
+			Content: extensionsv1alpha1.FileContent{
+				Inline: &extensionsv1alpha1.FileContentInline{
+					Encoding: "b64",
+					Data:     utils.EncodeBase64(healthMonitorScript.Bytes()),
+				},
+			},
+		},
+	}
+
+	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+		kubeletFiles = append(kubeletFiles, extensionsv1alpha1.File{
+			Path:        v1beta1constants.OperatingSystemConfigFilePathBinaries + "/kubelet",
+			Permissions: pointer.Int32(0755),
+			Content: extensionsv1alpha1.FileContent{
+				ImageRef: &extensionsv1alpha1.FileContentImageRef{
+					Image:           ctx.Images[imagevector.ImageNameHyperkube].String(),
+					FilePathInImage: "/kubelet",
+				},
+			},
+		})
+		healthMonitorFiles = append(healthMonitorFiles, extensionsv1alpha1.File{
+			Path:        v1beta1constants.OperatingSystemConfigFilePathBinaries + "/kubectl",
+			Permissions: pointer.Int32(0755),
+			Content: extensionsv1alpha1.FileContent{
+				ImageRef: &extensionsv1alpha1.FileContentImageRef{
+					Image:           ctx.Images[imagevector.ImageNameHyperkube].String(),
+					FilePathInImage: "/kubectl",
+				},
+			},
+		})
+		kubeletUnit.Files = kubeletFiles
+		healthMonitorUnit.Files = healthMonitorFiles
+	} else {
+		files = append(kubeletFiles, healthMonitorFiles...)
+	}
+
+	units = append(units, kubeletUnit, healthMonitorUnit)
+
+	return units, files, nil
 }
 
 func getFileContentKubeletConfig(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain string, params components.ConfigurableKubeletConfigParameters) (*extensionsv1alpha1.FileContentInline, error) {
