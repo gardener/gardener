@@ -109,8 +109,9 @@ func (r *Reconciler) runForceDeleteShootFlow(ctx context.Context, log logr.Logge
 			Dependencies: flow.NewTaskIDs(waitUntilExtensionObjectsDeleted),
 		})
 		setKeepObjectsForManagedResources = g.Add(flow.Task{
-			Name: "Configuring managed resources to not keep their objects when deleted",
-			Fn:   flow.TaskFn(cleaner.SetKeepObjectsForManagedResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Name:         "Configuring managed resources to not keep their objects when deleted",
+			Fn:           flow.TaskFn(cleaner.SetKeepObjectsForManagedResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(waitUntilExtensionObjectsDeleted),
 		})
 		deleteManagedResources = g.Add(flow.Task{
 			Name:         "Deleting managed resources",
