@@ -23,6 +23,8 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -37,6 +39,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -45,7 +48,9 @@ import (
 	"github.com/gardener/gardener/pkg/component/logging/vali/constants"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/istio"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -96,6 +101,9 @@ const (
 	kubeRBACProxyPort = constants.Port
 
 	initLargeDirName = "init-large-dir"
+
+	externalPort        = 443
+	labelTLSSecretOwner = "owner"
 )
 
 var (
@@ -148,6 +156,11 @@ type Values struct {
 	HVPAEnabled             bool
 	Storage                 *resource.Quantity
 	MaintenanceTimeWindow   *hvpav1alpha1.MaintenanceTimeWindow
+
+	// IstioIngressGatewayLabels are the labels for identifying the used istio ingress gateway.
+	IstioIngressGatewayLabels map[string]string
+	// IstioIngressGatewayNamespace is the namespace of the used istio ingress gateway.
+	IstioIngressGatewayNamespace string
 }
 
 type vali struct {
@@ -193,6 +206,10 @@ func (v *vali) Deploy(ctx context.Context) error {
 		genericTokenKubeconfigSecretName string
 		valitailShootAccessSecret        = v.newValitailShootAccessSecret()
 		kubeRBACProxyShootAccessSecret   = v.newKubeRBACProxyShootAccessSecret()
+		gateway                          *istionetworkingv1beta1.Gateway
+		virtualService                   *istionetworkingv1beta1.VirtualService
+		destinationRule                  *istionetworkingv1beta1.DestinationRule
+		tlsSecret                        *corev1.Secret
 	)
 
 	if v.values.ShootNodeLoggingEnabled {
@@ -228,8 +245,15 @@ func (v *vali) Deploy(ctx context.Context) error {
 		}
 		genericTokenKubeconfigSecretName = genericTokenKubeconfigSecret.Name
 
+		gateway, virtualService, destinationRule, tlsSecret, err = v.getIngressResources(ctx, ingressTLSSecret)
+		if err != nil {
+			return err
+		}
+
 		resources = append(resources,
-			v.getIngress(ingressTLSSecret.Name),
+			gateway,
+			virtualService,
+			destinationRule,
 			telegrafConfigMap,
 		)
 
@@ -275,7 +299,14 @@ func (v *vali) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, v.client, v.namespace, ManagedResourceNameRuntime, false, registry.SerializedObjects())
+	if err := managedresources.CreateForSeed(ctx, v.client, v.namespace, ManagedResourceNameRuntime, false, registry.SerializedObjects()); err != nil {
+		return err
+	}
+
+	if v.values.ShootNodeLoggingEnabled {
+		return v.cleanupOldIstioTLSSecrets(ctx, tlsSecret)
+	}
+	return nil
 }
 
 func (v *vali) Destroy(ctx context.Context) error {
@@ -285,6 +316,12 @@ func (v *vali) Destroy(ctx context.Context) error {
 
 	if err := managedresources.DeleteForSeed(ctx, v.client, v.namespace, ManagedResourceNameRuntime); err != nil {
 		return err
+	}
+
+	if v.values.ShootNodeLoggingEnabled {
+		if err := v.cleanupOldIstioTLSSecrets(ctx, nil); err != nil {
+			return err
+		}
 	}
 
 	return kubernetesutils.DeleteObjects(ctx, v.client,
@@ -472,45 +509,84 @@ func (v *vali) getHVPA() *hvpav1alpha1.Hvpa {
 	return hvpa
 }
 
-func (v *vali) getIngress(secretName string) *networkingv1.Ingress {
-	pathType := networkingv1.PathTypePrefix
+func (v *vali) getIngressResources(ctx context.Context, tlsSecret *corev1.Secret) (*istionetworkingv1beta1.Gateway, *istionetworkingv1beta1.VirtualService, *istionetworkingv1beta1.DestinationRule, *corev1.Secret, error) {
+	istioTLSSecret := tlsSecret.DeepCopy()
+	istioTLSSecret.Type = tlsSecret.Type
+	istioTLSSecret.ObjectMeta = metav1.ObjectMeta{
+		Name:      fmt.Sprintf("%s-%s", v.namespace, tlsSecret.Name),
+		Namespace: v.values.IstioIngressGatewayNamespace,
+		Labels:    v.getIstioTLSSecretLabels(),
+	}
+	if err := v.ensureIstioTLSSecret(ctx, istioTLSSecret); err != nil {
+		return nil, nil, nil, nil, err
+	}
 
-	ingress := &networkingv1.Ingress{
+	gateway := &istionetworkingv1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      valiName,
 			Namespace: v.namespace,
-			Annotations: map[string]string{
-				"nginx.ingress.kubernetes.io/configuration-snippet": "proxy_set_header X-Scope-OrgID operator;",
-			},
-			Labels: getLabels(),
 		},
-		Spec: networkingv1.IngressSpec{
-			IngressClassName: pointer.String(v1beta1constants.SeedNginxIngressClass),
-			TLS: []networkingv1.IngressTLS{{
-				SecretName: secretName,
-				Hosts:      []string{v.values.IngressHost},
-			}},
-			Rules: []networkingv1.IngressRule{{
-				Host: v.values.IngressHost,
-				IngressRuleValue: networkingv1.IngressRuleValue{
-					HTTP: &networkingv1.HTTPIngressRuleValue{
-						Paths: []networkingv1.HTTPIngressPath{{
-							Backend: networkingv1.IngressBackend{
-								Service: &networkingv1.IngressServiceBackend{
-									Name: valiServiceName,
-									Port: networkingv1.ServiceBackendPort{Number: kubeRBACProxyPort},
-								},
-							},
-							Path:     "/vali/api/v1/push",
-							PathType: &pathType,
-						}},
+	}
+	if err := istio.GatewayWithTLSTermination(gateway, getLabels(), v.values.IstioIngressGatewayLabels, []string{v.values.IngressHost}, externalPort, istioTLSSecret.Name)(); err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	virtualService := &istionetworkingv1beta1.VirtualService{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      valiName,
+			Namespace: v.namespace,
+		},
+	}
+	destinationHost := fmt.Sprintf("%s.%s.svc.%s", ServiceName, v.namespace, gardencorev1beta1.DefaultDomain)
+	if err := istio.VirtualServiceWithSNIMatch(virtualService, getLabels(), []string{v.values.IngressHost}, valiName, externalPort, destinationHost, constants.Port)(); err != nil {
+		return nil, nil, nil, nil, err
+	}
+	virtualService.Spec.Http = []*istioapinetworkingv1beta1.HTTPRoute{
+		{
+			Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{{
+				Uri: &istioapinetworkingv1beta1.StringMatch{
+					MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+						Prefix: "/vali/api/v1/push",
 					},
 				},
 			}},
+			Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{{
+				Destination: &istioapinetworkingv1beta1.Destination{
+					Host: destinationHost,
+					Port: &istioapinetworkingv1beta1.PortSelector{Number: constants.Port},
+				},
+			}},
+			Headers: &istioapinetworkingv1beta1.Headers{
+				Request: &istioapinetworkingv1beta1.Headers_HeaderOperations{
+					Set: map[string]string{"X-Scope-OrgID": "operator"},
+				},
+			},
+		},
+		{
+			Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{{
+				Uri: &istioapinetworkingv1beta1.StringMatch{
+					MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+						Prefix: "/",
+					},
+				},
+			}},
+			DirectResponse: &istioapinetworkingv1beta1.HTTPDirectResponse{
+				Status: 404,
+			},
 		},
 	}
 
-	return ingress
+	destinationRule := &istionetworkingv1beta1.DestinationRule{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      valiName,
+			Namespace: v.namespace,
+		},
+	}
+	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, getLabels(), destinationHost)(); err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	return gateway, virtualService, destinationRule, istioTLSSecret, nil
 }
 
 func (v *vali) getService() *corev1.Service {
@@ -567,8 +643,12 @@ func (v *vali) getService() *corev1.Service {
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, networkPolicyPorts...))
 	case component.ClusterTypeShoot:
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkPolicyPorts...))
-		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(service, metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}}))
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(service,
+			metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}},
+			metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
+		))
 		metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
+		metav1.SetMetaDataAnnotation(&service.ObjectMeta, "networking.istio.io/exportTo", "*")
 	}
 
 	return service
@@ -1068,4 +1148,49 @@ func (v *vali) resizeOrDeleteValiDataVolumeIfStorageNotTheSame(ctx context.Conte
 	}
 
 	return addOrRemoveIgnoreAnnotationFromManagedResource(false)
+}
+
+func (v *vali) getIstioTLSSecretLabels() map[string]string {
+	return utils.MergeStringMaps(getLabels(), map[string]string{labelTLSSecretOwner: v.namespace})
+}
+
+func (v *vali) ensureIstioTLSSecret(ctx context.Context, tlsSecret *corev1.Secret) error {
+	secret := &corev1.Secret{}
+	if err := v.client.Get(ctx, client.ObjectKeyFromObject(tlsSecret), secret); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+
+		if err := v.client.Create(ctx, tlsSecret); err != nil {
+			if !apierrors.IsAlreadyExists(err) {
+				return err
+			}
+
+			if err := v.client.Get(ctx, client.ObjectKeyFromObject(tlsSecret), secret); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (v *vali) cleanupOldIstioTLSSecrets(ctx context.Context, tlsSecret *corev1.Secret) error {
+	secretList := &corev1.SecretList{}
+	if err := v.client.List(ctx, secretList, client.InNamespace(v.values.IstioIngressGatewayNamespace), client.MatchingLabels(v.getIstioTLSSecretLabels())); err != nil {
+		return err
+	}
+
+	var fns []flow.TaskFn
+
+	for _, s := range secretList.Items {
+		secret := s
+
+		if tlsSecret != nil && tlsSecret.Name == secret.Name {
+			continue
+		}
+
+		fns = append(fns, func(ctx context.Context) error { return client.IgnoreNotFound(v.client.Delete(ctx, &secret)) })
+	}
+
+	return flow.Parallel(fns...)(ctx)
 }

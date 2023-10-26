@@ -22,10 +22,13 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
+	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -71,6 +74,12 @@ const (
 	valiHost                           = "vali.foo.bar"
 	valitailShootAccessSecretName      = "shoot-access-valitail"
 	kubeRBacProxyShootAccessSecretName = "shoot-access-kube-rbac-proxy"
+	istioNamespace                     = "istio-namespace"
+	externalPort                       = 443
+)
+
+var (
+	istioLabels = map[string]string{"istio": "ingressgateway", "some": "label"}
 )
 
 var _ = Describe("Vali", func() {
@@ -144,15 +153,17 @@ var _ = Describe("Vali", func() {
 						Begin: maintenanceBegin,
 						End:   maintenanceEnd,
 					},
-					ValiImage:             valiImage,
-					CuratorImage:          curatorImage,
-					RenameLokiToValiImage: alpineImage,
-					InitLargeDirImage:     initLargeDirImage,
-					TelegrafImage:         telegrafImage,
-					KubeRBACProxyImage:    kubeRBACProxyImage,
-					PriorityClassName:     priorityClassName,
-					ClusterType:           "shoot",
-					IngressHost:           valiHost,
+					ValiImage:                    valiImage,
+					CuratorImage:                 curatorImage,
+					RenameLokiToValiImage:        alpineImage,
+					InitLargeDirImage:            initLargeDirImage,
+					TelegrafImage:                telegrafImage,
+					KubeRBACProxyImage:           kubeRBACProxyImage,
+					PriorityClassName:            priorityClassName,
+					ClusterType:                  "shoot",
+					IngressHost:                  valiHost,
+					IstioIngressGatewayLabels:    istioLabels,
+					IstioIngressGatewayNamespace: istioNamespace,
 				},
 			)
 
@@ -189,16 +200,18 @@ var _ = Describe("Vali", func() {
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(6))
+			Expect(managedResourceSecret.Data).To(HaveLen(8))
 			Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__"+telegrafConfigMapName+".yaml"])).To(Equal(test.Serialize(getTelegrafConfigMap())))
 			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__"+valiConfigMapName+".yaml"])).To(Equal(test.Serialize(getValiConfigMap())))
 			Expect(string(managedResourceSecret.Data["hvpa__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getHVPA(true))))
-			Expect(string(managedResourceSecret.Data["ingress__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getIngress())))
 			Expect(string(managedResourceSecret.Data["service__shoot--foo--bar__logging.yaml"])).To(Equal(test.Serialize(getService(true, "shoot"))))
 			Expect(string(managedResourceSecret.Data["statefulset__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getStatefulSet(true))))
+			Expect(string(managedResourceSecret.Data["gateway__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getGateway())))
+			Expect(string(managedResourceSecret.Data["virtualservice__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getVirtualService())))
+			Expect(string(managedResourceSecret.Data["destinationrule__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getDestinationRule())))
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceTarget), managedResourceTarget)).To(Succeed())
 			expectedTargetMr := &resourcesv1alpha1.ManagedResource{
@@ -873,7 +886,8 @@ func getService(isRBACProxyEnabled bool, clusterType string) *corev1.Service {
 			svc.Annotations["networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports"] = `[{"protocol":"TCP","port":3100}]`
 		}
 		svc.Annotations["networking.resources.gardener.cloud/pod-label-selector-namespace-alias"] = "all-shoots"
-		svc.Annotations["networking.resources.gardener.cloud/namespace-selectors"] = `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`
+		svc.Annotations["networking.resources.gardener.cloud/namespace-selectors"] = `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}},{"matchLabels":{"gardener.cloud/role":"istio-ingress"}}]`
+		svc.Annotations["networking.istio.io/exportTo"] = "*"
 	}
 
 	return svc
@@ -1167,46 +1181,123 @@ func getHVPA(isRBACProxyEnabled bool) *hvpav1alpha1.Hvpa {
 	return obj
 }
 
-func getIngress() *networkingv1.Ingress {
-	pathType := networkingv1.PathTypePrefix
-	return &networkingv1.Ingress{
+func getGateway() *istionetworkingv1beta1.Gateway {
+	return &istionetworkingv1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      valiName,
 			Namespace: namespace,
-			Annotations: map[string]string{
-				"nginx.ingress.kubernetes.io/configuration-snippet": "proxy_set_header X-Scope-OrgID operator;",
-			},
-			Labels: getLabels(),
+			Labels:    getLabels(),
 		},
-		Spec: networkingv1.IngressSpec{
-			IngressClassName: pointer.String("nginx-ingress-gardener"),
-			TLS: []networkingv1.IngressTLS{
-				{
-					SecretName: "vali-tls",
-					Hosts:      []string{valiHost},
+		Spec: istioapinetworkingv1beta1.Gateway{
+			Selector: istioLabels,
+			Servers: []*istioapinetworkingv1beta1.Server{{
+				Hosts: []string{valiHost},
+				Port: &istioapinetworkingv1beta1.Port{
+					Number:   externalPort,
+					Name:     "tls",
+					Protocol: "HTTPS",
 				},
-			},
-			Rules: []networkingv1.IngressRule{
+				Tls: &istioapinetworkingv1beta1.ServerTLSSettings{
+					Mode:           istioapinetworkingv1beta1.ServerTLSSettings_SIMPLE,
+					CredentialName: namespace + "-vali-tls",
+				},
+			}},
+		},
+	}
+}
+
+func getVirtualService() *istionetworkingv1beta1.VirtualService {
+	return &istionetworkingv1beta1.VirtualService{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      valiName,
+			Namespace: namespace,
+			Labels:    getLabels(),
+		},
+		Spec: istioapinetworkingv1beta1.VirtualService{
+			ExportTo: []string{"*"},
+			Hosts:    []string{valiHost},
+			Gateways: []string{valiName},
+			Tls: []*istioapinetworkingv1beta1.TLSRoute{{
+				Match: []*istioapinetworkingv1beta1.TLSMatchAttributes{{
+					Port:     externalPort,
+					SniHosts: []string{valiHost},
+				}},
+				Route: []*istioapinetworkingv1beta1.RouteDestination{{
+					Destination: &istioapinetworkingv1beta1.Destination{
+						Host: "logging." + namespace + ".svc.cluster.local",
+						Port: &istioapinetworkingv1beta1.PortSelector{Number: 8080},
+					},
+				}},
+			}},
+			Http: []*istioapinetworkingv1beta1.HTTPRoute{
 				{
-					Host: valiHost,
-					IngressRuleValue: networkingv1.IngressRuleValue{
-						HTTP: &networkingv1.HTTPIngressRuleValue{
-							Paths: []networkingv1.HTTPIngressPath{
-								{
-									Backend: networkingv1.IngressBackend{
-										Service: &networkingv1.IngressServiceBackend{
-											Name: "logging",
-											Port: networkingv1.ServiceBackendPort{
-												Number: 8080,
-											},
-										},
-									},
-									Path:     "/vali/api/v1/push",
-									PathType: &pathType,
-								},
+					Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{{
+						Uri: &istioapinetworkingv1beta1.StringMatch{
+							MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+								Prefix: "/vali/api/v1/push",
 							},
 						},
+					}},
+					Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{{
+						Destination: &istioapinetworkingv1beta1.Destination{
+							Host: "logging." + namespace + ".svc.cluster.local",
+							Port: &istioapinetworkingv1beta1.PortSelector{Number: 8080},
+						},
+					}},
+					Headers: &istioapinetworkingv1beta1.Headers{
+						Request: &istioapinetworkingv1beta1.Headers_HeaderOperations{
+							Set: map[string]string{"X-Scope-OrgID": "operator"},
+						},
 					},
+				},
+				{
+					Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{{
+						Uri: &istioapinetworkingv1beta1.StringMatch{
+							MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+								Prefix: "/",
+							},
+						},
+					}},
+					DirectResponse: &istioapinetworkingv1beta1.HTTPDirectResponse{
+						Status: 404,
+					},
+				},
+			},
+		},
+	}
+}
+
+func getDestinationRule() *istionetworkingv1beta1.DestinationRule {
+	return &istionetworkingv1beta1.DestinationRule{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      valiName,
+			Namespace: namespace,
+			Labels:    getLabels(),
+		},
+		Spec: istioapinetworkingv1beta1.DestinationRule{
+			ExportTo: []string{"*"},
+			Host:     "logging." + namespace + ".svc.cluster.local",
+			TrafficPolicy: &istioapinetworkingv1beta1.TrafficPolicy{
+				ConnectionPool: &istioapinetworkingv1beta1.ConnectionPoolSettings{
+					Tcp: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings{
+						MaxConnections: 5000,
+						TcpKeepalive: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
+							Time:     &durationpb.Duration{Seconds: 7200},
+							Interval: &durationpb.Duration{Seconds: 75},
+						},
+					},
+				},
+				LoadBalancer: &istioapinetworkingv1beta1.LoadBalancerSettings{
+					LocalityLbSetting: &istioapinetworkingv1beta1.LocalityLoadBalancerSetting{
+						Enabled:          &wrapperspb.BoolValue{Value: true},
+						FailoverPriority: []string{corev1.LabelTopologyZone},
+					},
+				},
+				OutlierDetection: &istioapinetworkingv1beta1.OutlierDetection{
+					MinHealthPercent: 0,
+				},
+				Tls: &istioapinetworkingv1beta1.ClientTLSSettings{
+					Mode: istioapinetworkingv1beta1.ClientTLSSettings_DISABLE,
 				},
 			},
 		},

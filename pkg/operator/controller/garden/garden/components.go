@@ -242,7 +242,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.vali, err = r.newVali(garden)
+	c.vali, err = r.newVali(garden, c.istio.GetValues().IngressGateway)
 	if err != nil {
 		return
 	}
@@ -996,7 +996,11 @@ func (r *Reconciler) newFluentCustomResources() (component.DeployWaiter, error) 
 	)
 }
 
-func (r *Reconciler) newVali(garden *operatorv1alpha1.Garden) (vali.Interface, error) {
+func (r *Reconciler) newVali(garden *operatorv1alpha1.Garden, ingressGatewayValues []istio.IngressGatewayValues) (vali.Interface, error) {
+	if len(ingressGatewayValues) != 1 {
+		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the SNI config")
+	}
+
 	return sharedcomponent.NewVali(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
@@ -1013,5 +1017,7 @@ func (r *Reconciler) newVali(garden *operatorv1alpha1.Garden) (vali.Interface, e
 			Begin: garden.Spec.VirtualCluster.Maintenance.TimeWindow.Begin,
 			End:   garden.Spec.VirtualCluster.Maintenance.TimeWindow.End,
 		},
+		ingressGatewayValues[0].Labels,
+		ingressGatewayValues[0].Namespace,
 	)
 }

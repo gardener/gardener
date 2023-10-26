@@ -610,6 +610,8 @@ func (r *Reconciler) runReconcileSeedFlow(
 			r.GardenNamespace,
 			loggingEnabled && gardenlethelper.IsValiEnabled(&r.Config),
 			hvpaEnabled,
+			istioDefaultLabels,
+			istioDefaultNamespace,
 		)
 		if err != nil {
 			return err

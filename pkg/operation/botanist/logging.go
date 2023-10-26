@@ -166,5 +166,7 @@ func (b *Botanist) DefaultVali() (vali.Interface, error) {
 		true,
 		hvpaEnabled,
 		nil,
+		b.DefaultIstioLabels(),
+		*b.Config.SNI.Ingress.Namespace,
 	)
 }

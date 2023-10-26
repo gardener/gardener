@@ -315,6 +315,8 @@ func defaultVali(
 	gardenNamespaceName string,
 	isLoggingEnabled bool,
 	hvpaEnabled bool,
+	istioIngressGatewayLabels map[string]string,
+	istioIngressGatewayNamespace string,
 ) (
 	component.Deployer,
 	error,
@@ -364,6 +366,8 @@ func defaultVali(
 			Begin: maintenanceBegin,
 			End:   maintenanceEnd,
 		},
+		istioIngressGatewayLabels,
+		istioIngressGatewayNamespace,
 	)
 	if err != nil {
 		return nil, err

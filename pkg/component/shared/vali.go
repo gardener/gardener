@@ -39,6 +39,8 @@ func NewVali(
 	authEnabled bool,
 	hvpaEnabled bool,
 	maintenanceTimeWindow *hvpav1alpha1.MaintenanceTimeWindow,
+	istioIngressGatewayLabels map[string]string,
+	istioIngressGatewayNamespace string,
 ) (
 	vali.Interface,
 	error,
@@ -74,21 +76,23 @@ func NewVali(
 	}
 
 	deployer := vali.New(c, namespace, secretsManager, vali.Values{
-		ValiImage:               valiImage.String(),
-		CuratorImage:            curatorImage.String(),
-		RenameLokiToValiImage:   alpineImage.String(),
-		InitLargeDirImage:       tune2fsImage.String(),
-		KubeRBACProxyImage:      kubeRBACProxyImage.String(),
-		TelegrafImage:           telegrafImage.String(),
-		Replicas:                replicas,
-		HVPAEnabled:             hvpaEnabled,
-		MaintenanceTimeWindow:   maintenanceTimeWindow,
-		ShootNodeLoggingEnabled: isShootNodeLoggingEnabled,
-		PriorityClassName:       priorityClassName,
-		Storage:                 storage,
-		AuthEnabled:             authEnabled,
-		ClusterType:             clusterType,
-		IngressHost:             ingressHost,
+		ValiImage:                    valiImage.String(),
+		CuratorImage:                 curatorImage.String(),
+		RenameLokiToValiImage:        alpineImage.String(),
+		InitLargeDirImage:            tune2fsImage.String(),
+		KubeRBACProxyImage:           kubeRBACProxyImage.String(),
+		TelegrafImage:                telegrafImage.String(),
+		Replicas:                     replicas,
+		HVPAEnabled:                  hvpaEnabled,
+		MaintenanceTimeWindow:        maintenanceTimeWindow,
+		ShootNodeLoggingEnabled:      isShootNodeLoggingEnabled,
+		PriorityClassName:            priorityClassName,
+		Storage:                      storage,
+		AuthEnabled:                  authEnabled,
+		ClusterType:                  clusterType,
+		IngressHost:                  ingressHost,
+		IstioIngressGatewayLabels:    istioIngressGatewayLabels,
+		IstioIngressGatewayNamespace: istioIngressGatewayNamespace,
 	})
 
 	return deployer, nil
