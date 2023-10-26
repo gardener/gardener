@@ -1,4 +1,4 @@
-// Copyright 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,10 +14,15 @@
 
 package v1beta1
 
-import (
-	"k8s.io/apimachinery/pkg/runtime"
-)
+// SetDefaults_SecretBinding sets default values for SecretBinding objects.
+func SetDefaults_SecretBinding(obj *SecretBinding) {
+	if len(obj.SecretRef.Namespace) == 0 {
+		obj.SecretRef.Namespace = obj.Namespace
+	}
 
-func addDefaultingFuncs(scheme *runtime.Scheme) error {
-	return RegisterDefaults(scheme)
+	for i, quota := range obj.Quotas {
+		if len(quota.Namespace) == 0 {
+			obj.Quotas[i].Namespace = obj.Namespace
+		}
+	}
 }
