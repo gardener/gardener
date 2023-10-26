@@ -41,6 +41,8 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
@@ -136,6 +138,8 @@ func init() {
 type Interface interface {
 	component.Deployer
 	component.MonitoringComponent
+	// SetDNSConfig sets the DNSConfig.
+	SetDNSConfig(*DNSConfig)
 }
 
 // Values are the values for the Vali.
@@ -161,6 +165,20 @@ type Values struct {
 	IstioIngressGatewayLabels map[string]string
 	// IstioIngressGatewayNamespace is the namespace of the used istio ingress gateway.
 	IstioIngressGatewayNamespace string
+	// DNSConfig contains the configuration values used to create a DNS record.
+	DNSConfig *DNSConfig
+}
+
+// DNSConfig contains the configuration values used to create a DNS record.
+type DNSConfig struct {
+	// ProviderType is the type of the DNS provider.
+	ProviderType string
+	// Value is the value of the DNS record.
+	Value string
+	// SecretName is the name of the secret referenced by the DNS record resource.
+	SecretName string
+	// SecretNamespace is the namespace of the secret used by the DNS record.
+	SecretNamespace string
 }
 
 type vali struct {
@@ -210,6 +228,7 @@ func (v *vali) Deploy(ctx context.Context) error {
 		virtualService                   *istionetworkingv1beta1.VirtualService
 		destinationRule                  *istionetworkingv1beta1.DestinationRule
 		tlsSecret                        *corev1.Secret
+		dnsRecord                        *extensionsv1alpha1.DNSRecord
 	)
 
 	if v.values.ShootNodeLoggingEnabled {
@@ -250,10 +269,19 @@ func (v *vali) Deploy(ctx context.Context) error {
 			return err
 		}
 
+		// TODO(scheererj): Remove in next release after all shoot clusters have been moved
+		// Migration is performed in multiple steps
+		// 0. DNS record handled via wildcard record for nginx-ingress-controller (before)
+		// 1. Overwrite DNS record with more specific record to point to istio after first reconciliation (all shoots)
+		// 2. Add wildcard DNS entry for istio
+		// 3. Remove specific DNS records for all shoots
+		dnsRecord = v.getDNSRecord()
+
 		resources = append(resources,
 			gateway,
 			virtualService,
 			destinationRule,
+			dnsRecord,
 			telegrafConfigMap,
 		)
 
@@ -328,6 +356,10 @@ func (v *vali) Destroy(ctx context.Context) error {
 		v.newValitailShootAccessSecret().Secret,
 		v.newKubeRBACProxyShootAccessSecret().Secret,
 	)
+}
+
+func (v *vali) SetDNSConfig(dnsConfig *DNSConfig) {
+	v.values.DNSConfig = dnsConfig
 }
 
 func (v *vali) newValitailShootAccessSecret() *gardenerutils.AccessSecret {
@@ -1193,4 +1225,31 @@ func (v *vali) cleanupOldIstioTLSSecrets(ctx context.Context, tlsSecret *corev1.
 	}
 
 	return flow.Parallel(fns...)(ctx)
+}
+
+func (v *vali) getDNSRecord() *extensionsv1alpha1.DNSRecord {
+	if v.values.DNSConfig == nil {
+		// No DNS record for garden/seed clusters.
+		return nil
+	}
+	return &extensionsv1alpha1.DNSRecord{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      valiName,
+			Namespace: v.namespace,
+			// Allow deletion via managed resource by directly setting the confirmation annotation
+			Annotations: map[string]string{gardenerutils.ConfirmationDeletion: "true"},
+		},
+		Spec: extensionsv1alpha1.DNSRecordSpec{
+			DefaultSpec: extensionsv1alpha1.DefaultSpec{
+				Type: v.values.DNSConfig.ProviderType,
+			},
+			SecretRef: corev1.SecretReference{
+				Name:      v.values.DNSConfig.SecretName,
+				Namespace: v.values.DNSConfig.SecretNamespace,
+			},
+			Name:       v.values.IngressHost,
+			RecordType: extensionsv1alpha1helper.GetDNSRecordType(v.values.DNSConfig.Value),
+			Values:     []string{v.values.DNSConfig.Value},
+		},
+	}
 }

@@ -39,6 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	"github.com/gardener/gardener/pkg/component/logging/vali"
 	mockvali "github.com/gardener/gardener/pkg/component/logging/vali/mock"
 	mockcomponent "github.com/gardener/gardener/pkg/component/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -67,6 +68,8 @@ var _ = Describe("Logging", func() {
 		shootName           = "bar"
 		projectNamespace    = "garden-foo"
 		fakeErr             = fmt.Errorf("fake error")
+		istioNamespace      = "istio-namespace"
+		istioIP             = "1.2.3.4"
 
 		shootPurposeDevelopment = gardencorev1beta1.ShootPurposeDevelopment
 		shootPurposeTesting     = gardencorev1beta1.ShootPurposeTesting
@@ -105,6 +108,11 @@ var _ = Describe("Logging", func() {
 						},
 						ShootEventLogging: &config.ShootEventLogging{
 							Enabled: pointer.Bool(true),
+						},
+					},
+					SNI: &config.SNI{
+						Ingress: &config.SNIIngress{
+							Namespace: &istioNamespace,
 						},
 					},
 				},
@@ -253,6 +261,23 @@ var _ = Describe("Logging", func() {
 
 				// deploy Shoot Event Logging
 				eventLoggerDeployer.EXPECT().Deploy(ctx),
+				// set vali dns config
+				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: istioNamespace, Name: "istio-ingressgateway"}, gomock.AssignableToTypeOf(&corev1.Service{})).Do(func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					service := obj.(*corev1.Service)
+					service.Status = corev1.ServiceStatus{
+						LoadBalancer: corev1.LoadBalancerStatus{
+							Ingress: []corev1.LoadBalancerIngress{{
+								IP: istioIP,
+							}},
+						},
+					}
+					return nil
+				}).Return(nil),
+				valiDeployer.EXPECT().SetDNSConfig(&vali.DNSConfig{
+					SecretName:      "seed-ingress",
+					SecretNamespace: "garden",
+					Value:           istioIP,
+				}),
 				// deploy Vali
 				valiDeployer.EXPECT().Deploy(ctx),
 			)
@@ -265,6 +290,23 @@ var _ = Describe("Logging", func() {
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 				// deploy Shoot Event Logging
 				eventLoggerDeployer.EXPECT().Deploy(ctx),
+				// set vali dns config
+				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: istioNamespace, Name: "istio-ingressgateway"}, gomock.AssignableToTypeOf(&corev1.Service{})).Do(func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					service := obj.(*corev1.Service)
+					service.Status = corev1.ServiceStatus{
+						LoadBalancer: corev1.LoadBalancerStatus{
+							Ingress: []corev1.LoadBalancerIngress{{
+								IP: istioIP,
+							}},
+						},
+					}
+					return nil
+				}).Return(nil),
+				valiDeployer.EXPECT().SetDNSConfig(&vali.DNSConfig{
+					SecretName:      "seed-ingress",
+					SecretNamespace: "garden",
+					Value:           istioIP,
+				}),
 				// deploy Vali
 				valiDeployer.EXPECT().Deploy(ctx),
 			)
@@ -278,6 +320,23 @@ var _ = Describe("Logging", func() {
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 				// destroy Shoot Event Logging
 				eventLoggerDeployer.EXPECT().Destroy(ctx),
+				// set vali dns config
+				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: istioNamespace, Name: "istio-ingressgateway"}, gomock.AssignableToTypeOf(&corev1.Service{})).Do(func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					service := obj.(*corev1.Service)
+					service.Status = corev1.ServiceStatus{
+						LoadBalancer: corev1.LoadBalancerStatus{
+							Ingress: []corev1.LoadBalancerIngress{{
+								IP: istioIP,
+							}},
+						},
+					}
+					return nil
+				}).Return(nil),
+				valiDeployer.EXPECT().SetDNSConfig(&vali.DNSConfig{
+					SecretName:      "seed-ingress",
+					SecretNamespace: "garden",
+					Value:           istioIP,
+				}),
 				// deploy Vali
 				valiDeployer.EXPECT().Deploy(ctx),
 			)
@@ -291,6 +350,23 @@ var _ = Describe("Logging", func() {
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 				// deploy Shoot Event Logging
 				eventLoggerDeployer.EXPECT().Deploy(ctx),
+				// set vali dns config
+				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: istioNamespace, Name: "istio-ingressgateway"}, gomock.AssignableToTypeOf(&corev1.Service{})).Do(func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					service := obj.(*corev1.Service)
+					service.Status = corev1.ServiceStatus{
+						LoadBalancer: corev1.LoadBalancerStatus{
+							Ingress: []corev1.LoadBalancerIngress{{
+								IP: istioIP,
+							}},
+						},
+					}
+					return nil
+				}).Return(nil),
+				valiDeployer.EXPECT().SetDNSConfig(&vali.DNSConfig{
+					SecretName:      "seed-ingress",
+					SecretNamespace: "garden",
+					Value:           istioIP,
+				}),
 				// deploy Vali
 				valiDeployer.EXPECT().Deploy(ctx),
 			)
@@ -304,6 +380,23 @@ var _ = Describe("Logging", func() {
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 				// deploy Shoot Event Logging
 				eventLoggerDeployer.EXPECT().Deploy(ctx),
+				// set vali dns config
+				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: istioNamespace, Name: "istio-ingressgateway"}, gomock.AssignableToTypeOf(&corev1.Service{})).Do(func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					service := obj.(*corev1.Service)
+					service.Status = corev1.ServiceStatus{
+						LoadBalancer: corev1.LoadBalancerStatus{
+							Ingress: []corev1.LoadBalancerIngress{{
+								IP: istioIP,
+							}},
+						},
+					}
+					return nil
+				}).Return(nil),
+				valiDeployer.EXPECT().SetDNSConfig(&vali.DNSConfig{
+					SecretName:      "seed-ingress",
+					SecretNamespace: "garden",
+					Value:           istioIP,
+				}),
 				// deploy Vali
 				valiDeployer.EXPECT().Deploy(ctx),
 			)
@@ -368,6 +461,22 @@ var _ = Describe("Logging", func() {
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 					eventLoggerDeployer.EXPECT().Deploy(ctx),
+					c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: istioNamespace, Name: "istio-ingressgateway"}, gomock.AssignableToTypeOf(&corev1.Service{})).Do(func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+						service := obj.(*corev1.Service)
+						service.Status = corev1.ServiceStatus{
+							LoadBalancer: corev1.LoadBalancerStatus{
+								Ingress: []corev1.LoadBalancerIngress{{
+									IP: istioIP,
+								}},
+							},
+						}
+						return nil
+					}).Return(nil),
+					valiDeployer.EXPECT().SetDNSConfig(&vali.DNSConfig{
+						SecretName:      "seed-ingress",
+						SecretNamespace: "garden",
+						Value:           istioIP,
+					}),
 					valiDeployer.EXPECT().Deploy(ctx).Return(fakeErr),
 				)
 

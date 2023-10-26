@@ -41,6 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/component/logging/vali"
@@ -80,6 +81,12 @@ const (
 
 var (
 	istioLabels = map[string]string{"istio": "ingressgateway", "some": "label"}
+	dnsConfig   = &DNSConfig{
+		ProviderType:    "dns-type",
+		Value:           "1.2.3.4",
+		SecretName:      "dns-secret",
+		SecretNamespace: "dns-secret-namespace",
+	}
 )
 
 var _ = Describe("Vali", func() {
@@ -164,6 +171,7 @@ var _ = Describe("Vali", func() {
 					IngressHost:                  valiHost,
 					IstioIngressGatewayLabels:    istioLabels,
 					IstioIngressGatewayNamespace: istioNamespace,
+					DNSConfig:                    dnsConfig,
 				},
 			)
 
@@ -200,7 +208,7 @@ var _ = Describe("Vali", func() {
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(8))
+			Expect(managedResourceSecret.Data).To(HaveLen(9))
 			Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
@@ -212,6 +220,7 @@ var _ = Describe("Vali", func() {
 			Expect(string(managedResourceSecret.Data["gateway__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getGateway())))
 			Expect(string(managedResourceSecret.Data["virtualservice__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getVirtualService())))
 			Expect(string(managedResourceSecret.Data["destinationrule__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getDestinationRule())))
+			Expect(string(managedResourceSecret.Data["dnsrecord__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getDNSRecord())))
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceTarget), managedResourceTarget)).To(Succeed())
 			expectedTargetMr := &resourcesv1alpha1.ManagedResource{
@@ -1300,6 +1309,28 @@ func getDestinationRule() *istionetworkingv1beta1.DestinationRule {
 					Mode: istioapinetworkingv1beta1.ClientTLSSettings_DISABLE,
 				},
 			},
+		},
+	}
+}
+
+func getDNSRecord() *extensionsv1alpha1.DNSRecord {
+	return &extensionsv1alpha1.DNSRecord{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        valiName,
+			Namespace:   namespace,
+			Annotations: map[string]string{"confirmation.gardener.cloud/deletion": "true"},
+		},
+		Spec: extensionsv1alpha1.DNSRecordSpec{
+			Name:       valiHost,
+			RecordType: "A",
+			SecretRef: corev1.SecretReference{
+				Name:      "dns-secret",
+				Namespace: "dns-secret-namespace",
+			},
+			DefaultSpec: extensionsv1alpha1.DefaultSpec{
+				Type: "dns-type",
+			},
+			Values: []string{"1.2.3.4"},
 		},
 	}
 }

@@ -16,6 +16,7 @@ package botanist
 
 import (
 	"context"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -68,6 +69,21 @@ func (b *Botanist) DeployLogging(ctx context.Context) error {
 	if !gardenlethelper.IsValiEnabled(b.Config) {
 		return b.Shoot.Components.Logging.Vali.Destroy(ctx)
 	}
+
+	dnsConfig := &vali.DNSConfig{
+		SecretName:      "seed-ingress",
+		SecretNamespace: v1beta1constants.GardenNamespace,
+	}
+	if dns := b.Seed.GetInfo().Spec.DNS; dns.Provider != nil {
+		dnsConfig.ProviderType = dns.Provider.Type
+	}
+	// Always use the default istio ingress gateway and do not consider exposure classes for observability components
+	address, err := kubernetesutils.WaitUntilLoadBalancerIsReady(ctx, b.Logger, b.SeedClientSet.Client(), *b.Config.SNI.Ingress.Namespace, v1beta1constants.DefaultSNIIngressServiceName, time.Minute)
+	if err != nil {
+		return err
+	}
+	dnsConfig.Value = address
+	b.Operation.Shoot.Components.Logging.Vali.SetDNSConfig(dnsConfig)
 
 	return b.Shoot.Components.Logging.Vali.Deploy(ctx)
 }

@@ -8,6 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	vali "github.com/gardener/gardener/pkg/component/logging/vali"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -90,4 +91,16 @@ func (m *MockInterface) ScrapeConfigs() ([]string, error) {
 func (mr *MockInterfaceMockRecorder) ScrapeConfigs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScrapeConfigs", reflect.TypeOf((*MockInterface)(nil).ScrapeConfigs))
+}
+
+// SetDNSConfig mocks base method.
+func (m *MockInterface) SetDNSConfig(arg0 *vali.DNSConfig) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetDNSConfig", arg0)
+}
+
+// SetDNSConfig indicates an expected call of SetDNSConfig.
+func (mr *MockInterfaceMockRecorder) SetDNSConfig(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDNSConfig", reflect.TypeOf((*MockInterface)(nil).SetDNSConfig), arg0)
 }
