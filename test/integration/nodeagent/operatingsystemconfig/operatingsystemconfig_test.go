@@ -17,6 +17,7 @@ package operatingsystemconfig_test
 import (
 	"context"
 	"io/fs"
+	"path"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -36,13 +37,14 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/operatingsystemconfig"
-	"github.com/gardener/gardener/pkg/nodeagent/dbus/fake"
+	fakedbus "github.com/gardener/gardener/pkg/nodeagent/dbus/fake"
+	fakeregistry "github.com/gardener/gardener/pkg/nodeagent/registry/fake"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
 var _ = Describe("OperatingSystemConfig controller tests", func() {
 	var (
-		fakeDBus *fake.DBus
+		fakeDBus *fakedbus.DBus
 		fakeFS   afero.Afero
 
 		oscSecretName     = testRunID
@@ -50,17 +52,25 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		node *corev1.Node
 
-		file1, file2                                        extensionsv1alpha1.File
-		unit1, unit2, unit3, unit4, unit5, unit5DropInsOnly extensionsv1alpha1.Unit
+		file1, file2, file3                                        extensionsv1alpha1.File
+		unit1, unit2, unit3, unit4, unit5, unit5DropInsOnly, unit6 extensionsv1alpha1.Unit
 
 		operatingSystemConfig *extensionsv1alpha1.OperatingSystemConfig
 		oscRaw                []byte
 		oscSecret             *corev1.Secret
+
+		imageMountDirectory string
 	)
 
 	BeforeEach(func() {
-		fakeDBus = fake.New()
+		var err error
+
+		fakeDBus = fakedbus.New()
 		fakeFS = afero.Afero{Fs: afero.NewMemMapFs()}
+
+		imageMountDirectory, err = fakeFS.TempDir("", "fake-node-agent-")
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { Expect(fakeFS.RemoveAll(imageMountDirectory)).To(Succeed()) })
 
 		By("Setup manager")
 		mgr, err := manager.New(restConfig, manager.Options{
@@ -92,9 +102,10 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 				SecretName:        oscSecretName,
 				KubernetesVersion: kubernetesVersion,
 			},
-			DBus:     fakeDBus,
-			FS:       fakeFS,
-			NodeName: node.Name,
+			DBus:      fakeDBus,
+			FS:        fakeFS,
+			NodeName:  node.Name,
+			Extractor: fakeregistry.NewExtractor(fakeFS, imageMountDirectory),
 		}).AddToManager(mgr)).To(Succeed())
 
 		By("Start manager")
@@ -119,6 +130,12 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			Path:    "/another/file",
 			Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: "ZmlsZTI="}},
 		}
+		file3 = extensionsv1alpha1.File{
+			Path:        "/third/file",
+			Content:     extensionsv1alpha1.FileContent{ImageRef: &extensionsv1alpha1.FileContentImageRef{Image: "foo-image", FilePathInImage: "/foo-file"}},
+			Permissions: pointer.Int32(0750),
+		}
+		Expect(fakeFS.WriteFile(path.Join(imageMountDirectory, file3.Content.ImageRef.FilePathInImage), []byte("file3"), 0755)).To(Succeed())
 
 		unit1 = extensionsv1alpha1.Unit{
 			Name:    "unit1",
@@ -177,10 +194,17 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			}},
 		}
 
+		unit6 = extensionsv1alpha1.Unit{
+			Name:    "unit6",
+			Enable:  pointer.Bool(true),
+			Content: pointer.String("#unit6"),
+			Files:   []extensionsv1alpha1.File{file3},
+		}
+
 		operatingSystemConfig = &extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 				Files: []extensionsv1alpha1.File{file1},
-				Units: []extensionsv1alpha1.Unit{unit1, unit2, unit5, unit5DropInsOnly},
+				Units: []extensionsv1alpha1.Unit{unit1, unit2, unit5, unit5DropInsOnly, unit6},
 			},
 			Status: extensionsv1alpha1.OperatingSystemConfigStatus{
 				ExtensionFiles: []extensionsv1alpha1.File{file2},
@@ -224,6 +248,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		By("Assert that files and units have been created")
 		assertFileOnDisk(fakeFS, file1.Path, "file1", 0777)
 		assertFileOnDisk(fakeFS, file2.Path, "file2", 0600)
+		assertFileOnDisk(fakeFS, file3.Path, "file3", 0750)
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit1.Name, "#unit1", 0600)
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit1.Name+".d/"+unit1.DropIns[0].Name, "#unit1drop", 0600)
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit2.Name, "#unit2", 0600)
@@ -234,20 +259,23 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit5.Name+".d/"+unit5.DropIns[0].Name, "#unit5drop1", 0600)
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit5.Name+".d/"+unit5.DropIns[1].Name, "#unit5drop2", 0600)
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit5.Name+".d/"+unit5DropInsOnly.DropIns[0].Name, "#unit5extensionsdrop", 0600)
+		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit6.Name, "#unit6", 0600)
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(
-			fake.SystemdAction{Action: fake.ActionEnable, UnitNames: []string{unit1.Name}},
-			fake.SystemdAction{Action: fake.ActionDisable, UnitNames: []string{unit2.Name}},
-			fake.SystemdAction{Action: fake.ActionEnable, UnitNames: []string{unit3.Name}},
-			fake.SystemdAction{Action: fake.ActionEnable, UnitNames: []string{unit4.Name}},
-			fake.SystemdAction{Action: fake.ActionEnable, UnitNames: []string{unit5.Name}},
-			fake.SystemdAction{Action: fake.ActionDaemonReload},
-			fake.SystemdAction{Action: fake.ActionRestart, UnitNames: []string{unit1.Name}},
-			fake.SystemdAction{Action: fake.ActionStop, UnitNames: []string{unit2.Name}},
-			fake.SystemdAction{Action: fake.ActionRestart, UnitNames: []string{unit3.Name}},
-			fake.SystemdAction{Action: fake.ActionRestart, UnitNames: []string{unit4.Name}},
-			fake.SystemdAction{Action: fake.ActionRestart, UnitNames: []string{unit5.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit1.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionDisable, UnitNames: []string{unit2.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit3.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit4.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit5.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit6.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionDaemonReload},
+			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit1.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionStop, UnitNames: []string{unit2.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit3.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit4.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit5.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit6.Name}},
 		))
 	})
 
@@ -264,14 +292,17 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		// disable unit4 and remove all drop-ins
 		// remove only first drop-in from unit5
 		// file1 and unit3 are unchanged.
+		// move file3 from unit.files to files while keeping it unchanged
 		unit2.Enable = pointer.Bool(true)
 		unit2.Command = extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart)
 		unit2.DropIns = []extensionsv1alpha1.DropIn{{Name: "dropdropdrop", Content: "#unit2drop"}}
 		unit4.Enable = pointer.Bool(false)
 		unit4.DropIns = nil
 		unit5.DropIns = unit5.DropIns[1:]
+		unit6.Files = nil
 
-		operatingSystemConfig.Spec.Units = []extensionsv1alpha1.Unit{unit2, unit5}
+		operatingSystemConfig.Spec.Units = []extensionsv1alpha1.Unit{unit2, unit5, unit6}
+		operatingSystemConfig.Spec.Files = append(operatingSystemConfig.Spec.Files, file3)
 		operatingSystemConfig.Status.ExtensionUnits = []extensionsv1alpha1.Unit{unit3, unit4}
 		operatingSystemConfig.Status.ExtensionFiles = nil
 
@@ -297,6 +328,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		By("Assert that files and units have been created")
 		assertFileOnDisk(fakeFS, file1.Path, "file1", 0777)
 		assertNoFileOnDisk(fakeFS, file2.Path)
+		assertFileOnDisk(fakeFS, file3.Path, "file3", 0750)
 		assertNoFileOnDisk(fakeFS, "/etc/systemd/system/"+unit1.Name)
 		assertNoDirectoryOnDisk(fakeFS, "/etc/systemd/system/"+unit1.Name+".d")
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit2.Name, "#unit2", 0600)
@@ -309,15 +341,17 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(
-			fake.SystemdAction{Action: fake.ActionEnable, UnitNames: []string{unit2.Name}},
-			fake.SystemdAction{Action: fake.ActionEnable, UnitNames: []string{unit5.Name}},
-			fake.SystemdAction{Action: fake.ActionDisable, UnitNames: []string{unit4.Name}},
-			fake.SystemdAction{Action: fake.ActionDisable, UnitNames: []string{unit1.Name}},
-			fake.SystemdAction{Action: fake.ActionStop, UnitNames: []string{unit1.Name}},
-			fake.SystemdAction{Action: fake.ActionDaemonReload},
-			fake.SystemdAction{Action: fake.ActionRestart, UnitNames: []string{unit2.Name}},
-			fake.SystemdAction{Action: fake.ActionRestart, UnitNames: []string{unit5.Name}},
-			fake.SystemdAction{Action: fake.ActionStop, UnitNames: []string{unit4.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit2.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit5.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit6.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionDisable, UnitNames: []string{unit4.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionDisable, UnitNames: []string{unit1.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionStop, UnitNames: []string{unit1.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionDaemonReload},
+			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit2.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit5.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionStop, UnitNames: []string{unit4.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit6.Name}},
 		))
 	})
 })

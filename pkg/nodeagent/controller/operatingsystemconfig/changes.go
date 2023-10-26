@@ -80,6 +80,12 @@ type files struct {
 func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alpha1.OperatingSystemConfig) (*operatingSystemConfigChanges, error) {
 	changes := &operatingSystemConfigChanges{}
 
+	// osc.files and osc.unit.files should be changed the same way by OSC controller.
+	// The reason for assigning files to units is the detection of changes which require the restart of a unit.
+	newUnitFiles := collectUnitFiles(mergeUnits(newOSC.Spec.Units, newOSC.Status.ExtensionUnits))
+	newOSCFiles := append(newOSC.Spec.Files, newOSC.Status.ExtensionFiles...)
+	newOSCFiles = append(newOSCFiles, newUnitFiles...)
+
 	oldOSCRaw, err := fs.ReadFile(lastAppliedOperatingSystemConfigFilePath)
 	if err != nil {
 		if !errors.Is(err, afero.ErrFileNotFound) {
@@ -94,7 +100,7 @@ func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alp
 			})
 		}
 
-		changes.files.changed = append(newOSC.Spec.Files, newOSC.Status.ExtensionFiles...)
+		changes.files.changed = newOSCFiles
 		changes.units.changed = unitChanges
 		return changes, nil
 	}
@@ -108,10 +114,14 @@ func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alp
 		mergeUnits(oldOSC.Spec.Units, oldOSC.Status.ExtensionUnits),
 		mergeUnits(newOSC.Spec.Units, newOSC.Status.ExtensionUnits),
 	)
-	changes.files = computeFileDiffs(
-		append(oldOSC.Spec.Files, oldOSC.Status.ExtensionFiles...),
-		append(newOSC.Spec.Files, newOSC.Status.ExtensionFiles...),
-	)
+
+	oldUnitFiles := collectUnitFiles(mergeUnits(oldOSC.Spec.Units, oldOSC.Status.ExtensionUnits))
+	oldOSCFiles := append(oldOSC.Spec.Files, oldOSC.Status.ExtensionFiles...)
+	oldOSCFiles = append(oldOSCFiles, oldUnitFiles...)
+	// File changes have to be computed in one step for all files,
+	// because moving a file from osc.unit.files to osc.files or vice versa should not result in a change and a delete event.
+	changes.files = computeFileDiffs(oldOSCFiles, newOSCFiles)
+
 	return changes, nil
 }
 
@@ -216,7 +226,18 @@ func mergeUnits(specUnits, statusUnits []extensionsv1alpha1.Unit) []extensionsv1
 			out[unitIndex].Content = unit.Content
 		}
 		out[unitIndex].DropIns = append(out[unitIndex].DropIns, unit.DropIns...)
+		out[unitIndex].Files = append(out[unitIndex].Files, unit.Files...)
 	}
 
 	return out
+}
+
+func collectUnitFiles(units []extensionsv1alpha1.Unit) []extensionsv1alpha1.File {
+	var unitFiles []extensionsv1alpha1.File
+
+	for _, unit := range units {
+		unitFiles = append(unitFiles, unit.Files...)
+	}
+
+	return unitFiles
 }
