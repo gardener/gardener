@@ -162,6 +162,7 @@ build:
         - pkg/utils/time
         - pkg/utils/timewindow
         - pkg/utils/validation/admissionplugins
+        - pkg/utils/validation/apigroups
         - pkg/utils/validation/cidr
         - pkg/utils/validation/features
         - pkg/utils/validation/kubernetes/core
@@ -980,6 +981,7 @@ build:
         - pkg/utils/time
         - pkg/utils/timewindow
         - pkg/utils/validation/admissionplugins
+        - pkg/utils/validation/apigroups
         - pkg/utils/validation/cidr
         - pkg/utils/validation/features
         - pkg/utils/validation/kubernetes/core
