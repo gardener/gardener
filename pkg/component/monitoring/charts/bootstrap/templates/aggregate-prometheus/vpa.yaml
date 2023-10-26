@@ -11,4 +11,10 @@ spec:
     name: aggregate-prometheus
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: prometheus
+      maxAllowed:
+        cpu: "4"
+        memory: 28G
 {{ end }}

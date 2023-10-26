@@ -10,6 +10,10 @@ spec:
     - containerName: '*'
       minAllowed:
         memory: 400Mi
+    - containerName: prometheus
+      maxAllowed:
+        cpu: "4"
+        memory: 28G
   targetRef:
     apiVersion: apps/v1
     kind: StatefulSet
