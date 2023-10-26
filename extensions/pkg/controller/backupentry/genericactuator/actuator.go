@@ -38,6 +38,8 @@ type actuator struct {
 	client              client.Client
 }
 
+const BackupentryName = "created-by-backupentry"
+
 // NewActuator creates a new Actuator that updates the status of the handled BackupEntry resources.
 func NewActuator(mgr manager.Manager, backupEntryDelegate BackupEntryDelegate) backupentry.Actuator {
 	return &actuator{
@@ -85,6 +87,7 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, log logr.Logger, 
 	}
 
 	etcdSecret := emptyEtcdBackupSecret(be.Name)
+	metav1.SetMetaDataAnnotation(&etcdSecret.ObjectMeta, BackupentryName, be.Name)
 
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, a.client, etcdSecret, func() error {
 		etcdSecret.Data = etcdSecretData
@@ -101,9 +104,13 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, be *extensionsv1
 	return a.backupEntryDelegate.Delete(ctx, log, be)
 }
 
-func (a *actuator) deleteEtcdBackupSecret(ctx context.Context, secretName string) error {
-	etcdSecret := emptyEtcdBackupSecret(secretName)
-	return kubernetesutils.DeleteObject(ctx, a.client, etcdSecret)
+func (a *actuator) deleteEtcdBackupSecret(ctx context.Context, backupEntryName string) error {
+	etcdSecret := emptyEtcdBackupSecret(backupEntryName)
+	a.client.Get(ctx, client.ObjectKeyFromObject(etcdSecret), etcdSecret)
+	if !metav1.HasAnnotation(etcdSecret.ObjectMeta, BackupentryName) || (metav1.HasAnnotation(etcdSecret.ObjectMeta, BackupentryName) && etcdSecret.GetAnnotations()[BackupentryName] == backupEntryName) {
+		return kubernetesutils.DeleteObject(ctx, a.client, etcdSecret)
+	}
+	return nil
 }
 
 func emptyEtcdBackupSecret(backupEntryName string) *corev1.Secret {
