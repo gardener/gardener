@@ -22,6 +22,7 @@ import (
 	"os"
 	goruntime "runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -403,6 +404,11 @@ func (g *garden) Start(ctx context.Context) error {
 		return err
 	}
 
+	log.Info("Cleaning up orphaned ServiceAccounts related to garden access secrets for extensions")
+	if err := g.cleanupOrphanedExtensionsServiceAccounts(ctx, gardenCluster.GetClient()); err != nil {
+		return err
+	}
+
 	log.Info("Setting up shoot client map")
 	shootClientMap, err := clientmapbuilder.
 		NewShootClientMapBuilder().
@@ -452,6 +458,7 @@ func (g *garden) Start(ctx context.Context) error {
 	return nil
 }
 
+// TODO(rfranzke): Remove this code after v1.83 has been released.
 func cleanupLegacyLoggingManagedResource(ctx context.Context, seedClient client.Client) error {
 	managedResourceList := &metav1.PartialObjectMetadataList{}
 	managedResourceList.SetGroupVersionKind(resourcesv1alpha1.SchemeGroupVersion.WithKind("ManagedResourceList"))
@@ -468,6 +475,33 @@ func cleanupLegacyLoggingManagedResource(ctx context.Context, seedClient client.
 			mr := managedResource
 			taskFns = append(taskFns, func(ctx context.Context) error {
 				return seedClient.Delete(ctx, &mr)
+			})
+		}
+	}
+
+	return flow.Parallel(taskFns...)(ctx)
+}
+
+// TODO(rfranzke): Remove this code after v1.86 has been released.
+func (g *garden) cleanupOrphanedExtensionsServiceAccounts(ctx context.Context, gardenClient client.Client) error {
+	serviceAccountList := &metav1.PartialObjectMetadataList{}
+	serviceAccountList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("ServiceAccountList"))
+	if err := gardenClient.List(ctx, serviceAccountList, client.InNamespace(gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.Name))); err != nil {
+		return err
+	}
+
+	var taskFns []flow.TaskFn
+	for _, serviceAccount := range serviceAccountList.Items {
+		controllerInstallation := &metav1.PartialObjectMetadata{}
+		controllerInstallation.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("ControllerInstallation"))
+		if err := gardenClient.Get(ctx, client.ObjectKey{Name: strings.TrimPrefix(serviceAccount.Name, v1beta1constants.ExtensionGardenServiceAccountPrefix)}, controllerInstallation); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return err
+			}
+
+			sa := serviceAccount
+			taskFns = append(taskFns, func(ctx context.Context) error {
+				return gardenClient.Delete(ctx, &sa)
 			})
 		}
 	}
