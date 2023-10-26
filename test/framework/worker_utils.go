@@ -80,7 +80,7 @@ func AddWorker(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.C
 
 	machineType := cloudProfile.Spec.MachineTypes[0]
 
-	//select first machine type of CPU architecture amd64
+	// select first machine type of CPU architecture amd64
 	for _, machine := range cloudProfile.Spec.MachineTypes {
 		if *machine.Architecture == v1beta1constants.ArchitectureAMD64 {
 			machineType = machine
@@ -98,14 +98,16 @@ func AddWorker(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.C
 		return fmt.Errorf("no MachineImage that supports architecture amd64 configured in the Cloudprofile '%s'", cloudProfile.Name)
 	}
 
-	qualifyingVersionFound, shootMachineImage, err := helper.GetLatestQualifyingShootMachineImage(*machineImage)
+	qualifyingVersionFound, latestImageVersion, err := helper.GetLatestQualifyingVersion(helper.ToExpirableVersions(machineImage.Versions))
 	if err != nil {
-		return err
+		return fmt.Errorf("an error occurred while determining the latest Shoot machine image for machine image %q: %w", machineImage.Name, err)
 	}
 
 	if !qualifyingVersionFound {
 		return fmt.Errorf("could not add worker. No latest qualifying Shoot machine image could be determined for machine image %q. Make sure the machine image in the CloudProfile has at least one version that is not expired and not in preview", machineImage.Name)
 	}
+
+	shootMachineImage := &gardencorev1beta1.ShootMachineImage{Name: machineImage.Name, Version: &latestImageVersion.Version}
 
 	workerName, err := generateRandomWorkerName(fmt.Sprintf("%s-", shootMachineImage.Name))
 	if err != nil {

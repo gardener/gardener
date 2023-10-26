@@ -279,7 +279,7 @@ func computeNewKubernetesVersions(
 }
 
 func getNextConsecutiveMinorVersion(cloudProfile *gardencorev1beta1.CloudProfile, kubernetesVersion string) (string, error) {
-	consecutiveMinorAvailable, newVersion, err := v1beta1helper.GetKubernetesVersionForMinorUpdate(cloudProfile, kubernetesVersion)
+	consecutiveMinorAvailable, newVersion, err := v1beta1helper.GetVersionForForcefulUpdateToConsecutiveMinor(cloudProfile.Spec.Kubernetes.Versions, kubernetesVersion)
 	if err != nil {
 		return "", err
 	}

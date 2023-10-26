@@ -454,6 +454,55 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					}))))
 				})
 
+				It("should forbid machine images with an invalid machine image update strategy", func() {
+					updateStrategy := core.MachineImageUpdateStrategy("dummy")
+					cloudProfile.Spec.MachineImages = []core.MachineImage{
+						{
+							Name: "some-machineimage",
+							Versions: []core.MachineImageVersion{
+								{
+									ExpirableVersion: core.ExpirableVersion{
+										Version:        "3.4.6",
+										Classification: &supportedClassification,
+									},
+									CRI: []core.CRI{{Name: "docker"}},
+								},
+							},
+							UpdateStrategy: &updateStrategy,
+						},
+					}
+
+					errorList := ValidateCloudProfile(cloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal("spec.machineImages[0].updateStrategy"),
+					}))))
+				})
+
+				It("should allow machine images with a valid machine image update strategy", func() {
+					updateStrategy := core.UpdateStrategyMinor
+					cloudProfile.Spec.MachineImages = []core.MachineImage{
+						{
+							Name: "some-machineimage",
+							Versions: []core.MachineImageVersion{
+								{
+									ExpirableVersion: core.ExpirableVersion{
+										Version:        "3.4.6",
+										Classification: &supportedClassification,
+									},
+									CRI: []core.CRI{{Name: "docker"}},
+								},
+							},
+							UpdateStrategy: &updateStrategy,
+						},
+					}
+
+					errorList := ValidateCloudProfile(cloudProfile)
+
+					Expect(errorList).To(BeEmpty())
+				})
+
 				It("should forbid nonSemVer machine image versions", func() {
 					cloudProfile.Spec.MachineImages = []core.MachineImage{
 						{

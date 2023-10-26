@@ -2068,7 +2068,6 @@ var _ = Describe("validator", func() {
 					highestPreviewVersion      core.ExpirableVersion
 					expiredVersion             core.ExpirableVersion
 				)
-
 				BeforeEach(func() {
 					preview := core.ClassificationPreview
 					deprecatedClassification := core.ClassificationDeprecated
@@ -2203,6 +2202,16 @@ var _ = Describe("validator", func() {
 					Expect(err).To(MatchError(ContainSubstring("spec.kubernetes.version: Unsupported value: %q", expiredVersion.Version)))
 				})
 
+				It("should allow updating a cluster to an expired kubernetes version", func() {
+					oldShoot := shoot.DeepCopy()
+					shoot.Spec.Kubernetes.Version = expiredVersion.Version
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).ToNot(HaveOccurred())
+				})
+
 				It("should allow to delete a cluster with an expired kubernetes version", func() {
 					shoot.Spec.Kubernetes.Version = expiredVersion.Version
 
@@ -2266,6 +2275,18 @@ var _ = Describe("validator", func() {
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
 					Expect(err).To(MatchError(ContainSubstring("spec.provider.workers[0].kubernetes.version: Unsupported value: %q", expiredVersion.Version)))
+				})
+
+				It("should allow updating a cluster to an expired worker group kubernetes version", func() {
+					oldShoot := shoot.DeepCopy()
+					shoot.Spec.Kubernetes.Version = highestSupportedVersion.Version
+					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: &expiredVersion.Version}
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).ToNot(HaveOccurred())
 				})
 
 				It("should allow to delete a cluster with an expired worker group kubernetes version", func() {
@@ -3533,6 +3554,63 @@ var _ = Describe("validator", func() {
 
 						Expect(err).To(BeForbiddenError())
 						Expect(err.Error()).To(ContainSubstring("machine image 'constraint-image-name@1.2.3' does not support kubelet version '1.25.0', supported kubelet versions by this machine image version: '>= 1.26'"))
+					})
+
+					It("should allow updating to an expired machine image", func() {
+						cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages,
+							core.MachineImage{
+								Name: "constraint-image-name",
+								Versions: []core.MachineImageVersion{
+									{
+										ExpirableVersion: core.ExpirableVersion{
+											Version:        "1.2.4",
+											ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)},
+										},
+										Architectures: []string{"amd64"},
+									},
+									{
+										ExpirableVersion: core.ExpirableVersion{
+											Version: "1.2.3",
+										},
+										Architectures: []string{"amd64"},
+									},
+								},
+							},
+						)
+
+						shoot.Spec.Provider.Workers = []core.Worker{
+							{
+								Machine: core.Machine{
+									Type: "machine-type-1",
+									Image: &core.ShootMachineImage{
+										Name:    "constraint-image-name",
+										Version: "1.2.3",
+									},
+									Architecture: pointer.String("amd64"),
+								},
+							},
+						}
+
+						newShoot := shoot.DeepCopy()
+
+						newShoot.Spec.Provider.Workers = []core.Worker{
+							{
+								Machine: core.Machine{
+									Type: "machine-type-1",
+									Image: &core.ShootMachineImage{
+										Name: "constraint-image-name",
+										// updated to expired version
+										Version: "1.2.4",
+									},
+									Architecture: pointer.String("amd64"),
+								},
+							},
+						}
+
+						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).ToNot(HaveOccurred())
 					})
 
 					It("should keep machine image of the old shoot (unset in new shoot)", func() {

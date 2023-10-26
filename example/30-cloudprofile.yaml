@@ -23,6 +23,7 @@ spec:
       expirationDate: 2022-11-30T01:02:03Z # optional
   machineImages:
   - name: suse-chost
+  # updateStrategy: "major" # optional, either {patch,minor,major}
     versions:
     - version: 15.4.20220818
     - version: 15.4.20220620

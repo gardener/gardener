@@ -1564,6 +1564,13 @@ message MachineImage {
   // +patchMergeKey=version
   // +patchStrategy=merge
   repeated MachineImageVersion versions = 2;
+
+  // UpdateStrategy is the update strategy to use for the machine image. Possible values are:
+  //  - patch: update to the latest patch version of the current minor version.
+  //  - minor: update to the latest minor and patch version.
+  //  - major: always update to the overall latest version (default).
+  // +optional
+  optional string updateStrategy = 3;
 }
 
 // MachineImageVersion is an expirable version with list of supported container runtimes and interfaces

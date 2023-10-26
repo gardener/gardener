@@ -45,12 +45,37 @@ During the daily maintenance, the Gardener Controller Manager updates the Shoot'
  - There is a higher version available and the Shoot opted-in for automatic version updates.
  - The currently used version is `expired`.
 
-Gardener creates events with the type `MaintenanceDone` on the Shoot describing the action performed during maintenance, including the reason why an update has been triggered.
+The target version for machine image upgrades is controlled by the `updateStrategy` field for the machine image in the CloudProfile. Allowed update strategies are `patch`, `minor` and `major`.
+
+Gardener (gardener-controller-manager) populates the `lastMaintenance` field in the Shoot status with the maintenance results.
 
 ```yaml
-MaintenanceDone  Updated image of worker-pool 'coreos-xy' from 'coreos' version 'xy' to version 'abc'. Reason: AutoUpdate of MachineImage configured.
-MaintenanceDone  Updated Kubernetes version '0.0.1' to version '0.0.5'. This is an increase in the patch level. Reason: AutoUpdate of Kubernetes version configured.
-MaintenanceDone  Updated Kubernetes version '0.0.5' to version '0.1.5'. This is an increase in the minor level. Reason: Kubernetes version expired - force update required.
+Last Maintenance:
+    Description:     "All maintenance operations successful. Control Plane: Updated Kubernetes version from 1.26.4 to 1.27.1. Reason: Kubernetes version expired - force update required"
+    State:           Succeeded
+    Triggered Time:  2023-07-28T09:07:27Z
+```
+
+Additionally, Gardener creates events with the type `MachineImageVersionMaintenance` or `KubernetesVersionMaintenance` on the Shoot describing the action performed during maintenance, including the reason why an update has been triggered.
+
+```text
+LAST SEEN   TYPE      REASON                           OBJECT          MESSAGE
+30m         Normal    MachineImageVersionMaintenance   shoot/local     Worker pool "local": Updated image from 'gardenlinux' version 'xy' to version 'abc'. Reason: Automatic update of the machine image version is co
+nfigured (image update strategy: major).
+
+30m         Normal    KubernetesVersionMaintenance     shoot/local     Control Plane: Updated Kubernetes version from "1.26.4" to "1.27.1". Reason: Kubernetes version expired - force update required.
+
+15m         Normal    KubernetesVersionMaintenance     shoot/local     Worker pool "local": Updated Kubernetes version '1.26.3' to version '1.27.1'. Reason: Kubernetes version expired - force update required.
+```
+
+If at least one maintenance operation fails, the `lastMaintenance` field in the Shoot status is set to `Failed`:
+
+```yaml
+Last Maintenance:
+  Description:     "(1/2) maintenance operations successful: Control Plane: Updated Kubernetes version from 1.26.4 to 1.27.1. Reason: Kubernetes version expired - force update required, Worker pool x: 'gardenlinux' machine image version maintenance failed. Reason for update: machine image version expired"
+  FailureReason:   "Worker pool x: either the machine image 'gardenlinux' is reaching end of life and migration to another machine image is required or there is a misconfiguration in the CloudProfile."
+  State:           Failed
+  Triggered Time:  2023-07-28T09:07:27Z
 ```
 
 Please refer to the [Shoot Kubernetes and Operating System Versioning in Gardener](./shoot_versions.md) topic for more information about Kubernetes and machine image versions in Gardener.

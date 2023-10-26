@@ -2636,6 +2636,11 @@ func (in *MachineImage) DeepCopyInto(out *MachineImage) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.UpdateStrategy != nil {
+		in, out := &in.UpdateStrategy, &out.UpdateStrategy
+		*out = new(MachineImageUpdateStrategy)
+		**out = **in
+	}
 	return
 }
 

@@ -6902,8 +6902,34 @@ string
 <p>Versions contains versions, expiration dates and container runtimes of the machine image</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>updateStrategy</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.MachineImageUpdateStrategy">
+MachineImageUpdateStrategy
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>UpdateStrategy is the update strategy to use for the machine image. Possible values are:
+- patch: update to the latest patch version of the current minor version.
+- minor: update to the latest minor and patch version.
+- major: always update to the overall latest version (default).</p>
+</td>
+</tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.MachineImageUpdateStrategy">MachineImageUpdateStrategy
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.MachineImage">MachineImage</a>)
+</p>
+<p>
+<p>MachineImageUpdateStrategy is the update strategy to use for a machine image</p>
+</p>
 <h3 id="core.gardener.cloud/v1beta1.MachineImageVersion">MachineImageVersion
 </h3>
 <p>
