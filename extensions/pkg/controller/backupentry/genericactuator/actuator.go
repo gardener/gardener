@@ -38,7 +38,8 @@ type actuator struct {
 	client              client.Client
 }
 
-const BackupentryName = "created-by-backupentry"
+// AnnotationKeyCreatedByBackupEntry is a constant for the name of the BackupEntry object that created the etcd-backup secret.
+const AnnotationKeyCreatedByBackupEntry = "backup.gardener.cloud/created-by"
 
 // NewActuator creates a new Actuator that updates the status of the handled BackupEntry resources.
 func NewActuator(mgr manager.Manager, backupEntryDelegate BackupEntryDelegate) backupentry.Actuator {
@@ -87,7 +88,7 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, log logr.Logger, 
 	}
 
 	etcdSecret := emptyEtcdBackupSecret(be.Name)
-	metav1.SetMetaDataAnnotation(&etcdSecret.ObjectMeta, BackupentryName, be.Name)
+	metav1.SetMetaDataAnnotation(&etcdSecret.ObjectMeta, AnnotationKeyCreatedByBackupEntry, be.Name)
 
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, a.client, etcdSecret, func() error {
 		etcdSecret.Data = etcdSecretData
@@ -106,11 +107,16 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, be *extensionsv1
 
 func (a *actuator) deleteEtcdBackupSecret(ctx context.Context, backupEntryName string) error {
 	etcdSecret := emptyEtcdBackupSecret(backupEntryName)
-	a.client.Get(ctx, client.ObjectKeyFromObject(etcdSecret), etcdSecret)
-	if !metav1.HasAnnotation(etcdSecret.ObjectMeta, BackupentryName) || (metav1.HasAnnotation(etcdSecret.ObjectMeta, BackupentryName) && etcdSecret.GetAnnotations()[BackupentryName] == backupEntryName) {
-		return kubernetesutils.DeleteObject(ctx, a.client, etcdSecret)
+	if err := a.client.Get(ctx, client.ObjectKeyFromObject(etcdSecret), etcdSecret); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("could not delete secret %s in %s namespace: %w", etcdSecret.Name, etcdSecret.Namespace, err)
 	}
-	return nil
+	if createdBy, ok := etcdSecret.Annotations[AnnotationKeyCreatedByBackupEntry]; ok && createdBy != backupEntryName {
+		return nil
+	}
+	return kubernetesutils.DeleteObject(ctx, a.client, etcdSecret)
 }
 
 func emptyEtcdBackupSecret(backupEntryName string) *corev1.Secret {
