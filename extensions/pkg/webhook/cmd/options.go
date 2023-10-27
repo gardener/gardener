@@ -308,7 +308,7 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 		// also reconcile all shoot webhook configs to update the CA bundle
 		if err := mgr.Add(runOnceWithLeaderElection(flow.Sequential(
 			c.reconcileSeedWebhookConfig(mgr, seedWebhookConfigs, caBundle),
-			c.reconcileShootWebhookConfigs(mgr, shootWebhookConfigs, caBundle),
+			c.reconcileShootWebhookConfigs(mgr, shootWebhookConfigs),
 		))); err != nil {
 			return nil, err
 		}
@@ -357,16 +357,9 @@ func (c *AddToManagerConfig) reconcileSeedWebhookConfig(mgr manager.Manager, web
 	}
 }
 
-func (c *AddToManagerConfig) reconcileShootWebhookConfigs(mgr manager.Manager, shootWebhookConfigs extensionswebhook.Configs, caBundle []byte) func(ctx context.Context) error {
+func (c *AddToManagerConfig) reconcileShootWebhookConfigs(mgr manager.Manager, shootWebhookConfigs extensionswebhook.Configs) func(ctx context.Context) error {
 	return func(ctx context.Context) error {
 		if shootWebhookConfigs.HasWebhookConfig() {
-			// TODO(timuthy): Remove in next commit. CA is already injected when AddToManager is invoked.
-			for _, webhookConfig := range shootWebhookConfigs.GetWebhookConfigs() {
-				if err := extensionswebhook.InjectCABundleIntoWebhookConfig(webhookConfig, caBundle); err != nil {
-					return err
-				}
-			}
-
 			if err := extensionsshootwebhook.ReconcileWebhooksForAllNamespaces(ctx, mgr.GetClient(), c.Server.Namespace, c.extensionName, c.shootWebhookManagedResourceName, c.shootNamespaceSelector, shootWebhookConfigs); err != nil {
 				return fmt.Errorf("error reconciling all shoot webhook configs: %w", err)
 			}
