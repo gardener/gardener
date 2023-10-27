@@ -111,8 +111,8 @@ func AllPluginNames() []string {
 }
 
 // DefaultOnPlugins is the set of admission plugins that are enabled by default.
-func DefaultOnPlugins() sets.String {
-	return sets.NewString(
+func DefaultOnPlugins() sets.Set[string] {
+	return sets.New[string](
 		lifecycle.PluginName,                      // NamespaceLifecycle
 		PluginNameResourceReferenceManager,        // ResourceReferenceManager
 		PluginNameExtensionValidator,              // ExtensionValidator

@@ -128,7 +128,7 @@ func waitForLokiPodTermination(ctx context.Context, k8sClient client.Client, nam
 			Namespace: namespace,
 		},
 	}
-	if err := wait.PollUntilWithContext(ctx, 1*time.Second, func(context.Context) (done bool, err error) {
+	if err := wait.PollUntilContextCancel(ctx, 1*time.Second, true, func(context.Context) (done bool, err error) {
 		if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(pod), pod); err != nil {
 			if apierrors.IsNotFound(err) {
 				log.Info("Loki2vali: pod loki-0 not found, continuing with the rename", "lokiNamespace", namespace)
@@ -139,7 +139,7 @@ func waitForLokiPodTermination(ctx context.Context, k8sClient client.Client, nam
 		}
 		log.Info("Loki2vali: Waiting for pod loki-0 to terminate", "lokiNamespace", namespace, "timeLeft", time.Until(deadline))
 		return false, nil
-	}); err != nil && err == wait.ErrWaitTimeout {
+	}); wait.Interrupted(err) {
 		err := fmt.Errorf("Loki2vali: %v: Timeout while waiting for the loki-0 pod to terminate", namespace)
 		log.Info("Loki2vali:", "lokiError", err)
 		return err
@@ -199,7 +199,7 @@ func deleteLokiPvc(ctx context.Context, k8sClient client.Client, namespace strin
 	defer cancel()
 	deadline, _ := ctx.Deadline()
 
-	if err := wait.PollUntilWithContext(ctx, 1*time.Second, func(context.Context) (done bool, err error) {
+	if err := wait.PollUntilContextCancel(ctx, 1*time.Second, true, func(context.Context) (done bool, err error) {
 		if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(pvc), pvc); err != nil {
 			if apierrors.IsNotFound(err) {
 				log.Info("Loki2vali: Successfully deleted the Loki PVC", "lokiNamespace", namespace)
@@ -210,7 +210,7 @@ func deleteLokiPvc(ctx context.Context, k8sClient client.Client, namespace strin
 		}
 		log.Info("Loki2vali: Wait for Loki PVC deletion to complete", "lokiNamespace", namespace, "timeLeft", time.Until(deadline))
 		return false, nil
-	}); err != nil && err == wait.ErrWaitTimeout {
+	}); wait.Interrupted(err) {
 		err := fmt.Errorf("Loki2vali: %v: Timeout while waiting for the loki-loki-0 PVC to terminate", namespace)
 		log.Info("Loki2vali:", "lokiError", err)
 		return err
@@ -298,7 +298,7 @@ func waitForValiPvcToBeBound(ctx context.Context, k8sClient client.Client, names
 	ctx, cancel := context.WithDeadline(ctx, time.Now().Add(1*time.Minute))
 	defer cancel()
 	deadline, _ := ctx.Deadline()
-	if err := wait.PollUntilWithContext(ctx, 1*time.Second, func(context.Context) (done bool, err error) {
+	if err := wait.PollUntilContextCancel(ctx, 1*time.Second, true, func(context.Context) (done bool, err error) {
 		if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(valiPvc), valiPvc); err != nil {
 			if apierrors.IsNotFound(err) {
 				log.Info("Loki2vali: Vali PVC is not yet created", "lokiNamespace", namespace, "lokiError", err)
@@ -317,7 +317,7 @@ func waitForValiPvcToBeBound(ctx context.Context, k8sClient client.Client, names
 		}
 		log.Info("Loki2vali: Wait for the Vali PVC to be bound", "lokiNamespace", namespace, "timeLeft", time.Until(deadline))
 		return false, nil
-	}); err != nil && err == wait.ErrWaitTimeout {
+	}); wait.Interrupted(err) {
 		err := fmt.Errorf("Loki2vali: %v: Timeout while waiting for the vali PVC to be bound", namespace)
 		log.Info("Loki2vali:", "lokiError", err)
 		return err
