@@ -561,11 +561,11 @@ func (a *actuator) reconcileSeedSecrets(ctx context.Context, log logr.Logger, sp
 				Namespace: managedSeed.Annotations[seedmanagementv1alpha1constants.AnnotationSeedSecretNamespace],
 			},
 		)
-		if err != nil {
+		if client.IgnoreNotFound(err) != nil {
 			return fmt.Errorf("failed getting secret in the managedseed annotations: %w", err)
 		}
 
-		if metav1.IsControlledBy(secret, managedSeed) {
+		if err == nil && metav1.IsControlledBy(secret, managedSeed) {
 			// This finalizer is added by the seed controller, but it cannot remove it when the secretRef is unset.
 			if controllerutil.ContainsFinalizer(secret, gardencorev1beta1.ExternalGardenerName) {
 				if err := controllerutils.RemoveFinalizers(ctx, a.gardenClient, secret, gardencorev1beta1.ExternalGardenerName); err != nil {
@@ -577,13 +577,13 @@ func (a *actuator) reconcileSeedSecrets(ctx context.Context, log logr.Logger, sp
 				return fmt.Errorf("error deleting seed secret referred by managedseed: %w", err)
 			}
 			log.Info("Deleted seed secret referred by managedseed", "secretName", secret.Name, "secretNamespace", secret.Namespace)
+		}
 
-			patch := client.MergeFrom(managedSeed.DeepCopy())
-			delete(managedSeed.Annotations, seedmanagementv1alpha1constants.AnnotationSeedSecretName)
-			delete(managedSeed.Annotations, seedmanagementv1alpha1constants.AnnotationSeedSecretNamespace)
-			if err := a.gardenClient.Patch(ctx, managedSeed, patch); err != nil {
-				return fmt.Errorf("error removing seed secret reference annotations: %w", err)
-			}
+		patch := client.MergeFrom(managedSeed.DeepCopy())
+		delete(managedSeed.Annotations, seedmanagementv1alpha1constants.AnnotationSeedSecretName)
+		delete(managedSeed.Annotations, seedmanagementv1alpha1constants.AnnotationSeedSecretNamespace)
+		if err := a.gardenClient.Patch(ctx, managedSeed, patch); err != nil {
+			return fmt.Errorf("error removing seed secret reference annotations: %w", err)
 		}
 	}
 
