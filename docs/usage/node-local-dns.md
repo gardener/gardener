@@ -39,12 +39,9 @@ spec:
 
 It is worth noting that: 
 
-- When migrating from IPVS to IPTables, existing pods will continue to leverage the node-local-dns cache. 
+- When migrating from IPVS to IPTables, existing pods will continue to leverage the node-local-dns cache.
 - When migrating from IPtables to IPVS, only newer pods will be switched to the node-local-dns cache.
-- The annotation will take effect during the next shoot reconciliation. This happens automatically once per day in the maintenance period (unless you have disabled it). 
-- During the reconfiguration of the node-local-dns there might be a short disruption in terms of domain name resolution depending on the setup. Usually, DNS requests are repeated for some time as UDP is an unreliable protocol, but that strictly depends on the application/way the domain name resolution happens. It is recommended to let the shoot be reconciled during the next maintenance period. 
-- If a short DNS outage is not a big issue, you can [trigger reconciliation](./shoot_operations.md#immediate-reconciliation) directly after setting the annotation.
-- Switching node-local-dns off by removing the annotation can be a rather destructive operation that will result in pods without a working DNS configuration.
+- During the reconfiguration of the node-local-dns there might be a short disruption in terms of domain name resolution depending on the setup. Usually, DNS requests are repeated for some time as UDP is an unreliable protocol, but that strictly depends on the application/way the domain name resolution happens. It is recommended to let the shoot be reconciled during the next maintenance period.
 - Enabling or disabling node-local-dns triggers a rollout of all shoot worker nodes, see also [this document](shoot_updates.md#rolling-update-triggers).
 
 For more information about `node-local-dns`, please refer to the [KEP](https://github.com/kubernetes/enhancements/blob/master/keps/sig-network/1024-nodelocal-cache-dns/README.md) or to the [usage documentation](https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/). 
