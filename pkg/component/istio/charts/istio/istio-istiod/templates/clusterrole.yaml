@@ -5,19 +5,16 @@ metadata:
   labels:
 {{ .Values.labels | toYaml | indent 4 }}
 rules:
-# sidecar injection controller Do we need it?
+  # sidecar injection controller Do we need it?
   - apiGroups: ["admissionregistration.k8s.io"]
     resources: ["mutatingwebhookconfigurations"]
     verbs: ["get", "list", "watch", "update", "patch"]
-# configuration validation webhook controller
- # configuration validation webhook controller
+
+  # configuration validation webhook controller
   - apiGroups: ["admissionregistration.k8s.io"]
     resources: ["validatingwebhookconfigurations"]
     verbs: ["get", "list", "watch", "update"]
-# istio configuration
-# removing CRD permissions can break older versions of Istio running alongside this control plane (https://github.com/istio/istio/issues/29382)
-# please proceed with caution
-# istio configuration
+
   # removing CRD permissions can break older versions of Istio running alongside this control plane (https://github.com/istio/istio/issues/29382)
   # please proceed with caution
   - apiGroups: ["config.istio.io", "security.istio.io", "networking.istio.io", "authentication.istio.io", "rbac.istio.io", "telemetry.istio.io", "extensions.istio.io"]
@@ -34,7 +31,7 @@ rules:
   - apiGroups: ["apiextensions.k8s.io"]
     resources: ["customresourcedefinitions"]
     verbs: ["get", "list", "watch"]
-# discovery and routing
+
   # discovery and routing
   - apiGroups: [""]
     resources: ["pods", "nodes", "services", "namespaces", "endpoints"]
@@ -42,25 +39,27 @@ rules:
   - apiGroups: ["discovery.k8s.io"]
     resources: ["endpointslices"]
     verbs: ["get", "list", "watch"]
-# ingress controller TODO: is this needed???
-  # ingress controller
+
+  # ingress controller TODO: is this needed???
   - apiGroups: ["networking.k8s.io"]
     resources: ["ingresses", "ingressclasses"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["networking.k8s.io"]
     resources: ["ingresses/status"]
     verbs: ["*"]
+
   # required for CA's namespace controller
   - apiGroups: [""]
     resources: ["configmaps"]
     verbs: ["create", "get", "list", "watch", "update"]
 
-# Istiod and bootstrap.
+  # Istiod and bootstrap.
 
-# Used by Istiod to verify the JWT tokens
+  # Used by Istiod to verify the JWT tokens
   - apiGroups: ["authentication.k8s.io"]
     resources: ["tokenreviews"]
     verbs: ["create"]
+
   # Used by Istiod to verify gateway SDS
   - apiGroups: ["authorization.k8s.io"]
     resources: ["subjectaccessreviews"]
@@ -77,11 +76,10 @@ rules:
     resources: ["gatewayclasses"]
     verbs: ["create", "update", "patch", "delete"]
 
- # Needed for multicluster secret reading, possibly ingress certs in the future
+  # Needed for multicluster secret reading, possibly ingress certs in the future
   - apiGroups: [""]
     resources: ["secrets"]
     verbs: ["get", "watch", "list"]
-
 
   # Used for MCS serviceexport management
   - apiGroups: ["multicluster.x-k8s.io"]
@@ -125,11 +123,11 @@ metadata:
     release: istiod
 rules:
   - apiGroups:
-    - "config.istio.io"
-    - "security.istio.io"
-    - "networking.istio.io"
-    - "authentication.istio.io"
-    - "rbac.istio.io"
+      - "config.istio.io"
+      - "security.istio.io"
+      - "networking.istio.io"
+      - "authentication.istio.io"
+      - "rbac.istio.io"
     resources: ["*"]
     verbs: ["get", "list", "watch"]
   - apiGroups: [""]

@@ -1,6 +1,7 @@
 labels:
   app: istio-ingressgateway
-networkPolicyLabels: {}
+networkPolicyLabels:
+  networking.gardener.cloud/to-dns: allowed
 annotations: {}
 image: to-be-injected-by-imagevector
 trustDomain: cluster.local
