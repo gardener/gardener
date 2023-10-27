@@ -36,6 +36,7 @@ import (
 
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
+	"github.com/gardener/gardener/pkg/nodeagent/registry"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -55,6 +56,9 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	}
 	if r.FS.Fs == nil {
 		r.FS = afero.Afero{Fs: afero.NewOsFs()}
+	}
+	if r.Extractor == nil {
+		r.Extractor = registry.NewExtractor()
 	}
 
 	return builder.

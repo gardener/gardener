@@ -2951,7 +2951,8 @@ DefaultStatus
 <p>
 (<em>Appears on:</em>
 <a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigSpec">OperatingSystemConfigSpec</a>, 
-<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigStatus">OperatingSystemConfigStatus</a>)
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigStatus">OperatingSystemConfigStatus</a>, 
+<a href="#extensions.gardener.cloud/v1alpha1.Unit">Unit</a>)
 </p>
 <p>
 <p>File is a file that should get written to the host&rsquo;s file system. The content can either be inlined or
@@ -3065,6 +3066,61 @@ bool
 <em>(Optional)</em>
 <p>TransmitUnencoded set to true will ensure that the os-extension does not encode the file content when sent to the node.
 This for example can be used to manipulate the clear-text content before it reaches the node.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>imageRef</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.FileContentImageRef">
+FileContentImageRef
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ImageRef describes a container image which contains a file.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.FileContentImageRef">FileContentImageRef
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.FileContent">FileContent</a>)
+</p>
+<p>
+<p>FileContentImageRef describes a container image which contains a file</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>image</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Image contains the container image repository with tag.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>filePathInImage</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>FilePathInImage contains the path in the image to the file that should be extracted.</p>
 </td>
 </tr>
 </tbody>
@@ -3856,6 +3912,21 @@ string
 <td>
 <em>(Optional)</em>
 <p>DropIns is a list of drop-ins for this unit.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>files</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.File">
+[]File
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Files is a list of files the unit depends on that should get written to the host&rsquo;s file system.
+If any file changes a restart of the dependent unit will be triggered.</p>
 </td>
 </tr>
 </tbody>

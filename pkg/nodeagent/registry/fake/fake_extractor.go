@@ -17,6 +17,7 @@ package fake
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"path"
 
 	"github.com/spf13/afero"
@@ -36,14 +37,11 @@ func NewExtractor(aferoFS afero.Afero, sourceDirectory string) registry.Extracto
 	return &fakeRegistryExtractor{aferoFS: aferoFS, sourceDirectory: sourceDirectory}
 }
 
-// CopyFromImage copies files from a given image reference to the destination folder.
-func (e *fakeRegistryExtractor) CopyFromImage(_ context.Context, _ string, files []string, destination string) error {
-	for _, file := range files {
-		sourceFile := path.Join(e.sourceDirectory, file)
-		destinationFile := path.Join(destination, path.Base(file))
-		if err := registry.CopyFile(e.aferoFS, sourceFile, destinationFile); err != nil {
-			return fmt.Errorf("error copying file %s to %s: %w", sourceFile, destinationFile, err)
-		}
+// CopyFromImage copies a file from a given image reference to the destination file.
+func (e *fakeRegistryExtractor) CopyFromImage(_ context.Context, _ string, filePathInImage string, destination string, permissions fs.FileMode) error {
+	source := path.Join(e.sourceDirectory, filePathInImage)
+	if err := registry.CopyFile(e.aferoFS, source, destination, permissions); err != nil {
+		return fmt.Errorf("error copying file %s to %s: %w", source, destination, err)
 	}
 
 	return nil

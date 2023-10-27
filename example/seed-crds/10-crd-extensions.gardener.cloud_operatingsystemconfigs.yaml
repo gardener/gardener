@@ -77,6 +77,22 @@ spec:
                     content:
                       description: Content describe the file's content.
                       properties:
+                        imageRef:
+                          description: ImageRef describes a container image which
+                            contains a file.
+                          properties:
+                            filePathInImage:
+                              description: FilePathInImage contains the path in the
+                                image to the file that should be extracted.
+                              type: string
+                            image:
+                              description: Image contains the container image repository
+                                with tag.
+                              type: string
+                          required:
+                          - filePathInImage
+                          - image
+                          type: object
                         inline:
                           description: Inline is a struct that contains information
                             about the inlined data.
@@ -184,6 +200,87 @@ spec:
                       description: Enable describes whether the unit is enabled or
                         not.
                       type: boolean
+                    files:
+                      description: Files is a list of files the unit depends on that
+                        should get written to the host's file system. If any file
+                        changes a restart of the dependent unit will be triggered.
+                      items:
+                        description: File is a file that should get written to the
+                          host's file system. The content can either be inlined or
+                          referenced from a secret in the same namespace.
+                        properties:
+                          content:
+                            description: Content describe the file's content.
+                            properties:
+                              imageRef:
+                                description: ImageRef describes a container image
+                                  which contains a file.
+                                properties:
+                                  filePathInImage:
+                                    description: FilePathInImage contains the path
+                                      in the image to the file that should be extracted.
+                                    type: string
+                                  image:
+                                    description: Image contains the container image
+                                      repository with tag.
+                                    type: string
+                                required:
+                                - filePathInImage
+                                - image
+                                type: object
+                              inline:
+                                description: Inline is a struct that contains information
+                                  about the inlined data.
+                                properties:
+                                  data:
+                                    description: Data is the file's data.
+                                    type: string
+                                  encoding:
+                                    description: Encoding is the file's encoding (e.g.
+                                      base64).
+                                    type: string
+                                required:
+                                - data
+                                - encoding
+                                type: object
+                              secretRef:
+                                description: SecretRef is a struct that contains information
+                                  about the referenced secret.
+                                properties:
+                                  dataKey:
+                                    description: DataKey is the key in the secret's
+                                      `.data` field that should be read.
+                                    type: string
+                                  name:
+                                    description: Name is the name of the secret.
+                                    type: string
+                                required:
+                                - dataKey
+                                - name
+                                type: object
+                              transmitUnencoded:
+                                description: TransmitUnencoded set to true will ensure
+                                  that the os-extension does not encode the file content
+                                  when sent to the node. This for example can be used
+                                  to manipulate the clear-text content before it reaches
+                                  the node.
+                                type: boolean
+                            type: object
+                          path:
+                            description: Path is the path of the file system where
+                              the file should get written to.
+                            type: string
+                          permissions:
+                            description: Permissions describes with which permissions
+                              the file should get written to the file system. Should
+                              be defaulted to octal 0644.
+                            format: int32
+                            type: integer
+                        required:
+                        - content
+                        - path
+                        type: object
+                      type: array
                     name:
                       description: Name is the name of a unit.
                       type: string
@@ -285,6 +382,22 @@ spec:
                     content:
                       description: Content describe the file's content.
                       properties:
+                        imageRef:
+                          description: ImageRef describes a container image which
+                            contains a file.
+                          properties:
+                            filePathInImage:
+                              description: FilePathInImage contains the path in the
+                                image to the file that should be extracted.
+                              type: string
+                            image:
+                              description: Image contains the container image repository
+                                with tag.
+                              type: string
+                          required:
+                          - filePathInImage
+                          - image
+                          type: object
                         inline:
                           description: Inline is a struct that contains information
                             about the inlined data.
@@ -370,6 +483,87 @@ spec:
                       description: Enable describes whether the unit is enabled or
                         not.
                       type: boolean
+                    files:
+                      description: Files is a list of files the unit depends on that
+                        should get written to the host's file system. If any file
+                        changes a restart of the dependent unit will be triggered.
+                      items:
+                        description: File is a file that should get written to the
+                          host's file system. The content can either be inlined or
+                          referenced from a secret in the same namespace.
+                        properties:
+                          content:
+                            description: Content describe the file's content.
+                            properties:
+                              imageRef:
+                                description: ImageRef describes a container image
+                                  which contains a file.
+                                properties:
+                                  filePathInImage:
+                                    description: FilePathInImage contains the path
+                                      in the image to the file that should be extracted.
+                                    type: string
+                                  image:
+                                    description: Image contains the container image
+                                      repository with tag.
+                                    type: string
+                                required:
+                                - filePathInImage
+                                - image
+                                type: object
+                              inline:
+                                description: Inline is a struct that contains information
+                                  about the inlined data.
+                                properties:
+                                  data:
+                                    description: Data is the file's data.
+                                    type: string
+                                  encoding:
+                                    description: Encoding is the file's encoding (e.g.
+                                      base64).
+                                    type: string
+                                required:
+                                - data
+                                - encoding
+                                type: object
+                              secretRef:
+                                description: SecretRef is a struct that contains information
+                                  about the referenced secret.
+                                properties:
+                                  dataKey:
+                                    description: DataKey is the key in the secret's
+                                      `.data` field that should be read.
+                                    type: string
+                                  name:
+                                    description: Name is the name of the secret.
+                                    type: string
+                                required:
+                                - dataKey
+                                - name
+                                type: object
+                              transmitUnencoded:
+                                description: TransmitUnencoded set to true will ensure
+                                  that the os-extension does not encode the file content
+                                  when sent to the node. This for example can be used
+                                  to manipulate the clear-text content before it reaches
+                                  the node.
+                                type: boolean
+                            type: object
+                          path:
+                            description: Path is the path of the file system where
+                              the file should get written to.
+                            type: string
+                          permissions:
+                            description: Permissions describes with which permissions
+                              the file should get written to the file system. Should
+                              be defaulted to octal 0644.
+                            format: int32
+                            type: integer
+                        required:
+                        - content
+                        - path
+                        type: object
+                      type: array
                     name:
                       description: Name is the name of a unit.
                       type: string

@@ -39,8 +39,8 @@ func NewExtractor() Extractor {
 	return &containerdExtractor{}
 }
 
-// CopyFromImage copies files from a given image reference to the destination folder.
-func (e *containerdExtractor) CopyFromImage(ctx context.Context, imageRef string, files []string, destination string) error {
+// CopyFromImage copies a file from a given image reference to the destination file.
+func (e *containerdExtractor) CopyFromImage(ctx context.Context, imageRef string, filePathInImage string, destination string, permissions os.FileMode) error {
 	aferoFS := afero.Afero{Fs: afero.NewOsFs()}
 
 	address := os.Getenv("CONTAINERD_ADDRESS")
@@ -73,18 +73,15 @@ func (e *containerdExtractor) CopyFromImage(ctx context.Context, imageRef string
 	if err != nil {
 		return fmt.Errorf("error creating temp image: %w", err)
 	}
-	defer os.Remove(imageMountDirectory)
+	defer func() { utilruntime.HandleError(aferoFS.Remove(imageMountDirectory)) }()
 
 	if err := mountImage(ctx, image, snapshotter, imageMountDirectory); err != nil {
 		return err
 	}
 
-	for _, file := range files {
-		sourceFile := path.Join(imageMountDirectory, file)
-		destinationFile := path.Join(destination, path.Base(file))
-		if err := CopyFile(aferoFS, sourceFile, destinationFile); err != nil {
-			return fmt.Errorf("error copying file %s to %s: %w", sourceFile, destinationFile, err)
-		}
+	source := path.Join(imageMountDirectory, filePathInImage)
+	if err := CopyFile(aferoFS, source, destination, permissions); err != nil {
+		return fmt.Errorf("error copying file %s to %s: %w", source, destination, err)
 	}
 
 	return unmountImage(ctx, snapshotter, imageMountDirectory)
@@ -124,8 +121,8 @@ func unmountImage(ctx context.Context, snapshotter snapshots.Snapshotter, direct
 	return nil
 }
 
-// CopyFile copies a source file to destination file and sets the executable flag.
-func CopyFile(aferoFS afero.Afero, sourceFile, destinationFile string) error {
+// CopyFile copies a source file to destination file and sets the given permissions.
+func CopyFile(aferoFS afero.Afero, sourceFile, destinationFile string, permissions os.FileMode) error {
 	sourceFileStat, err := aferoFS.Stat(sourceFile)
 	if err != nil {
 		return err
@@ -149,7 +146,7 @@ func CopyFile(aferoFS afero.Afero, sourceFile, destinationFile string) error {
 	}
 	defer srcFile.Close()
 
-	if err := aferoFS.MkdirAll(path.Dir(destinationFile), 0755); err != nil {
+	if err := aferoFS.MkdirAll(path.Dir(destinationFile), permissions); err != nil {
 		return fmt.Errorf("destination directory %q could not be created", path.Dir(destinationFile))
 	}
 
@@ -163,5 +160,5 @@ func CopyFile(aferoFS afero.Afero, sourceFile, destinationFile string) error {
 		return err
 	}
 
-	return aferoFS.Chmod(dstFile.Name(), 0755)
+	return aferoFS.Chmod(dstFile.Name(), permissions)
 }
