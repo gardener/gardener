@@ -139,7 +139,7 @@ func waitForLokiPodTermination(ctx context.Context, k8sClient client.Client, nam
 		}
 		log.Info("Loki2vali: Waiting for pod loki-0 to terminate", "lokiNamespace", namespace, "timeLeft", time.Until(deadline))
 		return false, nil
-	}); err != nil && err == wait.ErrWaitTimeout {
+	}); wait.Interrupted(err) {
 		err := fmt.Errorf("Loki2vali: %v: Timeout while waiting for the loki-0 pod to terminate", namespace)
 		log.Info("Loki2vali:", "lokiError", err)
 		return err
@@ -210,7 +210,7 @@ func deleteLokiPvc(ctx context.Context, k8sClient client.Client, namespace strin
 		}
 		log.Info("Loki2vali: Wait for Loki PVC deletion to complete", "lokiNamespace", namespace, "timeLeft", time.Until(deadline))
 		return false, nil
-	}); err != nil && err == wait.ErrWaitTimeout {
+	}); wait.Interrupted(err) {
 		err := fmt.Errorf("Loki2vali: %v: Timeout while waiting for the loki-loki-0 PVC to terminate", namespace)
 		log.Info("Loki2vali:", "lokiError", err)
 		return err
@@ -317,7 +317,7 @@ func waitForValiPvcToBeBound(ctx context.Context, k8sClient client.Client, names
 		}
 		log.Info("Loki2vali: Wait for the Vali PVC to be bound", "lokiNamespace", namespace, "timeLeft", time.Until(deadline))
 		return false, nil
-	}); err != nil && err == wait.ErrWaitTimeout {
+	}); wait.Interrupted(err) {
 		err := fmt.Errorf("Loki2vali: %v: Timeout while waiting for the vali PVC to be bound", namespace)
 		log.Info("Loki2vali:", "lokiError", err)
 		return err
