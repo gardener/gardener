@@ -17,11 +17,11 @@ limitations under the License.
 package v1alpha1_test
 
 import (
-	. "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
-	"k8s.io/utils/pointer"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/pointer"
+
+	. "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 )
 
 var _ = Describe("adminKubeconfigRequest defaulting", func() {
