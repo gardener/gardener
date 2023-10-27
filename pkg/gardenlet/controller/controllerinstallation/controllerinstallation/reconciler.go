@@ -357,6 +357,15 @@ func (r *Reconciler) delete(
 
 	conditionInstalled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionSuccessful", "Deletion of old resources succeeded.")
 
+	gardenClusterServiceAccount := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
+		Name:      v1beta1constants.ExtensionGardenServiceAccountPrefix + controllerInstallation.Name,
+		Namespace: gardenerutils.ComputeGardenNamespace(seed.Name),
+	}}
+	if err := r.GardenClient.Delete(gardenCtx, gardenClusterServiceAccount); client.IgnoreNotFound(err) != nil {
+		conditionInstalled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of ServiceAccount %q in garden cluster failed: %+v", client.ObjectKeyFromObject(gardenClusterServiceAccount), err))
+		return reconcile.Result{}, err
+	}
+
 	if controllerutil.ContainsFinalizer(controllerInstallation, finalizerName) {
 		log.Info("Removing finalizer")
 		if err := controllerutils.RemoveFinalizers(gardenCtx, r.GardenClient, controllerInstallation, finalizerName); err != nil {
