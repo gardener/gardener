@@ -62,8 +62,9 @@ const (
 	extensionType                   = "test"
 	shootWebhookManagedResourceName = "extension-provider-test-shoot-webhooks"
 
-	seedWebhookName, seedWebhookPath   = "seed-webhook", "seed-path"
-	shootWebhookName, shootWebhookPath = "shoot-webhook", "shoot-path"
+	seedWebhookName, seedWebhookPath                       = "seed-webhook", "seed-path"
+	shootMutatingWebhookName, shootMutatingWebhookPath     = "shoot-mutating-webhook", "shoot-mutation-path"
+	shootValidatingWebhookName, shootValidatingWebhookPath = "shoot-validating-webhook", "shoot-validating-path"
 )
 
 var shootNamespaceSelector = map[string]string{"shoot.gardener.cloud/provider": extensionType}
@@ -82,9 +83,10 @@ var _ = Describe("Certificates tests", func() {
 		cluster            *extensionsv1alpha1.Cluster
 
 		seedWebhook              admissionregistrationv1.MutatingWebhook
-		shootWebhook             admissionregistrationv1.MutatingWebhook
+		shootMutatingWebhook     admissionregistrationv1.MutatingWebhook
+		shootValidatingWebhook   admissionregistrationv1.ValidatingWebhook
 		seedWebhookConfig        *admissionregistrationv1.MutatingWebhookConfiguration
-		shootWebhookConfig       *admissionregistrationv1.MutatingWebhookConfiguration
+		shootWebhookConfig       *extensionswebhook.Configs
 		atomicShootWebhookConfig *atomic.Value
 		defaultServer            *webhook.DefaultServer
 
@@ -156,10 +158,10 @@ var _ = Describe("Certificates tests", func() {
 			},
 		}
 
-		shootWebhook = admissionregistrationv1.MutatingWebhook{
-			Name: fmt.Sprintf("%s.%s.extensions.gardener.cloud", shootWebhookName, extensionType),
+		shootMutatingWebhook = admissionregistrationv1.MutatingWebhook{
+			Name: fmt.Sprintf("%s.%s.extensions.gardener.cloud", shootMutatingWebhookName, extensionType),
 			ClientConfig: admissionregistrationv1.WebhookClientConfig{
-				URL: pointer.String("https://gardener-extension-" + extensionName + "." + extensionNamespace.Name + ":443/" + shootWebhookPath),
+				URL: pointer.String("https://gardener-extension-" + extensionName + "." + extensionNamespace.Name + ":443/" + shootMutatingWebhookPath),
 			},
 			Rules: []admissionregistrationv1.RuleWithOperations{
 				{
@@ -176,10 +178,35 @@ var _ = Describe("Certificates tests", func() {
 			NamespaceSelector:       &metav1.LabelSelector{},
 			ObjectSelector:          &metav1.LabelSelector{},
 		}
+		shootValidatingWebhook = admissionregistrationv1.ValidatingWebhook{
+			Name: fmt.Sprintf("%s.%s.extensions.gardener.cloud", shootValidatingWebhookName, extensionType),
+			ClientConfig: admissionregistrationv1.WebhookClientConfig{
+				URL: pointer.String("https://gardener-extension-" + extensionName + "." + extensionNamespace.Name + ":443/" + shootMutatingWebhookPath),
+			},
+			Rules: []admissionregistrationv1.RuleWithOperations{
+				{
+					Rule:       admissionregistrationv1.Rule{APIGroups: []string{""}, APIVersions: []string{"v1"}, Resources: []string{"serviceaccounts"}, Scope: &scope},
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
+				},
+			},
+			AdmissionReviewVersions: []string{"v1", "v1beta1"},
+			FailurePolicy:           &failurePolicyFail,
+			MatchPolicy:             &matchPolicyExact,
+			SideEffects:             &sideEffectsNone,
+			TimeoutSeconds:          &timeoutSeconds,
+			NamespaceSelector:       &metav1.LabelSelector{},
+			ObjectSelector:          &metav1.LabelSelector{},
+		}
 
-		shootWebhookConfig = &admissionregistrationv1.MutatingWebhookConfiguration{
-			ObjectMeta: metav1.ObjectMeta{Name: "gardener-extension-" + extensionName + "-shoot"},
-			Webhooks:   []admissionregistrationv1.MutatingWebhook{shootWebhook},
+		shootWebhookConfig = &extensionswebhook.Configs{
+			MutatingWebhookConfig: &admissionregistrationv1.MutatingWebhookConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: "gardener-extension-" + extensionName + "-shoot"},
+				Webhooks:   []admissionregistrationv1.MutatingWebhook{shootMutatingWebhook},
+			},
+			ValidatingWebhookConfig: &admissionregistrationv1.ValidatingWebhookConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: "gardener-extension-" + extensionName + "-shoot"},
+				Webhooks:   []admissionregistrationv1.ValidatingWebhook{shootValidatingWebhook},
+			},
 		}
 	})
 
@@ -200,11 +227,12 @@ var _ = Describe("Certificates tests", func() {
 					Namespace:   extensionNamespace.Name,
 				}
 				switchOptions = extensionscmdwebhook.NewSwitchOptions(
-					extensionscmdwebhook.Switch(shootWebhookName, newShootWebhook),
+					extensionscmdwebhook.Switch(shootMutatingWebhookName, newShootMutatingWebhook),
 				)
 				webhookOptions = extensionscmdwebhook.NewAddToManagerOptions(extensionName, shootWebhookManagedResourceName, shootNamespaceSelector, serverOptions, switchOptions)
 			)
 
+			shootWebhookConfig.ValidatingWebhookConfig = nil
 			Expect(webhookOptions.Complete()).To(Succeed())
 			webhookConfig := webhookOptions.Completed()
 			webhookConfig.Clock = fakeClock
@@ -244,13 +272,16 @@ var _ = Describe("Certificates tests", func() {
 				mgrCancel()
 			})
 
-			By("Verify CA bundle was written in atomic shoot webhook config")
+			By("Verify CA bundle was written in atomic shoot mutating webhook config")
 			Eventually(func() []byte {
-				val, ok := atomicShootWebhookConfig.Load().(*admissionregistrationv1.MutatingWebhookConfiguration)
+				val, ok := atomicShootWebhookConfig.Load().(*extensionswebhook.Configs)
 				if !ok {
 					return nil
 				}
-				return val.Webhooks[0].ClientConfig.CABundle
+				if val.MutatingWebhookConfig == nil {
+					return nil
+				}
+				return val.MutatingWebhookConfig.Webhooks[0].ClientConfig.CABundle
 			}).ShouldNot(BeEmpty())
 		})
 
@@ -258,7 +289,7 @@ var _ = Describe("Certificates tests", func() {
 			BeforeEach(func() {
 				By("Prepare existing shoot webhook resources")
 				Expect(testClient.Create(ctx, cluster)).To(Succeed())
-				Expect(extensionsshootwebhook.ReconcileWebhookConfig(ctx, testClient, shootNamespace.Name, extensionNamespace.Name, extensionName, shootWebhookManagedResourceName, shootWebhookConfig, &extensions.Cluster{Shoot: &gardencorev1beta1.Shoot{}})).To(Succeed())
+				Expect(extensionsshootwebhook.ReconcileWebhookConfig(ctx, testClient, shootNamespace.Name, extensionNamespace.Name, extensionName, shootWebhookManagedResourceName, *shootWebhookConfig, &extensions.Cluster{Shoot: &gardencorev1beta1.Shoot{}})).To(Succeed())
 
 				DeferCleanup(func() {
 					Expect(testClient.Delete(ctx, cluster)).To(Or(Succeed(), BeNotFoundError()))
@@ -277,7 +308,7 @@ var _ = Describe("Certificates tests", func() {
 				By("Retrieve CA bundle (before first reconciliation)")
 				Eventually(func(g Gomega) []byte {
 					g.Expect(getShootWebhookConfig(codec, shootWebhookConfig, shootNamespace.Name)).To(Succeed())
-					return shootWebhookConfig.Webhooks[0].ClientConfig.CABundle
+					return shootWebhookConfig.MutatingWebhookConfig.Webhooks[0].ClientConfig.CABundle
 				}).Should(Not(BeEmpty()))
 
 				By("Read generated server certificate from disk")
@@ -298,7 +329,7 @@ var _ = Describe("Certificates tests", func() {
 
 				Eventually(func(g Gomega) []byte {
 					g.Expect(getShootWebhookConfig(codec, shootWebhookConfig, shootNamespace.Name)).To(Succeed())
-					return shootWebhookConfig.Webhooks[0].ClientConfig.CABundle
+					return shootWebhookConfig.MutatingWebhookConfig.Webhooks[0].ClientConfig.CABundle
 				}).Should(Not(BeEmpty()))
 
 				By("Read re-generated server certificate from disk")
@@ -367,7 +398,8 @@ var _ = Describe("Certificates tests", func() {
 				}
 				switchOptions = extensionscmdwebhook.NewSwitchOptions(
 					extensionscmdwebhook.Switch(seedWebhookName, newSeedWebhook),
-					extensionscmdwebhook.Switch(shootWebhookName, newShootWebhook),
+					extensionscmdwebhook.Switch(shootMutatingWebhookName, newShootMutatingWebhook),
+					extensionscmdwebhook.Switch(shootValidatingWebhookName, newShootValidatingWebhook),
 				)
 				webhookOptions = extensionscmdwebhook.NewAddToManagerOptions(extensionName, shootWebhookManagedResourceName, shootNamespaceSelector, serverOptions, switchOptions)
 			)
@@ -411,14 +443,15 @@ var _ = Describe("Certificates tests", func() {
 				mgrCancel()
 			})
 
-			By("Verify CA bundle was written in atomic shoot webhook config")
-			Eventually(func() []byte {
-				val, ok := atomicShootWebhookConfig.Load().(*admissionregistrationv1.MutatingWebhookConfiguration)
-				if !ok {
-					return nil
-				}
-				return val.Webhooks[0].ClientConfig.CABundle
-			}).ShouldNot(BeEmpty())
+			By("Verify CA bundle was written in atomic shoot webhook configs")
+			Eventually(func(g Gomega) {
+				val, ok := atomicShootWebhookConfig.Load().(*extensionswebhook.Configs)
+				g.Expect(ok).To(BeTrue())
+				g.Expect(val.MutatingWebhookConfig).NotTo(BeNil())
+				g.Expect(val.MutatingWebhookConfig.Webhooks[0].ClientConfig.CABundle).NotTo(BeEmpty())
+				g.Expect(val.ValidatingWebhookConfig).NotTo(BeNil())
+				g.Expect(val.ValidatingWebhookConfig.Webhooks[0].ClientConfig.CABundle).NotTo(BeEmpty())
+			})
 		})
 
 		AfterEach(func() {
@@ -445,7 +478,7 @@ var _ = Describe("Certificates tests", func() {
 			BeforeEach(func() {
 				By("Prepare existing shoot webhook resources")
 				Expect(testClient.Create(ctx, cluster)).To(Succeed())
-				Expect(extensionsshootwebhook.ReconcileWebhookConfig(ctx, testClient, shootNamespace.Name, extensionNamespace.Name, extensionName, shootWebhookManagedResourceName, shootWebhookConfig, &extensions.Cluster{Shoot: &gardencorev1beta1.Shoot{}})).To(Succeed())
+				Expect(extensionsshootwebhook.ReconcileWebhookConfig(ctx, testClient, shootNamespace.Name, extensionNamespace.Name, extensionName, shootWebhookManagedResourceName, *shootWebhookConfig, &extensions.Cluster{Shoot: &gardencorev1beta1.Shoot{}})).To(Succeed())
 
 				DeferCleanup(func() {
 					Expect(testClient.Delete(ctx, cluster)).To(Or(Succeed(), BeNotFoundError()))
@@ -468,10 +501,11 @@ var _ = Describe("Certificates tests", func() {
 					return caBundle1
 				}).Should(Not(BeEmpty()))
 
-				Eventually(func(g Gomega) []byte {
+				Eventually(func(g Gomega) {
 					g.Expect(getShootWebhookConfig(codec, shootWebhookConfig, shootNamespace.Name)).To(Succeed())
-					return shootWebhookConfig.Webhooks[0].ClientConfig.CABundle
-				}).Should(Equal(caBundle1))
+					g.Expect(shootWebhookConfig.MutatingWebhookConfig.Webhooks[0].ClientConfig.CABundle).To(Equal(caBundle1))
+					g.Expect(shootWebhookConfig.ValidatingWebhookConfig.Webhooks[0].ClientConfig.CABundle).To(Equal(caBundle1))
+				})
 
 				By("Read generated server certificate from disk")
 				Eventually(func(g Gomega) []byte {
@@ -499,10 +533,11 @@ var _ = Describe("Certificates tests", func() {
 					ContainSubstring(string(caBundle1)),
 				))
 
-				Eventually(func(g Gomega) []byte {
+				Eventually(func(g Gomega) {
 					g.Expect(getShootWebhookConfig(codec, shootWebhookConfig, shootNamespace.Name)).To(Succeed())
-					return shootWebhookConfig.Webhooks[0].ClientConfig.CABundle
-				}).Should(Equal(caBundle2))
+					g.Expect(shootWebhookConfig.MutatingWebhookConfig.Webhooks[0].ClientConfig.CABundle).To(Equal(caBundle2))
+					g.Expect(shootWebhookConfig.ValidatingWebhookConfig.Webhooks[0].ClientConfig.CABundle).To(Equal(caBundle2))
+				})
 
 				caCert2 := strings.TrimPrefix(string(caBundle2), string(caBundle1))
 
@@ -531,10 +566,11 @@ var _ = Describe("Certificates tests", func() {
 					Equal(caCert2),
 				))
 
-				Eventually(func(g Gomega) []byte {
+				Eventually(func(g Gomega) {
 					g.Expect(getShootWebhookConfig(codec, shootWebhookConfig, shootNamespace.Name)).To(Succeed())
-					return shootWebhookConfig.Webhooks[0].ClientConfig.CABundle
-				}).Should(Equal(caBundle3))
+					g.Expect(shootWebhookConfig.MutatingWebhookConfig.Webhooks[0].ClientConfig.CABundle).To(Equal(caBundle3))
+					g.Expect(shootWebhookConfig.ValidatingWebhookConfig.Webhooks[0].ClientConfig.CABundle).To(Equal(caBundle3))
+				})
 			})
 		})
 	})
@@ -551,10 +587,22 @@ func newSeedWebhook(_ manager.Manager) (*extensionswebhook.Webhook, error) {
 	}, nil
 }
 
-func newShootWebhook(_ manager.Manager) (*extensionswebhook.Webhook, error) {
+func newShootMutatingWebhook(_ manager.Manager) (*extensionswebhook.Webhook, error) {
 	return &extensionswebhook.Webhook{
-		Name:     shootWebhookName,
-		Path:     shootWebhookPath,
+		Name:     shootMutatingWebhookName,
+		Path:     shootMutatingWebhookPath,
+		Provider: extensionType,
+		Types:    []extensionswebhook.Type{{Obj: &corev1.ServiceAccount{}}},
+		Target:   extensionswebhook.TargetShoot,
+		Handler:  http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {}),
+	}, nil
+}
+
+func newShootValidatingWebhook(_ manager.Manager) (*extensionswebhook.Webhook, error) {
+	return &extensionswebhook.Webhook{
+		Action:   "validating",
+		Name:     shootValidatingWebhookName,
+		Path:     shootValidatingWebhookPath,
 		Provider: extensionType,
 		Types:    []extensionswebhook.Type{{Obj: &corev1.ServiceAccount{}}},
 		Target:   extensionswebhook.TargetShoot,
@@ -571,7 +619,7 @@ func newCodec(scheme *runtime.Scheme, codec serializer.CodecFactory, serializer 
 	return codec.CodecForVersions(serializer, serializer, schema.GroupVersions(groupVersions), schema.GroupVersions(groupVersions))
 }
 
-func getShootWebhookConfig(codec runtime.Codec, shootWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration, namespace string) error {
+func getShootWebhookConfig(codec runtime.Codec, shootWebhookConfig *extensionswebhook.Configs, namespace string) error {
 	managedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{
 		Name:      shootWebhookManagedResourceName,
 		Namespace: namespace,
@@ -586,6 +634,15 @@ func getShootWebhookConfig(codec runtime.Codec, shootWebhookConfig *admissionreg
 		return err
 	}
 
-	_, _, err := codec.Decode(managedResourceSecret.Data["mutatingwebhookconfiguration____"+shootWebhookConfig.Name+".yaml"], nil, shootWebhookConfig)
-	return err
+	if shootWebhookConfig.MutatingWebhookConfig != nil {
+		if _, _, err := codec.Decode(managedResourceSecret.Data["mutatingwebhookconfiguration____"+shootWebhookConfig.MutatingWebhookConfig.Name+".yaml"], nil, shootWebhookConfig.MutatingWebhookConfig); err != nil {
+			return err
+		}
+	}
+	if shootWebhookConfig.ValidatingWebhookConfig != nil {
+		if _, _, err := codec.Decode(managedResourceSecret.Data["validatingwebhookconfiguration____"+shootWebhookConfig.ValidatingWebhookConfig.Name+".yaml"], nil, shootWebhookConfig.ValidatingWebhookConfig); err != nil {
+			return err
+		}
+	}
+	return nil
 }

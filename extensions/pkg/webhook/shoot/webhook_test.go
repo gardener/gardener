@@ -91,7 +91,7 @@ webhooks:
 		})
 
 		It("should reconcile the shoot webhook config", func() {
-			Expect(ReconcileWebhookConfig(ctx, fakeClient, namespace, extensionNamespace, extensionName, managedResourceName, shootWebhookConfigs.MutatingWebhookConfig, cluster)).To(Succeed())
+			Expect(ReconcileWebhookConfig(ctx, fakeClient, namespace, extensionNamespace, extensionName, managedResourceName, shootWebhookConfigs, cluster)).To(Succeed())
 			expectWebhookConfigReconciliation(ctx, fakeClient, namespace, managedResourceName, shootWebhookConfigRaw)
 		})
 	})
@@ -192,14 +192,10 @@ webhooks:
 		})
 
 		It("should reconcile the webhook config for namespace3 and namespace4", func() {
-<<<<<<< HEAD
 			Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: namespace3.Name, Name: managedResourceName}})).To(Succeed())
 			Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: namespace4.Name, Name: managedResourceName}})).To(Succeed())
 
-			Expect(ReconcileWebhooksForAllNamespaces(ctx, fakeClient, extensionNamespace, extensionName, managedResourceName, shootNamespaceSelector, shootWebhookConfig)).To(Succeed())
-=======
-			Expect(ReconcileWebhooksForAllNamespaces(ctx, fakeClient, extensionNamespace, extensionName, managedResourceName, shootNamespaceSelector, serverPort, shootWebhookConfigs)).To(Succeed())
->>>>>>> eb2fe88b9 (Use `webhook.Configs` for shoot webhook configs)
+			Expect(ReconcileWebhooksForAllNamespaces(ctx, fakeClient, extensionNamespace, extensionName, managedResourceName, shootNamespaceSelector, shootWebhookConfigs)).To(Succeed())
 
 			expectNoWebhookConfigReconciliation(ctx, fakeClient, namespace1.Name, managedResourceName)
 			expectNoWebhookConfigReconciliation(ctx, fakeClient, namespace2.Name, managedResourceName)
@@ -212,11 +208,7 @@ webhooks:
 			Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: namespace3.Name, Name: managedResourceName}})).To(Succeed())
 			Expect(fakeClient.Delete(ctx, cluster3)).To(Succeed())
 
-<<<<<<< HEAD
-			err := ReconcileWebhooksForAllNamespaces(ctx, fakeClient, extensionNamespace, extensionName, managedResourceName, shootNamespaceSelector, shootWebhookConfig)
-=======
-			err := ReconcileWebhooksForAllNamespaces(ctx, fakeClient, extensionNamespace, extensionName, managedResourceName, shootNamespaceSelector, serverPort, shootWebhookConfigs)
->>>>>>> eb2fe88b9 (Use `webhook.Configs` for shoot webhook configs)
+			err := ReconcileWebhooksForAllNamespaces(ctx, fakeClient, extensionNamespace, extensionName, managedResourceName, shootNamespaceSelector, shootWebhookConfigs)
 
 			Expect(err).To(BeAssignableToTypeOf(&multierror.Error{}))
 			Expect(err.(*multierror.Error).Errors).To(ConsistOf(Equal(apierrors.NewNotFound(schema.GroupResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Resource: "clusters"}, namespace3.Name))))
@@ -229,11 +221,7 @@ webhooks:
 			cluster4.Spec.Shoot = runtime.RawExtension{}
 			Expect(fakeClient.Patch(ctx, cluster4, patch)).To(Succeed())
 
-<<<<<<< HEAD
-			err := ReconcileWebhooksForAllNamespaces(ctx, fakeClient, extensionNamespace, extensionName, managedResourceName, shootNamespaceSelector, shootWebhookConfig)
-=======
-			err := ReconcileWebhooksForAllNamespaces(ctx, fakeClient, extensionNamespace, extensionName, managedResourceName, shootNamespaceSelector, serverPort, shootWebhookConfigs)
->>>>>>> eb2fe88b9 (Use `webhook.Configs` for shoot webhook configs)
+			err := ReconcileWebhooksForAllNamespaces(ctx, fakeClient, extensionNamespace, extensionName, managedResourceName, shootNamespaceSelector, shootWebhookConfigs)
 
 			Expect(err).To(BeAssignableToTypeOf(&multierror.Error{}))
 			Expect(err.(*multierror.Error).Errors).To(ConsistOf(Equal(errors.New("no shoot found in cluster resource"))))
