@@ -1098,6 +1098,98 @@ build:
         ldflags:
           - '{{.LD_FLAGS}}'
         main: ./cmd/gardener-resource-manager
+    - image: eu.gcr.io/gardener-project/gardener/node-agent
+      ko:
+        dependencies:
+          paths:
+            - cmd/gardener-node-agent/app
+            - cmd/gardener-node-agent/app/bootstrappers
+            - cmd/utils
+            - imagevector
+            - pkg/api/extensions
+            - pkg/apis/core
+            - pkg/apis/core/install
+            - pkg/apis/core/v1beta1
+            - pkg/apis/core/v1beta1/constants
+            - pkg/apis/core/v1beta1/helper
+            - pkg/apis/extensions
+            - pkg/apis/extensions/v1alpha1
+            - pkg/apis/extensions/v1alpha1/helper
+            - pkg/apis/operations
+            - pkg/apis/operations/install
+            - pkg/apis/operations/v1alpha1
+            - pkg/apis/operator
+            - pkg/apis/operator/v1alpha1
+            - pkg/apis/resources
+            - pkg/apis/resources/v1alpha1
+            - pkg/apis/seedmanagement
+            - pkg/apis/seedmanagement/encoding
+            - pkg/apis/seedmanagement/install
+            - pkg/apis/seedmanagement/v1alpha1
+            - pkg/apis/settings
+            - pkg/apis/settings/install
+            - pkg/apis/settings/v1alpha1
+            - pkg/chartrenderer
+            - pkg/client/kubernetes
+            - pkg/client/kubernetes/cache
+            - pkg/component
+            - pkg/component/extensions/operatingsystemconfig/downloader
+            - pkg/component/extensions/operatingsystemconfig/executor
+            - pkg/component/extensions/operatingsystemconfig/original/components
+            - pkg/component/extensions/operatingsystemconfig/original/components/containerd
+            - pkg/component/extensions/operatingsystemconfig/original/components/containerd/logrotate
+            - pkg/component/extensions/operatingsystemconfig/original/components/docker
+            - pkg/component/extensions/operatingsystemconfig/original/components/docker/logrotate
+            - pkg/component/extensions/operatingsystemconfig/original/components/kubelet
+            - pkg/component/extensions/operatingsystemconfig/original/components/nodeagent
+            - pkg/component/extensions/operatingsystemconfig/original/components/valitail
+            - pkg/component/extensions/operatingsystemconfig/original/components/varlibmount
+            - pkg/component/extensions/operatingsystemconfig/utils
+            - pkg/component/kubeapiserver/constants
+            - pkg/component/logging/vali
+            - pkg/controllerutils
+            - pkg/controllerutils/predicate
+            - pkg/controllerutils/routes
+            - pkg/features
+            - pkg/gardenlet/apis/config
+            - pkg/gardenlet/apis/config/v1alpha1
+            - pkg/healthz
+            - pkg/logger
+            - pkg/nodeagent/apis/config
+            - pkg/nodeagent/apis/config/v1alpha1
+            - pkg/nodeagent/apis/config/validation
+            - pkg/nodeagent/bootstrap
+            - pkg/nodeagent/controller
+            - pkg/nodeagent/controller/node
+            - pkg/nodeagent/controller/operatingsystemconfig
+            - pkg/nodeagent/controller/token
+            - pkg/nodeagent/dbus
+            - pkg/nodeagent/features
+            - pkg/nodeagent/registry
+            - pkg/resourcemanager/controller/garbagecollector/references
+            - pkg/utils
+            - pkg/utils/chart
+            - pkg/utils/context
+            - pkg/utils/errors
+            - pkg/utils/flow
+            - pkg/utils/gardener
+            - pkg/utils/imagevector
+            - pkg/utils/kubernetes
+            - pkg/utils/kubernetes/health
+            - pkg/utils/managedresources
+            - pkg/utils/managedresources/builder
+            - pkg/utils/retry
+            - pkg/utils/secrets
+            - pkg/utils/secrets/manager
+            - pkg/utils/timewindow
+            - pkg/utils/validation/kubernetesversion
+            - pkg/utils/version
+            - third_party/controller-runtime/pkg/apiutil
+            - third_party/gopkg.in/yaml.v2
+            - VERSION
+        ldflags:
+          - '{{.LD_FLAGS}}'
+        main: ./cmd/gardener-node-agent
 deploy:
   helm:
     releases:
@@ -1120,6 +1212,9 @@ deploy:
             - name: gardener-resource-manager
               repository: '{{.IMAGE_REPO_eu_gcr_io_gardener_project_gardener_resource_manager}}'
               tag: '{{.IMAGE_TAG_eu_gcr_io_gardener_project_gardener_resource_manager}}@{{.IMAGE_DIGEST_eu_gcr_io_gardener_project_gardener_resource_manager}}'
+            - name: gardener-node-agent
+              repository: '{{.IMAGE_REPO_eu_gcr_io_gardener_project_gardener_node_agent}}'
+              tag: '{{.IMAGE_TAG_eu_gcr_io_gardener_project_gardener_node_agent}}@{{.IMAGE_DIGEST_eu_gcr_io_gardener_project_gardener_node_agent}}'
         createNamespace: true
         wait: true
     hooks:
