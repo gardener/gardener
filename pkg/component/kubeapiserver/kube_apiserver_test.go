@@ -1985,6 +1985,10 @@ rules:
 				Expect(deployment.Spec.Template.Spec.RestartPolicy).To(Equal(corev1.RestartPolicyAlways))
 				Expect(deployment.Spec.Template.Spec.SchedulerName).To(Equal("default-scheduler"))
 				Expect(deployment.Spec.Template.Spec.TerminationGracePeriodSeconds).To(PointTo(Equal(int64(30))))
+				Expect(deployment.Spec.Template.Spec.SecurityContext.RunAsNonRoot).To(Equal(pointer.Bool(true)))
+				Expect(deployment.Spec.Template.Spec.SecurityContext.RunAsUser).To(Equal(pointer.Int64(65532)))
+				Expect(deployment.Spec.Template.Spec.SecurityContext.RunAsGroup).To(Equal(pointer.Int64(65532)))
+				Expect(deployment.Spec.Template.Spec.SecurityContext.FSGroup).To(Equal(pointer.Int64(65532)))
 			})
 
 			It("should have no init containers", func() {
@@ -2436,8 +2440,6 @@ rules:
 					Expect(issuerIdx).To(BeNumerically(">=", 0))
 					Expect(issuerIdx).To(BeNumerically("<", issuerIdx1))
 					Expect(issuerIdx).To(BeNumerically("<", issuerIdx2))
-					Expect(deployment.Spec.Template.Spec.Containers[0].SecurityContext.RunAsNonRoot).To(Equal(pointer.Bool(true)))
-					Expect(deployment.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser).To(Equal(pointer.Int64(65532)))
 					Expect(deployment.Spec.Template.Spec.Containers[0].TerminationMessagePath).To(Equal("/dev/termination-log"))
 					Expect(deployment.Spec.Template.Spec.Containers[0].TerminationMessagePolicy).To(Equal(corev1.TerminationMessageReadFile))
 					Expect(deployment.Spec.Template.Spec.Containers[0].Ports).To(ConsistOf(corev1.ContainerPort{

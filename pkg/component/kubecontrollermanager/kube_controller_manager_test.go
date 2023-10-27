@@ -391,16 +391,18 @@ var _ = Describe("KubeControllerManager", func() {
 						Spec: corev1.PodSpec{
 							AutomountServiceAccountToken: pointer.Bool(false),
 							PriorityClassName:            priorityClassName,
+							SecurityContext: &corev1.PodSecurityContext{
+								RunAsNonRoot: pointer.Bool(true),
+								RunAsUser:    pointer.Int64(65532),
+								RunAsGroup:   pointer.Int64(65532),
+								FSGroup:      pointer.Int64(65532),
+							},
 							Containers: []corev1.Container{
 								{
 									Name:            "kube-controller-manager",
 									Image:           image,
 									ImagePullPolicy: corev1.PullIfNotPresent,
 									Command:         commandForKubernetesVersion(version, 10257, config.NodeCIDRMaskSize, config.PodEvictionTimeout, config.NodeMonitorGracePeriod, namespace, isWorkerless, serviceCIDR, podCIDR, getHorizontalPodAutoscalerConfig(config.HorizontalPodAutoscalerConfig), kubernetesutils.FeatureGatesToCommandLineParameter(config.FeatureGates), clusterSigningDuration, controllerWorkers, controllerSyncPeriods),
-									SecurityContext: &corev1.SecurityContext{
-										RunAsNonRoot: pointer.Bool(true),
-										RunAsUser:    pointer.Int64(65532),
-									},
 									LivenessProbe: &corev1.Probe{
 										ProbeHandler: corev1.ProbeHandler{
 											HTTPGet: &corev1.HTTPGetAction{

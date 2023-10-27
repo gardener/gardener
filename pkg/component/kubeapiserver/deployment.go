@@ -225,6 +225,12 @@ func (k *kubeAPIServer) reconcileDeployment(
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 corev1.DefaultSchedulerName,
 					TerminationGracePeriodSeconds: pointer.Int64(30),
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsNonRoot: pointer.Bool(true),
+						RunAsUser:    pointer.Int64(65532),
+						RunAsGroup:   pointer.Int64(65532),
+						FSGroup:      pointer.Int64(65532),
+					},
 					Containers: []corev1.Container{{
 						Name:                     ContainerNameKubeAPIServer,
 						Image:                    k.values.Images.KubeAPIServer,
@@ -233,10 +239,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 						Args:                     k.computeKubeAPIServerArgs(),
 						TerminationMessagePath:   corev1.TerminationMessagePathDefault,
 						TerminationMessagePolicy: corev1.TerminationMessageReadFile,
-						SecurityContext: &corev1.SecurityContext{
-							RunAsNonRoot: pointer.Bool(true),
-							RunAsUser:    pointer.Int64(65532),
-						},
 						Ports: []corev1.ContainerPort{{
 							Name:          "https",
 							ContainerPort: kubeapiserverconstants.Port,

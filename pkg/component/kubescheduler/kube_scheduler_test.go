@@ -255,16 +255,18 @@ var _ = Describe("KubeScheduler", func() {
 						},
 						Spec: corev1.PodSpec{
 							AutomountServiceAccountToken: pointer.Bool(false),
+							SecurityContext: &corev1.PodSecurityContext{
+								RunAsNonRoot: pointer.Bool(true),
+								RunAsUser:    pointer.Int64(65532),
+								RunAsGroup:   pointer.Int64(65532),
+								FSGroup:      pointer.Int64(65532),
+							},
 							Containers: []corev1.Container{
 								{
 									Name:            "kube-scheduler",
 									Image:           image,
 									ImagePullPolicy: corev1.PullIfNotPresent,
 									Command:         commandForKubernetesVersion(10259, featureGateFlags(config)...),
-									SecurityContext: &corev1.SecurityContext{
-										RunAsNonRoot: pointer.Bool(true),
-										RunAsUser:    pointer.Int64(65532),
-									},
 									LivenessProbe: &corev1.Probe{
 										ProbeHandler: corev1.ProbeHandler{
 											HTTPGet: &corev1.HTTPGetAction{
