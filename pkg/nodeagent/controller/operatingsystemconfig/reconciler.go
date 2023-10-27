@@ -128,7 +128,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	log.Info("Executing unit commands (start/stop)")
-	if err := r.executeUnitCommands(ctx, log, node, oscChanges.units.changed); err != nil {
+	mustRestartGardenerNodeAgent, err := r.executeUnitCommands(ctx, log, node, oscChanges.units.changed)
+	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed executing unit commands: %w", err)
 	}
 
@@ -147,6 +148,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	log.Info("Persisting current operating system config as 'last-applied' file to the disk", "path", lastAppliedOperatingSystemConfigFilePath)
 	if err := r.FS.WriteFile(lastAppliedOperatingSystemConfigFilePath, oscRaw, 0644); err != nil {
 		return reconcile.Result{}, fmt.Errorf("unable to write current OSC to file path %q: %w", lastAppliedOperatingSystemConfigFilePath, err)
+	}
+
+	if mustRestartGardenerNodeAgent {
+		log.Info("Restarting myself (gardener-node-agent unit)")
+		if err := r.DBus.Restart(ctx, r.Recorder, node, nodeagentv1alpha1.UnitName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("unable to restart unit %q: %w", nodeagentv1alpha1.UnitName, err)
+		}
 	}
 
 	if node == nil {
@@ -292,7 +300,7 @@ func (r *Reconciler) applyChangedUnits(ctx context.Context, log logr.Logger, uni
 			}
 		}
 
-		if pointer.BoolDeref(unit.Enable, true) {
+		if unit.Name == nodeagentv1alpha1.UnitName || pointer.BoolDeref(unit.Enable, true) {
 			if err := r.DBus.Enable(ctx, unit.Name); err != nil {
 				return fmt.Errorf("unable to enable unit %q: %w", unit.Name, err)
 			}
@@ -332,11 +340,19 @@ func (r *Reconciler) removeDeletedUnits(ctx context.Context, log logr.Logger, no
 	return nil
 }
 
-func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, node client.Object, units []changedUnit) error {
-	var fns []flow.TaskFn
+func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, node client.Object, units []changedUnit) (bool, error) {
+	var (
+		mustRestartGardenerNodeAgent bool
+		fns                          []flow.TaskFn
+	)
 
 	for _, u := range units {
 		unit := u
+
+		if unit.Name == nodeagentv1alpha1.UnitName {
+			mustRestartGardenerNodeAgent = true
+			continue
+		}
 
 		fns = append(fns, func(ctx context.Context) error {
 			if !pointer.BoolDeref(unit.Enable, true) || (unit.Command != nil && *unit.Command == extensionsv1alpha1.CommandStop) {
@@ -355,5 +371,5 @@ func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, n
 		})
 	}
 
-	return flow.Parallel(fns...)(ctx)
+	return mustRestartGardenerNodeAgent, flow.Parallel(fns...)(ctx)
 }
