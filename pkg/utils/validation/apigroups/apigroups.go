@@ -26,13 +26,7 @@ import (
 var (
 	// apiGroupVersionRanges contains the version ranges for all Kubernetes API GroupVersions.
 	// Extracted from https://raw.githubusercontent.com/kubernetes/kubernetes/release-${version}/staging/src/k8s.io/client-go/informers/generic.go
-	// To maintain this list for each new Kubernetes version:
-	// - To maintain this list for new Kubernetes versions, run `hack/compare-k8s-api-groups.sh <old-version> <new-version>` (e.g. `hack/compare-k8s-api-groups.sh 1.26 1.27`).
-	// - It will present 2 lists of API GroupVersions and 2 lists of API GroupVersionResources: those added and those removed in `<new-version>` compared to `<old-version>`.
-	// - Add all added group versions to the `apiGroupVersionRanges` map and group version resources to the `apiGVRVersionRanges` map with `<new-version>` as `AddedInVersion` and no `RemovedInVersion`.
-	// - For any removed APIs, add `<new-version>` as `RemovedInVersion` to the already existing API in the corresponding map.
-	// - Flag any APIs that are required (APIs that must not be disabled in the `Shoot` spec) by setting the `Required` and `RequiredForWorkerless` boolean variable to true for the API in the `apiGVRVersionRanges` map.
-	//   If the whole API is required, then mark it in the `apiGroupVersionRanges` map.
+	// To maintain this list for each new Kubernetes version, refer https://github.com/gardener/gardener/blob/master/docs/development/new-kubernetes-version.md#adapting-gardener
 	apiGroupVersionRanges = map[string]*APIVersionRange{
 		"admissionregistration.k8s.io/v1":       {Required: true},
 		"admissionregistration.k8s.io/v1beta1":  {},
@@ -232,6 +226,9 @@ func IsAPISupported(api, version string) (bool, string, error) {
 }
 
 // APIVersionRange represents a version range of type [AddedInVersion, RemovedInVersion).
+// Required defines whether this APIVersion is required for a Shoot with workers.
+// RequiredForWorkerless defines whether this APIVersion is required for Workerless Shoots.
+// If an API is required for both Shoot types, then both booleans need to be set to true.
 type APIVersionRange struct {
 	Required              bool
 	RequiredForWorkerless bool

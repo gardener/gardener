@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+# Copyright 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -78,14 +78,13 @@ for version in "${versions[@]}"; do
 done
 
 echo
-echo "kubernetes api-group-versions added in $2 compared to $1:"
+echo "Kubernetes API group versions added in $2 compared to $1:"
 diff "${out_dir}/k8s-apiGVs-$1.txt" "${out_dir}/k8s-apiGVs-$2.txt" | grep '>' | awk '{print $2}'
 echo
-echo "kubernetes api-GVRs added in $2 compared to $1:"
+echo "Kubernetes API GVRs added in $2 compared to $1:"
 diff "${out_dir}/k8s-apiGVRs-$1.txt" "${out_dir}/k8s-apiGVRs-$2.txt" | grep '>' | awk '{print $2}'
 echo
-echo "kubernetes api-group-versions removed in $2 compared to $1:"
+echo "Kubernetes API group versions removed in $2 compared to $1:"
 diff "${out_dir}/k8s-apiGVs-$1.txt" "${out_dir}/k8s-apiGVs-$2.txt" | grep '<' | awk '{print $2}'
 echo
-echo "kubernetes api-GVRs removed in $2 compared to $1:"
-diff "${out_dir}/k8s-apiGVRs-$1.txt" "${out_dir}/k8s-apiGVRs-$2.txt" | grep '<' | awk '{print $2}'
+echo "Kubernetes API GVRs removed in $2 compared to $1:"
