@@ -359,7 +359,7 @@ func (r *Reconciler) delete(
 
 	gardenClusterServiceAccount := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
 		Name:      v1beta1constants.ExtensionGardenServiceAccountPrefix + controllerInstallation.Name,
-		Namespace: gardenerutils.ComputeGardenNamespace(r.Config.SeedConfig.Name),
+		Namespace: gardenerutils.ComputeGardenNamespace(seed.Name),
 	}}
 	if err := r.GardenClient.Delete(gardenCtx, gardenClusterServiceAccount); client.IgnoreNotFound(err) != nil {
 		conditionInstalled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of ServiceAccount %q in garden cluster failed: %+v", client.ObjectKeyFromObject(gardenClusterServiceAccount), err))
