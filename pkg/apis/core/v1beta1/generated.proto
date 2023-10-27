@@ -553,7 +553,7 @@ message ControllerRegistrationDeployment {
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector seedSelector = 4;
 
-  // DeploymentRefs holds references to `ControllerDeployments`. Only one element is support now.
+  // DeploymentRefs holds references to `ControllerDeployments`. Only one element is supported currently.
   // +optional
   repeated DeploymentRef deploymentRefs = 5;
 }

@@ -277,7 +277,7 @@ func DeleteAndWaitForResource(ctx context.Context, k8sClient kubernetes.Interfac
 			}
 			return retry.MinorError(err)
 		}
-		return retry.MinorError(errors.New("Object still exists"))
+		return retry.MinorError(errors.New("object still exists"))
 	})
 }
 

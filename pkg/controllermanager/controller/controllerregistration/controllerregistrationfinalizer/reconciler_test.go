@@ -115,11 +115,15 @@ var _ = Describe("ControllerRegistration", func() {
 					},
 				}
 
+				controllerInstallation2 := controllerInstallation.DeepCopy()
+				controllerInstallation2.Name = "controllerInstallation-2"
+
 				Expect(c.Create(ctx, controllerInstallation)).To(Succeed())
+				Expect(c.Create(ctx, controllerInstallation2)).To(Succeed())
 
 				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerRegistrationName}})
 				Expect(result).To(Equal(reconcile.Result{}))
-				Expect(err).To(MatchError(ContainSubstring("cannot remove finalizer of ControllerRegistration %q because still found ControllerInstallations: [%s]", controllerRegistration.Name, controllerInstallation.Name)))
+				Expect(err).To(MatchError(ContainSubstring("cannot remove finalizer of ControllerRegistration %q because still found ControllerInstallations: [%s %s]", controllerRegistration.Name, controllerInstallation.Name, controllerInstallation2.Name)))
 			})
 
 			It("should remove the finalizer", func() {

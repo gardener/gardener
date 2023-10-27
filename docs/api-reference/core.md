@@ -3547,7 +3547,7 @@ An empty list means that all seeds are selected.</p>
 </td>
 <td>
 <em>(Optional)</em>
-<p>DeploymentRefs holds references to <code>ControllerDeployments</code>. Only one element is support now.</p>
+<p>DeploymentRefs holds references to <code>ControllerDeployments</code>. Only one element is supported currently.</p>
 </td>
 </tr>
 </tbody>
