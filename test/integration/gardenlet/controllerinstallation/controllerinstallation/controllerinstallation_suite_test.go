@@ -247,13 +247,6 @@ var _ = BeforeSuite(func() {
 					ConcurrentSyncs: pointer.Int(5),
 				},
 			},
-			SeedConfig: &config.SeedConfig{
-				SeedTemplate: gardencore.SeedTemplate{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: seed.Name,
-					},
-				},
-			},
 		},
 		Identity:              identity,
 		GardenClusterIdentity: gardenClusterIdentity,
