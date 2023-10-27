@@ -17,6 +17,7 @@ package seed
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -120,7 +121,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 func (r *Reconciler) reportProgress(log logr.Logger, seed *gardencorev1beta1.Seed) flow.ProgressReporter {
-	return flow.NewImmediateProgressReporter(func(ctx context.Context, stats *flow.Stats) {
+	return flow.NewDelayingProgressReporter(clock.RealClock{}, func(ctx context.Context, stats *flow.Stats) {
 		patch := client.MergeFrom(seed.DeepCopy())
 
 		if seed.Status.LastOperation == nil {
@@ -133,7 +134,7 @@ func (r *Reconciler) reportProgress(log logr.Logger, seed *gardencorev1beta1.See
 		if err := r.GardenClient.Status().Patch(ctx, seed, patch); err != nil {
 			log.Error(err, "Could not report reconciliation progress")
 		}
-	})
+	}, 5*time.Second)
 }
 
 func (r *Reconciler) updateStatusOperationStart(ctx context.Context, seed *gardencorev1beta1.Seed, operationType gardencorev1beta1.LastOperationType) error {
