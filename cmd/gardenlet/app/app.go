@@ -476,17 +476,15 @@ func cleanupLegacyLoggingManagedResource(ctx context.Context, seedClient client.
 
 // TODO(rfranzke): Remove this code after v1.86 has been released.
 func (g *garden) cleanupOrphanedExtensionsServiceAccounts(ctx context.Context, gardenClient client.Client) error {
-	serviceAccountList := &metav1.PartialObjectMetadataList{}
-	serviceAccountList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("ServiceAccountList"))
+	serviceAccountList := &corev1.ServiceAccountList{}
 	if err := gardenClient.List(ctx, serviceAccountList, client.InNamespace(gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.Name))); err != nil {
 		return err
 	}
 
 	var taskFns []flow.TaskFn
 	for _, serviceAccount := range serviceAccountList.Items {
-		controllerInstallation := &metav1.PartialObjectMetadata{}
-		controllerInstallation.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("ControllerInstallation"))
-		if err := gardenClient.Get(ctx, client.ObjectKey{Name: strings.TrimPrefix(serviceAccount.Name, v1beta1constants.ExtensionGardenServiceAccountPrefix)}, controllerInstallation); err != nil {
+		controllerInstallation := &gardencorev1beta1.ControllerInstallation{ObjectMeta: metav1.ObjectMeta{Name: strings.TrimPrefix(serviceAccount.Name, v1beta1constants.ExtensionGardenServiceAccountPrefix)}}
+		if err := gardenClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation); err != nil {
 			if !apierrors.IsNotFound(err) {
 				return err
 			}
