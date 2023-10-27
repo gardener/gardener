@@ -94,7 +94,7 @@ type ControllerRegistrationDeployment struct {
 	// considered for a deployment.
 	// An empty list means that all seeds are selected.
 	SeedSelector *metav1.LabelSelector
-	// DeploymentRefs holds references to `ControllerDeployments`. Only one element is support now.
+	// DeploymentRefs holds references to `ControllerDeployments`. Only one element is supported currently.
 	DeploymentRefs []DeploymentRef
 }
 

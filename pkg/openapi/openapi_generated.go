@@ -2223,7 +2223,7 @@ func schema_pkg_apis_core_v1beta1_ControllerRegistrationDeployment(ref common.Re
 					},
 					"deploymentRefs": {
 						SchemaProps: spec.SchemaProps{
-							Description: "DeploymentRefs holds references to `ControllerDeployments`. Only one element is support now.",
+							Description: "DeploymentRefs holds references to `ControllerDeployments`. Only one element is supported currently.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
