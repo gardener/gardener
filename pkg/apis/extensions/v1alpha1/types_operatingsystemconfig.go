@@ -180,7 +180,7 @@ type FileContent struct {
 	// This for example can be used to manipulate the clear-text content before it reaches the node.
 	// +optional
 	TransmitUnencoded *bool `json:"transmitUnencoded,omitempty"`
-	// ImageRef describes a container image which contains a file
+	// ImageRef describes a container image which contains a file.
 	// +optional
 	ImageRef *FileContentImageRef `json:"imageRef,omitempty"`
 }
@@ -203,7 +203,9 @@ type FileContentInline struct {
 
 // FileContentImageRef describes a container image which contains a file
 type FileContentImageRef struct {
-	Image           string `json:"image"`
+	// Image contains the container image repository with tag.
+	Image string `json:"image"`
+	// FilePathInImage contains the path in the image to the file that should be extracted.
 	FilePathInImage string `json:"filePathInImage"`
 }
 

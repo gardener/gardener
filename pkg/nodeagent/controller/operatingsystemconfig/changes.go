@@ -82,9 +82,7 @@ func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alp
 
 	// osc.files and osc.unit.files should be changed the same way by OSC controller.
 	// The reason for assigning files to units is the detection of changes which require the restart of a unit.
-	newUnitFiles := collectUnitFiles(mergeUnits(newOSC.Spec.Units, newOSC.Status.ExtensionUnits))
-	newOSCFiles := append(newOSC.Spec.Files, newOSC.Status.ExtensionFiles...)
-	newOSCFiles = append(newOSCFiles, newUnitFiles...)
+	newOSCFiles := collectAllFiles(newOSC)
 
 	oldOSCRaw, err := fs.ReadFile(lastAppliedOperatingSystemConfigFilePath)
 	if err != nil {
@@ -115,9 +113,7 @@ func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alp
 		mergeUnits(newOSC.Spec.Units, newOSC.Status.ExtensionUnits),
 	)
 
-	oldUnitFiles := collectUnitFiles(mergeUnits(oldOSC.Spec.Units, oldOSC.Status.ExtensionUnits))
-	oldOSCFiles := append(oldOSC.Spec.Files, oldOSC.Status.ExtensionFiles...)
-	oldOSCFiles = append(oldOSCFiles, oldUnitFiles...)
+	oldOSCFiles := collectAllFiles(oldOSC)
 	// File changes have to be computed in one step for all files,
 	// because moving a file from osc.unit.files to osc.files or vice versa should not result in a change and a delete event.
 	changes.files = computeFileDiffs(oldOSCFiles, newOSCFiles)
@@ -240,4 +236,12 @@ func collectUnitFiles(units []extensionsv1alpha1.Unit) []extensionsv1alpha1.File
 	}
 
 	return unitFiles
+}
+
+func collectAllFiles(osc *extensionsv1alpha1.OperatingSystemConfig) []extensionsv1alpha1.File {
+	unitFiles := collectUnitFiles(mergeUnits(osc.Spec.Units, osc.Status.ExtensionUnits))
+	oscFiles := append(osc.Spec.Files, osc.Status.ExtensionFiles...)
+	oscFiles = append(oscFiles, unitFiles...)
+
+	return oscFiles
 }

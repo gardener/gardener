@@ -201,6 +201,7 @@ func (r *Reconciler) applyChangedFiles(ctx context.Context, log logr.Logger, fil
 			}
 
 			log.Info("Successfully applied new or changed file", "path", file.Path)
+
 		case file.Content.ImageRef != nil:
 			if err := r.Extractor.CopyFromImage(ctx, file.Content.ImageRef.Image, file.Content.ImageRef.FilePathInImage, file.Path, permissions); err != nil {
 				return fmt.Errorf("unable to copy file %q from image %q to %q", file.Content.ImageRef.FilePathInImage, file.Content.ImageRef.Image, file.Path)

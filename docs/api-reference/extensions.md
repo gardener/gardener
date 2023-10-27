@@ -3079,7 +3079,7 @@ FileContentImageRef
 </td>
 <td>
 <em>(Optional)</em>
-<p>ImageRef describes a container image which contains a file</p>
+<p>ImageRef describes a container image which contains a file.</p>
 </td>
 </tr>
 </tbody>
@@ -3109,6 +3109,7 @@ string
 </em>
 </td>
 <td>
+<p>Image contains the container image repository with tag.</p>
 </td>
 </tr>
 <tr>
@@ -3119,6 +3120,7 @@ string
 </em>
 </td>
 <td>
+<p>FilePathInImage contains the path in the image to the file that should be extracted.</p>
 </td>
 </tr>
 </tbody>

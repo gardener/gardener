@@ -79,11 +79,15 @@ spec:
                       properties:
                         imageRef:
                           description: ImageRef describes a container image which
-                            contains a file
+                            contains a file.
                           properties:
                             filePathInImage:
+                              description: FilePathInImage contains the path in the
+                                image to the file that should be extracted.
                               type: string
                             image:
+                              description: Image contains the container image repository
+                                with tag.
                               type: string
                           required:
                           - filePathInImage
@@ -210,11 +214,15 @@ spec:
                             properties:
                               imageRef:
                                 description: ImageRef describes a container image
-                                  which contains a file
+                                  which contains a file.
                                 properties:
                                   filePathInImage:
+                                    description: FilePathInImage contains the path
+                                      in the image to the file that should be extracted.
                                     type: string
                                   image:
+                                    description: Image contains the container image
+                                      repository with tag.
                                     type: string
                                 required:
                                 - filePathInImage
@@ -376,11 +384,15 @@ spec:
                       properties:
                         imageRef:
                           description: ImageRef describes a container image which
-                            contains a file
+                            contains a file.
                           properties:
                             filePathInImage:
+                              description: FilePathInImage contains the path in the
+                                image to the file that should be extracted.
                               type: string
                             image:
+                              description: Image contains the container image repository
+                                with tag.
                               type: string
                           required:
                           - filePathInImage
@@ -485,11 +497,15 @@ spec:
                             properties:
                               imageRef:
                                 description: ImageRef describes a container image
-                                  which contains a file
+                                  which contains a file.
                                 properties:
                                   filePathInImage:
+                                    description: FilePathInImage contains the path
+                                      in the image to the file that should be extracted.
                                     type: string
                                   image:
+                                    description: Image contains the container image
+                                      repository with tag.
                                     type: string
                                 required:
                                 - filePathInImage
