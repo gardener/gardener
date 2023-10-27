@@ -11,4 +11,4 @@ roleRef:
   name: istio-ingressgateway-sds
 subjects:
 - kind: ServiceAccount
-  name: istio-ingressgateway
+  name: istio-ingressgateway-service-account

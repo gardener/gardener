@@ -22,17 +22,14 @@ spec:
 {{ toYaml .Values.labels | indent 8 }}
 {{ toYaml .Values.networkPolicyLabels | indent 8 }}
         service.istio.io/canonical-name: "istio-ingressgateway"
-        service.istio.io/canonical-revision: "1.7"
+        service.istio.io/canonical-revision: "1.19"
       annotations:
         sidecar.istio.io/inject: "false"
-        checksum/configmap-bootstrap-config-override: {{ include (print $.Template.BasePath "/bootstrap-config-override.yaml") . | sha256sum }}
+        proxy.istio.io/config: "concurrency: 4"
+
     spec:
-      serviceAccountName: istio-ingressgateway
+      serviceAccountName: istio-ingressgateway-service-account
       securityContext:
-        # Safe since 1.22: https://github.com/kubernetes/kubernetes/pull/103326
-        sysctls:
-        - name: net.ipv4.ip_unprivileged_port_start
-          value: "0"
         fsGroup: 1337
         runAsGroup: 1337
         runAsNonRoot: true
@@ -49,9 +46,6 @@ spec:
           allowPrivilegeEscalation: false
           privileged: false
           readOnlyRootFilesystem: true
-          runAsUser: 1337
-          runAsGroup: 1337
-          runAsNonRoot: true
         ports:
         {{- range .Values.ports }}
         - containerPort: {{ .targetPort }}
@@ -65,7 +59,6 @@ spec:
         - --proxyComponentLogLevel=misc:error
         - --log_output_level=all:warn,ads:error
         - --serviceCluster=istio-ingressgateway
-        - --concurrency=4
         readinessProbe:
           failureThreshold: 30
           httpGet:
@@ -145,8 +138,6 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
-        - name: ISTIO_BOOTSTRAP_OVERRIDE
-          value: /etc/istio/custom-bootstrap/custom_bootstrap.yaml
         volumeMounts:
         - name: workload-socket
           mountPath: /var/run/secrets/workload-spiffe-uds
@@ -158,9 +149,7 @@ spec:
           name: istio-envoy
         - mountPath: /var/run/secrets/istio
           name: istiod-ca-cert
-        - mountPath: /etc/istio/custom-bootstrap
-          name: custom-bootstrap-volume
-          readOnly: true
+
         - name: istio-token
           mountPath: /var/run/secrets/tokens
           readOnly: true
@@ -168,6 +157,12 @@ spec:
           mountPath: /var/lib/istio/data
         - name: podinfo
           mountPath: /etc/istio/pod
+        - name: ingressgateway-certs
+          mountPath: "/etc/istio/ingressgateway-certs"
+          readOnly: true
+        - name: ingressgateway-ca-certs
+          mountPath: "/etc/istio/ingressgateway-ca-certs"
+          readOnly: true
       volumes:
       - emptyDir: {}
         name: workload-socket
@@ -178,9 +173,6 @@ spec:
       - name: istiod-ca-cert
         configMap:
           name: istio-ca-root-cert
-      - name: custom-bootstrap-volume
-        configMap:
-          name: istio-custom-bootstrap-config
       - name: podinfo
         downwardAPI:
           items:
@@ -201,6 +193,14 @@ spec:
               path: istio-token
               expirationSeconds: 43200
               audience: istio-ca
+      - name: ingressgateway-certs
+        secret:
+          secretName: "istio-ingressgateway-certs"
+          optional: true
+      - name: ingressgateway-ca-certs
+        secret:
+          secretName: "istio-ingressgateway-ca-certs"
+          optional: true
       priorityClassName: {{ .Values.priorityClassName }}
       affinity:
         podAntiAffinity:

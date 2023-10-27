@@ -35,7 +35,6 @@ spec:
         args:
         - "discovery"
         - --monitoringAddr=:15014
-        - --grpcAddr=
         - --httpsAddr=:{{ .Values.ports.https }}
         - --log_output_level=all:warn,ads:error
         - --domain
@@ -57,49 +56,51 @@ spec:
           periodSeconds: 3
           timeoutSeconds: 5
         env:
-        - name: JWT_POLICY
-          value: third-party-jwt
-        - name: PILOT_CERT_PROVIDER
-          value: istiod
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: metadata.name
-        - name: POD_NAMESPACE
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: metadata.namespace
-        - name: SERVICE_ACCOUNT
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: spec.serviceAccountName
-        - name: PILOT_TRACE_SAMPLING
-          value: "0.1"
-        - name: PILOT_ENABLE_PROTOCOL_SNIFFING_FOR_OUTBOUND
-          value: "false"
-        - name: PILOT_ENABLE_PROTOCOL_SNIFFING_FOR_INBOUND
-          value: "false"
-        - name: INJECTION_WEBHOOK_CONFIG_NAME
-          value: istio-sidecar-injector
-        - name: ISTIOD_ADDR
-          value: istiod.{{ .Release.Namespace }}.svc:15012
-        - name: VALIDATION_WEBHOOK_CONFIG_NAME
-          value: istiod
-        - name: PILOT_EXTERNAL_GALLEY
-          value: "false"
-        - name: CLUSTER_ID
-          value: "Kubernetes"
-        - name: EXTERNAL_ISTIOD
-          value: "false"
-        - name: PILOT_ENDPOINT_TELEMETRY_LABEL
-          value: "true"
+          - name: REVISION
+            value: "default"
+          - name: JWT_POLICY
+            value: third-party-jwt
+          - name: PILOT_CERT_PROVIDER
+            value: istiod
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.name
+          - name: POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+          - name: SERVICE_ACCOUNT
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: spec.serviceAccountName
+          - name: KUBECONFIG
+            value: /var/run/secrets/remote/config
+          - name: PILOT_TRACE_SAMPLING
+            value: "1"
+          - name: ISTIOD_ADDR
+            value: istiod.{{ .Release.Namespace }}.svc:15012
+          - name: PILOT_ENABLE_ANALYSIS
+            value: "false"
+          - name: CLUSTER_ID
+            value: "Kubernetes"
+          - name: GOMEMLIMIT
+            valueFrom:
+              resourceFieldRef:
+                resource: limits.memory
+          - name: GOMAXPROCS
+            valueFrom:
+              resourceFieldRef:
+                resource: limits.cpu
+          - name: PLATFORM
+            value: ""
         resources:
           requests:
-            cpu: 250m
-            memory: 256Mi
+            cpu: 500m
+            memory: 2048Mi
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
@@ -110,8 +111,6 @@ spec:
             drop:
             - ALL
         volumeMounts:
-        - name: config-volume
-          mountPath: /etc/istio/config
         - name: istio-token
           mountPath: /var/run/secrets/tokens
           readOnly: true
@@ -151,9 +150,6 @@ spec:
         secret:
           secretName: istio-kubeconfig
           optional: true
-      - name: config-volume
-        configMap:
-          name: istio
       - name: istio-csr-dns-cert
         secret:
           secretName: istiod-tls

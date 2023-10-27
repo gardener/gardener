@@ -5,28 +5,25 @@ metadata:
   labels:
     # The istio revision is required so that the web hook is found at runtime for the caBundle update
     # Currently, we do not set the istio revision. Hence, it is just empty.
-    istio.io/rev: ""
+    istio.io/rev: default
 {{ .Values.labels | toYaml | indent 4 }}
 webhooks:
-  - name: validation.istio.io
-    admissionReviewVersions:  ["v1", "v1beta1"]
+  - name: rev.validation.istio.io
     timeoutSeconds: 10
     clientConfig:
       service:
         name: istiod
         namespace: {{ .Release.Namespace }}
         path: "/validate"
-      caBundle: "" # patched at runtime when the webhook is ready.
     rules:
       - operations:
         - CREATE
         - UPDATE
         apiGroups:
-        - config.istio.io
-        - rbac.istio.io
-        - security.istio.io
-        - authentication.istio.io
-        - networking.istio.io
+          - security.istio.io
+          - networking.istio.io
+          - telemetry.istio.io
+          - extensions.istio.io
         apiVersions:
         - "*"
         resources:
@@ -37,3 +34,4 @@ webhooks:
     failurePolicy: Ignore
     matchPolicy: Exact
     sideEffects: None
+    admissionReviewVersions: ["v1beta1", "v1"]

@@ -10,5 +10,6 @@ roleRef:
   kind: Role
   name: istiod
 subjects:
-- kind: ServiceAccount
-  name: istiod
+  - kind: ServiceAccount
+    name: istiod
+    namespace: istio-system

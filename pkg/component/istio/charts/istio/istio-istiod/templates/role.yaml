@@ -8,37 +8,21 @@ metadata:
 rules:
 # permissions to verify the webhook is ready and rejecting
 # invalid config. We use --server-dry-run so no config is persisted.
-- apiGroups:
-  - networking.istio.io
-  verbs:
-  - create
-  resources:
-  - gateways
+- apiGroups: ["networking.istio.io"]
+  verbs: ["create"]
+  resources: ["gateways"]
 
-# For storing CA secret
-- apiGroups:
-  - ''
-  resources:
-  - secrets
+- apiGroups: [""]
+  resources: ["secrets"]
   # TODO lock this down to istio-ca-cert if not using the DNS cert mesh config
-  verbs:
-  - create
-  - get
-  - watch
-  - list
-  - update
-  - delete
-- apiGroups:
-  - ''
-  resources:
-  - serviceaccounts
-  verbs:
-  - get
-  - watch
-  - list
-- apiGroups:
-  - ''
-  resources:
-  - configmaps
-  verbs:
-  - delete
+  verbs: ["create", "get", "watch", "list", "update", "delete"]
+
+# For status controller, so it can delete the distribution report configmap
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["delete"]
+
+# For gateway deployment controller
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["get", "update", "patch", "create"]
