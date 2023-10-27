@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -66,6 +67,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			return reconcile.Result{}, err
 		}
 
+		controllerRegistrations := sets.New[string]()
 		for _, controllerRegistration := range controllerRegistrationList.Items {
 			deployment := controllerRegistration.Spec.Deployment
 			if deployment == nil {
@@ -73,9 +75,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			}
 			for _, deploymentRef := range deployment.DeploymentRefs {
 				if deploymentRef.Name == controllerDeployment.Name {
-					return reconcile.Result{}, fmt.Errorf("cannot remove finalizer of ControllerDeployment %q because still found one ControllerRegistration", controllerRegistration.Name)
+					controllerRegistrations.Insert(controllerRegistration.Name)
 				}
 			}
+		}
+
+		if controllerRegistrations.Len() > 0 {
+			return reconcile.Result{}, fmt.Errorf("cannot remove finalizer of ControllerDeployment %q because still found ControllerRegistrations: %+v", controllerDeployment.Name, sets.List(controllerRegistrations))
 		}
 
 		if controllerutil.ContainsFinalizer(controllerDeployment, FinalizerName) {
