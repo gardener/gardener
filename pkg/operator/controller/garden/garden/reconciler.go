@@ -138,7 +138,7 @@ func (r *Reconciler) ensureAtMostOneGardenExists(ctx context.Context) error {
 }
 
 func (r *Reconciler) reportProgress(log logr.Logger, garden *operatorv1alpha1.Garden) flow.ProgressReporter {
-	return flow.NewImmediateProgressReporter(func(ctx context.Context, stats *flow.Stats) {
+	return flow.NewDelayingProgressReporter(clock.RealClock{}, func(ctx context.Context, stats *flow.Stats) {
 		patch := client.MergeFrom(garden.DeepCopy())
 
 		if garden.Status.LastOperation == nil {
@@ -151,7 +151,7 @@ func (r *Reconciler) reportProgress(log logr.Logger, garden *operatorv1alpha1.Ga
 		if err := r.RuntimeClientSet.Client().Status().Patch(ctx, garden, patch); err != nil {
 			log.Error(err, "Could not report reconciliation progress")
 		}
-	})
+	}, 5*time.Second)
 }
 
 func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *operatorv1alpha1.Garden, operationType gardencorev1beta1.LastOperationType) error {
