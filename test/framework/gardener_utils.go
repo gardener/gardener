@@ -75,9 +75,8 @@ func (f *GardenerFramework) GetSeed(ctx context.Context, seedName string) (*gard
 				return nil, nil, fmt.Errorf("could not construct Seed client: %w", err)
 			}
 			return seed, seedClient, nil
-		} else {
-			return seed, nil, fmt.Errorf("failed to get ManagedSeed for Seed, %s: %w", client.ObjectKeyFromObject(seed), err)
 		}
+		return seed, nil, fmt.Errorf("failed to get ManagedSeed for Seed, %s: %w", client.ObjectKeyFromObject(seed), err)
 	}
 
 	if managedSeed.Spec.Shoot == nil {
