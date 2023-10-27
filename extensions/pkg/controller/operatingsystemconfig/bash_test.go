@@ -35,17 +35,20 @@ import (
 )
 
 var _ = Describe("Bash", func() {
+	var (
+		ctx        = context.Background()
+		fakeClient client.Client
+		namespace  = "namespace"
+
+		folder1 = "/foo"
+		file1   = folder1 + "/bar.txt"
+	)
+
+	BeforeEach(func() {
+		fakeClient = fakeclient.NewClientBuilder().Build()
+	})
+
 	Describe("#FilesToDiskScript", func() {
-		var (
-			ctx        = context.Background()
-			fakeClient client.Client
-			namespace  = "namespace"
-		)
-
-		BeforeEach(func() {
-			fakeClient = fakeclient.NewClientBuilder().Build()
-		})
-
 		It("should fail when a referenced secret cannot be read", func() {
 			files := []extensionsv1alpha1.File{{
 				Content: extensionsv1alpha1.FileContent{
@@ -62,9 +65,6 @@ var _ = Describe("Bash", func() {
 
 		It("should generate the expected output", func() {
 			var (
-				folder1 = "/foo"
-				file1   = folder1 + "/bar.txt"
-
 				folder2 = "/bar"
 				file2   = folder2 + "/baz"
 
@@ -193,12 +193,22 @@ EOF`))
 					{
 						Name:    unit2,
 						Content: pointer.String("content2"),
+						Files: []extensionsv1alpha1.File{{
+							Path: file1,
+							Content: extensionsv1alpha1.FileContent{
+								Inline: &extensionsv1alpha1.FileContentInline{
+									Encoding: "",
+									Data:     "plain-text",
+								},
+							},
+						}},
 					},
 				}
 			)
 
 			By("Ensure the function generated the expected bash script")
-			script := UnitsToDiskScript(units)
+			script, err := UnitsToDiskScript(ctx, fakeClient, namespace, units)
+			Expect(err).NotTo(HaveOccurred())
 			Expect(script).To(Equal(`
 mkdir -p "/etc/systemd/system/` + unit1 + `.d"
 
@@ -212,6 +222,11 @@ EOF
 
 cat << EOF | base64 -d > "/etc/systemd/system/` + unit2 + `"
 Y29udGVudDI=
+EOF
+mkdir -p "` + folder1 + `"
+
+cat << EOF | base64 -d > "` + file1 + `"
+cGxhaW4tdGV4dA==
 EOF`))
 
 			By("Ensure that the bash script can be executed and performs the desired operations")
@@ -220,9 +235,11 @@ EOF`))
 			defer os.RemoveAll(tempDir)
 
 			script = strings.ReplaceAll(script, "/etc/systemd/system/", tempDir+"/etc/systemd/system/")
+			script = strings.ReplaceAll(script, `"`+folder1, `"`+tempDir+folder1)
 
 			runScriptAndCheckFiles(script,
 				tempDir+"/etc/systemd/system/"+unit2,
+				tempDir+file1,
 				tempDir+"/etc/systemd/system/"+unit1+".d/"+unit1DropIn1,
 				tempDir+"/etc/systemd/system/"+unit1+".d/"+unit1DropIn2,
 			)
