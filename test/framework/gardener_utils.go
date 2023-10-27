@@ -22,16 +22,19 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
+	"github.com/gardener/gardener/test/utils/access"
 )
 
 // GetSeeds returns all registered seeds
@@ -53,13 +56,45 @@ func (f *GardenerFramework) GetSeed(ctx context.Context, seedName string) (*gard
 		return nil, nil, fmt.Errorf("could not get Seed from Shoot in Garden cluster: %w", err)
 	}
 
-	seedSecretRef := seed.Spec.SecretRef
-	if seedSecretRef == nil {
-		f.Logger.Info("Seed does not have secretRef set, skip constructing seed client")
-		return seed, nil, nil
+	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
+	if err := f.GardenClient.Client().Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, seed.Name), managedSeed); err != nil {
+		if apierrors.IsNotFound(err) {
+			f.Logger.Info("Seed is not a ManagedSeed, checking seed.spec.secretRef")
+
+			seedSecretRef := seed.Spec.SecretRef
+			if seedSecretRef == nil {
+				f.Logger.Info("Seed does not have secretRef set, skip constructing seed client")
+				return seed, nil, nil
+			}
+
+			seedClient, err := kubernetes.NewClientFromSecret(ctx, f.GardenClient.Client(), seedSecretRef.Namespace, seedSecretRef.Name,
+				kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.SeedScheme}),
+				kubernetes.WithDisabledCachedClient(),
+			)
+			if err != nil {
+				return nil, nil, fmt.Errorf("could not construct Seed client: %w", err)
+			}
+			return seed, seedClient, nil
+		}
+		return seed, nil, fmt.Errorf("failed to get ManagedSeed for Seed, %s: %w", client.ObjectKeyFromObject(seed), err)
 	}
 
-	seedClient, err := kubernetes.NewClientFromSecret(ctx, f.GardenClient.Client(), seedSecretRef.Namespace, seedSecretRef.Name,
+	if managedSeed.Spec.Shoot == nil {
+		return seed, nil, fmt.Errorf("shoot for ManagedSeed, %s is nil", client.ObjectKeyFromObject(managedSeed))
+	}
+
+	shoot := &gardencorev1beta1.Shoot{}
+	if err := f.GardenClient.Client().Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
+		return seed, nil, fmt.Errorf("failed to get Shoot %s for ManagedSeed, %s: %w", managedSeed.Spec.Shoot.Name, client.ObjectKeyFromObject(managedSeed), err)
+	}
+
+	const expirationSeconds = 6 * 3600 // 6h
+	kubeconfig, err := access.RequestAdminKubeconfigForShoot(ctx, f.GardenClient, shoot, pointer.Int64(expirationSeconds))
+	if err != nil {
+		return seed, nil, fmt.Errorf("failed to request AdminKubeConfig for Shoot %s: %w", client.ObjectKeyFromObject(shoot), err)
+	}
+
+	seedClient, err := kubernetes.NewClientFromBytes(kubeconfig,
 		kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.SeedScheme}),
 		kubernetes.WithDisabledCachedClient(),
 	)
