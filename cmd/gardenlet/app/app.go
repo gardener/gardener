@@ -506,7 +506,7 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) e
 	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	return wait.PollUntilWithContext(timeoutCtx, 500*time.Millisecond, func(context.Context) (done bool, err error) {
+	return wait.PollUntilContextCancel(timeoutCtx, 500*time.Millisecond, true, func(context.Context) (done bool, err error) {
 		if err := gardenClient.Get(ctx, kubernetesutils.Key(gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.Name)), &corev1.Namespace{}); err != nil {
 			if apierrors.IsNotFound(err) || apierrors.IsForbidden(err) {
 				return false, nil
