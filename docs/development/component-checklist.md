@@ -93,8 +93,11 @@ This document provides a checklist for them that you can walk through.
 
 6. **Choose the proper Seccomp profile** ([example 1](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nodelocaldns/nodelocaldns.go#L283-L287), [example 2](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nginxingress/nginxingress.go#L447))
 
-   The [Seccomp profile](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-seccomp-profile-for-a-container) will be defaulted by `gardener-resource-manager`'s SeccompProfile webhook which works well for the majority of components.
-   However, in some special cases you might need to overwrite it.
+   For components deployed in the Seed cluster, the [Seccomp profile](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-seccomp-profile-for-a-container) will be defaulted to `RuntimeDefault` by `gardener-resource-manager`'s SeccompProfile webhook which works well for the majority of components. However, in some special cases you might need to overwrite it.
+   
+   The `gardener-resource-manager`'s SeccompProfile webhook is not enabled for a Shoot cluster. For components deployed in the Shoot cluster, it is required [*] to explicitly specify the Seccomp profile.
+
+   <sub>[*] It is required because if a component deployed in the Shoot cluster does not specify a Seccomp profile and cannot run with the `RuntimeDefault` Seccomp profile, then enabling the `.spec.kubernetes.kubelet.seccompDefault` field in the Shoot spec would break the corresponding component.</sub>
 
 7. **Define `PodSecurityPolicy`s** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/vpnshoot/vpnshoot.go#L341-L412))
 
