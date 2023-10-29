@@ -28,6 +28,8 @@ const (
 	// BinaryDir is the directory on the worker node that contains the binary for the gardener-node-agent.
 	BinaryDir = "/opt/bin"
 
+	// KubeconfigFilePath is the file path on the worker node that contains the kubeconfig of the gardener-node-agent.
+	KubeconfigFilePath = CredentialsDir + "/kubeconfig"
 	// BootstrapTokenFilePath is the file path on the worker node that contains the bootstrap token for the node.
 	BootstrapTokenFilePath = CredentialsDir + "/bootstrap-token"
 	// TokenFilePath is the file path on the worker node that contains the access token of the gardener-node-agent.

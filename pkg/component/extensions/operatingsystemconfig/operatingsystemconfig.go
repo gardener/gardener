@@ -614,6 +614,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 
 	case extensionsv1alpha1.OperatingSystemConfigPurposeReconcile:
 		units, files, err = OriginalConfigFn(components.Context{
+			Key:                     d.key,
 			CABundle:                d.caBundle,
 			ClusterDNSAddress:       d.clusterDNSAddress,
 			ClusterDomain:           d.clusterDomain,

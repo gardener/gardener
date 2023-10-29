@@ -112,6 +112,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			}
 			originalConfigFn = func(cctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 				return []extensionsv1alpha1.Unit{
+						{Name: cctx.Key},
 						{Name: *cctx.CABundle},
 						{Name: cctx.ClusterDNSAddress},
 						{Name: cctx.ClusterDomain},
@@ -235,6 +236,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					clusterCASecretName,
 				)
 				originalUnits, originalFiles, _ := originalConfigFn(components.Context{
+					Key:               key,
 					CABundle:          caBundle,
 					ClusterDNSAddress: clusterDNSAddress,
 					ClusterDomain:     clusterDomain,

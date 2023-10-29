@@ -31,6 +31,7 @@ type Component interface {
 
 // Context contains configuration for the components.
 type Context struct {
+	Key                     string
 	CABundle                *string
 	ClusterDNSAddress       string
 	ClusterDomain           string
