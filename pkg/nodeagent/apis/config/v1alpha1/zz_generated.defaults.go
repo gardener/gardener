@@ -34,5 +34,8 @@ func RegisterDefaults(scheme *runtime.Scheme) error {
 }
 
 func SetObjectDefaults_NodeAgentConfiguration(in *NodeAgentConfiguration) {
+	SetDefaults_NodeAgentConfiguration(in)
+	SetDefaults_ClientConnectionConfiguration(&in.ClientConnection)
+	SetDefaults_ServerConfiguration(&in.Server)
 	SetDefaults_OperatingSystemConfigControllerConfig(&in.Controllers.OperatingSystemConfig)
 }
