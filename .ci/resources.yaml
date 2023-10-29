@@ -31,6 +31,14 @@ access:
   type: 'ociRegistry'
   imageReference: 'eu.gcr.io/gardener-project/gardener/gardenlet:${COMPONENT_VERSION}'
 ---
+name: 'node-agent'
+version: '${COMPONENT_VERSION}'
+type: 'ociImage'
+relation: 'local'
+access:
+  type: 'ociRegistry'
+  imageReference: 'eu.gcr.io/gardener-project/gardener/node-agent:${COMPONENT_VERSION}'
+---
 name: 'resource-manager'
 version: '${COMPONENT_VERSION}'
 type: 'ociImage'
