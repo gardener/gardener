@@ -34,9 +34,6 @@ const (
 	BootstrapTokenFilePath = CredentialsDir + "/bootstrap-token"
 	// TokenFilePath is the file path on the worker node that contains the access token of the gardener-node-agent.
 	TokenFilePath = CredentialsDir + "/token"
-	// InitScriptPath is the file path on the worker node that contains the init script
-	// of the gardener-node-agent.
-	InitScriptPath = BaseDir + "/gardener-node-init.sh"
 	// ConfigFilePath is the file path on the worker node that contains the configuration of the gardener-node-agent.
 	ConfigFilePath = BaseDir + "/config.yaml"
 
