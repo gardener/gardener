@@ -26,7 +26,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -34,24 +33,21 @@ import (
 	"k8s.io/client-go/rest"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
-	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
-	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	"github.com/gardener/gardener/cmd/utils"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/controller"
@@ -70,33 +66,10 @@ func NewCommand() *cobra.Command {
 		Short: "Launch the " + Name,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			verflag.PrintAndExitIfRequested()
-
-			if err := opts.complete(); err != nil {
-				return err
-			}
-			if err := opts.validate(); err != nil {
-				return err
-			}
-
-			log, err := logger.NewZapLogger(opts.config.LogLevel, opts.config.LogFormat)
+			log, err := utils.InitRun(cmd, opts, Name)
 			if err != nil {
-				return fmt.Errorf("error instantiating zap logger: %w", err)
+				return err
 			}
-
-			logf.SetLogger(log)
-			klog.SetLogger(log)
-
-			log.Info("Starting "+Name, "version", version.Get())
-			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-				log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value)) //nolint:logcheck
-			})
-
-			// don't output usage on further errors raised during execution
-			cmd.SilenceUsage = true
-			// further errors will be logged properly, don't duplicate
-			cmd.SilenceErrors = true
-
 			return run(cmd.Context(), log, opts.config)
 		},
 	}

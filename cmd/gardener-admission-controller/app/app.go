@@ -26,23 +26,19 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
-	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
-	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	controllerwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	"github.com/gardener/gardener/cmd/utils"
 	"github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
-	"github.com/gardener/gardener/pkg/logger"
 )
 
 // Name is a const for the name of this component.
@@ -57,33 +53,10 @@ func NewCommand() *cobra.Command {
 		Short: "Launch the " + Name,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			verflag.PrintAndExitIfRequested()
-
-			if err := opts.complete(); err != nil {
-				return err
-			}
-			if err := opts.validate(); err != nil {
-				return err
-			}
-
-			log, err := logger.NewZapLogger(opts.config.LogLevel, opts.config.LogFormat)
+			log, err := utils.InitRun(cmd, opts, Name)
 			if err != nil {
-				return fmt.Errorf("error instantiating zap logger: %w", err)
+				return err
 			}
-
-			logf.SetLogger(log)
-			klog.SetLogger(log)
-
-			log.Info("Starting "+Name, "version", version.Get())
-			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-				log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value)) //nolint:logcheck
-			})
-
-			// don't output usage on further errors raised during execution
-			cmd.SilenceUsage = true
-			// further errors will be logged properly, don't duplicate
-			cmd.SilenceErrors = true
-
 			return run(cmd.Context(), log, opts.config)
 		},
 	}

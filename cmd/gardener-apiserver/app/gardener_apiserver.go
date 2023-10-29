@@ -73,8 +73,8 @@ import (
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
-// NewCommandStartGardenerAPIServer creates a *cobra.Command object with default parameters.
-func NewCommandStartGardenerAPIServer() *cobra.Command {
+// NewCommand creates a *cobra.Command object with default parameters.
+func NewCommand() *cobra.Command {
 	opts := NewOptions()
 
 	cmd := &cobra.Command{

@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
+	"github.com/gardener/gardener/cmd/utils"
 	"github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	admissioncontrollervalidation "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/validation"
@@ -45,11 +46,13 @@ type options struct {
 	config     *config.AdmissionControllerConfiguration
 }
 
+var _ utils.Options = &options{}
+
 func (o *options) addFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.configFile, "config", o.configFile, "Path to configuration file.")
 }
 
-func (o *options) complete() error {
+func (o *options) Complete() error {
 	if len(o.configFile) == 0 {
 		return fmt.Errorf("missing config file")
 	}
@@ -67,9 +70,13 @@ func (o *options) complete() error {
 	return nil
 }
 
-func (o *options) validate() error {
+func (o *options) Validate() error {
 	if errs := admissioncontrollervalidation.ValidateAdmissionControllerConfiguration(o.config); len(errs) > 0 {
 		return errs.ToAggregate()
 	}
 	return nil
+}
+
+func (o *options) LogConfig() (string, string) {
+	return o.config.LogLevel, o.config.LogFormat
 }
