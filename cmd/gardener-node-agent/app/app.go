@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,7 +51,9 @@ import (
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	"github.com/gardener/gardener/pkg/nodeagent/bootstrap"
 	"github.com/gardener/gardener/pkg/nodeagent/controller"
+	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -78,7 +81,29 @@ func NewCommand() *cobra.Command {
 	verflag.AddFlags(flags)
 	opts.addFlags(flags)
 
+	cmd.AddCommand(getBootstrapCommand(opts))
 	return cmd
+}
+
+func getBootstrapCommand(opts *options) *cobra.Command {
+	bootstrapCmd := &cobra.Command{
+		Use:   "bootstrap",
+		Short: "Bootstrap the " + Name,
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			log, err := utils.InitRun(cmd, opts, "gardener-node-init")
+			if err != nil {
+				return err
+			}
+			return bootstrap.Bootstrap(cmd.Context(), log, afero.Afero{Fs: afero.NewOsFs()}, dbus.New(), opts.config.Bootstrap)
+		},
+	}
+
+	flags := bootstrapCmd.Flags()
+	verflag.AddFlags(flags)
+	opts.addFlags(flags)
+
+	return bootstrapCmd
 }
 
 func run(ctx context.Context, log logr.Logger, cfg *config.NodeAgentConfiguration) error {
