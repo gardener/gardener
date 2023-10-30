@@ -21,6 +21,7 @@ linters:
   - logcheck
   - gomegacheck
   - exportloopref
+  - nilerr
 
 issues:
   exclude-use-default: false

@@ -116,7 +116,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	parsedSchedules, err := parseHibernationSchedules(schedules)
 	if err != nil {
 		log.Info("Invalid hibernation schedules, stopping reconciliation")
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, err
 	}
 
 	now := r.Clock.Now()

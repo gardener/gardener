@@ -367,7 +367,7 @@ func (r *Reconciler) deleteBackupEntry(
 		}
 
 		if err := client.IgnoreNotFound(r.SeedClient.Delete(seedCtx, extensionSecret)); err != nil {
-			return reconcile.Result{}, nil
+			return reconcile.Result{}, err
 		}
 
 		if updateErr := r.updateBackupEntryStatusSucceeded(gardenCtx, backupEntry, operationType); updateErr != nil {

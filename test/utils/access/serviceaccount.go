@@ -104,7 +104,7 @@ func CreateShootClientFromStaticServiceAccountToken(ctx context.Context, shootCl
 
 			return retry.Ok()
 		}); err != nil {
-			return "", nil
+			return "", err
 		}
 
 		return string(secret.Data[corev1.ServiceAccountTokenKey]), nil
