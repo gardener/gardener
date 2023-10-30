@@ -40,7 +40,8 @@ func CheckTunnelConnection(ctx context.Context, log logr.Logger, shootClient kub
 	}
 
 	var tunnelPod *corev1.Pod
-	for _, pod := range podList.Items {
+	for _, p := range podList.Items {
+		pod := p
 		if pod.Status.Phase == corev1.PodRunning {
 			tunnelPod = &pod
 			break
