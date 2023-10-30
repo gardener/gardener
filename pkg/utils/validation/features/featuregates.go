@@ -227,7 +227,7 @@ var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	"TopologyManagerPolicyAlphaOptions":              {AddedInVersion: "1.26"},
 	"TopologyManagerPolicyBetaOptions":               {AddedInVersion: "1.26"},
 	"TopologyManagerPolicyOptions":                   {AddedInVersion: "1.26"},
-	"UnauthenticatedHTTP2DOSMitigation:":             {AddedInVersion: "1.25"},
+	"UnauthenticatedHTTP2DOSMitigation":              {AddedInVersion: "1.25"},
 	"UnknownVersionInteroperabilityProxy":            {AddedInVersion: "1.28"},
 	"UserNamespacesStatelessPodsSupport":             {AddedInVersion: "1.25", RemovedInVersion: "1.28"},
 	"UserNamespacesSupport":                          {AddedInVersion: "1.28"},
