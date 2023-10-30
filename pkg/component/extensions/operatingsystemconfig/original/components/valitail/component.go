@@ -15,13 +15,11 @@
 package valitail
 
 import (
-	"fmt"
-
-	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/docker"
+	"github.com/gardener/gardener/pkg/features"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
@@ -65,42 +63,29 @@ func execStartPreCopyBinaryFromContainer(binaryName string, image *imagevectorut
 }
 
 func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
-	if !ctx.ValitailEnabled {
-		return []extensionsv1alpha1.Unit{
-			getValitailUnit(
-				"/bin/systemctl disable "+UnitName,
-				fmt.Sprintf(`/bin/sh -c "echo service %s is removed!; while true; do sleep 86400; done"`, UnitName),
-			),
-			getFetchTokenScriptUnit(
-				"/bin/systemctl disable "+unitNameFetchToken,
-				fmt.Sprintf(`/bin/sh -c "rm -f `+PathAuthToken+`; echo service %s is removed!; while true; do sleep 86400; done"`, unitNameFetchToken),
-			),
-		}, nil, nil
-	}
-
-	valitailConfigFile, err := getValitailConfigurationFile(ctx)
+	valitailUnit, err := getValitailUnit(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	fetchTokenScriptFile, err := getFetchTokenScriptFile()
+	fetchTokenScriptUnit, err := getFetchTokenScriptUnit(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return []extensionsv1alpha1.Unit{
-			getValitailUnit(
-				execStartPreCopyBinaryFromContainer("valitail", ctx.Images[imagevector.ImageNameValitail]),
-				v1beta1constants.OperatingSystemConfigFilePathBinaries+`/valitail -config.file=`+PathConfig,
-			),
-			getFetchTokenScriptUnit(
-				"",
-				PathFetchTokenScript,
-			),
-		},
-		[]extensionsv1alpha1.File{
-			valitailConfigFile,
-			fetchTokenScriptFile,
-			getValitailCAFile(ctx),
-		}, nil
+	var files []extensionsv1alpha1.File
+	if ctx.ValitailEnabled && !features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+		valitailConfigFile, err := getValitailConfigurationFile(ctx)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		fetchTokenScriptFile, err := getFetchTokenScriptFile()
+		if err != nil {
+			return nil, nil, err
+		}
+		files = append(files, valitailConfigFile, fetchTokenScriptFile, getValitailCAFile(ctx))
+	}
+
+	return []extensionsv1alpha1.Unit{valitailUnit, fetchTokenScriptUnit}, files, nil
 }
