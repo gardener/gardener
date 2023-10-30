@@ -26,6 +26,8 @@ config:
   seedConfig:
     metadata:
       name: local2
+      labels:
+        base: kind2
     spec:
       ingress:
         domain: ingress.local2.seed.local.gardener.cloud
