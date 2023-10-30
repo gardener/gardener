@@ -16,7 +16,9 @@
 
 package time
 
-import "time"
+import (
+	"time"
+)
 
 // Now allows mocking time.Now.
 type Now interface {

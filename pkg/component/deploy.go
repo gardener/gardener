@@ -14,7 +14,9 @@
 
 package component
 
-import "context"
+import (
+	"context"
+)
 
 // OpDestroy creates a Deployer which calls Destroy instead of Deploy.
 func OpDestroy(d ...Deployer) Deployer {

@@ -14,7 +14,9 @@
 
 package errors
 
-import "errors"
+import (
+	"errors"
+)
 
 // Unwrap unwraps and returns the root error. Multiple wrappings via `fmt.Errorf` implementations are properly taken into account.
 func Unwrap(err error) error {
