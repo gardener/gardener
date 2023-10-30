@@ -1231,4 +1231,25 @@ var _ = Describe("Shoot", func() {
 			Expect(ComputeTechnicalID(projectName, shoot)).To(Equal(fmt.Sprintf("shoot--%s--%s", projectName, shoot.Name)))
 		})
 	})
+
+	Describe("#GetShootConditionTypes", func() {
+		It("should return all shoot condition types", func() {
+			Expect(GetShootConditionTypes(false)).To(ConsistOf(
+				gardencorev1beta1.ConditionType("APIServerAvailable"),
+				gardencorev1beta1.ConditionType("ControlPlaneHealthy"),
+				gardencorev1beta1.ConditionType("ObservabilityComponentsHealthy"),
+				gardencorev1beta1.ConditionType("SystemComponentsHealthy"),
+				gardencorev1beta1.ConditionType("EveryNodeReady"),
+			))
+		})
+
+		It("should return all shoot condition types for workerless shoot", func() {
+			Expect(GetShootConditionTypes(true)).To(ConsistOf(
+				gardencorev1beta1.ConditionType("APIServerAvailable"),
+				gardencorev1beta1.ConditionType("ControlPlaneHealthy"),
+				gardencorev1beta1.ConditionType("ObservabilityComponentsHealthy"),
+				gardencorev1beta1.ConditionType("SystemComponentsHealthy"),
+			))
+		})
+	})
 })
