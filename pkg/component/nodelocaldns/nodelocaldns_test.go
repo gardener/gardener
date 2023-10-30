@@ -594,7 +594,7 @@ ip6.arpa:53 {
 							values.VPAEnabled = false
 						})
 
-						It("should succesfully deploy all resources", func() {
+						It("should successfully deploy all resources", func() {
 							Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
 							Expect(err).ToNot(HaveOccurred())
@@ -609,7 +609,7 @@ ip6.arpa:53 {
 							values.VPAEnabled = true
 						})
 
-						It("should succesfully deploy all resources", func() {
+						It("should successfully deploy all resources", func() {
 							Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
 							Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-local-dns.yaml"])).To(Equal(vpaYAML))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
@@ -635,7 +635,7 @@ ip6.arpa:53 {
 							values.VPAEnabled = false
 						})
 
-						It("should succesfully deploy all resources", func() {
+						It("should successfully deploy all resources", func() {
 							Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
 							Expect(err).ToNot(HaveOccurred())
@@ -650,7 +650,7 @@ ip6.arpa:53 {
 							values.VPAEnabled = true
 						})
 
-						It("should succesfully deploy all resources", func() {
+						It("should successfully deploy all resources", func() {
 							Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
 							Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-local-dns.yaml"])).To(Equal(vpaYAML))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
@@ -676,7 +676,7 @@ ip6.arpa:53 {
 							values.VPAEnabled = false
 						})
 
-						It("should succesfully deploy all resources", func() {
+						It("should successfully deploy all resources", func() {
 							Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
 							Expect(err).ToNot(HaveOccurred())
@@ -691,7 +691,7 @@ ip6.arpa:53 {
 							values.VPAEnabled = true
 						})
 
-						It("should succesfully deploy all resources", func() {
+						It("should successfully deploy all resources", func() {
 							Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
 							Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-local-dns.yaml"])).To(Equal(vpaYAML))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
@@ -717,7 +717,7 @@ ip6.arpa:53 {
 							values.VPAEnabled = false
 						})
 
-						It("should succesfully deploy all resources", func() {
+						It("should successfully deploy all resources", func() {
 							Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
 							Expect(err).ToNot(HaveOccurred())
@@ -732,7 +732,7 @@ ip6.arpa:53 {
 							values.VPAEnabled = true
 						})
 
-						It("should succesfully deploy all resources", func() {
+						It("should successfully deploy all resources", func() {
 							Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
 							Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-local-dns.yaml"])).To(Equal(vpaYAML))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
@@ -756,7 +756,7 @@ ip6.arpa:53 {
 						forceTcpToUpstreamDNS = "force_tcp"
 					})
 
-					It("should succesfully deploy all resources", func() {
+					It("should successfully deploy all resources", func() {
 						Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
 						managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
 						Expect(err).ToNot(HaveOccurred())
@@ -844,7 +844,7 @@ ip6.arpa:53 {
 							values.VPAEnabled = false
 						})
 
-						It("should succesfully deploy all resources", func() {
+						It("should successfully deploy all resources", func() {
 							Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
 							Expect(err).ToNot(HaveOccurred())
@@ -859,7 +859,7 @@ ip6.arpa:53 {
 							values.VPAEnabled = true
 						})
 
-						It("should succesfully deploy all resources", func() {
+						It("should successfully deploy all resources", func() {
 							Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
 							Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-local-dns.yaml"])).To(Equal(vpaYAML))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
@@ -886,7 +886,7 @@ ip6.arpa:53 {
 							values.VPAEnabled = false
 						})
 
-						It("should succesfully deploy all resources", func() {
+						It("should successfully deploy all resources", func() {
 							Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
 							Expect(err).ToNot(HaveOccurred())
@@ -901,7 +901,7 @@ ip6.arpa:53 {
 							values.VPAEnabled = true
 						})
 
-						It("should succesfully deploy all resources", func() {
+						It("should successfully deploy all resources", func() {
 							Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
 							Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-local-dns.yaml"])).To(Equal(vpaYAML))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
@@ -927,7 +927,7 @@ ip6.arpa:53 {
 							values.VPAEnabled = false
 						})
 
-						It("should succesfully deploy all resources", func() {
+						It("should successfully deploy all resources", func() {
 							Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
 							Expect(err).ToNot(HaveOccurred())
@@ -942,7 +942,7 @@ ip6.arpa:53 {
 							values.VPAEnabled = true
 						})
 
-						It("should succesfully deploy all resources", func() {
+						It("should successfully deploy all resources", func() {
 							Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
 							Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-local-dns.yaml"])).To(Equal(vpaYAML))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
@@ -968,7 +968,7 @@ ip6.arpa:53 {
 							values.VPAEnabled = false
 						})
 
-						It("should succesfully deploy all resources", func() {
+						It("should successfully deploy all resources", func() {
 							Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
 							Expect(err).ToNot(HaveOccurred())
@@ -983,7 +983,7 @@ ip6.arpa:53 {
 							values.VPAEnabled = true
 						})
 
-						It("should succesfully deploy all resources", func() {
+						It("should successfully deploy all resources", func() {
 							Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
 							Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-local-dns.yaml"])).To(Equal(vpaYAML))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
@@ -1078,7 +1078,7 @@ ip6.arpa:53 {
 					values.PSPDisabled = false
 				})
 
-				It("should succesfully deploy all resources", func() {
+				It("should successfully deploy all resources", func() {
 					Expect(managedResourceSecret.Data).To(HaveLen(8))
 					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-local-dns.yaml"])).To(Equal(clusterRoleYAML))
 					Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_node-local-dns.yaml"])).To(Equal(roleBindingPSPYAML))
@@ -1092,7 +1092,7 @@ ip6.arpa:53 {
 					values.PSPDisabled = true
 				})
 
-				It("should succesfully deploy all resources", func() {
+				It("should successfully deploy all resources", func() {
 					Expect(managedResourceSecret.Data).To(HaveLen(5))
 				})
 			})

@@ -277,7 +277,7 @@ var _ = Describe("Worker Reconcile", func() {
 			want:    reconcile.Result{},
 			wantErr: true,
 		}),
-		Entry("test reconcile after failed reconcilation", &test{
+		Entry("test reconcile after failed reconciliation", &test{
 			fields: fields{
 				logger:   logger,
 				actuator: newMockActuator("reconcile", nil),
@@ -294,7 +294,7 @@ var _ = Describe("Worker Reconcile", func() {
 			want:    reconcile.Result{},
 			wantErr: false,
 		}),
-		Entry("test reconcile after successful restoration reconcilation", &test{
+		Entry("test reconcile after successful restoration reconciliation", &test{
 			fields: fields{
 				logger:   logger,
 				actuator: newMockActuator("reconcile", nil),
@@ -304,14 +304,14 @@ var _ = Describe("Worker Reconcile", func() {
 						getWorker(),
 						gardencorev1beta1.LastOperationTypeReconcile,
 						gardencorev1beta1.LastOperationStateProcessing,
-						"Processs worker reconcilation"),
+						"Process worker reconciliation"),
 					getCluster()).WithStatusSubresource(&extensionsv1alpha1.Worker{}).Build(),
 			},
 			args:    arguments,
 			want:    reconcile.Result{},
 			wantErr: false,
 		}),
-		Entry("test error while reconciliation after failed reconcilation", &test{
+		Entry("test error while reconciliation after failed reconciliation", &test{
 			fields: fields{
 				logger:   logger,
 				actuator: newMockActuator("reconcile", errors.New("test")),
@@ -328,7 +328,7 @@ var _ = Describe("Worker Reconcile", func() {
 			want:    reconcile.Result{},
 			wantErr: true,
 		}),
-		Entry("test error while reconciliation after successful restoration reconcilation", &test{
+		Entry("test error while reconciliation after successful restoration reconciliation", &test{
 			fields: fields{
 				logger:   logger,
 				actuator: newMockActuator("reconcile", errors.New("test")),
@@ -338,7 +338,7 @@ var _ = Describe("Worker Reconcile", func() {
 						getWorker(),
 						gardencorev1beta1.LastOperationTypeReconcile,
 						gardencorev1beta1.LastOperationStateProcessing,
-						"Processs worker reconcilation"),
+						"Process worker reconciliation"),
 					getCluster()).WithStatusSubresource(&extensionsv1alpha1.Worker{}).Build(),
 			},
 			args:    arguments,

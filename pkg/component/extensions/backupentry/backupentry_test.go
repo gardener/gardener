@@ -282,7 +282,7 @@ var _ = Describe("#BackupEntry", func() {
 			// Let's **please** just stop writing such tests with mocks and use a fake client or envtest instead.
 			// Testing with mocks does not only assert that the tested unit fulfills its task but also
 			// asserts that specific calls are made in order to fulfill its task. However, we/the caller don't
-			// care about what helper funcs are used internally or whether it uses update or patch to fullfill
+			// care about what helper funcs are used internally or whether it uses update or patch to fulfill
 			// the task, as long as the result is what we expect (which is what should be asserted instead).
 			defer test.WithVars(
 				&extensions.TimeNow, mockNow.Do,

@@ -115,7 +115,7 @@ var _ = Describe("Reconciler", func() {
 			Expect(err).To(MatchError(ContainSubstring("Cannot delete Quota")))
 		})
 
-		It("should remove the finalizer beacuse no SecretBinding is referencing the Quota", func() {
+		It("should remove the finalizer because no SecretBinding is referencing the Quota", func() {
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: quotaName}})
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).NotTo(HaveOccurred())

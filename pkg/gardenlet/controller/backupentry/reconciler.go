@@ -48,7 +48,7 @@ import (
 )
 
 var (
-	// DefaultTimeout defines how long the controller should wait until the BackupBucket resource is ready or is succesfully deleted. Exposed for tests.
+	// DefaultTimeout defines how long the controller should wait until the BackupBucket resource is ready or is successfully deleted. Exposed for tests.
 	DefaultTimeout = 30 * time.Second
 	// DefaultSevereThreshold is the default threshold until an error reported by the component is treated as 'severe'. Exposed for tests.
 	DefaultSevereThreshold = 15 * time.Second
@@ -643,7 +643,7 @@ func (r *Reconciler) checkIfBackupBucketIsHealthy(ctx context.Context, backupBuc
 	}
 
 	if backupBucket.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
-		return fmt.Errorf("assoicated BackupBucket state is not Succeeded but %v", backupBucket.Status.LastOperation.State)
+		return fmt.Errorf("associated BackupBucket state is not Succeeded but %v", backupBucket.Status.LastOperation.State)
 	}
 
 	return nil

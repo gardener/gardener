@@ -117,7 +117,7 @@ var _ = Describe("Actuator", func() {
 			Expect(reducedMDs[0]).To(Equal(mdWithStateAndMachineSets))
 		})
 
-		It("should reduce the lenght to one", func() {
+		It("should reduce the length to one", func() {
 			reducedMDs := removeWantedDeploymentWithoutState(worker.MachineDeployments{mdWithoutState, mdWithStateAndMachineSets, mdWithEmptyState})
 
 			Expect(len(reducedMDs)).To(Equal(1))

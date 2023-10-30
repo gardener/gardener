@@ -422,7 +422,7 @@ status: {}
 				values.PSPDisabled = true
 			})
 
-			It("should succesfully deploy all PSP resources", func() {
+			It("should successfully deploy all PSP resources", func() {
 				Expect(managedResourceSecret.Data).To(HaveLen(4))
 				Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor("", false)))
 			})
@@ -433,7 +433,7 @@ status: {}
 				values.PSPDisabled = false
 			})
 
-			It("should succesfully deploy all PSP resources", func() {
+			It("should successfully deploy all PSP resources", func() {
 				Expect(managedResourceSecret.Data).To(HaveLen(7))
 				Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor("", false)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_psp_node-problem-detector.yaml"])).To(Equal(clusterRoleBindingPSPYAML))

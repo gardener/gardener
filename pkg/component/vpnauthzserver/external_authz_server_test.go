@@ -325,7 +325,7 @@ var _ = Describe("ExtAuthzServer", func() {
 			Expect(actualVpa).To(DeepEqual(expectedVpa))
 		})
 
-		It("should succesfully deploy all the components", func() {
+		It("should successfully deploy all the components", func() {
 			actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
 			Expect(c.Get(ctx, kubernetesutils.Key(expectedPodDisruptionBudget.Namespace, expectedPodDisruptionBudget.Name), actualPodDisruptionBudget)).To(Succeed())
 			Expect(actualPodDisruptionBudget).To(DeepEqual(expectedPodDisruptionBudget))
@@ -350,7 +350,7 @@ var _ = Describe("ExtAuthzServer", func() {
 			Expect(c.Get(ctx, kubernetesutils.Key(expectedVpa.Namespace, expectedVpa.Name), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 		})
 
-		It("should succesfully delete all the components", func() {
+		It("should successfully delete all the components", func() {
 			Expect(c.Get(ctx, kubernetesutils.Key(expectedPodDisruptionBudget.Namespace, expectedPodDisruptionBudget.Name), &policyv1.PodDisruptionBudget{})).To(Succeed())
 			Expect(defaultDepWaiter.Destroy(ctx)).To(Succeed())
 			Expect(c.Get(ctx, kubernetesutils.Key(expectedPodDisruptionBudget.Namespace, expectedPodDisruptionBudget.Name), &policyv1.PodDisruptionBudget{})).To(BeNotFoundError())

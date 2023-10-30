@@ -349,7 +349,7 @@ var _ = Describe("Reconciler", func() {
 
 			Expect(AllCSINodeDriversAreReady(log, recorder, node, requiredDrivers, nil)).To(BeFalse())
 			// note that the order if driver names can vary, therefore we only
-			// check that there are exactly two occurences of *.driver.example.com
+			// check that there are exactly two occurrences of *.driver.example.com
 			Eventually(logBuffer).Should(gbytes.Say(`Unready required CSI drivers.+(?:foo|bar)\.driver\.example\.com\"\,\"(?:foo|bar)\.driver\.example\.com\"\]`))
 		})
 

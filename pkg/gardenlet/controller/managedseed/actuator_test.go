@@ -946,13 +946,13 @@ var _ = Describe("Utils", func() {
 
 		})
 
-		It("should should not inject KUBERNETES_SERVICE_HOST environemnt", func() {
+		It("should should not inject KUBERNETES_SERVICE_HOST environment", func() {
 			ensuredDeploymentWithoutDomain := ensureGardenletEnvironment(otherEnvDeployment, dnsWithoutDomain)
 
 			Expect(ensuredDeploymentWithoutDomain.Env).To(HaveLen(1))
 			Expect(ensuredDeploymentWithoutDomain.Env[0].Name).ToNot(Equal(kubernetesServiceHost))
 		})
-		It("should should inject KUBERNETES_SERVICE_HOST environemnt", func() {
+		It("should should inject KUBERNETES_SERVICE_HOST environment", func() {
 			ensuredDeploymentWithoutDomain := ensureGardenletEnvironment(otherEnvDeployment, dnsWithDomain)
 
 			Expect(ensuredDeploymentWithoutDomain.Env).To(HaveLen(2))

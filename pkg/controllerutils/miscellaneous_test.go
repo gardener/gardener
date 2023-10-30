@@ -94,7 +94,7 @@ var _ = Describe("controller", func() {
 				[]string{v1beta1constants.ShootTaskDeployInfrastructure}, []string{"foo"}),
 			Entry("all existing tasks from filled list", map[string]string{v1beta1constants.ShootTasks: v1beta1constants.ShootTaskDeployInfrastructure + ",foo"},
 				[]string{"foo", v1beta1constants.ShootTaskDeployInfrastructure}, nil),
-			Entry("all occurances of a task", map[string]string{v1beta1constants.ShootTasks: v1beta1constants.ShootTaskDeployInfrastructure + "," + v1beta1constants.ShootTaskDeployInfrastructure},
+			Entry("all occurrences of a task", map[string]string{v1beta1constants.ShootTasks: v1beta1constants.ShootTaskDeployInfrastructure + "," + v1beta1constants.ShootTaskDeployInfrastructure},
 				[]string{v1beta1constants.ShootTaskDeployInfrastructure}, nil),
 		)
 

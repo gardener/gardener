@@ -688,7 +688,7 @@ data:
     # deprecated
     certificates: []
 
-    # Disable the advertisment of services and endpoints which are no explictly marked in
+    # Disable the advertisement of services and endpoints which are no explicitly marked in
     # ` + "`" + `exportTo` + "`" + `. Improves security and isolation.
     # Refer to https://istio.io/docs/reference/config/istio.mesh.v1alpha1/#MeshConfig
     defaultServiceExportTo: ["-"]
@@ -2184,7 +2184,7 @@ spec:
 			Expect(managedResourceIstioSystemSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_configmap.yaml"])).To(Equal(istiodConfigMap()))
-			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_deployment.yaml"])).To(Equal(istiodDeployment("d34796e6fc25a26d4a8a4cb3276e34961b18f867d70f5a1984255d57bfefb4c6")))
+			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_deployment.yaml"])).To(Equal(istiodDeployment("5e27b1126079ab2005b7eb40de0dcdfea39eaef6866419390a9c6f01adb6828c")))
 			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_service.yaml"])).To(Equal(istiodService()))
 			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_clusterrole.yaml"])).To(Equal(istioClusterRole()))
 			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_clusterrolebinding.yaml"])).To(Equal(istiodClusterRoleBinding()))

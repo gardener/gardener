@@ -51,7 +51,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 		return fmt.Errorf("could not instantiate actuator context: %w", err)
 	}
 
-	// Call pre reconcilation hook to prepare Worker reconciliation.
+	// Call pre reconciliation hook to prepare Worker reconciliation.
 	if err := workerDelegate.PreReconcileHook(ctx); err != nil {
 		return fmt.Errorf("pre worker reconciliation hook failed: %w", err)
 	}
@@ -179,7 +179,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 		}
 	}
 
-	// Call post reconcilation hook after Worker reconciliation has happened.
+	// Call post reconciliation hook after Worker reconciliation has happened.
 	if err := workerDelegate.PostReconcileHook(ctx); err != nil {
 		return fmt.Errorf("post worker reconciliation hook failed: %w", err)
 	}
