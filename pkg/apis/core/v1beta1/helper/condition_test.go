@@ -457,6 +457,21 @@ var _ = Describe("Condition", func() {
 		Entry("remove from an empty slice", nil, []gardencorev1beta1.ConditionType{"foo"}, nil),
 	)
 
+	DescribeTable("#RetainConditions",
+		func(conditions []gardencorev1beta1.Condition, conditionTypes []gardencorev1beta1.ConditionType, expectedResult []gardencorev1beta1.Condition) {
+			Expect(RetainConditions(conditions, conditionTypes...)).To(Equal(expectedResult))
+		},
+		Entry("remove foo", []gardencorev1beta1.Condition{{Type: "foo"}, {Type: "bar"}}, []gardencorev1beta1.ConditionType{"bar"},
+			[]gardencorev1beta1.Condition{{Type: "bar"}}),
+		Entry("remove bar", []gardencorev1beta1.Condition{{Type: "foo"}, {Type: "bar"}}, []gardencorev1beta1.ConditionType{"foo"},
+			[]gardencorev1beta1.Condition{{Type: "foo"}}),
+		Entry("remove anything", []gardencorev1beta1.Condition{{Type: "foo"}, {Type: "bar"}}, nil,
+			nil),
+		Entry("don't remove anything", []gardencorev1beta1.Condition{{Type: "foo"}, {Type: "bar"}}, []gardencorev1beta1.ConditionType{"foo", "bar"},
+			[]gardencorev1beta1.Condition{{Type: "foo"}, {Type: "bar"}}),
+		Entry("remove from an empty slice", nil, []gardencorev1beta1.ConditionType{"foo"}, nil),
+	)
+
 	Describe("#NewConditionOrError", func() {
 		It("should return the condition", func() {
 			condition := gardencorev1beta1.Condition{Type: "foo"}
