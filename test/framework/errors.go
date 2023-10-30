@@ -14,7 +14,9 @@
 
 package framework
 
-import "errors"
+import (
+	"errors"
+)
 
 var (
 	// ErrNoRepositoriesFound no repositories found in repository file
