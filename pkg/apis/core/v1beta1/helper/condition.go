@@ -167,14 +167,11 @@ func MergeConditions(oldConditions []gardencorev1beta1.Condition, newConditions 
 
 // RemoveConditions removes the conditions with the given types from the given conditions slice.
 func RemoveConditions(conditions []gardencorev1beta1.Condition, conditionTypes ...gardencorev1beta1.ConditionType) []gardencorev1beta1.Condition {
-	conditionTypesMap := make(map[gardencorev1beta1.ConditionType]struct{}, len(conditionTypes))
-	for _, conditionType := range conditionTypes {
-		conditionTypesMap[conditionType] = struct{}{}
-	}
+	unwantedConditionTypes := sets.New(conditionTypes...)
 
 	var newConditions []gardencorev1beta1.Condition
 	for _, condition := range conditions {
-		if _, ok := conditionTypesMap[condition.Type]; !ok {
+		if !unwantedConditionTypes.Has(condition.Type) {
 			newConditions = append(newConditions, condition)
 		}
 	}
