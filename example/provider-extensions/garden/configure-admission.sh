@@ -28,7 +28,7 @@ usage() {
   exit 0
 }
 
-if [ "$1" == "-h" ] || [ "$#" -ne 2 ]; then
+if [ "$1" == "-h" ]; then
   usage
 fi
 
