@@ -718,7 +718,7 @@ Credentials
 <a href="#operator.gardener.cloud/v1alpha1.VirtualCluster">VirtualCluster</a>)
 </p>
 <p>
-<p>Gardener contains the configuration settings for the Gardener componenets.</p>
+<p>Gardener contains the configuration settings for the Gardener components.</p>
 </p>
 <table>
 <thead>
