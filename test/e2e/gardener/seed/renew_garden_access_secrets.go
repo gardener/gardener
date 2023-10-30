@@ -44,9 +44,9 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 		)
 
 		BeforeEach(func() {
-			// find the first seed (seed name differs between test scenarios, e.g., non-ha/ha)
+			// find seed for kind cluster based on label (seed name differs between test scenarios, e.g., non-ha/ha)
 			seedList := &gardencorev1beta1.SeedList{}
-			Expect(testClient.List(ctx, seedList, client.Limit(1))).To(Succeed())
+			Expect(testClient.List(ctx, seedList, client.MatchingLabels{"base": "kind"}, client.Limit(1))).To(Succeed())
 			seed = seedList.Items[0].DeepCopy()
 
 			seedNamespace = gardenerutils.ComputeGardenNamespace(seed.Name)

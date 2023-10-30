@@ -68,6 +68,8 @@ config:
     kind: Seed
     metadata:
       name: local
+      labels:
+        base: kind
     spec:
       backup:
         provider: local
