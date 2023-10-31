@@ -252,7 +252,6 @@ func (h *Handler) admitClusterRoleBinding(ctx context.Context, seedName string, 
 		if clusterRoleBinding.RoleRef.APIGroup != rbacv1.GroupName ||
 			clusterRoleBinding.RoleRef.Kind != "ClusterRole" ||
 			clusterRoleBinding.RoleRef.Name != gardenletbootstraputil.GardenerSeedBootstrapper {
-
 			return admission.Errored(http.StatusForbidden, fmt.Errorf("can only bindings referring to the bootstrapper role"))
 		}
 

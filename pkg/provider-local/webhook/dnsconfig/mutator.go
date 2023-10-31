@@ -81,7 +81,7 @@ func (m *mutator) Mutate(ctx context.Context, newObj, oldObj client.Object) erro
 	return nil
 }
 
-// injectDNSConfig changes the `.spec.dnsPolicy` and `.spec.dnsConfig` in the provided `podSpec`. Bascially, we
+// injectDNSConfig changes the `.spec.dnsPolicy` and `.spec.dnsConfig` in the provided `podSpec`. Basically, we
 // configure the same options and search domains as the Kubernetes default behaviour. The only difference is that we use
 // the gardener-extension-provider-local-coredns instead of the cluster's default DNS server. This is because this
 // extension coredns can resolve the local domains (local.gardener.cloud). It otherwise forwards the traffic to the

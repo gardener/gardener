@@ -373,7 +373,7 @@ type KubeControllerManagerConfig struct {
 	CertificateSigningDuration *metav1.Duration `json:"certificateSigningDuration,omitempty"`
 }
 
-// Gardener contains the configuration settings for the Gardener componenets.
+// Gardener contains the configuration settings for the Gardener components.
 type Gardener struct {
 	// ClusterIdentity is the identity of the garden cluster. This field is immutable.
 	// +kubebuilder:validation:MinLength=1

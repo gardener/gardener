@@ -2106,7 +2106,7 @@ func ValidateContainerRuntimes(containerRuntime []core.ContainerRuntime, fldPath
 	return allErrs
 }
 
-// ValidateArchitecture validates the CPU architecure of the machines in this worker pool.
+// ValidateArchitecture validates the CPU architecture of the machines in this worker pool.
 func ValidateArchitecture(arch *string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if !slices.Contains(v1beta1constants.ValidArchitectures, *arch) {

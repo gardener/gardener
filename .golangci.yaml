@@ -20,6 +20,9 @@ linters:
   - importas
   - logcheck
   - gomegacheck
+  - exportloopref
+  - nilerr
+  - whitespace
 
 issues:
   exclude-use-default: false

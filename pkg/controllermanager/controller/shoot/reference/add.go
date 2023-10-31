@@ -120,7 +120,6 @@ func getAuditPolicyConfigMapRef(apiServerConfig *gardencorev1beta1.KubeAPIServer
 		apiServerConfig.AuditConfig != nil &&
 		apiServerConfig.AuditConfig.AuditPolicy != nil &&
 		apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef != nil {
-
 		return apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef
 	}
 

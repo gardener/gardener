@@ -40,7 +40,6 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 	if !k.values.Autoscaling.HVPAEnabled ||
 		k.values.Autoscaling.Replicas == nil ||
 		*k.values.Autoscaling.Replicas == 0 {
-
 		return kubernetesutils.DeleteObject(ctx, k.client.Client(), hvpa)
 	}
 

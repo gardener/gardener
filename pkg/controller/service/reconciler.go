@@ -129,7 +129,6 @@ func (r *Reconciler) remediateAllocatedNodePorts(ctx context.Context, log logr.L
 				port.NodePort == nodePortIstioIngressGatewayZone0 ||
 				port.NodePort == nodePortIstioIngressGatewayZone1 ||
 				port.NodePort == nodePortIstioIngressGatewayZone2 {
-
 				var (
 					min, max    = 30000, 32767
 					newNodePort = int32(rand.Intn(max-min) + min)

@@ -182,15 +182,15 @@ var _ = Describe("CreateForCluster", func() {
 			existingHost, existingPort = os.Getenv("KUBERNETES_SERVICE_HOST"), os.Getenv("KUBERNETES_SERVICE_PORT")
 		)
 
-		os.Setenv("KUBERNETES_SERVICE_HOST", "baz.bar")
-		os.Setenv("KUBERNETES_SERVICE_PORT", "4321")
+		Expect(os.Setenv("KUBERNETES_SERVICE_HOST", "baz.bar")).To(Succeed())
+		Expect(os.Setenv("KUBERNETES_SERVICE_PORT", "4321")).To(Succeed())
 
 		defer func() {
 			if existingHost != "" {
-				Expect(os.Setenv("KUBERNETES_SERVICE_HOST", existingHost)).NotTo(HaveOccurred())
+				Expect(os.Setenv("KUBERNETES_SERVICE_HOST", existingHost)).To(Succeed())
 			}
 			if existingPort != "" {
-				Expect(os.Setenv("KUBERNETES_SERVICE_PORT", existingPort)).NotTo(HaveOccurred())
+				Expect(os.Setenv("KUBERNETES_SERVICE_PORT", existingPort)).To(Succeed())
 			}
 		}()
 
@@ -210,15 +210,15 @@ var _ = Describe("CreateForCluster", func() {
 			existingHost, existingPort = os.Getenv("KUBERNETES_SERVICE_HOST"), os.Getenv("KUBERNETES_SERVICE_PORT")
 		)
 
-		os.Setenv("KUBERNETES_SERVICE_HOST", "5.6.7.8")
-		os.Setenv("KUBERNETES_SERVICE_PORT", "4321")
+		Expect(os.Setenv("KUBERNETES_SERVICE_HOST", "5.6.7.8")).To(Succeed())
+		Expect(os.Setenv("KUBERNETES_SERVICE_PORT", "4321")).To(Succeed())
 
 		defer func() {
 			if existingHost != "" {
-				Expect(os.Setenv("KUBERNETES_SERVICE_HOST", existingHost)).NotTo(HaveOccurred())
+				Expect(os.Setenv("KUBERNETES_SERVICE_HOST", existingHost)).To(Succeed())
 			}
 			if existingPort != "" {
-				Expect(os.Setenv("KUBERNETES_SERVICE_PORT", existingPort)).NotTo(HaveOccurred())
+				Expect(os.Setenv("KUBERNETES_SERVICE_PORT", existingPort)).To(Succeed())
 			}
 		}()
 

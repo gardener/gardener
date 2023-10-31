@@ -234,7 +234,6 @@ func (a *authorizer) authorizeClusterRoleBinding(log logr.Logger, seedName strin
 	// in the system yet, so we can't rely on the graph).
 	if attrs.GetVerb() == "delete" &&
 		strings.HasPrefix(attrs.GetName(), gardenletbootstraputil.ClusterRoleBindingNamePrefix) {
-
 		managedSeedNamespace, managedSeedName := gardenletbootstraputil.ManagedSeedInfoFromClusterRoleBindingName(attrs.GetName())
 		if managedSeedNamespace == v1beta1constants.GardenNamespace && managedSeedName == seedName {
 			return auth.DecisionAllow, "", nil
@@ -277,7 +276,6 @@ func (a *authorizer) authorizeLease(log logr.Logger, seedName string, userType s
 	// This is needed if the seed cluster is a garden cluster at the same time.
 	if attrs.GetName() == "gardenlet-leader-election" &&
 		utils.ValueExists(attrs.GetVerb(), []string{"create", "get", "list", "watch", "update"}) {
-
 		return auth.DecisionAllow, "", nil
 	}
 
@@ -300,7 +298,6 @@ func (a *authorizer) authorizeSecret(log logr.Logger, seedName string, attrs aut
 		attrs.GetNamespace() == metav1.NamespaceSystem &&
 		strings.HasPrefix(attrs.GetName(), bootstraptokenapi.BootstrapTokenSecretPrefix)) &&
 		(attrs.GetName() == bootstraptokenapi.BootstrapTokenSecretPrefix+gardenletbootstraputil.TokenID(metav1.ObjectMeta{Name: seedName, Namespace: v1beta1constants.GardenNamespace})) {
-
 		return auth.DecisionAllow, "", nil
 	}
 
@@ -318,7 +315,6 @@ func (a *authorizer) authorizeServiceAccount(log logr.Logger, seedName string, a
 		attrs.GetNamespace() == v1beta1constants.GardenNamespace &&
 		strings.HasPrefix(attrs.GetName(), gardenletbootstraputil.ServiceAccountNamePrefix) &&
 		strings.TrimPrefix(attrs.GetName(), gardenletbootstraputil.ServiceAccountNamePrefix) == seedName {
-
 		return auth.DecisionAllow, "", nil
 	}
 

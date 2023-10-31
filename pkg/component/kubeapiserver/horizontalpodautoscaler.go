@@ -46,7 +46,6 @@ func (k *kubeAPIServer) reconcileHorizontalPodAutoscaler(ctx context.Context, hp
 	if k.values.Autoscaling.HVPAEnabled ||
 		k.values.Autoscaling.Replicas == nil ||
 		*k.values.Autoscaling.Replicas == 0 {
-
 		return kubernetesutils.DeleteObject(ctx, k.client.Client(), hpa)
 	}
 

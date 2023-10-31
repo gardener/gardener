@@ -444,7 +444,7 @@ var _ = Describe("#ContainerRuntime", func() {
 			Expect(defaultDepWaiter.WaitMigrate(ctx)).ToNot(HaveOccurred(), "containerruntime is ready, should not return an error")
 		})
 
-		It("should return error if one resources is not migrated succesfully and others are", func() {
+		It("should return error if one resources is not migrated successfully and others are", func() {
 			for i := range expected[1:] {
 				expected[i].Status.LastError = nil
 				expected[i].Status.LastOperation = &gardencorev1beta1.LastOperation{

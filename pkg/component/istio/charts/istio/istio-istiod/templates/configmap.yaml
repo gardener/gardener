@@ -63,7 +63,7 @@ data:
     # deprecated
     certificates: []
 
-    # Disable the advertisment of services and endpoints which are no explictly marked in
+    # Disable the advertisement of services and endpoints which are no explicitly marked in
     # `exportTo`. Improves security and isolation.
     # Refer to https://istio.io/docs/reference/config/istio.mesh.v1alpha1/#MeshConfig
     defaultServiceExportTo: ["-"]

@@ -215,7 +215,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 				"LogsDuration":        logsDuration,
 			}
 
-			// Try to distrubute the loggers even between nodes
+			// Try to distribute the loggers even between nodes
 			if len(nodeList.Items) > 0 {
 				loggerParams["NodeName"] = nodeList.Items[i%len(nodeList.Items)].Name
 			}

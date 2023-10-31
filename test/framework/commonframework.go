@@ -102,7 +102,6 @@ func (f *CommonFramework) BeforeEach() {
 
 // CommonAfterSuite performs necessary common steps after all tests of a suite a run
 func CommonAfterSuite() {
-
 	// run all registered cleanup functions
 	RunCleanupActions()
 

@@ -812,7 +812,6 @@ func getDashboardConfigMaps(ctx context.Context, c client.Client, namespace stri
 	}
 
 	for _, configMap := range configMapList.Items {
-
 		if ok, err := regexp.Match(pattern, []byte(configMap.Name)); ok && err == nil {
 			return &configMap, nil
 		}

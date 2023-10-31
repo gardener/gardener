@@ -48,7 +48,7 @@ import (
 )
 
 var (
-	// DefaultTimeout defines how long the controller should wait until the BackupBucket resource is ready or is succesfully deleted. Exposed for tests.
+	// DefaultTimeout defines how long the controller should wait until the BackupBucket resource is ready or is successfully deleted. Exposed for tests.
 	DefaultTimeout = 30 * time.Second
 	// DefaultSevereThreshold is the default threshold until an error reported by the component is treated as 'severe'. Exposed for tests.
 	DefaultSevereThreshold = 15 * time.Second
@@ -367,7 +367,7 @@ func (r *Reconciler) deleteBackupEntry(
 		}
 
 		if err := client.IgnoreNotFound(r.SeedClient.Delete(seedCtx, extensionSecret)); err != nil {
-			return reconcile.Result{}, nil
+			return reconcile.Result{}, err
 		}
 
 		if updateErr := r.updateBackupEntryStatusSucceeded(gardenCtx, backupEntry, operationType); updateErr != nil {
@@ -440,7 +440,6 @@ func (r *Reconciler) migrateBackupEntry(
 			if extensionBackupEntry.Status.LastError != nil ||
 				lastOperation.State == gardencorev1beta1.LastOperationStateError ||
 				lastOperation.State == gardencorev1beta1.LastOperationStateFailed {
-
 				lastError := fmt.Errorf("extension state is not Succeeded but %v", lastOperation.State)
 				if extensionBackupEntry.Status.LastError != nil {
 					lastError = v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extensionBackupEntry.Status.LastError.Description), extensionBackupEntry.Status.LastError.Codes...)
@@ -643,7 +642,7 @@ func (r *Reconciler) checkIfBackupBucketIsHealthy(ctx context.Context, backupBuc
 	}
 
 	if backupBucket.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
-		return fmt.Errorf("assoicated BackupBucket state is not Succeeded but %v", backupBucket.Status.LastOperation.State)
+		return fmt.Errorf("associated BackupBucket state is not Succeeded but %v", backupBucket.Status.LastOperation.State)
 	}
 
 	return nil

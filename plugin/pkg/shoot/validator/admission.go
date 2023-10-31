@@ -634,7 +634,6 @@ func (c *validationContext) addMetadataAnnotations(a admission.Attributes) {
 		!apiequality.Semantic.DeepEqual(c.oldShoot.Spec, c.shoot.Spec) &&
 		c.shoot.Status.LastOperation != nil &&
 		c.shoot.Status.LastOperation.State == core.LastOperationStateFailed {
-
 		metav1.SetMetaDataAnnotation(&c.shoot.ObjectMeta, v1beta1constants.FailedShootNeedsRetryOperation, "true")
 	}
 }
@@ -1447,7 +1446,8 @@ func getDefaultMachineImage(machineImages []core.MachineImage, imageName string,
 	var defaultImage *core.MachineImage
 
 	if len(imageName) != 0 {
-		for _, machineImage := range machineImages {
+		for _, mi := range machineImages {
+			machineImage := mi
 			if machineImage.Name == imageName {
 				defaultImage = &machineImage
 				break
@@ -1458,7 +1458,8 @@ func getDefaultMachineImage(machineImages []core.MachineImage, imageName string,
 		}
 	} else {
 		// select the first image which support the required architecture type
-		for _, machineImage := range machineImages {
+		for _, mi := range machineImages {
+			machineImage := mi
 			for _, version := range machineImage.Versions {
 				if slices.Contains(version.Architectures, *arch) {
 					defaultImage = &machineImage
@@ -1556,7 +1557,8 @@ func validateCRI(constraints []core.CRI, worker core.Worker, fldPath *field.Path
 		foundCRI  *core.CRI
 	)
 
-	for _, criConstraint := range constraints {
+	for _, c := range constraints {
+		criConstraint := c
 		validCRIs = append(validCRIs, string(criConstraint.Name))
 		if worker.CRI.Name == criConstraint.Name {
 			foundCRI = &criConstraint

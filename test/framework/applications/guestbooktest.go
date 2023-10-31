@@ -310,7 +310,6 @@ func (t *GuestBookTest) Cleanup(ctx context.Context) {
 
 		err = deleteResource(ctx, redisMasterStatefulSetToDelete)
 		framework.ExpectNoError(err)
-
 	}
 	cleanupGuestbook()
 	cleanupRedis()

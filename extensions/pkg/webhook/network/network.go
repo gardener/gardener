@@ -75,7 +75,6 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 		Webhook:  &admission.Webhook{Handler: handler, RecoverPanic: true},
 		Selector: namespaceSelector,
 	}, nil
-
 }
 
 // buildSelector creates and returns a LabelSelector for the given webhook kind and provider.

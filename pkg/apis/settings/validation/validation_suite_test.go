@@ -59,7 +59,6 @@ func TestValidation(t *testing.T) {
 }
 
 func validationAssertions(p provider) {
-
 	var presetSpec *settings.OpenIDConnectPresetSpec
 
 	BeforeEach(func() {
@@ -324,7 +323,6 @@ func validationAssertions(p provider) {
 		})
 
 		Context("extraConfigs", func() {
-
 			DescribeTable("fobideen config", func(key string) {
 				p.preset().GetPresetSpec().Client.ExtraConfig = map[string]string{key: "some-key"}
 				errorList := p.providerFunc()

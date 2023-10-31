@@ -102,7 +102,6 @@ func ValidateWorkerPools(pools []extensionsv1alpha1.WorkerPool, fldPath *field.P
 				allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue(string(resourceName), value, idxPath.Child("nodeTemplate", "capacity", string(resourceName)))...)
 			}
 		}
-
 	}
 
 	return allErrs

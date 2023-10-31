@@ -816,7 +816,6 @@ func (r *Reconciler) releaseOrphanedResources(ctx context.Context, log logr.Logg
 
 			err := r.releaseOrphanedResource(ctx, log, ref, origin)
 			results <- err
-
 		}(orphanedResource)
 	}
 

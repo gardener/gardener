@@ -86,7 +86,7 @@ func AddToManager(
 	}
 
 	// At this point, the seed is not the garden cluster at the same time. However, this could change during the runtime
-	// of gardenlet. If so, gardener-operator will take over responsiblity of the NetworkPolicy management and will run
+	// of gardenlet. If so, gardener-operator will take over responsibility of the NetworkPolicy management and will run
 	// this controller. Since there is no way to stop a controller after it started, we cancel the manager context in
 	// case the seed is registered as garden during runtime. This way, gardenlet will restart and not add the controller
 	// again.

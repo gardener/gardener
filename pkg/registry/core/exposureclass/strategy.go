@@ -68,7 +68,7 @@ func (ExposureClassStrategy) ValidateUpdate(_ context.Context, newObj, oldObj ru
 	return validation.ValidateExposureClassUpdate(newExposureClass, oldExposureClass)
 }
 
-// Canonicalize can be used to transfrom the object into its cannoical format.
+// Canonicalize can be used to transform the object into its canonical format.
 func (ExposureClassStrategy) Canonicalize(_ runtime.Object) {
 }
 
@@ -78,7 +78,7 @@ func (ExposureClassStrategy) AllowCreateOnUpdate() bool {
 }
 
 // AllowUnconditionalUpdate indicates if the object can be updated
-// independently of the resouce version.
+// independently of the resource version.
 func (ExposureClassStrategy) AllowUnconditionalUpdate() bool {
 	return false
 }

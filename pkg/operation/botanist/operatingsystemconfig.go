@@ -272,7 +272,8 @@ func (b *Botanist) generateCloudConfigExecutorResourcesForWorker(
 	var kubeletDataVolume *gardencorev1beta1.DataVolume
 	if worker.KubeletDataVolumeName != nil && worker.DataVolumes != nil {
 		kubeletDataVolName := worker.KubeletDataVolumeName
-		for _, dataVolume := range worker.DataVolumes {
+		for _, dv := range worker.DataVolumes {
+			dataVolume := dv
 			if dataVolume.Name == *kubeletDataVolName {
 				kubeletDataVolume = &dataVolume
 				break

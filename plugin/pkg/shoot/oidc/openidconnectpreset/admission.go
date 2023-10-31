@@ -162,7 +162,6 @@ func filterOIDCs(oidcs []*settingsv1alpha1.OpenIDConnectPreset, shoot *core.Shoo
 				matchedPreset = oidc
 			}
 		}
-
 	}
 
 	if matchedPreset == nil {

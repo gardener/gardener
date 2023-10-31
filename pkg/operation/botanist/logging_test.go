@@ -333,7 +333,7 @@ var _ = Describe("Logging", func() {
 				Expect(botanist.DeployLogging(ctx)).ToNot(Succeed())
 			})
 
-			It("should fail to delete the logging stack when logging is disbaled and ShootValiDeployer Destroy return error", func() {
+			It("should fail to delete the logging stack when logging is disabled and ShootValiDeployer Destroy return error", func() {
 				*botanist.Config.Logging.Enabled = false
 				gomock.InOrder(
 					// Destroying the Shoot Event Logging

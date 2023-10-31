@@ -53,7 +53,6 @@ func (o *OperatingSystemConfig) GetExtensionSpec() Spec {
 // GetExtensionPurpose implements Object.
 func (o *OperatingSystemConfigSpec) GetExtensionPurpose() *string {
 	return (*string)(&o.Purpose)
-
 }
 
 // GetExtensionStatus implements Object.

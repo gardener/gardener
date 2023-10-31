@@ -40,7 +40,7 @@ var _ = Describe("ExposureClass", func() {
 			"gardener.cloud/role": "exposureclass-handler",
 			"handler.exposureclass.gardener.cloud/name": "test2",
 		}),
-		Entry("source label should be overriden by mandatory label", "test3", map[string]string{
+		Entry("source label should be overridden by mandatory label", "test3", map[string]string{
 			"app": "test3",
 		}, map[string]string{
 			"app":                 "istio-ingressgateway",

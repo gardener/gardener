@@ -132,7 +132,8 @@ func supportsContainerD(cloudProfileImages []gardencorev1beta1.MachineImage, wor
 		machineVersion    *gardencorev1beta1.MachineImageVersion
 	)
 
-	for _, current := range cloudProfileImages {
+	for _, c := range cloudProfileImages {
+		current := c
 		if current.Name == workerImage.Name {
 			cloudProfileImage = &current
 			break
@@ -142,7 +143,8 @@ func supportsContainerD(cloudProfileImages []gardencorev1beta1.MachineImage, wor
 		return false
 	}
 
-	for _, version := range cloudProfileImage.Versions {
+	for _, v := range cloudProfileImage.Versions {
+		version := v
 		if version.Version == *workerImage.Version {
 			machineVersion = &version
 			break

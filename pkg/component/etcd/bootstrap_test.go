@@ -798,7 +798,7 @@ status:
 				Expect(bootstrapper.Destroy(ctx)).To(Succeed())
 			})
 
-			It("should suceed when NotFoundError is returned", func() {
+			It("should succeed when NotFoundError is returned", func() {
 				notFoundError := apierrors.NewNotFound(schema.GroupResource{}, "etcd")
 				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})).Return(notFoundError)
 

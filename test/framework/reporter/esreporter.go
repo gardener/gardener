@@ -148,7 +148,6 @@ func (reporter *GardenerESReporter) processReport(report ginkgo.Report) {
 
 		testCase.Duration = spec.RunTime.Seconds()
 		reporter.testCases = append(reporter.testCases, testCase)
-
 	}
 
 	if reporter.suite.Failures != 0 || reporter.suite.Errors != 0 {

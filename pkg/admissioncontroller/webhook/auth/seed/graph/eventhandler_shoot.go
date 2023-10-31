@@ -123,7 +123,6 @@ func (g *graph) handleShootCreateOrUpdate(shoot *gardencorev1beta1.Shoot) {
 		shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig != nil &&
 		shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy != nil &&
 		shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef != nil {
-
 		configMapVertex := g.getOrCreateVertex(VertexTypeConfigMap, shoot.Namespace, shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name)
 		g.addEdge(configMapVertex, shootVertex)
 	}

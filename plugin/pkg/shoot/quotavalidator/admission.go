@@ -366,7 +366,8 @@ func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceLis
 		)
 
 		// Get the proper machineType
-		for _, element := range machineTypes {
+		for _, e := range machineTypes {
+			element := e
 			if element.Name == worker.Machine.Type {
 				machineType = &element
 				break
@@ -383,7 +384,8 @@ func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceLis
 				}
 			} else {
 				// Get the proper VolumeType
-				for _, element := range volumeTypes {
+				for _, e := range volumeTypes {
+					element := e
 					if worker.Volume.Type != nil && element.Name == *worker.Volume.Type {
 						volumeType = &element
 						break
