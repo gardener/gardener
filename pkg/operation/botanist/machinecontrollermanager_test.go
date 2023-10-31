@@ -152,6 +152,10 @@ var _ = Describe("MachineControllerManager", func() {
 				shoot.Status.IsHibernated = true
 				botanist.Shoot.SetInfo(shoot)
 			}),
+			Entry("when shoot is in restore phase", 0, func() {
+				shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeRestore}
+				botanist.Shoot.SetInfo(shoot)
+			}),
 		)
 	})
 

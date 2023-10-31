@@ -31,9 +31,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // RestoreWithoutReconcile restores the worker state without calling 'Reconcile'.
@@ -75,18 +73,9 @@ func RestoreWithoutReconcile(
 
 	wantedMachineDeployments = removeWantedDeploymentWithoutState(wantedMachineDeployments)
 
-	// Scale the machine-controller-manager to 0. During restoration MCM must not be working
-	if err := scaleMachineControllerManager(ctx, log, seedClient, worker, 0); err != nil {
-		return fmt.Errorf("failed to scale down machine-controller-manager: %w", err)
-	}
-
 	// Deploy generated machine classes.
 	if err := workerDelegate.DeployMachineClasses(ctx); err != nil {
 		return fmt.Errorf("failed to deploy the machine classes: %w", err)
-	}
-
-	if err := kubernetes.WaitUntilDeploymentScaledToDesiredReplicas(ctx, seedClient, kubernetesutils.Key(worker.Namespace, v1beta1constants.DeploymentNameMachineControllerManager), 0); err != nil && !apierrors.IsNotFound(err) {
-		return fmt.Errorf("deadline exceeded while scaling down machine-controller-manager: %w", err)
 	}
 
 	// Do the actual restoration

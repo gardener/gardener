@@ -59,6 +59,12 @@ func (b *Botanist) DefaultMachineControllerManager(ctx context.Context) (machine
 	// replicas is 1
 	case b.Shoot.HibernationEnabled != b.Shoot.GetInfo().Status.IsHibernated:
 		replicas = 1
+	// If the shoot cluster is currently being restored and MCM has not been deployed/scaled up yet, replicas is 0.
+	// This is required so that the Machine and MachineSet objects can be restored from the ShootState before
+	// MCM is started. The worker actuator is responsible for scaling MCM to 1 replica after the Machine and MachineSet
+	// objects are restored and before the worker resource is reconciled.
+	case b.IsRestorePhase():
+		replicas = 0
 	}
 
 	return machinecontrollermanager.New(
