@@ -259,7 +259,7 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 		path := wh.Path
 		if path == "" {
 			path = "/" + wh.Name
-		} else if !strings.HasPrefix("/", path) {
+		} else if !strings.HasPrefix(path, "/") {
 			path = "/" + path
 		}
 
