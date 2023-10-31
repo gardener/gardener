@@ -1,9 +1,8 @@
-{{- if eq .Values.vpn.enabled true -}}
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
   name: reversed-vpn
-  namespace: {{ .Release.Namespace }}
+  namespace: test-ingress
 spec:
   configPatches:
   - applyTo: NETWORK_FILTER
@@ -59,13 +58,15 @@ spec:
             timeout: 0.250s
   workloadSelector:
     labels:
-{{ .Values.labels | toYaml | indent 6 }}
+      app: istio-ingressgateway
+      foo: bar
+      
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
   name: http-connect-listener
-  namespace: {{ .Release.Namespace }}
+  namespace: test-ingress
 spec:
   configPatches:
   - applyTo: NETWORK_FILTER
@@ -89,6 +90,6 @@ spec:
           - upgrade_type: CONNECT
   workloadSelector:
     labels:
-{{ .Values.labels | toYaml | indent 6 }}
-{{- end -}}
-
+      app: istio-ingressgateway
+      foo: bar
+      

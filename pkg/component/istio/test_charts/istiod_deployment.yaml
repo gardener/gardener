@@ -2,9 +2,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: istiod
-  namespace: {{ .Release.Namespace }}
+  namespace: test
   labels:
-{{ .Values.labels | toYaml | indent 4 }}
+    app: istiod
+    istio: pilot
+    
 spec:
   replicas: 2
   revisionHistoryLimit: 1
@@ -14,37 +16,41 @@ spec:
       maxUnavailable: 25%
   selector:
     matchLabels:
-{{ .Values.labels | toYaml | indent 6 }}
+      app: istiod
+      istio: pilot
+      
   template:
     metadata:
       labels:
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-runtime-apiserver: allowed
-{{ .Values.labels | toYaml | indent 8 }}
+        app: istiod
+        istio: pilot
+        
       annotations:
         sidecar.istio.io/inject: "false"
-        checksum/istio-config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/istio-config: <CHECKSUM>
     spec:
       serviceAccountName: istiod
       securityContext:
         fsGroup: 1337
       containers:
         - name: discovery
-          image: "{{ .Values.image }}"
+          image: "foo/bar"
           imagePullPolicy: IfNotPresent
           args:
           - "discovery"
           - --monitoringAddr=:15014
-          - --httpsAddr=:{{ .Values.ports.https }}
+          - --httpsAddr=:10250
           - --log_output_level=all:warn,ads:error
           - --domain
-          - {{ .Values.trustDomain }}
+          - foo.local
           - --keepaliveMaxServerConnectionAge
           - "30m"
           ports:
           - containerPort: 15012
             protocol: TCP
-          - containerPort: {{ .Values.ports.https }}
+          - containerPort: 10250
             protocol: TCP
           - containerPort: 8080
             protocol: TCP
@@ -82,7 +88,7 @@ spec:
           - name: PILOT_TRACE_SAMPLING
             value: "1"
           - name: ISTIOD_ADDR
-            value: istiod.{{ .Release.Namespace }}.svc:15012
+            value: istiod.test.svc:15012
           - name: PILOT_ENABLE_ANALYSIS
             value: "false"
           - name: CLUSTER_ID
@@ -159,7 +165,7 @@ spec:
           name: istio-ca-root-cert
           defaultMode: 420
           optional: true
-      priorityClassName: {{ .Values.priorityClassName }}
+      priorityClassName: gardener-system-critical
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -167,10 +173,12 @@ spec:
             podAffinityTerm:
               labelSelector:
                 matchExpressions:
-                {{- range $key, $value := .Values.labels }}
-                - key: {{ $key }}
+                - key: app
                   operator: In
                   values:
-                  - {{ $value }}
-                {{- end }}
+                  - istiod
+                - key: istio
+                  operator: In
+                  values:
+                  - pilot
               topologyKey: "kubernetes.io/hostname"

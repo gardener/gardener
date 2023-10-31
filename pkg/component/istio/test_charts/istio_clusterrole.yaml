@@ -3,7 +3,9 @@ kind: ClusterRole
 metadata:
   name: istiod-clusterrole-istio-system
   labels:
-{{ .Values.labels | toYaml | indent 4 }}
+    app: istiod
+    istio: pilot
+    
 rules:
   # sidecar injection controller Do we need it?
   - apiGroups: ["admissionregistration.k8s.io"]
@@ -96,12 +98,10 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: istiod-gateway-controller-istio-system
-{{- if .Values.ignoreMode }}
-  annotations:
-    resources.gardener.cloud/mode: Ignore
-{{- end }}
   labels:
-{{ .Values.labels | toYaml | indent 4 }}
+    app: istiod
+    istio: pilot
+    
 rules:
   - apiGroups: ["apps"]
     verbs: [ "get", "watch", "list", "update", "patch", "create", "delete" ]
@@ -118,12 +118,10 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: istio-reader-clusterrole-istio-system
-{{- if .Values.ignoreMode }}
-  annotations:
-    resources.gardener.cloud/mode: Ignore
-{{- end }}
   labels:
-{{ .Values.labels | toYaml | indent 4 }}
+    app: istiod
+    istio: pilot
+    
 rules:
   - apiGroups:
       - "config.istio.io"

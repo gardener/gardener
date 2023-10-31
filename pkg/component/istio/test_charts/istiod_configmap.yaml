@@ -2,9 +2,11 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: istio
-  namespace: {{ .Release.Namespace }}
+  namespace: test
   labels:
-{{ .Values.labels | toYaml | indent 4 }}
+    app: istiod
+    istio: pilot
+    
 data:
 
   # Configuration file for the mesh networks to be used by the Split Horizon EDS.
@@ -36,12 +38,12 @@ data:
     defaultDestinationRuleExportTo: ["~"]
 
     defaultConfig:
-      discoveryAddress: istiod.{{ .Release.Namespace }}.svc:15012
+      discoveryAddress: istiod.test.svc:15012
 
     defaultProviders:
       metrics:
       - prometheus
     enablePrometheusMerge: true
 
-    rootNamespace: {{ .Release.Namespace }}
+    rootNamespace: test
     trustDomain: cluster.local
