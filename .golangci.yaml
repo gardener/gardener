@@ -22,6 +22,7 @@ linters:
   - gomegacheck
   - exportloopref
   - nilerr
+  - whitespace
 
 issues:
   exclude-use-default: false
