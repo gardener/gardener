@@ -38,7 +38,8 @@ type actuator struct {
 	client              client.Client
 }
 
-// AnnotationKeyCreatedByBackupEntry is a constant for the name of the BackupEntry object that created the etcd-backup secret.
+// AnnotationKeyCreatedByBackupEntry is a constant for the key of an annotation on the etcd-backup Secret whose value contains
+// the name of the BackupEntry object that created the Secret.
 const AnnotationKeyCreatedByBackupEntry = "backup.gardener.cloud/created-by"
 
 // NewActuator creates a new Actuator that updates the status of the handled BackupEntry resources.
@@ -111,11 +112,14 @@ func (a *actuator) deleteEtcdBackupSecret(ctx context.Context, backupEntryName s
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
-		return fmt.Errorf("could not delete secret %s in %s namespace: %w", etcdSecret.Name, etcdSecret.Namespace, err)
+
+		return fmt.Errorf("failed to get secret %s: %w", client.ObjectKeyFromObject(etcdSecret), err)
 	}
+
 	if createdBy, ok := etcdSecret.Annotations[AnnotationKeyCreatedByBackupEntry]; ok && createdBy != backupEntryName {
 		return nil
 	}
+
 	return kubernetesutils.DeleteObject(ctx, a.client, etcdSecret)
 }
 
