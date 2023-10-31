@@ -383,7 +383,7 @@ var _ = Describe("istiod", func() {
 			Expect(managedResourceIstioSystemSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_configmap.yaml"]), istiodConfigMap())).To(BeEmpty())
-			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_deployment.yaml"]), istiodDeployment("e2c945206719ed19ca55d60edd36cb29f68ffa7baa021d662e344fb5956dfdbd"))).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_deployment.yaml"]), istiodDeployment("7ca88ae631ffb4a974f4b82003debcb46d5cd9a16f409799298e59623f41df4e"))).To(BeEmpty())
 			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_service.yaml"]), istiodService())).To(BeEmpty())
 			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_clusterrole.yaml"]), istioClusterRole())).To(BeEmpty())
 			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_clusterrolebinding.yaml"]), istiodClusterRoleBinding())).To(BeEmpty())

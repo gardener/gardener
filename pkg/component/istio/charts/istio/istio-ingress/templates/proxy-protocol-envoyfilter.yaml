@@ -21,7 +21,8 @@ spec:
       operation: MERGE
       value:
         per_connection_buffer_limit_bytes: 32768 # 32 KiB
-        name: proxy_protocol
-        typed_config:
-          "@type": "type.googleapis.com/envoy.extensions.filters.listener.proxy_protocol.v3.ProxyProtocol"
+        listener_filters:
+        - name: proxy_protocol
+          typed_config:
+            "@type": "type.googleapis.com/envoy.extensions.filters.listener.proxy_protocol.v3.ProxyProtocol"
 {{ end -}}
