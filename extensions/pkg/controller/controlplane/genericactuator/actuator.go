@@ -460,10 +460,7 @@ func (a *actuator) deleteControlPlane(
 	cp *extensionsv1alpha1.ControlPlane,
 	cluster *extensionscontroller.Cluster,
 ) error {
-	var forceDelete bool
-	if cluster != nil {
-		forceDelete = v1beta1helper.ShootNeedsForceDeletion(cluster.Shoot)
-	}
+	forceDelete := cluster != nil && v1beta1helper.ShootNeedsForceDeletion(cluster.Shoot)
 
 	// Get config chart values
 	if a.configChart != nil {
