@@ -87,7 +87,6 @@ func New(
 	waitSevereThreshold time.Duration,
 	waitTimeout time.Duration,
 ) Interface {
-
 	return &etcdCopyBackupsTask{
 		values,
 		log,

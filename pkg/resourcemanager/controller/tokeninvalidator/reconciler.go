@@ -73,7 +73,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	if metav1.HasLabel(serviceAccount.ObjectMeta, resourcesv1alpha1.StaticTokenSkip) ||
 		serviceAccount.AutomountServiceAccountToken == nil ||
 		*serviceAccount.AutomountServiceAccountToken {
-
 		log.Info("Removing 'consider' label since secret is either explicitly skipped or `.automountServiceAccountToken` != false")
 		return reconcile.Result{}, r.removeConsiderLabel(ctx, secret)
 	}

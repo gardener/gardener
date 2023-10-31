@@ -138,7 +138,6 @@ func checkAdditionalIstioGateway(istioDeploy istio.Interface,
 	externalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType,
 	serviceExternalIP *string,
 	zone *string) {
-
 	var (
 		zones       []string
 		minReplicas *int

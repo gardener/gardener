@@ -440,7 +440,6 @@ func (r *Reconciler) migrateBackupEntry(
 			if extensionBackupEntry.Status.LastError != nil ||
 				lastOperation.State == gardencorev1beta1.LastOperationStateError ||
 				lastOperation.State == gardencorev1beta1.LastOperationStateFailed {
-
 				lastError := fmt.Errorf("extension state is not Succeeded but %v", lastOperation.State)
 				if extensionBackupEntry.Status.LastError != nil {
 					lastError = v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extensionBackupEntry.Status.LastError.Description), extensionBackupEntry.Status.LastError.Codes...)

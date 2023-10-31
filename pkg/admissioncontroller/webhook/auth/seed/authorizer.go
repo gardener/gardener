@@ -315,7 +315,6 @@ func (a *authorizer) authorizeServiceAccount(log logr.Logger, seedName string, a
 		attrs.GetNamespace() == v1beta1constants.GardenNamespace &&
 		strings.HasPrefix(attrs.GetName(), gardenletbootstraputil.ServiceAccountNamePrefix) &&
 		strings.TrimPrefix(attrs.GetName(), gardenletbootstraputil.ServiceAccountNamePrefix) == seedName {
-
 		return auth.DecisionAllow, "", nil
 	}
 

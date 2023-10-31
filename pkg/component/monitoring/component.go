@@ -569,7 +569,6 @@ func (m *monitoring) getCustomAlertingConfigs(ctx context.Context) (map[string]i
 
 	for _, secret := range m.values.AlertingSecrets {
 		if string(secret.Data["auth_type"]) == "none" {
-
 			if url, ok := secret.Data["url"]; ok {
 				configs["auth_type"] = map[string]interface{}{
 					"none": map[string]interface{}{

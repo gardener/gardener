@@ -66,7 +66,6 @@ func (g *graph) setupSeedWatch(ctx context.Context, informer cache.Informer) err
 				// When the client certificate expiration timestamp changes then we check if seed belongs to a ManagedSeed
 				// and reconcile it to potentially forbid to bootstrap it again.
 				!apiequality.Semantic.DeepEqual(oldSeed.Status.ClientCertificateExpirationTimestamp, newSeed.Status.ClientCertificateExpirationTimestamp) {
-
 				g.handleManagedSeedIfSeedBelongsToIt(ctx, newSeed.Name)
 			}
 		},
