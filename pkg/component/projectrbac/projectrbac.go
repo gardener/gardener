@@ -361,7 +361,6 @@ func (p *projectRBAC) DeleteStaleExtensionRolesResources(ctx context.Context) er
 
 	for _, member := range p.project.Spec.Members {
 		for _, role := range append([]string{member.Role}, member.Roles...) {
-
 			if strings.HasPrefix(role, gardencorev1beta1.ProjectMemberExtensionPrefix) {
 				extensionRoleName := getExtensionRoleNameFromRole(role)
 				wantedExtensionRolesNames.Insert(extensionRoleName)

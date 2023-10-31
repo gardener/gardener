@@ -532,7 +532,6 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		shoot.Generation != shoot.Status.ObservedGeneration ||
 		shoot.Status.Gardener.Version != version.Get().GitVersion ||
 		operationTypeSwitched {
-
 		shoot.Status.RetryCycleStartTime = &now
 	}
 

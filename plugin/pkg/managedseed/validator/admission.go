@@ -550,7 +550,6 @@ func (v *ManagedSeed) getSecrets(namespace string, selector labels.Selector) ([]
 func addSeedSecretRefAnnotations(managedSeed *seedmanagement.ManagedSeed) error {
 	if managedSeed.Spec.Gardenlet != nil &&
 		managedSeed.Spec.Gardenlet.Config != nil {
-
 		// Convert gardenlet config to an internal version
 		gardenletConfig, err := gardenlethelper.ConvertGardenletConfiguration(managedSeed.Spec.Gardenlet.Config)
 		if err != nil {

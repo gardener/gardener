@@ -76,7 +76,6 @@ func ReadTestResources(scheme *runtime.Scheme, namespaceName, path string) ([]cl
 
 	var objects []client.Object
 	for _, file := range files {
-
 		if file.IsDir() {
 			continue
 		}
@@ -108,7 +107,6 @@ func ReadTestResources(scheme *runtime.Scheme, namespaceName, path string) ([]cl
 		}
 	}
 	return objects, nil
-
 }
 
 // readDocuments reads documents from file

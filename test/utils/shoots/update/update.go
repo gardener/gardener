@@ -313,7 +313,6 @@ func WaitForJobToBeReady(ctx context.Context, cl client.Client, job *batchv1.Job
 			if c.Type == corev1.PodReady && c.Status == corev1.ConditionTrue {
 				return nil
 			}
-
 		}
 		return fmt.Errorf("waiting for pod %v to be ready", podList.Items[0].Name)
 	}, time.Minute, time.Second).Should(Succeed())

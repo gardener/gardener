@@ -189,7 +189,6 @@ func CreateForCluster(restConfig *rest.Config, log logr.Logger) (Provider, error
 	} else if envHostname != "" &&
 		envPort != "" &&
 		net.ParseIP(envHostname) == nil {
-
 		providerLogger.Info("Fallback to environment variable hostname resolver")
 		return NewProvider(
 			envHostname,

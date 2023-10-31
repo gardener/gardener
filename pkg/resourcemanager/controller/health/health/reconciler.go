@@ -148,7 +148,6 @@ func (r *Reconciler) executeHealthChecks(ctx context.Context, log logr.Logger, m
 			}
 
 			return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, nil
-
 		}
 
 		if checked, err := utils.CheckHealth(obj); err != nil {

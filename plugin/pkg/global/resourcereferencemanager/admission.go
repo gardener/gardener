@@ -694,7 +694,6 @@ func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes
 				return fmt.Errorf("failed to resolve shoot resource reference %q: %w", resource.Name, err)
 			}
 		}
-
 	}
 
 	if !equality.Semantic.DeepEqual(oldShoot.Spec.DNS, shoot.Spec.DNS) && shoot.Spec.DNS != nil && shoot.DeletionTimestamp == nil {

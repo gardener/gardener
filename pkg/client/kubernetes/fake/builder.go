@@ -105,7 +105,6 @@ func (b *ClientSetBuilder) WithVersion(version string) *ClientSetBuilder {
 
 // Build builds the ClientSet.
 func (b *ClientSetBuilder) Build() *ClientSet {
-
 	return &ClientSet{
 		applier:       b.applier,
 		chartRenderer: b.chartRenderer,

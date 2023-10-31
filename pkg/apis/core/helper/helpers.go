@@ -106,7 +106,6 @@ func DetermineLatestMachineImageVersion(versions []core.MachineImageVersion, fil
 // DetermineLatestExpirableVersion determines the latest expirable version and the latest non-deprecated version from a slice of ExpirableVersions.
 // When filterPreviewVersions is set, versions with classification preview are not considered.
 func DetermineLatestExpirableVersion(versions []core.ExpirableVersion, filterPreviewVersions bool) (core.ExpirableVersion, core.ExpirableVersion, error) {
-
 	var (
 		latestSemVerVersion              *semver.Version
 		latestNonDeprecatedSemVerVersion *semver.Version

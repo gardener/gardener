@@ -114,7 +114,6 @@ func (b *Botanist) isShootNodeLoggingEnabled() bool {
 	if b.Shoot != nil && !b.Shoot.IsWorkerless && b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config) &&
 		gardenlethelper.IsValiEnabled(b.Config) && b.Config != nil &&
 		b.Config.Logging != nil && b.Config.Logging.ShootNodeLogging != nil {
-
 		for _, purpose := range b.Config.Logging.ShootNodeLogging.ShootPurposes {
 			if gardencore.ShootPurpose(b.Shoot.Purpose) == purpose {
 				return true
