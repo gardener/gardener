@@ -20,6 +20,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/defaults"
@@ -77,7 +78,7 @@ func (e *containerdExtractor) CopyFromImage(ctx context.Context, imageRef string
 
 	imageMountDirectory, err := fs.TempDir("", "node-agent-")
 	if err != nil {
-		return fmt.Errorf("error creating temp image: %w", err)
+		return fmt.Errorf("error creating temp directory: %w", err)
 	}
 	defer func() { utilruntime.HandleError(fs.Remove(imageMountDirectory)) }()
 
@@ -128,8 +129,8 @@ func unmountImage(ctx context.Context, snapshotter snapshots.Snapshotter, direct
 }
 
 // CopyFile copies a source file to destination file and sets the given permissions.
-func CopyFile(aferoFS afero.Afero, sourceFile, destinationFile string, permissions os.FileMode) error {
-	sourceFileStat, err := aferoFS.Stat(sourceFile)
+func CopyFile(fs afero.Afero, sourceFile, destinationFile string, permissions os.FileMode) error {
+	sourceFileStat, err := fs.Stat(sourceFile)
 	if err != nil {
 		return err
 	}
@@ -138,7 +139,7 @@ func CopyFile(aferoFS afero.Afero, sourceFile, destinationFile string, permissio
 		return fmt.Errorf("source %q is not a regular file", sourceFile)
 	}
 
-	if destinationFileStat, err := aferoFS.Stat(destinationFile); err == nil {
+	if destinationFileStat, err := fs.Stat(destinationFile); err == nil {
 		if !destinationFileStat.Mode().IsRegular() {
 			return fmt.Errorf("destination %q exists but is not a regular file", destinationFile)
 		}
@@ -146,17 +147,25 @@ func CopyFile(aferoFS afero.Afero, sourceFile, destinationFile string, permissio
 		return err
 	}
 
-	srcFile, err := aferoFS.Open(sourceFile)
+	srcFile, err := fs.Open(sourceFile)
 	if err != nil {
 		return err
 	}
 	defer srcFile.Close()
 
-	if err := aferoFS.MkdirAll(path.Dir(destinationFile), permissions); err != nil {
+	if err := fs.MkdirAll(path.Dir(destinationFile), permissions); err != nil {
 		return fmt.Errorf("destination directory %q could not be created", path.Dir(destinationFile))
 	}
 
-	dstFile, err := aferoFS.OpenFile(destinationFile, os.O_CREATE|os.O_RDWR, 0755)
+	tempDir, err := fs.TempDir("", "copy-image-")
+	if err != nil {
+		return fmt.Errorf("error creating temp directory: %w", err)
+	}
+	defer func() { utilruntime.HandleError(fs.Remove(tempDir)) }()
+
+	tmpFilePath := filepath.Join(tempDir, filepath.Base(destinationFile))
+
+	dstFile, err := fs.OpenFile(tmpFilePath, os.O_CREATE|os.O_RDWR, 0755)
 	if err != nil {
 		return err
 	}
@@ -166,5 +175,9 @@ func CopyFile(aferoFS afero.Afero, sourceFile, destinationFile string, permissio
 		return err
 	}
 
-	return aferoFS.Chmod(dstFile.Name(), permissions)
+	if err := fs.Chmod(dstFile.Name(), permissions); err != nil {
+		return err
+	}
+
+	return fs.Rename(tmpFilePath, destinationFile)
 }
