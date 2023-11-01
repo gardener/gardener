@@ -2077,6 +2077,8 @@ rules:
 							},
 						},
 						SecurityContext: &corev1.SecurityContext{
+							RunAsNonRoot: pointer.Bool(false),
+							RunAsUser:    pointer.Int64(0),
 							Capabilities: &corev1.Capabilities{
 								Add: []corev1.Capability{"NET_ADMIN"},
 							},
@@ -2174,6 +2176,8 @@ rules:
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
+						RunAsNonRoot: pointer.Bool(false),
+						RunAsUser:    pointer.Int64(0),
 						Capabilities: &corev1.Capabilities{
 							Add: []corev1.Capability{"NET_ADMIN"},
 						},

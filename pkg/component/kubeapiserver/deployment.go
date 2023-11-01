@@ -834,6 +834,8 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 			},
 		},
 		SecurityContext: &corev1.SecurityContext{
+			RunAsNonRoot: pointer.Bool(false),
+			RunAsUser:    pointer.Int64(0),
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{"NET_ADMIN"},
 			},
@@ -892,6 +894,8 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 			},
 		},
 		SecurityContext: &corev1.SecurityContext{
+			RunAsNonRoot: pointer.Bool(false),
+			RunAsUser:    pointer.Int64(0),
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{"NET_ADMIN"},
 			},
