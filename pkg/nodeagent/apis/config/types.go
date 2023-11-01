@@ -40,10 +40,20 @@ type NodeAgentConfiguration struct {
 	// modifies piecemeal the built-in default values from "github.com/gardener/gardener/pkg/operator/features/features.go".
 	// Default: nil
 	FeatureGates map[string]bool
+	// APIServer contains information about the API server.
+	APIServer APIServer
 	// Bootstrap contains configuration for the bootstrap command.
 	Bootstrap *BootstrapConfiguration
 	// Controllers defines the configuration of the controllers.
 	Controllers ControllerConfiguration
+}
+
+// APIServer contains information about the API server.
+type APIServer struct {
+	// Server is the address of the API server.
+	Server string
+	// CABundle is the certificate authority bundle for the API server.
+	CABundle []byte
 }
 
 // BootstrapConfiguration contains configuration for the bootstrap command.

@@ -27,31 +27,29 @@ import (
 )
 
 var _ = Describe("ContainerdExtractor", func() {
-
 	Describe("#CopyFile", func() {
-
 		var (
 			sourceFile      string
 			destinationFile string
 			content         string
-			aferoFS         afero.Afero
+			fakeFS          afero.Afero
 			permissions     fs.FileMode
 		)
 
 		BeforeEach(func() {
 			var err error
 
-			aferoFS = afero.Afero{Fs: afero.NewMemMapFs()}
+			fakeFS = afero.Afero{Fs: afero.NewMemMapFs()}
 			destinationDirectory := "/copy-file-destdir"
 
-			sourceDirectory, err := aferoFS.TempDir("", "copy-file-sourcedir-")
+			sourceDirectory, err := fakeFS.TempDir("", "copy-file-sourcedir-")
 			Expect(err).ToNot(HaveOccurred())
-			err = aferoFS.Mkdir(destinationDirectory, 0755)
+			err = fakeFS.Mkdir(destinationDirectory, 0755)
 			Expect(err).ToNot(HaveOccurred())
 
 			DeferCleanup(func() {
-				Expect(aferoFS.RemoveAll(sourceDirectory)).To(Succeed())
-				Expect(aferoFS.RemoveAll(destinationDirectory)).To(Succeed())
+				Expect(fakeFS.RemoveAll(sourceDirectory)).To(Succeed())
+				Expect(fakeFS.RemoveAll(destinationDirectory)).To(Succeed())
 			})
 
 			filename := "foobar"
@@ -62,69 +60,69 @@ var _ = Describe("ContainerdExtractor", func() {
 		})
 
 		It("should copy new files into an existing directory", func() {
-			createFile(aferoFS, sourceFile, content, 0755)
-			Expect(CopyFile(aferoFS, sourceFile, destinationFile, permissions)).To(Succeed())
-			checkFile(aferoFS, destinationFile, content, permissions)
+			createFile(fakeFS, sourceFile, content, 0755)
+			Expect(CopyFile(fakeFS, sourceFile, destinationFile, permissions)).To(Succeed())
+			checkFile(fakeFS, destinationFile, content, permissions)
 		})
 
 		It("should copy new files into a new directory", func() {
-			createFile(aferoFS, sourceFile, content, 0755)
+			createFile(fakeFS, sourceFile, content, 0755)
 			destinationFile = path.Join(destinationFile, "more-foobar")
-			Expect(CopyFile(aferoFS, sourceFile, destinationFile, permissions)).To(Succeed())
-			checkFile(aferoFS, destinationFile, content, permissions)
+			Expect(CopyFile(fakeFS, sourceFile, destinationFile, permissions)).To(Succeed())
+			checkFile(fakeFS, destinationFile, content, permissions)
 		})
 
 		It("should overwrite an existing file in an existing directory", func() {
 			content = "foobar content: existing"
-			createFile(aferoFS, destinationFile, content, 0755)
-			checkFile(aferoFS, destinationFile, content, 0755)
+			createFile(fakeFS, destinationFile, content, 0755)
+			checkFile(fakeFS, destinationFile, content, 0755)
 
 			content = "foobar content: new"
-			createFile(aferoFS, sourceFile, content, 0755)
-			Expect(CopyFile(aferoFS, sourceFile, destinationFile, permissions)).To(Succeed())
-			checkFile(aferoFS, destinationFile, content, permissions)
+			createFile(fakeFS, sourceFile, content, 0755)
+			Expect(CopyFile(fakeFS, sourceFile, destinationFile, permissions)).To(Succeed())
+			checkFile(fakeFS, destinationFile, content, permissions)
 		})
 
 		It("should copy new files into an existing directory and correct its permissions", func() {
-			createFile(aferoFS, sourceFile, content, 0644)
-			Expect(CopyFile(aferoFS, sourceFile, destinationFile, permissions)).To(Succeed())
-			checkFile(aferoFS, destinationFile, content, permissions)
+			createFile(fakeFS, sourceFile, content, 0644)
+			Expect(CopyFile(fakeFS, sourceFile, destinationFile, permissions)).To(Succeed())
+			checkFile(fakeFS, destinationFile, content, permissions)
 		})
 
 		It("should overwrite an existing file with wrong permissions in an existing directory", func() {
-			createFile(aferoFS, destinationFile, "permissions are 0600", 0600)
+			createFile(fakeFS, destinationFile, "permissions are 0600", 0600)
 
-			createFile(aferoFS, sourceFile, content, 0755)
-			Expect(CopyFile(aferoFS, sourceFile, destinationFile, permissions)).To(Succeed())
-			checkFile(aferoFS, destinationFile, content, permissions)
+			createFile(fakeFS, sourceFile, content, 0755)
+			Expect(CopyFile(fakeFS, sourceFile, destinationFile, permissions)).To(Succeed())
+			checkFile(fakeFS, destinationFile, content, permissions)
 		})
 
 		It("should not copy a source directory", func() {
-			Expect(aferoFS.Mkdir(sourceFile, 0755)).To(Succeed())
-			Expect(CopyFile(aferoFS, sourceFile, destinationFile, permissions)).To(MatchError(ContainSubstring("is not a regular file")))
+			Expect(fakeFS.Mkdir(sourceFile, 0755)).To(Succeed())
+			Expect(CopyFile(fakeFS, sourceFile, destinationFile, permissions)).To(MatchError(ContainSubstring("is not a regular file")))
 		})
 
 		It("should not overwrite a destination if it is a directory", func() {
-			Expect(aferoFS.Mkdir(destinationFile, 0755)).To(Succeed())
-			createFile(aferoFS, sourceFile, content, 0755)
-			Expect(CopyFile(aferoFS, sourceFile, destinationFile, permissions)).To(MatchError(ContainSubstring("exists but is not a regular file")))
+			Expect(fakeFS.Mkdir(destinationFile, 0755)).To(Succeed())
+			createFile(fakeFS, sourceFile, content, 0755)
+			Expect(CopyFile(fakeFS, sourceFile, destinationFile, permissions)).To(MatchError(ContainSubstring("exists but is not a regular file")))
 		})
 	})
 })
 
-func createFile(aferoFS afero.Fs, name, content string, permissions os.FileMode) {
-	file, err := aferoFS.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_TRUNC, permissions)
+func createFile(fakeFS afero.Fs, name, content string, permissions os.FileMode) {
+	file, err := fakeFS.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_TRUNC, permissions)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 	defer file.Close()
 	_, err = file.WriteString(content)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 }
 
-func checkFile(aferoFS afero.Fs, name, content string, permissions fs.FileMode) {
-	fileInfo, err := aferoFS.Stat(name)
+func checkFile(fakeFS afero.Fs, name, content string, permissions fs.FileMode) {
+	fileInfo, err := fakeFS.Stat(name)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 	ExpectWithOffset(1, fileInfo.Mode()).To(Equal(fs.FileMode(permissions)))
-	file, err := aferoFS.Open(name)
+	file, err := fakeFS.Open(name)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 	defer file.Close()
 	var fileContent []byte

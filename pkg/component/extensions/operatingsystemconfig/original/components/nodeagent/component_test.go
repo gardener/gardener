@@ -18,7 +18,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -34,7 +33,7 @@ var _ = Describe("Component", func() {
 		oscSecretName     = "osc-secret-name"
 		kubernetesVersion = semver.MustParse("1.2.3")
 		apiServerURL      = "https://localhost"
-		caBundle          = "ca-bundle"
+		caBundle          = []byte("ca-bundle")
 	)
 
 	Describe("#Config", func() {
@@ -47,14 +46,14 @@ var _ = Describe("Component", func() {
 		It("should return the expected units and files", func() {
 			key := "key"
 
-			unitFiles, err := Files(ComponentConfig(key, kubernetesVersion), apiServerURL, caBundle, "/var/lib/gardener-node-agent/credentials/token")
+			unitFiles, err := Files(ComponentConfig(key, kubernetesVersion, apiServerURL, caBundle))
 			Expect(err).NotTo(HaveOccurred())
 
 			units, files, err := component.Config(components.Context{
 				Key:               key,
 				KubernetesVersion: kubernetesVersion,
 				APIServerURL:      apiServerURL,
-				CABundle:          &caBundle,
+				CABundle:          pointer.String(string(caBundle)),
 				Images:            map[string]*imagevectorutils.Image{"gardener-node-agent": {Repository: "gardener-node-agent", Tag: pointer.String("v1")}},
 			})
 
@@ -109,9 +108,10 @@ WantedBy=multi-user.target`))
 
 	Describe("#ComponentConfig", func() {
 		It("should return the expected result", func() {
-			Expect(ComponentConfig(oscSecretName, kubernetesVersion)).To(Equal(&nodeagentv1alpha1.NodeAgentConfiguration{
-				ClientConnection: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
-					Kubeconfig: "/var/lib/gardener-node-agent/credentials/kubeconfig",
+			Expect(ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, caBundle)).To(Equal(&nodeagentv1alpha1.NodeAgentConfiguration{
+				APIServer: nodeagentv1alpha1.APIServer{
+					Server:   apiServerURL,
+					CABundle: caBundle,
 				},
 				Controllers: nodeagentv1alpha1.ControllerConfiguration{
 					OperatingSystemConfig: nodeagentv1alpha1.OperatingSystemConfigControllerConfig{
@@ -128,21 +128,20 @@ WantedBy=multi-user.target`))
 
 	Describe("#Files", func() {
 		It("should return the expected files", func() {
-			var (
-				config    = ComponentConfig(oscSecretName, nil)
-				tokenFile = "token-file"
-			)
+			config := ComponentConfig(oscSecretName, nil, apiServerURL, caBundle)
 
-			Expect(Files(config, apiServerURL, caBundle, tokenFile)).To(ConsistOf(
-				extensionsv1alpha1.File{
-					Path:        "/var/lib/gardener-node-agent/config.yaml",
-					Permissions: pointer.Int32(0600),
-					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: nodeagent.config.gardener.cloud/v1alpha1
+			Expect(Files(config)).To(ConsistOf(extensionsv1alpha1.File{
+				Path:        "/var/lib/gardener-node-agent/config.yaml",
+				Permissions: pointer.Int32(0600),
+				Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiServer:
+  caBundle: ` + utils.EncodeBase64(caBundle) + `
+  server: ` + apiServerURL + `
+apiVersion: nodeagent.config.gardener.cloud/v1alpha1
 clientConnection:
   acceptContentTypes: ""
   burst: 0
   contentType: ""
-  kubeconfig: /var/lib/gardener-node-agent/credentials/kubeconfig
+  kubeconfig: ""
   qps: 0
 controllers:
   operatingSystemConfig:
@@ -155,31 +154,7 @@ logFormat: ""
 logLevel: ""
 server: {}
 `))}},
-				},
-				extensionsv1alpha1.File{
-					Path:        "/var/lib/gardener-node-agent/credentials/kubeconfig",
-					Permissions: pointer.Int32(0600),
-					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
-clusters:
-- cluster:
-    certificate-authority-data: ` + utils.EncodeBase64([]byte(caBundle)) + `
-    server: ` + apiServerURL + `
-  name: gardener-node-agent
-contexts:
-- context:
-    cluster: gardener-node-agent
-    user: gardener-node-agent
-  name: gardener-node-agent
-current-context: gardener-node-agent
-kind: Config
-preferences: {}
-users:
-- name: gardener-node-agent
-  user:
-    tokenFile: ` + tokenFile + `
-`))}},
-				},
-			))
+			}))
 		})
 	})
 })

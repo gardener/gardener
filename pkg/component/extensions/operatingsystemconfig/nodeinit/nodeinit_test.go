@@ -81,7 +81,7 @@ tmp_dir="$(mktemp -d)"
 trap 'ctr images unmount "$tmp_dir" && rm -rf "$tmp_dir"' EXIT
 
 echo "> Pull gardener-node-agent image and mount it to the temporary directory"
-ctr images pull  "` + image + `"
+ctr images pull  "` + image + `" --hosts-dir "/etc/containerd/certs.d"
 ctr images mount "` + image + `" "$tmp_dir"
 
 echo "> Copy gardener-node-agent binary to host (/opt/bin) and make it executable"
@@ -109,13 +109,16 @@ exec "/opt/bin/gardener-node-agent" bootstrap --config="/var/lib/gardener-node-a
 					extensionsv1alpha1.File{
 						Path:        "/var/lib/gardener-node-agent/config.yaml",
 						Permissions: pointer.Int32(0600),
-						Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: nodeagent.config.gardener.cloud/v1alpha1
+						Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiServer:
+  caBundle: ` + utils.EncodeBase64(caBundle) + `
+  server: ` + apiServerURL + `
+apiVersion: nodeagent.config.gardener.cloud/v1alpha1
 bootstrap: {}
 clientConnection:
   acceptContentTypes: ""
   burst: 0
   contentType: ""
-  kubeconfig: /var/lib/gardener-node-agent/credentials/kubeconfig
+  kubeconfig: ""
   qps: 0
 controllers:
   operatingSystemConfig:
@@ -127,29 +130,6 @@ kind: NodeAgentConfiguration
 logFormat: ""
 logLevel: ""
 server: {}
-`))}},
-					},
-					extensionsv1alpha1.File{
-						Path:        "/var/lib/gardener-node-agent/credentials/kubeconfig",
-						Permissions: pointer.Int32(0600),
-						Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
-clusters:
-- cluster:
-    certificate-authority-data: ` + utils.EncodeBase64(caBundle) + `
-    server: ` + apiServerURL + `
-  name: gardener-node-agent
-contexts:
-- context:
-    cluster: gardener-node-agent
-    user: gardener-node-agent
-  name: gardener-node-agent
-current-context: gardener-node-agent
-kind: Config
-preferences: {}
-users:
-- name: gardener-node-agent
-  user:
-    tokenFile: /var/lib/gardener-node-agent/credentials/bootstrap-token
 `))}},
 					},
 				))
@@ -180,14 +160,17 @@ users:
 				Expect(files).To(ContainElement(extensionsv1alpha1.File{
 					Path:        "/var/lib/gardener-node-agent/config.yaml",
 					Permissions: pointer.Int32(0600),
-					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: nodeagent.config.gardener.cloud/v1alpha1
+					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiServer:
+  caBundle: ` + utils.EncodeBase64(caBundle) + `
+  server: ` + apiServerURL + `
+apiVersion: nodeagent.config.gardener.cloud/v1alpha1
 bootstrap:
   kubeletDataVolumeSize: 1369088
 clientConnection:
   acceptContentTypes: ""
   burst: 0
   contentType: ""
-  kubeconfig: /var/lib/gardener-node-agent/credentials/kubeconfig
+  kubeconfig: ""
   qps: 0
 controllers:
   operatingSystemConfig:

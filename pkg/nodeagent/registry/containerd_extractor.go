@@ -26,6 +26,8 @@ import (
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/mount"
 	"github.com/containerd/containerd/namespaces"
+	"github.com/containerd/containerd/remotes/docker"
+	"github.com/containerd/containerd/remotes/docker/config"
 	"github.com/containerd/containerd/snapshots"
 	"github.com/opencontainers/image-spec/identity"
 	"github.com/spf13/afero"
@@ -41,7 +43,7 @@ func NewExtractor() Extractor {
 
 // CopyFromImage copies a file from a given image reference to the destination file.
 func (e *containerdExtractor) CopyFromImage(ctx context.Context, imageRef string, filePathInImage string, destination string, permissions os.FileMode) error {
-	aferoFS := afero.Afero{Fs: afero.NewOsFs()}
+	fs := afero.Afero{Fs: afero.NewOsFs()}
 
 	address := os.Getenv("CONTAINERD_ADDRESS")
 	if address == "" {
@@ -62,25 +64,29 @@ func (e *containerdExtractor) CopyFromImage(ctx context.Context, imageRef string
 	}
 	defer func() { utilruntime.HandleError(done(ctx)) }()
 
-	image, err := client.Pull(ctx, imageRef, containerd.WithPullSnapshotter(containerd.DefaultSnapshotter), containerd.WithPullUnpack)
+	resolver := docker.NewResolver(docker.ResolverOptions{
+		Hosts: config.ConfigureHosts(ctx, config.HostOptions{HostDir: config.HostDirFromRoot("/etc/containerd/certs.d")}),
+	})
+
+	image, err := client.Pull(ctx, imageRef, containerd.WithPullSnapshotter(containerd.DefaultSnapshotter), containerd.WithResolver(resolver), containerd.WithPullUnpack)
 	if err != nil {
 		return fmt.Errorf("error pulling image: %w", err)
 	}
 
 	snapshotter := client.SnapshotService(containerd.DefaultSnapshotter)
 
-	imageMountDirectory, err := aferoFS.TempDir("", "node-agent-")
+	imageMountDirectory, err := fs.TempDir("", "node-agent-")
 	if err != nil {
 		return fmt.Errorf("error creating temp image: %w", err)
 	}
-	defer func() { utilruntime.HandleError(aferoFS.Remove(imageMountDirectory)) }()
+	defer func() { utilruntime.HandleError(fs.Remove(imageMountDirectory)) }()
 
 	if err := mountImage(ctx, image, snapshotter, imageMountDirectory); err != nil {
 		return err
 	}
 
 	source := path.Join(imageMountDirectory, filePathInImage)
-	if err := CopyFile(aferoFS, source, destination, permissions); err != nil {
+	if err := CopyFile(fs, source, destination, permissions); err != nil {
 		return fmt.Errorf("error copying file %s to %s: %w", source, destination, err)
 	}
 

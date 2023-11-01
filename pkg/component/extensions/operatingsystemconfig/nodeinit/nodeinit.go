@@ -105,13 +105,13 @@ WantedBy=multi-user.target`),
 	// the gardener-node-agent unit will be written and eventually started (whilst gardener-node-init disables and stops
 	// itself). Hence, the files for gardener-node-agent (component configuration and kubeconfig) must be present on the
 	// machine so that it can start successfully.
-	config := nodeagent.ComponentConfig(oscSecretName, kubernetesVersion)
+	config := nodeagent.ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, clusterCA)
 	config.Bootstrap, err = getBootstrapConfiguration(worker)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed computing bootstrap configuration: %w", err)
 	}
 
-	nodeAgentFiles, err := nodeagent.Files(config, apiServerURL, string(clusterCA), nodeagentv1alpha1.BootstrapTokenFilePath)
+	nodeAgentFiles, err := nodeagent.Files(config)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed computing gardener-node-agent files: %w", err)
 	}

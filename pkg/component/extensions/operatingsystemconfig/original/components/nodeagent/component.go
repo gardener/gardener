@@ -23,9 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
-	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
-	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/imagevector"
@@ -34,7 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // AccessSecretName is a constant for the secret name for the gardener-node-agent's shoot access secret.
@@ -63,9 +59,12 @@ func (component) Name() string {
 }
 
 func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
-	config := ComponentConfig(ctx.Key, ctx.KubernetesVersion)
+	var caBundle []byte
+	if ctx.CABundle != nil {
+		caBundle = []byte(*ctx.CABundle)
+	}
 
-	files, err := Files(config, ctx.APIServerURL, pointer.StringDeref(ctx.CABundle, ""), nodeagentv1alpha1.TokenFilePath)
+	files, err := Files(ComponentConfig(ctx.Key, ctx.KubernetesVersion, ctx.APIServerURL, caBundle))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed generating files: %w", err)
 	}
@@ -103,10 +102,11 @@ WantedBy=multi-user.target`
 }
 
 // ComponentConfig returns the component configuration for the gardener-node-agent.
-func ComponentConfig(oscSecretName string, kubernetesVersion *semver.Version) *nodeagentv1alpha1.NodeAgentConfiguration {
+func ComponentConfig(oscSecretName string, kubernetesVersion *semver.Version, apiServerURL string, caBundle []byte) *nodeagentv1alpha1.NodeAgentConfiguration {
 	return &nodeagentv1alpha1.NodeAgentConfiguration{
-		ClientConnection: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
-			Kubeconfig: nodeagentv1alpha1.KubeconfigFilePath,
+		APIServer: nodeagentv1alpha1.APIServer{
+			Server:   apiServerURL,
+			CABundle: caBundle,
 		},
 		Controllers: nodeagentv1alpha1.ControllerConfiguration{
 			OperatingSystemConfig: nodeagentv1alpha1.OperatingSystemConfigControllerConfig{
@@ -121,31 +121,15 @@ func ComponentConfig(oscSecretName string, kubernetesVersion *semver.Version) *n
 }
 
 // Files returns the files related to the gardener-node-agent unit.
-func Files(config *nodeagentv1alpha1.NodeAgentConfiguration, apiServerURL, caBundle, tokenFile string) ([]extensionsv1alpha1.File, error) {
+func Files(config *nodeagentv1alpha1.NodeAgentConfiguration) ([]extensionsv1alpha1.File, error) {
 	configRaw, err := runtime.Encode(codec, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed encoding component config: %w", err)
 	}
 
-	kubeconfigRaw, err := runtime.Encode(clientcmdlatest.Codec, kubernetesutils.NewKubeconfig(
-		"gardener-node-agent",
-		clientcmdv1.Cluster{Server: apiServerURL, CertificateAuthorityData: []byte(caBundle)},
-		clientcmdv1.AuthInfo{TokenFile: tokenFile},
-	))
-	if err != nil {
-		return nil, fmt.Errorf("failed encoding kubeconfig: %w", err)
-	}
-
-	return []extensionsv1alpha1.File{
-		{
-			Path:        nodeagentv1alpha1.ConfigFilePath,
-			Permissions: pointer.Int32(0600),
-			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(configRaw)}},
-		},
-		{
-			Path:        nodeagentv1alpha1.KubeconfigFilePath,
-			Permissions: pointer.Int32(0600),
-			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(kubeconfigRaw)}},
-		},
-	}, nil
+	return []extensionsv1alpha1.File{{
+		Path:        nodeagentv1alpha1.ConfigFilePath,
+		Permissions: pointer.Int32(0600),
+		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(configRaw)}},
+	}}, nil
 }

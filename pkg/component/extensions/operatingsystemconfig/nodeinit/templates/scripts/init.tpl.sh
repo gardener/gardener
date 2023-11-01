@@ -9,7 +9,7 @@ tmp_dir="$(mktemp -d)"
 trap 'ctr images unmount "$tmp_dir" && rm -rf "$tmp_dir"' EXIT
 
 echo "> Pull gardener-node-agent image and mount it to the temporary directory"
-ctr images pull  "{{ .image }}"
+ctr images pull  "{{ .image }}" --hosts-dir "/etc/containerd/certs.d"
 ctr images mount "{{ .image }}" "$tmp_dir"
 
 echo "> Copy gardener-node-agent binary to host ({{ .binaryDirectory }}) and make it executable"

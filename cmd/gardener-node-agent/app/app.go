@@ -17,9 +17,11 @@ package app
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	goruntime "runtime"
 	"strconv"
 	"time"
@@ -30,10 +32,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
-	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
-	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -54,7 +53,6 @@ import (
 	"github.com/gardener/gardener/pkg/nodeagent/bootstrap"
 	"github.com/gardener/gardener/pkg/nodeagent/controller"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Name is a const for the name of this component.
@@ -110,23 +108,33 @@ func getBootstrapCommand(opts *options) *cobra.Command {
 func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *config.NodeAgentConfiguration) error {
 	log.Info("Feature Gates", "featureGates", features.DefaultFeatureGate)
 
-	log.Info("Getting rest config")
 	if kubeconfig := os.Getenv("KUBECONFIG"); kubeconfig != "" {
 		cfg.ClientConnection.Kubeconfig = kubeconfig
 	}
-	if cfg.ClientConnection.Kubeconfig == "" {
-		return fmt.Errorf("must specify path to a kubeconfig (either via \"KUBECONFIG\" environment variable of via .clientConnection.kubeconfig in component config)")
-	}
 
-	restConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.ClientConnection, nil, kubernetes.AuthTokenFile)
-	if err != nil {
-		return err
-	}
+	log.Info("Getting rest config")
+	var (
+		restConfig *rest.Config
+		err        error
+	)
 
-	if restConfig.BearerTokenFile == nodeagentv1alpha1.BootstrapTokenFilePath {
-		log.Info("Kubeconfig points to the bootstrap token file")
-		if err := fetchAccessTokenViaBootstrapToken(ctx, log, restConfig, cfg); err != nil {
-			return fmt.Errorf("failed fetching access token via bootstrap token: %w", err)
+	if len(cfg.ClientConnection.Kubeconfig) > 0 {
+		restConfig, err = kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.ClientConnection, nil, kubernetes.AuthTokenFile)
+		if err != nil {
+			return fmt.Errorf("failed getting REST config from client connection configuration: %w", err)
+		}
+	} else {
+		var mustFetchAccessToken bool
+		restConfig, mustFetchAccessToken, err = getRESTConfig(log, cfg)
+		if err != nil {
+			return fmt.Errorf("failed getting REST config: %w", err)
+		}
+
+		if mustFetchAccessToken {
+			log.Info("Fetching access token")
+			if err := fetchAccessToken(ctx, log, restConfig, cfg.Controllers.Token.SecretName); err != nil {
+				return fmt.Errorf("failed fetching access token: %w", err)
+			}
 		}
 	}
 
@@ -192,14 +200,45 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	return mgr.Start(ctx)
 }
 
-func fetchAccessTokenViaBootstrapToken(ctx context.Context, log logr.Logger, restConfig *rest.Config, cfg *config.NodeAgentConfiguration) error {
+func getRESTConfig(log logr.Logger, cfg *config.NodeAgentConfiguration) (*rest.Config, bool, error) {
+	restConfig := &rest.Config{
+		Burst: int(cfg.ClientConnection.Burst),
+		QPS:   cfg.ClientConnection.QPS,
+		ContentConfig: rest.ContentConfig{
+			AcceptContentTypes: cfg.ClientConnection.AcceptContentTypes,
+			ContentType:        cfg.ClientConnection.ContentType,
+		},
+		Host:            cfg.APIServer.Server,
+		TLSClientConfig: rest.TLSClientConfig{CAData: cfg.APIServer.CABundle},
+		BearerTokenFile: nodeagentv1alpha1.TokenFilePath,
+	}
+
+	if _, err := os.Stat(restConfig.BearerTokenFile); err != nil && !os.IsNotExist(err) {
+		return nil, false, fmt.Errorf("failed checking whether token file %q exists: %w", restConfig.BearerTokenFile, err)
+	} else if err == nil {
+		log.Info("Token file already exists, nothing to be done", "path", restConfig.BearerTokenFile)
+		return restConfig, false, nil
+	}
+
+	if _, err := os.Stat(nodeagentv1alpha1.BootstrapTokenFilePath); err != nil && !os.IsNotExist(err) {
+		return nil, false, fmt.Errorf("failed checking whether bootstrap token file %q exists: %w", nodeagentv1alpha1.BootstrapTokenFilePath, err)
+	} else if err == nil {
+		log.Info("Token file does not exist, but bootstrap token file does - using it", "path", nodeagentv1alpha1.BootstrapTokenFilePath)
+		restConfig.BearerTokenFile = nodeagentv1alpha1.BootstrapTokenFilePath
+		return restConfig, true, nil
+	}
+
+	return nil, false, fmt.Errorf("unable to construct REST config (neither token file %q nor bootstrap token file %q exist)", nodeagentv1alpha1.TokenFilePath, nodeagentv1alpha1.BootstrapTokenFilePath)
+}
+
+func fetchAccessToken(ctx context.Context, log logr.Logger, restConfig *rest.Config, tokenSecretName string) error {
 	c, err := client.New(restConfig, client.Options{})
 	if err != nil {
 		return fmt.Errorf("unable to create client with bootstrap token: %w", err)
 	}
 
-	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: cfg.Controllers.Token.SecretName, Namespace: metav1.NamespaceSystem}}
-	log.Info("Fetching access token secret", "secret", client.ObjectKeyFromObject(secret))
+	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: tokenSecretName, Namespace: metav1.NamespaceSystem}}
+	log.Info("Reading access token secret", "secret", client.ObjectKeyFromObject(secret))
 	if err := c.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
 		return fmt.Errorf("failed fetching access token from API server: %w", err)
 	}
@@ -209,28 +248,16 @@ func fetchAccessTokenViaBootstrapToken(ctx context.Context, log logr.Logger, res
 		return fmt.Errorf("secret key %q does not exist or empty", resourcesv1alpha1.DataKeyToken)
 	}
 
-	restConfig.BearerTokenFile = nodeagentv1alpha1.TokenFilePath
-	kubeconfigRaw, err := runtime.Encode(clientcmdlatest.Codec, kubernetesutils.NewKubeconfig(
-		Name,
-		clientcmdv1.Cluster{Server: restConfig.Host, CertificateAuthorityData: restConfig.CAData},
-		clientcmdv1.AuthInfo{TokenFile: nodeagentv1alpha1.TokenFilePath},
-	))
-	if err != nil {
-		return fmt.Errorf("failed encoding kubeconfig: %w", err)
-	}
-
 	log.Info("Writing downloaded access token to disk", "path", nodeagentv1alpha1.TokenFilePath)
+	if err := os.MkdirAll(filepath.Dir(nodeagentv1alpha1.TokenFilePath), fs.ModeDir); err != nil {
+		return fmt.Errorf("unable to create directory %q: %w", filepath.Dir(nodeagentv1alpha1.TokenFilePath), err)
+	}
 	if err := os.WriteFile(nodeagentv1alpha1.TokenFilePath, token, 0600); err != nil {
 		return fmt.Errorf("unable to write access token to %s: %w", nodeagentv1alpha1.TokenFilePath, err)
 	}
+
 	log.Info("Token written to disk")
-
-	log.Info("Overwriting kubeconfig on disk to no longer use bootstrap token file", "path", cfg.ClientConnection.Kubeconfig)
-	if err := os.WriteFile(cfg.ClientConnection.Kubeconfig, kubeconfigRaw, 0600); err != nil {
-		return fmt.Errorf("unable to write kubeconfig to %s: %w", cfg.ClientConnection.Kubeconfig, err)
-	}
-	log.Info("Kubeconfig written to disk")
-
+	restConfig.BearerTokenFile = nodeagentv1alpha1.TokenFilePath
 	return nil
 }
 

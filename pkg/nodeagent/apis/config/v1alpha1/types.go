@@ -28,8 +28,6 @@ const (
 	// BinaryDir is the directory on the worker node that contains the binary for the gardener-node-agent.
 	BinaryDir = "/opt/bin"
 
-	// KubeconfigFilePath is the file path on the worker node that contains the kubeconfig of the gardener-node-agent.
-	KubeconfigFilePath = CredentialsDir + "/kubeconfig"
 	// BootstrapTokenFilePath is the file path on the worker node that contains the bootstrap token for the node.
 	BootstrapTokenFilePath = CredentialsDir + "/bootstrap-token"
 	// TokenFilePath is the file path on the worker node that contains the access token of the gardener-node-agent.
@@ -65,11 +63,21 @@ type NodeAgentConfiguration struct {
 	// Default: nil
 	// +optional
 	FeatureGates map[string]bool `json:"featureGates,omitempty"`
+	// APIServer contains information about the API server.
+	APIServer APIServer `json:"apiServer"`
 	// Bootstrap contains configuration for the bootstrap command.
 	// +optional
 	Bootstrap *BootstrapConfiguration `json:"bootstrap,omitempty"`
 	// Controllers defines the configuration of the controllers.
 	Controllers ControllerConfiguration `json:"controllers"`
+}
+
+// APIServer contains information about the API server.
+type APIServer struct {
+	// Server is the address of the API server.
+	Server string `json:"server"`
+	// CABundle is the certificate authority bundle for the API server.
+	CABundle []byte `json:"caBundle"`
 }
 
 // BootstrapConfiguration contains configuration for the bootstrap command.
