@@ -21,7 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -29,23 +28,17 @@ const finalizerName = "resources.gardener.cloud/gardener-resource-manager"
 
 var _ = Describe("Secret controller tests", func() {
 	var (
-		managedResource *resourcesv1alpha1.ManagedResource
-		secretFoo       *corev1.Secret
-		secretBar       *corev1.Secret
+		secretFoo *corev1.Secret
+		secretBar *corev1.Secret
 	)
 
 	BeforeEach(func() {
-		managedResource = &resourcesv1alpha1.ManagedResource{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace:    testNamespace.Name,
-				GenerateName: "test-",
-			},
-		}
 
 		secretFoo = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "foo-",
 				Namespace:    testNamespace.Name,
+				Finalizers:   []string{"resources.gardener.cloud/gardener-resource-manager"},
 			},
 		}
 
@@ -62,20 +55,10 @@ var _ = Describe("Secret controller tests", func() {
 		Expect(testClient.Create(ctx, secretFoo)).To(Succeed())
 		log.Info("Created Secret for test", "secretName", secretFoo.Name)
 		Expect(testClient.Create(ctx, secretBar)).To(Succeed())
-		By("Create ManagedResource for test")
 		log.Info("Created Secret for test", "secretName", secretBar.Name)
-
-		managedResource.Spec.SecretRefs = []corev1.LocalObjectReference{
-			{Name: secretFoo.Name},
-			{Name: secretBar.Name},
-		}
-
-		Expect(testClient.Create(ctx, managedResource)).To(Succeed())
-		log.Info("Created ManagedResource for test", "managedResource", client.ObjectKeyFromObject(managedResource))
 	})
 
 	AfterEach(func() {
-		Expect(testClient.Delete(ctx, managedResource)).To(Or(Succeed(), BeNotFoundError()))
 		Expect(testClient.Delete(ctx, secretFoo)).To(Or(Succeed(), BeNotFoundError()))
 		Expect(testClient.Delete(ctx, secretBar)).To(Or(Succeed(), BeNotFoundError()))
 		// Wait for clean up of the secret
@@ -88,26 +71,8 @@ var _ = Describe("Secret controller tests", func() {
 	})
 
 	Context("Secret finalizer", func() {
-		It("should successfully add finalizer to all the secrets which are referenced by ManagedResources", func() {
-			Eventually(func(g Gomega) []string {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secretFoo), secretFoo)).To(Succeed())
-				return secretFoo.ObjectMeta.Finalizers
-			}).Should(
-				ContainElement(finalizerName),
-			)
-			Eventually(func(g Gomega) []string {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secretBar), secretBar)).To(Succeed())
-				return secretBar.ObjectMeta.Finalizers
-			}).Should(
-				ContainElement(finalizerName),
-			)
-		})
 
-		It("should remove finalizer from secrets which are no longer referenced by any ManagedResource", func() {
-			By("Update ManagedResource to reference some other secret")
-			patch := client.MergeFrom(managedResource.DeepCopy())
-			managedResource.Spec.SecretRefs[0].Name = "test"
-			Expect(testClient.Patch(ctx, managedResource, patch)).To(Succeed())
+		It("should remove finalizer from secret if finalizer is present", func() {
 
 			Eventually(func(g Gomega) []string {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secretFoo), secretFoo)).To(Succeed())
@@ -117,18 +82,11 @@ var _ = Describe("Secret controller tests", func() {
 			)
 		})
 
-		It("should do nothing if there is no ManagedResource referencing the secret", func() {
-			secret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: testNamespace.Name,
-				},
-			}
-			Expect(testClient.Create(ctx, secret)).To(Succeed())
+		It("should do nothing if secret has no finalizer", func() {
 
 			Consistently(func(g Gomega) []string {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
-				return secret.ObjectMeta.Finalizers
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secretBar), secretBar)).To(Succeed())
+				return secretBar.ObjectMeta.Finalizers
 			}).ShouldNot(
 				ContainElement(finalizerName),
 			)

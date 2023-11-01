@@ -37,9 +37,9 @@ type Reconciler struct {
 	ClassFilter  *predicate.ClassFilter
 }
 
-// TODO(Kostov6): Drop secret reconciler after gardener v1.85
 // Reconcile implements reconcile.Reconciler.
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+	// TODO(Kostov6): Drop secret reconciler after gardener v1.85
 	log := logf.FromContext(ctx)
 
 	ctx, cancel := controllerutils.GetMainReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
