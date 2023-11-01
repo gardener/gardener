@@ -25,7 +25,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
@@ -38,6 +37,7 @@ type Reconciler struct {
 	ClassFilter  *predicate.ClassFilter
 }
 
+// TODO(Kostov6): Drop secret reconciler after gardener v1.85
 // Reconcile implements reconcile.Reconciler.
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
@@ -54,31 +54,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	resourceList := &resourcesv1alpha1.ManagedResourceList{}
-	if err := r.SourceClient.List(ctx, resourceList, client.InNamespace(secret.Namespace)); err != nil {
-		return reconcile.Result{}, fmt.Errorf("could not fetch ManagedResources in namespace of Secret: %+v", err)
-	}
-
-	// check if there is at least one ManagedResource this controller is responsible for and which references this secret
-	secretIsReferenced := false
-	for _, resource := range resourceList.Items {
-		for _, ref := range resource.Spec.SecretRefs {
-			// check if we are responsible for this MR, class might have changed, then we need to remove our finalizer
-			if ref.Name == secret.Name && r.ClassFilter.Responsible(&resource) {
-				secretIsReferenced = true
-				break
-			}
-		}
-	}
-
 	controllerFinalizer := r.ClassFilter.FinalizerName()
 	hasFinalizer := controllerutil.ContainsFinalizer(secret, controllerFinalizer)
-	if secretIsReferenced && !hasFinalizer {
-		log.Info("Adding finalizer")
-		if err := controllerutils.AddFinalizers(ctx, r.SourceClient, secret, controllerFinalizer); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
-		}
-	} else if !secretIsReferenced && hasFinalizer {
+	if hasFinalizer {
 		log.Info("Removing finalizer")
 		if err := controllerutils.RemoveFinalizers(ctx, r.SourceClient, secret, controllerFinalizer); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
