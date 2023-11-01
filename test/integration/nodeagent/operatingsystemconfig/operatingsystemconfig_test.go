@@ -60,6 +60,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		oscSecret             *corev1.Secret
 
 		imageMountDirectory string
+		cancelFunc          cancelFuncEnsurer
 	)
 
 	BeforeEach(func() {
@@ -71,6 +72,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		imageMountDirectory, err = fakeFS.TempDir("", "fake-node-agent-")
 		Expect(err).NotTo(HaveOccurred())
 		DeferCleanup(func() { Expect(fakeFS.RemoveAll(imageMountDirectory)).To(Succeed()) })
+
+		cancelFunc = cancelFuncEnsurer{}
 
 		By("Setup manager")
 		mgr, err := manager.New(restConfig, manager.Options{
@@ -102,10 +105,11 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 				SecretName:        oscSecretName,
 				KubernetesVersion: kubernetesVersion,
 			},
-			DBus:      fakeDBus,
-			FS:        fakeFS,
-			NodeName:  node.Name,
-			Extractor: fakeregistry.NewExtractor(fakeFS, imageMountDirectory),
+			DBus:          fakeDBus,
+			FS:            fakeFS,
+			NodeName:      node.Name,
+			Extractor:     fakeregistry.NewExtractor(fakeFS, imageMountDirectory),
+			CancelContext: cancelFunc.cancel,
 		}).AddToManager(mgr)).To(Succeed())
 
 		By("Start manager")
@@ -225,7 +229,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		operatingSystemConfig = &extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 				Files: []extensionsv1alpha1.File{file1},
-				Units: []extensionsv1alpha1.Unit{unit1, gnaUnit, unit2, unit5, unit5DropInsOnly, unit6, unit7},
+				Units: []extensionsv1alpha1.Unit{unit1, unit2, unit5, unit5DropInsOnly, unit6, unit7},
 			},
 			Status: extensionsv1alpha1.OperatingSystemConfigStatus{
 				ExtensionFiles: []extensionsv1alpha1.File{file2},
@@ -253,7 +257,9 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		DeferCleanup(func() {
 			Expect(testClient.Delete(ctx, oscSecret)).To(Succeed())
 		})
+	})
 
+	It("should reconcile the configuration when there is no previous OSC", func() {
 		By("Wait for node annotations to be updated")
 		Eventually(func(g Gomega) map[string]string {
 			updatedNode := &corev1.Node{}
@@ -263,16 +269,13 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			HaveKeyWithValue("checksum/cloud-config-data", utils.ComputeSHA256Hex(oscRaw)),
 			HaveKeyWithValue("worker.gardener.cloud/kubernetes-version", kubernetesVersion.String()),
 		))
-	})
 
-	It("should reconcile the configuration when there is no previous OSC", func() {
 		By("Assert that files and units have been created")
 		assertFileOnDisk(fakeFS, file1.Path, "file1", 0777)
 		assertFileOnDisk(fakeFS, file2.Path, "file2", 0600)
 		assertFileOnDisk(fakeFS, file3.Path, "file3", 0750)
 		assertFileOnDisk(fakeFS, file4.Path, "file4", 0750)
 		assertFileOnDisk(fakeFS, file5.Path, "file5", 0750)
-		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+gnaUnit.Name, "#gna", 0600)
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit1.Name, "#unit1", 0600)
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit1.Name+".d/"+unit1.DropIns[0].Name, "#unit1drop", 0600)
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit2.Name, "#unit2", 0600)
@@ -289,7 +292,6 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit1.Name}},
-			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{gnaUnit.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionDisable, UnitNames: []string{unit2.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit3.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit4.Name}},
@@ -304,11 +306,23 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit5.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit6.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit7.Name}},
-			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{gnaUnit.Name}},
 		))
+
+		By("Expect that cancel func has not been called")
+		Expect(cancelFunc.called).To(BeFalse())
 	})
 
 	It("should reconcile the configuration when there is a previous OSC", func() {
+		By("Wait for node annotations to be updated")
+		Eventually(func(g Gomega) map[string]string {
+			updatedNode := &corev1.Node{}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
+			return updatedNode.Annotations
+		}).Should(And(
+			HaveKeyWithValue("checksum/cloud-config-data", utils.ComputeSHA256Hex(oscRaw)),
+			HaveKeyWithValue("worker.gardener.cloud/kubernetes-version", kubernetesVersion.String()),
+		))
+
 		fakeDBus.Actions = nil // reset actions on dbus to not repeat assertions from above for update scenario
 
 		// manually change permissions of unit and drop-in file (should be restored on next reconciliation)
@@ -317,14 +331,12 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		By("Update Operating System Config")
 		// delete unit1
 		// delete file2
-		// change content of gardener-node-agent unit
 		// add drop-in to unit2 and enable+start it
 		// disable unit4 and remove all drop-ins
 		// remove only first drop-in from unit5
 		// move file3 from unit.files to files while keeping it unchanged
 		// the content of file5 (belonging to unit7) is changed, so unit7 is restarting
-		// file1 and unit3 are unchanged, so unit3 is not restarting
-		gnaUnit.Content = pointer.String("#some-new-content")
+		// file1, unit3, and gardener-node-agent unit are unchanged, so unit3 is not restarting and cancel func is not called
 		unit2.Enable = pointer.Bool(true)
 		unit2.Command = extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart)
 		unit2.DropIns = []extensionsv1alpha1.DropIn{{Name: "dropdropdrop", Content: "#unit2drop"}}
@@ -334,7 +346,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		unit6.Files = nil
 		unit7.Files[0].Content.Inline.Data = "changeme"
 
-		operatingSystemConfig.Spec.Units = []extensionsv1alpha1.Unit{unit2, gnaUnit, unit5, unit6, unit7}
+		operatingSystemConfig.Spec.Units = []extensionsv1alpha1.Unit{unit2, unit5, unit6, unit7}
 		operatingSystemConfig.Spec.Files = append(operatingSystemConfig.Spec.Files, file3)
 		operatingSystemConfig.Status.ExtensionUnits = []extensionsv1alpha1.Unit{unit3, unit4}
 		operatingSystemConfig.Status.ExtensionFiles = nil
@@ -364,7 +376,6 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		assertFileOnDisk(fakeFS, file3.Path, "file3", 0750)
 		assertFileOnDisk(fakeFS, file4.Path, "file4", 0750)
 		assertFileOnDisk(fakeFS, file5.Path, "changeme", 0750)
-		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+gnaUnit.Name, "#some-new-content", 0600)
 		assertNoFileOnDisk(fakeFS, "/etc/systemd/system/"+unit1.Name)
 		assertNoDirectoryOnDisk(fakeFS, "/etc/systemd/system/"+unit1.Name+".d")
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit2.Name, "#unit2", 0600)
@@ -379,7 +390,6 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit2.Name}},
-			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{gnaUnit.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit5.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit6.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit7.Name}},
@@ -392,8 +402,53 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			fakedbus.SystemdAction{Action: fakedbus.ActionStop, UnitNames: []string{unit4.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit6.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit7.Name}},
-			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{gnaUnit.Name}},
 		))
+
+		By("Expect that cancel func has not been called")
+		Expect(cancelFunc.called).To(BeFalse())
+	})
+
+	It("should call the cancel function when gardener-node-agent must be restarted itself", func() {
+		var lastAppliedOSC []byte
+		By("Wait last-applied OSC file to be persisted")
+		Eventually(func(g Gomega) error {
+			var err error
+			lastAppliedOSC, err = fakeFS.ReadFile("/var/lib/gardener-node-agent/last-applied-osc.yaml")
+			return err
+		}).Should(Succeed())
+
+		fakeDBus.Actions = nil // reset actions on dbus to not repeat assertions from above for update scenario
+
+		By("Update Operating System Config")
+		operatingSystemConfig.Spec.Units = append(operatingSystemConfig.Spec.Units, gnaUnit)
+
+		var err error
+		oscRaw, err = runtime.Encode(codec, operatingSystemConfig)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("Update Secret containing the operating system config")
+		patch := client.MergeFrom(oscSecret.DeepCopy())
+		oscSecret.Data["osc.yaml"] = oscRaw
+		Expect(testClient.Patch(ctx, oscSecret, patch)).To(Succeed())
+
+		By("Wait last-applied OSC file to be updated")
+		Eventually(func(g Gomega) []byte {
+			content, err := fakeFS.ReadFile("/var/lib/gardener-node-agent/last-applied-osc.yaml")
+			g.Expect(err).NotTo(HaveOccurred())
+			return content
+		}).ShouldNot(Equal(lastAppliedOSC))
+
+		By("Assert that files and units have been created")
+		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+gnaUnit.Name, "#gna", 0600)
+
+		By("Assert that unit actions have been applied")
+		Expect(fakeDBus.Actions).To(ConsistOf(
+			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{gnaUnit.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionDaemonReload},
+		))
+
+		By("Expect that cancel func has been called")
+		Expect(cancelFunc.called).To(BeTrue())
 	})
 })
 
@@ -418,4 +473,12 @@ func assertNoDirectoryOnDisk(fakeFS afero.Afero, path string) {
 	exists, err := fakeFS.DirExists(path)
 	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "directory path "+path)
 	ExpectWithOffset(1, exists).To(BeFalse(), "directory path "+path)
+}
+
+type cancelFuncEnsurer struct {
+	called bool
+}
+
+func (c *cancelFuncEnsurer) cancel() {
+	c.called = true
 }

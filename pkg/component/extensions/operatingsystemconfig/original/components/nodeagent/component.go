@@ -96,7 +96,7 @@ After=network.target
 LimitMEMLOCK=infinity
 ExecStart=` + nodeagentv1alpha1.BinaryDir + `/gardener-node-agent --config=` + nodeagentv1alpha1.ConfigFilePath + `
 Restart=always
-RestartSec=10
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target`

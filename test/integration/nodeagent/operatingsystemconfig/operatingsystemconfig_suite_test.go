@@ -56,7 +56,6 @@ var (
 
 	testRunID = "test-" + gardenerutils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 )
-var ()
 
 func init() {
 	scheme := runtime.NewScheme()

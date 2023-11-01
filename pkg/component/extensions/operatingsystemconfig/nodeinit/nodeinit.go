@@ -65,9 +65,10 @@ Description=Downloads the gardener-node-agent binary from the container registry
 After=network-online.target
 Wants=network-online.target
 [Service]
-Restart=always
-RestartSec=30
-RuntimeMaxSec=120
+Type=oneshot
+Restart=on-failure
+RestartSec=5
+StartLimitBurst=0
 EnvironmentFile=/etc/environment
 ExecStart=` + pathInitScript + `
 [Install]

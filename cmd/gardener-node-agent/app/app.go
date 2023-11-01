@@ -73,7 +73,8 @@ func NewCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return run(cmd.Context(), log, opts.config)
+			ctx, cancel := context.WithCancel(cmd.Context())
+			return run(ctx, cancel, log, opts.config)
 		},
 	}
 
@@ -106,7 +107,7 @@ func getBootstrapCommand(opts *options) *cobra.Command {
 	return bootstrapCmd
 }
 
-func run(ctx context.Context, log logr.Logger, cfg *config.NodeAgentConfiguration) error {
+func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *config.NodeAgentConfiguration) error {
 	log.Info("Feature Gates", "featureGates", features.DefaultFeatureGate)
 
 	log.Info("Getting rest config")
@@ -183,7 +184,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.NodeAgentConfiguratio
 	}
 
 	log.Info("Adding controllers to manager")
-	if err := controller.AddToManager(mgr, cfg, nodeName); err != nil {
+	if err := controller.AddToManager(cancel, mgr, cfg, nodeName); err != nil {
 		return fmt.Errorf("failed adding controllers to manager: %w", err)
 	}
 

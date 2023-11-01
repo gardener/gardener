@@ -73,8 +73,8 @@ func Bootstrap(
 		return fmt.Errorf("unable to disable system unit %q: %w", nodeagentv1alpha1.InitUnitName, err)
 	}
 
-	// Stop itself must be the last action. With this command, the execution of the gardener-node-agent bootstrap
-	// command terminates. It is not possible to perform any logic after this line.
-	log.Info("Bootstrap procedure finished, stopping gardener-node-init unit (triggers self-termination)")
-	return dbus.Stop(ctx, nil, nil, nodeagentv1alpha1.InitUnitName)
+	// After this line, the execution of the gardener-node-agent bootstrap command terminates. It is not possible to
+	// perform any logic after this line.
+	log.Info("Bootstrap procedure finished, terminating")
+	return nil
 }

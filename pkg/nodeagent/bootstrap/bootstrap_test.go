@@ -49,7 +49,7 @@ After=network.target
 LimitMEMLOCK=infinity
 ExecStart=/opt/bin/gardener-node-agent --config=/var/lib/gardener-node-agent/config.yaml
 Restart=always
-RestartSec=10
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target`
@@ -72,7 +72,6 @@ WantedBy=multi-user.target`
 				fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{"gardener-node-agent.service"}},
 				fakedbus.SystemdAction{Action: fakedbus.ActionStart, UnitNames: []string{"gardener-node-agent.service"}},
 				fakedbus.SystemdAction{Action: fakedbus.ActionDisable, UnitNames: []string{"gardener-node-init.service"}},
-				fakedbus.SystemdAction{Action: fakedbus.ActionStop, UnitNames: []string{"gardener-node-init.service"}},
 			))
 		}
 

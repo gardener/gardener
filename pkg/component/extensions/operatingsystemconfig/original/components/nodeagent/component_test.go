@@ -71,7 +71,7 @@ After=network.target
 LimitMEMLOCK=infinity
 ExecStart=/opt/bin/gardener-node-agent --config=/var/lib/gardener-node-agent/config.yaml
 Restart=always
-RestartSec=10
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target`),
@@ -100,7 +100,7 @@ After=network.target
 LimitMEMLOCK=infinity
 ExecStart=/opt/bin/gardener-node-agent --config=/var/lib/gardener-node-agent/config.yaml
 Restart=always
-RestartSec=10
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target`))

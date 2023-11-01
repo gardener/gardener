@@ -57,13 +57,14 @@ const (
 // Reconciler decodes the OperatingSystemConfig resources from secrets and applies the systemd units and files to the
 // node.
 type Reconciler struct {
-	Client    client.Client
-	Config    config.OperatingSystemConfigControllerConfig
-	Recorder  record.EventRecorder
-	DBus      dbus.DBus
-	FS        afero.Afero
-	NodeName  string
-	Extractor registry.Extractor
+	Client        client.Client
+	Config        config.OperatingSystemConfigControllerConfig
+	Recorder      record.EventRecorder
+	DBus          dbus.DBus
+	FS            afero.Afero
+	NodeName      string
+	Extractor     registry.Extractor
+	CancelContext context.CancelFunc
 }
 
 // Reconcile decodes the OperatingSystemConfig resources from secrets and applies the systemd units and files to the
@@ -151,10 +152,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if mustRestartGardenerNodeAgent {
-		log.Info("Restarting myself (gardener-node-agent unit)")
-		if err := r.DBus.Restart(ctx, r.Recorder, node, nodeagentv1alpha1.UnitName); err != nil {
-			return reconcile.Result{}, fmt.Errorf("unable to restart unit %q: %w", nodeagentv1alpha1.UnitName, err)
-		}
+		log.Info("Must restart myself (gardener-node-agent unit), canceling the context to initiate graceful shutdown")
+		r.CancelContext()
+		return reconcile.Result{}, nil
 	}
 
 	if node == nil {
