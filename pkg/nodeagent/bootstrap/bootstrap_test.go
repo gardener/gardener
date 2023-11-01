@@ -43,7 +43,7 @@ var _ = Describe("Bootstrap", func() {
 
 			expectedGNAUnitContent = `[Unit]
 Description=Gardener Node Agent
-After=network.target
+After=network-online.target
 
 [Service]
 LimitMEMLOCK=infinity

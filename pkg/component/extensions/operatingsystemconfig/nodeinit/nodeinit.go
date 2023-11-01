@@ -75,7 +75,7 @@ ExecStart=` + pathInitScript + `
 WantedBy=multi-user.target`),
 			Files: []extensionsv1alpha1.File{{
 				Path:        pathInitScript,
-				Permissions: pointer.Int32(0744),
+				Permissions: pointer.Int32(0755),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
@@ -87,9 +87,13 @@ WantedBy=multi-user.target`),
 
 		nodeInitFiles = []extensionsv1alpha1.File{{
 			Path:        nodeagentv1alpha1.BootstrapTokenFilePath,
-			Permissions: pointer.Int32(0644),
+			Permissions: pointer.Int32(0640),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
+					// The bootstrap token will be created by the machine-controller-manager when creating an actual
+					// machine, and it will replace this "magic" string with the actual token in the user data. See
+					// https://github.com/gardener/gardener/blob/master/docs/extensions/operatingsystemconfig.md#bootstrap-tokens
+					// for more details.
 					Data: "<<BOOTSTRAP_TOKEN>>",
 				},
 				TransmitUnencoded: pointer.Bool(true),
@@ -102,11 +106,10 @@ WantedBy=multi-user.target`),
 	// itself). Hence, the files for gardener-node-agent (component configuration and kubeconfig) must be present on the
 	// machine so that it can start successfully.
 	config := nodeagent.ComponentConfig(oscSecretName, kubernetesVersion)
-	bootstrapConfig, err := getBootstrapConfiguration(worker)
+	config.Bootstrap, err = getBootstrapConfiguration(worker)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed computing bootstrap configuration: %w", err)
 	}
-	config.Bootstrap = bootstrapConfig
 
 	nodeAgentFiles, err := nodeagent.Files(config, apiServerURL, string(clusterCA), nodeagentv1alpha1.BootstrapTokenFilePath)
 	if err != nil {

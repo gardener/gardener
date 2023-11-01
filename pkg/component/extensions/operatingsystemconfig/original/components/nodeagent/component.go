@@ -90,7 +90,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 func UnitContent() string {
 	return `[Unit]
 Description=Gardener Node Agent
-After=network.target
+After=network-online.target
 
 [Service]
 LimitMEMLOCK=infinity
@@ -139,12 +139,12 @@ func Files(config *nodeagentv1alpha1.NodeAgentConfiguration, apiServerURL, caBun
 	return []extensionsv1alpha1.File{
 		{
 			Path:        nodeagentv1alpha1.ConfigFilePath,
-			Permissions: pointer.Int32(0644),
+			Permissions: pointer.Int32(0600),
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(configRaw)}},
 		},
 		{
 			Path:        nodeagentv1alpha1.KubeconfigFilePath,
-			Permissions: pointer.Int32(0644),
+			Permissions: pointer.Int32(0600),
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(kubeconfigRaw)}},
 		},
 	}, nil

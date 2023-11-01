@@ -26,11 +26,11 @@ import (
 func getBootstrapConfiguration(worker gardencorev1beta1.Worker) (*nodeagentv1alpha1.BootstrapConfiguration, error) {
 	bootstrapConfiguration := &nodeagentv1alpha1.BootstrapConfiguration{}
 
-	kubeletDataVolumeSize, err := getKubeletDataVolumeSize(worker)
+	var err error
+	bootstrapConfiguration.KubeletDataVolumeSize, err = getKubeletDataVolumeSize(worker)
 	if err != nil {
 		return nil, fmt.Errorf("failed getting kubelet data volume size: %w", err)
 	}
-	bootstrapConfiguration.KubeletDataVolumeSize = kubeletDataVolumeSize
 
 	return bootstrapConfiguration, nil
 }

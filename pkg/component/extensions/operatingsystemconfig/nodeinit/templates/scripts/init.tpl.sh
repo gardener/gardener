@@ -17,4 +17,4 @@ cp -f "$tmp_dir/gardener-node-agent" "{{ .binaryDirectory }}"
 chmod +x "{{ .binaryDirectory }}/gardener-node-agent"
 
 echo "> Bootstrap gardener-node-agent"
-"{{ .binaryDirectory }}/gardener-node-agent" bootstrap --config="{{ .configFile }}"
+exec "{{ .binaryDirectory }}/gardener-node-agent" bootstrap --config="{{ .configFile }}"

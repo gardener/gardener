@@ -65,7 +65,7 @@ var _ = Describe("Component", func() {
 					Enable: pointer.Bool(true),
 					Content: pointer.String(`[Unit]
 Description=Gardener Node Agent
-After=network.target
+After=network-online.target
 
 [Service]
 LimitMEMLOCK=infinity
@@ -94,7 +94,7 @@ WantedBy=multi-user.target`),
 		It("should return the expected result", func() {
 			Expect(UnitContent()).To(Equal(`[Unit]
 Description=Gardener Node Agent
-After=network.target
+After=network-online.target
 
 [Service]
 LimitMEMLOCK=infinity
@@ -136,7 +136,7 @@ WantedBy=multi-user.target`))
 			Expect(Files(config, apiServerURL, caBundle, tokenFile)).To(ConsistOf(
 				extensionsv1alpha1.File{
 					Path:        "/var/lib/gardener-node-agent/config.yaml",
-					Permissions: pointer.Int32(0644),
+					Permissions: pointer.Int32(0600),
 					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: nodeagent.config.gardener.cloud/v1alpha1
 clientConnection:
   acceptContentTypes: ""
@@ -158,7 +158,7 @@ server: {}
 				},
 				extensionsv1alpha1.File{
 					Path:        "/var/lib/gardener-node-agent/credentials/kubeconfig",
-					Permissions: pointer.Int32(0644),
+					Permissions: pointer.Int32(0600),
 					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
 clusters:
 - cluster:
