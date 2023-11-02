@@ -21,3 +21,9 @@ In practice, the implementation of many extension controllers (for example, the 
 ### Extension Controllers Not Based on Generic Actuators
 
 The implementation of some extension controllers (for example, the infrastructure controllers in all provider extensions) are not based on a generic `Actuator` implementation. Such extension controllers must always provide a proper implementation of the `ForceDelete` method according to the above guidelines; see the [AWS infrastructure controller](https://github.com/gardener/gardener-extension-provider-aws/tree/master/pkg/controller/infrastructure) as an example. In practice, this might result in code duplication between the different extensions, since the `ForceDelete` code is usually not OS-specific.
+
+### Some General Implementation Examples
+- If the extension deploys only resources in the shoot cluster not backed by infrastructure in third-party systems, then performing the regular deletion code (`actuator.Delete`) will suffice in the majority of cases. (e.g - https://github.com/gardener/gardener-extension-shoot-networking-filter/blob/1d95a483d803874e8aa3b1de89431e221a7d574e/pkg/controller/lifecycle/actuator.go#L175-L178)
+- If the extension deploys resources which are backed by infrastructure in third-party systems:
+  - If the resource is in the Seed cluster, the extension should remove the finalizers and delete the resource. This is needed especially if the resource is a custom resource since `gardenlet` will not be aware of this resource and cannot take action.
+  - If the resource is in the Shoot and if it's deployed by a `ManagedResource`, then `gardenlet` will take care to forcefully delete it in a later step of force-deletion. If the resource is not deployed via a `ManagedResource`, then it wouldn't block the deletion flow anyway since it is in the Shoot cluster. In both cases, the extension controller can ignore the resource and return `nil`.
