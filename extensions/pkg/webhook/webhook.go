@@ -75,8 +75,7 @@ type Args struct {
 // New creates a new Webhook with the given args.
 func New(mgr manager.Manager, args Args) (*Webhook, error) {
 	var (
-		objTypes   []Type
-		actionType string
+		objTypes []Type
 
 		logger  = log.Log.WithName(args.Name).WithValues("provider", args.Provider)
 		builder = NewBuilder(mgr, logger)
@@ -85,14 +84,17 @@ func New(mgr manager.Manager, args Args) (*Webhook, error) {
 	for val, objs := range args.Validators {
 		builder.WithValidator(val, objs...)
 		objTypes = append(objTypes, objs...)
-		if actionType != ActionMutating {
-			actionType = ActionValidating
-		}
 	}
 
 	for mut, objs := range args.Mutators {
 		builder.WithMutator(mut, objs...)
 		objTypes = append(objTypes, objs...)
+	}
+
+	// Action type is mutating as soon as one mutator is configured because the resulting webhook configuration
+	// must be of type `MutatingWebhookConfiguration`.
+	actionType := ActionValidating
+	if len(args.Mutators) > 0 {
 		actionType = ActionMutating
 	}
 

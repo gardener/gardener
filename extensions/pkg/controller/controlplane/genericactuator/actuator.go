@@ -246,7 +246,7 @@ func (a *actuator) reconcileControlPlane(
 		value := a.atomicShootWebhookConfig.Load()
 		webhookConfig, ok := value.(*webhook.Configs)
 		if !ok {
-			return false, fmt.Errorf("expected *admissionregistrationv1.MutatingWebhookConfiguration, got %T", value)
+			return false, fmt.Errorf("expected *webhook.Configs, got %T", value)
 		}
 
 		if err := extensionsshootwebhook.ReconcileWebhookConfig(ctx, a.client, cp.Namespace, a.webhookServerNamespace, a.providerName, ShootWebhooksResourceName, *webhookConfig, cluster); err != nil {
