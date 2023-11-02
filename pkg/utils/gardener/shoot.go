@@ -681,3 +681,18 @@ func ComputeTechnicalID(projectName string, shoot *gardencorev1beta1.Shoot) stri
 	// New clusters shall be created with the new technical id (double hyphens).
 	return fmt.Sprintf("%s-%s--%s", v1beta1constants.TechnicalIDPrefix, projectName, shoot.Name)
 }
+
+// GetShootConditionTypes returns all known shoot condition types.
+func GetShootConditionTypes(workerless bool) []gardencorev1beta1.ConditionType {
+	shootConditionTypes := []gardencorev1beta1.ConditionType{
+		gardencorev1beta1.ShootAPIServerAvailable,
+		gardencorev1beta1.ShootControlPlaneHealthy,
+		gardencorev1beta1.ShootObservabilityComponentsHealthy,
+	}
+
+	if !workerless {
+		shootConditionTypes = append(shootConditionTypes, gardencorev1beta1.ShootEveryNodeReady)
+	}
+
+	return append(shootConditionTypes, gardencorev1beta1.ShootSystemComponentsHealthy)
+}

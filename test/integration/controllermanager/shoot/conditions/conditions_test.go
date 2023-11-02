@@ -194,6 +194,7 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 				{Type: gardencorev1beta1.SeedExtensionsReady, Status: gardencorev1beta1.ConditionProgressing},
 				{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionProgressing},
 				{Type: gardencorev1beta1.SeedSystemComponentsHealthy, Status: gardencorev1beta1.ConditionProgressing},
+				{Type: gardencorev1beta1.ConditionType("custom"), Status: gardencorev1beta1.ConditionProgressing},
 			}
 
 			patch := client.StrategicMergeFrom(seed.DeepCopy())
@@ -210,6 +211,7 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 				ContainCondition(OfType(gardencorev1beta1.SeedExtensionsReady)),
 				ContainCondition(OfType(gardencorev1beta1.SeedGardenletReady)),
 				ContainCondition(OfType(gardencorev1beta1.SeedSystemComponentsHealthy)),
+				ContainCondition(OfType("custom")),
 			))
 
 			By("Check shoot conditions")
@@ -221,6 +223,31 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 				ContainCondition(OfType(gardencorev1beta1.SeedExtensionsReady)),
 				ContainCondition(OfType(gardencorev1beta1.SeedGardenletReady)),
 				ContainCondition(OfType(gardencorev1beta1.SeedSystemComponentsHealthy)),
+				ContainCondition(OfType("custom")),
+			))
+
+			By("Remove seed conditions")
+			patch = client.StrategicMergeFrom(seed.DeepCopy())
+			seed.Status.Conditions = []gardencorev1beta1.Condition{}
+			Expect(testClient.Status().Patch(ctx, seed, patch)).To(Succeed())
+
+			By("Wait until manager cache has observed seed with updated conditions")
+			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				updatedSeed := &gardencorev1beta1.Seed{}
+				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(seed), updatedSeed)).To(Succeed())
+				return updatedSeed.Status.Conditions
+			}).Should(BeEmpty())
+
+			By("Check shoot conditions")
+			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				return shoot.Status.Conditions
+			}).ShouldNot(And(
+				ContainCondition(OfType(gardencorev1beta1.SeedBackupBucketsReady)),
+				ContainCondition(OfType(gardencorev1beta1.SeedExtensionsReady)),
+				ContainCondition(OfType(gardencorev1beta1.SeedGardenletReady)),
+				ContainCondition(OfType(gardencorev1beta1.SeedSystemComponentsHealthy)),
+				ContainCondition(OfType("custom")),
 			))
 		})
 	})

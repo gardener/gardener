@@ -39,6 +39,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -348,18 +349,8 @@ func ShootReconciliationSuccessful(shoot *gardencorev1beta1.Shoot) (bool, string
 		return false, "no conditions and last operation present yet"
 	}
 
-	shootConditions := sets.New(
-		gardencorev1beta1.ShootAPIServerAvailable,
-		gardencorev1beta1.ShootControlPlaneHealthy,
-		gardencorev1beta1.ShootObservabilityComponentsHealthy,
-		gardencorev1beta1.ShootSystemComponentsHealthy,
-	)
-
-	if !v1beta1helper.IsWorkerless(shoot) {
-		shootConditions.Insert(
-			gardencorev1beta1.ShootEveryNodeReady,
-		)
-	}
+	workerlessShoot := v1beta1helper.IsWorkerless(shoot)
+	shootConditions := sets.New(gardenerutils.GetShootConditionTypes(workerlessShoot)...)
 
 	for _, condition := range shoot.Status.Conditions {
 		if condition.Status != gardencorev1beta1.ConditionTrue {

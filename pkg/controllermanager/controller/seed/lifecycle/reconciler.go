@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -173,21 +174,14 @@ func setShootStatusToUnknown(ctx context.Context, clock clock.Clock, c client.St
 		reason = "StatusUnknown"
 		msg    = "Gardenlet stopped sending heartbeats."
 
-		conditions = map[gardencorev1beta1.ConditionType]gardencorev1beta1.Condition{
-			gardencorev1beta1.ShootAPIServerAvailable:             {},
-			gardencorev1beta1.ShootControlPlaneHealthy:            {},
-			gardencorev1beta1.ShootObservabilityComponentsHealthy: {},
-			gardencorev1beta1.ShootEveryNodeReady:                 {},
-			gardencorev1beta1.ShootSystemComponentsHealthy:        {},
-		}
-
+		conditions  = make(map[gardencorev1beta1.ConditionType]gardencorev1beta1.Condition)
 		constraints = map[gardencorev1beta1.ConditionType]gardencorev1beta1.Condition{
 			gardencorev1beta1.ShootHibernationPossible:               {},
 			gardencorev1beta1.ShootMaintenancePreconditionsSatisfied: {},
 		}
 	)
 
-	for conditionType := range conditions {
+	for _, conditionType := range gardenerutils.GetShootConditionTypes(false) {
 		c := v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Conditions, conditionType)
 		c = v1beta1helper.UpdatedConditionWithClock(clock, c, gardencorev1beta1.ConditionUnknown, reason, msg)
 		conditions[conditionType] = c
