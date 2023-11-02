@@ -53,11 +53,7 @@ spec:
     dependencyWatchdog:
       weeder:
         enabled: true # crashlooping pods will be restarted once their dependants become ready
-      endpoint: # deprecated
-        enabled: true # crashlooping pods will be restarted once their dependants become ready
       prober:
-        enabled: true # shoot's kube-controller-managers get scaled down when the kube-apiserver is not reachable via external DNS
-      probe: # deprecated
         enabled: true # shoot's kube-controller-managers get scaled down when the kube-apiserver is not reachable via external DNS
   # excessCapacityReservation:
   #  enabled: true # optional: automatically assumed 'true' if not set and `configs` are specified.
