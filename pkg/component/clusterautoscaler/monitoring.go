@@ -30,6 +30,28 @@ const (
 	monitoringMetricProcessMaxFds  = "process_max_fds"
 	monitoringMetricProcessOpenFds = "process_open_fds"
 
+	monitoringMetricClusterAutoscalerClusterSafeToAutoscale           = "cluster_autoscaler_cluster_safe_to_autoscale"
+	monitoringMetricClusterAutoscalerNodesCount                       = "cluster_autoscaler_nodes_count"
+	monitoringMetricClusterAutoscalerUnschedulablePodsCount           = "cluster_autoscaler_unschedulable_pods_count"
+	monitoringMetricClusterAutoscalerNodeGroupsCount                  = "cluster_autoscaler_node_groups_count"
+	monitoringMetricClusterAutoscalerMaxNodesCount                    = "cluster_autoscaler_max_nodes_count"
+	monitoringMetricClusterAutoscalerClusterCpuCurrentCores           = "cluster_autoscaler_cluster_cpu_current_cores"
+	monitoringMetricClusterAutoscalerCpuLimitsCores                   = "cluster_autoscaler_cpu_limits_cores"
+	monitoringMetricClusterAutoscalerClusterMemoryCurrentBytes        = "cluster_autoscaler_cluster_memory_current_bytes"
+	monitoringMetricClusterAutoscalerMemoryLimitsBytes                = "cluster_autoscaler_memory_limits_bytes"
+	monitoringMetricClusterAutoscalerLastActivity                     = "cluster_autoscaler_last_activity"
+	monitoringMetricClusterAutoscalerFunctionDurationSeconds          = "cluster_autoscaler_function_duration_seconds"
+	monitoringMetricClusterAutoscalerErrorsTotal                      = "cluster_autoscaler_errors_total"
+	monitoringMetricClusterAutoscalerScaledUpNodesTotal               = "cluster_autoscaler_scaled_up_nodes_total"
+	monitoringMetricClusterAutoscalerScaledDownNodesTotal             = "cluster_autoscaler_scaled_down_nodes_total"
+	monitoringMetricClusterAutoscalerScaledUpGpuNodesTotal            = "cluster_autoscaler_scaled_up_gpu_nodes_total"
+	monitoringMetricClusterAutoscalerScaledDownGpuNodesTotal          = "cluster_autoscaler_scaled_down_gpu_nodes_total"
+	monitoringMetricClusterAutoscalerFailedScaleUpsTotal              = "cluster_autoscaler_failed_scale_ups_total"
+	monitoringMetricClusterAutoscalerEvictedPodsTotal                 = "cluster_autoscaler_evicted_pods_total"
+	monitoringMetricClusterAutoscalerUnneededNodesCount               = "cluster_autoscaler_unneeded_nodes_count"
+	monitoringMetricClusterAutoscalerOldUnregisteredNodesRemovedCount = "cluster_autoscaler_old_unregistered_nodes_removed_count"
+	monitoringMetricClusterAutoscalerSkippedScaleEventsCount          = "cluster_autoscaler_skipped_scale_events_count"
+
 	monitoringAlertingRules = `groups:
 - name: cluster-autoscaler.rules
   rules:
@@ -50,6 +72,27 @@ var (
 	monitoringAllowedMetrics = []string{
 		monitoringMetricProcessMaxFds,
 		monitoringMetricProcessOpenFds,
+		monitoringMetricClusterAutoscalerClusterSafeToAutoscale,
+		monitoringMetricClusterAutoscalerNodesCount,
+		monitoringMetricClusterAutoscalerUnschedulablePodsCount,
+		monitoringMetricClusterAutoscalerNodeGroupsCount,
+		monitoringMetricClusterAutoscalerMaxNodesCount,
+		monitoringMetricClusterAutoscalerClusterCpuCurrentCores,
+		monitoringMetricClusterAutoscalerCpuLimitsCores,
+		monitoringMetricClusterAutoscalerClusterMemoryCurrentBytes,
+		monitoringMetricClusterAutoscalerMemoryLimitsBytes,
+		monitoringMetricClusterAutoscalerLastActivity,
+		monitoringMetricClusterAutoscalerFunctionDurationSeconds,
+		monitoringMetricClusterAutoscalerErrorsTotal,
+		monitoringMetricClusterAutoscalerScaledUpNodesTotal,
+		monitoringMetricClusterAutoscalerScaledDownNodesTotal,
+		monitoringMetricClusterAutoscalerScaledUpGpuNodesTotal,
+		monitoringMetricClusterAutoscalerScaledDownGpuNodesTotal,
+		monitoringMetricClusterAutoscalerFailedScaleUpsTotal,
+		monitoringMetricClusterAutoscalerEvictedPodsTotal,
+		monitoringMetricClusterAutoscalerUnneededNodesCount,
+		monitoringMetricClusterAutoscalerOldUnregisteredNodesRemovedCount,
+		monitoringMetricClusterAutoscalerSkippedScaleEventsCount,
 	}
 
 	monitoringScrapeConfigTmpl = `job_name: ` + monitoringPrometheusJobName + `
