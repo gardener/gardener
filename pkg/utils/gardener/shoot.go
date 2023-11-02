@@ -688,12 +688,11 @@ func GetShootConditionTypes(workerless bool) []gardencorev1beta1.ConditionType {
 		gardencorev1beta1.ShootAPIServerAvailable,
 		gardencorev1beta1.ShootControlPlaneHealthy,
 		gardencorev1beta1.ShootObservabilityComponentsHealthy,
-		gardencorev1beta1.ShootSystemComponentsHealthy,
 	}
 
 	if !workerless {
 		shootConditionTypes = append(shootConditionTypes, gardencorev1beta1.ShootEveryNodeReady)
 	}
 
-	return shootConditionTypes
+	return append(shootConditionTypes, gardencorev1beta1.ShootSystemComponentsHealthy)
 }
