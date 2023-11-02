@@ -89,7 +89,6 @@ if [[ -d "$repo_root_dir/charts/" ]]; then
       REPOSITORY=${imageAndTag[0]}
       TAG=${imageAndTag[1]}
 
-      gardener="eu.gcr.io/gardener-project/gardener"
       ${ADD_DEPENDENCIES_CMD} --container-image-dependencies "{\"name\": \"${NAME}\", \"image_reference\": \"${REPOSITORY}:${TAG}\", \"version\": \"$TAG\"}"
     done < <(echo "$outputFile")
   done
