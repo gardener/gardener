@@ -91,7 +91,13 @@ func SetDefaults_SeedNetworks(obj *SeedNetworks) {
 }
 
 // SetDefaults_SeedSettingDependencyWatchdog sets defaults for SeedSettingDependencyWatchdog objects.
-func SetDefaults_SeedSettingDependencyWatchdog(_ *SeedSettingDependencyWatchdog) {
+func SetDefaults_SeedSettingDependencyWatchdog(obj *SeedSettingDependencyWatchdog) {
+	if obj.Weeder == nil {
+		obj.Weeder = &SeedSettingDependencyWatchdogWeeder{Enabled: true}
+	}
+	if obj.Prober == nil {
+		obj.Prober = &SeedSettingDependencyWatchdogProber{Enabled: true}
+	}
 }
 
 // SetDefaults_Shoot sets default values for Shoot objects.

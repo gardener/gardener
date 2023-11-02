@@ -49,7 +49,6 @@ func (s Strategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	seed := obj.(*core.Seed)
 
 	seed.Generation = 1
-	syncDependencyWatchdogSettings(seed)
 	seed.Status = core.SeedStatus{}
 }
 
@@ -60,7 +59,6 @@ func (s Strategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 func (s Strategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	newSeed := obj.(*core.Seed)
 	oldSeed := old.(*core.Seed)
-	syncDependencyWatchdogSettings(newSeed)
 	newSeed.Status = oldSeed.Status
 
 	if mustIncreaseGeneration(oldSeed, newSeed) {
@@ -93,38 +91,6 @@ func mustIncreaseGeneration(oldSeed, newSeed *core.Seed) bool {
 	}
 
 	return false
-}
-
-func syncDependencyWatchdogSettings(seed *core.Seed) {
-	if seed.Spec.Settings == nil || seed.Spec.Settings.DependencyWatchdog == nil {
-		return
-	}
-	// keeping the field `weeder` and `endpoint` in sync
-	// TODO(himanshu-kun): Once the deprecated `Endpoint` / `Probe` fields are removed from the API, move the defaulting code back to `pkg/apis/core/*/defaults.go`.
-	// Case 1: If weeder is specified, endpoint isn't -> set endpoint=weeder
-	// Case 2: If weeder isn't specified, endpoint is -> make weeder=endpoint
-	// Case 3: If both are specified, give preference to weeder field -> set endpoint=weeder
-	// Case 4: If both not specified, default weeder.enabled to true
-	if seed.Spec.Settings.DependencyWatchdog.Weeder == nil {
-		seed.Spec.Settings.DependencyWatchdog.Weeder = &core.SeedSettingDependencyWatchdogWeeder{Enabled: true}
-		if seed.Spec.Settings.DependencyWatchdog.Endpoint != nil {
-			seed.Spec.Settings.DependencyWatchdog.Weeder = &core.SeedSettingDependencyWatchdogWeeder{Enabled: seed.Spec.Settings.DependencyWatchdog.Endpoint.Enabled}
-		}
-	}
-	seed.Spec.Settings.DependencyWatchdog.Endpoint = &core.SeedSettingDependencyWatchdogEndpoint{Enabled: seed.Spec.Settings.DependencyWatchdog.Weeder.Enabled}
-
-	// keeping the field `prober` and `probe` in sync
-	// Case 1: If prober is specified, probe isn't -> set probe=prober
-	// Case 2: If prober isn't specified, probe is -> make prober=probe
-	// Case 3: If both are specified, give preference to prober field -> set probe=prober
-	// Case 4: If both not specified, default prober.enabled to true
-	if seed.Spec.Settings.DependencyWatchdog.Prober == nil {
-		seed.Spec.Settings.DependencyWatchdog.Prober = &core.SeedSettingDependencyWatchdogProber{Enabled: true}
-		if seed.Spec.Settings.DependencyWatchdog.Probe != nil {
-			seed.Spec.Settings.DependencyWatchdog.Prober = &core.SeedSettingDependencyWatchdogProber{Enabled: seed.Spec.Settings.DependencyWatchdog.Probe.Enabled}
-		}
-	}
-	seed.Spec.Settings.DependencyWatchdog.Probe = &core.SeedSettingDependencyWatchdogProbe{Enabled: seed.Spec.Settings.DependencyWatchdog.Prober.Enabled}
 }
 
 // Validate validates the given object.
@@ -187,7 +153,6 @@ func (s StatusStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Obj
 	newSeed := obj.(*core.Seed)
 	oldSeed := old.(*core.Seed)
 	newSeed.Spec = oldSeed.Spec
-	syncDependencyWatchdogSettings(newSeed)
 }
 
 // ValidateUpdate validates the update on the given old and new object.
