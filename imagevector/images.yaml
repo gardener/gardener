@@ -174,7 +174,7 @@ images:
       teamname: 'gardener/monitoring-maintainers'
 - name: configmap-reloader
   sourceRepository: github.com/prometheus-operator/prometheus-operator
-  repository: ghcr.io/prometheus-operator/prometheus-config-reloader
+  repository: quay.io/prometheus-operator/prometheus-config-reloader
   tag: v0.67.1
   labels:
   - name: gardener.cloud/cve-categorisation
