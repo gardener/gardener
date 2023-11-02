@@ -26,6 +26,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/containerd/logrotate"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -84,12 +85,11 @@ func (containerd) Config(_ components.Context) ([]extensionsv1alpha1.Unit, []ext
 
 	logRotateUnits, logRotateFiles := logrotate.Config(pathLogRotateConfig, "/var/log/pods/*/*/*.log", ContainerRuntime)
 
-	return append([]extensionsv1alpha1.Unit{
-			{
-				Name:    UnitNameMonitor,
-				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-				Enable:  pointer.Bool(true),
-				Content: pointer.String(`[Unit]
+	monitorUnit := extensionsv1alpha1.Unit{
+		Name:    UnitNameMonitor,
+		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+		Enable:  pointer.Bool(true),
+		Content: pointer.String(`[Unit]
 Description=Containerd-monitor daemon
 After=` + UnitName + `
 [Install]
@@ -98,19 +98,25 @@ WantedBy=multi-user.target
 Restart=always
 EnvironmentFile=/etc/environment
 ExecStart=` + pathHealthMonitor),
+	}
+
+	monitorFile := extensionsv1alpha1.File{
+		Path:        pathHealthMonitor,
+		Permissions: pointer.Int32(0755),
+		Content: extensionsv1alpha1.FileContent{
+			Inline: &extensionsv1alpha1.FileContentInline{
+				Encoding: "b64",
+				Data:     utils.EncodeBase64(healthMonitorScript.Bytes()),
 			},
-		}, logRotateUnits...),
-		append([]extensionsv1alpha1.File{
-			{
-				Path:        pathHealthMonitor,
-				Permissions: pointer.Int32(0755),
-				Content: extensionsv1alpha1.FileContent{
-					Inline: &extensionsv1alpha1.FileContentInline{
-						Encoding: "b64",
-						Data:     utils.EncodeBase64(healthMonitorScript.Bytes()),
-					},
-				},
-			},
-		}, logRotateFiles...),
-		nil
+		},
+	}
+
+	var files []extensionsv1alpha1.File
+	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+		monitorUnit.Files = append(monitorUnit.Files, monitorFile)
+	} else {
+		files = append(logRotateFiles, monitorFile)
+	}
+
+	return append(logRotateUnits, monitorUnit), files, nil
 }
