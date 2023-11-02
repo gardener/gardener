@@ -236,7 +236,7 @@ var _ = Describe("Certificates tests", func() {
 			Expect(webhookOptions.Complete()).To(Succeed())
 			webhookConfig := webhookOptions.Completed()
 			webhookConfig.Clock = fakeClock
-			atomicShootWebhookConfig, err = webhookConfig.AddToManager(ctx, mgr)
+			atomicShootWebhookConfig, err = webhookConfig.AddToManager(ctx, mgr, nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			defaultServer, ok = mgr.GetWebhookServer().(*webhook.DefaultServer)
@@ -407,7 +407,7 @@ var _ = Describe("Certificates tests", func() {
 			Expect(webhookOptions.Complete()).To(Succeed())
 			webhookConfig := webhookOptions.Completed()
 			webhookConfig.Clock = fakeClock
-			atomicShootWebhookConfig, err = webhookConfig.AddToManager(ctx, mgr)
+			atomicShootWebhookConfig, err = webhookConfig.AddToManager(ctx, mgr, nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			defaultServer, ok = mgr.GetWebhookServer().(*webhook.DefaultServer)
@@ -451,7 +451,7 @@ var _ = Describe("Certificates tests", func() {
 				g.Expect(val.MutatingWebhookConfig.Webhooks[0].ClientConfig.CABundle).NotTo(BeEmpty())
 				g.Expect(val.ValidatingWebhookConfig).NotTo(BeNil())
 				g.Expect(val.ValidatingWebhookConfig.Webhooks[0].ClientConfig.CABundle).NotTo(BeEmpty())
-			})
+			}).Should(Succeed())
 		})
 
 		AfterEach(func() {
@@ -505,7 +505,7 @@ var _ = Describe("Certificates tests", func() {
 					g.Expect(getShootWebhookConfig(codec, shootWebhookConfig, shootNamespace.Name)).To(Succeed())
 					g.Expect(shootWebhookConfig.MutatingWebhookConfig.Webhooks[0].ClientConfig.CABundle).To(Equal(caBundle1))
 					g.Expect(shootWebhookConfig.ValidatingWebhookConfig.Webhooks[0].ClientConfig.CABundle).To(Equal(caBundle1))
-				})
+				}).Should(Succeed())
 
 				By("Read generated server certificate from disk")
 				Eventually(func(g Gomega) []byte {
@@ -537,7 +537,7 @@ var _ = Describe("Certificates tests", func() {
 					g.Expect(getShootWebhookConfig(codec, shootWebhookConfig, shootNamespace.Name)).To(Succeed())
 					g.Expect(shootWebhookConfig.MutatingWebhookConfig.Webhooks[0].ClientConfig.CABundle).To(Equal(caBundle2))
 					g.Expect(shootWebhookConfig.ValidatingWebhookConfig.Webhooks[0].ClientConfig.CABundle).To(Equal(caBundle2))
-				})
+				}).Should(Succeed())
 
 				caCert2 := strings.TrimPrefix(string(caBundle2), string(caBundle1))
 
@@ -570,7 +570,7 @@ var _ = Describe("Certificates tests", func() {
 					g.Expect(getShootWebhookConfig(codec, shootWebhookConfig, shootNamespace.Name)).To(Succeed())
 					g.Expect(shootWebhookConfig.MutatingWebhookConfig.Webhooks[0].ClientConfig.CABundle).To(Equal(caBundle3))
 					g.Expect(shootWebhookConfig.ValidatingWebhookConfig.Webhooks[0].ClientConfig.CABundle).To(Equal(caBundle3))
-				})
+				}).Should(Succeed())
 			})
 		})
 	})

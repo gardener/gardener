@@ -23,6 +23,7 @@ import (
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
@@ -234,7 +235,7 @@ type AddToManagerConfig struct {
 // AddToManager instantiates all webhooks of this configuration. If there are any webhooks, it creates a
 // webhook server, registers the webhooks and adds the server to the manager. Otherwise, it is a no-op.
 // It generates and registers the seed targeted webhooks via a MutatingWebhookConfiguration.
-func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manager) (*atomic.Value, error) {
+func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster cluster.Cluster) (*atomic.Value, error) {
 	if c.Clock == nil {
 		c.Clock = &clock.RealClock{}
 	}
@@ -329,6 +330,7 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 	if err := certificates.AddCertificateManagementToManager(
 		ctx,
 		mgr,
+		sourceCluster,
 		c.Clock,
 		seedWebhookConfigs,
 		&shootWebhookConfigs,

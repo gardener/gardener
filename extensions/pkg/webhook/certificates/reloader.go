@@ -24,6 +24,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -57,8 +58,11 @@ type reloader struct {
 
 // AddToManager does an initial retrieval of an existing webhook server secret and then adds reloader to the given
 // manager in order to periodically reload the secret from the cluster.
-func (r *reloader) AddToManager(ctx context.Context, mgr manager.Manager) error {
+func (r *reloader) AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster cluster.Cluster) error {
 	r.reader = mgr.GetClient()
+	if sourceCluster != nil {
+		r.reader = sourceCluster.GetClient()
+	}
 
 	webhookServer := mgr.GetWebhookServer()
 	defaultServer, ok := webhookServer.(*webhook.DefaultServer)
@@ -68,7 +72,12 @@ func (r *reloader) AddToManager(ctx context.Context, mgr manager.Manager) error 
 	r.certDir = defaultServer.Options.CertDir
 
 	// initial retrieval of server cert, needed in order for the webhook server to start successfully
-	found, _, serverCert, serverKey, err := r.getServerCert(ctx, mgr.GetAPIReader())
+	apiReader := mgr.GetAPIReader()
+	if sourceCluster != nil {
+		apiReader = sourceCluster.GetAPIReader()
+	}
+
+	found, _, serverCert, serverKey, err := r.getServerCert(ctx, apiReader)
 	if err != nil {
 		return err
 	}

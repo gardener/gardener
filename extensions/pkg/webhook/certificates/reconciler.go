@@ -27,11 +27,11 @@ import (
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	extensionsshootwebhook "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
@@ -79,23 +79,26 @@ type reconciler struct {
 	// URL is the URL that is used to register the webhooks in Kubernetes.
 	URL string
 
-	serverPort int32
-	client     client.Client
+	// client is the client used to update webhook configuration objects.
+	client client.Client
+	// sourceClient is the client used to manage certificate secrets.
+	sourceClient client.Client
 }
 
-// AddToManager generates webhook CA and server cert if it doesn't exist on the cluster yet. Then it adds reconciler to
-// the given manager in order to periodically regenerate the webhook secrets.
-func (r *reconciler) AddToManager(ctx context.Context, mgr manager.Manager) error {
-	webhookServer := mgr.GetWebhookServer()
-	defaultServer, ok := webhookServer.(*webhook.DefaultServer)
-	if !ok {
-		return fmt.Errorf("expected *webhook.DefaultServer, got %T", webhookServer)
+// AddToManager generates webhook CA and server cert if it doesn't exist on the cluster yet.
+// Then it adds the reconciler to the given manager in order to periodically regenerate the webhook secrets.
+// An 'sourceCluster' can be optionally passed to let the certificate secrets be managed in a different cluster.
+func (r *reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster cluster.Cluster) error {
+	r.client = mgr.GetClient()
+	r.sourceClient = mgr.GetClient()
+	apiReader := mgr.GetAPIReader()
+
+	if sourceCluster != nil {
+		r.sourceClient = sourceCluster.GetClient()
+		apiReader = sourceCluster.GetClient()
 	}
 
-	r.serverPort = int32(defaultServer.Options.Port)
-	r.client = mgr.GetClient()
-
-	present, err := isWebhookServerSecretPresent(ctx, mgr.GetAPIReader(), mgr.GetScheme(), r.ServerSecretName, r.Namespace, r.Identity)
+	present, err := isWebhookServerSecretPresent(ctx, apiReader, mgr.GetScheme(), r.ServerSecretName, r.Namespace, r.Identity)
 	if err != nil {
 		return err
 	}
@@ -104,10 +107,15 @@ func (r *reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	// otherwise the webhook server will not be able to start (which is a non-leader election runnable and is therefore
 	// started before this controller)
 	if !present {
+		restConfig := mgr.GetConfig()
+		if sourceCluster != nil {
+			restConfig = sourceCluster.GetConfig()
+		}
+
 		// cache is not started yet, we need an uncached client for the initial setup
-		uncachedClient, err := client.New(mgr.GetConfig(), client.Options{
+		uncachedClient, err := client.New(restConfig, client.Options{
 			Cache: &client.CacheOptions{
-				Reader: mgr.GetAPIReader(),
+				Reader: apiReader,
 			},
 		})
 		if err != nil {
@@ -146,7 +154,7 @@ func (r *reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 func (r *reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
-	sm, err := r.newSecretsManager(ctx, log, r.client)
+	sm, err := r.newSecretsManager(ctx, log, r.sourceClient)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to create new SecretsManager: %w", err)
 	}

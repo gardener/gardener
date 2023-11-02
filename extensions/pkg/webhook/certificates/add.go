@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"k8s.io/utils/clock"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/extensions/pkg/webhook"
@@ -35,6 +36,7 @@ var DefaultSyncPeriod = 5 * time.Minute
 func AddCertificateManagementToManager(
 	ctx context.Context,
 	mgr manager.Manager,
+	sourceCluster cluster.Cluster,
 	clock clock.Clock,
 	sourceWebhookConfigs webhook.Configs,
 	shootWebhookConfigs *webhook.Configs,
@@ -69,7 +71,7 @@ func AddCertificateManagementToManager(
 		ShootNamespaceSelector:          shootNamespaceSelector,
 		Mode:                            mode,
 		URL:                             url,
-	}).AddToManager(ctx, mgr); err != nil {
+	}).AddToManager(ctx, mgr, sourceCluster); err != nil {
 		return fmt.Errorf("failed to add webhook server certificate reconciler: %w", err)
 	}
 
@@ -80,7 +82,7 @@ func AddCertificateManagementToManager(
 		ServerSecretName: serverSecretName,
 		Namespace:        namespace,
 		Identity:         identity,
-	}).AddToManager(ctx, mgr); err != nil {
+	}).AddToManager(ctx, mgr, sourceCluster); err != nil {
 		return fmt.Errorf("failed to add webhook server certificate reloader: %w", err)
 	}
 

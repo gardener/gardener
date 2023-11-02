@@ -167,6 +167,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.OperatorConfiguration
 	if err := certificates.AddCertificateManagementToManager(
 		ctx,
 		mgr,
+		nil,
 		clock.RealClock{},
 		extensionswebhook.Configs{
 			MutatingWebhookConfig:   mutatingWebhookConfiguration,
