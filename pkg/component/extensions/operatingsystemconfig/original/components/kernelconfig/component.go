@@ -26,6 +26,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
+	"github.com/gardener/gardener/pkg/features"
 )
 
 type component struct{}
@@ -74,26 +75,31 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		fileContent += fmt.Sprintf("%s = %s\n", key, newData[key])
 	}
 
-	return []extensionsv1alpha1.Unit{
-			{
-				// it needs to be reloaded, because the /etc/sysctl.d/ files are not present, when this is started for a first time
-				Name:    "systemd-sysctl.service",
-				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandRestart),
-				Enable:  pointer.Bool(true),
+	systemdSysctlUnit := extensionsv1alpha1.Unit{
+		// it needs to be reloaded, because the /etc/sysctl.d/ files are not present, when this is started for a first time
+		Name:    "systemd-sysctl.service",
+		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandRestart),
+		Enable:  pointer.Bool(true),
+	}
+
+	kernelSettingsFile := extensionsv1alpha1.File{
+		Path:        v1beta1constants.OperatingSystemConfigFilePathKernelSettings,
+		Permissions: pointer.Int32(0644),
+		Content: extensionsv1alpha1.FileContent{
+			Inline: &extensionsv1alpha1.FileContentInline{
+				Data: fileContent,
 			},
 		},
-		[]extensionsv1alpha1.File{
-			{
-				Path:        v1beta1constants.OperatingSystemConfigFilePathKernelSettings,
-				Permissions: pointer.Int32(0644),
-				Content: extensionsv1alpha1.FileContent{
-					Inline: &extensionsv1alpha1.FileContentInline{
-						Data: fileContent,
-					},
-				},
-			},
-		},
-		nil
+	}
+
+	var files []extensionsv1alpha1.File
+	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+		systemdSysctlUnit.Files = append(systemdSysctlUnit.Files, kernelSettingsFile)
+	} else {
+		files = append(files, kernelSettingsFile)
+	}
+
+	return []extensionsv1alpha1.Unit{systemdSysctlUnit}, files, nil
 }
 
 // Do not change the encoding here because extensions might modify it!
