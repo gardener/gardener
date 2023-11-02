@@ -161,8 +161,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedProvider":                               schema_pkg_apis_core_v1beta1_SeedProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector":                               schema_pkg_apis_core_v1beta1_SeedSelector(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdog":              schema_pkg_apis_core_v1beta1_SeedSettingDependencyWatchdog(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdogEndpoint":      schema_pkg_apis_core_v1beta1_SeedSettingDependencyWatchdogEndpoint(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdogProbe":         schema_pkg_apis_core_v1beta1_SeedSettingDependencyWatchdogProbe(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdogProber":        schema_pkg_apis_core_v1beta1_SeedSettingDependencyWatchdogProber(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdogWeeder":        schema_pkg_apis_core_v1beta1_SeedSettingDependencyWatchdogWeeder(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservation":       schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservation(ref),
@@ -6512,18 +6510,6 @@ func schema_pkg_apis_core_v1beta1_SeedSettingDependencyWatchdog(ref common.Refer
 				Description: "SeedSettingDependencyWatchdog controls the dependency-watchdog settings for the seed.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"endpoint": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Endpoint controls the endpoint settings for the dependency-watchdog for the seed. Deprecated: This field is deprecated and will be removed in a future version of Gardener. Use `Weeder` instead.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdogEndpoint"),
-						},
-					},
-					"probe": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Probe controls the probe settings for the dependency-watchdog for the seed. Deprecated: This field is deprecated and will be removed in a future version of Gardener. Use `Prober` instead.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdogProbe"),
-						},
-					},
 					"weeder": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Weeder controls the weeder settings for the dependency-watchdog for the seed.",
@@ -6540,51 +6526,7 @@ func schema_pkg_apis_core_v1beta1_SeedSettingDependencyWatchdog(ref common.Refer
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdogEndpoint", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdogProbe", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdogProber", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdogWeeder"},
-	}
-}
-
-func schema_pkg_apis_core_v1beta1_SeedSettingDependencyWatchdogEndpoint(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "SeedSettingDependencyWatchdogEndpoint controls the endpoint settings for the dependency-watchdog for the seed. Deprecated: This type is deprecated and will be removed in a future version of Gardener. Use type `SeedSettingDependencyWatchdogWeeder` instead.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"enabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Enabled controls whether the endpoint controller of the dependency-watchdog should be enabled. This controller helps to alleviate the delay where control plane components remain unavailable by finding the respective pods in CrashLoopBackoff status and restarting them once their dependants become ready and available again.",
-							Default:     false,
-							Type:        []string{"boolean"},
-							Format:      "",
-						},
-					},
-				},
-				Required: []string{"enabled"},
-			},
-		},
-	}
-}
-
-func schema_pkg_apis_core_v1beta1_SeedSettingDependencyWatchdogProbe(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "SeedSettingDependencyWatchdogProbe controls the probe settings for the dependency-watchdog for the seed. Deprecated: This type is deprecated and will be removed in a future version of Gardener. Use type `SeedSettingDependencyWatchdogProber` instead.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"enabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Enabled controls whether the probe controller of the dependency-watchdog should be enabled. This controller scales down the kube-controller-manager, machine-controller-manager and cluster-autoscaler of shoot clusters in case their respective kube-apiserver is not reachable via its external ingress in order to avoid melt-down situations.",
-							Default:     false,
-							Type:        []string{"boolean"},
-							Format:      "",
-						},
-					},
-				},
-				Required: []string{"enabled"},
-			},
-		},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdogProber", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdogWeeder"},
 	}
 }
 

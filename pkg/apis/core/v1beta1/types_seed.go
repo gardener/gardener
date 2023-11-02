@@ -340,38 +340,17 @@ type SeedSettingVerticalPodAutoscaler struct {
 
 // SeedSettingDependencyWatchdog controls the dependency-watchdog settings for the seed.
 type SeedSettingDependencyWatchdog struct {
-	// Endpoint controls the endpoint settings for the dependency-watchdog for the seed.
-	// Deprecated: This field is deprecated and will be removed in a future version of Gardener. Use `Weeder` instead.
-	// +optional
-	Endpoint *SeedSettingDependencyWatchdogEndpoint `json:"endpoint,omitempty" protobuf:"bytes,1,opt,name=endpoint"`
-	// Probe controls the probe settings for the dependency-watchdog for the seed.
-	// Deprecated: This field is deprecated and will be removed in a future version of Gardener. Use `Prober` instead.
-	// +optional
-	Probe *SeedSettingDependencyWatchdogProbe `json:"probe,omitempty" protobuf:"bytes,2,opt,name=probe"`
+	// Endpoint is tombstoned to show why 1 is reserved protobuf tag.
+	// Endpoint *SeedSettingDependencyWatchdogEndpoint `json:"endpoint,omitempty" protobuf:"bytes,1,opt,name=endpoint"`
+	// Probe is tombstoned to show why 2 is reserved protobuf tag.
+	// Probe *SeedSettingDependencyWatchdogProbe `json:"probe,omitempty" protobuf:"bytes,2,opt,name=probe"`
+
 	// Weeder controls the weeder settings for the dependency-watchdog for the seed.
 	// +optional
 	Weeder *SeedSettingDependencyWatchdogWeeder `json:"weeder,omitempty" protobuf:"bytes,3,opt,name=weeder"`
 	// Prober controls the prober settings for the dependency-watchdog for the seed.
 	// +optional
 	Prober *SeedSettingDependencyWatchdogProber `json:"prober,omitempty" protobuf:"bytes,4,opt,name=prober"`
-}
-
-// SeedSettingDependencyWatchdogEndpoint controls the endpoint settings for the dependency-watchdog for the seed.
-// Deprecated: This type is deprecated and will be removed in a future version of Gardener. Use type `SeedSettingDependencyWatchdogWeeder` instead.
-type SeedSettingDependencyWatchdogEndpoint struct {
-	// Enabled controls whether the endpoint controller of the dependency-watchdog should be enabled. This controller
-	// helps to alleviate the delay where control plane components remain unavailable by finding the respective pods in
-	// CrashLoopBackoff status and restarting them once their dependants become ready and available again.
-	Enabled bool `json:"enabled" protobuf:"bytes,1,opt,name=enabled"`
-}
-
-// SeedSettingDependencyWatchdogProbe controls the probe settings for the dependency-watchdog for the seed.
-// Deprecated: This type is deprecated and will be removed in a future version of Gardener. Use type `SeedSettingDependencyWatchdogProber` instead.
-type SeedSettingDependencyWatchdogProbe struct {
-	// Enabled controls whether the probe controller of the dependency-watchdog should be enabled. This controller
-	// scales down the kube-controller-manager, machine-controller-manager and cluster-autoscaler of shoot clusters in case their respective kube-apiserver is not
-	// reachable via its external ingress in order to avoid melt-down situations.
-	Enabled bool `json:"enabled" protobuf:"bytes,1,opt,name=enabled"`
 }
 
 // SeedSettingDependencyWatchdogWeeder controls the weeder settings for the dependency-watchdog for the seed.
