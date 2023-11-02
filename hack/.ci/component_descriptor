@@ -4,7 +4,7 @@
 #
 # COMPONENT_PREFIXES: Set the image prefix that should be used to
 #                     determine if an image is defined by another component.
-#                     Defaults to "eu.gcr.io/gardener-project/gardener"
+#                     Defaults to "eu.gcr.io/gardener-project/gardener,europe-docker.pkg.dev/gardener-project"
 #
 # GENERIC_DEPENDENCIES: Set images that are generic dependencies with no specific tag.
 #                       Defaults to "hyperkube,kube-apiserver,kube-controller-manager,kube-scheduler,kube-proxy"
@@ -58,7 +58,7 @@ fi
 if [[ ! -z "$image_vector_path" ]]; then
   # default environment variables
   if [[ -z "${COMPONENT_PREFIXES}" ]]; then
-    COMPONENT_PREFIXES="eu.gcr.io/gardener-project/gardener"
+    COMPONENT_PREFIXES="eu.gcr.io/gardener-project/gardener,europe-docker.pkg.dev/gardener-project"
   fi
   if [[ -z "${GENERIC_DEPENDENCIES}" ]]; then
     GENERIC_DEPENDENCIES="hyperkube,kube-apiserver,kube-controller-manager,kube-scheduler,kube-proxy"
