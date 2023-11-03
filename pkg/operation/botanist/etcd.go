@@ -109,17 +109,20 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 		}
 
 		var backupLeaderElection *config.ETCDBackupLeaderElection
+		var deltaSnapshotRetentionPeriod *metav1.Duration
 		if b.Config != nil && b.Config.ETCDConfig != nil {
 			backupLeaderElection = b.Config.ETCDConfig.BackupLeaderElection
+			deltaSnapshotRetentionPeriod = b.Config.ETCDConfig.DeltaSnapshotRetentionPeriod
 		}
 
 		b.Shoot.Components.ControlPlane.EtcdMain.SetBackupConfig(&etcd.BackupConfig{
-			Provider:             b.Seed.GetInfo().Spec.Backup.Provider,
-			SecretRefName:        v1beta1constants.BackupSecretName,
-			Prefix:               b.Shoot.BackupEntryName,
-			Container:            string(secret.Data[v1beta1constants.DataKeyBackupBucketName]),
-			FullSnapshotSchedule: snapshotSchedule,
-			LeaderElection:       backupLeaderElection,
+			Provider:                     b.Seed.GetInfo().Spec.Backup.Provider,
+			SecretRefName:                v1beta1constants.BackupSecretName,
+			Prefix:                       b.Shoot.BackupEntryName,
+			Container:                    string(secret.Data[v1beta1constants.DataKeyBackupBucketName]),
+			FullSnapshotSchedule:         snapshotSchedule,
+			LeaderElection:               backupLeaderElection,
+			DeltaSnapshotRetentionPeriod: deltaSnapshotRetentionPeriod,
 		})
 	}
 

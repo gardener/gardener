@@ -388,6 +388,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			e.etcd.Spec.Backup.FullSnapshotSchedule = e.computeFullSnapshotSchedule(existingEtcd)
 			e.etcd.Spec.Backup.DeltaSnapshotPeriod = &deltaSnapshotPeriod
 			e.etcd.Spec.Backup.DeltaSnapshotMemoryLimit = utils.QuantityPtr(resource.MustParse("100Mi"))
+			e.etcd.Spec.Backup.DeltaSnapshotRetentionPeriod = e.values.BackupConfig.DeltaSnapshotRetentionPeriod
 
 			if e.values.BackupConfig.LeaderElection != nil {
 				e.etcd.Spec.Backup.LeaderElection = &druidv1alpha1.LeaderElectionSpec{
@@ -836,7 +837,8 @@ type BackupConfig struct {
 	// FullSnapshotSchedule is a cron schedule that declares how frequent full snapshots shall be taken.
 	FullSnapshotSchedule string
 	// LeaderElection contains configuration for the leader election for the etcd backup-restore sidecar.
-	LeaderElection *gardenletconfig.ETCDBackupLeaderElection
+	LeaderElection               *gardenletconfig.ETCDBackupLeaderElection
+	DeltaSnapshotRetentionPeriod *metav1.Duration
 }
 
 // HVPAConfig contains information for configuring the HVPA object for the etcd.
