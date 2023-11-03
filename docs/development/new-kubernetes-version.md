@@ -77,6 +77,13 @@ There is a CI/CD job that runs periodically and releases a new `hyperkube` image
   - Add all added group versions to the `apiGroupVersionRanges` map and group version resources to the `apiGVRVersionRanges` map with `<new-version>` as `AddedInVersion` and no `RemovedInVersion`.
   - For any removed APIs, add `<new-version>` as `RemovedInVersion` to the already existing API in the corresponding map.
   - Flag any APIs that are required (APIs that must not be disabled in the `Shoot` spec) by setting the `Required` boolean variable to true for the API in the `apiGVRVersionRanges` map. If this API also should not be disabled for [Workerless Shoots](../usage/shoot_workerless.md), then set `RequiredForWorkerless` boolean variable also to true. If the API is required for both Shoot types, then both of these booleans need to be set to true. If the whole API Group is required, then mark it correspondingly in the `apiGroupVersionRanges` map.
+- Maintain the Kubernetes `kube-controller-manager` controllers for each API groups used in deploying required KCM controllers based on active APIs:
+  - The API groups are maintained in [this](https://github.com/gardener/gardener/blob/master/pkg/utils/kubernetes/controllers.go) file.
+  - To maintain this list for new Kubernetes versions, run `hack/compute-k8s-controllers.sh <old-version> <new-version>` (e.g. `hack/compute-k8s-controllers.sh 1.26 1.27`).
+  - If it complains that the path for the controller is not present in the map, check the release branch of the new kubernetes version and find the correct path for the missing/wrong controller. You cand do so by checking the file `cmd/kube-controller-manager/app/controllermanager.go` and where the controller is initialized from. As of now, there is no straightforward way to map each controller to its file, If this has improved, please enhance the script.
+  - If the paths are correct, It will present 2 lists of controllers: those added and those removed for each API group in `<new-version>` compared to `<old-version>`.
+  - Add all added controllers to the `APIGroupControllerMap` map and under the corresponding API group with `<new-version>` as `AddedInVersion` and no `RemovedInVersion`.
+  - For any removed controllers, add `<new-version>` as `RemovedInVersion` to the already existing controller in the corresponding API group map.
 - Maintain the `ServiceAccount` names for the controllers part of `kube-controller-manager`:
   - The names are maintained in [this](https://github.com/gardener/gardener/blob/master/pkg/component/shootsystem/shootsystem.go) file.
   - To maintain this list for new Kubernetes versions, run `hack/compare-k8s-controllers.sh <old-version> <new-version>` (e.g. `hack/compare-k8s-controllers.sh 1.26 1.27`).
