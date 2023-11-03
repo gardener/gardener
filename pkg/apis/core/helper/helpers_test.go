@@ -653,6 +653,38 @@ var _ = Describe("helper", func() {
 		previewVersion,
 	}
 
+	var machineImages = []core.MachineImage{
+		{
+			Name: "coreos",
+			Versions: []core.MachineImageVersion{
+				{
+					ExpirableVersion: core.ExpirableVersion{
+						Version: "0.0.2",
+					},
+				},
+				{
+					ExpirableVersion: core.ExpirableVersion{
+						Version: "0.0.3",
+					},
+				},
+			},
+		},
+	}
+
+	DescribeTable("#DetermineLatestMachineImageVersions",
+		func(versions []core.MachineImage, expectation map[string]core.MachineImageVersion, expectError bool) {
+			result, err := DetermineLatestMachineImageVersions(versions)
+			if expectError {
+				Expect(err).To(HaveOccurred())
+				return
+			}
+			Expect(result).To(Equal(expectation))
+		},
+
+		Entry("should return nil - empty machine image slice", nil, map[string]core.MachineImageVersion{}, false),
+		Entry("should determine latest expirable version", machineImages, map[string]core.MachineImageVersion{"coreos": {ExpirableVersion: core.ExpirableVersion{Version: "0.0.3"}}}, false),
+	)
+
 	DescribeTable("#DetermineLatestMachineImageVersion",
 		func(versions []core.MachineImageVersion, filterPreviewVersions bool, expectation core.MachineImageVersion, expectError bool) {
 			result, err := DetermineLatestMachineImageVersion(versions, filterPreviewVersions)

@@ -694,6 +694,32 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Provider.WorkersSettings).To(Equal(&WorkersSettings{SSHAccess: &SSHAccess{Enabled: false}}))
 		})
 
+		Describe("NginxIngress", func() {
+			It("should set the addon NginxIngress", func() {
+				v := corev1.ServiceExternalTrafficPolicyTypeCluster
+				obj.Spec.Addons = &Addons{
+					NginxIngress: &NginxIngress{},
+				}
+
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Addons.NginxIngress).To(Equal(&NginxIngress{ExternalTrafficPolicy: &v}))
+			})
+
+			It("should not set the addon NginxIngress if already set", func() {
+				v := corev1.ServiceExternalTrafficPolicyLocal
+				obj.Spec.Addons = &Addons{
+					NginxIngress: &NginxIngress{
+						ExternalTrafficPolicy: &v,
+					},
+				}
+
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Addons.NginxIngress).To(Equal(&NginxIngress{ExternalTrafficPolicy: &v}))
+			})
+		})
+
 		Describe("SystemComponents", func() {
 			It("should set the system components and coredns autoscaling fields for shoot with workers", func() {
 				obj.Spec.SystemComponents = nil
