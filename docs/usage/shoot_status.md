@@ -121,19 +121,23 @@ The Shoot status also contains information about the last occurred error(s) (if 
 
 ### Error Codes
 
-Known error codes are:
+Known error codes and their classification are:
 
-- `ERR_INFRA_UNAUTHENTICATED` - Indicates that the last error occurred due to the client request not being completed because it lacks valid authentication credentials for the requested resource. It is classified as a non-retryable error code.
-- `ERR_INFRA_UNAUTHORIZED` - Indicates that the last error occurred due to the server understanding the request but refusing to authorize it. It is classified as a non-retryable error code.
-- `ERR_INFRA_QUOTA_EXCEEDED` - Indicates that the last error occurred due to infrastructure quota limits. It is classified as a non-retryable error code.
-- `ERR_INFRA_RATE_LIMITS_EXCEEDED` - Indicates that the last error occurred due to exceeded infrastructure request rate limits.
-- `ERR_INFRA_DEPENDENCIES` - Indicates that the last error occurred due to dependent objects on the infrastructure level. It is classified as a non-retryable error code.
-- `ERR_RETRYABLE_INFRA_DEPENDENCIES` - Indicates that the last error occurred due to dependent objects on the infrastructure level, but the operation should be retried.
-- `ERR_INFRA_RESOURCES_DEPLETED` - Indicates that the last error occurred due to depleted resource in the infrastructure.
-- `ERR_CLEANUP_CLUSTER_RESOURCES` - Indicates that the last error occurred due to resources in the cluster that are stuck in deletion.
-- `ERR_CONFIGURATION_PROBLEM` - Indicates that the last error occurred due to a configuration problem. It is classified as a non-retryable error code.
-- `ERR_RETRYABLE_CONFIGURATION_PROBLEM` - Indicates that the last error occurred due to a retryable configuration problem. "Retryable" means that the occurred error is likely to be resolved in a ungraceful manner after given period of time.
-- `ERR_PROBLEMATIC_WEBHOOK` - Indicates that the last error occurred due to a webhook not following the [Kubernetes best practices](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#best-practices-and-warnings).
+| Error code                            | User error | Description                                                                                         |
+| ------------------------------------- | :--------: | --------------------------------------------------------------------------------------------------- |
+| `ERR_INFRA_UNAUTHENTICATED`           | true       | Indicates that the last error occurred due to the client request not being completed because it lacks valid authentication credentials for the requested resource. It is classified as a non-retryable error code. |
+| `ERR_INFRA_UNAUTHORIZED`              | true       | Indicates that the last error occurred due to the server understanding the request but refusing to authorize it. It is classified as a non-retryable error code. |
+| `ERR_INFRA_QUOTA_EXCEEDED`            | true       | Indicates that the last error occurred due to infrastructure quota limits. It is classified as a non-retryable error code. |
+| `ERR_INFRA_RATE_LIMITS_EXCEEDED`      | false      | Indicates that the last error occurred due to exceeded infrastructure request rate limits. |
+| `ERR_INFRA_DEPENDENCIES`              | true       | Indicates that the last error occurred due to dependent objects on the infrastructure level. It is classified as a non-retryable error code. |
+| `ERR_RETRYABLE_INFRA_DEPENDENCIES`    | false      | Indicates that the last error occurred due to dependent objects on the infrastructure level, but the operation should be retried. |
+| `ERR_INFRA_RESOURCES_DEPLETED`        | true       | Indicates that the last error occurred due to depleted resource in the infrastructure. |
+| `ERR_CLEANUP_CLUSTER_RESOURCES`       | true       | Indicates that the last error occurred due to resources in the cluster that are stuck in deletion. |
+| `ERR_CONFIGURATION_PROBLEM`           | true       | Indicates that the last error occurred due to a configuration problem. It is classified as a non-retryable error code. |
+| `ERR_RETRYABLE_CONFIGURATION_PROBLEM` | true       | Indicates that the last error occurred due to a retryable configuration problem. "Retryable" means that the occurred error is likely to be resolved in a ungraceful manner after given period of time. |
+| `ERR_PROBLEMATIC_WEBHOOK`             | true       | Indicates that the last error occurred due to a webhook not following the [Kubernetes best practices](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#best-practices-and-warnings). |
+
+**Please note:** Errors classified as `User error: true` do not require a Gardener operator to resolve but can be remediated by the user (e.g. by refreshing expired infrastructure credentials).
 
 ### Status Label
 
