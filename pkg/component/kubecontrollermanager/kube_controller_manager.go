@@ -35,6 +35,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -84,6 +85,8 @@ type Interface interface {
 	component.MonitoringComponent
 	// SetReplicaCount sets the replica count for the kube-controller-manager.
 	SetReplicaCount(replicas int32)
+	// SetRuntimeConfig sets the runtime config for the kube-controller-manager.
+	SetRuntimeConfig(runtimeConfig map[string]bool)
 	// WaitForControllerToBeActive checks whether kube-controller-manager has
 	// recently written to the Endpoint object holding the leader information. If yes, it is active.
 	WaitForControllerToBeActive(ctx context.Context) error
@@ -155,6 +158,8 @@ type Values struct {
 	ControllerWorkers ControllerWorkers
 	// ControllerSyncPeriods is used for configuring the sync periods for controllers.
 	ControllerSyncPeriods ControllerSyncPeriods
+	// RuntimeConfig contains information about enabled or disabled APIs.
+	RuntimeConfig map[string]bool
 }
 
 // ControllerWorkers is used for configuring the workers for controllers.
@@ -568,6 +573,9 @@ func (k *kubeControllerManager) Destroy(ctx context.Context) error {
 
 func (k *kubeControllerManager) SetShootClient(c client.Client) { k.shootClient = c }
 func (k *kubeControllerManager) SetReplicaCount(replicas int32) { k.values.Replicas = replicas }
+func (k *kubeControllerManager) SetRuntimeConfig(runtimeConfig map[string]bool) {
+	k.values.RuntimeConfig = runtimeConfig
+}
 
 func (k *kubeControllerManager) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: k.values.NamePrefix + "kube-controller-manager-vpa", Namespace: k.namespace}}
@@ -620,6 +628,9 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 			"--authorization-kubeconfig=" + gardenerutils.PathGenericKubeconfig,
 			"--kubeconfig=" + gardenerutils.PathGenericKubeconfig,
 		}
+
+		controllersToEnable  = sets.New("*", "bootstrapsigner", "tokencleaner")
+		controllersToDisable = sets.New[string]()
 	)
 
 	if versionutils.ConstraintK8sGreaterEqual127.Check(k.values.TargetVersion) {
@@ -637,7 +648,6 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		command = append(command,
 			"--allocate-node-cidrs=true",
 			"--attach-detach-reconcile-sync-period=1m0s",
-			"--controllers=*,bootstrapsigner,tokencleaner",
 			fmt.Sprintf("--cluster-cidr=%s", k.values.PodNetwork.String()),
 			fmt.Sprintf("--cluster-signing-kubelet-client-cert-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyCertificateCA),
 			fmt.Sprintf("--cluster-signing-kubelet-client-key-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyPrivateKeyCA),
@@ -666,33 +676,27 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 			fmt.Sprintf("--concurrent-statefulset-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.StatefulSet, defaultControllerWorkersStatefulSet)),
 		)
 	} else {
-		var controllers []string
-
-		if v := pointer.IntDeref(k.values.ControllerWorkers.Namespace, defaultControllerWorkersNamespace); v != 0 {
-			controllers = append(controllers, "namespace")
+		if v := pointer.IntDeref(k.values.ControllerWorkers.Namespace, defaultControllerWorkersNamespace); v == 0 {
+			controllersToDisable.Insert("namespace")
 		}
 
-		controllers = append(controllers, "serviceaccount")
-
-		if v := pointer.IntDeref(k.values.ControllerWorkers.ServiceAccountToken, defaultControllerWorkersServiceAccountToken); v != 0 {
-			controllers = append(controllers, "serviceaccount-token")
+		if v := pointer.IntDeref(k.values.ControllerWorkers.ServiceAccountToken, defaultControllerWorkersServiceAccountToken); v == 0 {
+			controllersToDisable.Insert("serviceaccount-token")
 		}
 
-		controllers = append(controllers,
-			"clusterrole-aggregation",
-			"garbagecollector",
-			"csrapproving",
-			"csrcleaner",
-			"csrsigning",
-			"bootstrapsigner",
-			"tokencleaner",
+		if v := pointer.IntDeref(k.values.ControllerWorkers.ResourceQuota, defaultControllerWorkersResourceQuota); v == 0 {
+			controllersToDisable.Insert("resourcequota")
+		}
+
+		controllersToDisable.Insert(
+			"nodeipam",
+			"nodelifecycle",
+			"cloud-node-lifecycle",
+			"attachdetach",
+			"persistentvolume-binder",
+			"persistentvolume-expander",
+			"ttl",
 		)
-
-		if v := pointer.IntDeref(k.values.ControllerWorkers.ResourceQuota, defaultControllerWorkersResourceQuota); v != 0 {
-			controllers = append(controllers, "resourcequota")
-		}
-
-		command = append(command, "--controllers="+strings.Join(controllers, ","))
 	}
 
 	command = append(command,
@@ -706,6 +710,26 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		fmt.Sprintf("--concurrent-gc-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.GarbageCollector, defaultControllerWorkersGarbageCollector)),
 		fmt.Sprintf("--concurrent-service-endpoint-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.ServiceEndpoint, defaultControllerWorkersServiceEndpoint)),
 	)
+
+	for api, enabled := range k.values.RuntimeConfig {
+		if enabled {
+			continue
+		}
+
+		if controllerVersionRange, present := kubernetesutils.APIGroupControllerMap[api]; present {
+			for controller, versionRange := range controllerVersionRange {
+				if contains, err := versionRange.Contains(k.values.TargetVersion.String()); err == nil && contains {
+					controllersToDisable.Insert(controller)
+				}
+			}
+		}
+	}
+
+	cmdControllers := "--controllers=" + strings.Join(sets.List(controllersToEnable.Difference(controllersToDisable)), ",")
+	if controllersToDisable.Len() > 0 {
+		cmdControllers += ",-" + strings.Join(sets.List(controllersToDisable), ",-")
+	}
+	command = append(command, cmdControllers)
 
 	if v := pointer.IntDeref(k.values.ControllerWorkers.Namespace, defaultControllerWorkersNamespace); v != 0 {
 		command = append(command, fmt.Sprintf("--concurrent-namespace-syncs=%d", v))

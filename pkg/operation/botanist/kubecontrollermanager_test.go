@@ -31,6 +31,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	mockkubeapiserver "github.com/gardener/gardener/pkg/component/kubeapiserver/mock"
 	mockkubecontrollermanager "github.com/gardener/gardener/pkg/component/kubecontrollermanager/mock"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -111,6 +112,8 @@ var _ = Describe("KubeControllerManager", func() {
 		Context("successfully deployment", func() {
 			BeforeEach(func() {
 				kubeControllerManager.EXPECT().Deploy(ctx)
+				kubeAPIServer.EXPECT().GetValues().Return(kubeapiserver.Values{RuntimeConfig: map[string]bool{"foo": true}})
+				kubeControllerManager.EXPECT().SetRuntimeConfig(map[string]bool{"foo": true})
 			})
 
 			Context("kube-apiserver is already scaled down", func() {
@@ -290,8 +293,10 @@ var _ = Describe("KubeControllerManager", func() {
 
 		It("should fail when the deploy function fails", func() {
 			kubernetesClient.EXPECT().Client().Return(c)
+			kubeAPIServer.EXPECT().GetValues().Return(kubeapiserver.Values{RuntimeConfig: map[string]bool{"foo": true}})
 			c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{}))
 			kubeControllerManager.EXPECT().SetReplicaCount(int32(0))
+			kubeControllerManager.EXPECT().SetRuntimeConfig(map[string]bool{"foo": true})
 			kubeControllerManager.EXPECT().Deploy(ctx).Return(fakeErr)
 
 			Expect(botanist.DeployKubeControllerManager(ctx)).To(Equal(fakeErr))
