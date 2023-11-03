@@ -15,6 +15,8 @@
 package sshdensurer_test
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
@@ -22,7 +24,9 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/sshdensurer"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Component", func() {
@@ -36,14 +40,18 @@ var _ = Describe("Component", func() {
 			component = New()
 		})
 
-		It("should return the expected units and files when SSHAccessEnabled is set to true", func() {
-			ctx = components.Context{SSHAccessEnabled: true}
-			units, files, err := component.Config(ctx)
+		testConfig := func(useGardenerNodeAgentEnabled bool) {
+			Context(fmt.Sprintf("UseGardenerNodeAgent: %v", useGardenerNodeAgentEnabled), func() {
+				It("should return the expected units and files when SSHAccessEnabled is set to true", func() {
+					defer test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, useGardenerNodeAgentEnabled)()
 
-			Expect(err).NotTo(HaveOccurred())
-			Expect(units).To(ConsistOf(
-				[]extensionsv1alpha1.Unit{
-					{
+					ctx = components.Context{SSHAccessEnabled: true}
+					units, files, err := component.Config(ctx)
+
+					Expect(err).NotTo(HaveOccurred())
+
+					sshdEnsurerUnit := extensionsv1alpha1.Unit{
+
 						Name:    "sshd-ensurer.service",
 						Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 						Content: pointer.String(`[Unit]
@@ -56,12 +64,9 @@ RestartSec=15
 ExecStart=/var/lib/sshd-ensurer/run.sh
 [Install]
 WantedBy=multi-user.target`),
-					},
-				},
-			))
-			Expect(files).To(ConsistOf(
-				[]extensionsv1alpha1.File{
-					{
+					}
+
+					sshdEnsurerFile := extensionsv1alpha1.File{
 						Path:        "/var/lib/sshd-ensurer/run.sh",
 						Permissions: pointer.Int32(0755),
 						Content: extensionsv1alpha1.FileContent{
@@ -70,19 +75,28 @@ WantedBy=multi-user.target`),
 								Data:     utils.EncodeBase64([]byte(enableScript)),
 							},
 						},
-					},
-				},
-			))
-		})
+					}
 
-		It("should return the expected units and files when SSHAccessEnabled is set to false", func() {
-			ctx = components.Context{SSHAccessEnabled: false}
-			units, files, err := component.Config(ctx)
+					var expectedFiles []extensionsv1alpha1.File
+					if useGardenerNodeAgentEnabled {
+						sshdEnsurerUnit.Files = append(sshdEnsurerUnit.Files, sshdEnsurerFile)
+					} else {
+						expectedFiles = append(expectedFiles, sshdEnsurerFile)
+					}
 
-			Expect(err).NotTo(HaveOccurred())
-			Expect(units).To(ConsistOf(
-				[]extensionsv1alpha1.Unit{
-					{
+					Expect(units).To(ConsistOf(sshdEnsurerUnit))
+					Expect(files).To(ConsistOf(expectedFiles))
+				})
+
+				It("should return the expected units and files when SSHAccessEnabled is set to false", func() {
+					defer test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, useGardenerNodeAgentEnabled)()
+
+					ctx = components.Context{SSHAccessEnabled: false}
+					units, files, err := component.Config(ctx)
+
+					Expect(err).NotTo(HaveOccurred())
+
+					sshdEnsurerUnit := extensionsv1alpha1.Unit{
 						Name:    "sshd-ensurer.service",
 						Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 						Content: pointer.String(`[Unit]
@@ -95,12 +109,9 @@ RestartSec=15
 ExecStart=/var/lib/sshd-ensurer/run.sh
 [Install]
 WantedBy=multi-user.target`),
-					},
-				},
-			))
-			Expect(files).To(ConsistOf(
-				[]extensionsv1alpha1.File{
-					{
+					}
+
+					sshdEnsurerFile := extensionsv1alpha1.File{
 						Path:        "/var/lib/sshd-ensurer/run.sh",
 						Permissions: pointer.Int32(0755),
 						Content: extensionsv1alpha1.FileContent{
@@ -109,10 +120,24 @@ WantedBy=multi-user.target`),
 								Data:     utils.EncodeBase64([]byte(disableScript)),
 							},
 						},
-					},
-				},
-			))
-		})
+					}
+
+					var expectedFiles []extensionsv1alpha1.File
+					if useGardenerNodeAgentEnabled {
+						sshdEnsurerUnit.Files = append(sshdEnsurerUnit.Files, sshdEnsurerFile)
+					} else {
+						expectedFiles = append(expectedFiles, sshdEnsurerFile)
+					}
+
+					Expect(units).To(ConsistOf(sshdEnsurerUnit))
+					Expect(files).To(ConsistOf(expectedFiles))
+				})
+			})
+		}
+		// Testing with feature gate UseGardenerNodeAgent: false
+		testConfig(false)
+		// Testing with feature gate UseGardenerNodeAgent: true
+		testConfig(true)
 	})
 })
 

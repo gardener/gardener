@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/docker"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -75,11 +76,10 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	const pathEtcSSLCerts = "/etc/ssl/certs"
 	var caBundleBase64 = utils.EncodeBase64([]byte(*ctx.CABundle))
 
-	return []extensionsv1alpha1.Unit{
-			{
-				Name:    "updatecacerts.service",
-				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-				Content: pointer.String(`[Unit]
+	updateCACertsUnit := extensionsv1alpha1.Unit{
+		Name:    "updatecacerts.service",
+		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+		Content: pointer.String(`[Unit]
 Description=Update local certificate authorities
 # Since other services depend on the certificate store run this early
 DefaultDependencies=no
@@ -95,33 +95,43 @@ ExecStart=` + pathUpdateLocalCaCertificates + `
 ExecStartPost=/bin/systemctl restart ` + docker.UnitName + `
 [Install]
 WantedBy=multi-user.target`),
-			},
-		},
-		[]extensionsv1alpha1.File{
-			updateLocalCaCertificatesScriptFile,
-			// This file contains Gardener CAs for Debian based OS
-			{
-				Path:        pathLocalSSLCerts + "/ROOTcerts.crt",
-				Permissions: pointer.Int32(0644),
-				Content: extensionsv1alpha1.FileContent{
-					Inline: &extensionsv1alpha1.FileContentInline{
-						Encoding: "b64",
-						Data:     caBundleBase64,
-					},
-				},
-			},
-			// This file contains Gardener CAs for Redhat/SUSE OS
-			{
-				Path:        "/etc/pki/trust/anchors/ROOTcerts.pem",
-				Permissions: pointer.Int32(0644),
-				Content: extensionsv1alpha1.FileContent{
-					Inline: &extensionsv1alpha1.FileContentInline{
-						Encoding: "b64",
-						Data:     caBundleBase64,
-					},
+	}
+
+	updateCACertsFiles := []extensionsv1alpha1.File{
+		updateLocalCaCertificatesScriptFile,
+		// This file contains Gardener CAs for Debian based OS
+		{
+			Path:        pathLocalSSLCerts + "/ROOTcerts.crt",
+			Permissions: pointer.Int32(0644),
+			Content: extensionsv1alpha1.FileContent{
+				Inline: &extensionsv1alpha1.FileContentInline{
+					Encoding: "b64",
+					Data:     caBundleBase64,
 				},
 			},
 		},
+		// This file contains Gardener CAs for Redhat/SUSE OS
+		{
+			Path:        "/etc/pki/trust/anchors/ROOTcerts.pem",
+			Permissions: pointer.Int32(0644),
+			Content: extensionsv1alpha1.FileContent{
+				Inline: &extensionsv1alpha1.FileContentInline{
+					Encoding: "b64",
+					Data:     caBundleBase64,
+				},
+			},
+		},
+	}
+
+	var files []extensionsv1alpha1.File
+	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+		updateCACertsUnit.Files = updateCACertsFiles
+	} else {
+		files = updateCACertsFiles
+	}
+
+	return []extensionsv1alpha1.Unit{updateCACertsUnit},
+		files,
 		nil
 }
 

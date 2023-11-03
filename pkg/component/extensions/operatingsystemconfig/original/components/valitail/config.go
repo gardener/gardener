@@ -24,11 +24,14 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	"k8s.io/utils/pointer"
 
+	"github.com/gardener/gardener/imagevector"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/logging/vali"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -115,12 +118,24 @@ func getValitailCAFile(ctx components.Context) extensionsv1alpha1.File {
 	}
 }
 
-func getValitailUnit(execStartPre, execStart string) extensionsv1alpha1.Unit {
-	return extensionsv1alpha1.Unit{
-		Name:    UnitName,
-		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-		Enable:  pointer.Bool(true),
-		Content: pointer.String(`[Unit]
+func getValitailUnit(ctx components.Context) (extensionsv1alpha1.Unit, error) {
+	var (
+		execStartPre string
+		execStart    = v1beta1constants.OperatingSystemConfigFilePathBinaries + `/valitail -config.file=` + PathConfig
+	)
+
+	if !features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+		if ctx.ValitailEnabled {
+			execStartPre = execStartPreCopyBinaryFromContainer("valitail", ctx.Images[imagevector.ImageNameValitail])
+		}
+	}
+
+	if !ctx.ValitailEnabled {
+		execStartPre = "/bin/systemctl disable " + UnitName
+		execStart = fmt.Sprintf(`/bin/sh -c "echo service %s is removed!; while true; do sleep 86400; done"`, UnitName)
+	}
+
+	unitContent := `[Unit]
 Description=valitail daemon
 Documentation=https://github.com/credativ/plutono
 After=` + unitNameFetchToken + `
@@ -139,10 +154,43 @@ Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
 ExecStartPre=/bin/sh -c "systemctl stop promtail.service || true"
-ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:])"
-ExecStartPre=` + execStartPre + `
-ExecStart=` + execStart),
+ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:])"`
+
+	if execStartPre != "" {
+		unitContent += `
+ExecStartPre=` + execStartPre
 	}
+
+	unitContent += `
+ExecStart=` + execStart
+
+	unit := extensionsv1alpha1.Unit{
+		Name:    UnitName,
+		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+		Enable:  pointer.Bool(true),
+		Content: &unitContent,
+	}
+
+	if ctx.ValitailEnabled && features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+		valitailConfigFile, err := getValitailConfigurationFile(ctx)
+		if err != nil {
+			return extensionsv1alpha1.Unit{}, err
+		}
+		unit.Files = append(unit.Files, valitailConfigFile)
+		unit.Files = append(unit.Files, getValitailCAFile(ctx))
+		unit.Files = append(unit.Files, extensionsv1alpha1.File{
+			Path:        v1beta1constants.OperatingSystemConfigFilePathBinaries + "/valitail",
+			Permissions: pointer.Int32(0755),
+			Content: extensionsv1alpha1.FileContent{
+				ImageRef: &extensionsv1alpha1.FileContentImageRef{
+					Image:           ctx.Images[imagevector.ImageNameValitail].String(),
+					FilePathInImage: "/usr/bin/valitail",
+				},
+			},
+		})
+	}
+
+	return unit, nil
 }
 
 func getFetchTokenScriptFile() (extensionsv1alpha1.File, error) {
@@ -170,7 +218,17 @@ func getFetchTokenScriptFile() (extensionsv1alpha1.File, error) {
 	}, nil
 }
 
-func getFetchTokenScriptUnit(execStartPre, execStart string) extensionsv1alpha1.Unit {
+func getFetchTokenScriptUnit(ctx components.Context) (extensionsv1alpha1.Unit, error) {
+	var (
+		execStartPre string
+		execStart    = PathFetchTokenScript
+	)
+
+	if !ctx.ValitailEnabled {
+		execStartPre = "/bin/systemctl disable " + unitNameFetchToken
+		execStart = fmt.Sprintf(`/bin/sh -c "rm -f `+PathAuthToken+`; echo service %s is removed!; while true; do sleep 86400; done"`, unitNameFetchToken)
+	}
+
 	unitContent := `[Unit]
 Description=valitail token fetcher
 After=` + downloader.UnitName + `
@@ -191,10 +249,20 @@ ExecStartPre=` + execStartPre
 	unitContent += `
 ExecStart=` + execStart
 
-	return extensionsv1alpha1.Unit{
+	unit := extensionsv1alpha1.Unit{
 		Name:    unitNameFetchToken,
 		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 		Enable:  pointer.Bool(true),
 		Content: &unitContent,
 	}
+
+	if ctx.ValitailEnabled && features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+		fetchTokenScriptFile, err := getFetchTokenScriptFile()
+		if err != nil {
+			return extensionsv1alpha1.Unit{}, err
+		}
+		unit.Files = append(unit.Files, fetchTokenScriptFile)
+	}
+
+	return unit, nil
 }

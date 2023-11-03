@@ -15,14 +15,18 @@
 package valitail
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Valitail", func() {
@@ -42,27 +46,35 @@ var _ = Describe("Valitail", func() {
 			valiIngress = "ingress.vali.testClusterDomain"
 		)
 
-		It("should return the expected units and files when shoot logging is enabled", func() {
-			ctx := components.Context{
-				CABundle:      &cABundle,
-				ClusterDomain: clusterDomain,
-				Images: map[string]*imagevector.Image{
-					"valitail": valitailImage,
-				},
-				ValiIngress:     valiIngress,
-				ValitailEnabled: true,
-				APIServerURL:    apiServerURL,
-			}
+		testConfig := func(useGardenerNodeAgentEnabled bool) {
+			Context(fmt.Sprintf("UseGardenerNodeAgent: %v", useGardenerNodeAgentEnabled), func() {
+				It("should return the expected units and files when shoot logging is enabled", func() {
+					defer test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, useGardenerNodeAgentEnabled)()
+					ctx := components.Context{
+						CABundle:      &cABundle,
+						ClusterDomain: clusterDomain,
+						Images: map[string]*imagevector.Image{
+							"valitail": valitailImage,
+						},
+						ValiIngress:     valiIngress,
+						ValitailEnabled: true,
+						APIServerURL:    apiServerURL,
+					}
 
-			units, files, err := New().Config(ctx)
-			Expect(err).To(BeNil())
+					units, files, err := New().Config(ctx)
+					Expect(err).To(BeNil())
 
-			Expect(units).To(ConsistOf(
-				extensionsv1alpha1.Unit{
-					Name:    UnitName,
-					Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-					Enable:  pointer.Bool(true),
-					Content: pointer.String(`[Unit]
+					var valitailDaemonStartPre string
+					if !useGardenerNodeAgentEnabled {
+						valitailDaemonStartPre = `
+ExecStartPre=/usr/bin/docker run --rm -v /opt/bin:/opt/bin:rw --entrypoint /bin/sh ` + valitailRepository + ":" + valitailImageTag + " -c " + "\"cp /usr/bin/valitail /opt/bin\""
+					}
+
+					valitailDaemonUnit := extensionsv1alpha1.Unit{
+						Name:    UnitName,
+						Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+						Enable:  pointer.Bool(true),
+						Content: pointer.String(`[Unit]
 Description=valitail daemon
 Documentation=https://github.com/credativ/plutono
 After=valitail-fetch-token.service
@@ -81,15 +93,15 @@ Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
 ExecStartPre=/bin/sh -c "systemctl stop promtail.service || true"
-ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:])"
-ExecStartPre=/usr/bin/docker run --rm -v /opt/bin:/opt/bin:rw --entrypoint /bin/sh ` + valitailRepository + ":" + valitailImageTag + " -c " + "\"cp /usr/bin/valitail /opt/bin\"" + `
+ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:])"` + valitailDaemonStartPre + `
 ExecStart=/opt/bin/valitail -config.file=` + PathConfig),
-				},
-				extensionsv1alpha1.Unit{
-					Name:    "valitail-fetch-token.service",
-					Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-					Enable:  pointer.Bool(true),
-					Content: pointer.String(`[Unit]
+					}
+
+					valitailTokenFetchUnit := extensionsv1alpha1.Unit{
+						Name:    "valitail-fetch-token.service",
+						Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+						Enable:  pointer.Bool(true),
+						Content: pointer.String(`[Unit]
 Description=valitail token fetcher
 After=cloud-config-downloader.service
 [Install]
@@ -101,17 +113,15 @@ RuntimeMaxSec=120
 EnvironmentFile=/etc/environment
 ExecStartPre=/bin/sh -c "systemctl stop promtail-fetch-token.service || true"
 ExecStart=/var/lib/valitail/scripts/fetch-token.sh`),
-				},
-			))
+					}
 
-			Expect(files).To(ConsistOf(
-				extensionsv1alpha1.File{
-					Path:        "/var/lib/valitail/config/config",
-					Permissions: pointer.Int32(0644),
-					Content: extensionsv1alpha1.FileContent{
-						Inline: &extensionsv1alpha1.FileContentInline{
-							Encoding: "b64",
-							Data: utils.EncodeBase64([]byte(`server:
+					valitailConfigFile := extensionsv1alpha1.File{
+						Path:        "/var/lib/valitail/config/config",
+						Permissions: pointer.Int32(0644),
+						Content: extensionsv1alpha1.FileContent{
+							Inline: &extensionsv1alpha1.FileContentInline{
+								Encoding: "b64",
+								Data: utils.EncodeBase64([]byte(`server:
   disable: true
   log_level: info
   http_listen_port: 3001
@@ -247,16 +257,28 @@ scrape_configs:
     replacement: 'shoot_system'
     target_label: origin
 `)),
+							},
 						},
-					},
-				},
-				extensionsv1alpha1.File{
-					Path:        "/var/lib/valitail/scripts/fetch-token.sh",
-					Permissions: pointer.Int32(0744),
-					Content: extensionsv1alpha1.FileContent{
-						Inline: &extensionsv1alpha1.FileContentInline{
-							Encoding: "b64",
-							Data: utils.EncodeBase64([]byte(`#!/bin/bash
+					}
+
+					valitailBinaryFile := extensionsv1alpha1.File{
+						Path:        "/opt/bin/valitail",
+						Permissions: pointer.Int32(0755),
+						Content: extensionsv1alpha1.FileContent{
+							ImageRef: &extensionsv1alpha1.FileContentImageRef{
+								Image:           ctx.Images["valitail"].String(),
+								FilePathInImage: "/usr/bin/valitail",
+							},
+						},
+					}
+
+					valitailFetchTokenScriptFile := extensionsv1alpha1.File{
+						Path:        "/var/lib/valitail/scripts/fetch-token.sh",
+						Permissions: pointer.Int32(0744),
+						Content: extensionsv1alpha1.FileContent{
+							Inline: &extensionsv1alpha1.FileContentInline{
+								Encoding: "b64",
+								Data: utils.EncodeBase64([]byte(`#!/bin/bash
 
 set -o errexit
 set -o nounset
@@ -279,42 +301,58 @@ echo "$SECRET" | sed -rn "s/  token: (.*)/\1/p" | base64 -d > "/var/lib/valitail
 exit $?
 }
 `)),
+							},
 						},
-					},
-				},
-				extensionsv1alpha1.File{
-					Path:        "/var/lib/valitail/ca.crt",
-					Permissions: pointer.Int32(0644),
-					Content: extensionsv1alpha1.FileContent{
-						Inline: &extensionsv1alpha1.FileContentInline{
-							Encoding: "b64",
-							Data:     utils.EncodeBase64([]byte(cABundle)),
+					}
+
+					caBundleFile := extensionsv1alpha1.File{
+						Path:        "/var/lib/valitail/ca.crt",
+						Permissions: pointer.Int32(0644),
+						Content: extensionsv1alpha1.FileContent{
+							Inline: &extensionsv1alpha1.FileContentInline{
+								Encoding: "b64",
+								Data:     utils.EncodeBase64([]byte(cABundle)),
+							},
 						},
-					},
-				},
-			))
-		})
+					}
 
-		It("should return the expected units and files when shoot logging is not enabled", func() {
-			ctx := components.Context{
-				CABundle:      &cABundle,
-				ClusterDomain: clusterDomain,
-				Images: map[string]*imagevector.Image{
-					"valitail": valitailImage,
-				},
-				ValiIngress:     valiIngress,
-				ValitailEnabled: false,
-			}
+					var expectedFiles []extensionsv1alpha1.File
+					if useGardenerNodeAgentEnabled {
+						valitailDaemonUnit.Files = append(valitailDaemonUnit.Files, valitailConfigFile, caBundleFile, valitailBinaryFile)
+						valitailTokenFetchUnit.Files = append(valitailTokenFetchUnit.Files, valitailFetchTokenScriptFile)
+					} else {
+						expectedFiles = append(expectedFiles, valitailConfigFile, valitailFetchTokenScriptFile, caBundleFile)
+					}
 
-			units, files, err := New().Config(ctx)
-			Expect(err).To(BeNil())
+					Expect(units).To(ConsistOf(
+						valitailDaemonUnit,
+						valitailTokenFetchUnit,
+					))
 
-			Expect(units).To(ConsistOf(
-				extensionsv1alpha1.Unit{
-					Name:    "valitail.service",
-					Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-					Enable:  pointer.Bool(true),
-					Content: pointer.String(`[Unit]
+					Expect(files).To(ConsistOf(expectedFiles))
+				})
+
+				It("should return the expected units and files when shoot logging is not enabled", func() {
+					defer test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, useGardenerNodeAgentEnabled)()
+					ctx := components.Context{
+						CABundle:      &cABundle,
+						ClusterDomain: clusterDomain,
+						Images: map[string]*imagevector.Image{
+							"valitail": valitailImage,
+						},
+						ValiIngress:     valiIngress,
+						ValitailEnabled: false,
+					}
+
+					units, files, err := New().Config(ctx)
+					Expect(err).To(BeNil())
+
+					Expect(units).To(ConsistOf(
+						extensionsv1alpha1.Unit{
+							Name:    "valitail.service",
+							Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+							Enable:  pointer.Bool(true),
+							Content: pointer.String(`[Unit]
 Description=valitail daemon
 Documentation=https://github.com/credativ/plutono
 After=valitail-fetch-token.service
@@ -336,12 +374,12 @@ ExecStartPre=/bin/sh -c "systemctl stop promtail.service || true"
 ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:])"
 ExecStartPre=/bin/systemctl disable valitail.service
 ExecStart=/bin/sh -c "echo service valitail.service is removed!; while true; do sleep 86400; done"`),
-				},
-				extensionsv1alpha1.Unit{
-					Name:    "valitail-fetch-token.service",
-					Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-					Enable:  pointer.Bool(true),
-					Content: pointer.String(`[Unit]
+						},
+						extensionsv1alpha1.Unit{
+							Name:    "valitail-fetch-token.service",
+							Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+							Enable:  pointer.Bool(true),
+							Content: pointer.String(`[Unit]
 Description=valitail token fetcher
 After=cloud-config-downloader.service
 [Install]
@@ -354,27 +392,34 @@ EnvironmentFile=/etc/environment
 ExecStartPre=/bin/sh -c "systemctl stop promtail-fetch-token.service || true"
 ExecStartPre=/bin/systemctl disable valitail-fetch-token.service
 ExecStart=/bin/sh -c "rm -f /var/lib/valitail/auth-token; echo service valitail-fetch-token.service is removed!; while true; do sleep 86400; done"`),
-				},
-			))
+						},
+					))
 
-			Expect(files).To(BeNil())
-		})
+					Expect(files).To(BeNil())
+				})
 
-		It("should return error when vali ingress is not specified", func() {
-			ctx := components.Context{
-				CABundle:      &cABundle,
-				ClusterDomain: clusterDomain,
-				Images: map[string]*imagevector.Image{
-					"valitail": valitailImage,
-				},
-				ValitailEnabled: true,
-				ValiIngress:     "",
-			}
+				It("should return error when vali ingress is not specified", func() {
+					defer test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, useGardenerNodeAgentEnabled)()
+					ctx := components.Context{
+						CABundle:      &cABundle,
+						ClusterDomain: clusterDomain,
+						Images: map[string]*imagevector.Image{
+							"valitail": valitailImage,
+						},
+						ValitailEnabled: true,
+						ValiIngress:     "",
+					}
 
-			units, files, err := New().Config(ctx)
-			Expect(err).To(MatchError(ContainSubstring("vali ingress url is missing")))
-			Expect(units).To(BeNil())
-			Expect(files).To(BeNil())
-		})
+					units, files, err := New().Config(ctx)
+					Expect(err).To(MatchError(ContainSubstring("vali ingress url is missing")))
+					Expect(units).To(BeNil())
+					Expect(files).To(BeNil())
+				})
+			})
+		}
+		// Testing with feature gate UseGardenerNodeAgent: false
+		testConfig(false)
+		// Testing with feature gate UseGardenerNodeAgent: true
+		testConfig(true)
 	})
 })
