@@ -112,6 +112,14 @@ var _ = Describe("Accessor", func() {
 					Expect(acc.GetProviderConfig()).To(BeNil())
 				})
 			})
+
+			Describe("#GetExtensionPurpose", func() {
+				It("should return nil", func() {
+					acc := mkUnstructuredAccessorWithSpec(extensionsv1alpha1.DefaultSpec{})
+
+					Expect(acc.GetExtensionPurpose()).To(BeNil())
+				})
+			})
 		})
 
 		Context("#GetExtensionStatus", func() {
