@@ -15,11 +15,15 @@
 package nodeinit_test
 
 import (
+	"context"
+	"unicode/utf8"
+
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
 
+	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/nodeinit"
@@ -85,6 +89,7 @@ ctr images pull  "` + image + `" --hosts-dir "/etc/containerd/certs.d"
 ctr images mount "` + image + `" "$tmp_dir"
 
 echo "> Copy gardener-node-agent binary to host (/opt/bin) and make it executable"
+mkdir -p "/opt/bin"
 cp -f "$tmp_dir/gardener-node-agent" "/opt/bin"
 chmod +x "/opt/bin/gardener-node-agent"
 
@@ -184,6 +189,19 @@ logLevel: ""
 server: {}
 `))}},
 				}))
+			})
+
+			It("should ensure the size of the configuration is not exceeding a certain limit", func() {
+				units, files, err := Config(worker, image, oscSecretName, apiServerURL, caBundle, kubernetesVersion)
+				Expect(err).NotTo(HaveOccurred())
+
+				writeFilesToDiskScript, err := operatingsystemconfig.FilesToDiskScript(context.Background(), nil, "", files)
+				Expect(err).NotTo(HaveOccurred())
+				writeUnitsToDiskScript, err := operatingsystemconfig.UnitsToDiskScript(context.Background(), nil, "", units)
+				Expect(err).NotTo(HaveOccurred())
+
+				// best-effort check: ensure the node init configuration is not exceeding 4KB in size
+				Expect(utf8.RuneCountInString(writeFilesToDiskScript + writeUnitsToDiskScript)).To(BeNumerically("<", 4096))
 			})
 		})
 	})

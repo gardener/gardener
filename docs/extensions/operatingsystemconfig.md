@@ -190,7 +190,7 @@ You can find an example implementation [here](../../pkg/provider-local/controlle
 
 ### Bootstrap Tokens
 
-`gadenlet` adds a file with the content `<<BOOTSTRAP_TOKEN>>` to the `OperatingSystemConfig` with purpose `provision` and sets `transmitUnencoded=true`.
+`gardenlet` adds a file with the content `<<BOOTSTRAP_TOKEN>>` to the `OperatingSystemConfig` with purpose `provision` and sets `transmitUnencoded=true`.
 This instructs the responsible OS extension to pass this file (with its content in clear-text) to the corresponding `Worker` resource.
 
 `machine-controller-manager` makes sure that

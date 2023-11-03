@@ -75,7 +75,8 @@ RestartSec=5
 [Install]
 WantedBy=multi-user.target`),
 					Files: append(unitFiles, extensionsv1alpha1.File{
-						Path: "/opt/bin/gardener-node-agent",
+						Path:        "/opt/bin/gardener-node-agent",
+						Permissions: pointer.Int32(0755),
 						Content: extensionsv1alpha1.FileContent{
 							ImageRef: &extensionsv1alpha1.FileContentImageRef{
 								Image:           "gardener-node-agent:v1",

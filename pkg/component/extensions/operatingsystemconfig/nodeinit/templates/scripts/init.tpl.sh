@@ -13,6 +13,7 @@ ctr images pull  "{{ .image }}" --hosts-dir "/etc/containerd/certs.d"
 ctr images mount "{{ .image }}" "$tmp_dir"
 
 echo "> Copy gardener-node-agent binary to host ({{ .binaryDirectory }}) and make it executable"
+mkdir -p "{{ .binaryDirectory }}"
 cp -f "$tmp_dir/gardener-node-agent" "{{ .binaryDirectory }}"
 chmod +x "{{ .binaryDirectory }}/gardener-node-agent"
 

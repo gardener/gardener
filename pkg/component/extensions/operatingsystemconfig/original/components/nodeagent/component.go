@@ -74,7 +74,8 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		Enable:  pointer.Bool(true),
 		Content: pointer.String(UnitContent()),
 		Files: append(files, extensionsv1alpha1.File{
-			Path: v1beta1constants.OperatingSystemConfigFilePathBinaries + "/gardener-node-agent",
+			Path:        v1beta1constants.OperatingSystemConfigFilePathBinaries + "/gardener-node-agent",
+			Permissions: pointer.Int32(0755),
 			Content: extensionsv1alpha1.FileContent{
 				ImageRef: &extensionsv1alpha1.FileContentImageRef{
 					Image:           ctx.Images[imagevector.ImageNameGardenerNodeAgent].String(),
