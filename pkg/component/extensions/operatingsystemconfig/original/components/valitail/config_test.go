@@ -261,6 +261,17 @@ scrape_configs:
 						},
 					}
 
+					valitailBinaryFile := extensionsv1alpha1.File{
+						Path:        "/opt/bin/valitail",
+						Permissions: pointer.Int32(0755),
+						Content: extensionsv1alpha1.FileContent{
+							ImageRef: &extensionsv1alpha1.FileContentImageRef{
+								Image:           ctx.Images["valitail"].String(),
+								FilePathInImage: "/usr/bin/valitail",
+							},
+						},
+					}
+
 					valitailFetchTokenScriptFile := extensionsv1alpha1.File{
 						Path:        "/var/lib/valitail/scripts/fetch-token.sh",
 						Permissions: pointer.Int32(0744),
@@ -307,7 +318,7 @@ exit $?
 
 					var expectedFiles []extensionsv1alpha1.File
 					if useGardenerNodeAgentEnabled {
-						valitailDaemonUnit.Files = append(valitailDaemonUnit.Files, valitailConfigFile, caBundleFile)
+						valitailDaemonUnit.Files = append(valitailDaemonUnit.Files, valitailConfigFile, caBundleFile, valitailBinaryFile)
 						valitailTokenFetchUnit.Files = append(valitailTokenFetchUnit.Files, valitailFetchTokenScriptFile)
 					} else {
 						expectedFiles = append(expectedFiles, valitailConfigFile, valitailFetchTokenScriptFile, caBundleFile)

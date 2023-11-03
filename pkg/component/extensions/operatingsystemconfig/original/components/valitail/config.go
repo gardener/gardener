@@ -178,6 +178,16 @@ ExecStart=` + execStart
 		}
 		unit.Files = append(unit.Files, valitailConfigFile)
 		unit.Files = append(unit.Files, getValitailCAFile(ctx))
+		unit.Files = append(unit.Files, extensionsv1alpha1.File{
+			Path:        v1beta1constants.OperatingSystemConfigFilePathBinaries + "/valitail",
+			Permissions: pointer.Int32(0755),
+			Content: extensionsv1alpha1.FileContent{
+				ImageRef: &extensionsv1alpha1.FileContentImageRef{
+					Image:           ctx.Images[imagevector.ImageNameValitail].String(),
+					FilePathInImage: "/usr/bin/valitail",
+				},
+			},
+		})
 	}
 
 	return unit, nil
