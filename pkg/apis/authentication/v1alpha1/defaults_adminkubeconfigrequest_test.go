@@ -24,27 +24,26 @@ import (
 	. "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 )
 
-var _ = Describe("adminKubeconfigRequest defaulting", func() {
+var _ = Describe("AdminKubeconfigRequest defaulting", func() {
 	var obj *AdminKubeconfigRequest
 
 	BeforeEach(func() {
 		obj = &AdminKubeconfigRequest{}
 	})
 
-	Describe("expirationSeconds defaulting", func() {
+	Describe("ExpirationSeconds defaulting", func() {
 		It("should default expirationSeconds field", func() {
 			SetObjectDefaults_AdminKubeconfigRequest(obj)
 
-			Expect(obj.Spec.ExpirationSeconds).To(Equal(pointer.Int64(int64(60 * 60))))
+			Expect(obj.Spec.ExpirationSeconds).To(Equal(pointer.Int64(60 * 60)))
 		})
 
 		It("should not default expirationSeconds field if it is already set", func() {
-			s := int64(10 * 60)
-			obj.Spec.ExpirationSeconds = &s
+			obj.Spec.ExpirationSeconds = pointer.Int64(10 * 60)
 
 			SetObjectDefaults_AdminKubeconfigRequest(obj)
 
-			Expect(obj.Spec.ExpirationSeconds).To(Equal(pointer.Int64(int64(10 * 60))))
+			Expect(obj.Spec.ExpirationSeconds).To(Equal(pointer.Int64(10 * 60)))
 		})
 	})
 })
