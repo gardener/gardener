@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"html/template"
 
-	"github.com/Masterminds/semver/v3"
 	"k8s.io/utils/pointer"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -41,10 +40,7 @@ const pathInitScript = nodeagentv1alpha1.BaseDir + "/init.sh"
 func Config(
 	worker gardencorev1beta1.Worker,
 	nodeAgentImage string,
-	oscSecretName string,
-	apiServerURL string,
-	clusterCA []byte,
-	kubernetesVersion *semver.Version,
+	config *nodeagentv1alpha1.NodeAgentConfiguration,
 ) (
 	[]extensionsv1alpha1.Unit,
 	[]extensionsv1alpha1.File,
@@ -105,7 +101,7 @@ WantedBy=multi-user.target`),
 	// the gardener-node-agent unit will be written and eventually started (whilst gardener-node-init disables and stops
 	// itself). Hence, the files for gardener-node-agent (component configuration and kubeconfig) must be present on the
 	// machine so that it can start successfully.
-	config := nodeagent.ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, clusterCA)
+	config = config.DeepCopy()
 	config.Bootstrap, err = getBootstrapConfiguration(worker)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed computing bootstrap configuration: %w", err)

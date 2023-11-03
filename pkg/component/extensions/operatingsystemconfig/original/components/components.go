@@ -16,6 +16,7 @@ package components
 
 import (
 	"github.com/Masterminds/semver/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -49,4 +50,5 @@ type Context struct {
 	ValitailEnabled         bool
 	APIServerURL            string
 	Sysctls                 map[string]string
+	OSCSyncJitterPeriod     *metav1.Duration
 }

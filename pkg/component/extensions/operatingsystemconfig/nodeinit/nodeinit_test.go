@@ -16,17 +16,20 @@ package nodeinit_test
 
 import (
 	"context"
+	"time"
 	"unicode/utf8"
 
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/nodeinit"
+	nodeagentcomponent "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 )
@@ -34,21 +37,25 @@ import (
 var _ = Describe("Init", func() {
 	Describe("#Config", func() {
 		var (
-			worker            gardencorev1beta1.Worker
-			image             = "gna-repo:gna-tag"
-			oscSecretName     = "osc-secret-name"
-			apiServerURL      = "https://localhost"
-			caBundle          = []byte("cluster-ca")
-			kubernetesVersion = semver.MustParse("1.2.3")
+			worker gardencorev1beta1.Worker
+			image  = "gna-repo:gna-tag"
+
+			config              *nodeagentv1alpha1.NodeAgentConfiguration
+			oscSecretName       = "osc-secret-name"
+			apiServerURL        = "https://localhost"
+			caBundle            = []byte("cluster-ca")
+			kubernetesVersion   = semver.MustParse("1.2.3")
+			oscSyncJitterPeriod = &metav1.Duration{Duration: time.Second}
 		)
 
 		BeforeEach(func() {
 			worker = gardencorev1beta1.Worker{}
+			config = nodeagentcomponent.ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, caBundle, oscSyncJitterPeriod)
 		})
 
 		When("kubelet data volume is not configured", func() {
 			It("should return the expected units and files", func() {
-				units, files, err := Config(worker, image, oscSecretName, apiServerURL, caBundle, kubernetesVersion)
+				units, files, err := Config(worker, image, config)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(units).To(ConsistOf(extensionsv1alpha1.Unit{
@@ -129,6 +136,7 @@ controllers:
   operatingSystemConfig:
     kubernetesVersion: ` + kubernetesVersion.String() + `
     secretName: ` + oscSecretName + `
+    syncJitterPeriod: ` + oscSyncJitterPeriod.Duration.String() + `
   token:
     secretName: gardener-node-agent
 kind: NodeAgentConfiguration
@@ -153,14 +161,14 @@ server: {}
 			It("should return an error when the data volume cannot be found", func() {
 				*worker.KubeletDataVolumeName = "not-found"
 
-				units, files, err := Config(worker, image, oscSecretName, apiServerURL, caBundle, kubernetesVersion)
+				units, files, err := Config(worker, image, config)
 				Expect(err).To(MatchError(ContainSubstring("failed finding data volume for kubelet in worker with name")))
 				Expect(units).To(BeNil())
 				Expect(files).To(BeNil())
 			})
 
 			It("should correctly configure the bootstrap configuration", func() {
-				_, files, err := Config(worker, image, oscSecretName, apiServerURL, caBundle, kubernetesVersion)
+				_, files, err := Config(worker, image, config)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(files).To(ContainElement(extensionsv1alpha1.File{
 					Path:        "/var/lib/gardener-node-agent/config.yaml",
@@ -181,6 +189,7 @@ controllers:
   operatingSystemConfig:
     kubernetesVersion: ` + kubernetesVersion.String() + `
     secretName: ` + oscSecretName + `
+    syncJitterPeriod: ` + oscSyncJitterPeriod.Duration.String() + `
   token:
     secretName: gardener-node-agent
 kind: NodeAgentConfiguration
@@ -192,7 +201,7 @@ server: {}
 			})
 
 			It("should ensure the size of the configuration is not exceeding a certain limit", func() {
-				units, files, err := Config(worker, image, oscSecretName, apiServerURL, caBundle, kubernetesVersion)
+				units, files, err := Config(worker, image, config)
 				Expect(err).NotTo(HaveOccurred())
 
 				writeFilesToDiskScript, err := operatingsystemconfig.FilesToDiskScript(context.Background(), nil, "", files)

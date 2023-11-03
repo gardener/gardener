@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -64,7 +65,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		caBundle = []byte(*ctx.CABundle)
 	}
 
-	files, err := Files(ComponentConfig(ctx.Key, ctx.KubernetesVersion, ctx.APIServerURL, caBundle))
+	files, err := Files(ComponentConfig(ctx.Key, ctx.KubernetesVersion, ctx.APIServerURL, caBundle, ctx.OSCSyncJitterPeriod))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed generating files: %w", err)
 	}
@@ -103,7 +104,13 @@ WantedBy=multi-user.target`
 }
 
 // ComponentConfig returns the component configuration for the gardener-node-agent.
-func ComponentConfig(oscSecretName string, kubernetesVersion *semver.Version, apiServerURL string, caBundle []byte) *nodeagentv1alpha1.NodeAgentConfiguration {
+func ComponentConfig(
+	oscSecretName string,
+	kubernetesVersion *semver.Version,
+	apiServerURL string,
+	caBundle []byte,
+	syncJitterPeriod *metav1.Duration,
+) *nodeagentv1alpha1.NodeAgentConfiguration {
 	return &nodeagentv1alpha1.NodeAgentConfiguration{
 		APIServer: nodeagentv1alpha1.APIServer{
 			Server:   apiServerURL,
@@ -113,6 +120,7 @@ func ComponentConfig(oscSecretName string, kubernetesVersion *semver.Version, ap
 			OperatingSystemConfig: nodeagentv1alpha1.OperatingSystemConfigControllerConfig{
 				SecretName:        oscSecretName,
 				KubernetesVersion: kubernetesVersion,
+				SyncJitterPeriod:  syncJitterPeriod,
 			},
 			Token: nodeagentv1alpha1.TokenControllerConfig{
 				SecretName: AccessSecretName,
