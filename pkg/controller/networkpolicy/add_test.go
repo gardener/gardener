@@ -148,6 +148,29 @@ var _ = Describe("Add", func() {
 		})
 	})
 
+	Describe("#MapObjectToName", func() {
+		var (
+			ctx           = context.TODO()
+			log           = logr.Discard()
+			networkpolicy *networkingv1.NetworkPolicy
+		)
+
+		BeforeEach(func() {
+			networkpolicy = &networkingv1.NetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "bar",
+				},
+			}
+		})
+
+		It("should return a request with the networkpolicy's name", func() {
+			Expect(reconciler.MapObjectToName(ctx, log, nil, networkpolicy)).To(ConsistOf(
+				reconcile.Request{NamespacedName: types.NamespacedName{Name: networkpolicy.Name}},
+			))
+		})
+	})
+
 	Describe("#MapObjectToNamespace", func() {
 		var (
 			ctx           = context.TODO()
