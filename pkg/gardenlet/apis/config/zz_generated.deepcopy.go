@@ -305,6 +305,11 @@ func (in *ETCDConfig) DeepCopyInto(out *ETCDConfig) {
 			(*out)[key] = val
 		}
 	}
+	if in.DeltaSnapshotRetentionPeriod != nil {
+		in, out := &in.DeltaSnapshotRetentionPeriod, &out.DeltaSnapshotRetentionPeriod
+		*out = new(v1.Duration)
+		**out = **in
+	}
 	return
 }
 

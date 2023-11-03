@@ -461,6 +461,8 @@ type ETCDConfig struct {
 	// "github.com/gardener/etcd-druid/pkg/features/features.go".
 	// Default: nil
 	FeatureGates map[string]bool
+	// DeltaSnapshotRetentionPeriod defines the duration for which delta snapshots will be retained, excluding the latest snapshot set.
+	DeltaSnapshotRetentionPeriod *metav1.Duration
 }
 
 // ETCDController contains config specific to ETCD controller
