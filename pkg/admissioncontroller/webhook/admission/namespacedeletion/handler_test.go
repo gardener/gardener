@@ -196,4 +196,16 @@ var _ = Describe("handler", func() {
 			})
 		})
 	})
+
+	It("should do nothing for on Create operation", func() {
+		warning, err := handler.ValidateCreate(ctx, namespace)
+		Expect(warning).To(BeNil())
+		Expect(err).To(BeNil())
+	})
+
+	It("should do nothing for on Update operation", func() {
+		warning, err := handler.ValidateUpdate(ctx, nil, namespace)
+		Expect(warning).To(BeNil())
+		Expect(err).To(BeNil())
+	})
 })
