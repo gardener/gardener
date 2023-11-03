@@ -246,6 +246,12 @@ func findFileWithPath(osc *extensionsv1alpha1.OperatingSystemConfig, path string
 		if f := extensionswebhook.FileWithPath(osc.Spec.Files, path); f != nil {
 			return f.Content.Inline
 		}
+
+		for _, unit := range osc.Spec.Units {
+			if f := extensionswebhook.FileWithPath(unit.Files, path); f != nil {
+				return f.Content.Inline
+			}
+		}
 	}
 
 	return nil
