@@ -588,9 +588,7 @@ func validateDNSUpdate(new, old *core.DNS, seedGotAssigned bool, fldPath *field.
 			allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Domain, old.Domain, fldPath.Child("domain"))...)
 		}
 
-		// allow to finalize DNS configuration during seed assignment. this is required because
-		// some decisions about the DNS setup can only be taken once the target seed is clarified.
-		if !seedGotAssigned {
+		if seedGotAssigned {
 			var (
 				primaryOld = helper.FindPrimaryDNSProvider(old.Providers)
 				primaryNew = helper.FindPrimaryDNSProvider(new.Providers)
