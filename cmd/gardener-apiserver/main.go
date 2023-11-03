@@ -30,7 +30,7 @@ func main() {
 	features.RegisterFeatureGates()
 
 	ctx := signals.SetupSignalHandler()
-	if err := app.NewCommandStartGardenerAPIServer().ExecuteContext(ctx); err != nil {
+	if err := app.NewCommand().ExecuteContext(ctx); err != nil {
 		os.Exit(1)
 	}
 }

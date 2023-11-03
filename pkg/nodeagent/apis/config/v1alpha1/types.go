@@ -23,25 +23,22 @@ import (
 const (
 	// BaseDir is the directory on the worker node that contains gardener-node-agent relevant files.
 	BaseDir = "/var/lib/gardener-node-agent"
-
 	// CredentialsDir is the directory on the worker node that contains credentials for the gardener-node-agent.
 	CredentialsDir = BaseDir + "/credentials"
+	// BinaryDir is the directory on the worker node that contains the binary for the gardener-node-agent.
+	BinaryDir = "/opt/bin"
+
 	// BootstrapTokenFilePath is the file path on the worker node that contains the bootstrap token for the node.
 	BootstrapTokenFilePath = CredentialsDir + "/bootstrap-token"
 	// TokenFilePath is the file path on the worker node that contains the access token of the gardener-node-agent.
 	TokenFilePath = CredentialsDir + "/token"
+	// ConfigFilePath is the file path on the worker node that contains the configuration of the gardener-node-agent.
+	ConfigFilePath = BaseDir + "/config.yaml"
 
-	// ConfigPath is the file path on the worker node that contains the configuration
-	// of the gardener-node-agent.
-	ConfigPath = BaseDir + "/config.yaml"
-	// InitScriptPath is the file path on the worker node that contains the init script
-	// of the gardener-node-agent.
-	InitScriptPath = BaseDir + "/gardener-node-init.sh"
-
-	// NodeInitUnitName is the name of the gardener-node-init systemd service.
-	NodeInitUnitName = "gardener-node-init.service"
 	// UnitName is the name of the gardener-node-agent systemd service.
 	UnitName = "gardener-node-agent.service"
+	// InitUnitName is the name of the gardener-node-agent systemd service.
+	InitUnitName = "gardener-node-init.service"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -66,11 +63,21 @@ type NodeAgentConfiguration struct {
 	// Default: nil
 	// +optional
 	FeatureGates map[string]bool `json:"featureGates,omitempty"`
+	// APIServer contains information about the API server.
+	APIServer APIServer `json:"apiServer"`
 	// Bootstrap contains configuration for the bootstrap command.
 	// +optional
 	Bootstrap *BootstrapConfiguration `json:"bootstrap,omitempty"`
 	// Controllers defines the configuration of the controllers.
 	Controllers ControllerConfiguration `json:"controllers"`
+}
+
+// APIServer contains information about the API server.
+type APIServer struct {
+	// Server is the address of the API server.
+	Server string `json:"server"`
+	// CABundle is the certificate authority bundle for the API server.
+	CABundle []byte `json:"caBundle"`
 }
 
 // BootstrapConfiguration contains configuration for the bootstrap command.

@@ -26,7 +26,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
@@ -34,27 +33,24 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
-	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	controllerwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/gardener/gardener/cmd/gardener-resource-manager/app/bootstrappers"
+	"github.com/gardener/gardener/cmd/utils"
 	"github.com/gardener/gardener/pkg/api/indexer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller"
@@ -74,33 +70,10 @@ func NewCommand() *cobra.Command {
 		Short: "Launch the " + Name,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			verflag.PrintAndExitIfRequested()
-
-			if err := opts.complete(); err != nil {
-				return err
-			}
-			if err := opts.validate(); err != nil {
-				return err
-			}
-
-			log, err := logger.NewZapLogger(opts.config.LogLevel, opts.config.LogFormat)
+			log, err := utils.InitRun(cmd, opts, Name)
 			if err != nil {
-				return fmt.Errorf("error instantiating zap logger: %w", err)
+				return err
 			}
-
-			logf.SetLogger(log)
-			klog.SetLogger(log)
-
-			log.Info("Starting "+Name, "version", version.Get())
-			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-				log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value)) //nolint:logcheck
-			})
-
-			// don't output usage on further errors raised during execution
-			cmd.SilenceUsage = true
-			// further errors will be logged properly, don't duplicate
-			cmd.SilenceErrors = true
-
 			return run(cmd.Context(), log, opts.config)
 		},
 	}

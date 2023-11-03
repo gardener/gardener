@@ -16,6 +16,9 @@ debugging:
   enableProfiling: false
   enableContentionProfiling: false
 featureGates: {}
+apiServer:
+  server: https://localhost
+  caBundle: <some-base64-encoded-ca-bundle>
 #bootstrap:
 #  kubeletDataVolumeSize: 50Gi
 controllers:

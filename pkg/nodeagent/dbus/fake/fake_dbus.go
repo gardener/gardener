@@ -16,6 +16,7 @@ package fake
 
 import (
 	"context"
+	"sync"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
@@ -50,6 +51,8 @@ type SystemdAction struct {
 // DBus is a fake implementation for the dbus.DBus interface.
 type DBus struct {
 	Actions []SystemdAction
+
+	mutex sync.Mutex
 }
 
 var _ dbus.DBus = &DBus{}
@@ -61,6 +64,9 @@ func New() *DBus {
 
 // DaemonReload implements dbus.DBus.
 func (d *DBus) DaemonReload(_ context.Context) error {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
 	d.Actions = append(d.Actions, SystemdAction{
 		Action: ActionDaemonReload,
 	})
@@ -69,6 +75,9 @@ func (d *DBus) DaemonReload(_ context.Context) error {
 
 // Disable implements dbus.DBus.
 func (d *DBus) Disable(_ context.Context, unitNames ...string) error {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
 	d.Actions = append(d.Actions, SystemdAction{
 		Action:    ActionDisable,
 		UnitNames: unitNames,
@@ -78,6 +87,9 @@ func (d *DBus) Disable(_ context.Context, unitNames ...string) error {
 
 // Enable implements dbus.DBus.
 func (d *DBus) Enable(_ context.Context, unitNames ...string) error {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
 	d.Actions = append(d.Actions, SystemdAction{
 		Action:    ActionEnable,
 		UnitNames: unitNames,
@@ -88,6 +100,9 @@ func (d *DBus) Enable(_ context.Context, unitNames ...string) error {
 
 // Restart implements dbus.DBus.
 func (d *DBus) Restart(_ context.Context, _ record.EventRecorder, _ runtime.Object, unitName string) error {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
 	d.Actions = append(d.Actions, SystemdAction{
 		Action:    ActionRestart,
 		UnitNames: []string{unitName},
@@ -97,6 +112,9 @@ func (d *DBus) Restart(_ context.Context, _ record.EventRecorder, _ runtime.Obje
 
 // Start implements dbus.DBus.
 func (d *DBus) Start(_ context.Context, _ record.EventRecorder, _ runtime.Object, unitName string) error {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
 	d.Actions = append(d.Actions, SystemdAction{
 		Action:    ActionStart,
 		UnitNames: []string{unitName},
@@ -106,6 +124,9 @@ func (d *DBus) Start(_ context.Context, _ record.EventRecorder, _ runtime.Object
 
 // Stop implements dbus.DBus.
 func (d *DBus) Stop(_ context.Context, _ record.EventRecorder, _ runtime.Object, unitName string) error {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
 	d.Actions = append(d.Actions, SystemdAction{
 		Action:    ActionStop,
 		UnitNames: []string{unitName},

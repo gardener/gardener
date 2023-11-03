@@ -18,11 +18,15 @@ Finally, the `gardener-node-agent` runs a systemd service watching on secret res
 
 This section describes how the `gardener-node-agent` is initially installed onto the worker node.
 
-In the beginning, there is a very small bash script called [`gardener-node-init.sh`](../../pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/init.tpl.sh), which will be copied to `/var/lib/gardener-node-agent/gardener-node-init.sh` on the node with cloud-init data. This script's sole purpose is downloading and starting the `gardener-node-agent`. The binary artifact is extracted from an [OCI artifact](https://github.com/opencontainers/image-spec/blob/main/manifest.md) and lives at `/usr/local/bin/gardener-node-agent`. The `kubelet` should also be contained in the same OCI artifact.
+In the beginning, there is a very small bash script called [`gardener-node-init.sh`](../../pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/init.tpl.sh), which will be copied to `/var/lib/gardener-node-agent/init.sh` on the node with cloud-init data.
+This script's sole purpose is downloading and starting the `gardener-node-agent`.
+The binary artifact is extracted from an [OCI artifact](https://github.com/opencontainers/image-spec/blob/main/manifest.md) and lives at `/opt/bin/gardener-node-agent`.
 
-Along with the init script, a configuration for the `gardener-node-agent` is carried over to the worker node at `/var/lib/gardener-node-agent/configuration.yaml`. This configuration contains things like the shoot's `kube-apiserver` endpoint, the according certificates to communicate with it, the bootstrap token for the `kubelet`, and so on.
+Along with the init script, a configuration for the `gardener-node-agent` is carried over to the worker node at `/var/lib/gardener-node-agent/config.yaml`.
+This configuration contains things like the shoot's `kube-apiserver` endpoint, the according certificates to communicate with it, and controller configuration.
 
-In a bootstrapping phase, the `gardener-node-agent` sets itself up as a systemd service. It also executes tasks that need to be executed before any other components are installed, e.g. formatting the data device for the `kubelet`.
+In a bootstrapping phase, the `gardener-node-agent` sets itself up as a systemd service.
+It also executes tasks that need to be executed before any other components are installed, e.g. formatting the data device for the `kubelet`.
 
 ## Controllers
 

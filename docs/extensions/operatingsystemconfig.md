@@ -188,6 +188,19 @@ The `gardener-node-agent` will merge `.spec.units` and `.status.extensionUnits` 
 
 You can find an example implementation [here](../../pkg/provider-local/controller/operatingsystemconfig/actuator.go).
 
+### Bootstrap Tokens
+
+`gardenlet` adds a file with the content `<<BOOTSTRAP_TOKEN>>` to the `OperatingSystemConfig` with purpose `provision` and sets `transmitUnencoded=true`.
+This instructs the responsible OS extension to pass this file (with its content in clear-text) to the corresponding `Worker` resource.
+
+`machine-controller-manager` makes sure that
+- a bootstrap token gets created per machine
+- the `<<BOOTSTRAP_TOKEN>>` string in the user data of the machine gets replaced by the generated token.
+
+After the machine has been bootstrapped, the token secret in the shoot cluster gets deleted again.
+
+The token is used to bootstrap [Gardener Node Agent](../concepts/node-agent.md) and `kubelet`.
+
 ---
 
 ## How does Gardener bootstrap the machines?

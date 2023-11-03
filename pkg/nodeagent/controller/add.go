@@ -15,6 +15,7 @@
 package controller
 
 import (
+	"context"
 	"fmt"
 
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -26,14 +27,15 @@ import (
 )
 
 // AddToManager adds all controllers to the given manager.
-func AddToManager(mgr manager.Manager, cfg *config.NodeAgentConfiguration, nodeName string) error {
+func AddToManager(cancel context.CancelFunc, mgr manager.Manager, cfg *config.NodeAgentConfiguration, nodeName string) error {
 	if err := (&node.Reconciler{}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding node controller: %w", err)
 	}
 
 	if err := (&operatingsystemconfig.Reconciler{
-		Config:   cfg.Controllers.OperatingSystemConfig,
-		NodeName: nodeName,
+		Config:        cfg.Controllers.OperatingSystemConfig,
+		NodeName:      nodeName,
+		CancelContext: cancel,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding operating system config controller: %w", err)
 	}
