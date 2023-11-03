@@ -45,7 +45,7 @@ var _ = Describe("Shoot defaulting", func() {
 		}
 	})
 
-	Describe("kubernetes defaulting", func() {
+	Describe("Kubernetes defaulting", func() {
 		It("should set the kubeScheduler field for Shoot with workers", func() {
 			SetObjectDefaults_Shoot(obj)
 
@@ -216,7 +216,7 @@ var _ = Describe("Shoot defaulting", func() {
 		})
 	})
 
-	Describe("purpose defaulting", func() {
+	Describe("Purpose defaulting", func() {
 		It("should default purpose field", func() {
 			obj.Spec.Purpose = nil
 
@@ -235,7 +235,7 @@ var _ = Describe("Shoot defaulting", func() {
 		})
 	})
 
-	Describe("toleration defaulting", func() {
+	Describe("Tolerations defaulting", func() {
 		It("should not add the 'protected' toleration if the namespace is not 'garden'", func() {
 			obj.Namespace = "foo"
 			obj.Spec.Tolerations = nil
@@ -258,7 +258,7 @@ var _ = Describe("Shoot defaulting", func() {
 		})
 	})
 
-	Describe("scheduler defaulting", func() {
+	Describe("SchedulerName defaulting", func() {
 		It("should default schedulerName", func() {
 			obj.Spec.SchedulerName = nil
 
@@ -276,7 +276,7 @@ var _ = Describe("Shoot defaulting", func() {
 		})
 	})
 
-	Describe("kubeReserved defaulting", func() {
+	Describe("KubeReserved defaulting", func() {
 		var (
 			defaultKubeReservedMemory = resource.MustParse("1Gi")
 			defaultKubeReservedCPU    = resource.MustParse("80m")
@@ -314,8 +314,8 @@ var _ = Describe("Shoot defaulting", func() {
 		})
 	})
 
-	Describe("kubeControllerManager settings defaulting", func() {
-		Describe("nodeCIDRMaskSize", func() {
+	Describe("KubeControllerManager settings defaulting", func() {
+		Describe("NodeCIDRMaskSize", func() {
 			It("should not default nodeCIDRMaskSize field for workerless Shoot", func() {
 				obj.Spec.Provider.Workers = nil
 
@@ -478,12 +478,20 @@ var _ = Describe("Shoot defaulting", func() {
 		})
 	})
 
-	Describe("maintenance defaulting", func() {
+	Describe("Maintenance defaulting", func() {
 		BeforeEach(func() {
 			obj.Spec.Maintenance = nil
 		})
 
-		It("should set the maintenance field", func() {
+		It("should correctly default the maintenance timeWindow field", func() {
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Maintenance.TimeWindow).NotTo(BeNil())
+			Expect(obj.Spec.Maintenance.TimeWindow.Begin).To(HaveSuffix("0000+0000"))
+			Expect(obj.Spec.Maintenance.TimeWindow.End).To(HaveSuffix("0000+0000"))
+		})
+
+		It("should set the maintenance autoUpdate field", func() {
 			SetObjectDefaults_Shoot(obj)
 
 			Expect(obj.Spec.Maintenance).NotTo(BeNil())
@@ -511,7 +519,7 @@ var _ = Describe("Shoot defaulting", func() {
 		})
 	})
 
-	Describe("kubeAPIServerConfig defaulting", func() {
+	Describe("KubeAPIServer defaulting", func() {
 		BeforeEach(func() {
 			obj.Spec.Kubernetes.KubeAPIServer = nil
 		})
@@ -697,7 +705,7 @@ var _ = Describe("Shoot defaulting", func() {
 		Expect(obj.Spec.Provider.WorkersSettings).To(Equal(&WorkersSettings{SSHAccess: &SSHAccess{Enabled: false}}))
 	})
 
-	Describe("systemComponents defaulting", func() {
+	Describe("SystemComponents defaulting", func() {
 		It("should set the system components and coredns autoscaling fields for shoot with workers", func() {
 			obj.Spec.SystemComponents = nil
 
@@ -715,7 +723,7 @@ var _ = Describe("Shoot defaulting", func() {
 		})
 	})
 
-	Context("k8s version >= 1.25", func() {
+	Context("K8s version >= 1.25", func() {
 		BeforeEach(func() {
 			obj.Spec.Kubernetes.Version = "1.25.0"
 		})
@@ -729,19 +737,7 @@ var _ = Describe("Shoot defaulting", func() {
 		})
 	})
 
-	Describe("maintenance defaulting", func() {
-		It("should correctly default the maintenance", func() {
-			obj.Spec.Maintenance = nil
-
-			SetObjectDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Maintenance.TimeWindow).NotTo(BeNil())
-			Expect(obj.Spec.Maintenance.TimeWindow.Begin).To(HaveSuffix("0000+0000"))
-			Expect(obj.Spec.Maintenance.TimeWindow.End).To(HaveSuffix("0000+0000"))
-		})
-	})
-
-	Describe("worker defaulting", func() {
+	Describe("Worker defaulting", func() {
 		It("should set the maxSurge field", func() {
 			SetObjectDefaults_Shoot(obj)
 

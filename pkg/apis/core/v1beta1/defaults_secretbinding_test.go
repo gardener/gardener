@@ -22,7 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = Describe("Shoot defaulting", func() {
+var _ = Describe("SecretBinding defaulting", func() {
 	var obj *SecretBinding
 
 	BeforeEach(func() {

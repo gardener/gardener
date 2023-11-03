@@ -51,7 +51,6 @@ func (h *Handler) Default(_ context.Context, obj runtime.Object) error {
 	if garden.Spec.VirtualCluster.Kubernetes.KubeControllerManager.KubeControllerManagerConfig == nil {
 		garden.Spec.VirtualCluster.Kubernetes.KubeControllerManager.KubeControllerManagerConfig = &gardencorev1beta1.KubeControllerManagerConfig{}
 	}
-	gardencorev1beta1.SetDefaults_KubeControllerManagerConfig(garden.Spec.VirtualCluster.Kubernetes.KubeControllerManager.KubeControllerManagerConfig)
 
 	return nil
 }

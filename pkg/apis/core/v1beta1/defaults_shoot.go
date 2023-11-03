@@ -232,9 +232,6 @@ func SetDefaults_KubeAPIServerConfig(obj *KubeAPIServerConfig) {
 	}
 }
 
-// SetDefaults_KubeControllerManagerConfig sets default values for KubeControllerManagerConfig objects.
-func SetDefaults_KubeControllerManagerConfig(_ *KubeControllerManagerConfig) {}
-
 // SetDefaults_Networking sets default values for Networking objects.
 func SetDefaults_Networking(obj *Networking) {
 	if len(obj.IPFamilies) == 0 {
