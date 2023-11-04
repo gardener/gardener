@@ -109,7 +109,7 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 		}
 
 		var (
-	        	backupLeaderElection *config.ETCDBackupLeaderElection
+			backupLeaderElection         *config.ETCDBackupLeaderElection
 			deltaSnapshotRetentionPeriod *metav1.Duration
 		)
 		if b.Config != nil && b.Config.ETCDConfig != nil {

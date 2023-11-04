@@ -837,7 +837,7 @@ type BackupConfig struct {
 	// FullSnapshotSchedule is a cron schedule that declares how frequent full snapshots shall be taken.
 	FullSnapshotSchedule string
 	// LeaderElection contains configuration for the leader election for the etcd backup-restore sidecar.
-	LeaderElection               *gardenletconfig.ETCDBackupLeaderElection
+	LeaderElection *gardenletconfig.ETCDBackupLeaderElection
 	// DeltaSnapshotRetentionPeriod defines the duration for which delta snapshots will be retained, excluding the latest snapshot set.
 	DeltaSnapshotRetentionPeriod *metav1.Duration
 }
