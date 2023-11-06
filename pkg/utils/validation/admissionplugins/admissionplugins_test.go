@@ -44,40 +44,6 @@ var _ = Describe("admissionplugins", func() {
 		Entry("Known admission plugin but version range not present", "PodNodeSelector", "1.25", true, true),
 	)
 
-	Describe("AdmissionPluginVersionRange", func() {
-		DescribeTable("#Contains",
-			func(vr AdmissionPluginVersionRange, version string, contains, success bool) {
-				result, err := vr.Contains(version)
-				if success {
-					Expect(err).To(Not(HaveOccurred()))
-					Expect(result).To(Equal(contains))
-				} else {
-					Expect(err).To(HaveOccurred())
-				}
-			},
-
-			Entry("[,) contains 1.2.3", AdmissionPluginVersionRange{}, "1.2.3", true, true),
-			Entry("[,) contains 0.1.2", AdmissionPluginVersionRange{}, "0.1.2", true, true),
-			Entry("[,) contains 1.3.5", AdmissionPluginVersionRange{}, "1.3.5", true, true),
-			Entry("[,) fails with foo", AdmissionPluginVersionRange{}, "foo", false, false),
-
-			Entry("[, 1.3) contains 1.2.3", AdmissionPluginVersionRange{RemovedInVersion: "1.3"}, "1.2.3", true, true),
-			Entry("[, 1.3) contains 0.1.2", AdmissionPluginVersionRange{RemovedInVersion: "1.3"}, "0.1.2", true, true),
-			Entry("[, 1.3) doesn't contain 1.3.5", AdmissionPluginVersionRange{RemovedInVersion: "1.3"}, "1.3.5", false, true),
-			Entry("[, 1.3) fails with foo", AdmissionPluginVersionRange{RemovedInVersion: "1.3"}, "foo", false, false),
-
-			Entry("[1.0, ) contains 1.2.3", AdmissionPluginVersionRange{AddedInVersion: "1.0"}, "1.2.3", true, true),
-			Entry("[1.0, ) doesn't contain 0.1.2", AdmissionPluginVersionRange{AddedInVersion: "1.0"}, "0.1.2", false, true),
-			Entry("[1.0, ) contains 1.3.5", AdmissionPluginVersionRange{AddedInVersion: "1.0"}, "1.3.5", true, true),
-			Entry("[1.0, ) fails with foo", AdmissionPluginVersionRange{AddedInVersion: "1.0"}, "foo", false, false),
-
-			Entry("[1.0, 1.3) contains 1.2.3", AdmissionPluginVersionRange{AddedInVersion: "1.0", RemovedInVersion: "1.3"}, "1.2.3", true, true),
-			Entry("[1.0, 1.3) doesn't contain 0.1.2", AdmissionPluginVersionRange{AddedInVersion: "1.0", RemovedInVersion: "1.3"}, "0.1.2", false, true),
-			Entry("[1.0, 1.3) doesn't contain 1.3.5", AdmissionPluginVersionRange{AddedInVersion: "1.0", RemovedInVersion: "1.3"}, "1.3.5", false, true),
-			Entry("[1.0, 1.3) fails with foo", AdmissionPluginVersionRange{AddedInVersion: "1.0", RemovedInVersion: "1.3"}, "foo", false, false),
-		)
-	})
-
 	Describe("#ValidateAdmissionPlugins", func() {
 		DescribeTable("validate admission plugins",
 			func(plugins []core.AdmissionPlugin, version string, matcher gomegatypes.GomegaMatcher) {

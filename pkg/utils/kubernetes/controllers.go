@@ -14,20 +14,10 @@
 
 package kubernetes
 
-import (
-	"fmt"
-
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
-)
-
-// VersionRange represents a version range of type [AddedInVersion, RemovedInVersion).
-type VersionRange struct {
-	AddedInVersion   string
-	RemovedInVersion string
-}
+import versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 // APIGroupControllerMap is a map for the Kubernetes API groups and the corresponding controllers for them.
-var APIGroupControllerMap = map[string]map[string]VersionRange{
+var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 	"apiserverinternal/v1alpha1": {
 		"storage-version-gc": {},
 	},
@@ -125,22 +115,4 @@ var APIGroupControllerMap = map[string]map[string]VersionRange{
 		"ttl":                                  {},
 		"ttl-after-finished":                   {},
 	},
-}
-
-// Contains returns true if the range contains the given version, false otherwise.
-// The range contains the given version only if it's greater or equal than AddedInVersion (always true if AddedInVersion is empty),
-// and less than RemovedInVersion (always true if RemovedInVersion is empty).
-func (r *VersionRange) Contains(version string) (bool, error) {
-	var constraint string
-	switch {
-	case r.AddedInVersion != "" && r.RemovedInVersion == "":
-		constraint = fmt.Sprintf(">= %s", r.AddedInVersion)
-	case r.AddedInVersion == "" && r.RemovedInVersion != "":
-		constraint = fmt.Sprintf("< %s", r.RemovedInVersion)
-	case r.AddedInVersion != "" && r.RemovedInVersion != "":
-		constraint = fmt.Sprintf(">= %s, < %s", r.AddedInVersion, r.RemovedInVersion)
-	default:
-		constraint = "*"
-	}
-	return versionutils.CheckVersionMeetsConstraint(version, constraint)
 }

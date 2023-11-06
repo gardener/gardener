@@ -97,3 +97,41 @@ func normalize(version string) string {
 	}
 	return v
 }
+
+// VersionRange represents a version range of type [AddedInVersion, RemovedInVersion).
+type VersionRange struct {
+	AddedInVersion   string
+	RemovedInVersion string
+}
+
+// Contains returns true if the range contains the given version, false otherwise.
+// The range contains the given version only if it's greater or equal than AddedInVersion (always true if AddedInVersion is empty),
+// and less than RemovedInVersion (always true if RemovedInVersion is empty).
+func (r *VersionRange) Contains(version string) (bool, error) {
+	var constraint string
+	switch {
+	case r.AddedInVersion != "" && r.RemovedInVersion == "":
+		constraint = fmt.Sprintf(">= %s", r.AddedInVersion)
+	case r.AddedInVersion == "" && r.RemovedInVersion != "":
+		constraint = fmt.Sprintf("< %s", r.RemovedInVersion)
+	case r.AddedInVersion != "" && r.RemovedInVersion != "":
+		constraint = fmt.Sprintf(">= %s, < %s", r.AddedInVersion, r.RemovedInVersion)
+	default:
+		constraint = "*"
+	}
+	return CheckVersionMeetsConstraint(version, constraint)
+}
+
+// SupportedVersionRange returns the supported version range for the given API.
+func (r *VersionRange) SupportedVersionRange() string {
+	switch {
+	case r.AddedInVersion != "" && r.RemovedInVersion == "":
+		return fmt.Sprintf("versions >= %s", r.AddedInVersion)
+	case r.AddedInVersion == "" && r.RemovedInVersion != "":
+		return fmt.Sprintf("versions < %s", r.RemovedInVersion)
+	case r.AddedInVersion != "" && r.RemovedInVersion != "":
+		return fmt.Sprintf("versions >= %s, < %s", r.AddedInVersion, r.RemovedInVersion)
+	default:
+		return "all kubernetes versions"
+	}
+}
