@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
+	"github.com/gardener/gardener/pkg/nodeagent/controller/lease"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/node"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/token"
@@ -44,6 +45,12 @@ func AddToManager(cancel context.CancelFunc, mgr manager.Manager, cfg *config.No
 		Config: cfg.Controllers.Token,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding token controller: %w", err)
+	}
+
+	if err := (&lease.Reconciler{
+		NodeName:      nodeName,
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding lease controller: %w", err)
 	}
 
 	return nil
