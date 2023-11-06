@@ -829,12 +829,12 @@ var _ = Describe("Defaults", func() {
 		It("should not default the seed settings because they were provided", func() {
 			var (
 				dwdWeederEnabled = false
-				dwdProberEnabled    = false
+				dwdProberEnabled = false
 			)
 
 			obj = &SeedSettingDependencyWatchdog{
 				Weeder: &SeedSettingDependencyWatchdogWeeder{Enabled: dwdWeederEnabled},
-				Prober:    &SeedSettingDependencyWatchdogProber{Enabled: dwdProberEnabled},
+				Prober: &SeedSettingDependencyWatchdogProber{Enabled: dwdProberEnabled},
 			}
 
 			SetDefaults_SeedSettingDependencyWatchdog(obj)

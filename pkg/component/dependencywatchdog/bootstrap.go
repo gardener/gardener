@@ -162,15 +162,6 @@ func (b *bootstrapper) WaitCleanup(ctx context.Context) error {
 	return managedresources.WaitUntilDeleted(timeoutCtx, b.client, b.namespace, b.name())
 }
 
-func (b *bootstrapper) waitUntilManagedResourceDeleted(ctx context.Context, name string) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
-	defer cancel()
-	if err := managedresources.WaitUntilDeleted(timeoutCtx, b.client, b.namespace, name); err != nil {
-		return fmt.Errorf("error while waiting for managed resource %s to be deleted: %w", name, err)
-	}
-	return nil
-}
-
 func (b *bootstrapper) getConfigMap() (*corev1.ConfigMap, error) {
 	var (
 		config string
