@@ -15,7 +15,7 @@
 package v1beta1
 
 import (
-	math "math"
+	"math"
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
