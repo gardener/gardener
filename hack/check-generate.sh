@@ -24,14 +24,13 @@ initialized_git=false
 stashed=false
 checked_out=false
 generated=false
-vendored=false
 
 function delete-check-branch {
   git rev-parse --verify "$check_branch" &>/dev/null && git branch -q -D "$check_branch" || :
 }
 
 function cleanup {
-  if [[ "$generated" == true ]] || [[ "$vendored" == true ]]; then
+  if [[ "$generated" == true ]]; then
     if ! clean_err="$(make -f "$makefile" clean && git reset --hard -q && git clean -qdf)"; then
       echo "Could not clean: $clean_err"
     fi
