@@ -31,6 +31,19 @@ DEFAULT_MANIFESTS_DIRS=(
   "test"
 )
 
+SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+VGOPATH="$VGOPATH"
+
+VIRTUAL_GOPATH="$(mktemp -d)"
+trap 'rm -rf "$VIRTUAL_GOPATH"' EXIT
+
+# Setup virtual GOPATH so the codegen tools work as expected.
+(cd "$SCRIPT_DIR/.."; go mod download && "$VGOPATH" -o "$VIRTUAL_GOPATH")
+
+export GOROOT="${GOROOT:-"$(go env GOROOT)"}"
+export GOPATH="$VIRTUAL_GOPATH"
+export GO111MODULE=off
+
 parse_flags() {
   while test $# -gt 0; do
     case "$1" in

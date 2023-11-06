@@ -63,7 +63,7 @@ get_group_package () {
     echo "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
     ;;
   "autoscaling.k8s.io")
-    echo "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/..."
+    echo "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
     ;;
   "machine.sapcloud.io")
     echo "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -105,10 +105,14 @@ generate_group () {
     # etcd-druid, due to adverse interaction with VPA.
     # See https://github.com/gardener/gardener/pull/6850 and https://github.com/gardener/gardener/pull/8560#discussion_r1347470394
     # TODO(shreyas-s-rao): Remove this workaround as soon as the scale subresource is supported properly.
-    etcd_api_types_file="${package_path%;}/types_etcd.go"
+    etcd_druid_dir="$(go list -f '{{ .Dir }}' "github.com/gardener/etcd-druid")"
+    etcd_api_types_file="${etcd_druid_dir}/api/v1alpha1/types_etcd.go"
+    etcd_api_types_backup="$(mktemp -d)/types_etcd.go"
+    chmod +w "$etcd_api_types_file" && chmod +w "$etcd_druid_dir/api/v1alpha1/"
+    cp "$etcd_api_types_file" "$etcd_api_types_backup"
+    trap 'cp "$etcd_api_types_backup" "$etcd_api_types_file"' EXIT
     sed -i '/\/\/ +kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas,selectorpath=.status.labelSelector/d' "$etcd_api_types_file"
     $generate
-    git checkout "$etcd_api_types_file"
   elif [[ "$group" == "autoscaling.k8s.io" ]]; then
     # See https://github.com/kubernetes/autoscaler/blame/master/vertical-pod-autoscaler/hack/generate-crd-yaml.sh#L43-L45
     generator_output="$(mktemp -d)/controller-gen.log"

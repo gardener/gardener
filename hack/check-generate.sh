@@ -16,7 +16,7 @@
 
 set -e
 
-echo "> Generate / Vendor Check"
+echo "> Generate"
 
 makefile="$1/Makefile"
 check_branch="__check"
@@ -103,20 +103,6 @@ if which git &>/dev/null; then
 
   if [[ "$old_status" != "$new_status" ]]; then
     echo "make generate needs to be run:"
-    echo "$new_status"
-    exit 1
-  fi
-
-  echo ">> make revendor"
-  vendored=true
-  if ! out=$(make -f "$makefile" revendor 2>&1); then
-    echo "Error during calling make revendor: $out"
-    exit 1
-  fi
-  new_status="$(git status -s)"
-
-  if [[ "$old_status" != "$new_status" ]]; then
-    echo "make revendor needs to be run:"
     echo "$new_status"
     exit 1
   fi
