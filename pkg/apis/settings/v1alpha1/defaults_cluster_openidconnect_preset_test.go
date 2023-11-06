@@ -22,37 +22,79 @@ import (
 	"github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 )
 
-var _ = Describe("Defaults", func() {
+var _ = Describe("ClusterOpenIDConnectPreset defaulting", func() {
 
-	Describe("SetDefaults_ClusterOpenIDConnectPreset", func() {
+	var (
+		given    *v1alpha1.ClusterOpenIDConnectPreset
+		expected *v1alpha1.ClusterOpenIDConnectPreset
+	)
 
-		It("correct defaults are set", func() {
-			given := &v1alpha1.ClusterOpenIDConnectPreset{}
-			expected := &v1alpha1.ClusterOpenIDConnectPreset{
-				Spec: v1alpha1.ClusterOpenIDConnectPresetSpec{
-					OpenIDConnectPresetSpec: defaultSpec(),
-					ProjectSelector:         &metav1.LabelSelector{},
+	BeforeEach(func() {
+
+		given = &v1alpha1.ClusterOpenIDConnectPreset{}
+		usernameClaim := "sub"
+		expected = &v1alpha1.ClusterOpenIDConnectPreset{
+			Spec: v1alpha1.ClusterOpenIDConnectPresetSpec{
+				OpenIDConnectPresetSpec: v1alpha1.OpenIDConnectPresetSpec{
+					Server: v1alpha1.KubeAPIServerOpenIDConnect{
+						// string literal are used to be sure that the test fails
+						// if the constant values are changed.
+						UsernameClaim: &usernameClaim,
+						SigningAlgs:   []string{"RS256"},
+					},
+					ShootSelector: &metav1.LabelSelector{},
 				},
-			}
+				ProjectSelector: &metav1.LabelSelector{},
+			},
+		}
+	})
 
-			v1alpha1.SetDefaults_ClusterOpenIDConnectPreset(given)
+	It("should default ClusterOpenIDConnectPreset correctly", func() {
+		v1alpha1.SetDefaults_ClusterOpenIDConnectPreset(given)
 
-			Expect(given).To(BeEquivalentTo(expected))
-		})
+		Expect(given).To(BeEquivalentTo(expected))
+	})
+
+	It("should not default ProjectSelector if it is already set", func() {
+		given.Spec.ProjectSelector = &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}}
+
+		v1alpha1.SetDefaults_ClusterOpenIDConnectPreset(given)
+
+		expected.Spec.ProjectSelector = &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}}
+		Expect(given).To(BeEquivalentTo(expected))
+
+	})
+
+	It("should not default ShootSelector if it is already set", func() {
+		given.Spec.ShootSelector = &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}}
+
+		v1alpha1.SetDefaults_ClusterOpenIDConnectPreset(given)
+
+		expected.Spec.ShootSelector = &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}}
+		Expect(given).To(BeEquivalentTo(expected))
+
+	})
+
+	It("should not default SigningAlgs if they are already set", func() {
+		given.Spec.Server.SigningAlgs = []string{"alg1", "alg2"}
+
+		v1alpha1.SetDefaults_ClusterOpenIDConnectPreset(given)
+
+		expected.Spec.Server.SigningAlgs = []string{"alg1", "alg2"}
+		Expect(given).To(BeEquivalentTo(expected))
+
+	})
+
+	It("should not default UsernameClaim if it is already set", func() {
+		usernameClaim := "usr"
+		given.Spec.Server.UsernameClaim = &usernameClaim
+
+		v1alpha1.SetDefaults_ClusterOpenIDConnectPreset(given)
+
+		expectedUsernameClaim := "usr"
+		expected.Spec.Server.UsernameClaim = &expectedUsernameClaim
+		Expect(given).To(BeEquivalentTo(expected))
 
 	})
 
 })
-
-func defaultSpec() v1alpha1.OpenIDConnectPresetSpec {
-	usernameClaim := "sub"
-	return v1alpha1.OpenIDConnectPresetSpec{
-		Server: v1alpha1.KubeAPIServerOpenIDConnect{
-			// string literal are used to be sure that the test fails
-			// if the constant values are changed.
-			UsernameClaim: &usernameClaim,
-			SigningAlgs:   []string{"RS256"},
-		},
-		ShootSelector: &metav1.LabelSelector{},
-	}
-}

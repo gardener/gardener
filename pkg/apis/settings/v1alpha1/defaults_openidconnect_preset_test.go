@@ -45,7 +45,6 @@ var _ = Describe("OpenIDConnectPreset defaulting", func() {
 	})
 
 	It("should default OpenIDConnectPreset correctly", func() {
-
 		v1alpha1.SetDefaults_OpenIDConnectPreset(given)
 
 		Expect(given).To(BeEquivalentTo(expected))
