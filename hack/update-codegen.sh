@@ -42,14 +42,6 @@ AVAILABLE_CODEGEN_OPTIONS=(
   "nodeagent_groups"
 )
 
-# Friendly reminder if workspace location is not in $GOPATH
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-if [ "${SCRIPT_DIR}" != "$(realpath $GOPATH)/src/github.com/gardener/gardener/hack" ]; then
-  echo "'hack/update-codegen.sh' script does not work correctly if your workspace is outside GOPATH"
-  echo "Please check https://github.com/gardener/gardener/blob/master/docs/development/local_setup.md#get-the-sources"
-  exit 1
-fi
-
 # We need to explicitly pass GO111MODULE=off to k8s.io/code-generator as it is significantly slower otherwise,
 # see https://github.com/kubernetes/code-generator/issues/100.
 export GO111MODULE=off
@@ -536,7 +528,7 @@ else
             break
         fi
     done
-    
+
     if $valid; then
         valid_options+=("$option")
     else
