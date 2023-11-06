@@ -67,15 +67,12 @@ var _ = Describe("DependencyWatchdogAccess", func() {
 			}
 		})
 
-		Context("DWD probe is enabled", func() {
+		Context("DWD prober is enabled", func() {
 			BeforeEach(func() {
 				botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
 					Spec: gardencorev1beta1.SeedSpec{
 						Settings: &gardencorev1beta1.SeedSettings{
 							DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{
-								Probe: &gardencorev1beta1.SeedSettingDependencyWatchdogProbe{
-									Enabled: true,
-								},
 								Prober: &gardencorev1beta1.SeedSettingDependencyWatchdogProber{
 									Enabled: true,
 								},
@@ -96,15 +93,12 @@ var _ = Describe("DependencyWatchdogAccess", func() {
 			})
 		})
 
-		Context("DWD probe is disabled", func() {
+		Context("DWD prober is disabled", func() {
 			BeforeEach(func() {
 				botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
 					Spec: gardencorev1beta1.SeedSpec{
 						Settings: &gardencorev1beta1.SeedSettings{
 							DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{
-								Probe: &gardencorev1beta1.SeedSettingDependencyWatchdogProbe{
-									Enabled: false,
-								},
 								Prober: &gardencorev1beta1.SeedSettingDependencyWatchdogProber{
 									Enabled: false,
 								},

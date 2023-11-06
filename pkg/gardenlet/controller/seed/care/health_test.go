@@ -101,12 +101,6 @@ var _ = Describe("Seed health", func() {
 				},
 				Settings: &gardencorev1beta1.SeedSettings{
 					DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{
-						Endpoint: &gardencorev1beta1.SeedSettingDependencyWatchdogEndpoint{
-							Enabled: true,
-						},
-						Probe: &gardencorev1beta1.SeedSettingDependencyWatchdogProbe{
-							Enabled: true,
-						},
 						Weeder: &gardencorev1beta1.SeedSettingDependencyWatchdogWeeder{
 							Enabled: true,
 						},
@@ -149,8 +143,6 @@ var _ = Describe("Seed health", func() {
 		Context("When optional managed resources are turned off, and required resources are deployed successfully", func() {
 			JustBeforeEach(func() {
 				defer test.WithFeatureGate(features.DefaultFeatureGate, features.HVPA, false)()
-				seed.Spec.Settings.DependencyWatchdog.Endpoint.Enabled = false
-				seed.Spec.Settings.DependencyWatchdog.Probe.Enabled = false
 				seed.Spec.Settings.DependencyWatchdog.Weeder.Enabled = false
 				seed.Spec.Settings.DependencyWatchdog.Prober.Enabled = false
 

@@ -665,8 +665,11 @@ var _ = Describe("Helper", func() {
 			Expect(SeedSettingDependencyWatchdogWeederEnabled(settings)).To(Equal(expected))
 		},
 
-		Entry("only dwd weeder set and its enabled", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{Weeder: &gardencorev1beta1.SeedSettingDependencyWatchdogWeeder{Enabled: true}}}, true),
-		Entry("both dwd weeder and endpoint set and disabled", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{Endpoint: &gardencorev1beta1.SeedSettingDependencyWatchdogEndpoint{Enabled: false}, Weeder: &gardencorev1beta1.SeedSettingDependencyWatchdogWeeder{Enabled: false}}}, false),
+		Entry("no settings", nil, true),
+		Entry("no dwd setting", &gardencorev1beta1.SeedSettings{}, true),
+		Entry("no dwd weeder setting", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{}}, true),
+		Entry("dwd weeder enabled", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{Weeder: &gardencorev1beta1.SeedSettingDependencyWatchdogWeeder{Enabled: true}}}, true),
+		Entry("dwd weeder disabled", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{Weeder: &gardencorev1beta1.SeedSettingDependencyWatchdogWeeder{Enabled: false}}}, false),
 	)
 
 	DescribeTable("#SeedSettingDependencyWatchdogProberEnabled",
@@ -674,8 +677,11 @@ var _ = Describe("Helper", func() {
 			Expect(SeedSettingDependencyWatchdogProberEnabled(settings)).To(Equal(expected))
 		},
 
-		Entry("only dwd prober set and its enabled", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{Prober: &gardencorev1beta1.SeedSettingDependencyWatchdogProber{Enabled: true}}}, true),
-		Entry("both dwd prober and probe set and disabled", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{Prober: &gardencorev1beta1.SeedSettingDependencyWatchdogProber{Enabled: false}, Probe: &gardencorev1beta1.SeedSettingDependencyWatchdogProbe{Enabled: false}}}, false),
+		Entry("no settings", nil, true),
+		Entry("no dwd setting", &gardencorev1beta1.SeedSettings{}, true),
+		Entry("no dwd prober setting", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{}}, true),
+		Entry("dwd prober enabled", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{Prober: &gardencorev1beta1.SeedSettingDependencyWatchdogProber{Enabled: true}}}, true),
+		Entry("dwd prober disabled", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{Prober: &gardencorev1beta1.SeedSettingDependencyWatchdogProber{Enabled: false}}}, false),
 	)
 
 	DescribeTable("#SeedSettingTopologyAwareRoutingEnabled",
