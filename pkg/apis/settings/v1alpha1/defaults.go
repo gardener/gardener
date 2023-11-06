@@ -28,7 +28,7 @@ func SetDefaults_OpenIDConnectPreset(obj *OpenIDConnectPreset) {
 	if obj.Spec.ShootSelector == nil {
 		obj.Spec.ShootSelector = &metav1.LabelSelector{}
 	}
-	setDefaultServerSpec(&obj.Spec.Server)
+	setDefaults_KubeAPIServerOpenIDConnect(&obj.Spec.Server)
 }
 
 // SetDefaults_ClusterOpenIDConnectPreset sets default values for ClusterOpenIDConnectPreset objects.
@@ -40,5 +40,5 @@ func SetDefaults_ClusterOpenIDConnectPreset(obj *ClusterOpenIDConnectPreset) {
 	if obj.Spec.ProjectSelector == nil {
 		obj.Spec.ProjectSelector = &metav1.LabelSelector{}
 	}
-	setDefaultServerSpec(&obj.Spec.Server)
+	setDefaults_KubeAPIServerOpenIDConnect(&obj.Spec.Server)
 }
