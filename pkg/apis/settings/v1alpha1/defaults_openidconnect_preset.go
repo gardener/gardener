@@ -14,7 +14,9 @@
 
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 // SetDefaults_OpenIDConnectPreset sets default values for OpenIDConnectPreset objects.
 func SetDefaults_OpenIDConnectPreset(obj *OpenIDConnectPreset) {
