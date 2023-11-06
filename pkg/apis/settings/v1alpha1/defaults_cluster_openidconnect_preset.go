@@ -12,16 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1alpha1_test
+package v1alpha1
 
-import (
-	"testing"
+import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-)
+// SetDefaults_ClusterOpenIDConnectPreset sets default values for ClusterOpenIDConnectPreset objects.
+func SetDefaults_ClusterOpenIDConnectPreset(obj *ClusterOpenIDConnectPreset) {
+	if obj.Spec.ShootSelector == nil {
+		obj.Spec.ShootSelector = &metav1.LabelSelector{}
+	}
 
-func TestAPI(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Settings V1alpha1 Suite")
+	if obj.Spec.ProjectSelector == nil {
+		obj.Spec.ProjectSelector = &metav1.LabelSelector{}
+	}
+	setDefaults_KubeAPIServerOpenIDConnect(&obj.Spec.Server)
 }
