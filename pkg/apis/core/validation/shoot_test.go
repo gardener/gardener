@@ -1507,9 +1507,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
-			It("should allow updating the dns providers if seed is assigned", func() {
+			It("should forbid updating the dns providers", func() {
 				oldShoot := shoot.DeepCopy()
-				oldShoot.Spec.SeedName = nil
 				oldShoot.Spec.DNS.Providers[0].Type = pointer.String("some-dns-provider")
 
 				newShoot := prepareShootForUpdate(oldShoot)
@@ -1517,15 +1516,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				newShoot.Spec.DNS.Providers = nil
 
 				errorList := ValidateShootUpdate(newShoot, oldShoot)
-
-				Expect(errorList).To(BeEmpty())
-			})
-
-			It("should forbid updating the primary dns provider type", func() {
-				newShoot := prepareShootForUpdate(shoot)
-				shoot.Spec.DNS.Providers[0].Type = pointer.String("some-other-provider")
-
-				errorList := ValidateShootUpdate(newShoot, shoot)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
@@ -1535,6 +1525,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should forbid to unset the primary DNS provider type", func() {
 				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.SeedName = pointer.String("seed")
 				newShoot.Spec.DNS.Providers[0].Type = nil
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
@@ -1547,6 +1538,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should forbid to remove the primary DNS provider", func() {
 				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.SeedName = pointer.String("seed")
 				newShoot.Spec.DNS.Providers[0].Primary = pointer.Bool(false)
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
@@ -1559,6 +1551,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should forbid adding another primary provider", func() {
 				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.SeedName = pointer.String("seed")
 				newShoot.Spec.DNS.Providers = append(newShoot.Spec.DNS.Providers, core.DNSProvider{
 					Primary: pointer.Bool(true),
 				})
@@ -1571,7 +1564,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
-			It("should having the a provider with invalid secretName", func() {
+			It("should forbid having a provider with invalid secretName", func() {
 				invalidSecretName := "foo/bar"
 
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
@@ -1593,7 +1586,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
-			It("should having the same provider multiple times", func() {
+			It("should forbid having the same provider multiple times", func() {
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
 						SecretName: &secretName,
