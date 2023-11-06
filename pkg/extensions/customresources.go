@@ -223,7 +223,7 @@ func WaitUntilExtensionObjectDeleted(
 		}
 
 		if lastErr := obj.GetExtensionStatus().GetLastError(); lastErr != nil {
-			log.Info("Object did not get deleted yet", "details", lastErr.Description)
+			log.Info("Object did not get deleted yet", "description", lastErr.Description)
 			lastObservedError = v1beta1helper.NewErrorWithCodes(errors.New(lastErr.Description), lastErr.Codes...)
 		}
 
