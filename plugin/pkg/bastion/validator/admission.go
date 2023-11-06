@@ -26,12 +26,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
 
-	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/operations"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
+	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/utils/kubernetes"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
@@ -51,7 +51,7 @@ type Bastion struct {
 }
 
 var (
-	_ = admissioninitializer.WantsInternalCoreClientset(&Bastion{})
+	_ = admissioninitializer.WantsExternalCoreClientSet(&Bastion{})
 
 	readyFuncs []admission.ReadyFunc
 )
@@ -69,8 +69,8 @@ func (v *Bastion) AssignReadyFunc(f admission.ReadyFunc) {
 	v.SetReadyFunc(f)
 }
 
-// SetInternalCoreClientset sets the garden core clientset.
-func (v *Bastion) SetInternalCoreClientset(c gardencoreclientset.Interface) {
+// SetExternalCoreClientSet sets the garden core clientset.
+func (v *Bastion) SetExternalCoreClientSet(c gardencoreclientset.Interface) {
 	v.coreClient = c
 }
 
@@ -128,7 +128,7 @@ func (v *Bastion) Admit(ctx context.Context, a admission.Attributes, _ admission
 	shootName := bastion.Spec.ShootRef.Name
 
 	// ensure shoot exists
-	shoot, err := v.coreClient.Core().Shoots(bastion.Namespace).Get(ctx, shootName, metav1.GetOptions{})
+	shoot, err := v.coreClient.CoreV1beta1().Shoots(bastion.Namespace).Get(ctx, shootName, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			fieldErr := field.Invalid(shootPath, shootName, fmt.Sprintf("shoot %s/%s not found", bastion.Namespace, shootName))
@@ -151,7 +151,7 @@ func (v *Bastion) Admit(ctx context.Context, a admission.Attributes, _ admission
 	}
 
 	// ensure shoot SSH access is not disabled
-	if bastion.DeletionTimestamp == nil && !gardencorehelper.ShootEnablesSSHAccess(shoot) {
+	if bastion.DeletionTimestamp == nil && !v1beta1helper.ShootEnablesSSHAccess(shoot) {
 		fieldErr := field.Invalid(shootPath, shootName, "ssh access is disabled for worker nodes")
 		return apierrors.NewInvalid(gk, bastion.Name, field.ErrorList{fieldErr})
 	}

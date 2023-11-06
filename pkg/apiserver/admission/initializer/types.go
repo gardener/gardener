@@ -50,8 +50,8 @@ type WantsExternalCoreInformerFactory interface {
 }
 
 // WantsExternalCoreClientset defines a function which sets external Core Clientset for admission plugins that need it.
-type WantsExternalCoreClientset interface {
-	SetExternalCoreClientset(gardencoreversionedclientset.Interface)
+type WantsExternalCoreClientSet interface {
+	SetExternalCoreClientSet(gardencoreversionedclientset.Interface)
 	admission.InitializationValidator
 }
 
