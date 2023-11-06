@@ -283,10 +283,6 @@ var _ = Describe("ControllerInstallation controller tests", func() {
         - c
       settings:
         dependencyWatchdog:
-          endpoint:
-            enabled: true
-          probe:
-            enabled: true
           prober:
             enabled: true
           weeder:
