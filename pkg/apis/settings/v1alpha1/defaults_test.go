@@ -1,4 +1,4 @@
-// Copyright 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,21 +30,6 @@ func TestAPI(t *testing.T) {
 }
 
 var _ = Describe("Defaults", func() {
-
-	Describe("SetDefaults_OpenIDConnectPreset", func() {
-
-		It("correct defaults are set", func() {
-			given := &v1alpha1.OpenIDConnectPreset{}
-			expected := &v1alpha1.OpenIDConnectPreset{
-				Spec: defaultSpec(),
-			}
-
-			v1alpha1.SetDefaults_OpenIDConnectPreset(given)
-
-			Expect(given).To(BeEquivalentTo(expected))
-		})
-
-	})
 
 	Describe("SetDefaults_ClusterOpenIDConnectPreset", func() {
 
