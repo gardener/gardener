@@ -69,7 +69,6 @@ TOOLS_DIR := hack/tools
 include hack/tools.mk
 
 LOGCHECK_DIR := $(TOOLS_DIR)/logcheck
-GOMEGACHECK_DIR := $(TOOLS_DIR)/gomegacheck
 
 #########################################
 # Rules for local development scenarios #
@@ -138,7 +137,6 @@ revendor:
 	@GO111MODULE=on go mod tidy
 	@GO111MODULE=on go mod vendor
 	@cd $(LOGCHECK_DIR); go mod tidy
-	@cd $(GOMEGACHECK_DIR); go mod tidy
 
 .PHONY: clean
 clean:
@@ -157,7 +155,7 @@ check-plutono-dashboards:
 	@hack/check-plutono-dashboards.sh
 
 .PHONY: check
-check: $(GO_ADD_LICENSE) $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS) $(LOGCHECK) $(GOMEGACHECK) $(YQ)
+check: $(GO_ADD_LICENSE) $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS) $(LOGCHECK) $(YQ)
 	@hack/check.sh --golangci-lint-config=./.golangci.yaml ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
 	@hack/check-imports.sh ./charts/... ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/... ./third_party/...
 
@@ -165,11 +163,6 @@ check: $(GO_ADD_LICENSE) $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS) $(
 	@cd $(LOGCHECK_DIR); $(abspath $(GOLANGCI_LINT)) run -c $(REPO_ROOT)/.golangci.yaml --timeout 10m ./...
 	@cd $(LOGCHECK_DIR); go vet ./...
 	@cd $(LOGCHECK_DIR); $(abspath $(GOIMPORTS)) -l .
-
-	@echo "> Check $(GOMEGACHECK_DIR)"
-	@cd $(GOMEGACHECK_DIR); $(abspath $(GOLANGCI_LINT)) run -c $(REPO_ROOT)/.golangci.yaml --timeout 10m ./...
-	@cd $(GOMEGACHECK_DIR); go vet ./...
-	@cd $(GOMEGACHECK_DIR); $(abspath $(GOIMPORTS)) -l .
 
 	@hack/check-charts.sh ./charts
 	@hack/check-license-header.sh
@@ -182,9 +175,9 @@ define GENERATE_HELP_INFO
 # Usage: make generate [WHAT="<targets>"] [MODE="<mode>"] [CODEGEN_GROUPS="<groups>"] [MANIFESTS_DIRS="<folders>"]
 #
 # Options:
-#   WHAT              - Specify the targets to run (e.g., "protobuf codegen manifests logcheck gomegacheck monitoring-docs")
-#   CODEGEN_GROUPS    - Specify which groups to run the 'codegen' target for, not applicable for other targets (e.g., "authentication_groups core_groups extensions_groups resources_groups 
-#                       operator_groups seedmanagement_groups operations_groups settings_groups operatorconfig_groups controllermanager_groups admissioncontroller_groups scheduler_groups 
+#   WHAT              - Specify the targets to run (e.g., "protobuf codegen manifests logcheck monitoring-docs")
+#   CODEGEN_GROUPS    - Specify which groups to run the 'codegen' target for, not applicable for other targets (e.g., "authentication_groups core_groups extensions_groups resources_groups
+#                       operator_groups seedmanagement_groups operations_groups settings_groups operatorconfig_groups controllermanager_groups admissioncontroller_groups scheduler_groups
 #                       gardenlet_groups resourcemanager_groups shoottolerationrestriction_groups shootdnsrewriting_groups provider_local_groups extensions_config_groups")
 #   MANIFESTS_DIRS    - Specify which directories to run the 'manifests' target in, not applicable for other targets (Default directories are "charts cmd example extensions imagevector pkg plugin test")
 #   MODE              - Specify the mode for the 'manifests' (default=parallel) or 'codegen' (default=sequential) target (e.g., "parallel" or "sequential")
@@ -194,7 +187,7 @@ define GENERATE_HELP_INFO
 #   make generate WHAT="codegen protobuf"
 #   make generate WHAT="codegen protobuf" MODE="sequential"
 #   make generate WHAT="manifests" MANIFESTS_DIRS="pkg/component plugin" MODE="sequential"
-#   make generate WHAT="codegen" CODEGEN_GROUPS="core_groups extensions_groups" 
+#   make generate WHAT="codegen" CODEGEN_GROUPS="core_groups extensions_groups"
 #   make generate WHAT="codegen manifests" CODEGEN_GROUPS="operator_groups controllermanager_groups" MANIFESTS_DIRS="charts extensions/pkg"
 #
 endef
@@ -206,7 +199,7 @@ generate:
 else
 generate: tools-for-generate
 	@printf "\nFor more info on the generate command, Run 'make generate PRINT_HELP=y'\n"
-	@REPO_ROOT=$(REPO_ROOT) LOGCHECK_DIR=$(LOGCHECK_DIR) GOMEGACHECK_DIR=$(GOMEGACHECK_DIR) hack/generate.sh --what "$(WHAT)" --codegen-groups "$(CODEGEN_GROUPS)" --manifests-dirs "$(MANIFESTS_DIRS)" --mode "$(MODE)"
+	@REPO_ROOT=$(REPO_ROOT) LOGCHECK_DIR=$(LOGCHECK_DIR) hack/generate.sh --what "$(WHAT)" --codegen-groups "$(CODEGEN_GROUPS)" --manifests-dirs "$(MANIFESTS_DIRS)" --mode "$(MODE)"
 	$(MAKE) format
 endif
 
@@ -214,13 +207,11 @@ endif
 format: $(GOIMPORTS) $(GOIMPORTSREVISER)
 	@./hack/format.sh ./cmd ./extensions ./pkg ./plugin ./test ./hack
 	@cd $(LOGCHECK_DIR); $(abspath $(GOIMPORTS)) -l -w .
-	@cd $(GOMEGACHECK_DIR); $(abspath $(GOIMPORTS)) -l -w .
 
 .PHONY: test
 test: $(REPORT_COLLECTOR) $(PROMTOOL)
 	@./hack/test.sh ./cmd/... ./extensions/pkg/... ./pkg/... ./plugin/...
 	@cd $(LOGCHECK_DIR); go test -race -timeout=2m ./... | grep -v 'no test files'
-	@cd $(GOMEGACHECK_DIR); go test -race -timeout=2m ./... | grep -v 'no test files'
 
 .PHONY: test-integration
 test-integration: $(REPORT_COLLECTOR) $(SETUP_ENVTEST)

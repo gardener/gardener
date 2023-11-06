@@ -165,7 +165,7 @@ var _ = Describe("Project defaulting", func() {
 			SetObjectDefaults_Project(obj)
 
 			for _, m := range obj.Spec.Members {
-				Expect(m.Role).NotTo(HaveLen(0))
+				Expect(m.Role).NotTo(BeEmpty())
 				Expect(m.Role).To(Equal(ProjectMemberViewer))
 			}
 		})

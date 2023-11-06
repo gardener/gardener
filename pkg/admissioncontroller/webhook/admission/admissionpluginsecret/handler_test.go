@@ -90,7 +90,7 @@ var _ = Describe("Handler", func() {
 	It("should pass because no shoot references secret", func() {
 		warning, err = handler.ValidateUpdate(ctx, nil, secret)
 		Expect(warning).To(BeNil())
-		Expect(err).To(BeNil())
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("should fail because some shoot references secret and kubeconfig is removed from secret", func() {

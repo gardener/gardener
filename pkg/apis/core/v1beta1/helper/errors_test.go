@@ -77,7 +77,7 @@ var _ = Describe("errors", func() {
 			})
 
 			It("should return nil", func() {
-				Expect(multiError.ErrorOrNil()).To(BeNil())
+				Expect(multiError.ErrorOrNil()).To(Succeed())
 			})
 
 			It("should return correct error string", func() {
@@ -106,7 +106,7 @@ var _ = Describe("errors", func() {
 			})
 
 			It("should return error", func() {
-				Expect(multiError.ErrorOrNil()).ToNot(BeNil())
+				Expect(multiError.ErrorOrNil()).ToNot(Succeed())
 			})
 
 			It("should return correct error string", func() {

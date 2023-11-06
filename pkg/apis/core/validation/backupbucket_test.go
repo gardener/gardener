@@ -54,7 +54,7 @@ var _ = Describe("validation", func() {
 		It("should not return any errors", func() {
 			errorList := ValidateBackupBucket(backupBucket)
 
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		DescribeTable("BackupBucket metadata",

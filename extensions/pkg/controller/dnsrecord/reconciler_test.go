@@ -33,10 +33,10 @@ var _ = Describe("reconciler", func() {
 		case v1beta1.ConditionUnknown:
 		case v1beta1.ConditionTrue:
 			err = addCreatedConditionTrue(status)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 		case v1beta1.ConditionFalse:
 			err = addCreatedConditionFalse(status)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 		}
 		oldTime := time.Now().Add(-1 * time.Second)
 		if len(status.Conditions) > 0 {
@@ -45,8 +45,8 @@ var _ = Describe("reconciler", func() {
 		}
 
 		err = f(status)
-		Expect(err).To(BeNil())
-		Expect(len(status.Conditions)).To(Equal(1))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(status.Conditions).To(HaveLen(1))
 		Expect(status.Conditions[0].Status).To(Equal(expected))
 		if old != expected {
 			Expect(status.Conditions[0].LastUpdateTime.Time).NotTo(Equal(oldTime))

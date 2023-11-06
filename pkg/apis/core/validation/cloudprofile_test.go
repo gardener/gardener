@@ -640,7 +640,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					}
 
 					errorList := ValidateCloudProfile(cloudProfile)
-					Expect(errorList).To(HaveLen(0))
+					Expect(errorList).To(BeEmpty())
 				})
 
 				It("should forbid invalid CPU architecture for machine image versions", func() {
@@ -917,7 +917,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					cloudProfile.Spec.MachineTypes = machineTypesConstraint
 
 					errorList := ValidateCloudProfile(cloudProfile)
-					Expect(errorList).To(HaveLen(0))
+					Expect(errorList).To(BeEmpty())
 				})
 			})
 

@@ -752,7 +752,7 @@ var _ = Describe("kubernetes", func() {
 			c.EXPECT().List(ctx, podList)
 
 			obj, err := NewestObject(ctx, c, podList, nil)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(obj).To(BeNil())
 		})
 
@@ -769,7 +769,7 @@ var _ = Describe("kubernetes", func() {
 			})
 
 			obj, err := NewestObject(ctx, c, podList, nil)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(obj).To(Equal(obj2))
 			Expect(podList.Items).To(Equal([]corev1.Pod{*obj3, *obj1, *obj2}))
 		})
@@ -786,7 +786,7 @@ var _ = Describe("kubernetes", func() {
 			})
 
 			obj, err := NewestObject(ctx, c, podList, filterFn)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(obj).To(Equal(obj1))
 			Expect(podList.Items).To(Equal([]corev1.Pod{*obj3, *obj1}))
 		})
@@ -921,7 +921,7 @@ var _ = Describe("kubernetes", func() {
 
 		BeforeEach(func() {
 			podSelector, err := metav1.LabelSelectorAsSelector(replicaSet1.Spec.Selector)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			podListOptions = append(rsListOptions, client.MatchingLabelsSelector{Selector: podSelector})
 		})
 
@@ -937,7 +937,7 @@ var _ = Describe("kubernetes", func() {
 			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&appsv1.ReplicaSetList{}), rsListOptions...)
 
 			pod, err := NewestPodForDeployment(ctx, c, deployment)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(pod).To(BeNil())
 		})
 
@@ -1048,7 +1048,7 @@ var _ = Describe("kubernetes", func() {
 			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.PodList{}), podListOptions...)
 
 			pod, err := NewestPodForDeployment(ctx, c, deployment)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(pod).To(BeNil())
 		})
 
@@ -1063,7 +1063,7 @@ var _ = Describe("kubernetes", func() {
 			})
 
 			pod, err := NewestPodForDeployment(ctx, c, deployment)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(pod).To(Equal(pod1))
 		})
 	})

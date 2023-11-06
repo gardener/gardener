@@ -694,7 +694,7 @@ var _ = Describe("extensions", func() {
 
 			containerRuntimeList := &extensionsv1alpha1.ContainerRuntimeList{}
 			Expect(c.List(ctx, containerRuntimeList, client.InNamespace(namespace))).To(Succeed())
-			Expect(len(containerRuntimeList.Items)).To(Equal(4))
+			Expect(containerRuntimeList.Items).To(HaveLen(4))
 			for _, item := range containerRuntimeList.Items {
 				Expect(item.Annotations[v1beta1constants.GardenerOperation]).To(Equal(v1beta1constants.GardenerOperationMigrate))
 			}

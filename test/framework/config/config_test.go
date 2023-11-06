@@ -75,7 +75,7 @@ int: 5
 		Expect(err).ToNot(HaveOccurred(), "read config file")
 
 		Expect(data.String).To(Equal("world"))
-		Expect(data.Bool).To(Equal(true))
+		Expect(data.Bool).To(BeTrue())
 		Expect(data.Int).To(Equal(5))
 	})
 
@@ -87,7 +87,7 @@ int: 5
 		Expect(err).ToNot(HaveOccurred(), "read config file")
 
 		Expect(data.String).To(Equal("world"))
-		Expect(data.Bool).To(Equal(true))
+		Expect(data.Bool).To(BeTrue())
 		Expect(data.Int).To(Equal(10))
 	})
 

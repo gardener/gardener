@@ -16,7 +16,7 @@
 
 set -e
 
-WHAT="protobuf codegen manifests logcheck gomegacheck monitoring-docs"
+WHAT="protobuf codegen manifests logcheck monitoring-docs"
 CODEGEN_GROUPS=""
 MANIFESTS_DIRS=""
 MODE=""
@@ -78,12 +78,12 @@ run_target() {
       $REPO_ROOT/hack/update-protobuf.sh
       ;;
     codegen)
-      local mode="${MODE:-sequential}"  
+      local mode="${MODE:-sequential}"
       $REPO_ROOT/hack/update-codegen.sh --groups "$CODEGEN_GROUPS" --mode "$mode"
       ;;
     manifests)
       local which=()
-      local mode="${MODE:-parallel}"  
+      local mode="${MODE:-parallel}"
 
       if [[ -z "$MANIFESTS_DIRS" ]]; then
         which=("${DEFAULT_MANIFESTS_DIRS[@]}")
@@ -105,14 +105,11 @@ run_target() {
     logcheck)
       cd "$REPO_ROOT/$LOGCHECK_DIR" && go generate ./...
       ;;
-    gomegacheck)
-      cd "$REPO_ROOT/$GOMEGACHECK_DIR" && go generate ./...
-      ;;
     monitoring-docs)
       $REPO_ROOT/hack/generate-monitoring-docs.sh
       ;;
     *)
-      printf "ERROR: Unknown target: $target. Available targets are 'protobuf', 'codegen', 'manifests', 'logcheck', 'gomegacheck', 'monitoring-docs'.\n\n"
+      printf "ERROR: Unknown target: $target. Available targets are 'protobuf', 'codegen', 'manifests', 'logcheck', 'monitoring-docs'.\n\n"
       ;;
   esac
 }

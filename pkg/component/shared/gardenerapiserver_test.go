@@ -86,7 +86,7 @@ var _ = Describe("GardenerAPIServer", func() {
 
 		Describe("AdmissionPlugins", func() {
 			BeforeEach(func() {
-				Expect(runtimeClient.Create(ctx, secret)).To(BeNil())
+				Expect(runtimeClient.Create(ctx, secret)).To(Succeed())
 				apiServerConfig = &operatorv1alpha1.GardenerAPIServerConfig{AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{}}
 			})
 

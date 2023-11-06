@@ -813,13 +813,13 @@ var _ = Describe("Helper", func() {
 		It("should determine that the version does not exist", func() {
 			shootMachineImage.Name = "xy"
 			exists, _ := ShootMachineImageVersionExists(constraint, shootMachineImage)
-			Expect(exists).To(Equal(false))
+			Expect(exists).To(BeFalse())
 		})
 
 		It("should determine that the version does not exist", func() {
 			shootMachineImage.Version = pointer.String("0.0.4")
 			exists, _ := ShootMachineImageVersionExists(constraint, shootMachineImage)
-			Expect(exists).To(Equal(false))
+			Expect(exists).To(BeFalse())
 		})
 	})
 
@@ -2230,7 +2230,7 @@ var _ = Describe("Helper", func() {
 				s2 := ShootItems(shootList2)
 				shootSet := s.Union(&s2)
 
-				Expect(len(shootSet)).To(Equal(5))
+				Expect(shootSet).To(HaveLen(5))
 			})
 
 			It("should not fail if one of the lists is empty", func() {
@@ -2263,10 +2263,10 @@ var _ = Describe("Helper", func() {
 				s := ShootItems(shootList1)
 				s2 := ShootItems(shootList2)
 				shootSet := s.Union(&s2)
-				Expect(len(shootSet)).To(Equal(3))
+				Expect(shootSet).To(HaveLen(3))
 
 				shootSet2 := s2.Union(&s)
-				Expect(len(shootSet)).To(Equal(3))
+				Expect(shootSet).To(HaveLen(3))
 				Expect(shootSet).To(ConsistOf(shootSet2))
 
 			})
@@ -2280,7 +2280,7 @@ var _ = Describe("Helper", func() {
 			s := ShootItems(shootList1)
 			s2 := ShootItems(shootList2)
 			shootSet := s.Union(&s2)
-			Expect(len(shootSet)).To(Equal(0))
+			Expect(shootSet).To(BeEmpty())
 		})
 	})
 

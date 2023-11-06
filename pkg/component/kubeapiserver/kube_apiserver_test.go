@@ -2131,7 +2131,7 @@ rules:
 					ReadOnly:  true,
 				})
 				Expect(deployment.Spec.Template.Spec.InitContainers).To(DeepEqual([]corev1.Container{initContainer}))
-				Expect(len(deployment.Spec.Template.Spec.Containers)).To(Equal(values.VPN.HighAvailabilityNumberOfSeedServers + 2))
+				Expect(deployment.Spec.Template.Spec.Containers).To(HaveLen(values.VPN.HighAvailabilityNumberOfSeedServers + 2))
 				for i := 0; i < values.VPN.HighAvailabilityNumberOfSeedServers; i++ {
 					labelKey := fmt.Sprintf("networking.resources.gardener.cloud/to-vpn-seed-server-%d-tcp-1194", i)
 					Expect(deployment.Spec.Template.Labels).To(HaveKeyWithValue(labelKey, "allowed"))
@@ -2755,7 +2755,7 @@ rules:
 					secretList = &corev1.SecretList{}
 					Expect(c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
 						"name": "user-kubeconfig",
-					})).To(BeNil())
+					})).To(Succeed())
 				})
 
 				It("should generate kube-apiserver-static-token without system:cluster-admin token when StaticTokenKubeconfigEnabled is set to false", func() {

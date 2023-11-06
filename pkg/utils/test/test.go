@@ -231,7 +231,7 @@ func EXPECTPatchWithOptimisticLock(ctx interface{}, c *mockclient.MockClient, ex
 
 func expectPatch(ctx interface{}, c *mockclient.MockClient, expectedObj client.Object, expectedPatch client.Patch, rets ...interface{}) *gomock.Call {
 	expectedData, expectedErr := expectedPatch.Data(expectedObj)
-	Expect(expectedErr).To(BeNil())
+	Expect(expectedErr).NotTo(HaveOccurred())
 
 	if rets == nil {
 		rets = []interface{}{nil}
@@ -250,7 +250,7 @@ func expectPatch(ctx interface{}, c *mockclient.MockClient, expectedObj client.O
 
 			Expect(obj).To(DeepEqual(expectedObj))
 			data, err := patch.Data(obj)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(patch.Type()).To(Equal(expectedPatch.Type()))
 			Expect(string(data)).To(Equal(string(expectedData)))
 			return nil
@@ -260,7 +260,7 @@ func expectPatch(ctx interface{}, c *mockclient.MockClient, expectedObj client.O
 
 func expectStatusPatch(ctx interface{}, c *mockclient.MockStatusWriter, expectedObj client.Object, expectedPatch client.Patch, rets ...interface{}) *gomock.Call {
 	expectedData, expectedErr := expectedPatch.Data(expectedObj)
-	Expect(expectedErr).To(BeNil())
+	Expect(expectedErr).NotTo(HaveOccurred())
 
 	if rets == nil {
 		rets = []interface{}{nil}
@@ -279,7 +279,7 @@ func expectStatusPatch(ctx interface{}, c *mockclient.MockStatusWriter, expected
 
 			Expect(obj).To(DeepEqual(expectedObj))
 			data, err := patch.Data(obj)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(patch.Type()).To(Equal(expectedPatch.Type()))
 			Expect(string(data)).To(Equal(string(expectedData)))
 			return nil

@@ -81,12 +81,12 @@ var _ = Describe("filecodec", func() {
 	DescribeTable("#EncodeDecode",
 		func(input extensionsv1alpha1.FileContentInline) {
 			codeID, err := ParseFileCodecID(input.Encoding)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			encoded, err := FileCodecForID(codeID).Encode([]byte(input.Data))
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 
 			decoded, err := Decode(input.Encoding, encoded)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(input.Data).To(Equal(string(decoded)))
 		},
 

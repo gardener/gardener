@@ -47,7 +47,7 @@ var _ = Describe("SecretBinding Validation Tests", func() {
 		It("should not return any errors", func() {
 			errorList := ValidateSecretBinding(secretBinding)
 
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		DescribeTable("SecretBinding metadata",

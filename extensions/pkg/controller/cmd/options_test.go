@@ -341,7 +341,7 @@ var _ = Describe("Options", func() {
 
 				Expect(fs.Parse(command)).NotTo(HaveOccurred())
 				Expect(opts.Complete()).NotTo(HaveOccurred())
-				Expect(opts.Completed().Logger.Enabled()).To(Equal(true))
+				Expect(opts.Completed().Logger.Enabled()).To(BeTrue())
 			})
 		})
 	})

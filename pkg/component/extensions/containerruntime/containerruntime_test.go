@@ -483,7 +483,7 @@ var _ = Describe("#ContainerRuntime", func() {
 			containerRuntimeList := &extensionsv1alpha1.ContainerRuntimeList{}
 			Expect(c.List(ctx, containerRuntimeList)).To(Succeed())
 
-			Expect(len(containerRuntimeList.Items)).To(Equal(4))
+			Expect(containerRuntimeList.Items).To(HaveLen(4))
 			for _, item := range containerRuntimeList.Items {
 				Expect(item.Spec.Type).ToNot(Equal("new-type"))
 			}

@@ -165,7 +165,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 		Describe("AdmissionPlugins", func() {
 			BeforeEach(func() {
-				Expect(resourceConfigClient.Create(ctx, secret)).To(BeNil())
+				Expect(resourceConfigClient.Create(ctx, secret)).To(Succeed())
 				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{}}
 			})
 

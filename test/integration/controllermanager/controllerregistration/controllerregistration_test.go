@@ -194,7 +194,7 @@ var _ = Describe("ControllerRegistration controller test", func() {
 					core.RegistrationRefName: controllerRegistration.Name,
 					core.SeedRefName:         seed.Name,
 				})).To(Succeed())
-				g.Expect(controllerInstallationList.Items).To(HaveLen(0))
+				g.Expect(controllerInstallationList.Items).To(BeEmpty())
 			}).Should(Succeed())
 		})
 
@@ -288,7 +288,7 @@ var _ = Describe("ControllerRegistration controller test", func() {
 					core.RegistrationRefName: controllerRegistration.Name,
 					core.SeedRefName:         seed.Name,
 				})).To(Succeed())
-				g.Expect(controllerInstallationList.Items).To(HaveLen(0))
+				g.Expect(controllerInstallationList.Items).To(BeEmpty())
 			}).Should(Succeed())
 		})
 	})
@@ -386,7 +386,7 @@ var _ = Describe("ControllerRegistration controller test", func() {
 					core.RegistrationRefName: controllerRegistration.Name,
 					core.SeedRefName:         seed.Name,
 				})).To(Succeed())
-				g.Expect(controllerInstallationList.Items).To(HaveLen(0))
+				g.Expect(controllerInstallationList.Items).To(BeEmpty())
 			}).Should(Succeed())
 		})
 	})
@@ -435,7 +435,7 @@ var _ = Describe("ControllerRegistration controller test", func() {
 					core.RegistrationRefName: shootControllerRegistration.Name,
 					core.SeedRefName:         seed.Name,
 				})).To(Succeed())
-				g.Expect(controllerInstallationList.Items).To(HaveLen(0))
+				g.Expect(controllerInstallationList.Items).To(BeEmpty())
 			}).Should(Succeed())
 		})
 	})

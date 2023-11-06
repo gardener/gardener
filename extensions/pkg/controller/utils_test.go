@@ -82,7 +82,7 @@ var _ = Describe("Utils", func() {
 			test.EXPECTPatch(ctx, c, expectedWorker, workerWithAnnotation, types.MergePatchType)
 
 			Expect(RemoveAnnotation(ctx, c, worker, annotation)).To(Succeed())
-			Expect(len(worker.Annotations)).To(Equal(1))
+			Expect(worker.Annotations).To(HaveLen(1))
 			notdeletedAnnotation, ok := worker.Annotations["test-no-delete-annotation-key"]
 			Expect(ok).To(BeTrue())
 			Expect(notdeletedAnnotation).To(BeEquivalentTo("test-no-delete-annotation-value"))

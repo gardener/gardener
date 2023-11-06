@@ -90,7 +90,7 @@ var _ = Describe("Shoot container runtime testing", func() {
 		// check the node labels of the worker pool to contain containerd label
 		nodeList, err := framework.GetAllNodesInWorkerPool(ctx, f.ShootClient, &containerdWorker.Name)
 		framework.ExpectNoError(err)
-		Expect(len(nodeList.Items)).To(Equal(int(containerdWorker.Minimum)))
+		Expect(nodeList.Items).To(HaveLen(int(containerdWorker.Minimum)))
 
 		for _, node := range nodeList.Items {
 			value, found := node.Labels[extensionsv1alpha1.CRINameWorkerLabel]

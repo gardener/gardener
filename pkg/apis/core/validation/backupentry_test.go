@@ -47,7 +47,7 @@ var _ = Describe("validation", func() {
 		It("should not return any errors", func() {
 			errorList := ValidateBackupEntry(backupEntry)
 
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("should forbid BackupEntry resources with empty metadata", func() {
@@ -84,7 +84,7 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateBackupEntryUpdate(newBackupEntry, backupEntry)
 
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 	})
 })

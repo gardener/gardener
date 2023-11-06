@@ -70,7 +70,7 @@ var _ = Describe("Secrets", func() {
 			ca, found := fakeSecretsManager.Get(v1beta1constants.SecretNameCACluster)
 			Expect(found).To(BeTrue())
 			ca.Data["bundle.crt"] = []byte("====rotatedCA")
-			Expect(c.Update(ctx, ca)).To(BeNil())
+			Expect(c.Update(ctx, ca)).To(Succeed())
 
 			By("create kubeconfig with new CA data")
 			secretAfter, err := GenerateGenericTokenKubeconfig(ctx, fakeSecretsManager, namespace, "kube-apiserver")

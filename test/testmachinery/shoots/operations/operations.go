@@ -181,9 +181,9 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 			metav1.SetMetaDataAnnotation(&s.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRotateSSHKeypair)
 			return nil
 		})
-		gomega.Expect(err).To(gomega.BeNil())
+		gomega.Expect(err).To(gomega.Succeed())
 
-		gomega.Expect(f.GetShoot(ctx, f.Shoot)).To(gomega.BeNil())
+		gomega.Expect(f.GetShoot(ctx, f.Shoot)).To(gomega.Succeed())
 		v, ok := f.Shoot.Annotations[v1beta1constants.GardenerOperation]
 		if ok {
 			gomega.Expect(v).NotTo(gomega.Equal(v1beta1constants.ShootOperationRotateSSHKeypair))

@@ -141,7 +141,7 @@ var _ = Describe("Seed health", func() {
 				})
 
 				updatedConditions := healthCheck.Check(ctx, conditions)
-				Expect(len(updatedConditions)).ToNot(BeZero())
+				Expect(updatedConditions).ToNot(BeEmpty())
 				Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy."))
 			})
 		})
@@ -166,7 +166,7 @@ var _ = Describe("Seed health", func() {
 				})
 
 				updatedConditions := healthCheck.Check(ctx, conditions)
-				Expect(len(updatedConditions)).ToNot(BeZero())
+				Expect(updatedConditions).ToNot(BeEmpty())
 				Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy."))
 			})
 		})
@@ -182,7 +182,7 @@ var _ = Describe("Seed health", func() {
 
 						updatedConditions := healthCheck.Check(ctx, conditions)
 
-						Expect(len(updatedConditions)).ToNot(BeZero())
+						Expect(updatedConditions).ToNot(BeEmpty())
 						Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, reason, message))
 					})
 
@@ -197,7 +197,7 @@ var _ = Describe("Seed health", func() {
 
 						updatedConditions := healthCheck.Check(ctx, conditions)
 
-						Expect(len(updatedConditions)).ToNot(BeZero())
+						Expect(updatedConditions).ToNot(BeEmpty())
 						Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message))
 					})
 
@@ -212,7 +212,7 @@ var _ = Describe("Seed health", func() {
 
 						updatedConditions := healthCheck.Check(ctx, conditions)
 
-						Expect(len(updatedConditions)).ToNot(BeZero())
+						Expect(updatedConditions).ToNot(BeEmpty())
 						Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message))
 					})
 
@@ -227,7 +227,7 @@ var _ = Describe("Seed health", func() {
 
 						updatedConditions := healthCheck.Check(ctx, conditions)
 
-						Expect(len(updatedConditions)).ToNot(BeZero())
+						Expect(updatedConditions).ToNot(BeEmpty())
 						Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message))
 					})
 
@@ -242,7 +242,7 @@ var _ = Describe("Seed health", func() {
 
 						updatedConditions := healthCheck.Check(ctx, conditions)
 
-						Expect(len(updatedConditions)).ToNot(BeZero())
+						Expect(updatedConditions).ToNot(BeEmpty())
 						Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, reason, message))
 					})
 				}

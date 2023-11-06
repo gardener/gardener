@@ -93,7 +93,7 @@ var _ = Describe("processReport tests", func() {
 		Expect(reporter.suite.Failures).To(Equal(0))
 		Expect(reporter.suite.Phase).To(Equal(SpecPhaseSucceeded))
 
-		Expect(len(reporter.testCases)).To(Equal(1))
+		Expect(len(reporter.testCases)).To(HaveLen(1))
 		Expect(reporter.testCases[0].Metadata.Name).To(Equal(mockReportSuiteDescription))
 		Expect(reporter.testCases[0].Name).To(Equal(testCaseName))
 		Expect(reporter.testCases[0].ShortName).To(Equal(testCaseName))
@@ -130,7 +130,7 @@ var _ = Describe("processReport tests", func() {
 		Expect(reporter.suite.Errors).To(Equal(0))
 		Expect(reporter.suite.Phase).To(Equal(SpecPhaseFailed))
 
-		Expect(len(reporter.testCases)).To(Equal(1))
+		Expect(len(reporter.testCases)).To(HaveLen(1))
 		Expect(reporter.testCases[0].Metadata.Name).To(Equal(mockReportSuiteDescription))
 		Expect(reporter.testCases[0].Name).To(Equal(testCaseName))
 		Expect(reporter.testCases[0].ShortName).To(Equal(testCaseName))
@@ -171,7 +171,7 @@ var _ = Describe("processReport tests", func() {
 		Expect(reporter.suite.Errors).To(Equal(1))
 		Expect(reporter.suite.Phase).To(Equal(SpecPhaseFailed))
 
-		Expect(len(reporter.testCases)).To(Equal(1))
+		Expect(len(reporter.testCases)).To(HaveLen(1))
 		Expect(reporter.testCases[0].Metadata.Name).To(Equal(mockReportSuiteDescription))
 		Expect(reporter.testCases[0].Name).To(Equal(testCaseName))
 		Expect(reporter.testCases[0].ShortName).To(Equal(testCaseName))
@@ -192,6 +192,6 @@ var _ = Describe("processReport tests", func() {
 		Expect(reporter.suite.Tests).To(Equal(0))
 		Expect(reporter.suite.Failures).To(Equal(0))
 		Expect(reporter.suite.Phase).To(Equal(SpecPhaseSucceeded))
-		Expect(len(reporter.testCases)).To(Equal(0))
+		Expect(reporter.testCases).To(BeEmpty())
 	})
 })

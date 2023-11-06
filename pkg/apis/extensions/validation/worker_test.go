@@ -186,7 +186,7 @@ var _ = Describe("Worker validation tests", func() {
 
 			errorList := ValidateWorkerUpdate(newWorker, worker)
 
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("should allow updating the name of the referenced secret, the infrastructure provider status, the ssh public key, or the worker pools", func() {

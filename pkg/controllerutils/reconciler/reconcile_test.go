@@ -42,7 +42,7 @@ var _ = Describe("Reconcile", func() {
 
 		It("should return the correct result if it's a RequeueAfterError", func() {
 			res, err := ReconcileErr(requeueAfterError)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(res).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: requeueAfter}))
 		})
 	})

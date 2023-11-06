@@ -37,7 +37,7 @@ var _ = Describe("Healthz", func() {
 
 		It("should return a function that returns nil when the health check passes", func() {
 			healthz.Set(true)
-			Expect(CheckerFunc(healthz)(nil)).To(BeNil())
+			Expect(CheckerFunc(healthz)(nil)).To(Succeed())
 		})
 
 		It("should return a function that returns an error when the health check does not pass", func() {

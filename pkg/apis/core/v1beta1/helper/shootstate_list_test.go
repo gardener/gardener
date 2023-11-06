@@ -92,14 +92,14 @@ var _ = Describe("ShootStateList", func() {
 			It("should delete the extension resource state when it can be found", func() {
 				list := ExtensionResourceStateList(shootState.Spec.Extensions)
 				list.Delete(extensionKind, extensionName, extensionPurpose)
-				Expect(len(list)).To(Equal(0))
+				Expect(list).To(BeEmpty())
 			})
 
 			It("should do nothing if extension resource state cannot be found", func() {
 				list := ExtensionResourceStateList(shootState.Spec.Extensions)
 				barString := "bar"
 				list.Delete(barString, &barString, &barString)
-				Expect(len(list)).To(Equal(1))
+				Expect(list).To(HaveLen(1))
 			})
 		})
 
@@ -114,7 +114,7 @@ var _ = Describe("ShootStateList", func() {
 					State:   &runtime.RawExtension{Raw: []byte("state")},
 				}
 				list.Upsert(newResource)
-				Expect(len(list)).To(Equal(2))
+				Expect(list).To(HaveLen(2))
 			})
 
 			It("should update an extension resource state in the list if it already exists", func() {
@@ -127,7 +127,7 @@ var _ = Describe("ShootStateList", func() {
 					State:   newState,
 				}
 				list.Upsert(updatedResource)
-				Expect(len(list)).To(Equal(1))
+				Expect(list).To(HaveLen(1))
 				Expect(list[0].State).To(Equal(newState))
 			})
 		})
@@ -212,13 +212,13 @@ var _ = Describe("ShootStateList", func() {
 			It("should delete the Gardener resource data when it can be found", func() {
 				list := GardenerResourceDataList(shootState.Spec.Gardener)
 				list.Delete(dataName)
-				Expect(len(list)).To(Equal(0))
+				Expect(list).To(BeEmpty())
 			})
 
 			It("should do nothing if Gardener resource data cannot be found", func() {
 				list := GardenerResourceDataList(shootState.Spec.Gardener)
 				list.Delete("bar")
-				Expect(len(list)).To(Equal(1))
+				Expect(list).To(HaveLen(1))
 			})
 		})
 
@@ -231,7 +231,7 @@ var _ = Describe("ShootStateList", func() {
 					Data: runtime.RawExtension{Raw: []byte("data")},
 				}
 				list.Upsert(newResource)
-				Expect(len(list)).To(Equal(2))
+				Expect(list).To(HaveLen(2))
 			})
 
 			It("should update a Gardener resource data in the list if it already exists", func() {
@@ -248,7 +248,7 @@ var _ = Describe("ShootStateList", func() {
 					Labels: newLabels,
 				}
 				list.Upsert(updatedResource)
-				Expect(len(list)).To(Equal(1))
+				Expect(list).To(HaveLen(1))
 				Expect(list[0].Data).To(Equal(newData))
 				Expect(list[0].Type).To(Equal(newType))
 				Expect(list[0].Labels).To(Equal(newLabels))
@@ -267,7 +267,7 @@ var _ = Describe("ShootStateList", func() {
 				}
 
 				list.Delete(shootStateResourceName)
-				Expect(list).To(HaveLen(0))
+				Expect(list).To(BeEmpty())
 				Expect(shootState.Spec.Gardener[0].Name).To(Equal(shootStateResourceName))
 
 				list.Upsert(newResource)
@@ -288,7 +288,7 @@ var _ = Describe("ShootStateList", func() {
 				}
 
 				list.Delete(shootStateResourceName)
-				Expect(list).To(HaveLen(0))
+				Expect(list).To(BeEmpty())
 				Expect(shootState.Spec.Gardener[0].Name).To(Equal(shootStateResourceName))
 
 				list.Upsert(newResource)
@@ -347,13 +347,13 @@ var _ = Describe("ShootStateList", func() {
 			It("should delete the resource data when it can be found", func() {
 				list := ResourceDataList(shootState.Spec.Resources)
 				list.Delete(&ref)
-				Expect(len(list)).To(Equal(0))
+				Expect(list).To(BeEmpty())
 			})
 
 			It("should do nothing if resource data cannot be found", func() {
 				list := ResourceDataList(shootState.Spec.Resources)
 				list.Delete(&autoscalingv1.CrossVersionObjectReference{})
-				Expect(len(list)).To(Equal(1))
+				Expect(list).To(HaveLen(1))
 			})
 		})
 
@@ -369,7 +369,7 @@ var _ = Describe("ShootStateList", func() {
 					Data: data,
 				}
 				list.Upsert(newResource)
-				Expect(len(list)).To(Equal(2))
+				Expect(list).To(HaveLen(2))
 			})
 
 			It("should update a resource data in the list if it already exists", func() {
@@ -380,7 +380,7 @@ var _ = Describe("ShootStateList", func() {
 					Data:                        newData,
 				}
 				list.Upsert(updatedResource)
-				Expect(len(list)).To(Equal(1))
+				Expect(list).To(HaveLen(1))
 				Expect(list[0].Data).To(Equal(newData))
 			})
 		})

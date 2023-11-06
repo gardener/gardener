@@ -54,7 +54,7 @@ var _ = Describe("validation", func() {
 		It("should not return any errors", func() {
 			errorList := ValidateBastion(bastion)
 
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("should forbid Bastion resources with empty metadata", func() {

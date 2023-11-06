@@ -203,7 +203,7 @@ var _ = Describe("Garden health", func() {
 					gardenNamespace,
 				).Check(ctx, gardenConditions)
 
-				Expect(len(updatedConditions)).ToNot(BeZero())
+				Expect(updatedConditions).ToNot(BeEmpty())
 				Expect(updatedConditions).To(ContainElements(
 					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "RuntimeComponentsRunning", "All runtime components are healthy."),
 					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "VirtualComponentsRunning", "All virtual garden components are healthy."),
@@ -242,7 +242,7 @@ var _ = Describe("Garden health", func() {
 					gardenNamespace,
 				).Check(ctx, gardenConditions)
 
-				Expect(len(updatedConditions)).ToNot(BeZero())
+				Expect(updatedConditions).ToNot(BeEmpty())
 				Expect(updatedConditions).To(ContainElements(
 					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "RuntimeComponentsRunning", "All runtime components are healthy."),
 					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "VirtualComponentsRunning", "All virtual garden components are healthy."),
@@ -280,7 +280,7 @@ var _ = Describe("Garden health", func() {
 					gardenNamespace,
 				).Check(ctx, gardenConditions)
 
-				Expect(len(updatedConditions)).ToNot(BeZero())
+				Expect(updatedConditions).ToNot(BeEmpty())
 				Expect(updatedConditions).To(ContainElements(
 					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "RuntimeComponentsRunning", "All runtime components are healthy."),
 					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "VirtualComponentsRunning", "All virtual garden components are healthy."),
@@ -302,7 +302,7 @@ var _ = Describe("Garden health", func() {
 							gardenNamespace,
 						).Check(ctx, gardenConditions)
 
-						Expect(len(updatedConditions)).ToNot(BeZero())
+						Expect(updatedConditions).ToNot(BeEmpty())
 						Expect(updatedConditions).To(ContainElements(
 							beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, reason, message),
 							beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, reason, message),
@@ -330,7 +330,7 @@ var _ = Describe("Garden health", func() {
 								gardenNamespace,
 							).Check(ctx, gardenConditions)
 
-							Expect(len(updatedConditions)).ToNot(BeZero())
+							Expect(updatedConditions).ToNot(BeEmpty())
 							Expect(updatedConditions).To(ContainElements(
 								beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message),
 								beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message),
@@ -359,7 +359,7 @@ var _ = Describe("Garden health", func() {
 								gardenNamespace,
 							).Check(ctx, gardenConditions)
 
-							Expect(len(updatedConditions)).ToNot(BeZero())
+							Expect(updatedConditions).ToNot(BeEmpty())
 							Expect(updatedConditions).To(ContainElements(
 								beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message),
 								beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message),
@@ -388,7 +388,7 @@ var _ = Describe("Garden health", func() {
 								gardenNamespace,
 							).Check(ctx, gardenConditions)
 
-							Expect(len(updatedConditions)).ToNot(BeZero())
+							Expect(updatedConditions).ToNot(BeEmpty())
 							Expect(updatedConditions).To(ContainElements(
 								beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message),
 								beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message),
@@ -410,7 +410,7 @@ var _ = Describe("Garden health", func() {
 								gardenNamespace,
 							).Check(ctx, gardenConditions)
 
-							Expect(len(updatedConditions)).ToNot(BeZero())
+							Expect(updatedConditions).ToNot(BeEmpty())
 							Expect(updatedConditions).To(ContainElements(
 								beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, reason, message),
 								beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, reason, message),
@@ -513,7 +513,7 @@ var _ = Describe("Garden health", func() {
 					gardenNamespace,
 				).Check(ctx, gardenConditions)
 
-				Expect(len(updatedConditions)).ToNot(BeZero())
+				Expect(updatedConditions).ToNot(BeEmpty())
 				Expect(updatedConditions).To(ContainElements(
 					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "DeploymentMissing", "Missing required deployments: [virtual-garden-gardener-resource-manager virtual-garden-kube-apiserver virtual-garden-kube-controller-manager]"),
 				))
@@ -533,7 +533,7 @@ var _ = Describe("Garden health", func() {
 					gardenNamespace,
 				).Check(ctx, gardenConditions)
 
-				Expect(len(updatedConditions)).ToNot(BeZero())
+				Expect(updatedConditions).ToNot(BeEmpty())
 				Expect(updatedConditions).To(ContainElements(
 					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "DeploymentUnhealthy", "is unhealthy: condition \"Available\" is missing"),
 				))
@@ -557,7 +557,7 @@ var _ = Describe("Garden health", func() {
 					gardenNamespace,
 				).Check(ctx, gardenConditions)
 
-				Expect(len(updatedConditions)).ToNot(BeZero())
+				Expect(updatedConditions).ToNot(BeEmpty())
 				Expect(updatedConditions).To(ContainElements(
 					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "EtcdMissing", "Missing required etcds: [virtual-garden-etcd-events virtual-garden-etcd-main]"),
 				))
@@ -577,7 +577,7 @@ var _ = Describe("Garden health", func() {
 					gardenNamespace,
 				).Check(ctx, gardenConditions)
 
-				Expect(len(updatedConditions)).ToNot(BeZero())
+				Expect(updatedConditions).ToNot(BeEmpty())
 				Expect(updatedConditions).To(ContainElements(
 					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "EtcdUnhealthy", "Etcd extension resource \"virtual-garden-etcd-events\" is unhealthy: etcd \"virtual-garden-etcd-events\" is not ready yet"),
 				))
@@ -595,7 +595,7 @@ var _ = Describe("Garden health", func() {
 					gardenNamespace,
 				).Check(ctx, gardenConditions)
 
-				Expect(len(updatedConditions)).ToNot(BeZero())
+				Expect(updatedConditions).ToNot(BeEmpty())
 				Expect(updatedConditions).To(ContainCondition(OfType(operatorv1alpha1.ObservabilityComponentsHealthy), WithReason("ResourceNotFound")))
 			})
 
@@ -613,7 +613,7 @@ var _ = Describe("Garden health", func() {
 					gardenNamespace,
 				).Check(ctx, gardenConditions)
 
-				Expect(len(updatedConditions)).ToNot(BeZero())
+				Expect(updatedConditions).ToNot(BeEmpty())
 				Expect(updatedConditions).To(ContainCondition(OfType(operatorv1alpha1.ObservabilityComponentsHealthy), WithReason("NotHealthy")))
 			})
 
@@ -631,7 +631,7 @@ var _ = Describe("Garden health", func() {
 					gardenNamespace,
 				).Check(ctx, gardenConditions)
 
-				Expect(len(updatedConditions)).ToNot(BeZero())
+				Expect(updatedConditions).ToNot(BeEmpty())
 				Expect(updatedConditions).To(ContainCondition(OfType(operatorv1alpha1.ObservabilityComponentsHealthy), WithReason("NotApplied")))
 			})
 
@@ -649,7 +649,7 @@ var _ = Describe("Garden health", func() {
 					gardenNamespace,
 				).Check(ctx, gardenConditions)
 
-				Expect(len(updatedConditions)).ToNot(BeZero())
+				Expect(updatedConditions).ToNot(BeEmpty())
 				Expect(updatedConditions).To(ContainCondition(OfType(operatorv1alpha1.ObservabilityComponentsHealthy), WithReason("ResourcesProgressing")))
 			})
 
@@ -670,7 +670,7 @@ var _ = Describe("Garden health", func() {
 					gardenNamespace,
 				).Check(ctx, gardenConditions)
 
-				Expect(len(updatedConditions)).ToNot(BeZero())
+				Expect(updatedConditions).ToNot(BeEmpty())
 				Expect(updatedConditions).To(ContainCondition(OfType(operatorv1alpha1.ObservabilityComponentsHealthy), WithReason("MissingManagedResourceCondition")))
 			})
 		})

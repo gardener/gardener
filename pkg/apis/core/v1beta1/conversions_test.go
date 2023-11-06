@@ -77,7 +77,7 @@ var _ = Describe("Conversion", func() {
 					Owner: &owner,
 				}
 
-				Expect(scheme.Convert(in, out, nil)).To(BeNil())
+				Expect(scheme.Convert(in, out, nil)).To(Succeed())
 				Expect(out).To(Equal(&core.Project{
 					Spec: core.ProjectSpec{
 						Owner: &owner,
@@ -95,7 +95,7 @@ var _ = Describe("Conversion", func() {
 					},
 				}
 
-				Expect(scheme.Convert(in, out, nil)).To(BeNil())
+				Expect(scheme.Convert(in, out, nil)).To(Succeed())
 				Expect(out).To(Equal(&core.Project{
 					Spec: core.ProjectSpec{
 						Owner: &owner,
@@ -124,7 +124,7 @@ var _ = Describe("Conversion", func() {
 					},
 				}
 
-				Expect(scheme.Convert(in, out, nil)).To(BeNil())
+				Expect(scheme.Convert(in, out, nil)).To(Succeed())
 				Expect(out).To(Equal(&core.Project{
 					Spec: core.ProjectSpec{
 						Owner: &owner,
@@ -153,7 +153,7 @@ var _ = Describe("Conversion", func() {
 					},
 				}
 
-				Expect(scheme.Convert(in, out, nil)).To(BeNil())
+				Expect(scheme.Convert(in, out, nil)).To(Succeed())
 				Expect(out).To(Equal(&core.Project{
 					Spec: core.ProjectSpec{
 						Owner: &owner,
@@ -193,7 +193,7 @@ var _ = Describe("Conversion", func() {
 					},
 				}
 
-				Expect(scheme.Convert(in, out, nil)).To(BeNil())
+				Expect(scheme.Convert(in, out, nil)).To(Succeed())
 				Expect(out).To(Equal(&core.Project{
 					Spec: core.ProjectSpec{
 						Owner: &owner,
@@ -262,7 +262,7 @@ var _ = Describe("Conversion", func() {
 					Owner: &owner,
 				}
 
-				Expect(scheme.Convert(in, out, nil)).To(BeNil())
+				Expect(scheme.Convert(in, out, nil)).To(Succeed())
 				Expect(out).To(Equal(&Project{
 					Spec: ProjectSpec{
 						Owner: &owner,
@@ -280,7 +280,7 @@ var _ = Describe("Conversion", func() {
 					},
 				}
 
-				Expect(scheme.Convert(in, out, nil)).To(BeNil())
+				Expect(scheme.Convert(in, out, nil)).To(Succeed())
 				Expect(out).To(Equal(&Project{
 					Spec: ProjectSpec{
 						Owner: &owner,
@@ -307,7 +307,7 @@ var _ = Describe("Conversion", func() {
 					},
 				}
 
-				Expect(scheme.Convert(in, out, nil)).To(BeNil())
+				Expect(scheme.Convert(in, out, nil)).To(Succeed())
 				Expect(out).To(Equal(&Project{
 					Spec: ProjectSpec{
 						Owner: &owner,
@@ -336,7 +336,7 @@ var _ = Describe("Conversion", func() {
 					},
 				}
 
-				Expect(scheme.Convert(in, out, nil)).To(BeNil())
+				Expect(scheme.Convert(in, out, nil)).To(Succeed())
 				Expect(out).To(Equal(&Project{
 					Spec: ProjectSpec{
 						Owner: &owner,
@@ -372,7 +372,7 @@ var _ = Describe("Conversion", func() {
 					},
 				}
 
-				Expect(scheme.Convert(in, out, nil)).To(BeNil())
+				Expect(scheme.Convert(in, out, nil)).To(Succeed())
 				Expect(out).To(Equal(&Project{
 					Spec: ProjectSpec{
 						Owner: &owner,
@@ -413,7 +413,7 @@ var _ = Describe("Conversion", func() {
 			})
 
 			It("should do nothing because role not set", func() {
-				Expect(scheme.Convert(in, out, nil)).To(BeNil())
+				Expect(scheme.Convert(in, out, nil)).To(Succeed())
 				Expect(out).To(Equal(&core.ProjectMember{}))
 			})
 
@@ -423,7 +423,7 @@ var _ = Describe("Conversion", func() {
 					Roles: []string{role, "bar"},
 				}
 
-				Expect(scheme.Convert(in, out, nil)).To(BeNil())
+				Expect(scheme.Convert(in, out, nil)).To(Succeed())
 				Expect(out).To(Equal(&core.ProjectMember{
 					Roles: []string{role, "bar"},
 				}))
@@ -435,7 +435,7 @@ var _ = Describe("Conversion", func() {
 					Roles: []string{"bar", role},
 				}
 
-				Expect(scheme.Convert(in, out, nil)).To(BeNil())
+				Expect(scheme.Convert(in, out, nil)).To(Succeed())
 				Expect(out).To(Equal(&core.ProjectMember{
 					Roles: []string{role, "bar"},
 				}))
@@ -447,7 +447,7 @@ var _ = Describe("Conversion", func() {
 					Roles: []string{"bar", role, role, role, "hugo"},
 				}
 
-				Expect(scheme.Convert(in, out, nil)).To(BeNil())
+				Expect(scheme.Convert(in, out, nil)).To(Succeed())
 				Expect(out).To(Equal(&core.ProjectMember{
 					Roles: []string{role, "bar", "hugo"},
 				}))
@@ -459,7 +459,7 @@ var _ = Describe("Conversion", func() {
 					Roles: []string{"bar"},
 				}
 
-				Expect(scheme.Convert(in, out, nil)).To(BeNil())
+				Expect(scheme.Convert(in, out, nil)).To(Succeed())
 				Expect(out).To(Equal(&core.ProjectMember{
 					Roles: []string{role, "bar"},
 				}))
@@ -480,14 +480,14 @@ var _ = Describe("Conversion", func() {
 			})
 
 			It("should do nothing because roles are not set", func() {
-				Expect(scheme.Convert(in, out, nil)).To(BeNil())
+				Expect(scheme.Convert(in, out, nil)).To(Succeed())
 				Expect(out).To(Equal(&ProjectMember{}))
 			})
 
 			It("should add the first role to the role field and remove it from the list", func() {
 				in.Roles = []string{role, "bar"}
 
-				Expect(scheme.Convert(in, out, nil)).To(BeNil())
+				Expect(scheme.Convert(in, out, nil)).To(Succeed())
 				Expect(out).To(Equal(&ProjectMember{
 					Role:  role,
 					Roles: []string{"bar"},

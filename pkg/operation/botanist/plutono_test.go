@@ -160,7 +160,7 @@ var _ = Describe("Plutono", func() {
 			mockPlutono.EXPECT().Deploy(ctx)
 			Expect(botanist.DeployPlutono(ctx)).To(Succeed())
 			Expect(gardenClient.Get(ctx, kubernetesutils.Key(projectNamespace, shootName+".monitoring"), &corev1.Secret{})).To(Succeed())
-			Expect(*botanist.Shoot.GetInfo().Spec.Purpose == shootPurposeEvaluation).To(BeTrue())
+			Expect(*botanist.Shoot.GetInfo().Spec.Purpose).To(Equal(shootPurposeEvaluation))
 
 			botanist.Shoot.Purpose = shootPurposeTesting
 			mockPlutono.EXPECT().Destroy(ctx)
