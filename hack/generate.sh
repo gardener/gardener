@@ -16,7 +16,8 @@
 
 set -e
 
-WHAT="protobuf codegen manifests logcheck monitoring-docs"
+WHAT="monitoring-docs"
+#WHAT="protobuf codegen manifests logcheck monitoring-docs"
 CODEGEN_GROUPS=""
 MANIFESTS_DIRS=""
 MODE=""
