@@ -720,6 +720,7 @@ func autoConvert_v1alpha1_ETCDConfig_To_config_ETCDConfig(in *ETCDConfig, out *c
 	out.BackupCompactionController = (*config.BackupCompactionController)(unsafe.Pointer(in.BackupCompactionController))
 	out.BackupLeaderElection = (*config.ETCDBackupLeaderElection)(unsafe.Pointer(in.BackupLeaderElection))
 	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
+	out.DeltaSnapshotRetentionPeriod = (*v1.Duration)(unsafe.Pointer(in.DeltaSnapshotRetentionPeriod))
 	return nil
 }
 
@@ -734,6 +735,7 @@ func autoConvert_config_ETCDConfig_To_v1alpha1_ETCDConfig(in *config.ETCDConfig,
 	out.BackupCompactionController = (*BackupCompactionController)(unsafe.Pointer(in.BackupCompactionController))
 	out.BackupLeaderElection = (*ETCDBackupLeaderElection)(unsafe.Pointer(in.BackupLeaderElection))
 	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
+	out.DeltaSnapshotRetentionPeriod = (*v1.Duration)(unsafe.Pointer(in.DeltaSnapshotRetentionPeriod))
 	return nil
 }
 

@@ -322,6 +322,7 @@ var _ = Describe("Etcd", func() {
 				}
 				obj.Spec.Backup.FullSnapshotSchedule = &fullSnapshotSchedule
 				obj.Spec.Backup.DeltaSnapshotPeriod = &deltaSnapshotPeriod
+				obj.Spec.Backup.DeltaSnapshotRetentionPeriod = &metav1.Duration{Duration: 15 * 24 * time.Hour}
 				obj.Spec.Backup.DeltaSnapshotMemoryLimit = &deltaSnapshotMemoryLimit
 
 				if backupConfig.LeaderElection != nil {
@@ -1030,11 +1031,12 @@ var _ = Describe("Etcd", func() {
 
 		Context("with backup", func() {
 			var backupConfig = &BackupConfig{
-				Provider:             "prov",
-				SecretRefName:        "secret-key",
-				Prefix:               "prefix",
-				Container:            "bucket",
-				FullSnapshotSchedule: "1234",
+				Provider:                     "prov",
+				SecretRefName:                "secret-key",
+				Prefix:                       "prefix",
+				Container:                    "bucket",
+				FullSnapshotSchedule:         "1234",
+				DeltaSnapshotRetentionPeriod: &metav1.Duration{Duration: 15 * 24 * time.Hour},
 			}
 
 			BeforeEach(func() {
