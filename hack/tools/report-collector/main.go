@@ -62,9 +62,6 @@ performant parallel test execution via go test and automated report collection v
 				case "junit.xml":
 					matches = append(matches, path)
 					return nil
-				case "vendor":
-					// speed up walk by skipping vendor
-					return filepath.SkipDir
 				}
 				return nil
 			}); err != nil {
