@@ -16,21 +16,9 @@ data:
   mesh: |-
     accessLogFile: "/dev/stdout"
 
-    # Automatic protocol detection uses a set of heuristics to
-    # determine whether the connection is using TLS or not (on the
-    # server side), as well as the application protocol being used
-    # (e.g., http vs tcp). These heuristics rely on the client sending
-    # the first bits of data. For server first protocols like MySQL,
-    # MongoDB, etc., Envoy will timeout on the protocol detection after
-    # the specified period, defaulting to non mTLS plain TCP
-    # traffic. Set this field to tweak the period that Envoy will wait
-    # for the client to send the first bits of data. 
-    # (MUST BE >=1ms or 0s to disable). Default detection timeout is 0s (no timeout).
-    protocolDetectionTimeout: 100ms
-
     ingressControllerMode: "OFF"
 
-    # Disable the advertisement of services and endpoints which are no explicitly marked in
+    # Disable the advertisement of services and endpoints which are not explicitly marked in
     # ` + "`" + `exportTo` + "`" + `. Improves security and isolation.
     # Refer to https://istio.io/docs/reference/config/istio.mesh.v1alpha1/#MeshConfig
     defaultServiceExportTo: ["~"]

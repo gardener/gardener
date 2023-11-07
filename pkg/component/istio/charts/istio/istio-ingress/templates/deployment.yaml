@@ -25,7 +25,11 @@ spec:
         service.istio.io/canonical-revision: "1.19"
       annotations:
         sidecar.istio.io/inject: "false"
-        proxy.istio.io/config: "concurrency: 4"
+        proxy.istio.io/config: |-
+          concurrency: 4
+          protocolDetectionTimeout: 100ms
+          runtimeValues:
+            "overload.global_downstream_max_connections": "750000"
     spec:
       serviceAccountName: istio-ingressgateway-service-account
       securityContext:
@@ -54,9 +58,9 @@ spec:
           - proxy
           - router
           - --domain={{ .Release.Namespace }}.svc.{{ .Values.trustDomain }}
-          - --proxyLogLevel=warning
+          - --proxyLogLevel=info
           - --proxyComponentLogLevel=misc:error
-          - --log_output_level=all:warn,ads:error
+          - --log_output_level=default:info,ads:error
           readinessProbe:
             failureThreshold: 30
             httpGet:

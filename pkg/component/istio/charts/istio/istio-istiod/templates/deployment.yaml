@@ -36,7 +36,9 @@ spec:
           - "discovery"
           - --monitoringAddr=:15014
           - --httpsAddr=:{{ .Values.ports.https }}
-          - --log_output_level=all:warn,ads:error
+          # Disable grpc as recommended here https://istio.io/latest/docs/ops/best-practices/security/#control-plane
+          - --grpcAddr=
+          - --log_output_level=default:info,ads:error
           - --domain
           - {{ .Values.trustDomain }}
           - --keepaliveMaxServerConnectionAge
