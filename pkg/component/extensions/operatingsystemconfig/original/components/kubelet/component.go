@@ -90,6 +90,9 @@ func (component) Name() string {
 
 func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 	var (
+		units []extensionsv1alpha1.Unit
+		files []extensionsv1alpha1.File
+
 		kubeletStartPre       string
 		healthMonitorStartPre string
 	)
@@ -169,7 +172,6 @@ EnvironmentFile=/etc/environment
 EnvironmentFile=-/var/lib/kubelet/extra_args` + kubeletStartPre + `
 ExecStart=` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `/kubelet \
     ` + utils.Indent(strings.Join(cliFlags, " \\\n"), 4) + ` $KUBELET_EXTRA_ARGS`),
-		FilePaths: extensionsv1alpha1helper.FilePathsFrom(kubeletFiles),
 	}
 
 	healthMonitorUnit := extensionsv1alpha1.Unit{
@@ -185,7 +187,6 @@ WantedBy=multi-user.target
 Restart=always
 EnvironmentFile=/etc/environment` + healthMonitorStartPre + `
 ExecStart=` + pathHealthMonitor),
-		FilePaths: extensionsv1alpha1helper.FilePathsFrom(healthMonitorFiles),
 	}
 
 	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
@@ -200,23 +201,16 @@ ExecStart=` + pathHealthMonitor),
 			},
 		}
 		kubeletFiles = append(kubeletFiles, kubeletBinaryFile)
-		kubeletUnit.FilePaths = append(kubeletUnit.FilePaths, kubeletBinaryFile.Path)
-
-		kubectlBinaryFile := extensionsv1alpha1.File{
-			Path:        v1beta1constants.OperatingSystemConfigFilePathBinaries + "/kubectl",
-			Permissions: pointer.Int32(0755),
-			Content: extensionsv1alpha1.FileContent{
-				ImageRef: &extensionsv1alpha1.FileContentImageRef{
-					Image:           ctx.Images[imagevector.ImageNameHyperkube].String(),
-					FilePathInImage: "/kubectl",
-				},
-			},
-		}
-		healthMonitorFiles = append(healthMonitorFiles, kubectlBinaryFile)
-		healthMonitorUnit.FilePaths = append(healthMonitorUnit.FilePaths, kubectlBinaryFile.Path)
+	} else {
+		units = append(units, healthMonitorUnit)
+		files = append(files, healthMonitorFiles...)
 	}
 
-	return []extensionsv1alpha1.Unit{kubeletUnit, healthMonitorUnit}, append(kubeletFiles, healthMonitorFiles...), nil
+	kubeletUnit.FilePaths = extensionsv1alpha1helper.FilePathsFrom(kubeletFiles)
+	units = append(units, kubeletUnit)
+	files = append(files, kubeletFiles...)
+
+	return units, files, nil
 }
 
 func getFileContentKubeletConfig(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain string, params components.ConfigurableKubeletConfigParameters) (*extensionsv1alpha1.FileContentInline, error) {

@@ -44,6 +44,7 @@ rules:
   - ""
   resources:
   - nodes
+  - nodes/status
   verbs:
   - get
   - list

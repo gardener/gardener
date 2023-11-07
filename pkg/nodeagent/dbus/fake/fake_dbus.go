@@ -40,6 +40,8 @@ const (
 	ActionStart
 	// ActionStop is constant for the 'Stop' action.
 	ActionStop
+	// ActionReboot is constant for the 'Reboot' action.
+	ActionReboot
 )
 
 // SystemdAction is used for the implementation of the fake dbus.
@@ -106,6 +108,18 @@ func (d *DBus) Restart(_ context.Context, _ record.EventRecorder, _ runtime.Obje
 	d.Actions = append(d.Actions, SystemdAction{
 		Action:    ActionRestart,
 		UnitNames: []string{unitName},
+	})
+	return nil
+}
+
+// Reboot implements dbus.DBus.
+func (d *DBus) Reboot() error {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
+	d.Actions = append(d.Actions, SystemdAction{
+		Action:    ActionReboot,
+		UnitNames: []string{"reboot"},
 	})
 	return nil
 }

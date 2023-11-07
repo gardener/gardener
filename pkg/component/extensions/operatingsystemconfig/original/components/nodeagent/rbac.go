@@ -39,7 +39,7 @@ func RBACResourcesData(secretNames []string) (map[string][]byte, error) {
 			Rules: []rbacv1.PolicyRule{
 				{
 					APIGroups: []string{""},
-					Resources: []string{"nodes"},
+					Resources: []string{"nodes", "nodes/status"},
 					Verbs:     []string{"get", "list", "watch", "patch", "update"},
 				},
 				{
