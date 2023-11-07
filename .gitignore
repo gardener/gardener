@@ -27,6 +27,9 @@ config.vmdk
 /test/framework/resources/repository/cache
 /test/framework/resources/shoots
 
+hack/tools/logcheck/pkg/logcheck/testdata/src/github.com/
+hack/tools/logcheck/pkg/logcheck/testdata/src/sigs.k8s.io/
+
 # Virtual go & fuse
 .virtualgo
 .fuse_hidden*

@@ -34,7 +34,7 @@ golangci-lint run $GOLANGCI_LINT_CONFIG_FILE --timeout 10m $@
 
 echo "Executing gofmt/goimports"
 folders=()
-for f in $@; do
+for f in "$@"; do
   folders+=( "$(echo $f | sed 's/\.\.\.//')" )
 done
 unformatted_files="$(goimports -l ${folders[*]})"

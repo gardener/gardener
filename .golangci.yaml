@@ -47,6 +47,9 @@ issues:
     text: "SA1019:" # Excludes messages where deprecated variables are used
 
 linters-settings:
+  loggercheck:
+    require-string-key: true
+    no-printf-like: true
   revive:
     rules:
     - name: duplicated-imports
