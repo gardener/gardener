@@ -45,12 +45,12 @@ var _ = Describe("Shoot Maintenance", func() {
 		Describe("#ExpirationDateExpired", func() {
 			It("should determine that expirationDate applies", func() {
 				applies := ExpirationDateExpired(&expirationDateInThePast)
-				Expect(applies).To(Equal(true))
+				Expect(applies).To(BeTrue())
 			})
 
 			It("should determine that expirationDate not applies", func() {
 				applies := ExpirationDateExpired(&expirationDateInTheFuture)
-				Expect(applies).To(Equal(false))
+				Expect(applies).To(BeFalse())
 			})
 		})
 	})
@@ -1246,7 +1246,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		It("should not change anything if PodSecurityPolicy admission controller is already disabled", func() {
 			shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{policyAdmissionControllerDisabled}}
 			result := disablePodSecurityPolicyAdmissionController(shoot, "foobar")
-			Expect(result).To(HaveLen(0))
+			Expect(result).To(BeEmpty())
 			Expect(shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins).To(ConsistOf(policyAdmissionControllerDisabled))
 		})
 
@@ -1302,14 +1302,14 @@ var _ = Describe("Shoot Maintenance", func() {
 			shoot.Spec.Provider.Workers[1].SystemComponents = &gardencorev1beta1.WorkerSystemComponents{Allow: false}
 			shoot.Spec.Provider.Workers[1].Zones = append(shoot.Spec.Provider.Workers[1].Zones, "barZone")
 			result := ensureSufficientMaxWorkers(shoot, "foobar")
-			Expect(result).To(HaveLen(0))
+			Expect(result).To(BeEmpty())
 			Expect(shoot.Spec.Provider.Workers[0].Maximum).To(Equal(int32(3)))
 			Expect(shoot.Spec.Provider.Workers[1].Maximum).To(Equal(int32(1)))
 		})
 
 		It("should not change anything if the maximum workers are high enough", func() {
 			result := ensureSufficientMaxWorkers(shoot, "foobar")
-			Expect(result).To(HaveLen(0))
+			Expect(result).To(BeEmpty())
 			Expect(shoot.Spec.Provider.Workers[0].Maximum).To(Equal(int32(3)))
 			Expect(shoot.Spec.Provider.Workers[1].Maximum).To(Equal(int32(1)))
 		})

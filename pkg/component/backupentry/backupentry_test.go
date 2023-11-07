@@ -277,7 +277,7 @@ var _ = Describe("BackupEntry", func() {
 
 	Describe("#WaitCleanup", func() {
 		It("should be nil because it's not implemented", func() {
-			Expect(defaultDepWaiter.WaitCleanup(ctx)).To(BeNil())
+			Expect(defaultDepWaiter.WaitCleanup(ctx)).To(Succeed())
 		})
 	})
 

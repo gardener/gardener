@@ -157,7 +157,7 @@ var _ = Describe("Extensions", func() {
 				})
 
 				ext, err := botanist.DefaultExtension(ctx)
-				Expect(err).To(BeNil())
+				Expect(err).NotTo(HaveOccurred())
 				Expect(ext.Extensions()).To(conditionMatcher)
 			},
 

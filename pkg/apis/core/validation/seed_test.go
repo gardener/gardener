@@ -111,7 +111,7 @@ var _ = Describe("Seed Validation Tests", func() {
 		It("should not return any errors", func() {
 			errorList := ValidateSeed(seed)
 
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		DescribeTable("Seed metadata",
@@ -1268,7 +1268,7 @@ var _ = Describe("Seed Validation Tests", func() {
 		It("should allow valid resources", func() {
 			errorList := ValidateSeedTemplate(seedTemplate, nil)
 
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("should forbid invalid metadata or spec fields", func() {
@@ -1299,7 +1299,7 @@ var _ = Describe("Seed Validation Tests", func() {
 		It("should allow valid updates", func() {
 			errorList := ValidateSeedTemplateUpdate(seedTemplate, seedTemplate, nil)
 
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("should forbid changes to immutable fields in spec", func() {

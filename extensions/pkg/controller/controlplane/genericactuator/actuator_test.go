@@ -534,7 +534,7 @@ webhooks:
 
 			// Call Reconcile method and check the result
 			requeue, err := a.Reconcile(ctx, logger, cp, cluster)
-			Expect(requeue).To(Equal(false))
+			Expect(requeue).To(BeFalse())
 			Expect(err).NotTo(HaveOccurred())
 
 			expectSecretsManagedBySecretsManager(fakeClient, "wanted secrets should get created",
@@ -714,7 +714,7 @@ webhooks:
 
 			// Call Reconcile method and check the result
 			requeue, err := a.Reconcile(ctx, logger, cpExposure, cluster)
-			Expect(requeue).To(Equal(false))
+			Expect(requeue).To(BeFalse())
 			Expect(err).NotTo(HaveOccurred())
 
 			expectSecretsManagedBySecretsManager(fakeClient, "wanted secrets should get created",

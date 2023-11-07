@@ -161,7 +161,7 @@ var _ = Describe("FakeManager", func() {
 
 	Describe("#Cleanup", func() {
 		It("should return nil (not implemented)", func() {
-			Expect(m.Cleanup(ctx)).To(BeNil())
+			Expect(m.Cleanup(ctx)).To(Succeed())
 		})
 	})
 })

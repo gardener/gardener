@@ -761,7 +761,7 @@ var _ = Describe("validator", func() {
 
 				err := admissionHandler.Admit(ctx, attrs, nil)
 
-				Expect(err).To(BeNil())
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should not allow setting the seedName to nil on admission.Update if the subresource is not binding", func() {
@@ -1554,7 +1554,7 @@ var _ = Describe("validator", func() {
 						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
-						Expect(err).To(BeNil())
+						Expect(err).NotTo(HaveOccurred())
 					})
 
 					It("should not allow because kubeconfig secret is not referenced in shoot .spec.resources", func() {
@@ -1663,7 +1663,7 @@ var _ = Describe("validator", func() {
 						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
-						Expect(err).To(BeNil())
+						Expect(err).NotTo(HaveOccurred())
 					})
 				})
 			})
@@ -2057,7 +2057,7 @@ var _ = Describe("validator", func() {
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
-					Expect(err).To(BeNil())
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 

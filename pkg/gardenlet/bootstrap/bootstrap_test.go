@@ -203,8 +203,8 @@ var _ = Describe("Bootstrap", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(kubeconfig).ToNot(BeEmpty())
-			Expect(len(csrName)).ToNot(Equal(0))
-			Expect(len(seedName)).ToNot(Equal(0))
+			Expect(csrName).ToNot(BeEmpty())
+			Expect(seedName).ToNot(BeEmpty())
 		})
 
 		It("should return an error - the CSR got denied", func() {

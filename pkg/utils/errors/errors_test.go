@@ -43,7 +43,7 @@ var _ = Describe("Errors", func() {
 
 	Describe("#WithSuppressed", func() {
 		It("should return nil if the error is nil", func() {
-			Expect(errorsutils.WithSuppressed(nil, err2)).To(BeNil())
+			Expect(errorsutils.WithSuppressed(nil, err2)).To(Succeed())
 		})
 
 		It("should return the error if the suppressed error is nil", func() {
@@ -64,7 +64,7 @@ var _ = Describe("Errors", func() {
 		})
 
 		It("should retrieve nil if the error doesn't have a suppressed error", func() {
-			Expect(errorsutils.Suppressed(err1)).To(BeNil())
+			Expect(errorsutils.Suppressed(err1)).To(Succeed())
 		})
 	})
 

@@ -126,7 +126,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 		It("should allow valid resources", func() {
 			errorList := ValidateManagedSeedSet(managedSeedSet)
 
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		DescribeTable("ManagedSeedSet metadata",
@@ -350,7 +350,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 		It("should allow valid updates", func() {
 			errorList := ValidateManagedSeedSetUpdate(newManagedSeedSet, managedSeedSet)
 
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("should forbid changes to immutable metadata fields", func() {
@@ -434,7 +434,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 		It("should allow valid status updates", func() {
 			errorList := ValidateManagedSeedSetStatusUpdate(newManagedSeedSet, managedSeedSet)
 
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("should forbid negative integer fields", func() {

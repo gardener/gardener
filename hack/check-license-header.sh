@@ -27,7 +27,6 @@ missing_license_header_files="$(addlicense \
   -ignore "**/*.html" \
   -ignore "**/*.yaml" \
   -ignore "**/Dockerfile" \
-  -ignore "hack/tools/gomegacheck/**" \
   -ignore "pkg/**/*.sh" \
   -ignore "third_party/gopkg.in/yaml.v2/**" \
   .)" || true

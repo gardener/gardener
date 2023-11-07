@@ -54,7 +54,7 @@ var _ = Describe("errors", func() {
 
 	Describe("#DetermineError", func() {
 		It("should return nil for empty error", func() {
-			Expect(DetermineError(nil, knownCodes)).To(BeNil())
+			Expect(DetermineError(nil, knownCodes)).To(Succeed())
 		})
 	})
 	DescribeTable("#DetermineError",

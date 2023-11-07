@@ -3236,7 +3236,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
-				Expect(errorList).To(HaveLen(0))
+				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should forbid specifying unsupported IP family", func() {

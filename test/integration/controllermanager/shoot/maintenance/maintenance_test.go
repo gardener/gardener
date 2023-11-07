@@ -520,7 +520,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				patch := client.MergeFrom(shoot.DeepCopy())
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "foo-bar-does-not-exist")
 				err := testClient.Patch(ctx, shoot, patch)
-				Expect(apierrors.IsInvalid(err)).To(Equal(true))
+				Expect(apierrors.IsInvalid(err)).To(BeTrue())
 
 				By("Trigger maintenance")
 				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())

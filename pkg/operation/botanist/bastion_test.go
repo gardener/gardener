@@ -69,7 +69,7 @@ var _ = Describe("Bastions", func() {
 			bastionList := &metav1.PartialObjectMetadataList{}
 			bastionList.SetGroupVersionKind(extensionsv1alpha1.SchemeGroupVersion.WithKind("BastionList"))
 			Expect(fakeClient.List(ctx, bastionList, client.InNamespace(namespace.Name))).To(Succeed())
-			Expect(len(bastionList.Items)).To(Equal(0))
+			Expect(bastionList.Items).To(BeEmpty())
 		})
 	})
 })

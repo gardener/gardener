@@ -83,7 +83,7 @@ var _ = Describe("Reconciler", func() {
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: quotaName}})
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(quota), quota)).To(Succeed())
 			Expect(result).To(Equal(reconcile.Result{}))
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(quota.GetFinalizers()).Should(ConsistOf(finalizerName))
 		})
 	})

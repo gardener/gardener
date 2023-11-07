@@ -47,7 +47,7 @@ var _ = Describe("CleanOptions", func() {
 	It("should allow setting ErrorToleration", func() {
 		co := &CleanOptions{}
 		TolerateErrors{apierrors.IsConflict}.ApplyToClean(co)
-		Expect(len(co.ErrorToleration)).To(Equal(1))
+		Expect(co.ErrorToleration).To(HaveLen(1))
 	})
 
 	It("should allow setting CleanOptions", func() {
@@ -62,7 +62,7 @@ var _ = Describe("CleanOptions", func() {
 		Expect(co.DeleteOptions).To(Equal([]client.DeleteOption{client.GracePeriodSeconds(42), client.DryRunAll}))
 		gp := int64(42)
 		Expect(co.FinalizeGracePeriodSeconds).To(Equal(&gp))
-		Expect(len(co.ErrorToleration)).To(Equal(1))
+		Expect(co.ErrorToleration).To(HaveLen(1))
 	})
 
 	It("should merge multiple options together", func() {

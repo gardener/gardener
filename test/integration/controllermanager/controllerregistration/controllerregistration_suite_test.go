@@ -295,6 +295,6 @@ var _ = AfterSuite(func() {
 			core.RegistrationRefName: seedControllerRegistration.Name,
 			core.SeedRefName:         seed.Name,
 		})).To(Succeed())
-		g.Expect(controllerInstallationList.Items).To(HaveLen(0))
+		g.Expect(controllerInstallationList.Items).To(BeEmpty())
 	}).Should(Succeed())
 })

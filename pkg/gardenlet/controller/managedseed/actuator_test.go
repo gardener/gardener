@@ -583,7 +583,7 @@ var _ = Describe("Actuator", func() {
 				WithStatus(gardencorev1beta1.ConditionFalse),
 				WithReason(gardencorev1beta1.EventReconciling),
 			))
-			Expect(wait).To(Equal(true))
+			Expect(wait).To(BeTrue())
 		})
 
 		Context("gardenlet", func() {
@@ -619,7 +619,7 @@ var _ = Describe("Actuator", func() {
 						WithReason(gardencorev1beta1.EventReconciled),
 					),
 				))
-				Expect(wait).To(Equal(false))
+				Expect(wait).To(BeFalse())
 			})
 
 			It("should create the garden namespace and seed secrets, and deploy gardenlet (with bootstrap and non-expired gardenlet client cert)", func() {
@@ -652,7 +652,7 @@ var _ = Describe("Actuator", func() {
 						WithReason(gardencorev1beta1.EventReconciled),
 					),
 				))
-				Expect(wait).To(Equal(false))
+				Expect(wait).To(BeFalse())
 			})
 
 			It("should create the garden namespace and seed secrets, and deploy gardenlet (with bootstrap and expired gardenlet client cert)", func() {
@@ -686,7 +686,7 @@ var _ = Describe("Actuator", func() {
 						WithReason(gardencorev1beta1.EventReconciled),
 					),
 				))
-				Expect(wait).To(Equal(false))
+				Expect(wait).To(BeFalse())
 			})
 
 			It("should create the garden namespace and seed secrets, and deploy gardenlet (with bootstrap, non-expired gardenlet client cert, and renew-kubeconfig annotation)", func() {
@@ -728,7 +728,7 @@ var _ = Describe("Actuator", func() {
 						WithReason(gardencorev1beta1.EventReconciled),
 					),
 				))
-				Expect(wait).To(Equal(false))
+				Expect(wait).To(BeFalse())
 			})
 
 			It("should create the garden namespace and seed secrets, and deploy gardenlet (without bootstrap)", func() {
@@ -760,7 +760,7 @@ var _ = Describe("Actuator", func() {
 						WithReason(gardencorev1beta1.EventReconciled),
 					),
 				))
-				Expect(wait).To(Equal(false))
+				Expect(wait).To(BeFalse())
 			})
 
 			It("should not create the seed kubeconfig secret when the shoot static kubeconfig is not enabled", func() {
@@ -793,7 +793,7 @@ var _ = Describe("Actuator", func() {
 						WithReason(gardencorev1beta1.EventReconciled),
 					),
 				))
-				Expect(wait).To(Equal(false))
+				Expect(wait).To(BeFalse())
 			})
 		})
 	})
@@ -821,8 +821,8 @@ var _ = Describe("Actuator", func() {
 					WithStatus(gardencorev1beta1.ConditionFalse),
 					WithReason(gardencorev1beta1.EventDeleting),
 				))
-				Expect(wait).To(Equal(false))
-				Expect(removeFinalizer).To(Equal(false))
+				Expect(wait).To(BeFalse())
+				Expect(removeFinalizer).To(BeFalse())
 			})
 
 			It("should delete gardenlet if it still exists", func() {
@@ -842,8 +842,8 @@ var _ = Describe("Actuator", func() {
 					WithStatus(gardencorev1beta1.ConditionFalse),
 					WithReason(gardencorev1beta1.EventDeleting),
 				))
-				Expect(wait).To(Equal(true))
-				Expect(removeFinalizer).To(Equal(false))
+				Expect(wait).To(BeTrue())
+				Expect(removeFinalizer).To(BeFalse())
 			})
 
 			It("should delete the seed secrets if they still exist", func() {
@@ -862,8 +862,8 @@ var _ = Describe("Actuator", func() {
 					WithReason(gardencorev1beta1.EventDeleting),
 				),
 				)
-				Expect(wait).To(Equal(true))
-				Expect(removeFinalizer).To(Equal(false))
+				Expect(wait).To(BeTrue())
+				Expect(removeFinalizer).To(BeFalse())
 			})
 
 			It("should delete the garden namespace if it still exists, and set wait to true", func() {
@@ -882,8 +882,8 @@ var _ = Describe("Actuator", func() {
 					WithStatus(gardencorev1beta1.ConditionFalse),
 					WithReason(gardencorev1beta1.EventDeleting),
 				))
-				Expect(wait).To(Equal(true))
-				Expect(removeFinalizer).To(Equal(false))
+				Expect(wait).To(BeTrue())
+				Expect(removeFinalizer).To(BeFalse())
 			})
 
 			It("should do nothing if neither the seed, nor gardenlet, nor the seed secrets, nor the garden namespace exist, and set removeFinalizer to true", func() {
@@ -900,8 +900,8 @@ var _ = Describe("Actuator", func() {
 					WithStatus(gardencorev1beta1.ConditionFalse),
 					WithReason(gardencorev1beta1.EventDeleted),
 				))
-				Expect(wait).To(Equal(false))
-				Expect(removeFinalizer).To(Equal(true))
+				Expect(wait).To(BeFalse())
+				Expect(removeFinalizer).To(BeTrue())
 			})
 		})
 	})

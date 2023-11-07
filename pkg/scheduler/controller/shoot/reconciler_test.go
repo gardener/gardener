@@ -264,7 +264,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, shoot)).To(Succeed())
 
 			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(multiZonalSeed.Name))
 		})
 
@@ -278,7 +278,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, shoot)).To(Succeed())
 
 			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(multiZonalSeed.Name))
 		})
 	})
@@ -854,7 +854,7 @@ var _ = Describe("Scheduler_Control", func() {
 
 			candidates, err := applyStrategy(log, testShoot, []gardencorev1beta1.Seed{newSeedEnvironment2, oldSeedEnvironment1, otherSeedEnvironment2}, schedulerConfiguration.Schedulers.Shoot.Strategy, nil)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(len(candidates)).To(Equal(2))
+			Expect(candidates).To(HaveLen(2))
 			Expect(candidates[0].Name).To(Equal(newSeedEnvironment2.Name))
 			Expect(candidates[1].Name).To(Equal(oldSeedEnvironment1.Name))
 		})
@@ -883,7 +883,7 @@ var _ = Describe("Scheduler_Control", func() {
 
 			candidates, err := applyStrategy(log, testShoot, []gardencorev1beta1.Seed{newSeedEnvironment2, oldSeedEnvironment1, otherSeedEnvironment2}, schedulerConfiguration.Schedulers.Shoot.Strategy, nil)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(len(candidates)).To(Equal(1))
+			Expect(candidates).To(HaveLen(1))
 			Expect(candidates[0].Name).To(Equal(oldSeedEnvironment1.Name))
 		})
 	})

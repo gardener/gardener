@@ -90,7 +90,7 @@ var _ = Describe("GardenKubeconfig", func() {
 				kubeconfigPath := "/some/path/to/a/kubeconfig/file"
 				runner.Config.GardenClientConnection.Kubeconfig = kubeconfigPath
 
-				Expect(runner.Start(ctx)).To(BeNil())
+				Expect(runner.Start(ctx)).To(Succeed())
 				Expect(result.Kubeconfig).To(BeNil())
 			})
 		})
@@ -138,7 +138,7 @@ var _ = Describe("GardenKubeconfig", func() {
 				})
 
 				It("should return the existing kubeconfig", func() {
-					Expect(runner.Start(ctx)).To(BeNil())
+					Expect(runner.Start(ctx)).To(Succeed())
 					Expect(result.Kubeconfig).To(Equal(existingKubeconfig))
 				})
 
@@ -150,7 +150,7 @@ var _ = Describe("GardenKubeconfig", func() {
 					updatedKubeconfig, err := gardenletbootstraputil.CreateGardenletKubeconfigWithClientCertificate(restConfig, nil, nil)
 					Expect(err).ToNot(HaveOccurred())
 
-					Expect(runner.Start(ctx)).To(BeNil())
+					Expect(runner.Start(ctx)).To(Succeed())
 					Expect(result.Kubeconfig).To(Equal(updatedKubeconfig))
 				})
 			})

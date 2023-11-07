@@ -75,7 +75,7 @@ var _ = Describe("Retry", func() {
 		})
 
 		It("should return nil if no error was given", func() {
-			Expect(NewLastErrorAggregator().Error()).To(BeNil())
+			Expect(NewLastErrorAggregator().Error()).To(Succeed())
 		})
 	})
 
@@ -281,7 +281,7 @@ var _ = Describe("Retry", func() {
 			done, err := NotOk()
 
 			Expect(done).To(BeFalse())
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 

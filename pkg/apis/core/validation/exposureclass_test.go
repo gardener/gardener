@@ -41,7 +41,7 @@ var _ = Describe("ExposureClass Validation Tests ", func() {
 	Describe("#ValidateExposureClass", func() {
 		It("should pass as exposure class is valid", func() {
 			errorList := ValidateExposureClass(exposureClass)
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("should fail as exposure class handler is no DNS1123 label with zero length", func() {
@@ -77,7 +77,7 @@ var _ = Describe("ExposureClass Validation Tests ", func() {
 		It("should pass as exposure class handler contains less than 34 characters", func() {
 			exposureClass.Handler = "izqissuczonxfeq346ce5exr9rhkcmb398"
 			errorList := ValidateExposureClass(exposureClass)
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("should fail as exposure class has an invalid seed selector", func() {
@@ -128,7 +128,7 @@ var _ = Describe("ExposureClass Validation Tests ", func() {
 
 		It("should pass as exposure class is valid", func() {
 			errorList := ValidateExposureClassUpdate(exposureClassNew, exposureClass)
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("should fail as exposure class handlers are different", func() {

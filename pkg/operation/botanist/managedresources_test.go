@@ -92,7 +92,7 @@ var _ = Describe("ManagedResources", func() {
 			mrList := &metav1.PartialObjectMetadataList{}
 			mrList.SetGroupVersionKind(resourcesv1alpha1.SchemeGroupVersion.WithKind("ManagedResourceList"))
 			Expect(fakeClient.List(ctx, mrList, client.InNamespace(namespace.Name))).To(Succeed())
-			Expect(len(mrList.Items)).To(Equal(1))
+			Expect(mrList.Items).To(HaveLen(1))
 		})
 
 		It("should timeout because not all managed resources referring the shoot are deleted", func() {

@@ -94,7 +94,7 @@ func ValidateGardenletChartPriorityClass(ctx context.Context, c client.Client) {
 		kubernetesutils.Key(priorityClass.Name),
 		priorityClass,
 	)).ToNot(HaveOccurred())
-	Expect(priorityClass.GlobalDefault).To(Equal(false))
+	Expect(priorityClass.GlobalDefault).To(BeFalse())
 	Expect(priorityClass.Value).To(Equal(int32(999998950)))
 }
 
@@ -938,7 +938,7 @@ func VerifyGardenletComponentConfigConfigMap(
 
 	// unmarshal Gardenlet Configuration from deployed Config Map
 	componentConfigYaml := componentConfigCm.Data["config.yaml"]
-	Expect(componentConfigYaml).ToNot(HaveLen(0))
+	Expect(componentConfigYaml).ToNot(BeEmpty())
 	gardenletConfig := &gardenletv1alpha1.GardenletConfiguration{}
 	_, _, err := universalDecoder.Decode([]byte(componentConfigYaml), nil, gardenletConfig)
 	Expect(err).ToNot(HaveOccurred())

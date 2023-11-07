@@ -124,7 +124,7 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 				}
 				time.Sleep(1 * time.Second)
 			}
-			Expect(i < maxIterations).To(Equal(true))
+			Expect(i).To(BeNumerically("<", maxIterations))
 		}
 
 	}, testTimeout, framework.WithCAfterTest(func(ctx context.Context) {

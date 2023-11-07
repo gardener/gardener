@@ -336,7 +336,7 @@ var _ = Describe("helper", func() {
 		It("should do nothing", func() {
 			diff := GetRemovedVersions(versions, versions)
 
-			Expect(diff).To(HaveLen(0))
+			Expect(diff).To(BeEmpty())
 		})
 	})
 
@@ -364,7 +364,7 @@ var _ = Describe("helper", func() {
 		It("should do nothing", func() {
 			diff := GetAddedVersions(versions, versions)
 
-			Expect(diff).To(HaveLen(0))
+			Expect(diff).To(BeEmpty())
 		})
 	})
 

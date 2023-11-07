@@ -124,7 +124,7 @@ spec:
 				}
 				manifest := mkManifest(&cm)
 				manifestReader := kubernetes.NewManifestReader(manifest)
-				Expect(applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultMergeFuncs)).To(BeNil())
+				Expect(applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultMergeFuncs)).To(Succeed())
 
 				var actualCM corev1.ConfigMap
 				err := c.Get(context.TODO(), client.ObjectKey{Name: "c", Namespace: "n"}, &actualCM)
@@ -135,7 +135,7 @@ spec:
 
 			It("should apply multiple objects", func() {
 				manifestReader := kubernetes.NewManifestReader(rawMultipleObjects)
-				Expect(applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultMergeFuncs)).To(BeNil())
+				Expect(applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultMergeFuncs)).To(Succeed())
 
 				err := c.Get(context.TODO(), client.ObjectKey{Name: "test-cm", Namespace: "test-ns"}, &corev1.ConfigMap{})
 				Expect(err).NotTo(HaveOccurred())
@@ -166,12 +166,12 @@ spec:
 				manifestReader := kubernetes.NewManifestReader(manifest)
 
 				Expect(c.Create(context.TODO(), &oldServiceAccount)).To(Succeed())
-				Expect(applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultMergeFuncs)).To(BeNil())
+				Expect(applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultMergeFuncs)).To(Succeed())
 
 				resultingService := &corev1.ServiceAccount{}
 				err := c.Get(context.TODO(), client.ObjectKey{Name: "test-serviceaccount", Namespace: "test-ns"}, resultingService)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(len(resultingService.Secrets)).To(Equal(1))
+				Expect(resultingService.Secrets).To(HaveLen(1))
 				Expect(resultingService.Secrets[0].Name).To(Equal("test-secret"))
 			})
 
@@ -697,7 +697,7 @@ spec:
 				manifest := mkManifest(&cm)
 				manifestReader := kubernetes.NewManifestReader(manifest)
 				namespaceSettingReader := kubernetes.NewNamespaceSettingReader(manifestReader, "b")
-				Expect(applier.ApplyManifest(context.TODO(), namespaceSettingReader, kubernetes.DefaultMergeFuncs)).To(BeNil())
+				Expect(applier.ApplyManifest(context.TODO(), namespaceSettingReader, kubernetes.DefaultMergeFuncs)).To(Succeed())
 
 				var actualCMWithNamespace corev1.ConfigMap
 				err := c.Get(context.TODO(), client.ObjectKey{Name: "test", Namespace: "b"}, &actualCMWithNamespace)
@@ -747,7 +747,7 @@ spec:
 			})
 
 			It("should not return error", func() {
-				Expect(result).To(BeNil())
+				Expect(result).NotTo(HaveOccurred())
 			})
 
 			It("should delete configmap", func() {

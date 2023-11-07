@@ -54,7 +54,7 @@ var _ = Describe("Quota Validation Tests ", func() {
 		It("should not return any errors", func() {
 			errorList := ValidateQuota(quota)
 
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		DescribeTable("Quota metadata",

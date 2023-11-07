@@ -62,7 +62,7 @@ var _ = Describe("Valitail", func() {
 					}
 
 					units, files, err := New().Config(ctx)
-					Expect(err).To(BeNil())
+					Expect(err).NotTo(HaveOccurred())
 
 					var valitailDaemonStartPre string
 					if !useGardenerNodeAgentEnabled {
@@ -345,7 +345,7 @@ exit $?
 					}
 
 					units, files, err := New().Config(ctx)
-					Expect(err).To(BeNil())
+					Expect(err).NotTo(HaveOccurred())
 
 					Expect(units).To(ConsistOf(
 						extensionsv1alpha1.Unit{

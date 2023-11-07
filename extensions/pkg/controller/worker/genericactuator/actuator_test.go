@@ -113,14 +113,14 @@ var _ = Describe("Actuator", func() {
 		It("should return only MachineDeployments with states", func() {
 			reducedMDs := removeWantedDeploymentWithoutState(worker.MachineDeployments{mdWithoutState, mdWithStateAndMachineSets})
 
-			Expect(len(reducedMDs)).To(Equal(1))
+			Expect(reducedMDs).To(HaveLen(1))
 			Expect(reducedMDs[0]).To(Equal(mdWithStateAndMachineSets))
 		})
 
 		It("should reduce the length to one", func() {
 			reducedMDs := removeWantedDeploymentWithoutState(worker.MachineDeployments{mdWithoutState, mdWithStateAndMachineSets, mdWithEmptyState})
 
-			Expect(len(reducedMDs)).To(Equal(1))
+			Expect(reducedMDs).To(HaveLen(1))
 			Expect(reducedMDs[0]).To(Equal(mdWithStateAndMachineSets))
 		})
 	})

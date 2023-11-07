@@ -128,7 +128,7 @@ var _ = Describe("Predicate", func() {
 		It("should add the HasType predicate of the passed extension to the given list of predicates", func() {
 			predicates := AddTypePredicate([]predicate.Predicate{HasPurpose(purposeNormal)}, extensionType)
 
-			Expect(len(predicates)).To(Equal(2))
+			Expect(predicates).To(HaveLen(2))
 
 			Expect(predicates[1].Create(createEvent)).To(BeTrue())
 			Expect(predicates[1].Update(updateEvent)).To(BeTrue())
@@ -139,7 +139,7 @@ var _ = Describe("Predicate", func() {
 		It("should add OR of all the HasType predicates for the passed extensions to the given list of predicates", func() {
 			predicates := AddTypePredicate([]predicate.Predicate{HasPurpose(purposeNormal)}, extensionType, extensionTypeFoo)
 
-			Expect(len(predicates)).To(Equal(2))
+			Expect(predicates).To(HaveLen(2))
 
 			Expect(predicates[1].Create(createEvent)).To(BeTrue())
 			Expect(predicates[1].Update(updateEvent)).To(BeTrue())

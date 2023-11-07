@@ -98,7 +98,7 @@ var _ = Describe("Plutono", func() {
 		// extensions dashboard
 		filePath := filepath.Join("testdata", "configmap.yaml")
 		cm, err := os.ReadFile(filePath)
-		Expect(err).To(BeNil())
+		Expect(err).NotTo(HaveOccurred())
 		Expect(yaml.Unmarshal(cm, &extensionConfigMap)).To(Succeed())
 		extensionConfigMap.ObjectMeta.ResourceVersion = ""
 		Expect(c.Create(ctx, extensionConfigMap)).To(Succeed())
@@ -802,7 +802,7 @@ func testDashboardConfigMap(ctx context.Context, c client.Client, namespaceName 
 	for key := range configmap.Data {
 		availableDashboards.Insert(key)
 	}
-	ExpectWithOffset(1, len(availableDashboards)).To(Equal(dashboardCount))
+	ExpectWithOffset(1, availableDashboards).To(HaveLen(dashboardCount))
 }
 
 func getDashboardConfigMaps(ctx context.Context, c client.Client, namespace string, pattern string) (*corev1.ConfigMap, error) {
