@@ -402,6 +402,7 @@ rules:
   resources:
   - volumeattachments
   verbs:
+  - delete
   - get
   - list
   - watch
