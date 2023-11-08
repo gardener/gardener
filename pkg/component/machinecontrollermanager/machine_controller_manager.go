@@ -386,7 +386,7 @@ func (m *machineControllerManager) computeShootResourcesData(serviceAccountName 
 				{
 					APIGroups: []string{"storage.k8s.io"},
 					Resources: []string{"volumeattachments"},
-					Verbs:     []string{"get", "list", "watch"},
+					Verbs:     []string{"delete", "get", "list", "watch"},
 				},
 			},
 		}
