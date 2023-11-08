@@ -20,6 +20,7 @@ require (
 	github.com/google/gnostic-models v0.6.8
 	github.com/google/go-cmp v0.6.0
 	github.com/hashicorp/go-multierror v1.1.1
+	github.com/ironcore-dev/vgopath v0.1.3
 	github.com/kubernetes-csi/external-snapshotter/client/v4 v4.2.0
 	github.com/mitchellh/hashstructure/v2 v2.0.2
 	github.com/onsi/ginkgo/v2 v2.13.0
@@ -70,8 +71,6 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3
 	sigs.k8s.io/yaml v1.3.0
 )
-
-require github.com/ironcore-dev/vgopath v0.1.3
 
 require (
 	github.com/BurntSushi/toml v1.2.1 // indirect

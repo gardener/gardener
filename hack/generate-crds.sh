@@ -93,7 +93,7 @@ generate_group () {
   if [ -z "$package" ] ; then
     exit 1
   fi
-  local package_path="$(go list -f '{{ .Dir }}' "$package" | tr '\n' ';')"
+  local package_path="$(go list -f '{{ .Dir }}' "$package")"
   if [ -z "$package_path" ] ; then
     exit 1
   fi
@@ -107,15 +107,20 @@ generate_group () {
     # TODO(shreyas-s-rao): Remove this workaround as soon as the scale subresource is supported properly.
     etcd_druid_dir="$(go list -f '{{ .Dir }}' "github.com/gardener/etcd-druid")"
     etcd_api_types_file="${etcd_druid_dir}/api/v1alpha1/types_etcd.go"
+    # Create a local copy outside the mod cache path in order to patch the types file via sed.
     etcd_api_types_backup="$(mktemp -d)/types_etcd.go"
-    chmod +w "$etcd_api_types_file" && chmod +w "$etcd_druid_dir/api/v1alpha1/"
     cp "$etcd_api_types_file" "$etcd_api_types_backup"
-    trap 'cp "$etcd_api_types_backup" "$etcd_api_types_file"' EXIT
+    chmod +w "$etcd_api_types_file" "$etcd_druid_dir/api/v1alpha1/"
+    trap 'cp "$etcd_api_types_backup" "$etcd_api_types_file" && chmod -w "$etcd_druid_dir/api/v1alpha1/"' EXIT
     sed -i '/\/\/ +kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas,selectorpath=.status.labelSelector/d' "$etcd_api_types_file"
     $generate
   elif [[ "$group" == "autoscaling.k8s.io" ]]; then
     # See https://github.com/kubernetes/autoscaler/blame/master/vertical-pod-autoscaler/hack/generate-crd-yaml.sh#L43-L45
     generator_output="$(mktemp -d)/controller-gen.log"
+    # As go list does not work with symlinks we need to manually construct the package paths to correctly
+    # generate v1beta2 CRDs.
+    package_path="${package_path};${package_path}beta2;"
+    generate="controller-gen crd"$crd_options" paths="$package_path" output:crd:dir="$output_dir_temp" output:stdout"
     $generate &> "$generator_output" ||:
     grep -v -e 'map keys must be strings, not int' -e 'not all generators ran successfully' -e 'usage' "$generator_output" && { echo "Failed to generate CRD YAMLs."; exit 1; }
   else

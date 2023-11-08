@@ -27,8 +27,8 @@ config.vmdk
 /test/framework/resources/repository/cache
 /test/framework/resources/shoots
 
-hack/tools/logcheck/pkg/logcheck/testdata/src/github.com/
-hack/tools/logcheck/pkg/logcheck/testdata/src/sigs.k8s.io/
+hack/tools/logcheck/pkg/logcheck/testdata/src/github.com/go-logr/logr
+hack/tools/logcheck/pkg/logcheck/testdata/src/sigs.k8s.io/controller-runtime/pkg/log
 
 # Virtual go & fuse
 .virtualgo
