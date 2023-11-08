@@ -1985,6 +1985,10 @@ rules:
 				Expect(deployment.Spec.Template.Spec.RestartPolicy).To(Equal(corev1.RestartPolicyAlways))
 				Expect(deployment.Spec.Template.Spec.SchedulerName).To(Equal("default-scheduler"))
 				Expect(deployment.Spec.Template.Spec.TerminationGracePeriodSeconds).To(PointTo(Equal(int64(30))))
+				Expect(deployment.Spec.Template.Spec.SecurityContext.RunAsNonRoot).To(Equal(pointer.Bool(true)))
+				Expect(deployment.Spec.Template.Spec.SecurityContext.RunAsUser).To(Equal(pointer.Int64(65532)))
+				Expect(deployment.Spec.Template.Spec.SecurityContext.RunAsGroup).To(Equal(pointer.Int64(65532)))
+				Expect(deployment.Spec.Template.Spec.SecurityContext.FSGroup).To(Equal(pointer.Int64(65532)))
 			})
 
 			It("should have no init containers", func() {
@@ -2073,6 +2077,8 @@ rules:
 							},
 						},
 						SecurityContext: &corev1.SecurityContext{
+							RunAsNonRoot: pointer.Bool(false),
+							RunAsUser:    pointer.Int64(0),
 							Capabilities: &corev1.Capabilities{
 								Add: []corev1.Capability{"NET_ADMIN"},
 							},
@@ -2170,6 +2176,8 @@ rules:
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
+						RunAsNonRoot: pointer.Bool(false),
+						RunAsUser:    pointer.Int64(0),
 						Capabilities: &corev1.Capabilities{
 							Add: []corev1.Capability{"NET_ADMIN"},
 						},

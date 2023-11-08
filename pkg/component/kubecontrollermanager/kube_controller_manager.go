@@ -334,6 +334,14 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			Spec: corev1.PodSpec{
 				AutomountServiceAccountToken: pointer.Bool(false),
 				PriorityClassName:            k.values.PriorityClassName,
+				SecurityContext: &corev1.PodSecurityContext{
+					// use the nonroot user from a distroless container
+					// https://github.com/GoogleContainerTools/distroless/blob/1a8918fcaa7313fd02ae08089a57a701faea999c/base/base.bzl#L8
+					RunAsNonRoot: pointer.Bool(true),
+					RunAsUser:    pointer.Int64(65532),
+					RunAsGroup:   pointer.Int64(65532),
+					FSGroup:      pointer.Int64(65532),
+				},
 				Containers: []corev1.Container{
 					{
 						Name:            containerName,

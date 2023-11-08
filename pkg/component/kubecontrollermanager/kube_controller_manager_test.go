@@ -391,6 +391,12 @@ var _ = Describe("KubeControllerManager", func() {
 						Spec: corev1.PodSpec{
 							AutomountServiceAccountToken: pointer.Bool(false),
 							PriorityClassName:            priorityClassName,
+							SecurityContext: &corev1.PodSecurityContext{
+								RunAsNonRoot: pointer.Bool(true),
+								RunAsUser:    pointer.Int64(65532),
+								RunAsGroup:   pointer.Int64(65532),
+								FSGroup:      pointer.Int64(65532),
+							},
 							Containers: []corev1.Container{
 								{
 									Name:            "kube-controller-manager",
