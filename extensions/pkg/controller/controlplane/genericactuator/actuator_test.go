@@ -398,8 +398,6 @@ webhooks:
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "gardener-extension-" + providerName}})
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: webhookServerNamespace, Name: "ingress-from-all-shoots-kube-apiserver"}})
 				c.EXPECT().Create(ctx, createdMRForShootWebhooks).Return(nil)
-				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(createdMRSecretForShootWebhooks), gomock.AssignableToTypeOf(&corev1.Secret{}))
-				c.EXPECT().Patch(ctx, objMatcher{obj: createdMRSecretForShootWebhooks}, gomock.Any())
 			}
 
 			c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
@@ -414,8 +412,6 @@ webhooks:
 			createdMRForCPShootChart.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: createdMRSecretForCPShootChart.Name}}
 			utilruntime.Must(references.InjectAnnotations(createdMRForCPShootChart))
 			c.EXPECT().Create(ctx, createdMRForCPShootChart).Return(nil)
-			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(createdMRSecretForCPShootChart), gomock.AssignableToTypeOf(&corev1.Secret{}))
-			c.EXPECT().Patch(ctx, objMatcher{obj: createdMRSecretForCPShootChart}, gomock.Any())
 
 			if withShootCRDsChart {
 				utilruntime.Must(kubernetesutils.MakeUnique(createdMRSecretForCPShootCRDsChart))
@@ -425,8 +421,6 @@ webhooks:
 				createdMRForCPShootCRDsChart.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: createdMRSecretForCPShootCRDsChart.Name}}
 				utilruntime.Must(references.InjectAnnotations(createdMRForCPShootCRDsChart))
 				c.EXPECT().Create(ctx, createdMRForCPShootCRDsChart).Return(nil)
-				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(createdMRSecretForCPShootCRDsChart), gomock.AssignableToTypeOf(&corev1.Secret{}))
-				c.EXPECT().Patch(ctx, objMatcher{obj: createdMRSecretForCPShootCRDsChart}, gomock.Any())
 			}
 
 			utilruntime.Must(kubernetesutils.MakeUnique(createdMRSecretForStorageClassesChart))
@@ -436,8 +430,6 @@ webhooks:
 			createdMRForStorageClassesChart.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: createdMRSecretForStorageClassesChart.Name}}
 			utilruntime.Must(references.InjectAnnotations(createdMRForStorageClassesChart))
 			c.EXPECT().Create(ctx, createdMRForStorageClassesChart).Return(nil)
-			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(createdMRSecretForStorageClassesChart), gomock.AssignableToTypeOf(&corev1.Secret{}))
-			c.EXPECT().Patch(ctx, objMatcher{obj: createdMRSecretForStorageClassesChart}, gomock.Any())
 
 			// Create mock Gardener clientset and chart applier
 			gardenerClientset := kubernetesmock.NewMockInterface(ctrl)
