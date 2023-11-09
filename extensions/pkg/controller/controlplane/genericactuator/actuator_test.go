@@ -17,7 +17,6 @@ package genericactuator
 import (
 	"context"
 	"crypto/rand"
-	"fmt"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -99,29 +98,6 @@ var _ = BeforeSuite(func() {
 		&secretsutils.GenerateKey, secretsutils.FakeGenerateKey,
 	))
 })
-
-type objMatcher struct {
-	obj client.Object
-}
-
-func (o objMatcher) Matches(x interface{}) bool {
-	xx, ok := x.(client.Object)
-	if !ok {
-		return false
-	}
-
-	oKind := o.obj.GetObjectKind()
-	xKind := xx.GetObjectKind()
-	return oKind.GroupVersionKind().Group == xKind.GroupVersionKind().Group &&
-		oKind.GroupVersionKind().Version == xKind.GroupVersionKind().Version &&
-		oKind.GroupVersionKind().Kind == xKind.GroupVersionKind().Kind &&
-		o.obj.GetName() == xx.GetName() &&
-		o.obj.GetNamespace() == xx.GetNamespace()
-}
-
-func (o objMatcher) String() string {
-	return fmt.Sprintf("is the same as %s", client.ObjectKeyFromObject(o.obj).String())
-}
 
 var _ = Describe("Actuator", func() {
 	var (
