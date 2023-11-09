@@ -693,12 +693,6 @@ func (e *etcd) RolloutPeerCA(ctx context.Context) error {
 	}
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, e.etcd, func() error {
-		// Exit early if etcd object has already the expected CA reference.
-		if peerTLS := e.etcd.Spec.Etcd.PeerUrlTLS; peerTLS != nil &&
-			peerTLS.TLSCASecretRef.Name == etcdPeerCASecret.Name {
-			return nil
-		}
-
 		e.etcd.Annotations = map[string]string{
 			v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
 			v1beta1constants.GardenerTimestamp: TimeNow().UTC().Format(time.RFC3339Nano),

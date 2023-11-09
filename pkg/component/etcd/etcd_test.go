@@ -1804,7 +1804,7 @@ var _ = Describe("Etcd", func() {
 				Expect(etcd.RolloutPeerCA(ctx)).To(Succeed())
 			})
 
-			It("should not patch anything because the expected CA ref is already configured", func() {
+			It("should only patch reconcile annotation data because the expected CA ref is already configured", func() {
 				peerCAName := "ca-etcd-peer"
 
 				Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: peerCAName, Namespace: testNamespace}})).To(Succeed())
@@ -1818,7 +1818,7 @@ var _ = Describe("Etcd", func() {
 					func(_ context.Context, obj *druidv1alpha1.Etcd, patch client.Patch, _ ...client.PatchOption) error {
 						data, err := patch.Data(obj)
 						Expect(err).ToNot(HaveOccurred())
-						Expect(data).To(MatchJSON("{}"))
+						Expect(data).To(MatchJSON("{\"metadata\":{\"annotations\":{\"gardener.cloud/operation\":\"reconcile\",\"gardener.cloud/timestamp\":\"0001-01-01T00:00:00Z\"}}}"))
 						return nil
 					})
 
