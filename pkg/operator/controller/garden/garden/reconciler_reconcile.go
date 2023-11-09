@@ -465,9 +465,9 @@ func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, 
 		// This is required because peer certificates which are used for client and server authentication at the same time,
 		// are re-created with the new CA in the `Deploy` step.
 		if helper.GetCARotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationPreparing {
-			if err := flow.Sequential(
-				flow.Parallel(etcdMain.RolloutPeerCA, etcdEvents.RolloutPeerCA),
-				flow.Parallel(etcdMain.Wait, etcdEvents.Wait),
+			if err := flow.Parallel(
+				etcdMain.RolloutPeerCA,
+				etcdEvents.RolloutPeerCA,
 			)(ctx); err != nil {
 				return err
 			}

@@ -1761,8 +1761,9 @@ var _ = Describe("Etcd", func() {
 			createEtcdObj := func(caName string) *druidv1alpha1.Etcd {
 				return &druidv1alpha1.Etcd{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      etcdName,
-						Namespace: testNamespace,
+						Name:       etcdName,
+						Namespace:  testNamespace,
+						Generation: 1,
 					},
 					Spec: druidv1alpha1.EtcdSpec{
 						Etcd: druidv1alpha1.EtcdConfig{
@@ -1776,6 +1777,10 @@ var _ = Describe("Etcd", func() {
 								},
 							},
 						},
+					},
+					Status: druidv1alpha1.EtcdStatus{
+						ObservedGeneration: pointer.Int64(1),
+						Ready:              pointer.Bool(true),
 					},
 				}
 			}
@@ -1801,6 +1806,12 @@ var _ = Describe("Etcd", func() {
 						return nil
 					})
 
+				c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+					createEtcdObj("old-ca").DeepCopyInto(obj.(*druidv1alpha1.Etcd))
+					obj.(*druidv1alpha1.Etcd).ObjectMeta.Annotations = map[string]string{"gardener.cloud/timestamp": "0001-01-01T00:00:00Z"}
+					return nil
+				}).AnyTimes()
+
 				Expect(etcd.RolloutPeerCA(ctx)).To(Succeed())
 			})
 
@@ -1821,6 +1832,12 @@ var _ = Describe("Etcd", func() {
 						Expect(data).To(MatchJSON("{\"metadata\":{\"annotations\":{\"gardener.cloud/operation\":\"reconcile\",\"gardener.cloud/timestamp\":\"0001-01-01T00:00:00Z\"}}}"))
 						return nil
 					})
+
+				c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+					createEtcdObj(peerCAName).DeepCopyInto(obj.(*druidv1alpha1.Etcd))
+					obj.(*druidv1alpha1.Etcd).ObjectMeta.Annotations = map[string]string{"gardener.cloud/timestamp": "0001-01-01T00:00:00Z"}
+					return nil
+				}).AnyTimes()
 
 				Expect(etcd.RolloutPeerCA(ctx)).To(Succeed())
 			})
