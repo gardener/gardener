@@ -200,7 +200,7 @@ OpenIDConnectClientAuthentication
 <em>(Optional)</em>
 <p>Client contains the configuration used for client OIDC authentication
 of Shoot clusters.
-This configuration is not overwritting any existing OpenID Connect
+This configuration is not overwriting any existing OpenID Connect
 client authentication already set on the Shoot object.</p>
 </td>
 </tr>
