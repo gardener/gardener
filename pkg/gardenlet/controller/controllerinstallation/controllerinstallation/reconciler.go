@@ -504,6 +504,12 @@ func mutateObjects(secretData map[string][]byte, mutate func(obj *unstructured.U
 			if err == io.EOF {
 				break
 			}
+			if err != nil {
+				return err
+			}
+			if obj == nil {
+				continue
+			}
 
 			if err := mutate(obj); err != nil {
 				return err
