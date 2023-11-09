@@ -403,7 +403,8 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						Name: volumeNameCAClient,
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
-								SecretName: secretCAClient.Name,
+								SecretName:  secretCAClient.Name,
+								DefaultMode: pointer.Int32(416),
 							},
 						},
 					},
@@ -411,7 +412,8 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						Name: volumeNameServiceAccountKey,
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
-								SecretName: serviceAccountKeySecret.Name,
+								SecretName:  serviceAccountKeySecret.Name,
+								DefaultMode: pointer.Int32(416),
 							},
 						},
 					},
@@ -419,7 +421,8 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						Name: volumeNameServer,
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
-								SecretName: serverSecret.Name,
+								SecretName:  serverSecret.Name,
+								DefaultMode: pointer.Int32(416),
 							},
 						},
 					},
@@ -437,7 +440,8 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 				Name: volumeNameCAKubelet,
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
-						SecretName: secretCAKubelet.Name,
+						SecretName:  secretCAKubelet.Name,
+						DefaultMode: pointer.Int32(416),
 					},
 				},
 			})
