@@ -105,7 +105,7 @@ generate_group () {
     # etcd-druid, due to adverse interaction with VPA.
     # See https://github.com/gardener/gardener/pull/6850 and https://github.com/gardener/gardener/pull/8560#discussion_r1347470394
     # TODO(shreyas-s-rao): Remove this workaround as soon as the scale subresource is supported properly.
-    etcd_api_types_file="$(dirname "$0")/../vendor/github.com/gardener/etcd-druid/api/v1alpha1/types_etcd.go"
+    etcd_api_types_file="${package_path%;}/types_etcd.go"
     sed -i '/\/\/ +kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas,selectorpath=.status.labelSelector/d' "$etcd_api_types_file"
     $generate
     git checkout "$etcd_api_types_file"
