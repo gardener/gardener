@@ -24,7 +24,7 @@ success=true
 repo_root="$(git rev-parse --show-toplevel)"
 
 function run() {
-  if ! $repo_root/hack/check-skaffold-deps-for-binary.sh "$operation" --skaffold-file $1 --binary $2 --skaffold-config $3; then
+  if ! "$repo_root"/hack/check-skaffold-deps-for-binary.sh "$operation" --skaffold-file "$1" --binary "$2" --skaffold-config "$3"; then
     success=false
   fi
 }

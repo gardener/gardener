@@ -76,8 +76,8 @@ echo "vendor" >> "$path_actual_dependencies"
 echo "VERSION" >> "$path_actual_dependencies"
 
 # sort dependencies
-sort -fo $path_current_skaffold_dependencies{,}
-sort -fo $path_actual_dependencies{,}
+sort -fo "$path_current_skaffold_dependencies"{,}
+sort -fo "$path_actual_dependencies"{,}
 
 case "$operation" in
   check)
