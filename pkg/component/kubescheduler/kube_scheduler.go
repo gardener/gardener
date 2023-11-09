@@ -334,7 +334,8 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 						Name: volumeNameServer,
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
-								SecretName: serverSecret.Name,
+								SecretName:  serverSecret.Name,
+								DefaultMode: pointer.Int32(416),
 							},
 						},
 					},
