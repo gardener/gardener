@@ -42,6 +42,19 @@ add_keep_object_annotation=false
 k8s_io_api_approval_reason="unapproved, temporarily squatting"
 crd_options=""
 
+SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+VGOPATH="$VGOPATH"
+
+VIRTUAL_GOPATH="$(mktemp -d)"
+trap 'rm -rf "$VIRTUAL_GOPATH"' EXIT
+
+# Setup virtual GOPATH so the codegen tools work as expected.
+(cd "$SCRIPT_DIR/.."; go mod download && "$VGOPATH" -o "$VIRTUAL_GOPATH")
+
+export GOROOT="${GOROOT:-"$(go env GOROOT)"}"
+export GOPATH="$VIRTUAL_GOPATH"
+export GO111MODULE=off
+
 get_group_package () {
   case "$1" in
   "extensions.gardener.cloud")
