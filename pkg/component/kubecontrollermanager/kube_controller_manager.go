@@ -716,7 +716,7 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 			continue
 		}
 
-		if controllerVersionRange, present := kubernetesutils.APIGroupControllerMap[api]; present {
+		if controllerVersionRange, present := kubernetesutils.APIGroupControllerMap[getTrimmedAPI(api)]; present {
 			for controller, versionRange := range controllerVersionRange {
 				if contains, err := versionRange.Contains(k.values.TargetVersion.String()); err == nil && contains {
 					controllersToDisable.Insert(controller)
@@ -830,4 +830,21 @@ func (k *kubeControllerManager) computeResourceRequirements(ctx context.Context)
 	}
 
 	return defaultResources, nil
+}
+
+func getTrimmedAPI(api string) string {
+	knownGroupSuffixes := sets.New(
+		".authorization.k8s.io",
+		".apiserver.k8s.io",
+		".k8s.io",
+	)
+
+	for s := range knownGroupSuffixes {
+		if strings.Contains(api, s) {
+			api = strings.Replace(api, s, "", 1)
+			return api
+		}
+	}
+
+	return api
 }

@@ -122,7 +122,7 @@ for version in "${versions[@]}"; do
       api_groups=$(grep -o 'k8s\.io/api/[^"]*' "$file_path" | awk -F 'k8s.io/api/' '{print $2}')
       for api_group in $api_groups
       do
-          api_group=$(echo "$api_group" | tr -d '[:space:]' | sed 's/^core\/v1$/v1/')
+          api_group=$(echo "$api_group" | tr -d '[:space:]' | sed 's/^core\/v1$/v1/' | sed 's/apiserverinternal/internal/')
           if [ -n "$api_group" ]; then
               api_group_controllers["$api_group"]+="$controller "
           fi

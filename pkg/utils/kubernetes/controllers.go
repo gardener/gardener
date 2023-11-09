@@ -18,7 +18,7 @@ import versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 // APIGroupControllerMap is a map for the Kubernetes API groups and the corresponding controllers for them.
 var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
-	"apiserverinternal/v1alpha1": {
+	"internal/v1alpha1": {
 		"storage-version-gc": {},
 	},
 	"apps/v1": {

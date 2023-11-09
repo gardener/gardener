@@ -71,7 +71,7 @@ var _ = Describe("KubeControllerManager", func() {
 		_, podCIDR, _                 = net.ParseCIDR("100.96.0.0/11")
 		_, serviceCIDR, _             = net.ParseCIDR("100.64.0.0/13")
 		namespace                     = "shoot--foo--bar"
-		version                       = "1.25.3"
+		version                       = "1.27.3"
 		semverVersion, _              = semver.NewVersion(version)
 		runtimeKubernetesVersion      = semver.MustParse("1.25.0")
 		image                         = "registry.k8s.io/kube-controller-manager:v1.25.3"
@@ -853,6 +853,17 @@ namespace: kube-system
 				},
 				false,
 				"--controllers=*,bootstrapsigner,tokencleaner,-cronjob,-horizontalpodautoscaling,-job,-ttl-after-finished",
+			),
+			Entry("with disabled APIs",
+				configWithNodeMonitorGracePeriod,
+				map[string]bool{
+					"resource.k8s.io/v1alpha2":           false,
+					"discovery.k8s.io/v1":                false,
+					"internal.apiserver.k8s.io/v1alpha1": false,
+					"rbac.authorization.k8s.io/v1":       false,
+				},
+				false,
+				"--controllers=*,bootstrapsigner,tokencleaner,-clusterrole-aggregation,-endpointslice,-endpointslicemirroring,-resource-claim-controller,-storage-version-gc",
 			),
 		)
 	})
