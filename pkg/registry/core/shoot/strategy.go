@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/registry/rest"
@@ -66,11 +65,6 @@ func (shootStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 
 	shoot.Generation = 1
 	shoot.Status = core.ShootStatus{}
-
-	// TODO(acumino): Drop this after v1.83 has been released.
-	removeDuplicateExtensions(shoot)
-	// TODO(dimitar-kostadinov): Drop this after v1.83 has been released.
-	removeDuplicateServiceAccountIssuers(shoot)
 }
 
 func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
@@ -79,11 +73,6 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 
 	newShoot.Status = oldShoot.Status               // can only be changed by shoots/status subresource
 	newShoot.Spec.SeedName = oldShoot.Spec.SeedName // can only be changed by shoots/binding subresource
-
-	// TODO(acumino): Drop this after v1.83 has been released.
-	removeDuplicateExtensions(newShoot)
-	// TODO(dimitar-kostadinov): Drop this after v1.83 has been released.
-	removeDuplicateServiceAccountIssuers(newShoot)
 
 	if mustIncreaseGeneration(oldShoot, newShoot) {
 		newShoot.Generation = oldShoot.Generation + 1
@@ -165,43 +154,6 @@ func mustIncreaseGenerationForSpecChanges(oldShoot, newShoot *core.Shoot) bool {
 	}
 
 	return !apiequality.Semantic.DeepEqual(oldShoot.Spec, newShoot.Spec)
-}
-
-func removeDuplicateExtensions(shoot *core.Shoot) {
-	if len(shoot.Spec.Extensions) > 1 {
-		typeToExtension := make(map[string]core.Extension)
-		for _, extension := range shoot.Spec.Extensions {
-			typeToExtension[extension.Type] = extension
-		}
-
-		extensionsList := make([]core.Extension, 0, len(typeToExtension))
-		for _, extension := range shoot.Spec.Extensions {
-			if ext, ok := typeToExtension[extension.Type]; ok {
-				extensionsList = append(extensionsList, ext)
-				delete(typeToExtension, extension.Type)
-			}
-		}
-
-		shoot.Spec.Extensions = extensionsList
-	}
-}
-
-func removeDuplicateServiceAccountIssuers(shoot *core.Shoot) {
-	apiSrv := shoot.Spec.Kubernetes.KubeAPIServer
-	if apiSrv != nil && apiSrv.ServiceAccountConfig != nil && len(apiSrv.ServiceAccountConfig.AcceptedIssuers) > 0 {
-		issuers := sets.New[string]()
-		if apiSrv.ServiceAccountConfig.Issuer != nil {
-			issuers.Insert(*apiSrv.ServiceAccountConfig.Issuer)
-		}
-		var acceptedIssuers []string
-		for _, issuer := range apiSrv.ServiceAccountConfig.AcceptedIssuers {
-			if !issuers.Has(issuer) {
-				issuers.Insert(issuer)
-				acceptedIssuers = append(acceptedIssuers, issuer)
-			}
-		}
-		apiSrv.ServiceAccountConfig.AcceptedIssuers = acceptedIssuers
-	}
 }
 
 func (shootStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {
