@@ -2,7 +2,7 @@
 
 This directory contains go source files for testing the `logcheck` tool using [golang.org/x/tools/go/analysis/analysistest](https://pkg.go.dev/golang.org/x/tools/go/analysis/analysistest).
 
-The following paths are symlinks to the respective `vendor` directory:
+The following paths are symlinks to the respective go mod cache directories:
 
 ```
 ./github.com/go-logr/logr

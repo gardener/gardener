@@ -108,7 +108,6 @@ After the PR in `gardener/gardener` for the support of the new version has been 
 
 > Actually, you can already start even if the PR is not yet merged and use the branch of your fork.
 
-- Revendor the `github.com/gardener/gardener` dependency in the extension and update the `README.md`.
 - Work on release-specific tasks related to this provider.
 
 #### Maintaining the `cloud-controller-manager` Images
@@ -118,13 +117,13 @@ Instead, we build and maintain them ourselves:
 
 - [cloud-provider-gcp](https://github.com/gardener/cloud-provider-gcp)
 
-Until we switch to upstream images, you need to revendor the Kubernetes dependencies and release a new image.
+Until we switch to upstream images, you need to update the Kubernetes dependencies and release a new image.
 The required steps are as follows:
 
 - Checkout the `legacy-cloud-provider` branch of the respective repository
 - Bump the versions in the `Dockerfile` ([example commit](https://github.com/gardener/cloud-provider-gcp/commit/b7eb3f56b252aaf29adc78406672574b1bc17495)).
 - Update the `VERSION` to `vX.Y.Z-dev` where `Z` is the latest available Kubernetes patch version for the `vX.Y` minor version.
-- Update the `k8s.io/*` dependencies in the `go.mod` file to `vX.Y.Z` and run `go mod vendor` and `go mod tidy` ([example commit](https://github.com/gardener/cloud-provider-gcp/commit/d41cc9f035bcc4893b40d90a4f617c4d436c5d62)).
+- Update the `k8s.io/*` dependencies in the `go.mod` file to `vX.Y.Z` and run `go mod tidy` ([example commit](https://github.com/gardener/cloud-provider-gcp/commit/d41cc9f035bcc4893b40d90a4f617c4d436c5d62)).
 - Checkout a new `release-vX.Y` branch and release it ([example](https://github.com/gardener/cloud-provider-gcp/commits/release-v1.23))
 
 > As you are already on it, it is great if you also bump the `k8s.io/*` dependencies for the last three minor releases as well.

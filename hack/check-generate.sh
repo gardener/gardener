@@ -106,6 +106,6 @@ if which git &>/dev/null; then
     exit 1
   fi
 else
-  echo "No git detected, cannot run vendor check"
+  echo "No git detected, cannot run make generate"
 fi
 exit 0
