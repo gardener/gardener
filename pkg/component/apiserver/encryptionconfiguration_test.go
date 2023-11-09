@@ -228,7 +228,8 @@ resources:
 								Name: "etcd-encryption-secret",
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
-										SecretName: secretETCDEncryptionConfiguration.Name,
+										SecretName:  secretETCDEncryptionConfiguration.Name,
+										DefaultMode: pointer.Int32(416),
 									},
 								},
 							}},

@@ -112,7 +112,8 @@ var _ = Describe("Deployment", func() {
 									Name: "etcd-client",
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
-											SecretName: secretETCDClient.Name,
+											SecretName:  secretETCDClient.Name,
+											DefaultMode: pointer.Int32(416),
 										},
 									},
 								},
@@ -120,7 +121,8 @@ var _ = Describe("Deployment", func() {
 									Name: "server",
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
-											SecretName: secretServer.Name,
+											SecretName:  secretServer.Name,
+											DefaultMode: pointer.Int32(416),
 										},
 									},
 								},

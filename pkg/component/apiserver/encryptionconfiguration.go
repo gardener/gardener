@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/config/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -169,7 +170,8 @@ func InjectEncryptionSettings(deployment *appsv1.Deployment, secretETCDEncryptio
 		Name: volumeNameEtcdEncryptionConfig,
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
-				SecretName: secretETCDEncryptionConfiguration.Name,
+				SecretName:  secretETCDEncryptionConfiguration.Name,
+				DefaultMode: pointer.Int32(416),
 			},
 		},
 	})
