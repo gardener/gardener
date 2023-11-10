@@ -16,34 +16,36 @@
 
 set -e
 
-echo "> Check Skaffold Dependencies"
+operation="${1:-check}"
 
-check_successful=true
+echo "> ${operation^} Skaffold Dependencies"
+
+success=true
 repo_root="$(git rev-parse --show-toplevel)"
 
-function check() {
-  if ! $repo_root/hack/check-skaffold-deps-for-binary.sh --skaffold-file $1 --binary $2 --skaffold-config $3; then
-    check_successful=false
+function run() {
+  if ! "$repo_root"/hack/check-skaffold-deps-for-binary.sh "$operation" --skaffold-file "$1" --binary "$2" --skaffold-config "$3"; then
+    success=false
   fi
 }
 
 # skaffold.yaml
-check "skaffold.yaml" "gardener-admission-controller"      "controlplane"
-check "skaffold.yaml" "gardener-apiserver"                 "controlplane"
-check "skaffold.yaml" "gardener-controller-manager"        "controlplane"
-check "skaffold.yaml" "gardener-extension-provider-local"  "provider-local"
-check "skaffold.yaml" "gardener-resource-manager"          "gardenlet"
-check "skaffold.yaml" "gardener-scheduler"                 "controlplane"
-check "skaffold.yaml" "gardenlet"                          "gardenlet"
+run "skaffold.yaml" "gardener-admission-controller"      "controlplane"
+run "skaffold.yaml" "gardener-apiserver"                 "controlplane"
+run "skaffold.yaml" "gardener-controller-manager"        "controlplane"
+run "skaffold.yaml" "gardener-extension-provider-local"  "provider-local"
+run "skaffold.yaml" "gardener-resource-manager"          "gardenlet"
+run "skaffold.yaml" "gardener-scheduler"                 "controlplane"
+run "skaffold.yaml" "gardenlet"                          "gardenlet"
 
 # skaffold-operator.yaml
-check "skaffold-operator.yaml" "gardener-operator"             "gardener-operator"
-check "skaffold-operator.yaml" "gardener-resource-manager"     "gardener-operator"
-check "skaffold-operator.yaml" "gardener-admission-controller" "gardener-operator"
-check "skaffold-operator.yaml" "gardener-apiserver"            "gardener-operator"
-check "skaffold-operator.yaml" "gardener-controller-manager"   "gardener-operator"
-check "skaffold-operator.yaml" "gardener-scheduler"            "gardener-operator"
+run "skaffold-operator.yaml" "gardener-operator"             "gardener-operator"
+run "skaffold-operator.yaml" "gardener-resource-manager"     "gardener-operator"
+run "skaffold-operator.yaml" "gardener-admission-controller" "gardener-operator"
+run "skaffold-operator.yaml" "gardener-apiserver"            "gardener-operator"
+run "skaffold-operator.yaml" "gardener-controller-manager"   "gardener-operator"
+run "skaffold-operator.yaml" "gardener-scheduler"            "gardener-operator"
 
-if [ "$check_successful" = false ] ; then
+if ! $success ; then
   exit 1
 fi
