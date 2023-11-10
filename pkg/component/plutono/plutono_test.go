@@ -474,8 +474,6 @@ metadata:
 					if values.ClusterType == comp.ClusterTypeShoot {
 						out += `    nginx.ingress.kubernetes.io/auth-secret: observability-ingress-users-f27eb0bf
     nginx.ingress.kubernetes.io/auth-type: basic
-    nginx.ingress.kubernetes.io/configuration-snippet: proxy_set_header X-Scope-OrgID
-      operator;
 `
 					} else {
 						out += `    nginx.ingress.kubernetes.io/auth-secret: global-monitoring-secret
