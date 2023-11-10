@@ -1925,13 +1925,6 @@ subjects:
 							Expect(obj).To(DeepEqual(managedResourceSecret))
 						}),
 						c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, "shoot-core-gardener-resource-manager"), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-						c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, managedResourceSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
-						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
-							expected := &corev1.Secret{
-								ObjectMeta: managedResourceSecret.ObjectMeta,
-							}
-							Expect(obj).To(DeepEqual(expected))
-						}),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 							Expect(obj).To(DeepEqual(managedResource))
 						}),
@@ -2009,13 +2002,6 @@ subjects:
 							Expect(obj).To(DeepEqual(managedResourceSecret))
 						}),
 						c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, "shoot-core-gardener-resource-manager"), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-						c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, managedResourceSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
-						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
-							expected := &corev1.Secret{
-								ObjectMeta: managedResourceSecret.ObjectMeta,
-							}
-							Expect(obj).To(DeepEqual(expected))
-						}),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 							Expect(obj).To(DeepEqual(managedResource))
 						}),
@@ -2101,13 +2087,6 @@ subjects:
 						Expect(obj).To(DeepEqual(managedResourceSecret))
 					}),
 					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, "shoot-core-gardener-resource-manager"), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, managedResourceSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
-						expected := &corev1.Secret{
-							ObjectMeta: managedResourceSecret.ObjectMeta,
-						}
-						Expect(obj).To(DeepEqual(expected))
-					}),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
@@ -2220,13 +2199,6 @@ subjects:
 						Expect(obj).To(DeepEqual(managedResourceSecret))
 					}),
 					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, "shoot-core-gardener-resource-manager"), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, managedResourceSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
-						expected := &corev1.Secret{
-							ObjectMeta: managedResourceSecret.ObjectMeta,
-						}
-						Expect(obj).To(DeepEqual(expected))
-					}),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 						Expect(obj).To(Equal(managedResource))
 					}),

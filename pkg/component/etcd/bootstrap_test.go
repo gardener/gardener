@@ -587,8 +587,6 @@ status:
 				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
 				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr),
 			)
 
@@ -603,8 +601,6 @@ status:
 					Expect(obj).To(Equal(managedResourceSecret))
 				}),
 				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 					managedResource.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}}
 					utilruntime.Must(references.InjectAnnotations(managedResource))
@@ -628,8 +624,6 @@ status:
 					Expect(obj).To(DeepEqual(managedResourceSecret))
 				}),
 				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 					managedResource.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}}
 					utilruntime.Must(references.InjectAnnotations(managedResource))
@@ -653,8 +647,6 @@ status:
 					Expect(obj).To(Equal(managedResourceSecret))
 				}),
 				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 					managedResource.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}}
 					utilruntime.Must(references.InjectAnnotations(managedResource))

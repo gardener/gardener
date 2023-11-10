@@ -23,7 +23,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -143,11 +142,6 @@ func (m *ManagedResource) Reconcile(ctx context.Context) error {
 			// if the mr is not found just create it
 			mutateFn(resource)
 
-			// only mark the new secrets
-			if err := markSecretsAsGarbageCollectable(ctx, m.client, secretsFromRefs(resource, sets.New[string]()), false); err != nil {
-				return fmt.Errorf("marking new secrets as garbage collectable: %w", err)
-			}
-
 			return m.client.Create(ctx, resource)
 		}
 		return err
@@ -159,9 +153,8 @@ func (m *ManagedResource) Reconcile(ctx context.Context) error {
 	// This guarantees that "old" secrets are always taken care of.
 	// If an old secret is already deleted then we do not care about it and continue the flow.
 	// For more details, please see https://github.com/gardener/gardener/pull/8116
-	excludedNames := sets.New[string]()
-	oldSecrets := secretsFromRefs(resource, excludedNames)
-	if err := markSecretsAsGarbageCollectable(ctx, m.client, oldSecrets, true); err != nil {
+	oldSecrets := secretsFromRefs(resource)
+	if err := markSecretsAsGarbageCollectable(ctx, m.client, oldSecrets); err != nil {
 		return fmt.Errorf("marking old secrets as garbage collectable: %w", err)
 	}
 
@@ -172,17 +165,6 @@ func (m *ManagedResource) Reconcile(ctx context.Context) error {
 		return nil
 	}
 
-	// exclude all already patched secrets
-	for _, s := range oldSecrets {
-		excludedNames.Insert(s.Name)
-	}
-
-	// mark new secrets (if any) as garbage collectable
-	newSecrets := secretsFromRefs(resource, excludedNames)
-	if err := markSecretsAsGarbageCollectable(ctx, m.client, newSecrets, false); err != nil {
-		return fmt.Errorf("marking new secrets as garbage collectable: %w", err)
-	}
-
 	return m.client.Update(ctx, resource)
 }
 
@@ -191,10 +173,10 @@ func (m *ManagedResource) Delete(ctx context.Context) error {
 	return client.IgnoreNotFound(m.client.Delete(ctx, m.resource))
 }
 
-func markSecretsAsGarbageCollectable(ctx context.Context, c client.Client, secrets []*corev1.Secret, ignoreNotFound bool) error {
+func markSecretsAsGarbageCollectable(ctx context.Context, c client.Client, secrets []*corev1.Secret) error {
 	for _, secret := range secrets {
 		if err := c.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
-			if apierrors.IsNotFound(err) && ignoreNotFound {
+			if apierrors.IsNotFound(err) {
 				continue
 			}
 			return err
@@ -214,18 +196,15 @@ func markSecretsAsGarbageCollectable(ctx context.Context, c client.Client, secre
 	return nil
 }
 
-func secretsFromRefs(obj *resourcesv1alpha1.ManagedResource, excludedNames sets.Set[string]) []*corev1.Secret {
+func secretsFromRefs(obj *resourcesv1alpha1.ManagedResource) []*corev1.Secret {
 	secrets := make([]*corev1.Secret, 0, len(obj.Spec.SecretRefs))
 	for _, secretRef := range obj.Spec.SecretRefs {
-		if !excludedNames.Has(secretRef.Name) {
-			secret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      secretRef.Name,
-					Namespace: obj.Namespace,
-				},
-			}
-			secrets = append(secrets, secret)
-		}
+		secrets = append(secrets, &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      secretRef.Name,
+				Namespace: obj.Namespace,
+			},
+		})
 	}
 	return secrets
 }

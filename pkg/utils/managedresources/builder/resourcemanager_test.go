@@ -305,19 +305,6 @@ var _ = Describe("Resource Manager", func() {
 
 			Expect(references.InjectAnnotations(expectedMr)).To(Succeed())
 			Expect(mr).To(Equal(expectedMr))
-
-			for _, s := range secrets {
-				secret := &corev1.Secret{}
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(s), secret)).To(Succeed())
-				expected := s.DeepCopy()
-				expected.ObjectMeta.ResourceVersion = "2"
-				expected.Labels["resources.gardener.cloud/garbage-collectable-reference"] = "true"
-				expected.TypeMeta = metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Secret",
-				}
-				Expect(secret).To(Equal(expected))
-			}
 		})
 
 		It("should label existing managed resource secrets", func() {

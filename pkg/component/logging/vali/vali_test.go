@@ -500,8 +500,6 @@ var _ = Describe("Vali", func() {
 				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
 				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
-				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
-				runtimeClient.EXPECT().Patch(ctx, objectOfTypeSecret, gomock.Any()),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeMR),
 			)
 			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
@@ -539,8 +537,6 @@ var _ = Describe("Vali", func() {
 				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
 				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
-				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
-				runtimeClient.EXPECT().Patch(ctx, objectOfTypeSecret, gomock.Any()),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeMR),
 			)
 			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
@@ -567,8 +563,6 @@ var _ = Describe("Vali", func() {
 				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
 				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
-				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
-				runtimeClient.EXPECT().Patch(ctx, objectOfTypeSecret, gomock.Any()),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeMR),
 			)
 			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
@@ -595,8 +589,6 @@ var _ = Describe("Vali", func() {
 				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
 				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
-				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
-				runtimeClient.EXPECT().Patch(ctx, objectOfTypeSecret, gomock.Any()),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeMR),
 			)
 			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
@@ -633,8 +625,6 @@ var _ = Describe("Vali", func() {
 				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
 				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
-				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
-				runtimeClient.EXPECT().Patch(ctx, objectOfTypeSecret, gomock.Any()),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeMR),
 			)
 			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
@@ -672,8 +662,6 @@ var _ = Describe("Vali", func() {
 				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
 				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
-				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
-				runtimeClient.EXPECT().Patch(ctx, objectOfTypeSecret, gomock.Any()),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeMR),
 			)
 			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
@@ -711,8 +699,6 @@ var _ = Describe("Vali", func() {
 				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
 				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
-				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
-				runtimeClient.EXPECT().Patch(ctx, objectOfTypeSecret, gomock.Any()),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeMR),
 			)
 			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
