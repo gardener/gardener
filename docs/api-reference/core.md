@@ -9013,36 +9013,6 @@ Kubernetes meta/v1.LabelSelector
 <tbody>
 <tr>
 <td>
-<code>endpoint</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdogEndpoint">
-SeedSettingDependencyWatchdogEndpoint
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Endpoint controls the endpoint settings for the dependency-watchdog for the seed.
-Deprecated: This field is deprecated and will be removed in a future version of Gardener. Use <code>Weeder</code> instead.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>probe</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdogProbe">
-SeedSettingDependencyWatchdogProbe
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Probe controls the probe settings for the dependency-watchdog for the seed.
-Deprecated: This field is deprecated and will be removed in a future version of Gardener. Use <code>Prober</code> instead.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>weeder</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdogWeeder">
@@ -9067,72 +9037,6 @@ SeedSettingDependencyWatchdogProber
 <td>
 <em>(Optional)</em>
 <p>Prober controls the prober settings for the dependency-watchdog for the seed.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdogEndpoint">SeedSettingDependencyWatchdogEndpoint
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdog">SeedSettingDependencyWatchdog</a>)
-</p>
-<p>
-<p>SeedSettingDependencyWatchdogEndpoint controls the endpoint settings for the dependency-watchdog for the seed.
-Deprecated: This type is deprecated and will be removed in a future version of Gardener. Use type <code>SeedSettingDependencyWatchdogWeeder</code> instead.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>enabled</code></br>
-<em>
-bool
-</em>
-</td>
-<td>
-<p>Enabled controls whether the endpoint controller of the dependency-watchdog should be enabled. This controller
-helps to alleviate the delay where control plane components remain unavailable by finding the respective pods in
-CrashLoopBackoff status and restarting them once their dependants become ready and available again.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdogProbe">SeedSettingDependencyWatchdogProbe
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdog">SeedSettingDependencyWatchdog</a>)
-</p>
-<p>
-<p>SeedSettingDependencyWatchdogProbe controls the probe settings for the dependency-watchdog for the seed.
-Deprecated: This type is deprecated and will be removed in a future version of Gardener. Use type <code>SeedSettingDependencyWatchdogProber</code> instead.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>enabled</code></br>
-<em>
-bool
-</em>
-</td>
-<td>
-<p>Enabled controls whether the probe controller of the dependency-watchdog should be enabled. This controller
-scales down the kube-controller-manager, machine-controller-manager and cluster-autoscaler of shoot clusters in case their respective kube-apiserver is not
-reachable via its external ingress in order to avoid melt-down situations.</p>
 </td>
 </tr>
 </tbody>

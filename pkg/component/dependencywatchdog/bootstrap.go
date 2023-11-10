@@ -68,11 +68,6 @@ const (
 	ManagedResourceDependencyWatchdogWeeder = prefixDependencyWatchdog + "-weeder"
 	// ManagedResourceDependencyWatchdogProber is the name of the dependency-watchdog-prober managed resource.
 	ManagedResourceDependencyWatchdogProber = prefixDependencyWatchdog + "-prober"
-
-	// ManagedResourceDependencyWatchdogEndpoint is the name of the dependency-watchdog-endpoint managed resource. This resource is cleaned up now.
-	ManagedResourceDependencyWatchdogEndpoint = prefixDependencyWatchdog + "-endpoint"
-	// ManagedResourceDependencyWatchdogProbe is the name of the dependency-watchdog-probe managed resource. This resource is cleaned up now.
-	ManagedResourceDependencyWatchdogProbe = prefixDependencyWatchdog + "-probe"
 )
 
 // BootstrapperValues contains dependency-watchdog values.
@@ -141,21 +136,11 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// TODO(himanshu-kun): remove after few releases
-	// First clean-up unsupported DWD managedResource and all the objects managed by it which includes old version of DWD weeder and prober as well.
-	if err := b.deleteOldDWDManagedResource(ctx); err != nil {
-		return err
-	}
 
 	return managedresources.CreateForSeed(ctx, b.client, b.namespace, b.name(), false, resources)
 }
 
 func (b *bootstrapper) Destroy(ctx context.Context) error {
-	// TODO(himanshu-kun): remove after few releases
-	// First clean-up unsupported DWD managedResource and all the objects managed by it which includes old version of DWD weeder and prober as well.
-	if err := b.deleteOldDWDManagedResource(ctx); err != nil {
-		return err
-	}
 	return managedresources.DeleteForSeed(ctx, b.client, b.namespace, b.name())
 }
 
@@ -175,26 +160,6 @@ func (b *bootstrapper) WaitCleanup(ctx context.Context) error {
 	defer cancel()
 
 	return managedresources.WaitUntilDeleted(timeoutCtx, b.client, b.namespace, b.name())
-}
-
-func (b *bootstrapper) deleteOldDWDManagedResource(ctx context.Context) error {
-	oldManagedResourceName := ManagedResourceDependencyWatchdogProbe
-	if b.values.Role == RoleWeeder {
-		oldManagedResourceName = ManagedResourceDependencyWatchdogEndpoint
-	}
-	if err := managedresources.DeleteForSeed(ctx, b.client, b.namespace, oldManagedResourceName); client.IgnoreNotFound(err) != nil {
-		return fmt.Errorf("could not delete managed resource %s: %w", oldManagedResourceName, err)
-	}
-	return b.waitUntilManagedResourceDeleted(ctx, oldManagedResourceName)
-}
-
-func (b *bootstrapper) waitUntilManagedResourceDeleted(ctx context.Context, name string) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
-	defer cancel()
-	if err := managedresources.WaitUntilDeleted(timeoutCtx, b.client, b.namespace, name); err != nil {
-		return fmt.Errorf("error while waiting for managed resource %s to be deleted: %w", name, err)
-	}
-	return nil
 }
 
 func (b *bootstrapper) getConfigMap() (*corev1.ConfigMap, error) {

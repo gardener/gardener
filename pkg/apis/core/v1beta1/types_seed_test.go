@@ -69,4 +69,20 @@ var _ = Describe("Seed", func() {
 			}
 		})
 	})
+
+	Describe("SeedSettingDependencyWatchdog", func() {
+		It("should not allow to reuse protobuf numbers of already removed fields", func() {
+			obj := reflect.ValueOf(SeedSettingDependencyWatchdog{}).Type()
+			for i := 0; i < obj.NumField(); i++ {
+				f := obj.Field(i)
+
+				protobufNum := strings.Split(f.Tag.Get("protobuf"), ",")[1]
+				if protobufNum == "1" {
+					Fail("protobuf 1 in SeedSettingDependencyWatchdog is reserved for removed endpoint field")
+				} else if protobufNum == "2" {
+					Fail("protobuf 2 in SeedSettingDependencyWatchdog is reserved for removed probe field")
+				}
+			}
+		})
+	})
 })

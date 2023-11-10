@@ -278,34 +278,10 @@ type SeedSettingVerticalPodAutoscaler struct {
 
 // SeedSettingDependencyWatchdog controls the dependency-watchdog settings for the seed.
 type SeedSettingDependencyWatchdog struct {
-	// Endpoint controls the endpoint settings for the dependency-watchdog for the seed.
-	// Deprecated: This field is deprecated and will be removed in a future version of Gardener. Use `Weeder` instead.
-	Endpoint *SeedSettingDependencyWatchdogEndpoint
-	// Probe controls the probe settings for the dependency-watchdog for the seed.
-	// Deprecated: This field is deprecated and will be removed in a future version of Gardener. Use `Prober` instead.
-	Probe *SeedSettingDependencyWatchdogProbe
 	// Weeder controls the weeder settings for the dependency-watchdog for the seed.
 	Weeder *SeedSettingDependencyWatchdogWeeder
 	// Prober controls the prober settings for the dependency-watchdog for the seed.
 	Prober *SeedSettingDependencyWatchdogProber
-}
-
-// SeedSettingDependencyWatchdogEndpoint controls the endpoint settings for the dependency-watchdog for the seed.
-// Deprecated: This type is deprecated and will be removed in a future version of Gardener. Use type `SeedSettingDependencyWatchdogWeeder` instead.
-type SeedSettingDependencyWatchdogEndpoint struct {
-	// Enabled controls whether the endpoint controller of the dependency-watchdog should be enabled. This controller
-	// helps to alleviate the delay where control plane components remain unavailable by finding the respective pods in
-	// CrashLoopBackoff status and restarting them once their dependants become ready and available again.
-	Enabled bool
-}
-
-// SeedSettingDependencyWatchdogProbe controls the probe settings for the dependency-watchdog for the seed.
-// Deprecated: This type is deprecated and will be removed in a future version of Gardener. Use type `SeedSettingDependencyWatchdogProber` instead.
-type SeedSettingDependencyWatchdogProbe struct {
-	// Enabled controls whether the probe controller of the dependency-watchdog should be enabled. This controller
-	// scales down the kube-controller-manager, machine-controller-manager and cluster-autoscaler of shoot clusters in case their respective kube-apiserver is not
-	// reachable via its external ingress in order to avoid melt-down situations.
-	Enabled bool
 }
 
 // SeedSettingDependencyWatchdogWeeder controls the weeder settings for the dependency-watchdog for the seed.
