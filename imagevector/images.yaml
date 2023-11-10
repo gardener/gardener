@@ -238,7 +238,7 @@ images:
 - name: plutono
   sourceRepository: github.com/credativ/plutono
   repository: ghcr.io/credativ/plutono
-  tag: "v7.5.25"
+  tag: "v7.5.26"
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
@@ -413,7 +413,7 @@ images:
 - name: vali
   sourceRepository: github.com/credativ/vali
   repository: ghcr.io/credativ/vali
-  tag: "v2.2.9"
+  tag: "v2.2.11"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -447,7 +447,7 @@ images:
 - name: kube-rbac-proxy
   sourceRepository: github.com/brancz/kube-rbac-proxy
   repository: quay.io/brancz/kube-rbac-proxy
-  tag: v0.14.2
+  tag: v0.15.0
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -465,7 +465,7 @@ images:
 - name: valitail
   sourceRepository: github.com/credativ/vali
   repository: ghcr.io/credativ/valitail
-  tag: "v2.2.9"
+  tag: "v2.2.11"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
