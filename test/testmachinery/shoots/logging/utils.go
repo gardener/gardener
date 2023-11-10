@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/onsi/ginkgo/v2"
@@ -65,7 +64,7 @@ func checkRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interf
 // WaitUntilValiReceivesLogs waits until the vali instance in <valiNamespace> receives <expected> logs for <key>=<value>
 func WaitUntilValiReceivesLogs(ctx context.Context, interval time.Duration, f *framework.ShootFramework, valiLabels map[string]string, tenant, valiNamespace, key, value string, expected, delta int, c kubernetes.Interface) error {
 	err := retry.Until(ctx, interval, func(ctx context.Context) (done bool, err error) {
-		search, err := f.GetValiLogs(ctx, valiLabels, tenant, valiNamespace, key, value, c)
+		search, err := f.GetValiLogs(ctx, valiLabels, valiNamespace, key, value, c)
 		if err != nil {
 			return retry.SevereError(err)
 		}
@@ -183,24 +182,6 @@ func getLoggingShootService(number int) *corev1.Service {
 			ExternalName: "logging-shoot.garden.svc.cluster.local",
 		},
 	}
-}
-
-func getXScopeOrgID(annotations map[string]string) string {
-	for key, value := range annotations {
-		if key == "nginx.ingress.kubernetes.io/configuration-snippet" {
-			configurations := strings.Split(value, ";")
-			for _, config := range configurations {
-				config = strings.TrimLeft(config, "\t \n")
-				if strings.HasPrefix(config, "proxy_set_header") {
-					proxySetHeaderFields := strings.Fields(config)
-					if len(proxySetHeaderFields) == 3 && proxySetHeaderFields[1] == "X-Scope-OrgID" {
-						return proxySetHeaderFields[2]
-					}
-				}
-			}
-		}
-	}
-	return "fake"
 }
 
 func getLogCountFromResult(search *framework.SearchResponse) (int, error) {

@@ -48,16 +48,12 @@ func (f *ShootFramework) ShootKubeconfigSecretName() string {
 }
 
 // GetValiLogs gets logs from the last 1 hour for <key>, <value> from the vali instance in <valiNamespace>
-func (f *ShootFramework) GetValiLogs(ctx context.Context, valiLabels map[string]string, tenant, valiNamespace, key, value string, client kubernetes.Interface) (*SearchResponse, error) {
+func (f *ShootFramework) GetValiLogs(ctx context.Context, valiLabels map[string]string, valiNamespace, key, value string, client kubernetes.Interface) (*SearchResponse, error) {
 	valiLabelsSelector := labels.SelectorFromSet(labels.Set(valiLabels))
-
-	if tenant == "" {
-		tenant = "fake"
-	}
 
 	query := fmt.Sprintf("query=count_over_time({%s=~\"%s\"}[1h])", key, value)
 
-	command := fmt.Sprintf("wget 'http://localhost:%d/vali/api/v1/query' -O- '--header=X-Scope-OrgID: %s' --post-data='%s'", valiPort, tenant, query)
+	command := fmt.Sprintf("wget 'http://localhost:%d/vali/api/v1/query' -O- --post-data='%s'", valiPort, query)
 
 	var reader io.Reader
 	err := retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (bool, error) {

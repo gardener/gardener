@@ -478,10 +478,7 @@ func (v *vali) getIngress(secretName string) *networkingv1.Ingress {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      valiName,
 			Namespace: v.namespace,
-			Annotations: map[string]string{
-				"nginx.ingress.kubernetes.io/configuration-snippet": "proxy_set_header X-Scope-OrgID operator;",
-			},
-			Labels: getLabels(),
+			Labels:    getLabels(),
 		},
 		Spec: networkingv1.IngressSpec{
 			IngressClassName: pointer.String(v1beta1constants.SeedNginxIngressClass),
