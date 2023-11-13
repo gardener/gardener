@@ -138,10 +138,6 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 		)(ctx); err != nil {
 			return err
 		}
-
-		if err := b.WaitUntilEtcdsReady(ctx); err != nil {
-			return err
-		}
 	}
 
 	return flow.Parallel(

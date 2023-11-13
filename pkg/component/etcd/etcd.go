@@ -693,13 +693,7 @@ func (e *etcd) RolloutPeerCA(ctx context.Context) error {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCDPeer)
 	}
 
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, e.etcd, func() error {
-		// Exit early if etcd object has already the expected CA reference.
-		if peerTLS := e.etcd.Spec.Etcd.PeerUrlTLS; peerTLS != nil &&
-			peerTLS.TLSCASecretRef.Name == etcdPeerCASecret.Name {
-			return nil
-		}
-
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, e.etcd, func() error {
 		e.etcd.Annotations = map[string]string{
 			v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
 			v1beta1constants.GardenerTimestamp: TimeNow().UTC().Format(time.RFC3339Nano),
@@ -722,8 +716,11 @@ func (e *etcd) RolloutPeerCA(ctx context.Context) error {
 			DataKey: dataKey,
 		}
 		return nil
-	})
-	return err
+	}); err != nil {
+		return err
+	}
+
+	return e.Wait(ctx)
 }
 
 func (e *etcd) GetValues() Values { return e.values }
