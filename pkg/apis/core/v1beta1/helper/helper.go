@@ -928,7 +928,7 @@ func FilterDeprecatedVersion() func(expirableVersion gardencorev1beta1.Expirable
 	}
 }
 
-// GetResourceByName returns the first NamedResourceReference with the given name in the given slice, or nil if not found.
+// GetResourceByName returns the NamedResourceReference with the given name in the given slice, or nil if not found.
 func GetResourceByName(resources []gardencorev1beta1.NamedResourceReference, name string) *gardencorev1beta1.NamedResourceReference {
 	for _, resource := range resources {
 		if resource.Name == name {

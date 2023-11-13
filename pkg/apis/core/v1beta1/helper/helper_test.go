@@ -2118,6 +2118,32 @@ var _ = Describe("Helper", func() {
 			)
 		})
 
+		DescribeTable("#GetResourceByName",
+			func(resources []gardencorev1beta1.NamedResourceReference, name string, expected *gardencorev1beta1.NamedResourceReference) {
+				actual := GetResourceByName(resources, name)
+				Expect(actual).To(Equal(expected))
+			},
+
+			Entry("resources is nil", nil, "foo", nil),
+			Entry("resources doesn't contain a resource with the given name",
+				[]gardencorev1beta1.NamedResourceReference{
+					{Name: "bar", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "Secret", Name: "bar"}},
+					{Name: "baz", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "ConfigMap", Name: "baz"}},
+				},
+				"foo",
+				nil,
+			),
+			Entry("resources contains a resource with the given name",
+				[]gardencorev1beta1.NamedResourceReference{
+					{Name: "bar", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "Secret", Name: "bar"}},
+					{Name: "baz", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "ConfigMap", Name: "baz"}},
+					{Name: "foo", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "Secret", Name: "foo"}},
+				},
+				"foo",
+				&gardencorev1beta1.NamedResourceReference{Name: "foo", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "Secret", Name: "foo"}},
+			),
+		)
+
 		DescribeTable("#UpsertLastError",
 			func(lastErrors []gardencorev1beta1.LastError, lastError gardencorev1beta1.LastError, expected []gardencorev1beta1.LastError) {
 				Expect(UpsertLastError(lastErrors, lastError)).To(Equal(expected))
