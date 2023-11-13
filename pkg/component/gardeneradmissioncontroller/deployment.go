@@ -66,6 +66,14 @@ func (a *gardenerAdmissionController) deployment(secretServerCert, secretGeneric
 				Spec: corev1.PodSpec{
 					PriorityClassName:            v1beta1constants.PriorityClassNameGardenSystem400,
 					AutomountServiceAccountToken: pointer.Bool(false),
+					SecurityContext: &corev1.PodSecurityContext{
+						// use the nonroot user from a distroless container
+						// https://github.com/GoogleContainerTools/distroless/blob/1a8918fcaa7313fd02ae08089a57a701faea999c/base/base.bzl#L8
+						RunAsNonRoot: pointer.Bool(true),
+						RunAsUser:    pointer.Int64(65532),
+						RunAsGroup:   pointer.Int64(65532),
+						FSGroup:      pointer.Int64(65532),
+					},
 					Containers: []corev1.Container{
 						{
 							Name:            DeploymentName,

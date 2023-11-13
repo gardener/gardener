@@ -443,6 +443,12 @@ var _ = Describe("GardenerAPIServer", func() {
 					Spec: corev1.PodSpec{
 						AutomountServiceAccountToken: pointer.Bool(false),
 						PriorityClassName:            "gardener-garden-system-500",
+						SecurityContext: &corev1.PodSecurityContext{
+							RunAsNonRoot: pointer.Bool(true),
+							RunAsUser:    pointer.Int64(65532),
+							RunAsGroup:   pointer.Int64(65532),
+							FSGroup:      pointer.Int64(65532),
+						},
 						Containers: []corev1.Container{{
 							Name:            "gardener-apiserver",
 							Image:           image,

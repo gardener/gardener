@@ -567,6 +567,12 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 				Spec: corev1.PodSpec{
 					PriorityClassName:            "gardener-garden-system-400",
 					AutomountServiceAccountToken: pointer.Bool(false),
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsNonRoot: pointer.Bool(true),
+						RunAsUser:    pointer.Int64(65532),
+						RunAsGroup:   pointer.Int64(65532),
+						FSGroup:      pointer.Int64(65532),
+					},
 					Containers: []corev1.Container{
 						{
 							Name:            "gardener-admission-controller",
