@@ -633,7 +633,7 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  serverCertSecretName,
-									DefaultMode: pointer.Int32(416),
+									DefaultMode: pointer.Int32(0640),
 								},
 							},
 						},

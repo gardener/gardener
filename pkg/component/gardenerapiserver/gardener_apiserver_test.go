@@ -560,7 +560,7 @@ var _ = Describe("GardenerAPIServer", func() {
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
 										SecretName:  "etcd-client",
-										DefaultMode: pointer.Int32(416),
+										DefaultMode: pointer.Int32(0640),
 									},
 								},
 							},
@@ -569,7 +569,7 @@ var _ = Describe("GardenerAPIServer", func() {
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
 										SecretName:  "gardener-apiserver",
-										DefaultMode: pointer.Int32(416),
+										DefaultMode: pointer.Int32(0640),
 									},
 								},
 							},
@@ -606,7 +606,7 @@ var _ = Describe("GardenerAPIServer", func() {
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
 										SecretName:  "gardener-apiserver-etcd-encryption-configuration-944a649a",
-										DefaultMode: pointer.Int32(416),
+										DefaultMode: pointer.Int32(0640),
 									},
 								},
 							},

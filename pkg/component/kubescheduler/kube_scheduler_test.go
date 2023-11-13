@@ -339,7 +339,7 @@ var _ = Describe("KubeScheduler", func() {
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  secretNameServer,
-											DefaultMode: pointer.Int32(416),
+											DefaultMode: pointer.Int32(0640),
 										},
 									},
 								},

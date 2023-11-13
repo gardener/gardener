@@ -344,7 +344,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretServiceAccountKey.Name,
-									DefaultMode: pointer.Int32(416),
+									DefaultMode: pointer.Int32(0640),
 								},
 							},
 						},
@@ -353,7 +353,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretServiceAccountKeyBundle.Name,
-									DefaultMode: pointer.Int32(416),
+									DefaultMode: pointer.Int32(0640),
 								},
 							},
 						},
@@ -370,7 +370,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretKubeAggregator.Name,
-									DefaultMode: pointer.Int32(416),
+									DefaultMode: pointer.Int32(0640),
 								},
 							},
 						},
@@ -532,7 +532,7 @@ func (k *kubeAPIServer) handleTLSSNISettings(deployment *appsv1.Deployment, tlsS
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  sni.secretName,
-					DefaultMode: pointer.Int32(416),
+					DefaultMode: pointer.Int32(0640),
 				},
 			},
 		})
@@ -616,7 +616,7 @@ func (k *kubeAPIServer) handleVPNSettingsNonHA(
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  secretHTTPProxy.Name,
-					DefaultMode: pointer.Int32(416),
+					DefaultMode: pointer.Int32(0640),
 				},
 			},
 		},
@@ -1017,7 +1017,7 @@ func (k *kubeAPIServer) handleKubeletSettings(deployment *appsv1.Deployment, sec
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  secretKubeletClient.Name,
-					DefaultMode: pointer.Int32(416),
+					DefaultMode: pointer.Int32(0640),
 				},
 			},
 		},

@@ -130,7 +130,7 @@ func InjectDefaultSettings(
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  secretETCDClient.Name,
-					DefaultMode: pointer.Int32(416),
+					DefaultMode: pointer.Int32(0640),
 				},
 			},
 		},
@@ -139,7 +139,7 @@ func InjectDefaultSettings(
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  secretServer.Name,
-					DefaultMode: pointer.Int32(416),
+					DefaultMode: pointer.Int32(0640),
 				},
 			},
 		},
