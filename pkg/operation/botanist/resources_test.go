@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"maps"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -99,11 +100,7 @@ var _ = Describe("Resources", func() {
 	})
 
 	Describe("#DeployReferencedResources", func() {
-		It("should deploy the managed resource and its secret for the referenced resources", func() {
-			Expect(gardenClient.Create(ctx, resource)).To(Succeed())
-
-			Expect(botanist.DeployReferencedResources(ctx)).To(Succeed())
-
+		expectReferencedResourcesInSeed := func(expectedObjects ...client.Object) {
 			managedResource := &resourcesv1alpha1.ManagedResource{}
 			Expect(seedClient.Get(ctx, kubernetesutils.Key(seedNamespace, "referenced-resources"), managedResource)).To(Succeed())
 			Expect(managedResource.Spec.Class).To(PointTo(Equal("seed")))
@@ -127,6 +124,7 @@ var _ = Describe("Resources", func() {
 				decodedObj map[string]interface{}
 			)
 
+			var i = 0
 			for indexInFile := 0; true; indexInFile++ {
 				err := decoder.Decode(&decodedObj)
 				if err == io.EOF {
@@ -138,10 +136,23 @@ var _ = Describe("Resources", func() {
 					continue
 				}
 
-				secret := &corev1.Secret{}
-				Expect(kubernetesscheme.Scheme.Convert(&unstructured.Unstructured{Object: decodedObj}, secret, nil)).To(Succeed())
+				Expect(i).To(BeNumerically("<", len(expectedObjects)), "managed resource secret should contain only %d objects", len(expectedObjects))
 
-				Expect(secret).To(Equal(&corev1.Secret{
+				actualObject := expectedObjects[i].DeepCopyObject()
+				Expect(kubernetesscheme.Scheme.Convert(&unstructured.Unstructured{Object: decodedObj}, actualObject, nil)).To(Succeed())
+				Expect(actualObject).To(DeepEqual(expectedObjects[i]))
+
+				i++
+			}
+		}
+
+		It("should deploy the managed resource and its secret for the referenced resources", func() {
+			Expect(gardenClient.Create(ctx, resource)).To(Succeed())
+
+			Expect(botanist.DeployReferencedResources(ctx)).To(Succeed())
+
+			expectReferencedResourcesInSeed(
+				&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        "ref-" + resource.Name,
 						Namespace:   seedNamespace,
@@ -150,8 +161,31 @@ var _ = Describe("Resources", func() {
 					},
 					Type: resource.Type,
 					Data: resource.Data,
-				}))
-			}
+				},
+			)
+		})
+
+		It("should drop unwanted metadata from referenced resources", func() {
+			metav1.SetMetaDataAnnotation(&resource.ObjectMeta, "kubectl.kubernetes.io/some-random-annotation", "this should be kept")
+			expectedAnnotations := maps.Clone(resource.Annotations)
+			metav1.SetMetaDataAnnotation(&resource.ObjectMeta, "kubectl.kubernetes.io/last-applied-configuration", "this should be dropped")
+
+			Expect(gardenClient.Create(ctx, resource)).To(Succeed())
+
+			Expect(botanist.DeployReferencedResources(ctx)).To(Succeed())
+
+			expectReferencedResourcesInSeed(
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        "ref-" + resource.Name,
+						Namespace:   seedNamespace,
+						Labels:      resource.Labels,
+						Annotations: expectedAnnotations,
+					},
+					Type: resource.Type,
+					Data: resource.Data,
+				},
+			)
 		})
 	})
 
