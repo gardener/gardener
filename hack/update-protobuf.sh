@@ -21,6 +21,11 @@ set -o pipefail
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 VGOPATH="$VGOPATH"
 
+# Ensure that if GOPATH is set, the GOPATH/bin directory exists. This seems to be not always
+# the case in certain environments like Prow. As we will create a symlink against the bin folder we
+# need to make sure that the bin directory is present in the GOPATH.
+if [ -n "$GOPATH" ] && [ ! -d "$GOPATH/bin" ]; then mkdir -p "$GOPATH/bin"; fi
+
 VIRTUAL_GOPATH="$(mktemp -d)"
 trap 'rm -rf "$VIRTUAL_GOPATH"' EXIT
 
