@@ -365,6 +365,16 @@ func SystemComponentsAllowed(worker *core.Worker) bool {
 	return worker.SystemComponents == nil || worker.SystemComponents.Allow
 }
 
+// GetResourceByName returns the NamedResourceReference with the given name in the given slice, or nil if not found.
+func GetResourceByName(resources []core.NamedResourceReference, name string) *core.NamedResourceReference {
+	for _, resource := range resources {
+		if resource.Name == name {
+			return &resource
+		}
+	}
+	return nil
+}
+
 // KubernetesDashboardEnabled returns true if the kubernetes-dashboard addon is enabled in the Shoot manifest.
 func KubernetesDashboardEnabled(addons *core.Addons) bool {
 	return addons != nil && addons.KubernetesDashboard != nil && addons.KubernetesDashboard.Enabled
