@@ -155,6 +155,8 @@ spec:
         - --collector.uname
         - --collector.stat
         - --collector.pressure
+        - --collector.textfile
+        - --collector.textfile.directory=/textfile-collector
         image: some-image:some-tag
         imagePullPolicy: IfNotPresent
         livenessProbe:
@@ -185,6 +187,9 @@ spec:
         - mountPath: /host
           name: host
           readOnly: true
+        - mountPath: /textfile-collector
+          name: textfile
+          readOnly: true
       hostNetwork: true
       hostPID: true
       priorityClassName: system-cluster-critical
@@ -203,6 +208,9 @@ spec:
       - hostPath:
           path: /
         name: host
+      - hostPath:
+          path: /var/lib/node-exporter/textfile-collector
+        name: textfile
   updateStrategy:
     type: RollingUpdate
 status:
