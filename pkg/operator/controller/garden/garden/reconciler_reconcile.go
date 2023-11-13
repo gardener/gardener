@@ -256,6 +256,7 @@ func (r *Reconciler) reconcile(
 			Name: "Deploying Kubernetes Controller Manager",
 			Fn: func(ctx context.Context) error {
 				c.kubeControllerManager.SetReplicaCount(1)
+				c.kubeControllerManager.SetRuntimeConfig(c.kubeAPIServer.GetValues().RuntimeConfig)
 				return component.OpWait(c.kubeControllerManager).Deploy(ctx)
 			},
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),

@@ -71,7 +71,7 @@ var _ = Describe("KubeControllerManager", func() {
 		_, podCIDR, _                 = net.ParseCIDR("100.96.0.0/11")
 		_, serviceCIDR, _             = net.ParseCIDR("100.64.0.0/13")
 		namespace                     = "shoot--foo--bar"
-		version                       = "1.25.3"
+		version                       = "1.27.3"
 		semverVersion, _              = semver.NewVersion(version)
 		runtimeKubernetesVersion      = semver.MustParse("1.25.0")
 		image                         = "registry.k8s.io/kube-controller-manager:v1.25.3"
@@ -402,7 +402,21 @@ var _ = Describe("KubeControllerManager", func() {
 									Name:            "kube-controller-manager",
 									Image:           image,
 									ImagePullPolicy: corev1.PullIfNotPresent,
-									Command:         commandForKubernetesVersion(version, 10257, config.NodeCIDRMaskSize, config.PodEvictionTimeout, config.NodeMonitorGracePeriod, namespace, isWorkerless, serviceCIDR, podCIDR, getHorizontalPodAutoscalerConfig(config.HorizontalPodAutoscalerConfig), kubernetesutils.FeatureGatesToCommandLineParameter(config.FeatureGates), clusterSigningDuration, controllerWorkers, controllerSyncPeriods),
+									Command: commandForKubernetesVersion(version,
+										10257,
+										config.NodeCIDRMaskSize,
+										config.PodEvictionTimeout,
+										config.NodeMonitorGracePeriod,
+										namespace,
+										isWorkerless,
+										serviceCIDR,
+										podCIDR,
+										getHorizontalPodAutoscalerConfig(config.HorizontalPodAutoscalerConfig),
+										kubernetesutils.FeatureGatesToCommandLineParameter(config.FeatureGates),
+										clusterSigningDuration,
+										controllerWorkers,
+										controllerSyncPeriods,
+									),
 									LivenessProbe: &corev1.Probe{
 										ProbeHandler: corev1.ProbeHandler{
 											HTTPGet: &corev1.HTTPGetAction{
@@ -746,6 +760,118 @@ namespace: kube-system
 			Entry("with NodeMonitorGradePeriod", configWithNodeMonitorGracePeriod, hvpaConfigDisabled, controllerWorkers),
 			Entry("with disabled controllers", configWithNodeMonitorGracePeriod, hvpaConfigDisabled, controllerWorkersWithDisabledControllers),
 		)
+
+		DescribeTable("success tests for various runtime config",
+			func(config *gardencorev1beta1.KubeControllerManagerConfig, runtimeConfig map[string]bool, workerless bool, expectedCommand string) {
+				semverVersion, err := semver.NewVersion(version)
+				Expect(err).NotTo(HaveOccurred())
+
+				values = Values{
+					RuntimeVersion:         runtimeKubernetesVersion,
+					TargetVersion:          semverVersion,
+					Image:                  image,
+					Config:                 config,
+					PriorityClassName:      priorityClassName,
+					IsWorkerless:           workerless,
+					PodNetwork:             podCIDR,
+					ServiceNetwork:         serviceCIDR,
+					ClusterSigningDuration: clusterSigningDuration,
+					ControllerWorkers:      controllerWorkers,
+					ControllerSyncPeriods:  controllerSyncPeriods,
+				}
+				kubeControllerManager = New(testLogger, fakeInterface, namespace, sm, values)
+				kubeControllerManager.SetReplicaCount(replicas)
+				kubeControllerManager.SetRuntimeConfig(runtimeConfig)
+
+				Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				expectedMr := &resourcesv1alpha1.ManagedResource{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
+						Kind:       "ManagedResource",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            managedResource.Name,
+						Namespace:       managedResource.Namespace,
+						ResourceVersion: "1",
+						Labels:          map[string]string{"origin": "gardener"},
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+						SecretRefs: []corev1.LocalObjectReference{{
+							Name: managedResource.Spec.SecretRefs[0].Name,
+						}},
+						KeepObjects: pointer.Bool(true),
+					},
+				}
+				utilruntime.Must(references.InjectAnnotations(expectedMr))
+				Expect(managedResource).To(DeepEqual(expectedMr))
+
+				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+
+				actualDeployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: namespace}}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(actualDeployment), actualDeployment)).To(Succeed())
+				Expect(actualDeployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement(expectedCommand))
+			},
+
+			Entry("with empty runtimeConfig",
+				configWithNodeMonitorGracePeriod,
+				nil,
+				false,
+				"--controllers=*,bootstrapsigner,tokencleaner",
+			),
+			Entry("with empty runtimeConfig (workerless)",
+				configWithNodeMonitorGracePeriod,
+				nil,
+				true,
+				"--controllers=*,bootstrapsigner,tokencleaner,-attachdetach,-cloud-node-lifecycle,-nodeipam,-nodelifecycle,-persistentvolume-binder,-persistentvolume-expander,-ttl",
+			),
+			Entry("with disabled APIs (workerless)",
+				configWithNodeMonitorGracePeriod,
+				map[string]bool{
+					"apps/v1": false,
+				},
+				true,
+				"--controllers=*,bootstrapsigner,tokencleaner,-attachdetach,-cloud-node-lifecycle,-daemonset,-deployment,-nodeipam,-nodelifecycle,-persistentvolume-binder,-persistentvolume-expander,-replicaset,-statefulset,-ttl",
+			),
+			Entry("with non-disabled APIs (workerless)",
+				configWithNodeMonitorGracePeriod,
+				map[string]bool{
+					"apps/v1": true,
+				},
+				true,
+				"--controllers=*,bootstrapsigner,tokencleaner,-attachdetach,-cloud-node-lifecycle,-nodeipam,-nodelifecycle,-persistentvolume-binder,-persistentvolume-expander,-ttl",
+			),
+			Entry("with disabled APIs",
+				configWithNodeMonitorGracePeriod,
+				map[string]bool{
+					"autoscaling/v2":                 false,
+					"batch/v1":                       false,
+					"apps/v1":                        true,
+					"policy/v1/poddisruptionbudgets": false,
+					"storage.k8s.io/v1/csidrivers":   false,
+					"storage.k8s.io/v1/csinodes":     false,
+				},
+				false,
+				"--controllers=*,bootstrapsigner,tokencleaner,-cronjob,-horizontalpodautoscaling,-job,-ttl-after-finished",
+			),
+			Entry("with disabled APIs",
+				configWithNodeMonitorGracePeriod,
+				map[string]bool{
+					"resource.k8s.io/v1alpha2":           false,
+					"discovery.k8s.io/v1":                false,
+					"internal.apiserver.k8s.io/v1alpha1": false,
+					"rbac.authorization.k8s.io/v1":       false,
+				},
+				false,
+				"--controllers=*,bootstrapsigner,tokencleaner,-clusterrole-aggregation,-endpointslice,-endpointslicemirroring,-resource-claim-controller,-storage-version-gc",
+			),
+		)
 	})
 
 	Describe("#Destroy", func() {
@@ -873,7 +999,10 @@ func commandForKubernetesVersion(
 	controllerWorkers ControllerWorkers,
 	controllerSyncPeriods ControllerSyncPeriods,
 ) []string {
-	var command []string
+	var (
+		command     []string
+		controllers = []string{"*", "bootstrapsigner", "tokencleaner"}
+	)
 
 	podEvictionTimeoutSetting := "2m0s"
 	if podEvictionTimeout != nil {
@@ -903,7 +1032,6 @@ func commandForKubernetesVersion(
 		command = append(command,
 			"--allocate-node-cidrs=true",
 			"--attach-detach-reconcile-sync-period=1m0s",
-			"--controllers=*,bootstrapsigner,tokencleaner",
 			fmt.Sprintf("--cluster-cidr=%s", podNetwork.String()),
 			"--cluster-signing-kubelet-client-cert-file=/srv/kubernetes/ca-client/ca.crt",
 			"--cluster-signing-kubelet-client-key-file=/srv/kubernetes/ca-client/ca.key",
@@ -940,33 +1068,31 @@ func commandForKubernetesVersion(
 			command = append(command, fmt.Sprintf("--concurrent-statefulset-syncs=%d", *v))
 		}
 	} else {
-		var controllers []string
+		controllers = append(controllers,
+			"-attachdetach",
+			"-cloud-node-lifecycle",
+		)
 
-		if controllerWorkers.Namespace == nil || *controllerWorkers.Namespace != 0 {
-			controllers = append(controllers, "namespace")
-		}
-
-		controllers = append(controllers, "serviceaccount")
-
-		if controllerWorkers.ServiceAccountToken == nil || *controllerWorkers.ServiceAccountToken != 0 {
-			controllers = append(controllers, "serviceaccount-token")
+		if controllerWorkers.Namespace != nil && *controllerWorkers.Namespace == 0 {
+			controllers = append(controllers, "-namespace")
 		}
 
 		controllers = append(controllers,
-			"clusterrole-aggregation",
-			"garbagecollector",
-			"csrapproving",
-			"csrcleaner",
-			"csrsigning",
-			"bootstrapsigner",
-			"tokencleaner",
+			"-nodeipam",
+			"-nodelifecycle",
+			"-persistentvolume-binder",
+			"-persistentvolume-expander",
 		)
 
-		if controllerWorkers.ResourceQuota == nil || *controllerWorkers.ResourceQuota != 0 {
-			controllers = append(controllers, "resourcequota")
+		if controllerWorkers.ResourceQuota != nil && *controllerWorkers.ResourceQuota == 0 {
+			controllers = append(controllers, "-resourcequota")
 		}
 
-		command = append(command, "--controllers="+strings.Join(controllers, ","))
+		if controllerWorkers.ServiceAccountToken != nil && *controllerWorkers.ServiceAccountToken == 0 {
+			controllers = append(controllers, "-serviceaccount-token")
+		}
+
+		controllers = append(controllers, "-ttl")
 	}
 
 	command = append(command,
@@ -1000,6 +1126,8 @@ func commandForKubernetesVersion(
 	} else {
 		command = append(command, fmt.Sprintf("--concurrent-service-endpoint-syncs=%d", *v))
 	}
+
+	command = append(command, "--controllers="+strings.Join(controllers, ","))
 
 	if v := controllerWorkers.Namespace; v == nil {
 		command = append(command, "--concurrent-namespace-syncs=50")

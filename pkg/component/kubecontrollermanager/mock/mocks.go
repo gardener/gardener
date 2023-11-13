@@ -105,6 +105,18 @@ func (mr *MockInterfaceMockRecorder) SetReplicaCount(arg0 interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetReplicaCount", reflect.TypeOf((*MockInterface)(nil).SetReplicaCount), arg0)
 }
 
+// SetRuntimeConfig mocks base method.
+func (m *MockInterface) SetRuntimeConfig(arg0 map[string]bool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetRuntimeConfig", arg0)
+}
+
+// SetRuntimeConfig indicates an expected call of SetRuntimeConfig.
+func (mr *MockInterfaceMockRecorder) SetRuntimeConfig(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRuntimeConfig", reflect.TypeOf((*MockInterface)(nil).SetRuntimeConfig), arg0)
+}
+
 // SetShootClient mocks base method.
 func (m *MockInterface) SetShootClient(arg0 client.Client) {
 	m.ctrl.T.Helper()

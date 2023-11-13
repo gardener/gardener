@@ -50,7 +50,7 @@ var (
 		"CertificateApproval":                  {},
 		"CertificateSigning":                   {},
 		"CertificateSubjectRestriction":        {},
-		"ClusterTrustBundleAttest":             {AddedInVersion: "1.27"},
+		"ClusterTrustBundleAttest":             {VersionRange: versionutils.VersionRange{AddedInVersion: "1.27"}},
 		"DefaultIngressClass":                  {},
 		"DefaultStorageClass":                  {},
 		"DefaultTolerationSeconds":             {},
@@ -70,7 +70,7 @@ var (
 		"PersistentVolumeLabel":                {},
 		"PodNodeSelector":                      {},
 		"PodSecurity":                          {Required: true},
-		"PodSecurityPolicy":                    {RemovedInVersion: "1.25"},
+		"PodSecurityPolicy":                    {VersionRange: versionutils.VersionRange{RemovedInVersion: "1.25"}},
 		"PodTolerationRestriction":             {},
 		"Priority":                             {Required: true},
 		"ResourceQuota":                        {},
@@ -79,7 +79,7 @@ var (
 		"ServiceAccount":                       {},
 		"StorageObjectInUseProtection":         {Required: true},
 		"TaintNodesByCondition":                {},
-		"ValidatingAdmissionPolicy":            {AddedInVersion: "1.26"},
+		"ValidatingAdmissionPolicy":            {VersionRange: versionutils.VersionRange{AddedInVersion: "1.26"}},
 		"ValidatingAdmissionWebhook":           {Required: true},
 	}
 
@@ -130,28 +130,9 @@ func IsAdmissionPluginSupported(plugin, version string) (bool, error) {
 
 // AdmissionPluginVersionRange represents a version range of type [AddedInVersion, RemovedInVersion).
 type AdmissionPluginVersionRange struct {
-	Forbidden        bool
-	Required         bool
-	AddedInVersion   string
-	RemovedInVersion string
-}
-
-// Contains returns true if the range contains the given version, false otherwise.
-// The range contains the given version only if it's greater or equal than AddedInVersion (always true if AddedInVersion is empty),
-// and less than RemovedInVersion (always true if RemovedInVersion is empty).
-func (r *AdmissionPluginVersionRange) Contains(version string) (bool, error) {
-	var constraint string
-	switch {
-	case r.AddedInVersion != "" && r.RemovedInVersion == "":
-		constraint = fmt.Sprintf(">= %s", r.AddedInVersion)
-	case r.AddedInVersion == "" && r.RemovedInVersion != "":
-		constraint = fmt.Sprintf("< %s", r.RemovedInVersion)
-	case r.AddedInVersion != "" && r.RemovedInVersion != "":
-		constraint = fmt.Sprintf(">= %s, < %s", r.AddedInVersion, r.RemovedInVersion)
-	default:
-		constraint = "*"
-	}
-	return versionutils.CheckVersionMeetsConstraint(version, constraint)
+	Forbidden bool
+	Required  bool
+	versionutils.VersionRange
 }
 
 func getAllForbiddenPlugins() []string {

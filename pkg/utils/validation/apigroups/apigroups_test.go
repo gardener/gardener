@@ -46,52 +46,6 @@ var _ = Describe("apigroups", func() {
 		Entry("Known API Group Version Resource but kubernetes version range not present", "policy/v1/poddisruptionbudgets", "1.25", true, true),
 	)
 
-	Describe("APIVersionRange", func() {
-		DescribeTable("#Contains",
-			func(vr APIVersionRange, version string, contains, success bool) {
-				result, err := vr.Contains(version)
-				if success {
-					Expect(err).To(Not(HaveOccurred()))
-					Expect(result).To(Equal(contains))
-				} else {
-					Expect(err).To(HaveOccurred())
-				}
-			},
-
-			Entry("[,) contains 1.2.3", APIVersionRange{}, "1.2.3", true, true),
-			Entry("[,) contains 0.1.2", APIVersionRange{}, "0.1.2", true, true),
-			Entry("[,) contains 1.3.5", APIVersionRange{}, "1.3.5", true, true),
-			Entry("[,) fails with foo", APIVersionRange{}, "foo", false, false),
-
-			Entry("[, 1.3) contains 1.2.3", APIVersionRange{RemovedInVersion: "1.3"}, "1.2.3", true, true),
-			Entry("[, 1.3) contains 0.1.2", APIVersionRange{RemovedInVersion: "1.3"}, "0.1.2", true, true),
-			Entry("[, 1.3) doesn't contain 1.3.5", APIVersionRange{RemovedInVersion: "1.3"}, "1.3.5", false, true),
-			Entry("[, 1.3) fails with foo", APIVersionRange{RemovedInVersion: "1.3"}, "foo", false, false),
-
-			Entry("[1.0, ) contains 1.2.3", APIVersionRange{AddedInVersion: "1.0"}, "1.2.3", true, true),
-			Entry("[1.0, ) doesn't contain 0.1.2", APIVersionRange{AddedInVersion: "1.0"}, "0.1.2", false, true),
-			Entry("[1.0, ) contains 1.3.5", APIVersionRange{AddedInVersion: "1.0"}, "1.3.5", true, true),
-			Entry("[1.0, ) fails with foo", APIVersionRange{AddedInVersion: "1.0"}, "foo", false, false),
-
-			Entry("[1.0, 1.3) contains 1.2.3", APIVersionRange{AddedInVersion: "1.0", RemovedInVersion: "1.3"}, "1.2.3", true, true),
-			Entry("[1.0, 1.3) doesn't contain 0.1.2", APIVersionRange{AddedInVersion: "1.0", RemovedInVersion: "1.3"}, "0.1.2", false, true),
-			Entry("[1.0, 1.3) doesn't contain 1.3.5", APIVersionRange{AddedInVersion: "1.0", RemovedInVersion: "1.3"}, "1.3.5", false, true),
-			Entry("[1.0, 1.3) fails with foo", APIVersionRange{AddedInVersion: "1.0", RemovedInVersion: "1.3"}, "foo", false, false),
-		)
-
-		DescribeTable("#SupportedVersions",
-			func(vr APIVersionRange, expected string) {
-				result := vr.SupportedVersionRange()
-				Expect(result).To(Equal(expected))
-			},
-
-			Entry("No AddedInVersion", APIVersionRange{RemovedInVersion: "1.1.0"}, "versions < 1.1.0"),
-			Entry("No RemovedInVersion", APIVersionRange{AddedInVersion: "1.1.0"}, "versions >= 1.1.0"),
-			Entry("No AddedInVersion amnd RemovedInVersion", APIVersionRange{}, "all kubernetes versions"),
-			Entry("AddedInVersion amnd RemovedInVersion", APIVersionRange{AddedInVersion: "1.1.0", RemovedInVersion: "1.2.0"}, "versions >= 1.1.0, < 1.2.0"),
-		)
-	})
-
 	DescribeTable("#SplitAPI",
 		func(api, expectedGV, expectedGVR string, matcher gomegatypes.GomegaMatcher) {
 			gv, gvr, err := SplitAPI(api)

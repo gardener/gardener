@@ -30,7 +30,7 @@ var (
 	apiGroupVersionRanges = map[string]*APIVersionRange{
 		"admissionregistration.k8s.io/v1":       {Required: true},
 		"admissionregistration.k8s.io/v1beta1":  {},
-		"admissionregistration.k8s.io/v1alpha1": {AddedInVersion: "1.26"},
+		"admissionregistration.k8s.io/v1alpha1": {VersionRange: versionutils.VersionRange{AddedInVersion: "1.26"}},
 		"apps/v1":                               {Required: true},
 		"apps/v1beta1":                          {},
 		"apps/v1beta2":                          {},
@@ -42,7 +42,7 @@ var (
 		"batch/v1beta1":                         {},
 		"certificates.k8s.io/v1":                {},
 		"certificates.k8s.io/v1beta1":           {},
-		"certificates.k8s.io/v1alpha1":          {AddedInVersion: "1.27"},
+		"certificates.k8s.io/v1alpha1":          {VersionRange: versionutils.VersionRange{AddedInVersion: "1.27"}},
 		"coordination.k8s.io/v1":                {},
 		"coordination.k8s.io/v1beta1":           {},
 		"discovery.k8s.io/v1":                   {},
@@ -53,11 +53,11 @@ var (
 		"flowcontrol.apiserver.k8s.io/v1alpha1": {},
 		"flowcontrol.apiserver.k8s.io/v1beta1":  {},
 		"flowcontrol.apiserver.k8s.io/v1beta2":  {},
-		"flowcontrol.apiserver.k8s.io/v1beta3":  {AddedInVersion: "1.26"},
+		"flowcontrol.apiserver.k8s.io/v1beta3":  {VersionRange: versionutils.VersionRange{AddedInVersion: "1.26"}},
 		"internal.apiserver.k8s.io/v1alpha1":    {},
 		"networking.k8s.io/v1":                  {Required: true, RequiredForWorkerless: true},
 		"networking.k8s.io/v1beta1":             {},
-		"networking.k8s.io/v1alpha1":            {AddedInVersion: "1.25"},
+		"networking.k8s.io/v1alpha1":            {VersionRange: versionutils.VersionRange{AddedInVersion: "1.25"}},
 		"node.k8s.io/v1":                        {},
 		"node.k8s.io/v1alpha1":                  {},
 		"node.k8s.io/v1beta1":                   {},
@@ -66,8 +66,8 @@ var (
 		"rbac.authorization.k8s.io/v1":          {Required: true, RequiredForWorkerless: true},
 		"rbac.authorization.k8s.io/v1alpha1":    {},
 		"rbac.authorization.k8s.io/v1beta1":     {},
-		"resource.k8s.io/v1alpha1":              {AddedInVersion: "1.26", RemovedInVersion: "1.27"},
-		"resource.k8s.io/v1alpha2":              {AddedInVersion: "1.27"},
+		"resource.k8s.io/v1alpha1":              {VersionRange: versionutils.VersionRange{AddedInVersion: "1.26", RemovedInVersion: "1.27"}},
+		"resource.k8s.io/v1alpha2":              {VersionRange: versionutils.VersionRange{AddedInVersion: "1.27"}},
 		"scheduling.k8s.io/v1":                  {},
 		"scheduling.k8s.io/v1alpha1":            {},
 		"scheduling.k8s.io/v1beta1":             {},
@@ -80,12 +80,12 @@ var (
 	apiGVRVersionRanges = map[string]*APIVersionRange{
 		"admissionregistration.k8s.io/v1/mutatingwebhookconfigurations":           {Required: true},
 		"admissionregistration.k8s.io/v1/validatingwebhookconfigurations":         {Required: true},
-		"admissionregistration.k8s.io/v1alpha1/validatingadmissionpolicies":       {AddedInVersion: "1.26"},
-		"admissionregistration.k8s.io/v1alpha1/validatingadmissionpolicybindings": {AddedInVersion: "1.26"},
+		"admissionregistration.k8s.io/v1alpha1/validatingadmissionpolicies":       {VersionRange: versionutils.VersionRange{AddedInVersion: "1.26"}},
+		"admissionregistration.k8s.io/v1alpha1/validatingadmissionpolicybindings": {VersionRange: versionutils.VersionRange{AddedInVersion: "1.26"}},
 		"admissionregistration.k8s.io/v1beta1/mutatingwebhookconfigurations":      {},
 		"admissionregistration.k8s.io/v1beta1/validatingwebhookconfigurations":    {},
-		"admissionregistration.k8s.io/v1beta1/validatingadmissionpolicies":        {AddedInVersion: "1.28"},
-		"admissionregistration.k8s.io/v1beta1/validatingadmissionpolicybindings":  {AddedInVersion: "1.28"},
+		"admissionregistration.k8s.io/v1beta1/validatingadmissionpolicies":        {VersionRange: versionutils.VersionRange{AddedInVersion: "1.28"}},
+		"admissionregistration.k8s.io/v1beta1/validatingadmissionpolicybindings":  {VersionRange: versionutils.VersionRange{AddedInVersion: "1.28"}},
 		"apps/v1/controllerrevisions":                                             {},
 		"apps/v1/daemonsets":                                                      {},
 		"apps/v1/deployments":                                                     {},
@@ -107,7 +107,7 @@ var (
 		"batch/v1/jobs":                                                           {},
 		"batch/v1beta1/cronjobs":                                                  {},
 		"certificates.k8s.io/v1/certificatesigningrequests":                       {Required: true},
-		"certificates.k8s.io/v1alpha1/clustertrustbundles":                        {AddedInVersion: "1.27"},
+		"certificates.k8s.io/v1alpha1/clustertrustbundles":                        {VersionRange: versionutils.VersionRange{AddedInVersion: "1.27"}},
 		"certificates.k8s.io/v1beta1/certificatesigningrequests":                  {},
 		"coordination.k8s.io/v1/leases":                                           {Required: true},
 		"coordination.k8s.io/v1beta1/leases":                                      {},
@@ -119,7 +119,7 @@ var (
 		"extensions/v1beta1/deployments":                                          {},
 		"extensions/v1beta1/ingresses":                                            {},
 		"extensions/v1beta1/networkpolicies":                                      {},
-		"extensions/v1beta1/podsecuritypolicies":                                  {RemovedInVersion: "1.27"},
+		"extensions/v1beta1/podsecuritypolicies":                                  {VersionRange: versionutils.VersionRange{RemovedInVersion: "1.27"}},
 		"extensions/v1beta1/replicasets":                                          {},
 		"flowcontrol.apiserver.k8s.io/v1alpha1/flowschemas":                       {},
 		"flowcontrol.apiserver.k8s.io/v1alpha1/prioritylevelconfigurations":       {},
@@ -127,16 +127,16 @@ var (
 		"flowcontrol.apiserver.k8s.io/v1beta1/prioritylevelconfigurations":        {},
 		"flowcontrol.apiserver.k8s.io/v1beta2/flowschemas":                        {},
 		"flowcontrol.apiserver.k8s.io/v1beta2/prioritylevelconfigurations":        {},
-		"flowcontrol.apiserver.k8s.io/v1beta3/flowschemas":                        {AddedInVersion: "1.26"},
-		"flowcontrol.apiserver.k8s.io/v1beta3/prioritylevelconfigurations":        {AddedInVersion: "1.26"},
+		"flowcontrol.apiserver.k8s.io/v1beta3/flowschemas":                        {VersionRange: versionutils.VersionRange{AddedInVersion: "1.26"}},
+		"flowcontrol.apiserver.k8s.io/v1beta3/prioritylevelconfigurations":        {VersionRange: versionutils.VersionRange{AddedInVersion: "1.26"}},
 		"internal.apiserver.k8s.io/v1alpha1/storageversions":                      {},
 		"networking.k8s.io/v1/ingressclasses":                                     {},
 		"networking.k8s.io/v1/ingresses":                                          {},
 		"networking.k8s.io/v1/networkpolicies":                                    {},
 		"networking.k8s.io/v1beta1/ingressclasses":                                {},
 		"networking.k8s.io/v1beta1/ingresses":                                     {},
-		"networking.k8s.io/v1alpha1/clustercidrs":                                 {AddedInVersion: "1.25"},
-		"networking.k8s.io/v1alpha1/ipaddresses":                                  {AddedInVersion: "1.27"},
+		"networking.k8s.io/v1alpha1/clustercidrs":                                 {VersionRange: versionutils.VersionRange{AddedInVersion: "1.25"}},
+		"networking.k8s.io/v1alpha1/ipaddresses":                                  {VersionRange: versionutils.VersionRange{AddedInVersion: "1.27"}},
 		"node.k8s.io/v1/runtimeclasses":                                           {Required: true},
 		"node.k8s.io/v1alpha1/runtimeclasses":                                     {},
 		"node.k8s.io/v1beta1/runtimeclasses":                                      {},
@@ -155,14 +155,14 @@ var (
 		"rbac.authorization.k8s.io/v1beta1/clusterroles":                          {},
 		"rbac.authorization.k8s.io/v1beta1/rolebindings":                          {},
 		"rbac.authorization.k8s.io/v1beta1/roles":                                 {},
-		"resource.k8s.io/v1alpha1/podschedulings":                                 {AddedInVersion: "1.26", RemovedInVersion: "1.27"},
-		"resource.k8s.io/v1alpha1/resourceclaims":                                 {AddedInVersion: "1.26", RemovedInVersion: "1.27"},
-		"resource.k8s.io/v1alpha1/resourceclaimtemplates":                         {AddedInVersion: "1.26", RemovedInVersion: "1.27"},
-		"resource.k8s.io/v1alpha1/resourceclasses":                                {AddedInVersion: "1.26", RemovedInVersion: "1.27"},
-		"resource.k8s.io/v1alpha2/podschedulingcontexts":                          {AddedInVersion: "1.27"},
-		"resource.k8s.io/v1alpha2/resourceclaims":                                 {AddedInVersion: "1.27"},
-		"resource.k8s.io/v1alpha2/resourceclaimtemplates":                         {AddedInVersion: "1.27"},
-		"resource.k8s.io/v1alpha2/resourceclasses":                                {AddedInVersion: "1.27"},
+		"resource.k8s.io/v1alpha1/podschedulings":                                 {VersionRange: versionutils.VersionRange{AddedInVersion: "1.26", RemovedInVersion: "1.27"}},
+		"resource.k8s.io/v1alpha1/resourceclaims":                                 {VersionRange: versionutils.VersionRange{AddedInVersion: "1.26", RemovedInVersion: "1.27"}},
+		"resource.k8s.io/v1alpha1/resourceclaimtemplates":                         {VersionRange: versionutils.VersionRange{AddedInVersion: "1.26", RemovedInVersion: "1.27"}},
+		"resource.k8s.io/v1alpha1/resourceclasses":                                {VersionRange: versionutils.VersionRange{AddedInVersion: "1.26", RemovedInVersion: "1.27"}},
+		"resource.k8s.io/v1alpha2/podschedulingcontexts":                          {VersionRange: versionutils.VersionRange{AddedInVersion: "1.27"}},
+		"resource.k8s.io/v1alpha2/resourceclaims":                                 {VersionRange: versionutils.VersionRange{AddedInVersion: "1.27"}},
+		"resource.k8s.io/v1alpha2/resourceclaimtemplates":                         {VersionRange: versionutils.VersionRange{AddedInVersion: "1.27"}},
+		"resource.k8s.io/v1alpha2/resourceclasses":                                {VersionRange: versionutils.VersionRange{AddedInVersion: "1.27"}},
 		"scheduling.k8s.io/v1/priorityclasses":                                    {Required: true},
 		"scheduling.k8s.io/v1alpha1/priorityclasses":                              {},
 		"scheduling.k8s.io/v1beta1/priorityclasses":                               {},
@@ -232,26 +232,7 @@ func IsAPISupported(api, version string) (bool, string, error) {
 type APIVersionRange struct {
 	Required              bool
 	RequiredForWorkerless bool
-	AddedInVersion        string
-	RemovedInVersion      string
-}
-
-// Contains returns true if the range contains the given version, false otherwise.
-// The range contains the given version only if it's greater or equal than AddedInVersion (always true if AddedInVersion is empty),
-// and less than RemovedInVersion (always true if RemovedInVersion is empty).
-func (r *APIVersionRange) Contains(version string) (bool, error) {
-	var constraint string
-	switch {
-	case r.AddedInVersion != "" && r.RemovedInVersion == "":
-		constraint = fmt.Sprintf(">= %s", r.AddedInVersion)
-	case r.AddedInVersion == "" && r.RemovedInVersion != "":
-		constraint = fmt.Sprintf("< %s", r.RemovedInVersion)
-	case r.AddedInVersion != "" && r.RemovedInVersion != "":
-		constraint = fmt.Sprintf(">= %s, < %s", r.AddedInVersion, r.RemovedInVersion)
-	default:
-		constraint = "*"
-	}
-	return versionutils.CheckVersionMeetsConstraint(version, constraint)
+	versionutils.VersionRange
 }
 
 // SupportedVersionRange returns the supported version range for the given API.
