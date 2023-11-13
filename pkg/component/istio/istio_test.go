@@ -102,11 +102,6 @@ var _ = Describe("istiod", func() {
 			return string(data)
 		}
 
-		istiodPeerAuthentication = func() string {
-			data, _ := os.ReadFile("./test_charts/istiod_peerauthentication.yaml")
-			return string(data)
-		}
-
 		istiodPodDisruptionBudget = func() string {
 			data, _ := os.ReadFile("./test_charts/istiod_poddisruptionbudget.yaml")
 			return string(data)
@@ -378,7 +373,7 @@ var _ = Describe("istiod", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSystemSecret), managedResourceIstioSystemSecret)).To(Succeed())
 			Expect(managedResourceIstioSystemSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceIstioSystemSecret.Data).To(HaveLen(11))
+			Expect(managedResourceIstioSystemSecret.Data).To(HaveLen(12))
 			Expect(managedResourceIstioSystemSecret.Immutable).To(Equal(pointer.Bool(true)))
 			Expect(managedResourceIstioSystemSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
@@ -389,7 +384,6 @@ var _ = Describe("istiod", func() {
 			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_clusterrolebinding.yaml"]), istiodClusterRoleBinding())).To(BeEmpty())
 			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_destinationrule.yaml"]), istiodDestinationRule())).To(BeEmpty())
 			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_namespace.yaml"])).To(BeEmpty())
-			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_peerauthentication.yaml"]), istiodPeerAuthentication())).To(BeEmpty())
 			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_poddisruptionbudget.yaml"]), istiodPodDisruptionBudget())).To(BeEmpty())
 			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_role.yaml"]), istiodRole())).To(BeEmpty())
 			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_rolebinding.yaml"]), istiodRoleBinding())).To(BeEmpty())
@@ -612,14 +606,11 @@ var _ = Describe("istiod", func() {
 				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_service.yaml"))
 				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_clusterrole.yaml"))
 				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_clusterrolebinding.yaml"))
-				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_destinationrule.yaml"))
 				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_namespace.yaml"))
-				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_peerauthentication.yaml"))
 				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_poddisruptionbudget.yaml"))
 				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_role.yaml"))
 				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_rolebinding.yaml"))
 				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_serviceaccount.yaml"))
-				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_sidecar.yaml"))
 				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_autoscale.yaml"))
 				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_validatingwebhookconfiguration.yaml"))
 			})
