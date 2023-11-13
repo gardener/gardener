@@ -631,7 +631,10 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 						{
 							Name: "gardener-admission-controller-cert",
 							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{SecretName: serverCertSecretName},
+								Secret: &corev1.SecretVolumeSource{
+									SecretName:  serverCertSecretName,
+									DefaultMode: pointer.Int32(416),
+								},
 							},
 						},
 						{

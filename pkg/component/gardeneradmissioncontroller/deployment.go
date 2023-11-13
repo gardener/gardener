@@ -127,7 +127,10 @@ func (a *gardenerAdmissionController) deployment(secretServerCert, secretGeneric
 						{
 							Name: volumeNameCerts,
 							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{SecretName: secretServerCert},
+								Secret: &corev1.SecretVolumeSource{
+									SecretName:  secretServerCert,
+									DefaultMode: pointer.Int32(416),
+								},
 							},
 						},
 						{
