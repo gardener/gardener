@@ -833,13 +833,15 @@ func (k *kubeControllerManager) computeResourceRequirements(ctx context.Context)
 }
 
 func getTrimmedAPI(api string) string {
-	knownGroupSuffixes := sets.New(
+	// The order of the suffixes are important because we exit right after we do the first replacement.
+	// .k8s.io should therefore always be the very last suffix.
+	knownGroupSuffixes := []string{
 		".authorization.k8s.io",
 		".apiserver.k8s.io",
 		".k8s.io",
-	)
+	}
 
-	for s := range knownGroupSuffixes {
+	for _, s := range knownGroupSuffixes {
 		if strings.Contains(api, s) {
 			api = strings.Replace(api, s, "", 1)
 			return api
