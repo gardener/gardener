@@ -4,10 +4,7 @@
 #
 # COMPONENT_PREFIXES: Set the image prefix that should be used to
 #                     determine if an image is defined by another component.
-#                     Defaults to "eu.gcr.io/gardener-project/gardener"
-#
-# GENERIC_DEPENDENCIES: Set images that are generic dependencies with no specific tag.
-#                       Defaults to "hyperkube,kube-apiserver,kube-controller-manager,kube-scheduler,kube-proxy"
+#                     Defaults to "eu.gcr.io/gardener-project/gardener,europe-docker.pkg.dev/gardener-project"
 #
 # COMPONENT_CLI_ARGS: Set all component-cli arguments.
 #                     This should be used with care as all defaults are overwritten.
@@ -58,10 +55,7 @@ fi
 if [[ ! -z "$image_vector_path" ]]; then
   # default environment variables
   if [[ -z "${COMPONENT_PREFIXES}" ]]; then
-    COMPONENT_PREFIXES="eu.gcr.io/gardener-project/gardener"
-  fi
-  if [[ -z "${GENERIC_DEPENDENCIES}" ]]; then
-    GENERIC_DEPENDENCIES="hyperkube,kube-apiserver,kube-controller-manager,kube-scheduler,kube-proxy"
+    COMPONENT_PREFIXES="eu.gcr.io/gardener-project/gardener,europe-docker.pkg.dev/gardener-project"
   fi
 
   if [[ -z "${COMPONENT_CLI_ARGS}" ]]; then
@@ -69,7 +63,6 @@ if [[ ! -z "$image_vector_path" ]]; then
     --comp-desc ${BASE_DEFINITION_PATH} \
     --image-vector "$image_vector_path" \
     --component-prefixes "${COMPONENT_PREFIXES}" \
-    --generic-dependencies "${GENERIC_DEPENDENCIES}" \
     "
   fi
 
@@ -96,14 +89,7 @@ if [[ -d "$repo_root_dir/charts/" ]]; then
       REPOSITORY=${imageAndTag[0]}
       TAG=${imageAndTag[1]}
 
-      gardener="eu.gcr.io/gardener-project/gardener"
-      if [[ "$NAME" == "hyperkube" ]]; then
-        ${ADD_DEPENDENCIES_CMD} --generic-dependencies "{\"name\": \"$NAME\", \"version\": \"$TAG\"}"
-      elif [[ $REPOSITORY =~ "eu.gcr.io/gardener-project/gardener"* ]]; then
-        ${ADD_DEPENDENCIES_CMD} --generic-dependencies "{\"name\": \"$NAME\", \"version\": \"$TAG\"}"
-      else
-        ${ADD_DEPENDENCIES_CMD} --container-image-dependencies "{\"name\": \"${NAME}\", \"image_reference\": \"${REPOSITORY}:${TAG}\", \"version\": \"$TAG\"}"
-      fi
+      ${ADD_DEPENDENCIES_CMD} --container-image-dependencies "{\"name\": \"${NAME}\", \"image_reference\": \"${REPOSITORY}:${TAG}\", \"version\": \"$TAG\"}"
     done < <(echo "$outputFile")
   done
 fi
