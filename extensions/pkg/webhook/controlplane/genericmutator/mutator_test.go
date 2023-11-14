@@ -407,8 +407,11 @@ var _ = Describe("Mutator", func() {
 				c.EXPECT().Get(context.TODO(), clusterKey, &extensionsv1alpha1.Cluster{}).DoAndReturn(clientGet(clusterObject(cluster)))
 			})
 
-			DescribeTable("should invoke appropriate ensurer methods with OperatingSystemConfig", func(mutateOSC func() *extensionsv1alpha1.OperatingSystemConfig) {
-				oldOSC := mutateOSC()
+			It("should invoke appropriate ensurer methods with OperatingSystemConfig", func() {
+				oldOSC := newOSC.DeepCopy()
+				oldOSC.Spec.Units[0].Content = pointer.String(oldServiceContent)
+				oldOSC.Spec.Files[0].Content.Inline.Data = oldKubeletConfigData
+				oldOSC.Spec.Files[1].Content.Inline.Data = oldKubernetesGeneralConfigData
 
 				// Create mock ensurer
 				ensurer.EXPECT().EnsureKubeletServiceUnitOptions(context.TODO(), gomock.Any(), kubernetesVersionSemver, newUnitOptions, oldUnitOptions).Return(mutatedUnitOptions, nil)
@@ -461,40 +464,6 @@ var _ = Describe("Mutator", func() {
 				Expect(err).To(Not(HaveOccurred()))
 				checkOperatingSystemConfig(newOSC)
 			},
-				Entry(
-					"OSC has spec.files",
-					func() *extensionsv1alpha1.OperatingSystemConfig {
-						oldOSC := newOSC.DeepCopy()
-						oldOSC.Spec.Units[0].Content = pointer.String(oldServiceContent)
-						oldOSC.Spec.Files[0].Content.Inline.Data = oldKubeletConfigData
-						oldOSC.Spec.Files[1].Content.Inline.Data = oldKubernetesGeneralConfigData
-						return oldOSC
-					},
-				),
-				Entry(
-					"OSC has spec.units.files",
-					func() *extensionsv1alpha1.OperatingSystemConfig {
-						newOSC.Spec.Units[0].Files = newOSC.Spec.Files
-						newOSC.Spec.Files = nil
-						oldOSC := newOSC.DeepCopy()
-						oldOSC.Spec.Units[0].Content = pointer.String(oldServiceContent)
-						oldOSC.Spec.Units[0].Files[0].Content.Inline.Data = oldKubeletConfigData
-						oldOSC.Spec.Units[0].Files[1].Content.Inline.Data = oldKubernetesGeneralConfigData
-						return oldOSC
-					},
-				),
-				Entry(
-					"OSC has mixed spec.files and spec.units.files",
-					func() *extensionsv1alpha1.OperatingSystemConfig {
-						newOSC.Spec.Units[0].Files = append(newOSC.Spec.Units[0].Files, newOSC.Spec.Files[0])
-						newOSC.Spec.Files = newOSC.Spec.Files[1:]
-						oldOSC := newOSC.DeepCopy()
-						oldOSC.Spec.Units[0].Content = pointer.String(oldServiceContent)
-						oldOSC.Spec.Units[0].Files[0].Content.Inline.Data = oldKubeletConfigData
-						oldOSC.Spec.Files[0].Content.Inline.Data = oldKubernetesGeneralConfigData
-						return oldOSC
-					},
-				),
 			)
 
 			It("should not add invalid file content to OSC", func() {
@@ -569,18 +538,18 @@ func checkOperatingSystemConfig(osc *extensionsv1alpha1.OperatingSystemConfig) {
 	customMTU := extensionswebhook.UnitWithName(osc.Spec.Units, "custom-mtu.service")
 	Expect(customMTU).To(Not(BeNil()))
 
-	customFile := collectFile(osc, "/test/path")
+	customFile := extensionswebhook.FileWithPath(osc.Spec.Files, "/test/path")
 	Expect(customFile).To(Not(BeNil()))
 
-	kubeletFile := collectFile(osc, v1beta1constants.OperatingSystemConfigFilePathKubeletConfig)
+	kubeletFile := extensionswebhook.FileWithPath(osc.Spec.Files, v1beta1constants.OperatingSystemConfigFilePathKubeletConfig)
 	Expect(kubeletFile).To(Not(BeNil()))
 	Expect(kubeletFile.Content.Inline).To(Equal(&extensionsv1alpha1.FileContentInline{Data: mutatedKubeletConfigData}))
 
-	general := collectFile(osc, v1beta1constants.OperatingSystemConfigFilePathKernelSettings)
+	general := extensionswebhook.FileWithPath(osc.Spec.Files, v1beta1constants.OperatingSystemConfigFilePathKernelSettings)
 	Expect(general).To(Not(BeNil()))
 	Expect(general.Content.Inline).To(Equal(&extensionsv1alpha1.FileContentInline{Data: mutatedKubernetesGeneralConfigData}))
 
-	cloudProvider := collectFile(osc, genericmutator.CloudProviderConfigPath)
+	cloudProvider := extensionswebhook.FileWithPath(osc.Spec.Files, genericmutator.CloudProviderConfigPath)
 	Expect(cloudProvider).To(Not(BeNil()))
 	Expect(cloudProvider.Path).To(Equal(genericmutator.CloudProviderConfigPath))
 	Expect(cloudProvider.Permissions).To(Equal(pointer.Int32(0644)))
@@ -616,12 +585,4 @@ func clusterObject(cluster *extensionscontroller.Cluster) *extensionsv1alpha1.Cl
 func encode(obj runtime.Object) []byte {
 	data, _ := json.Marshal(obj)
 	return data
-}
-
-func collectFile(osc *extensionsv1alpha1.OperatingSystemConfig, path string) *extensionsv1alpha1.File {
-	files := osc.Spec.Files
-	for _, unit := range osc.Spec.Units {
-		files = append(files, unit.Files...)
-	}
-	return extensionswebhook.FileWithPath(files, path)
 }
