@@ -92,14 +92,11 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		},
 	}
 
-	var files []extensionsv1alpha1.File
 	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
-		systemdSysctlUnit.Files = append(systemdSysctlUnit.Files, kernelSettingsFile)
-	} else {
-		files = append(files, kernelSettingsFile)
+		systemdSysctlUnit.FilePaths = []string{kernelSettingsFile.Path}
 	}
 
-	return []extensionsv1alpha1.Unit{systemdSysctlUnit}, files, nil
+	return []extensionsv1alpha1.Unit{systemdSysctlUnit}, []extensionsv1alpha1.File{kernelSettingsFile}, nil
 }
 
 // Do not change the encoding here because extensions might modify it!
