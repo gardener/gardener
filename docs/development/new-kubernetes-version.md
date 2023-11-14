@@ -108,6 +108,7 @@ After the PR in `gardener/gardener` for the support of the new version has been 
 
 > Actually, you can already start even if the PR is not yet merged and use the branch of your fork.
 
+- Update the `github.com/gardener/gardener` dependency in the extension and update the `README.md`.
 - Work on release-specific tasks related to this provider.
 
 #### Maintaining the `cloud-controller-manager` Images

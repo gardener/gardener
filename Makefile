@@ -135,6 +135,7 @@ docker-push:
 .PHONY: tidy
 tidy:
 	@GO111MODULE=on go mod tidy
+	@cd $(LOGCHECK_DIR); go mod tidy
 
 .PHONY: clean
 clean:

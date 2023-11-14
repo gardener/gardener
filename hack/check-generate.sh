@@ -105,7 +105,20 @@ if which git &>/dev/null; then
     echo "$new_status"
     exit 1
   fi
+
+  echo ">> make tidy"
+  if ! out=$(make -f "$makefile" tidy 2>&1); then
+    echo "Error during calling make tidy: $out"
+    exit 1
+  fi
+  new_status="$(git status -s)"
+
+  if [[ "$old_status" != "$new_status" ]]; then
+    echo "make tidy needs to be run:"
+    echo "$new_status"
+    exit 1
+  fi
 else
-  echo "No git detected, cannot run make generate"
+  echo "No git detected, cannot run make check-generate"
 fi
 exit 0
