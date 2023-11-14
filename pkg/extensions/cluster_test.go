@@ -266,7 +266,7 @@ var _ = Describe("Cluster", func() {
 			cluster.Spec.CloudProfile.Raw = nil
 
 			cloudProfile, err := CloudProfileFromCluster(cluster)
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			Expect(cloudProfile).To(BeNil())
 		})
 	})
@@ -315,7 +315,7 @@ var _ = Describe("Cluster", func() {
 			cluster.Spec.Seed.Raw = nil
 
 			seed, err := SeedFromCluster(cluster)
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			Expect(seed).To(BeNil())
 		})
 	})
@@ -364,7 +364,7 @@ var _ = Describe("Cluster", func() {
 			cluster.Spec.Shoot.Raw = nil
 
 			shoot, err := ShootFromCluster(cluster)
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			Expect(shoot).To(BeNil())
 		})
 	})

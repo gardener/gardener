@@ -143,12 +143,12 @@ var _ = Describe("Handler", func() {
 	It("should do nothing for on Create operation", func() {
 		warning, err = handler.ValidateCreate(ctx, secret)
 		Expect(warning).To(BeNil())
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 	})
 
 	It("should do nothing for on Delete operation", func() {
 		warning, err = handler.ValidateDelete(ctx, secret)
 		Expect(warning).To(BeNil())
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 	})
 })

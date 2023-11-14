@@ -82,7 +82,7 @@ var _ = Describe("Associations", func() {
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 
 			shoots, err := DetermineShootsAssociatedTo(ctx, fakeClient, obj)
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			Expect(shoots).To(HaveLen(1))
 			Expect(shoots).To(ConsistOf(shoot.Namespace + "/" + shoot.Name))
 		})
@@ -98,7 +98,7 @@ var _ = Describe("Associations", func() {
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 
 			shoots, err := DetermineShootsAssociatedTo(ctx, fakeClient, obj)
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			Expect(shoots).To(HaveLen(1))
 			Expect(shoots).To(ConsistOf(shoot.Namespace + "/" + shoot.Name))
 		})
@@ -115,7 +115,7 @@ var _ = Describe("Associations", func() {
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 
 			shoots, err := DetermineShootsAssociatedTo(ctx, fakeClient, obj)
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			Expect(shoots).To(HaveLen(1))
 			Expect(shoots).To(ConsistOf(shoot.Namespace + "/" + shoot.Name))
 		})
@@ -131,7 +131,7 @@ var _ = Describe("Associations", func() {
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 
 			shoots, err := DetermineShootsAssociatedTo(ctx, fakeClient, obj)
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			Expect(shoots).To(HaveLen(1))
 			Expect(shoots).To(ConsistOf(shoot.Namespace + "/" + shoot.Name))
 		})
@@ -146,9 +146,9 @@ var _ = Describe("Associations", func() {
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 
 			shoots, err := DetermineShootsAssociatedTo(ctx, fakeClient, obj)
-			Expect(err).NotTo(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("unable to determine Shoot associations, due to unknown type"))
-			Expect(shoots).To(HaveLen(0))
+			Expect(shoots).To(BeEmpty())
 		})
 	})
 
@@ -165,7 +165,7 @@ var _ = Describe("Associations", func() {
 			Expect(fakeClient.Create(ctx, secretBinding)).To(Succeed())
 
 			secretBindings, err := DetermineSecretBindingAssociations(ctx, fakeClient, quota)
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			Expect(secretBindings).To(HaveLen(1))
 			Expect(secretBindings).To(ConsistOf(secretBinding.Namespace + "/" + secretBinding.Name))
 		})
@@ -185,7 +185,7 @@ var _ = Describe("Associations", func() {
 			Expect(fakeClient.Create(ctx, backupbucket)).To(Succeed())
 
 			backupbuckets, err := DetermineBackupBucketAssociations(ctx, fakeClient, "test")
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			Expect(backupbuckets).To(HaveLen(1))
 			Expect(backupbuckets).To(ConsistOf(backupbucket.Name))
 		})
@@ -205,7 +205,7 @@ var _ = Describe("Associations", func() {
 			Expect(fakeClient.Create(ctx, controllerinstallation)).To(Succeed())
 
 			controllerinstallations, err := DetermineControllerInstallationAssociations(ctx, fakeClient, "test")
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			Expect(controllerinstallations).To(HaveLen(1))
 			Expect(controllerinstallations).To(ConsistOf(controllerinstallation.Name))
 		})
