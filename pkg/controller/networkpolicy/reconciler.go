@@ -75,9 +75,9 @@ type RuntimeNetworkConfig struct {
 	BlockCIDRs []string
 }
 
-// GetBlockedNetworkPeers returns a list of CIDRs to exclude from a NetworkPolicy IPBlock. ipFamily should match the
+// getBlockedNetworkPeers returns a list of CIDRs to exclude from a NetworkPolicy IPBlock. `ipFamily` should match the
 // IP family of the IPBlock.CIDR value. The resulting list still needs to be filtered for subsets of IPBlock.CIDR.
-func (r RuntimeNetworkConfig) GetBlockedNetworkPeers(ipFamily gardencore.IPFamily) []string {
+func (r RuntimeNetworkConfig) getBlockedNetworkPeers(ipFamily gardencore.IPFamily) []string {
 	// NB: BlockCIDRs can contain both IPv4 and IPv6 CIDRs.
 	var peers = append([]string(nil), r.BlockCIDRs...)
 
@@ -307,7 +307,7 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToPublicNetworks(ctx context.Con
 		// In IPv6 however, cluster networks might be "public" (e.g., if using prefix delegation from provider).
 		// As this NetworkPolicy should only allow communication with public networks *outside* the cluster,
 		// we exclude the cluster networks.
-		r.RuntimeNetworks.GetBlockedNetworkPeers(gardencore.IPFamilyIPv6)...,
+		r.RuntimeNetworks.getBlockedNetworkPeers(gardencore.IPFamilyIPv6)...,
 	)...)
 	if err != nil {
 		return err
@@ -357,8 +357,8 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToBlockedCIDRs(ctx context.Conte
 }
 
 func (r *Reconciler) reconcileNetworkPolicyAllowToPrivateNetworks(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy) error {
-	blockedNetworkPeersV4 := r.RuntimeNetworks.GetBlockedNetworkPeers(gardencore.IPFamilyIPv4)
-	blockedNetworkPeersV6 := r.RuntimeNetworks.GetBlockedNetworkPeers(gardencore.IPFamilyIPv6)
+	blockedNetworkPeersV4 := r.RuntimeNetworks.getBlockedNetworkPeers(gardencore.IPFamilyIPv4)
+	blockedNetworkPeersV6 := r.RuntimeNetworks.getBlockedNetworkPeers(gardencore.IPFamilyIPv6)
 
 	if strings.HasPrefix(networkPolicy.Namespace, v1beta1constants.TechnicalIDPrefix) {
 		cluster := &extensionsv1alpha1.Cluster{}
