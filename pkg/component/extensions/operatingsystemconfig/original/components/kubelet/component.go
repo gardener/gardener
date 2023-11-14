@@ -90,9 +90,6 @@ func (component) Name() string {
 
 func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 	var (
-		units []extensionsv1alpha1.Unit
-		files []extensionsv1alpha1.File
-
 		kubeletStartPre       string
 		healthMonitorStartPre string
 	)
@@ -210,15 +207,16 @@ ExecStart=` + pathHealthMonitor),
 				},
 			},
 		})
-		kubeletUnit.Files = kubeletFiles
-		healthMonitorUnit.Files = healthMonitorFiles
-	} else {
-		files = append(kubeletFiles, healthMonitorFiles...)
+
+		for _, file := range kubeletFiles {
+			kubeletUnit.FilePaths = append(kubeletUnit.FilePaths, file.Path)
+		}
+		for _, file := range healthMonitorFiles {
+			healthMonitorUnit.FilePaths = append(healthMonitorUnit.FilePaths, file.Path)
+		}
 	}
 
-	units = append(units, kubeletUnit, healthMonitorUnit)
-
-	return units, files, nil
+	return []extensionsv1alpha1.Unit{kubeletUnit, healthMonitorUnit}, append(kubeletFiles, healthMonitorFiles...), nil
 }
 
 func getFileContentKubeletConfig(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain string, params components.ConfigurableKubeletConfigParameters) (*extensionsv1alpha1.FileContentInline, error) {
