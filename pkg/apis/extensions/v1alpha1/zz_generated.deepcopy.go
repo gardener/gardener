@@ -1559,12 +1559,10 @@ func (in *Unit) DeepCopyInto(out *Unit) {
 		*out = make([]DropIn, len(*in))
 		copy(*out, *in)
 	}
-	if in.Files != nil {
-		in, out := &in.Files, &out.Files
-		*out = make([]File, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
+	if in.FilePaths != nil {
+		in, out := &in.FilePaths, &out.FilePaths
+		*out = make([]string, len(*in))
+		copy(*out, *in)
 	}
 	return
 }
