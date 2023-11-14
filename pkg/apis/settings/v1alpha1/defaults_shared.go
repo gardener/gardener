@@ -14,13 +14,25 @@
 
 package v1alpha1
 
-func setDefaults_KubeAPIServerOpenIDConnect(obj *KubeAPIServerOpenIDConnect) {
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
+)
+
+// SetDefaults_OpenIDConnectPresetSpec sets default values for OpenIDConnectPresetSpec objects.
+func SetDefaults_OpenIDConnectPresetSpec(obj *OpenIDConnectPresetSpec) {
+	if obj.ShootSelector == nil {
+		obj.ShootSelector = &metav1.LabelSelector{}
+	}
+}
+
+// SetDefaults_KubeAPIServerOpenIDConnect sets default values for KubeAPIServerOpenIDConnect objects.
+func SetDefaults_KubeAPIServerOpenIDConnect(obj *KubeAPIServerOpenIDConnect) {
 	if len(obj.SigningAlgs) == 0 {
 		obj.SigningAlgs = []string{DefaultSignAlg}
 	}
 
 	if obj.UsernameClaim == nil {
-		usernameClaim := DefaultUsernameClaim
-		obj.UsernameClaim = &usernameClaim
+		obj.UsernameClaim = pointer.String(DefaultUsernameClaim)
 	}
 }

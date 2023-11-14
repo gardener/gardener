@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1alpha1
+package v1alpha1_test
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"testing"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-// SetDefaults_OpenIDConnectPreset sets default values for OpenIDConnectPreset objects.
-func SetDefaults_OpenIDConnectPreset(obj *OpenIDConnectPreset) {
-	if obj.Spec.ShootSelector == nil {
-		obj.Spec.ShootSelector = &metav1.LabelSelector{}
-	}
-	setDefaults_KubeAPIServerOpenIDConnect(&obj.Spec.Server)
+func TestAPI(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "APIs Settings V1alpha1 Suite")
 }
