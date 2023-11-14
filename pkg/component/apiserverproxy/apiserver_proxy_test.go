@@ -52,14 +52,14 @@ var _ = Describe("APIServerProxy", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
-		values    Values
-		component Interface
+		values             Values
+		component          Interface
+		advertiseIPAddress string
 
 		managedResourceName = "shoot-core-apiserver-proxy"
 		namespace           = "some-namespace"
 		image               = "some-image:some-tag"
 		sidecarImage        = "sidecar-image:some-tag"
-		advertiseIPAddress  = "10.2.170.21"
 		proxySeedServerHost = "api.internal.local."
 
 		serviceYAML = `apiVersion: v1
@@ -186,12 +186,7 @@ subjects:
 	)
 
 	BeforeEach(func() {
-		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		sm = fakesecretsmanager.New(c, namespace)
-
-		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
-		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}, Data: map[string][]byte{"bundle.crt": []byte("FOOBAR")}})).To(Succeed())
-
+		advertiseIPAddress = "10.2.170.21"
 		values = Values{
 			Image:               image,
 			SidecarImage:        sidecarImage,
@@ -199,6 +194,14 @@ subjects:
 			ListenIPAddress:     "0.0.0.0",
 			DNSLookupFamily:     "V4_ONLY",
 		}
+	})
+
+	JustBeforeEach(func() {
+		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		sm = fakesecretsmanager.New(c, namespace)
+
+		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}, Data: map[string][]byte{"bundle.crt": []byte("FOOBAR")}})).To(Succeed())
 
 		component = New(c, namespace, sm, values)
 		component.SetAdvertiseIPAddress(advertiseIPAddress)
@@ -267,8 +270,8 @@ subjects:
 			}
 			Expect(managedResourceSecret.Data).To(HaveLen(expectedLen))
 			hash := extractConfigMapHash(managedResourceSecret.Data)
-			Expect(string(managedResourceSecret.Data["configmap__kube-system__apiserver-proxy-config-"+hash+".yaml"])).To(Equal(getConfigYAML(hash, values.ListenIPAddress, values.DNSLookupFamily)))
-			Expect(string(managedResourceSecret.Data["daemonset__kube-system__apiserver-proxy.yaml"])).To(Equal(getDaemonSetYAML(hash)))
+			Expect(string(managedResourceSecret.Data["configmap__kube-system__apiserver-proxy-config-"+hash+".yaml"])).To(Equal(getConfigYAML(hash, values.ListenIPAddress, values.DNSLookupFamily, advertiseIPAddress)))
+			Expect(string(managedResourceSecret.Data["daemonset__kube-system__apiserver-proxy.yaml"])).To(Equal(getDaemonSetYAML(hash, advertiseIPAddress)))
 			Expect(string(managedResourceSecret.Data["service__kube-system__apiserver-proxy.yaml"])).To(Equal(serviceYAML))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__apiserver-proxy.yaml"])).To(Equal(serviceAccountYAML))
 		}
@@ -291,6 +294,7 @@ subjects:
 			BeforeEach(func() {
 				values.ListenIPAddress = "::"
 				values.DNSLookupFamily = "V6_ONLY"
+				advertiseIPAddress = "2001:db8::1"
 			})
 
 			Context("PSP disabled", func() {
@@ -413,7 +417,7 @@ subjects:
 	})
 })
 
-func getConfigYAML(hash string, listenIPAddress string, dnsLookUpFamily string) string {
+func getConfigYAML(hash string, listenIPAddress string, dnsLookUpFamily string, advertiseIPAddress string) string {
 	return `apiVersion: v1
 data:
   envoy.yaml: |
@@ -460,7 +464,7 @@ data:
       - name: kube_apiserver
         address:
           socket_address:
-            address: 10.2.170.21
+            address: ` + advertiseIPAddress + `
             port_value: 443
         per_connection_buffer_limit_bytes: 32768 # 32 KiB
         filter_chains:
@@ -596,7 +600,7 @@ func extractConfigMapHash(data map[string][]byte) string {
 	return ""
 }
 
-func getDaemonSetYAML(hash string) string {
+func getDaemonSetYAML(hash string, advertiseIPAddress string) string {
 	return `apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -634,7 +638,7 @@ spec:
       automountServiceAccountToken: false
       containers:
       - args:
-        - --ip-address=10.2.170.21
+        - --ip-address=` + advertiseIPAddress + `
         - --setup-iptables=false
         - --interface=lo
         image: sidecar-image:some-tag
@@ -700,7 +704,7 @@ spec:
       hostNetwork: true
       initContainers:
       - args:
-        - --ip-address=10.2.170.21
+        - --ip-address=` + advertiseIPAddress + `
         - --setup-iptables=false
         - --daemon=false
         - --interface=lo
