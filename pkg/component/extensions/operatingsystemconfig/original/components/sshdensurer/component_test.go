@@ -77,15 +77,12 @@ WantedBy=multi-user.target`),
 						},
 					}
 
-					var expectedFiles []extensionsv1alpha1.File
 					if useGardenerNodeAgentEnabled {
-						sshdEnsurerUnit.Files = append(sshdEnsurerUnit.Files, sshdEnsurerFile)
-					} else {
-						expectedFiles = append(expectedFiles, sshdEnsurerFile)
+						sshdEnsurerUnit.FilePaths = []string{"/var/lib/sshd-ensurer/run.sh"}
 					}
 
 					Expect(units).To(ConsistOf(sshdEnsurerUnit))
-					Expect(files).To(ConsistOf(expectedFiles))
+					Expect(files).To(ConsistOf(sshdEnsurerFile))
 				})
 
 				It("should return the expected units and files when SSHAccessEnabled is set to false", func() {
@@ -122,15 +119,12 @@ WantedBy=multi-user.target`),
 						},
 					}
 
-					var expectedFiles []extensionsv1alpha1.File
 					if useGardenerNodeAgentEnabled {
-						sshdEnsurerUnit.Files = append(sshdEnsurerUnit.Files, sshdEnsurerFile)
-					} else {
-						expectedFiles = append(expectedFiles, sshdEnsurerFile)
+						sshdEnsurerUnit.FilePaths = []string{"/var/lib/sshd-ensurer/run.sh"}
 					}
 
 					Expect(units).To(ConsistOf(sshdEnsurerUnit))
-					Expect(files).To(ConsistOf(expectedFiles))
+					Expect(files).To(ConsistOf(sshdEnsurerFile))
 				})
 			})
 		}
