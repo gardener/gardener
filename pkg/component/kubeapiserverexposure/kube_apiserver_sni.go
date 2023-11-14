@@ -57,10 +57,9 @@ func init() {
 
 // SNIValues configure the kube-apiserver service SNI.
 type SNIValues struct {
-	Hosts                       []string
-	APIServerProxy              *APIServerProxy
-	IstioIngressGateway         IstioIngressGateway
-	APIServerClusterIPPrefixLen int
+	Hosts               []string
+	APIServerProxy      *APIServerProxy
+	IstioIngressGateway IstioIngressGateway
 }
 
 // APIServerProxy contains values for the APIServer proxy protocol configuration.
@@ -129,7 +128,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 
 	if values.APIServerProxy != nil {
 		envoyFilter := s.emptyEnvoyFilter()
-		values.APIServerClusterIPPrefixLen = netutils.GetBitLen(values.APIServerProxy.APIServerClusterIP)
+		apiServerClusterIPPrefixLen := netutils.GetBitLen(values.APIServerProxy.APIServerClusterIP)
 
 		if err := envoyFilterSpecTemplate.Execute(&envoyFilterSpec, envoyFilterTemplateValues{
 			APIServerProxy:              values.APIServerProxy,
@@ -138,7 +137,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 			Namespace:                   envoyFilter.Namespace,
 			Host:                        hostName,
 			Port:                        kubeapiserverconstants.Port,
-			APIServerClusterIPPrefixLen: values.APIServerClusterIPPrefixLen,
+			APIServerClusterIPPrefixLen: apiServerClusterIPPrefixLen,
 		}); err != nil {
 			return err
 		}

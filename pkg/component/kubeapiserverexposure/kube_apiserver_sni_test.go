@@ -41,7 +41,6 @@ import (
 	. "github.com/gardener/gardener/pkg/component/kubeapiserverexposure"
 	comptest "github.com/gardener/gardener/pkg/component/test"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	netutils "github.com/gardener/gardener/pkg/utils/net"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -213,9 +212,6 @@ var _ = Describe("#SNI", func() {
 					Namespace: istioNamespace,
 					Labels:    istioLabels,
 				},
-			}
-			if apiServerProxyValues != nil {
-				val.APIServerClusterIPPrefixLen = netutils.GetBitLen(apiServerProxyValues.APIServerClusterIP)
 			}
 			return val
 		})
