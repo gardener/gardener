@@ -302,7 +302,7 @@ var _ = Describe("Cluster", func() {
 			Expect(seed).To(Equal(expectedSeed))
 		})
 
-		It("should return an error because the seed cannot be decoded the cluster", func() {
+		It("should return an error because the seed cannot be decoded from the cluster", func() {
 			cluster.Spec.Seed.Raw = []byte(`{`)
 			Expect(fakeSeedClient.Create(ctx, cluster)).To(Succeed())
 
@@ -351,7 +351,7 @@ var _ = Describe("Cluster", func() {
 			Expect(shoot).To(Equal(expectedShoot))
 		})
 
-		It("should return an error because the shoot cannot be decoded the cluster", func() {
+		It("should return an error because the shoot cannot be decoded from the cluster", func() {
 			cluster.Spec.Shoot.Raw = []byte(`{`)
 			Expect(fakeSeedClient.Create(ctx, cluster)).To(Succeed())
 
@@ -423,7 +423,7 @@ var _ = Describe("Cluster", func() {
 			Expect(shoot).To(BeNil())
 		})
 
-		It("should return an error because the shoot cannot be decoded the cluster", func() {
+		It("should return an error because the shoot cannot be decoded from the cluster", func() {
 			cluster.Spec.Shoot.Object = nil
 			cluster.Spec.Shoot.Raw = []byte(`{`)
 			Expect(fakeSeedClient.Create(ctx, cluster)).To(Succeed())

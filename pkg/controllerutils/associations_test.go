@@ -146,7 +146,7 @@ var _ = Describe("Associations", func() {
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 
 			shoots, err := DetermineShootsAssociatedTo(ctx, fakeClient, obj)
-			Expect(err).ToNot(HaveOccurred())
+			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("unable to determine Shoot associations, due to unknown type"))
 			Expect(shoots).To(BeEmpty())
 		})
