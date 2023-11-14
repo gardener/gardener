@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"os"
 	goruntime "runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -35,6 +36,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
@@ -69,6 +72,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap/certificate"
 	"github.com/gardener/gardener/pkg/gardenlet/controller"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -382,6 +386,11 @@ func (g *garden) Start(ctx context.Context) error {
 		return err
 	}
 
+	log.Info("Recreating wrongly deleted managed resource secrets")
+	if err := recreateDeletedManagedResourceSecrets(ctx, g.mgr.GetClient()); err != nil {
+		return err
+	}
+
 	log.Info("Setting up shoot client map")
 	shootClientMap, err := clientmapbuilder.
 		NewShootClientMapBuilder().
@@ -478,6 +487,140 @@ func (g *garden) cleanupOrphanedExtensionsServiceAccounts(ctx context.Context, g
 	}
 
 	return flow.Parallel(taskFns...)(ctx)
+}
+
+const (
+	grmFinalizer           = "resources.gardener.cloud/gardener-resource-manager"
+	tempSecretLabel        = "resources.gardener.cloud/temp-secret"
+	tempSecretOldNameLabel = "resources.gardener.cloud/temp-secret-old-name"
+)
+
+// TODO(dimityrmirchev): Remove this code after v1.84 has been released.
+func recreateDeletedManagedResourceSecrets(ctx context.Context, c client.Client) error {
+	// check for already existing temp secrets
+	// these can occur in case the process is killed during cleanup phase
+	tempSecretList := &corev1.SecretList{}
+	if err := c.List(ctx, tempSecretList, client.MatchingLabels{tempSecretLabel: "true"}); err != nil {
+		return err
+	}
+
+	for _, temp := range tempSecretList.Items {
+		originalName := temp.Labels[tempSecretOldNameLabel]
+		original := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: originalName, Namespace: temp.Namespace}}
+
+		if err := c.Get(ctx, client.ObjectKeyFromObject(original), original); err != nil {
+			if apierrors.IsNotFound(err) {
+				// original secret is not found so we recreate it
+				original := temp.DeepCopy()
+				original.ResourceVersion = ""
+				original.Name = originalName
+
+				if err := c.Create(ctx, original); err != nil {
+					return fmt.Errorf("failed to recreate the original secret %w", err)
+				}
+				if err := c.Delete(ctx, &temp); client.IgnoreNotFound(err) != nil {
+					return err
+				}
+				continue
+			}
+
+			return err
+		}
+
+		// the original secret exists. check if the finalizer and deletion timestamp are there
+		if original.DeletionTimestamp != nil && slices.Contains(original.Finalizers, grmFinalizer) {
+			if err := removeFinalizersAndWait(ctx, c, original.DeepCopy()); err != nil {
+				return err
+			}
+
+			// zero meta info
+			original.DeletionTimestamp = nil
+			original.ResourceVersion = ""
+			original.Finalizers = []string{}
+
+			if err := c.Create(ctx, original); err != nil {
+				return fmt.Errorf("failed to recreate the original secret %w", err)
+			}
+		}
+
+		// secret was already recreated. just delete the temporary one
+		if err := c.Delete(ctx, &temp); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+
+	secretsToRecreate, err := getSecretsToRecreate(ctx, c)
+	if err != nil {
+		return fmt.Errorf("failed listing secrets for recreation %w", err)
+	}
+
+	for _, original := range secretsToRecreate {
+		tempSecret := original.DeepCopy()
+		tempSecret.Name = original.Name + "-tmp"
+		metav1.SetMetaDataLabel(&tempSecret.ObjectMeta, tempSecretLabel, "true")
+		metav1.SetMetaDataLabel(&tempSecret.ObjectMeta, tempSecretOldNameLabel, original.Name)
+		tempSecret.DeletionTimestamp = nil
+		tempSecret.ResourceVersion = ""
+		tempSecret.Finalizers = []string{}
+
+		if err := c.Create(ctx, tempSecret); err != nil {
+			return fmt.Errorf("failed to create a temporary secret %w", err)
+		}
+
+		if err := removeFinalizersAndWait(ctx, c, original.DeepCopy()); err != nil {
+			return err
+		}
+
+		// zero meta info
+		original.DeletionTimestamp = nil
+		original.ResourceVersion = ""
+		original.Finalizers = []string{}
+
+		// recreate the original and delete the temporary one
+		if err := c.Create(ctx, &original); err != nil {
+			return fmt.Errorf("failed to recreate the original secret %w", err)
+		}
+		if err := c.Delete(ctx, tempSecret); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// TODO(dimityrmirchev): Remove this code after v1.84 has been released.
+func removeFinalizersAndWait(ctx context.Context, c client.Client, secret *corev1.Secret) error {
+	patch := client.StrategicMergeFrom(secret.DeepCopy())
+	secret.Finalizers = []string{}
+	if err := c.Patch(ctx, secret, patch); err != nil {
+		return fmt.Errorf("failed to patch the original secret %w", err)
+	}
+
+	goneSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secret.Name, Namespace: secret.Namespace}}
+	cancelCtx, cancel := context.WithTimeout(ctx, time.Second*10)
+	defer cancel()
+	return kubernetesutils.WaitUntilResourceDeleted(cancelCtx, c, goneSecret, 1*time.Second)
+}
+
+// TODO(dimityrmirchev): Remove this code after v1.84 has been released.
+func getSecretsToRecreate(ctx context.Context, c client.Client) ([]corev1.Secret, error) {
+	selector := labels.NewSelector()
+	isGC, err := labels.NewRequirement(references.LabelKeyGarbageCollectable, selection.Equals, []string{"true"})
+	if err != nil {
+		return nil, err
+	}
+	notTemp, err := labels.NewRequirement(tempSecretLabel, selection.DoesNotExist, []string{})
+	if err != nil {
+		return nil, err
+	}
+	selector.Add(*isGC, *notTemp)
+	secretList := &corev1.SecretList{}
+	if err := c.List(ctx, secretList, client.MatchingLabelsSelector{Selector: selector}); err != nil {
+		return nil, err
+	}
+	secretsToRecreate := slices.DeleteFunc(secretList.Items, func(s corev1.Secret) bool {
+		return !slices.Contains(s.Finalizers, grmFinalizer)
+	})
+	return secretsToRecreate, nil
 }
 
 func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) error {
