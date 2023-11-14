@@ -178,7 +178,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 				Name:    "drop",
 				Content: "#unit3drop",
 			}},
-			Files: []extensionsv1alpha1.File{file4},
+			FilePaths: []string{file4.Path},
 		}
 		unit4 = extensionsv1alpha1.Unit{
 			Name:    "unit4",
@@ -214,25 +214,25 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			}},
 		}
 		unit6 = extensionsv1alpha1.Unit{
-			Name:    "unit6",
-			Enable:  pointer.Bool(true),
-			Content: pointer.String("#unit6"),
-			Files:   []extensionsv1alpha1.File{file3},
+			Name:      "unit6",
+			Enable:    pointer.Bool(true),
+			Content:   pointer.String("#unit6"),
+			FilePaths: []string{file3.Path},
 		}
 		unit7 = extensionsv1alpha1.Unit{
-			Name:    "unit7",
-			Enable:  pointer.Bool(true),
-			Content: pointer.String("#unit7"),
-			Files:   []extensionsv1alpha1.File{file5},
+			Name:      "unit7",
+			Enable:    pointer.Bool(true),
+			Content:   pointer.String("#unit7"),
+			FilePaths: []string{file5.Path},
 		}
 
 		operatingSystemConfig = &extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
-				Files: []extensionsv1alpha1.File{file1},
+				Files: []extensionsv1alpha1.File{file1, file3, file5},
 				Units: []extensionsv1alpha1.Unit{unit1, unit2, unit5, unit5DropInsOnly, unit6, unit7},
 			},
 			Status: extensionsv1alpha1.OperatingSystemConfigStatus{
-				ExtensionFiles: []extensionsv1alpha1.File{file2},
+				ExtensionFiles: []extensionsv1alpha1.File{file2, file4},
 				ExtensionUnits: []extensionsv1alpha1.Unit{unit3, unit4},
 			},
 		}
@@ -334,7 +334,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		// add drop-in to unit2 and enable+start it
 		// disable unit4 and remove all drop-ins
 		// remove only first drop-in from unit5
-		// move file3 from unit.files to files while keeping it unchanged
+		// remove file3 from unit6.FilePaths while keeping it unchanged
 		// the content of file5 (belonging to unit7) is changed, so unit7 is restarting
 		// file1, unit3, and gardener-node-agent unit are unchanged, so unit3 is not restarting and cancel func is not called
 		unit2.Enable = pointer.Bool(true)
@@ -343,13 +343,12 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		unit4.Enable = pointer.Bool(false)
 		unit4.DropIns = nil
 		unit5.DropIns = unit5.DropIns[1:]
-		unit6.Files = nil
-		unit7.Files[0].Content.Inline.Data = "changeme"
+		unit6.FilePaths = nil
 
 		operatingSystemConfig.Spec.Units = []extensionsv1alpha1.Unit{unit2, unit5, unit6, unit7}
-		operatingSystemConfig.Spec.Files = append(operatingSystemConfig.Spec.Files, file3)
+		operatingSystemConfig.Spec.Files[2].Content.Inline.Data = "changeme"
 		operatingSystemConfig.Status.ExtensionUnits = []extensionsv1alpha1.Unit{unit3, unit4}
-		operatingSystemConfig.Status.ExtensionFiles = nil
+		operatingSystemConfig.Status.ExtensionFiles = []extensionsv1alpha1.File{file4}
 
 		var err error
 		oscRaw, err = runtime.Encode(codec, operatingSystemConfig)

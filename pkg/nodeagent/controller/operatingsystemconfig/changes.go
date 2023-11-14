@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
@@ -108,21 +109,28 @@ func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alp
 		return nil, fmt.Errorf("unable to decode the old OSC read from file path %s: %w", lastAppliedOperatingSystemConfigFilePath, err)
 	}
 
-	changes.units = computeUnitDiffs(
-		mergeUnits(oldOSC.Spec.Units, oldOSC.Status.ExtensionUnits),
-		mergeUnits(newOSC.Spec.Units, newOSC.Status.ExtensionUnits),
-	)
-
 	oldOSCFiles := collectAllFiles(oldOSC)
 	// File changes have to be computed in one step for all files,
 	// because moving a file from osc.unit.files to osc.files or vice versa should not result in a change and a delete event.
 	changes.files = computeFileDiffs(oldOSCFiles, newOSCFiles)
 
+	changes.units = computeUnitDiffs(
+		mergeUnits(oldOSC.Spec.Units, oldOSC.Status.ExtensionUnits),
+		mergeUnits(newOSC.Spec.Units, newOSC.Status.ExtensionUnits),
+		changes.files,
+	)
+
 	return changes, nil
 }
 
-func computeUnitDiffs(oldUnits, newUnits []extensionsv1alpha1.Unit) units {
+func computeUnitDiffs(oldUnits, newUnits []extensionsv1alpha1.Unit, fileDiffs files) units {
 	var u units
+
+	var changedFiles = sets.New[string]()
+	// Only changed files are relevant here. Deleted files must be removed from `Unit.FilePaths` too which leads to a semantic difference.
+	for _, file := range fileDiffs.changed {
+		changedFiles.Insert(file.Path)
+	}
 
 	for _, oldUnit := range oldUnits {
 		if !slices.ContainsFunc(newUnits, func(newUnit extensionsv1alpha1.Unit) bool {
@@ -137,12 +145,19 @@ func computeUnitDiffs(oldUnits, newUnits []extensionsv1alpha1.Unit) units {
 			return oldUnit.Name == newUnit.Name
 		})
 
+		var fileContentChanged bool
+		for _, filePath := range newUnit.FilePaths {
+			if changedFiles.Has(filePath) {
+				fileContentChanged = true
+			}
+		}
+
 		if oldUnitIndex == -1 {
 			u.changed = append(u.changed, changedUnit{
 				Unit:    newUnit,
 				dropIns: dropIns{changed: newUnit.DropIns},
 			})
-		} else if !apiequality.Semantic.DeepEqual(oldUnits[oldUnitIndex], newUnit) {
+		} else if !apiequality.Semantic.DeepEqual(oldUnits[oldUnitIndex], newUnit) || fileContentChanged {
 			var d dropIns
 
 			for _, oldDropIn := range oldUnits[oldUnitIndex].DropIns {
@@ -222,26 +237,11 @@ func mergeUnits(specUnits, statusUnits []extensionsv1alpha1.Unit) []extensionsv1
 			out[unitIndex].Content = unit.Content
 		}
 		out[unitIndex].DropIns = append(out[unitIndex].DropIns, unit.DropIns...)
-		out[unitIndex].Files = append(out[unitIndex].Files, unit.Files...)
 	}
 
 	return out
 }
 
-func collectUnitFiles(units []extensionsv1alpha1.Unit) []extensionsv1alpha1.File {
-	var unitFiles []extensionsv1alpha1.File
-
-	for _, unit := range units {
-		unitFiles = append(unitFiles, unit.Files...)
-	}
-
-	return unitFiles
-}
-
 func collectAllFiles(osc *extensionsv1alpha1.OperatingSystemConfig) []extensionsv1alpha1.File {
-	unitFiles := collectUnitFiles(mergeUnits(osc.Spec.Units, osc.Status.ExtensionUnits))
-	oscFiles := append(osc.Spec.Files, osc.Status.ExtensionFiles...)
-	oscFiles = append(oscFiles, unitFiles...)
-
-	return oscFiles
+	return append(osc.Spec.Files, osc.Status.ExtensionFiles...)
 }
