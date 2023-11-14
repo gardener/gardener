@@ -512,6 +512,8 @@ func recreateDeletedManagedResourceSecrets(ctx context.Context, c client.Client)
 			if apierrors.IsNotFound(err) {
 				// original secret is not found so we recreate it
 				original := temp.DeepCopy()
+				delete(original.Labels, tempSecretLabel)
+				delete(original.Labels, tempSecretOldNameLabel)
 				original.ResourceVersion = ""
 				original.Name = originalName
 
