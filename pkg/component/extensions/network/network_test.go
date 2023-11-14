@@ -54,9 +54,9 @@ var _ = Describe("#Network", func() {
 		networkServiceIp   = "100.64.0.0"
 		networkServiceMask = 13
 
-		networkPodV6IP       = "2002:db8:1::"
+		networkPodV6IP       = "2001:db8:1::"
 		networkPodV6Mask     = 48
-		networkServiceV6IP   = "2002:db8:3::"
+		networkServiceV6IP   = "2001:db8:3::"
 		networkServiceV6Mask = 108
 	)
 	var (
