@@ -127,11 +127,9 @@ func (s *sni) Deploy(ctx context.Context) error {
 		envoyFilterSpec bytes.Buffer
 	)
 
-	sniValues := s.valuesFunc()
-
 	if values.APIServerProxy != nil {
 		envoyFilter := s.emptyEnvoyFilter()
-		sniValues.APIServerClusterIPPrefixLen = netutils.GetBitLen(values.APIServerProxy.APIServerClusterIP)
+		values.APIServerClusterIPPrefixLen = netutils.GetBitLen(values.APIServerProxy.APIServerClusterIP)
 
 		if err := envoyFilterSpecTemplate.Execute(&envoyFilterSpec, envoyFilterTemplateValues{
 			APIServerProxy:              values.APIServerProxy,
@@ -140,7 +138,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 			Namespace:                   envoyFilter.Namespace,
 			Host:                        hostName,
 			Port:                        kubeapiserverconstants.Port,
-			APIServerClusterIPPrefixLen: sniValues.APIServerClusterIPPrefixLen,
+			APIServerClusterIPPrefixLen: values.APIServerClusterIPPrefixLen,
 		}); err != nil {
 			return err
 		}
@@ -187,9 +185,9 @@ func (s *sni) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, gateway, func() error {
 		gateway.Labels = getLabels()
 		gateway.Spec = istioapinetworkingv1beta1.Gateway{
-			Selector: sniValues.IstioIngressGateway.Labels,
+			Selector: values.IstioIngressGateway.Labels,
 			Servers: []*istioapinetworkingv1beta1.Server{{
-				Hosts: sniValues.Hosts,
+				Hosts: values.Hosts,
 				Port: &istioapinetworkingv1beta1.Port{
 					Number:   kubeapiserverconstants.Port,
 					Name:     "tls",
@@ -209,12 +207,12 @@ func (s *sni) Deploy(ctx context.Context) error {
 		virtualService.Labels = getLabels()
 		virtualService.Spec = istioapinetworkingv1beta1.VirtualService{
 			ExportTo: []string{"*"},
-			Hosts:    sniValues.Hosts,
+			Hosts:    values.Hosts,
 			Gateways: []string{gateway.Name},
 			Tls: []*istioapinetworkingv1beta1.TLSRoute{{
 				Match: []*istioapinetworkingv1beta1.TLSMatchAttributes{{
 					Port:     kubeapiserverconstants.Port,
-					SniHosts: sniValues.Hosts,
+					SniHosts: values.Hosts,
 				}},
 				Route: []*istioapinetworkingv1beta1.RouteDestination{{
 					Destination: &istioapinetworkingv1beta1.Destination{
