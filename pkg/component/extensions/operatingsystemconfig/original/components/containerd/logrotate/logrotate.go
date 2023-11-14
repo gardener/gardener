@@ -74,12 +74,9 @@ WantedBy=multi-user.target`),
 		},
 	}
 
-	var files []extensionsv1alpha1.File
 	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
-		serviceUnit.Files = append(serviceUnit.Files, serviceFile)
-	} else {
-		files = append(files, serviceFile)
+		serviceUnit.FilePaths = []string{serviceFile.Path}
 	}
 
-	return []extensionsv1alpha1.Unit{serviceUnit, timerUnit}, files
+	return []extensionsv1alpha1.Unit{serviceUnit, timerUnit}, []extensionsv1alpha1.File{serviceFile}
 }

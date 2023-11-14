@@ -94,15 +94,12 @@ WantedBy=multi-user.target`),
 							},
 						}
 
-						var expectedFiles []extensionsv1alpha1.File
 						if useGardenerNodeAgentEnabled {
-							serviceUnit.Files = append(serviceUnit.Files, serviceConfigFile)
-						} else {
-							expectedFiles = append(expectedFiles, serviceConfigFile)
+							serviceUnit.FilePaths = []string{pathConfig}
 						}
 
 						Expect(units).To(ConsistOf(serviceUnit, timerUnit))
-						Expect(files).To(ConsistOf(expectedFiles))
+						Expect(files).To(ConsistOf(serviceConfigFile))
 					})
 				})
 			})

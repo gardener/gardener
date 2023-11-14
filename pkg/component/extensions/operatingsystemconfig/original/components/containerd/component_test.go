@@ -107,16 +107,13 @@ WantedBy=multi-user.target`),
 						},
 					}
 
-					var expectedFiles []extensionsv1alpha1.File
 					if useGardenerNodeAgentEnabled {
-						monitorUnit.Files = append(monitorUnit.Files, monitorFile)
-						logrotateUnit.Files = append(logrotateUnit.Files, logrotateConfigFile)
-					} else {
-						expectedFiles = append(expectedFiles, monitorFile, logrotateConfigFile)
+						monitorUnit.FilePaths = []string{"/opt/bin/health-monitor-containerd"}
+						logrotateUnit.FilePaths = []string{"/etc/systemd/containerd.conf"}
 					}
 
 					Expect(units).To(ConsistOf(monitorUnit, logrotateUnit, logrotateTimerUnit))
-					Expect(files).To(ConsistOf(expectedFiles))
+					Expect(files).To(ConsistOf(monitorFile, logrotateConfigFile))
 				})
 			})
 		}
