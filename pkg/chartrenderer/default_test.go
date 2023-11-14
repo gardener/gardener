@@ -94,7 +94,7 @@ var _ = Describe("ChartRenderer", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			manifests := chart.Manifest()
-			Expect(manifests).To(Not(BeNil()))
+			Expect(manifests).NotTo(BeNil())
 		})
 	})
 

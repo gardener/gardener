@@ -38,6 +38,14 @@ var _ = Describe("Cluster", func() {
 		ctx              = context.TODO()
 		fakeGardenClient client.Client
 		fakeSeedClient   client.Client
+
+		clusterName          string
+		cluster              *extensionsv1alpha1.Cluster
+		expectedCloudProfile *gardencorev1beta1.CloudProfile
+		expectedSeed         *gardencorev1beta1.Seed
+		expectedShoot        *gardencorev1beta1.Shoot
+		expectedShootState   *gardencorev1beta1.ShootState
+		expectedCluster      *Cluster
 	)
 
 	BeforeEach(func() {
@@ -65,15 +73,6 @@ var _ = Describe("Cluster", func() {
 	})
 
 	Describe("#SyncClusterResourceToSeed", func() {
-		var (
-			expectedCloudProfile *gardencorev1beta1.CloudProfile
-			expectedSeed         *gardencorev1beta1.Seed
-			expectedShoot        *gardencorev1beta1.Shoot
-
-			clusterName string
-			cluster     *extensionsv1alpha1.Cluster
-		)
-
 		BeforeEach(func() {
 			expectedCloudProfile = &gardencorev1beta1.CloudProfile{
 				TypeMeta: metav1.TypeMeta{
@@ -139,23 +138,13 @@ var _ = Describe("Cluster", func() {
 			Expect(SyncClusterResourceToSeed(ctx, fakeSeedClient, cluster.Name, expectedShoot, expectedCloudProfile, expectedSeed)).To(Succeed())
 			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(cluster), cluster)).To(Succeed())
 
-			Expect(cluster.Spec.CloudProfile.Raw).To(Not(BeNil()))
-			Expect(cluster.Spec.Seed.Raw).To(Not(BeNil()))
-			Expect(cluster.Spec.Shoot.Raw).To(Not(BeNil()))
+			Expect(cluster.Spec.CloudProfile.Raw).NotTo(BeNil())
+			Expect(cluster.Spec.Seed.Raw).NotTo(BeNil())
+			Expect(cluster.Spec.Shoot.Raw).NotTo(BeNil())
 		})
 	})
 
 	Describe("#GetCluster", func() {
-		var (
-			expectedCloudProfile *gardencorev1beta1.CloudProfile
-			expectedSeed         *gardencorev1beta1.Seed
-			expectedShoot        *gardencorev1beta1.Shoot
-
-			clusterName     string
-			cluster         *extensionsv1alpha1.Cluster
-			expectedCluster *Cluster
-		)
-
 		BeforeEach(func() {
 			expectedCloudProfile = &gardencorev1beta1.CloudProfile{
 				TypeMeta: metav1.TypeMeta{
@@ -214,7 +203,7 @@ var _ = Describe("Cluster", func() {
 			}
 		})
 
-		It("should return error if cluster not found", func() {
+		It("should return error if cluster is not found", func() {
 			cluster, err := GetCluster(ctx, fakeSeedClient, "foo")
 			Expect(err).To(MatchError(ContainSubstring("clusters.extensions.gardener.cloud \"foo\" not found")))
 			Expect(cluster).To(BeNil())
@@ -234,13 +223,6 @@ var _ = Describe("Cluster", func() {
 	})
 
 	Describe("#CloudProfileFromCluster", func() {
-		var (
-			expectedCloudProfile *gardencorev1beta1.CloudProfile
-
-			clusterName string
-			cluster     *extensionsv1alpha1.Cluster
-		)
-
 		BeforeEach(func() {
 			expectedCloudProfile = &gardencorev1beta1.CloudProfile{
 				TypeMeta: metav1.TypeMeta{
@@ -252,10 +234,9 @@ var _ = Describe("Cluster", func() {
 				},
 			}
 
-			clusterName = "foo"
 			cluster = &extensionsv1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: clusterName,
+					Name: "foo",
 				},
 				Spec: extensionsv1alpha1.ClusterSpec{
 					CloudProfile: runtime.RawExtension{
@@ -272,7 +253,7 @@ var _ = Describe("Cluster", func() {
 			Expect(cloudProfile).To(Equal(expectedCloudProfile))
 		})
 
-		It("should return an error because the cloudprofile cannot be decoded the cluster", func() {
+		It("should return an error because the cloudprofile cannot be decoded from the cluster", func() {
 			cluster.Spec.CloudProfile.Raw = []byte(`{`)
 			Expect(fakeSeedClient.Create(ctx, cluster)).To(Succeed())
 
@@ -281,7 +262,7 @@ var _ = Describe("Cluster", func() {
 			Expect(cloudProfile).To(BeNil())
 		})
 
-		It("should return an nil because the cloudprofile is not in raw format the cluster", func() {
+		It("should return nil because the cloudprofile is not in raw format in the cluster", func() {
 			cluster.Spec.CloudProfile.Raw = nil
 
 			cloudProfile, err := CloudProfileFromCluster(cluster)
@@ -291,13 +272,6 @@ var _ = Describe("Cluster", func() {
 	})
 
 	Describe("#SeedFromCluster", func() {
-		var (
-			expectedSeed *gardencorev1beta1.Seed
-
-			clusterName string
-			cluster     *extensionsv1alpha1.Cluster
-		)
-
 		BeforeEach(func() {
 			expectedSeed = &gardencorev1beta1.Seed{
 				TypeMeta: metav1.TypeMeta{
@@ -309,10 +283,9 @@ var _ = Describe("Cluster", func() {
 				},
 			}
 
-			clusterName = "foo"
 			cluster = &extensionsv1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: clusterName,
+					Name: "foo",
 				},
 				Spec: extensionsv1alpha1.ClusterSpec{
 					Seed: runtime.RawExtension{
@@ -338,7 +311,7 @@ var _ = Describe("Cluster", func() {
 			Expect(seed).To(BeNil())
 		})
 
-		It("should return an nil because the seed is not in raw format the cluster", func() {
+		It("should return nil because the seed is not in raw format in the cluster", func() {
 			cluster.Spec.Seed.Raw = nil
 
 			seed, err := SeedFromCluster(cluster)
@@ -348,13 +321,6 @@ var _ = Describe("Cluster", func() {
 	})
 
 	Describe("#ShootFromCluster", func() {
-		var (
-			expectedShoot *gardencorev1beta1.Shoot
-
-			clusterName string
-			cluster     *extensionsv1alpha1.Cluster
-		)
-
 		BeforeEach(func() {
 			expectedShoot = &gardencorev1beta1.Shoot{
 				TypeMeta: metav1.TypeMeta{
@@ -366,10 +332,9 @@ var _ = Describe("Cluster", func() {
 				},
 			}
 
-			clusterName = "foo"
 			cluster = &extensionsv1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: clusterName,
+					Name: "foo",
 				},
 				Spec: extensionsv1alpha1.ClusterSpec{
 					Shoot: runtime.RawExtension{
@@ -395,7 +360,7 @@ var _ = Describe("Cluster", func() {
 			Expect(shoot).To(BeNil())
 		})
 
-		It("should return an nil because the shoot is not in raw format the cluster", func() {
+		It("should return nil because the shoot is not in raw format in the cluster", func() {
 			cluster.Spec.Shoot.Raw = nil
 
 			shoot, err := ShootFromCluster(cluster)
@@ -405,14 +370,6 @@ var _ = Describe("Cluster", func() {
 	})
 
 	Describe("#GetShootStateForCluster", func() {
-		var (
-			expectedShoot      *gardencorev1beta1.Shoot
-			expectedShootState *gardencorev1beta1.ShootState
-
-			clusterName string
-			cluster     *extensionsv1alpha1.Cluster
-		)
-
 		BeforeEach(func() {
 			expectedShoot = &gardencorev1beta1.Shoot{
 				TypeMeta: metav1.TypeMeta{
