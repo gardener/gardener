@@ -76,7 +76,7 @@ var _ = Describe("helper", func() {
 				}
 			)
 
-			egressRules := GetEgressRules(subsets...)
+			egressRules, err := GetEgressRules(subsets...)
 			expectedRules := []networkingv1.NetworkPolicyEgressRule{
 				{
 					To: []networkingv1.NetworkPolicyPeer{
@@ -112,6 +112,7 @@ var _ = Describe("helper", func() {
 					},
 				},
 			}
+			Expect(err).ToNot(HaveOccurred())
 			Expect(egressRules).To(Equal(expectedRules))
 		})
 
@@ -149,7 +150,7 @@ var _ = Describe("helper", func() {
 				}
 			)
 
-			egressRules := GetEgressRules(subsets...)
+			egressRules, err := GetEgressRules(subsets...)
 
 			port443 := intstr.FromInt32(443)
 			expectedRules := []networkingv1.NetworkPolicyEgressRule{
@@ -184,6 +185,7 @@ var _ = Describe("helper", func() {
 					},
 				},
 			}
+			Expect(err).ToNot(HaveOccurred())
 			Expect(egressRules).To(Equal(expectedRules))
 		})
 
@@ -211,7 +213,7 @@ var _ = Describe("helper", func() {
 				}
 			)
 
-			egressRules := GetEgressRules(subsets...)
+			egressRules, err := GetEgressRules(subsets...)
 			port443 := intstr.FromInt32(443)
 			port161 := intstr.FromInt32(161)
 			expectedRules := []networkingv1.NetworkPolicyEgressRule{
@@ -232,6 +234,7 @@ var _ = Describe("helper", func() {
 					},
 				},
 			}
+			Expect(err).ToNot(HaveOccurred())
 			Expect(egressRules).To(Equal(expectedRules))
 		})
 	})

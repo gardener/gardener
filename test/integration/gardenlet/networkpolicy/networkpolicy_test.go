@@ -373,8 +373,11 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 			kubernetesEndpoint := &corev1.Endpoints{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "kubernetes"}}
 			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(kubernetesEndpoint), kubernetesEndpoint)).To(Succeed())
 
+			egressRules, err := networkpolicyhelper.GetEgressRules(kubernetesEndpoint.Subsets...)
+			Expect(err).ToNot(HaveOccurred())
+
 			expectedNetworkPolicySpec = networkingv1.NetworkPolicySpec{
-				Egress:      networkpolicyhelper.GetEgressRules(kubernetesEndpoint.Subsets...),
+				Egress:      egressRules,
 				PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{"networking.gardener.cloud/to-runtime-apiserver": "allowed"}},
 				PolicyTypes: []networkingv1.PolicyType{"Egress"},
 			}

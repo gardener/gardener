@@ -19,10 +19,10 @@ import (
 )
 
 // GetBitLen returns the bit length of the given IP address.
-func GetBitLen(address string) int {
+func GetBitLen(address string) (int, error) {
 	ip, err := netip.ParseAddr(address)
 	if err != nil {
-		return 32
+		return 0, err
 	}
-	return ip.BitLen()
+	return ip.BitLen(), nil
 }

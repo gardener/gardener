@@ -26,7 +26,7 @@ import (
 )
 
 // GetEgressRules creates Network Policy egress rules from endpoint subsets.
-func GetEgressRules(subsets ...corev1.EndpointSubset) []networkingv1.NetworkPolicyEgressRule {
+func GetEgressRules(subsets ...corev1.EndpointSubset) ([]networkingv1.NetworkPolicyEgressRule, error) {
 	var egressRules []networkingv1.NetworkPolicyEgressRule
 
 	for _, subset := range subsets {
@@ -37,12 +37,16 @@ func GetEgressRules(subsets ...corev1.EndpointSubset) []networkingv1.NetworkPoli
 			if existingIPs.Has(address.IP) {
 				continue
 			}
+			bitLen, err := netutils.GetBitLen(address.IP)
+			if err != nil {
+				return nil, err
+			}
 
 			existingIPs.Insert(address.IP)
 
 			egressRule.To = append(egressRule.To, networkingv1.NetworkPolicyPeer{
 				IPBlock: &networkingv1.IPBlock{
-					CIDR: fmt.Sprintf("%s/%d", address.IP, netutils.GetBitLen(address.IP)),
+					CIDR: fmt.Sprintf("%s/%d", address.IP, bitLen),
 				},
 			})
 		}
@@ -60,5 +64,5 @@ func GetEgressRules(subsets ...corev1.EndpointSubset) []networkingv1.NetworkPoli
 		egressRules = append(egressRules, egressRule)
 	}
 
-	return egressRules
+	return egressRules, nil
 }

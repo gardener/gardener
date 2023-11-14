@@ -128,7 +128,10 @@ func (s *sni) Deploy(ctx context.Context) error {
 
 	if values.APIServerProxy != nil {
 		envoyFilter := s.emptyEnvoyFilter()
-		apiServerClusterIPPrefixLen := netutils.GetBitLen(values.APIServerProxy.APIServerClusterIP)
+		apiServerClusterIPPrefixLen, err := netutils.GetBitLen(values.APIServerProxy.APIServerClusterIP)
+		if err != nil {
+			return err
+		}
 
 		if err := envoyFilterSpecTemplate.Execute(&envoyFilterSpec, envoyFilterTemplateValues{
 			APIServerProxy:              values.APIServerProxy,

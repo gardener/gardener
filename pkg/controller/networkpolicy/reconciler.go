@@ -277,6 +277,11 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToAPIServer(ctx context.Context,
 		return err
 	}
 
+	egressRules, err := helper.GetEgressRules(append(kubernetesEndpoints.Subsets, r.Resolver.Subset()...)...)
+	if err != nil {
+		return err
+	}
+
 	return r.reconcileNetworkPolicy(ctx, log, networkPolicy, func(policy *networkingv1.NetworkPolicy) {
 		metav1.SetMetaDataAnnotation(&policy.ObjectMeta, v1beta1constants.GardenerDescription, fmt.Sprintf("Allows "+
 			"egress traffic from pods labeled with '%s=%s' to the endpoints in the default namespace of the kube-apiserver "+
@@ -285,7 +290,7 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToAPIServer(ctx context.Context,
 
 		policy.Spec = networkingv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{labelKey: v1beta1constants.LabelNetworkPolicyAllowed}},
-			Egress:      helper.GetEgressRules(append(kubernetesEndpoints.Subsets, r.Resolver.Subset()...)...),
+			Egress:      egressRules,
 			Ingress:     []networkingv1.NetworkPolicyIngressRule{},
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
 		}
@@ -473,7 +478,10 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToDNS(ctx context.Context, log l
 	if err != nil {
 		return fmt.Errorf("cannot calculate CoreDNS ClusterIP: %w", err)
 	}
-	runtimeDNSServerAddressBitLen := netutils.GetBitLen(runtimeDNSServerAddress.String())
+	runtimeDNSServerAddressBitLen, err := netutils.GetBitLen(runtimeDNSServerAddress.String())
+	if err != nil {
+		return fmt.Errorf("cannot get bit len: %w", err)
+	}
 
 	return r.reconcileNetworkPolicy(ctx, log, networkPolicy, func(policy *networkingv1.NetworkPolicy) {
 		metav1.SetMetaDataAnnotation(&policy.ObjectMeta, v1beta1constants.GardenerDescription, fmt.Sprintf("Allows "+

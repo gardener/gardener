@@ -30,10 +30,14 @@ var _ = Describe("#GetBitLen", func() {
 	})
 	It("should fail parsing IPv4 address and return the default 32", func() {
 		ip := "500.500.500.123"
-		Expect(GetBitLen(ip)).To(Equal(32))
+		bitLen, err := GetBitLen(ip)
+		Expect(err).To(HaveOccurred())
+		Expect(bitLen).To(Equal(0))
 	})
 	It("should fail parsing IPv6 address and return the default 32", func() {
 		ip := "XYZ:db8:3::"
-		Expect(GetBitLen(ip)).To(Equal(32))
+		bitLen, err := GetBitLen(ip)
+		Expect(err).To(HaveOccurred())
+		Expect(bitLen).To(Equal(0))
 	})
 })
