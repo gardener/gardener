@@ -343,7 +343,8 @@ func (k *kubeAPIServer) reconcileDeployment(
 							Name: volumeNameServiceAccountKey,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: secretServiceAccountKey.Name,
+									SecretName:  secretServiceAccountKey.Name,
+									DefaultMode: pointer.Int32(0640),
 								},
 							},
 						},
@@ -351,7 +352,8 @@ func (k *kubeAPIServer) reconcileDeployment(
 							Name: volumeNameServiceAccountKeyBundle,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: secretServiceAccountKeyBundle.Name,
+									SecretName:  secretServiceAccountKeyBundle.Name,
+									DefaultMode: pointer.Int32(0640),
 								},
 							},
 						},
@@ -367,7 +369,8 @@ func (k *kubeAPIServer) reconcileDeployment(
 							Name: volumeNameKubeAggregator,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: secretKubeAggregator.Name,
+									SecretName:  secretKubeAggregator.Name,
+									DefaultMode: pointer.Int32(0640),
 								},
 							},
 						},
@@ -528,7 +531,8 @@ func (k *kubeAPIServer) handleTLSSNISettings(deployment *appsv1.Deployment, tlsS
 			Name: volumeName,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: sni.secretName,
+					SecretName:  sni.secretName,
+					DefaultMode: pointer.Int32(0640),
 				},
 			},
 		})
@@ -611,7 +615,8 @@ func (k *kubeAPIServer) handleVPNSettingsNonHA(
 			Name: volumeNameHTTPProxy,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: secretHTTPProxy.Name,
+					SecretName:  secretHTTPProxy.Name,
+					DefaultMode: pointer.Int32(0640),
 				},
 			},
 		},
@@ -1011,7 +1016,8 @@ func (k *kubeAPIServer) handleKubeletSettings(deployment *appsv1.Deployment, sec
 			Name: volumeNameKubeAPIServerToKubelet,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: secretKubeletClient.Name,
+					SecretName:  secretKubeletClient.Name,
+					DefaultMode: pointer.Int32(0640),
 				},
 			},
 		},

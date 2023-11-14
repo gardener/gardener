@@ -477,7 +477,8 @@ var _ = Describe("KubeControllerManager", func() {
 									Name: "ca-client",
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
-											SecretName: "ca-client-current",
+											SecretName:  "ca-client-current",
+											DefaultMode: pointer.Int32(0640),
 										},
 									},
 								},
@@ -485,7 +486,8 @@ var _ = Describe("KubeControllerManager", func() {
 									Name: "service-account-key",
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
-											SecretName: "service-account-key-current",
+											SecretName:  "service-account-key-current",
+											DefaultMode: pointer.Int32(0640),
 										},
 									},
 								},
@@ -493,7 +495,8 @@ var _ = Describe("KubeControllerManager", func() {
 									Name: "server",
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
-											SecretName: "kube-controller-manager-server",
+											SecretName:  "kube-controller-manager-server",
+											DefaultMode: pointer.Int32(0640),
 										},
 									},
 								},
@@ -513,7 +516,8 @@ var _ = Describe("KubeControllerManager", func() {
 					Name: "ca-kubelet",
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
-							SecretName: "ca-kubelet-current",
+							SecretName:  "ca-kubelet-current",
+							DefaultMode: pointer.Int32(0640),
 						},
 					},
 				})

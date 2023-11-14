@@ -443,6 +443,12 @@ var _ = Describe("GardenerAPIServer", func() {
 					Spec: corev1.PodSpec{
 						AutomountServiceAccountToken: pointer.Bool(false),
 						PriorityClassName:            "gardener-garden-system-500",
+						SecurityContext: &corev1.PodSecurityContext{
+							RunAsNonRoot: pointer.Bool(true),
+							RunAsUser:    pointer.Int64(65532),
+							RunAsGroup:   pointer.Int64(65532),
+							FSGroup:      pointer.Int64(65532),
+						},
 						Containers: []corev1.Container{{
 							Name:            "gardener-apiserver",
 							Image:           image,
@@ -553,7 +559,8 @@ var _ = Describe("GardenerAPIServer", func() {
 								Name: "etcd-client",
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
-										SecretName: "etcd-client",
+										SecretName:  "etcd-client",
+										DefaultMode: pointer.Int32(0640),
 									},
 								},
 							},
@@ -561,7 +568,8 @@ var _ = Describe("GardenerAPIServer", func() {
 								Name: "server",
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
-										SecretName: "gardener-apiserver",
+										SecretName:  "gardener-apiserver",
+										DefaultMode: pointer.Int32(0640),
 									},
 								},
 							},
@@ -597,7 +605,8 @@ var _ = Describe("GardenerAPIServer", func() {
 								Name: "etcd-encryption-secret",
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
-										SecretName: "gardener-apiserver-etcd-encryption-configuration-944a649a",
+										SecretName:  "gardener-apiserver-etcd-encryption-configuration-944a649a",
+										DefaultMode: pointer.Int32(0640),
 									},
 								},
 							},

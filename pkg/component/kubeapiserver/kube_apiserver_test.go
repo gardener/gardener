@@ -2576,7 +2576,8 @@ rules:
 							Name: "etcd-client",
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: secretNameEtcd,
+									SecretName:  secretNameEtcd,
+									DefaultMode: pointer.Int32(0640),
 								},
 							},
 						},
@@ -2584,7 +2585,8 @@ rules:
 							Name: "service-account-key",
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: secretNameServiceAccountKey,
+									SecretName:  secretNameServiceAccountKey,
+									DefaultMode: pointer.Int32(0640),
 								},
 							},
 						},
@@ -2592,7 +2594,8 @@ rules:
 							Name: "service-account-key-bundle",
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: secretNameServiceAccountKeyBundle,
+									SecretName:  secretNameServiceAccountKeyBundle,
+									DefaultMode: pointer.Int32(0640),
 								},
 							},
 						},
@@ -2608,7 +2611,8 @@ rules:
 							Name: "kube-aggregator",
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: secretNameKubeAggregator,
+									SecretName:  secretNameKubeAggregator,
+									DefaultMode: pointer.Int32(0640),
 								},
 							},
 						},
@@ -2616,7 +2620,8 @@ rules:
 							Name: "etcd-encryption-secret",
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: secretNameETCDEncryptionConfig,
+									SecretName:  secretNameETCDEncryptionConfig,
+									DefaultMode: pointer.Int32(0640),
 								},
 							},
 						},
@@ -2624,7 +2629,8 @@ rules:
 							Name: "server",
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: secretNameServer,
+									SecretName:  secretNameServer,
+									DefaultMode: pointer.Int32(0640),
 								},
 							},
 						},
@@ -2670,7 +2676,8 @@ rules:
 							Name: "kubelet-client",
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: secretNameKubeAPIServerToKubelet,
+									SecretName:  secretNameKubeAPIServerToKubelet,
+									DefaultMode: pointer.Int32(0640),
 								},
 							},
 						},
@@ -3182,7 +3189,8 @@ rules:
 							Name: "http-proxy",
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: secretNameHTTPProxy,
+									SecretName:  secretNameHTTPProxy,
+									DefaultMode: pointer.Int32(0640),
 								},
 							},
 						},
@@ -3294,7 +3302,8 @@ rules:
 							Name: "tls-sni-0",
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: "existing-secret",
+									SecretName:  "existing-secret",
+									DefaultMode: pointer.Int32(0640),
 								},
 							},
 						},
@@ -3302,7 +3311,8 @@ rules:
 							Name: "tls-sni-1",
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: "kube-apiserver-tls-sni-1-ec321de5",
+									SecretName:  "kube-apiserver-tls-sni-1-ec321de5",
+									DefaultMode: pointer.Int32(0640),
 								},
 							},
 						},
