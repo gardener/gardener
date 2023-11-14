@@ -118,7 +118,7 @@ func getValitailCAFile(ctx components.Context) extensionsv1alpha1.File {
 	}
 }
 
-func getValitailUnit(ctx components.Context) (extensionsv1alpha1.Unit, error) {
+func getValitailUnit(ctx components.Context) extensionsv1alpha1.Unit {
 	var (
 		execStartPre string
 		execStart    = v1beta1constants.OperatingSystemConfigFilePathBinaries + `/valitail -config.file=` + PathConfig
@@ -172,25 +172,10 @@ ExecStart=` + execStart
 	}
 
 	if ctx.ValitailEnabled && features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
-		valitailConfigFile, err := getValitailConfigurationFile(ctx)
-		if err != nil {
-			return extensionsv1alpha1.Unit{}, err
-		}
-		unit.Files = append(unit.Files, valitailConfigFile)
-		unit.Files = append(unit.Files, getValitailCAFile(ctx))
-		unit.Files = append(unit.Files, extensionsv1alpha1.File{
-			Path:        v1beta1constants.OperatingSystemConfigFilePathBinaries + "/valitail",
-			Permissions: pointer.Int32(0755),
-			Content: extensionsv1alpha1.FileContent{
-				ImageRef: &extensionsv1alpha1.FileContentImageRef{
-					Image:           ctx.Images[imagevector.ImageNameValitail].String(),
-					FilePathInImage: "/usr/bin/valitail",
-				},
-			},
-		})
+		unit.FilePaths = []string{PathConfig, PathCACert, valitailBinaryPath}
 	}
 
-	return unit, nil
+	return unit
 }
 
 func getFetchTokenScriptFile() (extensionsv1alpha1.File, error) {
@@ -218,7 +203,7 @@ func getFetchTokenScriptFile() (extensionsv1alpha1.File, error) {
 	}, nil
 }
 
-func getFetchTokenScriptUnit(ctx components.Context) (extensionsv1alpha1.Unit, error) {
+func getFetchTokenScriptUnit(ctx components.Context) extensionsv1alpha1.Unit {
 	var (
 		execStartPre string
 		execStart    = PathFetchTokenScript
@@ -257,12 +242,8 @@ ExecStart=` + execStart
 	}
 
 	if ctx.ValitailEnabled && features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
-		fetchTokenScriptFile, err := getFetchTokenScriptFile()
-		if err != nil {
-			return extensionsv1alpha1.Unit{}, err
-		}
-		unit.Files = append(unit.Files, fetchTokenScriptFile)
+		unit.FilePaths = []string{PathFetchTokenScript}
 	}
 
-	return unit, nil
+	return unit
 }

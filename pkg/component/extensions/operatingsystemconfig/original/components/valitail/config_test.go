@@ -316,12 +316,15 @@ exit $?
 						},
 					}
 
-					var expectedFiles []extensionsv1alpha1.File
+					expectedFiles := []extensionsv1alpha1.File{valitailConfigFile, valitailFetchTokenScriptFile, caBundleFile}
 					if useGardenerNodeAgentEnabled {
-						valitailDaemonUnit.Files = append(valitailDaemonUnit.Files, valitailConfigFile, caBundleFile, valitailBinaryFile)
-						valitailTokenFetchUnit.Files = append(valitailTokenFetchUnit.Files, valitailFetchTokenScriptFile)
-					} else {
-						expectedFiles = append(expectedFiles, valitailConfigFile, valitailFetchTokenScriptFile, caBundleFile)
+						expectedFiles = append(expectedFiles, valitailBinaryFile)
+						valitailDaemonUnit.FilePaths = []string{
+							"/var/lib/valitail/config/config",
+							"/var/lib/valitail/ca.crt",
+							"/opt/bin/valitail",
+						}
+						valitailTokenFetchUnit.FilePaths = []string{"/var/lib/valitail/scripts/fetch-token.sh"}
 					}
 
 					Expect(units).To(ConsistOf(

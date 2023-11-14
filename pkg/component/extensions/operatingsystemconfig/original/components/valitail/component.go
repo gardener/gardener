@@ -15,6 +15,9 @@
 package valitail
 
 import (
+	"k8s.io/utils/pointer"
+
+	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -45,6 +48,8 @@ const (
 	ServerPort = 3001
 	// PositionFile is the path for storing the scraped file offsets.
 	PositionFile = "/var/log/positions.yaml"
+
+	valitailBinaryPath = v1beta1constants.OperatingSystemConfigFilePathBinaries + "/valitail"
 )
 
 type component struct{}
@@ -63,18 +68,8 @@ func execStartPreCopyBinaryFromContainer(binaryName string, image *imagevectorut
 }
 
 func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
-	valitailUnit, err := getValitailUnit(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	fetchTokenScriptUnit, err := getFetchTokenScriptUnit(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	var files []extensionsv1alpha1.File
-	if ctx.ValitailEnabled && !features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+	if ctx.ValitailEnabled {
 		valitailConfigFile, err := getValitailConfigurationFile(ctx)
 		if err != nil {
 			return nil, nil, err
@@ -85,7 +80,20 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 			return nil, nil, err
 		}
 		files = append(files, valitailConfigFile, fetchTokenScriptFile, getValitailCAFile(ctx))
+
+		if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+			files = append(files, extensionsv1alpha1.File{
+				Path:        valitailBinaryPath,
+				Permissions: pointer.Int32(0755),
+				Content: extensionsv1alpha1.FileContent{
+					ImageRef: &extensionsv1alpha1.FileContentImageRef{
+						Image:           ctx.Images[imagevector.ImageNameValitail].String(),
+						FilePathInImage: "/usr/bin/valitail",
+					},
+				},
+			})
+		}
 	}
 
-	return []extensionsv1alpha1.Unit{valitailUnit, fetchTokenScriptUnit}, files, nil
+	return []extensionsv1alpha1.Unit{getValitailUnit(ctx), getFetchTokenScriptUnit(ctx)}, files, nil
 }
