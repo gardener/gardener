@@ -100,7 +100,7 @@ var _ = Describe("Controller Mapper", func() {
 			mapper = SecretToBackupBucketMapper(nil)
 		})
 
-		It("should find all objects for the passed cluster", func() {
+		It("should find all objects for the passed secret", func() {
 			Expect(fakeClient.Create(ctx, backupBucket)).To(Succeed())
 			Expect(fakeClient.Create(ctx, backupBucket2)).To(Succeed())
 
@@ -117,7 +117,7 @@ var _ = Describe("Controller Mapper", func() {
 				}))
 		})
 
-		It("should find no objects for the passed cluster because predicates do not match", func() {
+		It("should find no objects for the passed secret because predicates do not match", func() {
 			predicates := []predicate.Predicate{
 				predicate.Funcs{
 					GenericFunc: func(event event.GenericEvent) bool {
@@ -128,15 +128,14 @@ var _ = Describe("Controller Mapper", func() {
 			mapper = SecretToBackupBucketMapper(predicates)
 
 			Expect(fakeClient.Create(ctx, backupBucket)).To(Succeed())
-
 			Expect(mapper.Map(ctx, logr.Discard(), fakeClient, secret)).To(BeEmpty())
 		})
 
-		It("should find no objects because list is empty", func() {
+		It("should return empty request array because there are no backupbucket objects present", func() {
 			Expect(mapper.Map(ctx, logr.Discard(), fakeClient, secret)).To(BeEmpty())
 		})
 
-		It("should find no objects because the passed object is not secret", func() {
+		It("should find no objects because the passed object is not a secret", func() {
 			Expect(mapper.Map(ctx, logr.Discard(), fakeClient, configMap)).To(BeEmpty())
 		})
 	})

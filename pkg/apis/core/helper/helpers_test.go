@@ -682,6 +682,7 @@ var _ = Describe("helper", func() {
 		},
 
 		Entry("should return nil - empty machine image slice", nil, map[string]core.MachineImageVersion{}, false),
+		Entry("should return nil - no valid image", []core.MachineImage{{Name: "coreos", Versions: []core.MachineImageVersion{{ExpirableVersion: core.ExpirableVersion{Version: "abc"}}}}}, nil, true),
 		Entry("should determine latest expirable version", machineImages, map[string]core.MachineImageVersion{"coreos": {ExpirableVersion: core.ExpirableVersion{Version: "0.0.3"}}}, false),
 	)
 

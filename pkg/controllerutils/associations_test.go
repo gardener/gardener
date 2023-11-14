@@ -71,7 +71,7 @@ var _ = Describe("Associations", func() {
 	})
 
 	Describe("#DetermineShootsAssociatedTo", func() {
-		It("shoots associated to cloudprofile", func() {
+		It("should return shoots associated to cloudprofile", func() {
 			obj = &gardencorev1beta1.CloudProfile{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cloudprofile",
@@ -87,7 +87,7 @@ var _ = Describe("Associations", func() {
 			Expect(shoots).To(ConsistOf(shoot.Namespace + "/" + shoot.Name))
 		})
 
-		It("shoots associated to seed", func() {
+		It("should return shoots associated to seed", func() {
 			obj = &gardencorev1beta1.Seed{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "seed",
@@ -103,13 +103,8 @@ var _ = Describe("Associations", func() {
 			Expect(shoots).To(ConsistOf(shoot.Namespace + "/" + shoot.Name))
 		})
 
-		It("shoots associated to secretbinding", func() {
-			obj = &gardencorev1beta1.SecretBinding{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "secretbinding",
-					Namespace: shoot.Namespace,
-				},
-			}
+		It("should return shoots associated to secretbinding", func() {
+			obj = secretBinding.DeepCopy()
 
 			shoot.Spec.SecretBindingName = pointer.String(obj.GetName())
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
@@ -120,7 +115,7 @@ var _ = Describe("Associations", func() {
 			Expect(shoots).To(ConsistOf(shoot.Namespace + "/" + shoot.Name))
 		})
 
-		It("shoots associated to exposureclass", func() {
+		It("should return shoots associated to exposureclass", func() {
 			obj = &gardencorev1beta1.ExposureClass{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "exposureclass",
@@ -136,7 +131,7 @@ var _ = Describe("Associations", func() {
 			Expect(shoots).To(ConsistOf(shoot.Namespace + "/" + shoot.Name))
 		})
 
-		It("shoots associated to not supported type objects", func() {
+		It("should return shoots associated to not supported type objects", func() {
 			obj = &gardencorev1beta1.BackupBucket{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "backupbucket",
@@ -153,7 +148,7 @@ var _ = Describe("Associations", func() {
 	})
 
 	Describe("#DetermineSecretBindingAssociations", func() {
-		It("secretBinding associated to quota", func() {
+		It("should return secretBinding associated to quota", func() {
 			quota = &gardencorev1beta1.Quota{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "quota",
@@ -172,7 +167,7 @@ var _ = Describe("Associations", func() {
 	})
 
 	Describe("#DetermineBackupBucketAssociations", func() {
-		It("backupbucket associated to seed", func() {
+		It("should return backupbucket associated to seed", func() {
 			backupbucket = &gardencorev1beta1.BackupBucket{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "backupbucket",
@@ -192,7 +187,7 @@ var _ = Describe("Associations", func() {
 	})
 
 	Describe("#DetermineControllerInstallationAssociations", func() {
-		It("controllerinstallation associated to seed", func() {
+		It("should return controllerinstallation associated to seed", func() {
 			controllerinstallation = &gardencorev1beta1.ControllerInstallation{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "controllerinstallation",

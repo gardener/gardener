@@ -110,7 +110,7 @@ var _ = Describe("Controller Mapper", func() {
 			mapper = SecretToBackupEntryMapper(nil)
 		})
 
-		It("should find all objects for the passed cluster", func() {
+		It("should find all objects for the passed secret", func() {
 			Expect(fakeClient.Create(ctx, backupEntry)).To(Succeed())
 			Expect(fakeClient.Create(ctx, backupEntry2)).To(Succeed())
 
@@ -127,7 +127,7 @@ var _ = Describe("Controller Mapper", func() {
 				}))
 		})
 
-		It("should find no objects for the passed cluster because predicates do not match", func() {
+		It("should find no objects for the passed secret because predicates do not match", func() {
 			predicates := []predicate.Predicate{
 				predicate.Funcs{
 					GenericFunc: func(event event.GenericEvent) bool {
@@ -138,11 +138,10 @@ var _ = Describe("Controller Mapper", func() {
 			mapper = SecretToBackupEntryMapper(predicates)
 
 			Expect(fakeClient.Create(ctx, backupEntry)).To(Succeed())
-
 			Expect(mapper.Map(ctx, logr.Discard(), fakeClient, secret)).To(BeEmpty())
 		})
 
-		It("should find no objects because list is empty", func() {
+		It("should return empty request array because there are no backupentry objects present", func() {
 			Expect(mapper.Map(ctx, logr.Discard(), fakeClient, secret)).To(BeEmpty())
 		})
 
@@ -158,7 +157,7 @@ var _ = Describe("Controller Mapper", func() {
 			mapper = NamespaceToBackupEntryMapper(nil)
 		})
 
-		It("should find all objects for the passed cluster", func() {
+		It("should find all objects for the passed namespace", func() {
 			Expect(fakeClient.Create(ctx, backupEntry)).To(Succeed())
 			Expect(fakeClient.Create(ctx, backupEntry2)).To(Succeed())
 
@@ -170,7 +169,7 @@ var _ = Describe("Controller Mapper", func() {
 				}))
 		})
 
-		It("should find no objects for the passed cluster because predicates do not match", func() {
+		It("should find no objects for the passed namespace because predicates do not match", func() {
 			predicates := []predicate.Predicate{
 				predicate.Funcs{
 					GenericFunc: func(event event.GenericEvent) bool {
@@ -181,11 +180,10 @@ var _ = Describe("Controller Mapper", func() {
 			mapper = NamespaceToBackupEntryMapper(predicates)
 
 			Expect(fakeClient.Create(ctx, backupEntry)).To(Succeed())
-
 			Expect(mapper.Map(ctx, logr.Discard(), fakeClient, namespace)).To(BeEmpty())
 		})
 
-		It("should find no objects because list is empty", func() {
+		It("should return empty request array because there are no backupentry objects present", func() {
 			Expect(mapper.Map(ctx, logr.Discard(), fakeClient, namespace)).To(BeEmpty())
 		})
 
