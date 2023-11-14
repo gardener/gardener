@@ -132,6 +132,10 @@ docker-push:
 # Rules for verification, formatting, linting, testing and cleaning #
 #####################################################################
 
+.PHONY: tidy
+tidy:
+	@GO111MODULE=on go mod tidy
+
 .PHONY: clean
 clean:
 	@hack/clean.sh ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...

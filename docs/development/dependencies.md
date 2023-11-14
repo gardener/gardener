@@ -3,6 +3,17 @@
 We are using [go modules](https://github.com/golang/go/wiki/Modules) for depedency management.
 In order to add a new package dependency to the project, you can perform `go get <PACKAGE>@<VERSION>` or edit the `go.mod` file and append the package along with the version you want to use.
 
+# Updating Dependencies
+
+The `Makefile` contains a rule called `tidy` which performs `go mod tidy`:
+- `go mod tidy` makes sure `go.mod` matches the source code in the module. It adds any missing modules necessary to build the current module's packages and dependencies, and it removes unused modules that don't provide any relevant packages.
+
+```bash
+make tidy
+```
+
+:warning: Make sure that you test the code after you have updated the dependencies!
+
 ## Exported Packages
 
 This repository contains several packages that could be considered "exported packages", in a sense that they are supposed to be reused in other Go projects.
