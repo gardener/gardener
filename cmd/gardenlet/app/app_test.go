@@ -90,7 +90,9 @@ var _ = Describe("Recreate Managed Resource Secrets", func() {
 				Labels: map[string]string{
 					"resources.gardener.cloud/garbage-collectable-reference": "true",
 					"resources.gardener.cloud/temp-secret":                   "true",
-					"resources.gardener.cloud/temp-secret-old-name":          "secret3",
+				},
+				Annotations: map[string]string{
+					"resources.gardener.cloud/temp-secret-old-name": "secret3",
 				},
 			},
 			Immutable: pointer.Bool(true),
@@ -121,7 +123,9 @@ var _ = Describe("Recreate Managed Resource Secrets", func() {
 				Labels: map[string]string{
 					"resources.gardener.cloud/garbage-collectable-reference": "true",
 					"resources.gardener.cloud/temp-secret":                   "true",
-					"resources.gardener.cloud/temp-secret-old-name":          "secret4",
+				},
+				Annotations: map[string]string{
+					"resources.gardener.cloud/temp-secret-old-name": "secret4",
 				},
 			},
 			Immutable: pointer.Bool(true),

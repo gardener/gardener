@@ -491,9 +491,9 @@ func (g *garden) cleanupOrphanedExtensionsServiceAccounts(ctx context.Context, g
 }
 
 const (
-	grmFinalizer           = "resources.gardener.cloud/gardener-resource-manager"
-	tempSecretLabel        = "resources.gardener.cloud/temp-secret"
-	tempSecretOldNameLabel = "resources.gardener.cloud/temp-secret-old-name"
+	grmFinalizer                = "resources.gardener.cloud/gardener-resource-manager"
+	tempSecretLabel             = "resources.gardener.cloud/temp-secret"
+	tempSecretOldNameAnnotation = "resources.gardener.cloud/temp-secret-old-name"
 )
 
 // TODO(dimityrmirchev): Remove this code after v1.87 has been released.
@@ -512,7 +512,7 @@ func recreateDeletedManagedResourceSecrets(ctx context.Context, c client.Client)
 	for _, temp := range tempSecretList.Items {
 		temp := temp
 		tasks = append(tasks, func(ctx context.Context) error {
-			originalName := temp.Labels[tempSecretOldNameLabel]
+			originalName := temp.Annotations[tempSecretOldNameAnnotation]
 			original := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: originalName, Namespace: temp.Namespace}}
 
 			if err := limiter.Wait(ctx); err != nil {
@@ -524,7 +524,7 @@ func recreateDeletedManagedResourceSecrets(ctx context.Context, c client.Client)
 					// original secret is not found so we recreate it
 					original := temp.DeepCopy()
 					delete(original.Labels, tempSecretLabel)
-					delete(original.Labels, tempSecretOldNameLabel)
+					delete(original.Annotations, tempSecretOldNameAnnotation)
 					original.ResourceVersion = ""
 					original.Name = originalName
 
@@ -580,7 +580,7 @@ func recreateDeletedManagedResourceSecrets(ctx context.Context, c client.Client)
 			tempSecret := original.DeepCopy()
 			tempSecret.Name = "tmp-" + original.Name
 			metav1.SetMetaDataLabel(&tempSecret.ObjectMeta, tempSecretLabel, "true")
-			metav1.SetMetaDataLabel(&tempSecret.ObjectMeta, tempSecretOldNameLabel, original.Name)
+			metav1.SetMetaDataAnnotation(&tempSecret.ObjectMeta, tempSecretOldNameAnnotation, original.Name)
 			tempSecret.DeletionTimestamp = nil
 			tempSecret.ResourceVersion = ""
 			tempSecret.Finalizers = nil
