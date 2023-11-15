@@ -428,8 +428,10 @@ spec:
                   type: object
                 type: array
               files:
-                description: Files is a list of file paths that are part of the generated
-                  Cloud Config and shall be written to the host's file system.
+                description: 'Files is a list of file paths that are part of the generated
+                  Cloud Config and shall be written to the host''s file system. TODO(rfranzke):
+                  Deprecate this field once UseGardenerNodeAgent feature gate is promoted
+                  to GA.'
                 items:
                   type: string
                 type: array

@@ -108,10 +108,7 @@ func (a *actuator) handleProvisionOSC(ctx context.Context, osc *extensionsv1alph
 	if err != nil {
 		return "", err
 	}
-	writeUnitsToDiskScript, err := operatingsystemconfig.UnitsToDiskScript(osc.Spec.Units)
-	if err != nil {
-		return "", err
-	}
+	writeUnitsToDiskScript := operatingsystemconfig.UnitsToDiskScript(osc.Spec.Units)
 
 	return `#!/bin/bash
 ` + writeFilesToDiskScript + `

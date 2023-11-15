@@ -207,8 +207,7 @@ server: {}
 
 				writeFilesToDiskScript, err := operatingsystemconfig.FilesToDiskScript(context.Background(), nil, "", files)
 				Expect(err).NotTo(HaveOccurred())
-				writeUnitsToDiskScript, err := operatingsystemconfig.UnitsToDiskScript(units)
-				Expect(err).NotTo(HaveOccurred())
+				writeUnitsToDiskScript := operatingsystemconfig.UnitsToDiskScript(units)
 
 				// best-effort check: ensure the node init configuration is not exceeding 4KB in size
 				Expect(utf8.RuneCountInString(writeFilesToDiskScript + writeUnitsToDiskScript)).To(BeNumerically("<", 4096))

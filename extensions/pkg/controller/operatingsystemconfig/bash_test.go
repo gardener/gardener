@@ -198,8 +198,7 @@ EOF`))
 			)
 
 			By("Ensure the function generated the expected bash script")
-			script, err := UnitsToDiskScript(units)
-			Expect(err).NotTo(HaveOccurred())
+			script := UnitsToDiskScript(units)
 			Expect(script).To(Equal(`
 mkdir -p "/etc/systemd/system/` + unit1 + `.d"
 

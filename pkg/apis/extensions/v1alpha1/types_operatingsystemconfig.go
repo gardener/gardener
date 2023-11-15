@@ -236,6 +236,7 @@ type OperatingSystemConfigStatus struct {
 	Units []string `json:"units,omitempty"`
 	// Files is a list of file paths that are part of the generated Cloud Config and shall be
 	// written to the host's file system.
+	// TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is promoted to GA.
 	// +optional
 	Files []string `json:"files,omitempty"`
 }

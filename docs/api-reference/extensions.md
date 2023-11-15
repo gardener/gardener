@@ -3807,7 +3807,8 @@ TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is p
 <td>
 <em>(Optional)</em>
 <p>Files is a list of file paths that are part of the generated Cloud Config and shall be
-written to the host&rsquo;s file system.</p>
+written to the host&rsquo;s file system.
+TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is promoted to GA.</p>
 </td>
 </tr>
 </tbody>

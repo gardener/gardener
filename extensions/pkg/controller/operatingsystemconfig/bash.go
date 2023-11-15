@@ -54,7 +54,7 @@ mkdir -p "` + path.Dir(file.Path) + `"
 
 // UnitsToDiskScript is a utility function which generates a bash script for writing the provided units and their
 // drop-ins to the disk.
-func UnitsToDiskScript(units []extensionsv1alpha1.Unit) (string, error) {
+func UnitsToDiskScript(units []extensionsv1alpha1.Unit) string {
 	var out string
 
 	for _, unit := range units {
@@ -77,7 +77,7 @@ mkdir -p "` + unitDropInsDirectoryPath + `"`
 		}
 	}
 
-	return out, nil
+	return out
 }
 
 func dataForFileContent(ctx context.Context, c client.Reader, namespace string, content *extensionsv1alpha1.FileContent) ([]byte, error) {
