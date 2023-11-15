@@ -505,6 +505,18 @@ func recreateDeletedManagedResourceSecrets(ctx context.Context, c client.Client)
 		return err
 	}
 
+	namespaceList := &corev1.NamespaceList{}
+	if err := c.List(ctx, namespaceList); err != nil {
+		return err
+	}
+
+	namespacesInDeletion := sets.New[string]()
+	for _, namespace := range namespaceList.Items {
+		if namespace.DeletionTimestamp != nil || namespace.Status.Phase == corev1.NamespaceTerminating {
+			namespacesInDeletion.Insert(namespace.Name)
+		}
+	}
+
 	var (
 		tasks   []flow.TaskFn
 		limiter = rate.NewLimiter(rate.Limit(20), 20)
@@ -521,27 +533,27 @@ func recreateDeletedManagedResourceSecrets(ctx context.Context, c client.Client)
 
 			if err := c.Get(ctx, client.ObjectKeyFromObject(original), original); err != nil {
 				if apierrors.IsNotFound(err) {
-					// original secret is not found so we recreate it
-					original := temp.DeepCopy()
-					delete(original.Labels, tempSecretLabel)
-					delete(original.Annotations, tempSecretOldNameAnnotation)
-					original.ResourceVersion = ""
-					original.Name = originalName
+					if !namespacesInDeletion.Has(original.Namespace) {
+						// original secret is not found so we recreate it
+						original := temp.DeepCopy()
+						delete(original.Labels, tempSecretLabel)
+						delete(original.Annotations, tempSecretOldNameAnnotation)
+						original.ResourceVersion = ""
+						original.Name = originalName
 
-					if err := c.Create(ctx, original); err != nil {
-						return fmt.Errorf("failed to recreate the original secret %w", err)
+						if err := c.Create(ctx, original); err != nil {
+							return fmt.Errorf("failed to recreate the original secret %w", err)
+						}
 					}
-					if err := c.Delete(ctx, &temp); client.IgnoreNotFound(err) != nil {
-						return err
-					}
-					return nil
+
+					return client.IgnoreNotFound(c.Delete(ctx, &temp))
 				}
 
 				return err
 			}
 
 			// the original secret exists. check if the finalizer and deletion timestamp are there
-			if original.DeletionTimestamp != nil && slices.Contains(original.Finalizers, grmFinalizer) {
+			if original.DeletionTimestamp != nil && slices.Contains(original.Finalizers, grmFinalizer) && !namespacesInDeletion.Has(original.Namespace) {
 				if err := removeFinalizersAndWait(ctx, c, original.DeepCopy()); err != nil {
 					return err
 				}
@@ -568,7 +580,7 @@ func recreateDeletedManagedResourceSecrets(ctx context.Context, c client.Client)
 		return err
 	}
 
-	secretsToRecreate, err := getSecretsToRecreate(ctx, c)
+	secretsToRecreate, err := getSecretsToRecreate(ctx, c, namespacesInDeletion)
 	if err != nil {
 		return fmt.Errorf("failed listing secrets for recreation %w", err)
 	}
@@ -606,10 +618,8 @@ func recreateDeletedManagedResourceSecrets(ctx context.Context, c client.Client)
 			if err := c.Create(ctx, &original); err != nil {
 				return fmt.Errorf("failed to recreate the original secret %w", err)
 			}
-			if err := c.Delete(ctx, tempSecret); client.IgnoreNotFound(err) != nil {
-				return err
-			}
-			return nil
+
+			return client.IgnoreNotFound(c.Delete(ctx, tempSecret))
 		})
 	}
 	return flow.Parallel(tasks...)(ctx)
@@ -629,7 +639,7 @@ func removeFinalizersAndWait(ctx context.Context, c client.Client, secret *corev
 }
 
 // TODO(dimityrmirchev): Remove this code after v1.87 has been released.
-func getSecretsToRecreate(ctx context.Context, c client.Client) ([]corev1.Secret, error) {
+func getSecretsToRecreate(ctx context.Context, c client.Client, namespacesInDeletion sets.Set[string]) ([]corev1.Secret, error) {
 	selector := labels.NewSelector()
 	isGC, err := labels.NewRequirement(references.LabelKeyGarbageCollectable, selection.Equals, []string{"true"})
 	if err != nil {
@@ -645,7 +655,7 @@ func getSecretsToRecreate(ctx context.Context, c client.Client) ([]corev1.Secret
 		return nil, err
 	}
 	secretsToRecreate := slices.DeleteFunc(secretList.Items, func(s corev1.Secret) bool {
-		return !slices.Contains(s.Finalizers, grmFinalizer) || s.DeletionTimestamp == nil
+		return namespacesInDeletion.Has(s.Namespace) || !slices.Contains(s.Finalizers, grmFinalizer) || s.DeletionTimestamp == nil
 	})
 	return secretsToRecreate, nil
 }
