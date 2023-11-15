@@ -2951,8 +2951,7 @@ DefaultStatus
 <p>
 (<em>Appears on:</em>
 <a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigSpec">OperatingSystemConfigSpec</a>, 
-<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigStatus">OperatingSystemConfigStatus</a>, 
-<a href="#extensions.gardener.cloud/v1alpha1.Unit">Unit</a>)
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigStatus">OperatingSystemConfigStatus</a>)
 </p>
 <p>
 <p>File is a file that should get written to the host&rsquo;s file system. The content can either be inlined or
@@ -3916,17 +3915,14 @@ string
 </tr>
 <tr>
 <td>
-<code>files</code></br>
+<code>filePaths</code></br>
 <em>
-<a href="#extensions.gardener.cloud/v1alpha1.File">
-[]File
-</a>
+[]string
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>Files is a list of files the unit depends on that should get written to the host&rsquo;s file system.
-If any file changes a restart of the dependent unit will be triggered.</p>
+<p>FilePaths is a list of files the unit depends on. If any file changes a restart of the dependent unit will be
+triggered. For each FilePath there must exist a File with matching Path in OperatingSystemConfig.Spec.Files.</p>
 </td>
 </tr>
 </tbody>

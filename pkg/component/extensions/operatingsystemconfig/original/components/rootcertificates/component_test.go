@@ -135,15 +135,12 @@ fi
 						},
 					}
 
-					var expectedFiles []extensionsv1alpha1.File
 					if useGardenerNodeAgentEnabled {
-						updateCACertsUnit.Files = updateCACertsFiles
-					} else {
-						expectedFiles = updateCACertsFiles
+						updateCACertsUnit.FilePaths = []string{"/var/lib/ssl/update-local-ca-certificates.sh", "/var/lib/ca-certificates-local/ROOTcerts.crt", "/etc/pki/trust/anchors/ROOTcerts.pem"}
 					}
 
 					Expect(units).To(ConsistOf(updateCACertsUnit))
-					Expect(files).To(ConsistOf(expectedFiles))
+					Expect(files).To(ConsistOf(updateCACertsFiles))
 				})
 			})
 		}

@@ -111,12 +111,9 @@ ExecStart=` + pathHealthMonitor),
 		},
 	}
 
-	var files []extensionsv1alpha1.File
 	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
-		monitorUnit.Files = append(monitorUnit.Files, monitorFile)
-	} else {
-		files = append(logRotateFiles, monitorFile)
+		monitorUnit.FilePaths = []string{monitorFile.Path}
 	}
 
-	return append(logRotateUnits, monitorUnit), files, nil
+	return append(logRotateUnits, monitorUnit), append(logRotateFiles, monitorFile), nil
 }

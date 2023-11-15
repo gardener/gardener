@@ -109,12 +109,9 @@ WantedBy=multi-user.target`),
 		},
 	}
 
-	var files []extensionsv1alpha1.File
 	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
-		sshdEnsurerUnit.Files = append(sshdEnsurerUnit.Files, sshdEnsurerFile)
-	} else {
-		files = append(files, sshdEnsurerFile)
+		sshdEnsurerUnit.FilePaths = []string{sshdEnsurerFile.Path}
 	}
 
-	return []extensionsv1alpha1.Unit{sshdEnsurerUnit}, files, nil
+	return []extensionsv1alpha1.Unit{sshdEnsurerUnit}, []extensionsv1alpha1.File{sshdEnsurerFile}, nil
 }

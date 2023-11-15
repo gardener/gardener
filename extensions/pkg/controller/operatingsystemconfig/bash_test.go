@@ -193,22 +193,12 @@ EOF`))
 					{
 						Name:    unit2,
 						Content: pointer.String("content2"),
-						Files: []extensionsv1alpha1.File{{
-							Path: file1,
-							Content: extensionsv1alpha1.FileContent{
-								Inline: &extensionsv1alpha1.FileContentInline{
-									Encoding: "",
-									Data:     "plain-text",
-								},
-							},
-						}},
 					},
 				}
 			)
 
 			By("Ensure the function generated the expected bash script")
-			script, err := UnitsToDiskScript(ctx, fakeClient, namespace, units)
-			Expect(err).NotTo(HaveOccurred())
+			script := UnitsToDiskScript(units)
 			Expect(script).To(Equal(`
 mkdir -p "/etc/systemd/system/` + unit1 + `.d"
 
@@ -222,11 +212,6 @@ EOF
 
 cat << EOF | base64 -d > "/etc/systemd/system/` + unit2 + `"
 Y29udGVudDI=
-EOF
-mkdir -p "` + folder1 + `"
-
-cat << EOF | base64 -d > "` + file1 + `"
-cGxhaW4tdGV4dA==
 EOF`))
 
 			By("Ensure that the bash script can be executed and performs the desired operations")
@@ -239,7 +224,6 @@ EOF`))
 
 			runScriptAndCheckFiles(script,
 				tempDir+"/etc/systemd/system/"+unit2,
-				tempDir+file1,
 				tempDir+"/etc/systemd/system/"+unit1+".d/"+unit1DropIn1,
 				tempDir+"/etc/systemd/system/"+unit1+".d/"+unit1DropIn2,
 			)

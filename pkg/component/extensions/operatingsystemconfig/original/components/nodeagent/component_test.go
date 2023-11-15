@@ -50,7 +50,7 @@ var _ = Describe("Component", func() {
 		It("should return the expected units and files", func() {
 			key := "key"
 
-			unitFiles, err := Files(ComponentConfig(key, kubernetesVersion, apiServerURL, caBundle, syncJitterPeriod))
+			expectedFiles, err := Files(ComponentConfig(key, kubernetesVersion, apiServerURL, caBundle, syncJitterPeriod))
 			Expect(err).NotTo(HaveOccurred())
 
 			units, files, err := component.Config(components.Context{
@@ -60,6 +60,17 @@ var _ = Describe("Component", func() {
 				CABundle:            pointer.String(string(caBundle)),
 				Images:              map[string]*imagevectorutils.Image{"gardener-node-agent": {Repository: "gardener-node-agent", Tag: pointer.String("v1")}},
 				OSCSyncJitterPeriod: syncJitterPeriod,
+			})
+
+			expectedFiles = append(expectedFiles, extensionsv1alpha1.File{
+				Path:        "/opt/bin/gardener-node-agent",
+				Permissions: pointer.Int32(0755),
+				Content: extensionsv1alpha1.FileContent{
+					ImageRef: &extensionsv1alpha1.FileContentImageRef{
+						Image:           "gardener-node-agent:v1",
+						FilePathInImage: "/gardener-node-agent",
+					},
+				},
 			})
 
 			Expect(err).NotTo(HaveOccurred())
@@ -79,19 +90,10 @@ RestartSec=5
 
 [Install]
 WantedBy=multi-user.target`),
-					Files: append(unitFiles, extensionsv1alpha1.File{
-						Path:        "/opt/bin/gardener-node-agent",
-						Permissions: pointer.Int32(0755),
-						Content: extensionsv1alpha1.FileContent{
-							ImageRef: &extensionsv1alpha1.FileContentImageRef{
-								Image:           "gardener-node-agent:v1",
-								FilePathInImage: "/gardener-node-agent",
-							},
-						},
-					}),
+					FilePaths: []string{"/var/lib/gardener-node-agent/config.yaml", "/opt/bin/gardener-node-agent"},
 				},
 			))
-			Expect(files).To(BeEmpty())
+			Expect(files).To(ConsistOf(expectedFiles))
 		})
 	})
 

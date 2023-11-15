@@ -121,12 +121,9 @@ type Unit struct {
 	// +patchStrategy=merge
 	// +optional
 	DropIns []DropIn `json:"dropIns,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
-	// Files is a list of files the unit depends on that should get written to the host's file system.
-	// If any file changes a restart of the dependent unit will be triggered.
-	// +patchMergeKey=path
-	// +patchStrategy=merge
-	// +optional
-	Files []File `json:"files,omitempty" patchStrategy:"merge" patchMergeKey:"path"`
+	// FilePaths is a list of files the unit depends on. If any file changes a restart of the dependent unit will be
+	// triggered. For each FilePath there must exist a File with matching Path in OperatingSystemConfig.Spec.Files.
+	FilePaths []string `json:"filePaths,omitempty"`
 }
 
 // UnitCommand is a string alias.

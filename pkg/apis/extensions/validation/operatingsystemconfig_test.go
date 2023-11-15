@@ -53,17 +53,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 								Content: "data1",
 							},
 						},
-						Files: []extensionsv1alpha1.File{
-							{
-								Path: "/foo-bar-file",
-								Content: extensionsv1alpha1.FileContent{
-									ImageRef: &extensionsv1alpha1.FileContentImageRef{
-										Image:           "foo-image:bar-tag",
-										FilePathInImage: "/foo-bar-file",
-									},
-								},
-							},
-						},
+						FilePaths: []string{"/foo-bar-file"},
 					},
 				},
 				Files: []extensionsv1alpha1.File{
@@ -73,6 +63,15 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 							Inline: &extensionsv1alpha1.FileContentInline{
 								Encoding: "b64",
 								Data:     "some-data",
+							},
+						},
+					},
+					{
+						Path: "/foo-bar-file",
+						Content: extensionsv1alpha1.FileContent{
+							ImageRef: &extensionsv1alpha1.FileContentImageRef{
+								Image:           "foo-image:bar-tag",
+								FilePathInImage: "/foo-bar-file",
 							},
 						},
 					},
@@ -118,6 +117,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 				DropIns: []extensionsv1alpha1.DropIn{
 					{},
 				},
+				FilePaths: []string{"non-existing-foobar"},
 			}}
 			oscCopy.Status.ExtensionUnits = []extensionsv1alpha1.Unit{{
 				DropIns: []extensionsv1alpha1.DropIn{
@@ -135,6 +135,9 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 				})), PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.units[0].dropIns[0].content"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.units[0].filePaths[0]"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -151,6 +154,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 
 		It("should forbid OperatingSystemConfig resources with invalid files", func() {
 			oscCopy := osc.DeepCopy()
+			oscCopy.Spec.Units = nil
 			oscCopy.Spec.Files = []extensionsv1alpha1.File{
 				{},
 				{
@@ -264,6 +268,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 
 		It("should forbid OperatingSystemConfigs with duplicate files", func() {
 			oscCopy := osc.DeepCopy()
+			oscCopy.Spec.Units = nil
 			oscCopy.Spec.Files = []extensionsv1alpha1.File{{
 				Path: "path1",
 				Content: extensionsv1alpha1.FileContent{
@@ -273,22 +278,11 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 					},
 				},
 			}}
-			oscCopy.Spec.Units = []extensionsv1alpha1.Unit{{
-				Name:  "foo",
-				Files: oscCopy.Spec.Files,
-			}}
 			oscCopy.Status.ExtensionFiles = oscCopy.Spec.Files
-			oscCopy.Status.ExtensionUnits = oscCopy.Spec.Units
 
 			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeDuplicate),
-				"Field": Equal("spec.units[0].files[0].path"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeDuplicate),
 				"Field": Equal("status.extensionFiles[0].path"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeDuplicate),
-				"Field": Equal("status.extensionUnits[0].files[0].path"),
 			}))))
 		})
 

@@ -123,16 +123,13 @@ WantedBy=multi-user.target`),
 		},
 	}
 
-	var files []extensionsv1alpha1.File
 	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
-		updateCACertsUnit.Files = updateCACertsFiles
-	} else {
-		files = updateCACertsFiles
+		for _, file := range updateCACertsFiles {
+			updateCACertsUnit.FilePaths = append(updateCACertsUnit.FilePaths, file.Path)
+		}
 	}
 
-	return []extensionsv1alpha1.Unit{updateCACertsUnit},
-		files,
-		nil
+	return []extensionsv1alpha1.Unit{updateCACertsUnit}, updateCACertsFiles, nil
 }
 
 func updateLocalCACertificatesScriptFile() (extensionsv1alpha1.File, error) {

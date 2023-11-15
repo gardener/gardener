@@ -75,17 +75,13 @@ var _ = Describe("Component", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(units).To(ConsistOf(
-				kubeletUnit(ctx, criName, cliFlags, kubeletConfig, kubeletCABundleBase64, useGardenerNodeAgentEnabled),
-				kubeletMonitorUnit(ctx, useGardenerNodeAgentEnabled),
+				kubeletUnit(criName, cliFlags, useGardenerNodeAgentEnabled),
+				kubeletMonitorUnit(useGardenerNodeAgentEnabled),
 			))
 
-			if useGardenerNodeAgentEnabled {
-				Expect(files).To(BeEmpty())
-			} else {
-				Expect(files).To(ConsistOf(
-					append(kubeletFiles(ctx, kubeletConfig, kubeletCABundleBase64, useGardenerNodeAgentEnabled), kubeletMonitorFiles(ctx, useGardenerNodeAgentEnabled)...),
-				))
-			}
+			Expect(files).To(ConsistOf(
+				append(kubeletFiles(ctx, kubeletConfig, kubeletCABundleBase64, useGardenerNodeAgentEnabled), kubeletMonitorFiles(ctx, useGardenerNodeAgentEnabled)...),
+			))
 		},
 
 		Entry(
@@ -408,7 +404,7 @@ volumeStatsAggPeriod: 1m0s
 	return out
 }
 
-func kubeletUnit(ctx components.Context, criName extensionsv1alpha1.CRIName, cliFlags []string, kubeletConfig, kubeletCABundleBase64 string, useGardenerNodeAgentEnabled bool) extensionsv1alpha1.Unit {
+func kubeletUnit(criName extensionsv1alpha1.CRIName, cliFlags []string, useGardenerNodeAgentEnabled bool) extensionsv1alpha1.Unit {
 	var kubeletStartPre string
 	if !useGardenerNodeAgentEnabled {
 		kubeletStartPre = `
@@ -435,7 +431,7 @@ ExecStart=/opt/bin/kubelet \
 	}
 
 	if useGardenerNodeAgentEnabled {
-		unit.Files = kubeletFiles(ctx, kubeletConfig, kubeletCABundleBase64, useGardenerNodeAgentEnabled)
+		unit.FilePaths = []string{"/var/lib/kubelet/ca.crt", "/var/lib/kubelet/config/kubelet", "/opt/bin/kubelet"}
 	}
 
 	return unit
@@ -481,7 +477,7 @@ func kubeletFiles(ctx components.Context, kubeletConfig, kubeletCABundleBase64 s
 	return files
 }
 
-func kubeletMonitorUnit(ctx components.Context, useGardenerNodeAgentEnabled bool) extensionsv1alpha1.Unit {
+func kubeletMonitorUnit(useGardenerNodeAgentEnabled bool) extensionsv1alpha1.Unit {
 	var healthMonitorStartPre string
 	if !useGardenerNodeAgentEnabled {
 		healthMonitorStartPre = `
@@ -504,7 +500,7 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 	}
 
 	if useGardenerNodeAgentEnabled {
-		unit.Files = kubeletMonitorFiles(ctx, useGardenerNodeAgentEnabled)
+		unit.FilePaths = []string{"/opt/bin/health-monitor-kubelet", "/opt/bin/kubectl"}
 	}
 
 	return unit

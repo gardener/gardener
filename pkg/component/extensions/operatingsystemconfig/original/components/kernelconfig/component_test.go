@@ -106,15 +106,12 @@ var _ = Describe("Component", func() {
 			},
 		}
 
-		var expectedFiles []extensionsv1alpha1.File
 		if useGardenerNodeAgentEnabled {
-			systemdSysctlUnit.Files = append(systemdSysctlUnit.Files, kernelSettingsFile)
-		} else {
-			expectedFiles = append(expectedFiles, kernelSettingsFile)
+			systemdSysctlUnit.FilePaths = []string{"/etc/sysctl.d/99-k8s-general.conf"}
 		}
 
 		Expect(units).To(ConsistOf(systemdSysctlUnit))
-		Expect(files).To(ConsistOf(expectedFiles))
+		Expect(files).To(ConsistOf(kernelSettingsFile))
 	},
 		Entry("should return the expected units and files", "1.24.0", "", nil, nil, false),
 		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set", "1.24.0", kubeletSysctlConfig, pointer.Bool(true), nil, false),

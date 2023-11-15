@@ -69,7 +69,25 @@ EnvironmentFile=/etc/environment
 ExecStart=` + pathInitScript + `
 [Install]
 WantedBy=multi-user.target`),
-			Files: []extensionsv1alpha1.File{{
+			FilePaths: []string{pathInitScript},
+		}}
+
+		nodeInitFiles = []extensionsv1alpha1.File{
+			{
+				Path:        nodeagentv1alpha1.BootstrapTokenFilePath,
+				Permissions: pointer.Int32(0640),
+				Content: extensionsv1alpha1.FileContent{
+					Inline: &extensionsv1alpha1.FileContentInline{
+						// The bootstrap token will be created by the machine-controller-manager when creating an actual
+						// machine, and it will replace this "magic" string with the actual token in the user data. See
+						// https://github.com/gardener/gardener/blob/master/docs/extensions/operatingsystemconfig.md#bootstrap-tokens
+						// for more details.
+						Data: "<<BOOTSTRAP_TOKEN>>",
+					},
+					TransmitUnencoded: pointer.Bool(true),
+				},
+			},
+			{
 				Path:        pathInitScript,
 				Permissions: pointer.Int32(0755),
 				Content: extensionsv1alpha1.FileContent{
@@ -78,23 +96,8 @@ WantedBy=multi-user.target`),
 						Data:     utils.EncodeBase64(initScript),
 					},
 				},
-			}},
-		}}
-
-		nodeInitFiles = []extensionsv1alpha1.File{{
-			Path:        nodeagentv1alpha1.BootstrapTokenFilePath,
-			Permissions: pointer.Int32(0640),
-			Content: extensionsv1alpha1.FileContent{
-				Inline: &extensionsv1alpha1.FileContentInline{
-					// The bootstrap token will be created by the machine-controller-manager when creating an actual
-					// machine, and it will replace this "magic" string with the actual token in the user data. See
-					// https://github.com/gardener/gardener/blob/master/docs/extensions/operatingsystemconfig.md#bootstrap-tokens
-					// for more details.
-					Data: "<<BOOTSTRAP_TOKEN>>",
-				},
-				TransmitUnencoded: pointer.Bool(true),
 			},
-		}}
+		}
 	)
 
 	// The gardener-node-init script above will bootstrap the gardener-node-agent. This means that the unit file for

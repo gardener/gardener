@@ -75,37 +75,7 @@ EnvironmentFile=/etc/environment
 ExecStart=/var/lib/gardener-node-agent/init.sh
 [Install]
 WantedBy=multi-user.target`),
-					Files: []extensionsv1alpha1.File{{
-						Path:        "/var/lib/gardener-node-agent/init.sh",
-						Permissions: pointer.Int32(0755),
-						Content: extensionsv1alpha1.FileContent{
-							Inline: &extensionsv1alpha1.FileContentInline{
-								Encoding: "b64",
-								Data: utils.EncodeBase64([]byte(`#!/usr/bin/env bash
-
-set -o errexit
-set -o nounset
-set -o pipefail
-
-echo "> Prepare temporary directory for image pull and mount"
-tmp_dir="$(mktemp -d)"
-trap 'ctr images unmount "$tmp_dir" && rm -rf "$tmp_dir"' EXIT
-
-echo "> Pull gardener-node-agent image and mount it to the temporary directory"
-ctr images pull  "` + image + `" --hosts-dir "/etc/containerd/certs.d"
-ctr images mount "` + image + `" "$tmp_dir"
-
-echo "> Copy gardener-node-agent binary to host (/opt/bin) and make it executable"
-mkdir -p "/opt/bin"
-cp -f "$tmp_dir/gardener-node-agent" "/opt/bin"
-chmod +x "/opt/bin/gardener-node-agent"
-
-echo "> Bootstrap gardener-node-agent"
-exec "/opt/bin/gardener-node-agent" bootstrap --config="/var/lib/gardener-node-agent/config.yaml"
-`)),
-							},
-						},
-					}},
+					FilePaths: []string{"/var/lib/gardener-node-agent/init.sh"},
 				}))
 				Expect(files).To(ConsistOf(
 					extensionsv1alpha1.File{
@@ -144,6 +114,37 @@ logFormat: ""
 logLevel: ""
 server: {}
 `))}},
+					},
+					extensionsv1alpha1.File{
+						Path:        "/var/lib/gardener-node-agent/init.sh",
+						Permissions: pointer.Int32(0755),
+						Content: extensionsv1alpha1.FileContent{
+							Inline: &extensionsv1alpha1.FileContentInline{
+								Encoding: "b64",
+								Data: utils.EncodeBase64([]byte(`#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+echo "> Prepare temporary directory for image pull and mount"
+tmp_dir="$(mktemp -d)"
+trap 'ctr images unmount "$tmp_dir" && rm -rf "$tmp_dir"' EXIT
+
+echo "> Pull gardener-node-agent image and mount it to the temporary directory"
+ctr images pull  "` + image + `" --hosts-dir "/etc/containerd/certs.d"
+ctr images mount "` + image + `" "$tmp_dir"
+
+echo "> Copy gardener-node-agent binary to host (/opt/bin) and make it executable"
+mkdir -p "/opt/bin"
+cp -f "$tmp_dir/gardener-node-agent" "/opt/bin"
+chmod +x "/opt/bin/gardener-node-agent"
+
+echo "> Bootstrap gardener-node-agent"
+exec "/opt/bin/gardener-node-agent" bootstrap --config="/var/lib/gardener-node-agent/config.yaml"
+`)),
+							},
+						},
 					},
 				))
 			})
@@ -206,8 +207,7 @@ server: {}
 
 				writeFilesToDiskScript, err := operatingsystemconfig.FilesToDiskScript(context.Background(), nil, "", files)
 				Expect(err).NotTo(HaveOccurred())
-				writeUnitsToDiskScript, err := operatingsystemconfig.UnitsToDiskScript(context.Background(), nil, "", units)
-				Expect(err).NotTo(HaveOccurred())
+				writeUnitsToDiskScript := operatingsystemconfig.UnitsToDiskScript(units)
 
 				// best-effort check: ensure the node init configuration is not exceeding 4KB in size
 				Expect(utf8.RuneCountInString(writeFilesToDiskScript + writeUnitsToDiskScript)).To(BeNumerically("<", 4096))

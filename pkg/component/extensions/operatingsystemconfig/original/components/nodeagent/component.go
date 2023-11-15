@@ -70,21 +70,27 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		return nil, nil, fmt.Errorf("failed generating files: %w", err)
 	}
 
-	return []extensionsv1alpha1.Unit{{
+	files = append(files, extensionsv1alpha1.File{
+		Path:        v1beta1constants.OperatingSystemConfigFilePathBinaries + "/gardener-node-agent",
+		Permissions: pointer.Int32(0755),
+		Content: extensionsv1alpha1.FileContent{
+			ImageRef: &extensionsv1alpha1.FileContentImageRef{
+				Image:           ctx.Images[imagevector.ImageNameGardenerNodeAgent].String(),
+				FilePathInImage: "/gardener-node-agent",
+			},
+		},
+	})
+
+	nodeAgentUnit := extensionsv1alpha1.Unit{
 		Name:    nodeagentv1alpha1.UnitName,
 		Enable:  pointer.Bool(true),
 		Content: pointer.String(UnitContent()),
-		Files: append(files, extensionsv1alpha1.File{
-			Path:        v1beta1constants.OperatingSystemConfigFilePathBinaries + "/gardener-node-agent",
-			Permissions: pointer.Int32(0755),
-			Content: extensionsv1alpha1.FileContent{
-				ImageRef: &extensionsv1alpha1.FileContentImageRef{
-					Image:           ctx.Images[imagevector.ImageNameGardenerNodeAgent].String(),
-					FilePathInImage: "/gardener-node-agent",
-				},
-			},
-		}),
-	}}, nil, nil
+	}
+	for _, file := range files {
+		nodeAgentUnit.FilePaths = append(nodeAgentUnit.FilePaths, file.Path)
+	}
+
+	return []extensionsv1alpha1.Unit{nodeAgentUnit}, files, nil
 }
 
 // UnitContent returns the systemd unit content for the gardener-node-agent unit.
