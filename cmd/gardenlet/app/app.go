@@ -28,6 +28,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
+	"golang.org/x/time/rate"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -504,33 +505,94 @@ func recreateDeletedManagedResourceSecrets(ctx context.Context, c client.Client)
 		return err
 	}
 
+	var (
+		tasks   []flow.TaskFn
+		limiter = rate.NewLimiter(rate.Limit(20), 20)
+	)
 	for _, temp := range tempSecretList.Items {
-		originalName := temp.Labels[tempSecretOldNameLabel]
-		original := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: originalName, Namespace: temp.Namespace}}
+		temp := temp
+		tasks = append(tasks, func(ctx context.Context) error {
+			originalName := temp.Labels[tempSecretOldNameLabel]
+			original := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: originalName, Namespace: temp.Namespace}}
 
-		if err := c.Get(ctx, client.ObjectKeyFromObject(original), original); err != nil {
-			if apierrors.IsNotFound(err) {
-				// original secret is not found so we recreate it
-				original := temp.DeepCopy()
-				delete(original.Labels, tempSecretLabel)
-				delete(original.Labels, tempSecretOldNameLabel)
+			if err := limiter.Wait(ctx); err != nil {
+				return err
+			}
+
+			if err := c.Get(ctx, client.ObjectKeyFromObject(original), original); err != nil {
+				if apierrors.IsNotFound(err) {
+					// original secret is not found so we recreate it
+					original := temp.DeepCopy()
+					delete(original.Labels, tempSecretLabel)
+					delete(original.Labels, tempSecretOldNameLabel)
+					original.ResourceVersion = ""
+					original.Name = originalName
+
+					if err := c.Create(ctx, original); err != nil {
+						return fmt.Errorf("failed to recreate the original secret %w", err)
+					}
+					if err := c.Delete(ctx, &temp); client.IgnoreNotFound(err) != nil {
+						return err
+					}
+					return nil
+				}
+
+				return err
+			}
+
+			// the original secret exists. check if the finalizer and deletion timestamp are there
+			if original.DeletionTimestamp != nil && slices.Contains(original.Finalizers, grmFinalizer) {
+				if err := removeFinalizersAndWait(ctx, c, original.DeepCopy()); err != nil {
+					return err
+				}
+
+				// zero meta info
+				original.DeletionTimestamp = nil
 				original.ResourceVersion = ""
-				original.Name = originalName
+				original.Finalizers = nil
 
 				if err := c.Create(ctx, original); err != nil {
 					return fmt.Errorf("failed to recreate the original secret %w", err)
 				}
-				if err := c.Delete(ctx, &temp); client.IgnoreNotFound(err) != nil {
-					return err
-				}
-				continue
 			}
 
-			return err
-		}
+			// secret was already recreated. just delete the temporary one
+			if err := c.Delete(ctx, &temp); client.IgnoreNotFound(err) != nil {
+				return err
+			}
+			return nil
+		})
+	}
 
-		// the original secret exists. check if the finalizer and deletion timestamp are there
-		if original.DeletionTimestamp != nil && slices.Contains(original.Finalizers, grmFinalizer) {
+	if err := flow.Parallel(tasks...)(ctx); err != nil {
+		return err
+	}
+
+	secretsToRecreate, err := getSecretsToRecreate(ctx, c)
+	if err != nil {
+		return fmt.Errorf("failed listing secrets for recreation %w", err)
+	}
+
+	tasks = []flow.TaskFn{}
+	for _, original := range secretsToRecreate {
+		original := original
+		tasks = append(tasks, func(ctx context.Context) error {
+			tempSecret := original.DeepCopy()
+			tempSecret.Name = "tmp-" + original.Name
+			metav1.SetMetaDataLabel(&tempSecret.ObjectMeta, tempSecretLabel, "true")
+			metav1.SetMetaDataLabel(&tempSecret.ObjectMeta, tempSecretOldNameLabel, original.Name)
+			tempSecret.DeletionTimestamp = nil
+			tempSecret.ResourceVersion = ""
+			tempSecret.Finalizers = nil
+
+			if err := limiter.Wait(ctx); err != nil {
+				return err
+			}
+
+			if err := c.Create(ctx, tempSecret); err != nil {
+				return fmt.Errorf("failed to create a temporary secret %w", err)
+			}
+
 			if err := removeFinalizersAndWait(ctx, c, original.DeepCopy()); err != nil {
 				return err
 			}
@@ -540,53 +602,17 @@ func recreateDeletedManagedResourceSecrets(ctx context.Context, c client.Client)
 			original.ResourceVersion = ""
 			original.Finalizers = nil
 
-			if err := c.Create(ctx, original); err != nil {
+			// recreate the original and delete the temporary one
+			if err := c.Create(ctx, &original); err != nil {
 				return fmt.Errorf("failed to recreate the original secret %w", err)
 			}
-		}
-
-		// secret was already recreated. just delete the temporary one
-		if err := c.Delete(ctx, &temp); client.IgnoreNotFound(err) != nil {
-			return err
-		}
+			if err := c.Delete(ctx, tempSecret); client.IgnoreNotFound(err) != nil {
+				return err
+			}
+			return nil
+		})
 	}
-
-	secretsToRecreate, err := getSecretsToRecreate(ctx, c)
-	if err != nil {
-		return fmt.Errorf("failed listing secrets for recreation %w", err)
-	}
-
-	for _, original := range secretsToRecreate {
-		tempSecret := original.DeepCopy()
-		tempSecret.Name = "tmp-" + original.Name
-		metav1.SetMetaDataLabel(&tempSecret.ObjectMeta, tempSecretLabel, "true")
-		metav1.SetMetaDataLabel(&tempSecret.ObjectMeta, tempSecretOldNameLabel, original.Name)
-		tempSecret.DeletionTimestamp = nil
-		tempSecret.ResourceVersion = ""
-		tempSecret.Finalizers = nil
-
-		if err := c.Create(ctx, tempSecret); err != nil {
-			return fmt.Errorf("failed to create a temporary secret %w", err)
-		}
-
-		if err := removeFinalizersAndWait(ctx, c, original.DeepCopy()); err != nil {
-			return err
-		}
-
-		// zero meta info
-		original.DeletionTimestamp = nil
-		original.ResourceVersion = ""
-		original.Finalizers = nil
-
-		// recreate the original and delete the temporary one
-		if err := c.Create(ctx, &original); err != nil {
-			return fmt.Errorf("failed to recreate the original secret %w", err)
-		}
-		if err := c.Delete(ctx, tempSecret); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-	return nil
+	return flow.Parallel(tasks...)(ctx)
 }
 
 // TODO(dimityrmirchev): Remove this code after v1.87 has been released.
