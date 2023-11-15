@@ -104,7 +104,6 @@ SendDeletedClustersLogsToDefaultClient true
 CleanExpiredClientsPeriod 1h
 ControllerSyncTimeout 120s
 PreservedLabels origin,namespace_name,pod_name
-TenantID operator
 LogLevel info
 Url http://logging.garden.svc:3100/vali/api/v1/push
 BatchWait 60s
