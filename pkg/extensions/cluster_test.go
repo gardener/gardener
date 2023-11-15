@@ -114,26 +114,12 @@ var _ = Describe("Cluster", func() {
 		})
 
 		It("should not sync cloudprofile, shoot and seed to cluster if seed is not assigned to shoot", func() {
-			Expect(fakeGardenClient.Create(ctx, expectedCloudProfile)).To(Succeed())
-			Expect(fakeGardenClient.Create(ctx, expectedSeed)).To(Succeed())
-			Expect(fakeGardenClient.Create(ctx, expectedShoot)).To(Succeed())
-			Expect(fakeSeedClient.Create(ctx, cluster)).To(Succeed())
-
 			Expect(SyncClusterResourceToSeed(ctx, fakeSeedClient, cluster.Name, expectedShoot, expectedCloudProfile, expectedSeed)).To(Succeed())
-			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(cluster), cluster)).To(Succeed())
-
-			Expect(cluster.Spec.CloudProfile.Object).To(BeNil())
-			Expect(cluster.Spec.Seed.Object).To(BeNil())
-			Expect(cluster.Spec.Shoot.Object).To(BeNil())
+			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(cluster), cluster)).To(BeNotFoundError())
 		})
 
 		It("should sync cloudprofile, shoot and seed to cluster", func() {
 			expectedShoot.Spec.SeedName = pointer.String(expectedSeed.Name)
-
-			Expect(fakeGardenClient.Create(ctx, expectedCloudProfile)).To(Succeed())
-			Expect(fakeGardenClient.Create(ctx, expectedSeed)).To(Succeed())
-			Expect(fakeGardenClient.Create(ctx, expectedShoot)).To(Succeed())
-			Expect(fakeSeedClient.Create(ctx, cluster)).To(Succeed())
 
 			Expect(SyncClusterResourceToSeed(ctx, fakeSeedClient, cluster.Name, expectedShoot, expectedCloudProfile, expectedSeed)).To(Succeed())
 			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(cluster), cluster)).To(Succeed())
@@ -210,9 +196,6 @@ var _ = Describe("Cluster", func() {
 		})
 
 		It("should get the cluster", func() {
-			Expect(fakeGardenClient.Create(ctx, expectedCloudProfile)).To(Succeed())
-			Expect(fakeGardenClient.Create(ctx, expectedSeed)).To(Succeed())
-			Expect(fakeGardenClient.Create(ctx, expectedShoot)).To(Succeed())
 			Expect(fakeSeedClient.Create(ctx, cluster)).To(Succeed())
 
 			cluster, err := GetCluster(ctx, fakeSeedClient, cluster.Name)
@@ -255,7 +238,6 @@ var _ = Describe("Cluster", func() {
 
 		It("should return an error because the cloudprofile cannot be decoded from the cluster", func() {
 			cluster.Spec.CloudProfile.Raw = []byte(`{`)
-			Expect(fakeSeedClient.Create(ctx, cluster)).To(Succeed())
 
 			cloudProfile, err := CloudProfileFromCluster(cluster)
 			Expect(err).To(MatchError(ContainSubstring("unexpected end of JSON input")))
@@ -304,7 +286,6 @@ var _ = Describe("Cluster", func() {
 
 		It("should return an error because the seed cannot be decoded from the cluster", func() {
 			cluster.Spec.Seed.Raw = []byte(`{`)
-			Expect(fakeSeedClient.Create(ctx, cluster)).To(Succeed())
 
 			seed, err := SeedFromCluster(cluster)
 			Expect(err).To(MatchError(ContainSubstring("unexpected end of JSON input")))
@@ -353,7 +334,6 @@ var _ = Describe("Cluster", func() {
 
 		It("should return an error because the shoot cannot be decoded from the cluster", func() {
 			cluster.Spec.Shoot.Raw = []byte(`{`)
-			Expect(fakeSeedClient.Create(ctx, cluster)).To(Succeed())
 
 			shoot, err := ShootFromCluster(cluster)
 			Expect(err).To(MatchError(ContainSubstring("unexpected end of JSON input")))

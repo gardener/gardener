@@ -19,6 +19,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -39,7 +40,6 @@ var _ = Describe("Associations", func() {
 
 		namespace = "some-namespace"
 
-		obj                    client.Object
 		quota                  *gardencorev1beta1.Quota
 		shoot                  *gardencorev1beta1.Shoot
 		backupbucket           *gardencorev1beta1.BackupBucket
@@ -70,82 +70,41 @@ var _ = Describe("Associations", func() {
 		}
 	})
 
-	Describe("#DetermineShootsAssociatedTo", func() {
-		It("should return shoots associated to cloudprofile", func() {
-			obj = &gardencorev1beta1.CloudProfile{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "cloudprofile",
-				},
+	DescribeTable("#DetermineShootsAssociatedTo",
+		func(obj client.Object, mutateFunc func(shoot *gardencorev1beta1.Shoot, obj client.Object), errorMatcher gomegatypes.GomegaMatcher) {
+			mutateFunc(shoot, obj)
+			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
+
+			shoots, err := DetermineShootsAssociatedTo(ctx, fakeClient, obj)
+			Expect(err).To(errorMatcher)
+
+			if err == nil {
+				Expect(shoots).To(HaveLen(1))
+				Expect(shoots).To(ConsistOf(shoot.Namespace + "/" + shoot.Name))
+			} else {
+				Expect(shoots).To(BeEmpty())
 			}
+		},
 
-			shoot.Spec.CloudProfileName = obj.GetName()
-			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
-
-			shoots, err := DetermineShootsAssociatedTo(ctx, fakeClient, obj)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(shoots).To(HaveLen(1))
-			Expect(shoots).To(ConsistOf(shoot.Namespace + "/" + shoot.Name))
-		})
-
-		It("should return shoots associated to seed", func() {
-			obj = &gardencorev1beta1.Seed{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "seed",
-				},
-			}
-
-			shoot.Spec.SeedName = pointer.String(obj.GetName())
-			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
-
-			shoots, err := DetermineShootsAssociatedTo(ctx, fakeClient, obj)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(shoots).To(HaveLen(1))
-			Expect(shoots).To(ConsistOf(shoot.Namespace + "/" + shoot.Name))
-		})
-
-		It("should return shoots associated to secretbinding", func() {
-			obj = secretBinding.DeepCopy()
-
-			shoot.Spec.SecretBindingName = pointer.String(obj.GetName())
-			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
-
-			shoots, err := DetermineShootsAssociatedTo(ctx, fakeClient, obj)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(shoots).To(HaveLen(1))
-			Expect(shoots).To(ConsistOf(shoot.Namespace + "/" + shoot.Name))
-		})
-
-		It("should return shoots associated to exposureclass", func() {
-			obj = &gardencorev1beta1.ExposureClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "exposureclass",
-				},
-			}
-
-			shoot.Spec.ExposureClassName = pointer.String(obj.GetName())
-			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
-
-			shoots, err := DetermineShootsAssociatedTo(ctx, fakeClient, obj)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(shoots).To(HaveLen(1))
-			Expect(shoots).To(ConsistOf(shoot.Namespace + "/" + shoot.Name))
-		})
-
-		It("should return shoots associated to not supported type objects", func() {
-			obj = &gardencorev1beta1.BackupBucket{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "backupbucket",
-				},
-			}
-
-			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
-
-			shoots, err := DetermineShootsAssociatedTo(ctx, fakeClient, obj)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("unable to determine Shoot associations, due to unknown type"))
-			Expect(shoots).To(BeEmpty())
-		})
-	})
+		Entry("should return shoots associated to cloudprofile",
+			&gardencorev1beta1.CloudProfile{ObjectMeta: metav1.ObjectMeta{Name: "cloudprofile"}}, func(s *gardencorev1beta1.Shoot, obj client.Object) {
+				s.Spec.CloudProfileName = obj.GetName()
+			}, BeNil()),
+		Entry("should return shoots associated to seed",
+			&gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: "seed"}}, func(s *gardencorev1beta1.Shoot, obj client.Object) {
+				s.Spec.SeedName = pointer.String(obj.GetName())
+			}, BeNil()),
+		Entry("should return shoots associated to secretbinding",
+			&gardencorev1beta1.SecretBinding{ObjectMeta: metav1.ObjectMeta{Name: "secretbinding", Namespace: namespace}}, func(s *gardencorev1beta1.Shoot, obj client.Object) {
+				s.Spec.SecretBindingName = pointer.String(obj.GetName())
+			}, BeNil()),
+		Entry("should return shoots associated to exposureclass",
+			&gardencorev1beta1.ExposureClass{ObjectMeta: metav1.ObjectMeta{Name: "exposureclass"}}, func(s *gardencorev1beta1.Shoot, obj client.Object) {
+				s.Spec.ExposureClassName = pointer.String(obj.GetName())
+			}, BeNil()),
+		Entry("should return error if the object is of not supported type",
+			&gardencorev1beta1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: "backupbucket"}}, func(s *gardencorev1beta1.Shoot, obj client.Object) {}, HaveOccurred()),
+	)
 
 	Describe("#DetermineSecretBindingAssociations", func() {
 		It("should return secretBinding associated to quota", func() {

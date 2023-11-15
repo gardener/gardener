@@ -99,13 +99,13 @@ var _ = Describe("ChartRenderer", func() {
 	})
 
 	Describe("#AsSecretData", func() {
-		It("should return renderet chart as secret data", func() {
+		It("should return rendered chart as secret data", func() {
 			chart, err := renderer.RenderEmbeddedFS(embeddedFS, alpineChartPath, "alpine", "default", map[string]string{})
 			Expect(err).ToNot(HaveOccurred())
 
 			data := chart.AsSecretData()
 			Expect(data).To(Not(BeNil()))
-			Expect(data["alpine_templates_alpine-pod.yaml"]).NotTo(BeNil())
+			Expect(string(data["alpine_templates_alpine-pod.yaml"])).To(Equal(alpinePod))
 		})
 	})
 })
