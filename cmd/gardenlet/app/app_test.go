@@ -48,6 +48,8 @@ var _ = Describe("Recreate Managed Resource Secrets", func() {
 		secret4         *corev1.Secret
 		tempSecret4     *corev1.Secret
 		expectedSecret4 *corev1.Secret
+
+		secret5 *corev1.Secret
 	)
 
 	BeforeEach(func() {
@@ -191,6 +193,21 @@ var _ = Describe("Recreate Managed Resource Secrets", func() {
 				"test": []byte("bar1"),
 			},
 		}
+
+		secret5 = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "secret5",
+				Namespace: "garden",
+				Labels: map[string]string{
+					"resources.gardener.cloud/garbage-collectable-reference": "true",
+				},
+				Finalizers: []string{"resources.gardener.cloud/gardener-resource-manager"},
+			},
+			Immutable: pointer.Bool(true),
+			Data: map[string][]byte{
+				"test": []byte("foo"),
+			},
+		}
 	})
 
 	It("should recreate the managed resource secrets", func() {
@@ -231,5 +248,22 @@ var _ = Describe("Recreate Managed Resource Secrets", func() {
 		secretList := &corev1.SecretList{}
 		Expect(fakeClient.List(ctx, secretList)).To(Succeed())
 		Expect(secretList.Items).To(HaveLen(4))
+	})
+
+	It("should not recreate the managed resource secret", func() {
+		Expect(fakeClient.Create(ctx, secret5)).To(Succeed())
+
+		expected := &corev1.Secret{}
+		Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret5), expected)).To(Succeed())
+
+		Expect(recreateDeletedManagedResourceSecrets(ctx, fakeClient)).To(Succeed())
+
+		got := &corev1.Secret{}
+		Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret5), got)).To(Succeed())
+		Expect(expected).To(Equal(got))
+
+		secretList := &corev1.SecretList{}
+		Expect(fakeClient.List(ctx, secretList)).To(Succeed())
+		Expect(secretList.Items).To(HaveLen(1))
 	})
 })

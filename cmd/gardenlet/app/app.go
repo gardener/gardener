@@ -620,7 +620,7 @@ func getSecretsToRecreate(ctx context.Context, c client.Client) ([]corev1.Secret
 		return nil, err
 	}
 	secretsToRecreate := slices.DeleteFunc(secretList.Items, func(s corev1.Secret) bool {
-		return !slices.Contains(s.Finalizers, grmFinalizer)
+		return !slices.Contains(s.Finalizers, grmFinalizer) || s.DeletionTimestamp == nil
 	})
 	return secretsToRecreate, nil
 }
