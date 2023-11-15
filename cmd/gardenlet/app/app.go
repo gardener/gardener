@@ -495,7 +495,7 @@ const (
 	tempSecretOldNameLabel = "resources.gardener.cloud/temp-secret-old-name"
 )
 
-// TODO(dimityrmirchev): Remove this code after v1.84 has been released.
+// TODO(dimityrmirchev): Remove this code after v1.87 has been released.
 func recreateDeletedManagedResourceSecrets(ctx context.Context, c client.Client) error {
 	// check for already existing temp secrets
 	// these can occur in case the process is killed during cleanup phase
@@ -538,7 +538,7 @@ func recreateDeletedManagedResourceSecrets(ctx context.Context, c client.Client)
 			// zero meta info
 			original.DeletionTimestamp = nil
 			original.ResourceVersion = ""
-			original.Finalizers = []string{}
+			original.Finalizers = nil
 
 			if err := c.Create(ctx, original); err != nil {
 				return fmt.Errorf("failed to recreate the original secret %w", err)
@@ -558,12 +558,12 @@ func recreateDeletedManagedResourceSecrets(ctx context.Context, c client.Client)
 
 	for _, original := range secretsToRecreate {
 		tempSecret := original.DeepCopy()
-		tempSecret.Name = original.Name + "-tmp"
+		tempSecret.Name = "tmp-" + original.Name
 		metav1.SetMetaDataLabel(&tempSecret.ObjectMeta, tempSecretLabel, "true")
 		metav1.SetMetaDataLabel(&tempSecret.ObjectMeta, tempSecretOldNameLabel, original.Name)
 		tempSecret.DeletionTimestamp = nil
 		tempSecret.ResourceVersion = ""
-		tempSecret.Finalizers = []string{}
+		tempSecret.Finalizers = nil
 
 		if err := c.Create(ctx, tempSecret); err != nil {
 			return fmt.Errorf("failed to create a temporary secret %w", err)
@@ -576,7 +576,7 @@ func recreateDeletedManagedResourceSecrets(ctx context.Context, c client.Client)
 		// zero meta info
 		original.DeletionTimestamp = nil
 		original.ResourceVersion = ""
-		original.Finalizers = []string{}
+		original.Finalizers = nil
 
 		// recreate the original and delete the temporary one
 		if err := c.Create(ctx, &original); err != nil {
@@ -589,7 +589,7 @@ func recreateDeletedManagedResourceSecrets(ctx context.Context, c client.Client)
 	return nil
 }
 
-// TODO(dimityrmirchev): Remove this code after v1.84 has been released.
+// TODO(dimityrmirchev): Remove this code after v1.87 has been released.
 func removeFinalizersAndWait(ctx context.Context, c client.Client, secret *corev1.Secret) error {
 	patch := client.StrategicMergeFrom(secret.DeepCopy())
 	secret.Finalizers = []string{}
@@ -603,7 +603,7 @@ func removeFinalizersAndWait(ctx context.Context, c client.Client, secret *corev
 	return kubernetesutils.WaitUntilResourceDeleted(cancelCtx, c, goneSecret, 1*time.Second)
 }
 
-// TODO(dimityrmirchev): Remove this code after v1.84 has been released.
+// TODO(dimityrmirchev): Remove this code after v1.87 has been released.
 func getSecretsToRecreate(ctx context.Context, c client.Client) ([]corev1.Secret, error) {
 	selector := labels.NewSelector()
 	isGC, err := labels.NewRequirement(references.LabelKeyGarbageCollectable, selection.Equals, []string{"true"})
