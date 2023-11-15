@@ -33,6 +33,7 @@ import (
 const (
 	managedResourceControlName = "machine-controller-manager"
 	clusterRoleName            = "system:machine-controller-manager-runtime"
+	unsupportedClusterRoleName = "system:machine-controller-manager-seed"
 )
 
 // NewBootstrapper creates a new instance of DeployWaiter for the machine-controller-manager bootstrapper.
