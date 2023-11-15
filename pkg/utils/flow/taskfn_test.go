@@ -18,6 +18,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo/v2"
@@ -136,6 +139,73 @@ var _ = Describe("task functions", func() {
 
 			Expect(flow.ParallelExitOnError(f1, f2)(ctx)).To(MatchError("task1"))
 			Eventually(cancelled).Should(BeClosed())
+		})
+	})
+
+	Describe("ParallelN", func() {
+		It("should run the tasks", func() {
+			var (
+				mut         = sync.Mutex{}
+				m           = map[string]struct{}{}
+				ctx         = context.Background()
+				n           = 2
+				activeTasks int32
+				wg          = sync.WaitGroup{}
+				done        = make(chan struct{})
+				fn          = func(key string) flow.TaskFn {
+					return func(ctx context.Context) error {
+						atomic.AddInt32(&activeTasks, 1)
+						defer atomic.AddInt32(&activeTasks, -1)
+
+						// wait for some time so other tasks can start
+						time.Sleep(time.Millisecond * 100)
+
+						mut.Lock()
+						m[key] = struct{}{}
+						mut.Unlock()
+						return nil
+					}
+				}
+			)
+
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				// continuously check that activeTasks do not go over n
+				ticker := time.NewTicker(10 * time.Millisecond)
+				defer ticker.Stop()
+				for {
+					select {
+					case <-done:
+						return
+					case <-ticker.C:
+						Expect(atomic.LoadInt32(&activeTasks)).To(BeNumerically("<=", int32(n)))
+					}
+				}
+			}()
+			Expect(flow.ParallelN(n, fn("1"), fn("2"), fn("3"))(ctx)).To(Succeed())
+			Expect(m).To(HaveLen(3))
+
+			done <- struct{}{}
+			close(done)
+			wg.Wait()
+		})
+
+		It("should collect the errors", func() {
+			var (
+				ctx = context.Background()
+				fn  = func(err error) flow.TaskFn {
+					return func(ctx context.Context) error {
+						return err
+					}
+				}
+			)
+			err1 := errors.New("one")
+			err2 := errors.New("two")
+			err := flow.ParallelN(2, fn(err1), fn(nil), fn(err2))(ctx)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(BeAssignableToTypeOf(&multierror.Error{}))
+			Expect(err.(*multierror.Error).Errors).To(ConsistOf(err1, err2))
 		})
 	})
 })
