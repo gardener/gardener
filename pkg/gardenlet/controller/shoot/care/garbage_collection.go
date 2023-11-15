@@ -84,12 +84,7 @@ func (g *GarbageCollection) Collect(ctx context.Context) {
 
 // PerformGarbageCollectionSeed performs garbage collection in the Shoot namespace in the Seed cluster
 func (g *GarbageCollection) performGarbageCollectionSeed(ctx context.Context) error {
-	podList := &corev1.PodList{}
-	if err := g.seedClient.List(ctx, podList, client.InNamespace(g.shoot.SeedNamespace)); err != nil {
-		return err
-	}
-
-	return g.deleteStalePods(ctx, g.seedClient, podList)
+	return g.deleteStalePods(ctx, g.seedClient, g.shoot.SeedNamespace)
 }
 
 // PerformGarbageCollectionShoot performs garbage collection in the kube-system namespace in the Shoot
@@ -100,18 +95,18 @@ func (g *GarbageCollection) performGarbageCollectionShoot(ctx context.Context, s
 		namespace = metav1.NamespaceAll
 	}
 
-	podList := &corev1.PodList{}
-	if err := shootClient.List(ctx, podList, client.InNamespace(namespace)); err != nil {
-		return err
-	}
-
-	return g.deleteStalePods(ctx, shootClient, podList)
+	return g.deleteStalePods(ctx, shootClient, namespace)
 }
 
 // GardenerDeletionGracePeriod is the default grace period for Gardener's force deletion methods.
 const GardenerDeletionGracePeriod = 5 * time.Minute
 
-func (g *GarbageCollection) deleteStalePods(ctx context.Context, c client.Client, podList *corev1.PodList) error {
+func (g *GarbageCollection) deleteStalePods(ctx context.Context, c client.Client, namespace string) error {
+	podList := &corev1.PodList{}
+	if err := c.List(ctx, podList, client.InNamespace(namespace)); err != nil {
+		return err
+	}
+
 	var result error
 
 	for _, pod := range podList.Items {
