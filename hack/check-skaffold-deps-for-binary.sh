@@ -71,8 +71,7 @@ go list -f '{{ join .Deps "\n" }}' "./cmd/$binary_name" |\
   sort -f |\
   uniq > "$path_actual_dependencies"
 
-# always add vendor directory and VERSION file
-echo "vendor" >> "$path_actual_dependencies"
+# always add VERSION file
 echo "VERSION" >> "$path_actual_dependencies"
 
 # sort dependencies

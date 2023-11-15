@@ -42,6 +42,25 @@ add_keep_object_annotation=false
 k8s_io_api_approval_reason="unapproved, temporarily squatting"
 crd_options=""
 
+SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+VGOPATH="$VGOPATH"
+
+# Ensure that if GOPATH is set, the GOPATH/{bin,pkg} directory exists. This seems to be not always
+# the case in certain environments like Prow. As we will create a symlink against the bin folder we
+# need to make sure that the bin directory is present in the GOPATH.
+if [ -n "$GOPATH" ] && [ ! -d "$GOPATH/bin" ]; then mkdir -p "$GOPATH/bin"; fi
+if [ -n "$GOPATH" ] && [ ! -d "$GOPATH/pkg" ]; then mkdir -p "$GOPATH/pkg"; fi
+
+VIRTUAL_GOPATH="$(mktemp -d)"
+trap 'rm -rf "$VIRTUAL_GOPATH"' EXIT
+
+# Setup virtual GOPATH so the codegen tools work as expected.
+(cd "$SCRIPT_DIR/.."; go mod download && "$VGOPATH" -o "$VIRTUAL_GOPATH")
+
+export GOROOT="${GOROOT:-"$(go env GOROOT)"}"
+export GOPATH="$VIRTUAL_GOPATH"
+export GO111MODULE=off
+
 get_group_package () {
   case "$1" in
   "extensions.gardener.cloud")
@@ -63,7 +82,7 @@ get_group_package () {
     echo "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
     ;;
   "autoscaling.k8s.io")
-    echo "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/..."
+    echo "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
     ;;
   "machine.sapcloud.io")
     echo "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -93,7 +112,7 @@ generate_group () {
   if [ -z "$package" ] ; then
     exit 1
   fi
-  local package_path="$(go list -f '{{ .Dir }}' "$package" | tr '\n' ';')"
+  local package_path="$(go list -f '{{ .Dir }}' "$package")"
   if [ -z "$package_path" ] ; then
     exit 1
   fi
@@ -105,13 +124,22 @@ generate_group () {
     # etcd-druid, due to adverse interaction with VPA.
     # See https://github.com/gardener/gardener/pull/6850 and https://github.com/gardener/gardener/pull/8560#discussion_r1347470394
     # TODO(shreyas-s-rao): Remove this workaround as soon as the scale subresource is supported properly.
-    etcd_api_types_file="${package_path%;}/types_etcd.go"
+    etcd_druid_dir="$(go list -f '{{ .Dir }}' "github.com/gardener/etcd-druid")"
+    etcd_api_types_file="${etcd_druid_dir}/api/v1alpha1/types_etcd.go"
+    # Create a local copy outside the mod cache path in order to patch the types file via sed.
+    etcd_api_types_backup="$(mktemp -d)/types_etcd.go"
+    cp "$etcd_api_types_file" "$etcd_api_types_backup"
+    chmod +w "$etcd_api_types_file" "$etcd_druid_dir/api/v1alpha1/"
+    trap 'cp "$etcd_api_types_backup" "$etcd_api_types_file" && chmod -w "$etcd_druid_dir/api/v1alpha1/"' EXIT
     sed -i '/\/\/ +kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas,selectorpath=.status.labelSelector/d' "$etcd_api_types_file"
     $generate
-    git checkout "$etcd_api_types_file"
   elif [[ "$group" == "autoscaling.k8s.io" ]]; then
     # See https://github.com/kubernetes/autoscaler/blame/master/vertical-pod-autoscaler/hack/generate-crd-yaml.sh#L43-L45
     generator_output="$(mktemp -d)/controller-gen.log"
+    # As go list does not work with symlinks we need to manually construct the package paths to correctly
+    # generate v1beta2 CRDs.
+    package_path="${package_path};${package_path}beta2;"
+    generate="controller-gen crd"$crd_options" paths="$package_path" output:crd:dir="$output_dir_temp" output:stdout"
     $generate &> "$generator_output" ||:
     grep -v -e 'map keys must be strings, not int' -e 'not all generators ran successfully' -e 'usage' "$generator_output" && { echo "Failed to generate CRD YAMLs."; exit 1; }
   else

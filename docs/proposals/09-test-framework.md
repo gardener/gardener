@@ -59,7 +59,7 @@ spec:
   command: [bash, -c]
   args:
   - >-
-    go test -timeout=0 -mod=vendor ./test/integration/suite
+    go test -timeout=0 ./test/integration/suite
     --v -ginkgo.v -ginkgo.progress -ginkgo.no-color
     -ginkgo.focus="[GARDENER] [BETA]"
 ```
@@ -68,7 +68,7 @@ Using this approach, the overall number of testsuites is then reduced to a fixed
 ### Framework
 The new framework will consist of a common framework, a Gardener framework (integrating the commom framework), and a shoot framework (integrating the Gardener framework).
 
-All of these frameworks will have their own configuration that is exposed via commandline flags so that, for example, the shoot test framework can be executed by `go test -timeout=0 -mod=vendor ./test/integration/suite --v -ginkgo.v -ginkgo.focus="[SHOOT]" --kubecfg=/path/to/config --shoot-name=xx`.
+All of these frameworks will have their own configuration that is exposed via commandline flags so that, for example, the shoot test framework can be executed by `go test -timeout=0 ./test/integration/suite --v -ginkgo.v -ginkgo.focus="[SHOOT]" --kubecfg=/path/to/config --shoot-name=xx`.
 
 The available test labels should be declared in the code with predefined values and in a predefined order, so that everyone is aware about possible labels and the tests are labeled similarly across all integration tests. This approach is somehow similar to what Kubernetes is doing in their e2e test suite but with some more restrictions (compare [example k8s e2e test](https://github.com/kubernetes/kubernetes/blob/master/test/e2e/apps/deployment.go#L84)).<br>
 A possible solution to have consistent labeling would be to define them with every new `ginkgo.It` definition: `f.Beta().Flaky().It("my test")`, which internally orders them and would produce a ginkgo test with the text: `[BETA] [FLAKY] my test`.

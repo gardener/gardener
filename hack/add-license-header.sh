@@ -24,7 +24,6 @@ addlicense \
   -ignore ".idea/**" \
   -ignore ".vscode/**" \
   -ignore "dev/**" \
-  -ignore "vendor/**" \
   -ignore "**/*.md" \
   -ignore "**/*.html" \
   -ignore "**/*.yaml" \

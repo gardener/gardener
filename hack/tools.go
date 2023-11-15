@@ -21,6 +21,7 @@ package tools
 import (
 	_ "github.com/ahmetb/gen-crd-api-reference-docs"
 	_ "github.com/bronze1man/yaml2json"
+	_ "github.com/ironcore-dev/vgopath"
 	_ "github.com/onsi/ginkgo/v2/ginkgo"
 	_ "go.uber.org/mock/mockgen"
 	_ "golang.org/x/tools/cmd/goimports"

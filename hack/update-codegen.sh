@@ -42,13 +42,23 @@ AVAILABLE_CODEGEN_OPTIONS=(
   "nodeagent_groups"
 )
 
-# Friendly reminder if workspace location is not in $GOPATH
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-if [ "${SCRIPT_DIR}" != "$(realpath $GOPATH)/src/github.com/gardener/gardener/hack" ]; then
-  echo "'hack/update-codegen.sh' script does not work correctly if your workspace is outside GOPATH"
-  echo "Please check https://github.com/gardener/gardener/blob/master/docs/development/local_setup.md#get-the-sources"
-  exit 1
-fi
+SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+VGOPATH="$VGOPATH"
+
+# Ensure that if GOPATH is set, the GOPATH/{bin,pkg} directory exists. This seems to be not always
+# the case in certain environments like Prow. As we will create a symlink against the bin folder we
+# need to make sure that the bin directory is present in the GOPATH.
+if [ -n "$GOPATH" ] && [ ! -d "$GOPATH/bin" ]; then mkdir -p "$GOPATH/bin"; fi
+if [ -n "$GOPATH" ] && [ ! -d "$GOPATH/pkg" ]; then mkdir -p "$GOPATH/pkg"; fi
+
+VIRTUAL_GOPATH="$(mktemp -d)"
+trap 'rm -rf "$VIRTUAL_GOPATH"' EXIT
+
+# Setup virtual GOPATH so the codegen tools work as expected.
+(cd "$SCRIPT_DIR/.."; go mod download && "$VGOPATH" -o "$VIRTUAL_GOPATH")
+
+export GOROOT="${GOROOT:-"$(go env GOROOT)"}"
+export GOPATH="$VIRTUAL_GOPATH"
 
 # We need to explicitly pass GO111MODULE=off to k8s.io/code-generator as it is significantly slower otherwise,
 # see https://github.com/kubernetes/code-generator/issues/100.
@@ -536,7 +546,7 @@ else
             break
         fi
     done
-    
+
     if $valid; then
         valid_options+=("$option")
     else

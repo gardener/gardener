@@ -11,7 +11,7 @@ spec:
   command: [bash, -c]
   args:
   - >-
-    go test -timeout=0 -mod=vendor ./test/testmachinery/system/shoot_cp_migration
+    go test -timeout=0 ./test/testmachinery/system/shoot_cp_migration
     --v -ginkgo.v -ginkgo.show-node-events -ginkgo.no-color
     -target-seed-name=$SEED_NAME
     -shoot-name=$SHOOT_NAME

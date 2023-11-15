@@ -176,7 +176,6 @@ build:
             - plugin/pkg
             - third_party/controller-runtime/pkg/apiutil
             - third_party/gopkg.in/yaml.v2
-            - vendor
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'
@@ -276,7 +275,6 @@ build:
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
             - third_party/controller-runtime/pkg/apiutil
-            - vendor
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'
@@ -463,7 +461,6 @@ build:
             - plugin/pkg/shoot/vpa
             - plugin/pkg/utils
             - third_party/controller-runtime/pkg/apiutil
-            - vendor
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'
@@ -570,7 +567,6 @@ build:
             - pkg/utils/version
             - third_party/controller-runtime/pkg/apiutil
             - third_party/gopkg.in/yaml.v2
-            - vendor
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'
@@ -634,7 +630,6 @@ build:
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
             - third_party/controller-runtime/pkg/apiutil
-            - vendor
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'
@@ -712,7 +707,6 @@ build:
             - third_party/apiserver/pkg/apis/audit/v1alpha1
             - third_party/apiserver/pkg/apis/audit/v1beta1
             - third_party/controller-runtime/pkg/apiutil
-            - vendor
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'

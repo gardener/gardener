@@ -22,7 +22,6 @@ missing_license_header_files="$(addlicense \
   -ignore ".idea/**" \
   -ignore ".vscode/**" \
   -ignore "dev/**" \
-  -ignore "vendor/**" \
   -ignore "**/*.md" \
   -ignore "**/*.html" \
   -ignore "**/*.yaml" \
