@@ -597,10 +597,9 @@ func removeFinalizersAndWait(ctx context.Context, c client.Client, secret *corev
 		return fmt.Errorf("failed to patch the original secret %w", err)
 	}
 
-	goneSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secret.Name, Namespace: secret.Namespace}}
 	cancelCtx, cancel := context.WithTimeout(ctx, time.Second*10)
 	defer cancel()
-	return kubernetesutils.WaitUntilResourceDeleted(cancelCtx, c, goneSecret, 1*time.Second)
+	return kubernetesutils.WaitUntilResourceDeleted(cancelCtx, c, secret, 1*time.Second)
 }
 
 // TODO(dimityrmirchev): Remove this code after v1.87 has been released.
@@ -610,7 +609,7 @@ func getSecretsToRecreate(ctx context.Context, c client.Client) ([]corev1.Secret
 	if err != nil {
 		return nil, err
 	}
-	notTemp, err := labels.NewRequirement(tempSecretLabel, selection.DoesNotExist, []string{})
+	notTemp, err := labels.NewRequirement(tempSecretLabel, selection.DoesNotExist, nil)
 	if err != nil {
 		return nil, err
 	}
