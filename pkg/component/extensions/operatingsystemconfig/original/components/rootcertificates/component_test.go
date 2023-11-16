@@ -15,8 +15,6 @@
 package rootcertificates_test
 
 import (
-	"fmt"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
@@ -24,9 +22,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Component", func() {
@@ -44,29 +40,25 @@ var _ = Describe("Component", func() {
 			ctx = components.Context{CABundle: &caBundle}
 		})
 
-		testConfig := func(useGardenerNodeAgentEnabled bool) {
-			Context(fmt.Sprintf("UseGardenerNodeAgent: %v", useGardenerNodeAgentEnabled), func() {
-				It("should return nothing because the CABundle is empty", func() {
-					defer test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, useGardenerNodeAgentEnabled)()
-					ctx.CABundle = nil
+		It("should return nothing because the CABundle is empty", func() {
+			ctx.CABundle = nil
 
-					units, files, err := component.Config(ctx)
+			units, files, err := component.Config(ctx)
 
-					Expect(err).NotTo(HaveOccurred())
-					Expect(units).To(BeNil())
-					Expect(files).To(BeNil())
-				})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(units).To(BeNil())
+			Expect(files).To(BeNil())
+		})
 
-				It("should return the expected units and files", func() {
-					defer test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, useGardenerNodeAgentEnabled)()
-					units, files, err := component.Config(ctx)
+		It("should return the expected units and files", func() {
+			units, files, err := component.Config(ctx)
 
-					Expect(err).NotTo(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 
-					updateCACertsUnit := extensionsv1alpha1.Unit{
-						Name:    "updatecacerts.service",
-						Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-						Content: pointer.String(`[Unit]
+			updateCACertsUnit := extensionsv1alpha1.Unit{
+				Name:    "updatecacerts.service",
+				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+				Content: pointer.String(`[Unit]
 Description=Update local certificate authorities
 # Since other services depend on the certificate store run this early
 DefaultDependencies=no
@@ -82,16 +74,21 @@ ExecStart=/var/lib/ssl/update-local-ca-certificates.sh
 ExecStartPost=/bin/systemctl restart docker.service
 [Install]
 WantedBy=multi-user.target`),
-					}
+				FilePaths: []string{
+					"/var/lib/ssl/update-local-ca-certificates.sh",
+					"/var/lib/ca-certificates-local/ROOTcerts.crt",
+					"/etc/pki/trust/anchors/ROOTcerts.pem",
+				},
+			}
 
-					updateCACertsFiles := []extensionsv1alpha1.File{
-						{
-							Path:        "/var/lib/ssl/update-local-ca-certificates.sh",
-							Permissions: pointer.Int32(0744),
-							Content: extensionsv1alpha1.FileContent{
-								Inline: &extensionsv1alpha1.FileContentInline{
-									Encoding: "b64",
-									Data: utils.EncodeBase64([]byte(`#!/bin/bash
+			updateCACertsFiles := []extensionsv1alpha1.File{
+				{
+					Path:        "/var/lib/ssl/update-local-ca-certificates.sh",
+					Permissions: pointer.Int32(0744),
+					Content: extensionsv1alpha1.FileContent{
+						Inline: &extensionsv1alpha1.FileContentInline{
+							Encoding: "b64",
+							Data: utils.EncodeBase64([]byte(`#!/bin/bash
 
 set -o errexit
 set -o nounset
@@ -110,43 +107,33 @@ else
     /usr/sbin/update-ca-certificates --fresh
 fi
 `)),
-								},
-							},
 						},
-						{
-							Path:        "/var/lib/ca-certificates-local/ROOTcerts.crt",
-							Permissions: pointer.Int32(0644),
-							Content: extensionsv1alpha1.FileContent{
-								Inline: &extensionsv1alpha1.FileContentInline{
-									Encoding: "b64",
-									Data:     caBundleBase64,
-								},
-							},
+					},
+				},
+				{
+					Path:        "/var/lib/ca-certificates-local/ROOTcerts.crt",
+					Permissions: pointer.Int32(0644),
+					Content: extensionsv1alpha1.FileContent{
+						Inline: &extensionsv1alpha1.FileContentInline{
+							Encoding: "b64",
+							Data:     caBundleBase64,
 						},
-						{
-							Path:        "/etc/pki/trust/anchors/ROOTcerts.pem",
-							Permissions: pointer.Int32(0644),
-							Content: extensionsv1alpha1.FileContent{
-								Inline: &extensionsv1alpha1.FileContentInline{
-									Encoding: "b64",
-									Data:     caBundleBase64,
-								},
-							},
+					},
+				},
+				{
+					Path:        "/etc/pki/trust/anchors/ROOTcerts.pem",
+					Permissions: pointer.Int32(0644),
+					Content: extensionsv1alpha1.FileContent{
+						Inline: &extensionsv1alpha1.FileContentInline{
+							Encoding: "b64",
+							Data:     caBundleBase64,
 						},
-					}
+					},
+				},
+			}
 
-					if useGardenerNodeAgentEnabled {
-						updateCACertsUnit.FilePaths = []string{"/var/lib/ssl/update-local-ca-certificates.sh", "/var/lib/ca-certificates-local/ROOTcerts.crt", "/etc/pki/trust/anchors/ROOTcerts.pem"}
-					}
-
-					Expect(units).To(ConsistOf(updateCACertsUnit))
-					Expect(files).To(ConsistOf(updateCACertsFiles))
-				})
-			})
-		}
-		// Testing with feature gate UseGardenerNodeAgent: false
-		testConfig(false)
-		// Testing with feature gate UseGardenerNodeAgent: true
-		testConfig(true)
+			Expect(units).To(ConsistOf(updateCACertsUnit))
+			Expect(files).To(ConsistOf(updateCACertsFiles))
+		})
 	})
 })

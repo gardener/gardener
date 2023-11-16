@@ -24,10 +24,10 @@ import (
 	"k8s.io/utils/pointer"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/docker"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -76,27 +76,6 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	const pathEtcSSLCerts = "/etc/ssl/certs"
 	var caBundleBase64 = utils.EncodeBase64([]byte(*ctx.CABundle))
 
-	updateCACertsUnit := extensionsv1alpha1.Unit{
-		Name:    "updatecacerts.service",
-		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-		Content: pointer.String(`[Unit]
-Description=Update local certificate authorities
-# Since other services depend on the certificate store run this early
-DefaultDependencies=no
-Wants=systemd-tmpfiles-setup.service clean-ca-certificates.service
-After=systemd-tmpfiles-setup.service clean-ca-certificates.service
-Before=sysinit.target ` + kubelet.UnitName + `
-ConditionPathIsReadWrite=` + pathEtcSSLCerts + `
-ConditionPathIsReadWrite=` + pathLocalSSLCerts + `
-ConditionPathExists=!` + kubelet.PathKubeconfigReal + `
-[Service]
-Type=oneshot
-ExecStart=` + pathUpdateLocalCaCertificates + `
-ExecStartPost=/bin/systemctl restart ` + docker.UnitName + `
-[Install]
-WantedBy=multi-user.target`),
-	}
-
 	updateCACertsFiles := []extensionsv1alpha1.File{
 		updateLocalCaCertificatesScriptFile,
 		// This file contains Gardener CAs for Debian based OS
@@ -123,10 +102,26 @@ WantedBy=multi-user.target`),
 		},
 	}
 
-	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
-		for _, file := range updateCACertsFiles {
-			updateCACertsUnit.FilePaths = append(updateCACertsUnit.FilePaths, file.Path)
-		}
+	updateCACertsUnit := extensionsv1alpha1.Unit{
+		Name:    "updatecacerts.service",
+		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+		Content: pointer.String(`[Unit]
+Description=Update local certificate authorities
+# Since other services depend on the certificate store run this early
+DefaultDependencies=no
+Wants=systemd-tmpfiles-setup.service clean-ca-certificates.service
+After=systemd-tmpfiles-setup.service clean-ca-certificates.service
+Before=sysinit.target ` + kubelet.UnitName + `
+ConditionPathIsReadWrite=` + pathEtcSSLCerts + `
+ConditionPathIsReadWrite=` + pathLocalSSLCerts + `
+ConditionPathExists=!` + kubelet.PathKubeconfigReal + `
+[Service]
+Type=oneshot
+ExecStart=` + pathUpdateLocalCaCertificates + `
+ExecStartPost=/bin/systemctl restart ` + docker.UnitName + `
+[Install]
+WantedBy=multi-user.target`),
+		FilePaths: extensionsv1alpha1helper.FilePathsFrom(updateCACertsFiles),
 	}
 
 	return []extensionsv1alpha1.Unit{updateCACertsUnit}, updateCACertsFiles, nil
