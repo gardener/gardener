@@ -75,6 +75,15 @@ var _ = Describe("helper", func() {
 			Expect(DeterminePrimaryIPFamily([]extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv6, extensionsv1alpha1.IPFamilyIPv4})).To(Equal(extensionsv1alpha1.IPFamilyIPv6))
 		})
 	})
+
+	Describe("#FilePathsFrom", func() {
+		It("should return the expected list", func() {
+			file1 := extensionsv1alpha1.File{Path: "foo"}
+			file2 := extensionsv1alpha1.File{Path: "bar"}
+
+			Expect(FilePathsFrom([]extensionsv1alpha1.File{file1, file2})).To(ConsistOf("foo", "bar"))
+		})
+	})
 })
 
 var _ = Describe("filecodec", func() {
