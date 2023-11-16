@@ -17,6 +17,7 @@ package dbus
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	"github.com/coreos/go-systemd/v22/dbus"
 	corev1 "k8s.io/api/core/v1"
@@ -151,7 +152,7 @@ func (_ *db) DaemonReload(ctx context.Context) error {
 }
 
 func recordEvent(recorder record.EventRecorder, node runtime.Object, err error, unitName, reason, operation string) {
-	if recorder != nil && node != nil {
+	if recorder != nil && node != nil && !reflect.ValueOf(node).IsNil() { // nil is not nil :(
 		var (
 			eventType = corev1.EventTypeNormal
 			message   = fmt.Sprintf("processed %s of unit %s", operation, unitName)
