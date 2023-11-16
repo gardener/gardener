@@ -50,7 +50,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		oscSecretName     = testRunID
 		kubernetesVersion = semver.MustParse("1.2.3")
 
-		node *corev1.Node
+		hostName = "test-hostname"
+		node     *corev1.Node
 
 		file1, file2, file3, file4, file5                                          extensionsv1alpha1.File
 		gnaUnit, unit1, unit2, unit3, unit4, unit5, unit5DropInsOnly, unit6, unit7 extensionsv1alpha1.Unit
@@ -86,8 +87,11 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		node = &corev1.Node{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   testRunID,
-				Labels: map[string]string{testID: testRunID},
+				Name: testRunID,
+				Labels: map[string]string{
+					testID:                   testRunID,
+					"kubernetes.io/hostname": hostName,
+				},
 			},
 		}
 
@@ -107,7 +111,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			},
 			DBus:          fakeDBus,
 			FS:            fakeFS,
-			NodeName:      node.Name,
+			HostName:      hostName,
 			Extractor:     fakeregistry.NewExtractor(fakeFS, imageMountDirectory),
 			CancelContext: cancelFunc.cancel,
 		}).AddToManager(mgr)).To(Succeed())

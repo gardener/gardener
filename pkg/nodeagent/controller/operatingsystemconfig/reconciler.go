@@ -62,9 +62,10 @@ type Reconciler struct {
 	Recorder      record.EventRecorder
 	DBus          dbus.DBus
 	FS            afero.Afero
-	NodeName      string
 	Extractor     registry.Extractor
 	CancelContext context.CancelFunc
+	HostName      string
+	nodeName      string
 }
 
 // Reconcile decodes the OperatingSystemConfig resources from secrets and applies the systemd units and files to the
@@ -84,23 +85,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	node := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{Name: r.NodeName}}
-	node.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Node"))
-	if err := r.Client.Get(ctx, client.ObjectKeyFromObject(node), node); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return reconcile.Result{}, fmt.Errorf("unable to fetch node %q: %w", r.NodeName, err)
-		}
-		node = nil
+	node, err := r.getNode(ctx)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed getting node: %w", err)
 	}
 
 	osc, oscRaw, oscChecksum, err := extractOSCFromSecret(secret)
 	if err != nil {
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("failed extracting OSC from secret: %w", err)
 	}
 
 	oscChanges, err := computeOperatingSystemConfigChanges(r.FS, osc)
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("unable to calculate the OSC changes: %w", err)
+		return reconcile.Result{}, fmt.Errorf("failed calculating the OSC changes: %w", err)
 	}
 
 	if node != nil && node.Annotations[executor.AnnotationKeyChecksum] == oscChecksum {
@@ -168,6 +165,34 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	metav1.SetMetaDataAnnotation(&node.ObjectMeta, v1beta1constants.LabelWorkerKubernetesVersion, r.Config.KubernetesVersion.String())
 	metav1.SetMetaDataAnnotation(&node.ObjectMeta, executor.AnnotationKeyChecksum, oscChecksum)
 	return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, r.Client.Patch(ctx, node, patch)
+}
+
+func (r *Reconciler) getNode(ctx context.Context) (*metav1.PartialObjectMetadata, error) {
+	if r.nodeName != "" {
+		node := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{Name: r.nodeName}}
+		node.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Node"))
+		if err := r.Client.Get(ctx, client.ObjectKeyFromObject(node), node); err != nil {
+			return nil, fmt.Errorf("unable to fetch node %q: %w", r.nodeName, err)
+		}
+		return node, nil
+	}
+
+	// node name not known yet, try to fetch it via label selector based on hostname
+	nodeList := &metav1.PartialObjectMetadataList{}
+	nodeList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NodeList"))
+	if err := r.Client.List(ctx, nodeList, client.MatchingLabels{corev1.LabelHostname: r.HostName}); err != nil {
+		return nil, fmt.Errorf("unable to list nodes with label selector %s=%s: %w", corev1.LabelHostname, r.HostName, err)
+	}
+
+	switch len(nodeList.Items) {
+	case 0:
+		return nil, nil
+	case 1:
+		r.nodeName = nodeList.Items[0].Name
+		return &nodeList.Items[0], nil
+	default:
+		return nil, fmt.Errorf("found more than one node with label %s=%s", corev1.LabelHostname, r.HostName)
+	}
 }
 
 var (
