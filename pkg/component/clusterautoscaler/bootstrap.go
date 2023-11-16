@@ -61,6 +61,11 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 					Resources: []string{"*"},
 					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
 				},
+				{
+					APIGroups: []string{"apps"},
+					Resources: []string{"deployments"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
 			},
 		}
 	)
