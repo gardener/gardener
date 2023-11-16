@@ -26,7 +26,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
-	"github.com/gardener/gardener/pkg/features"
 )
 
 type component struct{}
@@ -75,13 +74,6 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		fileContent += fmt.Sprintf("%s = %s\n", key, newData[key])
 	}
 
-	systemdSysctlUnit := extensionsv1alpha1.Unit{
-		// it needs to be reloaded, because the /etc/sysctl.d/ files are not present, when this is started for a first time
-		Name:    "systemd-sysctl.service",
-		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandRestart),
-		Enable:  pointer.Bool(true),
-	}
-
 	kernelSettingsFile := extensionsv1alpha1.File{
 		Path:        v1beta1constants.OperatingSystemConfigFilePathKernelSettings,
 		Permissions: pointer.Int32(0644),
@@ -92,8 +84,12 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		},
 	}
 
-	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
-		systemdSysctlUnit.FilePaths = []string{kernelSettingsFile.Path}
+	systemdSysctlUnit := extensionsv1alpha1.Unit{
+		// it needs to be reloaded, because the /etc/sysctl.d/ files are not present, when this is started for a first time
+		Name:      "systemd-sysctl.service",
+		Command:   extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandRestart),
+		Enable:    pointer.Bool(true),
+		FilePaths: []string{kernelSettingsFile.Path},
 	}
 
 	return []extensionsv1alpha1.Unit{systemdSysctlUnit}, []extensionsv1alpha1.File{kernelSettingsFile}, nil
