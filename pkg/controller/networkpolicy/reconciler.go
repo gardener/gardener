@@ -391,7 +391,7 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToPrivateNetworks(ctx context.Co
 			if gardencorev1beta1.IsIPv4SingleStack(shoot.Spec.Networking.IPFamilies) {
 				blockedNetworkPeersV4 = append(blockedNetworkPeersV4, shootNetworks...)
 			} else {
-				blockedNetworkPeersV6 = append(blockedNetworkPeersV4, shootNetworks...)
+				blockedNetworkPeersV6 = append(blockedNetworkPeersV6, shootNetworks...)
 			}
 		}
 	}
