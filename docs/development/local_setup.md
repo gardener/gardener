@@ -28,6 +28,14 @@ On macOS run
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
+## [macOS only] Installing GNU bash
+
+Built-in apple-darwin bash is missing some features that could cause shell scripts to fail locally.
+
+```bash
+brew install bash
+```
+
 ## Installing git
 
 We use `git` as VCS which you need to install. On macOS run
