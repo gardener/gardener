@@ -26,7 +26,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/containerd/logrotate"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -85,6 +84,17 @@ func (containerd) Config(_ components.Context) ([]extensionsv1alpha1.Unit, []ext
 
 	logRotateUnits, logRotateFiles := logrotate.Config(pathLogRotateConfig, "/var/log/pods/*/*/*.log", ContainerRuntime)
 
+	monitorFile := extensionsv1alpha1.File{
+		Path:        pathHealthMonitor,
+		Permissions: pointer.Int32(0755),
+		Content: extensionsv1alpha1.FileContent{
+			Inline: &extensionsv1alpha1.FileContentInline{
+				Encoding: "b64",
+				Data:     utils.EncodeBase64(healthMonitorScript.Bytes()),
+			},
+		},
+	}
+
 	monitorUnit := extensionsv1alpha1.Unit{
 		Name:    UnitNameMonitor,
 		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
@@ -98,21 +108,7 @@ WantedBy=multi-user.target
 Restart=always
 EnvironmentFile=/etc/environment
 ExecStart=` + pathHealthMonitor),
-	}
-
-	monitorFile := extensionsv1alpha1.File{
-		Path:        pathHealthMonitor,
-		Permissions: pointer.Int32(0755),
-		Content: extensionsv1alpha1.FileContent{
-			Inline: &extensionsv1alpha1.FileContentInline{
-				Encoding: "b64",
-				Data:     utils.EncodeBase64(healthMonitorScript.Bytes()),
-			},
-		},
-	}
-
-	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
-		monitorUnit.FilePaths = []string{monitorFile.Path}
+		FilePaths: []string{monitorFile.Path},
 	}
 
 	return append(logRotateUnits, monitorUnit), append(logRotateFiles, monitorFile), nil

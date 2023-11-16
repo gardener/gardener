@@ -18,7 +18,6 @@ import (
 	"k8s.io/utils/pointer"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/features"
 )
 
 // Config returns the content for logrotate units and files.
@@ -28,31 +27,6 @@ import (
 // Prefix carries the target container runtime (such as  containerd, docker).
 // When containerd is used the log rotation based on size is performed by kubelet.
 func Config(pathConfig, pathLogFiles, prefix string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File) {
-	serviceUnit := extensionsv1alpha1.Unit{
-		Name:   prefix + "-logrotate.service",
-		Enable: pointer.Bool(true),
-		Content: pointer.String(`[Unit]
-Description=Rotate and Compress System Logs
-[Service]
-ExecStart=/usr/sbin/logrotate -s /var/lib/` + prefix + `-logrotate.status ` + pathConfig + `
-[Install]
-WantedBy=multi-user.target`),
-	}
-
-	timerUnit := extensionsv1alpha1.Unit{
-		Name:    prefix + "-logrotate.timer",
-		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-		Enable:  pointer.Bool(true),
-		Content: pointer.String(`[Unit]
-Description=Log Rotation at each 10 minutes
-[Timer]
-OnCalendar=*:0/10
-AccuracySec=1min
-Persistent=true
-[Install]
-WantedBy=multi-user.target`),
-	}
-
 	serviceFile := extensionsv1alpha1.File{
 		Path:        pathConfig,
 		Permissions: pointer.Int32(0644),
@@ -74,8 +48,30 @@ WantedBy=multi-user.target`),
 		},
 	}
 
-	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
-		serviceUnit.FilePaths = []string{serviceFile.Path}
+	serviceUnit := extensionsv1alpha1.Unit{
+		Name:   prefix + "-logrotate.service",
+		Enable: pointer.Bool(true),
+		Content: pointer.String(`[Unit]
+Description=Rotate and Compress System Logs
+[Service]
+ExecStart=/usr/sbin/logrotate -s /var/lib/` + prefix + `-logrotate.status ` + pathConfig + `
+[Install]
+WantedBy=multi-user.target`),
+		FilePaths: []string{serviceFile.Path},
+	}
+
+	timerUnit := extensionsv1alpha1.Unit{
+		Name:    prefix + "-logrotate.timer",
+		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+		Enable:  pointer.Bool(true),
+		Content: pointer.String(`[Unit]
+Description=Log Rotation at each 10 minutes
+[Timer]
+OnCalendar=*:0/10
+AccuracySec=1min
+Persistent=true
+[Install]
+WantedBy=multi-user.target`),
 	}
 
 	return []extensionsv1alpha1.Unit{serviceUnit, timerUnit}, []extensionsv1alpha1.File{serviceFile}
