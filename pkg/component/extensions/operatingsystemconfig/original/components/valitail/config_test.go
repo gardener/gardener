@@ -113,6 +113,7 @@ RuntimeMaxSec=120
 EnvironmentFile=/etc/environment
 ExecStartPre=/bin/sh -c "systemctl stop promtail-fetch-token.service || true"
 ExecStart=/var/lib/valitail/scripts/fetch-token.sh`),
+						FilePaths: []string{"/var/lib/valitail/scripts/fetch-token.sh"},
 					}
 
 					valitailConfigFile := extensionsv1alpha1.File{
@@ -317,21 +318,19 @@ exit $?
 					}
 
 					expectedFiles := []extensionsv1alpha1.File{valitailConfigFile, valitailFetchTokenScriptFile, caBundleFile}
+
+					valitailDaemonUnit.FilePaths = []string{
+						"/var/lib/valitail/config/config",
+						"/var/lib/valitail/ca.crt",
+					}
+					valitailTokenFetchUnit.FilePaths = []string{"/var/lib/valitail/scripts/fetch-token.sh"}
+
 					if useGardenerNodeAgentEnabled {
 						expectedFiles = append(expectedFiles, valitailBinaryFile)
-						valitailDaemonUnit.FilePaths = []string{
-							"/var/lib/valitail/config/config",
-							"/var/lib/valitail/ca.crt",
-							"/opt/bin/valitail",
-						}
-						valitailTokenFetchUnit.FilePaths = []string{"/var/lib/valitail/scripts/fetch-token.sh"}
+						valitailDaemonUnit.FilePaths = append(valitailDaemonUnit.FilePaths, "/opt/bin/valitail")
 					}
 
-					Expect(units).To(ConsistOf(
-						valitailDaemonUnit,
-						valitailTokenFetchUnit,
-					))
-
+					Expect(units).To(ConsistOf(valitailDaemonUnit, valitailTokenFetchUnit))
 					Expect(files).To(ConsistOf(expectedFiles))
 				})
 

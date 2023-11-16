@@ -171,8 +171,12 @@ ExecStart=` + execStart
 		Content: &unitContent,
 	}
 
-	if ctx.ValitailEnabled && features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
-		unit.FilePaths = []string{PathConfig, PathCACert, valitailBinaryPath}
+	if ctx.ValitailEnabled {
+		unit.FilePaths = []string{PathConfig, PathCACert}
+
+		if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+			unit.FilePaths = append(unit.FilePaths, valitailBinaryPath)
+		}
 	}
 
 	return unit
@@ -241,7 +245,7 @@ ExecStart=` + execStart
 		Content: &unitContent,
 	}
 
-	if ctx.ValitailEnabled && features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+	if ctx.ValitailEnabled {
 		unit.FilePaths = []string{PathFetchTokenScript}
 	}
 
