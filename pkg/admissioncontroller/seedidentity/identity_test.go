@@ -119,7 +119,7 @@ var _ = Describe("identity", func() {
 		})
 
 		It("Extension ServiceAccount in seed namespace", func() {
-			test(authenticationv1.UserInfo{Username: "system:serviceaccount:seed-foo:extension-bar", Groups: []string{"system:serviceaccounts", "system:serviceaccounts:seed-foo"}}, "foo", true, UserTypeExtension)
+			test(authenticationv1.UserInfo{Username: "system:serviceaccount:seed-foo:extension-bar", Groups: []string{"system:serviceaccounts", "system:serviceaccounts:seed-foo"}, Extra: map[string]authenticationv1.ExtraValue{}}, "foo", true, UserTypeExtension)
 		})
 	})
 

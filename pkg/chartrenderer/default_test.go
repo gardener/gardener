@@ -65,7 +65,7 @@ var _ = Describe("ChartRenderer", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			files := chart.Files()
-			Expect(files).To(HaveLen(1))
+			Expect(files).To(HaveLen(2))
 			Expect(files).To(HaveKeyWithValue("alpine/templates/alpine-pod.yaml", alpinePod))
 		})
 	})
@@ -85,6 +85,27 @@ var _ = Describe("ChartRenderer", func() {
 
 			actual := chart.FileContent("alpine-pod.yaml")
 			Expect(actual).To(Equal(alpinePod))
+		})
+	})
+
+	Describe("#Manifest", func() {
+		It("should return manifest", func() {
+			chart, err := renderer.RenderEmbeddedFS(embeddedFS, alpineChartPath, "alpine", "default", map[string]string{})
+			Expect(err).ToNot(HaveOccurred())
+
+			manifests := chart.Manifest()
+			Expect(manifests).NotTo(BeNil())
+		})
+	})
+
+	Describe("#AsSecretData", func() {
+		It("should return rendered chart as secret data", func() {
+			chart, err := renderer.RenderEmbeddedFS(embeddedFS, alpineChartPath, "alpine", "default", map[string]string{})
+			Expect(err).ToNot(HaveOccurred())
+
+			data := chart.AsSecretData()
+			Expect(data).To(Not(BeNil()))
+			Expect(string(data["alpine_templates_alpine-pod.yaml"])).To(Equal(alpinePod))
 		})
 	})
 })

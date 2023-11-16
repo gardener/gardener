@@ -154,4 +154,19 @@ var _ = Describe("Core", func() {
 		Entry("ControllerInstallation w/o registrationRef", &gardencorev1beta1.ControllerInstallation{}, ConsistOf("")),
 		Entry("ControllerInstallation w/ registrationRef", &gardencorev1beta1.ControllerInstallation{Spec: gardencorev1beta1.ControllerInstallationSpec{RegistrationRef: corev1.ObjectReference{Name: "registration"}}}, ConsistOf("registration")),
 	)
+
+	DescribeTable("#AddInternalSecretType",
+		func(obj client.Object, matcher gomegatypes.GomegaMatcher) {
+			Expect(AddInternalSecretType(context.TODO(), indexer)).To(Succeed())
+
+			Expect(indexer.obj).To(Equal(&gardencorev1beta1.InternalSecret{}))
+			Expect(indexer.field).To(Equal("type"))
+			Expect(indexer.extractValue).NotTo(BeNil())
+			Expect(indexer.extractValue(obj)).To(matcher)
+		},
+
+		Entry("no InternalSecret", &corev1.Secret{}, ConsistOf("")),
+		Entry("InternalSecret w/o type", &gardencorev1beta1.InternalSecret{}, ConsistOf("")),
+		Entry("InternalSecret w/ type", &gardencorev1beta1.InternalSecret{Type: corev1.SecretTypeBootstrapToken}, ConsistOf("bootstrap.kubernetes.io/token")),
+	)
 })
