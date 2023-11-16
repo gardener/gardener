@@ -928,6 +928,8 @@ build:
             - pkg/gardenlet/features
             - pkg/healthz
             - pkg/logger
+            - pkg/nodeagent/apis/config
+            - pkg/nodeagent/apis/config/v1alpha1
             - pkg/operation
             - pkg/operation/botanist
             - pkg/operation/botanist/matchers

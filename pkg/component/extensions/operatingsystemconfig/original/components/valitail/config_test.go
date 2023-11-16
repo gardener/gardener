@@ -278,6 +278,19 @@ scrape_configs:
 						},
 					}
 
+					scriptVariables, pathToken := `
+server="$(cat "/var/lib/cloud-config-downloader/credentials/server")"
+ca_bundle="/var/lib/cloud-config-downloader/credentials/ca.crt"
+`, "/var/lib/cloud-config-downloader/credentials/token"
+					if useGardenerNodeAgentEnabled {
+						scriptVariables, pathToken = `
+server="$(cat "/var/lib/gardener-node-agent/config.yaml" | sed -rn "s/  server: (.*)/\1/p")"
+ca_bundle="$(mktemp)"
+trap 'rm -f "$ca_bundle"' EXIT
+cat "/var/lib/gardener-node-agent/config.yaml" | sed -rn "s/  caBundle: (.*)/\1/p" | base64 -d > "$ca_bundle"
+`, "/var/lib/gardener-node-agent/credentials/token"
+					}
+
 					valitailFetchTokenScriptFile := extensionsv1alpha1.File{
 						Path:        "/var/lib/valitail/scripts/fetch-token.sh",
 						Permissions: pointer.Int32(0744),
@@ -290,13 +303,13 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-{
+{` + scriptVariables + `
 if ! SECRET="$(wget \
   -qO- \
   --header         "Accept: application/yaml" \
-  --header         "Authorization: Bearer $(cat "/var/lib/cloud-config-downloader/credentials/token")" \
-  --ca-certificate "/var/lib/cloud-config-downloader/credentials/ca.crt" \
-  "$(cat "/var/lib/cloud-config-downloader/credentials/server")/api/v1/namespaces/kube-system/secrets/gardener-valitail")"; then
+  --header         "Authorization: Bearer $(cat "` + pathToken + `")" \
+  --ca-certificate "$ca_bundle" \
+  "$server/api/v1/namespaces/kube-system/secrets/gardener-valitail")"; then
 
   echo "Could not retrieve the valitail token secret"
   exit 1
