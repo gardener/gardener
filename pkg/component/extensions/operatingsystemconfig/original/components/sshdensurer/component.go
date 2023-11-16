@@ -25,7 +25,6 @@ import (
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -83,6 +82,17 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		}
 	}
 
+	sshdEnsurerFile := extensionsv1alpha1.File{
+		Path:        pathScript,
+		Permissions: pointer.Int32(0755),
+		Content: extensionsv1alpha1.FileContent{
+			Inline: &extensionsv1alpha1.FileContentInline{
+				Encoding: "b64",
+				Data:     utils.EncodeBase64(script.Bytes()),
+			},
+		},
+	}
+
 	sshdEnsurerUnit := extensionsv1alpha1.Unit{
 		Name:    "sshd-ensurer.service",
 		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
@@ -96,21 +106,7 @@ RestartSec=15
 ExecStart=` + pathScript + `
 [Install]
 WantedBy=multi-user.target`),
-	}
-
-	sshdEnsurerFile := extensionsv1alpha1.File{
-		Path:        pathScript,
-		Permissions: pointer.Int32(0755),
-		Content: extensionsv1alpha1.FileContent{
-			Inline: &extensionsv1alpha1.FileContentInline{
-				Encoding: "b64",
-				Data:     utils.EncodeBase64(script.Bytes()),
-			},
-		},
-	}
-
-	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
-		sshdEnsurerUnit.FilePaths = []string{sshdEnsurerFile.Path}
+		FilePaths: []string{sshdEnsurerFile.Path},
 	}
 
 	return []extensionsv1alpha1.Unit{sshdEnsurerUnit}, []extensionsv1alpha1.File{sshdEnsurerFile}, nil
