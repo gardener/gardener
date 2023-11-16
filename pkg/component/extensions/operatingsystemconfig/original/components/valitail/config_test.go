@@ -64,8 +64,13 @@ var _ = Describe("Valitail", func() {
 					units, files, err := New().Config(ctx)
 					Expect(err).NotTo(HaveOccurred())
 
-					var valitailDaemonStartPre string
+					var (
+						afterUnit              = "gardener-node-agent.service"
+						valitailDaemonStartPre string
+					)
+
 					if !useGardenerNodeAgentEnabled {
+						afterUnit = "cloud-config-downloader.service"
 						valitailDaemonStartPre = `
 ExecStartPre=/usr/bin/docker run --rm -v /opt/bin:/opt/bin:rw --entrypoint /bin/sh ` + valitailRepository + ":" + valitailImageTag + " -c " + "\"cp /usr/bin/valitail /opt/bin\""
 					}
@@ -103,7 +108,7 @@ ExecStart=/opt/bin/valitail -config.file=` + PathConfig),
 						Enable:  pointer.Bool(true),
 						Content: pointer.String(`[Unit]
 Description=valitail token fetcher
-After=cloud-config-downloader.service
+After=` + afterUnit + `
 [Install]
 WantedBy=multi-user.target
 [Service]
@@ -154,7 +159,7 @@ scrape_configs:
     source_labels: ['__journal__systemd_unit']
     target_label: '__journal_syslog_identifier'
   - action: keep
-    regex: ^kernel|kubelet\.service|docker\.service|containerd\.service$
+    regex: ^kernel|kubelet\.service|docker\.service|containerd\.service|gardener-node-agent\.service$
     source_labels: ['__journal_syslog_identifier']
   - source_labels: ['__journal_syslog_identifier']
     target_label: unit
@@ -177,7 +182,7 @@ scrape_configs:
     source_labels: ['__journal__systemd_unit']
     target_label: '__journal_syslog_identifier'
   - action: drop
-    regex: ^kernel|kubelet\.service|docker\.service|containerd\.service$
+    regex: ^kernel|kubelet\.service|docker\.service|containerd\.service|gardener-node-agent\.service$
     source_labels: ['__journal_syslog_identifier']
   - source_labels: ['__journal_syslog_identifier']
     target_label: unit
@@ -349,6 +354,11 @@ exit $?
 					units, files, err := New().Config(ctx)
 					Expect(err).NotTo(HaveOccurred())
 
+					afterUnit := "cloud-config-downloader.service"
+					if useGardenerNodeAgentEnabled {
+						afterUnit = "gardener-node-agent.service"
+					}
+
 					Expect(units).To(ConsistOf(
 						extensionsv1alpha1.Unit{
 							Name:    "valitail.service",
@@ -383,7 +393,7 @@ ExecStart=/bin/sh -c "echo service valitail.service is removed!; while true; do 
 							Enable:  pointer.Bool(true),
 							Content: pointer.String(`[Unit]
 Description=valitail token fetcher
-After=cloud-config-downloader.service
+After=` + afterUnit + `
 [Install]
 WantedBy=multi-user.target
 [Service]

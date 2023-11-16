@@ -218,9 +218,14 @@ func getFetchTokenScriptUnit(ctx components.Context) extensionsv1alpha1.Unit {
 		execStart = fmt.Sprintf(`/bin/sh -c "rm -f `+PathAuthToken+`; echo service %s is removed!; while true; do sleep 86400; done"`, unitNameFetchToken)
 	}
 
+	afterUnit := downloader.UnitName
+	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+		afterUnit = nodeagentv1alpha1.UnitName
+	}
+
 	unitContent := `[Unit]
 Description=valitail token fetcher
-After=` + downloader.UnitName + `
+After=` + afterUnit + `
 [Install]
 WantedBy=multi-user.target
 [Service]
