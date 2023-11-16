@@ -16,6 +16,7 @@ package framework
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -461,11 +462,11 @@ func (t ShootMigrationTest) CheckSecretAndServiceAccount(ctx context.Context) er
 // CleanUpSecretAndServiceAccount cleans up the test secret and service account
 func (t ShootMigrationTest) CleanUpSecretAndServiceAccount(ctx context.Context) error {
 	testSecret, testServiceAccount := constructTestSecretAndServiceAccount()
-	if err := t.ShootClient.Client().Delete(ctx, testSecret); err != nil {
-		return err
-	}
 
-	return t.ShootClient.Client().Delete(ctx, testServiceAccount)
+	return errors.Join(
+		t.ShootClient.Client().Delete(ctx, testSecret),
+		t.ShootClient.Client().Delete(ctx, testServiceAccount),
+	)
 }
 
 func constructTestSecretAndServiceAccount() (*corev1.Secret, *corev1.ServiceAccount) {
