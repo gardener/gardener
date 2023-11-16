@@ -52,10 +52,7 @@ func (f *ShootFramework) ShootKubeconfigSecretName() string {
 }
 
 // GetValiLogs gets logs from the last 1 hour for <key>, <value> from the vali instance in <valiNamespace>
-func (f *ShootFramework) GetValiLogs(ctx context.Context,
-	valiLabels map[string]string, valiNamespace,
-	key, value string, client kubernetes.Interface) (*SearchResponse, error) {
-
+func (f *ShootFramework) GetValiLogs(ctx context.Context, valiLabels map[string]string, valiNamespace, key, value string, client kubernetes.Interface) (*SearchResponse, error) {
 	valiLabelsSelector := labels.SelectorFromSet(labels.Set(valiLabels))
 
 	query := fmt.Sprintf("query=count_over_time({%s=~\"%s\"}[1h])", key, value)
@@ -69,7 +66,7 @@ func (f *ShootFramework) GetValiLogs(ctx context.Context,
 	}
 
 	var reader io.Reader
-	log.Info("fetching logs")
+	log.Info("Fetching logs")
 	err := retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (bool, error) {
 		var err error
 		reader, err = PodExecByLabel(ctx, valiLabelsSelector, valiLogging, command, valiNamespace, client)
@@ -103,23 +100,23 @@ func isValiAuthEnabled(ctx context.Context, log logr.Logger, selector labels.Sel
 	commandAuthEnabled := fmt.Sprintf("wget 'http://localhost:%d/config' -O-", valiPort)
 	r, err := PodExecByLabel(ctx, selector, valiLogging, commandAuthEnabled, namespace, c)
 	if err != nil {
-		log.Error(err, "cannot check the vali config endpoint")
+		log.Error(err, "Failed to check the vali config endpoint")
 		return false
 	}
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		line := scanner.Text()
 		if strings.Contains(line, "auth_enabled: true") {
-			log.Info("parsing configuration", "auth_enabled", true)
+			log.Info("Parsing configuration", "auth_enabled", true)
 			authEnabledMap[selector.String()] = true
 			return true
 		}
 	}
 	if err = scanner.Err(); err == nil {
-		log.Info("configuration is parsed", "auth_enabled", false)
+		log.Info("Configuration is parsed", "auth_enabled", false)
 		authEnabledMap[selector.String()] = false
 	} else {
-		log.Error(err, "error scanning configuration")
+		log.Error(err, "Error scanning configuration")
 	}
 
 	return false
