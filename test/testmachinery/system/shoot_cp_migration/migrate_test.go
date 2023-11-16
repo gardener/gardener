@@ -29,6 +29,7 @@ import (
 	"github.com/onsi/ginkgo/v2"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	. "github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/applications"
 )
@@ -181,7 +182,7 @@ func initGuestBookTest(ctx context.Context, t *ShootMigrationTest) (*application
 		ShootClient:       t.ShootClient,
 		SeedClient:        t.SourceSeedClient,
 	}
-	if t.Shoot.Spec.Addons == nil || t.Shoot.Spec.Addons.NginxIngress == nil || !t.Shoot.Spec.Addons.NginxIngress.Enabled {
+	if !v1beta1helper.NginxIngressEnabled(t.Shoot.Spec.Addons) {
 		if err := t.GardenerFramework.UpdateShoot(ctx, &t.Shoot, func(shoot *gardencorev1beta1.Shoot) error {
 			if err := t.GardenerFramework.GetShoot(ctx, shoot); err != nil {
 				return err
