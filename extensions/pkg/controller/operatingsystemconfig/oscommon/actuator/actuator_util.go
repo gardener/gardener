@@ -42,6 +42,10 @@ func CloudConfigFromOperatingSystemConfig(
 ) {
 	files := make([]*commonosgenerator.File, 0, len(config.Spec.Files))
 	for _, file := range config.Spec.Files {
+		if file.Content.ImageRef != nil {
+			continue
+		}
+
 		data, err := DataForFileContent(ctx, c, config.Namespace, &file.Content)
 		if err != nil {
 			return nil, nil, err
