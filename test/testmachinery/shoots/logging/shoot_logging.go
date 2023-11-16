@@ -16,7 +16,6 @@ package logging
 
 import (
 	"context"
-	"k8s.io/klog/v2"
 	"time"
 
 	"github.com/onsi/ginkgo/v2"
@@ -28,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"

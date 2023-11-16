@@ -17,7 +17,6 @@ package logging
 import (
 	"context"
 	"fmt"
-	"k8s.io/klog/v2"
 	"time"
 
 	"github.com/onsi/ginkgo/v2"
@@ -31,6 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
