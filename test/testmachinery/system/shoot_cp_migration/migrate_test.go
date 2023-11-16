@@ -181,10 +181,14 @@ func initGuestBookTest(ctx context.Context, t *ShootMigrationTest) (*application
 		ShootClient:       t.ShootClient,
 		SeedClient:        t.SourceSeedClient,
 	}
-	if t.Shoot.Spec.Addons.NginxIngress == nil || !t.Shoot.Spec.Addons.NginxIngress.Enabled {
+	if t.Shoot.Spec.Addons == nil || t.Shoot.Spec.Addons.NginxIngress == nil || !t.Shoot.Spec.Addons.NginxIngress.Enabled {
 		if err := t.GardenerFramework.UpdateShoot(ctx, &t.Shoot, func(shoot *gardencorev1beta1.Shoot) error {
 			if err := t.GardenerFramework.GetShoot(ctx, shoot); err != nil {
 				return err
+			}
+
+			if shoot.Spec.Addons == nil {
+				shoot.Spec.Addons = &gardencorev1beta1.Addons{}
 			}
 
 			if shoot.Spec.Addons.NginxIngress == nil {
