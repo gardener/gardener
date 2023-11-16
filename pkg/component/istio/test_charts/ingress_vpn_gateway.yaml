@@ -1,12 +1,13 @@
-{{- if eq .Values.vpn.enabled true -}}
 apiVersion: networking.istio.io/v1beta1
 kind: Gateway
 metadata:
   name: reversed-vpn-auth-server
-  namespace: {{ .Release.Namespace }}
+  namespace: test-ingress
 spec:
   selector:
-{{ .Values.labels | toYaml | indent 4 }}
+    app: istio-ingressgateway
+    foo: bar
+    
   servers:
   - hosts:
     - reversed-vpn-auth-server.garden.svc.cluster.local
@@ -14,4 +15,3 @@ spec:
       name: tls-tunnel
       number: 8132
       protocol: HTTP
-{{- end }}

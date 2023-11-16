@@ -1,16 +1,19 @@
-{{- if eq .Values.proxyProtocolEnabled true -}}
 # this adds "envoy.listener.proxy_protocol" filter to the listener.
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
   name: proxy-protocol
-  namespace: {{ .Release.Namespace }}
+  namespace: test-ingress
   labels:
-{{ .Values.labels | toYaml | indent 4 }}
+    app: istio-ingressgateway
+    foo: bar
+    
 spec:
   workloadSelector:
     labels:
-{{ .Values.labels | toYaml | indent 6 }}
+      app: istio-ingressgateway
+      foo: bar
+      
   configPatches:
   - applyTo: LISTENER
     match:
@@ -25,4 +28,3 @@ spec:
         - name: proxy_protocol
           typed_config:
             "@type": "type.googleapis.com/envoy.extensions.filters.listener.proxy_protocol.v3.ProxyProtocol"
-{{ end -}}

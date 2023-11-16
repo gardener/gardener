@@ -1,30 +1,29 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Values.serviceName }}
-  namespace: {{ .Release.Namespace }}
+  name: istio-ingressgateway
+  namespace: test-ingress
   annotations:
     networking.resources.gardener.cloud/from-world-to-ports: '[{"port":8132,"protocol":"TCP"},{"port":8443,"protocol":"TCP"},{"port":9443,"protocol":"TCP"}]'
     networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"gardener.cloud/role":"shoot"}},{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]'
     networking.resources.gardener.cloud/pod-label-selector-namespace-alias: all-istio-ingresses
     networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports: '[{"port":15020,"protocol":"TCP"}]'
-{{- if .Values.annotations }}
-{{ .Values.annotations | toYaml | indent 4 }}
-{{- end }}
+    foo: bar
+    
   labels:
-    app.kubernetes.io/version: {{ .Values.ingressVersion }}
-{{ .Values.labels | toYaml | indent 4 }}
+    app.kubernetes.io/version: 1.19.3
+    app: istio-ingressgateway
+    foo: bar
+    
 spec:
-  type: {{ .Values.serviceType }}
+  type: LoadBalancer
   selector:
-{{ .Values.labels  | toYaml | indent 4 }}
+    app: istio-ingressgateway
+    foo: bar
+    
   ports:
-{{- if .Values.ports }}
-{{ toYaml .Values.ports | indent 2 }}
-{{- end }}
-{{- if .Values.loadBalancerIP }}
-  loadBalancerIP: {{ .Values.loadBalancerIP }}
-{{- end }}
-{{- if .Values.externalTrafficPolicy }}
-  externalTrafficPolicy: {{ .Values.externalTrafficPolicy -}}
-{{- end }}
+  - name: foo
+    port: 999
+    targetPort: 999
+  
+<EXTERNAL_TRAFFIC_POLICY>

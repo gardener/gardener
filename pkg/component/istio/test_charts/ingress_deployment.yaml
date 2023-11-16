@@ -2,16 +2,20 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: istio-ingressgateway
-  namespace: {{ .Release.Namespace }}
+  namespace: test-ingress
   labels:
-    app.kubernetes.io/version: {{ .Values.ingressVersion }}
-{{ toYaml .Values.labels | indent 4 }}
+    app.kubernetes.io/version: 1.19.3
+    app: istio-ingressgateway
+    foo: bar
+    
 spec:
-  replicas: {{ .Values.replicas }}
+  replicas: <REPLICAS>
   revisionHistoryLimit: 1
   selector:
     matchLabels:
-{{ toYaml .Values.labels | indent 6 }}
+      app: istio-ingressgateway
+      foo: bar
+      
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -19,8 +23,11 @@ spec:
   template:
     metadata:
       labels:
-{{ toYaml .Values.labels | indent 8 }}
-{{ toYaml .Values.networkPolicyLabels | indent 8 }}
+        app: istio-ingressgateway
+        foo: bar
+        
+        to-target: allowed
+        
         service.istio.io/canonical-name: "istio-ingressgateway"
         service.istio.io/canonical-revision: "1.19"
       annotations:
@@ -39,7 +46,7 @@ spec:
         runAsUser: 1337
       containers:
         - name: istio-proxy
-          image: {{ .Values.image }}
+          image: foo/bar
           imagePullPolicy: IfNotPresent
           securityContext:
             # Safe since 1.22: https://github.com/kubernetes/kubernetes/pull/103326
@@ -50,14 +57,12 @@ spec:
             privileged: false
             readOnlyRootFilesystem: true
           ports:
-          {{- range .Values.ports }}
-          - containerPort: {{ .targetPort }}
+          - containerPort: 999
             protocol: TCP
-          {{- end }}
           args:
           - proxy
           - router
-          - --domain={{ .Release.Namespace }}.svc.{{ .Values.trustDomain }}
+          - --domain=test-ingress.svc.foo.bar
           - --proxyLogLevel=info
           - --proxyComponentLogLevel=misc:error
           - --log_output_level=default:info,ads:error
@@ -119,11 +124,11 @@ spec:
           - name: ISTIO_META_USER_SDS
             value: "true"
           - name: CA_ADDR
-            value: istiod.{{ .Values.istiodNamespace }}.svc:15012
+            value: istiod.istio-test-system.svc:15012
           - name: ISTIO_META_WORKLOAD_NAME
             value: istio-ingressgateway
           - name: ISTIO_META_OWNER
-            value: kubernetes://apis/apps/v1/namespaces/{{ .Release.Namespace }}/deployments/istio-ingressgateway
+            value: kubernetes://apis/apps/v1/namespaces/test-ingress/deployments/istio-ingressgateway
           - name: ISTIO_META_MESH_ID
             value: "cluster.local"
           - name: TRUST_DOMAIN
@@ -204,7 +209,7 @@ spec:
         secret:
           secretName: "istio-ingressgateway-ca-certs"
           optional: true
-      priorityClassName: {{ .Values.priorityClassName }}
+      priorityClassName: gardener-system-critical
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -212,10 +217,12 @@ spec:
             podAffinityTerm:
               labelSelector:
                 matchExpressions:
-                {{- range $key, $value := .Values.labels }}
-                - key: {{ $key }}
+                - key: app
                   operator: In
                   values:
-                  - {{ $value }}
-                {{- end }}
+                  - istio-ingressgateway
+                - key: foo
+                  operator: In
+                  values:
+                  - bar
               topologyKey: "kubernetes.io/hostname"

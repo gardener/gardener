@@ -5,14 +5,16 @@ metadata:
   labels:
     # The istio revision is required so that the web hook is found at runtime for the caBundle update
     istio.io/rev: default
-{{ .Values.labels | toYaml | indent 4 }}
+    app: istiod
+    istio: pilot
+    
 webhooks:
   - name: rev.validation.istio.io
     timeoutSeconds: 10
     clientConfig:
       service:
         name: istiod
-        namespace: {{ .Release.Namespace }}
+        namespace: test
         path: "/validate"
     rules:
       - operations:

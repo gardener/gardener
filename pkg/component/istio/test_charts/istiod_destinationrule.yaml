@@ -4,7 +4,7 @@ apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
   name: default
-  namespace: {{ .Release.Namespace }}
+  namespace: test
 spec:
   host: "*"
   exportTo:

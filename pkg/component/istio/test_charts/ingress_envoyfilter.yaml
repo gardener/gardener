@@ -1,19 +1,20 @@
-{{- if .Values.ports }}
+
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
   name: istio-ingressgateway
-  namespace: {{ .Release.Namespace }}
+  namespace: test-ingress
   labels:
-{{ .Values.labels | toYaml | indent 4 }}
+    app: istio-ingressgateway
+    foo: bar
+    
 spec:
   configPatches:
-{{- range .Values.ports }}
   - applyTo: LISTENER
     match:
       context: GATEWAY
       listener:
-        portNumber: {{ .targetPort }}
+        portNumber: 999
     patch:
       operation: MERGE
       value:
@@ -22,7 +23,7 @@ spec:
     match:
       context: GATEWAY
       cluster:
-        portNumber: {{ .targetPort }}
+        portNumber: 999
     patch:
       operation: MERGE
       value:
@@ -36,7 +37,7 @@ spec:
     match:
       context: GATEWAY
       listener:
-        portNumber: {{ .targetPort }}
+        portNumber: 999
     patch:
       operation: MERGE
       value:
@@ -59,5 +60,3 @@ spec:
           name: 5
           int_value: 55
           state: STATE_LISTENING
-{{- end }}
-{{- end }}
