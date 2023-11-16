@@ -428,10 +428,11 @@ EnvironmentFile=/etc/environment
 EnvironmentFile=-/var/lib/kubelet/extra_args` + kubeletStartPre + `
 ExecStart=/opt/bin/kubelet \
     ` + utils.Indent(strings.Join(cliFlags, " \\\n"), 4) + ` $KUBELET_EXTRA_ARGS`),
+		FilePaths: []string{"/var/lib/kubelet/ca.crt", "/var/lib/kubelet/config/kubelet"},
 	}
 
 	if useGardenerNodeAgentEnabled {
-		unit.FilePaths = []string{"/var/lib/kubelet/ca.crt", "/var/lib/kubelet/config/kubelet", "/opt/bin/kubelet"}
+		unit.FilePaths = append(unit.FilePaths, "/opt/bin/kubelet")
 	}
 
 	return unit
@@ -497,10 +498,11 @@ WantedBy=multi-user.target
 Restart=always
 EnvironmentFile=/etc/environment` + healthMonitorStartPre + `
 ExecStart=/opt/bin/health-monitor-kubelet`),
+		FilePaths: []string{"/opt/bin/health-monitor-kubelet"},
 	}
 
 	if useGardenerNodeAgentEnabled {
-		unit.FilePaths = []string{"/opt/bin/health-monitor-kubelet", "/opt/bin/kubectl"}
+		unit.FilePaths = append(unit.FilePaths, "/opt/bin/kubectl")
 	}
 
 	return unit

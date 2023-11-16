@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/containerd"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/docker"
@@ -119,40 +120,6 @@ ExecStartPre=` + PathScriptCopyKubernetesBinary + ` kubelet`
 ExecStartPre=` + PathScriptCopyKubernetesBinary + ` kubectl`
 	}
 
-	kubeletUnit := extensionsv1alpha1.Unit{
-		Name:    UnitName,
-		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-		Enable:  pointer.Bool(true),
-		Content: pointer.String(`[Unit]
-Description=kubelet daemon
-Documentation=https://kubernetes.io/docs/admin/kubelet
-` + unitConfigAfterCRI(ctx.CRIName) + `
-[Install]
-WantedBy=multi-user.target
-[Service]
-Restart=always
-RestartSec=5
-EnvironmentFile=/etc/environment
-EnvironmentFile=-/var/lib/kubelet/extra_args` + kubeletStartPre + `
-ExecStart=` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `/kubelet \
-    ` + utils.Indent(strings.Join(cliFlags, " \\\n"), 4) + ` $KUBELET_EXTRA_ARGS`),
-	}
-
-	healthMonitorUnit := extensionsv1alpha1.Unit{
-		Name:    "kubelet-monitor.service",
-		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-		Enable:  pointer.Bool(true),
-		Content: pointer.String(`[Unit]
-Description=Kubelet-monitor daemon
-After=` + UnitName + `
-[Install]
-WantedBy=multi-user.target
-[Service]
-Restart=always
-EnvironmentFile=/etc/environment` + healthMonitorStartPre + `
-ExecStart=` + pathHealthMonitor),
-	}
-
 	kubeletFiles := []extensionsv1alpha1.File{
 		{
 			Path:        PathKubeletCACert,
@@ -186,8 +153,44 @@ ExecStart=` + pathHealthMonitor),
 		},
 	}
 
+	kubeletUnit := extensionsv1alpha1.Unit{
+		Name:    UnitName,
+		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+		Enable:  pointer.Bool(true),
+		Content: pointer.String(`[Unit]
+Description=kubelet daemon
+Documentation=https://kubernetes.io/docs/admin/kubelet
+` + unitConfigAfterCRI(ctx.CRIName) + `
+[Install]
+WantedBy=multi-user.target
+[Service]
+Restart=always
+RestartSec=5
+EnvironmentFile=/etc/environment
+EnvironmentFile=-/var/lib/kubelet/extra_args` + kubeletStartPre + `
+ExecStart=` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `/kubelet \
+    ` + utils.Indent(strings.Join(cliFlags, " \\\n"), 4) + ` $KUBELET_EXTRA_ARGS`),
+		FilePaths: extensionsv1alpha1helper.FilePathsFrom(kubeletFiles),
+	}
+
+	healthMonitorUnit := extensionsv1alpha1.Unit{
+		Name:    "kubelet-monitor.service",
+		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+		Enable:  pointer.Bool(true),
+		Content: pointer.String(`[Unit]
+Description=Kubelet-monitor daemon
+After=` + UnitName + `
+[Install]
+WantedBy=multi-user.target
+[Service]
+Restart=always
+EnvironmentFile=/etc/environment` + healthMonitorStartPre + `
+ExecStart=` + pathHealthMonitor),
+		FilePaths: extensionsv1alpha1helper.FilePathsFrom(healthMonitorFiles),
+	}
+
 	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
-		kubeletFiles = append(kubeletFiles, extensionsv1alpha1.File{
+		kubeletBinaryFile := extensionsv1alpha1.File{
 			Path:        v1beta1constants.OperatingSystemConfigFilePathBinaries + "/kubelet",
 			Permissions: pointer.Int32(0755),
 			Content: extensionsv1alpha1.FileContent{
@@ -196,8 +199,11 @@ ExecStart=` + pathHealthMonitor),
 					FilePathInImage: "/kubelet",
 				},
 			},
-		})
-		healthMonitorFiles = append(healthMonitorFiles, extensionsv1alpha1.File{
+		}
+		kubeletFiles = append(kubeletFiles, kubeletBinaryFile)
+		kubeletUnit.FilePaths = append(kubeletUnit.FilePaths, kubeletBinaryFile.Path)
+
+		kubectlBinaryFile := extensionsv1alpha1.File{
 			Path:        v1beta1constants.OperatingSystemConfigFilePathBinaries + "/kubectl",
 			Permissions: pointer.Int32(0755),
 			Content: extensionsv1alpha1.FileContent{
@@ -206,14 +212,9 @@ ExecStart=` + pathHealthMonitor),
 					FilePathInImage: "/kubectl",
 				},
 			},
-		})
-
-		for _, file := range kubeletFiles {
-			kubeletUnit.FilePaths = append(kubeletUnit.FilePaths, file.Path)
 		}
-		for _, file := range healthMonitorFiles {
-			healthMonitorUnit.FilePaths = append(healthMonitorUnit.FilePaths, file.Path)
-		}
+		healthMonitorFiles = append(healthMonitorFiles, kubectlBinaryFile)
+		healthMonitorUnit.FilePaths = append(healthMonitorUnit.FilePaths, kubectlBinaryFile.Path)
 	}
 
 	return []extensionsv1alpha1.Unit{kubeletUnit, healthMonitorUnit}, append(kubeletFiles, healthMonitorFiles...), nil
