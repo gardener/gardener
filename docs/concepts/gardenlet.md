@@ -149,15 +149,11 @@ seedConfig:
     provider:
       type: aws
     # ...
-    secretRef:
-      name: my-seed-secret
-      namespace: garden
+    settings:
+      scheduling:
+        visible: true
 ```
 (see [this yaml file](../../example/20-componentconfig-gardenlet.yaml) for a more complete example)
-
-When using `make start-gardenlet`, the corresponding script will automatically
-fetch the seed cluster's `kubeconfig` based on the `seedConfig.spec.secretRef`
-and set the environment accordingly.
 
 On startup, gardenlet registers a `Seed` resource using the given template
 in the `seedConfig` if it's not present already.
