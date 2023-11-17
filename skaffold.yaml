@@ -603,12 +603,14 @@ build:
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
             - pkg/component
+            - pkg/component/extensions/operatingsystemconfig/nodeinit
             - pkg/component/extensions/operatingsystemconfig/original/components
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd/logrotate
             - pkg/component/extensions/operatingsystemconfig/original/components/docker
             - pkg/component/extensions/operatingsystemconfig/original/components/docker/logrotate
             - pkg/component/extensions/operatingsystemconfig/original/components/kubelet
+            - pkg/component/extensions/operatingsystemconfig/original/components/nodeagent
             - pkg/component/extensions/operatingsystemconfig/utils
             - pkg/component/kubeapiserver/constants
             - pkg/component/kubeproxy
@@ -624,6 +626,8 @@ build:
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/healthz
             - pkg/logger
+            - pkg/nodeagent/apis/config
+            - pkg/nodeagent/apis/config/v1alpha1
             - pkg/provider-local/apis/local
             - pkg/provider-local/apis/local/helper
             - pkg/provider-local/apis/local/install
@@ -650,6 +654,7 @@ build:
             - pkg/provider-local/webhook/machinecontrollermanager
             - pkg/provider-local/webhook/networkpolicy
             - pkg/provider-local/webhook/node
+            - pkg/provider-local/webhook/nodeagentosc
             - pkg/provider-local/webhook/shoot
             - pkg/resourcemanager/controller/garbagecollector/references
             - pkg/utils

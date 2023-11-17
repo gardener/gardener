@@ -35,8 +35,12 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-// AccessSecretName is a constant for the secret name for the gardener-node-agent's shoot access secret.
-const AccessSecretName = "gardener-node-agent"
+const (
+	// AccessSecretName is a constant for the secret name for the gardener-node-agent's shoot access secret.
+	AccessSecretName = "gardener-node-agent"
+	// PathBinary is a constant for the path to the gardener-node-agent binary file on the VMs.
+	PathBinary = v1beta1constants.OperatingSystemConfigFilePathBinaries + "/gardener-node-agent"
+)
 
 var codec runtime.Codec
 
@@ -72,7 +76,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	}
 
 	files = append(files, extensionsv1alpha1.File{
-		Path:        v1beta1constants.OperatingSystemConfigFilePathBinaries + "/gardener-node-agent",
+		Path:        PathBinary,
 		Permissions: pointer.Int32(0755),
 		Content: extensionsv1alpha1.FileContent{
 			ImageRef: &extensionsv1alpha1.FileContentImageRef{

@@ -29,7 +29,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-const pathInitScript = nodeagentv1alpha1.BaseDir + "/init.sh"
+// PathInitScript is the path to the init script.
+const PathInitScript = nodeagentv1alpha1.BaseDir + "/init.sh"
 
 // Config returns the init units and the files for the OperatingSystemConfig for bootstrapping the gardener-node-agent.
 // ### !CAUTION! ###
@@ -66,10 +67,10 @@ Restart=on-failure
 RestartSec=5
 StartLimitBurst=0
 EnvironmentFile=/etc/environment
-ExecStart=` + pathInitScript + `
+ExecStart=` + PathInitScript + `
 [Install]
 WantedBy=multi-user.target`),
-			FilePaths: []string{pathInitScript},
+			FilePaths: []string{PathInitScript},
 		}}
 
 		nodeInitFiles = []extensionsv1alpha1.File{
@@ -88,7 +89,7 @@ WantedBy=multi-user.target`),
 				},
 			},
 			{
-				Path:        pathInitScript,
+				Path:        PathInitScript,
 				Permissions: pointer.Int32(0755),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
