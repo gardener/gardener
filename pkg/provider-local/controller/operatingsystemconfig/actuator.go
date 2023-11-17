@@ -65,22 +65,22 @@ func init() {
 }
 
 func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, osc *extensionsv1alpha1.OperatingSystemConfig) ([]byte, *string, []string, []string, []extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
-	if !a.useGardenerNodeAgent {
-		cloudConfig, cmd, err := oscommonactuator.CloudConfigFromOperatingSystemConfig(ctx, log, a.client, osc, cloudInitGenerator)
-		if err != nil {
-			return nil, nil, nil, nil, nil, nil, fmt.Errorf("could not generate cloud config: %w", err)
-		}
-		return cloudConfig, cmd, oscommonactuator.OperatingSystemConfigUnitNames(osc), oscommonactuator.OperatingSystemConfigFilePaths(osc), nil, nil, nil
+	cloudConfig, cmd, err := oscommonactuator.CloudConfigFromOperatingSystemConfig(ctx, log, a.client, osc, cloudInitGenerator)
+	if err != nil {
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("could not generate cloud config: %w", err)
 	}
 
 	switch purpose := osc.Spec.Purpose; purpose {
 	case extensionsv1alpha1.OperatingSystemConfigPurposeProvision:
+		if !a.useGardenerNodeAgent {
+			return cloudConfig, cmd, oscommonactuator.OperatingSystemConfigUnitNames(osc), oscommonactuator.OperatingSystemConfigFilePaths(osc), nil, nil, nil
+		}
 		userData, err := a.handleProvisionOSC(ctx, osc)
 		return []byte(userData), nil, nil, nil, nil, nil, err
 
 	case extensionsv1alpha1.OperatingSystemConfigPurposeReconcile:
 		extensionUnits, extensionFiles, err := a.handleReconcileOSC(osc)
-		return nil, nil, nil, nil, extensionUnits, extensionFiles, err
+		return cloudConfig, cmd, oscommonactuator.OperatingSystemConfigUnitNames(osc), oscommonactuator.OperatingSystemConfigFilePaths(osc), extensionUnits, extensionFiles, err
 
 	default:
 		return nil, nil, nil, nil, nil, nil, fmt.Errorf("unknown purpose: %s", purpose)
