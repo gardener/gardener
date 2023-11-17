@@ -75,14 +75,19 @@ var _ = Describe("Valitail", func() {
 ExecStartPre=/usr/bin/docker run --rm -v /opt/bin:/opt/bin:rw --entrypoint /bin/sh ` + valitailRepository + ":" + valitailImageTag + " -c " + "\"cp /usr/bin/valitail /opt/bin\""
 					}
 
-					valitailDaemonUnit := extensionsv1alpha1.Unit{
-						Name:    UnitName,
-						Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-						Enable:  pointer.Bool(true),
-						Content: pointer.String(`[Unit]
+					unitContent := `[Unit]
 Description=valitail daemon
-Documentation=https://github.com/credativ/plutono
-After=valitail-fetch-token.service
+Documentation=https://github.com/credativ/plutono`
+
+					if !useGardenerNodeAgentEnabled {
+						unitContent += `
+After=valitail-fetch-token.service`
+					} else {
+						unitContent += `
+ConditionPathExists=/var/lib/valitail/auth-token`
+					}
+
+					unitContent += `
 [Install]
 WantedBy=multi-user.target
 [Service]
@@ -99,7 +104,13 @@ RestartSec=5
 EnvironmentFile=/etc/environment
 ExecStartPre=/bin/sh -c "systemctl stop promtail.service || true"
 ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:])"` + valitailDaemonStartPre + `
-ExecStart=/opt/bin/valitail -config.file=` + PathConfig),
+ExecStart=/opt/bin/valitail -config.file=` + PathConfig
+
+					valitailDaemonUnit := extensionsv1alpha1.Unit{
+						Name:    UnitName,
+						Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+						Enable:  pointer.Bool(true),
+						Content: pointer.String(unitContent),
 					}
 
 					valitailTokenFetchUnit := extensionsv1alpha1.Unit{
@@ -322,20 +333,28 @@ exit $?
 						},
 					}
 
-					expectedFiles := []extensionsv1alpha1.File{valitailConfigFile, valitailFetchTokenScriptFile, caBundleFile}
+					expectedFiles := []extensionsv1alpha1.File{valitailConfigFile, caBundleFile}
+					if !useGardenerNodeAgentEnabled {
+						expectedFiles = append(expectedFiles, valitailFetchTokenScriptFile)
+						valitailTokenFetchUnit.FilePaths = []string{"/var/lib/valitail/scripts/fetch-token.sh"}
+					}
 
 					valitailDaemonUnit.FilePaths = []string{
 						"/var/lib/valitail/config/config",
 						"/var/lib/valitail/ca.crt",
 					}
-					valitailTokenFetchUnit.FilePaths = []string{"/var/lib/valitail/scripts/fetch-token.sh"}
 
 					if useGardenerNodeAgentEnabled {
 						expectedFiles = append(expectedFiles, valitailBinaryFile)
 						valitailDaemonUnit.FilePaths = append(valitailDaemonUnit.FilePaths, "/opt/bin/valitail")
 					}
 
-					Expect(units).To(ConsistOf(valitailDaemonUnit, valitailTokenFetchUnit))
+					expectedUnits := []extensionsv1alpha1.Unit{valitailDaemonUnit}
+					if !useGardenerNodeAgentEnabled {
+						expectedUnits = append(expectedUnits, valitailTokenFetchUnit)
+					}
+
+					Expect(units).To(ConsistOf(expectedUnits))
 					Expect(files).To(ConsistOf(expectedFiles))
 				})
 
@@ -359,15 +378,19 @@ exit $?
 						afterUnit = "gardener-node-agent.service"
 					}
 
-					Expect(units).To(ConsistOf(
-						extensionsv1alpha1.Unit{
-							Name:    "valitail.service",
-							Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-							Enable:  pointer.Bool(true),
-							Content: pointer.String(`[Unit]
+					unitContent := `[Unit]
 Description=valitail daemon
-Documentation=https://github.com/credativ/plutono
-After=valitail-fetch-token.service
+Documentation=https://github.com/credativ/plutono`
+
+					if !useGardenerNodeAgentEnabled {
+						unitContent += `
+After=valitail-fetch-token.service`
+					} else {
+						unitContent += `
+ConditionPathExists=/var/lib/valitail/auth-token`
+					}
+
+					unitContent += `
 [Install]
 WantedBy=multi-user.target
 [Service]
@@ -385,9 +408,17 @@ EnvironmentFile=/etc/environment
 ExecStartPre=/bin/sh -c "systemctl stop promtail.service || true"
 ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:])"
 ExecStartPre=/bin/systemctl disable valitail.service
-ExecStart=/bin/sh -c "echo service valitail.service is removed!; while true; do sleep 86400; done"`),
-						},
-						extensionsv1alpha1.Unit{
+ExecStart=/bin/sh -c "echo service valitail.service is removed!; while true; do sleep 86400; done"`
+
+					expectedUnits := []extensionsv1alpha1.Unit{{
+						Name:    "valitail.service",
+						Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+						Enable:  pointer.Bool(true),
+						Content: pointer.String(unitContent),
+					}}
+
+					if !useGardenerNodeAgentEnabled {
+						expectedUnits = append(expectedUnits, extensionsv1alpha1.Unit{
 							Name:    "valitail-fetch-token.service",
 							Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 							Enable:  pointer.Bool(true),
@@ -404,9 +435,10 @@ EnvironmentFile=/etc/environment
 ExecStartPre=/bin/sh -c "systemctl stop promtail-fetch-token.service || true"
 ExecStartPre=/bin/systemctl disable valitail-fetch-token.service
 ExecStart=/bin/sh -c "rm -f /var/lib/valitail/auth-token; echo service valitail-fetch-token.service is removed!; while true; do sleep 86400; done"`),
-						},
-					))
+						})
+					}
 
+					Expect(units).To(ConsistOf(expectedUnits))
 					Expect(files).To(BeNil())
 				})
 

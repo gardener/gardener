@@ -50,7 +50,7 @@ var _ = Describe("Init", func() {
 
 		BeforeEach(func() {
 			worker = gardencorev1beta1.Worker{}
-			config = nodeagentcomponent.ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, caBundle, oscSyncJitterPeriod)
+			config = nodeagentcomponent.ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, caBundle, oscSyncJitterPeriod, nil)
 		})
 
 		When("kubelet data volume is not configured", func() {
@@ -109,8 +109,8 @@ controllers:
     syncJitterPeriod: ` + oscSyncJitterPeriod.Duration.String() + `
   token:
     syncConfigs:
-    - secretName: gardener-node-agent
-      path: /var/lib/gardener-node-agent/credentials/token
+    - path: /var/lib/gardener-node-agent/credentials/token
+      secretName: gardener-node-agent
 kind: NodeAgentConfiguration
 logFormat: ""
 logLevel: ""
@@ -194,7 +194,9 @@ controllers:
     secretName: ` + oscSecretName + `
     syncJitterPeriod: ` + oscSyncJitterPeriod.Duration.String() + `
   token:
-    secretName: gardener-node-agent
+    syncConfigs:
+    - path: /var/lib/gardener-node-agent/credentials/token
+      secretName: gardener-node-agent
 kind: NodeAgentConfiguration
 logFormat: ""
 logLevel: ""

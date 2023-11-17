@@ -32,10 +32,12 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/features"
+	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
 var (
+	// TODO(rfranzke): Remove the fetch-token script when the UseGardenerNodeAgent feature gate gets removed.
 	tplNameFetchToken = "fetch-token"
 	//go:embed templates/scripts/fetch-token.tpl.sh
 	tplContentFetchToken string
@@ -137,8 +139,17 @@ func getValitailUnit(ctx components.Context) extensionsv1alpha1.Unit {
 
 	unitContent := `[Unit]
 Description=valitail daemon
-Documentation=https://github.com/credativ/plutono
-After=` + unitNameFetchToken + `
+Documentation=https://github.com/credativ/plutono`
+
+	if !features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+		unitContent += `
+After=` + unitNameFetchToken
+	} else {
+		unitContent += `
+ConditionPathExists=` + PathAuthToken
+	}
+
+	unitContent += `
 [Install]
 WantedBy=multi-user.target
 [Service]
