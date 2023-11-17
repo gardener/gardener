@@ -25,30 +25,33 @@ func SetDefaults_Seed(obj *Seed) {
 	if obj.Spec.Settings == nil {
 		obj.Spec.Settings = &SeedSettings{}
 	}
+}
 
-	if obj.Spec.Settings.ExcessCapacityReservation == nil {
-		obj.Spec.Settings.ExcessCapacityReservation = &SeedSettingExcessCapacityReservation{}
-		setDefaults_ExcessCapacityReservationConfig(obj.Spec.Settings.ExcessCapacityReservation)
+// SetDefaults_SeedSettings sets default values for SeedSettings objects.
+func SetDefaults_SeedSettings(obj *SeedSettings) {
+	if obj.ExcessCapacityReservation == nil {
+		obj.ExcessCapacityReservation = &SeedSettingExcessCapacityReservation{}
+		setDefaults_ExcessCapacityReservationConfig(obj.ExcessCapacityReservation)
 	}
 
-	if pointer.BoolDeref(obj.Spec.Settings.ExcessCapacityReservation.Enabled, true) && len(obj.Spec.Settings.ExcessCapacityReservation.Configs) == 0 {
-		setDefaults_ExcessCapacityReservationConfig(obj.Spec.Settings.ExcessCapacityReservation)
+	if pointer.BoolDeref(obj.ExcessCapacityReservation.Enabled, true) && len(obj.ExcessCapacityReservation.Configs) == 0 {
+		setDefaults_ExcessCapacityReservationConfig(obj.ExcessCapacityReservation)
 	}
 
-	if obj.Spec.Settings.Scheduling == nil {
-		obj.Spec.Settings.Scheduling = &SeedSettingScheduling{Visible: true}
+	if obj.Scheduling == nil {
+		obj.Scheduling = &SeedSettingScheduling{Visible: true}
 	}
 
-	if obj.Spec.Settings.VerticalPodAutoscaler == nil {
-		obj.Spec.Settings.VerticalPodAutoscaler = &SeedSettingVerticalPodAutoscaler{Enabled: true}
+	if obj.VerticalPodAutoscaler == nil {
+		obj.VerticalPodAutoscaler = &SeedSettingVerticalPodAutoscaler{Enabled: true}
 	}
 
-	if obj.Spec.Settings.DependencyWatchdog == nil {
-		obj.Spec.Settings.DependencyWatchdog = &SeedSettingDependencyWatchdog{}
+	if obj.DependencyWatchdog == nil {
+		obj.DependencyWatchdog = &SeedSettingDependencyWatchdog{}
 	}
 
-	if obj.Spec.Settings.TopologyAwareRouting == nil {
-		obj.Spec.Settings.TopologyAwareRouting = &SeedSettingTopologyAwareRouting{Enabled: false}
+	if obj.TopologyAwareRouting == nil {
+		obj.TopologyAwareRouting = &SeedSettingTopologyAwareRouting{Enabled: false}
 	}
 }
 

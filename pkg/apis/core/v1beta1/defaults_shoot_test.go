@@ -47,131 +47,210 @@ var _ = Describe("Shoot defaulting", func() {
 	})
 
 	Describe("Kubernetes defaulting", func() {
-		It("should set the kubeScheduler field for Shoot with workers", func() {
-			SetObjectDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Kubernetes.KubeScheduler).NotTo(BeNil())
-		})
-
-		It("should not set the kubeScheduler field for workerless Shoot", func() {
+		It("should not default the kubeScheduler field for workerless Shoot", func() {
 			obj.Spec.Provider.Workers = nil
 			SetObjectDefaults_Shoot(obj)
 
 			Expect(obj.Spec.Kubernetes.KubeScheduler).To(BeNil())
 		})
 
-		It("should set the kubeProxy field for Shoot with workers", func() {
+		It("should default the kubeScheduler field", func() {
+			obj.Spec.Kubernetes.KubeScheduler = &KubeSchedulerConfig{}
+
 			SetObjectDefaults_Shoot(obj)
 
-			Expect(obj.Spec.Kubernetes.KubeProxy).NotTo(BeNil())
+			Expect(obj.Spec.Kubernetes.KubeScheduler.Profile).To(PointTo(Equal(SchedulingProfileBalanced)))
 		})
 
-		It("should not set the kubeProxy field for workerless Shoot", func() {
+		It("should not overwrite the already set values for kubeScheduler profile field", func() {
+			profile := SchedulingProfileBinPacking
+			obj.Spec.Kubernetes.KubeScheduler = &KubeSchedulerConfig{
+				Profile: &profile,
+			}
+
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.KubeScheduler.Profile).To(PointTo(Equal(SchedulingProfileBinPacking)))
+		})
+
+		It("should not default the kubeProxy field for workerless Shoot", func() {
 			obj.Spec.Provider.Workers = nil
 			SetObjectDefaults_Shoot(obj)
 
 			Expect(obj.Spec.Kubernetes.KubeProxy).To(BeNil())
 		})
 
-		It("should set the kubelet field for Shoot with workers", func() {
+		It("should default the kubeProxy field for Shoot with workers", func() {
 			SetObjectDefaults_Shoot(obj)
 
-			Expect(obj.Spec.Kubernetes.Kubelet).NotTo(BeNil())
+			Expect(obj.Spec.Kubernetes.KubeProxy).NotTo(BeNil())
+			Expect(obj.Spec.Kubernetes.KubeProxy.Mode).To(PointTo(Equal(ProxyModeIPTables)))
+			Expect(obj.Spec.Kubernetes.KubeProxy.Enabled).To(PointTo(BeTrue()))
 		})
 
-		It("should not set the kubelet field for workerless Shoot", func() {
-			obj.Spec.Provider.Workers = nil
+		It("should not overwrite the already set values for kubeProxy field", func() {
+			mode := ProxyModeIPVS
+			obj.Spec.Kubernetes.KubeProxy = &KubeProxyConfig{
+				Mode:    &mode,
+				Enabled: pointer.Bool(false),
+			}
 			SetObjectDefaults_Shoot(obj)
 
-			Expect(obj.Spec.Kubernetes.Kubelet).To(BeNil())
+			Expect(obj.Spec.Kubernetes.KubeProxy).NotTo(BeNil())
+			Expect(obj.Spec.Kubernetes.KubeProxy.Mode).To(PointTo(Equal(ProxyModeIPVS)))
+			Expect(obj.Spec.Kubernetes.KubeProxy.Enabled).To(PointTo(BeFalse()))
 		})
 
-		It("should default the failSwapOn field", func() {
-			SetObjectDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Kubernetes.Kubelet.FailSwapOn).To(PointTo(BeTrue()))
-		})
-
-		It("should not default the failSwapOn field", func() {
-			obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-			obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(false)
-
-			SetObjectDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Kubernetes.Kubelet.FailSwapOn).To(PointTo(BeFalse()))
-		})
-
-		It("should default the swap behaviour", func() {
-			obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-			obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(false)
-			obj.Spec.Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
-			SetObjectDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Kubernetes.Kubelet.MemorySwap).To(Not(BeNil()))
-			Expect(obj.Spec.Kubernetes.Kubelet.MemorySwap.SwapBehavior).To(PointTo(Equal(LimitedSwap)))
-		})
-
-		It("should not default the swap behaviour because failSwapOn=true", func() {
-			trueVar := true
-			obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-			obj.Spec.Kubernetes.Kubelet.FailSwapOn = &trueVar
-			obj.Spec.Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
-			SetObjectDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Kubernetes.Kubelet.MemorySwap).To(BeNil())
-		})
-
-		It("should not default the swap behaviour because kubelet feature gate NodeSwap is not set", func() {
-			obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-			obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(false)
-			SetObjectDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Kubernetes.Kubelet.MemorySwap).To(BeNil())
-		})
-
-		It("should default the imageGCThreshold fields", func() {
-			SetObjectDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent).To(PointTo(Equal(int32(50))))
-			Expect(obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent).To(PointTo(Equal(int32(40))))
-		})
-
-		It("should not default the imageGCThreshold fields", func() {
+		Describe("Kubelet defaulting", func() {
 			var (
-				high int32 = 12
-				low  int32 = 34
+				defaultKubeReservedMemory = resource.MustParse("1Gi")
+				defaultKubeReservedCPU    = resource.MustParse("80m")
+				defaultKubeReservedPID    = resource.MustParse("20k")
+				kubeReservedMemory        = resource.MustParse("2Gi")
+				kubeReservedCPU           = resource.MustParse("20m")
+				kubeReservedPID           = resource.MustParse("10k")
 			)
 
-			obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-			obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent = &high
-			obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent = &low
+			BeforeEach(func() {
+				obj.Spec.Kubernetes.Kubelet = nil
+			})
 
-			SetObjectDefaults_Shoot(obj)
+			It("should not default the kubelet field for workerless Shoot", func() {
+				obj.Spec.Provider.Workers = nil
+				SetObjectDefaults_Shoot(obj)
 
-			Expect(obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent).To(PointTo(Equal(high)))
-			Expect(obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent).To(PointTo(Equal(low)))
-		})
+				Expect(obj.Spec.Kubernetes.Kubelet).To(BeNil())
+			})
 
-		It("should default the serializeImagePulls field", func() {
-			SetObjectDefaults_Shoot(obj)
+			It("should default the kubelet field for Shoot with workers", func() {
+				SetObjectDefaults_Shoot(obj)
 
-			Expect(obj.Spec.Kubernetes.Kubelet.SerializeImagePulls).To(PointTo(BeTrue()))
-		})
+				Expect(obj.Spec.Kubernetes.Kubelet).NotTo(BeNil())
+			})
 
-		It("should not default the serializeImagePulls field if it is already set", func() {
-			falseVar := false
-			obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-			obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = &falseVar
+			It("should default the failSwapOn field", func() {
+				SetObjectDefaults_Shoot(obj)
 
-			SetObjectDefaults_Shoot(obj)
+				Expect(obj.Spec.Kubernetes.Kubelet.FailSwapOn).To(PointTo(BeTrue()))
+			})
 
-			Expect(obj.Spec.Kubernetes.Kubelet.SerializeImagePulls).To(PointTo(BeFalse()))
+			It("should not overwrite already set values for failSwapOn field", func() {
+				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
+				obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(false)
+
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.Kubelet.FailSwapOn).To(PointTo(BeFalse()))
+			})
+
+			It("should default the swap behaviour", func() {
+				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
+				obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(false)
+				obj.Spec.Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.Kubelet.MemorySwap).To(Not(BeNil()))
+				Expect(obj.Spec.Kubernetes.Kubelet.MemorySwap.SwapBehavior).To(PointTo(Equal(LimitedSwap)))
+			})
+
+			It("should not overwrite already set values for swap behaviour", func() {
+				unlimitedSwap := UnlimitedSwap
+				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
+				obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(false)
+				obj.Spec.Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
+				obj.Spec.Kubernetes.Kubelet.MemorySwap = &MemorySwapConfiguration{SwapBehavior: &unlimitedSwap}
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.Kubelet.MemorySwap).To(Not(BeNil()))
+				Expect(obj.Spec.Kubernetes.Kubelet.MemorySwap.SwapBehavior).To(PointTo(Equal(UnlimitedSwap)))
+			})
+
+			It("should not default the swap behaviour because failSwapOn=true", func() {
+				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
+				obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(true)
+				obj.Spec.Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.Kubelet.MemorySwap).To(BeNil())
+			})
+
+			It("should not default the swap behaviour because kubelet NodeSwap feature gate is false", func() {
+				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
+				obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(false)
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.Kubelet.MemorySwap).To(BeNil())
+			})
+
+			It("should default the imageGCThreshold fields", func() {
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent).To(PointTo(Equal(int32(50))))
+				Expect(obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent).To(PointTo(Equal(int32(40))))
+			})
+
+			It("should not overwrite already set values for imageGCThreshold field", func() {
+				var (
+					high int32 = 12
+					low  int32 = 34
+				)
+
+				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
+				obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent = &high
+				obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent = &low
+
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent).To(PointTo(Equal(high)))
+				Expect(obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent).To(PointTo(Equal(low)))
+			})
+
+			It("should default the serializeImagePulls field", func() {
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.Kubelet.SerializeImagePulls).To(PointTo(BeTrue()))
+			})
+
+			It("should not overwrite already set values for serializeImagePulls field", func() {
+				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
+				obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = pointer.Bool(false)
+
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.Kubelet.SerializeImagePulls).To(PointTo(BeFalse()))
+			})
+
+			It("should default the kubeReserved field", func() {
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.Kubelet.KubeReserved).To(PointTo(Equal(KubeletConfigReserved{
+					CPU:    &defaultKubeReservedCPU,
+					Memory: &defaultKubeReservedMemory,
+					PID:    &defaultKubeReservedPID,
+				})))
+			})
+
+			It("should not overwrite already set values for kubeReserved field", func() {
+				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{
+					KubeReserved: &KubeletConfigReserved{
+						CPU:    &kubeReservedCPU,
+						Memory: &kubeReservedMemory,
+						PID:    &kubeReservedPID,
+					},
+				}
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.Kubelet.KubeReserved).To(PointTo(Equal(KubeletConfigReserved{
+					CPU:    &kubeReservedCPU,
+					Memory: &kubeReservedMemory,
+					PID:    &kubeReservedPID,
+				})))
+			})
 		})
 	})
 
 	Describe("Worker Swap", func() {
 		It("should default the swap behaviour for a worker pool", func() {
-			falseVar := false
 			obj.Spec.Provider.Workers = []Worker{
 				{
 					Kubernetes: &WorkerKubernetes{
@@ -179,12 +258,32 @@ var _ = Describe("Shoot defaulting", func() {
 					},
 				},
 			}
-			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FailSwapOn = &falseVar
+			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FailSwapOn = pointer.Bool(false)
 			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
 			SetObjectDefaults_Shoot(obj)
 
 			Expect(obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.MemorySwap).To(Not(BeNil()))
 			Expect(obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.MemorySwap.SwapBehavior).To(PointTo(Equal(LimitedSwap)))
+		})
+
+		It("should not overwrite already set values for swap behaviour for a worker pool", func() {
+			unlimitedSwap := UnlimitedSwap
+			obj.Spec.Provider.Workers = []Worker{
+				{
+					Kubernetes: &WorkerKubernetes{
+						Kubelet: &KubeletConfig{
+							MemorySwap: &MemorySwapConfiguration{
+								SwapBehavior: &unlimitedSwap,
+							},
+						},
+					},
+				},
+			}
+			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FailSwapOn = pointer.Bool(false)
+			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.MemorySwap.SwapBehavior).To(PointTo(Equal(UnlimitedSwap)))
 		})
 
 		It("should not default the swap behaviour for a worker pool because failSwapOn=true (defaulted to true)", func() {
@@ -202,7 +301,6 @@ var _ = Describe("Shoot defaulting", func() {
 		})
 
 		It("should not default the swap behaviour for a worker pool because kubelet feature gate NodeSwap is not set", func() {
-			falseVar := false
 			obj.Spec.Provider.Workers = []Worker{
 				{
 					Kubernetes: &WorkerKubernetes{
@@ -210,7 +308,7 @@ var _ = Describe("Shoot defaulting", func() {
 					},
 				},
 			}
-			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FailSwapOn = &falseVar
+			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FailSwapOn = pointer.Bool(false)
 			SetObjectDefaults_Shoot(obj)
 
 			Expect(obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.MemorySwap).To(BeNil())
@@ -268,50 +366,12 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.SchedulerName).To(PointTo(Equal("default-scheduler")))
 		})
 
-		It("should not default schedulerName field if it is already set", func() {
+		It("should not overwrite the already set values for schedulerName field", func() {
 			obj.Spec.SchedulerName = pointer.String("foo-scheduler")
 
 			SetObjectDefaults_Shoot(obj)
 
 			Expect(obj.Spec.SchedulerName).To(PointTo(Equal("foo-scheduler")))
-		})
-	})
-
-	Describe("KubeReserved defaulting", func() {
-		var (
-			defaultKubeReservedMemory = resource.MustParse("1Gi")
-			defaultKubeReservedCPU    = resource.MustParse("80m")
-			defaultKubeReservedPID    = resource.MustParse("20k")
-			kubeReservedMemory        = resource.MustParse("2Gi")
-			kubeReservedCPU           = resource.MustParse("20m")
-			kubeReservedPID           = resource.MustParse("10k")
-		)
-
-		It("should default all fields", func() {
-			SetObjectDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Kubernetes.Kubelet.KubeReserved).To(PointTo(Equal(KubeletConfigReserved{
-				CPU:    &defaultKubeReservedCPU,
-				Memory: &defaultKubeReservedMemory,
-				PID:    &defaultKubeReservedPID,
-			})))
-		})
-
-		It("should not overwrite manually set kubeReserved", func() {
-			obj.Spec.Kubernetes.Kubelet = &KubeletConfig{
-				KubeReserved: &KubeletConfigReserved{
-					CPU:    &kubeReservedCPU,
-					Memory: &kubeReservedMemory,
-					PID:    &kubeReservedPID,
-				},
-			}
-			SetObjectDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Kubernetes.Kubelet.KubeReserved).To(PointTo(Equal(KubeletConfigReserved{
-				CPU:    &kubeReservedCPU,
-				Memory: &kubeReservedMemory,
-				PID:    &kubeReservedPID,
-			})))
 		})
 	})
 
@@ -379,41 +439,12 @@ var _ = Describe("Shoot defaulting", func() {
 		})
 	})
 
-	Describe("KubeScheduler defaulting", func() {
-		It("should not default kubeScheduler field for workerless Shoot", func() {
-			obj.Spec.Provider.Workers = nil
-
-			SetObjectDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Kubernetes.KubeScheduler).To(BeNil())
-		})
-
-		It("should default the kubeScheduler.profile field", func() {
-			obj.Spec.Kubernetes.KubeScheduler = &KubeSchedulerConfig{}
-
-			SetObjectDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Kubernetes.KubeScheduler.Profile).To(PointTo(Equal(SchedulingProfileBalanced)))
-		})
-
-		It("should not default the kubeScheduler.profile field if it is already set", func() {
-			profile := SchedulingProfileBinPacking
-			obj.Spec.Kubernetes.KubeScheduler = &KubeSchedulerConfig{
-				Profile: &profile,
-			}
-
-			SetObjectDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Kubernetes.KubeScheduler.Profile).To(PointTo(Equal(SchedulingProfileBinPacking)))
-		})
-	})
-
 	Describe("Networking", func() {
 		BeforeEach(func() {
 			obj.Spec.Networking = nil
 		})
 
-		It("should set the networking field", func() {
+		It("should default the networking field", func() {
 			SetObjectDefaults_Shoot(obj)
 
 			Expect(obj.Spec.Networking).NotTo(BeNil())
@@ -425,10 +456,20 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Networking).NotTo(BeNil())
 			Expect(obj.Spec.Networking.IPFamilies).To(ConsistOf(IPFamilyIPv4))
 		})
+
+		It("should not overwrite already set values for ipFamilies value", func() {
+			obj.Spec.Networking = &Networking{}
+			obj.Spec.Networking.IPFamilies = []IPFamily{IPFamilyIPv6}
+
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Networking).NotTo(BeNil())
+			Expect(obj.Spec.Networking.IPFamilies).To(ConsistOf(IPFamilyIPv6))
+		})
 	})
 
 	Describe("Addons defaulting", func() {
-		It("should set the addons field for shoot with workers", func() {
+		It("should default the addons field for shoot with workers", func() {
 			obj.Spec.Addons = nil
 
 			SetObjectDefaults_Shoot(obj)
@@ -436,7 +477,7 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Addons).NotTo(BeNil())
 		})
 
-		It("should set the kubernetesDashboard field for shoot with workers", func() {
+		It("should default the kubernetesDashboard field for shoot with workers", func() {
 			obj.Spec.Addons = nil
 
 			SetObjectDefaults_Shoot(obj)
@@ -446,7 +487,21 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Addons.KubernetesDashboard.AuthenticationMode).To(PointTo(Equal(KubernetesDashboardAuthModeToken)))
 		})
 
-		It("should set the nginxIngress field for shoot with workers", func() {
+		It("should not overwrite the already set values for kubernetesDashboard field", func() {
+			obj.Spec.Addons = &Addons{
+				KubernetesDashboard: &KubernetesDashboard{
+					AuthenticationMode: pointer.String("foo"),
+				},
+			}
+
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Addons).NotTo(BeNil())
+			Expect(obj.Spec.Addons.KubernetesDashboard).NotTo(BeNil())
+			Expect(obj.Spec.Addons.KubernetesDashboard.AuthenticationMode).To(PointTo(Equal("foo")))
+		})
+
+		It("should default the nginxIngress field for shoot with workers", func() {
 			obj.Spec.Addons = &Addons{}
 			obj.Spec.Addons.NginxIngress = &NginxIngress{}
 
@@ -457,7 +512,7 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Addons.NginxIngress.ExternalTrafficPolicy).To(PointTo(Equal(corev1.ServiceExternalTrafficPolicyTypeCluster)))
 		})
 
-		It("should not overwrite the nginxIngress field for shoot with workers", func() {
+		It("should not overwrite the already set values for nginxIngress field", func() {
 			s := corev1.ServiceExternalTrafficPolicyLocal
 			obj.Spec.Addons = &Addons{}
 			obj.Spec.Addons.NginxIngress = &NginxIngress{ExternalTrafficPolicy: &s}
@@ -469,7 +524,7 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Addons.NginxIngress.ExternalTrafficPolicy).To(PointTo(Equal(corev1.ServiceExternalTrafficPolicyLocal)))
 		})
 
-		It("should not set the addons field for workerless Shoot", func() {
+		It("should not default the addons field for workerless Shoot", func() {
 			obj.Spec.Provider.Workers = nil
 			obj.Spec.Addons = nil
 
@@ -484,7 +539,7 @@ var _ = Describe("Shoot defaulting", func() {
 			obj.Spec.Maintenance = nil
 		})
 
-		It("should correctly default the maintenance timeWindow field", func() {
+		It("should default the maintenance timeWindow field", func() {
 			SetObjectDefaults_Shoot(obj)
 
 			Expect(obj.Spec.Maintenance.TimeWindow).NotTo(BeNil())
@@ -492,14 +547,7 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Maintenance.TimeWindow.End).To(HaveSuffix("0000+0000"))
 		})
 
-		It("should set the maintenance autoUpdate field", func() {
-			SetObjectDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Maintenance).NotTo(BeNil())
-			Expect(obj.Spec.Maintenance.AutoUpdate).NotTo(BeNil())
-		})
-
-		It("should set both KubernetesVersion and MachineImageVersion field for shoot with workers", func() {
+		It("should default both KubernetesVersion and MachineImageVersion field for shoot with workers", func() {
 			SetObjectDefaults_Shoot(obj)
 
 			Expect(obj.Spec.Maintenance).NotTo(BeNil())
@@ -508,7 +556,7 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Maintenance.AutoUpdate.MachineImageVersion).NotTo(BeNil())
 		})
 
-		It("should set only KubernetesVersion field for workerless shoot", func() {
+		It("should default only KubernetesVersion field for workerless shoot", func() {
 			obj.Spec.Provider.Workers = nil
 
 			SetObjectDefaults_Shoot(obj)
@@ -518,6 +566,22 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Maintenance.AutoUpdate.KubernetesVersion).To(BeTrue())
 			Expect(obj.Spec.Maintenance.AutoUpdate.MachineImageVersion).To(BeNil())
 		})
+
+		It("should not overwrite the already set values for maintenance autoUpdate field", func() {
+			obj.Spec.Maintenance = &Maintenance{
+				AutoUpdate: &MaintenanceAutoUpdate{
+					KubernetesVersion:   false,
+					MachineImageVersion: pointer.Bool(false),
+				},
+			}
+
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Maintenance).NotTo(BeNil())
+			Expect(obj.Spec.Maintenance.AutoUpdate).NotTo(BeNil())
+			Expect(obj.Spec.Maintenance.AutoUpdate.KubernetesVersion).To(BeFalse())
+			Expect(obj.Spec.Maintenance.AutoUpdate.MachineImageVersion).To(PointTo(BeFalse()))
+		})
 	})
 
 	Describe("KubeAPIServer defaulting", func() {
@@ -525,20 +589,15 @@ var _ = Describe("Shoot defaulting", func() {
 			obj.Spec.Kubernetes.KubeAPIServer = nil
 		})
 
-		It("should default API server requests fields", func() {
+		It("should default the API server requests fields", func() {
 			SetObjectDefaults_Shoot(obj)
 
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.Requests).NotTo(BeNil())
-		})
-
-		It("should default the max inflight requests fields", func() {
-			SetObjectDefaults_Shoot(obj)
-
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxNonMutatingInflight).To(Equal(pointer.Int32(400)))
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxMutatingInflight).To(Equal(pointer.Int32(200)))
 		})
 
-		It("should not default the max inflight requests fields if it is already set", func() {
+		It("should not overwrite the already set values for API server requests fields", func() {
 			var (
 				maxNonMutatingRequestsInflight int32 = 123
 				maxMutatingRequestsInflight    int32 = 456
@@ -554,15 +613,14 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxMutatingInflight).To(Equal(&maxMutatingRequestsInflight))
 		})
 
-		It("should disable anonymous authentication by default", func() {
+		It("should default anonymous authentication field", func() {
 			SetObjectDefaults_Shoot(obj)
 
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication).To(PointTo(BeFalse()))
 		})
 
-		It("should not default the anonymous authentication field if it is explicitly set", func() {
-			trueVar := true
-			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{EnableAnonymousAuthentication: &trueVar}
+		It("should not overwrite the already set values for anonymous authentication field", func() {
+			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{EnableAnonymousAuthentication: pointer.Bool(true)}
 
 			SetObjectDefaults_Shoot(obj)
 
@@ -575,7 +633,7 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.EventTTL).To(Equal(&metav1.Duration{Duration: time.Hour}))
 		})
 
-		It("should not default the event ttl field if it is already set", func() {
+		It("should not overwrite the already set values for event ttl field", func() {
 			eventTTL := &metav1.Duration{Duration: 4 * time.Hour}
 			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{EventTTL: eventTTL}
 
@@ -590,7 +648,7 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.Logging.Verbosity).To(PointTo(Equal(int32(2))))
 		})
 
-		It("should not overwrite the log verbosity level", func() {
+		It("should not overwrite the already set values for log verbosity level", func() {
 			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{Logging: &APIServerLogging{Verbosity: pointer.Int32(3)}}
 
 			SetObjectDefaults_Shoot(obj)
@@ -598,16 +656,19 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.Logging.Verbosity).To(PointTo(Equal(int32(3))))
 		})
 
-		It("should not default the access log level", func() {
-			SetObjectDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Kubernetes.KubeAPIServer.Logging.HTTPAccessVerbosity).To(BeNil())
-		})
-
 		It("should default the defaultNotReadyTolerationSeconds field", func() {
 			SetObjectDefaults_Shoot(obj)
 
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds).To(PointTo(Equal(int64(300))))
+		})
+
+		It("should not overwrite the already set values for defaultNotReadyTolerationSeconds field", func() {
+			var tolerationSeconds int64 = 120
+			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{DefaultNotReadyTolerationSeconds: pointer.Int64(tolerationSeconds)}
+
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds).To(PointTo(Equal(tolerationSeconds)))
 		})
 
 		It("should not default the defaultNotReadyTolerationSeconds field for workerless Shoot", func() {
@@ -618,19 +679,19 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds).To(BeNil())
 		})
 
-		It("should not overwrite the defaultNotReadyTolerationSeconds field if it is already set", func() {
-			var tolerationSeconds int64 = 120
-			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{DefaultNotReadyTolerationSeconds: pointer.Int64(tolerationSeconds)}
-
-			SetObjectDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds).To(PointTo(Equal(tolerationSeconds)))
-		})
-
 		It("should default the defaultUnreachableTolerationSeconds field", func() {
 			SetObjectDefaults_Shoot(obj)
 
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds).To(PointTo(Equal(int64(300))))
+		})
+
+		It("should not overwrite the already set values for defaultUnreachableTolerationSeconds field", func() {
+			var tolerationSeconds int64 = 120
+			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{DefaultUnreachableTolerationSeconds: pointer.Int64(tolerationSeconds)}
+
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds).To(PointTo(Equal(tolerationSeconds)))
 		})
 
 		It("should not default the defaultUnreachableTolerationSeconds field for workerless Shoot", func() {
@@ -640,14 +701,35 @@ var _ = Describe("Shoot defaulting", func() {
 
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds).To(BeNil())
 		})
+	})
 
-		It("should not overwrite the defaultUnreachableTolerationSeconds field if it is already set", func() {
-			var tolerationSeconds int64 = 120
-			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{DefaultUnreachableTolerationSeconds: pointer.Int64(tolerationSeconds)}
+	Describe("WorkerSettings defaulting", func() {
+		It("should default the workers settings field for shoot with workers", func() {
+			obj.Spec.Provider.WorkersSettings = nil
 
 			SetObjectDefaults_Shoot(obj)
 
-			Expect(obj.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds).To(PointTo(Equal(tolerationSeconds)))
+			Expect(obj.Spec.Provider.WorkersSettings).To(Equal(&WorkersSettings{SSHAccess: &SSHAccess{Enabled: true}}))
+		})
+
+		It("should not default the workers settings field for workerless Shoot", func() {
+			obj.Spec.Provider.Workers = nil
+
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Provider.WorkersSettings).To(BeNil())
+		})
+
+		It("should not overwrite the already set values for ssh access field in workers settings", func() {
+			obj.Spec.Provider.WorkersSettings = &WorkersSettings{
+				SSHAccess: &SSHAccess{
+					Enabled: false,
+				},
+			}
+
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Provider.WorkersSettings).To(Equal(&WorkersSettings{SSHAccess: &SSHAccess{Enabled: false}}))
 		})
 	})
 
@@ -678,36 +760,8 @@ var _ = Describe("Shoot defaulting", func() {
 		Expect(obj.Spec.Provider.Workers[1].CRI.Name).To(BeEquivalentTo("some configured value"))
 	})
 
-	It("should set the workers settings field for shoot with workers", func() {
-		obj.Spec.Provider.WorkersSettings = nil
-
-		SetObjectDefaults_Shoot(obj)
-
-		Expect(obj.Spec.Provider.WorkersSettings).To(Equal(&WorkersSettings{SSHAccess: &SSHAccess{Enabled: true}}))
-	})
-
-	It("should not set the workers settings field for workerless Shoot", func() {
-		obj.Spec.Provider.Workers = nil
-
-		SetObjectDefaults_Shoot(obj)
-
-		Expect(obj.Spec.Provider.WorkersSettings).To(BeNil())
-	})
-
-	It("should not overwrite the ssh access field in workers settings", func() {
-		obj.Spec.Provider.WorkersSettings = &WorkersSettings{
-			SSHAccess: &SSHAccess{
-				Enabled: false,
-			},
-		}
-
-		SetObjectDefaults_Shoot(obj)
-
-		Expect(obj.Spec.Provider.WorkersSettings).To(Equal(&WorkersSettings{SSHAccess: &SSHAccess{Enabled: false}}))
-	})
-
 	Describe("SystemComponents defaulting", func() {
-		It("should set the system components and coredns autoscaling fields for shoot with workers", func() {
+		It("should default the system components and coredns autoscaling fields for shoot with workers", func() {
 			obj.Spec.SystemComponents = nil
 
 			SetObjectDefaults_Shoot(obj)
@@ -715,7 +769,37 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.SystemComponents).To(Equal(&SystemComponents{CoreDNS: &CoreDNS{Autoscaling: &CoreDNSAutoscaling{Mode: CoreDNSAutoscalingModeHorizontal}}}))
 		})
 
-		It("should not set the system components for workerless Shoot", func() {
+		It("should not overwrite coredns autoscaling fields when mode is set to horizontal for shoot with workers", func() {
+			obj.Spec.SystemComponents = &SystemComponents{
+				CoreDNS: &CoreDNS{Autoscaling: &CoreDNSAutoscaling{Mode: CoreDNSAutoscalingModeHorizontal}},
+			}
+
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.SystemComponents.CoreDNS.Autoscaling.Mode).To(Equal(CoreDNSAutoscalingModeHorizontal))
+		})
+
+		It("should not overwrite coredns autoscaling fields when mode is set to cluster-proportional for shoot with workers", func() {
+			obj.Spec.SystemComponents = &SystemComponents{
+				CoreDNS: &CoreDNS{Autoscaling: &CoreDNSAutoscaling{Mode: CoreDNSAutoscalingModeClusterProportional}},
+			}
+
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.SystemComponents.CoreDNS.Autoscaling.Mode).To(Equal(CoreDNSAutoscalingModeClusterProportional))
+		})
+
+		It("should overwrite coredns autoscaling mode field to horizontal when mode is not horizontal or cluster-proportional for shoot with workers", func() {
+			obj.Spec.SystemComponents = &SystemComponents{
+				CoreDNS: &CoreDNS{Autoscaling: &CoreDNSAutoscaling{Mode: CoreDNSAutoscalingMode("foo")}},
+			}
+
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.SystemComponents.CoreDNS.Autoscaling.Mode).To(Equal(CoreDNSAutoscalingModeHorizontal))
+		})
+
+		It("should not default the system components for workerless Shoot", func() {
 			obj.Spec.Provider.Workers = nil
 
 			SetObjectDefaults_Shoot(obj)
@@ -739,30 +823,37 @@ var _ = Describe("Shoot defaulting", func() {
 	})
 
 	Describe("Worker defaulting", func() {
-		It("should set the maxSurge field", func() {
+		var (
+			maxSurge       = intstr.FromInt32(2)
+			maxUnavailable = intstr.FromInt32(1)
+		)
+		It("should default the worker fields", func() {
 			SetObjectDefaults_Shoot(obj)
 
 			for i := range obj.Spec.Provider.Workers {
-				a := &obj.Spec.Provider.Workers[i]
-				Expect(a.MaxSurge).To(PointTo(Equal(intstr.FromInt32(1))))
+				worker := &obj.Spec.Provider.Workers[i]
+				Expect(worker.MaxSurge).To(PointTo(Equal(intstr.FromInt32(1))))
+				Expect(worker.MaxUnavailable).To(PointTo(Equal(intstr.FromInt32(0))))
+				Expect(worker.SystemComponents.Allow).To(BeTrue())
 			}
 		})
 
-		It("should set the maxUnavailable field", func() {
-			SetObjectDefaults_Shoot(obj)
-
-			for i := range obj.Spec.Provider.Workers {
-				a := &obj.Spec.Provider.Workers[i]
-				Expect(a.MaxUnavailable).To(PointTo(Equal(intstr.FromInt32(0))))
+		It("should not overwrite the already set values for worker fields", func() {
+			obj.Spec.Provider.Workers = []Worker{
+				{
+					MaxSurge:         &maxSurge,
+					MaxUnavailable:   &maxUnavailable,
+					SystemComponents: &WorkerSystemComponents{Allow: false},
+				},
 			}
-		})
 
-		It("should set the allowSystemComponents field", func() {
 			SetObjectDefaults_Shoot(obj)
 
 			for i := range obj.Spec.Provider.Workers {
-				a := &obj.Spec.Provider.Workers[i]
-				Expect(a.SystemComponents.Allow).To(BeTrue())
+				worker := &obj.Spec.Provider.Workers[i]
+				Expect(worker.MaxSurge).To(PointTo(Equal(intstr.FromInt32(2))))
+				Expect(worker.MaxUnavailable).To(PointTo(Equal(intstr.FromInt32(1))))
+				Expect(worker.SystemComponents.Allow).To(BeFalse())
 			}
 		})
 	})
@@ -773,7 +864,7 @@ var _ = Describe("Shoot defaulting", func() {
 			expanderLeastWaste = ClusterAutoscalerExpanderLeastWaste
 		)
 
-		It("should correctly default the ClusterAutoscaler", func() {
+		It("should default the ClusterAutoscaler field", func() {
 			obj.Spec.Kubernetes.ClusterAutoscaler = &ClusterAutoscaler{}
 
 			SetObjectDefaults_Shoot(obj)
@@ -788,7 +879,7 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxGracefulTerminationSeconds).To(PointTo(Equal(int32(600))))
 		})
 
-		It("should correctly override values the ClusterAutoscaler on setting them", func() {
+		It("sshould not overwrite the already set values for ClusterAutoscaler field", func() {
 			obj.Spec.Kubernetes.ClusterAutoscaler = &ClusterAutoscaler{
 				ScaleDownDelayAfterAdd:        &metav1.Duration{Duration: 1 * time.Hour},
 				ScaleDownDelayAfterDelete:     &metav1.Duration{Duration: 2 * time.Hour},
@@ -807,6 +898,7 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.ScaleDownDelayAfterDelete).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Hour})))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.ScaleDownDelayAfterFailure).To(PointTo(Equal(metav1.Duration{Duration: 3 * time.Hour})))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.ScaleDownUnneededTime).To(PointTo(Equal(metav1.Duration{Duration: 4 * time.Hour})))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.ScaleDownUtilizationThreshold).To(PointTo(Equal(float64(0.8))))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.ScanInterval).To(PointTo(Equal(metav1.Duration{Duration: 5 * time.Hour})))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxNodeProvisionTime).To(PointTo(Equal(metav1.Duration{Duration: 6 * time.Hour})))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.Expander).To(PointTo(Equal(ClusterAutoscalerExpanderRandom)))
@@ -815,7 +907,12 @@ var _ = Describe("Shoot defaulting", func() {
 	})
 
 	Describe("VerticalPodAutoscaler defaulting", func() {
-		It("should correctly default the VerticalPodAutoscaler", func() {
+		var (
+			evictionTolerance            = 0.6
+			recommendationMarginFraction = 0.20
+		)
+
+		It("should default the VerticalPodAutoscaler field", func() {
 			obj.Spec.Kubernetes.VerticalPodAutoscaler = &VerticalPodAutoscaler{}
 
 			SetObjectDefaults_Shoot(obj)
@@ -828,6 +925,29 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.RecommendationMarginFraction).To(PointTo(Equal(0.15)))
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.UpdaterInterval).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.RecommenderInterval).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
+		})
+
+		It("should not overwrite the already set values for VerticalPodAutoscaler field", func() {
+			obj.Spec.Kubernetes.VerticalPodAutoscaler = &VerticalPodAutoscaler{
+				EvictAfterOOMThreshold:       &metav1.Duration{Duration: 5 * time.Minute},
+				EvictionRateBurst:            pointer.Int32(2),
+				EvictionRateLimit:            pointer.Float64(1),
+				EvictionTolerance:            &evictionTolerance,
+				RecommendationMarginFraction: &recommendationMarginFraction,
+				UpdaterInterval:              &metav1.Duration{Duration: 2 * time.Minute},
+				RecommenderInterval:          &metav1.Duration{Duration: 2 * time.Minute},
+			}
+
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.Enabled).To(BeFalse())
+			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.EvictAfterOOMThreshold).To(PointTo(Equal(metav1.Duration{Duration: 5 * time.Minute})))
+			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.EvictionRateBurst).To(PointTo(Equal(int32(2))))
+			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.EvictionRateLimit).To(PointTo(Equal(float64(1))))
+			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.EvictionTolerance).To(PointTo(Equal(evictionTolerance)))
+			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.RecommendationMarginFraction).To(PointTo(Equal(recommendationMarginFraction)))
+			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.UpdaterInterval).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Minute})))
+			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.RecommenderInterval).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Minute})))
 		})
 	})
 })

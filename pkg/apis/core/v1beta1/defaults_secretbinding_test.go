@@ -45,7 +45,7 @@ var _ = Describe("SecretBinding defaulting", func() {
 		Expect(obj.SecretRef.Namespace).To(Equal("test"))
 	})
 
-	It("should not default secretRef namespace if it is already set", func() {
+	It("should not overwrite already set values for secretRef namespace", func() {
 		obj.SecretRef.Namespace = "other"
 
 		SetObjectDefaults_SecretBinding(obj)
@@ -54,19 +54,18 @@ var _ = Describe("SecretBinding defaulting", func() {
 	})
 
 	It("should default quotas namespace", func() {
-		obj.Quotas = []corev1.ObjectReference{
-			{
-				Name:      "obj1",
-				Namespace: "ns1",
-			},
-			{
-				Name: "obj2",
-			},
-		}
+		obj.Quotas = []corev1.ObjectReference{{Name: "obj"}}
 
 		SetObjectDefaults_SecretBinding(obj)
 
-		Expect(obj.Quotas[0].Namespace).To(Equal("ns1"))
-		Expect(obj.Quotas[1].Namespace).To(Equal("test"))
+		Expect(obj.Quotas[0].Namespace).To(Equal("test"))
+	})
+
+	It("should not overwrite already set values for quotas namespace", func() {
+		obj.Quotas = []corev1.ObjectReference{{Name: "obj", Namespace: "ns"}}
+
+		SetObjectDefaults_SecretBinding(obj)
+
+		Expect(obj.Quotas[0].Namespace).To(Equal("ns"))
 	})
 })
