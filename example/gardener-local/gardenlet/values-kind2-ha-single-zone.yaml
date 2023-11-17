@@ -27,5 +27,3 @@ config:
     spec:
       ingress:
         domain: ingress.local2-ha-single-zone.seed.local.gardener.cloud
-      secretRef:
-        name: seed-local2-ha-single-zone

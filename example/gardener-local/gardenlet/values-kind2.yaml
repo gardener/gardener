@@ -31,5 +31,3 @@ config:
     spec:
       ingress:
         domain: ingress.local2.seed.local.gardener.cloud
-      secretRef:
-        name: seed-local2
