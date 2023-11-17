@@ -15,9 +15,11 @@
 package resourcemanager
 
 import (
+	"cmp"
 	"context"
 	_ "embed"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -635,6 +637,11 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 	}
 
 	if r.values.TargetDiffersFromSourceCluster {
+		// sort system component tolerations for a stable output
+		slices.SortFunc(r.values.SystemComponentTolerations, func(a, b corev1.Toleration) int {
+			return cmp.Compare(a.Key, b.Key)
+		})
+
 		config.Webhooks.SystemComponentsConfig = resourcemanagerv1alpha1.SystemComponentsConfigWebhookConfig{
 			Enabled: true,
 			NodeSelector: map[string]string{
