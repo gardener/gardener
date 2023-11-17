@@ -61,10 +61,11 @@ The controller also maintains two annotations on the `Node`:
 
 ### [Token Controller](../../pkg/nodeagent/controller/token)
 
-This controller watches the access token `Secret` in the `kube-system` namespace whose name is provided via the `gardener-node-agent`'s component configuration (`.accessTokenSecret` field).
-Whenever the `.data.token` field changes, it writes the new content to the `/var/lib/gardener-node-agent/credentials/token` file on the host file system.
+This controller watches the access token `Secret`s in the `kube-system` namespace configured via the `gardener-node-agent`'s component configuration (`.controllers.token.syncConfigs[]` field).
+Whenever the `.data.token` field changes, it writes the new content to a file on the configured path on the host file system.
+This mechanism is used to download its own access token for the shoot cluster, but also the access tokens of other `systemd` components (e.g., `valitail`).
 Since the underlying client is based on `k8s.io/client-go` and the kubeconfig points to this token file, it is dynamically reloaded without the necessity of explicit configuration or code changes.
-This procedure ensures that the most up-to-date token is always present on the host and used by the `gardener-node-agent`.
+This procedure ensures that the most up-to-date tokens are always present on the host and used by the `gardener-node-agent` and the other `systemd` components.
 
 ## Reasoning
 
