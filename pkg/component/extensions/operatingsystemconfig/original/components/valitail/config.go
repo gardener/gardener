@@ -32,7 +32,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/features"
-	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -184,23 +183,15 @@ ExecStart=` + execStart
 }
 
 func getFetchTokenScriptFile() (extensionsv1alpha1.File, error) {
-	values := map[string]interface{}{
-		"pathAuthToken": PathAuthToken,
-		"dataKeyToken":  resourcesv1alpha1.DataKeyToken,
-		"secretName":    vali.ValitailTokenSecretName,
-	}
-
-	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
-		values["pathCredentialsToken"] = nodeagentv1alpha1.TokenFilePath
-		values["pathNodeAgentConfig"] = nodeagentv1alpha1.ConfigFilePath
-	} else {
-		values["pathCredentialsToken"] = downloader.PathCredentialsToken
-		values["pathCredentialsServer"] = downloader.PathCredentialsServer
-		values["pathCredentialsCACert"] = downloader.PathCredentialsCACert
-	}
-
 	var script bytes.Buffer
-	if err := tplFetchToken.Execute(&script, values); err != nil {
+	if err := tplFetchToken.Execute(&script, map[string]interface{}{
+		"pathCredentialsToken":  downloader.PathCredentialsToken,
+		"pathCredentialsServer": downloader.PathCredentialsServer,
+		"pathCredentialsCACert": downloader.PathCredentialsCACert,
+		"pathAuthToken":         PathAuthToken,
+		"dataKeyToken":          resourcesv1alpha1.DataKeyToken,
+		"secretName":            vali.ValitailTokenSecretName,
+	}); err != nil {
 		return extensionsv1alpha1.File{}, err
 	}
 
