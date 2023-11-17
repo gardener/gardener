@@ -95,11 +95,6 @@ func (g *graph) handleManagedSeedCreateOrUpdate(ctx context.Context, managedSeed
 			secretVertex := g.getOrCreateVertex(VertexTypeSecret, seedTemplate.Spec.Backup.SecretRef.Namespace, seedTemplate.Spec.Backup.SecretRef.Name)
 			g.addEdge(secretVertex, managedSeedVertex)
 		}
-
-		if seedTemplate.Spec.SecretRef != nil {
-			secretVertex := g.getOrCreateVertex(VertexTypeSecret, seedTemplate.Spec.SecretRef.Namespace, seedTemplate.Spec.SecretRef.Name)
-			g.addEdge(secretVertex, managedSeedVertex)
-		}
 	}
 
 	if metav1.HasAnnotation(managedSeed.ObjectMeta, seedmanagementv1alpha1constants.AnnotationSeedSecretName) &&

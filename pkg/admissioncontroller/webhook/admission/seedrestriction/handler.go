@@ -389,12 +389,6 @@ func (h *Handler) admitSecret(ctx context.Context, seedName string, request admi
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 
-		if seedTemplate.Spec.SecretRef != nil &&
-			seedTemplate.Spec.SecretRef.Namespace == request.Namespace &&
-			seedTemplate.Spec.SecretRef.Name == request.Name {
-			return admission.Allowed("")
-		}
-
 		if seedTemplate.Spec.Backup != nil &&
 			seedTemplate.Spec.Backup.SecretRef.Namespace == request.Namespace &&
 			seedTemplate.Spec.Backup.SecretRef.Name == request.Name {
