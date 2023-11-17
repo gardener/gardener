@@ -40,7 +40,10 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 					KubernetesVersion: semver.MustParse("v1.27.0"),
 				},
 				Token: TokenControllerConfig{
-					SecretName: "token-secret",
+					SyncConfigs: []TokenSecretSyncConfig{{
+						SecretName: "token-secret",
+						Path:       "/some/path/on/the/machine",
+					}},
 				},
 			},
 		}
@@ -76,12 +79,23 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 
 	Context("Token Controller", func() {
 		It("should fail because access token secret name is not specified", func() {
-			config.Controllers.Token.SecretName = ""
+			config.Controllers.Token.SyncConfigs[0].SecretName = ""
 
 			Expect(ValidateNodeAgentConfiguration(config)).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("controllers.token.secretName"),
+					"Field": Equal("controllers.token.syncConfigs[0].secretName"),
+				})),
+			))
+		})
+
+		It("should fail because path is not specified", func() {
+			config.Controllers.Token.SyncConfigs[0].Path = ""
+
+			Expect(ValidateNodeAgentConfiguration(config)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("controllers.token.syncConfigs[0].path"),
 				})),
 			))
 		})

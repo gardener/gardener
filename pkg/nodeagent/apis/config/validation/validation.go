@@ -80,8 +80,13 @@ func validateOperatingSystemConfigControllerConfiguration(conf config.OperatingS
 func validateTokenControllerConfiguration(conf config.TokenControllerConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if conf.SecretName == "" {
-		allErrs = append(allErrs, field.Required(fldPath.Child("secretName"), "must provide the secret name for the access token"))
+	for i, cfg := range conf.SyncConfigs {
+		if cfg.SecretName == "" {
+			allErrs = append(allErrs, field.Required(fldPath.Child("syncConfigs").Index(i).Child("secretName"), "must provide the secret name for the access token"))
+		}
+		if cfg.Path == "" {
+			allErrs = append(allErrs, field.Required(fldPath.Child("syncConfigs").Index(i).Child("path"), "must provide the path where the token should be synced to"))
+		}
 	}
 
 	return allErrs
