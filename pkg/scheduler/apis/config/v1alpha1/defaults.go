@@ -15,13 +15,8 @@
 package v1alpha1
 
 import (
-	"k8s.io/apimachinery/pkg/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 )
-
-func addDefaultingFuncs(scheme *runtime.Scheme) error {
-	return RegisterDefaults(scheme)
-}
 
 // SetDefaults_SchedulerConfiguration sets defaults for the configuration of the Gardener scheduler.
 func SetDefaults_SchedulerConfiguration(obj *SchedulerConfiguration) {
