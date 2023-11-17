@@ -28,4 +28,6 @@ controllers:
   # syncPeriod: 10m
   # syncJitterPeriod: 5m
   token:
-    secretName: name-of-access-token-secret
+    syncConfigs:
+    - secretName: name-of-access-token-secret
+      path: /path/on/machine/where/to/sync/the/token/to
