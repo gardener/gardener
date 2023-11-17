@@ -137,12 +137,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					Name:       seedName,
 					Finalizers: finalizers,
 				},
-				Spec: core.SeedSpec{
-					SecretRef: &corev1.SecretReference{
-						Name:      secretName,
-						Namespace: namespace,
-					},
-				},
+				Spec: core.SeedSpec{},
 			}
 			quota = core.Quota{
 				ObjectMeta: metav1.ObjectMeta{
@@ -504,65 +499,6 @@ var _ = Describe("resourcereferencemanager", func() {
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
-			})
-		})
-
-		Context("tests for Seed objects", func() {
-			It("should accept because all referenced objects have been found (secret found in cache)", func() {
-				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-
-				attrs := admission.NewAttributesRecord(&seed, nil, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It("should accept because all referenced objects have been found (secret looked up live)", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				kubeClient.AddReactor("get", "secrets", func(action testing.Action) (bool, runtime.Object, error) {
-					return true, &corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: secret.Namespace,
-							Name:      secret.Name,
-						},
-					}, nil
-				})
-
-				attrs := admission.NewAttributesRecord(&seed, nil, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It("should reject because the referenced secret does not exist", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				kubeClient.AddReactor("get", "secrets", func(action testing.Action) (bool, runtime.Object, error) {
-					return true, nil, fmt.Errorf("nope, out of luck")
-				})
-
-				attrs := admission.NewAttributesRecord(&seed, nil, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-				Expect(err).To(HaveOccurred())
-			})
-
-			It("should accept because the secret does not have a secret ref", func() {
-				seedObj := core.Seed{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       seedName,
-						Finalizers: finalizers,
-					},
-				}
-
-				attrs := admission.NewAttributesRecord(&seedObj, nil, core.Kind("Seed").WithVersion("version"), "", seedObj.Name, core.Resource("seeds").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
