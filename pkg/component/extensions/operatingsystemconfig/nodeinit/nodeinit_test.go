@@ -108,7 +108,9 @@ controllers:
     secretName: ` + oscSecretName + `
     syncJitterPeriod: ` + oscSyncJitterPeriod.Duration.String() + `
   token:
-    secretName: gardener-node-agent
+    syncConfigs:
+    - secretName: gardener-node-agent
+      path: /var/lib/gardener-node-agent/credentials/token
 kind: NodeAgentConfiguration
 logFormat: ""
 logLevel: ""

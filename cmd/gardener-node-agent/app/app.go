@@ -45,6 +45,7 @@ import (
 	"github.com/gardener/gardener/cmd/utils"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
@@ -132,7 +133,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 
 		if mustFetchAccessToken {
 			log.Info("Fetching access token")
-			if err := fetchAccessToken(ctx, log, restConfig, cfg.Controllers.Token.SecretName); err != nil {
+			if err := fetchAccessToken(ctx, log, restConfig); err != nil {
 				return fmt.Errorf("failed fetching access token: %w", err)
 			}
 		}
@@ -225,13 +226,13 @@ func getRESTConfig(log logr.Logger, cfg *config.NodeAgentConfiguration) (*rest.C
 	return nil, false, fmt.Errorf("unable to construct REST config (neither token file %q nor bootstrap token file %q exist)", nodeagentv1alpha1.TokenFilePath, nodeagentv1alpha1.BootstrapTokenFilePath)
 }
 
-func fetchAccessToken(ctx context.Context, log logr.Logger, restConfig *rest.Config, tokenSecretName string) error {
+func fetchAccessToken(ctx context.Context, log logr.Logger, restConfig *rest.Config) error {
 	c, err := client.New(restConfig, client.Options{})
 	if err != nil {
 		return fmt.Errorf("unable to create client with bootstrap token: %w", err)
 	}
 
-	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: tokenSecretName, Namespace: metav1.NamespaceSystem}}
+	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: nodeagent.AccessSecretName, Namespace: metav1.NamespaceSystem}}
 	log.Info("Reading access token secret", "secret", client.ObjectKeyFromObject(secret))
 	if err := c.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
 		return fmt.Errorf("failed fetching access token from API server: %w", err)

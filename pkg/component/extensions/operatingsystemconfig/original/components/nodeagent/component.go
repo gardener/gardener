@@ -132,7 +132,12 @@ func ComponentConfig(
 				SyncJitterPeriod:  syncJitterPeriod,
 			},
 			Token: nodeagentv1alpha1.TokenControllerConfig{
-				SecretName: AccessSecretName,
+				SyncConfigs: []nodeagentv1alpha1.TokenSecretSyncConfig{
+					{
+						SecretName: AccessSecretName,
+						Path:       nodeagentv1alpha1.TokenFilePath,
+					},
+				},
 			},
 		},
 	}

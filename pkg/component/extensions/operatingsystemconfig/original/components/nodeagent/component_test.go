@@ -128,7 +128,12 @@ WantedBy=multi-user.target`))
 						SyncJitterPeriod:  syncJitterPeriod,
 					},
 					Token: nodeagentv1alpha1.TokenControllerConfig{
-						SecretName: "gardener-node-agent",
+						SyncConfigs: []nodeagentv1alpha1.TokenSecretSyncConfig{
+							{
+								SecretName: "gardener-node-agent",
+								Path:       "/var/lib/gardener-node-agent/credentials/token",
+							},
+						},
 					},
 				},
 			}))
@@ -158,7 +163,9 @@ controllers:
     secretName: ` + oscSecretName + `
     syncJitterPeriod: ` + syncJitterPeriod.Duration.String() + `
   token:
-    secretName: gardener-node-agent
+    syncConfigs:
+    - secretName: gardener-node-agent
+      path: /var/lib/gardener-node-agent/credentials/token
 kind: NodeAgentConfiguration
 logFormat: ""
 logLevel: ""
