@@ -15,8 +15,6 @@
 package sshdensurer_test
 
 import (
-	"fmt"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
@@ -24,9 +22,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/sshdensurer"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Component", func() {
@@ -40,21 +36,17 @@ var _ = Describe("Component", func() {
 			component = New()
 		})
 
-		testConfig := func(useGardenerNodeAgentEnabled bool) {
-			Context(fmt.Sprintf("UseGardenerNodeAgent: %v", useGardenerNodeAgentEnabled), func() {
-				It("should return the expected units and files when SSHAccessEnabled is set to true", func() {
-					defer test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, useGardenerNodeAgentEnabled)()
+		It("should return the expected units and files when SSHAccessEnabled is set to true", func() {
+			ctx = components.Context{SSHAccessEnabled: true}
+			units, files, err := component.Config(ctx)
 
-					ctx = components.Context{SSHAccessEnabled: true}
-					units, files, err := component.Config(ctx)
+			Expect(err).NotTo(HaveOccurred())
 
-					Expect(err).NotTo(HaveOccurred())
+			sshdEnsurerUnit := extensionsv1alpha1.Unit{
 
-					sshdEnsurerUnit := extensionsv1alpha1.Unit{
-
-						Name:    "sshd-ensurer.service",
-						Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-						Content: pointer.String(`[Unit]
+				Name:    "sshd-ensurer.service",
+				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+				Content: pointer.String(`[Unit]
 Description=Ensure SSHD service is enabled or disabled
 DefaultDependencies=no
 [Service]
@@ -64,39 +56,34 @@ RestartSec=15
 ExecStart=/var/lib/sshd-ensurer/run.sh
 [Install]
 WantedBy=multi-user.target`),
-					}
+				FilePaths: []string{"/var/lib/sshd-ensurer/run.sh"},
+			}
 
-					sshdEnsurerFile := extensionsv1alpha1.File{
-						Path:        "/var/lib/sshd-ensurer/run.sh",
-						Permissions: pointer.Int32(0755),
-						Content: extensionsv1alpha1.FileContent{
-							Inline: &extensionsv1alpha1.FileContentInline{
-								Encoding: "b64",
-								Data:     utils.EncodeBase64([]byte(enableScript)),
-							},
-						},
-					}
+			sshdEnsurerFile := extensionsv1alpha1.File{
+				Path:        "/var/lib/sshd-ensurer/run.sh",
+				Permissions: pointer.Int32(0755),
+				Content: extensionsv1alpha1.FileContent{
+					Inline: &extensionsv1alpha1.FileContentInline{
+						Encoding: "b64",
+						Data:     utils.EncodeBase64([]byte(enableScript)),
+					},
+				},
+			}
 
-					if useGardenerNodeAgentEnabled {
-						sshdEnsurerUnit.FilePaths = []string{"/var/lib/sshd-ensurer/run.sh"}
-					}
+			Expect(units).To(ConsistOf(sshdEnsurerUnit))
+			Expect(files).To(ConsistOf(sshdEnsurerFile))
+		})
 
-					Expect(units).To(ConsistOf(sshdEnsurerUnit))
-					Expect(files).To(ConsistOf(sshdEnsurerFile))
-				})
+		It("should return the expected units and files when SSHAccessEnabled is set to false", func() {
+			ctx = components.Context{SSHAccessEnabled: false}
+			units, files, err := component.Config(ctx)
 
-				It("should return the expected units and files when SSHAccessEnabled is set to false", func() {
-					defer test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, useGardenerNodeAgentEnabled)()
+			Expect(err).NotTo(HaveOccurred())
 
-					ctx = components.Context{SSHAccessEnabled: false}
-					units, files, err := component.Config(ctx)
-
-					Expect(err).NotTo(HaveOccurred())
-
-					sshdEnsurerUnit := extensionsv1alpha1.Unit{
-						Name:    "sshd-ensurer.service",
-						Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-						Content: pointer.String(`[Unit]
+			sshdEnsurerUnit := extensionsv1alpha1.Unit{
+				Name:    "sshd-ensurer.service",
+				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+				Content: pointer.String(`[Unit]
 Description=Ensure SSHD service is enabled or disabled
 DefaultDependencies=no
 [Service]
@@ -106,32 +93,23 @@ RestartSec=15
 ExecStart=/var/lib/sshd-ensurer/run.sh
 [Install]
 WantedBy=multi-user.target`),
-					}
+				FilePaths: []string{"/var/lib/sshd-ensurer/run.sh"},
+			}
 
-					sshdEnsurerFile := extensionsv1alpha1.File{
-						Path:        "/var/lib/sshd-ensurer/run.sh",
-						Permissions: pointer.Int32(0755),
-						Content: extensionsv1alpha1.FileContent{
-							Inline: &extensionsv1alpha1.FileContentInline{
-								Encoding: "b64",
-								Data:     utils.EncodeBase64([]byte(disableScript)),
-							},
-						},
-					}
+			sshdEnsurerFile := extensionsv1alpha1.File{
+				Path:        "/var/lib/sshd-ensurer/run.sh",
+				Permissions: pointer.Int32(0755),
+				Content: extensionsv1alpha1.FileContent{
+					Inline: &extensionsv1alpha1.FileContentInline{
+						Encoding: "b64",
+						Data:     utils.EncodeBase64([]byte(disableScript)),
+					},
+				},
+			}
 
-					if useGardenerNodeAgentEnabled {
-						sshdEnsurerUnit.FilePaths = []string{"/var/lib/sshd-ensurer/run.sh"}
-					}
-
-					Expect(units).To(ConsistOf(sshdEnsurerUnit))
-					Expect(files).To(ConsistOf(sshdEnsurerFile))
-				})
-			})
-		}
-		// Testing with feature gate UseGardenerNodeAgent: false
-		testConfig(false)
-		// Testing with feature gate UseGardenerNodeAgent: true
-		testConfig(true)
+			Expect(units).To(ConsistOf(sshdEnsurerUnit))
+			Expect(files).To(ConsistOf(sshdEnsurerFile))
+		})
 	})
 })
 

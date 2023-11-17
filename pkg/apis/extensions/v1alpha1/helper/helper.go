@@ -57,3 +57,14 @@ func DeterminePrimaryIPFamily(ipFamilies []extensionsv1alpha1.IPFamily) extensio
 	}
 	return ipFamilies[0]
 }
+
+// FilePathsFrom returns the paths for all the given files.
+func FilePathsFrom(files []extensionsv1alpha1.File) []string {
+	var out []string
+
+	for _, file := range files {
+		out = append(out, file.Path)
+	}
+
+	return out
+}

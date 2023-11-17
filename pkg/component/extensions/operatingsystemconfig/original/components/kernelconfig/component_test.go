@@ -29,8 +29,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kernelconfig"
-	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Component", func() {
@@ -63,9 +61,7 @@ var _ = Describe("Component", func() {
 		component = New()
 	})
 
-	DescribeTable("#Config", func(k8sVersion, additionalData string, protectKernelDefaults *bool, sysctls map[string]string, useGardenerNodeAgentEnabled bool) {
-		defer test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, useGardenerNodeAgentEnabled)()
-
+	DescribeTable("#Config", func(k8sVersion, additionalData string, protectKernelDefaults *bool, sysctls map[string]string) {
 		units, files, err := component.Config(components.Context{
 			KubernetesVersion: semver.MustParse(k8sVersion),
 			KubeletConfigParameters: components.ConfigurableKubeletConfigParameters{
@@ -91,9 +87,10 @@ var _ = Describe("Component", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		systemdSysctlUnit := extensionsv1alpha1.Unit{
-			Name:    "systemd-sysctl.service",
-			Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandRestart),
-			Enable:  pointer.Bool(true),
+			Name:      "systemd-sysctl.service",
+			Command:   extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandRestart),
+			Enable:    pointer.Bool(true),
+			FilePaths: []string{"/etc/sysctl.d/99-k8s-general.conf"},
 		}
 
 		kernelSettingsFile := extensionsv1alpha1.File{
@@ -106,27 +103,16 @@ var _ = Describe("Component", func() {
 			},
 		}
 
-		if useGardenerNodeAgentEnabled {
-			systemdSysctlUnit.FilePaths = []string{"/etc/sysctl.d/99-k8s-general.conf"}
-		}
-
 		Expect(units).To(ConsistOf(systemdSysctlUnit))
 		Expect(files).To(ConsistOf(kernelSettingsFile))
 	},
-		Entry("should return the expected units and files", "1.24.0", "", nil, nil, false),
-		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set", "1.24.0", kubeletSysctlConfig, pointer.Bool(true), nil, false),
-		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set by default", "1.26.0", kubeletSysctlConfig, nil, nil, false),
-		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set to false", "1.26.0", "", pointer.Bool(false), nil, false),
+		Entry("should return the expected units and files", "1.24.0", "", nil, nil),
+		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set", "1.24.0", kubeletSysctlConfig, pointer.Bool(true), nil),
+		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set by default", "1.26.0", kubeletSysctlConfig, nil, nil),
+		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set to false", "1.26.0", "", pointer.Bool(false), nil),
 		// This test prevents from unknowingly upgrading to a newer k8s version which may have different sysctl settings.
-		Entry("should return the expected units and files if k8s version has not been upgraded", "1.26.0", hardCodedKubeletSysctlConfig, nil, nil, false),
-		Entry("should return the expected units and files if configured to add kernel settings", "1.25.0", dummySettingConfig, nil, dummySettingMap, false),
-		// The following tests run with node-agent enabled
-		Entry("should return the expected units and files with node-agent enabled", "1.24.0", "", nil, nil, true),
-		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set with node-agent enabled", "1.24.0", kubeletSysctlConfig, pointer.Bool(true), nil, true),
-		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set by default with node-agent enabled", "1.26.0", kubeletSysctlConfig, nil, nil, true),
-		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set to false with node-agent enabled", "1.26.0", "", pointer.Bool(false), nil, true),
-		Entry("should return the expected units and files if k8s version has not been upgraded with node-agent enabled", "1.26.0", hardCodedKubeletSysctlConfig, nil, nil, true),
-		Entry("should return the expected units and files if configured to add kernel settings with node-agent enabled", "1.25.0", dummySettingConfig, nil, dummySettingMap, true),
+		Entry("should return the expected units and files if k8s version has not been upgraded", "1.26.0", hardCodedKubeletSysctlConfig, nil, nil),
+		Entry("should return the expected units and files if configured to add kernel settings", "1.25.0", dummySettingConfig, nil, dummySettingMap),
 	)
 })
 

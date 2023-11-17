@@ -15,8 +15,6 @@
 package containerd_test
 
 import (
-	"fmt"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
@@ -24,9 +22,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/containerd"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Component", func() {
@@ -37,20 +33,16 @@ var _ = Describe("Component", func() {
 			component = New()
 		})
 
-		testConfig := func(useGardenerNodeAgentEnabled bool) {
-			Context(fmt.Sprintf("UseGardenerNodeAgent: %v", useGardenerNodeAgentEnabled), func() {
-				It("should return the expected units and files", func() {
-					defer test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, useGardenerNodeAgentEnabled)()
+		It("should return the expected units and files", func() {
+			units, files, err := component.Config(components.Context{})
 
-					units, files, err := component.Config(components.Context{})
+			Expect(err).NotTo(HaveOccurred())
 
-					Expect(err).NotTo(HaveOccurred())
-
-					monitorUnit := extensionsv1alpha1.Unit{
-						Name:    "containerd-monitor.service",
-						Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-						Enable:  pointer.Bool(true),
-						Content: pointer.String(`[Unit]
+			monitorUnit := extensionsv1alpha1.Unit{
+				Name:    "containerd-monitor.service",
+				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+				Enable:  pointer.Bool(true),
+				Content: pointer.String(`[Unit]
 Description=Containerd-monitor daemon
 After=containerd.service
 [Install]
@@ -59,24 +51,26 @@ WantedBy=multi-user.target
 Restart=always
 EnvironmentFile=/etc/environment
 ExecStart=/opt/bin/health-monitor-containerd`),
-					}
+				FilePaths: []string{"/opt/bin/health-monitor-containerd"},
+			}
 
-					logrotateUnit := extensionsv1alpha1.Unit{
-						Name:   "containerd-logrotate.service",
-						Enable: pointer.Bool(true),
-						Content: pointer.String(`[Unit]
+			logrotateUnit := extensionsv1alpha1.Unit{
+				Name:   "containerd-logrotate.service",
+				Enable: pointer.Bool(true),
+				Content: pointer.String(`[Unit]
 Description=Rotate and Compress System Logs
 [Service]
 ExecStart=/usr/sbin/logrotate -s /var/lib/containerd-logrotate.status /etc/systemd/containerd.conf
 [Install]
 WantedBy=multi-user.target`),
-					}
+				FilePaths: []string{"/etc/systemd/containerd.conf"},
+			}
 
-					logrotateTimerUnit := extensionsv1alpha1.Unit{
-						Name:    "containerd-logrotate.timer",
-						Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-						Enable:  pointer.Bool(true),
-						Content: pointer.String(`[Unit]
+			logrotateTimerUnit := extensionsv1alpha1.Unit{
+				Name:    "containerd-logrotate.timer",
+				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+				Enable:  pointer.Bool(true),
+				Content: pointer.String(`[Unit]
 Description=Log Rotation at each 10 minutes
 [Timer]
 OnCalendar=*:0/10
@@ -84,43 +78,32 @@ AccuracySec=1min
 Persistent=true
 [Install]
 WantedBy=multi-user.target`),
-					}
+			}
 
-					monitorFile := extensionsv1alpha1.File{
-						Path:        "/opt/bin/health-monitor-containerd",
-						Permissions: pointer.Int32(0755),
-						Content: extensionsv1alpha1.FileContent{
-							Inline: &extensionsv1alpha1.FileContentInline{
-								Encoding: "b64",
-								Data:     utils.EncodeBase64([]byte(healthMonitorScript)),
-							},
-						},
-					}
+			monitorFile := extensionsv1alpha1.File{
+				Path:        "/opt/bin/health-monitor-containerd",
+				Permissions: pointer.Int32(0755),
+				Content: extensionsv1alpha1.FileContent{
+					Inline: &extensionsv1alpha1.FileContentInline{
+						Encoding: "b64",
+						Data:     utils.EncodeBase64([]byte(healthMonitorScript)),
+					},
+				},
+			}
 
-					logrotateConfigFile := extensionsv1alpha1.File{
-						Path:        "/etc/systemd/containerd.conf",
-						Permissions: pointer.Int32(0644),
-						Content: extensionsv1alpha1.FileContent{
-							Inline: &extensionsv1alpha1.FileContentInline{
-								Data: logRotateData,
-							},
-						},
-					}
+			logrotateConfigFile := extensionsv1alpha1.File{
+				Path:        "/etc/systemd/containerd.conf",
+				Permissions: pointer.Int32(0644),
+				Content: extensionsv1alpha1.FileContent{
+					Inline: &extensionsv1alpha1.FileContentInline{
+						Data: logRotateData,
+					},
+				},
+			}
 
-					if useGardenerNodeAgentEnabled {
-						monitorUnit.FilePaths = []string{"/opt/bin/health-monitor-containerd"}
-						logrotateUnit.FilePaths = []string{"/etc/systemd/containerd.conf"}
-					}
-
-					Expect(units).To(ConsistOf(monitorUnit, logrotateUnit, logrotateTimerUnit))
-					Expect(files).To(ConsistOf(monitorFile, logrotateConfigFile))
-				})
-			})
-		}
-		// Testing with feature gate UseGardenerNodeAgent: false
-		testConfig(false)
-		// Testing with feature gate UseGardenerNodeAgent: true
-		testConfig(true)
+			Expect(units).To(ConsistOf(monitorUnit, logrotateUnit, logrotateTimerUnit))
+			Expect(files).To(ConsistOf(monitorFile, logrotateConfigFile))
+		})
 	})
 })
 

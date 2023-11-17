@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
@@ -81,16 +82,14 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		},
 	})
 
-	nodeAgentUnit := extensionsv1alpha1.Unit{
-		Name:    nodeagentv1alpha1.UnitName,
-		Enable:  pointer.Bool(true),
-		Content: pointer.String(UnitContent()),
-	}
-	for _, file := range files {
-		nodeAgentUnit.FilePaths = append(nodeAgentUnit.FilePaths, file.Path)
-	}
+	units := []extensionsv1alpha1.Unit{{
+		Name:      nodeagentv1alpha1.UnitName,
+		Enable:    pointer.Bool(true),
+		Content:   pointer.String(UnitContent()),
+		FilePaths: extensionsv1alpha1helper.FilePathsFrom(files),
+	}}
 
-	return []extensionsv1alpha1.Unit{nodeAgentUnit}, files, nil
+	return units, files, nil
 }
 
 // UnitContent returns the systemd unit content for the gardener-node-agent unit.

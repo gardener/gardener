@@ -30,7 +30,7 @@ scrape_configs:
     source_labels: ['__journal__systemd_unit']
     target_label: '__journal_syslog_identifier'
   - action: keep
-    regex: ^kernel|kubelet\.service|docker\.service|containerd\.service$
+    regex: ^kernel|kubelet\.service|docker\.service|containerd\.service|gardener-node-agent\.service$
     source_labels: ['__journal_syslog_identifier']
   - source_labels: ['__journal_syslog_identifier']
     target_label: unit
@@ -53,7 +53,7 @@ scrape_configs:
     source_labels: ['__journal__systemd_unit']
     target_label: '__journal_syslog_identifier'
   - action: drop
-    regex: ^kernel|kubelet\.service|docker\.service|containerd\.service$
+    regex: ^kernel|kubelet\.service|docker\.service|containerd\.service|gardener-node-agent\.service$
     source_labels: ['__journal_syslog_identifier']
   - source_labels: ['__journal_syslog_identifier']
     target_label: unit
