@@ -58,23 +58,9 @@ func (f *GardenerFramework) GetSeed(ctx context.Context, seedName string) (*gard
 	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
 	if err := f.GardenClient.Client().Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, seed.Name), managedSeed); err != nil {
 		if apierrors.IsNotFound(err) {
-			f.Logger.Info("Seed is not a ManagedSeed, checking seed.spec.secretRef")
-
-			seedSecretRef := seed.Spec.SecretRef
-			if seedSecretRef == nil {
-				f.Logger.Info("Seed does not have secretRef set, skip constructing seed client")
-				return seed, nil, nil
-			}
-
-			seedClient, err := kubernetes.NewClientFromSecret(ctx, f.GardenClient.Client(), seedSecretRef.Namespace, seedSecretRef.Name,
-				kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.SeedScheme}),
-				kubernetes.WithDisabledCachedClient(),
-			)
-			if err != nil {
-				return nil, nil, fmt.Errorf("could not construct Seed client: %w", err)
-			}
-			return seed, seedClient, nil
+			return seed, nil, fmt.Errorf("Seed is not a ManagedSeed, %s: %w", client.ObjectKeyFromObject(seed), err)
 		}
+
 		return seed, nil, fmt.Errorf("failed to get ManagedSeed for Seed, %s: %w", client.ObjectKeyFromObject(seed), err)
 	}
 
