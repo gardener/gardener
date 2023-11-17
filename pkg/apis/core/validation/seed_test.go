@@ -71,10 +71,6 @@ var _ = Describe("Seed Validation Tests", func() {
 						Kind: "nginx",
 					},
 				},
-				SecretRef: &corev1.SecretReference{
-					Name:      "seed-foo",
-					Namespace: "garden",
-				},
 				Taints: []core.SeedTaint{
 					{Key: "foo"},
 				},
@@ -224,7 +220,6 @@ var _ = Describe("Seed Validation Tests", func() {
 			seed.Spec.Provider = core.SeedProvider{
 				Zones: []string{"a", "a"},
 			}
-			seed.Spec.SecretRef = &corev1.SecretReference{}
 			seed.Spec.Networks = core.SeedNetworks{
 				Nodes:    &invalidCIDR,
 				Pods:     "300.300.300.300/300",
@@ -289,14 +284,6 @@ var _ = Describe("Seed Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeDuplicate),
 					"Field": Equal("spec.provider.zones[1]"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.secretRef.name"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.secretRef.namespace"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeDuplicate),

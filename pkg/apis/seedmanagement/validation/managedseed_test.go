@@ -83,10 +83,6 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 					Type:   "foo",
 					Region: "some-region",
 				},
-				SecretRef: &corev1.SecretReference{
-					Name:      "seed-test",
-					Namespace: "garden",
-				},
 				Taints: []core.SeedTaint{
 					{Key: "foo"},
 				},

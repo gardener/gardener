@@ -134,7 +134,7 @@ func setDefaultsGardenletConfiguration(obj *gardenletv1alpha1.GardenletConfigura
 	}
 
 	// Set seed spec defaults
-	setDefaultsSeedSpec(&obj.SeedConfig.SeedTemplate.Spec, name, namespace, false)
+	setDefaultsSeedSpec(&obj.SeedConfig.SeedTemplate.Spec, name, namespace)
 }
 
 func setDefaultsResources(obj *gardenletv1alpha1.ResourcesConfiguration) {
@@ -146,13 +146,7 @@ func setDefaultsResources(obj *gardenletv1alpha1.ResourcesConfiguration) {
 	}
 }
 
-func setDefaultsSeedSpec(spec *gardencorev1beta1.SeedSpec, name, namespace string, withSecretRef bool) {
-	if spec.SecretRef == nil && withSecretRef {
-		spec.SecretRef = &corev1.SecretReference{
-			Name:      fmt.Sprintf("seed-%s", name),
-			Namespace: namespace,
-		}
-	}
+func setDefaultsSeedSpec(spec *gardencorev1beta1.SeedSpec, name, namespace string) {
 	if spec.Backup != nil && spec.Backup.SecretRef == (corev1.SecretReference{}) {
 		spec.Backup.SecretRef = corev1.SecretReference{
 			Name:      fmt.Sprintf("backup-%s", name),
