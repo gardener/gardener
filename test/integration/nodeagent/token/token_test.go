@@ -16,6 +16,7 @@ package token_test
 
 import (
 	"context"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -29,19 +30,40 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
-	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/token"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 var _ = Describe("Token controller tests", func() {
 	var (
 		testFS afero.Afero
 
-		accessToken = []byte("access-token")
-		secret      *corev1.Secret
+		accessToken1, accessToken2 = []byte("access-token-1"), []byte("access-token-2")
+		path1, path2               = "/some/path", "/some/other/path"
+		secret1, secret2           *corev1.Secret
 	)
 
 	BeforeEach(func() {
+		secret1Name, err := utils.GenerateRandomString(64)
+		Expect(err).NotTo(HaveOccurred())
+		secret2Name, err := utils.GenerateRandomString(64)
+		Expect(err).NotTo(HaveOccurred())
+
+		secret1 = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      strings.ToLower(secret1Name),
+				Namespace: metav1.NamespaceSystem,
+			},
+			Data: map[string][]byte{resourcesv1alpha1.DataKeyToken: accessToken1},
+		}
+		secret2 = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      strings.ToLower(secret2Name),
+				Namespace: metav1.NamespaceSystem,
+			},
+			Data: map[string][]byte{resourcesv1alpha1.DataKeyToken: accessToken2},
+		}
+
 		By("Setup manager")
 		mgr, err := manager.New(restConfig, manager.Options{
 			Metrics: metricsserver.Options{BindAddress: "0"},
@@ -56,7 +78,16 @@ var _ = Describe("Token controller tests", func() {
 		Expect((&token.Reconciler{
 			FS: testFS,
 			Config: config.TokenControllerConfig{
-				SecretName: testRunID,
+				SyncConfigs: []config.TokenSecretSyncConfig{
+					{
+						SecretName: secret1.Name,
+						Path:       path1,
+					},
+					{
+						SecretName: secret2.Name,
+						Path:       path2,
+					},
+				},
 			},
 		}).AddToManager(mgr)).To(Succeed())
 
@@ -72,63 +103,79 @@ var _ = Describe("Token controller tests", func() {
 			By("Stop manager")
 			mgrCancel()
 		})
-
-		secret = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      testRunID,
-				Namespace: metav1.NamespaceSystem,
-			},
-			Data: map[string][]byte{resourcesv1alpha1.DataKeyToken: accessToken},
-		}
 	})
 
 	JustBeforeEach(func() {
-		By("Create access token secret")
-		Expect(testClient.Create(ctx, secret)).To(Succeed())
+		By("Create access token secrets")
+		Expect(testClient.Create(ctx, secret1)).To(Succeed())
+		Expect(testClient.Create(ctx, secret2)).To(Succeed())
 		DeferCleanup(func() {
-			Expect(testClient.Delete(ctx, secret)).To(Succeed())
+			Expect(testClient.Delete(ctx, secret1)).To(Succeed())
+			Expect(testClient.Delete(ctx, secret2)).To(Succeed())
 		})
 	})
 
-	It("should write the token to the local file system", func() {
-		Eventually(func(g Gomega) []byte {
-			tokenOnDisk, err := afero.ReadFile(testFS, nodeagentv1alpha1.TokenFilePath)
+	It("should write the tokens to the local file system", func() {
+		Eventually(func(g Gomega) {
+			token1OnDisk, err := afero.ReadFile(testFS, path1)
 			g.Expect(err).NotTo(HaveOccurred())
-			return tokenOnDisk
-		}).Should(Equal(accessToken))
+			g.Expect(token1OnDisk).To(Equal(accessToken1))
+
+			token2OnDisk, err := afero.ReadFile(testFS, path2)
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(token2OnDisk).To(Equal(accessToken2))
+		}).Should(Succeed())
 	})
 
-	It("should update the token on the local file system when it changes", func() {
-		Eventually(func(g Gomega) []byte {
-			tokenOnDisk, err := afero.ReadFile(testFS, nodeagentv1alpha1.TokenFilePath)
+	It("should update the tokens on the local file system when they changes", func() {
+		Eventually(func(g Gomega) {
+			token1OnDisk, err := afero.ReadFile(testFS, path1)
 			g.Expect(err).NotTo(HaveOccurred())
-			return tokenOnDisk
-		}).Should(Equal(accessToken))
+			g.Expect(token1OnDisk).To(Equal(accessToken1))
 
-		By("Update token in secret data")
-		newToken := []byte("new-token")
-		patch := client.MergeFrom(secret.DeepCopy())
-		secret.Data[resourcesv1alpha1.DataKeyToken] = newToken
-		Expect(testClient.Patch(ctx, secret, patch)).To(Succeed())
-
-		Eventually(func(g Gomega) []byte {
-			tokenOnDisk, err := afero.ReadFile(testFS, nodeagentv1alpha1.TokenFilePath)
+			token2OnDisk, err := afero.ReadFile(testFS, path2)
 			g.Expect(err).NotTo(HaveOccurred())
-			return tokenOnDisk
-		}).Should(Equal(newToken))
+			g.Expect(token2OnDisk).To(Equal(accessToken2))
+		}).Should(Succeed())
+
+		By("Update tokens in secret data")
+		newToken1 := []byte("new-token1")
+		patch := client.MergeFrom(secret1.DeepCopy())
+		secret1.Data[resourcesv1alpha1.DataKeyToken] = newToken1
+		Expect(testClient.Patch(ctx, secret1, patch)).To(Succeed())
+
+		newToken2 := []byte("new-token1")
+		patch = client.MergeFrom(secret2.DeepCopy())
+		secret2.Data[resourcesv1alpha1.DataKeyToken] = newToken2
+		Expect(testClient.Patch(ctx, secret2, patch)).To(Succeed())
+
+		Eventually(func(g Gomega) {
+			token1OnDisk, err := afero.ReadFile(testFS, path1)
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(token1OnDisk).To(Equal(newToken1))
+
+			token2OnDisk, err := afero.ReadFile(testFS, path2)
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(token2OnDisk).To(Equal(newToken2))
+		}).Should(Succeed())
 	})
 
 	Context("unrelated secret", func() {
 		BeforeEach(func() {
-			secret.Name = "some-other-secret"
+			secret1.Name = "some-other-secret"
+			secret2.Name = "yet-another-secret"
 		})
 
 		It("should do nothing because the secret is unrelated", func() {
-			Consistently(func(g Gomega) error {
-				tokenOnDisk, err := afero.ReadFile(testFS, nodeagentv1alpha1.TokenFilePath)
-				g.Expect(tokenOnDisk).To(BeEmpty())
-				return err
-			}).Should(MatchError(ContainSubstring("file does not exist")))
+			Consistently(func(g Gomega) {
+				token1OnDisk, err := afero.ReadFile(testFS, path1)
+				g.Expect(token1OnDisk).To(BeEmpty())
+				g.Expect(err).To(MatchError(ContainSubstring("file does not exist")))
+
+				token2OnDisk, err := afero.ReadFile(testFS, path2)
+				g.Expect(token2OnDisk).To(BeEmpty())
+				g.Expect(err).To(MatchError(ContainSubstring("file does not exist")))
+			}).Should(Succeed())
 		})
 	})
 })
