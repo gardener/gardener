@@ -89,22 +89,6 @@ func (r *Reconciler) reconcile(
 		}
 	}
 
-	// Add the Gardener finalizer to the referenced Seed secret to protect it from deletion as long as the Seed resource
-	// does exist.
-	if seed.Spec.SecretRef != nil {
-		secret, err := kubernetesutils.GetSecretByReference(ctx, r.GardenClient, seed.Spec.SecretRef)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-
-		if !controllerutil.ContainsFinalizer(secret, gardencorev1beta1.ExternalGardenerName) {
-			log.Info("Adding finalizer to referenced secret", "secret", client.ObjectKeyFromObject(secret))
-			if err := controllerutils.AddFinalizers(ctx, r.GardenClient, secret, gardencorev1beta1.ExternalGardenerName); err != nil {
-				return reconcile.Result{}, err
-			}
-		}
-	}
-
 	// Check whether the Kubernetes version of the Seed cluster fulfills the minimal requirements.
 	if err := r.checkMinimumK8SVersion(r.SeedClientSet.Version()); err != nil {
 		return reconcile.Result{}, err

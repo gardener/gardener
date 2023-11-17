@@ -57,7 +57,6 @@ const (
 	secretName           = "test-secret"
 	kubeconfigSecretName = "test.kubeconfig"
 	backupSecretName     = "test-backup-secret"
-	seedSecretName       = "test-seed-secret"
 )
 
 var _ = Describe("Actuator", func() {
@@ -79,18 +78,16 @@ var _ = Describe("Actuator", func() {
 
 		ctx context.Context
 
-		managedSeed      *seedmanagementv1alpha1.ManagedSeed
-		shoot            *gardencorev1beta1.Shoot
-		secretBinding    *gardencorev1beta1.SecretBinding
-		secret           *corev1.Secret
-		kubeconfigSecret *corev1.Secret
+		managedSeed   *seedmanagementv1alpha1.ManagedSeed
+		shoot         *gardencorev1beta1.Shoot
+		secretBinding *gardencorev1beta1.SecretBinding
+		secret        *corev1.Secret
 
 		seedTemplate *gardencorev1beta1.SeedTemplate
 		gardenlet    *seedmanagementv1alpha1.Gardenlet
 
 		gardenNamespace     *corev1.Namespace
 		backupSecret        *corev1.Secret
-		seedSecret          *corev1.Secret
 		seed                *gardencorev1beta1.Seed
 		gardenletDeployment *appsv1.Deployment
 
@@ -171,15 +168,6 @@ var _ = Describe("Actuator", func() {
 				"foo": []byte("bar"),
 			},
 		}
-		kubeconfigSecret = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      kubeconfigSecretName,
-				Namespace: namespace,
-			},
-			Data: map[string][]byte{
-				"kubeconfig": []byte("kubeconfig"),
-			},
-		}
 
 		seedTemplate = &gardencorev1beta1.SeedTemplate{
 			ObjectMeta: metav1.ObjectMeta{
@@ -196,10 +184,6 @@ var _ = Describe("Actuator", func() {
 						Name:      backupSecretName,
 						Namespace: namespace,
 					},
-				},
-				SecretRef: &corev1.SecretReference{
-					Name:      seedSecretName,
-					Namespace: namespace,
 				},
 				Settings: &gardencorev1beta1.SeedSettings{
 					VerticalPodAutoscaler: &gardencorev1beta1.SeedSettingVerticalPodAutoscaler{
@@ -247,19 +231,6 @@ var _ = Describe("Actuator", func() {
 				},
 			},
 			Data: secret.Data,
-			Type: corev1.SecretTypeOpaque,
-		}
-		seedSecret = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      seedSecretName,
-				Namespace: namespace,
-				OwnerReferences: []metav1.OwnerReference{
-					*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
-				},
-			},
-			Data: map[string][]byte{
-				"kubeconfig": []byte("kubeconfig"),
-			},
 			Type: corev1.SecretTypeOpaque,
 		}
 		seed = &gardencorev1beta1.Seed{
@@ -341,7 +312,7 @@ var _ = Describe("Actuator", func() {
 			)
 		}
 
-		expectCreateSeedSecrets = func(shouldCreateSeedKubeconfigSecret bool) {
+		expectCreateSeedSecrets = func() {
 			// Get shoot secret
 			gardenClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, secretBindingName), gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBinding{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, sb *gardencorev1beta1.SecretBinding, _ ...client.GetOption) error {
@@ -368,22 +339,6 @@ var _ = Describe("Actuator", func() {
 					return nil
 				},
 			)
-
-			if shouldCreateSeedKubeconfigSecret {
-				// Create seed secret
-				gardenClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, kubeconfigSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
-						*s = *kubeconfigSecret
-						return nil
-					},
-				)
-				gardenClient.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-					func(_ context.Context, s *corev1.Secret, _ ...client.CreateOption) error {
-						Expect(s).To(Equal(seedSecret))
-						return nil
-					},
-				)
-			}
 		}
 
 		expectDeleteSeedSecrets = func() {
@@ -401,15 +356,6 @@ var _ = Describe("Actuator", func() {
 					return nil
 				},
 			)
-
-			// Delete seed secret
-			gardenClient.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-				func(_ context.Context, s *corev1.Secret, _ ...client.DeleteOption) error {
-					Expect(s.Name).To(Equal(seedSecretName))
-					Expect(s.Namespace).To(Equal(namespace))
-					return nil
-				},
-			)
 		}
 
 		expectGetSeedSecrets = func(exist bool) {
@@ -421,17 +367,6 @@ var _ = Describe("Actuator", func() {
 						return nil
 					}
 					return apierrors.NewNotFound(corev1.Resource("secret"), backupSecretName)
-				},
-			)
-
-			// Get seed secret
-			gardenClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, seedSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
-					if exist {
-						*s = *seedSecret
-						return nil
-					}
-					return apierrors.NewNotFound(corev1.Resource("secret"), seedSecretName)
 				},
 			)
 		}
@@ -598,7 +533,7 @@ var _ = Describe("Actuator", func() {
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in shoot %q", client.ObjectKeyFromObject(shoot).String())
 				expectCreateGardenNamespace()
 				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
-				expectCreateSeedSecrets(true)
+				expectCreateSeedSecrets()
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into shoot %q", client.ObjectKeyFromObject(shoot).String())
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(true)
@@ -631,7 +566,7 @@ var _ = Describe("Actuator", func() {
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in shoot %q", client.ObjectKeyFromObject(shoot).String())
 				expectCreateGardenNamespace()
 				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
-				expectCreateSeedSecrets(true)
+				expectCreateSeedSecrets()
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into shoot %q", client.ObjectKeyFromObject(shoot).String())
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(true)
@@ -665,7 +600,7 @@ var _ = Describe("Actuator", func() {
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in shoot %q", client.ObjectKeyFromObject(shoot).String())
 				expectCreateGardenNamespace()
 				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
-				expectCreateSeedSecrets(true)
+				expectCreateSeedSecrets()
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into shoot %q", client.ObjectKeyFromObject(shoot).String())
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(false)
@@ -707,7 +642,7 @@ var _ = Describe("Actuator", func() {
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in shoot %q", client.ObjectKeyFromObject(shoot).String())
 				expectCreateGardenNamespace()
 				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
-				expectCreateSeedSecrets(true)
+				expectCreateSeedSecrets()
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into shoot %q", client.ObjectKeyFromObject(shoot).String())
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection(false)
@@ -740,40 +675,7 @@ var _ = Describe("Actuator", func() {
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in shoot %q", client.ObjectKeyFromObject(shoot).String())
 				expectCreateGardenNamespace()
 				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
-				expectCreateSeedSecrets(true)
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into shoot %q", client.ObjectKeyFromObject(shoot).String())
-				expectMergeWithParent()
-				expectGetGardenletChartValues(false)
-				expectApplyGardenletChart()
-
-				status, wait, err := actuator.Reconcile(ctx, log, managedSeed)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(status.Conditions).To(And(
-					ContainCondition(
-						OfType(seedmanagementv1alpha1.ManagedSeedShootReconciled),
-						WithStatus(gardencorev1beta1.ConditionTrue),
-						WithReason(gardencorev1beta1.EventReconciled),
-					),
-					ContainCondition(
-						OfType(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
-						WithStatus(gardencorev1beta1.ConditionTrue),
-						WithReason(gardencorev1beta1.EventReconciled),
-					),
-				))
-				Expect(wait).To(BeFalse())
-			})
-
-			It("should not create the seed kubeconfig secret when the shoot static kubeconfig is not enabled", func() {
-				shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(false)
-				managedSeed.Spec.Gardenlet.Bootstrap = bootstrapPtr(seedmanagementv1alpha1.BootstrapNone)
-
-				expectGetShoot()
-				expectGetSeed(false)
-				expectCheckSeedSpec()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in shoot %q", client.ObjectKeyFromObject(shoot).String())
-				expectCreateGardenNamespace()
-				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
-				expectCreateSeedSecrets(false)
+				expectCreateSeedSecrets()
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into shoot %q", client.ObjectKeyFromObject(shoot).String())
 				expectMergeWithParent()
 				expectGetGardenletChartValues(false)

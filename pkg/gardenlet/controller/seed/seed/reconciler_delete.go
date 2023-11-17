@@ -23,7 +23,6 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
@@ -113,21 +112,6 @@ func (r *Reconciler) delete(
 
 	if err := r.runDeleteSeedFlow(ctx, log, seedObj, seedIsGarden); err != nil {
 		return reconcile.Result{}, err
-	}
-
-	// Remove finalizer from referenced secret
-	if seed.Spec.SecretRef != nil {
-		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: seed.Spec.SecretRef.Name, Namespace: seed.Spec.SecretRef.Namespace}}
-		if err := r.GardenClient.Get(ctx, client.ObjectKeyFromObject(secret), secret); err == nil {
-			if controllerutil.ContainsFinalizer(secret, gardencorev1beta1.ExternalGardenerName) {
-				log.Info("Removing finalizer from secret", "secret", client.ObjectKeyFromObject(secret))
-				if err := controllerutils.RemoveFinalizers(ctx, r.GardenClient, secret, gardencorev1beta1.ExternalGardenerName); err != nil {
-					return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from secret: %w", err)
-				}
-			}
-		} else if !apierrors.IsNotFound(err) {
-			return reconcile.Result{}, fmt.Errorf("failed to get Seed secret '%s/%s': %w", secret.Namespace, secret.Name, err)
-		}
 	}
 
 	// Remove finalizer from Seed
