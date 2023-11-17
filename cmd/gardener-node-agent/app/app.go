@@ -31,7 +31,7 @@ import (
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/utils/pointer"
@@ -146,10 +146,10 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		}
 	}
 
-	log.Info("Fetching node name based on hostname")
-	nodeName, err := getNodeName(ctx, log, restConfig)
+	log.Info("Fetching hostname")
+	hostName, err := os.Hostname()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed fetching hostname: %w", err)
 	}
 
 	log.Info("Setting up manager")
@@ -164,16 +164,10 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 			ExtraHandlers: extraHandlers,
 		},
 
-		Cache: cache.Options{
-			ByObject: map[client.Object]cache.ByObject{
-				&corev1.Secret{}: {
-					Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}},
-				},
-				&corev1.Node{}: {
-					Field: fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: nodeName}),
-				},
-			},
-		},
+		Cache: cache.Options{ByObject: map[client.Object]cache.ByObject{
+			&corev1.Secret{}: {Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}}},
+			&corev1.Node{}:   {Label: labels.SelectorFromSet(labels.Set{corev1.LabelHostname: hostName})},
+		}},
 		LeaderElection: false,
 		Controller: controllerconfig.Controller{
 			RecoverPanic: pointer.Bool(true),
@@ -192,7 +186,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	}
 
 	log.Info("Adding controllers to manager")
-	if err := controller.AddToManager(cancel, mgr, cfg, nodeName); err != nil {
+	if err := controller.AddToManager(cancel, mgr, cfg, hostName); err != nil {
 		return fmt.Errorf("failed adding controllers to manager: %w", err)
 	}
 
@@ -259,32 +253,4 @@ func fetchAccessToken(ctx context.Context, log logr.Logger, restConfig *rest.Con
 	log.Info("Token written to disk")
 	restConfig.BearerTokenFile = nodeagentv1alpha1.TokenFilePath
 	return nil
-}
-
-func getNodeName(ctx context.Context, log logr.Logger, restConfig *rest.Config) (string, error) {
-	hostname, err := os.Hostname()
-	if err != nil {
-		return "", fmt.Errorf("failed fetching hostname: %w", err)
-	}
-
-	cl, err := client.New(restConfig, client.Options{})
-	if err != nil {
-		return "", fmt.Errorf("unable to create client: %w", err)
-	}
-
-	nodeList := &metav1.PartialObjectMetadataList{}
-	nodeList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NodeList"))
-	if err := cl.List(ctx, nodeList, client.MatchingLabels{corev1.LabelHostname: hostname}); err != nil {
-		return "", err
-	}
-
-	switch len(nodeList.Items) {
-	case 0:
-		return "", fmt.Errorf("could not find any node with label %s=%s", corev1.LabelHostname, hostname)
-	case 1:
-		log.Info("Found node name based on hostname", "hostname", hostname, "nodeName", nodeList.Items[0].Name)
-		return nodeList.Items[0].Name, nil
-	default:
-		return "", fmt.Errorf("found more than one node with label %s=%s", corev1.LabelHostname, hostname)
-	}
 }
