@@ -205,7 +205,7 @@ var _ = Describe("#SNI", func() {
 
 	JustBeforeEach(func() {
 		defaultDepWaiter = NewSNI(c, applier, v1beta1constants.DeploymentNameKubeAPIServer, namespace, func() *SNIValues {
-			return &SNIValues{
+			val := &SNIValues{
 				Hosts:          hosts,
 				APIServerProxy: apiServerProxyValues,
 				IstioIngressGateway: IstioIngressGateway{
@@ -213,6 +213,7 @@ var _ = Describe("#SNI", func() {
 					Labels:    istioLabels,
 				},
 			}
+			return val
 		})
 	})
 

@@ -36,6 +36,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -81,6 +82,8 @@ type ReversedVPNValues struct {
 	Endpoint string
 	// OpenVPNPort is the port for the ReversedVPN.
 	OpenVPNPort int32
+	// IPFamilies are the IPFamilies of the shoot.
+	IPFamilies []gardencorev1beta1.IPFamily
 }
 
 // Values is a set of configuration values for the VPNShoot component.
@@ -640,8 +643,18 @@ func (v *vpnShoot) indexedReversedHeader(index *int) string {
 }
 
 func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
-	var envVariables []corev1.EnvVar
+	var (
+		envVariables []corev1.EnvVar
+		ipFamilies   []string
+	)
+	for _, v := range v.values.ReversedVPN.IPFamilies {
+		ipFamilies = append(ipFamilies, string(v))
+	}
 	envVariables = append(envVariables,
+		corev1.EnvVar{
+			Name:  "IP_FAMILIES",
+			Value: strings.Join(ipFamilies, ","),
+		},
 		corev1.EnvVar{
 			Name:  "ENDPOINT",
 			Value: v.values.ReversedVPN.Endpoint,

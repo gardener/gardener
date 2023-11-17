@@ -373,8 +373,11 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 			kubernetesEndpoint := &corev1.Endpoints{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "kubernetes"}}
 			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(kubernetesEndpoint), kubernetesEndpoint)).To(Succeed())
 
+			egressRules, err := networkpolicyhelper.GetEgressRules(kubernetesEndpoint.Subsets...)
+			Expect(err).ToNot(HaveOccurred())
+
 			expectedNetworkPolicySpec = networkingv1.NetworkPolicySpec{
-				Egress:      networkpolicyhelper.GetEgressRules(kubernetesEndpoint.Subsets...),
+				Egress:      egressRules,
 				PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{"networking.gardener.cloud/to-runtime-apiserver": "allowed"}},
 				PolicyTypes: []networkingv1.PolicyType{"Egress"},
 			}
@@ -408,6 +411,14 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 								blockedCIDR,
 							},
 						},
+					}, {
+						IPBlock: &networkingv1.IPBlock{
+							CIDR: "::/0",
+							Except: []string{
+								"fe80::/10",
+								"fc00::/7",
+							},
+						},
 					}},
 				}},
 				PolicyTypes: []networkingv1.PolicyType{"Egress"},
@@ -437,8 +448,13 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 							{IPBlock: &networkingv1.IPBlock{CIDR: "172.16.0.0/12"}},
 							{IPBlock: &networkingv1.IPBlock{CIDR: "192.168.0.0/16"}},
 							{IPBlock: &networkingv1.IPBlock{CIDR: "100.64.0.0/10"}},
-						}},
-					},
+						},
+					}, {
+						To: []networkingv1.NetworkPolicyPeer{
+							{IPBlock: &networkingv1.IPBlock{CIDR: "fe80::/10"}},
+							{IPBlock: &networkingv1.IPBlock{CIDR: "fc00::/7"}},
+						},
+					}},
 				}
 
 				if strings.HasPrefix(namespaceName, "shoot--") {

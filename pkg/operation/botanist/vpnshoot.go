@@ -35,6 +35,7 @@ func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 			Header:      "outbound|1194||" + vpnseedserver.ServiceName + "." + b.Shoot.SeedNamespace + ".svc.cluster.local",
 			Endpoint:    b.outOfClusterAPIServerFQDN(),
 			OpenVPNPort: 8132,
+			IPFamilies:  b.Shoot.GetInfo().Spec.Networking.IPFamilies,
 		},
 		HighAvailabilityEnabled:              b.Shoot.VPNHighAvailabilityEnabled,
 		HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,

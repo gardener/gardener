@@ -51,13 +51,12 @@ var _ = Describe("NodeProblemDetector", func() {
 		namespace           = "some-namespace"
 		image               = "some-image:some-tag"
 
-		c                          client.Client
-		component                  component.DeployWaiter
-		daemonSetPrometheusPort    = 20257
-		daemonSetPrometheusAddress = "0.0.0.0"
-		managedResource            *resourcesv1alpha1.ManagedResource
-		managedResourceSecret      *corev1.Secret
-		values                     Values
+		c                       client.Client
+		component               component.DeployWaiter
+		daemonSetPrometheusPort = 20257
+		managedResource         *resourcesv1alpha1.ManagedResource
+		managedResourceSecret   *corev1.Secret
+		values                  Values
 	)
 
 	BeforeEach(func() {
@@ -257,8 +256,7 @@ spec:
         - -c
         - exec /node-problem-detector --logtostderr --config.system-log-monitor=/config/kernel-monitor.json,/config/docker-monitor.json,/config/systemd-monitor.json
           .. --config.custom-plugin-monitor=/config/kernel-monitor-counter.json,/config/systemd-monitor-counter.json
-          .. --config.system-stats-monitor=/config/system-stats-monitor.json --prometheus-address=` + daemonSetPrometheusAddress + `
-          --prometheus-port=` + strconv.Itoa(daemonSetPrometheusPort) + `
+          .. --config.system-stats-monitor=/config/system-stats-monitor.json --prometheus-port=` + strconv.Itoa(daemonSetPrometheusPort) + `
         env:
         - name: NODE_NAME
           valueFrom:

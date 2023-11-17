@@ -52,7 +52,6 @@ const (
 	vpaName                                = "node-problem-detector"
 	daemonSetTerminationGracePeriodSeconds = 30
 	daemonSetPrometheusPort                = 20257
-	daemonSetPrometheusAddress             = "0.0.0.0"
 	podSecurityPolicyName                  = "node-problem-detector"
 	labelValue                             = "node-problem-detector"
 )
@@ -226,7 +225,7 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 								Command: []string{
 									"/bin/sh",
 									"-c",
-									"exec /node-problem-detector --logtostderr --config.system-log-monitor=/config/kernel-monitor.json,/config/docker-monitor.json,/config/systemd-monitor.json .. --config.custom-plugin-monitor=/config/kernel-monitor-counter.json,/config/systemd-monitor-counter.json .. --config.system-stats-monitor=/config/system-stats-monitor.json --prometheus-address=" + daemonSetPrometheusAddress + " --prometheus-port=" + strconv.Itoa(daemonSetPrometheusPort),
+									"exec /node-problem-detector --logtostderr --config.system-log-monitor=/config/kernel-monitor.json,/config/docker-monitor.json,/config/systemd-monitor.json .. --config.custom-plugin-monitor=/config/kernel-monitor-counter.json,/config/systemd-monitor-counter.json .. --config.system-stats-monitor=/config/system-stats-monitor.json --prometheus-port=" + strconv.Itoa(daemonSetPrometheusPort),
 								},
 								SecurityContext: &corev1.SecurityContext{
 									Privileged: pointer.Bool(true),

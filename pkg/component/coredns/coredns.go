@@ -240,7 +240,7 @@ func (c *coreDNS) computeResourcesData() (map[string][]byte, error) {
       fallthrough in-addr.arpa ip6.arpa
       ttl 30
   }
-  prometheus 0.0.0.0:` + strconv.Itoa(portMetrics) + `
+  prometheus :` + strconv.Itoa(portMetrics) + `
   forward . /etc/resolv.conf
   cache 30
   loop

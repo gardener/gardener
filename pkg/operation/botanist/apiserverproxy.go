@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/imagevector"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/component/apiserverproxy"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
@@ -34,11 +35,25 @@ func (b *Botanist) DefaultAPIServerProxy() (apiserverproxy.Interface, error) {
 		return nil, err
 	}
 
+	var (
+		listenAddress = "0.0.0.0"
+		// we don't want to use AUTO for single-stack clusters as it causes an unnecessary failed lookup
+		// ref https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#enum-config-cluster-v3-cluster-dnslookupfamily
+		dnsLookupFamily = "V4_ONLY"
+	)
+
+	if gardencorev1beta1.IsIPv6SingleStack(b.Shoot.GetInfo().Spec.Networking.IPFamilies) {
+		listenAddress = "::"
+		dnsLookupFamily = "V6_ONLY"
+	}
+
 	values := apiserverproxy.Values{
 		Image:               image.String(),
 		SidecarImage:        sidecarImage.String(),
 		ProxySeedServerHost: b.outOfClusterAPIServerFQDN(),
 		PSPDisabled:         b.Shoot.PSPDisabled,
+		ListenIPAddress:     listenAddress,
+		DNSLookupFamily:     dnsLookupFamily,
 	}
 
 	return apiserverproxy.New(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, b.SecretsManager, values), nil

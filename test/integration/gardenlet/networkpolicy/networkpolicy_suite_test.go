@@ -173,6 +173,7 @@ var _ = BeforeSuite(func() {
 			AdditionalNamespaceSelectors: []metav1.LabelSelector{{MatchLabels: map[string]string{"custom": "namespace"}}},
 		},
 		gardencore.SeedNetworks{
+			IPFamilies: []gardencore.IPFamily{gardencore.IPFamilyIPv4},
 			Pods:       "10.0.0.0/16",
 			Services:   "10.1.0.0/16",
 			Nodes:      pointer.String("10.2.0.0/16"),

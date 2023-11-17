@@ -66,6 +66,7 @@ func AddToManager(
 		AdditionalNamespaceSelectors: cfg.AdditionalNamespaceSelectors,
 		Resolver:                     resolver,
 		RuntimeNetworks: networkpolicy.RuntimeNetworkConfig{
+			IPFamilies: networks.IPFamilies,
 			Pods:       networks.Pods,
 			Services:   networks.Services,
 			Nodes:      networks.Nodes,
