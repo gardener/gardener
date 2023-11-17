@@ -57,6 +57,34 @@ func (mr *MockEnsurerMockRecorder) EnsureAdditionalFiles(arg0, arg1, arg2, arg3 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureAdditionalFiles", reflect.TypeOf((*MockEnsurer)(nil).EnsureAdditionalFiles), arg0, arg1, arg2, arg3)
 }
 
+// EnsureAdditionalProvisionFiles mocks base method.
+func (m *MockEnsurer) EnsureAdditionalProvisionFiles(arg0 context.Context, arg1 context0.GardenContext, arg2, arg3 *[]v1alpha10.File) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureAdditionalProvisionFiles", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EnsureAdditionalProvisionFiles indicates an expected call of EnsureAdditionalProvisionFiles.
+func (mr *MockEnsurerMockRecorder) EnsureAdditionalProvisionFiles(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureAdditionalProvisionFiles", reflect.TypeOf((*MockEnsurer)(nil).EnsureAdditionalProvisionFiles), arg0, arg1, arg2, arg3)
+}
+
+// EnsureAdditionalProvisionUnits mocks base method.
+func (m *MockEnsurer) EnsureAdditionalProvisionUnits(arg0 context.Context, arg1 context0.GardenContext, arg2, arg3 *[]v1alpha10.Unit) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureAdditionalProvisionUnits", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EnsureAdditionalProvisionUnits indicates an expected call of EnsureAdditionalProvisionUnits.
+func (mr *MockEnsurerMockRecorder) EnsureAdditionalProvisionUnits(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureAdditionalProvisionUnits", reflect.TypeOf((*MockEnsurer)(nil).EnsureAdditionalProvisionUnits), arg0, arg1, arg2, arg3)
+}
+
 // EnsureAdditionalUnits mocks base method.
 func (m *MockEnsurer) EnsureAdditionalUnits(arg0 context.Context, arg1 context0.GardenContext, arg2, arg3 *[]v1alpha10.Unit) error {
 	m.ctrl.T.Helper()

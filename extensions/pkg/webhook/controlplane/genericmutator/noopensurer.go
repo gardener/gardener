@@ -113,3 +113,13 @@ func (e *NoopEnsurer) EnsureAdditionalUnits(_ context.Context, _ extensionsconte
 func (e *NoopEnsurer) EnsureAdditionalFiles(_ context.Context, _ extensionscontextwebhook.GardenContext, _, _ *[]extensionsv1alpha1.File) error {
 	return nil
 }
+
+// EnsureAdditionalProvisionUnits ensures that additional required system units are added.
+func (e *NoopEnsurer) EnsureAdditionalProvisionUnits(_ context.Context, _ extensionscontextwebhook.GardenContext, _, _ *[]extensionsv1alpha1.Unit) error {
+	return nil
+}
+
+// EnsureAdditionalProvisionFiles ensures that additional required system files are added.
+func (e *NoopEnsurer) EnsureAdditionalProvisionFiles(_ context.Context, _ extensionscontextwebhook.GardenContext, _, _ *[]extensionsv1alpha1.File) error {
+	return nil
+}
