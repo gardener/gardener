@@ -167,7 +167,6 @@ MemorySwapMax=0
 Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
-ExecStartPre=/bin/sh -c "systemctl stop promtail.service || true"
 ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:])"`
 
 	if execStartPre != "" {
@@ -246,8 +245,7 @@ WantedBy=multi-user.target
 Restart=always
 RestartSec=300
 RuntimeMaxSec=120
-EnvironmentFile=/etc/environment
-ExecStartPre=/bin/sh -c "systemctl stop promtail-fetch-token.service || true"`
+EnvironmentFile=/etc/environment`
 
 	if execStartPre != "" {
 		unitContent += `

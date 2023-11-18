@@ -102,7 +102,6 @@ MemorySwapMax=0
 Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
-ExecStartPre=/bin/sh -c "systemctl stop promtail.service || true"
 ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:])"` + valitailDaemonStartPre + `
 ExecStart=/opt/bin/valitail -config.file=` + PathConfig
 
@@ -127,7 +126,6 @@ Restart=always
 RestartSec=300
 RuntimeMaxSec=120
 EnvironmentFile=/etc/environment
-ExecStartPre=/bin/sh -c "systemctl stop promtail-fetch-token.service || true"
 ExecStart=/var/lib/valitail/scripts/fetch-token.sh`),
 						FilePaths: []string{"/var/lib/valitail/scripts/fetch-token.sh"},
 					}
@@ -411,7 +409,6 @@ MemorySwapMax=0
 Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
-ExecStartPre=/bin/sh -c "systemctl stop promtail.service || true"
 ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:])"
 ExecStartPre=/bin/systemctl disable valitail.service
 ExecStart=/bin/sh -c "echo service valitail.service is removed!; while true; do sleep 86400; done"`
@@ -437,7 +434,6 @@ Restart=always
 RestartSec=300
 RuntimeMaxSec=120
 EnvironmentFile=/etc/environment
-ExecStartPre=/bin/sh -c "systemctl stop promtail-fetch-token.service || true"
 ExecStartPre=/bin/systemctl disable valitail-fetch-token.service
 ExecStart=/bin/sh -c "rm -f /var/lib/valitail/auth-token; echo service valitail-fetch-token.service is removed!; while true; do sleep 86400; done"`),
 						},
