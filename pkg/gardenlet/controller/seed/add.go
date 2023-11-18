@@ -60,6 +60,7 @@ func AddToManager(
 		Config:         *cfg.Controllers.SeedCare,
 		SeedName:       cfg.SeedConfig.Name,
 		LoggingEnabled: gardenlethelper.IsLoggingEnabled(&cfg),
+		ValiEnabled:    gardenlethelper.IsValiEnabled(&cfg),
 	}).AddToManager(ctx, mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding care reconciler: %w", err)
 	}
