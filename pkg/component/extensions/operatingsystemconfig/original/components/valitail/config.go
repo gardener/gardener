@@ -132,6 +132,9 @@ func getValitailUnit(ctx components.Context) extensionsv1alpha1.Unit {
 		}
 	}
 
+	// TODO(rfranzke): Drop this 'disablement' handling once UseGardenerNodeAgent feature gate gets removed.
+	//  gardener-node-agent takes care of disabling and removing the systemd service when it's no longer present in the
+	//  operating system configuration.
 	if !ctx.ValitailEnabled {
 		execStartPre = "/bin/systemctl disable " + UnitName
 		execStart = fmt.Sprintf(`/bin/sh -c "echo service %s is removed!; while true; do sleep 86400; done"`, UnitName)

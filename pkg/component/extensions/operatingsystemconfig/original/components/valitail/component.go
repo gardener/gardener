@@ -64,7 +64,7 @@ func execStartPreCopyBinaryFromContainer(binaryName string, image *imagevectorut
 
 func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 	var (
-		units = []extensionsv1alpha1.Unit{getValitailUnit(ctx)}
+		units []extensionsv1alpha1.Unit
 		files []extensionsv1alpha1.File
 	)
 
@@ -77,6 +77,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		files = append(files, valitailConfigFile, getValitailCAFile(ctx))
 
 		if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+			units = append(units, getValitailUnit(ctx))
 			files = append(files, extensionsv1alpha1.File{
 				Path:        valitailBinaryPath,
 				Permissions: pointer.Int32(0755),
@@ -97,6 +98,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	}
 
 	if !features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+		units = append(units, getValitailUnit(ctx))
 		units = append(units, getFetchTokenScriptUnit(ctx))
 	}
 

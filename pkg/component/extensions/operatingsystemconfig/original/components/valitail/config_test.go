@@ -373,6 +373,12 @@ exit $?
 					units, files, err := New().Config(ctx)
 					Expect(err).NotTo(HaveOccurred())
 
+					if useGardenerNodeAgentEnabled {
+						Expect(units).To(BeEmpty())
+						Expect(files).To(BeEmpty())
+						return
+					}
+
 					afterUnit := "cloud-config-downloader.service"
 					if useGardenerNodeAgentEnabled {
 						afterUnit = "gardener-node-agent.service"
@@ -410,15 +416,14 @@ ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:up
 ExecStartPre=/bin/systemctl disable valitail.service
 ExecStart=/bin/sh -c "echo service valitail.service is removed!; while true; do sleep 86400; done"`
 
-					expectedUnits := []extensionsv1alpha1.Unit{{
-						Name:    "valitail.service",
-						Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-						Enable:  pointer.Bool(true),
-						Content: pointer.String(unitContent),
-					}}
-
-					if !useGardenerNodeAgentEnabled {
-						expectedUnits = append(expectedUnits, extensionsv1alpha1.Unit{
+					Expect(units).To(ConsistOf([]extensionsv1alpha1.Unit{
+						{
+							Name:    "valitail.service",
+							Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+							Enable:  pointer.Bool(true),
+							Content: pointer.String(unitContent),
+						},
+						{
 							Name:    "valitail-fetch-token.service",
 							Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 							Enable:  pointer.Bool(true),
@@ -435,10 +440,8 @@ EnvironmentFile=/etc/environment
 ExecStartPre=/bin/sh -c "systemctl stop promtail-fetch-token.service || true"
 ExecStartPre=/bin/systemctl disable valitail-fetch-token.service
 ExecStart=/bin/sh -c "rm -f /var/lib/valitail/auth-token; echo service valitail-fetch-token.service is removed!; while true; do sleep 86400; done"`),
-						})
-					}
-
-					Expect(units).To(ConsistOf(expectedUnits))
+						},
+					}))
 					Expect(files).To(BeNil())
 				})
 
