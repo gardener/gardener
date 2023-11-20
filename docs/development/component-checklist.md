@@ -61,9 +61,12 @@ This document provides a checklist for them that you can walk through.
 
 2. **Do not use container images from registries that don't support IPv6** (example: [image vector](https://github.com/gardener/gardener/blob/6f4e64fe9494cafb5c5da9a2c0a491a5690161b6/charts/images.yaml#L619-L622), [prow configuration](https://github.com/gardener/ci-infra/blob/92782bedd92815639abf4dc14b2c484f77c6e57d/config/images/images.yaml#L37-L40))
 
-   Registries such as Docker Hub (`docker.io`), ECR, GHCR (`ghcr.io`), MCR (`mcr.microsoft.com`) don't support pulling images over IPv6. For Docker Hub, see [Beta IPv6 Support on Docker Hub Registry](https://www.docker.com/blog/beta-ipv6-support-on-docker-hub-registry/).
+   Registries such as ECR, GHCR (`ghcr.io`), MCR (`mcr.microsoft.com`) don't support pulling images over IPv6.
+
    Check if the upstream image is being also maintained in a registry that support IPv6 natively such as Artifact Registry, Quay (`quay.io`). If there is such image, use the image from registry with IPv6 support.
+
    If the image is not available in a registry with IPv6 then copy the image to the gardener GCR. There is a [prow job](https://github.com/gardener/ci-infra/blob/92782bedd92815639abf4dc14b2c484f77c6e57d/config/jobs/ci-infra/copy-images.yaml) copying images that are needed in gardener components from a source registry to the gardener GCR under the prefix `eu.gcr.io/gardener-project/3rd/` (see the [documentation](https://github.com/gardener/ci-infra/tree/master/config/images) or [gardener/ci-infra#619](https://github.com/gardener/ci-infra/issues/619)).
+
    If you want to use a new image from a registry without IPv6 support or upgrade an already used image to a newer tag, please open a PR to the ci-infra repository that modifies the job's list of images to copy: [`images.yaml`](https://github.com/gardener/ci-infra/blob/master/config/images/images.yaml).
 
 3. **Do not use container images from Docker Hub** (example: [image vector](https://github.com/gardener/gardener/blob/6f4e64fe9494cafb5c5da9a2c0a491a5690161b6/charts/images.yaml#L619-L622), [prow configuration](https://github.com/gardener/ci-infra/blob/92782bedd92815639abf4dc14b2c484f77c6e57d/config/images/images.yaml#L37-L40))
