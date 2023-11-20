@@ -62,6 +62,7 @@ type health struct {
 	namespace           *string
 	seedIsGarden        bool
 	loggingEnabled      bool
+	valiEnabled         bool
 	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration
 	healthChecker       *healthchecker.HealthChecker
 }
@@ -74,6 +75,7 @@ func NewHealth(
 	namespace *string,
 	seedIsGarden bool,
 	loggingEnabled bool,
+	valiEnabled bool,
 	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
 ) HealthCheck {
 	return &health{
@@ -83,6 +85,7 @@ func NewHealth(
 		namespace:           namespace,
 		seedIsGarden:        seedIsGarden,
 		loggingEnabled:      loggingEnabled,
+		valiEnabled:         valiEnabled,
 		conditionThresholds: conditionThresholds,
 		healthChecker:       healthchecker.NewHealthChecker(seedClient, clock, conditionThresholds, seed.Status.LastOperation),
 	}
@@ -128,6 +131,8 @@ func (h *health) checkSystemComponents(
 		managedResources = append(managedResources, fluentoperator.OperatorManagedResourceName)
 		managedResources = append(managedResources, fluentoperator.CustomResourcesManagedResourceName)
 		managedResources = append(managedResources, fluentoperator.FluentBitManagedResourceName)
+	}
+	if h.valiEnabled {
 		managedResources = append(managedResources, vali.ManagedResourceNameRuntime)
 	}
 

@@ -15,12 +15,22 @@
 package care_test
 
 import (
+	"context"
+	"net/http"
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -33,30 +43,71 @@ import (
 	"github.com/gardener/gardener/pkg/component/nginxingress"
 	"github.com/gardener/gardener/pkg/component/seedsystem"
 	"github.com/gardener/gardener/pkg/component/vpa"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/care"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	thirdpartyapiutil "github.com/gardener/gardener/third_party/controller-runtime/pkg/apiutil"
 )
 
 var _ = Describe("Seed Care controller tests", func() {
 	var (
-		requiredManagedResources = []string{
-			etcd.Druid,
-			clusteridentity.ManagedResourceControlName,
-			clusterautoscaler.ManagedResourceControlName,
-			kubestatemetrics.ManagedResourceName,
-			seedsystem.ManagedResourceName,
-			vpa.ManagedResourceControlName,
-			hvpa.ManagedResourceName,
-			dependencywatchdog.ManagedResourceDependencyWatchdogWeeder,
-			dependencywatchdog.ManagedResourceDependencyWatchdogProber,
-			nginxingress.ManagedResourceName,
-			"istio",
-			"istio-system",
-		}
-
-		seed *gardencorev1beta1.Seed
+		seed           *gardencorev1beta1.Seed
+		loggingEnabled bool
+		valiEnabled    bool
 	)
 
 	BeforeEach(func() {
+		loggingEnabled = false
+		valiEnabled = false
+	})
+
+	JustBeforeEach(func() {
+		By("Setup manager")
+		mgr, err := manager.New(restConfig, manager.Options{
+			Scheme:  testScheme,
+			Metrics: metricsserver.Options{BindAddress: "0"},
+			Cache: cache.Options{
+				// Here kube-system namespace is added because in the controller we fetch cluster identity from
+				// kube-system namespace and expect it to return not found error, but if don't create cache for it
+				// a cache error will be returned.
+				DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}, metav1.NamespaceSystem: {}},
+				ByObject: map[client.Object]cache.ByObject{
+					&gardencorev1beta1.Seed{}: {
+						Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+					},
+				},
+			},
+			MapperProvider: func(config *rest.Config, httpClient *http.Client) (meta.RESTMapper, error) {
+				return thirdpartyapiutil.NewDynamicRESTMapper(config)
+			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+		mgrClient = mgr.GetClient()
+
+		By("Register controller")
+		Expect((&care.Reconciler{
+			Config: config.SeedCareControllerConfiguration{
+				SyncPeriod: &metav1.Duration{Duration: 500 * time.Millisecond},
+			},
+			Namespace:      &testNamespace.Name,
+			SeedName:       seedName,
+			LoggingEnabled: loggingEnabled,
+			ValiEnabled:    valiEnabled,
+		}).AddToManager(ctx, mgr, mgr, mgr)).To(Succeed())
+
+		By("Start manager")
+		mgrContext, mgrCancel := context.WithCancel(ctx)
+
+		go func() {
+			defer GinkgoRecover()
+			Expect(mgr.Start(mgrContext)).To(Succeed())
+		}()
+
+		DeferCleanup(func() {
+			By("Stop manager")
+			mgrCancel()
+		})
+
 		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   seedName,
@@ -121,74 +172,109 @@ var _ = Describe("Seed Care controller tests", func() {
 	})
 
 	Context("when ManagedResources for the Seed exist", func() {
-		BeforeEach(func() {
-			for _, name := range requiredManagedResources {
-				By("Create ManagedResource for " + name)
-				managedResource := &resourcesv1alpha1.ManagedResource{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      name,
-						Namespace: testNamespace.Name,
-					},
-					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						SecretRefs: []corev1.LocalObjectReference{{Name: "foo-secret"}},
-					},
+		requiredManagedResources := []string{
+			etcd.Druid,
+			clusteridentity.ManagedResourceControlName,
+			clusterautoscaler.ManagedResourceControlName,
+			kubestatemetrics.ManagedResourceName,
+			seedsystem.ManagedResourceName,
+			vpa.ManagedResourceControlName,
+			hvpa.ManagedResourceName,
+			dependencywatchdog.ManagedResourceDependencyWatchdogWeeder,
+			dependencywatchdog.ManagedResourceDependencyWatchdogProber,
+			nginxingress.ManagedResourceName,
+			"istio",
+			"istio-system",
+		}
+
+		test := func(managedResourceNames []string) {
+			BeforeEach(func() {
+				for _, name := range managedResourceNames {
+					By("Create ManagedResource for " + name)
+					managedResource := &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      name,
+							Namespace: testNamespace.Name,
+						},
+						Spec: resourcesv1alpha1.ManagedResourceSpec{
+							SecretRefs: []corev1.LocalObjectReference{{Name: "foo-secret"}},
+						},
+					}
+					Expect(testClient.Create(ctx, managedResource)).To(Succeed())
+					log.Info("Created ManagedResource for test", "managedResource", client.ObjectKeyFromObject(managedResource))
 				}
-				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
-				log.Info("Created ManagedResource for test", "managedResource", client.ObjectKeyFromObject(managedResource))
-			}
+			})
+
+			AfterEach(func() {
+				for _, name := range managedResourceNames {
+					By("Delete ManagedResource for " + name)
+					Expect(testClient.Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: testNamespace.Name}})).To(Succeed())
+				}
+			})
+
+			It("should set condition to False because all ManagedResource statuses are outdated", func() {
+				By("Expect SeedSystemComponentsHealthy condition to be False")
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
+					return seed.Status.Conditions
+				}).Should(ContainCondition(
+					OfType(gardencorev1beta1.SeedSystemComponentsHealthy),
+					WithStatus(gardencorev1beta1.ConditionFalse),
+					WithReason("OutdatedStatus"),
+					WithMessageSubstrings("observed generation of managed resource"),
+				))
+			})
+
+			It("should set condition to False because some ManagedResource statuses are outdated", func() {
+				for _, name := range managedResourceNames[1:] {
+					updateManagedResourceStatusToHealthy(name)
+				}
+
+				By("Expect SeedSystemComponentsHealthy condition to be False")
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
+					return seed.Status.Conditions
+				}).Should(ContainCondition(
+					OfType(gardencorev1beta1.SeedSystemComponentsHealthy),
+					WithStatus(gardencorev1beta1.ConditionFalse),
+					WithReason("OutdatedStatus"),
+					WithMessageSubstrings("observed generation of managed resource"),
+				))
+			})
+
+			It("should set condition to True because all ManagedResource statuses are healthy", func() {
+				for _, name := range managedResourceNames {
+					updateManagedResourceStatusToHealthy(name)
+				}
+
+				By("Expect SeedSystemComponentsHealthy condition to be True")
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
+					return seed.Status.Conditions
+				}).Should(ContainCondition(
+					OfType(gardencorev1beta1.SeedSystemComponentsHealthy),
+					WithStatus(gardencorev1beta1.ConditionTrue),
+					WithReason("SystemComponentsRunning"),
+					WithMessageSubstrings("All system components are healthy."),
+				))
+			})
+		}
+
+		Context("logging and vali are disabled", func() {
+			test(requiredManagedResources)
 		})
 
-		AfterEach(func() {
-			for _, name := range requiredManagedResources {
-				By("Delete ManagedResource for " + name)
-				Expect(testClient.Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: testNamespace.Name}})).To(Succeed())
-			}
-		})
+		Context("logging and vali are enabled", func() {
+			BeforeEach(func() {
+				loggingEnabled = true
+				valiEnabled = true
+			})
 
-		It("should set condition to False because all ManagedResource statuses are outdated", func() {
-			By("Expect SeedSystemComponentsHealthy condition to be False")
-			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-				return seed.Status.Conditions
-			}).Should(ContainCondition(
-				OfType(gardencorev1beta1.SeedSystemComponentsHealthy),
-				WithStatus(gardencorev1beta1.ConditionFalse),
-				WithReason("OutdatedStatus"),
-				WithMessageSubstrings("observed generation of managed resource"),
-			))
-		})
-
-		It("should set condition to False because some ManagedResource statuses are outdated", func() {
-			for _, name := range requiredManagedResources[1:] {
-				updateManagedResourceStatusToHealthy(name)
-			}
-
-			By("Expect SeedSystemComponentsHealthy condition to be False")
-			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-				return seed.Status.Conditions
-			}).Should(ContainCondition(
-				OfType(gardencorev1beta1.SeedSystemComponentsHealthy),
-				WithStatus(gardencorev1beta1.ConditionFalse),
-				WithReason("OutdatedStatus"),
-				WithMessageSubstrings("observed generation of managed resource"),
-			))
-		})
-
-		It("should set condition to True because all ManagedResource statuses are healthy", func() {
-			for _, name := range requiredManagedResources {
-				updateManagedResourceStatusToHealthy(name)
-			}
-
-			By("Expect SeedSystemComponentsHealthy condition to be True")
-			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-				return seed.Status.Conditions
-			}).Should(ContainCondition(
-				OfType(gardencorev1beta1.SeedSystemComponentsHealthy),
-				WithStatus(gardencorev1beta1.ConditionTrue),
-				WithReason("SystemComponentsRunning"),
-				WithMessageSubstrings("All system components are healthy."),
+			test(append(requiredManagedResources,
+				"fluent-operator",
+				"fluent-operator-custom-resources",
+				"fluent-bit",
+				"vali",
 			))
 		})
 	})

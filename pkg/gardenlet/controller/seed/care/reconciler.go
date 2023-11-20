@@ -48,6 +48,7 @@ type Reconciler struct {
 	Namespace      *string
 	SeedName       string
 	LoggingEnabled bool
+	ValiEnabled    bool
 }
 
 // Reconcile reconciles Seed resources and executes health check operations.
@@ -89,6 +90,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		r.Namespace,
 		seedIsGarden,
 		r.LoggingEnabled,
+		r.ValiEnabled,
 		r.conditionThresholdsToProgressingMapping(),
 	).Check(
 		ctx,
