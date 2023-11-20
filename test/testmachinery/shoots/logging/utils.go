@@ -64,7 +64,7 @@ func checkRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interf
 // WaitUntilValiReceivesLogs waits until the vali instance in <valiNamespace> receives <expected> logs for <key>=<value>
 func WaitUntilValiReceivesLogs(ctx context.Context, interval time.Duration, shootFramework *framework.ShootFramework, valiLabels map[string]string, valiNamespace, key, value string, expected, delta int, c kubernetes.Interface) error {
 	err := retry.Until(ctx, interval, func(ctx context.Context) (done bool, err error) {
-		search, err := shootFramework.GetValiLogs(ctx, valiLabels, valiNamespace, key, value, clt)
+		search, err := shootFramework.GetValiLogs(ctx, valiLabels, valiNamespace, key, value, c)
 		if err != nil {
 			return retry.SevereError(err)
 		}
@@ -100,13 +100,15 @@ func WaitUntilValiReceivesLogs(ctx context.Context, interval time.Duration, shoo
 		defer dumpLogsCancel()
 
 		shootFramework.Logger.Info("Dump Vali logs")
-		if dumpError := shootFramework.DumpLogsForPodInNamespace(dumpLogsCtx, clt, valiNamespace, "vali-0", &corev1.PodLogOptions{Container: "vali"}); dumpError != nil {
+		if dumpError := shootFramework.DumpLogsForPodInNamespace(dumpLogsCtx, c, valiNamespace, "vali-0",
+			&corev1.PodLogOptions{Container: "vali"}); dumpError != nil {
 			shootFramework.Logger.Error(dumpError, "Error dumping logs for pod")
 		}
 
 		shootFramework.Logger.Info("Dump Fluent-bit logs")
 		labels := client.MatchingLabels{"app": "fluent-bit"}
-		if dumpError := shootFramework.DumpLogsForPodsWithLabelsInNamespace(dumpLogsCtx, clt, "garden", labels); dumpError != nil {
+		if dumpError := shootFramework.DumpLogsForPodsWithLabelsInNamespace(dumpLogsCtx, c, "garden",
+			labels); dumpError != nil {
 			shootFramework.Logger.Error(dumpError, "Error dumping logs for pod")
 		}
 	}
