@@ -62,7 +62,7 @@ func checkRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interf
 }
 
 // WaitUntilValiReceivesLogs waits until the vali instance in <valiNamespace> receives <expected> logs for <key>=<value>
-func WaitUntilValiReceivesLogs(ctx context.Context, interval time.Duration, shootFramework *framework.ShootFramework, valiLabels map[string]string, valiNamespace, key, value string, expected, delta int, clt kubernetes.Interface) error {
+func WaitUntilValiReceivesLogs(ctx context.Context, interval time.Duration, shootFramework *framework.ShootFramework, valiLabels map[string]string, valiNamespace, key, value string, expected, delta int, c kubernetes.Interface) error {
 	err := retry.Until(ctx, interval, func(ctx context.Context) (done bool, err error) {
 		search, err := shootFramework.GetValiLogs(ctx, valiLabels, valiNamespace, key, value, clt)
 		if err != nil {
