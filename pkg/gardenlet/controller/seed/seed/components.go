@@ -41,6 +41,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/component/extensions"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/downloader"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
 	"github.com/gardener/gardener/pkg/component/kubeproxy"
@@ -474,6 +475,7 @@ func getFluentOperatorCustomResources(
 		machinecontrollermanager.CentralLoggingConfiguration,
 		// shoot worker components
 		downloader.CentralLoggingConfiguration,
+		nodeagent.CentralLoggingConfiguration,
 		// shoot system components
 		nodeexporter.CentralLoggingConfiguration,
 		nodeproblemdetector.CentralLoggingConfiguration,

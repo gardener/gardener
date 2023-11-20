@@ -38,8 +38,8 @@ export_artifacts() {
       kubectl -n "$namespace" exec "$node" -- crictl images >"$node_dir/images.log" || true
       kubectl -n "$namespace" get pod "$node" --show-managed-fields -oyaml >"$node_dir/pod.yaml" || true
 
-      # systemd units
-      for unit in cloud-config-downloader kubelet containerd containerd-configuration-local-setup; do
+      # relevant systemd units
+      for unit in cloud-config-downloader gardener-node-agent kubelet containerd containerd-configuration-local-setup; do
         kubectl -n "$namespace" exec "$node" -- journalctl --no-pager -u $unit.service >"$node_dir/$unit.log" || true
       done
       kubectl -n "$namespace" exec "$node" -- journalctl --no-pager >"$node_dir/journal.log" || true

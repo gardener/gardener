@@ -844,6 +844,7 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/journald
             - pkg/component/extensions/operatingsystemconfig/original/components/kernelconfig
             - pkg/component/extensions/operatingsystemconfig/original/components/kubelet
+            - pkg/component/extensions/operatingsystemconfig/original/components/nodeagent
             - pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates
             - pkg/component/extensions/operatingsystemconfig/original/components/sshdensurer
             - pkg/component/extensions/operatingsystemconfig/original/components/valitail
