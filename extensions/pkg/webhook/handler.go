@@ -53,7 +53,6 @@ func NewBuilder(mgr manager.Manager, logger logr.Logger) *HandlerBuilder {
 
 // WithMutator adds the given mutator for the given types to the HandlerBuilder.
 func (b *HandlerBuilder) WithMutator(mutator Mutator, types ...Type) *HandlerBuilder {
-	mutator = hybridMutator(mutator)
 	b.mutatorMap[mutator] = append(b.mutatorMap[mutator], types...)
 
 	return b
