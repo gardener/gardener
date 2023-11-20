@@ -182,7 +182,7 @@ var _ = Describe("task functions", func() {
 			}()
 			Expect(flow.ParallelN(n, tasks...)(ctx)).To(Succeed())
 			Expect(m).To(HaveLen(len(tasks)))
-			Expect(tasksAsserted.Load()).To(Equal(true))
+			Expect(tasksAsserted.Load()).To(BeTrue())
 		})
 
 		It("should collect the errors", func() {
