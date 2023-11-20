@@ -29,7 +29,11 @@ import (
 	"github.com/gardener/gardener/pkg/provider-local/local"
 )
 
-var logger = log.Log.WithName("local-controlplane-webhook")
+var (
+	logger = log.Log.WithName("local-controlplane-webhook")
+	// UseGardenerNodeAgent controls whether the UseGardenerNodeAgent feature gate of gardenlet is enabled.
+	UseGardenerNodeAgent bool
+)
 
 // AddToManager creates a webhook and adds it to the manager.
 func AddToManager(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
@@ -45,6 +49,6 @@ func AddToManager(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 			{Obj: &vpaautoscalingv1.VerticalPodAutoscaler{}},
 			{Obj: &extensionsv1alpha1.OperatingSystemConfig{}},
 		},
-		Mutator: genericmutator.NewMutator(mgr, NewEnsurer(logger), oscutils.NewUnitSerializer(), kubelet.NewConfigCodec(fciCodec), fciCodec, logger),
+		Mutator: genericmutator.NewMutator(mgr, NewEnsurer(logger, UseGardenerNodeAgent), oscutils.NewUnitSerializer(), kubelet.NewConfigCodec(fciCodec), fciCodec, logger),
 	})
 }

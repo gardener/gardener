@@ -44,6 +44,7 @@ import (
 	"github.com/gardener/gardener/pkg/provider-local/webhook/machinecontrollermanager"
 	networkpolicywebhook "github.com/gardener/gardener/pkg/provider-local/webhook/networkpolicy"
 	nodewebhook "github.com/gardener/gardener/pkg/provider-local/webhook/node"
+	"github.com/gardener/gardener/pkg/provider-local/webhook/nodeagentosc"
 	shootwebhook "github.com/gardener/gardener/pkg/provider-local/webhook/shoot"
 )
 
@@ -77,5 +78,6 @@ func WebhookSwitchOptions() *extensionscmdwebhook.SwitchOptions {
 		extensionscmdwebhook.Switch(nodewebhook.WebhookName, nodewebhook.AddToManager),
 		extensionscmdwebhook.Switch(nodewebhook.WebhookNameShoot, nodewebhook.AddShootWebhookToManager),
 		extensionscmdwebhook.Switch(machinecontrollermanager.WebhookName, machinecontrollermanager.AddToManager),
+		extensionscmdwebhook.Switch(nodeagentosc.WebhookName, nodeagentosc.AddToManager),
 	)
 }
