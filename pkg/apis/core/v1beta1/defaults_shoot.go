@@ -1,4 +1,4 @@
-// Copyright 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,84 +21,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
-
-func addDefaultingFuncs(scheme *runtime.Scheme) error {
-	return RegisterDefaults(scheme)
-}
-
-// SetDefaults_SecretBinding sets default values for SecretBinding objects.
-func SetDefaults_SecretBinding(obj *SecretBinding) {
-	if len(obj.SecretRef.Namespace) == 0 {
-		obj.SecretRef.Namespace = obj.Namespace
-	}
-
-	for i, quota := range obj.Quotas {
-		if len(quota.Namespace) == 0 {
-			obj.Quotas[i].Namespace = obj.Namespace
-		}
-	}
-}
-
-// SetDefaults_Seed sets default values for Seed objects.
-func SetDefaults_Seed(obj *Seed) {
-	if obj.Spec.Settings == nil {
-		obj.Spec.Settings = &SeedSettings{}
-	}
-
-	var defaultExcessCapacityReservationConfigs = []SeedSettingExcessCapacityReservationConfig{
-		// This roughly corresponds to a single, moderately large control-plane.
-		{Resources: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("2"), corev1.ResourceMemory: resource.MustParse("6Gi")}},
-	}
-
-	if obj.Spec.Settings.ExcessCapacityReservation == nil {
-		obj.Spec.Settings.ExcessCapacityReservation = &SeedSettingExcessCapacityReservation{
-			Configs: defaultExcessCapacityReservationConfigs,
-		}
-	}
-
-	if pointer.BoolDeref(obj.Spec.Settings.ExcessCapacityReservation.Enabled, true) && len(obj.Spec.Settings.ExcessCapacityReservation.Configs) == 0 {
-		obj.Spec.Settings.ExcessCapacityReservation.Configs = defaultExcessCapacityReservationConfigs
-	}
-
-	if obj.Spec.Settings.Scheduling == nil {
-		obj.Spec.Settings.Scheduling = &SeedSettingScheduling{Visible: true}
-	}
-
-	if obj.Spec.Settings.VerticalPodAutoscaler == nil {
-		obj.Spec.Settings.VerticalPodAutoscaler = &SeedSettingVerticalPodAutoscaler{Enabled: true}
-	}
-
-	if obj.Spec.Settings.DependencyWatchdog == nil {
-		obj.Spec.Settings.DependencyWatchdog = &SeedSettingDependencyWatchdog{}
-	}
-
-	if obj.Spec.Settings.TopologyAwareRouting == nil {
-		obj.Spec.Settings.TopologyAwareRouting = &SeedSettingTopologyAwareRouting{Enabled: false}
-	}
-}
-
-// SetDefaults_SeedNetworks sets default values for SeedNetworks objects.
-func SetDefaults_SeedNetworks(obj *SeedNetworks) {
-	if len(obj.IPFamilies) == 0 {
-		obj.IPFamilies = []IPFamily{IPFamilyIPv4}
-	}
-}
-
-// SetDefaults_SeedSettingDependencyWatchdog sets defaults for SeedSettingDependencyWatchdog objects.
-func SetDefaults_SeedSettingDependencyWatchdog(obj *SeedSettingDependencyWatchdog) {
-	if obj.Weeder == nil {
-		obj.Weeder = &SeedSettingDependencyWatchdogWeeder{Enabled: true}
-	}
-	if obj.Prober == nil {
-		obj.Prober = &SeedSettingDependencyWatchdogProber{Enabled: true}
-	}
-}
 
 // SetDefaults_Shoot sets default values for Shoot objects.
 func SetDefaults_Shoot(obj *Shoot) {
@@ -305,9 +232,6 @@ func SetDefaults_KubeAPIServerConfig(obj *KubeAPIServerConfig) {
 		obj.Logging.Verbosity = pointer.Int32(2)
 	}
 }
-
-// SetDefaults_KubeControllerManagerConfig sets default values for KubeControllerManagerConfig objects.
-func SetDefaults_KubeControllerManagerConfig(_ *KubeControllerManagerConfig) {}
 
 // SetDefaults_Networking sets default values for Networking objects.
 func SetDefaults_Networking(obj *Networking) {
