@@ -237,6 +237,7 @@ func mergeUnits(specUnits, statusUnits []extensionsv1alpha1.Unit) []extensionsv1
 			out[unitIndex].Content = unit.Content
 		}
 		out[unitIndex].DropIns = append(out[unitIndex].DropIns, unit.DropIns...)
+		out[unitIndex].FilePaths = append(out[unitIndex].FilePaths, unit.FilePaths...)
 	}
 
 	return out

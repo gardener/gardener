@@ -53,8 +53,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		hostName = "test-hostname"
 		node     *corev1.Node
 
-		file1, file2, file3, file4, file5                                          extensionsv1alpha1.File
-		gnaUnit, unit1, unit2, unit3, unit4, unit5, unit5DropInsOnly, unit6, unit7 extensionsv1alpha1.Unit
+		file1, file2, file3, file4, file5, file6, file7                                          extensionsv1alpha1.File
+		gnaUnit, unit1, unit2, unit3, unit4, unit5, unit5DropInsOnly, unit6, unit7, unit8, unit9 extensionsv1alpha1.Unit
 
 		operatingSystemConfig *extensionsv1alpha1.OperatingSystemConfig
 		oscRaw                []byte
@@ -154,6 +154,16 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file5"}},
 			Permissions: pointer.Int32(0750),
 		}
+		file6 = extensionsv1alpha1.File{
+			Path:        "/sixth/file",
+			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file6"}},
+			Permissions: pointer.Int32(0750),
+		}
+		file7 = extensionsv1alpha1.File{
+			Path:        "/seventh/file",
+			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file7"}},
+			Permissions: pointer.Int32(0750),
+		}
 
 		gnaUnit = extensionsv1alpha1.Unit{
 			Name:    "gardener-node-agent.service",
@@ -229,6 +239,21 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			Content:   pointer.String("#unit7"),
 			FilePaths: []string{file5.Path},
 		}
+		unit8 = extensionsv1alpha1.Unit{
+			Name:      "unit8",
+			Enable:    pointer.Bool(true),
+			Command:   extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+			Content:   pointer.String("#unit8"),
+			FilePaths: []string{file6.Path},
+		}
+		unit9 = extensionsv1alpha1.Unit{
+			Name: "unit9",
+			DropIns: []extensionsv1alpha1.DropIn{{
+				Name:    "drop",
+				Content: "#unit9drop",
+			}},
+			FilePaths: []string{file7.Path},
+		}
 
 		operatingSystemConfig = &extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
@@ -236,8 +261,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 				Units: []extensionsv1alpha1.Unit{unit1, unit2, unit5, unit5DropInsOnly, unit6, unit7},
 			},
 			Status: extensionsv1alpha1.OperatingSystemConfigStatus{
-				ExtensionFiles: []extensionsv1alpha1.File{file2, file4},
-				ExtensionUnits: []extensionsv1alpha1.Unit{unit3, unit4},
+				ExtensionFiles: []extensionsv1alpha1.File{file2, file4, file6, file7},
+				ExtensionUnits: []extensionsv1alpha1.Unit{unit3, unit4, unit8, unit9},
 			},
 		}
 
@@ -280,6 +305,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		assertFileOnDisk(fakeFS, file3.Path, "file3", 0750)
 		assertFileOnDisk(fakeFS, file4.Path, "file4", 0750)
 		assertFileOnDisk(fakeFS, file5.Path, "file5", 0750)
+		assertFileOnDisk(fakeFS, file6.Path, "file6", 0750)
+		assertFileOnDisk(fakeFS, file7.Path, "file7", 0750)
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit1.Name, "#unit1", 0600)
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit1.Name+".d/"+unit1.DropIns[0].Name, "#unit1drop", 0600)
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit2.Name, "#unit2", 0600)
@@ -292,6 +319,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit5.Name+".d/"+unit5DropInsOnly.DropIns[0].Name, "#unit5extensionsdrop", 0600)
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit6.Name, "#unit6", 0600)
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit7.Name, "#unit7", 0600)
+		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit8.Name, "#unit8", 0600)
+		assertNoFileOnDisk(fakeFS, "/etc/systemd/system/"+unit9.Name)
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(
@@ -302,6 +331,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit5.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit6.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit7.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit8.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit9.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionDaemonReload},
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit1.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionStop, UnitNames: []string{unit2.Name}},
@@ -310,6 +341,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit5.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit6.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit7.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit8.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit9.Name}},
 		))
 
 		By("Expect that cancel func has not been called")
@@ -340,6 +373,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		// remove only first drop-in from unit5
 		// remove file3 from unit6.FilePaths while keeping it unchanged
 		// the content of file5 (belonging to unit7) is changed, so unit7 is restarting
+		// the content of file6 (belonging to unit8) is changed, so unit8 is restarting
+		// the content of file7 (belonging to unit9) is changed, so unit9 is restarting
 		// file1, unit3, and gardener-node-agent unit are unchanged, so unit3 is not restarting and cancel func is not called
 		unit2.Enable = pointer.Bool(true)
 		unit2.Command = extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart)
@@ -351,8 +386,10 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		operatingSystemConfig.Spec.Units = []extensionsv1alpha1.Unit{unit2, unit5, unit6, unit7}
 		operatingSystemConfig.Spec.Files[2].Content.Inline.Data = "changeme"
-		operatingSystemConfig.Status.ExtensionUnits = []extensionsv1alpha1.Unit{unit3, unit4}
-		operatingSystemConfig.Status.ExtensionFiles = []extensionsv1alpha1.File{file4}
+		operatingSystemConfig.Status.ExtensionUnits = []extensionsv1alpha1.Unit{unit3, unit4, unit8, unit9}
+		operatingSystemConfig.Status.ExtensionFiles = []extensionsv1alpha1.File{file4, file6, file7}
+		operatingSystemConfig.Status.ExtensionFiles[1].Content.Inline.Data = "changed"
+		operatingSystemConfig.Status.ExtensionFiles[2].Content.Inline.Data = "changed-as-well"
 
 		var err error
 		oscRaw, err = runtime.Encode(codec, operatingSystemConfig)
@@ -379,6 +416,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		assertFileOnDisk(fakeFS, file3.Path, "file3", 0750)
 		assertFileOnDisk(fakeFS, file4.Path, "file4", 0750)
 		assertFileOnDisk(fakeFS, file5.Path, "changeme", 0750)
+		assertFileOnDisk(fakeFS, file6.Path, "changed", 0750)
+		assertFileOnDisk(fakeFS, file7.Path, "changed-as-well", 0750)
 		assertNoFileOnDisk(fakeFS, "/etc/systemd/system/"+unit1.Name)
 		assertNoDirectoryOnDisk(fakeFS, "/etc/systemd/system/"+unit1.Name+".d")
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit2.Name, "#unit2", 0600)
@@ -389,6 +428,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit5.Name, "#unit5", 0600)
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit5.Name+".d/"+unit5.DropIns[0].Name, "#unit5drop2", 0600)
 		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit7.Name, "#unit7", 0600)
+		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit8.Name, "#unit8", 0600)
+		assertNoFileOnDisk(fakeFS, "/etc/systemd/system/"+unit9.Name)
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(
@@ -396,6 +437,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit5.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit6.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit7.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit8.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit9.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionDisable, UnitNames: []string{unit4.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionDisable, UnitNames: []string{unit1.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionStop, UnitNames: []string{unit1.Name}},
@@ -405,6 +448,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			fakedbus.SystemdAction{Action: fakedbus.ActionStop, UnitNames: []string{unit4.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit6.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit7.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit8.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit9.Name}},
 		))
 
 		By("Expect that cancel func has not been called")
