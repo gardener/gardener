@@ -15,7 +15,6 @@
 package framework
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -61,13 +60,19 @@ func (f *ShootFramework) GetValiLogs(ctx context.Context, valiLabels map[string]
 
 	command := fmt.Sprintf("wget 'http://localhost:%d/vali/api/v1/query' -O- --post-data='%s'", valiPort, query)
 
-	if isValiAuthEnabled(ctx, log, valiLabelsSelector, valiNamespace, client) {
+	enabled, err := isValiAuthEnabled(ctx, log, valiLabelsSelector, valiNamespace, client)
+	if err != nil {
+		log.Error(err, "Error fetching logs")
+		return nil, err
+	}
+
+	if enabled {
 		command = command + fmt.Sprintf(" '--header=X-Scope-OrgID: %s'", "operator")
 	}
 
 	var reader io.Reader
 	log.Info("Fetching logs")
-	err := retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (bool, error) {
+	err = retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (bool, error) {
 		var err error
 		reader, err = PodExecByLabel(ctx, valiLabelsSelector, valiLogging, command, valiNamespace, client)
 
@@ -90,36 +95,30 @@ func (f *ShootFramework) GetValiLogs(ctx context.Context, valiLabels map[string]
 	return search, nil
 }
 
-func isValiAuthEnabled(ctx context.Context, log logr.Logger, selector labels.Selector, namespace string, c kubernetes.Interface) bool {
+func isValiAuthEnabled(ctx context.Context, log logr.Logger, selector labels.Selector, namespace string, c kubernetes.Interface) (bool, error) {
 	//Check if the auth is enabled in the configuration of the target
 	enabled, ok := authEnabledMap[selector.String()]
 	if ok {
-		return enabled
+		return enabled, nil
 	}
 
 	commandAuthEnabled := fmt.Sprintf("wget 'http://localhost:%d/config' -O-", valiPort)
 	r, err := PodExecByLabel(ctx, selector, valiLogging, commandAuthEnabled, namespace, c)
 	if err != nil {
-		log.Error(err, "Failed to check the vali config endpoint")
-		return false
-	}
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.Contains(line, "auth_enabled: true") {
-			log.Info("Parsing configuration", "auth_enabled", true)
-			authEnabledMap[selector.String()] = true
-			return true
-		}
-	}
-	if err = scanner.Err(); err == nil {
-		log.Info("Configuration is parsed", "auth_enabled", false)
-		authEnabledMap[selector.String()] = false
-	} else {
-		log.Error(err, "Error scanning configuration")
+		return false, err
 	}
 
-	return false
+	configBytes, err := io.ReadAll(r)
+	if err != nil {
+		return false, err
+	}
+	if strings.Contains(string(configBytes), "auth_enabled: true") {
+		log.Info("Parsing configuration", "auth_enabled", true)
+		authEnabledMap[selector.String()] = true
+		return true, nil
+	}
+
+	return false, nil
 }
 
 // DumpState dumps the state of a shoot

@@ -1,4 +1,3 @@
-auth_enabled: {{ .AuthEnabled }}
 ingester:
   chunk_target_size: 1536000
   chunk_idle_period: 3m
