@@ -333,9 +333,14 @@ var _ = Describe("ResourceManager", func() {
 			RuntimeKubernetesVersion:                         version,
 			SecretNameServerCA:                               "ca",
 			SyncPeriod:                                       &syncPeriod,
-			TargetDiffersFromSourceCluster:                   true,
-			TargetDisableCache:                               &targetDisableCache,
-			WatchedNamespace:                                 &watchedNamespace,
+			SystemComponentTolerations: []corev1.Toleration{
+				{Key: "a"},
+				{Key: "b"},
+				{Key: "c"},
+			},
+			TargetDiffersFromSourceCluster: true,
+			TargetDisableCache:             &targetDisableCache,
+			WatchedNamespace:               &watchedNamespace,
 			VPA: &VPAConfig{
 				MinAllowed: corev1.ResourceList{
 					corev1.ResourceMemory: resource.MustParse("30Mi"),
@@ -477,6 +482,11 @@ var _ = Describe("ResourceManager", func() {
 					},
 					PodNodeSelector: map[string]string{
 						"worker.gardener.cloud/system-components": "true",
+					},
+					PodTolerations: []corev1.Toleration{
+						{Key: "a"},
+						{Key: "b"},
+						{Key: "c"},
 					},
 				}
 			} else {

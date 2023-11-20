@@ -712,6 +712,60 @@ var _ = Describe("Shoot", func() {
 			})).To(BeEmpty())
 		})
 
+		It("should return tolerations in order", func() {
+			Expect(ExtractSystemComponentsTolerations([]gardencorev1beta1.Worker{
+				{
+					SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: true},
+					Taints: []corev1.Taint{
+						{
+							Key:    "b",
+							Value:  "someValue",
+							Effect: corev1.TaintEffectNoExecute,
+						},
+					},
+				},
+				{
+					SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: true},
+					Taints: []corev1.Taint{
+						{
+							Key:    "a",
+							Value:  "someValue",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+					},
+				},
+				{
+					SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: true},
+					Taints: []corev1.Taint{
+						{
+							Key:    "c",
+							Value:  "someValue",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+					},
+				},
+			})).To(HaveExactElements(
+				corev1.Toleration{
+					Key:      "a",
+					Operator: corev1.TolerationOpEqual,
+					Value:    "someValue",
+					Effect:   corev1.TaintEffectNoSchedule,
+				},
+				corev1.Toleration{
+					Key:      "b",
+					Operator: corev1.TolerationOpEqual,
+					Value:    "someValue",
+					Effect:   corev1.TaintEffectNoExecute,
+				},
+				corev1.Toleration{
+					Key:      "c",
+					Operator: corev1.TolerationOpEqual,
+					Value:    "someValue",
+					Effect:   corev1.TaintEffectNoSchedule,
+				},
+			))
+		})
+
 		It("should return tolerations when taints are defined for system worker group", func() {
 			Expect(ExtractSystemComponentsTolerations([]gardencorev1beta1.Worker{
 				{
