@@ -104,9 +104,8 @@ var (
 	//go:embed templates/vali-init.sh
 	valiInitScript string
 
-	//go:embed templates/vali-config.yaml.tpl
-	valiConfigTplContent string
-	valiConfigTemplate   *template.Template
+	//go:embed templates/vali-config.yaml
+	valiConfig string
 
 	//go:embed templates/telegraf-config.tpl
 	telegrafConfigTplContent string
@@ -118,7 +117,6 @@ var (
 )
 
 func init() {
-	valiConfigTemplate = template.Must(template.New("vali-config").Funcs(sprig.TxtFuncMap()).Parse(valiConfigTplContent))
 	telegrafStartScriptTemplate = template.Must(template.New("telegraf-config").Funcs(sprig.TxtFuncMap()).Parse(telegrafStartScriptTplContent))
 	telegrafConfigTemplate = template.Must(template.New("telegraf-start").Funcs(sprig.TxtFuncMap()).Parse(telegrafConfigTplContent))
 }
@@ -570,10 +568,6 @@ func (v *vali) getService() *corev1.Service {
 }
 
 func (v *vali) getValiConfigMap() (*corev1.ConfigMap, error) {
-	var config bytes.Buffer
-	if err := valiConfigTemplate.Execute(&config, map[string]interface{}{}); err != nil {
-		return nil, fmt.Errorf("failed to render telegraf configuration: %w", err)
-	}
 
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -582,7 +576,7 @@ func (v *vali) getValiConfigMap() (*corev1.ConfigMap, error) {
 			Labels:    getLabels(),
 		},
 		Data: map[string]string{
-			valiDataKeyConfig:     config.String(),
+			valiDataKeyConfig:     valiConfig,
 			curatorDataKeyConfig:  curatorConfig,
 			valiDataKeyInitScript: valiInitScript,
 		},
