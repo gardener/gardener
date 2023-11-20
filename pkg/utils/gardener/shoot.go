@@ -15,8 +15,10 @@
 package gardener
 
 import (
+	"cmp"
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -494,7 +496,13 @@ func ExtractSystemComponentsTolerations(workers []gardencorev1beta1.Worker) []co
 		}
 	}
 
-	return tolerations.UnsortedList()
+	sortedTolerations := tolerations.UnsortedList()
+
+	// sort system component tolerations for a stable output
+	slices.SortFunc(sortedTolerations, func(a, b corev1.Toleration) int {
+		return cmp.Compare(a.Key, b.Key)
+	})
+	return sortedTolerations
 }
 
 // IncompleteDNSConfigError is a custom error type.

@@ -334,8 +334,8 @@ var _ = Describe("ResourceManager", func() {
 			SecretNameServerCA:                               "ca",
 			SyncPeriod:                                       &syncPeriod,
 			SystemComponentTolerations: []corev1.Toleration{
-				{Key: "b"},
 				{Key: "a"},
+				{Key: "b"},
 				{Key: "c"},
 			},
 			TargetDiffersFromSourceCluster: true,
