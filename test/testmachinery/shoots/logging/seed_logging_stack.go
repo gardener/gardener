@@ -30,7 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/klog/v2"
+
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -110,8 +110,6 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 	framework.CBeforeEach(func(ctx context.Context) {
 		var err error
 		checkRequiredResources(ctx, shootFramework.SeedClient)
-
-		shootFramework.Logger = klog.NewKlogr()
 
 		// Create seedClient.Client for the shoots
 		shootClient, err = kubernetes.NewClientFromSecret(ctx,

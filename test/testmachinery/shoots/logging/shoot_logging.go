@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
-	"k8s.io/klog/v2"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -74,7 +74,6 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 	framework.CBeforeEach(func(ctx context.Context) {
 
 		checkRequiredResources(ctx, shootFramework.SeedClient)
-		shootFramework.Logger = klog.NewKlogr()
 
 		// Get shoot namespace name
 		shootNamespace.ObjectMeta.Name = shootFramework.ShootSeedNamespace()
