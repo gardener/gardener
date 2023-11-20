@@ -568,7 +568,6 @@ func (v *vali) getService() *corev1.Service {
 }
 
 func (v *vali) getValiConfigMap() (*corev1.ConfigMap, error) {
-
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "vali-config",
