@@ -60,6 +60,7 @@ func (f *ShootFramework) GetValiLogs(ctx context.Context, valiLabels map[string]
 
 	command := fmt.Sprintf("wget 'http://localhost:%d/vali/api/v1/query' -O- --post-data='%s'", valiPort, query)
 
+	// TODO(nickytd): Remove this code after v1.88 has been released.
 	enabled, err := isValiAuthEnabled(ctx, log, valiLabelsSelector, valiNamespace, client)
 	if err != nil {
 		log.Error(err, "Error fetching logs")
