@@ -41,7 +41,7 @@ import (
 // Checks whether required logging resources are present.
 // If not, probably the logging feature gate is not enabled.
 func hasRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interface) (bool, error) {
-	if _, err := getFluentBitDeamonSet(ctx, k8sSeedClient); err != nil {
+	if _, err := getFluentBitDaemonSet(ctx, k8sSeedClient); err != nil {
 		return false, err
 	}
 
