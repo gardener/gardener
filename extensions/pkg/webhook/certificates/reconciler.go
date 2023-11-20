@@ -92,13 +92,15 @@ func (r *reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 	r.client = mgr.GetClient()
 	r.sourceClient = mgr.GetClient()
 	apiReader := mgr.GetAPIReader()
+	scheme := mgr.GetScheme()
 
 	if sourceCluster != nil {
 		r.sourceClient = sourceCluster.GetClient()
-		apiReader = sourceCluster.GetClient()
+		apiReader = sourceCluster.GetAPIReader()
+		scheme = sourceCluster.GetScheme()
 	}
 
-	present, err := isWebhookServerSecretPresent(ctx, apiReader, mgr.GetScheme(), r.ServerSecretName, r.Namespace, r.Identity)
+	present, err := isWebhookServerSecretPresent(ctx, apiReader, scheme, r.ServerSecretName, r.Namespace, r.Identity)
 	if err != nil {
 		return err
 	}

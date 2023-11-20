@@ -110,6 +110,7 @@ func New(mgr manager.Manager, args Args) (*Webhook, error) {
 
 	return &Webhook{
 		Name:           args.Name,
+		Provider:       args.Provider,
 		Action:         actionType,
 		Selector:       args.Selector,
 		ObjectSelector: args.ObjectSelector,

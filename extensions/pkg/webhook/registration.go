@@ -93,7 +93,7 @@ func (c *Configs) HasWebhookConfig() bool {
 	return c.MutatingWebhookConfig != nil || c.ValidatingWebhookConfig != nil
 }
 
-// BuildWebhookConfigs builds MutatingWebhookConfiguration objects for seed and shoots from the given webhooks slice.
+// BuildWebhookConfigs builds webhook.Configs for seed and shoot from the given webhooks slice.
 func BuildWebhookConfigs(
 	webhooks []*Webhook,
 	c client.Client,
@@ -102,8 +102,8 @@ func BuildWebhookConfigs(
 	mode, url string,
 	caBundle []byte,
 ) (
-	seedWebhookConfig Configs,
-	shootWebhookConfig Configs,
+	seedWebhookConfigs Configs,
+	shootWebhookConfigs Configs,
 	err error,
 ) {
 	var (
@@ -117,12 +117,15 @@ func BuildWebhookConfigs(
 	}
 
 	for _, webhook := range webhooks {
-		var rules []admissionregistrationv1.RuleWithOperations
+		var (
+			name  = NamePrefix + providerName
+			rules []admissionregistrationv1.RuleWithOperations
+		)
 
 		for _, t := range webhook.Types {
 			rule, err := buildRule(c, t)
 			if err != nil {
-				return seedWebhookConfig, shootWebhookConfig, err
+				return seedWebhookConfigs, shootWebhookConfigs, err
 			}
 			rules = append(rules, *rule)
 		}
@@ -131,10 +134,8 @@ func BuildWebhookConfigs(
 			// if all webhooks for one target are removed in a new version, extensions need to explicitly delete the respective
 			// webhook config
 			createAndAddToWebhookConfig(
-				&seedWebhookConfig,
-				func() string {
-					return NamePrefix + providerName
-				},
+				&seedWebhookConfigs,
+				name,
 				*webhook,
 				providerName,
 				rules,
@@ -146,10 +147,8 @@ func BuildWebhookConfigs(
 
 		case TargetShoot:
 			createAndAddToWebhookConfig(
-				&shootWebhookConfig,
-				func() string {
-					return NamePrefix + providerName + NameSuffixShoot
-				},
+				&shootWebhookConfigs,
+				name+NameSuffixShoot,
 				*webhook,
 				providerName,
 				rules,
@@ -159,11 +158,11 @@ func BuildWebhookConfigs(
 				&sideEffects,
 			)
 		default:
-			return seedWebhookConfig, shootWebhookConfig, fmt.Errorf("invalid webhook target: %s", webhook.Target)
+			return seedWebhookConfigs, shootWebhookConfigs, fmt.Errorf("invalid webhook target: %s", webhook.Target)
 		}
 	}
 
-	return seedWebhookConfig, shootWebhookConfig, nil
+	return seedWebhookConfigs, shootWebhookConfigs, nil
 }
 
 // ReconcileSeedWebhookConfig reconciles the given webhook config in the seed cluster.
@@ -371,7 +370,7 @@ func BuildClientConfigFor(webhookPath string, namespace, componentName string, s
 
 func createAndAddToWebhookConfig(
 	webhookConfigs *Configs,
-	nameFunc func() string,
+	name string,
 	webhook Webhook,
 	providerName string,
 	rules []admissionregistrationv1.RuleWithOperations,
@@ -381,7 +380,7 @@ func createAndAddToWebhookConfig(
 	sideEffects *admissionregistrationv1.SideEffectClass,
 ) {
 	objectMeta := metav1.ObjectMeta{
-		Name:   nameFunc(),
+		Name:   name,
 		Labels: map[string]string{v1beta1constants.LabelExcludeWebhookFromRemediation: "true"},
 	}
 
