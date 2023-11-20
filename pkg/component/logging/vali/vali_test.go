@@ -136,7 +136,6 @@ var _ = Describe("Vali", func() {
 				fakeSecretManager,
 				Values{
 					Replicas:                1,
-					AuthEnabled:             false,
 					Storage:                 &storage,
 					ShootNodeLoggingEnabled: true,
 					HVPAEnabled:             true,
@@ -314,7 +313,6 @@ var _ = Describe("Vali", func() {
 				fakeSecretManager,
 				Values{
 					Replicas:              1,
-					AuthEnabled:           false,
 					Storage:               &storage,
 					ValiImage:             valiImage,
 					CuratorImage:          curatorImage,

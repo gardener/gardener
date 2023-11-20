@@ -142,7 +142,6 @@ type Values struct {
 	Replicas                int32
 	PriorityClassName       string
 	IngressHost             string
-	AuthEnabled             bool
 	ShootNodeLoggingEnabled bool
 	HVPAEnabled             bool
 	Storage                 *resource.Quantity
@@ -572,7 +571,7 @@ func (v *vali) getService() *corev1.Service {
 
 func (v *vali) getValiConfigMap() (*corev1.ConfigMap, error) {
 	var config bytes.Buffer
-	if err := valiConfigTemplate.Execute(&config, map[string]interface{}{"AuthEnabled": v.values.AuthEnabled}); err != nil {
+	if err := valiConfigTemplate.Execute(&config, map[string]interface{}{}); err != nil {
 		return nil, fmt.Errorf("failed to render telegraf configuration: %w", err)
 	}
 
