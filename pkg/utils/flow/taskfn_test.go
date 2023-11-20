@@ -145,50 +145,44 @@ var _ = Describe("task functions", func() {
 	Describe("ParallelN", func() {
 		It("should run the tasks", func() {
 			var (
-				mut         = sync.Mutex{}
-				m           = map[string]struct{}{}
-				ctx         = context.Background()
-				n           = 2
-				activeTasks int32
-				wg          = sync.WaitGroup{}
-				done        = make(chan struct{})
-				fn          = func(key string) flow.TaskFn {
+				mut           = sync.Mutex{}
+				m             = map[string]struct{}{}
+				ctx           = context.Background()
+				n             = 2
+				activeTasks   int32
+				tasksAsserted = atomic.Bool{}
+				blockCh       = make(chan struct{}, 5)
+				fn            = func(key string) flow.TaskFn {
 					return func(ctx context.Context) error {
 						atomic.AddInt32(&activeTasks, 1)
 						defer atomic.AddInt32(&activeTasks, -1)
 
-						// wait for some time so other tasks can start
-						time.Sleep(time.Millisecond * 100)
-
+						// block all tasks
+						<-blockCh
 						mut.Lock()
 						m[key] = struct{}{}
 						mut.Unlock()
 						return nil
 					}
 				}
+				tasks = []flow.TaskFn{fn("1"), fn("2"), fn("3"), fn("4"), fn("5")}
 			)
 
-			wg.Add(1)
 			go func() {
-				defer wg.Done()
-				// continuously check that activeTasks do not go over n
-				ticker := time.NewTicker(10 * time.Millisecond)
-				defer ticker.Stop()
-				for {
-					select {
-					case <-done:
-						return
-					case <-ticker.C:
-						Expect(atomic.LoadInt32(&activeTasks)).To(BeNumerically("<=", int32(n)))
-					}
-				}
-			}()
-			Expect(flow.ParallelN(n, fn("1"), fn("2"), fn("3"))(ctx)).To(Succeed())
-			Expect(m).To(HaveLen(3))
+				// wait for some time so that tasks can start
+				time.Sleep(time.Millisecond * 100)
+				Expect(atomic.LoadInt32(&activeTasks)).To(Equal(int32(n)))
 
-			done <- struct{}{}
-			close(done)
-			wg.Wait()
+				// we checked that the active tasks == the expected worker count
+				// so we can unblock all tasks
+				for i := 0; i < len(tasks); i++ {
+					blockCh <- struct{}{}
+				}
+				tasksAsserted.Store(true)
+			}()
+			Expect(flow.ParallelN(n, tasks...)(ctx)).To(Succeed())
+			Expect(m).To(HaveLen(len(tasks)))
+			Expect(tasksAsserted.Load()).To(Equal(true))
 		})
 
 		It("should collect the errors", func() {
