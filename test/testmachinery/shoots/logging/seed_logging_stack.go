@@ -126,7 +126,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		framework.ExpectNoError(err)
 
 		// Fetch the daemon set in the garden namespace
-		fluentBit, err = getFluentBitDeamonSet(ctx, shootFramework.SeedClient)
+		fluentBit, err = getFluentBitDaemonSet(ctx, shootFramework.SeedClient)
 		framework.ExpectNoError(err)
 
 		// Client for the seed cluster (gcp-ha)
@@ -633,7 +633,7 @@ func prepareFluentBitServiceAccount(serviceAccount *corev1.ServiceAccount) *core
 	return serviceAccount
 }
 
-func getFluentBitDeamonSet(ctx context.Context, k8sSeedClient kubernetes.Interface) (*appsv1.DaemonSet, error) {
+func getFluentBitDaemonSet(ctx context.Context, k8sSeedClient kubernetes.Interface) (*appsv1.DaemonSet, error) {
 	daemonSetList := &appsv1.DaemonSetList{}
 	err := k8sSeedClient.Client().List(ctx,
 		daemonSetList,
