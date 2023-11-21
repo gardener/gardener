@@ -1135,7 +1135,6 @@ build:
             - pkg/client/kubernetes/cache
             - pkg/component
             - pkg/component/extensions/operatingsystemconfig/downloader
-            - pkg/component/extensions/operatingsystemconfig/executor
             - pkg/component/extensions/operatingsystemconfig/original/components
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd/logrotate
@@ -1144,7 +1143,6 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/kubelet
             - pkg/component/extensions/operatingsystemconfig/original/components/nodeagent
             - pkg/component/extensions/operatingsystemconfig/original/components/valitail
-            - pkg/component/extensions/operatingsystemconfig/original/components/varlibmount
             - pkg/component/extensions/operatingsystemconfig/utils
             - pkg/component/kubeapiserver/constants
             - pkg/component/logging/vali

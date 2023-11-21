@@ -766,8 +766,8 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(syncPointAllSystemComponentsDeployed, waitUntilNetworkIsReady, waitUntilWorkerReady),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Waiting until all shoot worker nodes have updated the cloud config user data",
-			Fn:           botanist.WaitUntilCloudConfigUpdatedForAllWorkerPools,
+			Name:         "Waiting until all shoot worker nodes have updated the operating system config",
+			Fn:           botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools,
 			SkipIf:       o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady, waitUntilTunnelConnectionExists),
 		})

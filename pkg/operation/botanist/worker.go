@@ -29,11 +29,15 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/downloader"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/executor"
 	"github.com/gardener/gardener/pkg/component/extensions/worker"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
+	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -99,12 +103,12 @@ func WorkerPoolToNodesMap(ctx context.Context, shootClient client.Client) (map[s
 	return workerPoolToNodes, nil
 }
 
-// WorkerPoolToCloudConfigSecretMetaMap lists all the cloud-config secrets with the given client in the shoot cluster.
+// WorkerPoolToOperatingSystemConfigSecretMetaMap lists all the cloud-config secrets with the given client in the shoot cluster.
 // It returns a map whose key is the name of a worker pool and whose values are the corresponding metadata of the
 // cloud-config script stored inside the secret's data.
-func WorkerPoolToCloudConfigSecretMetaMap(ctx context.Context, shootClient client.Client) (map[string]metav1.ObjectMeta, error) {
+func WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx context.Context, shootClient client.Client, roleValue string) (map[string]metav1.ObjectMeta, error) {
 	secretList := &corev1.SecretList{}
-	if err := shootClient.List(ctx, secretList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleCloudConfig}); err != nil {
+	if err := shootClient.List(ctx, secretList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{v1beta1constants.GardenRole: roleValue}); err != nil {
 		return nil, err
 	}
 
@@ -118,25 +122,25 @@ func WorkerPoolToCloudConfigSecretMetaMap(ctx context.Context, shootClient clien
 	return workerPoolToCloudConfigSecretMeta, nil
 }
 
-// CloudConfigUpdatedForAllWorkerPools checks if all the nodes for all the provided worker pools have successfully
+// OperatingSystemConfigUpdatedForAllWorkerPools checks if all the nodes for all the provided worker pools have successfully
 // applied the desired version of their cloud-config user data.
-func CloudConfigUpdatedForAllWorkerPools(
+func OperatingSystemConfigUpdatedForAllWorkerPools(
 	workers []gardencorev1beta1.Worker,
 	workerPoolToNodes map[string][]corev1.Node,
-	workerPoolToCloudConfigSecretMeta map[string]metav1.ObjectMeta,
+	workerPoolToOperatingSystemConfigSecretMeta map[string]metav1.ObjectMeta,
 ) error {
 	var result error
 
 	for _, worker := range workers {
-		secretMeta, ok := workerPoolToCloudConfigSecretMeta[worker.Name]
+		secretMeta, ok := workerPoolToOperatingSystemConfigSecretMeta[worker.Name]
 		if !ok {
-			result = multierror.Append(result, fmt.Errorf("missing cloud config secret metadata for worker pool %q", worker.Name))
+			result = multierror.Append(result, fmt.Errorf("missing operating system config secret metadata for worker pool %q", worker.Name))
 			continue
 		}
 
 		var (
 			secretOSCKey   = secretMeta.Name
-			secretChecksum = secretMeta.Annotations[downloader.AnnotationKeyChecksum]
+			secretChecksum = secretMeta.Annotations[nodeagentv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig]
 		)
 
 		for _, node := range workerPoolToNodes[worker.Name] {
@@ -150,11 +154,11 @@ func CloudConfigUpdatedForAllWorkerPools(
 				continue
 			}
 
-			if nodeChecksum, ok := node.Annotations[executor.AnnotationKeyChecksum]; nodeChecksum != secretChecksum {
+			if nodeChecksum, ok := node.Annotations[nodeagentv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig]; nodeChecksum != secretChecksum {
 				if !ok {
-					result = multierror.Append(result, fmt.Errorf("the last successfully applied cloud config on node %q hasn't been reported yet", node.Name))
+					result = multierror.Append(result, fmt.Errorf("the last successfully applied operating system config on node %q hasn't been reported yet", node.Name))
 				} else {
-					result = multierror.Append(result, fmt.Errorf("the last successfully applied cloud config on node %q is outdated (current: %s, desired: %s)", node.Name, nodeChecksum, secretChecksum))
+					result = multierror.Append(result, fmt.Errorf("the last successfully applied operating system config on node %q is outdated (current: %s, desired: %s)", node.Name, nodeChecksum, secretChecksum))
 				}
 			}
 		}
@@ -200,27 +204,37 @@ func nodeOSCKeyDifferentFromSecretOSCKey(node corev1.Node, secretOSCKey string) 
 
 // exposed for testing
 var (
-	// IntervalWaitCloudConfigUpdated is the interval when waiting until the cloud config was updated for all worker pools.
-	IntervalWaitCloudConfigUpdated = 5 * time.Second
-	// GetTimeoutWaitCloudConfigUpdated retrieves the timeout when waiting until the cloud config was updated for all worker pools.
-	GetTimeoutWaitCloudConfigUpdated = getTimeoutWaitCloudConfigUpdated
+	// IntervalWaitOperatingSystemConfigUpdated is the interval when waiting until the operating system config was
+	// updated for all worker pools.
+	IntervalWaitOperatingSystemConfigUpdated = 5 * time.Second
+	// GetTimeoutWaitOperatingSystemConfigUpdated retrieves the timeout when waiting until the operating system config
+	// was updated for all worker pools.
+	GetTimeoutWaitOperatingSystemConfigUpdated = getTimeoutWaitOperatingSystemConfigUpdated
 )
 
-func getTimeoutWaitCloudConfigUpdated(shoot *shootpkg.Shoot) time.Duration {
+func getTimeoutWaitOperatingSystemConfigUpdated(shoot *shootpkg.Shoot) time.Duration {
+	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+		return time.Duration(shoot.CloudConfigExecutionMaxDelaySeconds)*time.Second + controllerutils.DefaultReconciliationTimeout
+	}
 	return downloader.UnitRestartSeconds*time.Second*2 + time.Duration(shoot.CloudConfigExecutionMaxDelaySeconds)*time.Second
 }
 
-// WaitUntilCloudConfigUpdatedForAllWorkerPools waits for a maximum of 6 minutes until all the nodes for all the worker
-// pools in the Shoot have successfully applied the desired version of their cloud-config user data.
-func (b *Botanist) WaitUntilCloudConfigUpdatedForAllWorkerPools(ctx context.Context) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, GetTimeoutWaitCloudConfigUpdated(b.Shoot))
+// WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools waits for a maximum of 6 minutes until all the nodes for all
+// the worker pools in the Shoot have successfully applied the desired version of their operating system config.
+func (b *Botanist) WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, GetTimeoutWaitOperatingSystemConfigUpdated(b.Shoot))
 	defer cancel()
 
-	if err := managedresources.WaitUntilHealthy(timeoutCtx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, CloudConfigExecutionManagedResourceName); err != nil {
-		return fmt.Errorf("the cloud-config user data scripts for the worker nodes were not populated yet: %w", err)
+	managedResourceName, roleValue := CloudConfigExecutionManagedResourceName, v1beta1constants.GardenRoleCloudConfig
+	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+		managedResourceName, roleValue = GardenerNodeAgentManagedResourceName, v1beta1constants.GardenRoleOperatingSystemConfig
 	}
 
-	timeoutCtx2, cancel2 := context.WithTimeout(ctx, GetTimeoutWaitCloudConfigUpdated(b.Shoot))
+	if err := managedresources.WaitUntilHealthy(timeoutCtx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, managedResourceName); err != nil {
+		return fmt.Errorf("the operating system configs for the worker nodes were not populated yet: %w", err)
+	}
+
+	timeoutCtx2, cancel2 := context.WithTimeout(ctx, GetTimeoutWaitOperatingSystemConfigUpdated(b.Shoot))
 	defer cancel2()
 
 	return retry.Until(timeoutCtx2, IntervalWaitCloudConfigUpdated, func(ctx context.Context) (done bool, err error) {
@@ -229,12 +243,12 @@ func (b *Botanist) WaitUntilCloudConfigUpdatedForAllWorkerPools(ctx context.Cont
 			return retry.SevereError(err)
 		}
 
-		workerPoolToCloudConfigSecretMeta, err := WorkerPoolToCloudConfigSecretMetaMap(ctx, b.ShootClientSet.Client())
+		workerPoolToOperatingSystemConfigSecretMeta, err := WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx, b.ShootClientSet.Client(), roleValue)
 		if err != nil {
 			return retry.SevereError(err)
 		}
 
-		if err := CloudConfigUpdatedForAllWorkerPools(b.Shoot.GetInfo().Spec.Provider.Workers, workerPoolToNodes, workerPoolToCloudConfigSecretMeta); err != nil {
+		if err := OperatingSystemConfigUpdatedForAllWorkerPools(b.Shoot.GetInfo().Spec.Provider.Workers, workerPoolToNodes, workerPoolToOperatingSystemConfigSecretMeta); err != nil {
 			return retry.MinorError(err)
 		}
 
