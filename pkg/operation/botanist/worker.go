@@ -237,7 +237,7 @@ func (b *Botanist) WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx co
 	timeoutCtx2, cancel2 := context.WithTimeout(ctx, GetTimeoutWaitOperatingSystemConfigUpdated(b.Shoot))
 	defer cancel2()
 
-	return retry.Until(timeoutCtx2, IntervalWaitCloudConfigUpdated, func(ctx context.Context) (done bool, err error) {
+	if err := retry.Until(timeoutCtx2, IntervalWaitOperatingSystemConfigUpdated, func(ctx context.Context) (done bool, err error) {
 		workerPoolToNodes, err := WorkerPoolToNodesMap(ctx, b.ShootClientSet.Client())
 		if err != nil {
 			return retry.SevereError(err)
@@ -253,5 +253,33 @@ func (b *Botanist) WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx co
 		}
 
 		return retry.Ok()
-	})
+	}); err != nil {
+		return err
+	}
+
+	// TODO(rfranzke): Drop this code after Gardener v1.95 has been released.
+	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+		b.Logger.Info("Removing no longer required resources related to legacy cloud-config-downloader")
+
+		for _, obj := range []client.Object{
+			&resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: CloudConfigExecutionManagedResourceName, Namespace: b.Shoot.SeedNamespace}},
+			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: gardenerutils.SecretNamePrefixShootAccess + downloader.SecretName, Namespace: b.Shoot.SeedNamespace}},
+		} {
+			if err := b.SeedClientSet.Client().Delete(ctx, obj); client.IgnoreNotFound(err) != nil {
+				return fmt.Errorf("failed to delete object %s: %w", client.ObjectKeyFromObject(obj), err)
+			}
+		}
+
+		if err := b.SeedClientSet.Client().DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(b.Shoot.SeedNamespace), client.MatchingLabels{SecretLabelKeyManagedResource: CloudConfigExecutionManagedResourceName}); client.IgnoreNotFound(err) != nil {
+			return fmt.Errorf("failed to delete cloud-config-execution related secrets: %w", err)
+		}
+
+		if b.ShootClientSet != nil {
+			if err := b.ShootClientSet.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: downloader.SecretName, Namespace: metav1.NamespaceSystem}}); client.IgnoreNotFound(err) != nil {
+				return fmt.Errorf("failed to delete %s secret in shoot: %w", downloader.SecretName, err)
+			}
+		}
+	}
+
+	return nil
 }
