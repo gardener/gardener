@@ -18,7 +18,6 @@ import (
 	"github.com/spf13/afero"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -41,12 +40,17 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		r.FS = afero.Afero{Fs: afero.NewOsFs()}
 	}
 
+	r.secretNameToPath = make(map[string]string, len(r.Config.SyncConfigs))
+	for _, config := range r.Config.SyncConfigs {
+		r.secretNameToPath[config.SecretName] = config.Path
+	}
+
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		For(&corev1.Secret{}, builder.WithPredicates(
 			predicate.NewPredicateFuncs(func(obj client.Object) bool {
-				return obj.GetNamespace() == metav1.NamespaceSystem && obj.GetName() == r.Config.SecretName
+				return r.secretNameToPath[obj.GetName()] != ""
 			}),
 			r.SecretPredicate(),
 		)).

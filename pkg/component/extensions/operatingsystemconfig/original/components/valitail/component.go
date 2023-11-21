@@ -44,11 +44,6 @@ const (
 	// PathCACert is the path for the vali-tls certificate authority.
 	PathCACert = PathDirectory + "/ca.crt"
 
-	// ServerPort is the valitail listening port.
-	ServerPort = 3001
-	// PositionFile is the path for storing the scraped file offsets.
-	PositionFile = "/var/log/positions.yaml"
-
 	valitailBinaryPath = v1beta1constants.OperatingSystemConfigFilePathBinaries + "/valitail"
 )
 
@@ -68,20 +63,21 @@ func execStartPreCopyBinaryFromContainer(binaryName string, image *imagevectorut
 }
 
 func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
-	var files []extensionsv1alpha1.File
+	var (
+		units []extensionsv1alpha1.Unit
+		files []extensionsv1alpha1.File
+	)
+
 	if ctx.ValitailEnabled {
 		valitailConfigFile, err := getValitailConfigurationFile(ctx)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		fetchTokenScriptFile, err := getFetchTokenScriptFile()
-		if err != nil {
-			return nil, nil, err
-		}
-		files = append(files, valitailConfigFile, fetchTokenScriptFile, getValitailCAFile(ctx))
+		files = append(files, valitailConfigFile, getValitailCAFile(ctx))
 
 		if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+			units = append(units, getValitailUnit(ctx))
 			files = append(files, extensionsv1alpha1.File{
 				Path:        valitailBinaryPath,
 				Permissions: pointer.Int32(0755),
@@ -92,8 +88,19 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 					},
 				},
 			})
+		} else {
+			fetchTokenScriptFile, err := getFetchTokenScriptFile()
+			if err != nil {
+				return nil, nil, err
+			}
+			files = append(files, fetchTokenScriptFile)
 		}
 	}
 
-	return []extensionsv1alpha1.Unit{getValitailUnit(ctx), getFetchTokenScriptUnit(ctx)}, files, nil
+	if !features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+		units = append(units, getValitailUnit(ctx))
+		units = append(units, getFetchTokenScriptUnit(ctx))
+	}
+
+	return units, files, nil
 }

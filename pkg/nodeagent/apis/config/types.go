@@ -89,9 +89,17 @@ type OperatingSystemConfigControllerConfig struct {
 
 // TokenControllerConfig defines the configuration of the access token controller.
 type TokenControllerConfig struct {
-	// SecretName defines the name of the secret in the shoot cluster control plane, which contains the `kube-apiserver`
-	// access token for the gardener-node-agent.
+	// SyncConfigs is the list of configurations for syncing access tokens.
+	SyncConfigs []TokenSecretSyncConfig
+}
+
+// TokenSecretSyncConfig contains configurations for syncing access tokens.
+type TokenSecretSyncConfig struct {
+	// SecretName defines the name of the secret in the shoot cluster's kube-system namespace which contains the access
+	// token.
 	SecretName string
+	// Path is the path on the machine where the access token content should be synced.
+	Path string
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

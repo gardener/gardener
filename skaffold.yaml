@@ -603,6 +603,7 @@ build:
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
             - pkg/component
+            - pkg/component/extensions/operatingsystemconfig/downloader
             - pkg/component/extensions/operatingsystemconfig/nodeinit
             - pkg/component/extensions/operatingsystemconfig/original/components
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd
@@ -611,9 +612,11 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/docker/logrotate
             - pkg/component/extensions/operatingsystemconfig/original/components/kubelet
             - pkg/component/extensions/operatingsystemconfig/original/components/nodeagent
+            - pkg/component/extensions/operatingsystemconfig/original/components/valitail
             - pkg/component/extensions/operatingsystemconfig/utils
             - pkg/component/kubeapiserver/constants
             - pkg/component/kubeproxy
+            - pkg/component/logging/vali
             - pkg/component/machinecontrollermanager
             - pkg/controller/service
             - pkg/controllerutils

@@ -28,6 +28,8 @@ const (
 	// BinaryDir is the directory on the worker node that contains the binary for the gardener-node-agent.
 	BinaryDir = "/opt/bin"
 
+	// AccessSecretName is a constant for the secret name for the gardener-node-agent's shoot access secret.
+	AccessSecretName = "gardener-node-agent"
 	// BootstrapTokenFilePath is the file path on the worker node that contains the bootstrap token for the node.
 	BootstrapTokenFilePath = CredentialsDir + "/bootstrap-token"
 	// TokenFilePath is the file path on the worker node that contains the access token of the gardener-node-agent.
@@ -116,9 +118,18 @@ type OperatingSystemConfigControllerConfig struct {
 
 // TokenControllerConfig defines the configuration of the access token controller.
 type TokenControllerConfig struct {
-	// SecretName defines the name of the secret in the shoot cluster control plane, which contains the `kube-apiserver`
-	// access token for the gardener-node-agent.
+	// SyncConfigs is the list of configurations for syncing access tokens.
+	// +optional
+	SyncConfigs []TokenSecretSyncConfig `json:"syncConfigs,omitempty"`
+}
+
+// TokenSecretSyncConfig contains configurations for syncing access tokens.
+type TokenSecretSyncConfig struct {
+	// SecretName defines the name of the secret in the shoot cluster's kube-system namespace which contains the access
+	// token.
 	SecretName string `json:"secretName"`
+	// Path is the path on the machine where the access token content should be synced.
+	Path string `json:"path"`
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

@@ -31,16 +31,14 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/valitail"
+	"github.com/gardener/gardener/pkg/component/logging/vali"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-const (
-	// AccessSecretName is a constant for the secret name for the gardener-node-agent's shoot access secret.
-	AccessSecretName = "gardener-node-agent"
-	// PathBinary is a constant for the path to the gardener-node-agent binary file on the VMs.
-	PathBinary = v1beta1constants.OperatingSystemConfigFilePathBinaries + "/gardener-node-agent"
-)
+// PathBinary is a constant for the path to the gardener-node-agent binary file on the VMs.
+const PathBinary = v1beta1constants.OperatingSystemConfigFilePathBinaries + "/gardener-node-agent"
 
 var codec runtime.Codec
 
@@ -70,7 +68,15 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		caBundle = []byte(*ctx.CABundle)
 	}
 
-	files, err := Files(ComponentConfig(ctx.Key, ctx.KubernetesVersion, ctx.APIServerURL, caBundle, ctx.OSCSyncJitterPeriod))
+	var additionalTokenSyncConfigs []nodeagentv1alpha1.TokenSecretSyncConfig
+	if ctx.ValitailEnabled {
+		additionalTokenSyncConfigs = append(additionalTokenSyncConfigs, nodeagentv1alpha1.TokenSecretSyncConfig{
+			SecretName: vali.ValitailTokenSecretName,
+			Path:       valitail.PathAuthToken,
+		})
+	}
+
+	files, err := Files(ComponentConfig(ctx.Key, ctx.KubernetesVersion, ctx.APIServerURL, caBundle, ctx.OSCSyncJitterPeriod, additionalTokenSyncConfigs))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed generating files: %w", err)
 	}
@@ -119,6 +125,7 @@ func ComponentConfig(
 	apiServerURL string,
 	caBundle []byte,
 	syncJitterPeriod *metav1.Duration,
+	additionalTokenSyncConfigs []nodeagentv1alpha1.TokenSecretSyncConfig,
 ) *nodeagentv1alpha1.NodeAgentConfiguration {
 	return &nodeagentv1alpha1.NodeAgentConfiguration{
 		APIServer: nodeagentv1alpha1.APIServer{
@@ -132,7 +139,10 @@ func ComponentConfig(
 				SyncJitterPeriod:  syncJitterPeriod,
 			},
 			Token: nodeagentv1alpha1.TokenControllerConfig{
-				SecretName: AccessSecretName,
+				SyncConfigs: append([]nodeagentv1alpha1.TokenSecretSyncConfig{{
+					SecretName: nodeagentv1alpha1.AccessSecretName,
+					Path:       nodeagentv1alpha1.TokenFilePath,
+				}}, additionalTokenSyncConfigs...),
 			},
 		},
 	}

@@ -37,6 +37,7 @@ import (
 )
 
 var (
+	// TODO(rfranzke): Remove the fetch-token script when the UseGardenerNodeAgent feature gate gets removed.
 	tplNameFetchToken = "fetch-token"
 	//go:embed templates/scripts/fetch-token.tpl.sh
 	tplContentFetchToken string
@@ -131,6 +132,9 @@ func getValitailUnit(ctx components.Context) extensionsv1alpha1.Unit {
 		}
 	}
 
+	// TODO(rfranzke): Drop this 'disablement' handling once UseGardenerNodeAgent feature gate gets removed.
+	//  gardener-node-agent takes care of disabling and removing the systemd service when it's no longer present in the
+	//  operating system configuration.
 	if !ctx.ValitailEnabled {
 		execStartPre = "/bin/systemctl disable " + UnitName
 		execStart = fmt.Sprintf(`/bin/sh -c "echo service %s is removed!; while true; do sleep 86400; done"`, UnitName)
@@ -138,8 +142,17 @@ func getValitailUnit(ctx components.Context) extensionsv1alpha1.Unit {
 
 	unitContent := `[Unit]
 Description=valitail daemon
-Documentation=https://github.com/credativ/plutono
-After=` + unitNameFetchToken + `
+Documentation=https://github.com/credativ/plutono`
+
+	if !features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+		unitContent += `
+After=` + unitNameFetchToken
+	} else {
+		unitContent += `
+ConditionPathExists=` + PathAuthToken
+	}
+
+	unitContent += `
 [Install]
 WantedBy=multi-user.target
 [Service]
@@ -154,7 +167,6 @@ MemorySwapMax=0
 Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
-ExecStartPre=/bin/sh -c "systemctl stop promtail.service || true"
 ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:])"`
 
 	if execStartPre != "" {
@@ -184,23 +196,15 @@ ExecStart=` + execStart
 }
 
 func getFetchTokenScriptFile() (extensionsv1alpha1.File, error) {
-	values := map[string]interface{}{
-		"pathAuthToken": PathAuthToken,
-		"dataKeyToken":  resourcesv1alpha1.DataKeyToken,
-		"secretName":    vali.ValitailTokenSecretName,
-	}
-
-	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
-		values["pathCredentialsToken"] = nodeagentv1alpha1.TokenFilePath
-		values["pathNodeAgentConfig"] = nodeagentv1alpha1.ConfigFilePath
-	} else {
-		values["pathCredentialsToken"] = downloader.PathCredentialsToken
-		values["pathCredentialsServer"] = downloader.PathCredentialsServer
-		values["pathCredentialsCACert"] = downloader.PathCredentialsCACert
-	}
-
 	var script bytes.Buffer
-	if err := tplFetchToken.Execute(&script, values); err != nil {
+	if err := tplFetchToken.Execute(&script, map[string]interface{}{
+		"pathCredentialsToken":  downloader.PathCredentialsToken,
+		"pathCredentialsServer": downloader.PathCredentialsServer,
+		"pathCredentialsCACert": downloader.PathCredentialsCACert,
+		"pathAuthToken":         PathAuthToken,
+		"dataKeyToken":          resourcesv1alpha1.DataKeyToken,
+		"secretName":            vali.ValitailTokenSecretName,
+	}); err != nil {
 		return extensionsv1alpha1.File{}, err
 	}
 
@@ -241,8 +245,7 @@ WantedBy=multi-user.target
 Restart=always
 RestartSec=300
 RuntimeMaxSec=120
-EnvironmentFile=/etc/environment
-ExecStartPre=/bin/sh -c "systemctl stop promtail-fetch-token.service || true"`
+EnvironmentFile=/etc/environment`
 
 	if execStartPre != "" {
 		unitContent += `
