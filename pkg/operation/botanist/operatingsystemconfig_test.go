@@ -210,7 +210,7 @@ var _ = Describe("operatingsystemconfig", func() {
 			worker1OriginalCommand = "/foo"
 			worker1OriginalUnits   = []string{"w1u1", "w1u2"}
 			worker1OriginalFiles   = []string{"w1f1", "w1f2"}
-			worker1Key             = operatingsystemconfig.Key(worker1Name, semver.MustParse(kubernetesVersion), nil)
+			worker1Key             string
 
 			worker2Name                  = "worker2"
 			worker2OriginalContent       = "w2content"
@@ -218,7 +218,7 @@ var _ = Describe("operatingsystemconfig", func() {
 			worker2OriginalUnits         = []string{"w2u2", "w2u2", "w2u3"}
 			worker2OriginalFiles         = []string{"w2f2", "w2f2", "w2f3"}
 			worker2KubernetesVersion     = "4.5.6"
-			worker2Key                   = operatingsystemconfig.Key(worker2Name, semver.MustParse(worker2KubernetesVersion), nil)
+			worker2Key                   string
 			worker2KubeletDataVolumeName = "vol"
 
 			workerNameToOperatingSystemConfigMaps = map[string]*operatingsystemconfig.OperatingSystemConfigs{
@@ -243,6 +243,11 @@ var _ = Describe("operatingsystemconfig", func() {
 			oldSecret1Name = "old-secret-1"
 			oldSecret2Name = "old-secret-2"
 		)
+
+		JustBeforeEach(func() {
+			worker1Key = operatingsystemconfig.Key(worker1Name, semver.MustParse(kubernetesVersion), nil)
+			worker2Key = operatingsystemconfig.Key(worker2Name, semver.MustParse(worker2KubernetesVersion), nil)
+		})
 
 		BeforeEach(func() {
 			kubernetesInterfaceSeed = kubernetesmock.NewMockInterface(ctrl)

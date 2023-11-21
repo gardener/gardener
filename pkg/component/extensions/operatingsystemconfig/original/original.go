@@ -23,10 +23,12 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/journald"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kernelconfig"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/sshdensurer"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/valitail"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/varlibmount"
+	"github.com/gardener/gardener/pkg/features"
 )
 
 // ComponentsFn is a function that returns the list of original operating system config components.
@@ -72,6 +74,10 @@ func Components(criName extensionsv1alpha1.CRIName, sshAccessEnabled bool) []com
 
 	if criName == extensionsv1alpha1.CRINameContainerD {
 		components = append(components, containerd.NewInitializer())
+	}
+
+	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+		components = append(components, nodeagent.New())
 	}
 
 	return components
