@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
+	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 	"github.com/gardener/gardener/pkg/nodeagent/registry"
 	"github.com/gardener/gardener/pkg/utils"
@@ -94,7 +95,7 @@ func (r *Reconciler) SecretPredicate() predicate.Predicate {
 				return false
 			}
 
-			return !bytes.Equal(oldSecret.Data[dataKeyOperatingSystemConfig], newSecret.Data[dataKeyOperatingSystemConfig])
+			return !bytes.Equal(oldSecret.Data[nodeagentv1alpha1.DataKeyOperatingSystemConfig], newSecret.Data[nodeagentv1alpha1.DataKeyOperatingSystemConfig])
 		},
 		DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
 		GenericFunc: func(_ event.GenericEvent) bool { return false },
@@ -132,7 +133,7 @@ func (r *Reconciler) EnqueueWithJitterDelay(log logr.Logger) handler.EventHandle
 				return
 			}
 
-			if !bytes.Equal(oldSecret.Data[dataKeyOperatingSystemConfig], newSecret.Data[dataKeyOperatingSystemConfig]) {
+			if !bytes.Equal(oldSecret.Data[nodeagentv1alpha1.DataKeyOperatingSystemConfig], newSecret.Data[nodeagentv1alpha1.DataKeyOperatingSystemConfig]) {
 				duration := RandomDurationWithMetaDuration(r.Config.SyncJitterPeriod)
 				log.Info("Enqueued secret with operating system config with a jitter period", "duration", duration)
 				q.AddAfter(reconcileRequest(evt.ObjectNew), duration)

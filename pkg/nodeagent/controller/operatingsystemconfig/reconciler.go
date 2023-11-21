@@ -49,10 +49,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
-const (
-	dataKeyOperatingSystemConfig             = "osc.yaml"
-	lastAppliedOperatingSystemConfigFilePath = nodeagentv1alpha1.BaseDir + "/last-applied-osc.yaml"
-)
+const lastAppliedOperatingSystemConfigFilePath = nodeagentv1alpha1.BaseDir + "/last-applied-osc.yaml"
 
 // Reconciler decodes the OperatingSystemConfig resources from secrets and applies the systemd units and files to the
 // node.

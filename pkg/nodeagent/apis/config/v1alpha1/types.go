@@ -41,6 +41,10 @@ const (
 	UnitName = "gardener-node-agent.service"
 	// InitUnitName is the name of the gardener-node-agent systemd service.
 	InitUnitName = "gardener-node-init.service"
+
+	// DataKeyOperatingSystemConfig is the constant for a key in the data map of an OSC secret which contains the
+	// encoded operating system config.
+	DataKeyOperatingSystemConfig = "osc.yaml"
 	// AnnotationKeyChecksumDownloadedOperatingSystemConfig is a constant for an annotation key on a Secret describing
 	// the checksum of the operating system configuration in the data map.
 	AnnotationKeyChecksumDownloadedOperatingSystemConfig = "checksum/data-script"

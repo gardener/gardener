@@ -40,14 +40,14 @@ func init() {
 }
 
 func extractOSCFromSecret(secret *corev1.Secret) (*extensionsv1alpha1.OperatingSystemConfig, []byte, string, error) {
-	oscRaw, ok := secret.Data[dataKeyOperatingSystemConfig]
+	oscRaw, ok := secret.Data[nodeagentv1alpha1.DataKeyOperatingSystemConfig]
 	if !ok {
-		return nil, nil, "", fmt.Errorf("no %s key found in OSC secret", dataKeyOperatingSystemConfig)
+		return nil, nil, "", fmt.Errorf("no %s key found in OSC secret", nodeagentv1alpha1.DataKeyOperatingSystemConfig)
 	}
 
 	osc := &extensionsv1alpha1.OperatingSystemConfig{}
 	if err := runtime.DecodeInto(decoder, oscRaw, osc); err != nil {
-		return nil, nil, "", fmt.Errorf("unable to decode OSC from secret data key %s: %w", dataKeyOperatingSystemConfig, err)
+		return nil, nil, "", fmt.Errorf("unable to decode OSC from secret data key %s: %w", nodeagentv1alpha1.DataKeyOperatingSystemConfig, err)
 	}
 
 	return osc, oscRaw, secret.Annotations[nodeagentv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig], nil
