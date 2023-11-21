@@ -74,20 +74,7 @@ Additionally, it creates a few (currently unused) dummy secrets (CA, server and 
 
 #### `DNSRecord`
 
-This controller manipulates the `/etc/hosts` file and adds a new line for each `DNSRecord` it observes.
-This enables accessing the shoot clusters from the respective machine, however, it also requires to run the extension with elevated privileges (`sudo`).
-
-The `/etc/hosts` would be extended as follows:
-
-```text
-# Begin of gardener-extension-provider-local section
-10.84.23.24 api.local.local.external.local.gardener.cloud
-10.84.23.24 api.local.local.internal.local.gardener.cloud
-...
-# End of gardener-extension-provider-local section
-```
-
-In addition to that, the controller also adapts the cluster internal DNS configuration by extending the `coredns` configuration for every observed `DNSRecord`. It will add two corresponding entries in the custom DNS configuration per shoot cluster:
+The controller adapts the cluster internal DNS configuration by extending the `coredns` configuration for every observed `DNSRecord`. It will add two corresponding entries in the custom DNS configuration per shoot cluster:
 
 ```text
 data:
@@ -123,7 +110,7 @@ Additionally, it generates the [`MachineClass`es](https://github.com/gardener/ma
 
 Gardenlet creates a wildcard DNS record for the Seed's ingress domain pointing to the `nginx-ingress-controller`'s LoadBalancer.
 This domain is commonly used by all `Ingress` objects created in the Seed for Seed and Shoot components.
-However, provider-local implements the `DNSRecord` extension API by writing the DNS record to `/etc/hosts`, which doesn't support wildcard entries.
+However, provider-local implements the `DNSRecord` extension API (see the [`DNSRecord`section](#dnsrecord)).
 To make `Ingress` domains resolvable on the host, this controller reconciles all `Ingresses` and creates `DNSRecords` of type `local` for each host included in `spec.rules`.
 
 #### `Service`
