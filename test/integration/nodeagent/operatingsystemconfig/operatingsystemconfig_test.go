@@ -274,9 +274,10 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		oscSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      oscSecretName,
-				Namespace: metav1.NamespaceSystem,
-				Labels:    map[string]string{testID: testRunID},
+				Name:        oscSecretName,
+				Namespace:   metav1.NamespaceSystem,
+				Labels:      map[string]string{testID: testRunID},
+				Annotations: map[string]string{"checksum/data-script": utils.ComputeSHA256Hex(oscRaw)},
 			},
 			Data: map[string][]byte{"osc.yaml": oscRaw},
 		}
@@ -417,6 +418,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		By("Update Secret containing the operating system config")
 		patch := client.MergeFrom(oscSecret.DeepCopy())
+		oscSecret.Annotations["checksum/data-script"] = utils.ComputeSHA256Hex(oscRaw)
 		oscSecret.Data["osc.yaml"] = oscRaw
 		Expect(testClient.Patch(ctx, oscSecret, patch)).To(Succeed())
 
@@ -496,6 +498,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		By("Update Secret containing the operating system config")
 		patch := client.MergeFrom(oscSecret.DeepCopy())
+		oscSecret.Annotations["checksum/data-script"] = utils.ComputeSHA256Hex(oscRaw)
 		oscSecret.Data["osc.yaml"] = oscRaw
 		Expect(testClient.Patch(ctx, oscSecret, patch)).To(Succeed())
 

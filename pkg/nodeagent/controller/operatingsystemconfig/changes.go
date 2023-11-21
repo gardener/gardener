@@ -28,7 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils"
+	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 )
 
 var decoder runtime.Decoder
@@ -50,7 +50,7 @@ func extractOSCFromSecret(secret *corev1.Secret) (*extensionsv1alpha1.OperatingS
 		return nil, nil, "", fmt.Errorf("unable to decode OSC from secret data key %s: %w", dataKeyOperatingSystemConfig, err)
 	}
 
-	return osc, oscRaw, utils.ComputeSHA256Hex(oscRaw), nil
+	return osc, oscRaw, secret.Annotations[nodeagentv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig], nil
 }
 
 type operatingSystemConfigChanges struct {

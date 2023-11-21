@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/docker"
 	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/features"
+	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -71,7 +72,7 @@ const (
 	DataKeyScript = "script"
 	// AnnotationKeyChecksum is the key of an annotation on a Secret object whose value is the checksum of the cloud
 	// config user data stored in the data map of this Secret.
-	AnnotationKeyChecksum = "checksum/data-script"
+	AnnotationKeyChecksum = nodeagentv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig
 
 	// PathCCDDirectory is a constant for the path of the cloud-config-downloader unit.
 	PathCCDDirectory = "/var/lib/" + Name

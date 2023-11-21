@@ -41,6 +41,12 @@ const (
 	UnitName = "gardener-node-agent.service"
 	// InitUnitName is the name of the gardener-node-agent systemd service.
 	InitUnitName = "gardener-node-init.service"
+	// AnnotationKeyChecksumDownloadedOperatingSystemConfig is a constant for an annotation key on a Secret describing
+	// the checksum of the operating system configuration in the data map.
+	AnnotationKeyChecksumDownloadedOperatingSystemConfig = "checksum/data-script"
+	// AnnotationKeyChecksumAppliedOperatingSystemConfig is a constant for an annotation key on a Node describing the
+	// checksum of the last applied operating system configuration.
+	AnnotationKeyChecksumAppliedOperatingSystemConfig = "checksum/cloud-config-data"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
