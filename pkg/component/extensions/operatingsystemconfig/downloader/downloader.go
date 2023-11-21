@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/docker"
 	"github.com/gardener/gardener/pkg/component/logging/vali"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -221,10 +222,14 @@ func GenerateRBACResourcesData(secretNames []string) (map[string][]byte, error) 
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
-					APIGroups:     []string{""},
-					Resources:     []string{"secrets"},
-					ResourceNames: append(secretNames, Name, vali.ValitailTokenSecretName),
-					Verbs:         []string{"get"},
+					APIGroups: []string{""},
+					Resources: []string{"secrets"},
+					ResourceNames: append(secretNames, Name, vali.ValitailTokenSecretName,
+						// This is needed for migration from cloud-config-downloader to gardener-node-agent: The CCD
+						// token will be used to fetch the GNA token, hence it needs permissions to read the secret.
+						"gardener-node-agent",
+					),
+					Verbs: []string{"get"},
 				},
 			},
 		}
@@ -300,6 +305,14 @@ func GenerateRBACResourcesData(secretNames []string) (map[string][]byte, error) 
 			}},
 		}
 	)
+
+	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+		// The following resources will be managed by the gardener-node-agent when the feature gate is turned on. 'role'
+		// and 'roleBinding' are kept for the migration scenario.
+		metav1.SetMetaDataAnnotation(&clusterRoleBindingNodeBootstrapper.ObjectMeta, resourcesv1alpha1.Mode, resourcesv1alpha1.ModeIgnore)
+		metav1.SetMetaDataAnnotation(&clusterRoleBindingNodeClient.ObjectMeta, resourcesv1alpha1.Mode, resourcesv1alpha1.ModeIgnore)
+		metav1.SetMetaDataAnnotation(&clusterRoleBindingSelfNodeClient.ObjectMeta, resourcesv1alpha1.Mode, resourcesv1alpha1.ModeIgnore)
+	}
 
 	return managedresources.
 		NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer).
