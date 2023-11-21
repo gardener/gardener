@@ -166,53 +166,58 @@ var (
 // 1. A secret containing the dedicated cloud config execution script for each worker group
 // 2. A secret containing some shared RBAC policies for downloading the cloud config execution script
 func (b *Botanist) DeployManagedResourceForCloudConfigExecutor(ctx context.Context) error {
+	return b.deployManagedResourceForOperatingSystemConfig(
+		ctx,
+		CloudConfigExecutionManagedResourceName,
+		"shoot-cloud-config-execution-", b.generateCloudConfigExecutorResourcesForWorker,
+		"shoot-cloud-config-rbac", DownloaderGenerateRBACResourcesDataFn,
+	)
+}
+
+func (b *Botanist) deployManagedResourceForOperatingSystemConfig(
+	ctx context.Context,
+	managedResourceName string,
+	dataKeySecretNamePrefix string,
+	generateSecretDataForWorkerFunc func(context.Context, gardencorev1beta1.Worker, operatingsystemconfig.Data) (string, map[string][]byte, error),
+	dataKeyRBACResources string,
+	generateRBACResourcesDataFunc func([]string) (map[string][]byte, error),
+) error {
 	var (
-		managedResource                  = managedresources.NewForShoot(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, CloudConfigExecutionManagedResourceName, managedresources.LabelValueGardener, false)
+		managedResource                  = managedresources.NewForShoot(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, managedResourceName, managedresources.LabelValueGardener, false)
 		managedResourceSecretsCount      = len(b.Shoot.GetInfo().Spec.Provider.Workers) + 1
-		managedResourceSecretLabels      = map[string]string{SecretLabelKeyManagedResource: CloudConfigExecutionManagedResourceName}
+		managedResourceSecretLabels      = map[string]string{SecretLabelKeyManagedResource: managedResourceName}
 		managedResourceSecretNamesWanted = sets.New[string]()
 		managedResourceSecretNameToData  = make(map[string]map[string][]byte, managedResourceSecretsCount)
 
-		cloudConfigExecutorSecretNames        []string
+		secretNames                           []string
 		workerNameToOperatingSystemConfigMaps = b.Shoot.Components.Extensions.OperatingSystemConfig.WorkerNameToOperatingSystemConfigsMap()
 
 		fns = make([]flow.TaskFn, 0, managedResourceSecretsCount)
 	)
 
-	// Generate cloud-config user-data executor scripts for all worker pools.
+	// Generate operating system config secrets for all worker pools.
 	for _, worker := range b.Shoot.GetInfo().Spec.Provider.Workers {
 		oscData, ok := workerNameToOperatingSystemConfigMaps[worker.Name]
 		if !ok {
 			return fmt.Errorf("did not find osc data for worker pool %q", worker.Name)
 		}
 
-		kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(b.Shoot.KubernetesVersion, worker.Kubernetes)
+		secretName, data, err := generateSecretDataForWorkerFunc(ctx, worker, oscData.Original)
 		if err != nil {
 			return err
 		}
 
-		hyperkubeImage, err := imagevector.ImageVector().FindImage(imagevector.ImageNameHyperkube, imagevectorutils.RuntimeVersion(kubernetesVersion.String()), imagevectorutils.TargetVersion(kubernetesVersion.String()))
-		if err != nil {
-			return err
-		}
-
-		secretName, data, err := b.generateCloudConfigExecutorResourcesForWorker(worker, oscData.Original, hyperkubeImage)
-		if err != nil {
-			return err
-		}
-
-		cloudConfigExecutorSecretNames = append(cloudConfigExecutorSecretNames, secretName)
-		managedResourceSecretNameToData[fmt.Sprintf("shoot-cloud-config-execution-%s", worker.Name)] = data
+		secretNames = append(secretNames, secretName)
+		managedResourceSecretNameToData[dataKeySecretNamePrefix+worker.Name] = data
 	}
 
-	// Allow the cloud-config-downloader to download the generated cloud-config user-data scripts.
-	downloaderRBACResourcesData, err := DownloaderGenerateRBACResourcesDataFn(cloudConfigExecutorSecretNames)
+	rbacResourcesData, err := generateRBACResourcesDataFunc(secretNames)
 	if err != nil {
 		return err
 	}
-	managedResourceSecretNameToData["shoot-cloud-config-rbac"] = downloaderRBACResourcesData
+	managedResourceSecretNameToData[dataKeyRBACResources] = rbacResourcesData
 
-	// Create Secrets for the ManagedResource containing all the executor scripts as well as the RBAC resources.
+	// Create Secrets for the ManagedResource containing the configs for all worker pools well as the RBAC resources.
 	for secretName, data := range managedResourceSecretNameToData {
 		var (
 			keyValues                                        = data
@@ -259,9 +264,9 @@ func (b *Botanist) DeployManagedResourceForCloudConfigExecutor(ctx context.Conte
 }
 
 func (b *Botanist) generateCloudConfigExecutorResourcesForWorker(
+	_ context.Context,
 	worker gardencorev1beta1.Worker,
 	oscDataOriginal operatingsystemconfig.Data,
-	hyperkubeImage *imagevectorutils.Image,
 ) (
 	string,
 	map[string][]byte,
@@ -272,9 +277,14 @@ func (b *Botanist) generateCloudConfigExecutorResourcesForWorker(
 		return "", nil, err
 	}
 
+	hyperkubeImage, err := imagevector.ImageVector().FindImage(imagevector.ImageNameHyperkube, imagevectorutils.RuntimeVersion(kubernetesVersion.String()), imagevectorutils.TargetVersion(kubernetesVersion.String()))
+	if err != nil {
+		return "", nil, err
+	}
+
 	var (
 		registry   = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
-		secretName = operatingsystemconfig.Key(worker.Name, kubernetesVersion, worker.CRI)
+		secretName = operatingsystemconfig.LegacyKey(worker.Name, kubernetesVersion, worker.CRI)
 	)
 
 	var kubeletDataVolume *gardencorev1beta1.DataVolume
