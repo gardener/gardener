@@ -345,6 +345,30 @@ var _ = Describe("OperatingSystemConfig", func() {
 				}))
 			})
 
+			It("should successfully deploy the shoot access secret for the gardener-node-agent", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, true))
+				DeferCleanup(test.WithVars(
+					&DownloaderConfigFn, downloaderConfigFn,
+					&OriginalConfigFn, originalConfigFn,
+				))
+
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+				secret := &corev1.Secret{}
+				Expect(c.Get(ctx, client.ObjectKey{Name: "shoot-access-gardener-node-agent", Namespace: namespace}, secret)).To(Succeed())
+				Expect(secret.Labels).To(Equal(map[string]string{
+					"resources.gardener.cloud/purpose": "token-requestor",
+					"resources.gardener.cloud/class":   "shoot",
+				}))
+				Expect(secret.Annotations).To(Equal(map[string]string{
+					"serviceaccount.resources.gardener.cloud/name":                      "gardener-node-agent",
+					"serviceaccount.resources.gardener.cloud/namespace":                 "kube-system",
+					"serviceaccount.resources.gardener.cloud/token-expiration-duration": "720h",
+					"token-requestor.resources.gardener.cloud/target-secret-name":       "gardener-node-agent",
+					"token-requestor.resources.gardener.cloud/target-secret-namespace":  "kube-system",
+				}))
+			})
+
 			It("should successfully deploy all extensions resources", func() {
 				defer test.WithVars(
 					&TimeNow, mockNow.Do,

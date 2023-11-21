@@ -89,14 +89,14 @@ type Values struct {
 	// Workers is the list of worker pools.
 	Workers []gardencorev1beta1.Worker
 
-	// DownloaderValues are configuration values required for the 'provision' OperatingSystemConfigPurpose.
-	DownloaderValues
+	// InitValues are configuration values required for the 'provision' OperatingSystemConfigPurpose.
+	InitValues
 	// OriginalValues are configuration values required for the 'reconcile' OperatingSystemConfigPurpose.
 	OriginalValues
 }
 
-// DownloaderValues are configuration values required for the 'provision' OperatingSystemConfigPurpose.
-type DownloaderValues struct {
+// InitValues are configuration values required for the 'provision' OperatingSystemConfigPurpose.
+type InitValues struct {
 	// APIServerURL is the address (including https:// protocol prefix) to the kube-apiserver (from which the original
 	// cloud-config user data will be downloaded).
 	APIServerURL string
@@ -213,12 +213,23 @@ func (o *operatingSystemConfig) Restore(ctx context.Context, shootState *gardenc
 }
 
 func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(deployer) error) error {
+	// TODO(rfranzke): Remove this when UseGardenerNodeAgent feature gate gets removed.
 	if err := gardenerutils.
 		NewShootAccessSecret(downloader.SecretName, o.values.Namespace).
 		WithTargetSecret(downloader.SecretName, metav1.NamespaceSystem).
 		WithTokenExpirationDuration("720h").
 		Reconcile(ctx, o.client); err != nil {
 		return err
+	}
+
+	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+		if err := gardenerutils.
+			NewShootAccessSecret(nodeagentv1alpha1.AccessSecretName, o.values.Namespace).
+			WithTargetSecret(nodeagentv1alpha1.AccessSecretName, metav1.NamespaceSystem).
+			WithTokenExpirationDuration("720h").
+			Reconcile(ctx, o.client); err != nil {
+			return err
+		}
 	}
 
 	fns := o.forEachWorkerPoolAndPurposeTaskFn(func(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) error {
@@ -563,7 +574,7 @@ type deployer struct {
 	worker  gardencorev1beta1.Worker
 	purpose extensionsv1alpha1.OperatingSystemConfigPurpose
 
-	// downloader values
+	// init values
 	apiServerURL string
 
 	// original values
