@@ -37,12 +37,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-const (
-	// AccessSecretName is a constant for the secret name for the gardener-node-agent's shoot access secret.
-	AccessSecretName = "gardener-node-agent"
-	// PathBinary is a constant for the path to the gardener-node-agent binary file on the VMs.
-	PathBinary = v1beta1constants.OperatingSystemConfigFilePathBinaries + "/gardener-node-agent"
-)
+// PathBinary is a constant for the path to the gardener-node-agent binary file on the VMs.
+const PathBinary = v1beta1constants.OperatingSystemConfigFilePathBinaries + "/gardener-node-agent"
 
 var codec runtime.Codec
 
@@ -144,7 +140,7 @@ func ComponentConfig(
 			},
 			Token: nodeagentv1alpha1.TokenControllerConfig{
 				SyncConfigs: append([]nodeagentv1alpha1.TokenSecretSyncConfig{{
-					SecretName: AccessSecretName,
+					SecretName: nodeagentv1alpha1.AccessSecretName,
 					Path:       nodeagentv1alpha1.TokenFilePath,
 				}}, additionalTokenSyncConfigs...),
 			},

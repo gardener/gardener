@@ -41,8 +41,8 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 				},
 				Token: TokenControllerConfig{
 					SyncConfigs: []TokenSecretSyncConfig{{
-						SecretName: "token-secret",
-						Path:       "/some/path/on/the/machine",
+						SecretName: "gardener-node-agent",
+						Path:       "/var/lib/gardener-node-agent/credentials/token",
 					}},
 				},
 			},
@@ -79,23 +79,52 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 
 	Context("Token Controller", func() {
 		It("should fail because access token secret name is not specified", func() {
-			config.Controllers.Token.SyncConfigs[0].SecretName = ""
+			config.Controllers.Token.SyncConfigs = append(config.Controllers.Token.SyncConfigs, TokenSecretSyncConfig{
+				Path: "/some/path",
+			})
 
 			Expect(ValidateNodeAgentConfiguration(config)).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("controllers.token.syncConfigs[0].secretName"),
+					"Field": Equal("controllers.token.syncConfigs[1].secretName"),
 				})),
 			))
 		})
 
 		It("should fail because path is not specified", func() {
-			config.Controllers.Token.SyncConfigs[0].Path = ""
+			config.Controllers.Token.SyncConfigs = append(config.Controllers.Token.SyncConfigs, TokenSecretSyncConfig{
+				SecretName: "/some/secret",
+			})
 
 			Expect(ValidateNodeAgentConfiguration(config)).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("controllers.token.syncConfigs[0].path"),
+					"Field": Equal("controllers.token.syncConfigs[1].path"),
+				})),
+			))
+		})
+
+		It("should fail because path is duplicated", func() {
+			config.Controllers.Token.SyncConfigs = append(config.Controllers.Token.SyncConfigs, TokenSecretSyncConfig{
+				SecretName: "other-secret",
+				Path:       "/var/lib/gardener-node-agent/credentials/token",
+			})
+
+			Expect(ValidateNodeAgentConfiguration(config)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("controllers.token.syncConfigs[1].path"),
+				})),
+			))
+		})
+
+		It("should fail because gardener-node-agent access token config is missing", func() {
+			config.Controllers.Token.SyncConfigs = nil
+
+			Expect(ValidateNodeAgentConfiguration(config)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("controllers.token.syncConfigs"),
 				})),
 			))
 		})

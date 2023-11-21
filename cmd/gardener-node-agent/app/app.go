@@ -45,7 +45,6 @@ import (
 	"github.com/gardener/gardener/cmd/utils"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
@@ -232,7 +231,7 @@ func fetchAccessToken(ctx context.Context, log logr.Logger, restConfig *rest.Con
 		return fmt.Errorf("unable to create client with bootstrap token: %w", err)
 	}
 
-	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: nodeagent.AccessSecretName, Namespace: metav1.NamespaceSystem}}
+	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: nodeagentv1alpha1.AccessSecretName, Namespace: metav1.NamespaceSystem}}
 	log.Info("Reading access token secret", "secret", client.ObjectKeyFromObject(secret))
 	if err := c.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
 		return fmt.Errorf("failed fetching access token from API server: %w", err)
