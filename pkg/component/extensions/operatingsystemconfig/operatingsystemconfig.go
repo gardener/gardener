@@ -127,6 +127,8 @@ type OriginalValues struct {
 	ValiIngressHostName string
 	// NodeLocalDNSEnabled indicates whether node local dns is enabled or not.
 	NodeLocalDNSEnabled bool
+	// SyncJitterPeriod is the duration of how the operating system config sync will be jittered on updates.
+	SyncJitterPeriod *metav1.Duration
 }
 
 // New creates a new instance of Interface.
@@ -519,6 +521,7 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		valiIngressHostName:     o.values.ValiIngressHostName,
 		valitailEnabled:         o.values.ValitailEnabled,
 		nodeLocalDNSEnabled:     o.values.NodeLocalDNSEnabled,
+		oscSyncJitterPeriod:     o.values.SyncJitterPeriod,
 	}, nil
 }
 
@@ -580,6 +583,7 @@ type deployer struct {
 	valiIngressHostName     string
 	valitailEnabled         bool
 	nodeLocalDNSEnabled     bool
+	oscSyncJitterPeriod     *metav1.Duration
 }
 
 // exposed for testing
@@ -632,6 +636,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 			ValiIngress:             d.valiIngressHostName,
 			APIServerURL:            d.apiServerURL,
 			Sysctls:                 d.worker.Sysctls,
+			OSCSyncJitterPeriod:     d.oscSyncJitterPeriod,
 		})
 		if err != nil {
 			return nil, err
