@@ -38,16 +38,16 @@ import (
 )
 
 const (
-	tenantInitializationTimeout          = 2 * time.Minute
-	tenantGetLogsFromValiTimeout         = 5 * time.Minute
-	tenantLoggerDeploymentCleanupTimeout = 5 * time.Minute
+	shootInitializationTimeout          = 2 * time.Minute
+	shootGetLogsFromValiTimeout         = 5 * time.Minute
+	shootLoggerDeploymentCleanupTimeout = 5 * time.Minute
 
-	randomLength         = 11
-	loggerAppLabel       = "logger"
-	loggerName           = "logger"
-	tenantDeltaLogsCount = 0
-	shootLogsCount       = 100
-	shootLogsDuration    = "20s"
+	randomLength        = 11
+	loggerAppLabel      = "logger"
+	loggerName          = "logger"
+	shootDeltaLogsCount = 0
+	shootLogsCount      = 100
+	shootLogsDuration   = "20s"
 )
 
 var (
@@ -124,7 +124,7 @@ epFdd1fXLwuwn7fvPMmJqD3HtLalX1AZmPk+BI8ezfAiVcVqnTJQMXlYPpYe9A==
 			shootFramework.SeedClient, templates.BlockValiValidatingWebhookConfiguration, validatingWebhookParams,
 		)
 		framework.ExpectNoError(err)
-	}, tenantInitializationTimeout)
+	}, initializationTimeout)
 
 	shootFramework.Beta().CIt("should get container logs from the shoot cluster", func(ctx context.Context) {
 		loggerRegex := fullLoggerName + "-.*"
@@ -136,7 +136,7 @@ epFdd1fXLwuwn7fvPMmJqD3HtLalX1AZmPk+BI8ezfAiVcVqnTJQMXlYPpYe9A==
 			),
 		)
 
-		ginkgo.By("Compute expected logs for the operator tenant")
+		ginkgo.By("Compute expected logs")
 		search, err := shootFramework.GetValiLogs(ctx,
 			valiLabels, shootFramework.ShootSeedNamespace(), "pod_name",
 			loggerRegex, shootFramework.SeedClient,
@@ -152,7 +152,7 @@ epFdd1fXLwuwn7fvPMmJqD3HtLalX1AZmPk+BI8ezfAiVcVqnTJQMXlYPpYe9A==
 			shootFramework.WaitUntilStatefulSetIsRunning(ctx, valiName, shootFramework.ShootSeedNamespace(), shootFramework.SeedClient),
 		)
 
-		ginkgo.By("Deploy the operator logger application")
+		ginkgo.By("Deploy the logger application")
 		loggerParams := map[string]interface{}{
 			"LoggerName":          fullLoggerName,
 			"HelmDeployNamespace": shootFramework.ShootSeedNamespace(),
@@ -164,7 +164,7 @@ epFdd1fXLwuwn7fvPMmJqD3HtLalX1AZmPk+BI8ezfAiVcVqnTJQMXlYPpYe9A==
 		err = shootFramework.RenderAndDeployTemplate(ctx, shootFramework.SeedClient, templates.LoggerAppName, loggerParams)
 		framework.ExpectNoError(err)
 
-		ginkgo.By("Wait until operator logger application is ready")
+		ginkgo.By("Wait until logger application is ready")
 		loggerLabels := labels.SelectorFromSet(map[string]string{
 			"app": loggerAppLabel,
 		})
@@ -174,15 +174,15 @@ epFdd1fXLwuwn7fvPMmJqD3HtLalX1AZmPk+BI8ezfAiVcVqnTJQMXlYPpYe9A==
 		)
 		framework.ExpectNoError(err)
 
-		ginkgo.By("Verify vali received all operator logger application logs")
+		ginkgo.By("Verify vali received all logger application logs")
 		err = WaitUntilValiReceivesLogs(ctx,
 			30*time.Second, shootFramework, valiLabels, shootFramework.ShootSeedNamespace(),
-			"pod_name", loggerRegex, expectedLogs, tenantDeltaLogsCount, shootFramework.SeedClient,
+			"pod_name", loggerRegex, expectedLogs, shootDeltaLogsCount, shootFramework.SeedClient,
 		)
 		framework.ExpectNoError(err)
 
-	}, tenantGetLogsFromValiTimeout, framework.WithCAfterTest(func(ctx context.Context) {
-		ginkgo.By("Cleanup operator logger app resources")
+	}, shootGetLogsFromValiTimeout, framework.WithCAfterTest(func(ctx context.Context) {
+		ginkgo.By("Cleanup logger app resources")
 		loggerDeploymentToDelete := &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: shootFramework.ShootSeedNamespace(),
@@ -209,5 +209,5 @@ epFdd1fXLwuwn7fvPMmJqD3HtLalX1AZmPk+BI8ezfAiVcVqnTJQMXlYPpYe9A==
 		)
 		framework.ExpectNoError(err)
 
-	}, tenantLoggerDeploymentCleanupTimeout))
+	}, shootLoggerDeploymentCleanupTimeout))
 })
