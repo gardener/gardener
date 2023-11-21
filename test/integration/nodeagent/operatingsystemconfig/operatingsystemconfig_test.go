@@ -16,8 +16,8 @@ package operatingsystemconfig_test
 
 import (
 	"context"
-	"io/fs"
 	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -40,6 +40,7 @@ import (
 	fakedbus "github.com/gardener/gardener/pkg/nodeagent/dbus/fake"
 	fakeregistry "github.com/gardener/gardener/pkg/nodeagent/registry/fake"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("OperatingSystemConfig controller tests", func() {
@@ -60,8 +61,10 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		oscRaw                []byte
 		oscSecret             *corev1.Secret
 
-		imageMountDirectory string
-		cancelFunc          cancelFuncEnsurer
+		imageMountDirectory                string
+		cancelFunc                         cancelFuncEnsurer
+		pathBootstrapTokenFile             = filepath.Join("/", "var", "lib", "gardener-node-agent", "credentials", "bootstrap-token")
+		pathKubeletBootstrapKubeconfigFile = filepath.Join("/", "var", "lib", "kubelet", "kubeconfig-bootstrap")
 	)
 
 	BeforeEach(func() {
@@ -282,9 +285,22 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 	BeforeEach(func() {
 		By("Create Secret containing the operating system config")
 		Expect(testClient.Create(ctx, oscSecret)).To(Succeed())
-
 		DeferCleanup(func() {
 			Expect(testClient.Delete(ctx, oscSecret)).To(Succeed())
+		})
+
+		By("Create bootstrap token file")
+		_, err := fakeFS.Create(pathBootstrapTokenFile)
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() {
+			Expect(fakeFS.Remove(pathBootstrapTokenFile)).To(Or(Succeed(), MatchError(afero.ErrFileNotFound)))
+		})
+
+		By("Create kubelet bootstrap kubeconfig file")
+		_, err = fakeFS.Create(pathKubeletBootstrapKubeconfigFile)
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() {
+			Expect(fakeFS.Remove(pathKubeletBootstrapKubeconfigFile)).To(Or(Succeed(), MatchError(afero.ErrFileNotFound)))
 		})
 	})
 
@@ -300,27 +316,27 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		))
 
 		By("Assert that files and units have been created")
-		assertFileOnDisk(fakeFS, file1.Path, "file1", 0777)
-		assertFileOnDisk(fakeFS, file2.Path, "file2", 0600)
-		assertFileOnDisk(fakeFS, file3.Path, "file3", 0750)
-		assertFileOnDisk(fakeFS, file4.Path, "file4", 0750)
-		assertFileOnDisk(fakeFS, file5.Path, "file5", 0750)
-		assertFileOnDisk(fakeFS, file6.Path, "file6", 0750)
-		assertFileOnDisk(fakeFS, file7.Path, "file7", 0750)
-		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit1.Name, "#unit1", 0600)
-		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit1.Name+".d/"+unit1.DropIns[0].Name, "#unit1drop", 0600)
-		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit2.Name, "#unit2", 0600)
-		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit3.Name+".d/"+unit3.DropIns[0].Name, "#unit3drop", 0600)
-		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit4.Name, "#unit4", 0600)
-		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit4.Name+".d/"+unit4.DropIns[0].Name, "#unit4drop", 0600)
-		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit5.Name, "#unit5", 0600)
-		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit5.Name+".d/"+unit5.DropIns[0].Name, "#unit5drop1", 0600)
-		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit5.Name+".d/"+unit5.DropIns[1].Name, "#unit5drop2", 0600)
-		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit5.Name+".d/"+unit5DropInsOnly.DropIns[0].Name, "#unit5extensionsdrop", 0600)
-		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit6.Name, "#unit6", 0600)
-		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit7.Name, "#unit7", 0600)
-		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit8.Name, "#unit8", 0600)
-		assertNoFileOnDisk(fakeFS, "/etc/systemd/system/"+unit9.Name)
+		test.AssertFileOnDisk(fakeFS, file1.Path, "file1", 0777)
+		test.AssertFileOnDisk(fakeFS, file2.Path, "file2", 0600)
+		test.AssertFileOnDisk(fakeFS, file3.Path, "file3", 0750)
+		test.AssertFileOnDisk(fakeFS, file4.Path, "file4", 0750)
+		test.AssertFileOnDisk(fakeFS, file5.Path, "file5", 0750)
+		test.AssertFileOnDisk(fakeFS, file6.Path, "file6", 0750)
+		test.AssertFileOnDisk(fakeFS, file7.Path, "file7", 0750)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit1.Name, "#unit1", 0600)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit1.Name+".d/"+unit1.DropIns[0].Name, "#unit1drop", 0600)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit2.Name, "#unit2", 0600)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit3.Name+".d/"+unit3.DropIns[0].Name, "#unit3drop", 0600)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit4.Name, "#unit4", 0600)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit4.Name+".d/"+unit4.DropIns[0].Name, "#unit4drop", 0600)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit5.Name, "#unit5", 0600)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit5.Name+".d/"+unit5.DropIns[0].Name, "#unit5drop1", 0600)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit5.Name+".d/"+unit5.DropIns[1].Name, "#unit5drop2", 0600)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit5.Name+".d/"+unit5DropInsOnly.DropIns[0].Name, "#unit5extensionsdrop", 0600)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit6.Name, "#unit6", 0600)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit7.Name, "#unit7", 0600)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit8.Name, "#unit8", 0600)
+		test.AssertNoFileOnDisk(fakeFS, "/etc/systemd/system/"+unit9.Name)
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(
@@ -345,7 +361,11 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit9.Name}},
 		))
 
-		By("Expect that cancel func has not been called")
+		By("Assert that bootstrap files have been deleted")
+		test.AssertNoFileOnDisk(fakeFS, pathKubeletBootstrapKubeconfigFile)
+		test.AssertNoFileOnDisk(fakeFS, pathBootstrapTokenFile)
+
+		By("Assert that cancel func has not been called")
 		Expect(cancelFunc.called).To(BeFalse())
 	})
 
@@ -411,25 +431,25 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		))
 
 		By("Assert that files and units have been created")
-		assertFileOnDisk(fakeFS, file1.Path, "file1", 0777)
-		assertNoFileOnDisk(fakeFS, file2.Path)
-		assertFileOnDisk(fakeFS, file3.Path, "file3", 0750)
-		assertFileOnDisk(fakeFS, file4.Path, "file4", 0750)
-		assertFileOnDisk(fakeFS, file5.Path, "changeme", 0750)
-		assertFileOnDisk(fakeFS, file6.Path, "changed", 0750)
-		assertFileOnDisk(fakeFS, file7.Path, "changed-as-well", 0750)
-		assertNoFileOnDisk(fakeFS, "/etc/systemd/system/"+unit1.Name)
-		assertNoDirectoryOnDisk(fakeFS, "/etc/systemd/system/"+unit1.Name+".d")
-		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit2.Name, "#unit2", 0600)
-		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit2.Name+".d/"+unit2.DropIns[0].Name, "#unit2drop", 0600)
-		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit3.Name+".d/"+unit3.DropIns[0].Name, "#unit3drop", 0600)
-		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit4.Name, "#unit4", 0600)
-		assertNoDirectoryOnDisk(fakeFS, "/etc/systemd/system/"+unit4.Name+".d")
-		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit5.Name, "#unit5", 0600)
-		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit5.Name+".d/"+unit5.DropIns[0].Name, "#unit5drop2", 0600)
-		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit7.Name, "#unit7", 0600)
-		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit8.Name, "#unit8", 0600)
-		assertNoFileOnDisk(fakeFS, "/etc/systemd/system/"+unit9.Name)
+		test.AssertFileOnDisk(fakeFS, file1.Path, "file1", 0777)
+		test.AssertNoFileOnDisk(fakeFS, file2.Path)
+		test.AssertFileOnDisk(fakeFS, file3.Path, "file3", 0750)
+		test.AssertFileOnDisk(fakeFS, file4.Path, "file4", 0750)
+		test.AssertFileOnDisk(fakeFS, file5.Path, "changeme", 0750)
+		test.AssertFileOnDisk(fakeFS, file6.Path, "changed", 0750)
+		test.AssertFileOnDisk(fakeFS, file7.Path, "changed-as-well", 0750)
+		test.AssertNoFileOnDisk(fakeFS, "/etc/systemd/system/"+unit1.Name)
+		test.AssertNoDirectoryOnDisk(fakeFS, "/etc/systemd/system/"+unit1.Name+".d")
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit2.Name, "#unit2", 0600)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit2.Name+".d/"+unit2.DropIns[0].Name, "#unit2drop", 0600)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit3.Name+".d/"+unit3.DropIns[0].Name, "#unit3drop", 0600)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit4.Name, "#unit4", 0600)
+		test.AssertNoDirectoryOnDisk(fakeFS, "/etc/systemd/system/"+unit4.Name+".d")
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit5.Name, "#unit5", 0600)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit5.Name+".d/"+unit5.DropIns[0].Name, "#unit5drop2", 0600)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit7.Name, "#unit7", 0600)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit8.Name, "#unit8", 0600)
+		test.AssertNoFileOnDisk(fakeFS, "/etc/systemd/system/"+unit9.Name)
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(
@@ -452,7 +472,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit9.Name}},
 		))
 
-		By("Expect that cancel func has not been called")
+		By("Assert that cancel func has not been called")
 		Expect(cancelFunc.called).To(BeFalse())
 	})
 
@@ -487,7 +507,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		}).ShouldNot(Equal(lastAppliedOSC))
 
 		By("Assert that files and units have been created")
-		assertFileOnDisk(fakeFS, "/etc/systemd/system/"+gnaUnit.Name, "#gna", 0600)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+gnaUnit.Name, "#gna", 0600)
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(
@@ -499,29 +519,6 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		Expect(cancelFunc.called).To(BeTrue())
 	})
 })
-
-func assertFileOnDisk(fakeFS afero.Afero, path, expectedContent string, fileMode uint32) {
-	description := "file path " + path
-
-	content, err := fakeFS.ReadFile(path)
-	ExpectWithOffset(1, err).NotTo(HaveOccurred(), description)
-	ExpectWithOffset(1, string(content)).To(Equal(expectedContent), description)
-
-	fileInfo, err := fakeFS.Stat(path)
-	ExpectWithOffset(1, err).NotTo(HaveOccurred(), description)
-	ExpectWithOffset(1, fileInfo.Mode()).To(Equal(fs.FileMode(fileMode)), description)
-}
-
-func assertNoFileOnDisk(fakeFS afero.Afero, path string) {
-	_, err := fakeFS.ReadFile(path)
-	ExpectWithOffset(1, err).To(MatchError(afero.ErrFileNotFound), "file path "+path)
-}
-
-func assertNoDirectoryOnDisk(fakeFS afero.Afero, path string) {
-	exists, err := fakeFS.DirExists(path)
-	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "directory path "+path)
-	ExpectWithOffset(1, exists).To(BeFalse(), "directory path "+path)
-}
 
 type cancelFuncEnsurer struct {
 	called bool

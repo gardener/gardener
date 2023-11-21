@@ -42,9 +42,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	"github.com/gardener/gardener/cmd/gardener-node-agent/app/bootstrappers"
 	"github.com/gardener/gardener/cmd/utils"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
@@ -185,9 +187,22 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		return err
 	}
 
-	log.Info("Adding controllers to manager")
-	if err := controller.AddToManager(cancel, mgr, cfg, hostName); err != nil {
-		return fmt.Errorf("failed adding controllers to manager: %w", err)
+	var (
+		fs   = afero.Afero{Fs: afero.NewOsFs()}
+		dbus = dbus.New()
+	)
+
+	log.Info("Adding runnables to manager")
+	if err := mgr.Add(&controllerutils.ControlledRunner{
+		Manager: mgr,
+		BootstrapRunnables: []manager.Runnable{
+			&bootstrappers.KubeletBootstrapKubeconfig{Log: log.WithName("kubelet-bootstrap-kubeconfig-creator"), FS: fs, APIServerConfig: cfg.APIServer},
+		},
+		ActualRunnables: []manager.Runnable{
+			manager.RunnableFunc(func(_ context.Context) error { return controller.AddToManager(cancel, mgr, cfg, hostName) }),
+		},
+	}); err != nil {
+		return fmt.Errorf("failed adding runnables to manager: %w", err)
 	}
 
 	log.Info("Starting manager")
