@@ -191,6 +191,8 @@ type OperatingSystemConfigs struct {
 
 // Data contains the actual content, a command to load it and all units that shall be considered for restart on change.
 type Data struct {
+	// Object is the plain OperatingSystemConfig object.
+	Object *extensionsv1alpha1.OperatingSystemConfig
 	// Content is the actual cloud-config user data.
 	Content string
 	// Command is the command for reloading the cloud-config (in case a new version was downloaded).
@@ -273,6 +275,7 @@ func (o *operatingSystemConfig) Wait(ctx context.Context) error {
 				}
 
 				data := Data{
+					Object:  osc,
 					Content: string(secret.Data[extensionsv1alpha1.OperatingSystemConfigSecretDataKey]),
 					Command: osc.Status.Command,
 					Units:   osc.Status.Units,

@@ -267,6 +267,8 @@ const (
 	GardenRoleOptionalAddon = "optional-addon"
 	// GardenRoleCloudConfig is the value of the GardenRole key indicating type 'cloud-config'.
 	GardenRoleCloudConfig = "cloud-config"
+	// GardenRoleOperatingSystemConfig is the value of the GardenRole key indicating type 'operating-system-config'.
+	GardenRoleOperatingSystemConfig = "operating-system-config"
 	// GardenRoleKubeconfig is the value of the GardenRole key indicating type 'kubeconfig'.
 	GardenRoleKubeconfig = "kubeconfig"
 	// GardenRoleCACluster is the value of the GardenRole key indicating type 'ca-cluster'.

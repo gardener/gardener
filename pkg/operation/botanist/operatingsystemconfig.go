@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/executor"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
 	nodelocaldnsconstants "github.com/gardener/gardener/pkg/component/nodelocaldns/constants"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -160,6 +161,12 @@ var (
 	// DownloaderGenerateRBACResourcesDataFn is a function for generating the RBAC resources data map for the cloud
 	// config user data executor scripts downloader.
 	DownloaderGenerateRBACResourcesDataFn = downloader.GenerateRBACResourcesData
+
+	// NodeAgentOSCSecretFn is a function for computing the operating system config secret for gardener-node-agent.
+	NodeAgentOSCSecretFn = nodeagent.OperatingSystemConfigSecret
+	// NodeAgentRBACResourcesDataFn is a function for generating the RBAC resources data map for the
+	// gardener-node-agent.
+	NodeAgentRBACResourcesDataFn = nodeagent.RBACResourcesData
 )
 
 // DeployManagedResourceForCloudConfigExecutor creates the cloud config managed resource that contains:
@@ -319,4 +326,50 @@ func (b *Botanist) generateCloudConfigExecutorResourcesForWorker(
 	}
 
 	return secretName, resources, nil
+}
+
+// GardenerNodeAgentManagedResourceName is a constant for the name of a ManagedResource in the seed cluster in the shoot
+// namespace which contains resources for gardener-node-agent.
+const GardenerNodeAgentManagedResourceName = "shoot-gardener-node-agent"
+
+// DeployManagedResourceForGardenerNodeAgent creates the ManagedResource that contains:
+// - A secret containing the raw original OperatingSystemConfig for each worker pool.
+// - A secret containing some shared RBAC resources for downloading the OSC secrets + bootstrapping the node.
+func (b *Botanist) DeployManagedResourceForGardenerNodeAgent(ctx context.Context) error {
+	return b.deployManagedResourceForOperatingSystemConfig(
+		ctx,
+		GardenerNodeAgentManagedResourceName,
+		"shoot-gardener-node-agent-", b.generateOperatingSystemConfigSecretForWorker,
+		"shoot-gardener-node-agent-rbac", NodeAgentRBACResourcesDataFn,
+	)
+}
+
+func (b *Botanist) generateOperatingSystemConfigSecretForWorker(
+	ctx context.Context,
+	worker gardencorev1beta1.Worker,
+	oscDataOriginal operatingsystemconfig.Data,
+) (
+	string,
+	map[string][]byte,
+	error,
+) {
+	kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(b.Shoot.KubernetesVersion, worker.Kubernetes)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed computing the effective Kubernetes version for pool %q: %w", worker.Name, err)
+	}
+	secretName := operatingsystemconfig.Key(worker.Name, kubernetesVersion, worker.CRI)
+
+	oscSecret, err := NodeAgentOSCSecretFn(ctx, b.SeedClientSet.Client(), oscDataOriginal.Object, secretName, worker.Name)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed computing the OperatingSystemConfig secret for gardener-node-agent for pool %q: %w", worker.Name, err)
+	}
+
+	resources, err := managedresources.
+		NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer).
+		AddAllAndSerialize(oscSecret)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed adding gardener-node-agent secret for pool %q to the registry and serializing it: %w", worker.Name, err)
+	}
+
+	return oscSecret.Name, resources, nil
 }
