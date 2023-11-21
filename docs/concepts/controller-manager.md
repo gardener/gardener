@@ -110,7 +110,7 @@ Consequently, to ensure that `ExposureClass`es in-use are always present in the 
 ### [`ManagedSeedSet` Controller](../../pkg/controllermanager/controller/managedseedset)
 
 `ManagedSeedSet` objects maintain a stable set of replicas of `ManagedSeed`s, i.e. they guarantee the availability of a specified number of identical `ManagedSeed`s on an equal number of identical `Shoot`s.
-The `ManagedSeedSet` controller creates and deletes `ManagedSeed`s and `Shoot`s in response to changes to the replicas and selector fields. For more information, refer to the [`ManagedSeedSet` proposal document](../../docs/proposals/13-automated-seed-management.md#managedseedsets).
+The `ManagedSeedSet` controller creates and deletes `ManagedSeed`s and `Shoot`s in response to changes to the replicas and selector fields. For more information, refer to the [`ManagedSeedSet` proposal document](../proposals/13-automated-seed-management.md#managedseedsets).
 
 1. The reconciler first gets all the replicas of the given `ManagedSeedSet` in the `ManagedSeedSet`'s namespace and with the matching selector. Each replica is a struct that contains a `ManagedSeed`, its corresponding `Seed` and `Shoot` objects.
 1. Then the pending replica is retrieved, if it exists.

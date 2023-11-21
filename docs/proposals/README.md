@@ -14,7 +14,7 @@ You may consider filing a GEP for the following reasons:
 -	A phased implementation approach is expected because of the widespread scope of the change
 -	Your proposed changes may be controversial
 
-We encourage you to take a look at already merged [GEPs](https://github.com/gardener/gardener/tree/master/docs/proposals) since they give you a sense of what a typical GEP comprises.
+We encourage you to take a look at already merged [GEPs](../proposals) since they give you a sense of what a typical GEP comprises.
 
 ## Before creating a GEP
 
@@ -26,7 +26,7 @@ An appropriate format for this may be the regular [Gardener community meetings](
 
 ## How to file a GEP
 
-GEPs should be created as Markdown `.md` files and are submitted through a GitHub pull request to their current home in [docs/proposals](https://github.com/gardener/gardener/tree/master/docs/proposals). Please use the provided [template](./00-template.md) or follow the structure of existing [GEPs]( https://github.com/gardener/gardener/tree/master/docs/proposals) which makes reviewing easier and faster. Additionally, please link the new GEP in our documentation [index](../README.md#Proposals).
+GEPs should be created as Markdown `.md` files and are submitted through a GitHub pull request to their current home in [docs/proposals](../proposals). Please use the provided [template](./00-template.md) or follow the structure of existing [GEPs](../proposals) which makes reviewing easier and faster. Additionally, please link the new GEP in our documentation [index](../README.md#Proposals).
 
 If not already done, please present your GEP in the [regular community meetings](https://gardener.cloud/docs/contribute/#bi-weekly-meetings) to brief the community about your proposal (we strive for personal communication :) ). Also consider that this may be an important step to raise awareness and understanding for everyone involved.
 

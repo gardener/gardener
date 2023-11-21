@@ -127,7 +127,7 @@ It is recommended that for high-availability setup, an odd number of nodes (node
 
 **Validation**
 
-Enforcing that a highly available `ManagedSeed` is setup with odd number of zones, additional checks needs to be introduced in [admission plugin](https://github.com/gardener/gardener/blob/master/plugin/pkg/managedseed/validator/admission.go).
+Enforcing that a highly available `ManagedSeed` is setup with odd number of zones, additional checks needs to be introduced in [admission plugin](../../plugin/pkg/managedseed/validator/admission.go).
 
 ### Recommended Number of Replicas
 

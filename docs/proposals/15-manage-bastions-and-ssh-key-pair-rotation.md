@@ -75,7 +75,7 @@ The following is a list of involved components that either need to be newly intr
     - Cleans up `Bastion` resource on missing heartbeat
     - Is configured with a `maxLifetime` for the `Bastion` resource
 - Gardener (RBAC)
-  - The project `admin` role should be extended to allow CRUD operations on the `Bastion` resource. The `gardener.cloud:system:project-member-aggregation` `ClusterRole` needs to be updated accordingly (https://github.com/gardener/gardener/blob/master/charts/gardener/controlplane/charts/application/templates/rbac-user.yaml)
+  - The project `admin` role should be extended to allow CRUD operations on the `Bastion` resource. The `gardener.cloud:system:project-member-aggregation` `ClusterRole` needs to be [updated accordingly](../../charts/gardener/controlplane/charts/application/templates/rbac-user.yaml)
 
 ### SSH Flow
 0. Users should only get the RBAC permission to `create` / `update` `Bastion` resources for a namespace, if they should be allowed to `ssh` onto the shoot nodes in this namespace. A project member with `admin` role will have these permissions.
@@ -221,8 +221,8 @@ Currently, the `ssh` key pair for the shoot nodes are created once during shoot 
         - Generates new `ssh-keypair` secret.
         - The `OperatingSystemConfig` needs to be re-generated and deployed with the new and old `ssh` public key.
     - As usual (for more details, see [Contract: OperatingSystemConfig Resource](../extensions/operatingsystemconfig.md)):
-        - Once the `cloud-config-<X>` secret in the `kube-system` namespace of the shoot cluster is updated, it will be picked up by the [`downloader` script](https://github.com/gardener/gardener/blob/master/pkg/component/extensions/operatingsystemconfig/downloader/templates/scripts/download-cloud-config.tpl.sh) (checks every 30s for updates).
-        - The `downloader` runs the ["execution" script](https://github.com/gardener/gardener/blob/master/pkg/component/extensions/operatingsystemconfig/executor/templates/scripts/execute-cloud-config.tpl.sh) from the `cloud-config-<X>` secret.
+        - Once the `cloud-config-<X>` secret in the `kube-system` namespace of the shoot cluster is updated, it will be picked up by the [`downloader` script](../pkg/component/extensions/operatingsystemconfig/downloader/templates/scripts/download-cloud-config.tpl.sh) (checks every 30s for updates).
+        - The `downloader` runs the ["execution" script](../../pkg/component/extensions/operatingsystemconfig/executor/templates/scripts/execute-cloud-config.tpl.sh) from the `cloud-config-<X>` secret.
         - The "execution" script includes also the original user data script, which it writes to `PATH_CLOUDCONFIG`, compares it against the previous cloud config and runs the script in case it has changed.
         - Running the [original user data](../../pkg/component/extensions/operatingsystemconfig/original) script will also run the `gardeneruser` component, where the `authorized_keys` file will be updated.
         - After the most recent cloud-config user data was applied, the "execution" script annotates the node with `checksum/cloud-config-data: <cloud-config-checksum>` to indicate the success.

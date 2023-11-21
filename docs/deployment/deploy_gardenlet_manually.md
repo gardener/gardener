@@ -215,7 +215,7 @@ using the global configuration values of the gardenlet Helm chart.
 For an overview over all values, see the [configuration values](../../charts/gardener/gardenlet/values.yaml).
 We refer to the global configuration values as _gardenlet configuration_ in the following procedure.
 
-1.  Create a gardenlet configuration `gardenlet-values.yaml` based on [this template](https://github.com/gardener/gardener/blob/master/charts/gardener/gardenlet/values.yaml).
+1.  Create a gardenlet configuration `gardenlet-values.yaml` based on [this template](../../charts/gardener/gardenlet/values.yaml).
 
 2.  Create a bootstrap `kubeconfig` based on the bootstrap token created in the garden cluster.
 

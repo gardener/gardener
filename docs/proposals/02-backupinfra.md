@@ -47,7 +47,7 @@ Spec:
 
 ## Proposal
 
-Considering the [Gardener extension proposal](https://github.com/gardener/gardener/blob/master/docs/proposals/01-extensibility.md#backup-infrastructure-provisioning) in mind, the backup infrastructure controller can be divided in two parts. There will be basically four backup infrastructure related CRD's, two on the garden apiserver and two on the seed cluster. Before going into the workflow, let's just first have look at the CRD.
+Considering the [Gardener extension proposal](./01-extensibility.md#backup-infrastructure-provisioning) in mind, the backup infrastructure controller can be divided in two parts. There will be basically four backup infrastructure related CRD's, two on the garden apiserver and two on the seed cluster. Before going into the workflow, let's just first have look at the CRD.
 
 ### CRD on Garden Cluster
 Just to give a brief overview before going into the details, we will be sticking to the fact that Garden apiserver is always the single source of truth. Since backupInfra will be maintained post deletion of shoot, the info regarding this should always come from the garden apiserver. We will continue to have a BackupInfra resource on the garden apiserver, with some modifications.
@@ -242,7 +242,7 @@ controllers:
 -->
 
 ### References
-* [Gardener extension proposal](https://github.com/gardener/gardener/blob/master/docs/proposals/01-extensibility.md#backup-infrastructure-provisioning)
+* [Gardener extension proposal](./01-extensibility.md#backup-infrastructure-provisioning)
 * [Cloud providers object store limit comparison](https://gist.github.com/swapnilgm/5c4d5506811e63c32ab3d73c4171d30f)
 
 
