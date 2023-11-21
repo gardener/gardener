@@ -57,7 +57,7 @@ const (
 	managedResourceNameTarget          = "vali-target"
 	managedResourceSecretNameTarget    = "managedresource-vali-target"
 	valiName                           = "vali"
-	valiConfigMapName                  = "vali-config-c714f7f5"
+	valiConfigMapName                  = "vali-config-bc8a885d"
 	telegrafConfigMapName              = "telegraf-config-b4c38756"
 	maintenanceBegin                   = "210000-0000"
 	maintenanceEnd                     = "223000-0000"
@@ -870,7 +870,8 @@ func getValiConfigMap() *corev1.ConfigMap {
 			Labels:    getLabels(),
 		},
 		Data: map[string]string{
-			"vali.yaml": `ingester:
+			"vali.yaml": `auth_enabled: false
+ingester:
   chunk_target_size: 1536000
   chunk_idle_period: 3m
   chunk_block_size: 262144
