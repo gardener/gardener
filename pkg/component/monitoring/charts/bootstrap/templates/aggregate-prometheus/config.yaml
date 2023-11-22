@@ -67,6 +67,7 @@ data:
         - '{__name__=~"metering:.+", __name__!~"metering:.+(over_time|_seconds|:this_month)"}'
         - '{__name__=~"seed:(.+):(.+)"}'
         - '{job="kube-state-metrics",namespace=~"garden|extension-.+"}'
+        - '{job="kube-state-metrics",namespace=""}'
         - '{job="cadvisor",namespace=~"garden|extension-.+"}'
       kubernetes_sd_configs:
       - role: service
