@@ -278,8 +278,8 @@ func (a *actuator) Delete(
 		}
 	}
 
-	// Delete seed secrets if any of them still exists and is not already deleting
-	backupSecret, err := a.getSeedSecrets(ctx, &seedTemplate.Spec, ms)
+	// Delete seed backup secrets if any of them still exists and is not already deleting
+	backupSecret, err := a.getBackupSecret(ctx, &seedTemplate.Spec, ms)
 	if err != nil {
 		return status, false, false, fmt.Errorf("could not get seed %s secrets: %w", ms.Name, err)
 	}
@@ -288,7 +288,7 @@ func (a *actuator) Delete(
 		if backupSecret.DeletionTimestamp == nil {
 			log.Info("Deleting seed secrets")
 			a.recorder.Event(ms, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting seed secrets")
-			if err := a.deleteSeedSecrets(ctx, &seedTemplate.Spec, ms); err != nil {
+			if err := a.deleteBackupSecret(ctx, &seedTemplate.Spec, ms); err != nil {
 				return status, false, false, fmt.Errorf("could not delete seed %s secrets: %w", ms.Name, err)
 			}
 		} else {
@@ -524,7 +524,7 @@ func (a *actuator) reconcileSeedSecrets(ctx context.Context, spec *gardencorev1b
 	return nil
 }
 
-func (a *actuator) deleteSeedSecrets(ctx context.Context, spec *gardencorev1beta1.SeedSpec, managedSeed *seedmanagementv1alpha1.ManagedSeed) error {
+func (a *actuator) deleteBackupSecret(ctx context.Context, spec *gardencorev1beta1.SeedSpec, managedSeed *seedmanagementv1alpha1.ManagedSeed) error {
 	// If backup is specified, delete the backup secret if it exists and is owned by the managed seed
 	if spec.Backup != nil {
 		backupSecret, err := kubernetesutils.GetSecretByReference(ctx, a.gardenClient, &spec.Backup.SecretRef)
@@ -541,9 +541,11 @@ func (a *actuator) deleteSeedSecrets(ctx context.Context, spec *gardencorev1beta
 	return nil
 }
 
-func (a *actuator) getSeedSecrets(ctx context.Context, spec *gardencorev1beta1.SeedSpec, managedSeed *seedmanagementv1alpha1.ManagedSeed) (*corev1.Secret, error) {
-	var backupSecret *corev1.Secret
-	var err error
+func (a *actuator) getBackupSecret(ctx context.Context, spec *gardencorev1beta1.SeedSpec, managedSeed *seedmanagementv1alpha1.ManagedSeed) (*corev1.Secret, error) {
+	var (
+		backupSecret *corev1.Secret
+		err          error
+	)
 
 	// If backup is specified, get the backup secret if it exists and is owned by the managed seed
 	if spec.Backup != nil {

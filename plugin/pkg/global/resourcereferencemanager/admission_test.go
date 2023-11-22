@@ -137,7 +137,6 @@ var _ = Describe("resourcereferencemanager", func() {
 					Name:       seedName,
 					Finalizers: finalizers,
 				},
-				Spec: core.SeedSpec{},
 			}
 			quota = core.Quota{
 				ObjectMeta: metav1.ObjectMeta{
