@@ -221,7 +221,7 @@ Currently, the `ssh` key pair for the shoot nodes are created once during shoot 
         - Generates new `ssh-keypair` secret.
         - The `OperatingSystemConfig` needs to be re-generated and deployed with the new and old `ssh` public key.
     - As usual (for more details, see [Contract: OperatingSystemConfig Resource](../extensions/operatingsystemconfig.md)):
-        - Once the `cloud-config-<X>` secret in the `kube-system` namespace of the shoot cluster is updated, it will be picked up by the [`downloader` script](../pkg/component/extensions/operatingsystemconfig/downloader/templates/scripts/download-cloud-config.tpl.sh) (checks every 30s for updates).
+        - Once the `cloud-config-<X>` secret in the `kube-system` namespace of the shoot cluster is updated, it will be picked up by the [`downloader` script](../../pkg/component/extensions/operatingsystemconfig/downloader/templates/scripts/download-cloud-config.tpl.sh) (checks every 30s for updates).
         - The `downloader` runs the ["execution" script](../../pkg/component/extensions/operatingsystemconfig/executor/templates/scripts/execute-cloud-config.tpl.sh) from the `cloud-config-<X>` secret.
         - The "execution" script includes also the original user data script, which it writes to `PATH_CLOUDCONFIG`, compares it against the previous cloud config and runs the script in case it has changed.
         - Running the [original user data](../../pkg/component/extensions/operatingsystemconfig/original) script will also run the `gardeneruser` component, where the `authorized_keys` file will be updated.

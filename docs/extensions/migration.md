@@ -16,7 +16,7 @@ Two new operations have been introduced in Gardener. They can be specified as va
 * The `migrate` operation is used to ask the extension controller in the source seed to stop reconciling extension resources (in case they are requeued due to errors) and perform cleanup activities, if such are required. These cleanup activities might involve removing finalizers on resources in the shoot namespace that have been previously created by the extension controller and deleting them without actually deleting any resources external to the seed cluster. This is also the last opportunity for extensions to persist their state into the `.status.state` field of the reconciled extension resource before its restored in the new destination seed cluster.
 * The `restore` operation is used to ask the extension controller in the destination seed to restore any state saved in the extension resource `status`, before performing the actual reconciliation.
 
-Unlike the [reconcile operation](../extensions/reconcile-trigger.md), extension controllers must remove the `gardener.cloud/operation` annotation at the end of a successful reconciliation when the current operation is `migrate` or `restore`, not at the beginning of a reconciliation.
+Unlike the [reconcile operation](reconcile-trigger.md), extension controllers must remove the `gardener.cloud/operation` annotation at the end of a successful reconciliation when the current operation is `migrate` or `restore`, not at the beginning of a reconciliation.
 
 ## Cleaning-Up Source Seed Resources
 

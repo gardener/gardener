@@ -89,7 +89,7 @@ There is a CI/CD job that runs periodically and releases a new `hyperkube` image
   - The names are maintained in [this](../../pkg/component/shootsystem/shootsystem.go) file.
   - To maintain this list for new Kubernetes versions, run `hack/compare-k8s-controllers.sh <old-version> <new-version>` (e.g. `hack/compare-k8s-controllers.sh 1.26 1.27`).
   - It will present 2 lists of controllers: those added and those removed in `<new-version>` compared to `<old-version>`.
-  - Double check whether such `ServiceAccount` indeed appears in the `kube-system` namespace when creating a cluster with `<new-version>`. Note that it sometimes might be hidden behind a default-off feature gate. You can create a local cluster with the new version using the [local provider](../development/getting_started_locally.md).
+  - Double check whether such `ServiceAccount` indeed appears in the `kube-system` namespace when creating a cluster with `<new-version>`. Note that it sometimes might be hidden behind a default-off feature gate. You can create a local cluster with the new version using the [local provider](getting_started_locally.md).
   - If it appears, add all added controllers to the list based on the Kubernetes version ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/shootsystem/shootsystem.go#L253-L318)).
   - For any removed controllers, add them only to the Kubernetes version if it is low enough.
 - Maintain the names of controllers used for workerless Shoots, [here](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/kubecontrollermanager/kube_controller_manager.go#L683C27-L709) after carefully evaluating whether they are needed if there are no workers.
@@ -106,7 +106,7 @@ There is a CI/CD job that runs periodically and releases a new `hyperkube` image
 
 #### Filing the Pull Request
 
-Work on all the tasks you have collected and validate them using the [local provider](../development/getting_started_locally.md).
+Work on all the tasks you have collected and validate them using the [local provider](getting_started_locally.md).
 Execute the e2e tests and if everything looks good, then go ahead and file the PR ([example PR](https://github.com/gardener/gardener/pull/5255)).
 Generally, it is great if you add the PRs also to the umbrella issue so that they can be tracked more easily.
 
