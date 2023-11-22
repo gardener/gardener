@@ -308,7 +308,7 @@ You can take a look at the below referenced example implementation for the AWS p
 
 All of the described behaviour is mostly the same for every provider.
 The only difference is maybe the version/configuration of the provider-specific `machine-controller-manager` sidecar container, and the machine class specification itself.
-You can take a look at our [extension library](https://github.com/gardener/gardener/blob/master/extensions), especially the [worker controller](../../extensions/pkg/controller/worker) part where you will find a lot of utilities that you can use.
+You can take a look at our [extension library](../../extensions), especially the [worker controller](../../extensions/pkg/controller/worker) part where you will find a lot of utilities that you can use.
 Note that there are also utility functions for getting the default sidecar container specification or corresponding VPA container policy in the [`machinecontrollermanager` package](../../pkg/component/machinecontrollermanager) called `ProviderSidecarContainer` and `ProviderSidecarVPAContainerPolicy`. 
 Also, using the library you only need to implement your provider specifics - all the things that can be handled generically can be taken for free and do not need to be re-implemented.
 Take a look at the [AWS worker controller](https://github.com/gardener/gardener-extension-provider-aws/tree/master/pkg/controller/worker) for finding an example.
@@ -325,6 +325,6 @@ They are part of the [`Cluster` extension resource](cluster.md) and can be used 
 ## References and Additional Resources
 
 * [`Worker` API (Golang Specification)](../../pkg/apis/extensions/v1alpha1/types_worker.go)
-* [Extension Controller Library](https://github.com/gardener/gardener/blob/master/extensions)
+* [Extension Controller Library](../../extensions/)
 * [Generic Worker Controller](../../extensions/pkg/controller/worker)
 * [Exemplary Implementation for the AWS Provider](https://github.com/gardener/gardener-extension-provider-aws/tree/master/pkg/controller/worker)

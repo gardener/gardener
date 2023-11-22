@@ -30,7 +30,7 @@ Today's Gardener cluster VPN solution has several issues including:
 1. Connection establishment is always from the seed cluster to the shoot cluster. This means that there needs to be connectivity both ways which is not desirable in many cases (OpenStack, VMware) and causes high effort in firewall configuration or extra infrastructure. These firewall configurations are prohibited in some cases due to security policies.
 2. Shoot clusters must provide a VPN endpoint. This means extra cost for the endpoint (roughly €20/month on hyperscalers) or consumption of scarce resources (limited number of VMware NSX-T load balancers).
 
-A first implementation has been provided to resolve the issues with the [Konnectivity server](https://github.com/gardener/gardener/blob/master/docs/proposals/11-apiserver-network-proxy.md). As we did find several shortcomings with the underlying technology component, the [apiserver-network-proxy](https://github.com/kubernetes-sigs/apiserver-network-proxy), we believe that this is not a suitable way ahead. We have opened an [issue](https://github.com/kubernetes-sigs/apiserver-network-proxy/issues/180) and provided two solution proposals to the community. We do see some remedies, e.g., using the [Quick Protocol](https://de.wikipedia.org/wiki/Quick_UDP_Internet_Connections) instead of GRPC but we (a) consider the implementation effort significantly higher compared to this proposal and (b) would use an experimental protocol to solve a problem that can also be solved with existing and proven core network technologies.
+A first implementation has been provided to resolve the issues with the [Konnectivity server](./11-apiserver-network-proxy.md). As we did find several shortcomings with the underlying technology component, the [apiserver-network-proxy](https://github.com/kubernetes-sigs/apiserver-network-proxy), we believe that this is not a suitable way ahead. We have opened an [issue](https://github.com/kubernetes-sigs/apiserver-network-proxy/issues/180) and provided two solution proposals to the community. We do see some remedies, e.g., using the [Quick Protocol](https://de.wikipedia.org/wiki/Quick_UDP_Internet_Connections) instead of GRPC but we (a) consider the implementation effort significantly higher compared to this proposal and (b) would use an experimental protocol to solve a problem that can also be solved with existing and proven core network technologies.
 
 We will therefore not continue to invest into this approach. We will, however, research a similar approach (see below, in [Further Research](#further-research)).
 
@@ -130,7 +130,7 @@ The two containers `vpn-seed-server` and `vpn-shoot-client` are new containers a
 
 A service `vpn-seed-server` of type `ClusterIP` is created for each control plane in its namespace.
 
-The `vpn-shoot-client` pod connects to the correct `vpn-seed-server` service via the SNI passthrough proxy introduced with [SNI Passthrough proxy for kube-apiservers](https://github.com/gardener/gardener/blob/master/docs/proposals/08-shoot-apiserver-via-sni.md) on port 8132.
+The `vpn-shoot-client` pod connects to the correct `vpn-seed-server` service via the SNI passthrough proxy introduced with [SNI Passthrough proxy for kube-apiservers](./08-shoot-apiserver-via-sni.md) on port 8132.
 
 Shoot OpenVPN clients (`vpn-shoot-client`) connect to the correct OpenVPN Server using the http proxy feature provided by OpenVPN. A configuration is added to the envoy proxy to detect http proxy requests and open a connection attempt to the correct OpenVPN server.
 

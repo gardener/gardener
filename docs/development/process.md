@@ -204,4 +204,4 @@ Before you initiate a cherry pick, make sure that the following prerequisites ar
     rather than your actual GitHub password.
     Refer [https://github.com/github/hub/issues/2655#issuecomment-735836048](https://github.com/github/hub/issues/2655#issuecomment-735836048)
 
-- [cherry-pick-script](https://github.com/gardener/gardener/blob/master/hack/cherry-pick-pull.sh)
+- [cherry-pick-script](../../hack/cherry-pick-pull.sh)

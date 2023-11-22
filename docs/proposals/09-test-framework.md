@@ -4,7 +4,7 @@
 As we want to improve our code coverage in the next months, we will need a simple and easy to use test framework.
 The current testframework already contains a lot of general test functions that ease the work for writing new tests.
 However, there are multiple disadvantages with the current structure of the tests and the testframework:
-1. Every new test is an own testsuite and therefore needs its own `TestDef` (https://github.com/gardener/gardener/tree/master/.test-defs). With this approach there will be hundreds of test definitions, growing with every new test (or at least every new test suite).
+1. Every new test is an own testsuite and therefore needs its own [`TestDef`](../../.test-defs). With this approach there will be hundreds of test definitions, growing with every new test (or at least every new test suite).
   But in most cases, new tests do not need their own special `TestDef`: it's just the wrong scope for the testmachinery and will result in unnecessary complex testruns and configurations. In addition, it would result in additional maintenance for a huge number of `TestDefs`.
 2. The testsuites currently have their own specific interface/configuration that they need in order to be executed correctly (see [K8s Update test](../../.test-defs/ShootKubernetesUpdateTest.yaml#L14)).
   Consequently, the configuration has to be defined in the testruns which result in one step per test with their very own configuration, which means that the testmachinery cannot simply select testdefinitions by label.
