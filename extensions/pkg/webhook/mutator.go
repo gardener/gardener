@@ -34,10 +34,14 @@ type MutatorWithShootClient interface {
 	Mutate(ctx context.Context, new, old client.Object, shootClient client.Client) error
 }
 
-// MutateFunc is a func to be used directly as an implementation for Mutator
-type MutateFunc func(ctx context.Context, new, old client.Object) error
+type mutationWrapper struct {
+	Mutator
+}
 
-// Mutate validates and if needed mutates the given object.
-func (mf MutateFunc) Mutate(ctx context.Context, new, old client.Object) error {
-	return mf(ctx, new, old)
+func (d *mutationWrapper) do(ctx context.Context, new, old client.Object) error {
+	return d.Mutate(ctx, new, old)
+}
+
+func mutatingActionHandler(val Mutator) handlerAction {
+	return &mutationWrapper{val}
 }

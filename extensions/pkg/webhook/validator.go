@@ -29,11 +29,10 @@ type validationWrapper struct {
 	Validator
 }
 
-// Mutate implements the `Mutator` interface and calls the `Validate` function of the underlying validator.
-func (d *validationWrapper) Mutate(ctx context.Context, new, old client.Object) error {
+func (d *validationWrapper) do(ctx context.Context, new, old client.Object) error {
 	return d.Validate(ctx, new, old)
 }
 
-func hybridValidator(val Validator) Mutator {
+func validatingActionHandler(val Validator) handlerAction {
 	return &validationWrapper{val}
 }
