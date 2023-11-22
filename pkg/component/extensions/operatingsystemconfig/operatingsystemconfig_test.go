@@ -203,6 +203,15 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 				key := Key(worker.Name, k8sVersion, worker.CRI)
 
+				imagesCopy := make(map[string]*imagevector.Image, len(images))
+				for imageName, image := range images {
+					imagesCopy[imageName] = image
+				}
+
+				if useGardenerNodeAgent {
+					imagesCopy["hyperkube"] = &imagevector.Image{Repository: "eu.gcr.io/gardener-project/hyperkube", Tag: pointer.String("v" + k8sVersion.String())}
+				}
+
 				downloaderUnits, downloaderFiles, _ := downloaderConfigFn(
 					key,
 					apiServerURL,
@@ -210,7 +219,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				)
 				initUnits, initFiles, _ := initConfigFn(
 					worker,
-					images["gardener-node-agent"].String(),
+					imagesCopy["gardener-node-agent"].String(),
 					&nodeagentv1alpha1.NodeAgentConfiguration{APIServer: nodeagentv1alpha1.APIServer{
 						Server:   apiServerURL,
 						CABundle: []byte(*caBundle),
@@ -222,7 +231,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					ClusterDNSAddress: clusterDNSAddress,
 					ClusterDomain:     clusterDomain,
 					CRIName:           criName,
-					Images:            images,
+					Images:            imagesCopy,
 					KubeletConfigParameters: components.ConfigurableKubeletConfigParameters{
 						EvictionHard: map[string]string{
 							"memory.available": evictionHardMemoryAvailable,

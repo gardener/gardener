@@ -514,6 +514,18 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		return deployer{}, err
 	}
 
+	images := make(map[string]*imagevectorutils.Image, len(o.values.Images))
+	for imageName, image := range o.values.Images {
+		images[imageName] = image
+	}
+
+	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+		images[imagevector.ImageNameHyperkube], err = imagevector.ImageVector().FindImage(imagevector.ImageNameHyperkube, imagevectorutils.RuntimeVersion(kubernetesVersion.String()), imagevectorutils.TargetVersion(kubernetesVersion.String()))
+		if err != nil {
+			return deployer{}, fmt.Errorf("failed finding hyperkube image for version %s: %w", kubernetesVersion.String(), err)
+		}
+	}
+
 	return deployer{
 		client:                  o.client,
 		osc:                     osc,
@@ -527,7 +539,7 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		clusterDNSAddress:       o.values.ClusterDNSAddress,
 		clusterDomain:           o.values.ClusterDomain,
 		criName:                 criName,
-		images:                  o.values.Images,
+		images:                  images,
 		kubeletCABundle:         kubeletCASecret.Data[secretsutils.DataKeyCertificateBundle],
 		kubeletConfigParameters: kubeletConfigParameters,
 		kubeletCLIFlags:         kubeletCLIFlags,

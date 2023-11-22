@@ -34,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/executor"
 	nodelocaldnsconstants "github.com/gardener/gardener/pkg/component/nodelocaldns/constants"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -47,7 +48,13 @@ const SecretLabelKeyManagedResource = "managed-resource"
 
 // DefaultOperatingSystemConfig creates the default deployer for the OperatingSystemConfig custom resource.
 func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interface, error) {
-	oscImages, err := imagevectorutils.FindImages(imagevector.ImageVector(), []string{imagevector.ImageNameHyperkube, imagevector.ImageNamePauseContainer, imagevector.ImageNameValitail, imagevector.ImageNameGardenerNodeAgent}, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	images := []string{imagevector.ImageNamePauseContainer, imagevector.ImageNameValitail}
+	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+		images = append(images, imagevector.ImageNameGardenerNodeAgent)
+	} else {
+		images = append(images, imagevector.ImageNameHyperkube)
+	}
+	oscImages, err := imagevectorutils.FindImages(imagevector.ImageVector(), images, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}
