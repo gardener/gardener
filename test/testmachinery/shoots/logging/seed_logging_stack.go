@@ -42,17 +42,24 @@ import (
 	"github.com/gardener/gardener/test/framework/resources/templates"
 )
 
+// Logs generator constants
 const (
 	deltaLogsCount            = 1
 	deltaLogsDuration         = "180s"
 	logsCount                 = 2000
 	logsDuration              = "90s"
 	numberOfSimulatedClusters = 100
+)
 
+// Test setup constants
+const (
 	initializationTimeout          = 5 * time.Minute
 	getLogsFromValiTimeout         = 15 * time.Minute
 	loggerDeploymentCleanupTimeout = 5 * time.Minute
+)
 
+// Test environment constants
+const (
 	fluentBitName                 = "fluent-bit"
 	fluentBitConfigVolumeName     = "config"
 	valiName                      = "vali"
@@ -65,7 +72,7 @@ const (
 
 var _ = ginkgo.Describe("Seed logging testing", func() {
 	var (
-		f                           = framework.NewShootFramework(nil)
+		shootFramework              = framework.NewShootFramework(nil)
 		fluentBit                   = &appsv1.DaemonSet{}
 		fluentBitSecret             = &corev1.Secret{}
 		fluentBitService            = &corev1.Service{}
@@ -98,40 +105,184 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		}
 	)
 
+	// Test environment setup
 	framework.CBeforeEach(func(ctx context.Context) {
 		var err error
-		checkRequiredResources(ctx, f.SeedClient)
-		shootClient, err = kubernetes.NewClientFromSecret(ctx, f.SeedClient.Client(), framework.ComputeTechnicalID(f.Project.Name, f.Shoot), gardencorev1beta1.GardenerName, kubernetes.WithClientOptions(client.Options{
-			Scheme: kubernetes.SeedScheme,
-		}))
-		framework.ExpectNoError(err)
-		fluentBit, err = getFluentBitDaemonSet(ctx, f.SeedClient)
-		framework.ExpectNoError(err)
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: getSecretNameFromVolume(fluentBit.Spec.Template.Spec.Volumes, fluentBitConfigVolumeName)}, fluentBitSecret))
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitName}, fluentBitService))
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: "", Name: fluentBitClusterRoleName}, fluentBitClusterRole))
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: "", Name: fluentBitClusterRoleName + "-" + fluentBit.Name}, fluentBitClusterRoleBinding))
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBit.Name}, fluentBitServiceAccount))
-		fluentBitPriorityClassName := fluentBit.Spec.Template.Spec.PriorityClassName
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: "", Name: fluentBitPriorityClassName}, fluentBitPriorityClass))
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: "", Name: "clusters.extensions.gardener.cloud"}, clusterCRD))
+		checkRequiredResources(ctx, shootFramework.SeedClient)
 
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: valiName}, gardenValiSts))
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: loggingServiceName}, gardenLoggingService))
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: getConfigMapName(gardenValiSts.Spec.Template.Spec.Volumes, valiConfigDiskName)}, gardenValiConfMap))
+		// Create seedClient.Client for the shoots
+		shootClient, err = kubernetes.NewClientFromSecret(ctx,
+			shootFramework.SeedClient.Client(),
+			framework.ComputeTechnicalID(shootFramework.Project.Name, shootFramework.Shoot),
+			gardencorev1beta1.GardenerName,
+			kubernetes.WithClientOptions(
+				client.Options{
+					Scheme: kubernetes.SeedScheme,
+				}),
+		)
+		framework.ExpectNoError(err)
+
+		// Fetch the daemon set in the garden namespace
+		fluentBit, err = getFluentBitDaemonSet(ctx, shootFramework.SeedClient)
+		framework.ExpectNoError(err)
+
+		// Client for the seed cluster (gcp-ha)
+		// It is used to fetch the resource definitions deployed later in the test cluster
+		seedClient := shootFramework.SeedClient.Client()
+		// Fetch the fluent-bit configuration
+		framework.ExpectNoError(
+			seedClient.Get(ctx,
+				types.NamespacedName{
+					Namespace: v1beta1constants.GardenNamespace,
+					Name:      getSecretNameFromVolume(fluentBit.Spec.Template.Spec.Volumes, fluentBitConfigVolumeName),
+				},
+				fluentBitSecret),
+		)
+
+		// Fetch the fluent-bit service
+		framework.ExpectNoError(
+			seedClient.Get(ctx,
+				types.NamespacedName{
+					Namespace: v1beta1constants.GardenNamespace,
+					Name:      fluentBitName},
+				fluentBitService),
+		)
+
+		// Fetch the fluent-bit cluster role
+		framework.ExpectNoError(
+			seedClient.Get(ctx,
+				types.NamespacedName{
+					Namespace: "",
+					Name:      fluentBitClusterRoleName},
+				fluentBitClusterRole),
+		)
+
+		// Fetch the fluent-bit cluster role binding
+		framework.ExpectNoError(
+			seedClient.Get(ctx,
+				types.NamespacedName{
+					Namespace: "",
+					Name:      fluentBitClusterRoleName + "-" + fluentBit.Name},
+				fluentBitClusterRoleBinding),
+		)
+
+		// Fetch the fluent-bit service account
+		framework.ExpectNoError(
+			seedClient.Get(ctx,
+				types.NamespacedName{
+					Namespace: v1beta1constants.GardenNamespace,
+					Name:      fluentBit.Name},
+				fluentBitServiceAccount),
+		)
+
+		// Fetch the fluent-bit priority class
+		fluentBitPriorityClassName := fluentBit.Spec.Template.Spec.PriorityClassName
+		framework.ExpectNoError(
+			seedClient.Get(ctx,
+				types.NamespacedName{
+					Namespace: "",
+					Name:      fluentBitPriorityClassName},
+				fluentBitPriorityClass),
+		)
+
+		// Fetch the Cluster CRD
+		framework.ExpectNoError(
+			seedClient.Get(ctx,
+				types.NamespacedName{
+					Namespace: "",
+					Name:      "clusters.extensions.gardener.cloud"},
+				clusterCRD),
+		)
+
+		// Fetch Vali StatefulSet
+		framework.ExpectNoError(
+			seedClient.Get(ctx,
+				types.NamespacedName{
+					Namespace: v1beta1constants.GardenNamespace,
+					Name:      valiName},
+				gardenValiSts),
+		)
+
+		// Fetch Logging service
+		framework.ExpectNoError(
+			seedClient.Get(ctx,
+				types.NamespacedName{
+					Namespace: v1beta1constants.GardenNamespace,
+					Name:      loggingServiceName},
+				gardenLoggingService),
+		)
+
+		// Fetch Vali configuration
+		framework.ExpectNoError(
+			seedClient.Get(ctx,
+				types.NamespacedName{
+					Namespace: v1beta1constants.GardenNamespace,
+					Name:      getConfigMapName(gardenValiSts.Spec.Template.Spec.Volumes, valiConfigDiskName)},
+				gardenValiConfMap),
+		)
+
+		// Fetch Vali priority class
 		valiPriorityClassName := gardenValiSts.Spec.Template.Spec.PriorityClassName
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: valiPriorityClassName}, gardenValiPriorityClass))
+		framework.ExpectNoError(
+			seedClient.Get(ctx,
+				types.NamespacedName{
+					Namespace: v1beta1constants.GardenNamespace,
+					Name:      valiPriorityClassName},
+				gardenValiPriorityClass),
+		)
+
 		// Get the shoot logging components from the shoot running the test
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: loggingServiceName}, shootLoggingService))
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: valiName}, shootValiSts))
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: getConfigMapName(shootValiSts.Spec.Template.Spec.Volumes, valiConfigDiskName)}, shootValiConfMap))
+		framework.ExpectNoError(
+			seedClient.Get(ctx,
+				types.NamespacedName{
+					Namespace: shootFramework.ShootSeedNamespace(),
+					Name:      loggingServiceName},
+				shootLoggingService),
+		)
+
+		// Fetch shoot Vali Statefulset
+		framework.ExpectNoError(
+			seedClient.Get(ctx,
+				types.NamespacedName{
+					Namespace: shootFramework.ShootSeedNamespace(),
+					Name:      valiName},
+				shootValiSts),
+		)
+
+		// Fetch shoot Vali configuration
+		framework.ExpectNoError(
+			seedClient.Get(ctx,
+				types.NamespacedName{
+					Namespace: shootFramework.ShootSeedNamespace(),
+					Name:      getConfigMapName(shootValiSts.Spec.Template.Spec.Volumes, valiConfigDiskName)},
+				shootValiConfMap),
+		)
+
+		// Fetch the configMap template
+		shootValiConfMap.Data["vali.yaml"] = valiYaml
+
+		// Fetch shoot vali priority class name
 		shootValiPriorityClassName := shootValiSts.Spec.Template.Spec.PriorityClassName
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: shootValiPriorityClassName}, shootValiPriorityClass))
+		framework.ExpectNoError(
+			seedClient.Get(ctx,
+				types.NamespacedName{
+					Namespace: shootFramework.ShootSeedNamespace(),
+					Name:      shootValiPriorityClassName},
+				shootValiPriorityClass),
+		)
+
 		// Get the plutono Ingress
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: v1beta1constants.DeploymentNamePlutono}, plutonoIngress))
+		framework.ExpectNoError(
+			seedClient.Get(ctx,
+				types.NamespacedName{
+					Namespace: shootFramework.ShootSeedNamespace(),
+					Name:      v1beta1constants.DeploymentNamePlutono},
+				plutonoIngress),
+		)
 	}, initializationTimeout)
 
-	f.Beta().Serial().CIt("should get container logs from vali for all namespaces", func(ctx context.Context) {
+	// Test cases
+	shootFramework.Beta().Serial().CIt("should get container logs from vali for all namespaces", func(ctx context.Context) {
 		const (
 			emptyDirSize             = "500Mi"
 			valiPersistentVolumeName = "vali"
@@ -139,72 +290,124 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 			loggerRegex              = loggerName + "-.*"
 		)
 		var (
-			loggerLabels = labels.SelectorFromSet(map[string]string{
-				"app": loggerName,
-			})
+			loggerLabels = labels.SelectorFromSet(
+				map[string]string{"app": loggerName},
+			)
+			// fetch target test cluster client
+			client = shootFramework.ShootClient.Client()
 		)
 
-		ginkgo.By("Get Vali tenant IDs")
-		id := getXScopeOrgID(plutonoIngress.GetAnnotations())
+		ginkgo.By("Create the garden namespace")
+		framework.ExpectNoError(
+			create(ctx, client, newGardenNamespace(v1beta1constants.GardenNamespace)),
+		)
 
-		ginkgo.By("Deploy the garden Namespace")
-		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), newGardenNamespace(v1beta1constants.GardenNamespace)))
+		ginkgo.By("Deploy the seed vali instance")
+		framework.ExpectNoError(
+			create(ctx, client, gardenValiConfMap),
+		)
+		framework.ExpectNoError(
+			create(ctx, client, prepareGardenLoggingService(gardenLoggingService)),
+		)
+		framework.ExpectNoError(
+			create(ctx, client, gardenValiPriorityClass),
+		)
+		framework.ExpectNoError(
+			create(ctx, client, prepareGardenValiStatefulSet(gardenValiSts, valiPersistentVolumeName, emptyDirSize, shootValiLabels)),
+		)
 
-		ginkgo.By("Deploy the Vali StatefulSet for Garden namespace")
-		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), gardenValiConfMap))
-		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), prepareGardenLoggingService(gardenLoggingService)))
-		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), gardenValiPriorityClass))
-		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), prepareGardenValiStatefulSet(gardenValiSts, valiPersistentVolumeName, emptyDirSize, shootValiLabels)))
+		ginkgo.By("Deploy the shoot vali instance")
+		framework.ExpectNoError(
+			create(ctx, client, prepareShootLoggingService(shootLoggingService, "logging-shoot", shootValiLabels)),
+		)
+		framework.ExpectNoError(
+			create(ctx, client, shootValiPriorityClass),
+		)
+		framework.ExpectNoError(
+			create(ctx, client, prepareShootValiConfigMap(shootValiConfMap)),
+		)
 
-		ginkgo.By("Deploy the Vali StatefulSet for Shoot namespaces")
-		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), prepareShootLoggingService(shootLoggingService, "logging-shoot", shootValiLabels)))
-		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), shootValiPriorityClass))
-		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), prepareShootValiConfigMap(shootValiConfMap)))
-		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), prepareShootValiStatefulSet(shootValiSts, gardenValiSts, shootValiName, valiPersistentVolumeName, emptyDirSize, shootValiLabels, gardenValiLabels)))
+		framework.ExpectNoError(
+			create(ctx, client, prepareShootValiStatefulSet(shootValiSts, gardenValiSts, shootValiName, valiPersistentVolumeName, emptyDirSize, shootValiLabels, gardenValiLabels)),
+		)
 
-		ginkgo.By("Wait until Vali StatefulSet for Garden namespace is ready")
-		framework.ExpectNoError(f.WaitUntilStatefulSetIsRunning(ctx, gardenValiSts.Name, v1beta1constants.GardenNamespace, f.ShootClient))
+		ginkgo.By("Wait until seed vali instance is ready")
+		framework.ExpectNoError(
+			shootFramework.WaitUntilStatefulSetIsRunning(ctx, gardenValiSts.Name, v1beta1constants.GardenNamespace, shootFramework.ShootClient),
+		)
 
-		ginkgo.By("Wait until Vali StatefulSet for Shoot namespaces is ready")
-		framework.ExpectNoError(f.WaitUntilStatefulSetIsRunning(ctx, shootValiSts.Name, v1beta1constants.GardenNamespace, f.ShootClient))
+		ginkgo.By("Wait until shoot vali instance is ready")
+		framework.ExpectNoError(
+			shootFramework.WaitUntilStatefulSetIsRunning(ctx, shootValiSts.Name, v1beta1constants.GardenNamespace, shootFramework.ShootClient),
+		)
 
-		ginkgo.By("Deploy the cluster CRD")
-		framework.ExpectNoError(create(ctx, shootClient.Client(), prepareClusterCRD(clusterCRD)))
+		ginkgo.By("Deploy the Cluster CRD")
+		framework.ExpectNoError(
+			create(ctx, shootClient.Client(), prepareClusterCRD(clusterCRD)),
+		)
 
 		ginkgo.By("Deploy the fluent-bit RBAC")
-		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), prepareFluentBitServiceAccount(fluentBitServiceAccount)))
-		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), fluentBitPriorityClass))
-		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), fluentBitClusterRole))
-		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), fluentBitClusterRoleBinding))
-		if !v1beta1helper.IsPSPDisabled(f.Shoot) {
-			framework.ExpectNoError(f.RenderAndDeployTemplate(ctx, f.ShootClient, "fluent-bit-psp-clusterrolebinding.yaml", nil))
+		framework.ExpectNoError(
+			create(ctx, client, prepareFluentBitServiceAccount(fluentBitServiceAccount)),
+		)
+		framework.ExpectNoError(
+			create(ctx, client, fluentBitPriorityClass),
+		)
+		framework.ExpectNoError(
+			create(ctx, client, fluentBitClusterRole),
+		)
+		framework.ExpectNoError(
+			create(ctx, client, fluentBitClusterRoleBinding),
+		)
+		if !v1beta1helper.IsPSPDisabled(shootFramework.Shoot) {
+			framework.ExpectNoError(
+				shootFramework.RenderAndDeployTemplate(ctx,
+					shootFramework.ShootClient, "fluent-bit-psp-clusterrolebinding.yaml", nil),
+			)
 		}
 
-		ginkgo.By("Deploy the fluent-bit DaemonSet")
-		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), fluentBitSecret))
-		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), fluentBit))
+		ginkgo.By("Deploy the fluent-bit")
+		framework.ExpectNoError(
+			create(ctx, client, fluentBitSecret),
+		)
+		framework.ExpectNoError(
+			create(ctx, client, fluentBit),
+		)
 
-		ginkgo.By("Wait until fluent-bit DaemonSet is ready")
-		framework.ExpectNoError(f.WaitUntilDaemonSetIsRunning(ctx, f.ShootClient.Client(), fluentBit.Name, v1beta1constants.GardenNamespace))
+		ginkgo.By("Wait until fluent-bit is ready")
+		framework.ExpectNoError(
+			shootFramework.WaitUntilDaemonSetIsRunning(ctx, client, fluentBit.Name, v1beta1constants.GardenNamespace),
+		)
 
-		ginkgo.By("Deploy the simulated cluster and shoot controlplane namespaces")
+		ginkgo.By("Deploy the simulated clusters and shoot namespaces")
 		nodeList := &corev1.NodeList{}
-		framework.ExpectNoError(f.ShootClient.Client().List(ctx, nodeList))
+		framework.ExpectNoError(
+			client.List(ctx, nodeList),
+		)
 
 		for i := 0; i < numberOfSimulatedClusters; i++ {
 			shootNamespace := getShootNamesapce(i)
-			ginkgo.By(fmt.Sprintf("Deploy namespace %s", shootNamespace.Name))
-			framework.ExpectNoError(create(ctx, f.ShootClient.Client(), shootNamespace))
 
+			// Create shoot namespace
+			ginkgo.By(fmt.Sprintf("Create shoot namespace %s", shootNamespace.Name))
+			framework.ExpectNoError(
+				create(ctx, client, shootNamespace),
+			)
+
+			// Create Cluster resource for the shoot namespace
 			cluster := getCluster(i)
 			ginkgo.By(fmt.Sprintf("Deploy cluster %s", cluster.Name))
-			framework.ExpectNoError(create(ctx, shootClient.Client(), cluster))
+			framework.ExpectNoError(
+				create(ctx, shootClient.Client(), cluster),
+			)
 
-			ginkgo.By(fmt.Sprintf("Deploy the logging service in namespace %s", shootNamespace.Name))
+			ginkgo.By(fmt.Sprintf("Create the logging service in shoot namespace %s", shootNamespace.Name))
 			loggingShootService := getLoggingShootService(i)
-			framework.ExpectNoError(create(ctx, f.ShootClient.Client(), loggingShootService))
+			framework.ExpectNoError(
+				create(ctx, client, loggingShootService),
+			)
 
-			ginkgo.By(fmt.Sprintf("Deploy the logger application in namespace %s", shootNamespace.Name))
+			ginkgo.By(fmt.Sprintf("Deploy the logger application in shoot namespace %s", shootNamespace.Name))
 			loggerParams := map[string]interface{}{
 				"LoggerName":          loggerName,
 				"HelmDeployNamespace": shootNamespace.Name,
@@ -220,24 +423,39 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 				loggerParams["NodeName"] = nodeList.Items[i%len(nodeList.Items)].Name
 			}
 
-			framework.ExpectNoError(f.RenderAndDeployTemplate(ctx, f.ShootClient, templates.LoggerAppName, loggerParams))
+			framework.ExpectNoError(
+				shootFramework.RenderAndDeployTemplate(ctx,
+					shootFramework.ShootClient, templates.LoggerAppName, loggerParams),
+			)
 		}
 
 		for i := 0; i < numberOfSimulatedClusters; i++ {
 			shootNamespace := fmt.Sprintf("%s%v", simulatedShootNamespacePrefix, i)
 
-			ginkgo.By(fmt.Sprintf("Wait until logger application is ready in namespace %s", shootNamespace))
-			framework.ExpectNoError(f.WaitUntilDeploymentsWithLabelsIsReady(ctx, loggerLabels, shootNamespace, f.ShootClient))
+			ginkgo.By(fmt.Sprintf("Wait until logger application is ready in shoot namespace %s", shootNamespace))
+			framework.ExpectNoError(
+				shootFramework.WaitUntilDeploymentsWithLabelsIsReady(ctx,
+					loggerLabels, shootNamespace, shootFramework.ShootClient),
+			)
 		}
 
-		ginkgo.By("Verify vali received all operator's logs for all shoot namespaces")
-		framework.ExpectNoError(WaitUntilValiReceivesLogs(ctx, 30*time.Second, f, shootValiLabels, id, v1beta1constants.GardenNamespace, "pod_name", loggerRegex, logsCount*numberOfSimulatedClusters, numberOfSimulatedClusters, f.ShootClient))
-
-		ginkgo.By("Verify vali didn't get the logs from the operator's application as user's logs for all shoot namespaces")
-		framework.ExpectNoError(WaitUntilValiReceivesLogs(ctx, 30*time.Second, f, shootValiLabels, "user", v1beta1constants.GardenNamespace, "pod_name", loggerRegex, 0, 0, f.ShootClient))
+		ginkgo.By("Verify vali received all logs from all shoot namespaces")
+		framework.ExpectNoError(
+			WaitUntilValiReceivesLogs(ctx, 30*time.Second,
+				shootFramework, shootValiLabels, v1beta1constants.GardenNamespace,
+				"pod_name", loggerRegex, logsCount*numberOfSimulatedClusters,
+				numberOfSimulatedClusters, shootFramework.ShootClient,
+			),
+		)
 
 		ginkgo.By("Verify vali received logger application logs for garden namespace")
-		framework.ExpectNoError(WaitUntilValiReceivesLogs(ctx, 30*time.Second, f, gardenValiLabels, "", v1beta1constants.GardenNamespace, "pod_name", loggerRegex, logsCount*numberOfSimulatedClusters, numberOfSimulatedClusters, f.ShootClient))
+		framework.ExpectNoError(
+			WaitUntilValiReceivesLogs(ctx, 30*time.Second,
+				shootFramework, gardenValiLabels, v1beta1constants.GardenNamespace,
+				"pod_name", loggerRegex, logsCount*numberOfSimulatedClusters,
+				numberOfSimulatedClusters, shootFramework.ShootClient,
+			),
+		)
 
 	}, getLogsFromValiTimeout, framework.WithCAfterTest(func(ctx context.Context) {
 		ginkgo.By("Cleanup logger app resources")
@@ -250,15 +468,28 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 					Name:      loggerName,
 				},
 			}
-			framework.ExpectNoError(kubernetesutils.DeleteObject(ctx, f.ShootClient.Client(), loggerDeploymentToDelete))
 
+			// Delete the logger application
+			framework.ExpectNoError(
+				kubernetesutils.DeleteObject(ctx, shootFramework.ShootClient.Client(), loggerDeploymentToDelete),
+			)
+
+			// Delete Cluster resource
 			cluster := getCluster(i)
-			framework.ExpectNoError(kubernetesutils.DeleteObject(ctx, shootClient.Client(), cluster))
+			framework.ExpectNoError(
+				kubernetesutils.DeleteObject(ctx, shootClient.Client(), cluster),
+			)
 
+			// Delete logging service
 			loggingShootService := getLoggingShootService(i)
-			framework.ExpectNoError(kubernetesutils.DeleteObject(ctx, f.ShootClient.Client(), loggingShootService))
+			framework.ExpectNoError(
+				kubernetesutils.DeleteObject(ctx, shootFramework.ShootClient.Client(), loggingShootService),
+			)
 
-			framework.ExpectNoError(kubernetesutils.DeleteObject(ctx, f.ShootClient.Client(), shootNamespace))
+			// Delete the shoot namespace
+			framework.ExpectNoError(
+				kubernetesutils.DeleteObject(ctx, shootFramework.ShootClient.Client(), shootNamespace),
+			)
 		}
 
 		ginkgo.By("Cleanup garden namespace")
@@ -282,7 +513,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 			newGardenNamespace(v1beta1constants.GardenNamespace),
 		}
 		for _, object := range objectsToDelete {
-			framework.ExpectNoError(kubernetesutils.DeleteObject(ctx, f.ShootClient.Client(), object))
+			framework.ExpectNoError(kubernetesutils.DeleteObject(ctx, shootFramework.ShootClient.Client(), object))
 		}
 	}, loggerDeploymentCleanupTimeout))
 })

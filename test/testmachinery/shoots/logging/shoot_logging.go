@@ -38,16 +38,16 @@ import (
 )
 
 const (
-	tenantInitializationTimeout          = 2 * time.Minute
-	tenantGetLogsFromValiTimeout         = 5 * time.Minute
-	tenantLoggerDeploymentCleanupTimeout = 5 * time.Minute
+	shootInitializationTimeout          = 2 * time.Minute
+	shootGetLogsFromValiTimeout         = 5 * time.Minute
+	shootLoggerDeploymentCleanupTimeout = 5 * time.Minute
 
-	randomLength         = 11
-	loggerAppLabel       = "logger"
-	loggerName           = "logger"
-	tenantDeltaLogsCount = 0
-	shootLogsCount       = 100
-	shootLogsDuration    = "20s"
+	randomLength        = 11
+	loggerAppLabel      = "logger"
+	loggerName          = "logger"
+	shootDeltaLogsCount = 0
+	shootLogsCount      = 100
+	shootLogsDuration   = "20s"
 )
 
 var (
@@ -60,7 +60,7 @@ var (
 
 var _ = ginkgo.Describe("Seed logging testing", func() {
 
-	f := framework.NewShootFramework(nil)
+	shootFramework := framework.NewShootFramework(nil)
 
 	var (
 		plutonoIngress client.Object = &networkingv1.Ingress{}
@@ -71,16 +71,30 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 	)
 
 	framework.CBeforeEach(func(ctx context.Context) {
-		checkRequiredResources(ctx, f.SeedClient)
+
+		checkRequiredResources(ctx, shootFramework.SeedClient)
+
 		// Get shoot namespace name
-		shootNamespace.ObjectMeta.Name = f.ShootSeedNamespace()
+		shootNamespace.ObjectMeta.Name = shootFramework.ShootSeedNamespace()
+
+		seedClient := shootFramework.SeedClient.Client()
 		// Get the plutono Ingress
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: v1beta1constants.DeploymentNamePlutono}, plutonoIngress))
+		framework.ExpectNoError(
+			seedClient.Get(ctx,
+				types.NamespacedName{
+					Namespace: shootFramework.ShootSeedNamespace(),
+					Name:      v1beta1constants.DeploymentNamePlutono},
+				plutonoIngress,
+			),
+		)
 		// Set label to the testing namespace
-		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, f.SeedClient.Client(), shootNamespace, func() error {
-			metav1.SetMetaDataLabel(&shootNamespace.ObjectMeta, shootNamespaceLabelKey, shootNamespaceLabelValue)
-			return nil
-		})
+		_, err := controllerutils.GetAndCreateOrMergePatch(ctx,
+			seedClient, shootNamespace,
+			func() error {
+				metav1.SetMetaDataLabel(&shootNamespace.ObjectMeta, shootNamespaceLabelKey, shootNamespaceLabelValue)
+				return nil
+			},
+		)
 		framework.ExpectNoError(err)
 
 		// Deploy Vali ValidatingWebhookConfiguration
@@ -106,66 +120,76 @@ esfcqFwji6JyAKFRACPowykQONFwUSom89uYESSCJFvNCk9MJmjJ2PzDUt6CypR4
 epFdd1fXLwuwn7fvPMmJqD3HtLalX1AZmPk+BI8ezfAiVcVqnTJQMXlYPpYe9A==
 -----END CERTIFICATE-----`)),
 		}
-		err = f.RenderAndDeployTemplate(ctx, f.SeedClient, templates.BlockValiValidatingWebhookConfiguration, validatingWebhookParams)
+		err = shootFramework.RenderAndDeployTemplate(ctx,
+			shootFramework.SeedClient, templates.BlockValiValidatingWebhookConfiguration, validatingWebhookParams,
+		)
 		framework.ExpectNoError(err)
-	}, tenantInitializationTimeout)
+	}, initializationTimeout)
 
-	f.Beta().CIt("should get container logs from vali by operator tenant", func(ctx context.Context) {
+	shootFramework.Beta().CIt("should get container logs from the shoot cluster", func(ctx context.Context) {
 		loggerRegex := fullLoggerName + "-.*"
 
-		ginkgo.By("Get Vali tenant IDs")
-		id := getXScopeOrgID(plutonoIngress.GetAnnotations())
-
 		ginkgo.By("Wait until Vali StatefulSet is ready")
-		framework.ExpectNoError(f.WaitUntilStatefulSetIsRunning(ctx, valiName, f.ShootSeedNamespace(), f.SeedClient))
+		framework.ExpectNoError(
+			shootFramework.WaitUntilStatefulSetIsRunning(ctx,
+				valiName, shootFramework.ShootSeedNamespace(), shootFramework.SeedClient,
+			),
+		)
 
-		ginkgo.By("Compute expected logs for the operator tenant")
-		search, err := f.GetValiLogs(ctx, valiLabels, id, f.ShootSeedNamespace(), "pod_name", loggerRegex, f.SeedClient)
+		ginkgo.By("Compute expected logs")
+		search, err := shootFramework.GetValiLogs(ctx,
+			valiLabels, shootFramework.ShootSeedNamespace(), "pod_name",
+			loggerRegex, shootFramework.SeedClient,
+		)
 		framework.ExpectNoError(err)
+
 		initialLogs, err := getLogCountFromResult(search)
 		framework.ExpectNoError(err)
 		expectedLogs := shootLogsCount + initialLogs
 
 		ginkgo.By("Check again if Vali StatefulSet is ready")
-		framework.ExpectNoError(f.WaitUntilStatefulSetIsRunning(ctx, valiName, f.ShootSeedNamespace(), f.SeedClient))
+		framework.ExpectNoError(
+			shootFramework.WaitUntilStatefulSetIsRunning(ctx, valiName, shootFramework.ShootSeedNamespace(), shootFramework.SeedClient),
+		)
 
-		ginkgo.By("Deploy the operator logger application")
+		ginkgo.By("Deploy the logger application")
 		loggerParams := map[string]interface{}{
 			"LoggerName":          fullLoggerName,
-			"HelmDeployNamespace": f.ShootSeedNamespace(),
+			"HelmDeployNamespace": shootFramework.ShootSeedNamespace(),
 			"AppLabel":            loggerAppLabel,
 			"LogsCount":           shootLogsCount,
 			"LogsDuration":        shootLogsDuration,
 		}
 
-		err = f.RenderAndDeployTemplate(ctx, f.SeedClient, templates.LoggerAppName, loggerParams)
+		err = shootFramework.RenderAndDeployTemplate(ctx, shootFramework.SeedClient, templates.LoggerAppName, loggerParams)
 		framework.ExpectNoError(err)
 
-		ginkgo.By("Wait until operator logger application is ready")
+		ginkgo.By("Wait until logger application is ready")
 		loggerLabels := labels.SelectorFromSet(map[string]string{
 			"app": loggerAppLabel,
 		})
 
-		err = f.WaitUntilDeploymentsWithLabelsIsReady(ctx, loggerLabels, f.ShootSeedNamespace(), f.SeedClient)
+		err = shootFramework.WaitUntilDeploymentsWithLabelsIsReady(ctx,
+			loggerLabels, shootFramework.ShootSeedNamespace(), shootFramework.SeedClient,
+		)
 		framework.ExpectNoError(err)
 
-		ginkgo.By("Verify vali received all operator logger application logs")
-		err = WaitUntilValiReceivesLogs(ctx, 30*time.Second, f, valiLabels, id, f.ShootSeedNamespace(), "pod_name", loggerRegex, expectedLogs, tenantDeltaLogsCount, f.SeedClient)
+		ginkgo.By("Verify vali received all logger application logs")
+		err = WaitUntilValiReceivesLogs(ctx,
+			30*time.Second, shootFramework, valiLabels, shootFramework.ShootSeedNamespace(),
+			"pod_name", loggerRegex, expectedLogs, shootDeltaLogsCount, shootFramework.SeedClient,
+		)
 		framework.ExpectNoError(err)
 
-		ginkgo.By("Verify that vali will not show the operator logs to the user tenant")
-		err = WaitUntilValiReceivesLogs(ctx, 30*time.Second, f, valiLabels, "user", f.ShootSeedNamespace(), "pod_name", loggerRegex, 0, tenantDeltaLogsCount, f.SeedClient)
-		framework.ExpectNoError(err)
-
-	}, tenantGetLogsFromValiTimeout, framework.WithCAfterTest(func(ctx context.Context) {
-		ginkgo.By("Cleanup operator logger app resources")
+	}, shootGetLogsFromValiTimeout, framework.WithCAfterTest(func(ctx context.Context) {
+		ginkgo.By("Cleanup logger app resources")
 		loggerDeploymentToDelete := &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: f.ShootSeedNamespace(),
+				Namespace: shootFramework.ShootSeedNamespace(),
 				Name:      fullLoggerName,
 			},
 		}
-		err := kubernetesutils.DeleteObject(ctx, f.SeedClient.Client(), loggerDeploymentToDelete)
+		err := kubernetesutils.DeleteObject(ctx, shootFramework.SeedClient.Client(), loggerDeploymentToDelete)
 		framework.ExpectNoError(err)
 
 		ginkgo.By("Cleanup vali's MutatingWebhook and the additional label")
@@ -174,14 +198,16 @@ epFdd1fXLwuwn7fvPMmJqD3HtLalX1AZmPk+BI8ezfAiVcVqnTJQMXlYPpYe9A==
 				Name: "block-vali-updates",
 			},
 		}
-		err = kubernetesutils.DeleteObject(ctx, f.SeedClient.Client(), webhookToDelete)
+		err = kubernetesutils.DeleteObject(ctx, shootFramework.SeedClient.Client(), webhookToDelete)
 		framework.ExpectNoError(err)
 
-		_, err = controllerutils.GetAndCreateOrMergePatch(ctx, f.SeedClient.Client(), shootNamespace, func() error {
-			delete(shootNamespace.Labels, shootNamespaceLabelKey)
-			return nil
-		})
+		_, err = controllerutils.GetAndCreateOrMergePatch(ctx, shootFramework.SeedClient.Client(), shootNamespace,
+			func() error {
+				delete(shootNamespace.Labels, shootNamespaceLabelKey)
+				return nil
+			},
+		)
 		framework.ExpectNoError(err)
 
-	}, tenantLoggerDeploymentCleanupTimeout))
+	}, shootLoggerDeploymentCleanupTimeout))
 })

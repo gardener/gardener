@@ -36,7 +36,6 @@ func NewVali(
 	priorityClassName string,
 	storage *resource.Quantity,
 	ingressHost string,
-	authEnabled bool,
 	hvpaEnabled bool,
 	maintenanceTimeWindow *hvpav1alpha1.MaintenanceTimeWindow,
 ) (
@@ -86,7 +85,6 @@ func NewVali(
 		ShootNodeLoggingEnabled: isShootNodeLoggingEnabled,
 		PriorityClassName:       priorityClassName,
 		Storage:                 storage,
-		AuthEnabled:             authEnabled,
 		ClusterType:             clusterType,
 		IngressHost:             ingressHost,
 	})

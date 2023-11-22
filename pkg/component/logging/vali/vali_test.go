@@ -57,7 +57,7 @@ const (
 	managedResourceNameTarget          = "vali-target"
 	managedResourceSecretNameTarget    = "managedresource-vali-target"
 	valiName                           = "vali"
-	valiConfigMapName                  = "vali-config-7d883cf0"
+	valiConfigMapName                  = "vali-config-bc8a885d"
 	telegrafConfigMapName              = "telegraf-config-b4c38756"
 	maintenanceBegin                   = "210000-0000"
 	maintenanceEnd                     = "223000-0000"
@@ -136,7 +136,6 @@ var _ = Describe("Vali", func() {
 				fakeSecretManager,
 				Values{
 					Replicas:                1,
-					AuthEnabled:             true,
 					Storage:                 &storage,
 					ShootNodeLoggingEnabled: true,
 					HVPAEnabled:             true,
@@ -242,7 +241,6 @@ var _ = Describe("Vali", func() {
 				fakeSecretManager,
 				Values{
 					Replicas:    1,
-					AuthEnabled: true,
 					Storage:     &storage,
 					HVPAEnabled: true,
 					MaintenanceTimeWindow: &hvpav1alpha1.MaintenanceTimeWindow{
@@ -315,7 +313,6 @@ var _ = Describe("Vali", func() {
 				fakeSecretManager,
 				Values{
 					Replicas:              1,
-					AuthEnabled:           true,
 					Storage:               &storage,
 					ValiImage:             valiImage,
 					CuratorImage:          curatorImage,
@@ -873,7 +870,7 @@ func getValiConfigMap() *corev1.ConfigMap {
 			Labels:    getLabels(),
 		},
 		Data: map[string]string{
-			"vali.yaml": `auth_enabled: true
+			"vali.yaml": `auth_enabled: false
 ingester:
   chunk_target_size: 1536000
   chunk_idle_period: 3m
@@ -1159,10 +1156,7 @@ func getIngress() *networkingv1.Ingress {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      valiName,
 			Namespace: namespace,
-			Annotations: map[string]string{
-				"nginx.ingress.kubernetes.io/configuration-snippet": "proxy_set_header X-Scope-OrgID operator;",
-			},
-			Labels: getLabels(),
+			Labels:    getLabels(),
 		},
 		Spec: networkingv1.IngressSpec{
 			IngressClassName: pointer.String("nginx-ingress-gardener"),

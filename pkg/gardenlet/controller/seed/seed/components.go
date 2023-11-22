@@ -348,7 +348,6 @@ func defaultVali(
 		v1beta1constants.PriorityClassNameSeedSystem600,
 		storage,
 		"",
-		false,
 		hvpaEnabled,
 		&hvpav1alpha1.MaintenanceTimeWindow{
 			Begin: maintenanceBegin,

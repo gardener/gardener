@@ -94,7 +94,6 @@ SendDeletedClustersLogsToDefaultClient true
 CleanExpiredClientsPeriod 1h
 ControllerSyncTimeout 120s
 PreservedLabels origin,namespace_name,pod_name
-TenantID operator
 ` + commonSettings + staticDynamicCommonSettings,
 			},
 		},

@@ -21,6 +21,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -37,6 +38,8 @@ import (
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
+var authEnabledMap = map[string]bool{}
+
 // ShootSeedNamespace gets the shoot namespace in the seed
 func (f *ShootFramework) ShootSeedNamespace() string {
 	return ComputeTechnicalID(f.Project.Name, f.Shoot)
@@ -48,24 +51,34 @@ func (f *ShootFramework) ShootKubeconfigSecretName() string {
 }
 
 // GetValiLogs gets logs from the last 1 hour for <key>, <value> from the vali instance in <valiNamespace>
-func (f *ShootFramework) GetValiLogs(ctx context.Context, valiLabels map[string]string, tenant, valiNamespace, key, value string, client kubernetes.Interface) (*SearchResponse, error) {
+func (f *ShootFramework) GetValiLogs(ctx context.Context, valiLabels map[string]string, valiNamespace, key, value string, client kubernetes.Interface) (*SearchResponse, error) {
 	valiLabelsSelector := labels.SelectorFromSet(labels.Set(valiLabels))
-
-	if tenant == "" {
-		tenant = "fake"
-	}
 
 	query := fmt.Sprintf("query=count_over_time({%s=~\"%s\"}[1h])", key, value)
 
-	command := fmt.Sprintf("wget 'http://localhost:%d/vali/api/v1/query' -O- '--header=X-Scope-OrgID: %s' --post-data='%s'", valiPort, tenant, query)
+	log := f.Logger.WithValues("namespace", valiNamespace, "labels", valiLabels, "q", query)
+
+	command := fmt.Sprintf("wget 'http://localhost:%d/vali/api/v1/query' -O- --post-data='%s'", valiPort, query)
+
+	// TODO(nickytd): Remove this code after v1.88 has been released.
+	enabled, err := isValiAuthEnabled(ctx, log, valiLabelsSelector, valiNamespace, client)
+	if err != nil {
+		log.Error(err, "Error fetching logs")
+		return nil, err
+	}
+
+	if enabled {
+		command = command + fmt.Sprintf(" '--header=X-Scope-OrgID: %s'", "operator")
+	}
 
 	var reader io.Reader
-	err := retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (bool, error) {
+	log.Info("Fetching logs")
+	err = retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (bool, error) {
 		var err error
 		reader, err = PodExecByLabel(ctx, valiLabelsSelector, valiLogging, command, valiNamespace, client)
 
 		if err != nil {
-			f.Logger.Error(err, "Error exec'ing into pod")
+			log.Error(err, "Error fetching logs")
 			return retry.MinorError(err)
 		}
 		return retry.Ok()
@@ -81,6 +94,32 @@ func (f *ShootFramework) GetValiLogs(ctx context.Context, valiLabels map[string]
 	}
 
 	return search, nil
+}
+
+func isValiAuthEnabled(ctx context.Context, log logr.Logger, selector labels.Selector, namespace string, c kubernetes.Interface) (bool, error) {
+	//Check if the auth is enabled in the configuration of the target
+	enabled, ok := authEnabledMap[selector.String()]
+	if ok {
+		return enabled, nil
+	}
+
+	commandAuthEnabled := fmt.Sprintf("wget 'http://localhost:%d/config' -O-", valiPort)
+	r, err := PodExecByLabel(ctx, selector, valiLogging, commandAuthEnabled, namespace, c)
+	if err != nil {
+		return false, err
+	}
+
+	configBytes, err := io.ReadAll(r)
+	if err != nil {
+		return false, err
+	}
+	if strings.Contains(string(configBytes), "auth_enabled: true") {
+		log.Info("Parsing configuration", "auth_enabled", true)
+		authEnabledMap[selector.String()] = true
+		return true, nil
+	}
+
+	return false, nil
 }
 
 // DumpState dumps the state of a shoot

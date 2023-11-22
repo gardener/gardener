@@ -1006,7 +1006,6 @@ func (r *Reconciler) newVali(garden *operatorv1alpha1.Garden) (vali.Interface, e
 		v1beta1constants.PriorityClassNameGardenSystem100,
 		nil,
 		"",
-		false,
 		hvpaEnabled(),
 		&hvpav1alpha1.MaintenanceTimeWindow{
 			Begin: garden.Spec.VirtualCluster.Maintenance.TimeWindow.Begin,

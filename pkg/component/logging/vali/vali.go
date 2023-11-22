@@ -104,9 +104,8 @@ var (
 	//go:embed templates/vali-init.sh
 	valiInitScript string
 
-	//go:embed templates/vali-config.yaml.tpl
-	valiConfigTplContent string
-	valiConfigTemplate   *template.Template
+	//go:embed templates/vali-config.yaml
+	valiConfig string
 
 	//go:embed templates/telegraf-config.tpl
 	telegrafConfigTplContent string
@@ -118,7 +117,6 @@ var (
 )
 
 func init() {
-	valiConfigTemplate = template.Must(template.New("vali-config").Funcs(sprig.TxtFuncMap()).Parse(valiConfigTplContent))
 	telegrafStartScriptTemplate = template.Must(template.New("telegraf-config").Funcs(sprig.TxtFuncMap()).Parse(telegrafStartScriptTplContent))
 	telegrafConfigTemplate = template.Must(template.New("telegraf-start").Funcs(sprig.TxtFuncMap()).Parse(telegrafConfigTplContent))
 }
@@ -142,7 +140,6 @@ type Values struct {
 	Replicas                int32
 	PriorityClassName       string
 	IngressHost             string
-	AuthEnabled             bool
 	ShootNodeLoggingEnabled bool
 	HVPAEnabled             bool
 	Storage                 *resource.Quantity
@@ -478,10 +475,7 @@ func (v *vali) getIngress(secretName string) *networkingv1.Ingress {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      valiName,
 			Namespace: v.namespace,
-			Annotations: map[string]string{
-				"nginx.ingress.kubernetes.io/configuration-snippet": "proxy_set_header X-Scope-OrgID operator;",
-			},
-			Labels: getLabels(),
+			Labels:    getLabels(),
 		},
 		Spec: networkingv1.IngressSpec{
 			IngressClassName: pointer.String(v1beta1constants.SeedNginxIngressClass),
@@ -574,11 +568,6 @@ func (v *vali) getService() *corev1.Service {
 }
 
 func (v *vali) getValiConfigMap() (*corev1.ConfigMap, error) {
-	var config bytes.Buffer
-	if err := valiConfigTemplate.Execute(&config, map[string]interface{}{"AuthEnabled": v.values.AuthEnabled}); err != nil {
-		return nil, fmt.Errorf("failed to render telegraf configuration: %w", err)
-	}
-
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "vali-config",
@@ -586,7 +575,7 @@ func (v *vali) getValiConfigMap() (*corev1.ConfigMap, error) {
 			Labels:    getLabels(),
 		},
 		Data: map[string]string{
-			valiDataKeyConfig:     config.String(),
+			valiDataKeyConfig:     valiConfig,
 			curatorDataKeyConfig:  curatorConfig,
 			valiDataKeyInitScript: valiInitScript,
 		},

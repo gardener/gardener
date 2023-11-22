@@ -799,9 +799,6 @@ func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error)
 
 	if p.values.ClusterType == component.ClusterTypeShoot {
 		ingress.Labels = getLabels()
-		ingress.Annotations = utils.MergeStringMaps(ingress.Annotations, map[string]string{
-			"nginx.ingress.kubernetes.io/configuration-snippet": "proxy_set_header X-Scope-OrgID operator;",
-		})
 	}
 
 	return ingress, nil
