@@ -31,7 +31,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1helper "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
+	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 	"github.com/gardener/gardener/plugin/pkg/utils"
@@ -53,8 +53,8 @@ type ManagedSeed struct {
 }
 
 var (
-	_ = admissioninitializer.WantsInternalCoreClientset(&ManagedSeed{})
-	_ = admissioninitializer.WantsSeedManagementClientset(&ManagedSeed{})
+	_ = admissioninitializer.WantsExternalCoreClientSet(&ManagedSeed{})
+	_ = admissioninitializer.WantsSeedManagementClientSet(&ManagedSeed{})
 
 	readyFuncs []admission.ReadyFunc
 )
@@ -72,13 +72,13 @@ func (v *ManagedSeed) AssignReadyFunc(f admission.ReadyFunc) {
 	v.SetReadyFunc(f)
 }
 
-// SetInternalCoreClientset sets the garden core clientset.
-func (v *ManagedSeed) SetInternalCoreClientset(c gardencoreclientset.Interface) {
+// SetExternalCoreClientSet sets the garden core clientset.
+func (v *ManagedSeed) SetExternalCoreClientSet(c gardencoreclientset.Interface) {
 	v.coreClient = c
 }
 
-// SetSeedManagementClientset sets the garden seedmanagement clientset.
-func (v *ManagedSeed) SetSeedManagementClientset(c seedmanagementclientset.Interface) {
+// SetSeedManagementClientSet sets the garden seedmanagement clientset.
+func (v *ManagedSeed) SetSeedManagementClientSet(c seedmanagementclientset.Interface) {
 	v.seedManagementClient = c
 }
 
@@ -224,8 +224,8 @@ func (v *ManagedSeed) validateDelete(ctx context.Context, a admission.Attributes
 	return admission.NewForbidden(a, fmt.Errorf("cannot delete shoot %s/%s since it is still referenced by a managed seed", a.GetNamespace(), a.GetName()))
 }
 
-func (v *ManagedSeed) getShoots(ctx context.Context, selector labels.Selector) ([]core.Shoot, error) {
-	shootList, err := v.coreClient.Core().Shoots("").List(ctx, metav1.ListOptions{LabelSelector: selector.String()})
+func (v *ManagedSeed) getShoots(ctx context.Context, selector labels.Selector) ([]gardencorev1beta1.Shoot, error) {
+	shootList, err := v.coreClient.CoreV1beta1().Shoots("").List(ctx, metav1.ListOptions{LabelSelector: selector.String()})
 	if err != nil {
 		return nil, err
 	}

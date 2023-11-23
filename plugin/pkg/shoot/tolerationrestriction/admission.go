@@ -26,10 +26,11 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/utils"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 	"github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction/apis/shoottolerationrestriction"
@@ -65,7 +66,7 @@ type TolerationRestriction struct {
 }
 
 var (
-	_ = admissioninitializer.WantsInternalCoreInformerFactory(&TolerationRestriction{})
+	_ = admissioninitializer.WantsExternalCoreInformerFactory(&TolerationRestriction{})
 
 	readyFuncs []admission.ReadyFunc
 )
@@ -85,9 +86,9 @@ func (t *TolerationRestriction) AssignReadyFunc(f admission.ReadyFunc) {
 	t.SetReadyFunc(f)
 }
 
-// SetInternalCoreInformerFactory sets the internal garden core informer factory.
-func (t *TolerationRestriction) SetInternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
-	projectInformer := f.Core().InternalVersion().Projects()
+// SetExternalCoreInformerFactory sets the internal garden core informer factory.
+func (t *TolerationRestriction) SetExternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+	projectInformer := f.Core().V1beta1().Projects()
 	t.projectLister = projectInformer.Lister()
 
 	readyFuncs = append(readyFuncs, projectInformer.Informer().HasSynced)
@@ -150,14 +151,19 @@ func (t *TolerationRestriction) Admit(_ context.Context, a admission.Attributes,
 }
 
 func (t *TolerationRestriction) admitShoot(shoot *core.Shoot) error {
-	project, err := admissionutils.ProjectForNamespaceFromInternalLister(t.projectLister, shoot.Namespace)
+	project, err := admissionutils.ProjectForNamespaceFromExternalLister(t.projectLister, shoot.Namespace)
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced project: %+v", err.Error()))
 	}
 
+	coreProjectSpec := core.ProjectSpec{}
+	if err := gardencorev1beta1.Convert_v1beta1_ProjectSpec_To_core_ProjectSpec(&project.Spec, &coreProjectSpec, nil); err != nil {
+		return apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 project spec: %+v", err.Error()))
+	}
+
 	defaults := t.defaults
 	if project.Spec.Tolerations != nil {
-		defaults = append(defaults, project.Spec.Tolerations.Defaults...)
+		defaults = append(defaults, coreProjectSpec.Tolerations.Defaults...)
 	}
 
 	existingKeys := sets.New[string]()
@@ -211,14 +217,19 @@ func (t *TolerationRestriction) validateShoot(shoot, oldShoot *core.Shoot) error
 		tolerationsToValidate = getNewOrChangedTolerations(shoot, oldShoot)
 	}
 
-	project, err := admissionutils.ProjectForNamespaceFromInternalLister(t.projectLister, shoot.Namespace)
+	project, err := admissionutils.ProjectForNamespaceFromExternalLister(t.projectLister, shoot.Namespace)
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced project: %+v", err.Error()))
 	}
 
+	coreProjectSpec := core.ProjectSpec{}
+	if err := gardencorev1beta1.Convert_v1beta1_ProjectSpec_To_core_ProjectSpec(&project.Spec, &coreProjectSpec, nil); err != nil {
+		return apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 project spec: %+v", err.Error()))
+	}
+
 	allowlist := t.allowlist
 	if project.Spec.Tolerations != nil {
-		allowlist = append(allowlist, project.Spec.Tolerations.Whitelist...)
+		allowlist = append(allowlist, coreProjectSpec.Tolerations.Whitelist...)
 	}
 
 	if errList := gardencorevalidation.ValidateTolerationsAgainstAllowlist(tolerationsToValidate, allowlist, field.NewPath("spec", "tolerations")); len(errList) > 0 {

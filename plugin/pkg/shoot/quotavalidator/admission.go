@@ -31,10 +31,12 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	timeutils "github.com/gardener/gardener/pkg/utils/time"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
@@ -68,7 +70,7 @@ type QuotaValidator struct {
 }
 
 var (
-	_ = admissioninitializer.WantsInternalCoreInformerFactory(&QuotaValidator{})
+	_ = admissioninitializer.WantsExternalCoreInformerFactory(&QuotaValidator{})
 
 	readyFuncs []admission.ReadyFunc
 )
@@ -87,18 +89,18 @@ func (q *QuotaValidator) AssignReadyFunc(f admission.ReadyFunc) {
 	q.SetReadyFunc(f)
 }
 
-// SetInternalCoreInformerFactory gets Lister from SharedInformerFactory.
-func (q *QuotaValidator) SetInternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
-	shootInformer := f.Core().InternalVersion().Shoots()
+// SetExternalCoreInformerFactory gets Lister from SharedInformerFactory.
+func (q *QuotaValidator) SetExternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+	shootInformer := f.Core().V1beta1().Shoots()
 	q.shootLister = shootInformer.Lister()
 
-	cloudProfileInformer := f.Core().InternalVersion().CloudProfiles()
+	cloudProfileInformer := f.Core().V1beta1().CloudProfiles()
 	q.cloudProfileLister = cloudProfileInformer.Lister()
 
-	secretBindingInformer := f.Core().InternalVersion().SecretBindings()
+	secretBindingInformer := f.Core().V1beta1().SecretBindings()
 	q.secretBindingLister = secretBindingInformer.Lister()
 
-	quotaInformer := f.Core().InternalVersion().Quotas()
+	quotaInformer := f.Core().V1beta1().Quotas()
 	q.quotaLister = quotaInformer.Lister()
 
 	readyFuncs = append(readyFuncs, shootInformer.Informer().HasSynced, cloudProfileInformer.Informer().HasSynced, secretBindingInformer.Informer().HasSynced, quotaInformer.Informer().HasSynced)
@@ -239,7 +241,7 @@ func (q *QuotaValidator) Validate(_ context.Context, a admission.Attributes, _ a
 	return nil
 }
 
-func (q *QuotaValidator) isQuotaExceeded(shoot core.Shoot, quota core.Quota) (*[]corev1.ResourceName, error) {
+func (q *QuotaValidator) isQuotaExceeded(shoot core.Shoot, quota gardencorev1beta1.Quota) (*[]corev1.ResourceName, error) {
 	allocatedResources, err := q.determineAllocatedResources(quota, shoot)
 	if err != nil {
 		return nil, err
@@ -264,7 +266,7 @@ func (q *QuotaValidator) isQuotaExceeded(shoot core.Shoot, quota core.Quota) (*[
 	return nil, nil
 }
 
-func (q *QuotaValidator) determineAllocatedResources(quota core.Quota, shoot core.Shoot) (corev1.ResourceList, error) {
+func (q *QuotaValidator) determineAllocatedResources(quota gardencorev1beta1.Quota, shoot core.Shoot) (corev1.ResourceList, error) {
 	shoots, err := q.findShootsReferQuota(quota, shoot)
 	if err != nil {
 		return nil, err
@@ -288,10 +290,10 @@ func (q *QuotaValidator) determineAllocatedResources(quota core.Quota, shoot cor
 	return allocatedResources, nil
 }
 
-func (q *QuotaValidator) findShootsReferQuota(quota core.Quota, shoot core.Shoot) ([]core.Shoot, error) {
+func (q *QuotaValidator) findShootsReferQuota(quota gardencorev1beta1.Quota, shoot core.Shoot) ([]gardencorev1beta1.Shoot, error) {
 	var (
-		shootsReferQuota []core.Shoot
-		secretBindings   []core.SecretBinding
+		shootsReferQuota []gardencorev1beta1.Shoot
+		secretBindings   []gardencorev1beta1.SecretBinding
 	)
 
 	scope, err := helper.QuotaScope(quota.Spec.Scope)
@@ -332,7 +334,12 @@ func (q *QuotaValidator) findShootsReferQuota(quota core.Quota, shoot core.Shoot
 	return shootsReferQuota, nil
 }
 
-func (q *QuotaValidator) determineRequiredResources(allocatedResources corev1.ResourceList, shoot core.Shoot) (corev1.ResourceList, error) {
+func (q *QuotaValidator) determineRequiredResources(allocatedResources corev1.ResourceList, coreShoot core.Shoot) (corev1.ResourceList, error) {
+	shoot := gardencorev1beta1.Shoot{}
+	if err := gardencorev1beta1.Convert_core_Shoot_To_v1beta1_Shoot(&coreShoot, &shoot, nil); err != nil {
+		return nil, apierrors.NewInternalError(fmt.Errorf("could not convert core shoot: %+v", err.Error()))
+	}
+
 	shootResources, err := q.getShootResources(shoot)
 	if err != nil {
 		return nil, err
@@ -345,7 +352,7 @@ func (q *QuotaValidator) determineRequiredResources(allocatedResources corev1.Re
 	return requiredResources, nil
 }
 
-func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceList, error) {
+func (q *QuotaValidator) getShootResources(shoot gardencorev1beta1.Shoot) (corev1.ResourceList, error) {
 	cloudProfile, err := q.cloudProfileLister.Get(shoot.Spec.CloudProfileName)
 	if err != nil {
 		return nil, apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %+v", err.Error()))
@@ -361,8 +368,8 @@ func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceLis
 
 	for _, worker := range workers {
 		var (
-			machineType *core.MachineType
-			volumeType  *core.VolumeType
+			machineType *gardencorev1beta1.MachineType
+			volumeType  *gardencorev1beta1.VolumeType
 		)
 
 		// Get the proper machineType
@@ -379,7 +386,7 @@ func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceLis
 
 		if worker.Volume != nil {
 			if machineType.Storage != nil {
-				volumeType = &core.VolumeType{
+				volumeType = &gardencorev1beta1.VolumeType{
 					Class: machineType.Storage.Class,
 				}
 			} else {
@@ -420,7 +427,7 @@ func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceLis
 		}
 	}
 
-	if helper.NginxIngressEnabled(shoot.Spec.Addons) {
+	if v1beta1helper.NginxIngressEnabled(shoot.Spec.Addons) {
 		countLB++
 	}
 	resources[core.QuotaMetricLoadbalancer] = *resource.NewQuantity(countLB, resource.DecimalSI)
@@ -428,8 +435,8 @@ func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceLis
 	return resources, nil
 }
 
-func getShootWorkerResources(shoot *core.Shoot, cloudProfile *core.CloudProfile) []core.Worker {
-	workers := make([]core.Worker, 0, len(shoot.Spec.Provider.Workers))
+func getShootWorkerResources(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.CloudProfile) []gardencorev1beta1.Worker {
+	workers := make([]gardencorev1beta1.Worker, 0, len(shoot.Spec.Provider.Workers))
 
 	for _, worker := range shoot.Spec.Provider.Workers {
 		workerCopy := worker.DeepCopy()
@@ -437,7 +444,7 @@ func getShootWorkerResources(shoot *core.Shoot, cloudProfile *core.CloudProfile)
 		if worker.Volume == nil {
 			for _, machineType := range cloudProfile.Spec.MachineTypes {
 				if worker.Machine.Type == machineType.Name && machineType.Storage != nil && machineType.Storage.StorageSize != nil {
-					workerCopy.Volume = &core.Volume{
+					workerCopy.Volume = &gardencorev1beta1.Volume{
 						Type:       &machineType.Storage.Type,
 						VolumeSize: machineType.Storage.StorageSize.String(),
 					}

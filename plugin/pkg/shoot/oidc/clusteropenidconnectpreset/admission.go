@@ -27,10 +27,11 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	settingsinformers "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 	settingsv1alpha1lister "github.com/gardener/gardener/pkg/client/settings/listers/settings/v1alpha1"
 	plugin "github.com/gardener/gardener/plugin/pkg"
@@ -54,7 +55,7 @@ type ClusterOpenIDConnectPreset struct {
 }
 
 var (
-	_ = admissioninitializer.WantsInternalCoreInformerFactory(&ClusterOpenIDConnectPreset{})
+	_ = admissioninitializer.WantsExternalCoreInformerFactory(&ClusterOpenIDConnectPreset{})
 	_ = admissioninitializer.WantsSettingsInformerFactory(&ClusterOpenIDConnectPreset{})
 
 	readyFuncs []admission.ReadyFunc
@@ -73,9 +74,9 @@ func (c *ClusterOpenIDConnectPreset) AssignReadyFunc(f admission.ReadyFunc) {
 	c.SetReadyFunc(f)
 }
 
-// SetInternalCoreInformerFactory gets Lister from SharedInformerFactory.
-func (c *ClusterOpenIDConnectPreset) SetInternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
-	projectInformer := f.Core().InternalVersion().Projects()
+// SetExternalCoreInformerFactory gets Lister from SharedInformerFactory.
+func (c *ClusterOpenIDConnectPreset) SetExternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+	projectInformer := f.Core().V1beta1().Projects()
 	c.projectLister = projectInformer.Lister()
 
 	readyFuncs = append(readyFuncs, projectInformer.Informer().HasSynced)
@@ -152,9 +153,9 @@ func (c *ClusterOpenIDConnectPreset) Admit(_ context.Context, a admission.Attrib
 	if len(projects) == 0 {
 		return nil
 	}
-	var foundProject *core.Project
+	var foundProject *gardencorev1beta1.Project
 	for _, project := range projects {
-		if project.Spec.Namespace != nil && *project.Spec.Namespace == shoot.Namespace && project.Status.Phase == core.ProjectReady {
+		if project.Spec.Namespace != nil && *project.Spec.Namespace == shoot.Namespace && project.Status.Phase == gardencorev1beta1.ProjectReady {
 			foundProject = project
 			break
 		}
@@ -176,7 +177,7 @@ func (c *ClusterOpenIDConnectPreset) Admit(_ context.Context, a admission.Attrib
 	return nil
 }
 
-func filterClusterOIDCs(oidcs []*settingsv1alpha1.ClusterOpenIDConnectPreset, shoot *core.Shoot, project *core.Project) (*settingsv1alpha1.OpenIDConnectPresetSpec, error) {
+func filterClusterOIDCs(oidcs []*settingsv1alpha1.ClusterOpenIDConnectPreset, shoot *core.Shoot, project *gardencorev1beta1.Project) (*settingsv1alpha1.OpenIDConnectPresetSpec, error) {
 	var matchedPreset *settingsv1alpha1.ClusterOpenIDConnectPreset
 
 	for _, oidc := range oidcs {

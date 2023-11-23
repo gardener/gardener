@@ -24,7 +24,8 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction"
 	"github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction/apis/shoottolerationrestriction"
 )
@@ -35,7 +36,7 @@ var _ = Describe("tolerationrestriction", func() {
 			namespace = "dummy"
 
 			shoot   *core.Shoot
-			project *core.Project
+			project *gardencorev1beta1.Project
 
 			attrs            admission.Attributes
 			admissionHandler *TolerationRestriction
@@ -48,7 +49,7 @@ var _ = Describe("tolerationrestriction", func() {
 
 			admissionHandler, _ = New(&shoottolerationrestriction.Configuration{})
 			admissionHandler.AssignReadyFunc(func() bool { return true })
-			admissionHandler.SetInternalCoreInformerFactory(gardenCoreInformerFactory)
+			admissionHandler.SetExternalCoreInformerFactory(gardenCoreInformerFactory)
 
 			shoot = &core.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
@@ -56,8 +57,8 @@ var _ = Describe("tolerationrestriction", func() {
 					Namespace: namespace,
 				},
 			}
-			project = &core.Project{
-				Spec: core.ProjectSpec{
+			project = &gardencorev1beta1.Project{
+				Spec: gardencorev1beta1.ProjectSpec{
 					Namespace: &namespace,
 				},
 			}
@@ -77,7 +78,7 @@ var _ = Describe("tolerationrestriction", func() {
 				It("should do nothing because no defaults are defined", func() {
 					shoot.Spec.Tolerations = []core.Toleration{{Key: "baz"}}
 
-					Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(project)).To(Succeed())
+					Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
 					attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.UpdateOptions{}, false, nil)
 					Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 					Expect(shoot.Spec.Tolerations).To(Equal([]core.Toleration{{Key: "baz"}}))
@@ -85,14 +86,14 @@ var _ = Describe("tolerationrestriction", func() {
 
 				It("should merge the global and project-level default tolerations into the shoot tolerations", func() {
 					config := &shoottolerationrestriction.Configuration{Defaults: []core.Toleration{{Key: "foo"}}}
-					project.Spec.Tolerations = &core.ProjectTolerations{Defaults: []core.Toleration{{Key: "bar"}}}
+					project.Spec.Tolerations = &gardencorev1beta1.ProjectTolerations{Defaults: []gardencorev1beta1.Toleration{{Key: "bar"}}}
 					shoot.Spec.Tolerations = []core.Toleration{{Key: "baz"}}
 
 					admissionHandler, _ = New(config)
 					admissionHandler.AssignReadyFunc(func() bool { return true })
-					admissionHandler.SetInternalCoreInformerFactory(gardenCoreInformerFactory)
+					admissionHandler.SetExternalCoreInformerFactory(gardenCoreInformerFactory)
 
-					Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(project)).To(Succeed())
+					Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
 					attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.UpdateOptions{}, false, nil)
 					Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 					Expect(shoot.Spec.Tolerations).To(Equal([]core.Toleration{{Key: "baz"}, {Key: "foo"}, {Key: "bar"}}))
@@ -100,14 +101,14 @@ var _ = Describe("tolerationrestriction", func() {
 
 				It("should not merge less-specific the global and project-level default tolerations into the shoot tolerations", func() {
 					config := &shoottolerationrestriction.Configuration{Defaults: []core.Toleration{{Key: "foo"}}}
-					project.Spec.Tolerations = &core.ProjectTolerations{Defaults: []core.Toleration{{Key: "bar"}, {Key: "baz", Value: ptr.To("foo")}}}
+					project.Spec.Tolerations = &gardencorev1beta1.ProjectTolerations{Defaults: []gardencorev1beta1.Toleration{{Key: "bar"}, {Key: "baz", Value: ptr.To("foo")}}}
 					shoot.Spec.Tolerations = []core.Toleration{{Key: "baz"}}
 
 					admissionHandler, _ = New(config)
 					admissionHandler.AssignReadyFunc(func() bool { return true })
-					admissionHandler.SetInternalCoreInformerFactory(gardenCoreInformerFactory)
+					admissionHandler.SetExternalCoreInformerFactory(gardenCoreInformerFactory)
 
-					Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(project)).To(Succeed())
+					Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
 					attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.UpdateOptions{}, false, nil)
 					Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 					Expect(shoot.Spec.Tolerations).To(Equal([]core.Toleration{{Key: "baz"}, {Key: "foo"}, {Key: "bar"}}))
@@ -117,14 +118,14 @@ var _ = Describe("tolerationrestriction", func() {
 			Context("UPDATE", func() {
 				It("should not change the tolerations for already existing shoots", func() {
 					config := &shoottolerationrestriction.Configuration{Whitelist: []core.Toleration{{Key: "foo"}}}
-					project.Spec.Tolerations = &core.ProjectTolerations{Whitelist: []core.Toleration{{Key: "bar"}}}
+					project.Spec.Tolerations = &gardencorev1beta1.ProjectTolerations{Whitelist: []gardencorev1beta1.Toleration{{Key: "bar"}}}
 					shoot.Spec.Tolerations = []core.Toleration{{Key: "baz"}}
 
 					admissionHandler, _ = New(config)
 					admissionHandler.AssignReadyFunc(func() bool { return true })
-					admissionHandler.SetInternalCoreInformerFactory(gardenCoreInformerFactory)
+					admissionHandler.SetExternalCoreInformerFactory(gardenCoreInformerFactory)
 
-					Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(project)).To(Succeed())
+					Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
 					attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.CreateOptions{}, false, nil)
 					Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 					Expect(shoot.Spec.Tolerations).To(Equal([]core.Toleration{{Key: "baz"}}))
@@ -140,13 +141,13 @@ var _ = Describe("tolerationrestriction", func() {
 				})
 
 				It("should allow creating the shoot because it doesn't have any tolerations", func() {
-					Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(project)).To(Succeed())
+					Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
 					attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 				})
 
 				It("should allow creating the shoot because its tolerations are in the project's whitelist", func() {
-					project.Spec.Tolerations = &core.ProjectTolerations{Whitelist: []core.Toleration{
+					project.Spec.Tolerations = &gardencorev1beta1.ProjectTolerations{Whitelist: []gardencorev1beta1.Toleration{
 						{Key: "foo"},
 						{Key: "bax"},
 						{Key: "bar", Value: ptr.To("baz")},
@@ -157,13 +158,13 @@ var _ = Describe("tolerationrestriction", func() {
 						{Key: "bar", Value: ptr.To("baz")},
 					}
 
-					Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(project)).To(Succeed())
+					Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
 					attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 				})
 
 				It("should reject creating the shoot because its tolerations are not in the project's whitelist", func() {
-					project.Spec.Tolerations = &core.ProjectTolerations{Whitelist: []core.Toleration{
+					project.Spec.Tolerations = &gardencorev1beta1.ProjectTolerations{Whitelist: []gardencorev1beta1.Toleration{
 						{Key: "foo"},
 						{Key: "bax", Value: ptr.To("bar")},
 						{Key: "bar", Value: ptr.To("baz")},
@@ -174,7 +175,7 @@ var _ = Describe("tolerationrestriction", func() {
 						{Key: "bar", Value: ptr.To("baz")},
 					}
 
-					Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(project)).To(Succeed())
+					Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
 					attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).NotTo(Succeed())
 				})
@@ -188,7 +189,7 @@ var _ = Describe("tolerationrestriction", func() {
 
 					admissionHandler, _ = New(config)
 					admissionHandler.AssignReadyFunc(func() bool { return true })
-					admissionHandler.SetInternalCoreInformerFactory(gardenCoreInformerFactory)
+					admissionHandler.SetExternalCoreInformerFactory(gardenCoreInformerFactory)
 
 					shoot.Spec.Tolerations = []core.Toleration{
 						{Key: "foo"},
@@ -196,7 +197,7 @@ var _ = Describe("tolerationrestriction", func() {
 						{Key: "bar", Value: ptr.To("baz")},
 					}
 
-					Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(project)).To(Succeed())
+					Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
 					attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 				})
@@ -210,7 +211,7 @@ var _ = Describe("tolerationrestriction", func() {
 
 					admissionHandler, _ = New(config)
 					admissionHandler.AssignReadyFunc(func() bool { return true })
-					admissionHandler.SetInternalCoreInformerFactory(gardenCoreInformerFactory)
+					admissionHandler.SetExternalCoreInformerFactory(gardenCoreInformerFactory)
 
 					shoot.Spec.Tolerations = []core.Toleration{
 						{Key: "foo"},
@@ -218,7 +219,7 @@ var _ = Describe("tolerationrestriction", func() {
 						{Key: "bar", Value: ptr.To("baz")},
 					}
 
-					Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(project)).To(Succeed())
+					Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
 					attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).NotTo(Succeed())
 				})
@@ -238,7 +239,7 @@ var _ = Describe("tolerationrestriction", func() {
 					}
 					oldShoot := shoot.DeepCopy()
 
-					Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(project)).To(Succeed())
+					Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
 					attrs = admission.NewAttributesRecord(shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 				})
@@ -254,7 +255,7 @@ var _ = Describe("tolerationrestriction", func() {
 						{Key: "bar", Value: ptr.To("baz")},
 					}
 
-					Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(project)).To(Succeed())
+					Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
 					attrs = admission.NewAttributesRecord(shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 				})
@@ -268,7 +269,7 @@ var _ = Describe("tolerationrestriction", func() {
 					oldShoot := shoot.DeepCopy()
 					shoot.Spec.Tolerations[0].Key = "new"
 
-					Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(project)).To(Succeed())
+					Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
 					attrs = admission.NewAttributesRecord(shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).NotTo(Succeed())
 				})
@@ -282,7 +283,7 @@ var _ = Describe("tolerationrestriction", func() {
 					oldShoot := shoot.DeepCopy()
 					shoot.Spec.Tolerations = append(shoot.Spec.Tolerations, core.Toleration{Key: "new"})
 
-					Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(project)).To(Succeed())
+					Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
 					attrs = admission.NewAttributesRecord(shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).NotTo(Succeed())
 				})
@@ -323,7 +324,7 @@ var _ = Describe("tolerationrestriction", func() {
 
 		It("should not return error if ProjectLister is set", func() {
 			dr, _ := New(&shoottolerationrestriction.Configuration{})
-			dr.SetInternalCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
+			dr.SetExternalCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 
 			err := dr.ValidateInitialization()
 			Expect(err).ToNot(HaveOccurred())
