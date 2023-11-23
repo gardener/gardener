@@ -22,10 +22,8 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 
-	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
-	gardencoreversionedclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	gardencoreexternalinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	seedmanagementinformers "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
 	settingsinformers "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
@@ -35,8 +33,6 @@ import (
 func New(
 	coreInformers gardencoreinformers.SharedInformerFactory,
 	coreClient gardencoreclientset.Interface,
-	externalCoreInformers gardencoreexternalinformers.SharedInformerFactory,
-	externalCoreClient gardencoreversionedclientset.Interface,
 	seedManagementInformers seedmanagementinformers.SharedInformerFactory,
 	seedManagementClient seedmanagementclientset.Interface,
 	settingsInformers settingsinformers.SharedInformerFactory,
@@ -49,9 +45,6 @@ func New(
 	return pluginInitializer{
 		coreInformers: coreInformers,
 		coreClient:    coreClient,
-
-		externalCoreInformers: externalCoreInformers,
-		externalCoreClient:    externalCoreClient,
 
 		seedManagementInformers: seedManagementInformers,
 		seedManagementClient:    seedManagementClient,
@@ -72,25 +65,18 @@ func New(
 // Initialize checks the initialization interfaces implemented by each plugin
 // and provide the appropriate initialization data
 func (i pluginInitializer) Initialize(plugin admission.Interface) {
-	if wants, ok := plugin.(WantsInternalCoreInformerFactory); ok {
-		wants.SetInternalCoreInformerFactory(i.coreInformers)
-	}
-	if wants, ok := plugin.(WantsInternalCoreClientset); ok {
-		wants.SetInternalCoreClientset(i.coreClient)
-	}
-
 	if wants, ok := plugin.(WantsExternalCoreInformerFactory); ok {
-		wants.SetExternalCoreInformerFactory(i.externalCoreInformers)
+		wants.SetExternalCoreInformerFactory(i.coreInformers)
 	}
-	if wants, ok := plugin.(WantsExternalCoreClientset); ok {
-		wants.SetExternalCoreClientset(i.externalCoreClient)
+	if wants, ok := plugin.(WantsExternalCoreClientSet); ok {
+		wants.SetExternalCoreClientSet(i.coreClient)
 	}
 
 	if wants, ok := plugin.(WantsSeedManagementInformerFactory); ok {
 		wants.SetSeedManagementInformerFactory(i.seedManagementInformers)
 	}
-	if wants, ok := plugin.(WantsSeedManagementClientset); ok {
-		wants.SetSeedManagementClientset(i.seedManagementClient)
+	if wants, ok := plugin.(WantsSeedManagementClientSet); ok {
+		wants.SetSeedManagementClientSet(i.seedManagementClient)
 	}
 
 	if wants, ok := plugin.(WantsSettingsInformerFactory); ok {
