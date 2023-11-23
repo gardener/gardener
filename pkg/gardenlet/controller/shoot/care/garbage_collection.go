@@ -110,6 +110,7 @@ func (g *GarbageCollection) performGarbageCollectionShoot(ctx context.Context, s
 // kubelet sometimes created Lease objects without owner reference. When the respective node gets deleted eventually,
 // the Lease object remains in the system and no Kubernetes controller will ever clean it up. Hence, this function takes
 // over this task.
+// TODO: Remove this function when support for Kubernetes 1.28 is dropped.
 func (g *GarbageCollection) deleteOrphanedNodeLeases(ctx context.Context, c client.Client) error {
 	leaseList := &coordinationv1.LeaseList{}
 	if err := c.List(ctx, leaseList, client.InNamespace(corev1.NamespaceNodeLease)); err != nil {
