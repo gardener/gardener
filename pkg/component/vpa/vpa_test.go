@@ -482,11 +482,6 @@ var _ = Describe("VPA", func() {
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
-					APIGroups: []string{"poc.autoscaling.k8s.io"},
-					Resources: []string{"verticalpodautoscalercheckpoints"},
-					Verbs:     []string{"get", "list", "watch", "create", "patch", "delete"},
-				},
-				{
 					APIGroups: []string{"autoscaling.k8s.io"},
 					Resources: []string{"verticalpodautoscalercheckpoints"},
 					Verbs:     []string{"get", "list", "watch", "create", "patch", "delete"},
@@ -753,11 +748,6 @@ var _ = Describe("VPA", func() {
 					APIGroups: []string{"admissionregistration.k8s.io"},
 					Resources: []string{"mutatingwebhookconfigurations"},
 					Verbs:     []string{"create", "delete", "get", "list"},
-				},
-				{
-					APIGroups: []string{"poc.autoscaling.k8s.io"},
-					Resources: []string{"verticalpodautoscalers"},
-					Verbs:     []string{"get", "list", "watch"},
 				},
 				{
 					APIGroups: []string{"autoscaling.k8s.io"},
@@ -1055,11 +1045,6 @@ var _ = Describe("VPA", func() {
 					APIGroups: []string{""},
 					Resources: []string{"events"},
 					Verbs:     []string{"get", "list", "watch", "create"},
-				},
-				{
-					APIGroups: []string{"poc.autoscaling.k8s.io"},
-					Resources: []string{"verticalpodautoscalers"},
-					Verbs:     []string{"get", "list", "watch", "patch"},
 				},
 				{
 					APIGroups: []string{"autoscaling.k8s.io"},

@@ -123,11 +123,6 @@ func (v *vpa) reconcileRecommenderClusterRoleCheckpointActor(clusterRole *rbacv1
 	clusterRole.Labels = getRoleLabel()
 	clusterRole.Rules = []rbacv1.PolicyRule{
 		{
-			APIGroups: []string{"poc.autoscaling.k8s.io"},
-			Resources: []string{"verticalpodautoscalercheckpoints"},
-			Verbs:     []string{"get", "list", "watch", "create", "patch", "delete"},
-		},
-		{
 			APIGroups: []string{"autoscaling.k8s.io"},
 			Resources: []string{"verticalpodautoscalercheckpoints"},
 			Verbs:     []string{"get", "list", "watch", "create", "patch", "delete"},

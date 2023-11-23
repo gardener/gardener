@@ -89,11 +89,6 @@ func (v *vpa) reconcileGeneralClusterRoleActor(clusterRole *rbacv1.ClusterRole) 
 			Verbs:     []string{"get", "list", "watch", "create"},
 		},
 		{
-			APIGroups: []string{"poc.autoscaling.k8s.io"},
-			Resources: []string{"verticalpodautoscalers"},
-			Verbs:     []string{"get", "list", "watch", "patch"},
-		},
-		{
 			APIGroups: []string{"autoscaling.k8s.io"},
 			Resources: []string{"verticalpodautoscalers"},
 			Verbs:     []string{"get", "list", "watch", "patch"},
