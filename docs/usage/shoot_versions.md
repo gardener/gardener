@@ -123,14 +123,14 @@ Example configuration in the CloudProfile:
 ```yaml
 machineImages:
   - name: gardenlinux
-     autoUpdateStrategy: minor
-     versions:
+    updateStrategy: minor
+    versions:
      - version: 1096.1.0
      - version: 934.8.0
      - version: 934.7.0
   - name: suse-chost
-     autoUpdateStrategy: patch
-     versions:
+    updateStrategy: patch
+    versions:
     - version: 15.3.20220818 
     - version: 15.3.20221118
 ```
