@@ -25,23 +25,24 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	. "github.com/gardener/gardener/plugin/pkg/global/extensionlabels"
 )
 
 var _ = Describe("ExtensionLabels tests", func() {
 	var (
-		admissionHandler                  *ExtensionLabels
-		gardenInternalCoreInformerFactory gardencoreinformers.SharedInformerFactory
+		admissionHandler          *ExtensionLabels
+		gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory
 	)
 
 	BeforeEach(func() {
 		admissionHandler, _ = New()
 		admissionHandler.AssignReadyFunc(func() bool { return true })
 
-		gardenInternalCoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-		admissionHandler.SetInternalCoreInformerFactory(gardenInternalCoreInformerFactory)
+		gardenCoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
+		admissionHandler.SetExternalCoreInformerFactory(gardenCoreInformerFactory)
 	})
 
 	Context("Seed", func() {
@@ -125,8 +126,8 @@ var _ = Describe("ExtensionLabels tests", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(secretBinding.ObjectMeta.Labels).To(Equal(expectedLabels))
 			},
-			Entry("when provider is nil", &core.SecretBinding{Provider: nil}, nil),
-			Entry("when provider is set", &core.SecretBinding{Provider: &core.SecretBindingProvider{Type: providerType1}}, map[string]string{"provider.extensions.gardener.cloud/" + providerType1: "true"}),
+			Entry("when provider is nil", &core.SecretBinding{ObjectMeta: metav1.ObjectMeta{Name: "test-secretbinding"}, Provider: nil}, nil),
+			Entry("when provider is set", &core.SecretBinding{ObjectMeta: metav1.ObjectMeta{Name: "test-secretbinding"}, Provider: &core.SecretBindingProvider{Type: providerType1}}, map[string]string{"provider.extensions.gardener.cloud/" + providerType1: "true"}),
 		)
 
 		It("should add all the correct labels on update", func() {
@@ -176,10 +177,10 @@ var _ = Describe("ExtensionLabels tests", func() {
 		)
 
 		BeforeEach(func() {
-			controllerRegistrations := []*core.ControllerRegistration{{
+			controllerRegistrations := []*gardencorev1beta1.ControllerRegistration{{
 				ObjectMeta: metav1.ObjectMeta{Name: "registration1"},
-				Spec: core.ControllerRegistrationSpec{
-					Resources: []core.ControllerResource{
+				Spec: gardencorev1beta1.ControllerRegistrationSpec{
+					Resources: []gardencorev1beta1.ControllerResource{
 						{
 							Kind:            extensionsv1alpha1.ExtensionResource,
 							Type:            extensionType1,
@@ -201,8 +202,8 @@ var _ = Describe("ExtensionLabels tests", func() {
 				},
 			}, {
 				ObjectMeta: metav1.ObjectMeta{Name: "registration2"},
-				Spec: core.ControllerRegistrationSpec{
-					Resources: []core.ControllerResource{{
+				Spec: gardencorev1beta1.ControllerRegistrationSpec{
+					Resources: []gardencorev1beta1.ControllerResource{{
 						Kind: extensionsv1alpha1.ExtensionResource,
 						Type: extensionType3,
 					}, {
@@ -214,7 +215,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 			}}
 
 			for _, reg := range controllerRegistrations {
-				Expect(gardenInternalCoreInformerFactory.Core().InternalVersion().ControllerRegistrations().Informer().GetStore().Add(reg)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().ControllerRegistrations().Informer().GetStore().Add(reg)).To(Succeed())
 			}
 
 			shoot = &core.Shoot{
@@ -514,19 +515,19 @@ var _ = Describe("ExtensionLabels tests", func() {
 
 	Context("Backup Entry", func() {
 		var (
-			backupBucket  *core.BackupBucket
+			backupBucket  *gardencorev1beta1.BackupBucket
 			backupEntry   *core.BackupEntry
 			providerType1 = "provider-type-1"
 			providerType2 = "provider-type-2"
 		)
 
 		BeforeEach(func() {
-			backupBucket = &core.BackupBucket{
+			backupBucket = &gardencorev1beta1.BackupBucket{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-backupbucket",
 				},
-				Spec: core.BackupBucketSpec{
-					Provider: core.BackupBucketProvider{
+				Spec: gardencorev1beta1.BackupBucketSpec{
+					Provider: gardencorev1beta1.BackupBucketProvider{
 						Type: providerType1,
 					},
 				},
@@ -543,7 +544,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 		})
 
 		It("should add all the correct labels on creation", func() {
-			Expect(gardenInternalCoreInformerFactory.Core().InternalVersion().BackupBuckets().Informer().GetStore().Add(backupBucket)).To(Succeed())
+			Expect(gardenCoreInformerFactory.Core().V1beta1().BackupBuckets().Informer().GetStore().Add(backupBucket)).To(Succeed())
 
 			attrs := admission.NewAttributesRecord(backupEntry, nil, core.Kind("BackupEntry").WithVersion("version"), backupEntry.Namespace, backupEntry.Name, core.Resource("BackupEntry").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 			err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -558,16 +559,16 @@ var _ = Describe("ExtensionLabels tests", func() {
 		})
 
 		It("should add all the correct labels on update", func() {
-			backupBucket2 := &core.BackupBucket{
+			backupBucket2 := &gardencorev1beta1.BackupBucket{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-backupbucket-2",
 				},
-				Spec: core.BackupBucketSpec{
-					Provider: core.BackupBucketProvider{
+				Spec: gardencorev1beta1.BackupBucketSpec{
+					Provider: gardencorev1beta1.BackupBucketProvider{
 						Type: providerType2,
 					},
 				}}
-			Expect(gardenInternalCoreInformerFactory.Core().InternalVersion().BackupBuckets().Informer().GetStore().Add(backupBucket2)).To(Succeed())
+			Expect(gardenCoreInformerFactory.Core().V1beta1().BackupBuckets().Informer().GetStore().Add(backupBucket2)).To(Succeed())
 
 			newBackupEntry := backupEntry.DeepCopy()
 			newBackupEntry.Spec.BucketName = backupBucket2.Name
@@ -627,7 +628,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 
 		It("should not return error if BackupBucketLister and core client are set", func() {
 			el, _ := New()
-			el.SetInternalCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
+			el.SetExternalCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 			err := el.ValidateInitialization()
 			Expect(err).ToNot(HaveOccurred())
 		})

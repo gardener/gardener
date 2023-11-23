@@ -31,10 +31,11 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
@@ -57,7 +58,7 @@ type ExtensionValidator struct {
 }
 
 var (
-	_ = admissioninitializer.WantsInternalCoreInformerFactory(&ExtensionValidator{})
+	_ = admissioninitializer.WantsExternalCoreInformerFactory(&ExtensionValidator{})
 
 	readyFuncs []admission.ReadyFunc
 )
@@ -75,12 +76,12 @@ func (e *ExtensionValidator) AssignReadyFunc(f admission.ReadyFunc) {
 	e.SetReadyFunc(f)
 }
 
-// SetInternalCoreInformerFactory gets Lister from SharedInformerFactory.
-func (e *ExtensionValidator) SetInternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
-	controllerRegistrationInformer := f.Core().InternalVersion().ControllerRegistrations()
+// SetExternalCoreInformerFactory gets Lister from SharedInformerFactory.
+func (e *ExtensionValidator) SetExternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+	controllerRegistrationInformer := f.Core().V1beta1().ControllerRegistrations()
 	e.controllerRegistrationLister = controllerRegistrationInformer.Lister()
 
-	backupBucketInformer := f.Core().InternalVersion().BackupBuckets()
+	backupBucketInformer := f.Core().V1beta1().BackupBuckets()
 	e.backupBucketLister = backupBucketInformer.Lister()
 
 	readyFuncs = append(readyFuncs, controllerRegistrationInformer.Informer().HasSynced, backupBucketInformer.Informer().HasSynced)
@@ -365,7 +366,7 @@ func isExtensionRegistered(kindToTypesMap map[string]sets.Set[string], extension
 
 // computeRegisteredPrimaryExtensionKindTypes computes a map that maps the extension kind to the set of types that are
 // registered (only if primary=true), e.g. {ControlPlane=>{foo,bar,baz}, Network=>{a,b,c}}.
-func computeRegisteredPrimaryExtensionKindTypes(controllerRegistrationList []*core.ControllerRegistration) map[string]sets.Set[string] {
+func computeRegisteredPrimaryExtensionKindTypes(controllerRegistrationList []*gardencorev1beta1.ControllerRegistration) map[string]sets.Set[string] {
 	out := map[string]sets.Set[string]{}
 
 	for _, controllerRegistration := range controllerRegistrationList {
@@ -386,7 +387,7 @@ func computeRegisteredPrimaryExtensionKindTypes(controllerRegistrationList []*co
 }
 
 // computeWorkerlessSupportedExtensionTypes computes Extension types that are supported for workerless Shoots.
-func computeWorkerlessSupportedExtensionTypes(controllerRegistrationList []*core.ControllerRegistration) sets.Set[string] {
+func computeWorkerlessSupportedExtensionTypes(controllerRegistrationList []*gardencorev1beta1.ControllerRegistration) sets.Set[string] {
 	out := sets.Set[string]{}
 
 	for _, controllerRegistration := range controllerRegistrationList {

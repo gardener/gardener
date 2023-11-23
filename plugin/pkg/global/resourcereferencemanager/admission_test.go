@@ -38,9 +38,10 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	internalclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	internalclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned/fake"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
 )
@@ -69,9 +70,9 @@ var _ = Describe("resourcereferencemanager", func() {
 			scheme                    *runtime.Scheme
 			dynamicClient             *dynamicfake.FakeDynamicClient
 
-			backupBucket core.BackupBucket
-			backupEntry  core.BackupEntry
-			shoot        core.Shoot
+			backupBucket gardencorev1beta1.BackupBucket
+			backupEntry  gardencorev1beta1.BackupEntry
+			coreShoot    core.Shoot
 
 			namespace                  = "default"
 			cloudProfileName           = "profile-1"
@@ -108,13 +109,13 @@ var _ = Describe("resourcereferencemanager", func() {
 				},
 			}
 
-			controllerDeployment = core.ControllerDeployment{
+			controllerDeployment = gardencorev1beta1.ControllerDeployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: controllerDeploymentName,
 				},
 			}
 
-			cloudProfile = core.CloudProfile{
+			cloudProfile = gardencorev1beta1.CloudProfile{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: cloudProfileName,
 				},
@@ -131,26 +132,50 @@ var _ = Describe("resourcereferencemanager", func() {
 					},
 				},
 			}
-			project = core.Project{}
-			seed    = core.Seed{
+			project     = gardencorev1beta1.Project{}
+			coreProject = core.Project{}
+			seed        = gardencorev1beta1.Seed{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       seedName,
 					Finalizers: finalizers,
 				},
+				Spec: gardencorev1beta1.SeedSpec{
+					SecretRef: &corev1.SecretReference{
+						Name:      secretName,
+						Namespace: namespace,
+					},
+				},
 			}
-			quota = core.Quota{
+			quota = gardencorev1beta1.Quota{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      quotaName,
 					Namespace: namespace,
 				},
-				Spec: core.QuotaSpec{
+				Spec: gardencorev1beta1.QuotaSpec{
 					Scope: corev1.ObjectReference{
 						APIVersion: "core.gardener.cloud/v1beta1",
 						Kind:       "Project",
 					},
 				},
 			}
-			secretBinding = core.SecretBinding{
+			coreSecretBinding = core.SecretBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       bindingName,
+					Namespace:  namespace,
+					Finalizers: finalizers,
+				},
+				SecretRef: corev1.SecretReference{
+					Name:      secretName,
+					Namespace: namespace,
+				},
+				Quotas: []corev1.ObjectReference{
+					{
+						Name:      quotaName,
+						Namespace: namespace,
+					},
+				},
+			}
+			secretBinding = gardencorev1beta1.SecretBinding{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       bindingName,
 					Namespace:  namespace,
@@ -172,6 +197,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					Name: projectName,
 				},
 			}
+			shoot     = gardencorev1beta1.Shoot{}
 			shootBase = core.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       shootName,
@@ -206,7 +232,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				},
 			}
 
-			backupBucketBase = core.BackupBucket{
+			coreBackupBucket = core.BackupBucket{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "bucket",
 				},
@@ -218,13 +244,35 @@ var _ = Describe("resourcereferencemanager", func() {
 					},
 				},
 			}
+			backupBucketBase = gardencorev1beta1.BackupBucket{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "bucket",
+				},
+				Spec: gardencorev1beta1.BackupBucketSpec{
+					SeedName: &seedName,
+					SecretRef: corev1.SecretReference{
+						Name:      secretName,
+						Namespace: namespace,
+					},
+				},
+			}
 
-			backupEntryBase = core.BackupEntry{
+			coreBackupEntry = core.BackupEntry{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "entry",
 					Namespace: namespace,
 				},
 				Spec: core.BackupEntrySpec{
+					BucketName: backupBucketBase.Name,
+					SeedName:   &seedName,
+				},
+			}
+			backupEntryBase = gardencorev1beta1.BackupEntry{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "entry",
+					Namespace: namespace,
+				},
+				Spec: gardencorev1beta1.BackupEntrySpec{
 					BucketName: backupBucketBase.Name,
 					SeedName:   &seedName,
 				},
@@ -274,10 +322,10 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			gardenCoreClient = internalclientset.NewSimpleClientset()
 			gardenCoreClient.Fake = testing.Fake{Resources: discoveryGardenClientResources}
-			admissionHandler.SetInternalCoreClientset(gardenCoreClient)
+			admissionHandler.SetExternalCoreClientSet(gardenCoreClient)
 
 			gardenCoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-			admissionHandler.SetInternalCoreInformerFactory(gardenCoreInformerFactory)
+			admissionHandler.SetExternalCoreInformerFactory(gardenCoreInformerFactory)
 
 			fakeAuthorizer = fakeAuthorizerType{}
 			admissionHandler.SetAuthorizer(fakeAuthorizer)
@@ -290,10 +338,16 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			MissingSecretWait = 0
 
-			project = projectBase
-			shoot = shootBase
+			coreProject = projectBase
+			coreShoot = shootBase
 			backupBucket = backupBucketBase
 			backupEntry = backupEntryBase
+
+			err := gardencorev1beta1.Convert_core_Shoot_To_v1beta1_Shoot(&coreShoot, &shoot, nil)
+			Expect(err).To(Succeed())
+
+			err = gardencorev1beta1.Convert_core_Project_To_v1beta1_Project(&coreProject, &project, nil)
+			Expect(err).To(Succeed())
 		})
 
 		It("should return nil because the resource is not BackupBucket and operation is delete", func() {
@@ -312,7 +366,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 		Context("tests for ControllerRegistration objects", func() {
 			It("should accept because all referenced objects have been found (controller deployment found in cache)", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().ControllerDeployments().Informer().GetStore().Add(&controllerDeployment)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().ControllerDeployments().Informer().GetStore().Add(&controllerDeployment)).To(Succeed())
 
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&controllerRegistration, nil, core.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, core.Resource("controllerregistrations").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
@@ -352,10 +406,10 @@ var _ = Describe("resourcereferencemanager", func() {
 		Context("tests for SecretBinding objects", func() {
 			It("should accept because all referenced objects have been found (secret found in cache)", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&secretBinding, nil, core.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&coreSecretBinding, nil, core.Kind("SecretBinding").WithVersion("version"), coreSecretBinding.Namespace, coreSecretBinding.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -363,7 +417,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should accept because all referenced objects have been found (secret looked up live)", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
 				kubeClient.AddReactor("get", "secrets", func(action testing.Action) (bool, runtime.Object, error) {
 					return true, &corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
@@ -374,7 +428,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				})
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&secretBinding, nil, core.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&coreSecretBinding, nil, core.Kind("SecretBinding").WithVersion("version"), coreSecretBinding.Namespace, coreSecretBinding.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -382,13 +436,13 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should reject because the referenced secret does not exist", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
 				kubeClient.AddReactor("get", "secrets", func(action testing.Action) (bool, runtime.Object, error) {
 					return true, nil, fmt.Errorf("nope, out of luck")
 				})
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&secretBinding, nil, core.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&coreSecretBinding, nil, core.Kind("SecretBinding").WithVersion("version"), coreSecretBinding.Namespace, coreSecretBinding.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -397,10 +451,10 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should reject because the user is not allowed to read the referenced secret", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
 
 				user := &user.DefaultInfo{Name: "disallowed-user"}
-				attrs := admission.NewAttributesRecord(&secretBinding, nil, core.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&coreSecretBinding, nil, core.Kind("SecretBinding").WithVersion("version"), coreSecretBinding.Namespace, coreSecretBinding.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -411,7 +465,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&secretBinding, nil, core.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&coreSecretBinding, nil, core.Kind("SecretBinding").WithVersion("version"), coreSecretBinding.Namespace, coreSecretBinding.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -420,10 +474,10 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should reject because the user is not allowed to read the referenced quota", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
 
 				user := &user.DefaultInfo{Name: "disallowed-user"}
-				attrs := admission.NewAttributesRecord(&secretBinding, nil, core.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&coreSecretBinding, nil, core.Kind("SecretBinding").WithVersion("version"), coreSecretBinding.Namespace, coreSecretBinding.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -432,12 +486,12 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should pass because exact one quota per scope is referenced", func() {
 				quotaName2 := "quota-2"
-				quota2 := core.Quota{
+				quota2 := gardencorev1beta1.Quota{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      quotaName2,
 						Namespace: namespace,
 					},
-					Spec: core.QuotaSpec{
+					Spec: gardencorev1beta1.QuotaSpec{
 						Scope: corev1.ObjectReference{
 							APIVersion: "v1",
 							Kind:       "Secret",
@@ -449,16 +503,16 @@ var _ = Describe("resourcereferencemanager", func() {
 					Name:      quotaName2,
 					Namespace: namespace,
 				}
-				quotaRefList := secretBinding.Quotas
+				quotaRefList := coreSecretBinding.Quotas
 				quotaRefList = append(quotaRefList, quota2Ref)
-				secretBinding.Quotas = quotaRefList
+				coreSecretBinding.Quotas = quotaRefList
 
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Quotas().Informer().GetStore().Add(&quota2)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota2)).To(Succeed())
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&secretBinding, nil, core.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&coreSecretBinding, nil, core.Kind("SecretBinding").WithVersion("version"), coreSecretBinding.Namespace, coreSecretBinding.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -467,12 +521,12 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should reject because more than one quota of the same scope is referenced", func() {
 				quotaName2 := "quota-2"
-				quota2 := core.Quota{
+				quota2 := gardencorev1beta1.Quota{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      quotaName2,
 						Namespace: namespace,
 					},
-					Spec: core.QuotaSpec{
+					Spec: gardencorev1beta1.QuotaSpec{
 						Scope: corev1.ObjectReference{
 							APIVersion: "core.gardener.cloud/v1beta1",
 							Kind:       "Project",
@@ -484,16 +538,16 @@ var _ = Describe("resourcereferencemanager", func() {
 					Name:      quotaName2,
 					Namespace: namespace,
 				}
-				quotaRefList := secretBinding.Quotas
+				quotaRefList := coreSecretBinding.Quotas
 				quotaRefList = append(quotaRefList, quota2Ref)
-				secretBinding.Quotas = quotaRefList
+				coreSecretBinding.Quotas = quotaRefList
 
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Quotas().Informer().GetStore().Add(&quota2)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota2)).To(Succeed())
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&secretBinding, nil, core.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&coreSecretBinding, nil, core.Kind("SecretBinding").WithVersion("version"), coreSecretBinding.Namespace, coreSecretBinding.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -503,30 +557,30 @@ var _ = Describe("resourcereferencemanager", func() {
 
 		Context("tests for Shoot objects", func() {
 			It("should add the created-by annotation", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				Expect(shoot.Annotations).NotTo(HaveKeyWithValue(v1beta1constants.GardenCreatedBy, user.Name))
+				Expect(coreShoot.Annotations).NotTo(HaveKeyWithValue(v1beta1constants.GardenCreatedBy, user.Name))
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(shoot.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenCreatedBy, user.Name))
+				Expect(coreShoot.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenCreatedBy, user.Name))
 			})
 
 			It("should accept because all referenced objects have been found", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -534,15 +588,15 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should accept because spec was not changed", func() {
-				oldShoot := shoot.DeepCopy()
-				shoot.Annotations = map[string]string{
+				oldShoot := coreShoot.DeepCopy()
+				coreShoot.Annotations = map[string]string{
 					"delete": "me",
 				}
-				shoot.Labels = map[string]string{
+				coreShoot.Labels = map[string]string{
 					"nice": "label",
 				}
-				shoot.Status.TechnicalID = "should-never-change"
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+				coreShoot.Status.TechnicalID = "should-never-change"
+				attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -550,11 +604,11 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should reject because the referenced cloud profile does not exist (create)", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -562,14 +616,14 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should reject because the referenced cloud profile does not exist (update)", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
-				oldShoot := shoot.DeepCopy()
+				oldShoot := coreShoot.DeepCopy()
 				oldShoot.Spec.CloudProfileName = ""
 
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -577,11 +631,11 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should reject because the referenced seed does not exist (create)", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -589,14 +643,11 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should reject because the referenced seed does not exist (update)", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
-				oldShoot := shoot.DeepCopy()
-				oldShoot.Spec.SeedName = nil
-
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -604,11 +655,11 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should reject because the referenced secret binding does not exist (create)", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -616,14 +667,14 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should reject because the referenced secret binding does not exist (update)", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
-				oldShoot := shoot.DeepCopy()
+				oldShoot := coreShoot.DeepCopy()
 				oldShoot.Spec.SecretBindingName = ptr.To("")
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -634,16 +685,16 @@ var _ = Describe("resourcereferencemanager", func() {
 				var exposureClassName = "test-exposureclass"
 
 				BeforeEach(func() {
-					Expect(gardenCoreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(gardenCoreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 					Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
 					shoot.Spec.ExposureClassName = &exposureClassName
 				})
 
 				It("should reject because the referenced exposure class does not exists", func() {
-					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+					attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 					Expect(err).To(HaveOccurred())
@@ -656,8 +707,8 @@ var _ = Describe("resourcereferencemanager", func() {
 						},
 					}
 
-					Expect(gardenCoreInformerFactory.Core().InternalVersion().ExposureClasses().Informer().GetStore().Add(&exposureClass)).To(Succeed())
-					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+					Expect(gardenCoreInformerFactory.Core().V1beta1().ExposureClasses().Informer().GetStore().Add(&exposureClass)).To(Succeed())
+					attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 					Expect(err).To(HaveOccurred())
@@ -665,11 +716,11 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should reject because the referenced config map does not exist", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -677,13 +728,13 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should reject because the user is not allowed to read the referenced resource (create)", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
 				user := &user.DefaultInfo{Name: "disallowed-user"}
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -691,12 +742,12 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should reject because the user is not allowed to read the referenced resource (update)", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
-				shoot.Spec.Resources = append(shoot.Spec.Resources, core.NamedResourceReference{
+				coreShoot.Spec.Resources = append(coreShoot.Spec.Resources, core.NamedResourceReference{
 					Name: "foo",
 					ResourceRef: autoscalingv1.CrossVersionObjectReference{
 						Kind:       "Secret",
@@ -705,12 +756,12 @@ var _ = Describe("resourcereferencemanager", func() {
 					},
 				})
 
-				oldShoot := shoot.DeepCopy()
-				shoot.Spec.Resources[0] = oldShoot.Spec.Resources[1]
-				shoot.Spec.Resources[1] = oldShoot.Spec.Resources[0]
+				oldShoot := coreShoot.DeepCopy()
+				coreShoot.Spec.Resources[0] = oldShoot.Spec.Resources[1]
+				coreShoot.Spec.Resources[1] = oldShoot.Spec.Resources[0]
 
 				user := &user.DefaultInfo{Name: "disallowed-user"}
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -718,15 +769,15 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should allow because the user is not allowed to read the referenced resource but resource spec hasn't changed", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
-				oldShoot := shoot.DeepCopy()
+				oldShoot := coreShoot.DeepCopy()
 
 				user := &user.DefaultInfo{Name: "disallowed-user"}
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -736,13 +787,13 @@ var _ = Describe("resourcereferencemanager", func() {
 			It("should reject because the referenced resource does not exist", func() {
 				dynamicClient = dynamicfake.NewSimpleDynamicClient(scheme)
 				admissionHandler.SetDynamicClient(dynamicClient)
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -750,12 +801,12 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should reject because the referenced DNS provider secret does not exist (create)", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
-				shoot.Spec.DNS = &core.DNS{
+				coreShoot.Spec.DNS = &core.DNS{
 					Providers: []core.DNSProvider{
 						{SecretName: ptr.To("foo")},
 					},
@@ -766,7 +817,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				})
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -774,14 +825,14 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should reject because the referenced DNS provider secret does not exist (update)", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
-				oldShoot := shoot.DeepCopy()
+				oldShoot := coreShoot.DeepCopy()
 
-				shoot.Spec.DNS = &core.DNS{
+				coreShoot.Spec.DNS = &core.DNS{
 					Providers: []core.DNSProvider{
 						{SecretName: ptr.To("foo")},
 					},
@@ -792,7 +843,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				})
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -800,28 +851,28 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should pass because the referenced DNS provider secret does not exist but shoot has deletion timestamp", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
-				oldShoot := shoot.DeepCopy()
+				oldShoot := coreShoot.DeepCopy()
 
-				shoot.Spec.DNS = &core.DNS{
+				coreShoot.Spec.DNS = &core.DNS{
 					Providers: []core.DNSProvider{
 						{SecretName: ptr.To("foo")},
 					},
 				}
 
 				now := metav1.Now()
-				shoot.DeletionTimestamp = &now
+				coreShoot.DeletionTimestamp = &now
 
 				kubeClient.AddReactor("get", "secrets", func(action testing.Action) (bool, runtime.Object, error) {
 					return true, nil, fmt.Errorf("nope, out of luck")
 				})
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -829,12 +880,12 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should pass because the referenced DNS provider secret exists", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
-				shoot.Spec.DNS = &core.DNS{
+				coreShoot.Spec.DNS = &core.DNS{
 					Providers: []core.DNSProvider{
 						{SecretName: ptr.To("foo")},
 					},
@@ -845,7 +896,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				})
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -855,21 +906,21 @@ var _ = Describe("resourcereferencemanager", func() {
 
 		Context("tests for BackupBucket objects", func() {
 			It("should reject if the referred Seed is not found", func() {
-				attrs := admission.NewAttributesRecord(&backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", backupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(&coreBackupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", coreBackupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(BeForbiddenError())
-				Expect(err).To(MatchError(ContainSubstring("backupBuckets.core.gardener.cloud %q is forbidden: seed.core.gardener.cloud %q not found", backupBucket.Name, seed.Name)))
+				Expect(err).To(MatchError(ContainSubstring("backupBuckets.core.gardener.cloud %q is forbidden: seed.core.gardener.cloud %q not found", coreBackupBucket.Name, seed.Name)))
 			})
 
 			It("should reject if the referred Secret is not found", func() {
 				kubeClient.AddReactor("get", "secrets", func(action testing.Action) (bool, runtime.Object, error) {
 					return true, nil, fmt.Errorf("secret not found")
 				})
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 
-				attrs := admission.NewAttributesRecord(&backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", backupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(&coreBackupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", coreBackupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -886,9 +937,9 @@ var _ = Describe("resourcereferencemanager", func() {
 						},
 					}, nil
 				})
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 
-				attrs := admission.NewAttributesRecord(&backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", backupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(&coreBackupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", coreBackupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -897,9 +948,9 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should accept (secret found in cache)", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 
-				attrs := admission.NewAttributesRecord(&backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", backupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(&coreBackupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", coreBackupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -908,13 +959,13 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should accept deletion if no backupEntries are referencing it", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 
 				gardenCoreClient.AddReactor("list", "backupentries", func(action testing.Action) (bool, runtime.Object, error) {
-					return true, &core.BackupEntryList{Items: []core.BackupEntry{}}, nil
+					return true, &gardencorev1beta1.BackupEntryList{Items: []gardencorev1beta1.BackupEntry{}}, nil
 				})
 
-				attrs := admission.NewAttributesRecord(nil, nil, core.Kind("BackupBucket").WithVersion("version"), "", backupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(nil, nil, core.Kind("BackupBucket").WithVersion("version"), "", coreBackupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -923,14 +974,14 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should reject deletion if there are backupEntries referencing it", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 
 				backupEntry2 := backupEntryBase.DeepCopy()
 				backupEntry2.Name = "another-name"
 				backupEntry2.Namespace = "another-namespace"
 
 				gardenCoreClient.AddReactor("list", "backupentries", func(action testing.Action) (bool, runtime.Object, error) {
-					return true, &core.BackupEntryList{Items: []core.BackupEntry{backupEntry, *backupEntry2}}, nil
+					return true, &gardencorev1beta1.BackupEntryList{Items: []gardencorev1beta1.BackupEntry{backupEntry, *backupEntry2}}, nil
 				})
 
 				attrs := admission.NewAttributesRecord(nil, nil, core.Kind("BackupBucket").WithVersion("version"), "", backupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, defaultUserInfo)
@@ -943,13 +994,13 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should reject deletion if the listing fails", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 
 				gardenCoreClient.AddReactor("list", "backupentries", func(action testing.Action) (bool, runtime.Object, error) {
 					return true, nil, errors.New("error")
 				})
 
-				attrs := admission.NewAttributesRecord(nil, nil, core.Kind("BackupBucket").WithVersion("version"), "", backupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(nil, nil, core.Kind("BackupBucket").WithVersion("version"), "", coreBackupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -958,7 +1009,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should forbid multiple BackupBuckets deletion if a BackupEntry referencing any of the BackupBuckets exists", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 
 				backupBucket2 := backupBucketBase.DeepCopy()
 				backupBucket2.Name = "different-backupBucket"
@@ -970,11 +1021,11 @@ var _ = Describe("resourcereferencemanager", func() {
 				backupEntry2.Spec.BucketName = backupBucket2.Name
 
 				gardenCoreClient.AddReactor("list", "backupentries", func(action testing.Action) (bool, runtime.Object, error) {
-					return true, &core.BackupEntryList{Items: []core.BackupEntry{backupEntry, *backupEntry2}}, nil
+					return true, &gardencorev1beta1.BackupEntryList{Items: []gardencorev1beta1.BackupEntry{backupEntry, *backupEntry2}}, nil
 				})
 
 				gardenCoreClient.AddReactor("list", "backupbuckets", func(action testing.Action) (bool, runtime.Object, error) {
-					return true, &core.BackupBucketList{Items: []core.BackupBucket{*backupBucket2, backupBucket}}, nil
+					return true, &gardencorev1beta1.BackupBucketList{Items: []gardencorev1beta1.BackupBucket{*backupBucket2, backupBucket}}, nil
 				})
 
 				attrs := admission.NewAttributesRecord(nil, nil, core.Kind("BackupBucket").WithVersion("version"), "", "", core.Resource("backupBuckets").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, defaultUserInfo)
@@ -987,7 +1038,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should allow multiple BackupBuckets deletion if no BackupEntry exists referencing any of the BackupBuckets", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 
 				backupBucket2 := backupBucketBase.DeepCopy()
 				backupBucket2.Name = "different-backupBucket"
@@ -999,11 +1050,11 @@ var _ = Describe("resourcereferencemanager", func() {
 				backupEntry2.Spec.BucketName = "some-other-bucket"
 
 				gardenCoreClient.AddReactor("list", "backupentries", func(action testing.Action) (bool, runtime.Object, error) {
-					return true, &core.BackupEntryList{Items: []core.BackupEntry{}}, nil
+					return true, &gardencorev1beta1.BackupEntryList{Items: []gardencorev1beta1.BackupEntry{}}, nil
 				})
 
 				gardenCoreClient.AddReactor("list", "backupbuckets", func(action testing.Action) (bool, runtime.Object, error) {
-					return true, &core.BackupBucketList{Items: []core.BackupBucket{*backupBucket2, backupBucket}}, nil
+					return true, &gardencorev1beta1.BackupBucketList{Items: []gardencorev1beta1.BackupBucket{*backupBucket2, backupBucket}}, nil
 				})
 
 				attrs := admission.NewAttributesRecord(nil, nil, core.Kind("BackupBucket").WithVersion("version"), "", "", core.Resource("backupBuckets").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, defaultUserInfo)
@@ -1016,28 +1067,28 @@ var _ = Describe("resourcereferencemanager", func() {
 
 		Context("tests for BackupEntry objects", func() {
 			It("should reject if the referred Seed is not found", func() {
-				attrs := admission.NewAttributesRecord(&backupEntry, nil, core.Kind("BackupEntry").WithVersion("version"), backupEntry.Namespace, backupEntry.Name, core.Resource("backupEntries").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(&coreBackupEntry, nil, core.Kind("BackupEntry").WithVersion("version"), coreBackupEntry.Namespace, coreBackupEntry.Name, core.Resource("backupEntries").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(BeForbiddenError())
-				Expect(err).To(MatchError(ContainSubstring("backupEntries.core.gardener.cloud %q is forbidden: seed.core.gardener.cloud %q not found", backupEntry.Name, seed.Name)))
+				Expect(err).To(MatchError(ContainSubstring("backupEntries.core.gardener.cloud %q is forbidden: seed.core.gardener.cloud %q not found", coreBackupEntry.Name, seed.Name)))
 			})
 
 			It("should reject if the referred BackupBucket is not found", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				attrs := admission.NewAttributesRecord(&backupEntry, nil, core.Kind("BackupEntry").WithVersion("version"), backupEntry.Namespace, backupEntry.Name, core.Resource("backupEntries").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				attrs := admission.NewAttributesRecord(&coreBackupEntry, nil, core.Kind("BackupEntry").WithVersion("version"), coreBackupEntry.Namespace, coreBackupEntry.Name, core.Resource("backupEntries").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(BeForbiddenError())
-				Expect(err).To(MatchError(ContainSubstring("backupEntries.core.gardener.cloud %q is forbidden: backupbucket.core.gardener.cloud %q not found", backupEntry.Name, backupBucket.Name)))
+				Expect(err).To(MatchError(ContainSubstring("backupEntries.core.gardener.cloud %q is forbidden: backupbucket.core.gardener.cloud %q not found", coreBackupEntry.Name, coreBackupBucket.Name)))
 			})
 
 			It("should accept if the referred resources exist", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().BackupBuckets().Informer().GetStore().Add(&backupBucket)).To(Succeed())
-				attrs := admission.NewAttributesRecord(&backupEntry, nil, core.Kind("BackupEntry").WithVersion("version"), backupEntry.Namespace, backupEntry.Name, core.Resource("backupEntries").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().BackupBuckets().Informer().GetStore().Add(&backupBucket)).To(Succeed())
+				attrs := admission.NewAttributesRecord(&coreBackupEntry, nil, core.Kind("BackupEntry").WithVersion("version"), coreBackupEntry.Namespace, coreBackupEntry.Name, core.Resource("backupEntries").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -1047,14 +1098,14 @@ var _ = Describe("resourcereferencemanager", func() {
 
 		Context("tests for Project objects", func() {
 			It("should set the created-by field", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 
-				attrs := admission.NewAttributesRecord(&project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(&coreProject, nil, core.Kind("Project").WithVersion("version"), coreProject.Namespace, coreProject.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(project.Spec.CreatedBy).To(Equal(&rbacv1.Subject{
+				Expect(coreProject.Spec.CreatedBy).To(Equal(&rbacv1.Subject{
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     rbacv1.UserKind,
 					Name:     defaultUserName,
@@ -1063,28 +1114,36 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should set the owner field (member with owner role found)", func() {
 				projectCopy := project.DeepCopy()
+				coreProjectCopy := coreProject.DeepCopy()
 				ownerMember := &rbacv1.Subject{
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     rbacv1.UserKind,
 					Name:     "owner",
 				}
 				projectCopy.Name = "foo"
-				projectCopy.Spec.Members = []core.ProjectMember{
+				projectCopy.Spec.Members = []gardencorev1beta1.ProjectMember{
+					{
+						Subject: *ownerMember,
+						Roles:   []string{core.ProjectMemberOwner},
+					},
+				}
+				coreProjectCopy.Name = "foo"
+				coreProjectCopy.Spec.Members = []core.ProjectMember{
 					{
 						Subject: *ownerMember,
 						Roles:   []string{core.ProjectMemberOwner},
 					},
 				}
 
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(projectCopy)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(projectCopy)).To(Succeed())
 
-				attrs := admission.NewAttributesRecord(projectCopy, nil, core.Kind("Project").WithVersion("version"), projectCopy.Namespace, projectCopy.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(coreProjectCopy, nil, core.Kind("Project").WithVersion("version"), coreProjectCopy.Namespace, coreProjectCopy.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(projectCopy.Spec.Owner).To(Equal(ownerMember))
-				Expect(projectCopy.Spec.CreatedBy).To(Equal(&rbacv1.Subject{
+				Expect(coreProjectCopy.Spec.Owner).To(Equal(ownerMember))
+				Expect(coreProjectCopy.Spec.CreatedBy).To(Equal(&rbacv1.Subject{
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     rbacv1.UserKind,
 					Name:     defaultUserName,
@@ -1092,14 +1151,14 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should set the owner field", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 
-				attrs := admission.NewAttributesRecord(&project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(&coreProject, nil, core.Kind("Project").WithVersion("version"), coreProject.Namespace, coreProject.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(project.Spec.Owner).To(Equal(&rbacv1.Subject{
+				Expect(coreProject.Spec.Owner).To(Equal(&rbacv1.Subject{
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     rbacv1.UserKind,
 					Name:     defaultUserName,
@@ -1107,14 +1166,14 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should add the owner to members", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 
-				attrs := admission.NewAttributesRecord(&project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(&coreProject, nil, core.Kind("Project").WithVersion("version"), coreProject.Namespace, coreProject.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(project.Spec.Members).To(ContainElement(Equal(core.ProjectMember{
+				Expect(coreProject.Spec.Members).To(ContainElement(Equal(core.ProjectMember{
 					Subject: rbacv1.Subject{
 						APIGroup: "rbac.authorization.k8s.io",
 						Kind:     rbacv1.UserKind,
@@ -1132,9 +1191,10 @@ var _ = Describe("resourcereferencemanager", func() {
 				projectCopy := project.DeepCopy()
 				projectCopy.Name = "project-2"
 				projectCopy.Spec.Namespace = ptr.To("garden-bar")
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(projectCopy)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(projectCopy)).To(Succeed())
 
-				attrs := admission.NewAttributesRecord(&project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+				coreProject.Spec.Namespace = ptr.To("garden-foo")
+				attrs := admission.NewAttributesRecord(&coreProject, nil, core.Kind("Project").WithVersion("version"), coreProject.Namespace, coreProject.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -1147,10 +1207,12 @@ var _ = Describe("resourcereferencemanager", func() {
 				project.Spec.Namespace = ptr.To("garden-foo")
 				projectCopy.Name = "project-2"
 				projectCopy.Spec.Namespace = ptr.To("garden-bar")
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(projectOld)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(projectCopy)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(projectOld)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(projectCopy)).To(Succeed())
 
-				attrs := admission.NewAttributesRecord(&project, projectOld, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+				coreProjectOld := coreProject.DeepCopy()
+				coreProject.Spec.Namespace = ptr.To("garden-foo")
+				attrs := admission.NewAttributesRecord(&coreProject, coreProjectOld, core.Kind("Project").WithVersion("version"), coreProject.Namespace, coreProject.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -1160,9 +1222,9 @@ var _ = Describe("resourcereferencemanager", func() {
 			It("should allow specifying multiple projects w/o a namespace", func() {
 				projectCopy := project.DeepCopy()
 				projectCopy.Name = "project-2"
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(projectCopy)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(projectCopy)).To(Succeed())
 
-				attrs := admission.NewAttributesRecord(&project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(&coreProject, nil, core.Kind("Project").WithVersion("version"), coreProject.Namespace, coreProject.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -1170,12 +1232,13 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should forbid specifying a namespace which is already used by another project (create)", func() {
-				project.Spec.Namespace = ptr.To("garden-foo")
 				projectCopy := project.DeepCopy()
+				projectCopy.Spec.Namespace = ptr.To("garden-foo")
 				projectCopy.Name = "project-2"
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(projectCopy)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(projectCopy)).To(Succeed())
 
-				attrs := admission.NewAttributesRecord(&project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+				coreProject.Spec.Namespace = ptr.To("garden-foo")
+				attrs := admission.NewAttributesRecord(&coreProject, nil, core.Kind("Project").WithVersion("version"), coreProject.Namespace, coreProject.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -1192,10 +1255,12 @@ var _ = Describe("resourcereferencemanager", func() {
 				project.Spec.Namespace = ptr.To("garden-foo")
 				projectCopy := project.DeepCopy()
 				projectCopy.Name = "project-2"
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(projectOld)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(projectCopy)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(projectOld)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(projectCopy)).To(Succeed())
 
-				attrs := admission.NewAttributesRecord(&project, projectOld, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+				coreProjectOld := coreProject
+				coreProject.Spec.Namespace = ptr.To("garden-foo")
+				attrs := admission.NewAttributesRecord(&coreProject, &coreProjectOld, core.Kind("Project").WithVersion("version"), coreProject.Namespace, coreProject.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -1214,13 +1279,13 @@ var _ = Describe("resourcereferencemanager", func() {
 				{Version: "1.24.1"},
 				{Version: "1.24.0"},
 			}
-			shootOne := shootBase
+			shootOne := shoot.DeepCopy()
 			shootOne.Name = "shoot-One"
 			shootOne.Spec.Provider.Type = "aws"
 			shootOne.Spec.CloudProfileName = "aws-profile"
 			shootOne.Spec.Kubernetes.Version = "1.24.2"
 
-			shootTwo := shootOne
+			shootTwo := shootOne.DeepCopy()
 			shootTwo.Name = "shoot-Two"
 			shootTwo.Spec.Kubernetes.Version = "1.24.1"
 			var (
@@ -1234,8 +1299,8 @@ var _ = Describe("resourcereferencemanager", func() {
 				}
 			)
 			It("should accept if no kubernetes version has been removed", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootOne)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootTwo)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootOne)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootTwo)).To(Succeed())
 
 				attrs := admission.NewAttributesRecord(&cloudProfile, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
@@ -1245,8 +1310,8 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should accept removal of kubernetes version that is not in use by any shoot", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootOne)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootTwo)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootOne)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootTwo)).To(Succeed())
 
 				cloudProfileNew := cloudProfile
 				cloudProfileNew.Spec = core.CloudProfileSpec{
@@ -1266,8 +1331,8 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should reject removal of kubernetes versions that are still in use by shoots", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootOne)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootTwo)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootOne)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootTwo)).To(Succeed())
 
 				cloudProfileNew := cloudProfile
 				cloudProfileNew.Spec = core.CloudProfileSpec{
@@ -1288,11 +1353,11 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should accept removal of kubernetes version that is still in use by a shoot that is being deleted", func() {
 				t := metav1.Now()
-				shootTwoDeleted := shootTwo
+				shootTwoDeleted := shootTwo.DeepCopy()
 				shootTwoDeleted.DeletionTimestamp = &t
 
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootOne)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootTwoDeleted)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootOne)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootTwoDeleted)).To(Succeed())
 
 				cloudProfileNew := cloudProfile
 				cloudProfileNew.Spec = core.CloudProfileSpec{
@@ -1339,40 +1404,40 @@ var _ = Describe("resourcereferencemanager", func() {
 					},
 				},
 			}
-			shootOne := shootBase
+			shootOne := shoot.DeepCopy()
 			shootOne.Name = "shoot-One"
 			shootOne.Spec.Provider.Type = "aws"
 			shootOne.Spec.CloudProfileName = "aws-profile"
-			shootOne.Spec.Provider.Workers = []core.Worker{
+			shootOne.Spec.Provider.Workers = []gardencorev1beta1.Worker{
 				{
 					Name: "coreos-worker",
-					Machine: core.Machine{
-						Image: &core.ShootMachineImage{
+					Machine: gardencorev1beta1.Machine{
+						Image: &gardencorev1beta1.ShootMachineImage{
 							Name:    "coreos",
-							Version: "1.17.3",
+							Version: ptr.To("1.17.3"),
 						},
 					},
 				},
 			}
 
-			shootTwo := shootOne
+			shootTwo := shootOne.DeepCopy()
 			shootTwo.Name = "shoot-Two"
-			shootTwo.Spec.Provider.Workers = []core.Worker{
+			shootTwo.Spec.Provider.Workers = []gardencorev1beta1.Worker{
 				{
 					Name: "ubuntu-worker-1",
-					Machine: core.Machine{
-						Image: &core.ShootMachineImage{
+					Machine: gardencorev1beta1.Machine{
+						Image: &gardencorev1beta1.ShootMachineImage{
 							Name:    "ubuntu",
-							Version: "1.17.2",
+							Version: ptr.To("1.17.2"),
 						},
 					},
 				},
 				{
 					Name: "ubuntu-worker-2",
-					Machine: core.Machine{
-						Image: &core.ShootMachineImage{
+					Machine: gardencorev1beta1.Machine{
+						Image: &gardencorev1beta1.ShootMachineImage{
 							Name:    "ubuntu",
-							Version: "1.17.1",
+							Version: ptr.To("1.17.1"),
 						},
 					},
 				},
@@ -1396,8 +1461,8 @@ var _ = Describe("resourcereferencemanager", func() {
 				}
 			)
 			It("should accept if no machine image version has been removed", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootOne)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootTwo)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootOne)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootTwo)).To(Succeed())
 
 				attrs := admission.NewAttributesRecord(&cloudProfile, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
@@ -1406,8 +1471,8 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 			It("should accept removal of a machine version that is not in use by any shoot", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootOne)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootTwo)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootOne)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootTwo)).To(Succeed())
 
 				newVersions := []core.MachineImageVersion{
 					{
@@ -1450,8 +1515,8 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should reject removal of a machine image version that is in use by a shoot", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootOne)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootTwo)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootOne)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootTwo)).To(Succeed())
 
 				newVersions := []core.MachineImageVersion{
 					{
@@ -1499,11 +1564,11 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should accept removal of a machine image version that is in use by a shoot that is being deleted", func() {
 				t := metav1.Now()
-				shootTwoDeleted := shootTwo
+				shootTwoDeleted := shootTwo.DeepCopy()
 				shootTwoDeleted.DeletionTimestamp = &t
 
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootOne)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootTwoDeleted)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootOne)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootTwoDeleted)).To(Succeed())
 
 				newVersions := []core.MachineImageVersion{
 					{
@@ -1549,29 +1614,29 @@ var _ = Describe("resourcereferencemanager", func() {
 			// Shoot uses Machine Image that does not exist in the CloudProfile and uses machine image version that should be removed
 			It("should reject deletion of image version", func() {
 				s := shootTwo.DeepCopy()
-				s.Spec.Provider.Workers = []core.Worker{
+				s.Spec.Provider.Workers = []gardencorev1beta1.Worker{
 					{
 						Name: "dummy-worker-1",
-						Machine: core.Machine{
-							Image: &core.ShootMachineImage{
+						Machine: gardencorev1beta1.Machine{
+							Image: &gardencorev1beta1.ShootMachineImage{
 								Name: "dummy",
 								// version does not matter for this test, as image does not exist
-								Version: "1.1.1",
+								Version: ptr.To("1.1.1"),
 							},
 						},
 					},
 					{
 						Name: "ubuntu-worker",
-						Machine: core.Machine{
-							Image: &core.ShootMachineImage{
+						Machine: gardencorev1beta1.Machine{
+							Image: &gardencorev1beta1.ShootMachineImage{
 								Name:    "ubuntu",
-								Version: "1.17.2",
+								Version: ptr.To("1.17.2"),
 							},
 						},
 					},
 				}
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootOne)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(s)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootOne)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(s)).To(Succeed())
 
 				newVersions := []core.MachineImageVersion{
 					{
@@ -1615,8 +1680,8 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should reject removal of a whole machine image which versions are in use by a shoot", func() {
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootOne)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootTwo)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootOne)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootTwo)).To(Succeed())
 
 				newVersions := []core.MachineImageVersion{
 					{
@@ -1698,9 +1763,9 @@ var _ = Describe("resourcereferencemanager", func() {
 			rm, _ := New()
 
 			internalGardenClient := &internalclientset.Clientset{}
-			rm.SetInternalCoreClientset(internalGardenClient)
+			rm.SetExternalCoreClientSet(internalGardenClient)
 
-			rm.SetInternalCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
+			rm.SetExternalCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 
 			fakeAuthorizer := fakeAuthorizerType{}
 			rm.SetAuthorizer(fakeAuthorizer)

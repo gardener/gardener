@@ -28,9 +28,9 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	"github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	"github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	plugin "github.com/gardener/gardener/plugin/pkg"
@@ -49,7 +49,7 @@ func NewFactory(_ io.Reader) (admission.Interface, error) {
 // DeletionConfirmation contains an admission handler and listers.
 type DeletionConfirmation struct {
 	*admission.Handler
-	gardenCoreClient internalversion.Interface
+	gardenCoreClient versioned.Interface
 	shootLister      gardencorelisters.ShootLister
 	shootStateLister gardencorelisters.ShootStateLister
 	projectLister    gardencorelisters.ProjectLister
@@ -57,8 +57,8 @@ type DeletionConfirmation struct {
 }
 
 var (
-	_ = admissioninitializer.WantsInternalCoreInformerFactory(&DeletionConfirmation{})
-	_ = admissioninitializer.WantsInternalCoreClientset(&DeletionConfirmation{})
+	_ = admissioninitializer.WantsExternalCoreInformerFactory(&DeletionConfirmation{})
+	_ = admissioninitializer.WantsExternalCoreClientSet(&DeletionConfirmation{})
 
 	readyFuncs []admission.ReadyFunc
 )
@@ -76,15 +76,15 @@ func (d *DeletionConfirmation) AssignReadyFunc(f admission.ReadyFunc) {
 	d.SetReadyFunc(f)
 }
 
-// SetInternalCoreInformerFactory gets Lister from SharedInformerFactory.
-func (d *DeletionConfirmation) SetInternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
-	shootInformer := f.Core().InternalVersion().Shoots()
+// SetExternalCoreInformerFactory gets Lister from SharedInformerFactory.
+func (d *DeletionConfirmation) SetExternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+	shootInformer := f.Core().V1beta1().Shoots()
 	d.shootLister = shootInformer.Lister()
 
-	projectInformer := f.Core().InternalVersion().Projects()
+	projectInformer := f.Core().V1beta1().Projects()
 	d.projectLister = projectInformer.Lister()
 
-	shootStateInformer := f.Core().InternalVersion().ShootStates()
+	shootStateInformer := f.Core().V1beta1().ShootStates()
 	d.shootStateLister = shootStateInformer.Lister()
 
 	readyFuncs = append(
@@ -95,8 +95,8 @@ func (d *DeletionConfirmation) SetInternalCoreInformerFactory(f gardencoreinform
 	)
 }
 
-// SetInternalCoreClientset gets the clientset from the Kubernetes client.
-func (d *DeletionConfirmation) SetInternalCoreClientset(c internalversion.Interface) {
+// SetExternalCoreClientSet gets the clientset from the Kubernetes client.
+func (d *DeletionConfirmation) SetExternalCoreClientSet(c versioned.Interface) {
 	d.gardenCoreClient = c
 }
 
@@ -146,7 +146,7 @@ func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attribu
 			return d.shootLister.Shoots(a.GetNamespace()).Get(a.GetName())
 		}
 		liveLookup = func() (client.Object, error) {
-			return d.gardenCoreClient.Core().Shoots(a.GetNamespace()).Get(ctx, a.GetName(), kubernetes.DefaultGetOptions())
+			return d.gardenCoreClient.CoreV1beta1().Shoots(a.GetNamespace()).Get(ctx, a.GetName(), kubernetes.DefaultGetOptions())
 		}
 		checkFunc = gardenerutils.CheckIfDeletionIsConfirmed
 
@@ -166,7 +166,7 @@ func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attribu
 			return d.projectLister.Get(a.GetName())
 		}
 		liveLookup = func() (client.Object, error) {
-			return d.gardenCoreClient.Core().Projects().Get(ctx, a.GetName(), kubernetes.DefaultGetOptions())
+			return d.gardenCoreClient.CoreV1beta1().Projects().Get(ctx, a.GetName(), kubernetes.DefaultGetOptions())
 		}
 		checkFunc = gardenerutils.CheckIfDeletionIsConfirmed
 
@@ -186,7 +186,7 @@ func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attribu
 			return d.shootStateLister.ShootStates(a.GetNamespace()).Get(a.GetName())
 		}
 		liveLookup = func() (client.Object, error) {
-			return d.gardenCoreClient.Core().ShootStates(a.GetNamespace()).Get(ctx, a.GetName(), kubernetes.DefaultGetOptions())
+			return d.gardenCoreClient.CoreV1beta1().ShootStates(a.GetNamespace()).Get(ctx, a.GetName(), kubernetes.DefaultGetOptions())
 		}
 		checkFunc = gardenerutils.CheckIfDeletionIsConfirmed
 
