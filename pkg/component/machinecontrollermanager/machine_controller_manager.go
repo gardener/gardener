@@ -513,8 +513,5 @@ func (m *machineControllerManager) checkUnsupportedClusterRoleBindingSeed(ctx co
 		return false, err
 	}
 
-	if crb.RoleRef.Name == unsupportedClusterRoleName {
-		return true, nil
-	}
-	return false, nil
+	return crb.RoleRef.Name == unsupportedClusterRoleName, nil
 }

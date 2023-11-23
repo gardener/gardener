@@ -577,6 +577,7 @@ subjects:
 			managedResourceSecret.ResourceVersion = "1"
 			Expect(actualManagedResourceSecret).To(Equal(managedResourceSecret))
 		})
+
 		It("should successfully delete unsupported clusterrolebinding and create new one", func() {
 			Expect(fakeClient.Create(ctx, unsupportedClusterRoleBindingSeed)).To(Succeed())
 			Expect(mcm.Deploy(ctx)).To(Succeed())
