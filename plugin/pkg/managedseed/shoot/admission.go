@@ -25,11 +25,11 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
 
-	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
@@ -51,8 +51,8 @@ type Shoot struct {
 }
 
 var (
-	_ = admissioninitializer.WantsInternalCoreInformerFactory(&Shoot{})
-	_ = admissioninitializer.WantsSeedManagementClientset(&Shoot{})
+	_ = admissioninitializer.WantsExternalCoreInformerFactory(&Shoot{})
+	_ = admissioninitializer.WantsSeedManagementClientSet(&Shoot{})
 
 	readyFuncs []admission.ReadyFunc
 )
@@ -70,16 +70,16 @@ func (v *Shoot) AssignReadyFunc(f admission.ReadyFunc) {
 	v.SetReadyFunc(f)
 }
 
-// SetInternalCoreInformerFactory gets Lister from SharedInformerFactory.
-func (v *Shoot) SetInternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
-	shootInformer := f.Core().InternalVersion().Shoots()
+// SetExternalCoreInformerFactory gets Lister from SharedInformerFactory.
+func (v *Shoot) SetExternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+	shootInformer := f.Core().V1beta1().Shoots()
 	v.shootLister = shootInformer.Lister()
 
 	readyFuncs = append(readyFuncs, shootInformer.Informer().HasSynced)
 }
 
-// SetSeedManagementClientset sets the garden seedmanagement clientset.
-func (v *Shoot) SetSeedManagementClientset(c seedmanagementclientset.Interface) {
+// SetSeedManagementClientSet sets the garden seedmanagement clientset.
+func (v *Shoot) SetSeedManagementClientSet(c seedmanagementclientset.Interface) {
 	v.seedManagementClient = c
 }
 
@@ -182,7 +182,7 @@ func (v *Shoot) getManagedSeeds(ctx context.Context, selector labels.Selector) (
 	return managedSeedList.Items, nil
 }
 
-func (v *Shoot) getShoots(selector labels.Selector) ([]*core.Shoot, error) {
+func (v *Shoot) getShoots(selector labels.Selector) ([]*gardencorev1beta1.Shoot, error) {
 	shoots, err := v.shootLister.List(selector)
 	if err != nil {
 		return nil, apierrors.NewInternalError(err)

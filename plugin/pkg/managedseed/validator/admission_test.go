@@ -36,8 +36,8 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	corefake "github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	corefake "github.com/gardener/gardener/pkg/client/core/clientset/versioned/fake"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	fakeseedmanagement "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/fake"
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -60,7 +60,7 @@ var _ = Describe("ManagedSeed", func() {
 	Describe("#Admit", func() {
 		var (
 			managedSeed          *seedmanagement.ManagedSeed
-			shoot                *core.Shoot
+			shoot                *gardencorev1beta1.Shoot
 			secret               *corev1.Secret
 			seed                 *core.Seed
 			coreInformerFactory  gardencoreinformers.SharedInformerFactory
@@ -83,30 +83,30 @@ var _ = Describe("ManagedSeed", func() {
 				},
 			}
 
-			shoot = &core.Shoot{
+			shoot = &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
 				},
-				Spec: core.ShootSpec{
-					DNS: &core.DNS{
+				Spec: gardencorev1beta1.ShootSpec{
+					DNS: &gardencorev1beta1.DNS{
 						Domain: ptr.To(domain),
 					},
-					Kubernetes: core.Kubernetes{
+					Kubernetes: gardencorev1beta1.Kubernetes{
 						EnableStaticTokenKubeconfig: ptr.To(true),
 						Version:                     "1.27.5",
-						VerticalPodAutoscaler: &core.VerticalPodAutoscaler{
+						VerticalPodAutoscaler: &gardencorev1beta1.VerticalPodAutoscaler{
 							Enabled: true,
 						},
 					},
-					Networking: &core.Networking{
+					Networking: &gardencorev1beta1.Networking{
 						Pods:     ptr.To("100.96.0.0/11"),
 						Nodes:    ptr.To("10.250.0.0/16"),
 						Services: ptr.To("100.64.0.0/13"),
 					},
-					Provider: core.Provider{
+					Provider: gardencorev1beta1.Provider{
 						Type: provider,
-						Workers: []core.Worker{
+						Workers: []gardencorev1beta1.Worker{
 							{Zones: []string{zone1, zone2}},
 						},
 					},
@@ -169,18 +169,18 @@ var _ = Describe("ManagedSeed", func() {
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-			admissionHandler.SetInternalCoreInformerFactory(coreInformerFactory)
+			admissionHandler.SetExternalCoreInformerFactory(coreInformerFactory)
 
 			coreClient = &corefake.Clientset{}
-			admissionHandler.SetInternalCoreClientset(coreClient)
+			admissionHandler.SetExternalCoreClientSet(coreClient)
 
 			seedManagementClient = &fakeseedmanagement.Clientset{}
-			admissionHandler.SetSeedManagementClientset(seedManagementClient)
+			admissionHandler.SetSeedManagementClientSet(seedManagementClient)
 
 			kubeInformerFactory = kubeinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetKubeInformerFactory(kubeInformerFactory)
 
-			Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 		})
 
 		It("should do nothing if the resource is not a ManagedSeed", func() {
@@ -217,7 +217,7 @@ var _ = Describe("ManagedSeed", func() {
 		})
 
 		It("should forbid the ManagedSeed creation if the Shoot does not exist", func() {
-			Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Delete(shoot)).To(Succeed())
+			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Delete(shoot)).To(Succeed())
 
 			err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
 			Expect(err).To(BeInvalidError())
@@ -230,7 +230,7 @@ var _ = Describe("ManagedSeed", func() {
 		})
 
 		It("should forbid the ManagedSeed if the Shoot does not have any worker", func() {
-			shoot.Spec.Provider.Workers = []core.Worker{}
+			shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{}
 
 			err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
 			Expect(err).To(BeInvalidError())
@@ -257,9 +257,9 @@ var _ = Describe("ManagedSeed", func() {
 		})
 
 		It("should forbid the ManagedSeed creation if the Shoot enables the nginx-ingress addon", func() {
-			shoot.Spec.Addons = &core.Addons{
-				NginxIngress: &core.NginxIngress{
-					Addon: core.Addon{
+			shoot.Spec.Addons = &gardencorev1beta1.Addons{
+				NginxIngress: &gardencorev1beta1.NginxIngress{
+					Addon: gardencorev1beta1.Addon{
 						Enabled: true,
 					},
 				},
@@ -465,18 +465,18 @@ var _ = Describe("ManagedSeed", func() {
 
 			Context("when topology-aware routing Seed setting is enabled", func() {
 				It("it should forbid when the TopologyAwareHints feature gate is disabled", func() {
-					shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
-						KubernetesConfig: core.KubernetesConfig{
+					shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
+						KubernetesConfig: gardencorev1beta1.KubernetesConfig{
 							FeatureGates: map[string]bool{"TopologyAwareHints": false},
 						},
 					}
-					shoot.Spec.Kubernetes.KubeControllerManager = &core.KubeControllerManagerConfig{
-						KubernetesConfig: core.KubernetesConfig{
+					shoot.Spec.Kubernetes.KubeControllerManager = &gardencorev1beta1.KubeControllerManagerConfig{
+						KubernetesConfig: gardencorev1beta1.KubernetesConfig{
 							FeatureGates: map[string]bool{"TopologyAwareHints": false},
 						},
 					}
-					shoot.Spec.Kubernetes.KubeProxy = &core.KubeProxyConfig{
-						KubernetesConfig: core.KubernetesConfig{
+					shoot.Spec.Kubernetes.KubeProxy = &gardencorev1beta1.KubeProxyConfig{
+						KubernetesConfig: gardencorev1beta1.KubernetesConfig{
 							FeatureGates: map[string]bool{"TopologyAwareHints": false},
 						},
 					}
@@ -525,16 +525,16 @@ var _ = Describe("ManagedSeed", func() {
 				})
 
 				It("should allow the ManagedSeed creation when the TopologyAwareHints feature gate is not disabled", func() {
-					shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{}
-					shoot.Spec.Kubernetes.KubeControllerManager = &core.KubeControllerManagerConfig{
-						KubernetesConfig: core.KubernetesConfig{
+					shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{}
+					shoot.Spec.Kubernetes.KubeControllerManager = &gardencorev1beta1.KubeControllerManagerConfig{
+						KubernetesConfig: gardencorev1beta1.KubernetesConfig{
 							FeatureGates: map[string]bool{
 								"TopologyAwareHints": true,
 							},
 						},
 					}
-					shoot.Spec.Kubernetes.KubeProxy = &core.KubeProxyConfig{
-						KubernetesConfig: core.KubernetesConfig{
+					shoot.Spec.Kubernetes.KubeProxy = &gardencorev1beta1.KubeProxyConfig{
+						KubernetesConfig: gardencorev1beta1.KubernetesConfig{
 							FeatureGates: map[string]bool{},
 						},
 					}
@@ -615,8 +615,8 @@ var _ = Describe("ManagedSeed", func() {
 						return true, shoot, nil
 					})
 
-					shoot := &core.Shoot{Spec: core.ShootSpec{SeedName: &newManagedSeed.Name}}
-					Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+					shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: &newManagedSeed.Name}}
+					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 
 					err := admissionHandler.Admit(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)
 					Expect(err).To(BeInvalidError())
@@ -642,7 +642,7 @@ var _ = Describe("ManagedSeed", func() {
 					})
 
 					shoot := &core.Shoot{Spec: core.ShootSpec{SeedName: &newManagedSeed.Name}}
-					Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 
 					err := admissionHandler.Admit(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)
 					Expect(err).To(BeInvalidError())
@@ -717,9 +717,9 @@ var _ = Describe("ManagedSeed", func() {
 
 		It("should not fail if the required clients are set", func() {
 			admissionHandler, _ := New()
-			admissionHandler.SetInternalCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
-			admissionHandler.SetInternalCoreClientset(&corefake.Clientset{})
-			admissionHandler.SetSeedManagementClientset(&fakeseedmanagement.Clientset{})
+			admissionHandler.SetExternalCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
+			admissionHandler.SetExternalCoreClientSet(&corefake.Clientset{})
+			admissionHandler.SetSeedManagementClientSet(&fakeseedmanagement.Clientset{})
 			admissionHandler.SetKubeInformerFactory(kubeinformers.NewSharedInformerFactory(nil, 0))
 
 			err := admissionHandler.ValidateInitialization()
