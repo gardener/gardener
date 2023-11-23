@@ -2289,6 +2289,41 @@ var _ = Describe("validator", func() {
 					Expect(err).ToNot(HaveOccurred())
 				})
 
+				It("should forbid updating a cluster with a new worker pool with an expired worker group kubernetes version", func() {
+					oldShoot := shoot.DeepCopy()
+					shoot.Spec.Kubernetes.Version = highestSupportedVersion.Version
+
+					// add new worker pool with expired Kubernetes version
+					newWorker := core.Worker{
+						Name:       "worker-new",
+						Kubernetes: &core.WorkerKubernetes{Version: &expiredVersion.Version},
+						Machine: core.Machine{
+							Type: "machine-type-1",
+							Image: &core.ShootMachineImage{
+								Name: validMachineImageName,
+							},
+							Architecture: pointer.String("amd64"),
+						},
+						Minimum: 1,
+						Maximum: 1,
+						Volume: &core.Volume{
+							VolumeSize: "40Gi",
+							Type:       &volumeType,
+						},
+						Zones: []string{"europe-a"},
+					}
+
+					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, newWorker)
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(HaveOccurred())
+					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("spec.provider.workers[1].kubernetes.version: Unsupported value: \"1.26.8\"")))
+				})
+
 				It("should allow to delete a cluster with an expired worker group kubernetes version", func() {
 					shoot.Spec.Kubernetes.Version = highestSupportedVersion.Version
 					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: &expiredVersion.Version}
@@ -3556,7 +3591,119 @@ var _ = Describe("validator", func() {
 						Expect(err.Error()).To(ContainSubstring("machine image 'constraint-image-name@1.2.3' does not support kubelet version '1.25.0', supported kubelet versions by this machine image version: '>= 1.26'"))
 					})
 
-					It("should allow updating to an expired machine image", func() {
+					It("should forbid creating a new worker pool with an expired machine image version", func() {
+						cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages,
+							core.MachineImage{
+								Name: "constraint-image-name",
+								Versions: []core.MachineImageVersion{
+									{
+										ExpirableVersion: core.ExpirableVersion{
+											Version:        "1.2.4",
+											ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)},
+										},
+										Architectures: []string{"amd64"},
+									},
+								},
+							},
+						)
+
+						shoot.Spec.Provider.Workers = []core.Worker{
+							{
+								Machine: core.Machine{
+									Type: "machine-type-1",
+									Image: &core.ShootMachineImage{
+										Name:    "constraint-image-name",
+										Version: "1.2.4",
+									},
+									Architecture: pointer.String("amd64"),
+								},
+							},
+						}
+
+						newShoot := shoot.DeepCopy()
+
+						newWorker := core.Worker{
+							Name: "new-worker",
+							Machine: core.Machine{
+								Type: "machine-type-1",
+								Image: &core.ShootMachineImage{
+									Name: "constraint-image-name",
+									// expired version
+									Version: "1.2.4",
+								},
+								Architecture: pointer.String("amd64"),
+							},
+						}
+
+						newShoot.Spec.Provider.Workers = append(newShoot.Spec.Provider.Workers, newWorker)
+
+						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).To(BeForbiddenError())
+						Expect(err.Error()).To(ContainSubstring("machine image version 'constraint-image-name:1.2.4' is expired"))
+						Expect(err.Error()).To(ContainSubstring("spec.provider.workers[1].machine.image"))
+					})
+
+					It("should forbid updating an existing worker pool machine image to a lower expired version", func() {
+						cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages,
+							core.MachineImage{
+								Name: "constraint-image-name",
+								Versions: []core.MachineImageVersion{
+									{
+										ExpirableVersion: core.ExpirableVersion{
+											Version: "1.2.4",
+										},
+										Architectures: []string{"amd64"},
+									},
+									{
+										ExpirableVersion: core.ExpirableVersion{
+											Version:        "1.2.3",
+											ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)},
+										},
+										Architectures: []string{"amd64"},
+									},
+								},
+							},
+						)
+
+						shoot.Spec.Provider.Workers = []core.Worker{
+							{
+								Machine: core.Machine{
+									Type: "machine-type-1",
+									Image: &core.ShootMachineImage{
+										Name:    "constraint-image-name",
+										Version: "1.2.4",
+									},
+									Architecture: pointer.String("amd64"),
+								},
+							},
+						}
+
+						newShoot := shoot.DeepCopy()
+
+						newShoot.Spec.Provider.Workers = []core.Worker{
+							{
+								Machine: core.Machine{
+									Type: "machine-type-1",
+									Image: &core.ShootMachineImage{
+										Name: "constraint-image-name",
+										// updated to lower expired version
+										Version: "1.2.3",
+									},
+									Architecture: pointer.String("amd64"),
+								},
+							},
+						}
+
+						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).To(BeForbiddenError())
+						Expect(err.Error()).To(ContainSubstring("machine image version 'constraint-image-name:1.2.3' is expired"))
+					})
+
+					It("should allow updating to a higher expired machine image for an existing worker pool", func() {
 						cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages,
 							core.MachineImage{
 								Name: "constraint-image-name",
@@ -3599,7 +3746,7 @@ var _ = Describe("validator", func() {
 									Type: "machine-type-1",
 									Image: &core.ShootMachineImage{
 										Name: "constraint-image-name",
-										// updated to expired version
+										// updated to higher expired version
 										Version: "1.2.4",
 									},
 									Architecture: pointer.String("amd64"),
