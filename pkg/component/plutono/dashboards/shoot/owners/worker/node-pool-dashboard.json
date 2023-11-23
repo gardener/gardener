@@ -684,7 +684,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Kubelet versions of nodes in Worker Group(s) All",
+      "title": "Kubelet versions of nodes in Worker Group(s) $worker_group",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -781,7 +781,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "OS Image of Nodes in Worker Group(s) All",
+      "title": "OS Image of Nodes in Worker Group(s) $worker_group",
       "tooltip": {
         "shared": true,
         "sort": 0,
