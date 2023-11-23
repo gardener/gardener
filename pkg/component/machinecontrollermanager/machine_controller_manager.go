@@ -504,6 +504,7 @@ func getLabels() map[string]string {
 	}
 }
 
+// TODO(himanshu-kun): remove after g/g v1.88 has been released
 func (m *machineControllerManager) checkUnsupportedClusterRoleBindingSeed(ctx context.Context) (bool, error) {
 	crb := &rbacv1.ClusterRoleBinding{}
 	if err := m.client.Get(ctx, client.ObjectKeyFromObject(m.emptyClusterRoleBindingSeed()), crb); err != nil {

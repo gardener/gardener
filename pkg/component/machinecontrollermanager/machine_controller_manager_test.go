@@ -587,6 +587,16 @@ subjects:
 			clusterRoleBinding.ResourceVersion = "1"
 			Expect(actualClusterRoleBinding).To(Equal(clusterRoleBinding))
 		})
+
+		It("should not delete supported clusterrolebinding, if already present", func() {
+			Expect(fakeClient.Create(ctx, clusterRoleBinding)).To(Succeed())
+			Expect(mcm.Deploy(ctx)).To(Succeed())
+
+			actualClusterRoleBinding := &rbacv1.ClusterRoleBinding{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), actualClusterRoleBinding)).To(Succeed())
+			clusterRoleBinding.ResourceVersion = "2"
+			Expect(actualClusterRoleBinding).To(Equal(clusterRoleBinding))
+		})
 	})
 
 	Describe("#Destroy", func() {
