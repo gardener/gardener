@@ -26,8 +26,8 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 )
@@ -48,7 +48,7 @@ type ValidateSeed struct {
 }
 
 var (
-	_ = admissioninitializer.WantsInternalCoreInformerFactory(&ValidateSeed{})
+	_ = admissioninitializer.WantsExternalCoreInformerFactory(&ValidateSeed{})
 
 	readyFuncs []admission.ReadyFunc
 )
@@ -66,15 +66,15 @@ func (v *ValidateSeed) AssignReadyFunc(f admission.ReadyFunc) {
 	v.SetReadyFunc(f)
 }
 
-// SetInternalCoreInformerFactory gets Lister from SharedInformerFactory.
-func (v *ValidateSeed) SetInternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
-	seedInformer := f.Core().InternalVersion().Seeds()
+// SetExternalCoreInformerFactory gets Lister from SharedInformerFactory.
+func (v *ValidateSeed) SetExternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+	seedInformer := f.Core().V1beta1().Seeds()
 	v.seedLister = seedInformer.Lister()
 
-	shootInformer := f.Core().InternalVersion().Shoots()
+	shootInformer := f.Core().V1beta1().Shoots()
 	v.shootLister = shootInformer.Lister()
 
-	backupBucketInformer := f.Core().InternalVersion().BackupBuckets()
+	backupBucketInformer := f.Core().V1beta1().BackupBuckets()
 
 	readyFuncs = append(readyFuncs, seedInformer.Informer().HasSynced, shootInformer.Informer().HasSynced, backupBucketInformer.Informer().HasSynced)
 }
