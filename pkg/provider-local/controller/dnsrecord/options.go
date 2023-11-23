@@ -24,8 +24,6 @@ import (
 type ControllerOptions struct {
 	// MaxConcurrentReconciles are the maximum concurrent reconciles.
 	MaxConcurrentReconciles int
-	// WriteToHostsFile specifies whether to enable hosts management via /etc/hosts.
-	WriteToHostsFile bool
 
 	config *ControllerConfig
 }
@@ -33,12 +31,11 @@ type ControllerOptions struct {
 // AddFlags implements Flagger.AddFlags.
 func (c *ControllerOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.IntVar(&c.MaxConcurrentReconciles, cmd.MaxConcurrentReconcilesFlag, c.MaxConcurrentReconciles, "The maximum number of concurrent reconciliations.")
-	fs.BoolVar(&c.WriteToHostsFile, "write-to-hosts-file", true, "Whether to enable hosts management via /etc/hosts.")
 }
 
 // Complete implements Completer.Complete.
 func (c *ControllerOptions) Complete() error {
-	c.config = &ControllerConfig{c.MaxConcurrentReconciles, c.WriteToHostsFile}
+	c.config = &ControllerConfig{c.MaxConcurrentReconciles}
 	return nil
 }
 
@@ -51,12 +48,9 @@ func (c *ControllerOptions) Completed() *ControllerConfig {
 type ControllerConfig struct {
 	// MaxConcurrentReconciles is the maximum number of concurrent reconciles.
 	MaxConcurrentReconciles int
-	// WriteToHostsFile specifies whether to enable hosts management via /etc/hosts.
-	WriteToHostsFile bool
 }
 
 // Apply sets the values of this ControllerConfig in the given AddOptions.
 func (c *ControllerConfig) Apply(opts *AddOptions) {
 	opts.Controller.MaxConcurrentReconciles = c.MaxConcurrentReconciles
-	opts.WriteToHostsFile = c.WriteToHostsFile
 }

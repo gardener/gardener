@@ -18,15 +18,11 @@ The motivation for maintaining such extension is the following:
 The following enlists the current limitations of the implementation.
 Please note that all of them are not technical limitations/blockers, but simply advanced scenarios that we haven't had invested yet into.
 
-1. No owner TXT `DNSRecord`s (hence, no ["bad-case" control plane migration](../proposals/17-shoot-control-plane-migration-bad-case.md)).
-
-   _In order to realize DNS (see the [Implementation Details](#implementation-details) section below), the `/etc/hosts` file is manipulated. This does not work for TXT records. In the future, we could look into using [CoreDNS](https://coredns.io/) instead._
-
-2. No load balancers for Shoot clusters.
+1. No load balancers for Shoot clusters.
 
    _We have not yet developed a `cloud-controller-manager` which could reconcile load balancer `Service`s in the shoot cluster._
 
-3. In case a seed cluster with multiple availability zones, i.e. multiple entries in `.spec.provider.zones`, is used in conjunction with a single-zone shoot control plane, i.e. a shoot cluster without `.spec.controlPlane.highAvailability` or with `.spec.controlPlane.highAvailability.failureTolerance.type` set to `node`, the local address of the API server endpoint needs to be determined manually or via the in-cluster `coredns`.
+1. In case a seed cluster with multiple availability zones, i.e. multiple entries in `.spec.provider.zones`, is used in conjunction with a single-zone shoot control plane, i.e. a shoot cluster without `.spec.controlPlane.highAvailability` or with `.spec.controlPlane.highAvailability.failureTolerance.type` set to `node`, the local address of the API server endpoint needs to be determined manually or via the in-cluster `coredns`.
 
    _As the different istio ingress gateway loadbalancers have individual external IP addresses, single-zone shoot control planes can end up in a random availability zone. Having the local host use the `coredns` in the cluster as name resolver would form a name resolution cycle. The tests mitigate the issue by adapting the DNS configuration inside the affected test._
 
@@ -78,20 +74,7 @@ Additionally, it creates a few (currently unused) dummy secrets (CA, server and 
 
 #### `DNSRecord`
 
-This controller manipulates the `/etc/hosts` file and adds a new line for each `DNSRecord` it observes.
-This enables accessing the shoot clusters from the respective machine, however, it also requires to run the extension with elevated privileges (`sudo`).
-
-The `/etc/hosts` would be extended as follows:
-
-```text
-# Begin of gardener-extension-provider-local section
-10.84.23.24 api.local.local.external.local.gardener.cloud
-10.84.23.24 api.local.local.internal.local.gardener.cloud
-...
-# End of gardener-extension-provider-local section
-```
-
-In addition to that, the controller also adapts the cluster internal DNS configuration by extending the `coredns` configuration for every observed `DNSRecord`. It will add two corresponding entries in the custom DNS configuration per shoot cluster:
+The controller adapts the cluster internal DNS configuration by extending the `coredns` configuration for every observed `DNSRecord`. It will add two corresponding entries in the custom DNS configuration per shoot cluster:
 
 ```text
 data:
@@ -127,7 +110,7 @@ Additionally, it generates the [`MachineClass`es](https://github.com/gardener/ma
 
 Gardenlet creates a wildcard DNS record for the Seed's ingress domain pointing to the `nginx-ingress-controller`'s LoadBalancer.
 This domain is commonly used by all `Ingress` objects created in the Seed for Seed and Shoot components.
-However, provider-local implements the `DNSRecord` extension API by writing the DNS record to `/etc/hosts`, which doesn't support wildcard entries.
+However, provider-local implements the `DNSRecord` extension API (see the [`DNSRecord`section](#dnsrecord)).
 To make `Ingress` domains resolvable on the host, this controller reconciles all `Ingresses` and creates `DNSRecords` of type `local` for each host included in `spec.rules`.
 
 #### `Service`

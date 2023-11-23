@@ -197,11 +197,19 @@ Hence, if you want to access the shoot cluster, you have to run the following co
 ```bash
 cat <<EOF | sudo tee -a /etc/hosts
 
-# Manually created to access local Gardener shoot clusters.
-# TODO: Remove this again when the shoot cluster access is no longer required.
+# Begin of Gardener local setup section
+# Shoot API server domains
 127.0.0.1 api.local.local.external.local.gardener.cloud
 127.0.0.1 api.local.local.internal.local.gardener.cloud
 
+# Ingress
+127.0.0.1 p-seed.ingress.local.seed.local.gardener.cloud
+127.0.0.1 g-seed.ingress.local.seed.local.gardener.cloud
+127.0.0.1 gu-local--local.ingress.local.seed.local.gardener.cloud
+127.0.0.1 p-local--local.ingress.local.seed.local.gardener.cloud
+127.0.0.1 v-local--local.ingress.local.seed.local.gardener.cloud
+
+# E2e tests
 127.0.0.1 api.e2e-managedseed.garden.external.local.gardener.cloud
 127.0.0.1 api.e2e-managedseed.garden.internal.local.gardener.cloud
 127.0.0.1 api.e2e-hib.local.external.local.gardener.cloud
@@ -242,6 +250,7 @@ cat <<EOF | sudo tee -a /etc/hosts
 127.0.0.1 api.e2e-upg-hib.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-upg-hib-wl.local.external.local.gardener.cloud
 127.0.0.1 api.e2e-upg-hib-wl.local.internal.local.gardener.cloud
+# End of Gardener local setup section
 EOF
 ```
 
@@ -258,6 +267,8 @@ If you want to change the default namespace or shoot name, you can do so by pass
 ```bash
 ./hack/usage/generate-admin-kubeconf.sh --namespace <namespace> --shoot-name <shootname> > admin-kubeconf.yaml
 ```
+
+To access an Ingress resource from the `Seed`, use the Ingress host with port `8448` (`https://<ingress-host>:8448`, for example `https://gu-local--local.ingress.local.seed.local.gardener.cloud:8448`).
 
 ## (Optional): Setting Up a Second Seed Cluster
 
