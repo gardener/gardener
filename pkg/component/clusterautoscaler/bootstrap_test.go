@@ -79,6 +79,14 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - watch
 `
 
 			expectedSecret = &corev1.Secret{
