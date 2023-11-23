@@ -453,6 +453,73 @@ func ShootMachineImageVersionExists(constraint gardencorev1beta1.MachineImage, i
 	return false, 0
 }
 
+// DetermineLatestMachineImageVersion determines the latest MachineImageVersion from a slice of MachineImageVersion.
+// When filterPreviewVersions is set, versions with classification preview are not considered.
+// It will prefer older but non-deprecated versions over newer but deprecated versions.
+func DetermineLatestMachineImageVersion(versions []gardencorev1beta1.MachineImageVersion, filterPreviewVersions bool) (gardencorev1beta1.MachineImageVersion, error) {
+	latestVersion, latestNonDeprecatedVersion, err := DetermineLatestExpirableVersion(ToExpirableVersions(versions), filterPreviewVersions)
+	if err != nil {
+		return gardencorev1beta1.MachineImageVersion{}, err
+	}
+
+	// Try to find non-deprecated version first.
+	for _, version := range versions {
+		if version.Version == latestNonDeprecatedVersion.Version {
+			return version, nil
+		}
+	}
+
+	// It looks like there is no non-deprecated version, now look also into the deprecated versions
+	for _, version := range versions {
+		if version.Version == latestVersion.Version {
+			return version, nil
+		}
+	}
+
+	return gardencorev1beta1.MachineImageVersion{}, fmt.Errorf("the latest machine version has been removed")
+}
+
+// DetermineLatestExpirableVersion determines the latest expirable version and the latest non-deprecated version from a slice of ExpirableVersions.
+// When filterPreviewVersions is set, versions with classification preview are not considered.
+func DetermineLatestExpirableVersion(versions []gardencorev1beta1.ExpirableVersion, filterPreviewVersions bool) (gardencorev1beta1.ExpirableVersion, gardencorev1beta1.ExpirableVersion, error) {
+	var (
+		latestSemVerVersion              *semver.Version
+		latestNonDeprecatedSemVerVersion *semver.Version
+
+		latestExpirableVersion              gardencorev1beta1.ExpirableVersion
+		latestNonDeprecatedExpirableVersion gardencorev1beta1.ExpirableVersion
+	)
+
+	for _, version := range versions {
+		v, err := semver.NewVersion(version.Version)
+		if err != nil {
+			return gardencorev1beta1.ExpirableVersion{}, gardencorev1beta1.ExpirableVersion{}, fmt.Errorf("error while parsing expirable version '%s': %s", version.Version, err.Error())
+		}
+
+		if filterPreviewVersions && version.Classification != nil && *version.Classification == gardencorev1beta1.ClassificationPreview {
+			continue
+		}
+
+		if latestSemVerVersion == nil || v.GreaterThan(latestSemVerVersion) {
+			latestSemVerVersion = v
+			latestExpirableVersion = version
+		}
+
+		if version.Classification != nil && *version.Classification != gardencorev1beta1.ClassificationDeprecated {
+			if latestNonDeprecatedSemVerVersion == nil || v.GreaterThan(latestNonDeprecatedSemVerVersion) {
+				latestNonDeprecatedSemVerVersion = v
+				latestNonDeprecatedExpirableVersion = version
+			}
+		}
+	}
+
+	if latestSemVerVersion == nil {
+		return gardencorev1beta1.ExpirableVersion{}, gardencorev1beta1.ExpirableVersion{}, fmt.Errorf("unable to determine latest expirable version")
+	}
+
+	return latestExpirableVersion, latestNonDeprecatedExpirableVersion, nil
+}
+
 // ToExpirableVersions returns the expirable versions from the given machine image versions.
 func ToExpirableVersions(versions []gardencorev1beta1.MachineImageVersion) []gardencorev1beta1.ExpirableVersion {
 	expVersions := []gardencorev1beta1.ExpirableVersion{}
@@ -1134,7 +1201,7 @@ func AnonymousAuthenticationEnabled(kubeAPIServerConfig *gardencorev1beta1.KubeA
 
 // CalculateSeedUsage returns a map representing the number of shoots per seed from the given list of shoots.
 // It takes both spec.seedName and status.seedName into account.
-func CalculateSeedUsage(shootList []gardencorev1beta1.Shoot) map[string]int {
+func CalculateSeedUsage(shootList []*gardencorev1beta1.Shoot) map[string]int {
 	m := map[string]int{}
 
 	for _, shoot := range shootList {
@@ -1457,6 +1524,15 @@ func IsFailureToleranceTypeNode(failureToleranceType *gardencorev1beta1.FailureT
 	return failureToleranceType != nil && *failureToleranceType == gardencorev1beta1.FailureToleranceTypeNode
 }
 
+// GetAllZonesFromShoot returns the set of all availability zones defined in the worker pools of the Shoot specification.
+func GetAllZonesFromShoot(shoot *gardencorev1beta1.Shoot) sets.Set[string] {
+	out := sets.New[string]()
+	for _, worker := range shoot.Spec.Provider.Workers {
+		out.Insert(worker.Zones...)
+	}
+	return out
+}
+
 // IsHAControlPlaneConfigured returns true if HA configuration for the shoot control plane has been set.
 func IsHAControlPlaneConfigured(shoot *gardencorev1beta1.Shoot) bool {
 	return shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil
@@ -1495,4 +1571,46 @@ func IsTopologyAwareRoutingForShootControlPlaneEnabled(seed *gardencorev1beta1.S
 // ShootHasOperationType returns true when the 'type' in the last operation matches the provided type.
 func ShootHasOperationType(lastOperation *gardencorev1beta1.LastOperation, lastOperationType gardencorev1beta1.LastOperationType) bool {
 	return lastOperation != nil && lastOperation.Type == lastOperationType
+}
+
+// KubeAPIServerFeatureGateDisabled returns whether the given feature gate is explicitly disabled for the kube-apiserver for the given Shoot spec.
+func KubeAPIServerFeatureGateDisabled(shoot *gardencorev1beta1.Shoot, featureGate string) bool {
+	kubeAPIServer := shoot.Spec.Kubernetes.KubeAPIServer
+	if kubeAPIServer == nil || kubeAPIServer.FeatureGates == nil {
+		return false
+	}
+
+	value, ok := kubeAPIServer.FeatureGates[featureGate]
+	if !ok {
+		return false
+	}
+	return !value
+}
+
+// KubeControllerManagerFeatureGateDisabled returns whether the given feature gate is explicitly disabled for the kube-controller-manager for the given Shoot spec.
+func KubeControllerManagerFeatureGateDisabled(shoot *gardencorev1beta1.Shoot, featureGate string) bool {
+	kubeControllerManager := shoot.Spec.Kubernetes.KubeControllerManager
+	if kubeControllerManager == nil || kubeControllerManager.FeatureGates == nil {
+		return false
+	}
+
+	value, ok := kubeControllerManager.FeatureGates[featureGate]
+	if !ok {
+		return false
+	}
+	return !value
+}
+
+// KubeProxyFeatureGateDisabled returns whether the given feature gate is disabled for the kube-proxy for the given Shoot spec.
+func KubeProxyFeatureGateDisabled(shoot *gardencorev1beta1.Shoot, featureGate string) bool {
+	kubeProxy := shoot.Spec.Kubernetes.KubeProxy
+	if kubeProxy == nil || kubeProxy.FeatureGates == nil {
+		return false
+	}
+
+	value, ok := kubeProxy.FeatureGates[featureGate]
+	if !ok {
+		return false
+	}
+	return !value
 }

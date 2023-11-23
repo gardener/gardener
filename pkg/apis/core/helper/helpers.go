@@ -525,7 +525,7 @@ func IsWorkerless(shoot *core.Shoot) bool {
 }
 
 // ShootEnablesSSHAccess returns true if ssh access to worker nodes should be allowed for the given shoot.
-func ShootEnablesSSHAccess(shoot *gardencorev1beta1.Shoot) bool {
+func ShootEnablesSSHAccess(shoot *core.Shoot) bool {
 	return !IsWorkerless(shoot) &&
 		(shoot.Spec.Provider.WorkersSettings == nil || shoot.Spec.Provider.WorkersSettings.SSHAccess == nil || shoot.Spec.Provider.WorkersSettings.SSHAccess.Enabled)
 }
