@@ -65,6 +65,8 @@ func (v *vpa) recommenderResourceConfigs() component.ResourceConfigs {
 		clusterRoleBindingMetricsReader   = v.emptyClusterRoleBinding("metrics-reader")
 		clusterRoleCheckpointActor        = v.emptyClusterRole("checkpoint-actor")
 		clusterRoleBindingCheckpointActor = v.emptyClusterRoleBinding("checkpoint-actor")
+		clusterRoleVPAStatusActor         = v.emptyClusterRole("vpa-status-actor")
+		clusterRoleBindingVPAStatusActor  = v.emptyClusterRoleBinding("vpa-status-actor")
 		service                           = v.emptyService(recommender)
 		deployment                        = v.emptyDeployment(recommender)
 	)
@@ -77,6 +79,10 @@ func (v *vpa) recommenderResourceConfigs() component.ResourceConfigs {
 		{Obj: clusterRoleCheckpointActor, Class: component.Application, MutateFn: func() { v.reconcileRecommenderClusterRoleCheckpointActor(clusterRoleCheckpointActor) }},
 		{Obj: clusterRoleBindingCheckpointActor, Class: component.Application, MutateFn: func() {
 			v.reconcileRecommenderClusterRoleBinding(clusterRoleBindingCheckpointActor, clusterRoleCheckpointActor, recommender)
+		}},
+		{Obj: clusterRoleVPAStatusActor, Class: component.Application, MutateFn: func() { v.reconcileRecommenderClusterRoleVPAStatusActor(clusterRoleVPAStatusActor) }},
+		{Obj: clusterRoleBindingVPAStatusActor, Class: component.Application, MutateFn: func() {
+			v.reconcileRecommenderClusterRoleBinding(clusterRoleBindingVPAStatusActor, clusterRoleVPAStatusActor, recommender)
 		}},
 		{Obj: service, Class: component.Runtime, MutateFn: func() { v.reconcileRecommenderService(service) }},
 	}
@@ -131,6 +137,17 @@ func (v *vpa) reconcileRecommenderClusterRoleCheckpointActor(clusterRole *rbacv1
 			APIGroups: []string{""},
 			Resources: []string{"namespaces"},
 			Verbs:     []string{"get", "list"},
+		},
+	}
+}
+
+func (v *vpa) reconcileRecommenderClusterRoleVPAStatusActor(clusterRole *rbacv1.ClusterRole) {
+	clusterRole.Labels = getRoleLabel()
+	clusterRole.Rules = []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{"autoscaling.k8s.io"},
+			Resources: []string{"verticalpodautoscalers/status"},
+			Verbs:     []string{"get", "patch"},
 		},
 	}
 }

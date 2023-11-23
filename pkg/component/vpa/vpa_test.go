@@ -126,6 +126,8 @@ var _ = Describe("VPA", func() {
 		clusterRoleBindingRecommenderMetricsReader   *rbacv1.ClusterRoleBinding
 		clusterRoleRecommenderCheckpointActor        *rbacv1.ClusterRole
 		clusterRoleBindingRecommenderCheckpointActor *rbacv1.ClusterRoleBinding
+		clusterRoleRecommenderVPAStatusActor         *rbacv1.ClusterRole
+		clusterRoleBindingRecommenderVPAStatusActor  *rbacv1.ClusterRoleBinding
 		serviceRecommenderFor                        func(component.ClusterType) *corev1.Service
 		shootAccessSecretRecommender                 *corev1.Secret
 		deploymentRecommenderFor                     func(bool, *metav1.Duration, *float64, component.ClusterType) *appsv1.Deployment
@@ -517,6 +519,52 @@ var _ = Describe("VPA", func() {
 				Name:      "vpa-recommender",
 				Namespace: namespace,
 			}},
+		}
+		clusterRoleRecommenderVPAStatusActor = &rbacv1.ClusterRole{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "rbac.authorization.k8s.io/v1",
+				Kind:       "ClusterRole",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:vpa:target:vpa-status-actor",
+				Labels: map[string]string{
+					"gardener.cloud/role": "vpa",
+				},
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"autoscaling.k8s.io"},
+					Resources: []string{"verticalpodautoscalers/status"},
+					Verbs:     []string{"get", "patch"},
+				},
+			},
+		}
+		clusterRoleBindingRecommenderVPAStatusActor = &rbacv1.ClusterRoleBinding{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "rbac.authorization.k8s.io/v1",
+				Kind:       "ClusterRoleBinding",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:vpa:target:vpa-status-actor",
+				Labels: map[string]string{
+					"gardener.cloud/role": "vpa",
+				},
+				Annotations: map[string]string{
+					"resources.gardener.cloud/delete-on-invalid-update": "true",
+				},
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      "ServiceAccount",
+					Name:      "vpa-recommender",
+					Namespace: namespace,
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "ClusterRole",
+				Name:     "gardener.cloud:vpa:target:vpa-status-actor",
+			},
 		}
 		serviceRecommenderFor = func(clusterType component.ClusterType) *corev1.Service {
 			obj := &corev1.Service{
@@ -1049,7 +1097,7 @@ var _ = Describe("VPA", func() {
 				{
 					APIGroups: []string{"autoscaling.k8s.io"},
 					Resources: []string{"verticalpodautoscalers"},
-					Verbs:     []string{"get", "list", "watch", "patch"},
+					Verbs:     []string{"get", "list", "watch"},
 				},
 				{
 					APIGroups: []string{"coordination.k8s.io"},
@@ -1274,7 +1322,7 @@ var _ = Describe("VPA", func() {
 				Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(24))
+				Expect(managedResourceSecret.Data).To(HaveLen(26))
 
 				By("Verify vpa-updater resources")
 				clusterRoleUpdater.Name = replaceTargetSubstrings(clusterRoleUpdater.Name)
@@ -1297,6 +1345,9 @@ var _ = Describe("VPA", func() {
 				clusterRoleRecommenderCheckpointActor.Name = replaceTargetSubstrings(clusterRoleRecommenderCheckpointActor.Name)
 				clusterRoleBindingRecommenderCheckpointActor.Name = replaceTargetSubstrings(clusterRoleBindingRecommenderCheckpointActor.Name)
 				clusterRoleBindingRecommenderCheckpointActor.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingRecommenderCheckpointActor.RoleRef.Name)
+				clusterRoleRecommenderVPAStatusActor.Name = replaceTargetSubstrings(clusterRoleRecommenderVPAStatusActor.Name)
+				clusterRoleBindingRecommenderVPAStatusActor.Name = replaceTargetSubstrings(clusterRoleBindingRecommenderVPAStatusActor.Name)
+				clusterRoleBindingRecommenderVPAStatusActor.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingRecommenderVPAStatusActor.RoleRef.Name)
 
 				deploymentRecommender := deploymentRecommenderFor(true, nil, nil, component.ClusterTypeSeed)
 				adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentRecommender.Spec.Template.Labels)
@@ -1306,6 +1357,8 @@ var _ = Describe("VPA", func() {
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_metrics-reader.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingRecommenderMetricsReader)))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_checkpoint-actor.yaml"])).To(Equal(componenttest.Serialize(clusterRoleRecommenderCheckpointActor)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_checkpoint-actor.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingRecommenderCheckpointActor)))
+				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_vpa-status-actor.yaml"])).To(Equal(componenttest.Serialize(clusterRoleRecommenderVPAStatusActor)))
+				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_vpa-status-actor.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingRecommenderVPAStatusActor)))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-recommender.yaml"])).To(Equal(componenttest.Serialize(deploymentRecommender)))
 				Expect(string(managedResourceSecret.Data["service__"+namespace+"__vpa-recommender.yaml"])).To(Equal(componenttest.Serialize(serviceRecommenderFor(component.ClusterTypeSeed))))
 				Expect(managedResourceSecret.Data).NotTo(HaveKey("verticalpodautoscaler__" + namespace + "__vpa-recommender.yaml"))
@@ -1469,7 +1522,7 @@ var _ = Describe("VPA", func() {
 				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(15))
+				Expect(managedResourceSecret.Data).To(HaveLen(17))
 
 				By("Verify vpa-updater application resources")
 				clusterRoleBindingUpdater.Subjects[0].Namespace = "kube-system"
