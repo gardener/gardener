@@ -24,7 +24,8 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 )
 
 // SkipVerification is a common function to skip object verification during admission
@@ -33,7 +34,7 @@ func SkipVerification(operation admission.Operation, metadata metav1.ObjectMeta)
 }
 
 // IsSeedUsedByShoot checks whether there is a shoot cluster referencing the provided seed name
-func IsSeedUsedByShoot(seedName string, shoots []*core.Shoot) bool {
+func IsSeedUsedByShoot(seedName string, shoots []*gardencorev1beta1.Shoot) bool {
 	for _, shoot := range shoots {
 		if shoot.Spec.SeedName != nil && *shoot.Spec.SeedName == seedName {
 			return true
@@ -46,8 +47,8 @@ func IsSeedUsedByShoot(seedName string, shoots []*core.Shoot) bool {
 }
 
 // GetFilteredShootList returns shoots returned by the shootLister filtered via the predicateFn.
-func GetFilteredShootList(shootLister gardencorelisters.ShootLister, predicateFn func(*core.Shoot) bool) ([]*core.Shoot, error) {
-	var matchingShoots []*core.Shoot
+func GetFilteredShootList(shootLister gardencorelisters.ShootLister, predicateFn func(*gardencorev1beta1.Shoot) bool) ([]*gardencorev1beta1.Shoot, error) {
+	var matchingShoots []*gardencorev1beta1.Shoot
 	shoots, err := shootLister.List(labels.Everything())
 	if err != nil {
 		return nil, apierrors.NewInternalError(fmt.Errorf("failed to list shoots: %w", err))

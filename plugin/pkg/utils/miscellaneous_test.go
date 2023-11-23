@@ -22,48 +22,49 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	. "github.com/gardener/gardener/plugin/pkg/utils"
 )
 
 var _ = Describe("Miscellaneous", func() {
 	var (
-		shoot1 = core.Shoot{
+		shoot1 = gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "shoot1",
 				Namespace: "garden-pr1",
 			},
-			Spec: core.ShootSpec{
+			Spec: gardencorev1beta1.ShootSpec{
 				SeedName: ptr.To("seed1"),
 			},
 		}
 
-		shoot2 = core.Shoot{
+		shoot2 = gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "shoot2",
 				Namespace: "garden-pr1",
 			},
-			Spec: core.ShootSpec{
+			Spec: gardencorev1beta1.ShootSpec{
 				SeedName: ptr.To("seed1"),
 			},
-			Status: core.ShootStatus{
+			Status: gardencorev1beta1.ShootStatus{
 				SeedName: ptr.To("seed2"),
 			},
 		}
 
-		shoot3 = core.Shoot{
+		shoot3 = gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "shoot3",
 				Namespace: "garden-pr1",
 			},
-			Spec: core.ShootSpec{
+			Spec: gardencorev1beta1.ShootSpec{
 				SeedName: nil,
 			},
 		}
 	)
 
-	shoots := []*core.Shoot{
+	shoots := []*gardencorev1beta1.Shoot{
 		&shoot1,
 		&shoot2,
 		&shoot3,
@@ -111,12 +112,12 @@ var _ = Describe("Miscellaneous", func() {
 			shootLister         gardencorelisters.ShootLister
 
 			oldSeedSpec, newSeedSpec *core.SeedSpec
-			shoot                    *core.Shoot
+			shoot                    *gardencorev1beta1.Shoot
 		)
 
 		BeforeEach(func() {
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-			shootLister = coreInformerFactory.Core().InternalVersion().Shoots().Lister()
+			shootLister = coreInformerFactory.Core().V1beta1().Shoots().Lister()
 
 			oldSeedSpec = &core.SeedSpec{
 				Provider: core.SeedProvider{
@@ -125,11 +126,11 @@ var _ = Describe("Miscellaneous", func() {
 			}
 			newSeedSpec = oldSeedSpec.DeepCopy()
 
-			shoot = &core.Shoot{
-				Spec: core.ShootSpec{
+			shoot = &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
 					SeedName: &seedName,
 				},
-				Status: core.ShootStatus{
+				Status: gardencorev1beta1.ShootStatus{
 					SeedName: &seedName,
 				},
 			}
@@ -146,7 +147,7 @@ var _ = Describe("Miscellaneous", func() {
 		})
 
 		It("should do nothing because no zone was removed even though shoots exist", func() {
-			Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 
 			Expect(ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
 		})
@@ -159,7 +160,7 @@ var _ = Describe("Miscellaneous", func() {
 
 		It("should return an error because zone was removed even though shoots exist", func() {
 			newSeedSpec.Provider.Zones = []string{"2"}
-			Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 
 			Expect(ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(MatchError(ContainSubstring("cannot remove zones")))
 		})

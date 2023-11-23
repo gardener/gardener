@@ -18,14 +18,14 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 )
 
-// ProjectForNamespaceFromInternalLister returns the Project responsible for a given <namespace>. It lists all Projects
+// ProjectForNamespaceFromExternalLister returns the Project responsible for a given <namespace>. It lists all Projects
 // via the given lister, iterates over them and tries to identify the Project by looking for the namespace name
 // in the project spec.
-func ProjectForNamespaceFromInternalLister(projectLister internalversion.ProjectLister, namespaceName string) (*core.Project, error) {
+func ProjectForNamespaceFromExternalLister(projectLister gardencorelisters.ProjectLister, namespaceName string) (*gardencorev1beta1.Project, error) {
 	projectList, err := projectLister.List(labels.Everything())
 	if err != nil {
 		return nil, err
@@ -37,5 +37,5 @@ func ProjectForNamespaceFromInternalLister(projectLister internalversion.Project
 		}
 	}
 
-	return nil, apierrors.NewNotFound(core.Resource("Project"), namespaceName)
+	return nil, apierrors.NewNotFound(gardencorev1beta1.Resource("Project"), namespaceName)
 }
