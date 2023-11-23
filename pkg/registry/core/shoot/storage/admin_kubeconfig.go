@@ -25,7 +25,7 @@ import (
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 
 	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 )
 
 // NewAdminKubeconfigREST returns a new KubeconfigREST for admin kubeconfigs.

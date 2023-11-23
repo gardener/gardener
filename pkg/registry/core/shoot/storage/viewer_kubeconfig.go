@@ -25,7 +25,7 @@ import (
 
 	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 )
 
 // NewViewerKubeconfigREST returns a new KubeconfigREST for viewer kubeconfigs.

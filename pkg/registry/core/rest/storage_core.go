@@ -26,7 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	backupbucketstore "github.com/gardener/gardener/pkg/registry/core/backupbucket/storage"
 	backupentrystore "github.com/gardener/gardener/pkg/registry/core/backupentry/storage"
 	cloudprofilestore "github.com/gardener/gardener/pkg/registry/core/cloudprofile/storage"
@@ -112,7 +112,7 @@ func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGet
 
 	shootStorage := shootstore.NewStorage(
 		restOptionsGetter,
-		p.CoreInformerFactory.Core().InternalVersion().InternalSecrets().Lister(),
+		p.CoreInformerFactory.Core().V1beta1().InternalSecrets().Lister(),
 		p.KubeInformerFactory.Core().V1().Secrets().Lister(),
 		p.KubeInformerFactory.Core().V1().ConfigMaps().Lister(),
 		p.AdminKubeconfigMaxExpiration,

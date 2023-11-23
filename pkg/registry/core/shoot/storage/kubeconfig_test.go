@@ -40,7 +40,8 @@ import (
 	"k8s.io/utils/ptr"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
@@ -60,7 +61,7 @@ func kubeconfigTests(
 		shoot              *gardencore.Shoot
 		caClusterSecret    *corev1.Secret
 		caClusterConfigMap *corev1.ConfigMap
-		caClientSecret     *gardencore.InternalSecret
+		caClientSecret     *gardencorev1beta1.InternalSecret
 
 		kcREST           *KubeconfigREST
 		createValidation registryrest.ValidateObjectFunc
@@ -140,7 +141,7 @@ lIwEl8tStnO9u1JUK4w1e+lC37zI2v5k4WMQmJcolUEMwmZjnCR/
 				"ca.crt": string(clusterCACert),
 			},
 		}
-		caClientSecret = &gardencore.InternalSecret{
+		caClientSecret = &gardencorev1beta1.InternalSecret{
 			ObjectMeta: metav1.ObjectMeta{Name: name + ".ca-client", Namespace: namespace},
 			Data: map[string][]byte{
 				"ca.crt": clientCACert,
@@ -348,7 +349,7 @@ func (f fakeSecretLister) Get(_ string) (*corev1.Secret, error) {
 
 type fakeInternalSecretLister struct {
 	gardencorelisters.InternalSecretLister
-	obj *gardencore.InternalSecret
+	obj *gardencorev1beta1.InternalSecret
 	err error
 }
 
@@ -356,7 +357,7 @@ func (f fakeInternalSecretLister) InternalSecrets(string) gardencorelisters.Inte
 	return f
 }
 
-func (f fakeInternalSecretLister) Get(_ string) (*gardencore.InternalSecret, error) {
+func (f fakeInternalSecretLister) Get(_ string) (*gardencorev1beta1.InternalSecret, error) {
 	return f.obj, f.err
 }
 

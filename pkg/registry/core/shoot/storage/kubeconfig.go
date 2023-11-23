@@ -35,7 +35,7 @@ import (
 	authenticationapi "github.com/gardener/gardener/pkg/apis/authentication"
 	authenticationvalidation "github.com/gardener/gardener/pkg/apis/authentication/validation"
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 )

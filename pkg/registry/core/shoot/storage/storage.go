@@ -27,7 +27,7 @@ import (
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/registry/core/shoot"
 )
 
