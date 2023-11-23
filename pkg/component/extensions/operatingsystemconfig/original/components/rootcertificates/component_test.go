@@ -71,7 +71,6 @@ ConditionPathExists=!/var/lib/kubelet/kubeconfig-real
 [Service]
 Type=oneshot
 ExecStart=/var/lib/ssl/update-local-ca-certificates.sh
-ExecStartPost=/bin/systemctl restart docker.service
 [Install]
 WantedBy=multi-user.target`),
 				FilePaths: []string{

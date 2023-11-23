@@ -29,7 +29,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/downloader"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/docker"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/varlibmount"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
@@ -126,7 +125,7 @@ func Script(
 		"pathCCDScriptChecksum":                    downloader.PathCCDScriptChecksum,
 		"pathCredentialsServer":                    downloader.PathCredentialsServer,
 		"pathCredentialsCACert":                    downloader.PathCredentialsCACert,
-		"pathDockerBinary":                         docker.PathBinary,
+		"pathDockerBinary":                         "/usr/bin/docker",
 		"pathDownloadedCloudConfig":                downloader.PathDownloadedCloudConfig,
 		"pathDownloadedChecksum":                   downloader.PathDownloadedCloudConfigChecksum,
 		"pathExecutionDelaySeconds":                PathExecutionDelaySeconds,
@@ -152,7 +151,7 @@ func Script(
 		"units":                                    units,
 		"cloudConfigFiles":                         strings.Join(files, "\n"),
 		"unitNameCloudConfigDownloader":            downloader.UnitName,
-		"unitNameDocker":                           docker.UnitName,
+		"unitNameDocker":                           "docker.service",
 		"unitNameVarLibMount":                      varlibmount.UnitName,
 	}
 

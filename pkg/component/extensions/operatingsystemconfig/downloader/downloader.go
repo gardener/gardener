@@ -30,7 +30,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/docker"
 	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/features"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
@@ -152,7 +151,7 @@ func Config(cloudConfigUserDataSecretName, apiServerURL, clusterCASecretName str
 			Enable:  pointer.Bool(true),
 			Content: pointer.String(`[Unit]
 Description=Downloads the actual cloud config from the Shoot API server and executes it
-After=` + docker.UnitName + ` docker.socket
+After=docker.service docker.socket
 Wants=docker.socket
 [Service]
 Restart=always

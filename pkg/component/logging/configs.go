@@ -18,7 +18,6 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/containerd"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/docker"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/component/hvpa"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
@@ -35,7 +34,6 @@ import (
 var GardenCentralLoggingConfigurations = []component.CentralLoggingConfiguration{
 	// Ensure kubelet/container runtime logs get parsed and forwarded to vali
 	kubelet.CentralLoggingConfiguration,
-	docker.CentralLoggingConfiguration,
 	containerd.CentralLoggingConfiguration,
 	// garden system components
 	resourcemanager.CentralLoggingConfiguration,

@@ -46,10 +46,10 @@ var _ = Describe("Component", func() {
 	})
 
 	DescribeTable("#Config",
-		func(kubernetesVersion string, criName extensionsv1alpha1.CRIName, kubeletConfig string, useGardenerNodeAgentEnabled bool) {
+		func(kubernetesVersion string, kubeletConfig string, useGardenerNodeAgentEnabled bool) {
 			defer test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, useGardenerNodeAgentEnabled)()
 
-			ctx.CRIName = criName
+			ctx.CRIName = extensionsv1alpha1.CRINameContainerD
 			ctx.KubernetesVersion = semver.MustParse(kubernetesVersion)
 			ctx.KubeletCABundle = kubeletCABundle
 			ctx.Images = map[string]*imagevector.Image{
@@ -75,7 +75,7 @@ var _ = Describe("Component", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(units).To(ConsistOf(
-				kubeletUnit(criName, cliFlags, useGardenerNodeAgentEnabled),
+				kubeletUnit(cliFlags, useGardenerNodeAgentEnabled),
 				kubeletMonitorUnit(useGardenerNodeAgentEnabled),
 			))
 
@@ -85,44 +85,26 @@ var _ = Describe("Component", func() {
 		},
 
 		Entry(
-			"kubernetes 1.25, w/ docker",
+			"kubernetes 1.25",
 			"1.25.1",
-			extensionsv1alpha1.CRINameDocker,
 			kubeletConfig(true, true, false),
 			false,
 		),
 		Entry(
-			"kubernetes 1.25, w/ containerd",
+			"kubernetes 1.25 w/ node-agent",
 			"1.25.1",
-			extensionsv1alpha1.CRINameContainerD,
-			kubeletConfig(true, true, false),
-			false,
-		),
-		Entry(
-			"kubernetes 1.25, w/ containerd + node-agent",
-			"1.25.1",
-			extensionsv1alpha1.CRINameContainerD,
 			kubeletConfig(true, true, false),
 			true,
 		),
 		Entry(
-			"kubernetes 1.26, w/ docker",
+			"kubernetes 1.26",
 			"1.26.1",
-			extensionsv1alpha1.CRINameDocker,
 			kubeletConfig(true, true, true),
 			false,
 		),
 		Entry(
-			"kubernetes 1.26, w/ containerd",
+			"kubernetes 1.26 w/ node-agent",
 			"1.26.1",
-			extensionsv1alpha1.CRINameContainerD,
-			kubeletConfig(true, true, true),
-			false,
-		),
-		Entry(
-			"kubernetes 1.26, w/ containerd + node-agent",
-			"1.26.1",
-			extensionsv1alpha1.CRINameContainerD,
 			kubeletConfig(true, true, true),
 			true,
 		),
@@ -267,14 +249,6 @@ kubelet_monitoring
 	hyperkubeImageTag       = "v4.5.6"
 )
 
-func unitConfigAfterCRI(criName extensionsv1alpha1.CRIName) string {
-	if criName == extensionsv1alpha1.CRINameContainerD {
-		return `After=containerd.service`
-	}
-	return `After=docker.service
-Wants=docker.socket rpc-statd.service`
-}
-
 func kubeletConfig(
 	rotateCertificates bool,
 	volumePluginDir bool,
@@ -404,7 +378,7 @@ volumeStatsAggPeriod: 1m0s
 	return out
 }
 
-func kubeletUnit(criName extensionsv1alpha1.CRIName, cliFlags []string, useGardenerNodeAgentEnabled bool) extensionsv1alpha1.Unit {
+func kubeletUnit(cliFlags []string, useGardenerNodeAgentEnabled bool) extensionsv1alpha1.Unit {
 	var kubeletStartPre string
 	if !useGardenerNodeAgentEnabled {
 		kubeletStartPre = `
@@ -418,7 +392,7 @@ ExecStartPre=` + PathScriptCopyKubernetesBinary + ` kubelet`
 		Content: pointer.String(`[Unit]
 Description=kubelet daemon
 Documentation=https://kubernetes.io/docs/admin/kubelet
-` + unitConfigAfterCRI(criName) + `
+After=containerd.service
 [Install]
 WantedBy=multi-user.target
 [Service]

@@ -26,7 +26,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/docker"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/utils"
 )
@@ -118,7 +117,6 @@ ConditionPathExists=!` + kubelet.PathKubeconfigReal + `
 [Service]
 Type=oneshot
 ExecStart=` + pathUpdateLocalCaCertificates + `
-ExecStartPost=/bin/systemctl restart ` + docker.UnitName + `
 [Install]
 WantedBy=multi-user.target`),
 		FilePaths: extensionsv1alpha1helper.FilePathsFrom(updateCACertsFiles),

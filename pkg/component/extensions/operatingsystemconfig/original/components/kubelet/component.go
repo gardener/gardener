@@ -30,7 +30,6 @@ import (
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/containerd"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/docker"
 	oscutils "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/utils"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
@@ -160,7 +159,7 @@ ExecStartPre=` + PathScriptCopyKubernetesBinary + ` kubectl`
 		Content: pointer.String(`[Unit]
 Description=kubelet daemon
 Documentation=https://kubernetes.io/docs/admin/kubelet
-` + unitConfigAfterCRI(ctx.CRIName) + `
+After=` + containerd.UnitName + `
 [Install]
 WantedBy=multi-user.target
 [Service]
@@ -228,12 +227,4 @@ func getFileContentKubeletConfig(kubernetesVersion *semver.Version, clusterDNSAd
 	)
 
 	return kcCodec.Encode(kubeletConfig, configFCI.Encoding)
-}
-
-func unitConfigAfterCRI(criName extensionsv1alpha1.CRIName) string {
-	if criName == extensionsv1alpha1.CRINameContainerD {
-		return `After=` + containerd.UnitName
-	}
-	return `After=` + docker.UnitName + `
-Wants=docker.socket rpc-statd.service`
 }
