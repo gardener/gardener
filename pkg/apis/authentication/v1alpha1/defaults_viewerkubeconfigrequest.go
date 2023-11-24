@@ -20,8 +20,8 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-// SetDefaults_AdminKubeconfigRequestSpec sets default values for AdminKubeconfigRequestSpec objects.
-func SetDefaults_AdminKubeconfigRequestSpec(obj *AdminKubeconfigRequestSpec) {
+// SetDefaults_ViewerKubeconfigRequestSpec sets default values for ViewerKubeconfigRequestSpec objects.
+func SetDefaults_ViewerKubeconfigRequestSpec(obj *ViewerKubeconfigRequestSpec) {
 	if obj.ExpirationSeconds == nil {
 		obj.ExpirationSeconds = pointer.Int64(60 * 60)
 	}

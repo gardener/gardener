@@ -17,12 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"k8s.io/utils/pointer"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// SetDefaults_AdminKubeconfigRequestSpec sets default values for AdminKubeconfigRequestSpec objects.
-func SetDefaults_AdminKubeconfigRequestSpec(obj *AdminKubeconfigRequestSpec) {
-	if obj.ExpirationSeconds == nil {
-		obj.ExpirationSeconds = pointer.Int64(60 * 60)
-	}
+func addDefaultingFuncs(scheme *runtime.Scheme) error {
+	return RegisterDefaults(scheme)
 }

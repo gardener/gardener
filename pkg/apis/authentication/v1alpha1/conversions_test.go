@@ -59,4 +59,34 @@ var _ = Describe("conversion", func() {
 			Expect(out.Status).To(Equal(AdminKubeconfigRequestStatus{Kubeconfig: kubeconfig, ExpirationTimestamp: expirationTimestamp}))
 		})
 	})
+
+	Describe("#Convert_v1alpha1_ViewerKubeconfigRequest_To_authentication_KubeconfigRequest", func() {
+		It("should properly convert", func() {
+			in := &ViewerKubeconfigRequest{
+				Spec:   ViewerKubeconfigRequestSpec{ExpirationSeconds: &expirationSeconds},
+				Status: ViewerKubeconfigRequestStatus{Kubeconfig: kubeconfig, ExpirationTimestamp: expirationTimestamp},
+			}
+			out := &authentication.KubeconfigRequest{}
+
+			Expect(Convert_v1alpha1_ViewerKubeconfigRequest_To_authentication_KubeconfigRequest(in, out, nil)).To(Succeed())
+
+			Expect(out.Spec).To(Equal(authentication.KubeconfigRequestSpec{ExpirationSeconds: expirationSeconds}))
+			Expect(out.Status).To(Equal(authentication.KubeconfigRequestStatus{Kubeconfig: kubeconfig, ExpirationTimestamp: expirationTimestamp}))
+		})
+	})
+
+	Describe("#Convert_authentication_KubeconfigRequest_To_v1alpha1_ViewerKubeconfigRequest", func() {
+		It("should properly convert", func() {
+			in := &authentication.KubeconfigRequest{
+				Spec:   authentication.KubeconfigRequestSpec{ExpirationSeconds: expirationSeconds},
+				Status: authentication.KubeconfigRequestStatus{Kubeconfig: kubeconfig, ExpirationTimestamp: expirationTimestamp},
+			}
+			out := &ViewerKubeconfigRequest{}
+
+			Expect(Convert_authentication_KubeconfigRequest_To_v1alpha1_ViewerKubeconfigRequest(in, out, nil)).To(Succeed())
+
+			Expect(out.Spec).To(Equal(ViewerKubeconfigRequestSpec{ExpirationSeconds: &expirationSeconds}))
+			Expect(out.Status).To(Equal(ViewerKubeconfigRequestStatus{Kubeconfig: kubeconfig, ExpirationTimestamp: expirationTimestamp}))
+		})
+	})
 })
