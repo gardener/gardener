@@ -34,9 +34,9 @@ import (
 
 // Reconciler fetches the shoot access token for gardener-node-agent and writes it to disk.
 type Reconciler struct {
-	Client client.Client
-	Config config.TokenControllerConfig
-	FS     afero.Afero
+	APIReader client.Reader
+	Config    config.TokenControllerConfig
+	FS        afero.Afero
 
 	secretNameToPath map[string]string
 }
@@ -49,10 +49,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	defer cancel()
 
 	secret := &corev1.Secret{}
-	if err := r.Client.Get(ctx, request.NamespacedName, secret); err != nil {
+	if err := r.APIReader.Get(ctx, request.NamespacedName, secret); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.V(1).Info("Object is gone, stop reconciling")
-			return reconcile.Result{}, nil
+			log.V(1).Info("Object not found")
+			return reconcile.Result{}, fmt.Errorf("secret %s not found: %w", request.NamespacedName, err)
 		}
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
