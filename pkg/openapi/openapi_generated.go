@@ -36,6 +36,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.AdminKubeconfigRequest":          schema_pkg_apis_authentication_v1alpha1_AdminKubeconfigRequest(ref),
 		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.AdminKubeconfigRequestSpec":      schema_pkg_apis_authentication_v1alpha1_AdminKubeconfigRequestSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.AdminKubeconfigRequestStatus":    schema_pkg_apis_authentication_v1alpha1_AdminKubeconfigRequestStatus(ref),
+		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.ViewerKubeconfigRequest":         schema_pkg_apis_authentication_v1alpha1_ViewerKubeconfigRequest(ref),
+		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.ViewerKubeconfigRequestSpec":     schema_pkg_apis_authentication_v1alpha1_ViewerKubeconfigRequestSpec(ref),
+		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.ViewerKubeconfigRequestStatus":   schema_pkg_apis_authentication_v1alpha1_ViewerKubeconfigRequestStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerLogging":                           schema_pkg_apis_core_v1beta1_APIServerLogging(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerRequests":                          schema_pkg_apis_core_v1beta1_APIServerRequests(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Addon":                                      schema_pkg_apis_core_v1beta1_Addon(ref),
@@ -649,6 +652,107 @@ func schema_pkg_apis_authentication_v1alpha1_AdminKubeconfigRequestStatus(ref co
 					"kubeconfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Kubeconfig contains the kubeconfig with cluster-admin privileges for the shoot cluster.",
+							Type:        []string{"string"},
+							Format:      "byte",
+						},
+					},
+					"expirationTimestamp": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExpirationTimestamp is the expiration timestamp of the returned credential.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+				},
+				Required: []string{"kubeconfig", "expirationTimestamp"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
+func schema_pkg_apis_authentication_v1alpha1_ViewerKubeconfigRequest(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ViewerKubeconfigRequest can be used to request a kubeconfig with viewer credentials (excluding Secrets) for a Shoot cluster.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object metadata.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Spec is the specification of the ViewerKubeconfigRequest.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.ViewerKubeconfigRequestSpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Status is the status of the ViewerKubeconfigRequest.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.ViewerKubeconfigRequestStatus"),
+						},
+					},
+				},
+				Required: []string{"spec", "status"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.ViewerKubeconfigRequestSpec", "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.ViewerKubeconfigRequestStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_authentication_v1alpha1_ViewerKubeconfigRequestSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ViewerKubeconfigRequestSpec contains the expiration time of the kubeconfig.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"expirationSeconds": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExpirationSeconds is the requested validity duration of the credential. The credential issuer may return a credential with a different validity duration so a client needs to check the 'expirationTimestamp' field in a response. Defaults to 1 hour.",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_authentication_v1alpha1_ViewerKubeconfigRequestStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ViewerKubeconfigRequestStatus is the status of the ViewerKubeconfigRequest containing the kubeconfig and expiration of the credential.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kubeconfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kubeconfig contains the kubeconfig with viewer privileges (excluding Secrets) for the shoot cluster.",
 							Type:        []string{"string"},
 							Format:      "byte",
 						},

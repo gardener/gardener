@@ -39,8 +39,18 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddConversionFunc((*authentication.KubeconfigRequest)(nil), (*ViewerKubeconfigRequest)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_authentication_KubeconfigRequest_To_v1alpha1_ViewerKubeconfigRequest(a.(*authentication.KubeconfigRequest), b.(*ViewerKubeconfigRequest), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddConversionFunc((*AdminKubeconfigRequest)(nil), (*authentication.KubeconfigRequest)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_AdminKubeconfigRequest_To_authentication_KubeconfigRequest(a.(*AdminKubeconfigRequest), b.(*authentication.KubeconfigRequest), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*ViewerKubeconfigRequest)(nil), (*authentication.KubeconfigRequest)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ViewerKubeconfigRequest_To_authentication_KubeconfigRequest(a.(*ViewerKubeconfigRequest), b.(*authentication.KubeconfigRequest), scope)
 	}); err != nil {
 		return err
 	}
