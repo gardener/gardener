@@ -253,6 +253,9 @@ spec:
         {{- if .Values.global.apiserver.shootAdminKubeconfigMaxExpiration }}
         - --shoot-admin-kubeconfig-max-expiration={{ .Values.global.apiserver.shootAdminKubeconfigMaxExpiration }}
         {{- end }}
+        {{- if .Values.global.apiserver.shootViewerKubeconfigMaxExpiration }}
+        - --shoot-viewer-kubeconfig-max-expiration={{ .Values.global.apiserver.shootViewerKubeconfigMaxExpiration }}
+        {{- end }}
         {{- if .Values.global.apiserver.shootCredentialsRotationInterval }}
         - --shoot-credentials-rotation-interval={{ .Values.global.apiserver.shootCredentialsRotationInterval }}
         {{- end }}
