@@ -36,8 +36,9 @@ import (
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	testclock "k8s.io/utils/clock/testing"
+	"k8s.io/utils/pointer"
 
-	authenticationapi "github.com/gardener/gardener/pkg/apis/authentication"
+	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -47,7 +48,7 @@ import (
 var _ = Describe("Admin Kubeconfig", func() {
 	var (
 		ctx context.Context
-		obj *authenticationapi.AdminKubeconfigRequest
+		obj *authenticationv1alpha1.AdminKubeconfigRequest
 
 		shoot           *gardencore.Shoot
 		caClusterSecret *corev1.Secret
@@ -154,9 +155,9 @@ lIwEl8tStnO9u1JUK4w1e+lC37zI2v5k4WMQmJcolUEMwmZjnCR/
 		secretLister = &fakeSecretLister{obj: caClusterSecret}
 		internalSecretLister = &fakeInternalSecretLister{obj: caClientSecret}
 
-		obj = &authenticationapi.AdminKubeconfigRequest{
-			Spec: authenticationapi.AdminKubeconfigRequestSpec{
-				ExpirationSeconds: int64(time.Minute.Seconds() * 11),
+		obj = &authenticationv1alpha1.AdminKubeconfigRequest{
+			Spec: authenticationv1alpha1.AdminKubeconfigRequestSpec{
+				ExpirationSeconds: pointer.Int64(int64(time.Minute.Seconds() * 11)),
 			},
 		}
 
@@ -193,7 +194,7 @@ lIwEl8tStnO9u1JUK4w1e+lC37zI2v5k4WMQmJcolUEMwmZjnCR/
 		})
 
 		It("returns an error if validation fails", func() {
-			obj.Spec.ExpirationSeconds = -1
+			obj.Spec.ExpirationSeconds = pointer.Int64(-1)
 		})
 
 		It("returns an error if there is no user in the context", func() {
@@ -247,9 +248,9 @@ lIwEl8tStnO9u1JUK4w1e+lC37zI2v5k4WMQmJcolUEMwmZjnCR/
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(actual).ToNot(BeNil())
-			Expect(actual).To(BeAssignableToTypeOf(&authenticationapi.AdminKubeconfigRequest{}))
+			Expect(actual).To(BeAssignableToTypeOf(&authenticationv1alpha1.AdminKubeconfigRequest{}))
 
-			akcr := actual.(*authenticationapi.AdminKubeconfigRequest)
+			akcr := actual.(*authenticationv1alpha1.AdminKubeconfigRequest)
 
 			Expect(akcr.Status.ExpirationTimestamp.Time).To(Equal(time.Unix(10, 0).Add(time.Minute * 11)))
 

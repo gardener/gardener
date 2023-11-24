@@ -54,20 +54,17 @@ func NewStorage(
 ) ShootStorage {
 	shootRest, shootStatusRest, bindingREST := NewREST(optsGetter, credentialsRotationInterval)
 
-	s := ShootStorage{
+	return ShootStorage{
 		Shoot:   shootRest,
 		Status:  shootStatusRest,
 		Binding: bindingREST,
+		AdminKubeconfig: &AdminKubeconfigREST{
+			secretLister:         secretLister,
+			internalSecretLister: internalSecretLister,
+			shootStorage:         shootRest,
+			maxExpirationSeconds: int64(adminKubeconfigMaxExpiration.Seconds()),
+		},
 	}
-
-	s.AdminKubeconfig = &AdminKubeconfigREST{
-		secretLister:         secretLister,
-		internalSecretLister: internalSecretLister,
-		shootStorage:         shootRest,
-		maxExpirationSeconds: int64(adminKubeconfigMaxExpiration.Seconds()),
-	}
-
-	return s
 }
 
 // NewREST returns a RESTStorage object that will work against shoots.

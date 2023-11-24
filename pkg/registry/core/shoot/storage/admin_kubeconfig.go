@@ -32,6 +32,7 @@ import (
 	"k8s.io/apiserver/pkg/registry/rest"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 
+	"github.com/gardener/gardener/pkg/api"
 	authenticationapi "github.com/gardener/gardener/pkg/apis/authentication"
 	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 	authenticationvalidation "github.com/gardener/gardener/pkg/apis/authentication/validation"
@@ -62,7 +63,7 @@ var (
 
 // New returns and instance of AdminKubeconfigRequest
 func (r *AdminKubeconfigREST) New() runtime.Object {
-	return &authenticationapi.AdminKubeconfigRequest{}
+	return &authenticationv1alpha1.AdminKubeconfigRequest{}
 }
 
 // Destroy cleans up its resources on shutdown.
@@ -82,8 +83,12 @@ func (r *AdminKubeconfigREST) Create(ctx context.Context, name string, obj runti
 		}
 	}
 
-	out := obj.(*authenticationapi.AdminKubeconfigRequest)
-	if errs := authenticationvalidation.ValidateAdminKubeconfigRequest(out); len(errs) != 0 {
+	kubeconfigRequest := &authenticationapi.KubeconfigRequest{}
+	if err := api.Scheme.Convert(obj, kubeconfigRequest, nil); err != nil {
+		return nil, fmt.Errorf("failed converting %T to %T: %w", obj, kubeconfigRequest, err)
+	}
+
+	if errs := authenticationvalidation.ValidateKubeconfigRequest(kubeconfigRequest); len(errs) != 0 {
 		return nil, apierrors.NewInvalid(gvk.GroupKind(), "", errs)
 	}
 
@@ -130,12 +135,12 @@ func (r *AdminKubeconfigREST) Create(ctx context.Context, name string, obj runti
 	}
 
 	// generate kubeconfig with client certificate
-	if r.maxExpirationSeconds > 0 && out.Spec.ExpirationSeconds > r.maxExpirationSeconds {
-		out.Spec.ExpirationSeconds = r.maxExpirationSeconds
+	if r.maxExpirationSeconds > 0 && kubeconfigRequest.Spec.ExpirationSeconds > r.maxExpirationSeconds {
+		kubeconfigRequest.Spec.ExpirationSeconds = r.maxExpirationSeconds
 	}
 
 	var (
-		validity = time.Duration(out.Spec.ExpirationSeconds) * time.Second
+		validity = time.Duration(kubeconfigRequest.Spec.ExpirationSeconds) * time.Second
 		authName = fmt.Sprintf("%s--%s", shoot.Namespace, shoot.Name)
 		cpsc     = secrets.ControlPlaneSecretConfig{
 			Name: authName,
@@ -169,10 +174,14 @@ func (r *AdminKubeconfigREST) Create(ctx context.Context, name string, obj runti
 	controlPlaneSecret := cp.(*secrets.ControlPlane)
 
 	// return generated kubeconfig in status
-	out.Status.Kubeconfig = controlPlaneSecret.Kubeconfig
-	out.Status.ExpirationTimestamp = metav1.Time{Time: controlPlaneSecret.Certificate.Certificate.NotAfter}
+	kubeconfigRequest.Status.Kubeconfig = controlPlaneSecret.Kubeconfig
+	kubeconfigRequest.Status.ExpirationTimestamp = metav1.Time{Time: controlPlaneSecret.Certificate.Certificate.NotAfter}
 
-	return out, nil
+	if err := api.Scheme.Convert(kubeconfigRequest, obj, nil); err != nil {
+		return nil, fmt.Errorf("failed converting %T to %T: %w", kubeconfigRequest, obj, err)
+	}
+
+	return obj, nil
 }
 
 // GroupVersionKind returns authentication.gardener.cloud/v1alpha1 for AdminKubeconfigRequest.
