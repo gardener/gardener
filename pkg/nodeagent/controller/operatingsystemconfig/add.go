@@ -21,7 +21,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -69,9 +68,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 			source.Kind(mgr.GetCache(), &corev1.Secret{}),
 			r.EnqueueWithJitterDelay(mgr.GetLogger().WithValues("controller", ControllerName).WithName("jitterEventHandler")),
 			builder.WithPredicates(
-				predicate.NewPredicateFuncs(func(obj client.Object) bool {
-					return obj.GetNamespace() == metav1.NamespaceSystem && obj.GetName() == r.Config.SecretName
-				}),
 				r.SecretPredicate(),
 				predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
 			),

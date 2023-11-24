@@ -32,6 +32,7 @@ import (
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
 	"k8s.io/component-base/version/verflag"
@@ -169,9 +170,16 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		},
 
 		Cache: cache.Options{ByObject: map[client.Object]cache.ByObject{
-			&corev1.Secret{}:        {Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}}},
-			&corev1.Node{}:          {Label: labels.SelectorFromSet(labels.Set{corev1.LabelHostname: hostName})},
-			&coordinationv1.Lease{}: {Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}}},
+			&corev1.Secret{}: {
+				Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}},
+				Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: cfg.Controllers.OperatingSystemConfig.SecretName}),
+			},
+			&corev1.Node{}: {
+				Label: labels.SelectorFromSet(labels.Set{corev1.LabelHostname: hostName}),
+			},
+			&coordinationv1.Lease{}: {
+				Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}},
+			},
 		}},
 		LeaderElection: false,
 		Controller: controllerconfig.Controller{
