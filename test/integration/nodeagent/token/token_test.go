@@ -17,6 +17,7 @@ package token_test
 import (
 	"context"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -88,6 +89,7 @@ var _ = Describe("Token controller tests", func() {
 						Path:       path2,
 					},
 				},
+				SyncPeriod: &metav1.Duration{Duration: time.Hour},
 			},
 		}).AddToManager(mgr)).To(Succeed())
 

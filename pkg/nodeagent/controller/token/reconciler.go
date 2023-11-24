@@ -80,5 +80,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		log.Info("Updated token written to disk")
 	}
 
-	return reconcile.Result{}, nil
+	log.Info("Token sync completed, requeuing for next sync", "requeueAfter", r.Config.SyncPeriod.Duration)
+	return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, nil
 }
