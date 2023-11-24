@@ -432,6 +432,7 @@ rules:
   - core.gardener.cloud
   resources:
   - shoots/adminkubeconfig
+  - shoots/viewerkubeconfig
   verbs:
   - create
 
@@ -569,3 +570,9 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - core.gardener.cloud
+  resources:
+  - shoots/viewerkubeconfig
+  verbs:
+  - create
