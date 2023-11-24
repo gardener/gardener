@@ -292,6 +292,7 @@ func (v *vali) Destroy(ctx context.Context) error {
 func (v *vali) newValitailShootAccessSecret() *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret("valitail", v.namespace).
 		WithServiceAccountName(valitailName).
+		WithTokenExpirationDuration("720h").
 		WithTargetSecret(ValitailTokenSecretName, metav1.NamespaceSystem)
 }
 

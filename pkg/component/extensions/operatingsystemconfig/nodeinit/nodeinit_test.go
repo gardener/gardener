@@ -111,6 +111,7 @@ controllers:
     syncConfigs:
     - path: /var/lib/gardener-node-agent/credentials/token
       secretName: gardener-node-agent
+    syncPeriod: 12h0m0s
 kind: NodeAgentConfiguration
 logFormat: ""
 logLevel: ""
@@ -197,6 +198,7 @@ controllers:
     syncConfigs:
     - path: /var/lib/gardener-node-agent/credentials/token
       secretName: gardener-node-agent
+    syncPeriod: 12h0m0s
 kind: NodeAgentConfiguration
 logFormat: ""
 logLevel: ""
