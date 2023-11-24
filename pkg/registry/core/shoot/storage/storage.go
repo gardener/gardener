@@ -40,7 +40,7 @@ type REST struct {
 type ShootStorage struct {
 	Shoot           *REST
 	Status          *StatusREST
-	AdminKubeconfig *AdminKubeconfigREST
+	AdminKubeconfig *KubeconfigREST
 	Binding         *BindingREST
 }
 
@@ -55,15 +55,10 @@ func NewStorage(
 	shootRest, shootStatusRest, bindingREST := NewREST(optsGetter, credentialsRotationInterval)
 
 	return ShootStorage{
-		Shoot:   shootRest,
-		Status:  shootStatusRest,
-		Binding: bindingREST,
-		AdminKubeconfig: &AdminKubeconfigREST{
-			secretLister:         secretLister,
-			internalSecretLister: internalSecretLister,
-			shootStorage:         shootRest,
-			maxExpirationSeconds: int64(adminKubeconfigMaxExpiration.Seconds()),
-		},
+		Shoot:           shootRest,
+		Status:          shootStatusRest,
+		Binding:         bindingREST,
+		AdminKubeconfig: NewAdminKubeconfigREST(shootRest, secretLister, internalSecretLister, adminKubeconfigMaxExpiration),
 	}
 }
 
