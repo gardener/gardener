@@ -1513,7 +1513,7 @@ type DataVolume struct {
 
 // CRI contains information about the Container Runtimes.
 type CRI struct {
-	// The name of the CRI library. Supported values are `docker` and `containerd`.
+	// The name of the CRI library. Supported values are `containerd`.
 	Name CRIName `json:"name" protobuf:"bytes,1,opt,name=name,casttype=CRIName"`
 	// ContainerRuntimes is the list of the required container runtimes supported for a worker pool.
 	// +optional

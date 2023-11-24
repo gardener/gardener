@@ -2819,7 +2819,7 @@ CRIName
 </em>
 </td>
 <td>
-<p>The name of the CRI library. Supported values are <code>docker</code> and <code>containerd</code>.</p>
+<p>The name of the CRI library. Supported values are <code>containerd</code>.</p>
 </td>
 </tr>
 <tr>
