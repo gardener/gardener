@@ -87,6 +87,11 @@ metadata:
 rules:
 - apiGroups:
   - ""
+  resourceNames:
+  - gardener-node-agent
+  - gardener-valitail
+  - osc-secret1
+  - osc-secret2
   resources:
   - secrets
   verbs:
@@ -169,7 +174,7 @@ subjects:
 		})
 
 		It("should generate the expected RBAC resources", func() {
-			data, err := RBACResourcesData(nil)
+			data, err := RBACResourcesData([]string{"osc-secret1", "osc-secret2"})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(data).To(HaveLen(7))
 			Expect(string(data["clusterrole____gardener-node-agent.yaml"])).To(Equal(clusterRoleYAML))

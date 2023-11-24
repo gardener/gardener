@@ -22,6 +22,7 @@ import (
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/component/logging/vali"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
@@ -29,7 +30,7 @@ import (
 // RBACResourcesData returns a map of serialized Kubernetes resources that allow the gardener-node-agent to
 // access the list of given secrets. Additionally, serialized resources providing permissions to allow initiating the
 // Kubernetes TLS bootstrapping process will be returned.
-func RBACResourcesData(_ []string) (map[string][]byte, error) {
+func RBACResourcesData(secretNames []string) (map[string][]byte, error) {
 	var (
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
@@ -72,9 +73,10 @@ func RBACResourcesData(_ []string) (map[string][]byte, error) {
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
-					APIGroups: []string{""},
-					Resources: []string{"secrets"},
-					Verbs:     []string{"get", "list", "watch"},
+					APIGroups:     []string{""},
+					Resources:     []string{"secrets"},
+					ResourceNames: append([]string{nodeagentv1alpha1.AccessSecretName, vali.ValitailTokenSecretName}, secretNames...),
+					Verbs:         []string{"get", "list", "watch"},
 				},
 				{
 					APIGroups: []string{coordinationv1.GroupName},
