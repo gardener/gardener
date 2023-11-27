@@ -34,6 +34,7 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 			seedList := &gardencorev1beta1.SeedList{}
 			Expect(testClient.List(ctx, seedList, client.Limit(1))).To(Succeed())
 			seed = seedList.Items[0].DeepCopy()
+			log.Info("Renewing gardenlet kubeconfig", "seedName", seed.Name)
 		})
 
 		It("should renew the gardenlet garden kubeconfig when triggered by annotation", func() {

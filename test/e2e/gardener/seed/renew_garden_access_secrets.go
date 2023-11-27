@@ -48,6 +48,7 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 			seedList := &gardencorev1beta1.SeedList{}
 			Expect(testClient.List(ctx, seedList, client.MatchingLabels{"base": "kind"}, client.Limit(1))).To(Succeed())
 			seed = seedList.Items[0].DeepCopy()
+			log.Info("Renewing garden cluster access", "seedName", seed.Name)
 
 			seedNamespace = gardenerutils.ComputeGardenNamespace(seed.Name)
 
