@@ -60,7 +60,7 @@ func (f *GardenerFramework) GetSeed(ctx context.Context, seedName string) (*gard
 		if apierrors.IsNotFound(err) {
 			f.Logger.Info("Seed is not a ManagedSeed, checking seed secret")
 
-			// here we expect seed kubeconfig secret is created in Garden for testing
+			// For tests, we expect the seed kubeconfig secret to be present in the garden namespace
 			seedSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "seed-" + seedName,
@@ -69,7 +69,7 @@ func (f *GardenerFramework) GetSeed(ctx context.Context, seedName string) (*gard
 			}
 
 			if err := f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(seedSecret), seedSecret); err != nil {
-				return seed, nil, fmt.Errorf("seed is not a ManagedSeed also seed kubeconfig secret is not present in Garden, %s: %w", client.ObjectKeyFromObject(seed), err)
+				return seed, nil, fmt.Errorf("seed is not a ManagedSeed also no seed kubeconfig secret present in the garden namespace, %s: %w", client.ObjectKeyFromObject(seed), err)
 			}
 
 			seedClient, err := kubernetes.NewClientFromSecret(ctx, f.GardenClient.Client(), seedSecret.Namespace, seedSecret.Name,
