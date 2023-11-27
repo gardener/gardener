@@ -86,10 +86,11 @@ func (c completedConfig) New() (*GardenerServer, error) {
 	var (
 		s                = &GardenerServer{GenericAPIServer: genericServer}
 		coreAPIGroupInfo = (corerest.StorageProvider{
-			AdminKubeconfigMaxExpiration: c.ExtraConfig.AdminKubeconfigMaxExpiration,
-			CredentialsRotationInterval:  c.ExtraConfig.CredentialsRotationInterval,
-			KubeInformerFactory:          c.kubeInformerFactory,
-			CoreInformerFactory:          c.coreInformerFactory,
+			AdminKubeconfigMaxExpiration:  c.ExtraConfig.AdminKubeconfigMaxExpiration,
+			ViewerKubeconfigMaxExpiration: c.ExtraConfig.ViewerKubeconfigMaxExpiration,
+			CredentialsRotationInterval:   c.ExtraConfig.CredentialsRotationInterval,
+			KubeInformerFactory:           c.kubeInformerFactory,
+			CoreInformerFactory:           c.coreInformerFactory,
 		}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		seedManagementAPIGroupInfo = (seedmanagementrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		settingsAPIGroupInfo       = (settingsrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)

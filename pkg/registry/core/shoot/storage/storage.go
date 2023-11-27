@@ -38,10 +38,11 @@ type REST struct {
 
 // ShootStorage implements the storage for Shoots and all their subresources.
 type ShootStorage struct {
-	Shoot           *REST
-	Status          *StatusREST
-	AdminKubeconfig *KubeconfigREST
-	Binding         *BindingREST
+	Shoot            *REST
+	Status           *StatusREST
+	AdminKubeconfig  *KubeconfigREST
+	ViewerKubeconfig *KubeconfigREST
+	Binding          *BindingREST
 }
 
 // NewStorage creates a new ShootStorage object.
@@ -50,15 +51,17 @@ func NewStorage(
 	internalSecretLister gardencorelisters.InternalSecretLister,
 	secretLister kubecorev1listers.SecretLister,
 	adminKubeconfigMaxExpiration time.Duration,
+	viewerKubeconfigMaxExpiration time.Duration,
 	credentialsRotationInterval time.Duration,
 ) ShootStorage {
 	shootRest, shootStatusRest, bindingREST := NewREST(optsGetter, credentialsRotationInterval)
 
 	return ShootStorage{
-		Shoot:           shootRest,
-		Status:          shootStatusRest,
-		Binding:         bindingREST,
-		AdminKubeconfig: NewAdminKubeconfigREST(shootRest, secretLister, internalSecretLister, adminKubeconfigMaxExpiration),
+		Shoot:            shootRest,
+		Status:           shootStatusRest,
+		Binding:          bindingREST,
+		AdminKubeconfig:  NewAdminKubeconfigREST(shootRest, secretLister, internalSecretLister, adminKubeconfigMaxExpiration),
+		ViewerKubeconfig: NewViewerKubeconfigREST(shootRest, secretLister, internalSecretLister, viewerKubeconfigMaxExpiration),
 	}
 }
 
