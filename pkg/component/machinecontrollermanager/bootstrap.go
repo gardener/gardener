@@ -33,6 +33,8 @@ import (
 const (
 	managedResourceControlName = "machine-controller-manager"
 	clusterRoleName            = "system:machine-controller-manager-runtime"
+	// TODO(himanshu-kun): remove after g/g v1.88 has been released
+	unsupportedClusterRoleName = "system:machine-controller-manager-seed"
 )
 
 // NewBootstrapper creates a new instance of DeployWaiter for the machine-controller-manager bootstrapper.

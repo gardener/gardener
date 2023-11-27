@@ -129,6 +129,14 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if exists, err := m.checkUnsupportedClusterRoleBindingSeed(ctx); err != nil {
+		return err
+	} else if exists {
+		if err = kubernetesutils.DeleteObject(ctx, m.client, m.emptyClusterRoleBindingSeed()); err != nil {
+			return err
+		}
+	}
+
 	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, m.client, clusterRoleBinding, func() error {
 		clusterRoleBinding.OwnerReferences = []metav1.OwnerReference{{
 			APIVersion:         "v1",
@@ -452,6 +460,10 @@ func (m *machineControllerManager) emptyServiceAccount() *corev1.ServiceAccount 
 	return &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager", Namespace: m.namespace}}
 }
 
+func (m *machineControllerManager) emptyClusterRoleBindingSeed() *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager-" + m.namespace}}
+}
+
 func (m *machineControllerManager) emptyClusterRoleBindingRuntime() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager-" + m.namespace}}
 }
@@ -490,4 +502,17 @@ func getLabels() map[string]string {
 		v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
 		v1beta1constants.LabelRole: "machine-controller-manager",
 	}
+}
+
+// TODO(himanshu-kun): remove after g/g v1.88 has been released
+func (m *machineControllerManager) checkUnsupportedClusterRoleBindingSeed(ctx context.Context) (bool, error) {
+	crb := &rbacv1.ClusterRoleBinding{}
+	if err := m.client.Get(ctx, client.ObjectKeyFromObject(m.emptyClusterRoleBindingSeed()), crb); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return crb.RoleRef.Name == unsupportedClusterRoleName, nil
 }

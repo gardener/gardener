@@ -63,15 +63,16 @@ var _ = Describe("MachineControllerManager", func() {
 		values     Values
 		mcm        Interface
 
-		serviceAccount        *corev1.ServiceAccount
-		clusterRoleBinding    *rbacv1.ClusterRoleBinding
-		service               *corev1.Service
-		shootAccessSecret     *corev1.Secret
-		deployment            *appsv1.Deployment
-		podDisruptionBudget   *policyv1.PodDisruptionBudget
-		vpa                   *vpaautoscalingv1.VerticalPodAutoscaler
-		managedResourceSecret *corev1.Secret
-		managedResource       *resourcesv1alpha1.ManagedResource
+		serviceAccount                    *corev1.ServiceAccount
+		unsupportedClusterRoleBindingSeed *rbacv1.ClusterRoleBinding
+		clusterRoleBinding                *rbacv1.ClusterRoleBinding
+		service                           *corev1.Service
+		shootAccessSecret                 *corev1.Secret
+		deployment                        *appsv1.Deployment
+		podDisruptionBudget               *policyv1.PodDisruptionBudget
+		vpa                               *vpaautoscalingv1.VerticalPodAutoscaler
+		managedResourceSecret             *corev1.Secret
+		managedResource                   *resourcesv1alpha1.ManagedResource
 	)
 
 	BeforeEach(func() {
@@ -98,6 +99,34 @@ var _ = Describe("MachineControllerManager", func() {
 				Namespace: namespace,
 			},
 			AutomountServiceAccountToken: pointer.Bool(false),
+		}
+
+		unsupportedClusterRoleBindingSeed = &rbacv1.ClusterRoleBinding{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "rbac.authorization.k8s.io/v1",
+				Kind:       "ClusterRoleBinding",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "machine-controller-manager-" + namespace,
+				OwnerReferences: []metav1.OwnerReference{{
+					APIVersion:         "v1",
+					Kind:               "Namespace",
+					Name:               namespace,
+					UID:                namespaceUID,
+					Controller:         pointer.Bool(true),
+					BlockOwnerDeletion: pointer.Bool(true),
+				}},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "ClusterRole",
+				Name:     "system:machine-controller-manager-seed",
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      "machine-controller-manager",
+				Namespace: namespace,
+			}},
 		}
 
 		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
@@ -547,6 +576,26 @@ subjects:
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), actualManagedResourceSecret)).To(Succeed())
 			managedResourceSecret.ResourceVersion = "1"
 			Expect(actualManagedResourceSecret).To(Equal(managedResourceSecret))
+		})
+
+		It("should successfully delete unsupported clusterrolebinding and create new one", func() {
+			Expect(fakeClient.Create(ctx, unsupportedClusterRoleBindingSeed)).To(Succeed())
+			Expect(mcm.Deploy(ctx)).To(Succeed())
+
+			actualClusterRoleBinding := &rbacv1.ClusterRoleBinding{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), actualClusterRoleBinding)).To(Succeed())
+			clusterRoleBinding.ResourceVersion = "1"
+			Expect(actualClusterRoleBinding).To(Equal(clusterRoleBinding))
+		})
+
+		It("should not delete supported clusterrolebinding, if already present", func() {
+			Expect(fakeClient.Create(ctx, clusterRoleBinding)).To(Succeed())
+			Expect(mcm.Deploy(ctx)).To(Succeed())
+
+			actualClusterRoleBinding := &rbacv1.ClusterRoleBinding{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), actualClusterRoleBinding)).To(Succeed())
+			clusterRoleBinding.ResourceVersion = "2"
+			Expect(actualClusterRoleBinding).To(Equal(clusterRoleBinding))
 		})
 	})
 
