@@ -45,6 +45,7 @@ import (
 	extensionsmockgenericactuator "github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator/mock"
 	extensionsmockcontroller "github.com/gardener/gardener/extensions/pkg/controller/mock"
 	extensionssecretsmanager "github.com/gardener/gardener/extensions/pkg/util/secret/manager"
+	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -52,7 +53,6 @@ import (
 	mockchartrenderer "github.com/gardener/gardener/pkg/chartrenderer/mock"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/chart"
 	mockchartutil "github.com/gardener/gardener/pkg/utils/chart/mocks"
@@ -84,7 +84,6 @@ var (
 	pFalse, pTrue = &vFalse, &vTrue
 
 	fakeClock *testclock.FakeClock
-	mgr       *mockmanager.MockManager
 )
 
 func TestControlPlane(t *testing.T) {
@@ -210,9 +209,6 @@ var _ = Describe("Actuator", func() {
 			// use fake clock and client, pass on the rest
 			return extensionssecretsmanager.SecretsManagerForCluster(ctx, logger, fakeClock, fakeClient, cluster, identity, secretConfigs)
 		}
-
-		// Create fake manager
-		mgr = mockmanager.NewMockManager(ctrl)
 
 		deterministicReader := strings.NewReader(strings.Repeat("-", 10000))
 		fakeClock = testclock.NewFakeClock(time.Unix(1649848746, 0))
@@ -343,7 +339,7 @@ var _ = Describe("Actuator", func() {
 			var atomicWebhookConfig *atomic.Value
 			if webhookConfig != nil {
 				atomicWebhookConfig = &atomic.Value{}
-				atomicWebhookConfig.Store(webhookConfig)
+				atomicWebhookConfig.Store(&extensionswebhook.Configs{MutatingWebhookConfig: webhookConfig})
 			}
 
 			// Create mock client
@@ -521,7 +517,7 @@ webhooks:
 			var atomicWebhookConfig *atomic.Value
 			if webhookConfig != nil {
 				atomicWebhookConfig = &atomic.Value{}
-				atomicWebhookConfig.Store(webhookConfig)
+				atomicWebhookConfig.Store(&extensionswebhook.Configs{MutatingWebhookConfig: webhookConfig})
 			}
 
 			// Create mock values provider

@@ -15,6 +15,7 @@
 package webhook
 
 import (
+	"fmt"
 	"net/http"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -27,6 +28,10 @@ import (
 )
 
 const (
+	// ActionMutating defines the webhook as a mutating webhook.
+	ActionMutating = "mutating"
+	// ActionValidating defines the webhook as a validating webhook.
+	ActionValidating = "validating"
 	// TargetSeed defines that the webhook is to be installed in the seed.
 	TargetSeed = "seed"
 	// TargetShoot defines that the webhook is to be installed in the shoot.
@@ -35,6 +40,7 @@ const (
 
 // Webhook is the specification of a webhook.
 type Webhook struct {
+	Action         string
 	Name           string
 	Provider       string
 	Path           string
@@ -56,27 +62,47 @@ type Type struct {
 
 // Args contains Webhook creation arguments.
 type Args struct {
-	Provider   string
-	Name       string
-	Path       string
-	Predicates []predicate.Predicate
-	Validators map[Validator][]Type
-	Mutators   map[Mutator][]Type
+	Provider       string
+	Name           string
+	Path           string
+	Target         string
+	Selector       *metav1.LabelSelector
+	ObjectSelector *metav1.LabelSelector
+	Predicates     []predicate.Predicate
+	Validators     map[Validator][]Type
+	Mutators       map[Mutator][]Type
 }
 
 // New creates a new Webhook with the given args.
 func New(mgr manager.Manager, args Args) (*Webhook, error) {
-	logger := log.Log.WithName(args.Name).WithValues("provider", args.Provider)
+	var (
+		objTypes []Type
 
-	// Create handler
-	builder := NewBuilder(mgr, logger)
+		logger  = log.Log.WithName(args.Name).WithValues("provider", args.Provider)
+		builder = NewBuilder(mgr, logger)
+	)
 
-	for val, objs := range args.Validators {
-		builder.WithValidator(val, objs...)
+	var actionType string
+	if len(args.Mutators) > 0 {
+		actionType = ActionMutating
+	}
+	if len(args.Validators) > 0 {
+		// Mutators and validators must not be configured at the same time because mutators are supposed to be placed in
+		// a 'MutatingWebhookConfiugration' while validators should reside in a 'ValidatingWebhookConfiguration'.
+		if actionType == ActionMutating {
+			return nil, fmt.Errorf("failed to create webhook because a mixture of mutating and validating functions is not permitted")
+		}
+		actionType = ActionValidating
 	}
 
 	for mut, objs := range args.Mutators {
 		builder.WithMutator(mut, objs...)
+		objTypes = append(objTypes, objs...)
+	}
+
+	for val, objs := range args.Validators {
+		builder.WithValidator(val, objs...)
+		objTypes = append(objTypes, objs...)
 	}
 
 	builder.WithPredicates(args.Predicates...)
@@ -90,7 +116,14 @@ func New(mgr manager.Manager, args Args) (*Webhook, error) {
 	logger.Info("Creating webhook")
 
 	return &Webhook{
-		Path:    args.Path,
-		Webhook: &admission.Webhook{Handler: handler, RecoverPanic: true},
+		Name:           args.Name,
+		Provider:       args.Provider,
+		Action:         actionType,
+		Selector:       args.Selector,
+		ObjectSelector: args.ObjectSelector,
+		Path:           args.Path,
+		Target:         args.Target,
+		Webhook:        &admission.Webhook{Handler: handler, RecoverPanic: true},
+		Types:          objTypes,
 	}, nil
 }

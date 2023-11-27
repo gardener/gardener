@@ -21,18 +21,17 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	extensionsshootwebhook "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
@@ -53,14 +52,14 @@ type reconciler struct {
 	// SyncPeriod is the frequency with which to reload the server cert. Defaults to 5m.
 	SyncPeriod time.Duration
 	// SourceWebhookConfigs are the webhook configurations to reconcile in the Source cluster.
-	SourceWebhookConfigs []client.Object
-	// ShootWebhookConfig is the webhook configuration to reconcile in all Shoot clusters.
-	ShootWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration
-	// AtomicShootWebhookConfig is an atomic value in which this reconciler will store the updated ShootWebhookConfig.
+	SourceWebhookConfigs extensionswebhook.Configs
+	// ShootWebhookConfigs are the webhook configurations to reconcile in all Shoot clusters.
+	ShootWebhookConfigs *extensionswebhook.Configs
+	// AtomicShootWebhookConfigs is an atomic value in which this reconciler will store the updated ShootWebhookConfigs.
 	// It is supposed to be shared with the ControlPlane actuator. I.e. if the CA bundle changes, this reconciler
 	// updates the CA bundle in this value so that the ControlPlane actuator can configure the correct (the new) CA
 	// bundle for newly created shoots by loading this value.
-	AtomicShootWebhookConfig *atomic.Value
+	AtomicShootWebhookConfigs *atomic.Value
 	// CASecretName is the CA config name.
 	CASecretName string
 	// ServerSecretName is the server certificate config name.
@@ -80,23 +79,28 @@ type reconciler struct {
 	// URL is the URL that is used to register the webhooks in Kubernetes.
 	URL string
 
-	serverPort int32
-	client     client.Client
+	// client is the client used to update webhook configuration objects.
+	client client.Client
+	// sourceClient is the client used to manage certificate secrets.
+	sourceClient client.Client
 }
 
-// AddToManager generates webhook CA and server cert if it doesn't exist on the cluster yet. Then it adds reconciler to
-// the given manager in order to periodically regenerate the webhook secrets.
-func (r *reconciler) AddToManager(ctx context.Context, mgr manager.Manager) error {
-	webhookServer := mgr.GetWebhookServer()
-	defaultServer, ok := webhookServer.(*webhook.DefaultServer)
-	if !ok {
-		return fmt.Errorf("expected *webhook.DefaultServer, got %T", webhookServer)
+// AddToManager generates webhook CA and server cert if it doesn't exist on the cluster yet.
+// Then it adds the reconciler to the given manager in order to periodically regenerate the webhook secrets.
+// An 'sourceCluster' can be optionally passed to let the certificate secrets be managed in a different cluster.
+func (r *reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster cluster.Cluster) error {
+	r.client = mgr.GetClient()
+	r.sourceClient = mgr.GetClient()
+	apiReader := mgr.GetAPIReader()
+	scheme := mgr.GetScheme()
+
+	if sourceCluster != nil {
+		r.sourceClient = sourceCluster.GetClient()
+		apiReader = sourceCluster.GetAPIReader()
+		scheme = sourceCluster.GetScheme()
 	}
 
-	r.serverPort = int32(defaultServer.Options.Port)
-	r.client = mgr.GetClient()
-
-	present, err := isWebhookServerSecretPresent(ctx, mgr.GetAPIReader(), mgr.GetScheme(), r.ServerSecretName, r.Namespace, r.Identity)
+	present, err := isWebhookServerSecretPresent(ctx, apiReader, scheme, r.ServerSecretName, r.Namespace, r.Identity)
 	if err != nil {
 		return err
 	}
@@ -105,10 +109,15 @@ func (r *reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	// otherwise the webhook server will not be able to start (which is a non-leader election runnable and is therefore
 	// started before this controller)
 	if !present {
+		restConfig := mgr.GetConfig()
+		if sourceCluster != nil {
+			restConfig = sourceCluster.GetConfig()
+		}
+
 		// cache is not started yet, we need an uncached client for the initial setup
-		uncachedClient, err := client.New(mgr.GetConfig(), client.Options{
+		uncachedClient, err := client.New(restConfig, client.Options{
 			Cache: &client.CacheOptions{
-				Reader: mgr.GetAPIReader(),
+				Reader: apiReader,
 			},
 		})
 		if err != nil {
@@ -147,7 +156,7 @@ func (r *reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 func (r *reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
-	sm, err := r.newSecretsManager(ctx, log, r.client)
+	sm, err := r.newSecretsManager(ctx, log, r.sourceClient)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to create new SecretsManager: %w", err)
 	}
@@ -175,29 +184,35 @@ func (r *reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 	}
 	log.Info("Generated webhook server cert", "serverSecretName", serverSecret.Name)
 
-	for _, sourceWebhookConfig := range r.SourceWebhookConfigs {
-		if sourceWebhookConfig == nil {
-			continue
-		}
+	for _, sourceWebhookConfig := range r.SourceWebhookConfigs.GetWebhookConfigs() {
 		if err := r.reconcileSourceWebhookConfig(ctx, sourceWebhookConfig, caBundleSecret); err != nil {
 			return reconcile.Result{}, fmt.Errorf("error reconciling source webhook config %s: %w", client.ObjectKeyFromObject(sourceWebhookConfig), err)
 		}
 		log.Info("Updated source webhook config with new CA bundle", "webhookConfig", sourceWebhookConfig)
 	}
 
-	if r.ShootWebhookConfig != nil {
-		// update shoot webhook config object (in memory) with the freshly created CA bundle which is also used by the
-		// ControlPlane actuator
-		if err := extensionswebhook.InjectCABundleIntoWebhookConfig(r.ShootWebhookConfig, caBundleSecret.Data[secretsutils.DataKeyCertificateBundle]); err != nil {
-			return reconcile.Result{}, err
+	if r.ShootWebhookConfigs != nil && r.ShootWebhookConfigs.HasWebhookConfig() {
+		for _, shootWebhookConfig := range r.ShootWebhookConfigs.GetWebhookConfigs() {
+			// update shoot webhook config object (in memory) with the freshly created CA bundle which is also used by the
+			// ControlPlane actuator
+			if err := extensionswebhook.InjectCABundleIntoWebhookConfig(shootWebhookConfig, caBundleSecret.Data[secretsutils.DataKeyCertificateBundle]); err != nil {
+				return reconcile.Result{}, err
+			}
 		}
-		r.AtomicShootWebhookConfig.Store(r.ShootWebhookConfig.DeepCopy())
+
+		r.AtomicShootWebhookConfigs.Store(r.ShootWebhookConfigs.DeepCopy())
 
 		// reconcile all shoot webhook configs with the freshly created CA bundle
-		if err := extensionsshootwebhook.ReconcileWebhooksForAllNamespaces(ctx, r.client, r.Namespace, r.ComponentName, r.ShootWebhookManagedResourceName, r.ShootNamespaceSelector, r.ShootWebhookConfig); err != nil {
+		if err := extensionsshootwebhook.ReconcileWebhooksForAllNamespaces(ctx, r.client, r.Namespace, r.ComponentName, r.ShootWebhookManagedResourceName, r.ShootNamespaceSelector, *r.ShootWebhookConfigs); err != nil {
 			return reconcile.Result{}, fmt.Errorf("error reconciling all shoot webhook configs: %w", err)
 		}
-		log.Info("Updated all shoot webhook configs with new CA bundle", "webhookConfig", r.ShootWebhookConfig)
+
+		if r.ShootWebhookConfigs.MutatingWebhookConfig != nil {
+			log.Info("Updated all shoot mutating webhook configs with new CA bundle", "webhookConfig", r.ShootWebhookConfigs.MutatingWebhookConfig)
+		}
+		if r.ShootWebhookConfigs.ValidatingWebhookConfig != nil {
+			log.Info("Updated all shoot validating webhook configs with new CA bundle", "webhookConfig", r.ShootWebhookConfigs.ValidatingWebhookConfig)
+		}
 	}
 
 	if err := sm.Cleanup(ctx); err != nil {
