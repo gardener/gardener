@@ -376,8 +376,8 @@ github.com/fsnotify/fsnotify v1.6.0/go.mod h1:sl3t1tCWJFWoRz9R8WJCbQihKKwmorjAbS
 github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa/go.mod h1:KnogPXtdwXqoenmZCw6S+25EAm2MkxbG0deNDu4cbSA=
 github.com/gardener/dependency-watchdog v1.1.2 h1:id9FAnjL9kiZec+QNVacw4BlxLrI3deMtN4KyxpCcKk=
 github.com/gardener/dependency-watchdog v1.1.2/go.mod h1:giWCBTBkZiY00dv06/DpASzPgc0U+XVF+ZOGkTUewjk=
-github.com/gardener/etcd-druid v0.20.1 h1:o6F4higujfg7dvBXvk+yPb86+3t2+XLE0Hmw5W1kXtM=
-github.com/gardener/etcd-druid v0.20.1/go.mod h1:1tAeHycB0Vb2GfCX6sUCc6V6frGrCQI//quVg4K3GNA=
+github.com/gardener/etcd-druid v0.21.0 h1:kgr3KR+lVL4+k2WD+9PMrTY1eePkQ7CZHSCB5A+Q9TQ=
+github.com/gardener/etcd-druid v0.21.0/go.mod h1:1tAeHycB0Vb2GfCX6sUCc6V6frGrCQI//quVg4K3GNA=
 github.com/gardener/hvpa-controller/api v0.5.0 h1:f4F3O7YUrenwh4S3TgPREPiB287JjjUiUL18OqPLyAA=
 github.com/gardener/hvpa-controller/api v0.5.0/go.mod h1:QQl3ELkCaki+8RhXl0FZMfvnm0WCGwGJlGmrxJj6lvM=
 github.com/gardener/machine-controller-manager v0.50.0 h1:3dcQjzueFU1TGgprV00adjb3OCR99myTBx8DQGxywks=
