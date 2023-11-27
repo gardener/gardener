@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
@@ -258,6 +259,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 			shoot.CloudConfigExecutionMaxDelaySeconds = seconds
 		}
 	}
+	shoot.OSCSyncJitterPeriod = &metav1.Duration{Duration: time.Duration(shoot.CloudConfigExecutionMaxDelaySeconds) * time.Second}
 
 	if lastOperation := shootObject.Status.LastOperation; lastOperation != nil &&
 		lastOperation.Type == gardencorev1beta1.LastOperationTypeRestore &&

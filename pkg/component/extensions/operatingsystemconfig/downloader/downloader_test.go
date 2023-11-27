@@ -15,13 +15,17 @@
 package downloader_test
 
 import (
+	"strings"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/downloader"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Downloader", func() {
@@ -85,6 +89,14 @@ var _ = Describe("Downloader", func() {
 			secretName1 = "secret1"
 			secretName2 = "secret2"
 
+			roleYAML                               string
+			roleBindingYAML                        string
+			clusterRoleBindingNodeBootstrapperYAML string
+			clusterRoleBindingNodeClientYAML       string
+			clusterRoleBindingSelfNodeClientYAML   string
+		)
+
+		BeforeEach(func() {
 			roleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -99,6 +111,7 @@ rules:
   - ` + secretName2 + `
   - cloud-config-downloader
   - gardener-valitail
+  - gardener-node-agent
   resources:
   - secrets
   verbs:
@@ -166,9 +179,34 @@ subjects:
   kind: Group
   name: system:nodes
 `
-		)
+		})
 
-		It("should generate the expected RBAC resources", func() {
+		It("should generate the expected RBAC resources when UseGardenerNodeAgent feature gate is off", func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, false))
+
+			data, err := GenerateRBACResourcesData([]string{secretName1, secretName2})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(data).To(HaveLen(5))
+			Expect(string(data["role__kube-system__cloud-config-downloader.yaml"])).To(Equal(roleYAML))
+			Expect(string(data["rolebinding__kube-system__cloud-config-downloader.yaml"])).To(Equal(roleBindingYAML))
+			Expect(string(data["clusterrolebinding____system_node-bootstrapper.yaml"])).To(Equal(clusterRoleBindingNodeBootstrapperYAML))
+			Expect(string(data["clusterrolebinding____system_certificates.k8s.io_certificatesigningrequests_nodeclient.yaml"])).To(Equal(clusterRoleBindingNodeClientYAML))
+			Expect(string(data["clusterrolebinding____system_certificates.k8s.io_certificatesigningrequests_selfnodeclient.yaml"])).To(Equal(clusterRoleBindingSelfNodeClientYAML))
+		})
+
+		It("should generate the expected RBAC resources when UseGardenerNodeAgent feature gate is on", func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, true))
+
+			clusterRoleBindingNodeBootstrapperYAML = strings.ReplaceAll(clusterRoleBindingNodeBootstrapperYAML, "metadata:", `metadata:
+  annotations:
+    resources.gardener.cloud/mode: Ignore`)
+			clusterRoleBindingNodeClientYAML = strings.ReplaceAll(clusterRoleBindingNodeClientYAML, "metadata:", `metadata:
+  annotations:
+    resources.gardener.cloud/mode: Ignore`)
+			clusterRoleBindingSelfNodeClientYAML = strings.ReplaceAll(clusterRoleBindingSelfNodeClientYAML, "metadata:", `metadata:
+  annotations:
+    resources.gardener.cloud/mode: Ignore`)
+
 			data, err := GenerateRBACResourcesData([]string{secretName1, secretName2})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(data).To(HaveLen(5))

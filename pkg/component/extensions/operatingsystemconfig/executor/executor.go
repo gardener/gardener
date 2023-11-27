@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/docker"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/varlibmount"
+	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
@@ -70,7 +71,7 @@ func init() {
 const (
 	// AnnotationKeyChecksum is the key of an annotation on a shoot Node object whose value is the checksum
 	// of the last applied cloud config user data.
-	AnnotationKeyChecksum = "checksum/cloud-config-data"
+	AnnotationKeyChecksum = nodeagentv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig
 	// PathExecutionDelaySeconds is the path on the shoot worker nodes at which the randomly computed delay for the
 	// execution will be persisted.
 	PathExecutionDelaySeconds = downloader.PathCCDDirectory + "/execution_delay_seconds"

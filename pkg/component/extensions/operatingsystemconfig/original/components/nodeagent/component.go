@@ -45,9 +45,10 @@ var codec runtime.Codec
 func init() {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(nodeagentv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(extensionsv1alpha1.AddToScheme(scheme))
 
 	ser := json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
-	versions := schema.GroupVersions([]schema.GroupVersion{nodeagentv1alpha1.SchemeGroupVersion})
+	versions := schema.GroupVersions([]schema.GroupVersion{nodeagentv1alpha1.SchemeGroupVersion, extensionsv1alpha1.SchemeGroupVersion})
 	codec = serializer.NewCodecFactory(scheme).CodecForVersions(ser, ser, versions, versions)
 }
 
