@@ -100,7 +100,7 @@ func (r *Reconciler) runForceDeleteShootFlow(ctx context.Context, log logr.Logge
 		})
 		waitUntilMachineResourcesDeleted = g.Add(flow.Task{
 			Name:         "Waiting until machine resources have been deleted",
-			Fn:           cleaner.WaitUntilMachineResourcesDeleted,
+			Fn:           flow.TaskFn(cleaner.WaitUntilMachineResourcesDeleted).Timeout(defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deleteMachineResources),
 		})
 		deleteCluster = g.Add(flow.Task{
