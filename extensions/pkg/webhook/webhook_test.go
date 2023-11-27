@@ -21,12 +21,12 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	. "github.com/gardener/gardener/extensions/pkg/webhook"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Webhook", func() {
@@ -34,7 +34,9 @@ var _ = Describe("Webhook", func() {
 		var mgr manager.Manager
 
 		BeforeEach(func() {
-			mgr = &fakeManager{}
+			mgr = &test.FakeManager{
+				Scheme: kubernetesscheme.Scheme,
+			}
 		})
 
 		It("should successfully return a webhook object", func() {
@@ -81,14 +83,6 @@ var _ = Describe("Webhook", func() {
 		})
 	})
 })
-
-type fakeManager struct {
-	manager.Manager
-}
-
-func (f *fakeManager) GetScheme() *runtime.Scheme {
-	return kubernetesscheme.Scheme
-}
 
 type fakeMutator struct{}
 
