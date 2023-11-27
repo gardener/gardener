@@ -32,8 +32,7 @@ import (
 // Reconciler creates a lease in the kube-system namespace of the shoot.
 type Reconciler struct {
 	Client               client.Client
-	RenewIntervalSeconds int32
-	NodeName             string
+	LeaseDurationSeconds int32
 	Namespace            string
 	Clock                clock.Clock
 }
@@ -56,9 +55,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 	leaseSpec := coordinationv1.LeaseSpec{
 		HolderIdentity:       &lease.Name,
-		LeaseDurationSeconds: &r.RenewIntervalSeconds,
+		LeaseDurationSeconds: &r.LeaseDurationSeconds,
 		RenewTime:            &metav1.MicroTime{Time: r.Clock.Now().UTC()},
 	}
+
+	requeueAfter := time.Duration(r.LeaseDurationSeconds) * time.Second / 4
 
 	if err := r.Client.Get(ctx, client.ObjectKeyFromObject(lease), lease); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -67,7 +68,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 				return reconcile.Result{}, err
 			}
 			log.V(1).Info("Creating heartbeat Lease", "lease", client.ObjectKeyFromObject(lease))
-			return reconcile.Result{RequeueAfter: time.Duration(r.RenewIntervalSeconds) * time.Second}, r.Client.Create(ctx, lease)
+			return reconcile.Result{RequeueAfter: requeueAfter}, r.Client.Create(ctx, lease)
 		}
 		return reconcile.Result{}, err
 	}
@@ -75,7 +76,5 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	lease.Spec = leaseSpec
 
 	log.V(1).Info("Renewing heartbeat Lease", "lease", client.ObjectKeyFromObject(lease))
-	return reconcile.Result{
-		RequeueAfter: time.Duration(r.RenewIntervalSeconds) * time.Second / 3,
-	}, r.Client.Update(ctx, lease)
+	return reconcile.Result{RequeueAfter: requeueAfter}, r.Client.Update(ctx, lease)
 }

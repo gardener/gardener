@@ -20,9 +20,9 @@ import (
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
 // ControllerName is the name of the controller.
@@ -33,8 +33,8 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
 	}
-	if r.RenewIntervalSeconds == 0 {
-		r.RenewIntervalSeconds = 60
+	if r.LeaseDurationSeconds == 0 {
+		r.LeaseDurationSeconds = 40
 	}
 	if r.Clock == nil {
 		r.Clock = clock.RealClock{}
@@ -49,19 +49,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		For(node, builder.WithPredicates(r.NodePredicate())).
+		For(node, builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create))).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		Complete(r)
-}
-
-// NodePredicate returns 'true' when the node controller by node-agent was created.
-func (r *Reconciler) NodePredicate() predicate.Predicate {
-	return predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool {
-			return e.Object.GetName() == r.NodeName
-		},
-		UpdateFunc:  func(_ event.UpdateEvent) bool { return false },
-		DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
-		GenericFunc: func(_ event.GenericEvent) bool { return false },
-	}
 }

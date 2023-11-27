@@ -17,19 +17,27 @@ package lease_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
+	testclock "k8s.io/utils/clock/testing"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/logger"
+	leasecontroller "github.com/gardener/gardener/pkg/nodeagent/controller/lease"
+	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -44,12 +52,14 @@ var (
 	ctx = context.Background()
 	log logr.Logger
 
+	fakeClock  *testclock.FakeClock
 	restConfig *rest.Config
 	testEnv    *envtest.Environment
 	testClient client.Client
 
 	testNamespace *corev1.Namespace
 	testRunID     string
+	nodeName      string
 )
 
 var _ = BeforeSuite(func() {
@@ -86,5 +96,38 @@ var _ = BeforeSuite(func() {
 	DeferCleanup(func() {
 		By("Delete test Namespace")
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
+	})
+
+	nodeName = "test-" + gardenerutils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
+	fakeClock = testclock.NewFakeClock(time.Now().UTC())
+
+	By("Setup manager")
+	mgr, err := manager.New(restConfig, manager.Options{
+		Metrics: metricsserver.Options{BindAddress: "0"},
+		Cache: cache.Options{
+			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
+		},
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	By("Register controller")
+	leaseReconciler := &leasecontroller.Reconciler{
+		Clock:                fakeClock,
+		Namespace:            testNamespace.Name,
+		LeaseDurationSeconds: 3,
+	}
+	Expect(leaseReconciler.AddToManager(mgr)).To(Succeed())
+
+	By("Start manager")
+	mgrContext, mgrCancel := context.WithCancel(ctx)
+
+	go func() {
+		defer GinkgoRecover()
+		Expect(mgr.Start(mgrContext)).To(Succeed())
+	}()
+
+	DeferCleanup(func() {
+		By("Stop manager")
+		mgrCancel()
 	})
 })

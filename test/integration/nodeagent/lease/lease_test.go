@@ -14,7 +14,6 @@
 package lease_test
 
 import (
-	"context"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -23,68 +22,26 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/uuid"
-	"k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	leasecontroller "github.com/gardener/gardener/pkg/nodeagent/controller/lease"
-	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Reconcile", func() {
 	Describe("Lease controller tests", func() {
 		var (
-			node      *corev1.Node
-			nodeName  string
-			fakeClock *testing.FakeClock
+			node *corev1.Node
 		)
 
 		BeforeEach(func() {
-			nodeName = "test-" + gardenerutils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
-			fakeClock = testing.NewFakeClock(time.Now().UTC())
-
-			By("Setup manager")
-			mgr, err := manager.New(restConfig, manager.Options{
-				Metrics: metricsserver.Options{BindAddress: "0"},
-				Cache: cache.Options{
-					DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
-				},
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			By("Register controller")
-			leaseReconciler := &leasecontroller.Reconciler{
-				Clock:                fakeClock,
-				NodeName:             nodeName,
-				Namespace:            testNamespace.Name,
-				RenewIntervalSeconds: 3,
-			}
-			Expect(leaseReconciler.AddToManager(mgr)).To(Succeed())
-
-			By("Start manager")
-			mgrContext, mgrCancel := context.WithCancel(ctx)
-
-			go func() {
-				defer GinkgoRecover()
-				Expect(mgr.Start(mgrContext)).To(Succeed())
-			}()
-
-			DeferCleanup(func() {
-				By("Stop manager")
-				mgrCancel()
-			})
-
 			node = &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   nodeName,
 					Labels: map[string]string{testID: testRunID},
 				},
 			}
+			lease := &coordinationv1.Lease{ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace.Name, Name: "gardener-node-agent-" + nodeName}}
 
 			By("Create Node")
 			Expect(testClient.Create(ctx, node)).To(Succeed())
@@ -92,12 +49,11 @@ var _ = Describe("Reconcile", func() {
 				By("Delete Node")
 				Expect(client.IgnoreNotFound(testClient.Delete(ctx, node))).To(Succeed())
 				By("Delete Lease")
-				lease := &coordinationv1.Lease{ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace.Name, Name: "gardener-node-agent-" + nodeName}}
 				Expect(client.IgnoreNotFound(testClient.Delete(ctx, lease))).To(Succeed())
 			})
 		})
 
-		It("should create Lease", func() {
+		It("should create the Lease", func() {
 			lease := &coordinationv1.Lease{}
 			Eventually(func() error {
 				return testClient.Get(ctx, types.NamespacedName{Namespace: testNamespace.Name, Name: "gardener-node-agent-" + nodeName}, lease)
@@ -113,7 +69,7 @@ var _ = Describe("Reconcile", func() {
 			validateOwnerReference(lease, node)
 
 			oldRenewTime := lease.Spec.RenewTime
-			// wait a nit more than RenewIntervalSeconds
+			// wait a nit more than LeaseDurationSeconds
 			fakeClock.Step(5 * time.Second)
 
 			Eventually(func() bool {

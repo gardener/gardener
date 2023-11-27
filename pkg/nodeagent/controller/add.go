@@ -47,9 +47,7 @@ func AddToManager(cancel context.CancelFunc, mgr manager.Manager, cfg *config.No
 		return fmt.Errorf("failed adding token controller: %w", err)
 	}
 
-	if err := (&lease.Reconciler{
-		NodeName:      nodeName,
-	}).AddToManager(mgr); err != nil {
+	if err := (&lease.Reconciler{}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding lease controller: %w", err)
 	}
 
