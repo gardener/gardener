@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package bootstrappers
+package bootstrappers_test
 
 import (
 	"context"
@@ -24,6 +24,7 @@ import (
 	"github.com/spf13/afero"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	. "github.com/gardener/gardener/cmd/gardener-node-agent/app/bootstrappers"
 	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/test"
