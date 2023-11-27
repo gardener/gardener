@@ -56,8 +56,8 @@ var (
 	machineKindToObjectList = map[string]client.ObjectList{
 		"MachineDeployment": &machinev1alpha1.MachineDeploymentList{},
 		"MachineSet":        &machinev1alpha1.MachineSetList{},
-		"MachineClass":      &machinev1alpha1.MachineClassList{},
 		"Machine":           &machinev1alpha1.MachineList{},
+		"MachineClass":      &machinev1alpha1.MachineClassList{},
 	}
 
 	kubernetesKindToObjectList = map[string]client.ObjectList{
