@@ -73,6 +73,10 @@ go list -f '{{ join .Deps "\n" }}' "./cmd/$binary_name" |\
 
 # always add VERSION file
 echo "VERSION" >> "$path_actual_dependencies"
+# add vendor if the vendor/ dir exists
+if [[ -d "$repo_root/vendor" ]]; then
+  echo "vendor" >> "$path_actual_dependencies"
+fi
 
 # sort dependencies
 sort -fo "$path_current_skaffold_dependencies"{,}
