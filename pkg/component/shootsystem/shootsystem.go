@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -31,6 +32,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -38,7 +40,6 @@ import (
 	corednsconstants "github.com/gardener/gardener/pkg/component/coredns/constants"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
 	nodelocaldnsconstants "github.com/gardener/gardener/pkg/component/nodelocaldns/constants"
-	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
@@ -54,14 +55,24 @@ type Interface interface {
 
 // Values is a set of configuration values for the system resources.
 type Values struct {
-	// ProjectName is the name of the project of the shoot cluster.
-	ProjectName string
-	// Shoot is an object containing information about the shoot cluster.
-	Shoot *shootpkg.Shoot
 	// APIResourceList is the list of available API resources in the shoot cluster.
 	APIResourceList []*metav1.APIResourceList
+	// Extensions is the list of the extension types.
+	Extensions []string
+	// ExternalClusterDomain is the external domain of the cluster.
+	ExternalClusterDomain *string
 	// IsWorkerless specifies whether the cluster managed by this API server has worker nodes.
 	IsWorkerless bool
+	// KubernetesVersion is the version of the cluster.
+	KubernetesVersion *semver.Version
+	// Object is the shoot object.
+	Object *gardencorev1beta1.Shoot
+	// PodNetworkCIDR is the CIDR of the pod network.
+	PodNetworkCIDR string
+	// ProjectName is the name of the project of the cluster.
+	ProjectName string
+	// ServiceNetworkCIDR is the CIDR of the service network.
+	ServiceNetworkCIDR string
 }
 
 // New creates a new instance of DeployWaiter for shoot system resources.
@@ -334,12 +345,12 @@ func (s *shootSystem) getServiceAccountNamesToInvalidate() []string {
 		"service-controller",
 	}
 
-	if versionutils.ConstraintK8sGreaterEqual126.Check(s.values.Shoot.KubernetesVersion) {
+	if versionutils.ConstraintK8sGreaterEqual126.Check(s.values.KubernetesVersion) {
 		kubeControllerManagerServiceAccountNames = append(kubeControllerManagerServiceAccountNames,
 			"resource-claim-controller")
 	}
 
-	if versionutils.ConstraintK8sGreaterEqual128.Check(s.values.Shoot.KubernetesVersion) {
+	if versionutils.ConstraintK8sGreaterEqual128.Check(s.values.KubernetesVersion) {
 		kubeControllerManagerServiceAccountNames = append(kubeControllerManagerServiceAccountNames,
 			"legacy-service-account-token-cleaner",
 			"validatingadmissionpolicy-status-controller",
@@ -380,31 +391,25 @@ func priorityClassResources() []client.Object {
 
 func (s *shootSystem) shootInfoData() map[string]string {
 	data := map[string]string{
+		"extensions":        strings.Join(s.values.Extensions, ","),
 		"projectName":       s.values.ProjectName,
-		"shootName":         s.values.Shoot.GetInfo().Name,
-		"provider":          s.values.Shoot.GetInfo().Spec.Provider.Type,
-		"region":            s.values.Shoot.GetInfo().Spec.Region,
-		"kubernetesVersion": s.values.Shoot.GetInfo().Spec.Kubernetes.Version,
-		"podNetwork":        s.values.Shoot.Networks.Pods.String(),
-		"serviceNetwork":    s.values.Shoot.Networks.Services.String(),
-		"maintenanceBegin":  s.values.Shoot.GetInfo().Spec.Maintenance.TimeWindow.Begin,
-		"maintenanceEnd":    s.values.Shoot.GetInfo().Spec.Maintenance.TimeWindow.End,
+		"shootName":         s.values.Object.Name,
+		"provider":          s.values.Object.Spec.Provider.Type,
+		"region":            s.values.Object.Spec.Region,
+		"kubernetesVersion": s.values.Object.Spec.Kubernetes.Version,
+		"podNetwork":        s.values.PodNetworkCIDR,
+		"serviceNetwork":    s.values.ServiceNetworkCIDR,
+		"maintenanceBegin":  s.values.Object.Spec.Maintenance.TimeWindow.Begin,
+		"maintenanceEnd":    s.values.Object.Spec.Maintenance.TimeWindow.End,
 	}
 
-	if domain := s.values.Shoot.ExternalClusterDomain; domain != nil {
+	if domain := s.values.ExternalClusterDomain; domain != nil {
 		data["domain"] = *domain
 	}
 
-	if nodeNetwork := s.values.Shoot.GetInfo().Spec.Networking.Nodes; nodeNetwork != nil {
+	if nodeNetwork := s.values.Object.Spec.Networking.Nodes; nodeNetwork != nil {
 		data["nodeNetwork"] = *nodeNetwork
 	}
-
-	extensions := make([]string, 0, len(s.values.Shoot.Components.Extensions.Extension.Extensions()))
-	for extensionType := range s.values.Shoot.Components.Extensions.Extension.Extensions() {
-		extensions = append(extensions, extensionType)
-	}
-	slices.Sort(extensions)
-	data["extensions"] = strings.Join(extensions, ",")
 
 	return data
 }

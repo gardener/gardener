@@ -16,11 +16,9 @@ package shootsystem_test
 
 import (
 	"context"
-	"net"
 	"strconv"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -35,9 +33,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/component/extensions/extension"
 	. "github.com/gardener/gardener/pkg/component/shootsystem"
-	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -66,11 +62,7 @@ var _ = Describe("ShootSystem", func() {
 		nodeCIDR          = "12.12.0.0/16"
 		extension1        = "some-extension"
 		extension2        = "some-other-extension"
-		extensions        = map[string]extension.Extension{
-			extension1: {},
-			extension2: {},
-		}
-		shootObj = &gardencorev1beta1.Shoot{
+		shootObj          = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      shootName,
 				Namespace: shootNamespace,
@@ -94,7 +86,6 @@ var _ = Describe("ShootSystem", func() {
 				Region: region,
 			},
 		}
-		shoot *shootpkg.Shoot
 
 		c         client.Client
 		values    Values
@@ -105,34 +96,16 @@ var _ = Describe("ShootSystem", func() {
 	)
 
 	BeforeEach(func() {
-		shoot = &shootpkg.Shoot{
-			Components: &shootpkg.Components{
-				Extensions: &shootpkg.Extensions{
-					Extension: extension.New(
-						logr.Discard(),
-						nil,
-						&extension.Values{
-							Extensions: extensions,
-						},
-						0,
-						0,
-						0,
-					),
-				},
-			},
-			ExternalClusterDomain: &domain,
-			KubernetesVersion:     semver.MustParse(kubernetesVersion),
-			Networks: &shootpkg.Networks{
-				Pods:     parseCIDR(podCIDR),
-				Services: parseCIDR(serviceCIDR),
-			},
-		}
-		shoot.SetInfo(shootObj)
-
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		values = Values{
-			ProjectName: projectName,
-			Shoot:       shoot,
+			Extensions:            []string{extension1, extension2},
+			ExternalClusterDomain: &domain,
+			IsWorkerless:          false,
+			KubernetesVersion:     semver.MustParse(kubernetesVersion),
+			Object:                shootObj,
+			PodNetworkCIDR:        podCIDR,
+			ProjectName:           projectName,
+			ServiceNetworkCIDR:    serviceCIDR,
 		}
 		component = New(c, namespace, values)
 
@@ -642,12 +615,6 @@ subjects:
 		})
 	})
 })
-
-func parseCIDR(cidr string) *net.IPNet {
-	_, ipNet, err := net.ParseCIDR(cidr)
-	Expect(err).NotTo(HaveOccurred())
-	return ipNet
-}
 
 func expectPriorityClasses(data map[string][]byte) {
 	expected := []struct {
