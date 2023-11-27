@@ -131,7 +131,7 @@ func (g *GarbageCollection) deleteOrphanedNodeLeases(ctx context.Context, c clie
 			}
 
 			g.log.Info("Detected orphaned Lease object, cleaning it up", "nodeName", lease.Name, "lease", client.ObjectKeyFromObject(lease))
-			orphanedLeases = append(orphanedLeases, lease.DeepCopy())
+			orphanedLeases = append(orphanedLeases, lease)
 		}
 	}
 
