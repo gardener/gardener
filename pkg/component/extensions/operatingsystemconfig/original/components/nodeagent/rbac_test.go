@@ -93,6 +93,16 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
 `
 
 			roleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
