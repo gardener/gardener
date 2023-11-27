@@ -16,19 +16,23 @@ package care
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/shoot"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // GarbageCollection contains required information for shoot and seed garbage collection.
@@ -84,34 +88,65 @@ func (g *GarbageCollection) Collect(ctx context.Context) {
 
 // PerformGarbageCollectionSeed performs garbage collection in the Shoot namespace in the Seed cluster
 func (g *GarbageCollection) performGarbageCollectionSeed(ctx context.Context) error {
-	podList := &corev1.PodList{}
-	if err := g.seedClient.List(ctx, podList, client.InNamespace(g.shoot.SeedNamespace)); err != nil {
-		return err
-	}
-
-	return g.deleteStalePods(ctx, g.seedClient, podList)
+	return g.deleteStalePods(ctx, g.seedClient, g.shoot.SeedNamespace)
 }
 
 // PerformGarbageCollectionShoot performs garbage collection in the kube-system namespace in the Shoot
 // cluster, i.e., it deletes evicted pods (mitigation for https://github.com/kubernetes/kubernetes/issues/55051).
 func (g *GarbageCollection) performGarbageCollectionShoot(ctx context.Context, shootClient client.Client) error {
+	if err := g.deleteOrphanedNodeLeases(ctx, shootClient); err != nil {
+		return fmt.Errorf("failed deleting orphaned node lease objects: %w", err)
+	}
+
 	namespace := metav1.NamespaceSystem
 	if g.shoot.GetInfo().DeletionTimestamp != nil {
 		namespace = metav1.NamespaceAll
 	}
 
-	podList := &corev1.PodList{}
-	if err := shootClient.List(ctx, podList, client.InNamespace(namespace)); err != nil {
+	return g.deleteStalePods(ctx, shootClient, namespace)
+}
+
+// See https://github.com/gardener/gardener/issues/8749 and https://github.com/kubernetes/kubernetes/issues/109777.
+// kubelet sometimes created Lease objects without owner reference. When the respective node gets deleted eventually,
+// the Lease object remains in the system and no Kubernetes controller will ever clean it up. Hence, this function takes
+// over this task.
+// TODO: Remove this function when support for Kubernetes 1.28 is dropped.
+func (g *GarbageCollection) deleteOrphanedNodeLeases(ctx context.Context, c client.Client) error {
+	leaseList := &coordinationv1.LeaseList{}
+	if err := c.List(ctx, leaseList, client.InNamespace(corev1.NamespaceNodeLease)); err != nil {
 		return err
 	}
 
-	return g.deleteStalePods(ctx, shootClient, podList)
+	var orphanedLeases []client.Object
+
+	for _, l := range leaseList.Items {
+		if len(l.OwnerReferences) > 0 {
+			continue
+		}
+		lease := l.DeepCopy()
+
+		if err := c.Get(ctx, client.ObjectKey{Name: lease.Name}, &metav1.PartialObjectMetadata{TypeMeta: metav1.TypeMeta{APIVersion: corev1.SchemeGroupVersion.String(), Kind: "Node"}}); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf("failed getting node %s when checking for potential orphaned Lease %s: %w", lease.Name, client.ObjectKeyFromObject(lease), err)
+			}
+
+			g.log.Info("Detected orphaned Lease object, cleaning it up", "nodeName", lease.Name, "lease", client.ObjectKeyFromObject(lease))
+			orphanedLeases = append(orphanedLeases, lease)
+		}
+	}
+
+	return kubernetesutils.DeleteObjects(ctx, c, orphanedLeases...)
 }
 
 // GardenerDeletionGracePeriod is the default grace period for Gardener's force deletion methods.
 const GardenerDeletionGracePeriod = 5 * time.Minute
 
-func (g *GarbageCollection) deleteStalePods(ctx context.Context, c client.Client, podList *corev1.PodList) error {
+func (g *GarbageCollection) deleteStalePods(ctx context.Context, c client.Client, namespace string) error {
+	podList := &corev1.PodList{}
+	if err := c.List(ctx, podList, client.InNamespace(namespace)); err != nil {
+		return err
+	}
+
 	var result error
 
 	for _, pod := range podList.Items {
