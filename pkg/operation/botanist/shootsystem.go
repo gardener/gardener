@@ -24,8 +24,9 @@ import (
 // DefaultShootSystem returns a deployer for the shoot system resources.
 func (b *Botanist) DefaultShootSystem() shootsystem.Interface {
 	values := shootsystem.Values{
-		ProjectName: b.Garden.Project.Name,
-		Shoot:       b.Shoot,
+		ProjectName:  b.Garden.Project.Name,
+		Shoot:        b.Shoot,
+		IsWorkerless: b.Shoot.IsWorkerless,
 	}
 
 	return shootsystem.New(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, values)

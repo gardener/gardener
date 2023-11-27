@@ -60,6 +60,8 @@ type Values struct {
 	Shoot *shootpkg.Shoot
 	// APIResourceList is the list of available API resources in the shoot cluster.
 	APIResourceList []*metav1.APIResourceList
+	// IsWorkerless specifies whether the cluster managed by this API server has worker nodes.
+	IsWorkerless bool
 }
 
 // New creates a new instance of DeployWaiter for shoot system resources.
@@ -117,148 +119,160 @@ func (s *shootSystem) WaitCleanup(ctx context.Context) error {
 }
 
 func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
-	var (
-		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+	registry := managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
-		shootInfoConfigMap = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      v1beta1constants.ConfigMapNameShootInfo,
-				Namespace: metav1.NamespaceSystem,
-			},
-			Data: s.shootInfoData(),
-		}
-
-		port53      = intstr.FromInt32(53)
-		port443     = intstr.FromInt32(kubeapiserverconstants.Port)
-		port8053    = intstr.FromInt32(corednsconstants.PortServer)
-		port10250   = intstr.FromInt32(10250)
-		protocolUDP = corev1.ProtocolUDP
-		protocolTCP = corev1.ProtocolTCP
-
-		networkPolicyAllowToShootAPIServer = &networkingv1.NetworkPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardener.cloud--allow-to-apiserver",
-				Namespace: metav1.NamespaceSystem,
-				Annotations: map[string]string{
-					v1beta1constants.GardenerDescription: fmt.Sprintf("Allows traffic to the API server in TCP "+
-						"port 443 for pods labeled with '%s=%s'.", v1beta1constants.LabelNetworkPolicyShootToAPIServer,
-						v1beta1constants.LabelNetworkPolicyAllowed),
+	if !s.values.IsWorkerless {
+		var (
+			shootInfoConfigMap = &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      v1beta1constants.ConfigMapNameShootInfo,
+					Namespace: metav1.NamespaceSystem,
 				},
-			},
-			Spec: networkingv1.NetworkPolicySpec{
-				PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyShootToAPIServer: v1beta1constants.LabelNetworkPolicyAllowed}},
-				Egress:      []networkingv1.NetworkPolicyEgressRule{{Ports: []networkingv1.NetworkPolicyPort{{Port: &port443, Protocol: &protocolTCP}}}},
-				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-			},
-		}
-		networkPolicyAllowToDNS = &networkingv1.NetworkPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardener.cloud--allow-to-dns",
-				Namespace: metav1.NamespaceSystem,
-				Annotations: map[string]string{
-					v1beta1constants.GardenerDescription: fmt.Sprintf("Allows egress traffic from pods labeled "+
-						"with '%s=%s' to DNS running in the '%s' namespace.", v1beta1constants.LabelNetworkPolicyToDNS,
-						v1beta1constants.LabelNetworkPolicyAllowed, metav1.NamespaceSystem),
-				},
-			},
-			Spec: networkingv1.NetworkPolicySpec{
-				PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToDNS: v1beta1constants.LabelNetworkPolicyAllowed}},
-				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-				Egress: []networkingv1.NetworkPolicyEgressRule{
-					{
-						To: []networkingv1.NetworkPolicyPeer{{
-							PodSelector: &metav1.LabelSelector{
-								MatchExpressions: []metav1.LabelSelectorRequirement{{
-									Key:      corednsconstants.LabelKey,
-									Operator: metav1.LabelSelectorOpIn,
-									Values:   []string{corednsconstants.LabelValue},
-								}},
-							},
-						}},
-						Ports: []networkingv1.NetworkPolicyPort{
-							{Protocol: &protocolUDP, Port: &port8053},
-							{Protocol: &protocolTCP, Port: &port8053},
-						},
+				Data: s.shootInfoData(),
+			}
+
+			port53      = intstr.FromInt32(53)
+			port443     = intstr.FromInt32(kubeapiserverconstants.Port)
+			port8053    = intstr.FromInt32(corednsconstants.PortServer)
+			port10250   = intstr.FromInt32(10250)
+			protocolUDP = corev1.ProtocolUDP
+			protocolTCP = corev1.ProtocolTCP
+
+			networkPolicyAllowToShootAPIServer = &networkingv1.NetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardener.cloud--allow-to-apiserver",
+					Namespace: metav1.NamespaceSystem,
+					Annotations: map[string]string{
+						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows traffic to the API server in TCP "+
+							"port 443 for pods labeled with '%s=%s'.", v1beta1constants.LabelNetworkPolicyShootToAPIServer,
+							v1beta1constants.LabelNetworkPolicyAllowed),
 					},
-					// this allows Pods with 'dnsPolicy: Default' to talk to the node's DNS provider.
-					{
-						To: []networkingv1.NetworkPolicyPeer{
-							{
-								IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"},
-							},
-							{
-								IPBlock: &networkingv1.IPBlock{CIDR: "::/0"},
-							},
-							{
+				},
+				Spec: networkingv1.NetworkPolicySpec{
+					PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyShootToAPIServer: v1beta1constants.LabelNetworkPolicyAllowed}},
+					Egress:      []networkingv1.NetworkPolicyEgressRule{{Ports: []networkingv1.NetworkPolicyPort{{Port: &port443, Protocol: &protocolTCP}}}},
+					PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+				},
+			}
+			networkPolicyAllowToDNS = &networkingv1.NetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardener.cloud--allow-to-dns",
+					Namespace: metav1.NamespaceSystem,
+					Annotations: map[string]string{
+						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows egress traffic from pods labeled "+
+							"with '%s=%s' to DNS running in the '%s' namespace.", v1beta1constants.LabelNetworkPolicyToDNS,
+							v1beta1constants.LabelNetworkPolicyAllowed, metav1.NamespaceSystem),
+					},
+				},
+				Spec: networkingv1.NetworkPolicySpec{
+					PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToDNS: v1beta1constants.LabelNetworkPolicyAllowed}},
+					PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+					Egress: []networkingv1.NetworkPolicyEgressRule{
+						{
+							To: []networkingv1.NetworkPolicyPeer{{
 								PodSelector: &metav1.LabelSelector{
 									MatchExpressions: []metav1.LabelSelectorRequirement{{
 										Key:      corednsconstants.LabelKey,
 										Operator: metav1.LabelSelectorOpIn,
-										Values:   []string{nodelocaldnsconstants.LabelValue},
+										Values:   []string{corednsconstants.LabelValue},
 									}},
 								},
+							}},
+							Ports: []networkingv1.NetworkPolicyPort{
+								{Protocol: &protocolUDP, Port: &port8053},
+								{Protocol: &protocolTCP, Port: &port8053},
 							},
 						},
-						Ports: []networkingv1.NetworkPolicyPort{
-							{Protocol: &protocolUDP, Port: &port53},
-							{Protocol: &protocolTCP, Port: &port53},
+						// this allows Pods with 'dnsPolicy: Default' to talk to the node's DNS provider.
+						{
+							To: []networkingv1.NetworkPolicyPeer{
+								{
+									IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"},
+								},
+								{
+									IPBlock: &networkingv1.IPBlock{CIDR: "::/0"},
+								},
+								{
+									PodSelector: &metav1.LabelSelector{
+										MatchExpressions: []metav1.LabelSelectorRequirement{{
+											Key:      corednsconstants.LabelKey,
+											Operator: metav1.LabelSelectorOpIn,
+											Values:   []string{nodelocaldnsconstants.LabelValue},
+										}},
+									},
+								},
+							},
+							Ports: []networkingv1.NetworkPolicyPort{
+								{Protocol: &protocolUDP, Port: &port53},
+								{Protocol: &protocolTCP, Port: &port53},
+							},
 						},
 					},
 				},
-			},
-		}
-		networkPolicyAllowToKubelet = &networkingv1.NetworkPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardener.cloud--allow-to-kubelet",
-				Namespace: metav1.NamespaceSystem,
-				Annotations: map[string]string{
-					v1beta1constants.GardenerDescription: fmt.Sprintf("Allows egress traffic to kubelet in TCP "+
-						"port 10250 for pods labeled with '%s=%s'.", v1beta1constants.LabelNetworkPolicyShootToKubelet,
-						v1beta1constants.LabelNetworkPolicyAllowed),
+			}
+			networkPolicyAllowToKubelet = &networkingv1.NetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardener.cloud--allow-to-kubelet",
+					Namespace: metav1.NamespaceSystem,
+					Annotations: map[string]string{
+						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows egress traffic to kubelet in TCP "+
+							"port 10250 for pods labeled with '%s=%s'.", v1beta1constants.LabelNetworkPolicyShootToKubelet,
+							v1beta1constants.LabelNetworkPolicyAllowed),
+					},
 				},
-			},
-			Spec: networkingv1.NetworkPolicySpec{
-				PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyShootToKubelet: v1beta1constants.LabelNetworkPolicyAllowed}},
-				Egress:      []networkingv1.NetworkPolicyEgressRule{{Ports: []networkingv1.NetworkPolicyPort{{Port: &port10250, Protocol: &protocolTCP}}}},
-				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-			},
-		}
-		networkPolicyAllowToPublicNetworks = &networkingv1.NetworkPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardener.cloud--allow-to-public-networks",
-				Namespace: metav1.NamespaceSystem,
-				Annotations: map[string]string{
-					v1beta1constants.GardenerDescription: fmt.Sprintf("Allows egress traffic to all networks for "+
-						"pods labeled with '%s=%s'.", v1beta1constants.LabelNetworkPolicyToPublicNetworks,
-						v1beta1constants.LabelNetworkPolicyAllowed),
+				Spec: networkingv1.NetworkPolicySpec{
+					PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyShootToKubelet: v1beta1constants.LabelNetworkPolicyAllowed}},
+					Egress:      []networkingv1.NetworkPolicyEgressRule{{Ports: []networkingv1.NetworkPolicyPort{{Port: &port10250, Protocol: &protocolTCP}}}},
+					PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
 				},
-			},
-			Spec: networkingv1.NetworkPolicySpec{
-				PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToPublicNetworks: v1beta1constants.LabelNetworkPolicyAllowed}},
-				Egress: []networkingv1.NetworkPolicyEgressRule{{To: []networkingv1.NetworkPolicyPeer{
-					{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
-					{IPBlock: &networkingv1.IPBlock{CIDR: "::/0"}},
-				}}},
-				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-			},
-		}
-	)
+			}
+			networkPolicyAllowToPublicNetworks = &networkingv1.NetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardener.cloud--allow-to-public-networks",
+					Namespace: metav1.NamespaceSystem,
+					Annotations: map[string]string{
+						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows egress traffic to all networks for "+
+							"pods labeled with '%s=%s'.", v1beta1constants.LabelNetworkPolicyToPublicNetworks,
+							v1beta1constants.LabelNetworkPolicyAllowed),
+					},
+				},
+				Spec: networkingv1.NetworkPolicySpec{
+					PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToPublicNetworks: v1beta1constants.LabelNetworkPolicyAllowed}},
+					Egress: []networkingv1.NetworkPolicyEgressRule{{To: []networkingv1.NetworkPolicyPeer{
+						{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
+						{IPBlock: &networkingv1.IPBlock{CIDR: "::/0"}},
+					}}},
+					PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+				},
+			}
+		)
 
-	for _, name := range s.getServiceAccountNamesToInvalidate() {
-		if err := registry.Add(&corev1.ServiceAccount{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        name,
-				Namespace:   metav1.NamespaceSystem,
-				Annotations: map[string]string{resourcesv1alpha1.KeepObject: "true"},
-			},
-			AutomountServiceAccountToken: pointer.Bool(false),
-		}); err != nil {
+		for _, name := range s.getServiceAccountNamesToInvalidate() {
+			if err := registry.Add(&corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        name,
+					Namespace:   metav1.NamespaceSystem,
+					Annotations: map[string]string{resourcesv1alpha1.KeepObject: "true"},
+				},
+				AutomountServiceAccountToken: pointer.Bool(false),
+			}); err != nil {
+				return nil, err
+			}
+		}
+
+		if err := registry.Add(
+			shootInfoConfigMap,
+			networkPolicyAllowToShootAPIServer,
+			networkPolicyAllowToDNS,
+			networkPolicyAllowToKubelet,
+			networkPolicyAllowToPublicNetworks,
+		); err != nil {
 			return nil, err
 		}
-	}
 
-	if err := addPriorityClasses(registry); err != nil {
-		return nil, err
+		if err := registry.Add(priorityClassResources()...); err != nil {
+			return nil, err
+		}
 	}
 
 	if len(s.values.APIResourceList) > 0 {
@@ -267,13 +281,7 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 		}
 	}
 
-	return registry.AddAllAndSerialize(
-		shootInfoConfigMap,
-		networkPolicyAllowToShootAPIServer,
-		networkPolicyAllowToDNS,
-		networkPolicyAllowToKubelet,
-		networkPolicyAllowToPublicNetworks,
-	)
+	return registry.SerializedObjects(), nil
 }
 
 func (s *shootSystem) getServiceAccountNamesToInvalidate() []string {
@@ -353,21 +361,21 @@ var gardenletManagedPriorityClasses = []struct {
 	{v1beta1constants.PriorityClassNameShootSystem600, 999999600, "PriorityClass for Shoot system components"},
 }
 
-func addPriorityClasses(registry *managedresources.Registry) error {
+func priorityClassResources() []client.Object {
+	var out []client.Object
+
 	for _, class := range gardenletManagedPriorityClasses {
-		if err := registry.Add(&schedulingv1.PriorityClass{
+		out = append(out, &schedulingv1.PriorityClass{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: class.name,
 			},
 			Description:   class.description,
 			GlobalDefault: false,
 			Value:         class.value,
-		}); err != nil {
-			return err
-		}
+		})
 	}
 
-	return nil
+	return out
 }
 
 func (s *shootSystem) shootInfoData() map[string]string {

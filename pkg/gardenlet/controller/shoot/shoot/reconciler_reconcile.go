@@ -553,7 +553,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return botanist.DeployShootSystem(ctx)
 			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled,
+			SkipIf:       o.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, initializeShootClients, waitUntilOperatingSystemConfigReady, waitUntilShootNamespacesReady),
 		})
 		deployCoreDNS = g.Add(flow.Task{

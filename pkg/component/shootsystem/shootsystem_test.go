@@ -154,6 +154,7 @@ var _ = Describe("ShootSystem", func() {
 		JustBeforeEach(func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 
+			component = New(c, namespace, values)
 			Expect(component.Deploy(ctx)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
@@ -187,6 +188,18 @@ var _ = Describe("ShootSystem", func() {
 		})
 
 		Context("kube-controller-manager ServiceAccounts", func() {
+			When("shoot is workerless", func() {
+				BeforeEach(func() {
+					values.IsWorkerless = true
+				})
+
+				It("should not deploy any ServiceAccounts", func() {
+					for key := range managedResourceSecret.Data {
+						Expect(key).NotTo(HavePrefix("serviceaccount_"), key)
+					}
+				})
+			})
+
 			var (
 				serviceAccountYAMLFor = func(name string) string {
 					return `apiVersion: v1
@@ -237,8 +250,7 @@ metadata:
 
 			Context("k8s >= 1.26", func() {
 				BeforeEach(func() {
-					values.Shoot.KubernetesVersion = semver.MustParse("1.26.4")
-					component = New(c, namespace, values)
+					values.KubernetesVersion = semver.MustParse("1.26.4")
 				})
 
 				It("should successfully deploy all resources", func() {
@@ -250,8 +262,7 @@ metadata:
 
 			Context("k8s >= 1.28", func() {
 				BeforeEach(func() {
-					values.Shoot.KubernetesVersion = semver.MustParse("1.28.2")
-					component = New(c, namespace, values)
+					values.KubernetesVersion = semver.MustParse("1.28.2")
 				})
 
 				It("should successfully deploy all resources", func() {
@@ -263,6 +274,18 @@ metadata:
 		})
 
 		Context("shoot-info ConfigMap", func() {
+			When("shoot is workerless", func() {
+				BeforeEach(func() {
+					values.IsWorkerless = true
+				})
+
+				It("should not deploy any ConfigMap", func() {
+					for key := range managedResourceSecret.Data {
+						Expect(key).NotTo(HaveKey("configmap__kube-system__shoot-info.yaml"))
+					}
+				})
+			})
+
 			configMap := `apiVersion: v1
 data:
   domain: ` + domain + `
@@ -290,12 +313,36 @@ metadata:
 		})
 
 		Context("PriorityClasses", func() {
+			When("shoot is workerless", func() {
+				BeforeEach(func() {
+					values.IsWorkerless = true
+				})
+
+				It("should not deploy any PriorityClasses", func() {
+					for key := range managedResourceSecret.Data {
+						Expect(key).NotTo(HavePrefix("priorityclass_"), key)
+					}
+				})
+			})
+
 			It("should successfully deploy all well-known PriorityClasses", func() {
 				expectPriorityClasses(managedResourceSecret.Data)
 			})
 		})
 
 		Context("NetworkPolicies", func() {
+			When("shoot is workerless", func() {
+				BeforeEach(func() {
+					values.IsWorkerless = true
+				})
+
+				It("should not deploy any NetworkPolicies", func() {
+					for key := range managedResourceSecret.Data {
+						Expect(key).NotTo(HavePrefix("networkpolicy_"), key)
+					}
+				})
+			})
+
 			var (
 				networkPolicyToAPIServer = `apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -424,7 +471,7 @@ spec:
 
 			When("API resource list is set", func() {
 				BeforeEach(func() {
-					component.SetAPIResourceList([]*metav1.APIResourceList{
+					values.APIResourceList = []*metav1.APIResourceList{
 						{
 							GroupVersion: "foo/v1",
 							APIResources: []metav1.APIResource{
@@ -439,7 +486,7 @@ spec:
 								{Name: "baz", Verbs: metav1.Verbs{"get", "list", "watch"}},
 							},
 						},
-					})
+					}
 				})
 
 				It("should successfully deploy the related RBAC resources", func() {
