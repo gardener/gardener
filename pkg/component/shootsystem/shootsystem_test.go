@@ -35,7 +35,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/extensions/extension"
 	. "github.com/gardener/gardener/pkg/component/shootsystem"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
@@ -99,7 +98,7 @@ var _ = Describe("ShootSystem", func() {
 
 		c         client.Client
 		values    Values
-		component component.DeployWaiter
+		component Interface
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
@@ -412,6 +411,78 @@ spec:
 				Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-to-dns.yaml"])).To(Equal(networkPolicyToDNS))
 				Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-to-kubelet.yaml"])).To(Equal(networkPolicyToKubelet))
 				Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-to-public-networks.yaml"])).To(Equal(networkPolicyToPublicNetworks))
+			})
+		})
+
+		Context("Read-Only resources", func() {
+			It("should do nothing when the API resource list is unset", func() {
+				Expect(managedResourceSecret.Data).NotTo(And(
+					HaveKey("clusterrole____gardener.cloud_system_read-only.yaml"),
+					HaveKey("clusterrolebinding____gardener.cloud_system_read-only.yaml"),
+				))
+			})
+
+			When("API resource list is set", func() {
+				BeforeEach(func() {
+					component.SetAPIResourceList([]*metav1.APIResourceList{
+						{
+							GroupVersion: "foo/v1",
+							APIResources: []metav1.APIResource{
+								{Name: "bar", Verbs: metav1.Verbs{"create", "delete"}},
+								{Name: "baz", Verbs: metav1.Verbs{"get", "list", "watch"}},
+							},
+						},
+						{
+							GroupVersion: "bar/v1beta1",
+							APIResources: []metav1.APIResource{
+								{Name: "foo", Verbs: metav1.Verbs{"get", "list", "watch"}},
+								{Name: "baz", Verbs: metav1.Verbs{"get", "list", "watch"}},
+							},
+						},
+					})
+				})
+
+				It("should successfully deploy the related RBAC resources", func() {
+					Expect(managedResourceSecret.Data["clusterrole____gardener.cloud_system_read-only.yaml"]).To(Equal([]byte(`apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: gardener.cloud:system:read-only
+rules:
+- apiGroups:
+  - bar
+  resources:
+  - foo
+  - baz
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - foo
+  resources:
+  - baz
+  verbs:
+  - get
+  - list
+  - watch
+`)))
+					Expect(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_system_read-only.yaml"]).To(Equal([]byte(`apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
+  creationTimestamp: null
+  name: gardener.cloud:system:read-only
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: gardener.cloud:system:read-only
+subjects:
+- kind: Group
+  name: gardener.cloud:system:viewers
+`)))
+				})
 			})
 		})
 	})

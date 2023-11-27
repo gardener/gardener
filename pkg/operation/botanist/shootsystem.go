@@ -15,16 +15,29 @@
 package botanist
 
 import (
-	"github.com/gardener/gardener/pkg/component"
+	"context"
+	"fmt"
+
 	"github.com/gardener/gardener/pkg/component/shootsystem"
 )
 
 // DefaultShootSystem returns a deployer for the shoot system resources.
-func (b *Botanist) DefaultShootSystem() component.DeployWaiter {
+func (b *Botanist) DefaultShootSystem() shootsystem.Interface {
 	values := shootsystem.Values{
 		ProjectName: b.Garden.Project.Name,
 		Shoot:       b.Shoot,
 	}
 
 	return shootsystem.New(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, values)
+}
+
+// DeployShootSystem deploys the shoot system resources.
+func (b *Botanist) DeployShootSystem(ctx context.Context) error {
+	_, apiResourceList, err := b.ShootClientSet.Kubernetes().Discovery().ServerGroupsAndResources()
+	if err != nil {
+		return fmt.Errorf("failed to discover the API: %w", err)
+	}
+
+	b.Shoot.Components.SystemComponents.Resources.SetAPIResourceList(apiResourceList)
+	return b.Shoot.Components.SystemComponents.Resources.Deploy(ctx)
 }

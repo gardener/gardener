@@ -18,11 +18,13 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"sort"
 	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -44,12 +46,20 @@ import (
 // ManagedResourceName is the name of the ManagedResource containing the resource specifications.
 const ManagedResourceName = "shoot-core-system"
 
+// Interface is an interface for managing shoot system resources.
+type Interface interface {
+	component.DeployWaiter
+	SetAPIResourceList([]*metav1.APIResourceList)
+}
+
 // Values is a set of configuration values for the system resources.
 type Values struct {
 	// ProjectName is the name of the project of the shoot cluster.
 	ProjectName string
 	// Shoot is an object containing information about the shoot cluster.
 	Shoot *shootpkg.Shoot
+	// APIResourceList is the list of available API resources in the shoot cluster.
+	APIResourceList []*metav1.APIResourceList
 }
 
 // New creates a new instance of DeployWaiter for shoot system resources.
@@ -57,7 +67,7 @@ func New(
 	client client.Client,
 	namespace string,
 	values Values,
-) component.DeployWaiter {
+) Interface {
 	return &shootSystem{
 		client:    client,
 		namespace: namespace,
@@ -82,6 +92,10 @@ func (s *shootSystem) Deploy(ctx context.Context) error {
 
 func (s *shootSystem) Destroy(ctx context.Context) error {
 	return managedresources.DeleteForShoot(ctx, s.client, s.namespace, ManagedResourceName)
+}
+
+func (s *shootSystem) SetAPIResourceList(list []*metav1.APIResourceList) {
+	s.values.APIResourceList = list
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
@@ -247,6 +261,12 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 		return nil, err
 	}
 
+	if len(s.values.APIResourceList) > 0 {
+		if err := registry.Add(s.readOnlyRBACResources()...); err != nil {
+			return nil, err
+		}
+	}
+
 	return registry.AddAllAndSerialize(
 		shootInfoConfigMap,
 		networkPolicyAllowToShootAPIServer,
@@ -379,4 +399,69 @@ func (s *shootSystem) shootInfoData() map[string]string {
 	data["extensions"] = strings.Join(extensions, ",")
 
 	return data
+}
+
+func (s *shootSystem) readOnlyRBACResources() []client.Object {
+	apiGroupToReadableResourcesNames := make(map[string][]string)
+	for _, api := range s.values.APIResourceList {
+		apiGroup := strings.Split(api.GroupVersion, "/")[0]
+		if apiGroup == corev1.SchemeGroupVersion.Version {
+			apiGroup = corev1.GroupName
+		}
+
+		for _, resource := range api.APIResources {
+			// We don't want to include privileges for reading secrets.
+			if apiGroup == corev1.GroupName && resource.Name == "secrets" {
+				continue
+			}
+
+			// We don't want to include privileges for resources which are not readable.
+			if !slices.ContainsFunc(resource.Verbs, func(verb string) bool {
+				return verb == "get" || verb == "list"
+			}) {
+				continue
+			}
+
+			apiGroupToReadableResourcesNames[apiGroup] = append(apiGroupToReadableResourcesNames[apiGroup], resource.Name)
+		}
+	}
+
+	// Sort keys to get a stable order of the RBAC rules when iterating.
+	var allAPIGroups []string
+	for key := range apiGroupToReadableResourcesNames {
+		allAPIGroups = append(allAPIGroups, key)
+	}
+	sort.Strings(allAPIGroups)
+
+	clusterRole := &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "gardener.cloud:system:read-only",
+		},
+	}
+
+	for _, apiGroup := range allAPIGroups {
+		clusterRole.Rules = append(clusterRole.Rules, rbacv1.PolicyRule{
+			APIGroups: []string{apiGroup},
+			Resources: apiGroupToReadableResourcesNames[apiGroup],
+			Verbs:     []string{"get", "list", "watch"},
+		})
+	}
+
+	clusterRoleBinding := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "gardener.cloud:system:read-only",
+			Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     clusterRole.Name,
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind: rbacv1.GroupKind,
+			Name: v1beta1constants.ShootGroupViewers,
+		}},
+	}
+
+	return []client.Object{clusterRole, clusterRoleBinding}
 }

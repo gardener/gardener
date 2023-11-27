@@ -698,6 +698,10 @@ const (
 	// SeedUserNamePrefix is the identity user name prefix for gardenlets when authenticating to the API server.
 	SeedUserNamePrefix = "gardener.cloud:system:seed:"
 
+	// ShootGroupViewers is a constant for a group name in shoot clusters whose users get read-only privileges (except
+	// for core/v1.Secrets).
+	ShootGroupViewers = "gardener.cloud:system:viewers"
+
 	// ProjectName is the key of a label on namespaces whose value holds the project name.
 	ProjectName = "project.gardener.cloud/name"
 	// ProjectSkipStaleCheck is the key of an annotation on a project namespace that marks the associated Project to be
