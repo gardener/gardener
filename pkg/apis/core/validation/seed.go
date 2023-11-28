@@ -111,10 +111,6 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 		zones.Insert(zone)
 	}
 
-	if seedSpec.SecretRef != nil {
-		allErrs = append(allErrs, validateSecretReference(*seedSpec.SecretRef, fldPath.Child("secretRef"))...)
-	}
-
 	allErrs = append(allErrs, validateSeedNetworks(seedSpec.Networks, fldPath.Child("networks"), inTemplate)...)
 
 	if seedSpec.Backup != nil {

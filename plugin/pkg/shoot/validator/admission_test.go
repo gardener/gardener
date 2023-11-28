@@ -40,7 +40,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	mockauthorizer "github.com/gardener/gardener/pkg/mock/apiserver/authorization/authorizer"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -105,17 +104,6 @@ var _ = Describe("validator", func() {
 			seedPodsCIDR     = "10.241.128.0/17"
 			seedServicesCIDR = "10.241.0.0/17"
 			seedNodesCIDR    = "10.240.0.0/16"
-			seedSecret       = corev1.Secret{
-				TypeMeta: metav1.TypeMeta{},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      seedName,
-					Namespace: "garden",
-				},
-				Data: map[string][]byte{
-					kubernetes.KubeConfig: []byte(""),
-				},
-				Type: corev1.SecretTypeOpaque,
-			}
 
 			projectBase = core.Project{
 				ObjectMeta: metav1.ObjectMeta{
@@ -214,10 +202,6 @@ var _ = Describe("validator", func() {
 						Services:   seedServicesCIDR,
 						Nodes:      &seedNodesCIDR,
 						IPFamilies: []core.IPFamily{core.IPFamilyIPv4},
-					},
-					SecretRef: &corev1.SecretReference{
-						Name:      seedSecret.Name,
-						Namespace: seedSecret.Namespace,
 					},
 				},
 			}

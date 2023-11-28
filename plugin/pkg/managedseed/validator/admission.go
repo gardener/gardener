@@ -23,7 +23,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -31,14 +30,12 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	kubeinformers "k8s.io/client-go/informers"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
-	"k8s.io/utils/pointer"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	seedmanagementhelper "github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
-	seedmanagementv1alpha1constants "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
@@ -234,11 +231,6 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, _ admis
 			return err
 		}
 
-		// Add seed secret reference annotations to the managedseed
-		if err := addSeedSecretRefAnnotations(managedSeed); err != nil {
-			return err
-		}
-
 		allErrs = append(allErrs, errs...)
 	}
 
@@ -424,10 +416,6 @@ func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencore
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("settings", "verticalPodAutoscaler", "enabled"), spec.Settings.VerticalPodAutoscaler.Enabled, "seed VPA is not supported for managed seeds - use the shoot VPA"))
 	}
 
-	if spec.SecretRef != nil && !pointer.BoolDeref(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, false) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("secretRef"), spec.SecretRef, "seed secretRef cannot be specified when the shoot static token kubeconfig is disabled"))
-	}
-
 	topologyAwareRoutingEnabled := gardencorehelper.SeedSettingTopologyAwareRoutingEnabled(spec.Settings)
 	if topologyAwareRoutingEnabled {
 		if gardencorehelper.KubeAPIServerFeatureGateDisabled(shoot, "TopologyAwareHints") {
@@ -545,24 +533,4 @@ func (v *ManagedSeed) getSecretBinding(namespace, name string) (*gardencore.Secr
 
 func (v *ManagedSeed) getSecrets(namespace string, selector labels.Selector) ([]*corev1.Secret, error) {
 	return v.secretLister.Secrets(namespace).List(selector)
-}
-
-func addSeedSecretRefAnnotations(managedSeed *seedmanagement.ManagedSeed) error {
-	if managedSeed.Spec.Gardenlet != nil &&
-		managedSeed.Spec.Gardenlet.Config != nil {
-		// Convert gardenlet config to an internal version
-		gardenletConfig, err := gardenlethelper.ConvertGardenletConfiguration(managedSeed.Spec.Gardenlet.Config)
-		if err != nil {
-			return apierrors.NewInternalError(fmt.Errorf("could not convert config: %v", err))
-		}
-
-		if gardenletConfig.SeedConfig != nil {
-			if secretRef := gardenletConfig.SeedConfig.Spec.SecretRef; secretRef != nil {
-				metav1.SetMetaDataAnnotation(&managedSeed.ObjectMeta, seedmanagementv1alpha1constants.AnnotationSeedSecretName, secretRef.Name)
-				metav1.SetMetaDataAnnotation(&managedSeed.ObjectMeta, seedmanagementv1alpha1constants.AnnotationSeedSecretNamespace, secretRef.Namespace)
-			}
-		}
-	}
-
-	return nil
 }

@@ -52,8 +52,7 @@ func (g *graph) setupSeedWatch(ctx context.Context, informer cache.Informer) err
 				return
 			}
 
-			if !apiequality.Semantic.DeepEqual(oldSeed.Spec.SecretRef, newSeed.Spec.SecretRef) ||
-				!v1beta1helper.SeedBackupSecretRefEqual(oldSeed.Spec.Backup, newSeed.Spec.Backup) ||
+			if !v1beta1helper.SeedBackupSecretRefEqual(oldSeed.Spec.Backup, newSeed.Spec.Backup) ||
 				!seedDNSProviderSecretRefEqual(oldSeed.Spec.DNS.Provider, newSeed.Spec.DNS.Provider) {
 				g.handleSeedCreateOrUpdate(newSeed)
 			}
@@ -106,11 +105,6 @@ func (g *graph) handleSeedCreateOrUpdate(seed *gardencorev1beta1.Seed) {
 
 	leaseVertex := g.getOrCreateVertex(VertexTypeLease, gardencorev1beta1.GardenerSeedLeaseNamespace, seed.Name)
 	g.addEdge(leaseVertex, seedVertex)
-
-	if seed.Spec.SecretRef != nil {
-		secretVertex := g.getOrCreateVertex(VertexTypeSecret, seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name)
-		g.addEdge(secretVertex, seedVertex)
-	}
 
 	if seed.Spec.Backup != nil {
 		secretVertex := g.getOrCreateVertex(VertexTypeSecret, seed.Spec.Backup.SecretRef.Namespace, seed.Spec.Backup.SecretRef.Name)

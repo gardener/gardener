@@ -1484,43 +1484,6 @@ var _ = Describe("handler", func() {
 
 						It("should forbid because the secret is referenced in a managedseed's gardenlet config but belongs to another seed", func() {
 							var (
-								secretName      = "secret-foo"
-								secretNamespace = "secret-bar"
-							)
-
-							request.Namespace = secretNamespace
-							request.Name = secretName
-							seedConfig1.Spec.SecretRef = &corev1.SecretReference{
-								Name:      secretName,
-								Namespace: secretNamespace,
-							}
-
-							mockCache.EXPECT().List(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeedList{})).DoAndReturn(func(ctx context.Context, list *seedmanagementv1alpha1.ManagedSeedList, opts ...client.ListOption) error {
-								(&seedmanagementv1alpha1.ManagedSeedList{Items: managedSeeds}).DeepCopyInto(list)
-								return nil
-							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeed1Namespace, shoot1.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
-								shoot1.DeepCopyInto(obj)
-								return nil
-							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeed1Namespace, shoot2.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
-								shoot2.DeepCopyInto(obj)
-								return nil
-							})
-
-							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-								AdmissionResponse: admissionv1.AdmissionResponse{
-									Allowed: false,
-									Result: &metav1.Status{
-										Code:    int32(http.StatusForbidden),
-										Message: fmt.Sprintf("object does not belong to seed %q", seedName),
-									},
-								},
-							}))
-						})
-
-						It("should forbid because the secret is referenced in a managedseed's gardenlet config but belongs to another seed", func() {
-							var (
 								secretName      = "secret-bar"
 								secretNamespace = "secret-foo"
 							)
@@ -1556,35 +1519,6 @@ var _ = Describe("handler", func() {
 									},
 								},
 							}))
-						})
-
-						It("should allow because the secret is referenced in a managedseed's gardenlet config", func() {
-							var (
-								secretName      = "secret-foo"
-								secretNamespace = "secret-bar"
-							)
-
-							request.Namespace = secretNamespace
-							request.Name = secretName
-							seedConfig2.Spec.SecretRef = &corev1.SecretReference{
-								Name:      secretName,
-								Namespace: secretNamespace,
-							}
-
-							mockCache.EXPECT().List(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeedList{})).DoAndReturn(func(ctx context.Context, list *seedmanagementv1alpha1.ManagedSeedList, opts ...client.ListOption) error {
-								(&seedmanagementv1alpha1.ManagedSeedList{Items: managedSeeds}).DeepCopyInto(list)
-								return nil
-							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeed1Namespace, shoot1.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
-								shoot1.DeepCopyInto(obj)
-								return nil
-							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeed1Namespace, shoot2.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
-								shoot2.DeepCopyInto(obj)
-								return nil
-							})
-
-							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 						})
 
 						It("should allow because the secret is referenced in a managedseed's gardenlet config", func() {

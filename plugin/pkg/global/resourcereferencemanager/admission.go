@@ -261,16 +261,6 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 		}
 		err = r.ensureSecretBindingReferences(ctx, a, binding)
 
-	case core.Kind("Seed"):
-		seed, ok := a.GetObject().(*core.Seed)
-		if !ok {
-			return apierrors.NewBadRequest("could not convert resource into Seed object")
-		}
-		if utils.SkipVerification(operation, seed.ObjectMeta) {
-			return nil
-		}
-		err = r.ensureSeedReferences(ctx, seed)
-
 	case core.Kind("Shoot"):
 		var (
 			oldShoot, shoot *core.Shoot
@@ -616,13 +606,6 @@ func (r *ReferenceManager) ensureSecretBindingReferences(ctx context.Context, at
 	}
 
 	return nil
-}
-
-func (r *ReferenceManager) ensureSeedReferences(ctx context.Context, seed *core.Seed) error {
-	if seed.Spec.SecretRef == nil {
-		return nil
-	}
-	return r.lookupSecret(ctx, seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name)
 }
 
 func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes admission.Attributes, oldShoot, shoot *core.Shoot) error {

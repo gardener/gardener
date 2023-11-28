@@ -434,16 +434,6 @@ func (f *ShootCreationFramework) CreateShootAndWaitForCreation(ctx context.Conte
 		}
 	}
 
-	if f.Config.seedKubeconfigPath == "" {
-		f.Logger.Info("Seed kubeconfig path is not specified, skipping downloading the static token kubeconfig for the Seed")
-	} else if seedSecretRef := shootFramework.Seed.Spec.SecretRef; seedSecretRef == nil {
-		f.Logger.Info("Seed does not have secretRef set, skipping constructing seed client")
-	} else {
-		if err := DownloadKubeconfig(ctx, shootFramework.GardenClient, shootFramework.Seed.Spec.SecretRef.Namespace, shootFramework.Seed.Spec.SecretRef.Name, f.Config.seedKubeconfigPath); err != nil {
-			return fmt.Errorf("failed downloading seed kubeconfig: %w", err)
-		}
-	}
-
 	log.Info("Finished creating shoot")
 	return nil
 }

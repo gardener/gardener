@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
@@ -171,10 +170,6 @@ func (v *ManagedSeed) validateUpdate(ctx context.Context, a admission.Attributes
 	seedTemplate, _, err := seedmanagementv1alpha1helper.ExtractSeedTemplateAndGardenletConfig(managedSeed)
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("cannot extract the seed template: %w", err))
-	}
-
-	if seedTemplate.Spec.SecretRef != nil && !pointer.BoolDeref(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, false) {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "kubernetes", "enableStaticTokenKubeconfig"), shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, "shoot static token kubeconfig cannot be disabled when the seed secretRef is set"))
 	}
 
 	zoneValidationErrs, err := v.validateZoneRemovalFromShoot(field.NewPath("spec", "providers", "workers"), oldShoot, shoot, seedTemplate)
