@@ -49,6 +49,7 @@ type IngressGatewayValues struct {
 	ProxyProtocolEnabled  bool
 	VPNEnabled            bool
 	Zones                 []string
+	EnsureHostSpreading   bool
 
 	// Ports is a list of all Ports the istio-ingress gateways is listening on.
 	// Port 15021 and 15000 cannot be used.
@@ -76,6 +77,7 @@ func (i *istiod) generateIstioIngressGatewayChart() (*chartrenderer.RenderedChar
 			"vpn": map[string]interface{}{
 				"enabled": istioIngressGateway.VPNEnabled,
 			},
+			"ensureHostAntiAffinity": istioIngressGateway.EnsureHostSpreading,
 		}
 
 		if istioIngressGateway.MinReplicas != nil {

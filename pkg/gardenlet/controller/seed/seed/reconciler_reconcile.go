@@ -392,7 +392,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	// setup for flow graph
 	var dnsRecord component.DeployMigrateWaiter
 
-	istio, err := defaultIstio(seedClient, chartRenderer, seed, &r.Config, seedIsGarden)
+	istio, err := defaultIstio(ctx, seedClient, chartRenderer, seed, &r.Config, seedIsGarden)
 	if err != nil {
 		return err
 	}

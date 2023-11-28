@@ -15,12 +15,15 @@
 package shared_test
 
 import (
+	"context"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/component/istio"
@@ -58,6 +61,7 @@ func createIstio(testValues istioTestValues) istio.Interface {
 	))
 
 	istio, err := NewIstio(
+		context.TODO(),
 		testValues.client,
 		testValues.chartRenderer,
 		testValues.prefix,
@@ -125,6 +129,7 @@ func checkIstio(istioDeploy istio.Interface, testValues istioTestValues) {
 				PriorityClassName:     testValues.priorityClassName,
 				ProxyProtocolEnabled:  testValues.proxyProtocolEnabled,
 				VPNEnabled:            testValues.vpnEnabled,
+				EnsureHostSpreading:   len(testValues.zones) == 0,
 			},
 		},
 		NamePrefix: testValues.prefix,
@@ -170,6 +175,7 @@ func checkAdditionalIstioGateway(istioDeploy istio.Interface,
 		ProxyProtocolEnabled:  ingressValues[0].ProxyProtocolEnabled,
 		VPNEnabled:            true,
 		Zones:                 zones,
+		EnsureHostSpreading:   zone == nil,
 	}))
 }
 
@@ -189,6 +195,7 @@ var _ = Describe("Istio", func() {
 	JustBeforeEach(func() {
 		trafficPolicy := corev1.ServiceExternalTrafficPolicyTypeLocal
 		testValues = istioTestValues{
+			client:                   fakeclient.NewClientBuilder().Build(),
 			istiodImageName:          "istiod",
 			ingressImageName:         "istio-ingress",
 			prefix:                   "shared-istio-test-",
@@ -273,6 +280,8 @@ var _ = Describe("Istio", func() {
 			istioDeploy = istio.NewIstio(nil, nil, istio.Values{})
 
 			Expect(AddIstioIngressGateway(
+				context.TODO(),
+				testValues.client,
 				istioDeploy,
 				namespace,
 				annotations,
@@ -289,6 +298,8 @@ var _ = Describe("Istio", func() {
 
 			It("should successfully add an additional ingress gateway", func() {
 				Expect(AddIstioIngressGateway(
+					context.TODO(),
+					testValues.client,
 					istioDeploy,
 					namespace,
 					annotations,
@@ -316,6 +327,8 @@ var _ = Describe("Istio", func() {
 
 			It("should successfully add an additional ingress gateway", func() {
 				Expect(AddIstioIngressGateway(
+					context.TODO(),
+					testValues.client,
 					istioDeploy,
 					namespace,
 					annotations,
