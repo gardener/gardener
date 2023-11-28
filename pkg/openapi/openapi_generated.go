@@ -1394,7 +1394,7 @@ func schema_pkg_apis_core_v1beta1_CRI(ref common.ReferenceCallback) common.OpenA
 				Properties: map[string]spec.Schema{
 					"name": {
 						SchemaProps: spec.SchemaProps{
-							Description: "The name of the CRI library. Supported values are `docker` and `containerd`.",
+							Description: "The name of the CRI library. Supported values are `containerd`.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",

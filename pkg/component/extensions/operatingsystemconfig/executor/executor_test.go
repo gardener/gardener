@@ -26,7 +26,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/executor"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/docker"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/varlibmount"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -56,7 +55,7 @@ var _ = Describe("Executor", func() {
 				"f2",
 			}
 			units = []string{
-				docker.UnitName,
+				"docker.service",
 				"unit1",
 				"unit2",
 				varlibmount.UnitName,
@@ -389,7 +388,7 @@ if ! diff "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD" >/dev/null || \
 `
 
 	for _, name := range units {
-		if name != docker.UnitName && name != varlibmount.UnitName && name != downloader.UnitName {
+		if name != "docker.service" && name != varlibmount.UnitName && name != downloader.UnitName {
 			footerPart += `    systemctl enable ` + name + ` && systemctl restart --no-block ` + name + `
 `
 		}

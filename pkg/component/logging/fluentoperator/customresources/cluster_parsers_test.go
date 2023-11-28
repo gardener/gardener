@@ -38,24 +38,6 @@ var _ = Describe("Logging", func() {
 				[]*fluentbitv1alpha2.ClusterParser{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:   "docker-parser",
-							Labels: labels,
-						},
-						Spec: fluentbitv1alpha2.ParserSpec{
-							JSON: &fluentbitv1alpha2parser.JSON{
-								TimeKey:    "time",
-								TimeFormat: "%Y-%m-%dT%H:%M:%S.%L%z",
-								TimeKeep:   pointer.Bool(true),
-							},
-							Decoders: []fluentbitv1alpha2.Decorder{
-								{
-									DecodeFieldAs: "json log",
-								},
-							},
-						},
-					},
-					{
-						ObjectMeta: metav1.ObjectMeta{
 							Name:   "containerd-parser",
 							Labels: labels,
 						},

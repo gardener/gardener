@@ -65,8 +65,6 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd/logrotate
-            - pkg/component/extensions/operatingsystemconfig/original/components/docker
-            - pkg/component/extensions/operatingsystemconfig/original/components/docker/logrotate
             - pkg/component/extensions/operatingsystemconfig/original/components/kubelet
             - pkg/component/extensions/operatingsystemconfig/utils
             - pkg/component/gardeneraccess

@@ -288,7 +288,7 @@ message CARotation {
 
 // CRI contains information about the Container Runtimes.
 message CRI {
-  // The name of the CRI library. Supported values are `docker` and `containerd`.
+  // The name of the CRI library. Supported values are `containerd`.
   optional string name = 1;
 
   // ContainerRuntimes is the list of the required container runtimes supported for a worker pool.

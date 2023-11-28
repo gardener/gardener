@@ -18,13 +18,9 @@ Container [log rotation](https://kubernetes.io/docs/concepts/cluster-administrat
 * `ContainerLogMaxSize` for rotation
 * `ContainerLogMaxFiles` for retention
 
-### Docker Container Runtime
-
-In this case, the log rotation and retention is implemented by a `logrotate` service provisioned by Gardener, which rotates logs once `100M` size is reached. Logs are compressed on daily basis and retained for a maximum period of `14d`.
-
 ### ContainerD Runtime
 
-In this case, it is possible to configure the `containerLogMaxSize` and `containerLogMaxFiles` fields in the Shoot specification. Both fields are optional and if nothing is specified, then the `kubelet` rotates on the same size `100M` as in the `docker` container runtime. Those fields are part of provider's workers definition. Here is an example:
+In this case, it is possible to configure the `containerLogMaxSize` and `containerLogMaxFiles` fields in the Shoot specification. Both fields are optional and if nothing is specified, then the `kubelet` rotates on the size `100M`. Those fields are part of provider's workers definition. Here is an example:
 
 ```yaml
 spec:

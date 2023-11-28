@@ -18,7 +18,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/containerd"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/docker"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/gardeneruser"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/journald"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kernelconfig"
@@ -42,7 +41,7 @@ func Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1al
 		files []extensionsv1alpha1.File
 	)
 
-	for _, component := range ComponentsFn(ctx.CRIName, ctx.SSHAccessEnabled) {
+	for _, component := range ComponentsFn(ctx.SSHAccessEnabled) {
 		u, f, err := component.Config(ctx)
 		if err != nil {
 			return nil, nil, err
@@ -56,12 +55,13 @@ func Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1al
 }
 
 // Components computes the original operating system config components.
-func Components(criName extensionsv1alpha1.CRIName, sshAccessEnabled bool) []components.Component {
+func Components(sshAccessEnabled bool) []components.Component {
 	components := []components.Component{
 		valitail.New(),
 		varlibmount.New(),
 		rootcertificates.New(),
-		getContainerRuntimeComponent(criName),
+		containerd.New(),
+		containerd.NewInitializer(),
 		journald.New(),
 		kernelconfig.New(),
 		kubelet.New(),
@@ -72,20 +72,9 @@ func Components(criName extensionsv1alpha1.CRIName, sshAccessEnabled bool) []com
 		components = append(components, gardeneruser.New())
 	}
 
-	if criName == extensionsv1alpha1.CRINameContainerD {
-		components = append(components, containerd.NewInitializer())
-	}
-
 	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
 		components = append(components, nodeagent.New())
 	}
 
 	return components
-}
-
-func getContainerRuntimeComponent(criName extensionsv1alpha1.CRIName) components.Component {
-	if criName == extensionsv1alpha1.CRINameContainerD {
-		return containerd.New()
-	}
-	return docker.New()
 }

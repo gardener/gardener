@@ -40,25 +40,6 @@ var _ = Describe("Logging", func() {
 				[]*fluentbitv1alpha2.ClusterFilter{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							// This filter will be the first one of fluent-bit because the operator orders them by name
-							Name:   "01-docker",
-							Labels: labels,
-						},
-						Spec: fluentbitv1alpha2.FilterSpec{
-							Match: "kubernetes.*",
-							FilterItems: []fluentbitv1alpha2.FilterItem{
-								{
-									Parser: &fluentbitv1alpha2filter.Parser{
-										KeyName:     "log",
-										Parser:      "docker-parser",
-										ReserveData: pointer.Bool(true),
-									},
-								},
-							},
-						},
-					},
-					{
-						ObjectMeta: metav1.ObjectMeta{
 							// This filter will be the second one of fluent-bit because the operator orders them by name
 							Name:   "02-containerd",
 							Labels: labels,

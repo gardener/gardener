@@ -606,8 +606,6 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd/logrotate
-            - pkg/component/extensions/operatingsystemconfig/original/components/docker
-            - pkg/component/extensions/operatingsystemconfig/original/components/docker/logrotate
             - pkg/component/extensions/operatingsystemconfig/original/components/kubelet
             - pkg/component/extensions/operatingsystemconfig/original/components/nodeagent
             - pkg/component/extensions/operatingsystemconfig/original/components/valitail
@@ -844,8 +842,6 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd/logrotate
-            - pkg/component/extensions/operatingsystemconfig/original/components/docker
-            - pkg/component/extensions/operatingsystemconfig/original/components/docker/logrotate
             - pkg/component/extensions/operatingsystemconfig/original/components/gardeneruser
             - pkg/component/extensions/operatingsystemconfig/original/components/journald
             - pkg/component/extensions/operatingsystemconfig/original/components/kernelconfig
@@ -1135,8 +1131,6 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd/logrotate
-            - pkg/component/extensions/operatingsystemconfig/original/components/docker
-            - pkg/component/extensions/operatingsystemconfig/original/components/docker/logrotate
             - pkg/component/extensions/operatingsystemconfig/original/components/kubelet
             - pkg/component/extensions/operatingsystemconfig/original/components/nodeagent
             - pkg/component/extensions/operatingsystemconfig/original/components/valitail

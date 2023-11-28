@@ -2045,7 +2045,7 @@ CRIName
 </em>
 </td>
 <td>
-<p>Name is a mandatory string containing the name of the CRI library. Supported values are <code>docker</code> and <code>containerd</code>.</p>
+<p>Name is a mandatory string containing the name of the CRI library. Supported values are <code>containerd</code>.</p>
 </td>
 </tr>
 </tbody>

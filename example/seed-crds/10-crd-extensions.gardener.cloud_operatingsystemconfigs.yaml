@@ -61,7 +61,7 @@ spec:
                 properties:
                   name:
                     description: Name is a mandatory string containing the name of
-                      the CRI library. Supported values are `docker` and `containerd`.
+                      the CRI library. Supported values are `containerd`.
                     type: string
                 required:
                 - name
