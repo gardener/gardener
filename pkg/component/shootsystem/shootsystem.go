@@ -61,7 +61,7 @@ type Values struct {
 	Extensions []string
 	// ExternalClusterDomain is the external domain of the cluster.
 	ExternalClusterDomain *string
-	// IsWorkerless specifies whether the cluster managed by this API server has worker nodes.
+	// IsWorkerless specifies whether the cluster has worker nodes.
 	IsWorkerless bool
 	// KubernetesVersion is the version of the cluster.
 	KubernetesVersion *semver.Version

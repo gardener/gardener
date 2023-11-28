@@ -57,7 +57,7 @@ var (
 	_ = rest.GroupVersionKindProvider(&KubeconfigREST{})
 )
 
-// New returns and instance of the object.
+// New returns an instance of the object.
 func (r *KubeconfigREST) New() runtime.Object {
 	return r.newObjectFunc()
 }
@@ -67,10 +67,11 @@ func (r *KubeconfigREST) Destroy() {
 	// Given that underlying store is shared with REST, we don't destroy it here explicitly.
 }
 
-// Create returns an kubeconfig request with kubeconfig based on
+// Create returns a kubeconfig request with kubeconfig based on
 // - shoot's advertised addresses
 // - shoot's certificate authority
 // - user making the request
+// - configured organization for the client certificate
 func (r *KubeconfigREST) Create(ctx context.Context, name string, obj runtime.Object, createValidation rest.ValidateObjectFunc, _ *metav1.CreateOptions) (runtime.Object, error) {
 	if createValidation != nil {
 		if err := createValidation(ctx, obj.DeepCopyObject()); err != nil {

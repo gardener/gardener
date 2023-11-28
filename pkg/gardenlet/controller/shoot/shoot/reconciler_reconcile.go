@@ -549,10 +549,8 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, ensureShootClusterIdentity, waitUntilOperatingSystemConfigReady),
 		})
 		deployShootSystemResources = g.Add(flow.Task{
-			Name: "Deploying shoot system resources",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return botanist.DeployShootSystem(ctx)
-			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Name:         "Deploying shoot system resources",
+			Fn:           flow.TaskFn(botanist.DeployShootSystem).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       o.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, initializeShootClients, waitUntilOperatingSystemConfigReady, waitUntilShootNamespacesReady),
 		})

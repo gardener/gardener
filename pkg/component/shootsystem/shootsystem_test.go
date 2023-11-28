@@ -453,6 +453,13 @@ spec:
 							},
 						},
 						{
+							GroupVersion: "v1",
+							APIResources: []metav1.APIResource{
+								{Name: "secrets", Verbs: metav1.Verbs{"get", "list", "watch"}},
+								{Name: "configmaps", Verbs: metav1.Verbs{"get", "list", "watch"}},
+							},
+						},
+						{
 							GroupVersion: "bar/v1beta1",
 							APIResources: []metav1.APIResource{
 								{Name: "foo", Verbs: metav1.Verbs{"get", "list", "watch"}},
@@ -469,6 +476,14 @@ metadata:
   creationTimestamp: null
   name: gardener.cloud:system:read-only
 rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
 - apiGroups:
   - bar
   resources:
