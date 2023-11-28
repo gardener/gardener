@@ -65,6 +65,8 @@ func (v *vpa) recommenderResourceConfigs() component.ResourceConfigs {
 		clusterRoleBindingMetricsReader   = v.emptyClusterRoleBinding("metrics-reader")
 		clusterRoleCheckpointActor        = v.emptyClusterRole("checkpoint-actor")
 		clusterRoleBindingCheckpointActor = v.emptyClusterRoleBinding("checkpoint-actor")
+		clusterRoleStatusActor            = v.emptyClusterRole("status-actor")
+		clusterRoleBindingStatusActor     = v.emptyClusterRoleBinding("status-actor")
 		service                           = v.emptyService(recommender)
 		deployment                        = v.emptyDeployment(recommender)
 	)
@@ -77,6 +79,10 @@ func (v *vpa) recommenderResourceConfigs() component.ResourceConfigs {
 		{Obj: clusterRoleCheckpointActor, Class: component.Application, MutateFn: func() { v.reconcileRecommenderClusterRoleCheckpointActor(clusterRoleCheckpointActor) }},
 		{Obj: clusterRoleBindingCheckpointActor, Class: component.Application, MutateFn: func() {
 			v.reconcileRecommenderClusterRoleBinding(clusterRoleBindingCheckpointActor, clusterRoleCheckpointActor, recommender)
+		}},
+		{Obj: clusterRoleStatusActor, Class: component.Application, MutateFn: func() { v.reconcileRecommenderClusterRoleStatusActor(clusterRoleStatusActor) }},
+		{Obj: clusterRoleBindingStatusActor, Class: component.Application, MutateFn: func() {
+			v.reconcileRecommenderClusterRoleBinding(clusterRoleBindingStatusActor, clusterRoleStatusActor, recommender)
 		}},
 		{Obj: service, Class: component.Runtime, MutateFn: func() { v.reconcileRecommenderService(service) }},
 	}
@@ -123,11 +129,6 @@ func (v *vpa) reconcileRecommenderClusterRoleCheckpointActor(clusterRole *rbacv1
 	clusterRole.Labels = getRoleLabel()
 	clusterRole.Rules = []rbacv1.PolicyRule{
 		{
-			APIGroups: []string{"poc.autoscaling.k8s.io"},
-			Resources: []string{"verticalpodautoscalercheckpoints"},
-			Verbs:     []string{"get", "list", "watch", "create", "patch", "delete"},
-		},
-		{
 			APIGroups: []string{"autoscaling.k8s.io"},
 			Resources: []string{"verticalpodautoscalercheckpoints"},
 			Verbs:     []string{"get", "list", "watch", "create", "patch", "delete"},
@@ -136,6 +137,17 @@ func (v *vpa) reconcileRecommenderClusterRoleCheckpointActor(clusterRole *rbacv1
 			APIGroups: []string{""},
 			Resources: []string{"namespaces"},
 			Verbs:     []string{"get", "list"},
+		},
+	}
+}
+
+func (v *vpa) reconcileRecommenderClusterRoleStatusActor(clusterRole *rbacv1.ClusterRole) {
+	clusterRole.Labels = getRoleLabel()
+	clusterRole.Rules = []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{"autoscaling.k8s.io"},
+			Resources: []string{"verticalpodautoscalers/status"},
+			Verbs:     []string{"get", "patch"},
 		},
 	}
 }

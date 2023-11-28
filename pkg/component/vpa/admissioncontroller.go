@@ -116,11 +116,6 @@ func (v *vpa) reconcileAdmissionControllerClusterRole(clusterRole *rbacv1.Cluste
 			Verbs:     []string{"create", "delete", "get", "list"},
 		},
 		{
-			APIGroups: []string{"poc.autoscaling.k8s.io"},
-			Resources: []string{"verticalpodautoscalers"},
-			Verbs:     []string{"get", "list", "watch"},
-		},
-		{
 			APIGroups: []string{"autoscaling.k8s.io"},
 			Resources: []string{"verticalpodautoscalers"},
 			Verbs:     []string{"get", "list", "watch"},

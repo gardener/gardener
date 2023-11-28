@@ -541,7 +541,7 @@ images:
 - name: vpa-admission-controller
   sourceRepository: github.com/kubernetes/autoscaler
   repository: registry.k8s.io/autoscaling/vpa-admission-controller
-  tag: "0.14.0"
+  tag: "1.0.0"
   labels:
     - name: 'gardener.cloud/cve-categorisation'
       value:
@@ -554,7 +554,7 @@ images:
 - name: vpa-recommender
   sourceRepository: github.com/kubernetes/autoscaler
   repository: registry.k8s.io/autoscaling/vpa-recommender
-  tag: "0.14.0"
+  tag: "1.0.0"
   labels:
     - name: 'gardener.cloud/cve-categorisation'
       value:
@@ -567,7 +567,7 @@ images:
 - name: vpa-updater
   sourceRepository: github.com/kubernetes/autoscaler
   repository: registry.k8s.io/autoscaling/vpa-updater
-  tag: "0.14.0"
+  tag: "1.0.0"
   labels:
     - name: 'gardener.cloud/cve-categorisation'
       value:
