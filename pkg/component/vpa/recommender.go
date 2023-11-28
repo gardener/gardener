@@ -65,8 +65,8 @@ func (v *vpa) recommenderResourceConfigs() component.ResourceConfigs {
 		clusterRoleBindingMetricsReader   = v.emptyClusterRoleBinding("metrics-reader")
 		clusterRoleCheckpointActor        = v.emptyClusterRole("checkpoint-actor")
 		clusterRoleBindingCheckpointActor = v.emptyClusterRoleBinding("checkpoint-actor")
-		clusterRoleVPAStatusActor         = v.emptyClusterRole("vpa-status-actor")
-		clusterRoleBindingVPAStatusActor  = v.emptyClusterRoleBinding("vpa-status-actor")
+		clusterRoleStatusActor            = v.emptyClusterRole("status-actor")
+		clusterRoleBindingStatusActor     = v.emptyClusterRoleBinding("status-actor")
 		service                           = v.emptyService(recommender)
 		deployment                        = v.emptyDeployment(recommender)
 	)
@@ -80,9 +80,9 @@ func (v *vpa) recommenderResourceConfigs() component.ResourceConfigs {
 		{Obj: clusterRoleBindingCheckpointActor, Class: component.Application, MutateFn: func() {
 			v.reconcileRecommenderClusterRoleBinding(clusterRoleBindingCheckpointActor, clusterRoleCheckpointActor, recommender)
 		}},
-		{Obj: clusterRoleVPAStatusActor, Class: component.Application, MutateFn: func() { v.reconcileRecommenderClusterRoleVPAStatusActor(clusterRoleVPAStatusActor) }},
-		{Obj: clusterRoleBindingVPAStatusActor, Class: component.Application, MutateFn: func() {
-			v.reconcileRecommenderClusterRoleBinding(clusterRoleBindingVPAStatusActor, clusterRoleVPAStatusActor, recommender)
+		{Obj: clusterRoleStatusActor, Class: component.Application, MutateFn: func() { v.reconcileRecommenderClusterRoleStatusActor(clusterRoleStatusActor) }},
+		{Obj: clusterRoleBindingStatusActor, Class: component.Application, MutateFn: func() {
+			v.reconcileRecommenderClusterRoleBinding(clusterRoleBindingStatusActor, clusterRoleStatusActor, recommender)
 		}},
 		{Obj: service, Class: component.Runtime, MutateFn: func() { v.reconcileRecommenderService(service) }},
 	}
@@ -141,7 +141,7 @@ func (v *vpa) reconcileRecommenderClusterRoleCheckpointActor(clusterRole *rbacv1
 	}
 }
 
-func (v *vpa) reconcileRecommenderClusterRoleVPAStatusActor(clusterRole *rbacv1.ClusterRole) {
+func (v *vpa) reconcileRecommenderClusterRoleStatusActor(clusterRole *rbacv1.ClusterRole) {
 	clusterRole.Labels = getRoleLabel()
 	clusterRole.Rules = []rbacv1.PolicyRule{
 		{
