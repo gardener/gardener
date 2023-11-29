@@ -30,13 +30,13 @@ const (
 type OpenIDConnectPresetSpec struct {
 
 	// Server contains the kube-apiserver's OpenID Connect configuration.
-	// This configuration is not overwritting any existing OpenID Connect
+	// This configuration is not overwriting any existing OpenID Connect
 	// configuration already set on the Shoot object.
 	Server KubeAPIServerOpenIDConnect `json:"server" protobuf:"bytes,1,opt,name=server"`
 
 	// Client contains the configuration used for client OIDC authentication
 	// of Shoot clusters.
-	// This configuration is not overwritting any existing OpenID Connect
+	// This configuration is not overwriting any existing OpenID Connect
 	// client authentication already set on the Shoot object.
 	// +optional
 	Client *OpenIDConnectClientAuthentication `json:"client,omitempty" protobuf:"bytes,2,opt,name=client"`
