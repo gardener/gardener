@@ -28,12 +28,6 @@ var _ = Describe("Version", func() {
 		func(constraint *semver.Constraints, version *semver.Version, matcher gomegatypes.GomegaMatcher) {
 			Expect(constraint.Check(version)).To(matcher)
 		},
-
-		Entry("ConstraintK8sEqual124, success", ConstraintK8sEqual124, semver.MustParse("1.24.1"), BeTrue()),
-		Entry("ConstraintK8sEqual124, failure", ConstraintK8sEqual124, semver.MustParse("1.23.0"), BeFalse()),
-		Entry("ConstraintK8sEqual124, success w/ suffix", ConstraintK8sEqual124, semver.MustParse("v1.24.1-foo.12"), BeTrue()),
-		Entry("ConstraintK8sEqual124, failure w/ suffix", ConstraintK8sEqual124, semver.MustParse("v1.23.0-foo.12"), BeFalse()),
-
 		Entry("ConstraintK8sGreaterEqual125, success", ConstraintK8sGreaterEqual125, semver.MustParse("1.25.0"), BeTrue()),
 		Entry("ConstraintK8sGreaterEqual125, failure", ConstraintK8sGreaterEqual125, semver.MustParse("1.24.0"), BeFalse()),
 		Entry("ConstraintK8sGreaterEqual125, success w/ suffix", ConstraintK8sGreaterEqual125, semver.MustParse("v1.25.0-foo.12"), BeTrue()),
