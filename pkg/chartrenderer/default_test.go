@@ -16,6 +16,7 @@ package chartrenderer_test
 
 import (
 	"embed"
+	"fmt"
 	"path/filepath"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -25,7 +26,8 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 )
 
-const alpinePod = `apiVersion: v1
+const (
+	alpinePod = `apiVersion: v1
 kind: Pod
 metadata:
   name: alpine
@@ -39,6 +41,17 @@ spec:
   - name: waiter
     image: alpine:3.3
     command: ["/bin/sleep", "9000"]`
+
+	testSecret = `apiVersion: v1
+kind: Secret
+metadata:
+  name: test
+  namespace: default
+  labels:
+    chartName: alpine
+    chartVersion: "0.1.0"
+type: Opaque`
+)
 
 //go:embed testdata/alpine/*
 var embeddedFS embed.FS
@@ -65,7 +78,11 @@ var _ = Describe("ChartRenderer", func() {
 
 			files := chart.Files()
 			Expect(files).To(HaveLen(2))
-			Expect(files).To(HaveKeyWithValue("alpine/templates/alpine-pod.yaml", alpinePod))
+			Expect(files).To(HaveKey("alpine/templates/alpine-pod.yaml"))
+			Expect(files["alpine/templates/alpine-pod.yaml"]).To(HaveKeyWithValue("pod/alpine", alpinePod))
+			Expect(files["alpine/templates/alpine-pod.yaml"]).To(HaveKeyWithValue("secret/test", testSecret))
+			Expect(files).To(HaveKey("alpine/templates/secret.yaml"))
+			Expect(files["alpine/templates/secret.yaml"]).To(HaveKeyWithValue("secret/test", testSecret))
 		})
 	})
 
@@ -83,7 +100,10 @@ var _ = Describe("ChartRenderer", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			actual := chart.FileContent("alpine-pod.yaml")
-			Expect(actual).To(Equal(alpinePod))
+			Expect(actual).To(Equal(testSecret + "\n---\n" + alpinePod))
+
+			actual = chart.FileContent("secret.yaml")
+			Expect(actual).To(Equal(testSecret))
 		})
 	})
 
@@ -104,7 +124,10 @@ var _ = Describe("ChartRenderer", func() {
 
 			data := chart.AsSecretData()
 			Expect(data).To(Not(BeNil()))
-			Expect(string(data["alpine_templates_alpine-pod.yaml"])).To(Equal(alpinePod))
+			fmt.Print(data)
+			Expect(string(data["alpine_templates_secret.yaml"])).To(Equal(testSecret))
+			Expect(string(data["alpine_templates_alpine-pod_secret_test.yaml"])).To(Equal(testSecret))
+			Expect(string(data["alpine_templates_alpine-pod_pod_alpine.yaml"])).To(Equal(alpinePod))
 		})
 	})
 })

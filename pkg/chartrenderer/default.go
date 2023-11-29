@@ -160,31 +160,48 @@ func (c *RenderedChart) Manifest() []byte {
 }
 
 // Files returns all rendered manifests mapping their names to their content.
-func (c *RenderedChart) Files() map[string]string {
-	var files = make(map[string]string)
+func (c *RenderedChart) Files() map[string]map[string]string {
+	var files = make(map[string]map[string]string)
 	for _, manifest := range c.Manifests {
-		files[manifest.Name] = manifest.Content
+		if _, ok := files[manifest.Name]; ok {
+			files[manifest.Name][strings.ToLower(manifest.Head.Kind+"/"+manifest.Head.Metadata.Name)] = manifest.Content
+			continue
+		}
+		files[manifest.Name] = map[string]string{strings.ToLower(manifest.Head.Kind + "/" + manifest.Head.Metadata.Name): manifest.Content}
 	}
 	return files
 }
 
 // FileContent returns explicitly the content of the provided <filename>.
 func (c *RenderedChart) FileContent(filename string) string {
+	var fileContent string
 	for _, mf := range c.Manifests {
 		if mf.Name == fmt.Sprintf("%s/templates/%s", c.ChartName, filename) {
-			return mf.Content
+			if fileContent != "" {
+				// add `---` to seperate charts
+				fileContent = fileContent + "\n---\n"
+			}
+			fileContent = fileContent + mf.Content
+			continue
 		}
 	}
-	return ""
+	return fileContent
 }
 
 // AsSecretData returns all rendered manifests that is capable for used as data of a secret
 func (c *RenderedChart) AsSecretData() map[string][]byte {
-	data := make(map[string][]byte, len(c.Files()))
+	data := make(map[string][]byte)
 	for fileName, fileContent := range c.Files() {
-		if len(fileContent) != 0 {
-			key := strings.ReplaceAll(fileName, "/", "_")
-			data[key] = []byte(fileContent)
+		multipleResources := len(fileContent) > 1
+		for resourceName, resourceContent := range fileContent {
+			if len(resourceContent) != 0 {
+				// prevents old behaviour if there is only one resource in file.
+				key := strings.ReplaceAll(fileName, "/", "_")
+				if multipleResources {
+					key = strings.ReplaceAll(strings.TrimSuffix(fileName, ".yaml")+"/"+resourceName+".yaml", "/", "_")
+				}
+				data[key] = []byte(resourceContent)
+			}
 		}
 	}
 	return data
