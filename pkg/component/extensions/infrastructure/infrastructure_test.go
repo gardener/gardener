@@ -69,6 +69,7 @@ var _ = Describe("#Interface", func() {
 		providerConfig *runtime.RawExtension
 		providerStatus *runtime.RawExtension
 		nodesCIDR      *string
+		egressCIDRs    []string
 
 		empty, expected *extensionsv1alpha1.Infrastructure
 		values          *infrastructure.Values
@@ -95,6 +96,7 @@ var _ = Describe("#Interface", func() {
 		providerConfig = &runtime.RawExtension{Raw: []byte(`{"very":"provider-specific"}`)}
 		providerStatus = &runtime.RawExtension{Raw: []byte(`{"very":"provider-specific-status"}`)}
 		nodesCIDR = pointer.String("1.2.3.4/5")
+		egressCIDRs = []string{"1.2.3.4/5", "5.6.7.8/9"}
 
 		values = &infrastructure.Values{
 			Namespace:      namespace,
@@ -332,6 +334,7 @@ var _ = Describe("#Interface", func() {
 			}
 			expected.Status.NodesCIDR = nodesCIDR
 			expected.Status.ProviderStatus = providerStatus
+			expected.Status.EgressCIDRs = egressCIDRs
 			Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching infrastructure succeeds")
 
 			By("Wait")
@@ -340,6 +343,7 @@ var _ = Describe("#Interface", func() {
 			By("Verify status")
 			Expect(deployWaiter.ProviderStatus()).To(Equal(providerStatus))
 			Expect(deployWaiter.NodesCIDR()).To(Equal(nodesCIDR))
+			Expect(deployWaiter.EgressCIDRs()).To(Equal(egressCIDRs))
 		})
 
 		It("should return no error when is ready (AnnotateOperation == false)", func() {
@@ -350,11 +354,13 @@ var _ = Describe("#Interface", func() {
 			}
 			expected.Status.NodesCIDR = nodesCIDR
 			expected.Status.ProviderStatus = providerStatus
+			expected.Status.EgressCIDRs = egressCIDRs
 
 			Expect(c.Create(ctx, expected)).To(Succeed(), "creating infrastructure succeeds")
 			Expect(deployWaiter.Wait(ctx)).To(Succeed())
 			Expect(deployWaiter.ProviderStatus()).To(Equal(providerStatus))
 			Expect(deployWaiter.NodesCIDR()).To(Equal(nodesCIDR))
+			Expect(deployWaiter.EgressCIDRs()).To(Equal(egressCIDRs))
 		})
 	})
 
@@ -542,6 +548,7 @@ var _ = Describe("#Interface", func() {
 			infra := empty.DeepCopy()
 			infra.Status.ProviderStatus = providerStatus
 			infra.Status.NodesCIDR = nodesCIDR
+			infra.Status.EgressCIDRs = egressCIDRs
 			Expect(c.Create(ctx, infra)).To(Succeed())
 
 			expected = infra.DeepCopy()
@@ -552,6 +559,7 @@ var _ = Describe("#Interface", func() {
 
 			Expect(deployWaiter.ProviderStatus()).To(Equal(providerStatus))
 			Expect(deployWaiter.NodesCIDR()).To(Equal(nodesCIDR))
+			Expect(deployWaiter.EgressCIDRs()).To(Equal(egressCIDRs))
 		})
 	})
 })

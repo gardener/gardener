@@ -65,6 +65,20 @@ func (mr *MockInterfaceMockRecorder) Destroy(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), arg0)
 }
 
+// EgressCIDRs mocks base method.
+func (m *MockInterface) EgressCIDRs() []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EgressCIDRs")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// EgressCIDRs indicates an expected call of EgressCIDRs.
+func (mr *MockInterfaceMockRecorder) EgressCIDRs() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EgressCIDRs", reflect.TypeOf((*MockInterface)(nil).EgressCIDRs))
+}
+
 // Get mocks base method.
 func (m *MockInterface) Get(arg0 context.Context) (*v1alpha1.Infrastructure, error) {
 	m.ctrl.T.Helper()
