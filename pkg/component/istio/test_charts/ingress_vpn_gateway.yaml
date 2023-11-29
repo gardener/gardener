@@ -7,7 +7,6 @@ spec:
   selector:
     app: istio-ingressgateway
     foo: bar
-    
   servers:
   - hosts:
     - reversed-vpn-auth-server.garden.svc.cluster.local

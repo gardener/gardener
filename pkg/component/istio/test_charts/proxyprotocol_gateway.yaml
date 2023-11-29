@@ -6,12 +6,10 @@ metadata:
   labels:
     app: istio-ingressgateway
     foo: bar
-    
 spec:
   selector:
     app: istio-ingressgateway
     foo: bar
-    
   servers:
   - port:
       number: 8443

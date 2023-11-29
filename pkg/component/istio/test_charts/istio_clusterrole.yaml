@@ -5,7 +5,6 @@ metadata:
   labels:
     app: istiod
     istio: pilot
-    
 rules:
   # sidecar injection controller Do we need it?
   - apiGroups: ["admissionregistration.k8s.io"]
@@ -101,7 +100,6 @@ metadata:
   labels:
     app: istiod
     istio: pilot
-    
 rules:
   - apiGroups: ["apps"]
     verbs: [ "get", "watch", "list", "update", "patch", "create", "delete" ]
@@ -121,7 +119,6 @@ metadata:
   labels:
     app: istiod
     istio: pilot
-    
 rules:
   - apiGroups:
       - "config.istio.io"

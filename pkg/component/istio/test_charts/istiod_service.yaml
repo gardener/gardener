@@ -10,7 +10,6 @@ metadata:
   labels:
     app: istiod
     istio: pilot
-    
 spec:
   type: ClusterIP
   ports:
@@ -28,4 +27,3 @@ spec:
   selector:
     app: istiod
     istio: pilot
-    

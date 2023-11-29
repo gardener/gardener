@@ -7,7 +7,6 @@ metadata:
     app.kubernetes.io/version: 1.19.3
     app: istio-ingressgateway
     foo: bar
-    
 spec:
   scaleTargetRef:
     apiVersion: apps/v1

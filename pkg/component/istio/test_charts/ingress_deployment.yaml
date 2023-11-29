@@ -7,7 +7,6 @@ metadata:
     app.kubernetes.io/version: 1.19.3
     app: istio-ingressgateway
     foo: bar
-    
 spec:
   replicas: <REPLICAS>
   revisionHistoryLimit: 1
@@ -15,7 +14,6 @@ spec:
     matchLabels:
       app: istio-ingressgateway
       foo: bar
-      
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -25,9 +23,7 @@ spec:
       labels:
         app: istio-ingressgateway
         foo: bar
-        
         to-target: allowed
-        
         service.istio.io/canonical-name: "istio-ingressgateway"
         service.istio.io/canonical-revision: "1.19"
       annotations:

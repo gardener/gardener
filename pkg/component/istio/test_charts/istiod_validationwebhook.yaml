@@ -7,7 +7,6 @@ metadata:
     istio.io/rev: default
     app: istiod
     istio: pilot
-    
 webhooks:
   - name: rev.validation.istio.io
     timeoutSeconds: 10

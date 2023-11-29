@@ -6,7 +6,6 @@ metadata:
   labels:
     app: istio-ingressgateway
     foo: bar
-    
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role

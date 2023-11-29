@@ -9,21 +9,17 @@ metadata:
     networking.resources.gardener.cloud/pod-label-selector-namespace-alias: all-istio-ingresses
     networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports: '[{"port":15020,"protocol":"TCP"}]'
     foo: bar
-    
   labels:
     app.kubernetes.io/version: 1.19.3
     app: istio-ingressgateway
     foo: bar
-    
 spec:
   type: LoadBalancer
   selector:
     app: istio-ingressgateway
     foo: bar
-    
   ports:
   - name: foo
     port: 999
     targetPort: 999
-  
 <EXTERNAL_TRAFFIC_POLICY>

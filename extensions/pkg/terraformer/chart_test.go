@@ -19,13 +19,13 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/helm/pkg/manifest"
+	"helm.sh/helm/v3/pkg/releaseutil"
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
 )
 
-func mkManifest(name string, content string) manifest.Manifest {
-	return manifest.Manifest{
+func mkManifest(name string, content string) releaseutil.Manifest {
+	return releaseutil.Manifest{
 		Name:    fmt.Sprintf("/templates/%s", name),
 		Content: content,
 	}
@@ -41,7 +41,7 @@ var _ = Describe("Chart", func() {
 			)
 
 			files, err := ExtractTerraformFiles(&chartrenderer.RenderedChart{
-				Manifests: []manifest.Manifest{
+				Manifests: []releaseutil.Manifest{
 					mkManifest(MainKey, mainContent),
 					mkManifest(VariablesKey, variablesContent),
 					mkManifest(TFVarsKey, tfVarsContent),
