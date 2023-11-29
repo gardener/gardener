@@ -23,13 +23,13 @@ import (
 type OpenIDConnectPresetSpec struct {
 
 	// Server contains the kube-apiserver's OpenID Connect configuration.
-	// This configuration is not overwritting any existing OpenID Connect
+	// This configuration is not overwriting any existing OpenID Connect
 	// configuration already set on the Shoot object.
 	Server KubeAPIServerOpenIDConnect
 
 	// Client contains the configuration used for client OIDC authentication
 	// of Shoot clusters.
-	// This configuration is not overwritting any existing OpenID Connect
+	// This configuration is not overwriting any existing OpenID Connect
 	// client authentication already set on the Shoot object.
 	Client *OpenIDConnectClientAuthentication
 

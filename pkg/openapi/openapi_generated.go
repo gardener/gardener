@@ -9821,14 +9821,14 @@ func schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPresetSpec(ref common
 				Properties: map[string]spec.Schema{
 					"server": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Server contains the kube-apiserver's OpenID Connect configuration. This configuration is not overwritting any existing OpenID Connect configuration already set on the Shoot object.",
+							Description: "Server contains the kube-apiserver's OpenID Connect configuration. This configuration is not overwriting any existing OpenID Connect configuration already set on the Shoot object.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/settings/v1alpha1.KubeAPIServerOpenIDConnect"),
 						},
 					},
 					"client": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Client contains the configuration used for client OIDC authentication of Shoot clusters. This configuration is not overwritting any existing OpenID Connect client authentication already set on the Shoot object.",
+							Description: "Client contains the configuration used for client OIDC authentication of Shoot clusters. This configuration is not overwriting any existing OpenID Connect client authentication already set on the Shoot object.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectClientAuthentication"),
 						},
 					},
@@ -10097,14 +10097,14 @@ func schema_pkg_apis_settings_v1alpha1_OpenIDConnectPresetSpec(ref common.Refere
 				Properties: map[string]spec.Schema{
 					"server": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Server contains the kube-apiserver's OpenID Connect configuration. This configuration is not overwritting any existing OpenID Connect configuration already set on the Shoot object.",
+							Description: "Server contains the kube-apiserver's OpenID Connect configuration. This configuration is not overwriting any existing OpenID Connect configuration already set on the Shoot object.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/settings/v1alpha1.KubeAPIServerOpenIDConnect"),
 						},
 					},
 					"client": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Client contains the configuration used for client OIDC authentication of Shoot clusters. This configuration is not overwritting any existing OpenID Connect client authentication already set on the Shoot object.",
+							Description: "Client contains the configuration used for client OIDC authentication of Shoot clusters. This configuration is not overwriting any existing OpenID Connect client authentication already set on the Shoot object.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectClientAuthentication"),
 						},
 					},
