@@ -40,7 +40,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -160,8 +159,6 @@ type Images struct {
 	KubeAPIServer string
 	// VPNClient is the container image for the vpn-seed-client.
 	VPNClient string
-	// Watchdog is the container image for the termination-handler.
-	Watchdog string
 }
 
 // VPNConfig contains information for configuring the VPN settings for the kube-apiserver.
@@ -264,7 +261,6 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		secretAdmissionKubeconfigs            = k.emptySecret(secretAdmissionKubeconfigsNamePrefix)
 		configMapAuditPolicy                  = k.emptyConfigMap(configMapAuditPolicyNamePrefix)
 		configMapEgressSelector               = k.emptyConfigMap(configMapEgressSelectorNamePrefix)
-		configMapTerminationHandler           = k.emptyConfigMap(watchdogConfigMapNamePrefix)
 	)
 
 	if err := k.reconcilePodDisruptionBudget(ctx, podDisruptionBudget); err != nil {
@@ -384,12 +380,6 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		}
 	}
 
-	if version.ConstraintK8sEqual124.Check(k.values.Version) {
-		if err := k.reconcileTerminationHandlerConfigMap(ctx, configMapTerminationHandler); err != nil {
-			return err
-		}
-	}
-
 	if err := k.reconcileDeployment(
 		ctx,
 		deployment,
@@ -398,7 +388,6 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		configMapAdmissionConfigs,
 		secretAdmissionKubeconfigs,
 		configMapEgressSelector,
-		configMapTerminationHandler,
 		secretETCDEncryptionConfiguration,
 		secretOIDCCABundle,
 		secretServiceAccountKey,

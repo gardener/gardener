@@ -47,7 +47,6 @@ import (
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 var (
@@ -285,14 +284,6 @@ func computeKubeAPIServerImages(
 		return kubeapiserver.Images{}, err
 	}
 	result.KubeAPIServer = imageKubeAPIServer.String()
-
-	if version.ConstraintK8sEqual124.Check(targetVersion) {
-		imageWatchdog, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlpine, imagevectorutils.RuntimeVersion(runtimeVersion.String()), imagevectorutils.TargetVersion(targetVersion.String()))
-		if err != nil {
-			return kubeapiserver.Images{}, err
-		}
-		result.Watchdog = imageWatchdog.String()
-	}
 
 	if vpnConfig.HighAvailabilityEnabled {
 		imageVPNClient, err := imagevector.ImageVector().FindImage(imagevector.ImageNameVpnShootClient, imagevectorutils.RuntimeVersion(runtimeVersion.String()), imagevectorutils.TargetVersion(targetVersion.String()))
