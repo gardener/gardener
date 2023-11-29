@@ -1,0 +1,5 @@
+service:
+  labels:
+    baz: goo
+  data:
+    key: valz
