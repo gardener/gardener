@@ -34,11 +34,10 @@ This section describes the controllers in more details.
 
 ### [`Lease` Controller](../../pkg/nodeagent/controller/lease)
 
-This controller creates a lease for `gardener-node-agent` in `kube-system` namespace of the shoot cluster.
-Each instance of `gardener-node-agent` creates its own lease when its corresponding `Node` was created.
+This controller creates a `Lease` for `gardener-node-agent` in `kube-system` namespace of the shoot cluster.
+Each instance of `gardener-node-agent` creates its own `Lease` when its corresponding `Node` was created.
 It renews the `Lease` resource every 10 seconds. This indicates a heartbeat to the external world.
 
-At the moment, the `Lease` resources are not reflected in any health check function of the shoot cluster yet.
 
 ### [`Node` Controller](../../pkg/nodeagent/controller/node)
 

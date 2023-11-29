@@ -57,9 +57,10 @@ var (
 	testEnv    *envtest.Environment
 	testClient client.Client
 
-	testNamespace *corev1.Namespace
-	testRunID     string
-	nodeName      string
+	testNamespace        *corev1.Namespace
+	testRunID            string
+	leaseDurationSeconds int32
+	nodeName             string
 )
 
 var _ = BeforeSuite(func() {
@@ -100,6 +101,7 @@ var _ = BeforeSuite(func() {
 
 	nodeName = "test-" + gardenerutils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 	fakeClock = testclock.NewFakeClock(time.Now().UTC())
+	leaseDurationSeconds = 3
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
@@ -114,7 +116,7 @@ var _ = BeforeSuite(func() {
 	leaseReconciler := &leasecontroller.Reconciler{
 		Clock:                fakeClock,
 		Namespace:            testNamespace.Name,
-		LeaseDurationSeconds: 3,
+		LeaseDurationSeconds: leaseDurationSeconds,
 	}
 	Expect(leaseReconciler.AddToManager(mgr)).To(Succeed())
 

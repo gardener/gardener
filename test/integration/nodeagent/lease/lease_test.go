@@ -70,7 +70,7 @@ var _ = Describe("Reconcile", func() {
 
 			oldRenewTime := lease.Spec.RenewTime
 			// wait a nit more than LeaseDurationSeconds
-			fakeClock.Step(5 * time.Second)
+			fakeClock.Step(time.Duration(leaseDurationSeconds+1) * time.Second)
 
 			Eventually(func() bool {
 				Expect(testClient.Get(ctx, types.NamespacedName{Namespace: testNamespace.Name, Name: "gardener-node-agent-" + nodeName}, lease)).To(Succeed())
@@ -87,7 +87,7 @@ var _ = Describe("Reconcile", func() {
 			validateOwnerReference(lease, node)
 
 			oldRenewTime := lease.Spec.RenewTime
-			fakeClock.Step(1 * time.Minute)
+			fakeClock.Step(time.Duration(leaseDurationSeconds+1) * time.Second)
 
 			Expect(testClient.Delete(ctx, node)).To(Succeed())
 			Eventually(func() error {

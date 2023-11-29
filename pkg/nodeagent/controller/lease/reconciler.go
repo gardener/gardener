@@ -20,7 +20,6 @@ import (
 
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -53,28 +52,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			Namespace: r.Namespace,
 		},
 	}
-	leaseSpec := coordinationv1.LeaseSpec{
-		HolderIdentity:       &lease.Name,
-		LeaseDurationSeconds: &r.LeaseDurationSeconds,
-		RenewTime:            &metav1.MicroTime{Time: r.Clock.Now().UTC()},
-	}
 
-	requeueAfter := time.Duration(r.LeaseDurationSeconds) * time.Second / 4
-
-	if err := r.Client.Get(ctx, client.ObjectKeyFromObject(lease), lease); err != nil {
-		if apierrors.IsNotFound(err) {
-			lease.Spec = leaseSpec
-			if err := controllerutil.SetControllerReference(node, lease, r.Client.Scheme()); err != nil {
-				return reconcile.Result{}, err
-			}
-			log.V(1).Info("Creating heartbeat Lease", "lease", client.ObjectKeyFromObject(lease))
-			return reconcile.Result{RequeueAfter: requeueAfter}, r.Client.Create(ctx, lease)
+	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, lease, func() error {
+		if err := controllerutil.SetControllerReference(node, lease, r.Client.Scheme()); err != nil {
+			log.Error(err, "Unable to set controller reference for Lease", "lease", client.ObjectKeyFromObject(lease))
 		}
-		return reconcile.Result{}, err
-	}
 
-	lease.Spec = leaseSpec
-
-	log.V(1).Info("Renewing heartbeat Lease", "lease", client.ObjectKeyFromObject(lease))
-	return reconcile.Result{RequeueAfter: requeueAfter}, r.Client.Update(ctx, lease)
+		lease.Spec = coordinationv1.LeaseSpec{
+			HolderIdentity:       &lease.Name,
+			LeaseDurationSeconds: &r.LeaseDurationSeconds,
+			RenewTime:            &metav1.MicroTime{Time: r.Clock.Now().UTC()},
+		}
+		return nil
+	})
+	log.V(1).Info("Heartbeat Lease", "lease", client.ObjectKeyFromObject(lease), "operation", op)
+	return reconcile.Result{RequeueAfter: time.Duration(r.LeaseDurationSeconds) * time.Second / 4}, err
 }
