@@ -376,15 +376,17 @@ var _ = Describe("Shoot defaulting", func() {
 	})
 
 	Describe("KubeControllerManager settings defaulting", func() {
-		Describe("NodeCIDRMaskSize", func() {
-			It("should not default nodeCIDRMaskSize field for workerless Shoot", func() {
+		Describe("KubeControllerManager", func() {
+			It("should not default KubeControllerManager field for workerless Shoot", func() {
 				obj.Spec.Provider.Workers = nil
 
 				SetObjectDefaults_Shoot(obj)
 
-				Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(BeNil())
+				Expect(obj.Spec.Kubernetes.KubeControllerManager).To(BeNil())
 			})
+		})
 
+		Describe("NodeCIDRMaskSize", func() {
 			Context("IPv4", func() {
 				It("should make nodeCIDRMaskSize big enough for 2*maxPods", func() {
 					obj.Spec.Provider.Workers = []Worker{{}}
