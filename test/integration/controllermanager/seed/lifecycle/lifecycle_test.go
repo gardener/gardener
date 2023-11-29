@@ -37,6 +37,7 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 		gardenNamespace *corev1.Namespace
 		managedSeed     *seedmanagementv1alpha1.ManagedSeed
 		shoot           *gardencorev1beta1.Shoot
+		shootConditions int
 	)
 
 	BeforeEach(func() {
@@ -65,7 +66,7 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 		}
 	})
 
-	JustBeforeEach(func() {
+	BeforeEach(func() {
 		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   lease.Name,
@@ -155,6 +156,8 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 				},
 			},
 		}
+
+		shootConditions = 4
 	})
 
 	Context("when there is no GardenletReady condition", func() {
@@ -262,65 +265,91 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 		})
 
 		Context("changing Shoot status", func() {
-			JustBeforeEach(func() {
-				By("Create Shoot")
-				Expect(testClient.Create(ctx, shoot)).To(Succeed())
-				log.Info("Created Shoot", "shoot", client.ObjectKeyFromObject(shoot))
+			test := func(workerless bool) {
+				JustBeforeEach(func() {
+					By("Create Shoot")
+					Expect(testClient.Create(ctx, shoot)).To(Succeed())
+					log.Info("Created Shoot", "shoot", client.ObjectKeyFromObject(shoot))
 
-				By("Set shoot constraints and conditions to status True")
-				patch := client.MergeFrom(shoot.DeepCopy())
-				shoot.Status = gardencorev1beta1.ShootStatus{
-					Conditions: []gardencorev1beta1.Condition{
-						{Type: gardencorev1beta1.ShootAPIServerAvailable, Status: gardencorev1beta1.ConditionTrue},
-						{Type: gardencorev1beta1.ShootControlPlaneHealthy, Status: gardencorev1beta1.ConditionTrue},
-						{Type: gardencorev1beta1.ShootObservabilityComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
-						{Type: gardencorev1beta1.ShootEveryNodeReady, Status: gardencorev1beta1.ConditionTrue},
-						{Type: gardencorev1beta1.ShootSystemComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
-					},
-					Constraints: []gardencorev1beta1.Condition{
-						{Type: gardencorev1beta1.ShootHibernationPossible, Status: gardencorev1beta1.ConditionTrue},
-						{Type: gardencorev1beta1.ShootMaintenancePreconditionsSatisfied, Status: gardencorev1beta1.ConditionTrue},
-					},
-				}
-				Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
+					By("Set shoot constraints and conditions to status True")
+					patch := client.MergeFrom(shoot.DeepCopy())
+					shoot.Status = gardencorev1beta1.ShootStatus{
+						Conditions: []gardencorev1beta1.Condition{
+							{Type: gardencorev1beta1.ShootAPIServerAvailable, Status: gardencorev1beta1.ConditionTrue},
+							{Type: gardencorev1beta1.ShootControlPlaneHealthy, Status: gardencorev1beta1.ConditionTrue},
+							{Type: gardencorev1beta1.ShootObservabilityComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
+							{Type: gardencorev1beta1.ShootSystemComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
+						},
+						Constraints: []gardencorev1beta1.Condition{
+							{Type: gardencorev1beta1.ShootHibernationPossible, Status: gardencorev1beta1.ConditionTrue},
+							{Type: gardencorev1beta1.ShootMaintenancePreconditionsSatisfied, Status: gardencorev1beta1.ConditionTrue},
+						},
+					}
 
-				DeferCleanup(func() {
-					Expect(testClient.Delete(ctx, shoot)).To(Succeed())
+					if !workerless {
+						shootConditions = 5
+						shoot.Status.Conditions = append(shoot.Status.Conditions, gardencorev1beta1.Condition{Type: gardencorev1beta1.ShootEveryNodeReady, Status: gardencorev1beta1.ConditionTrue})
+					}
+
+					Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
+
+					DeferCleanup(func() {
+						Expect(testClient.Delete(ctx, shoot)).To(Succeed())
+						Eventually(func(g Gomega) error {
+							return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
+						}).Should(BeNotFoundError())
+					})
+
+					By("Update RenewTime of Lease")
+					patch = client.MergeFrom(lease.DeepCopy())
+					lease.Spec.RenewTime = microNow(fakeClock.Now().Add(-2 * seedMonitorPeriod))
+					Expect(testClient.Patch(ctx, lease, patch)).To(Succeed())
 				})
 
-				By("Update RenewTime of Lease")
-				patch = client.MergeFrom(lease.DeepCopy())
-				lease.Spec.RenewTime = microNow(fakeClock.Now().Add(-2 * seedMonitorPeriod))
-				Expect(testClient.Patch(ctx, lease, patch)).To(Succeed())
+				It("should change the shoot conditions to Unknown only when shoot monitor period has passed", func() {
+					Eventually(func(g Gomega) gardencorev1beta1.ConditionStatus {
+						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
+						return seed.Status.Conditions[0].Status
+					}).Should(Equal(gardencorev1beta1.ConditionUnknown))
+
+					Consistently(func(g Gomega) {
+						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+						for _, constraint := range shoot.Status.Constraints {
+							g.Expect(constraint.Status).To(Equal(gardencorev1beta1.ConditionTrue), "constraint "+string(constraint.Type)+" should have status True")
+						}
+						for _, condition := range shoot.Status.Conditions {
+							g.Expect(condition.Status).To(Equal(gardencorev1beta1.ConditionTrue), "condition "+string(condition.Type)+" should have status True")
+						}
+					}).Should(Succeed())
+
+					fakeClock.Step(2 * shootMonitorPeriod)
+
+					Eventually(func(g Gomega) {
+						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+						for _, constraint := range shoot.Status.Constraints {
+							g.Expect(constraint.Status).To(Equal(gardencorev1beta1.ConditionUnknown), "constraint "+string(constraint.Type)+" should have status Unknown")
+						}
+						for _, condition := range shoot.Status.Conditions {
+							g.Expect(condition.Status).To(Equal(gardencorev1beta1.ConditionUnknown), "condition "+string(condition.Type)+" should have status Unknown")
+						}
+					}).Should(Succeed())
+
+					Expect(shoot.Status.Conditions).To(HaveLen(shootConditions))
+				})
+			}
+
+			Context("shoot with worker", func() {
+				test(false)
 			})
 
-			It("should change the shoot conditions to Unknown only when shoot monitor period has passed", func() {
-				Eventually(func(g Gomega) gardencorev1beta1.ConditionStatus {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-					return seed.Status.Conditions[0].Status
-				}).Should(Equal(gardencorev1beta1.ConditionUnknown))
+			Context("workerless shoot", func() {
+				JustBeforeEach(func() {
+					shoot.Spec.Networking = nil
+					shoot.Spec.Provider.Workers = nil
+					shoot.Spec.SecretBindingName = nil
+				})
 
-				Consistently(func(g Gomega) {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
-					for _, constraint := range shoot.Status.Constraints {
-						g.Expect(constraint.Status).To(Equal(gardencorev1beta1.ConditionTrue), "constraint "+string(constraint.Type)+" should have status True")
-					}
-					for _, condition := range shoot.Status.Conditions {
-						g.Expect(condition.Status).To(Equal(gardencorev1beta1.ConditionTrue), "condition "+string(condition.Type)+" should have status True")
-					}
-				}).Should(Succeed())
-
-				fakeClock.Step(2 * shootMonitorPeriod)
-
-				Eventually(func(g Gomega) {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
-					for _, constraint := range shoot.Status.Constraints {
-						g.Expect(constraint.Status).To(Equal(gardencorev1beta1.ConditionUnknown), "constraint "+string(constraint.Type)+" should have status Unknown")
-					}
-					for _, condition := range shoot.Status.Conditions {
-						g.Expect(condition.Status).To(Equal(gardencorev1beta1.ConditionUnknown), "condition "+string(condition.Type)+" should have status Unknown")
-					}
-				}).Should(Succeed())
+				test(true)
 			})
 		})
 	})
