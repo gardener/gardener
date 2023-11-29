@@ -1,0 +1,67 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../registry
+
+patches:
+  - patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/env
+        value:
+          - name: REGISTRY_PROXY_REMOTEURL
+            value: http://registry-gcr-io.kube-system.svc.cluster.local:5000
+          - name: REGISTRY_HTTP_ADDR
+            value: :5003
+    target:
+      group: apps
+      kind: Deployment
+      name: registry-gcr
+  - patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/env
+        value:
+          - name: REGISTRY_PROXY_REMOTEURL
+            value: http://registry-eu-gcr-io.kube-system.svc.cluster.local:5000
+          - name: REGISTRY_HTTP_ADDR
+            value: :5004
+    target:
+      group: apps
+      kind: Deployment
+      name: registry-gcr-eu
+  - patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/env
+        value:
+          - name: REGISTRY_PROXY_REMOTEURL
+            value: http://registry-ghcr-io.kube-system.svc.cluster.local:5000
+          - name: REGISTRY_HTTP_ADDR
+            value: :5005
+    target:
+      group: apps
+      kind: Deployment
+      name: registry-ghcr
+  - patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/env
+        value:
+          - name: REGISTRY_PROXY_REMOTEURL
+            value: http://registry-registry-k8s-io.kube-system.svc.cluster.local:5000
+          - name: REGISTRY_HTTP_ADDR
+            value: :5006
+    target:
+      group: apps
+      kind: Deployment
+      name: registry-k8s
+  - patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/env
+        value:
+          - name: REGISTRY_PROXY_REMOTEURL
+            value: http://registry-quay-io.kube-system.svc.cluster.local:5000
+          - name: REGISTRY_HTTP_ADDR
+            value: :5007
+    target:
+      group: apps
+      kind: Deployment
+      name: registry-quay
