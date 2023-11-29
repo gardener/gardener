@@ -17,7 +17,6 @@ package kubeproxy
 import (
 	_ "embed"
 	"fmt"
-	"strconv"
 
 	"github.com/Masterminds/semver/v3"
 	appsv1 "k8s.io/api/apps/v1"
@@ -491,10 +490,6 @@ func (k *kubeProxy) getInitContainers(kubernetesVersion *semver.Version, image s
 				{
 					Name:  "KUBE_PROXY_MODE",
 					Value: string(k.getMode()),
-				},
-				{
-					Name:  "EXECUTE_WORKAROUND_FOR_K8S_ISSUE_109286",
-					Value: strconv.FormatBool(versionutils.ConstraintK8sLess125.Check(kubernetesVersion)),
 				},
 			},
 			SecurityContext: &corev1.SecurityContext{

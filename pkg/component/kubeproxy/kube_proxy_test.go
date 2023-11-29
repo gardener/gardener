@@ -17,7 +17,6 @@ package kubeproxy_test
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -348,7 +347,7 @@ metadata:
   namespace: kube-system
 `
 
-			configMapCleanupScriptName = "kube-proxy-cleanup-script-b2743fa8"
+			configMapCleanupScriptName = "kube-proxy-cleanup-script-a4263ada"
 			configMapCleanupScriptYAML = `apiVersion: v1
 data:
   cleanup.sh: |
@@ -358,15 +357,6 @@ data:
       echo "${KUBE_PROXY_MODE}" >"$1"
       echo "Nothing to cleanup - the mode didn't change."
       exit 0
-    fi
-
-    # Workaround kube-proxy bug (https://github.com/kubernetes/kubernetes/issues/109286) when switching from ipvs to iptables mode.
-    # The fix (https://github.com/kubernetes/kubernetes/pull/109288) is present in 1.25+.
-    if [ "${EXECUTE_WORKAROUND_FOR_K8S_ISSUE_109286}" = "true" ]; then
-      if iptables -t filter -L KUBE-NODE-PORT; then
-        echo "KUBE-NODE-PORT chain exists, flushing it..."
-        iptables -t filter -F KUBE-NODE-PORT
-      fi
     fi
 
     /usr/local/bin/kube-proxy --v=2 --cleanup --config=/var/lib/kube-proxy-config/config.yaml --proxy-mode="${OLD_KUBE_PROXY_MODE}"
@@ -527,8 +517,6 @@ spec:
 				}
 
 				out += `
-        - name: EXECUTE_WORKAROUND_FOR_K8S_ISSUE_109286
-          value: "` + strconv.FormatBool(versionutils.ConstraintK8sLess125.Check(pool.KubernetesVersion)) + `"
         image: ` + pool.Image + `
         imagePullPolicy: IfNotPresent
         name: cleanup
