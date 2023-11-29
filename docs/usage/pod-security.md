@@ -1,19 +1,3 @@
-# Migrating from `PodSecurityPolicy`s to PodSecurity Admission Controller
-
-Kubernetes has deprecated the `PodSecurityPolicy` API in `v1.21` and it will be removed in `v1.25`. With `v1.23`, a new feature called [`PodSecurity`](https://kubernetes.io/docs/concepts/security/pod-security-admission/) was promoted to beta. From `v1.25` onwards, there will be no API serving `PodSecurityPolicy`s, so you have to cleanup all the existing PSPs before upgrading your cluster. Detailed migration steps are described in [Migrate from PodSecurityPolicy to the Built-In PodSecurity Admission Controller](https://kubernetes.io/docs/tasks/configure-pod-container/migrate-from-psp/).
-
-After migration, you should disable the `PodSecurityPolicy` admission plugin. To do so, you have to add: 
-```yaml
-admissionPlugins:
-- name: PodSecurityPolicy
-  disabled: true
-```
-in `spec.kubernetes.kubeAPIServer.admissionPlugins` field in the `Shoot` resource. Please refer the example `Shoot` manifest in [90-shoot.yaml](../../example/90-shoot.yaml).
-
-Only if the `PodSecurityPolicy` admission plugin is disabled the cluster can be upgraded to `v1.25`.
-
-> :warning: You should disable the admission plugin and wait until Gardener finishes at least one `Shoot` reconciliation before upgrading to `v1.25`. This is to make sure all the `PodSecurityPolicy` related resources deployed by Gardener are cleaned up.
-
 ## Admission Configuration for the `PodSecurity` Admission Plugin
 
 If you wish to add your custom configuration for the `PodSecurity` plugin, you can do so in the Shoot spec under `.spec.kubernetes.kubeAPIServer.admissionPlugins` by adding:
@@ -50,12 +34,4 @@ admissionPlugins:
       namespaces: []
 ```
 
-⚠️ Note that the `pod-security.admission.config.k8s.io/v1` configuration requires `v1.25`+. For `v1.24`, use `pod-security.admission.config.k8s.io/v1beta1`.
-
 For proper functioning of Gardener, `kube-system` namespace will also be automatically added to the `exemptions.namespaces` list.
-
-## `.spec.kubernetes.allowPrivilegedContainers` in the Shoot Spec
-
-If this field is set to `true`, then all authenticated users can use the "gardener.privileged" `PodSecurityPolicy`, allowing full unrestricted access to Pod features. However, the `PodSecurityPolicy` admission plugin is removed in Kubernetes `v1.25` and `PodSecurity` has taken its place as its successor. Therefore, this field doesn't have any relevance in versions `>= v1.25` anymore. If you need to set a default pod admission level for your cluster, follow [this documentation](#admission-configuration-for-the-podsecurity-admission-plugin).
-
-> **Note:** You should remove this field from the `Shoot` spec for `v1.24` clusters only after migrating to the new `PodSecurity` admission controller, i.e. after disabling the old `PodSecurityPolicy` admission plugin (see [Migrating from `PodSecurityPolicy`s to PodSecurity Admission Controller](#migrating-from-podsecuritypolicys-to-podsecurity-admission-controller)). Otherwise the field is defaulted by the Gardener API Server. This is intentional because if we allow the field to be removed when `PodSecurityPolicy` admission plugin is active, the existing pods running in the cluster which need privileges can fail.

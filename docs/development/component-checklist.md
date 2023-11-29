@@ -120,12 +120,6 @@ This document provides a checklist for them that you can walk through.
 
    <sub>[*] It is required because if a component deployed in the Shoot cluster does not specify a Seccomp profile and cannot run with the `RuntimeDefault` Seccomp profile, then enabling the `.spec.kubernetes.kubelet.seccompDefault` field in the Shoot spec would break the corresponding component.</sub>
 
-8. **Define `PodSecurityPolicy`s** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/vpnshoot/vpnshoot.go#L341-L412))
-
-   `PodSecurityPolicy`s are deprecated, however Gardener still supports shoot clusters with older Kubernetes versions ([ref](../usage/supported_k8s_versions.md)).
-   To make sure that such clusters can run with `.spec.kubernetes.allowPrivilegedContainers=false`, you have to define proper `PodSecurityPolicy`s.
-   For more information, see [Pod Security](../usage/pod-security.md).
-
 ## High Availability / Stability
 
 1. **Specify the component type label for high availability** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/kubescheduler/kube_scheduler.go#L241))
