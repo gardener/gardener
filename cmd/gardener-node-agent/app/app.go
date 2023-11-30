@@ -229,7 +229,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 			&bootstrappers.KubeletBootstrapKubeconfig{Log: log.WithName("kubelet-bootstrap-kubeconfig-creator"), FS: fs, APIServerConfig: cfg.APIServer},
 		},
 		ActualRunnables: []manager.Runnable{
-			manager.RunnableFunc(func(_ context.Context) error { return controller.AddToManager(cancel, mgr, cfg, hostName) }),
+			manager.RunnableFunc(func(ctx context.Context) error { return controller.AddToManager(ctx, cancel, mgr, cfg, hostName) }),
 			&bootstrappers.CloudConfigDownloaderCleaner{Log: log.WithName("legacy-cloud-config-downloader-cleaner"), FS: fs, DBus: dbus},
 		},
 	}); err != nil {

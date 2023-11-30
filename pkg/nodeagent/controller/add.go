@@ -28,7 +28,7 @@ import (
 )
 
 // AddToManager adds all controllers to the given manager.
-func AddToManager(cancel context.CancelFunc, mgr manager.Manager, cfg *config.NodeAgentConfiguration, hostName string) error {
+func AddToManager(ctx context.Context, cancel context.CancelFunc, mgr manager.Manager, cfg *config.NodeAgentConfiguration, hostName string) error {
 	if err := (&node.Reconciler{}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding node controller: %w", err)
 	}
@@ -37,7 +37,7 @@ func AddToManager(cancel context.CancelFunc, mgr manager.Manager, cfg *config.No
 		Config:        cfg.Controllers.OperatingSystemConfig,
 		HostName:      hostName,
 		CancelContext: cancel,
-	}).AddToManager(mgr); err != nil {
+	}).AddToManager(ctx, mgr); err != nil {
 		return fmt.Errorf("failed adding operating system config controller: %w", err)
 	}
 

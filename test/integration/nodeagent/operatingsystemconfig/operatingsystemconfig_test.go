@@ -111,13 +111,14 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 				SyncPeriod:        &metav1.Duration{Duration: time.Hour},
 				SecretName:        oscSecretName,
 				KubernetesVersion: kubernetesVersion,
+				SyncJitterPeriod:  &metav1.Duration{Duration: 0},
 			},
 			DBus:          fakeDBus,
 			FS:            fakeFS,
 			HostName:      hostName,
 			Extractor:     fakeregistry.NewExtractor(fakeFS, imageMountDirectory),
 			CancelContext: cancelFunc.cancel,
-		}).AddToManager(mgr)).To(Succeed())
+		}).AddToManager(ctx, mgr)).To(Succeed())
 
 		By("Start manager")
 		mgrContext, mgrCancel := context.WithCancel(ctx)

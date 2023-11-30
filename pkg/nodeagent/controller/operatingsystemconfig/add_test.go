@@ -16,6 +16,7 @@ package operatingsystemconfig_test
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -25,11 +26,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockworkqueue "github.com/gardener/gardener/pkg/mock/client-go/util/workqueue"
 	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
 	. "github.com/gardener/gardener/pkg/nodeagent/controller/operatingsystemconfig"
@@ -92,28 +96,35 @@ var _ = Describe("Add", func() {
 			ctx = context.Background()
 			log = logr.Discard()
 
-			hdlr  handler.EventHandler
-			queue *mockworkqueue.MockRateLimitingInterface
-			obj   *corev1.Secret
-			req   reconcile.Request
-			cfg   config.OperatingSystemConfigControllerConfig
+			fakeClient client.Client
+			hdlr       handler.EventHandler
+			queue      *mockworkqueue.MockRateLimitingInterface
+			obj        *corev1.Secret
+			req        reconcile.Request
+			cfg        config.OperatingSystemConfigControllerConfig
 
-			randomDuration = 10 * time.Millisecond
+			nodeName string
 		)
 
 		BeforeEach(func() {
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
+
+			nodeName = ""
+		})
+
+		JustBeforeEach(func() {
 			cfg = config.OperatingSystemConfigControllerConfig{
-				SyncJitterPeriod: &metav1.Duration{Duration: 50 * time.Millisecond},
+				SyncJitterPeriod: &metav1.Duration{Duration: 5 * time.Second},
 			}
 
-			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay(log)
+			hdlr = (&Reconciler{
+				Client:   fakeClient,
+				Config:   cfg,
+				NodeName: nodeName,
+			}).EnqueueWithJitterDelay(ctx, log)
 			queue = mockworkqueue.NewMockRateLimitingInterface(gomock.NewController(GinkgoT()))
 			obj = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "osc-secret", Namespace: "namespace"}}
 			req = reconcile.Request{NamespacedName: types.NamespacedName{Name: obj.Name, Namespace: obj.Namespace}}
-
-			DeferCleanup(func() {
-				test.WithVar(&RandomDurationWithMetaDuration, func(_ *metav1.Duration) time.Duration { return randomDuration })
-			})
 		})
 
 		Context("Create events", func() {
@@ -136,14 +147,111 @@ var _ = Describe("Add", func() {
 				hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: oldObj}, queue)
 			})
 
-			It("should enqueue the object when the OSC changed", func() {
-				queue.EXPECT().AddAfter(req, randomDuration)
+			Context("when the OSC changed", func() {
+				var oldObj *corev1.Secret
 
-				obj.Data = map[string][]byte{"osc.yaml": []byte(`{"apiVersion":"extensions.gardener.cloud/v1alpha1","kind":"OperatingSystemConfig"}`)}
-				oldObj := obj.DeepCopy()
-				oldObj.Data = map[string][]byte{"osc.yaml": []byte(`{"apiVersion":"extensions.gardener.cloud/v1alpha1","kind":"OperatingSystemConfig","generation":1}`)}
+				JustBeforeEach(func() {
+					obj.Data = map[string][]byte{"osc.yaml": []byte(`{"apiVersion":"extensions.gardener.cloud/v1alpha1","kind":"OperatingSystemConfig"}`)}
+					oldObj = obj.DeepCopy()
+					oldObj.Data = map[string][]byte{"osc.yaml": []byte(`{"apiVersion":"extensions.gardener.cloud/v1alpha1","kind":"OperatingSystemConfig","generation":1}`)}
+				})
 
-				hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: oldObj}, queue)
+				When("node name is not known yet", func() {
+					It("should enqueue the object without delay", func() {
+						queue.EXPECT().AddAfter(req, time.Duration(0))
+						hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: oldObj}, queue)
+					})
+				})
+
+				When("node name is known", func() {
+					var node *corev1.Node
+
+					BeforeEach(func() {
+						nodeName = "1"
+						node = &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}
+
+						Expect(fakeClient.Create(ctx, node)).To(Succeed())
+						DeferCleanup(func() {
+							Expect(fakeClient.Delete(ctx, node)).To(Succeed())
+						})
+					})
+
+					When("number of nodes is not larger than max delay seconds", func() {
+						When("there are no other nodes", func() {
+							// It("should enqueue the object with a delay in the expected range", func() {
+							It("should enqueue the object without delay", func() {
+								queue.EXPECT().AddAfter(req, time.Duration(0))
+								hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: oldObj}, queue)
+							})
+						})
+
+						When("there are other nodes", func() {
+							BeforeEach(func() {
+								for i := 2; i <= 5; i++ {
+									otherNode := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("%d", i)}}
+
+									Expect(fakeClient.Create(ctx, otherNode)).To(Succeed(), "create node "+otherNode.Name)
+									DeferCleanup(func() {
+										Expect(fakeClient.Delete(ctx, otherNode)).To(Succeed(), "delete node "+otherNode.Name)
+									})
+								}
+							})
+
+							test := func(node int) {
+								BeforeEach(func() {
+									nodeName = fmt.Sprintf("%d", node)
+								})
+
+								It("should enqueue the object with the expected delay", func() {
+									queue.EXPECT().AddAfter(req, time.Duration(node-1)*time.Second)
+									hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: oldObj}, queue)
+								})
+							}
+
+							Context("for the first node", func() {
+								test(1)
+							})
+
+							Context("for the second node", func() {
+								test(2)
+							})
+
+							Context("for the third node", func() {
+								test(3)
+							})
+
+							Context("for the fourth node", func() {
+								test(4)
+							})
+
+							Context("for the last node", func() {
+								test(5)
+							})
+						})
+					})
+
+					When("number of nodes is larger than max delay seconds", func() {
+						randomDuration := 10 * time.Millisecond
+
+						BeforeEach(func() {
+							DeferCleanup(test.WithVar(&RandomDurationWithMetaDuration, func(_ *metav1.Duration) time.Duration { return randomDuration }))
+
+							for i := 0; i < 5; i++ {
+								otherNode := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("node-%d", i)}}
+
+								Expect(fakeClient.Create(ctx, otherNode)).To(Succeed(), "create node "+otherNode.Name)
+								DeferCleanup(func() {
+									Expect(fakeClient.Delete(ctx, otherNode)).To(Succeed(), "delete node "+otherNode.Name)
+								})
+							}
+						})
+
+						It("should enqueue the object with a random duration", func() {
+							queue.EXPECT().AddAfter(req, randomDuration)
+							hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: oldObj}, queue)
+						})
+					})
+				})
 			})
 		})
 
