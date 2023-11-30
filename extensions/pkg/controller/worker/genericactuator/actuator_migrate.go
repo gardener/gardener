@@ -24,9 +24,6 @@ import (
 )
 
 // Migrate ensures that the MCM is deleted in case it is managed.
-func (a *genericActuator) Migrate(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, _ *controller.Cluster) error {
-	log = log.WithValues("operation", "migrate")
-
-	// Cleanup legacy machine-controller-manager resources.
-	return a.cleanupLegacyMachineControllerManagerResources(ctx, log, worker)
+func (a *genericActuator) Migrate(_ context.Context, _ logr.Logger, _ *extensionsv1alpha1.Worker, _ *controller.Cluster) error {
+	return nil
 }

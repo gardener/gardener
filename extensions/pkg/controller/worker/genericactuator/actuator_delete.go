@@ -53,11 +53,6 @@ func (a *genericActuator) Delete(ctx context.Context, log logr.Logger, worker *e
 		return fmt.Errorf("pre worker deletion hook failed: %w", err)
 	}
 
-	// Cleanup legacy machine-controller-manager resources.
-	if err := a.cleanupLegacyMachineControllerManagerResources(ctx, log, worker); err != nil {
-		return err
-	}
-
 	// Redeploy generated machine classes to update credentials machine-controller-manager used.
 	log.Info("Deploying the machine classes")
 	if err := workerDelegate.DeployMachineClasses(ctx); err != nil {
