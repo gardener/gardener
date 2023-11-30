@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/gardener/gardener/pkg/logger"
 	leasecontroller "github.com/gardener/gardener/pkg/nodeagent/controller/lease"
@@ -118,7 +119,7 @@ var _ = BeforeSuite(func() {
 		Namespace:            testNamespace.Name,
 		LeaseDurationSeconds: leaseDurationSeconds,
 	}
-	Expect(leaseReconciler.AddToManager(mgr)).To(Succeed())
+	Expect(leaseReconciler.AddToManager(mgr, predicate.NewPredicateFuncs(func(client.Object) bool { return true }))).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

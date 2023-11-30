@@ -34,7 +34,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/utils/pointer"
@@ -189,9 +188,6 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 			&corev1.Secret{}: {
 				Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}},
 				Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: cfg.Controllers.OperatingSystemConfig.SecretName}),
-			},
-			&corev1.Node{}: {
-				Label: labels.SelectorFromSet(labels.Set{corev1.LabelHostname: hostName}),
 			},
 			&coordinationv1.Lease{}: leaseCacheOptions,
 		}},

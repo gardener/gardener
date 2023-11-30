@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	nodecontroller "github.com/gardener/gardener/pkg/nodeagent/controller/node"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus/fake"
@@ -52,7 +53,7 @@ var _ = Describe("Node controller tests", func() {
 		fakeDBus = fake.New()
 		Expect((&nodecontroller.Reconciler{
 			DBus: fakeDBus,
-		}).AddToManager(mgr)).To(Succeed())
+		}).AddToManager(mgr, predicate.NewPredicateFuncs(func(client.Object) bool { return true }))).To(Succeed())
 
 		By("Start manager")
 		mgrContext, mgrCancel := context.WithCancel(ctx)
