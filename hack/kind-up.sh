@@ -18,6 +18,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+REGISTRY_CACHE=${CI:-false}
 CLUSTER_NAME=""
 PATH_CLUSTER_VALUES=""
 PATH_KUBECONFIG=""
@@ -149,6 +150,22 @@ server = "${UPSTREAM_SERVER}"
 EOF
 }
 
+check_registry_cache_availability() {
+  local registry_cache_ip
+  local registry_cache_dns
+  if [[ "$REGISTRY_CACHE" != "true" ]]; then
+    return
+  fi
+  echo "Registry-cache enabled. Checking if registry-cache instances are deployed in prow cluster."
+  for registry_cache_dns in $(kubectl create -k "$(dirname "$0")/../example/gardener-local/registry-prow" --dry-run=client -o yaml | grep kube-system.svc.cluster.local | awk '{ print $2 }' | sed -e "s/^http:\/\///" -e "s/:5000$//"); do
+    registry_cache_ip=$(getent hosts "$registry_cache_dns" | awk '{ print $1 }')
+    if [[ "$registry_cache_ip" == "" ]]; then
+      echo "Unable to resolve IP of $registry_cache_dns in prow cluster. Disabling registry-cache."
+      REGISTRY_CACHE=false
+    fi
+  done
+}
+
 parse_flags "$@"
 
 mkdir -m 0755 -p \
@@ -262,7 +279,14 @@ kubectl -n kube-system get configmap coredns -ojson | \
 kubectl -n kube-system rollout restart deployment coredns
 
 if [[ "$DEPLOY_REGISTRY" == "true" ]]; then
-  kubectl apply -k "$(dirname "$0")/../example/gardener-local/registry" --server-side
+  check_registry_cache_availability
+  if [[ "$REGISTRY_CACHE" == "true" ]]; then
+    echo "Deploying local container registries in registry-cache configuration"
+    kubectl apply -k "$(dirname "$0")/../example/gardener-local/registry-prow" --server-side
+  else
+    echo "Deploying local container registries in default configuration"
+    kubectl apply -k "$(dirname "$0")/../example/gardener-local/registry" --server-side
+  fi
   kubectl wait --for=condition=available deployment -l app=registry -n registry --timeout 5m
 fi
 kubectl apply -k "$(dirname "$0")/../example/gardener-local/calico/$IPFAMILY" --server-side
