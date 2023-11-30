@@ -15,6 +15,7 @@
 package nodeagent
 
 import (
+	coordinationv1 "k8s.io/api/coordination/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
@@ -69,11 +70,18 @@ func RBACResourcesData(_ []string) (map[string][]byte, error) {
 				Name:      "gardener-node-agent",
 				Namespace: metav1.NamespaceSystem,
 			},
-			Rules: []rbacv1.PolicyRule{{
-				APIGroups: []string{""},
-				Resources: []string{"secrets"},
-				Verbs:     []string{"get", "list", "watch"},
-			}},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{"secrets"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{coordinationv1.GroupName},
+					Resources: []string{"leases"},
+					Verbs:     []string{"get", "list", "watch", "create", "update"},
+				},
+			},
 		}
 
 		roleBinding = &rbacv1.RoleBinding{

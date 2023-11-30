@@ -668,7 +668,7 @@ metadata:
 							Annotations: map[string]string{
 								"reference.resources.gardener.cloud/secret-9f4158e8": expectedMRSecretWorker1.Name,
 								"reference.resources.gardener.cloud/secret-b83131c8": expectedMRSecretWorker2.Name,
-								"reference.resources.gardener.cloud/secret-8acdd467": expectedMRSecretRBAC.Name,
+								"reference.resources.gardener.cloud/secret-03d66e75": expectedMRSecretRBAC.Name,
 							},
 							ResourceVersion: "1",
 						},
