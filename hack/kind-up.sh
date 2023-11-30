@@ -151,25 +151,19 @@ EOF
 }
 
 check_registry_cache_availability() {
+  local registry_cache_ip
+  local registry_cache_dns
   if [[ "$REGISTRY_CACHE" != "true" ]]; then
     return
   fi
   echo "Registry-cache enabled. Checking if registry-cache instances are deployed in prow cluster."
-  check_registry_cache_dns_entry registry-gcr-io
-  check_registry_cache_dns_entry registry-eu-gcr-io
-  check_registry_cache_dns_entry registry-ghcr-io
-  check_registry_cache_dns_entry registry-registry-k8s-io
-  check_registry_cache_dns_entry registry-quay-io
-}
-
-check_registry_cache_dns_entry() {
-  local name=$1
-  local registry_cache_ip
-  registry_cache_ip=$(getent hosts "$name.kube-system.svc.cluster.local" | awk '{ print $1 }')
-  if [[ "$registry_cache_ip" == "" ]]; then
-    echo "Unable to resolve IP of $name.kube-system.svc.cluster.local in prow cluster. Disabling registry-cache."
-    REGISTRY_CACHE=false
-  fi
+  for registry_cache_dns in $(kubectl create -k "$(dirname "$0")/../example/gardener-local/registry-prow" --dry-run=client -o yaml | grep kube-system.svc.cluster.local | awk '{ print $2 }' | sed -e "s/^http:\/\///" -e "s/:5000$//"); do
+    registry_cache_ip=$(getent hosts "$registry_cache_dns" | awk '{ print $1 }')
+    if [[ "$registry_cache_ip" == "" ]]; then
+      echo "Unable to resolve IP of $registry_cache_dns in prow cluster. Disabling registry-cache."
+      REGISTRY_CACHE=false
+    fi
+  done
 }
 
 parse_flags "$@"
