@@ -66,7 +66,7 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 		}
 	})
 
-	BeforeEach(func() {
+	JustBeforeEach(func() {
 		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   lease.Name,
@@ -157,7 +157,7 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 			},
 		}
 
-		shootConditions = 4
+		shootConditions = 5
 	})
 
 	Context("when there is no GardenletReady condition", func() {
@@ -287,7 +287,6 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 					}
 
 					if !workerless {
-						shootConditions = 5
 						shoot.Status.Conditions = append(shoot.Status.Conditions, gardencorev1beta1.Condition{Type: gardencorev1beta1.ShootEveryNodeReady, Status: gardencorev1beta1.ConditionTrue})
 					}
 
@@ -347,6 +346,8 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 					shoot.Spec.Networking = nil
 					shoot.Spec.Provider.Workers = nil
 					shoot.Spec.SecretBindingName = nil
+
+					shootConditions = 4
 				})
 
 				test(true)
