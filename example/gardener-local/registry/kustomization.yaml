@@ -12,6 +12,7 @@ resources:
 - k8s
 - localhost
 - quay
+- europe-docker-pkg-dev
 labels:
 - includeSelectors: true
   pairs:

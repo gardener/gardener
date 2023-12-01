@@ -118,6 +118,7 @@ func ensureRegistryMirrorConfig(new *[]extensionsv1alpha1.File) {
 		{UpstreamHost: "ghcr.io", UpstreamServer: "https://ghcr.io", MirrorHost: "http://garden.local.gardener.cloud:5005"},
 		{UpstreamHost: "registry.k8s.io", UpstreamServer: "https://registry.k8s.io", MirrorHost: "http://garden.local.gardener.cloud:5006"},
 		{UpstreamHost: "quay.io", UpstreamServer: "https://quay.io", MirrorHost: "http://garden.local.gardener.cloud:5007"},
+		{UpstreamHost: "europe-docker.pkg.dev", UpstreamServer: "https://europe-docker.pkg.dev", MirrorHost: "http://garden.local.gardener.cloud:5008"},
 	}
 
 	for _, mirror := range mirrors {
