@@ -181,7 +181,7 @@ func setShootStatusToUnknown(ctx context.Context, clock clock.Clock, c client.St
 		}
 	)
 
-	for _, conditionType := range gardenerutils.GetShootConditionTypes(false) {
+	for _, conditionType := range gardenerutils.GetShootConditionTypes(v1beta1helper.IsWorkerless(shoot)) {
 		c := v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Conditions, conditionType)
 		c = v1beta1helper.UpdatedConditionWithClock(clock, c, gardencorev1beta1.ConditionUnknown, reason, msg)
 		conditions[conditionType] = c
