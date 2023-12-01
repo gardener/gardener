@@ -19,14 +19,13 @@ import (
 	"errors"
 	"fmt"
 	"sync"
-	"sync/atomic"
-	"time"
 
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/goleak"
 	"go.uber.org/mock/gomock"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/gardener/gardener/pkg/utils/flow"
 	mockflow "github.com/gardener/gardener/pkg/utils/flow/mock"
@@ -145,44 +144,90 @@ var _ = Describe("task functions", func() {
 	Describe("ParallelN", func() {
 		It("should run the tasks", func() {
 			var (
-				mut           = sync.Mutex{}
-				m             = map[string]struct{}{}
-				ctx           = context.Background()
-				n             = 2
-				activeTasks   int32
-				tasksAsserted = atomic.Bool{}
-				blockCh       = make(chan struct{}, 5)
-				fn            = func(key string) flow.TaskFn {
+				ctx         = context.Background()
+				n           = 2
+				activeTasks = &sync.Map{}
+				doneTasks   = &sync.Map{}
+				blockCh     = make(chan struct{}, 5)
+				doneCh      = make(chan struct{})
+				fn          = func(key string) flow.TaskFn {
 					return func(ctx context.Context) error {
-						atomic.AddInt32(&activeTasks, 1)
-						defer atomic.AddInt32(&activeTasks, -1)
+						activeTasks.Store(key, struct{}{})
+						defer func() {
+							doneTasks.Store(key, struct{}{})
+							activeTasks.Delete(key)
+						}()
 
-						// block all tasks
+						// block until unblocked by test step
 						<-blockCh
-						mut.Lock()
-						m[key] = struct{}{}
-						mut.Unlock()
 						return nil
 					}
 				}
-				tasks = []flow.TaskFn{fn("1"), fn("2"), fn("3"), fn("4"), fn("5")}
+				taskIds = sets.New("1", "2", "3", "4", "5")
+				tasks   = []flow.TaskFn{fn("1"), fn("2"), fn("3"), fn("4"), fn("5")}
 			)
 
 			go func() {
-				// wait for some time so that tasks can start
-				time.Sleep(time.Millisecond * 100)
-				Expect(atomic.LoadInt32(&activeTasks)).To(Equal(int32(n)))
-
-				// we checked that the active tasks == the expected worker count
-				// so we can unblock all tasks
-				for i := 0; i < len(tasks); i++ {
-					blockCh <- struct{}{}
-				}
-				tasksAsserted.Store(true)
+				Expect(flow.ParallelN(n, tasks...)(ctx)).To(Succeed())
+				close(doneCh)
 			}()
-			Expect(flow.ParallelN(n, tasks...)(ctx)).To(Succeed())
-			Expect(m).To(HaveLen(len(tasks)))
-			Expect(tasksAsserted.Load()).To(BeTrue())
+
+			By("Checking active tasks after initial ParallelN call")
+			Eventually(func() int {
+				// find two of the active tasks and remove them from the ids
+				tasksFound := findTasks(taskIds, activeTasks)
+				taskIds = taskIds.Difference(tasksFound)
+				return tasksFound.Len()
+			}).Should(Equal(n))
+
+			By("Unblocking single task")
+			blockCh <- struct{}{}
+			Eventually(func() int {
+				// find the newest active task and remove it from the ids
+				tasksFound := findTasks(taskIds, activeTasks)
+				taskIds = taskIds.Difference(tasksFound)
+				return tasksFound.Len()
+			}).Should(Equal(1))
+
+			Eventually(func(g Gomega) {
+				doneTasks.Range(func(key, value any) bool {
+					g.Expect(taskIds).NotTo(HaveKey(key.(string)))
+					return false
+				})
+			}).Should(Succeed())
+
+			By("Unblocking more tasks")
+			blockCh <- struct{}{}
+			blockCh <- struct{}{}
+			Eventually(func() int {
+				// find the remaining 2 active tasks and remove them from the ids
+				tasksFound := findTasks(taskIds, activeTasks)
+				taskIds = taskIds.Difference(tasksFound)
+				return tasksFound.Len()
+			}).Should(Equal(2))
+
+			Eventually(func(g Gomega) {
+				doneTasks.Range(func(key, value any) bool {
+					g.Expect(taskIds).NotTo(HaveKey(key.(string)))
+					return false
+				})
+			}).Should(Succeed())
+
+			Expect(taskIds.Len()).To(Equal(0))
+
+			By("Unblocking remaining tasks")
+			blockCh <- struct{}{}
+			blockCh <- struct{}{}
+
+			Eventually(func(g Gomega) {
+				tasks := 0
+				activeTasks.Range(func(key, value any) bool {
+					tasks += 1
+					return true
+				})
+				g.Expect(tasks).To(Equal(0))
+				g.Expect(doneCh).To(BeClosed())
+			}).Should(Succeed())
 		})
 
 		It("should collect the errors", func() {
@@ -203,3 +248,16 @@ var _ = Describe("task functions", func() {
 		})
 	})
 })
+
+func findTasks(taskIds sets.Set[string], tasks *sync.Map) sets.Set[string] {
+	tasksFound := sets.New[string]()
+
+	tasks.Range(func(key, value any) bool {
+		if taskIds.Has(key.(string)) {
+			tasksFound.Insert(key.(string))
+		}
+		return true
+	})
+
+	return tasksFound
+}
