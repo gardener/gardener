@@ -40,4 +40,5 @@ func SetObjectDefaults_SchedulerConfiguration(in *SchedulerConfiguration) {
 		SetDefaults_LeaderElectionConfiguration(in.LeaderElection)
 	}
 	SetDefaults_ServerConfiguration(&in.Server)
+	SetDefaults_SchedulerControllerConfiguration(&in.Schedulers)
 }

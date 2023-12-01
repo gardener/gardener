@@ -36,11 +36,32 @@ var _ = Describe("Defaults", func() {
 	})
 
 	Describe("SchedulerConfiguration defaulting", func() {
-		It("should default the admission controller configuration", func() {
+		It("should default the scheduler configuration", func() {
 			schedulerv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
 
 			Expect(obj.LogLevel).To(Equal(logger.InfoLevel))
 			Expect(obj.LogFormat).To(Equal(logger.FormatJSON))
+			Expect(obj.LeaderElection).NotTo(BeNil())
+		})
+
+		It("should not overwrite already set values for scheduler configuration", func() {
+			obj = &schedulerv1alpha1.SchedulerConfiguration{
+				LogLevel:  schedulerv1alpha1.LogLevelDebug,
+				LogFormat: schedulerv1alpha1.LogFormatText,
+			}
+
+			schedulerv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
+
+			Expect(obj.LogLevel).To(Equal(logger.DebugLevel))
+			Expect(obj.LogFormat).To(Equal(logger.FormatText))
+			Expect(obj.LeaderElection).NotTo(BeNil())
+		})
+	})
+
+	Describe("SchedulerControllerConfiguration defaulting", func() {
+		It("should default the scheduler controller configuration", func() {
+			schedulerv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
+
 			Expect(obj.Schedulers).To(Equal(schedulerv1alpha1.SchedulerControllerConfiguration{
 				BackupBucket: &schedulerv1alpha1.BackupBucketSchedulerConfiguration{
 					ConcurrentSyncs: 2,
@@ -50,13 +71,10 @@ var _ = Describe("Defaults", func() {
 					Strategy:        schedulerv1alpha1.Default,
 				},
 			}))
-			Expect(obj.LeaderElection).NotTo(BeNil())
 		})
 
-		It("should not overwrite already set values for admission controller configuration", func() {
+		It("should not overwrite already set values for scheduler controller configuration", func() {
 			obj = &schedulerv1alpha1.SchedulerConfiguration{
-				LogLevel:  schedulerv1alpha1.LogLevelDebug,
-				LogFormat: schedulerv1alpha1.LogFormatText,
 				Schedulers: schedulerv1alpha1.SchedulerControllerConfiguration{
 					BackupBucket: &schedulerv1alpha1.BackupBucketSchedulerConfiguration{
 						ConcurrentSyncs: 3,
@@ -67,12 +85,9 @@ var _ = Describe("Defaults", func() {
 					},
 				},
 			}
-			obj.LeaderElection = &componentbaseconfigv1alpha1.LeaderElectionConfiguration{ResourceLock: "foo"}
 
 			schedulerv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
 
-			Expect(obj.LogLevel).To(Equal(logger.DebugLevel))
-			Expect(obj.LogFormat).To(Equal(logger.FormatText))
 			Expect(obj.Schedulers).To(Equal(schedulerv1alpha1.SchedulerControllerConfiguration{
 				BackupBucket: &schedulerv1alpha1.BackupBucketSchedulerConfiguration{
 					ConcurrentSyncs: 3,
@@ -82,7 +97,6 @@ var _ = Describe("Defaults", func() {
 					Strategy:        schedulerv1alpha1.MinimalDistance,
 				},
 			}))
-			Expect(obj.LeaderElection.ResourceLock).To(Equal("foo"))
 		})
 	})
 
