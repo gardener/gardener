@@ -107,19 +107,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, nil
 	}
 
-	action, responsible := r.ClassFilter.Active(mr)
-	log.Info("Reconciling ManagedResource", "actionRequired", action, "responsible", responsible)
-
 	// If the object should be deleted or the responsibility changed
 	// the actual deployments have to be deleted
-	if mr.DeletionTimestamp != nil || (action && !responsible) {
+	if mr.DeletionTimestamp != nil || r.ClassFilter.ShouldCleanResources(mr) {
+		log.Info("Cleaning resources")
 		return r.delete(ctx, log, mr)
 	}
 
 	// If the deletion after a change of responsibility is still
 	// pending, the handling of the object by the responsible controller
 	// must be delayed, until the deletion is finished.
-	if responsible && !action {
+	if r.ClassFilter.WaitForCleanup(mr) {
+		log.Info("Waiting for resources to be cleaned")
 		return reconcile.Result{Requeue: true}, nil
 	}
 	return r.reconcile(ctx, log, mr)

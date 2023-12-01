@@ -19,6 +19,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -33,11 +34,13 @@ const (
 )
 
 // ClassFilter keeps the resource class for the actual controller instance
-// and is used as Filter predicate for events finally passed to the controller
+// and is used as Filter predicate for events finally passed to the controller.
+// Only objects that have the same class as the controller
+// or their resources deletion is handled by the controller are filtered
 type ClassFilter struct {
 	resourceClass string
 
-	finalizer string
+	objectFinalizer string
 }
 
 var _ predicate.Predicate = &ClassFilter{}
@@ -54,8 +57,8 @@ func NewClassFilter(class string) *ClassFilter {
 	}
 
 	return &ClassFilter{
-		resourceClass: class,
-		finalizer:     finalizer,
+		resourceClass:   class,
+		objectFinalizer: finalizer,
 	}
 }
 
@@ -66,7 +69,7 @@ func (f *ClassFilter) ResourceClass() string {
 
 // FinalizerName determines the finalizer name to be used for the actual resource class
 func (f *ClassFilter) FinalizerName() string {
-	return f.finalizer
+	return f.objectFinalizer
 }
 
 // Responsible checks whether an object should be managed by the actual controller instance
@@ -76,48 +79,39 @@ func (f *ClassFilter) Responsible(o runtime.Object) bool {
 	return c == f.resourceClass || (c == "" && f.resourceClass == resourcemanagerv1alpha1.DefaultResourceClass)
 }
 
-// Active checks whether a dedicated object must be handled by the actual controller
-// instance. This is split into two conditions. An object must be handled
-// if it has already been handled, indicated by the actual finalizer, or
-// if the actual controller is responsible for the object.
-func (f *ClassFilter) Active(o runtime.Object) (action bool, responsible bool) {
-	busy := false
-	responsible = f.Responsible(o)
-	r := o.(*resourcesv1alpha1.ManagedResource)
+// ShouldCleanResources checks if an MR has changed its class and should have its resources cleaned by the given controller instance
+func (f *ClassFilter) ShouldCleanResources(mr *resourcesv1alpha1.ManagedResource) bool {
+	return controllerutil.ContainsFinalizer(mr, f.objectFinalizer) && !f.Responsible(mr)
+}
 
-	for _, finalizer := range r.GetFinalizers() {
+// WaitForCleanup checks if a MR has changed its class and a given controller instance should wait for its resources to be cleaned
+func (f *ClassFilter) WaitForCleanup(mr *resourcesv1alpha1.ManagedResource) bool {
+	for _, finalizer := range mr.GetFinalizers() {
 		if strings.HasPrefix(finalizer, FinalizerName) {
-			busy = true
-			if finalizer == f.finalizer {
-				action = true
-				return
-			}
+			// mr has a controller responsible for it's resources deletion
+			return f.Responsible(mr) && finalizer != f.objectFinalizer
 		}
 	}
-	action = !busy && responsible
-	return
+	// mr doesn't have a controller responsible for it's resources deletion
+	return false
 }
 
 // Create implements `predicate.Predicate`.
 func (f *ClassFilter) Create(e event.CreateEvent) bool {
-	a, r := f.Active(e.Object)
-	return a || r
+	return controllerutil.ContainsFinalizer(e.Object, f.objectFinalizer) || f.Responsible(e.Object)
 }
 
 // Delete implements `predicate.Predicate`.
 func (f *ClassFilter) Delete(e event.DeleteEvent) bool {
-	a, r := f.Active(e.Object)
-	return a || r
+	return controllerutil.ContainsFinalizer(e.Object, f.objectFinalizer) || f.Responsible(e.Object)
 }
 
 // Update implements `predicate.Predicate`.
 func (f *ClassFilter) Update(e event.UpdateEvent) bool {
-	a, r := f.Active(e.ObjectNew)
-	return a || r
+	return controllerutil.ContainsFinalizer(e.ObjectNew, f.objectFinalizer) || f.Responsible(e.ObjectNew)
 }
 
 // Generic implements `predicate.Predicate`.
 func (f *ClassFilter) Generic(e event.GenericEvent) bool {
-	a, r := f.Active(e.Object)
-	return a || r
+	return controllerutil.ContainsFinalizer(e.Object, f.objectFinalizer) || f.Responsible(e.Object)
 }
