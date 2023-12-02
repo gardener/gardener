@@ -29,6 +29,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -168,8 +169,9 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		},
 
 		Cache: cache.Options{ByObject: map[client.Object]cache.ByObject{
-			&corev1.Secret{}: {Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}}},
-			&corev1.Node{}:   {Label: labels.SelectorFromSet(labels.Set{corev1.LabelHostname: hostName})},
+			&corev1.Secret{}:        {Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}}},
+			&corev1.Node{}:          {Label: labels.SelectorFromSet(labels.Set{corev1.LabelHostname: hostName})},
+			&coordinationv1.Lease{}: {Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}}},
 		}},
 		LeaderElection: false,
 		Controller: controllerconfig.Controller{
