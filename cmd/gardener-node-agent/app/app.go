@@ -195,6 +195,11 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		dbus = dbus.New()
 	)
 
+	log.Info("Creating directory for temporary files", "path", nodeagentv1alpha1.TempDir)
+	if err := fs.MkdirAll(nodeagentv1alpha1.TempDir, os.ModeDir); err != nil {
+		return fmt.Errorf("unable to create directory for temporary files %q: %w", nodeagentv1alpha1.TempDir, err)
+	}
+
 	log.Info("Adding runnables to manager")
 	if err := mgr.Add(&controllerutils.ControlledRunner{
 		Manager: mgr,
