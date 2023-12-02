@@ -45,3 +45,11 @@ patches:
       group: apps
       kind: Deployment
       name: registry-quay
+  - patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/env/0/value
+        value: http://registry-europe-docker-pkg-dev.kube-system.svc.cluster.local:5000
+    target:
+      group: apps
+      kind: Deployment
+      name: registry-europe-docker-pkg-dev

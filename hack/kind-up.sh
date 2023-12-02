@@ -129,6 +129,7 @@ setup_containerd_registry_mirrors() {
     setup_containerd_registry_mirror $NODE "ghcr.io" "https://ghcr.io" "http://${REGISTRY_HOSTNAME}:5005"
     setup_containerd_registry_mirror $NODE "registry.k8s.io" "https://registry.k8s.io" "http://${REGISTRY_HOSTNAME}:5006"
     setup_containerd_registry_mirror $NODE "quay.io" "https://quay.io" "http://${REGISTRY_HOSTNAME}:5007"
+    setup_containerd_registry_mirror $NODE "europe-docker.pkg.dev" "https://europe-docker.pkg.dev" "http://${REGISTRY_HOSTNAME}:5008"
   done
 }
 
