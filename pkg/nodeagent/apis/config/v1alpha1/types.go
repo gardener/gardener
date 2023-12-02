@@ -25,6 +25,8 @@ const (
 	BaseDir = "/var/lib/gardener-node-agent"
 	// CredentialsDir is the directory on the worker node that contains credentials for the gardener-node-agent.
 	CredentialsDir = BaseDir + "/credentials"
+	// TempDir is the directory on the worker node that contains temporary directories of files.
+	TempDir = BaseDir + "/tmp"
 	// BinaryDir is the directory on the worker node that contains the binary for the gardener-node-agent.
 	BinaryDir = "/opt/bin"
 

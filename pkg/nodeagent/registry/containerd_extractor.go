@@ -33,6 +33,8 @@ import (
 	"github.com/opencontainers/image-spec/identity"
 	"github.com/spf13/afero"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+
+	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 )
 
 type containerdExtractor struct{}
@@ -76,7 +78,7 @@ func (e *containerdExtractor) CopyFromImage(ctx context.Context, imageRef string
 
 	snapshotter := client.SnapshotService(containerd.DefaultSnapshotter)
 
-	imageMountDirectory, err := fs.TempDir("", "node-agent-")
+	imageMountDirectory, err := fs.TempDir(nodeagentv1alpha1.TempDir, "mount-image-")
 	if err != nil {
 		return fmt.Errorf("error creating temp directory: %w", err)
 	}
@@ -157,7 +159,7 @@ func CopyFile(fs afero.Afero, sourceFile, destinationFile string, permissions os
 		return fmt.Errorf("destination directory %q could not be created", path.Dir(destinationFile))
 	}
 
-	tempDir, err := fs.TempDir("", "copy-image-")
+	tempDir, err := fs.TempDir(nodeagentv1alpha1.TempDir, "copy-image-")
 	if err != nil {
 		return fmt.Errorf("error creating temp directory: %w", err)
 	}
