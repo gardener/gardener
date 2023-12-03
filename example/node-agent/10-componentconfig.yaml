@@ -31,3 +31,4 @@ controllers:
     syncConfigs:
     - secretName: name-of-access-token-secret
       path: /path/on/machine/where/to/sync/the/token/to
+    syncPeriod: 1h

@@ -142,6 +142,7 @@ WantedBy=multi-user.target`))
 								Path:       "/var/lib/valitail/auth-token",
 							},
 						},
+						SyncPeriod: &metav1.Duration{Duration: 12 * time.Hour},
 					},
 				},
 			}))
@@ -176,6 +177,7 @@ controllers:
       secretName: gardener-node-agent
     - path: /var/lib/valitail/auth-token
       secretName: gardener-valitail
+    syncPeriod: 12h0m0s
 kind: NodeAgentConfiguration
 logFormat: ""
 logLevel: ""

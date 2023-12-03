@@ -91,6 +91,8 @@ type OperatingSystemConfigControllerConfig struct {
 type TokenControllerConfig struct {
 	// SyncConfigs is the list of configurations for syncing access tokens.
 	SyncConfigs []TokenSecretSyncConfig
+	// SyncPeriod is the duration how often the access token secrets are synced to the disk.
+	SyncPeriod *metav1.Duration
 }
 
 // TokenSecretSyncConfig contains configurations for syncing access tokens.

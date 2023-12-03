@@ -131,6 +131,9 @@ type TokenControllerConfig struct {
 	// SyncConfigs is the list of configurations for syncing access tokens.
 	// +optional
 	SyncConfigs []TokenSecretSyncConfig `json:"syncConfigs,omitempty"`
+	// SyncPeriod is the duration how often the access token secrets are synced to the disk.
+	// +optional
+	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
 }
 
 // TokenSecretSyncConfig contains configurations for syncing access tokens.

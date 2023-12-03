@@ -17,6 +17,7 @@ package token_test
 import (
 	"context"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -41,6 +42,7 @@ var _ = Describe("Token controller tests", func() {
 		accessToken1, accessToken2 = []byte("access-token-1"), []byte("access-token-2")
 		path1, path2               = "/some/path", "/some/other/path"
 		secret1, secret2           *corev1.Secret
+		syncPeriod                 = time.Second
 	)
 
 	BeforeEach(func() {
@@ -88,6 +90,7 @@ var _ = Describe("Token controller tests", func() {
 						Path:       path2,
 					},
 				},
+				SyncPeriod: &metav1.Duration{Duration: syncPeriod},
 			},
 		}).AddToManager(mgr)).To(Succeed())
 
@@ -127,7 +130,7 @@ var _ = Describe("Token controller tests", func() {
 		}).Should(Succeed())
 	})
 
-	It("should update the tokens on the local file system when they changes", func() {
+	It("should update the tokens on the local file system after the sync period", func() {
 		Eventually(func(g Gomega) {
 			token1OnDisk, err := afero.ReadFile(testFS, path1)
 			g.Expect(err).NotTo(HaveOccurred())
@@ -157,7 +160,7 @@ var _ = Describe("Token controller tests", func() {
 			token2OnDisk, err := afero.ReadFile(testFS, path2)
 			g.Expect(err).NotTo(HaveOccurred())
 			g.Expect(token2OnDisk).To(Equal(newToken2))
-		}).Should(Succeed())
+		}).WithTimeout(2 * syncPeriod).Should(Succeed())
 	})
 
 	Context("unrelated secret", func() {
