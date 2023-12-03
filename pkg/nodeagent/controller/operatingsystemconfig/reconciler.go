@@ -205,7 +205,7 @@ var (
 )
 
 func (r *Reconciler) applyChangedFiles(ctx context.Context, log logr.Logger, files []extensionsv1alpha1.File) error {
-	tmpDir, err := r.FS.TempDir("", "gardener-node-agent-*")
+	tmpDir, err := r.FS.TempDir(nodeagentv1alpha1.TempDir, "osc-reconciliation-file-")
 	if err != nil {
 		return fmt.Errorf("unable to create temporary directory: %w", err)
 	}
