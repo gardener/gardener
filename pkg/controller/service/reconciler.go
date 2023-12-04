@@ -107,7 +107,27 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	patch = client.MergeFrom(service.DeepCopy())
-	service.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{{IP: ip}}
+	service.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{}
+
+	if key != keyNginxIngress {
+		nodes := &corev1.NodeList{}
+		if err := r.Client.List(ctx, nodes); err != nil {
+			return reconcile.Result{}, err
+		}
+
+		for _, node := range nodes.Items {
+			for _, address := range node.Status.Addresses {
+				if address.Type == corev1.NodeInternalIP {
+					service.Status.LoadBalancer.Ingress = append(service.Status.LoadBalancer.Ingress, corev1.LoadBalancerIngress{IP: address.Address})
+				}
+			}
+		}
+	}
+
+	// We append this IP behind the nodeIPs because the gardenlet puts the last ingress IP into the DNSRecords
+	// and we need a change in the DNSRecords if the control-plane moved from one zone to another to update the coredns-custom configMap.
+	service.Status.LoadBalancer.Ingress = append(service.Status.LoadBalancer.Ingress, corev1.LoadBalancerIngress{IP: ip})
+
 	return reconcile.Result{}, r.Client.Status().Patch(ctx, service, patch)
 }
 
