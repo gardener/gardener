@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	goruntime "runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -156,6 +157,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	if err != nil {
 		return fmt.Errorf("failed fetching hostname: %w", err)
 	}
+	hostName = strings.ToLower(hostName)
 
 	log.Info("Setting up manager")
 	mgr, err := manager.New(restConfig, manager.Options{
