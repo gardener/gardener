@@ -58,6 +58,7 @@ import (
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/bootstrap"
 	"github.com/gardener/gardener/pkg/nodeagent/controller"
+	"github.com/gardener/gardener/pkg/nodeagent/controller/lease"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 )
 
@@ -163,8 +164,11 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	if err != nil {
 		return fmt.Errorf("failed fetching name of node: %w", err)
 	}
+
+	leaseCacheOptions := cache.ByObject{Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}}}
 	if nodeName != "" {
 		log.Info("Node already registered, found name", "nodeName", nodeName)
+		leaseCacheOptions.Field = fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: lease.ObjectName(nodeName)})
 	}
 
 	log.Info("Setting up manager")
@@ -187,9 +191,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 			&corev1.Node{}: {
 				Label: labels.SelectorFromSet(labels.Set{corev1.LabelHostname: hostName}),
 			},
-			&coordinationv1.Lease{}: {
-				Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}},
-			},
+			&coordinationv1.Lease{}: leaseCacheOptions,
 		}},
 		LeaderElection: false,
 		Controller: controllerconfig.Controller{
