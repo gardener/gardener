@@ -27,7 +27,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | IPv6SingleStack                     | `false` | `Alpha` | `1.63` |        |
 | MutableShootSpecNetworkingNodes     | `false` | `Alpha` | `1.64` |        |
 | WorkerlessShoots                    | `false` | `Alpha` | `1.70` | `1.78` |
-| WorkerlessShoots                    | `false` | `Beta`  | `1.79` |        |
+| WorkerlessShoots                    | `false` | `Beta`  | `1.79` | `1.85` |
+| WorkerlessShoots                    | `true`  | `GA`    | `1.86` |        |
 | MachineControllerManagerDeployment  | `false` | `Alpha` | `1.73` |        |
 | MachineControllerManagerDeployment  | `true`  | `Beta`  | `1.81` | `1.81` |
 | MachineControllerManagerDeployment  | `true`  | `GA`    | `1.82` |        |
