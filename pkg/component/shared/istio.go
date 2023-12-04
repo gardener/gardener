@@ -271,7 +271,7 @@ func ShouldEnsureHostSpreading(ctx context.Context, cl client.Client, zones []st
 	zonesIncomplete := len(zones)
 forNode:
 	for _, node := range nodeList.Items {
-		nodeZone := node.Labels["topology.kubernetes.io/zone"]
+		nodeZone := node.Labels[corev1.LabelTopologyZone]
 		for i, zone := range zones {
 			if strings.HasSuffix(nodeZone, zone) {
 				if nodesPerZone[i] < targetNodeCount {

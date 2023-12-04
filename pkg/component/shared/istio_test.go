@@ -21,11 +21,13 @@ import (
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/istio"
 	. "github.com/gardener/gardener/pkg/component/shared"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
@@ -390,5 +392,46 @@ var _ = Describe("Istio", func() {
 		Entry("zone and gardener.cloud/role label without handler", map[string]string{"gardener.cloud/role": "exposureclass-handler-gardener-role--zone--some-zone"}, BeFalse(), Equal("")),
 		Entry("zone and gardener.cloud/role label with handler", map[string]string{"gardener.cloud/role": "exposureclass-handler-gardener-role--zone--some-zone", "handler.exposureclass.gardener.cloud/name": ""}, BeTrue(), Equal("some-zone")),
 		Entry("zone and incorrect gardener.cloud/role label with handler", map[string]string{"gardener.cloud/role": "gardener-role--zone--some-zone", "handler.exposureclass.gardener.cloud/name": ""}, BeFalse(), Equal("")),
+	)
+
+	DescribeTable("#ShouldEnsureHostSpreading",
+		func(nodes []corev1.Node, zones []string, expectedError gomegatypes.GomegaMatcher, expectedHostSpreading bool) {
+			cl := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+			for _, n := range nodes {
+				Expect(cl.Create(context.TODO(), &n)).To(Succeed())
+			}
+			hostSpreadingEnabled, err := ShouldEnsureHostSpreading(context.TODO(), cl, zones)
+			Expect(err).To(expectedError)
+			Expect(hostSpreadingEnabled).To(Equal(expectedHostSpreading))
+		},
+
+		Entry("no nodes", []corev1.Node{}, []string{}, BeNil(), true),
+		Entry("single node", []corev1.Node{{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}}}, []string{"z1"}, BeNil(), false),
+		Entry("two nodes", []corev1.Node{
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
+		}, []string{"z1"}, BeNil(), true),
+		Entry("three nodes with different zones targeting one zone", []corev1.Node{
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-2", Labels: map[string]string{"topology.kubernetes.io/zone": "z2"}}},
+		}, []string{"z1"}, BeNil(), true),
+		Entry("three nodes with different zones targeting two zones", []corev1.Node{
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-2", Labels: map[string]string{"topology.kubernetes.io/zone": "z2"}}},
+		}, []string{"z1", "z2"}, BeNil(), false),
+		Entry("four nodes with different zones targeting two zones", []corev1.Node{
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-2", Labels: map[string]string{"topology.kubernetes.io/zone": "z2"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-3", Labels: map[string]string{"topology.kubernetes.io/zone": "z2"}}},
+		}, []string{"z1", "z2"}, BeNil(), true),
+		Entry("four nodes with different zones targeting different zone", []corev1.Node{
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-2", Labels: map[string]string{"topology.kubernetes.io/zone": "z2"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-3", Labels: map[string]string{"topology.kubernetes.io/zone": "z2"}}},
+		}, []string{"z3"}, BeNil(), false),
 	)
 })
