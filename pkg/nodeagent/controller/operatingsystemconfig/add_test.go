@@ -37,7 +37,6 @@ import (
 	mockworkqueue "github.com/gardener/gardener/pkg/mock/client-go/util/workqueue"
 	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
 	. "github.com/gardener/gardener/pkg/nodeagent/controller/operatingsystemconfig"
-	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Add", func() {
@@ -231,13 +230,11 @@ var _ = Describe("Add", func() {
 					})
 
 					When("number of nodes is larger than max delay seconds", func() {
-						randomDuration := 10 * time.Millisecond
-
 						BeforeEach(func() {
-							DeferCleanup(test.WithVar(&RandomDurationWithMetaDuration, func(_ *metav1.Duration) time.Duration { return randomDuration }))
+							nodeName = "8"
 
-							for i := 0; i < 5; i++ {
-								otherNode := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("node-%d", i)}}
+							for i := 2; i <= 15; i++ {
+								otherNode := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("%d", i)}}
 
 								Expect(fakeClient.Create(ctx, otherNode)).To(Succeed(), "create node "+otherNode.Name)
 								DeferCleanup(func() {
@@ -246,8 +243,9 @@ var _ = Describe("Add", func() {
 							}
 						})
 
-						It("should enqueue the object with a random duration", func() {
-							queue.EXPECT().AddAfter(req, randomDuration)
+						It("should enqueue the object with a fractional duration", func() {
+							fraction := float64(13) / float64(3)
+							queue.EXPECT().AddAfter(req, time.Duration(fraction*float64(time.Second)))
 							hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: oldObj}, queue)
 						})
 					})

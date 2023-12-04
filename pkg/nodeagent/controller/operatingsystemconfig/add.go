@@ -40,7 +40,6 @@ import (
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 	"github.com/gardener/gardener/pkg/nodeagent/registry"
-	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -108,9 +107,6 @@ func reconcileRequest(obj client.Object) reconcile.Request {
 		Namespace: obj.GetNamespace(),
 	}}
 }
-
-// RandomDurationWithMetaDuration is an alias for `utils.RandomDurationWithMetaDuration`. Exposed for unit tests.
-var RandomDurationWithMetaDuration = utils.RandomDurationWithMetaDuration
 
 // EnqueueWithJitterDelay returns handler.Funcs which enqueues the object with a random jitter duration for 'update'
 // events. 'Create' events are enqueued immediately.
@@ -180,16 +176,11 @@ func (d *delayer) compute(ctx context.Context, nodeName string) time.Duration {
 		d.nodeList = nodeList
 	}
 
-	if numberOfNodes := len(d.nodeList.Items); numberOfNodes > d.maxDelaySeconds {
-		d.log.Info("Number of nodes is higher than maximum delay in seconds, falling back to random duration", "numberOfNodes", numberOfNodes, "maxDelaySeconds", d.maxDelaySeconds)
-		return RandomDurationWithMetaDuration(&metav1.Duration{Duration: time.Duration(d.maxDelaySeconds) * time.Second})
-	}
-
 	index := slices.IndexFunc(d.nodeList.Items, func(node metav1.PartialObjectMetadata) bool {
 		return node.GetName() == nodeName
 	})
 
-	rangeSize := (d.maxDelaySeconds - d.minDelaySeconds) / len(d.nodeList.Items)
-	delaySeconds := d.minDelaySeconds + index*rangeSize
-	return time.Duration(delaySeconds) * time.Second
+	rangeSize := float64(d.maxDelaySeconds-d.minDelaySeconds) / float64(len(d.nodeList.Items))
+	delaySeconds := float64(d.minDelaySeconds) + float64(index)*rangeSize
+	return time.Duration(delaySeconds * float64(time.Second))
 }
