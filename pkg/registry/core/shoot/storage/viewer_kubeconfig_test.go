@@ -1,5 +1,5 @@
 /*
-Copyright 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+Copyright 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -28,28 +28,28 @@ import (
 	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 )
 
-var _ = Describe("Admin Kubeconfig", func() {
+var _ = Describe("Viewer Kubeconfig", func() {
 	kubeconfigTests(
-		NewAdminKubeconfigREST,
+		NewViewerKubeconfigREST,
 		func() runtime.Object {
-			return &authenticationv1alpha1.AdminKubeconfigRequest{
-				Spec: authenticationv1alpha1.AdminKubeconfigRequestSpec{
+			return &authenticationv1alpha1.ViewerKubeconfigRequest{
+				Spec: authenticationv1alpha1.ViewerKubeconfigRequestSpec{
 					ExpirationSeconds: pointer.Int64(int64(time.Minute.Seconds() * 11)),
 				},
 			}
 		},
 		func(obj runtime.Object, expirationSeconds *int64) {
-			akc := obj.(*authenticationv1alpha1.AdminKubeconfigRequest)
+			akc := obj.(*authenticationv1alpha1.ViewerKubeconfigRequest)
 			akc.Spec.ExpirationSeconds = expirationSeconds
 		},
 		func(obj runtime.Object) metav1.Time {
-			akc := obj.(*authenticationv1alpha1.AdminKubeconfigRequest)
+			akc := obj.(*authenticationv1alpha1.ViewerKubeconfigRequest)
 			return akc.Status.ExpirationTimestamp
 		},
 		func(obj runtime.Object) []byte {
-			akc := obj.(*authenticationv1alpha1.AdminKubeconfigRequest)
+			akc := obj.(*authenticationv1alpha1.ViewerKubeconfigRequest)
 			return akc.Status.Kubeconfig
 		},
-		ConsistOf("system:masters"),
+		ConsistOf("gardener.cloud:system:viewers"),
 	)
 })

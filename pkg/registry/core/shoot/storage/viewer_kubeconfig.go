@@ -1,5 +1,5 @@
 /*
-Copyright 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+Copyright 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,15 +21,15 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apiserver/pkg/authentication/user"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 
 	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 )
 
-// NewAdminKubeconfigREST returns a new KubeconfigREST for admin kubeconfigs.
-func NewAdminKubeconfigREST(
+// NewViewerKubeconfigREST returns a new KubeconfigREST for viewer kubeconfigs.
+func NewViewerKubeconfigREST(
 	shootGetter getter,
 	secretLister kubecorev1listers.SecretLister,
 	internalSecretLister gardencorelisters.InternalSecretLister,
@@ -44,11 +44,11 @@ func NewAdminKubeconfigREST(
 		gvk: schema.GroupVersionKind{
 			Group:   authenticationv1alpha1.SchemeGroupVersion.Group,
 			Version: authenticationv1alpha1.SchemeGroupVersion.Version,
-			Kind:    "AdminKubeconfigRequest",
+			Kind:    "ViewerKubeconfigRequest",
 		},
 		newObjectFunc: func() runtime.Object {
-			return &authenticationv1alpha1.AdminKubeconfigRequest{}
+			return &authenticationv1alpha1.ViewerKubeconfigRequest{}
 		},
-		clientCertificateOrganization: user.SystemPrivilegedGroup,
+		clientCertificateOrganization: v1beta1constants.ShootGroupViewers,
 	}
 }

@@ -27,7 +27,24 @@ import (
 
 // CreateShootClientFromAdminKubeconfig requests an admin kubeconfig and creates a shoot client.
 func CreateShootClientFromAdminKubeconfig(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) (kubernetes.Interface, error) {
-	kubeconfig, err := RequestAdminKubeconfigForShoot(ctx, gardenClient, shoot, pointer.Int64(7200))
+	return createShootClientFromDynamicKubeconfig(ctx, gardenClient, shoot, RequestAdminKubeconfigForShoot)
+}
+
+// CreateShootClientFromViewerKubeconfig requests a viewer kubeconfig and creates a shoot client.
+func CreateShootClientFromViewerKubeconfig(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) (kubernetes.Interface, error) {
+	return createShootClientFromDynamicKubeconfig(ctx, gardenClient, shoot, RequestViewerKubeconfigForShoot)
+}
+
+func createShootClientFromDynamicKubeconfig(
+	ctx context.Context,
+	gardenClient kubernetes.Interface,
+	shoot *gardencorev1beta1.Shoot,
+	requestFn func(context.Context, kubernetes.Interface, *gardencorev1beta1.Shoot, *int64) ([]byte, error),
+) (
+	kubernetes.Interface,
+	error,
+) {
+	kubeconfig, err := requestFn(ctx, gardenClient, shoot, pointer.Int64(7200))
 	if err != nil {
 		return nil, err
 	}
@@ -51,4 +68,18 @@ func RequestAdminKubeconfigForShoot(ctx context.Context, gardenClient kubernetes
 	}
 
 	return adminKubeconfigRequest.Status.Kubeconfig, nil
+}
+
+// RequestViewerKubeconfigForShoot requests an viewer kubeconfig for the given shoot.
+func RequestViewerKubeconfigForShoot(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, expirationSeconds *int64) ([]byte, error) {
+	viewerKubeconfigRequest := &authenticationv1alpha1.ViewerKubeconfigRequest{
+		Spec: authenticationv1alpha1.ViewerKubeconfigRequestSpec{
+			ExpirationSeconds: expirationSeconds,
+		},
+	}
+	if err := gardenClient.Client().SubResource("viewerkubeconfig").Create(ctx, shoot, viewerKubeconfigRequest); err != nil {
+		return nil, err
+	}
+
+	return viewerKubeconfigRequest.Status.Kubeconfig, nil
 }

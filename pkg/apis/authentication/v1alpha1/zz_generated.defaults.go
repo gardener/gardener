@@ -30,9 +30,14 @@ import (
 // All generated defaulters are covering - they call all nested defaulters.
 func RegisterDefaults(scheme *runtime.Scheme) error {
 	scheme.AddTypeDefaultingFunc(&AdminKubeconfigRequest{}, func(obj interface{}) { SetObjectDefaults_AdminKubeconfigRequest(obj.(*AdminKubeconfigRequest)) })
+	scheme.AddTypeDefaultingFunc(&ViewerKubeconfigRequest{}, func(obj interface{}) { SetObjectDefaults_ViewerKubeconfigRequest(obj.(*ViewerKubeconfigRequest)) })
 	return nil
 }
 
 func SetObjectDefaults_AdminKubeconfigRequest(in *AdminKubeconfigRequest) {
 	SetDefaults_AdminKubeconfigRequestSpec(&in.Spec)
+}
+
+func SetObjectDefaults_ViewerKubeconfigRequest(in *ViewerKubeconfigRequest) {
+	SetDefaults_ViewerKubeconfigRequestSpec(&in.Spec)
 }

@@ -1,5 +1,5 @@
 /*
-Copyright 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+Copyright 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,16 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package validation_test
+package v1alpha1
 
 import (
-	"testing"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"k8s.io/utils/pointer"
 )
 
-func TestValidation(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "APIs Authentication Validation Suite")
+// SetDefaults_ViewerKubeconfigRequestSpec sets default values for ViewerKubeconfigRequestSpec objects.
+func SetDefaults_ViewerKubeconfigRequestSpec(obj *ViewerKubeconfigRequestSpec) {
+	if obj.ExpirationSeconds == nil {
+		obj.ExpirationSeconds = pointer.Int64(60 * 60)
+	}
 }

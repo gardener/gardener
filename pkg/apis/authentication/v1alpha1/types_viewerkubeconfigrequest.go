@@ -1,5 +1,5 @@
 /*
-Copyright 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+Copyright 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -23,29 +23,29 @@ import (
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// AdminKubeconfigRequest can be used to request a kubeconfig with admin credentials
+// ViewerKubeconfigRequest can be used to request a kubeconfig with viewer credentials (excluding Secrets)
 // for a Shoot cluster.
-type AdminKubeconfigRequest struct {
+type ViewerKubeconfigRequest struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-	// Spec is the specification of the AdminKubeconfigRequest.
-	Spec AdminKubeconfigRequestSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
-	// Status is the status of the AdminKubeconfigRequest.
-	Status AdminKubeconfigRequestStatus `json:"status" protobuf:"bytes,3,opt,name=status"`
+	// Spec is the specification of the ViewerKubeconfigRequest.
+	Spec ViewerKubeconfigRequestSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
+	// Status is the status of the ViewerKubeconfigRequest.
+	Status ViewerKubeconfigRequestStatus `json:"status" protobuf:"bytes,3,opt,name=status"`
 }
 
-// AdminKubeconfigRequestStatus is the status of the AdminKubeconfigRequest containing
+// ViewerKubeconfigRequestStatus is the status of the ViewerKubeconfigRequest containing
 // the kubeconfig and expiration of the credential.
-type AdminKubeconfigRequestStatus struct {
-	// Kubeconfig contains the kubeconfig with cluster-admin privileges for the shoot cluster.
+type ViewerKubeconfigRequestStatus struct {
+	// Kubeconfig contains the kubeconfig with viewer privileges (excluding Secrets) for the shoot cluster.
 	Kubeconfig []byte `json:"kubeconfig" protobuf:"bytes,1,opt,name=kubeconfig"`
 	// ExpirationTimestamp is the expiration timestamp of the returned credential.
 	ExpirationTimestamp metav1.Time `json:"expirationTimestamp" protobuf:"bytes,2,opt,name=expirationTimestamp"`
 }
 
-// AdminKubeconfigRequestSpec contains the expiration time of the kubeconfig.
-type AdminKubeconfigRequestSpec struct {
+// ViewerKubeconfigRequestSpec contains the expiration time of the kubeconfig.
+type ViewerKubeconfigRequestSpec struct {
 	// ExpirationSeconds is the requested validity duration of the credential. The
 	// credential issuer may return a credential with a different validity duration so a
 	// client needs to check the 'expirationTimestamp' field in a response.
