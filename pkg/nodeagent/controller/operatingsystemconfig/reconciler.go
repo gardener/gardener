@@ -42,6 +42,7 @@ import (
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/nodeagent"
 	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
@@ -181,22 +182,16 @@ func (r *Reconciler) getNode(ctx context.Context) (*metav1.PartialObjectMetadata
 		return node, nil
 	}
 
-	// node name not known yet, try to fetch it via label selector based on hostname
-	nodeList := &metav1.PartialObjectMetadataList{}
-	nodeList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NodeList"))
-	if err := r.Client.List(ctx, nodeList, client.MatchingLabels{corev1.LabelHostname: r.HostName}); err != nil {
-		return nil, fmt.Errorf("unable to list nodes with label selector %s=%s: %w", corev1.LabelHostname, r.HostName, err)
+	node, err := nodeagent.FetchNodeByHostName(ctx, r.Client, r.HostName)
+	if err != nil {
+		return nil, err
 	}
 
-	switch len(nodeList.Items) {
-	case 0:
-		return nil, nil
-	case 1:
-		r.nodeName = nodeList.Items[0].Name
-		return &nodeList.Items[0], nil
-	default:
-		return nil, fmt.Errorf("found more than one node with label %s=%s", corev1.LabelHostname, r.HostName)
+	if node != nil {
+		r.nodeName = node.Name
 	}
+
+	return node, nil
 }
 
 var (

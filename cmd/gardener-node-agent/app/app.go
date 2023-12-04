@@ -53,6 +53,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
+	"github.com/gardener/gardener/pkg/nodeagent"
 	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/bootstrap"
@@ -155,6 +156,15 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	hostName, err := os.Hostname()
 	if err != nil {
 		return fmt.Errorf("failed fetching hostname: %w", err)
+	}
+
+	log.Info("Fetching name of node (if already registered)")
+	nodeName, err := fetchNodeName(ctx, restConfig, hostName)
+	if err != nil {
+		return fmt.Errorf("failed fetching name of node: %w", err)
+	}
+	if nodeName != "" {
+		log.Info("Node already registered, found name", "nodeName", nodeName)
 	}
 
 	log.Info("Setting up manager")
@@ -293,4 +303,22 @@ func fetchAccessToken(ctx context.Context, log logr.Logger, restConfig *rest.Con
 	log.Info("Token written to disk")
 	restConfig.BearerTokenFile = nodeagentv1alpha1.TokenFilePath
 	return nil
+}
+
+func fetchNodeName(ctx context.Context, restConfig *rest.Config, hostName string) (string, error) {
+	c, err := client.New(restConfig, client.Options{})
+	if err != nil {
+		return "", fmt.Errorf("unable to create client: %w", err)
+	}
+
+	node, err := nodeagent.FetchNodeByHostName(ctx, c, hostName)
+	if err != nil {
+		return "", err
+	}
+
+	if node == nil {
+		return "", nil
+	}
+
+	return node.Name, nil
 }

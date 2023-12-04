@@ -1145,6 +1145,7 @@ build:
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/healthz
             - pkg/logger
+            - pkg/nodeagent
             - pkg/nodeagent/apis/config
             - pkg/nodeagent/apis/config/v1alpha1
             - pkg/nodeagent/apis/config/validation
