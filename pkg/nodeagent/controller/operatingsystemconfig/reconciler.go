@@ -347,19 +347,28 @@ func (r *Reconciler) applyChangedUnits(ctx context.Context, log logr.Logger, uni
 
 func (r *Reconciler) removeDeletedUnits(ctx context.Context, log logr.Logger, node client.Object, units []extensionsv1alpha1.Unit) error {
 	for _, unit := range units {
-		if err := r.DBus.Disable(ctx, unit.Name); err != nil {
-			return fmt.Errorf("unable to disable deleted unit %q: %w", unit.Name, err)
+		unitFilePath := path.Join(etcSystemdSystem, unit.Name)
+
+		unitFileExists, err := r.fileExists(unitFilePath)
+		if err != nil {
+			return fmt.Errorf("unable to check whether unit file %q exists: %w", unitFilePath, err)
 		}
 
-		if err := r.DBus.Stop(ctx, r.Recorder, node, unit.Name); err != nil {
-			return fmt.Errorf("unable to stop deleted unit %q: %w", unit.Name, err)
+		if unitFileExists {
+			if err := r.DBus.Disable(ctx, unit.Name); err != nil {
+				return fmt.Errorf("unable to disable deleted unit %q: %w", unit.Name, err)
+			}
+
+			if err := r.DBus.Stop(ctx, r.Recorder, node, unit.Name); err != nil {
+				return fmt.Errorf("unable to stop deleted unit %q: %w", unit.Name, err)
+			}
+
+			if err := r.FS.Remove(unitFilePath); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+				return fmt.Errorf("unable to delete systemd unit file of deleted unit %q: %w", unit.Name, err)
+			}
 		}
 
-		if err := r.FS.Remove(path.Join(etcSystemdSystem, unit.Name)); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
-			return fmt.Errorf("unable to delete systemd unit file of deleted unit %q: %w", unit.Name, err)
-		}
-
-		if err := r.FS.RemoveAll(path.Join(etcSystemdSystem, unit.Name+".d")); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+		if err := r.FS.RemoveAll(unitFilePath + ".d"); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
 			return fmt.Errorf("unable to delete systemd drop-in folder of deleted unit %q: %w", unit.Name, err)
 		}
 
@@ -401,4 +410,14 @@ func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, n
 	}
 
 	return mustRestartGardenerNodeAgent, flow.Parallel(fns...)(ctx)
+}
+
+func (r *Reconciler) fileExists(path string) (bool, error) {
+	if _, err := r.FS.Stat(path); err != nil {
+		if errors.Is(err, afero.ErrFileNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
