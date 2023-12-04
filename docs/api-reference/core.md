@@ -1420,23 +1420,6 @@ SeedProvider
 </tr>
 <tr>
 <td>
-<code>secretRef</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
-Kubernetes core/v1.SecretReference
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>SecretRef is a reference to a Secret object containing the Kubeconfig of the Kubernetes
-cluster to be registered as Seed.</p>
-<p>Deprecated: This field is deprecated, gardenlet must run in the Seed cluster,
-hence it should use the in-cluster rest config via ServiceAccount to communicate with the Seed cluster.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>taints</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.SeedTaint">
@@ -9654,23 +9637,6 @@ SeedProvider
 </tr>
 <tr>
 <td>
-<code>secretRef</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
-Kubernetes core/v1.SecretReference
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>SecretRef is a reference to a Secret object containing the Kubeconfig of the Kubernetes
-cluster to be registered as Seed.</p>
-<p>Deprecated: This field is deprecated, gardenlet must run in the Seed cluster,
-hence it should use the in-cluster rest config via ServiceAccount to communicate with the Seed cluster.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>taints</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.SeedTaint">
@@ -10008,23 +9974,6 @@ SeedProvider
 </td>
 <td>
 <p>Provider defines the provider type and region for this Seed cluster.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>secretRef</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
-Kubernetes core/v1.SecretReference
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>SecretRef is a reference to a Secret object containing the Kubeconfig of the Kubernetes
-cluster to be registered as Seed.</p>
-<p>Deprecated: This field is deprecated, gardenlet must run in the Seed cluster,
-hence it should use the in-cluster rest config via ServiceAccount to communicate with the Seed cluster.</p>
 </td>
 </tr>
 <tr>
