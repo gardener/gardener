@@ -71,7 +71,7 @@ relabel_configs:
 metric_relabel_configs:
 - source_labels: [ __name__ ]
   action: keep
-  regex: ^(authentication_attempts|authenticated_user_requests|apiserver_admission_controller_admission_duration_seconds_.+|apiserver_admission_webhook_admission_duration_seconds_.+|apiserver_admission_step_admission_duration_seconds_.+|apiserver_admission_webhook_rejection_count|apiserver_audit_event_total|apiserver_audit_error_total|apiserver_audit_requests_rejected_total|apiserver_latency_seconds|apiserver_crd_webhook_conversion_duration_seconds_.+|apiserver_current_inflight_requests|apiserver_current_inqueue_requests|apiserver_longrunning_requests|apiserver_response_sizes_.+|apiserver_registered_watchers|apiserver_request_duration_seconds_.+|apiserver_request_terminations_total|apiserver_request_total|apiserver_request_count|apiserver_storage_transformation_duration_seconds_.+|apiserver_storage_transformation_operations_total|apiserver_init_events_total|apiserver_watch_events_sizes_.+|apiserver_watch_events_total|etcd_db_total_size_in_bytes|apiserver_storage_db_total_size_in_bytes|apiserver_storage_size_bytes|etcd_object_counts|apiserver_storage_objects|etcd_request_duration_seconds_.+|go_.+|process_max_fds|process_open_fds|watch_cache_capacity_increase_total|watch_cache_capacity_decrease_total|watch_cache_capacity|apiserver_cache_list_.+|apiserver_storage_list_.+)$
+  regex: ^(authentication_attempts|authenticated_user_requests|apiserver_admission_controller_admission_duration_seconds_.+|apiserver_admission_webhook_admission_duration_seconds_.+|apiserver_admission_step_admission_duration_seconds_.+|apiserver_admission_webhook_rejection_count|apiserver_audit_event_total|apiserver_audit_error_total|apiserver_audit_requests_rejected_total|apiserver_latency_seconds|apiserver_crd_webhook_conversion_duration_seconds_.+|apiserver_current_inflight_requests|apiserver_current_inqueue_requests|apiserver_longrunning_requests|apiserver_response_sizes_.+|apiserver_registered_watchers|apiserver_request_duration_seconds_.+|apiserver_request_terminations_total|apiserver_request_total|apiserver_request_count|apiserver_storage_transformation_duration_seconds_.+|apiserver_storage_transformation_operations_total|apiserver_init_events_total|apiserver_watch_events_sizes_.+|apiserver_watch_events_total|etcd_db_total_size_in_bytes|apiserver_storage_db_total_size_in_bytes|apiserver_storage_size_bytes|etcd_object_counts|apiserver_storage_objects|etcd_request_duration_seconds_.+|go_.+|process_max_fds|process_open_fds|watch_cache_capacity_increase_total|watch_cache_capacity_decrease_total|watch_cache_capacity|apiserver_cache_list_.+|apiserver_storage_list_.+|apiserver_latency|apiserver_request_duration_seconds_count|apiserver_request_duration_seconds_bucket)$
 `
 
 	expectedAlertingRule = `groups:
@@ -188,7 +188,8 @@ metric_relabel_configs:
     expr: histogram_quantile(0.5, sum without (instance, pod) (rate(apiserver_request_duration_seconds_bucket[5m])))
     labels:
       quantile: "0.5"
-
+  - record: shoot:apiserver_latency:percentage
+    expr: 1 - sum(rate(apiserver_request_duration_seconds_bucket{le="1",subresource!~"log|portforward|exec|proxy|attach",verb!~"CONNECT|WATCHLIST|WATCH|PROXY proxy"}[1h])) / sum(rate(apiserver_request_duration_seconds_count{subresource!~"log|portforward|exec|proxy|attach",verb!~"CONNECT|WATCHLIST|WATCH|PROXY proxy"}[1h]))
   - record: shoot:kube_apiserver:sum_by_pod
     expr: sum(up{job="kube-apiserver"}) by (pod)
   ### API failure rate ###
