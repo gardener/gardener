@@ -46,7 +46,6 @@ registry_domain=$(cat "$registry_domain_file")
 echo "Skaffolding seed"
 GARDENER_LOCAL_KUBECONFIG=$garden_kubeconfig \
   SKAFFOLD_DEFAULT_REPO=$registry_domain \
-  REGISTRY_DOMAIN=$registry_domain \
   SEED_NAME=$seed_name \
   SEED_VALUES=$seed_values \
   SKAFFOLD_PUSH=true \
