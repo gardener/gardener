@@ -158,9 +158,6 @@ type delayer struct {
 // compute computes a time.Duration that can be used to delay reconciliations by using a simple linear mapping approach
 // based on the index of the node this instance of gardener-node-agent is responsible for in the list of all nodes in
 // the cluster. This way, the delays of all instances of gardener-node-agent are distributed evenly.
-// This works well as long as the number of nodes in the cluster is not higher than the configured maximum delay in
-// seconds. In this case, a random duration in [0, maxDelaySeconds] is computed (which obviously leads to an uneven
-// distribution).
 func (d *delayer) compute(ctx context.Context, nodeName string) time.Duration {
 	if nodeName == "" {
 		return 0
