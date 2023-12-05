@@ -826,7 +826,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "Shows the number of nodes having issues for more than 5 mins in the cluster over a period of 30mins",
+      "description": "Shows the number of nodes having issues for more than 5 mins in the cluster over a period of 30 mins.",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
