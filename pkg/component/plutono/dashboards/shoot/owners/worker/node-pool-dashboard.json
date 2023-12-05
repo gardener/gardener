@@ -876,7 +876,7 @@
       ],
       "thresholds": [],
       "timeRegions": [],
-      "title": "Nodes marked unhealthy, ignoring CA or K8S / GL upgrade activities",
+      "title": "Nodes marked unhealthy, ignoring CA or K8S / OS upgrade activities.",
       "tooltip": {
         "shared": true,
         "sort": 0,
