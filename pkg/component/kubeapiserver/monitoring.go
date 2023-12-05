@@ -40,6 +40,7 @@ const (
 	monitoringMetricApiserverAuditEventTotal                             = "apiserver_audit_event_total"
 	monitoringMetricApiserverAuditErrorTotal                             = "apiserver_audit_error_total"
 	monitoringMetricApiserverAuditRequestsRejectedTotal                  = "apiserver_audit_requests_rejected_total"
+	monitoringMetricApiserverLatency                                     = "apiserver_latency"
 	monitoringMetricApiserverLatencySeconds                              = "apiserver_latency_seconds"
 	monitoringMetricApiserverCRDWebhookConversionDurationSeconds         = "apiserver_crd_webhook_conversion_duration_seconds_.+"
 	monitoringMetricApiserverCurrentInflightRequests                     = "apiserver_current_inflight_requests"
@@ -49,6 +50,7 @@ const (
 	monitoringMetricApiserverRegisteredWatchers                          = "apiserver_registered_watchers"
 	monitoringMetricApiserverRequestDurationSeconds                      = "apiserver_request_duration_seconds_.+"
 	monitoringMetricApiserverRequestDurationSecondsBucket                = "apiserver_request_duration_seconds_bucket"
+	monitoringMetricApiserverRequestDurationSecondsCount                 = "apiserver_request_duration_seconds_count"
 	monitoringMetricApiserverRequestTerminationsTotal                    = "apiserver_request_terminations_total"
 	monitoringMetricApiserverRequestTotal                                = "apiserver_request_total"
 	monitoringMetricApiserverRequestCount                                = "apiserver_request_count"
@@ -72,8 +74,8 @@ const (
 	monitoringMetricWatchCacheCapacity                                   = "watch_cache_capacity"
 	monitoringmetricApiserverCacheList                                   = "apiserver_cache_list_.+"
 	monitoringmetricApiserverStorageList                                 = "apiserver_storage_list_.+"
-	monitoringMetricApiserverLatency                                     = "apiserver_latency"
-	monitoringMetricApiserverDurationCount                               = "apiserver_request_duration_seconds_count"
+
+
 
 	// TODO: Replace below hard-coded job name of the Blackbox Exporter once its deployment has been refactored.
 	monitoringAlertingRules = `groups:
@@ -190,8 +192,9 @@ const (
     expr: histogram_quantile(0.5, sum without (instance, pod) (rate(` + monitoringMetricApiserverRequestDurationSecondsBucket + `[5m])))
     labels:
       quantile: "0.5"
+  ### API server request duration greater than 1s percentage
   - record: shoot:` + monitoringMetricApiserverLatency + `:percentage
-    expr: 1 - sum(rate(`+ monitoringMetricApiserverRequestDurationSecondsBucket +`{le="1",subresource!~"log|portforward|exec|proxy|attach",verb!~"CONNECT|WATCHLIST|WATCH|PROXY proxy"}[1h])) / sum(rate(`+ monitoringMetricApiserverDurationCount +`{subresource!~"log|portforward|exec|proxy|attach",verb!~"CONNECT|WATCHLIST|WATCH|PROXY proxy"}[1h]))
+    expr: 1 - sum(rate(`+ monitoringMetricApiserverRequestDurationSecondsBucket +`{le="1",subresource!~"log|portforward|exec|proxy|attach",verb!~"CONNECT|LIST|WATCH"}[1h])) / sum(rate(`+ monitoringMetricApiserverRequestDurationSecondsCount +`{subresource!~"log|portforward|exec|proxy|attach",verb!~"CONNECT|LIST|WATCH"}[1h]))
   - record: shoot:kube_apiserver:sum_by_pod
     expr: sum(up{job="` + monitoringPrometheusJobName + `"}) by (pod)
   ### API failure rate ###
@@ -250,8 +253,7 @@ var (
 		monitoringMetricWatchCacheCapacity,
 		monitoringmetricApiserverCacheList,
 		monitoringmetricApiserverStorageList,
-		monitoringMetricApiserverLatency,
-		monitoringMetricApiserverDurationCount,
+		monitoringMetricApiserverRequestDurationSecondsCount,
 		monitoringMetricApiserverRequestDurationSecondsBucket,
 	}
 
