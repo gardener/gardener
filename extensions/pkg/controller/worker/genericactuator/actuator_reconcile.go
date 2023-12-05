@@ -62,11 +62,6 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 		return err
 	}
 
-	// Cleanup legacy machine-controller-manager resources.
-	if err := a.cleanupLegacyMachineControllerManagerResources(ctx, log, worker); err != nil {
-		return err
-	}
-
 	// Generate the desired machine deployments.
 	log.Info("Generating machine deployments")
 	wantedMachineDeployments, err := workerDelegate.GenerateMachineDeployments(ctx)
