@@ -32,24 +32,24 @@ import (
 
 var _ = Describe("ClassFilter", func() {
 	var (
-		filter = NewClassFilter("")
+		filter *ClassFilter
 
-		differencClass     = "diff"
-		differencFinalizer = fmt.Sprintf("%s-%s", FinalizerName, differencClass)
+		differentClass     = "diff"
+		differentFinalizer = fmt.Sprintf("%s-%s", FinalizerName, differentClass)
 
 		mrWithoutFinalizerDifferentClass = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				Class: &differencClass,
+				Class: &differentClass,
 			},
 		}
 
 		mrDifferentFinalizerDifferentClass = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
-				Finalizers: []string{differencFinalizer},
+				Finalizers: []string{differentFinalizer},
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				Class: &differencClass,
+				Class: &differentClass,
 			},
 		}
 
@@ -58,7 +58,7 @@ var _ = Describe("ClassFilter", func() {
 				Finalizers: []string{FinalizerName},
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				Class: &differencClass,
+				Class: &differentClass,
 			},
 		}
 
@@ -71,7 +71,7 @@ var _ = Describe("ClassFilter", func() {
 
 		mrDifferentFinalizerSameClass = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
-				Finalizers: []string{differencFinalizer},
+				Finalizers: []string{differentFinalizer},
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
 				Class: pointer.String(""),
@@ -88,6 +88,10 @@ var _ = Describe("ClassFilter", func() {
 		}
 	)
 
+	BeforeEach(func() {
+		filter = NewClassFilter("")
+	})
+
 	DescribeTable("Responsible",
 		func(mr *resourcesv1alpha1.ManagedResource, responsible bool) {
 			resp := filter.Responsible(mr)
@@ -101,9 +105,9 @@ var _ = Describe("ClassFilter", func() {
 		Entry("MR with same finalizer and with same class", mrSameFinalizerSameClass, true),
 	)
 
-	DescribeTable("ShouldCleanResources",
+	DescribeTable("NoLongerHandles",
 		func(mr *resourcesv1alpha1.ManagedResource, shouldCleanup bool) {
-			cleanup := filter.ShouldCleanResources(mr)
+			cleanup := filter.NoLongerHandles(mr)
 			Expect(cleanup).To(Equal(shouldCleanup))
 		},
 		Entry("MR without a finalizer and with different class", mrWithoutFinalizerDifferentClass, false),

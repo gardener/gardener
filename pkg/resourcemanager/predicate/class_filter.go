@@ -36,7 +36,7 @@ const (
 // ClassFilter keeps the resource class for the actual controller instance
 // and is used as Filter predicate for events finally passed to the controller.
 // Only objects that have the same class as the controller
-// or their resources deletion is handled by the controller are filtered
+// or their resources deletion is handled by the controller are filtered.
 type ClassFilter struct {
 	resourceClass string
 
@@ -79,12 +79,12 @@ func (f *ClassFilter) Responsible(o runtime.Object) bool {
 	return c == f.resourceClass || (c == "" && f.resourceClass == resourcemanagerv1alpha1.DefaultResourceClass)
 }
 
-// ShouldCleanResources checks if an MR has changed its class and should have its resources cleaned by the given controller instance
-func (f *ClassFilter) ShouldCleanResources(mr *resourcesv1alpha1.ManagedResource) bool {
+// NoLongerHandles checks if an MR has changed its class and should have its resources cleaned by the given controller instance.
+func (f *ClassFilter) NoLongerHandles(mr *resourcesv1alpha1.ManagedResource) bool {
 	return controllerutil.ContainsFinalizer(mr, f.objectFinalizer) && !f.Responsible(mr)
 }
 
-// WaitForCleanup checks if a MR has changed its class and a given controller instance should wait for its resources to be cleaned
+// WaitForCleanup checks if a MR has changed its class and a given controller instance should wait for its resources to be cleaned.
 func (f *ClassFilter) WaitForCleanup(mr *resourcesv1alpha1.ManagedResource) bool {
 	for _, finalizer := range mr.GetFinalizers() {
 		if strings.HasPrefix(finalizer, FinalizerName) {
