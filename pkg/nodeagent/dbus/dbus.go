@@ -25,8 +25,6 @@ import (
 	"k8s.io/client-go/tools/record"
 )
 
-const done = "done"
-
 // DBus is an interface for interacting with systemd via dbus.
 type DBus interface {
 	// DaemonReload reload the systemd configuration, same as executing "systemctl daemon-reload".
@@ -134,8 +132,14 @@ func (_ *db) runCommand(
 		return fmt.Errorf("unable to %s unit %s: %w", operation, unitName, err)
 	}
 
-	if completion := <-jobCh; completion != done {
-		err = fmt.Errorf("%s failed for %s, due %s", operation, unitName, completion)
+	select {
+	case <-ctx.Done(): // context is cancelled
+		return ctx.Err()
+
+	case result := <-jobCh: // job channel reported back
+		if result != "done" {
+			err = fmt.Errorf("%s failed for %s, due %s", operation, unitName, result)
+		}
 	}
 
 	recordEvent(recorder, node, err, unitName, eventReason, operation)
