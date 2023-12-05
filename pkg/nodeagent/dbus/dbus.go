@@ -77,7 +77,7 @@ func (d *db) Stop(ctx context.Context, recorder record.EventRecorder, node runti
 	}
 	defer dbc.Close()
 
-	return d.runCommand(ctx, recorder, node, unitName, dbc.StopUnitContext, "SystemDUnitStop", "stop")
+	return runCommand(ctx, recorder, node, unitName, dbc.StopUnitContext, "SystemDUnitStop", "stop")
 }
 
 func (d *db) Start(ctx context.Context, recorder record.EventRecorder, node runtime.Object, unitName string) error {
@@ -87,7 +87,7 @@ func (d *db) Start(ctx context.Context, recorder record.EventRecorder, node runt
 	}
 	defer dbc.Close()
 
-	return d.runCommand(ctx, recorder, node, unitName, dbc.StartUnitContext, "SystemDUnitStart", "start")
+	return runCommand(ctx, recorder, node, unitName, dbc.StartUnitContext, "SystemDUnitStart", "start")
 }
 
 func (d *db) Restart(ctx context.Context, recorder record.EventRecorder, node runtime.Object, unitName string) error {
@@ -97,7 +97,7 @@ func (d *db) Restart(ctx context.Context, recorder record.EventRecorder, node ru
 	}
 	defer dbc.Close()
 
-	return d.runCommand(ctx, recorder, node, unitName, dbc.RestartUnitContext, "SystemDUnitRestart", "restart")
+	return runCommand(ctx, recorder, node, unitName, dbc.RestartUnitContext, "SystemDUnitRestart", "restart")
 }
 
 func (_ *db) DaemonReload(ctx context.Context) error {
@@ -114,7 +114,7 @@ func (_ *db) DaemonReload(ctx context.Context) error {
 	return nil
 }
 
-func (_ *db) runCommand(
+func runCommand(
 	ctx context.Context,
 	recorder record.EventRecorder,
 	node runtime.Object,
