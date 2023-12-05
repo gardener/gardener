@@ -1512,7 +1512,7 @@ func validateMachineImagesConstraints(a admission.Attributes, constraints []core
 			if machineVersion.ExpirationDate == nil || machineVersion.ExpirationDate.Time.UTC().After(time.Now().UTC()) {
 				activeMachineImageVersions.Insert(machineImageVersion)
 			} else if machineVersion.ExpirationDate != nil && machineVersion.ExpirationDate.Time.UTC().Before(time.Now().UTC()) && a.GetOperation() == admission.Update && !isNewWorkerPool {
-				// An already expired machine image version is a viable machine image version for the worker pool iff.
+				// An already expired machine image version is a viable machine image version for the worker pool if-and-only-if:
 				//  - this is an update call (no new Shoot creation)
 				//  - updates an existing worker pool (not for a new worker pool)
 				//  - the expired version is higher than the old machine's version
