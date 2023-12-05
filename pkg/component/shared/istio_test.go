@@ -472,43 +472,43 @@ var _ = Describe("Istio", func() {
 	)
 
 	DescribeTable("#ShouldEnsureHostSpreading",
-		func(nodes []corev1.Node, zones []string, expectedError gomegatypes.GomegaMatcher, expectedHostSpreading bool) {
+		func(nodes []corev1.Node, zones []string, expectedHostSpreading bool) {
 			cl := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 			for _, n := range nodes {
 				Expect(cl.Create(context.TODO(), &n)).To(Succeed())
 			}
 			hostSpreadingEnabled, err := ShouldEnsureHostSpreading(context.TODO(), cl, zones)
-			Expect(err).To(expectedError)
+			Expect(err).ToNot(HaveOccurred())
 			Expect(hostSpreadingEnabled).To(Equal(expectedHostSpreading))
 		},
 
-		Entry("no nodes", []corev1.Node{}, []string{}, BeNil(), false),
-		Entry("single node", []corev1.Node{{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}}}, []string{"z1"}, BeNil(), false),
+		Entry("no nodes", []corev1.Node{}, []string{}, false),
+		Entry("single node", []corev1.Node{{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}}}, []string{"z1"}, false),
 		Entry("two nodes", []corev1.Node{
 			{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
 			{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
-		}, []string{"z1"}, BeNil(), true),
+		}, []string{"z1"}, true),
 		Entry("three nodes with different zones targeting one zone", []corev1.Node{
 			{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
 			{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
 			{ObjectMeta: metav1.ObjectMeta{Name: "node-2", Labels: map[string]string{"topology.kubernetes.io/zone": "z2"}}},
-		}, []string{"z1"}, BeNil(), true),
+		}, []string{"z1"}, true),
 		Entry("three nodes with different zones targeting two zones", []corev1.Node{
 			{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
 			{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
 			{ObjectMeta: metav1.ObjectMeta{Name: "node-2", Labels: map[string]string{"topology.kubernetes.io/zone": "z2"}}},
-		}, []string{"z1", "z2"}, BeNil(), false),
+		}, []string{"z1", "z2"}, false),
 		Entry("four nodes with different zones targeting two zones", []corev1.Node{
 			{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
 			{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
 			{ObjectMeta: metav1.ObjectMeta{Name: "node-2", Labels: map[string]string{"topology.kubernetes.io/zone": "z2"}}},
 			{ObjectMeta: metav1.ObjectMeta{Name: "node-3", Labels: map[string]string{"topology.kubernetes.io/zone": "z2"}}},
-		}, []string{"z1", "z2"}, BeNil(), true),
+		}, []string{"z1", "z2"}, true),
 		Entry("four nodes with different zones targeting different zone", []corev1.Node{
 			{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
 			{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
 			{ObjectMeta: metav1.ObjectMeta{Name: "node-2", Labels: map[string]string{"topology.kubernetes.io/zone": "z2"}}},
 			{ObjectMeta: metav1.ObjectMeta{Name: "node-3", Labels: map[string]string{"topology.kubernetes.io/zone": "z2"}}},
-		}, []string{"z3"}, BeNil(), false),
+		}, []string{"z3"}, false),
 	)
 })
