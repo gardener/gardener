@@ -164,7 +164,7 @@ func checkAdditionalIstioGateway(cl client.Client,
 		zones = []string{*zone}
 
 		ensureHostSpreading, err = ShouldEnsureHostSpreading(context.TODO(), cl, []string{*zone})
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 	}
 
 	Expect(ingressValues[len(ingressValues)-1]).To(Equal(istio.IngressGatewayValues{
