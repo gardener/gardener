@@ -48,7 +48,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	lease := &coordinationv1.Lease{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "gardener-node-agent-" + node.GetName(),
+			Name:      ObjectName(node.GetName()),
 			Namespace: r.Namespace,
 		},
 	}
@@ -67,4 +67,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	})
 	log.V(1).Info("Heartbeat Lease", "lease", client.ObjectKeyFromObject(lease), "operation", op)
 	return reconcile.Result{RequeueAfter: time.Duration(r.LeaseDurationSeconds) * time.Second / 4}, err
+}
+
+// ObjectName returns the name of the Lease object based on the node name.
+func ObjectName(nodeName string) string {
+	return "gardener-node-agent-" + nodeName
 }

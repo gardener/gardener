@@ -54,10 +54,12 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
+	"github.com/gardener/gardener/pkg/nodeagent"
 	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/bootstrap"
 	"github.com/gardener/gardener/pkg/nodeagent/controller"
+	"github.com/gardener/gardener/pkg/nodeagent/controller/lease"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 )
 
@@ -159,6 +161,18 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	}
 	hostName = strings.ToLower(hostName)
 
+	log.Info("Fetching name of node (if already registered)")
+	nodeName, err := fetchNodeName(ctx, restConfig, hostName)
+	if err != nil {
+		return fmt.Errorf("failed fetching name of node: %w", err)
+	}
+
+	leaseCacheOptions := cache.ByObject{Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}}}
+	if nodeName != "" {
+		log.Info("Node already registered, found name", "nodeName", nodeName)
+		leaseCacheOptions.Field = fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: lease.ObjectName(nodeName)})
+	}
+
 	log.Info("Setting up manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Logger:                  log,
@@ -179,9 +193,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 			&corev1.Node{}: {
 				Label: labels.SelectorFromSet(labels.Set{corev1.LabelHostname: hostName}),
 			},
-			&coordinationv1.Lease{}: {
-				Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}},
-			},
+			&coordinationv1.Lease{}: leaseCacheOptions,
 		}},
 		LeaderElection: false,
 		Controller: controllerconfig.Controller{
@@ -295,4 +307,22 @@ func fetchAccessToken(ctx context.Context, log logr.Logger, restConfig *rest.Con
 	log.Info("Token written to disk")
 	restConfig.BearerTokenFile = nodeagentv1alpha1.TokenFilePath
 	return nil
+}
+
+func fetchNodeName(ctx context.Context, restConfig *rest.Config, hostName string) (string, error) {
+	c, err := client.New(restConfig, client.Options{})
+	if err != nil {
+		return "", fmt.Errorf("unable to create client: %w", err)
+	}
+
+	node, err := nodeagent.FetchNodeByHostName(ctx, c, hostName)
+	if err != nil {
+		return "", err
+	}
+
+	if node == nil {
+		return "", nil
+	}
+
+	return node.Name, nil
 }
