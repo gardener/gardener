@@ -174,15 +174,11 @@ linters-settings:
         alias: admissioninitializer
       - pkg: github.com/gardener/gardener/pkg/chartrenderer
         alias: chartrenderer
-      - pkg: github.com/gardener/gardener/pkg/client/core/clientset/internalversion
-        alias: gardencoreclientset
       - pkg: github.com/gardener/gardener/pkg/client/core/clientset/versioned
-        alias: gardencoreversionedclientset
+        alias: gardencoreclientset
       - pkg: github.com/gardener/gardener/pkg/client/core/informers/externalversions
-        alias: gardencoreexternalinformers
-      - pkg: github.com/gardener/gardener/pkg/client/core/informers/internalversion
         alias: gardencoreinformers
-      - pkg: github.com/gardener/gardener/pkg/client/core/listers/core/internalversion
+      - pkg: github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1
         alias: gardencorelisters
       - pkg: github.com/gardener/gardener/pkg/client/kubernetes
         alias: kubernetesclient
