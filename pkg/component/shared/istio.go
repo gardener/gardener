@@ -287,7 +287,7 @@ forNode:
 			}
 		}
 	}
-	return zonesIncomplete == 0, nil
+	return zonesIncomplete == 0 && len(zones) > 0, nil
 }
 
 func commonIstioIngressNetworkPolicyLabels(vpnEnabled bool) map[string]string {

@@ -51,6 +51,7 @@ type istioTestValues struct {
 	proxyProtocolEnabled              bool
 	vpnEnabled                        bool
 	zones                             []string
+	ensureHostSpreading               bool
 }
 
 func createIstio(testValues istioTestValues) istio.Interface {
@@ -131,14 +132,15 @@ func checkIstio(istioDeploy istio.Interface, testValues istioTestValues) {
 				PriorityClassName:     testValues.priorityClassName,
 				ProxyProtocolEnabled:  testValues.proxyProtocolEnabled,
 				VPNEnabled:            testValues.vpnEnabled,
-				EnsureHostSpreading:   len(testValues.zones) == 0,
+				EnsureHostSpreading:   testValues.ensureHostSpreading,
 			},
 		},
 		NamePrefix: testValues.prefix,
 	}))
 }
 
-func checkAdditionalIstioGateway(istioDeploy istio.Interface,
+func checkAdditionalIstioGateway(cl client.Client,
+	istioDeploy istio.Interface,
 	namespace string,
 	annotations map[string]string,
 	labels map[string]string,
@@ -146,9 +148,11 @@ func checkAdditionalIstioGateway(istioDeploy istio.Interface,
 	serviceExternalIP *string,
 	zone *string) {
 	var (
-		zones       []string
-		minReplicas *int
-		maxReplicas *int
+		zones               []string
+		minReplicas         *int
+		maxReplicas         *int
+		ensureHostSpreading bool
+		err                 error
 
 		ingressValues = istioDeploy.GetValues().IngressGateway
 	)
@@ -158,6 +162,9 @@ func checkAdditionalIstioGateway(istioDeploy istio.Interface,
 		maxReplicas = ingressValues[0].MaxReplicas
 	} else {
 		zones = []string{*zone}
+
+		ensureHostSpreading, err = ShouldEnsureHostSpreading(context.TODO(), cl, []string{*zone})
+		Expect(err).To(BeNil())
 	}
 
 	Expect(ingressValues[len(ingressValues)-1]).To(Equal(istio.IngressGatewayValues{
@@ -177,7 +184,7 @@ func checkAdditionalIstioGateway(istioDeploy istio.Interface,
 		ProxyProtocolEnabled:  ingressValues[0].ProxyProtocolEnabled,
 		VPNEnabled:            true,
 		Zones:                 zones,
-		EnsureHostSpreading:   zone == nil,
+		EnsureHostSpreading:   ensureHostSpreading,
 	}))
 }
 
@@ -213,6 +220,7 @@ var _ = Describe("Istio", func() {
 			proxyProtocolEnabled:     false,
 			vpnEnabled:               vpnEnabled,
 			zones:                    zones,
+			ensureHostSpreading:      false,
 		}
 
 		istioDeploy = createIstio(testValues)
@@ -243,6 +251,20 @@ var _ = Describe("Istio", func() {
 			It("should successfully create a new Istio deployer", func() {
 				checkIstio(istioDeploy, testValues)
 			})
+
+			Context("with nodes in single zone", func() {
+				JustBeforeEach(func() {
+					testValues.client = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+					testValues.ensureHostSpreading = true
+					Expect(testValues.client.Create(context.TODO(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "1"}}})).To(Succeed())
+					Expect(testValues.client.Create(context.TODO(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "1"}}})).To(Succeed())
+					istioDeploy = createIstio(testValues)
+				})
+
+				It("should successfully create a new Istio deployer", func() {
+					checkIstio(istioDeploy, testValues)
+				})
+			})
 		})
 
 		Context("with multiple zones", func() {
@@ -252,6 +274,24 @@ var _ = Describe("Istio", func() {
 
 			It("should successfully create a new Istio deployer", func() {
 				checkIstio(istioDeploy, testValues)
+			})
+
+			Context("with nodes in the zones", func() {
+				JustBeforeEach(func() {
+					testValues.client = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+					testValues.ensureHostSpreading = true
+					Expect(testValues.client.Create(context.TODO(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "1"}}})).To(Succeed())
+					Expect(testValues.client.Create(context.TODO(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "1"}}})).To(Succeed())
+					Expect(testValues.client.Create(context.TODO(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-2", Labels: map[string]string{"topology.kubernetes.io/zone": "2"}}})).To(Succeed())
+					Expect(testValues.client.Create(context.TODO(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-3", Labels: map[string]string{"topology.kubernetes.io/zone": "2"}}})).To(Succeed())
+					Expect(testValues.client.Create(context.TODO(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-4", Labels: map[string]string{"topology.kubernetes.io/zone": "3"}}})).To(Succeed())
+					Expect(testValues.client.Create(context.TODO(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-5", Labels: map[string]string{"topology.kubernetes.io/zone": "3"}}})).To(Succeed())
+					istioDeploy = createIstio(testValues)
+				})
+
+				It("should successfully create a new Istio deployer", func() {
+					checkIstio(istioDeploy, testValues)
+				})
 			})
 		})
 	})
@@ -311,6 +351,7 @@ var _ = Describe("Istio", func() {
 					zone)).To(Succeed())
 
 				checkAdditionalIstioGateway(
+					testValues.client,
 					istioDeploy,
 					namespace,
 					annotations,
@@ -340,6 +381,7 @@ var _ = Describe("Istio", func() {
 					zone)).To(Succeed())
 
 				checkAdditionalIstioGateway(
+					testValues.client,
 					istioDeploy,
 					namespace,
 					annotations,
@@ -348,6 +390,41 @@ var _ = Describe("Istio", func() {
 					serviceExternalIP,
 					zone,
 				)
+			})
+
+			Context("with nodes in zone", func() {
+				JustBeforeEach(func() {
+					testValues.client = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+					testValues.ensureHostSpreading = true
+					Expect(testValues.client.Create(context.TODO(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "1"}}})).To(Succeed())
+					Expect(testValues.client.Create(context.TODO(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "1"}}})).To(Succeed())
+					istioDeploy = createIstio(testValues)
+				})
+
+				It("should successfully create a new Istio deployer", func() {
+					Expect(AddIstioIngressGateway(
+						context.TODO(),
+						testValues.client,
+						istioDeploy,
+						namespace,
+						annotations,
+						labels,
+						&externalTrafficPolicy,
+						serviceExternalIP,
+						zone)).To(Succeed())
+
+					checkAdditionalIstioGateway(
+						testValues.client,
+						istioDeploy,
+						namespace,
+						annotations,
+						labels,
+						&externalTrafficPolicy,
+						serviceExternalIP,
+						zone,
+					)
+				})
+
 			})
 		})
 	})
@@ -405,7 +482,7 @@ var _ = Describe("Istio", func() {
 			Expect(hostSpreadingEnabled).To(Equal(expectedHostSpreading))
 		},
 
-		Entry("no nodes", []corev1.Node{}, []string{}, BeNil(), true),
+		Entry("no nodes", []corev1.Node{}, []string{}, BeNil(), false),
 		Entry("single node", []corev1.Node{{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}}}, []string{"z1"}, BeNil(), false),
 		Entry("two nodes", []corev1.Node{
 			{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
