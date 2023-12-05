@@ -72,6 +72,10 @@ images:
       confidentiality_requirement: 'low'
       integrity_requirement: 'low'
       availability_requirement: 'low'
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubUser'
+      username: 'shafeeqes'
 - name: ingress-default-backend
   sourceRepository: github.com/gardener/ingress-default-backend
   repository: eu.gcr.io/gardener-project/gardener/ingress-default-backend
