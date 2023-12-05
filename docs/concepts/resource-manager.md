@@ -144,8 +144,7 @@ A `ManagedResource` has an optional `.spec.class` field that allows it to indica
 The `.controllers.resourceClass` field in the component configuration restricts the watch to `ManagedResource`s with the given `.spec.class`.
 A default class is assumed if no class is specified.
 
-The seed GRM watches resources with class `seed` in all namespaces.
-THe shoot GRM watches resources with the default class and only in it's designated namespace via `.sourceClientConnection.namespace`
+For instance, the `gardener-resource-manager` which is deployed in the Shoot’s control plane namespace in the Seed does not specify a .spec.class and watches only for resources in the control plane namespace by specifying it in the `.sourceClientConnection.namespace`  field.
 
 If the `.spec.class` changes this means that the resources have to be handled by a different Gardener Resource Manager. That is achieved by:
 1. Cleaning all referenced resources by the GRM that was responsible for the old class in its target cluster
