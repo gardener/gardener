@@ -63,7 +63,7 @@ type Reconciler struct {
 	Extractor     registry.Extractor
 	CancelContext context.CancelFunc
 	HostName      string
-	nodeName      string
+	NodeName      string
 }
 
 // Reconcile decodes the OperatingSystemConfig resources from secrets and applies the systemd units and files to the
@@ -173,11 +173,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 func (r *Reconciler) getNode(ctx context.Context) (*metav1.PartialObjectMetadata, error) {
-	if r.nodeName != "" {
-		node := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{Name: r.nodeName}}
+	if r.NodeName != "" {
+		node := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{Name: r.NodeName}}
 		node.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Node"))
 		if err := r.Client.Get(ctx, client.ObjectKeyFromObject(node), node); err != nil {
-			return nil, fmt.Errorf("unable to fetch node %q: %w", r.nodeName, err)
+			return nil, fmt.Errorf("unable to fetch node %q: %w", r.NodeName, err)
 		}
 		return node, nil
 	}
@@ -188,7 +188,7 @@ func (r *Reconciler) getNode(ctx context.Context) (*metav1.PartialObjectMetadata
 	}
 
 	if node != nil {
-		r.nodeName = node.Name
+		r.NodeName = node.Name
 	}
 
 	return node, nil

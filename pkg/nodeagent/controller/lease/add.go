@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
@@ -29,7 +30,7 @@ import (
 const ControllerName = "lease"
 
 // AddToManager adds the lease controller with the default Options to the manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager) error {
+func (r *Reconciler) AddToManager(mgr manager.Manager, nodePredicate predicate.Predicate) error {
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
 	}
@@ -49,7 +50,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		For(node, builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create))).
+		For(node, builder.WithPredicates(nodePredicate, predicateutils.ForEventTypes(predicateutils.Create))).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		Complete(r)
 }

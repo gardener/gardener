@@ -30,7 +30,7 @@ import (
 const ControllerName = "node"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager) error {
+func (r *Reconciler) AddToManager(mgr manager.Manager, nodePredicate predicate.Predicate) error {
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
 	}
@@ -47,7 +47,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		For(node, builder.WithPredicates(r.NodePredicate())).
+		For(node, builder.WithPredicates(r.NodePredicate(), nodePredicate)).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		Complete(r)
 }
