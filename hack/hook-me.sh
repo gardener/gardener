@@ -14,6 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -o errexit
+set -o nounset
+set -o pipefail
+
 QUIC_CLIENT_IMAGE=ghcr.io/mvladev/quic-reverse-http-tunnel/quic-client-tcp:v0.1.2
 QUIC_SERVER_IMAGE=ghcr.io/mvladev/quic-reverse-http-tunnel/quic-server:v0.1.2
 
@@ -25,22 +29,23 @@ CERTS_DIR=$(pwd)/tmp/certs
 checkPrereqs() {
   command -v host > /dev/null || echo "please install host command for lookup"
   command -v docker > /dev/null || echo "please install docker https://www.docker.com"
+  command -v yq > /dev/null || echo "please install yq https://github.com/mikefarah/yq"
 }
 
 createOrUpdateWebhookSVC(){
-namespace=${1:-}
-[[ -z $namespace ]] && echo "Please specify extension namespace!" && exit 1
+  namespace=${1:-}
+  [[ -z $namespace ]] && echo "Please specify extension namespace!" && exit 1
 
-serviceName=${2:-}
-[[ -z $serviceName ]] && echo "Please specify the service name (gardener-extension-provider-{aws,gcp,azure},..etc.)!" && exit 1
+  serviceName=${2:-}
+  [[ -z $serviceName ]] && echo "Please specify the service name (gardener-extension-provider-{aws,gcp,azure},..etc.)!" && exit 1
 
-local quicServerPort=${3:-}
-[[ -z $quicServerPort ]] && echo "Please specify the quic pod server port!" && exit 1
+  local quicServerPort=${3:-}
+  [[ -z $quicServerPort ]] && echo "Please specify the quic pod server port!" && exit 1
 
-tmpService=$(mktemp)
-kubectl get svc $serviceName -o yaml > $tmpService
+  tmpService=$(mktemp)
+  kubectl get svc $serviceName -o yaml | yq 'del(.metadata.resourceVersion)' > $tmpService
 
-    cat <<EOF | kubectl apply -f -
+  cat <<EOF | kubectl apply -f -
 ---
 apiVersion: v1
 kind: Service
@@ -49,6 +54,8 @@ metadata:
     app: $serviceName
     app.kubernetes.io/instance: $serviceName
     app.kubernetes.io/name: $serviceName
+  annotations:
+    networking.resources.gardener.cloud/from-world-to-ports: '[{"protocol":"TCP","port":${quicServerPort}}]'
   name: $serviceName
   namespace: $namespace
 spec:
@@ -66,19 +73,21 @@ EOF
 
 
 createQuicLB(){
-namespace=${1:-}
-[[ -z $namespace ]] && echo "Please specify extension namespace!" && exit 1
+  namespace=${1:-}
+  [[ -z $namespace ]] && echo "Please specify extension namespace!" && exit 1
 
-local quicTunnelPort=${2:-}
-[[ -z $quicTunnelPort ]] && echo "Please specify the quic pod tunnel port!" && exit 1
+  local quicTunnelPort=${2:-}
+  [[ -z $quicTunnelPort ]] && echo "Please specify the quic pod tunnel port!" && exit 1
 
-cat <<EOF | kubectl apply -f -
+  cat <<EOF | kubectl apply -f -
 ---
 apiVersion: v1
 kind: Service
 metadata:
   labels:
     app: quic-lb
+  annotations:
+    networking.resources.gardener.cloud/from-world-to-ports: '[{"protocol":"UDP","port":${quicTunnelPort}}]'
   name: quic-lb
   namespace: $namespace
 spec:
@@ -119,19 +128,19 @@ waitForQuicLBToBeReady(){
 }
 
 createServerDeploy(){
-namespace=${1:-}
-[[ -z $namespace ]] && echo "Please specify extension namespace!" && exit 1
+  namespace=${1:-}
+  [[ -z $namespace ]] && echo "Please specify extension namespace!" && exit 1
 
-serviceName=${2:-}
-[[ -z $serviceName ]] && echo "Please specify the service name (gardener-extension-provider-{aws,gcp,azure},..etc.)!" && exit 1
+  serviceName=${2:-}
+  [[ -z $serviceName ]] && echo "Please specify the service name (gardener-extension-provider-{aws,gcp,azure},..etc.)!" && exit 1
 
-local quicServerPort=${3:-}
-[[ -z $quicServerPort ]] && echo "Please specify the quic pod server port!" && exit 1
+  local quicServerPort=${3:-}
+  [[ -z $quicServerPort ]] && echo "Please specify the quic pod server port!" && exit 1
 
-local quicTunnelPort=${4:-}
-[[ -z $quicTunnelPort ]] && echo "Please specify the quic pod tunnel port!" && exit 1
+  local quicTunnelPort=${4:-}
+  [[ -z $quicTunnelPort ]] && echo "Please specify the quic pod tunnel port!" && exit 1
 
-cat <<EOF | kubectl apply -f -
+  cat <<EOF | kubectl apply -f -
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -286,7 +295,7 @@ loadCerts() {
   [[ -z $secret ]] && echo "Please specify webhook secret name!" && exit 1
 
   # if it already exists, we get rid of it
-  kubectl -n $namespace delete secret $secret 2>/dev/null || true
+  kubectl -n $namespace delete --ignore-not-found secret $secret 2>/dev/null || true
 
   # now create it anew
   (
@@ -303,19 +312,20 @@ cleanUP() {
    echo "cleaning up local-dev setup.."
 
    echo "Deleting quic service..."
-   kubectl -n $namespace delete  svc/quic-lb
+   kubectl -n $namespace delete --ignore-not-found  svc/quic-lb
 
    echo "Deleting the quic deploy..."
-   kubectl -n $namespace delete  deploy/quic-server
+   kubectl -n $namespace delete --ignore-not-found  deploy/quic-server
 
    echo "Deleting the quic certs..."
-   kubectl -n $namespace delete  secret/quic-tunnel-certs
+   kubectl -n $namespace delete --ignore-not-found  secret/quic-tunnel-certs
 
    echo "Re-applying old service values..."
    kubectl apply -f $tmpService
 
-   docker kill $QUIC_CLIENT_CONTAINER
-   exit 0
+    if [[ "$(docker container ls -f name=$QUIC_CLIENT_CONTAINER -q)" != "" ]]; then
+      docker kill $QUIC_CLIENT_CONTAINER
+    fi
 }
 
 usage(){
@@ -329,6 +339,7 @@ usage(){
   echo "===================================PRE-REQs========================================="
   echo "\`host\` commands for DNS"
   echo "\`docker\` https://www.docker.com"
+  echo "\`yq\` https://github.com/mikefarah/yq"
   echo "===================================================================================="
 
   echo ""
@@ -341,8 +352,8 @@ usage(){
   echo ""
 
   echo "===================================CLEAN UP COMMANDS========================================="
-  echo ">  kubectl -n $namespace delete  svc/quic-lb"
-  echo ">  kubectl -n $namespace delete  deploy/quic-server"
+  echo ">  kubectl -n $namespace delete --ignore-not-found svc/quic-lb"
+  echo ">  kubectl -n $namespace delete --ignore-not-found deploy/quic-server"
   echo "============================================================================================="
 
   exit 0
@@ -369,7 +380,7 @@ if [[ "${BASH_SOURCE[0]}" = "$0" ]]; then
   [[ -z $quicTunnelPort ]] && echo "quic-tunnel port not specified, using default port of 9444" && quicTunnelPort=9444
 
 
-  trap 'cleanUP $namespace' SIGINT SIGTERM
+  trap 'cleanUP $namespace' EXIT
 
   while true; do
     read -p "[STEP 0] Have you already set the \`ignoreResources\` chart value to \`true\` for your extension controller-registration?" yn
