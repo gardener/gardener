@@ -24,14 +24,9 @@ import (
 )
 
 var _ = Describe("ClusterOpenIDConnectPreset defaulting", func() {
-	var (
-		given    *ClusterOpenIDConnectPreset
-		expected *ClusterOpenIDConnectPreset
-	)
-
-	BeforeEach(func() {
-		given = &ClusterOpenIDConnectPreset{}
-		expected = &ClusterOpenIDConnectPreset{
+	It("should default ClusterOpenIDConnectPreset correctly", func() {
+		obj := &ClusterOpenIDConnectPreset{}
+		expected := &ClusterOpenIDConnectPreset{
 			Spec: ClusterOpenIDConnectPresetSpec{
 				OpenIDConnectPresetSpec: OpenIDConnectPresetSpec{
 					Server: KubeAPIServerOpenIDConnect{
@@ -45,47 +40,30 @@ var _ = Describe("ClusterOpenIDConnectPreset defaulting", func() {
 				ProjectSelector: &metav1.LabelSelector{},
 			},
 		}
+		SetObjectDefaults_ClusterOpenIDConnectPreset(obj)
+
+		Expect(obj).To(BeEquivalentTo(expected))
 	})
 
-	It("should default ClusterOpenIDConnectPreset correctly", func() {
-		SetObjectDefaults_ClusterOpenIDConnectPreset(given)
+	It("should not default ClusterOpenIDConnectPreset if it is already set", func() {
+		obj := &ClusterOpenIDConnectPreset{
+			Spec: ClusterOpenIDConnectPresetSpec{
+				OpenIDConnectPresetSpec: OpenIDConnectPresetSpec{
+					Server: KubeAPIServerOpenIDConnect{
+						// string literal are used to be sure that the test fails
+						// if the constant values are changed.
+						UsernameClaim: pointer.String("usr"),
+						SigningAlgs:   []string{"alg1", "alg2"},
+					},
+					ShootSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}},
+				},
+				ProjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}},
+			},
+		}
+		expected := obj.DeepCopy()
 
-		Expect(given).To(BeEquivalentTo(expected))
-	})
+		SetObjectDefaults_ClusterOpenIDConnectPreset(obj)
 
-	It("should not default ProjectSelector if it is already set", func() {
-		given.Spec.ProjectSelector = &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}}
-		expected.Spec.ProjectSelector = &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}}
-
-		SetObjectDefaults_ClusterOpenIDConnectPreset(given)
-
-		Expect(given).To(BeEquivalentTo(expected))
-	})
-
-	It("should not default ShootSelector if it is already set", func() {
-		given.Spec.ShootSelector = &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}}
-		expected.Spec.ShootSelector = &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}}
-
-		SetObjectDefaults_ClusterOpenIDConnectPreset(given)
-
-		Expect(given).To(BeEquivalentTo(expected))
-	})
-
-	It("should not default SigningAlgs if they are already set", func() {
-		given.Spec.Server.SigningAlgs = []string{"alg1", "alg2"}
-		expected.Spec.Server.SigningAlgs = []string{"alg1", "alg2"}
-
-		SetObjectDefaults_ClusterOpenIDConnectPreset(given)
-
-		Expect(given).To(BeEquivalentTo(expected))
-	})
-
-	It("should not default UsernameClaim if it is already set", func() {
-		given.Spec.Server.UsernameClaim = pointer.String("usr")
-		expected.Spec.Server.UsernameClaim = pointer.String("usr")
-
-		SetObjectDefaults_ClusterOpenIDConnectPreset(given)
-
-		Expect(given).To(BeEquivalentTo(expected))
+		Expect(obj).To(BeEquivalentTo(expected))
 	})
 })

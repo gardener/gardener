@@ -24,14 +24,9 @@ import (
 )
 
 var _ = Describe("OpenIDConnectPreset defaulting", func() {
-	var (
-		given    *OpenIDConnectPreset
-		expected *OpenIDConnectPreset
-	)
-
-	BeforeEach(func() {
-		given = &OpenIDConnectPreset{}
-		expected = &OpenIDConnectPreset{
+	It("should default OpenIDConnectPreset correctly", func() {
+		obj := &OpenIDConnectPreset{}
+		expected := &OpenIDConnectPreset{
 			Spec: OpenIDConnectPresetSpec{
 				Server: KubeAPIServerOpenIDConnect{
 					// string literal are used to be sure that the test fails
@@ -42,38 +37,28 @@ var _ = Describe("OpenIDConnectPreset defaulting", func() {
 				ShootSelector: &metav1.LabelSelector{},
 			},
 		}
+		SetObjectDefaults_OpenIDConnectPreset(obj)
+
+		Expect(obj).To(BeEquivalentTo(expected))
 	})
 
-	It("should default OpenIDConnectPreset correctly", func() {
-		SetObjectDefaults_OpenIDConnectPreset(given)
+	It("should not default OpenIDConnectPreset if it is already set", func() {
+		obj := &OpenIDConnectPreset{
+			Spec: OpenIDConnectPresetSpec{
+				Server: KubeAPIServerOpenIDConnect{
+					// string literal are used to be sure that the test fails
+					// if the constant values are changed.
+					UsernameClaim: pointer.String("usr"),
+					SigningAlgs:   []string{"alg1", "alg2"},
+				},
+				ShootSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}},
+			},
+		}
+		expected := obj.DeepCopy()
 
-		Expect(given).To(BeEquivalentTo(expected))
+		SetObjectDefaults_OpenIDConnectPreset(obj)
+
+		Expect(obj).To(BeEquivalentTo(expected))
 	})
 
-	It("should not default ShootSelector if it is already set", func() {
-		given.Spec.ShootSelector = &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}}
-		expected.Spec.ShootSelector = &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}}
-
-		SetObjectDefaults_OpenIDConnectPreset(given)
-
-		Expect(given).To(BeEquivalentTo(expected))
-	})
-
-	It("should not default SigningAlgs if they are already set", func() {
-		given.Spec.Server.SigningAlgs = []string{"alg1", "alg2"}
-		expected.Spec.Server.SigningAlgs = []string{"alg1", "alg2"}
-
-		SetObjectDefaults_OpenIDConnectPreset(given)
-
-		Expect(given).To(BeEquivalentTo(expected))
-	})
-
-	It("should not default UsernameClaim if it is already set", func() {
-		given.Spec.Server.UsernameClaim = pointer.String("usr")
-		expected.Spec.Server.UsernameClaim = pointer.String("usr")
-
-		SetObjectDefaults_OpenIDConnectPreset(given)
-
-		Expect(given).To(BeEquivalentTo(expected))
-	})
 })
