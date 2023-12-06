@@ -192,7 +192,7 @@ const (
       quantile: "0.5"
   ### API server request duration greater than 1s percentage
   - record: shoot:` + monitoringMetricApiserverLatency + `:percentage
-    expr: 1 - sum(rate(`+ monitoringMetricApiserverRequestDurationSecondsBucket +`{le="1",subresource!~"log|portforward|exec|proxy|attach",verb!~"CONNECT|LIST|WATCH"}[1h])) / sum(rate(`+ monitoringMetricApiserverRequestDurationSecondsCount +`{subresource!~"log|portforward|exec|proxy|attach",verb!~"CONNECT|LIST|WATCH"}[1h]))
+    expr: 1 - sum(rate(` + monitoringMetricApiserverRequestDurationSecondsBucket + `{le="1",subresource!~"log|portforward|exec|proxy|attach",verb!~"CONNECT|LIST|WATCH"}[1h])) / sum(rate(` + monitoringMetricApiserverRequestDurationSecondsCount + `{subresource!~"log|portforward|exec|proxy|attach",verb!~"CONNECT|LIST|WATCH"}[1h]))
   - record: shoot:kube_apiserver:sum_by_pod
     expr: sum(up{job="` + monitoringPrometheusJobName + `"}) by (pod)
   ### API failure rate ###
