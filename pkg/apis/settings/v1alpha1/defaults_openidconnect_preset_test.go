@@ -55,7 +55,6 @@ var _ = Describe("OpenIDConnectPreset defaulting", func() {
 			},
 		}
 		expected := obj.DeepCopy()
-
 		SetObjectDefaults_OpenIDConnectPreset(obj)
 
 		Expect(obj).To(BeEquivalentTo(expected))

@@ -61,7 +61,6 @@ var _ = Describe("ClusterOpenIDConnectPreset defaulting", func() {
 			},
 		}
 		expected := obj.DeepCopy()
-
 		SetObjectDefaults_ClusterOpenIDConnectPreset(obj)
 
 		Expect(obj).To(BeEquivalentTo(expected))
