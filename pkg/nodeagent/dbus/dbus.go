@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/coreos/go-systemd/v22/dbus"
 	"github.com/go-logr/logr"
@@ -80,7 +81,7 @@ func (d *db) Stop(ctx context.Context, recorder record.EventRecorder, node runti
 	}
 	defer dbc.Close()
 
-	return runCommand(ctx, recorder, node, unitName, dbc.StopUnitContext, "SystemDUnitStop", "stop")
+	return d.runCommand(ctx, recorder, node, unitName, dbc.StopUnitContext, "SystemDUnitStop", "stop")
 }
 
 func (d *db) Start(ctx context.Context, recorder record.EventRecorder, node runtime.Object, unitName string) error {
@@ -90,7 +91,7 @@ func (d *db) Start(ctx context.Context, recorder record.EventRecorder, node runt
 	}
 	defer dbc.Close()
 
-	return runCommand(ctx, recorder, node, unitName, dbc.StartUnitContext, "SystemDUnitStart", "start")
+	return d.runCommand(ctx, recorder, node, unitName, dbc.StartUnitContext, "SystemDUnitStart", "start")
 }
 
 func (d *db) Restart(ctx context.Context, recorder record.EventRecorder, node runtime.Object, unitName string) error {
@@ -100,7 +101,7 @@ func (d *db) Restart(ctx context.Context, recorder record.EventRecorder, node ru
 	}
 	defer dbc.Close()
 
-	return runCommand(ctx, recorder, node, unitName, dbc.RestartUnitContext, "SystemDUnitRestart", "restart")
+	return d.runCommand(ctx, recorder, node, unitName, dbc.RestartUnitContext, "SystemDUnitRestart", "restart")
 }
 
 func (_ *db) DaemonReload(ctx context.Context) error {
@@ -117,7 +118,7 @@ func (_ *db) DaemonReload(ctx context.Context) error {
 	return nil
 }
 
-func runCommand(
+func (d *db) runCommand(
 	ctx context.Context,
 	recorder record.EventRecorder,
 	node runtime.Object,
@@ -143,6 +144,9 @@ func runCommand(
 		if result != "done" {
 			err = fmt.Errorf("%s failed for %s, due %s", operation, unitName, result)
 		}
+
+	case <-time.After(10 * time.Second): // after 10s, we continue even if the result channel did not report back
+		d.log.Info("Systemd operation is blocking for more than 10s, aborting and continuing anyways", "unitName", unitName, "operation", operation)
 	}
 
 	recordEvent(recorder, node, err, unitName, eventReason, operation)
