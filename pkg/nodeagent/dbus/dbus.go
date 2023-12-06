@@ -18,8 +18,10 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/coreos/go-systemd/v22/dbus"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
@@ -41,11 +43,13 @@ type DBus interface {
 	Restart(ctx context.Context, recorder record.EventRecorder, node runtime.Object, unitName string) error
 }
 
-type db struct{}
+type db struct {
+	log logr.Logger
+}
 
 // New returns a new working DBus
-func New() DBus {
-	return &db{}
+func New(log logr.Logger) DBus {
+	return &db{log: log.WithName("dbus")}
 }
 
 func (_ *db) Enable(ctx context.Context, unitNames ...string) error {
@@ -77,7 +81,7 @@ func (d *db) Stop(ctx context.Context, recorder record.EventRecorder, node runti
 	}
 	defer dbc.Close()
 
-	return runCommand(ctx, recorder, node, unitName, dbc.StopUnitContext, "SystemDUnitStop", "stop")
+	return d.runCommand(ctx, recorder, node, unitName, dbc.StopUnitContext, "SystemDUnitStop", "stop")
 }
 
 func (d *db) Start(ctx context.Context, recorder record.EventRecorder, node runtime.Object, unitName string) error {
@@ -87,7 +91,7 @@ func (d *db) Start(ctx context.Context, recorder record.EventRecorder, node runt
 	}
 	defer dbc.Close()
 
-	return runCommand(ctx, recorder, node, unitName, dbc.StartUnitContext, "SystemDUnitStart", "start")
+	return d.runCommand(ctx, recorder, node, unitName, dbc.StartUnitContext, "SystemDUnitStart", "start")
 }
 
 func (d *db) Restart(ctx context.Context, recorder record.EventRecorder, node runtime.Object, unitName string) error {
@@ -97,7 +101,7 @@ func (d *db) Restart(ctx context.Context, recorder record.EventRecorder, node ru
 	}
 	defer dbc.Close()
 
-	return runCommand(ctx, recorder, node, unitName, dbc.RestartUnitContext, "SystemDUnitRestart", "restart")
+	return d.runCommand(ctx, recorder, node, unitName, dbc.RestartUnitContext, "SystemDUnitRestart", "restart")
 }
 
 func (_ *db) DaemonReload(ctx context.Context) error {
@@ -114,7 +118,7 @@ func (_ *db) DaemonReload(ctx context.Context) error {
 	return nil
 }
 
-func runCommand(
+func (d *db) runCommand(
 	ctx context.Context,
 	recorder record.EventRecorder,
 	node runtime.Object,
@@ -124,22 +128,25 @@ func runCommand(
 	operation string,
 ) error {
 	var (
-		jobCh = make(chan string)
-		err   error
+		resultCh = make(chan string)
+		err      error
 	)
 
-	if _, err := f(ctx, unitName, "replace", jobCh); err != nil {
+	if _, err := f(ctx, unitName, "replace", resultCh); err != nil {
 		return fmt.Errorf("unable to %s unit %s: %w", operation, unitName, err)
 	}
 
 	select {
 	case <-ctx.Done(): // context is cancelled
-		return ctx.Err()
+		err = ctx.Err()
 
-	case result := <-jobCh: // job channel reported back
+	case result := <-resultCh: // job channel reported back
 		if result != "done" {
 			err = fmt.Errorf("%s failed for %s, due %s", operation, unitName, result)
 		}
+
+	case <-time.After(10 * time.Second): // after 10s, we continue even if the result channel did not report back
+		d.log.Info("Systemd operation is blocking for more than 10s, aborting and continuing anyways", "unitName", unitName, "operation", operation)
 	}
 
 	recordEvent(recorder, node, err, unitName, eventReason, operation)
