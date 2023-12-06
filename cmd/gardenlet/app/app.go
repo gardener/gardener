@@ -61,6 +61,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/operations"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -376,6 +377,11 @@ func (g *garden) Start(ctx context.Context) error {
 		return err
 	}
 
+	log.Info("Cleaning up legacy 'shoot-node-logging' ManagedResource")
+	if err := cleanupLegacyLoggingManagedResource(ctx, g.mgr.GetClient()); err != nil {
+		return err
+	}
+
 	log.Info("Cleaning up orphaned ServiceAccounts related to garden access secrets for extensions")
 	if err := g.cleanupOrphanedExtensionsServiceAccounts(ctx, gardenCluster.GetClient()); err != nil {
 		return err
@@ -433,6 +439,30 @@ func (g *garden) Start(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// TODO(rfranzke): Remove this code after v1.83 has been released.
+func cleanupLegacyLoggingManagedResource(ctx context.Context, seedClient client.Client) error {
+	managedResourceList := &metav1.PartialObjectMetadataList{}
+	managedResourceList.SetGroupVersionKind(resourcesv1alpha1.SchemeGroupVersion.WithKind("ManagedResourceList"))
+	if err := seedClient.List(ctx, managedResourceList); err != nil {
+		if meta.IsNoMatchError(err) {
+			return nil
+		}
+		return err
+	}
+
+	var taskFns []flow.TaskFn
+	for _, managedResource := range managedResourceList.Items {
+		if managedResource.GetName() == "shoot-node-logging" {
+			mr := managedResource
+			taskFns = append(taskFns, func(ctx context.Context) error {
+				return seedClient.Delete(ctx, &mr)
+			})
+		}
+	}
+
+	return flow.Parallel(taskFns...)(ctx)
 }
 
 // TODO(rfranzke): Remove this code after v1.86 has been released.

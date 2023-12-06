@@ -49,13 +49,6 @@ func SetDefaults_OperatingSystemConfigControllerConfig(obj *OperatingSystemConfi
 	}
 }
 
-// SetDefaults_TokenControllerConfig sets defaults for the TokenControllerConfig object.
-func SetDefaults_TokenControllerConfig(obj *TokenControllerConfig) {
-	if obj.SyncPeriod == nil {
-		obj.SyncPeriod = &metav1.Duration{Duration: time.Hour}
-	}
-}
-
 // SetDefaults_ClientConnectionConfiguration sets defaults for the garden client connection.
 func SetDefaults_ClientConnectionConfiguration(obj *componentbaseconfigv1alpha1.ClientConnectionConfiguration) {
 	componentbaseconfigv1alpha1.RecommendedDefaultClientConnectionConfiguration(obj)

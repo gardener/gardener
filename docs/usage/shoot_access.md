@@ -20,6 +20,7 @@ kubectl create \
     base64 -d
 ```
 
+
 You also can use controller-runtime `client` (>= v0.14.3) to create such a kubeconfig from your go code like so:
 
 ```go
@@ -82,26 +83,6 @@ v1 = client.CoreV1Api(shoot_api_client)
 ```
 
 > **Note:** The [`gardenctl-v2`](https://github.com/gardener/gardenctl-v2) tool simplifies targeting shoot clusters. It automatically downloads a kubeconfig that uses the [gardenlogin](https://github.com/gardener/gardenlogin) kubectl auth plugin. This transparently manages authentication and certificate renewal without containing any credentials.
-
-## `shoots/viewerkubeconfig` Subresource
-
-The `shoots/viewerkubeconfig` subresource works similar to the [`shoots/adminkubeconfig`](#shootsadminkubeconfig-subresource).
-The difference is that it returns a kubeconfig with read-only access for all APIs except the `core/v1.Secret` API.
-
-In order to request such a `kubeconfig`, you can run follow almost the same code as above - the only difference is that you need to use the `viewerkubeconfig` subresource.
-For example, in bash this looks like this:
-
-```bash
-export NAMESPACE=garden-my-namespace
-export SHOOT_NAME=my-shoot
-kubectl create \
-    -f <(printf '{"spec":{"expirationSeconds":600}}') \
-    --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/viewerkubeconfig | \
-    jq -r ".status.kubeconfig" | \
-    base64 -d
-```
-
-The examples for other programming languages are similar to [the above](#shootsadminkubeconfig-subresource) and can be adapted accordingly.
 
 ## OpenID Connect
 

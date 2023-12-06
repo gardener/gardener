@@ -18,14 +18,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/goleak"
 	"go.uber.org/mock/gomock"
-	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/gardener/gardener/pkg/utils/flow"
 	mockflow "github.com/gardener/gardener/pkg/utils/flow/mock"
@@ -140,124 +138,4 @@ var _ = Describe("task functions", func() {
 			Eventually(cancelled).Should(BeClosed())
 		})
 	})
-
-	Describe("ParallelN", func() {
-		It("should run the tasks", func() {
-			var (
-				ctx         = context.Background()
-				n           = 2
-				activeTasks = &sync.Map{}
-				doneTasks   = &sync.Map{}
-				blockCh     = make(chan struct{}, 5)
-				doneCh      = make(chan struct{})
-				fn          = func(key string) flow.TaskFn {
-					return func(ctx context.Context) error {
-						activeTasks.Store(key, struct{}{})
-						defer func() {
-							doneTasks.Store(key, struct{}{})
-							activeTasks.Delete(key)
-						}()
-
-						// block until unblocked by test step
-						<-blockCh
-						return nil
-					}
-				}
-				taskIds = sets.New("1", "2", "3", "4", "5")
-				tasks   = []flow.TaskFn{fn("1"), fn("2"), fn("3"), fn("4"), fn("5")}
-			)
-
-			go func() {
-				Expect(flow.ParallelN(n, tasks...)(ctx)).To(Succeed())
-				close(doneCh)
-			}()
-
-			By("Checking active tasks after initial ParallelN call")
-			Eventually(func() int {
-				// find two of the active tasks and remove them from the ids
-				tasksFound := findTasks(taskIds, activeTasks)
-				taskIds = taskIds.Difference(tasksFound)
-				return tasksFound.Len()
-			}).Should(Equal(n))
-
-			By("Unblocking single task")
-			blockCh <- struct{}{}
-			Eventually(func() int {
-				// find the newest active task and remove it from the ids
-				tasksFound := findTasks(taskIds, activeTasks)
-				taskIds = taskIds.Difference(tasksFound)
-				return tasksFound.Len()
-			}).Should(Equal(1))
-
-			Eventually(func(g Gomega) {
-				doneTasks.Range(func(key, value any) bool {
-					g.Expect(taskIds).NotTo(HaveKey(key.(string)))
-					return false
-				})
-			}).Should(Succeed())
-
-			By("Unblocking more tasks")
-			blockCh <- struct{}{}
-			blockCh <- struct{}{}
-			Eventually(func() int {
-				// find the remaining 2 active tasks and remove them from the ids
-				tasksFound := findTasks(taskIds, activeTasks)
-				taskIds = taskIds.Difference(tasksFound)
-				return tasksFound.Len()
-			}).Should(Equal(2))
-
-			Eventually(func(g Gomega) {
-				doneTasks.Range(func(key, value any) bool {
-					g.Expect(taskIds).NotTo(HaveKey(key.(string)))
-					return false
-				})
-			}).Should(Succeed())
-
-			Expect(taskIds.Len()).To(Equal(0))
-
-			By("Unblocking remaining tasks")
-			blockCh <- struct{}{}
-			blockCh <- struct{}{}
-
-			Eventually(func(g Gomega) {
-				tasks := 0
-				activeTasks.Range(func(key, value any) bool {
-					tasks += 1
-					return true
-				})
-				g.Expect(tasks).To(Equal(0))
-				g.Expect(doneCh).To(BeClosed())
-			}).Should(Succeed())
-		})
-
-		It("should collect the errors", func() {
-			var (
-				ctx = context.Background()
-				fn  = func(err error) flow.TaskFn {
-					return func(ctx context.Context) error {
-						return err
-					}
-				}
-			)
-			err1 := errors.New("one")
-			err2 := errors.New("two")
-			err := flow.ParallelN(2, fn(err1), fn(nil), fn(err2))(ctx)
-			Expect(err).To(HaveOccurred())
-			Expect(err).To(BeAssignableToTypeOf(&multierror.Error{}))
-			Expect(err.(*multierror.Error).Errors).To(ConsistOf(err1, err2))
-		})
-	})
 })
-
-func findTasks(taskIds sets.Set[string], tasks *sync.Map) sets.Set[string] {
-	tasksFound := sets.New[string]()
-
-	tasks.Range(func(key, value any) bool {
-		if taskIds.Has(key.(string)) {
-			tasksFound.Insert(key.(string))
-		}
-		return true
-	})
-
-	return tasksFound
-}

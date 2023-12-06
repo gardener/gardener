@@ -23,7 +23,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/component-base/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -51,21 +50,14 @@ const SecretLabelKeyManagedResource = "managed-resource"
 // DefaultOperatingSystemConfig creates the default deployer for the OperatingSystemConfig custom resource.
 func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interface, error) {
 	images := []string{imagevector.ImageNamePauseContainer, imagevector.ImageNameValitail}
-	if !features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+		images = append(images, imagevector.ImageNameGardenerNodeAgent)
+	} else {
 		images = append(images, imagevector.ImageNameHyperkube)
 	}
-
 	oscImages, err := imagevectorutils.FindImages(imagevector.ImageVector(), images, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
-	}
-
-	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
-		oscImages[imagevector.ImageNameGardenerNodeAgent], err = imagevector.ImageVector().FindImage(imagevector.ImageNameGardenerNodeAgent)
-		if err != nil {
-			return nil, fmt.Errorf("failed finding image %q: %w", imagevector.ImageNameGardenerNodeAgent, err)
-		}
-		oscImages[imagevector.ImageNameGardenerNodeAgent].WithOptionalTag(version.Get().GitVersion)
 	}
 
 	clusterDNSAddress := b.Shoot.Networks.CoreDNS.String()

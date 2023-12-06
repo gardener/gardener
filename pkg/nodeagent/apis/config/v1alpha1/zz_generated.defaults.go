@@ -38,5 +38,4 @@ func SetObjectDefaults_NodeAgentConfiguration(in *NodeAgentConfiguration) {
 	SetDefaults_ClientConnectionConfiguration(&in.ClientConnection)
 	SetDefaults_ServerConfiguration(&in.Server)
 	SetDefaults_OperatingSystemConfigControllerConfig(&in.Controllers.OperatingSystemConfig)
-	SetDefaults_TokenControllerConfig(&in.Controllers.Token)
 }

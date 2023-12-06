@@ -279,6 +279,13 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 					"filters.fluentbit.fluent.io",
 					"outputs.fluentbit.fluent.io",
 					"parsers.fluentbit.fluent.io",
+					// TODO(rfranzke): Remove this code after Gardener v1.83 has been released.
+					"alicloudmachineclasses.machine.sapcloud.io",
+					"awsmachineclasses.machine.sapcloud.io",
+					"azuremachineclasses.machine.sapcloud.io",
+					"gcpmachineclasses.machine.sapcloud.io",
+					"openstackmachineclasses.machine.sapcloud.io",
+					"packetmachineclasses.machine.sapcloud.io",
 				},
 				Verbs: []string{"delete"},
 			},

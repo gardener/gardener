@@ -122,6 +122,20 @@ var _ = Describe("Add", func() {
 				Expect(p.Update(event.UpdateEvent{ObjectOld: oldService, ObjectNew: service})).To(BeTrue())
 			})
 
+			It("should return true because the from-policy-pod-label-selector annotation was changed", func() {
+				oldService := service.DeepCopy()
+				service.Annotations = map[string]string{"networking.resources.gardener.cloud/from-policy-pod-label-selector": "foo"}
+
+				Expect(p.Update(event.UpdateEvent{ObjectOld: oldService, ObjectNew: service})).To(BeTrue())
+			})
+
+			It("should return true because the from-policy-allowed-ports annotation was changed", func() {
+				oldService := service.DeepCopy()
+				service.Annotations = map[string]string{"networking.resources.gardener.cloud/from-policy-allowed-ports": "foo"}
+
+				Expect(p.Update(event.UpdateEvent{ObjectOld: oldService, ObjectNew: service})).To(BeTrue())
+			})
+
 			It("should return true because a custom pod label selector was added", func() {
 				oldService := service.DeepCopy()
 				service.Annotations = map[string]string{"networking.resources.gardener.cloud/from-foo-allowed-ports": "foo"}

@@ -42,7 +42,6 @@ import (
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/nodeagent"
 	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
@@ -63,7 +62,7 @@ type Reconciler struct {
 	Extractor     registry.Extractor
 	CancelContext context.CancelFunc
 	HostName      string
-	NodeName      string
+	nodeName      string
 }
 
 // Reconcile decodes the OperatingSystemConfig resources from secrets and applies the systemd units and files to the
@@ -173,25 +172,31 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 func (r *Reconciler) getNode(ctx context.Context) (*metav1.PartialObjectMetadata, error) {
-	if r.NodeName != "" {
-		node := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{Name: r.NodeName}}
+	if r.nodeName != "" {
+		node := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{Name: r.nodeName}}
 		node.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Node"))
 		if err := r.Client.Get(ctx, client.ObjectKeyFromObject(node), node); err != nil {
-			return nil, fmt.Errorf("unable to fetch node %q: %w", r.NodeName, err)
+			return nil, fmt.Errorf("unable to fetch node %q: %w", r.nodeName, err)
 		}
 		return node, nil
 	}
 
-	node, err := nodeagent.FetchNodeByHostName(ctx, r.Client, r.HostName)
-	if err != nil {
-		return nil, err
+	// node name not known yet, try to fetch it via label selector based on hostname
+	nodeList := &metav1.PartialObjectMetadataList{}
+	nodeList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NodeList"))
+	if err := r.Client.List(ctx, nodeList, client.MatchingLabels{corev1.LabelHostname: r.HostName}); err != nil {
+		return nil, fmt.Errorf("unable to list nodes with label selector %s=%s: %w", corev1.LabelHostname, r.HostName, err)
 	}
 
-	if node != nil {
-		r.NodeName = node.Name
+	switch len(nodeList.Items) {
+	case 0:
+		return nil, nil
+	case 1:
+		r.nodeName = nodeList.Items[0].Name
+		return &nodeList.Items[0], nil
+	default:
+		return nil, fmt.Errorf("found more than one node with label %s=%s", corev1.LabelHostname, r.HostName)
 	}
-
-	return node, nil
 }
 
 var (
@@ -200,7 +205,7 @@ var (
 )
 
 func (r *Reconciler) applyChangedFiles(ctx context.Context, log logr.Logger, files []extensionsv1alpha1.File) error {
-	tmpDir, err := r.FS.TempDir(nodeagentv1alpha1.TempDir, "osc-reconciliation-file-")
+	tmpDir, err := r.FS.TempDir("", "gardener-node-agent-*")
 	if err != nil {
 		return fmt.Errorf("unable to create temporary directory: %w", err)
 	}
@@ -342,28 +347,19 @@ func (r *Reconciler) applyChangedUnits(ctx context.Context, log logr.Logger, uni
 
 func (r *Reconciler) removeDeletedUnits(ctx context.Context, log logr.Logger, node client.Object, units []extensionsv1alpha1.Unit) error {
 	for _, unit := range units {
-		unitFilePath := path.Join(etcSystemdSystem, unit.Name)
-
-		unitFileExists, err := r.fileExists(unitFilePath)
-		if err != nil {
-			return fmt.Errorf("unable to check whether unit file %q exists: %w", unitFilePath, err)
+		if err := r.DBus.Disable(ctx, unit.Name); err != nil {
+			return fmt.Errorf("unable to disable deleted unit %q: %w", unit.Name, err)
 		}
 
-		if unitFileExists {
-			if err := r.DBus.Disable(ctx, unit.Name); err != nil {
-				return fmt.Errorf("unable to disable deleted unit %q: %w", unit.Name, err)
-			}
-
-			if err := r.DBus.Stop(ctx, r.Recorder, node, unit.Name); err != nil {
-				return fmt.Errorf("unable to stop deleted unit %q: %w", unit.Name, err)
-			}
-
-			if err := r.FS.Remove(unitFilePath); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
-				return fmt.Errorf("unable to delete systemd unit file of deleted unit %q: %w", unit.Name, err)
-			}
+		if err := r.DBus.Stop(ctx, r.Recorder, node, unit.Name); err != nil {
+			return fmt.Errorf("unable to stop deleted unit %q: %w", unit.Name, err)
 		}
 
-		if err := r.FS.RemoveAll(unitFilePath + ".d"); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+		if err := r.FS.Remove(path.Join(etcSystemdSystem, unit.Name)); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+			return fmt.Errorf("unable to delete systemd unit file of deleted unit %q: %w", unit.Name, err)
+		}
+
+		if err := r.FS.RemoveAll(path.Join(etcSystemdSystem, unit.Name+".d")); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
 			return fmt.Errorf("unable to delete systemd drop-in folder of deleted unit %q: %w", unit.Name, err)
 		}
 
@@ -405,14 +401,4 @@ func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, n
 	}
 
 	return mustRestartGardenerNodeAgent, flow.Parallel(fns...)(ctx)
-}
-
-func (r *Reconciler) fileExists(path string) (bool, error) {
-	if _, err := r.FS.Stat(path); err != nil {
-		if errors.Is(err, afero.ErrFileNotFound) {
-			return false, nil
-		}
-		return false, err
-	}
-	return true, nil
 }

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package authentication
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,22 +26,22 @@ import (
 // AdminKubeconfigRequest can be used to request a kubeconfig with admin credentials
 // for a Shoot cluster.
 type AdminKubeconfigRequest struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta
 	// Standard object metadata.
-	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	metav1.ObjectMeta
 	// Spec is the specification of the AdminKubeconfigRequest.
-	Spec AdminKubeconfigRequestSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
+	Spec AdminKubeconfigRequestSpec
 	// Status is the status of the AdminKubeconfigRequest.
-	Status AdminKubeconfigRequestStatus `json:"status" protobuf:"bytes,3,opt,name=status"`
+	Status AdminKubeconfigRequestStatus
 }
 
 // AdminKubeconfigRequestStatus is the status of the AdminKubeconfigRequest containing
 // the kubeconfig and expiration of the credential.
 type AdminKubeconfigRequestStatus struct {
 	// Kubeconfig contains the kubeconfig with cluster-admin privileges for the shoot cluster.
-	Kubeconfig []byte `json:"kubeconfig" protobuf:"bytes,1,name=kubeconfig"`
+	Kubeconfig []byte
 	// ExpirationTimestamp is the expiration timestamp of the returned credential.
-	ExpirationTimestamp metav1.Time `json:"expirationTimestamp" protobuf:"bytes,2,name=expirationTimestamp"`
+	ExpirationTimestamp metav1.Time
 }
 
 // AdminKubeconfigRequestSpec contains the expiration time of the kubeconfig.
@@ -50,6 +50,5 @@ type AdminKubeconfigRequestSpec struct {
 	// credential issuer may return a credential with a different validity duration so a
 	// client needs to check the 'expirationTimestamp' field in a response.
 	// Defaults to 1 hour.
-	// +optional
-	ExpirationSeconds *int64 `json:"expirationSeconds,omitempty" protobuf:"varint,1,opt,name=expirationSeconds"`
+	ExpirationSeconds int64
 }

@@ -48,7 +48,6 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -643,7 +642,7 @@ metadata:
 					}
 					utilruntime.Must(kubernetesutils.MakeUnique(expectedMRSecretWorker2))
 
-					nodeAgentRBACResourcesData, err := NodeAgentRBACResourcesDataFn([]string{expectedOSCSecretWorker1.Name, expectedOSCSecretWorker2.Name})
+					nodeAgentRBACResourcesData, err := NodeAgentRBACResourcesDataFn(nil)
 					Expect(err).NotTo(HaveOccurred())
 					expectedMRSecretRBAC := &corev1.Secret{
 						TypeMeta: metav1.TypeMeta{
@@ -663,9 +662,14 @@ metadata:
 
 					expectedManagedResource := &resourcesv1alpha1.ManagedResource{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:            "shoot-gardener-node-agent",
-							Namespace:       namespace,
-							Labels:          map[string]string{"origin": "gardener"},
+							Name:      "shoot-gardener-node-agent",
+							Namespace: namespace,
+							Labels:    map[string]string{"origin": "gardener"},
+							Annotations: map[string]string{
+								"reference.resources.gardener.cloud/secret-9f4158e8": expectedMRSecretWorker1.Name,
+								"reference.resources.gardener.cloud/secret-b83131c8": expectedMRSecretWorker2.Name,
+								"reference.resources.gardener.cloud/secret-8acdd467": expectedMRSecretRBAC.Name,
+							},
 							ResourceVersion: "1",
 						},
 						Spec: resourcesv1alpha1.ManagedResourceSpec{
@@ -678,7 +682,6 @@ metadata:
 							KeepObjects:  pointer.Bool(false),
 						},
 					}
-					utilruntime.Must(references.InjectAnnotations(expectedManagedResource))
 
 					By("Assert expected creation of ManagedResource and related secrets")
 					mrSecretWorker1 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: expectedMRSecretWorker1.Name, Namespace: expectedMRSecretWorker1.Namespace}}

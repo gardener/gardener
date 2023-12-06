@@ -44,7 +44,6 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 						SecretName: "gardener-node-agent",
 						Path:       "/var/lib/gardener-node-agent/credentials/token",
 					}},
-					SyncPeriod: &metav1.Duration{Duration: time.Hour},
 				},
 			},
 		}
@@ -73,17 +72,6 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("controllers.operatingSystemConfig.secretName"),
-				})),
-			))
-		})
-
-		It("should fail because sync period is too small", func() {
-			config.Controllers.OperatingSystemConfig.SyncPeriod.Duration = 10 * time.Second
-
-			Expect(ValidateNodeAgentConfiguration(config)).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("controllers.operatingSystemConfig.syncPeriod"),
 				})),
 			))
 		})
@@ -137,17 +125,6 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("controllers.token.syncConfigs"),
-				})),
-			))
-		})
-
-		It("should fail because sync period is too small", func() {
-			config.Controllers.Token.SyncPeriod.Duration = 10 * time.Second
-
-			Expect(ValidateNodeAgentConfiguration(config)).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("controllers.token.syncPeriod"),
 				})),
 			))
 		})

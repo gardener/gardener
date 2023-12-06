@@ -32,6 +32,9 @@ func SetDefaults_Shoot(obj *Shoot) {
 	if obj.Spec.Kubernetes.KubeAPIServer == nil {
 		obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{}
 	}
+	if obj.Spec.Kubernetes.KubeControllerManager == nil {
+		obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{}
+	}
 
 	if obj.Spec.Purpose == nil {
 		p := ShootPurposeEvaluation
@@ -92,10 +95,6 @@ func SetDefaults_Shoot(obj *Shoot) {
 		}
 		if obj.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds == nil {
 			obj.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds = pointer.Int64(300)
-		}
-
-		if obj.Spec.Kubernetes.KubeControllerManager == nil {
-			obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{}
 		}
 
 		if obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize == nil {

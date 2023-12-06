@@ -16,9 +16,11 @@ package shootsystem_test
 
 import (
 	"context"
+	"net"
 	"strconv"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -33,7 +35,10 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/extensions/extension"
 	. "github.com/gardener/gardener/pkg/component/shootsystem"
+	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -62,7 +67,11 @@ var _ = Describe("ShootSystem", func() {
 		nodeCIDR          = "12.12.0.0/16"
 		extension1        = "some-extension"
 		extension2        = "some-other-extension"
-		shootObj          = &gardencorev1beta1.Shoot{
+		extensions        = map[string]extension.Extension{
+			extension1: {},
+			extension2: {},
+		}
+		shootObj = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      shootName,
 				Namespace: shootNamespace,
@@ -86,26 +95,45 @@ var _ = Describe("ShootSystem", func() {
 				Region: region,
 			},
 		}
+		shoot *shootpkg.Shoot
 
 		c         client.Client
 		values    Values
-		component Interface
+		component component.DeployWaiter
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 	)
 
 	BeforeEach(func() {
+		shoot = &shootpkg.Shoot{
+			Components: &shootpkg.Components{
+				Extensions: &shootpkg.Extensions{
+					Extension: extension.New(
+						logr.Discard(),
+						nil,
+						&extension.Values{
+							Extensions: extensions,
+						},
+						0,
+						0,
+						0,
+					),
+				},
+			},
+			ExternalClusterDomain: &domain,
+			KubernetesVersion:     semver.MustParse(kubernetesVersion),
+			Networks: &shootpkg.Networks{
+				Pods:     parseCIDR(podCIDR),
+				Services: parseCIDR(serviceCIDR),
+			},
+		}
+		shoot.SetInfo(shootObj)
+
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		values = Values{
-			Extensions:            []string{extension1, extension2},
-			ExternalClusterDomain: &domain,
-			IsWorkerless:          false,
-			KubernetesVersion:     semver.MustParse(kubernetesVersion),
-			Object:                shootObj,
-			PodNetworkCIDR:        podCIDR,
-			ProjectName:           projectName,
-			ServiceNetworkCIDR:    serviceCIDR,
+			ProjectName: projectName,
+			Shoot:       shoot,
 		}
 		component = New(c, namespace, values)
 
@@ -127,7 +155,6 @@ var _ = Describe("ShootSystem", func() {
 		JustBeforeEach(func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 
-			component = New(c, namespace, values)
 			Expect(component.Deploy(ctx)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
@@ -161,18 +188,6 @@ var _ = Describe("ShootSystem", func() {
 		})
 
 		Context("kube-controller-manager ServiceAccounts", func() {
-			When("shoot is workerless", func() {
-				BeforeEach(func() {
-					values.IsWorkerless = true
-				})
-
-				It("should not deploy any ServiceAccounts", func() {
-					for key := range managedResourceSecret.Data {
-						Expect(key).NotTo(HavePrefix("serviceaccount_"), key)
-					}
-				})
-			})
-
 			var (
 				serviceAccountYAMLFor = func(name string) string {
 					return `apiVersion: v1
@@ -223,7 +238,8 @@ metadata:
 
 			Context("k8s >= 1.26", func() {
 				BeforeEach(func() {
-					values.KubernetesVersion = semver.MustParse("1.26.4")
+					values.Shoot.KubernetesVersion = semver.MustParse("1.26.4")
+					component = New(c, namespace, values)
 				})
 
 				It("should successfully deploy all resources", func() {
@@ -235,7 +251,8 @@ metadata:
 
 			Context("k8s >= 1.28", func() {
 				BeforeEach(func() {
-					values.KubernetesVersion = semver.MustParse("1.28.2")
+					values.Shoot.KubernetesVersion = semver.MustParse("1.28.2")
+					component = New(c, namespace, values)
 				})
 
 				It("should successfully deploy all resources", func() {
@@ -247,18 +264,6 @@ metadata:
 		})
 
 		Context("shoot-info ConfigMap", func() {
-			When("shoot is workerless", func() {
-				BeforeEach(func() {
-					values.IsWorkerless = true
-				})
-
-				It("should not deploy any ConfigMap", func() {
-					for key := range managedResourceSecret.Data {
-						Expect(key).NotTo(HaveKey("configmap__kube-system__shoot-info.yaml"))
-					}
-				})
-			})
-
 			configMap := `apiVersion: v1
 data:
   domain: ` + domain + `
@@ -286,36 +291,12 @@ metadata:
 		})
 
 		Context("PriorityClasses", func() {
-			When("shoot is workerless", func() {
-				BeforeEach(func() {
-					values.IsWorkerless = true
-				})
-
-				It("should not deploy any PriorityClasses", func() {
-					for key := range managedResourceSecret.Data {
-						Expect(key).NotTo(HavePrefix("priorityclass_"), key)
-					}
-				})
-			})
-
 			It("should successfully deploy all well-known PriorityClasses", func() {
 				expectPriorityClasses(managedResourceSecret.Data)
 			})
 		})
 
 		Context("NetworkPolicies", func() {
-			When("shoot is workerless", func() {
-				BeforeEach(func() {
-					values.IsWorkerless = true
-				})
-
-				It("should not deploy any NetworkPolicies", func() {
-					for key := range managedResourceSecret.Data {
-						Expect(key).NotTo(HavePrefix("networkpolicy_"), key)
-					}
-				})
-			})
-
 			var (
 				networkPolicyToAPIServer = `apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -433,93 +414,6 @@ spec:
 				Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-to-public-networks.yaml"])).To(Equal(networkPolicyToPublicNetworks))
 			})
 		})
-
-		Context("Read-Only resources", func() {
-			It("should do nothing when the API resource list is unset", func() {
-				Expect(managedResourceSecret.Data).NotTo(And(
-					HaveKey("clusterrole____gardener.cloud_system_read-only.yaml"),
-					HaveKey("clusterrolebinding____gardener.cloud_system_read-only.yaml"),
-				))
-			})
-
-			When("API resource list is set", func() {
-				BeforeEach(func() {
-					values.APIResourceList = []*metav1.APIResourceList{
-						{
-							GroupVersion: "foo/v1",
-							APIResources: []metav1.APIResource{
-								{Name: "bar", Verbs: metav1.Verbs{"create", "delete"}},
-								{Name: "baz", Verbs: metav1.Verbs{"get", "list", "watch"}},
-							},
-						},
-						{
-							GroupVersion: "v1",
-							APIResources: []metav1.APIResource{
-								{Name: "secrets", Verbs: metav1.Verbs{"get", "list", "watch"}},
-								{Name: "configmaps", Verbs: metav1.Verbs{"get", "list", "watch"}},
-							},
-						},
-						{
-							GroupVersion: "bar/v1beta1",
-							APIResources: []metav1.APIResource{
-								{Name: "foo", Verbs: metav1.Verbs{"get", "list", "watch"}},
-								{Name: "baz", Verbs: metav1.Verbs{"get", "list", "watch"}},
-							},
-						},
-					}
-				})
-
-				It("should successfully deploy the related RBAC resources", func() {
-					Expect(managedResourceSecret.Data["clusterrole____gardener.cloud_system_read-only.yaml"]).To(Equal([]byte(`apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  creationTimestamp: null
-  name: gardener.cloud:system:read-only
-rules:
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - bar
-  resources:
-  - foo
-  - baz
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - foo
-  resources:
-  - baz
-  verbs:
-  - get
-  - list
-  - watch
-`)))
-					Expect(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_system_read-only.yaml"]).To(Equal([]byte(`apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  annotations:
-    resources.gardener.cloud/delete-on-invalid-update: "true"
-  creationTimestamp: null
-  name: gardener.cloud:system:read-only
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: gardener.cloud:system:read-only
-subjects:
-- kind: Group
-  name: gardener.cloud:system:viewers
-`)))
-				})
-			})
-		})
 	})
 
 	Describe("#Destroy", func() {
@@ -630,6 +524,12 @@ subjects:
 		})
 	})
 })
+
+func parseCIDR(cidr string) *net.IPNet {
+	_, ipNet, err := net.ParseCIDR(cidr)
+	Expect(err).NotTo(HaveOccurred())
+	return ipNet
+}
 
 func expectPriorityClasses(data map[string][]byte) {
 	expected := []struct {

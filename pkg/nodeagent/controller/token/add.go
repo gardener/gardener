@@ -15,19 +15,17 @@
 package token
 
 import (
-	"context"
-
 	"github.com/spf13/afero"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/util/workqueue"
+	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 )
 
 // ControllerName is the name of this controller.
@@ -35,8 +33,8 @@ const ControllerName = "token"
 
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(mgr manager.Manager) error {
-	if r.APIReader == nil {
-		r.APIReader = mgr.GetAPIReader()
+	if r.Client == nil {
+		r.Client = mgr.GetClient()
 	}
 	if r.FS.Fs == nil {
 		r.FS = afero.Afero{Fs: afero.NewOsFs()}
@@ -50,15 +48,34 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		WatchesRawSource(
-			source.Func(func(_ context.Context, _ handler.EventHandler, q workqueue.RateLimitingInterface, _ ...predicate.Predicate) error {
-				for _, config := range r.Config.SyncConfigs {
-					q.Add(reconcile.Request{NamespacedName: types.NamespacedName{Name: config.SecretName, Namespace: metav1.NamespaceSystem}})
-				}
-				return nil
+		For(&corev1.Secret{}, builder.WithPredicates(
+			predicate.NewPredicateFuncs(func(obj client.Object) bool {
+				return r.secretNameToPath[obj.GetName()] != ""
 			}),
-			&handler.EnqueueRequestForObject{},
-		).
-		WithOptions(controller.Options{MaxConcurrentReconciles: len(r.Config.SyncConfigs)}).
+			r.SecretPredicate(),
+		)).
+		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		Complete(r)
+}
+
+// SecretPredicate returns the predicate for Secret events.
+func (r *Reconciler) SecretPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(_ event.CreateEvent) bool { return true },
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldSecret, ok := e.ObjectOld.(*corev1.Secret)
+			if !ok {
+				return false
+			}
+
+			newSecret, ok := e.ObjectNew.(*corev1.Secret)
+			if !ok {
+				return false
+			}
+
+			return !apiequality.Semantic.DeepEqual(oldSecret.Data[resourcesv1alpha1.DataKeyToken], newSecret.Data[resourcesv1alpha1.DataKeyToken])
+		},
+		DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
+		GenericFunc: func(_ event.GenericEvent) bool { return false },
+	}
 }

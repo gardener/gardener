@@ -24,16 +24,14 @@ import (
 	"path/filepath"
 	goruntime "runtime"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
-	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/utils/pointer"
@@ -53,12 +51,10 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
-	"github.com/gardener/gardener/pkg/nodeagent"
 	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/bootstrap"
 	"github.com/gardener/gardener/pkg/nodeagent/controller"
-	"github.com/gardener/gardener/pkg/nodeagent/controller/lease"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 )
 
@@ -158,19 +154,6 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	if err != nil {
 		return fmt.Errorf("failed fetching hostname: %w", err)
 	}
-	hostName = strings.ToLower(hostName)
-
-	log.Info("Fetching name of node (if already registered)")
-	nodeName, err := fetchNodeName(ctx, restConfig, hostName)
-	if err != nil {
-		return fmt.Errorf("failed fetching name of node: %w", err)
-	}
-
-	leaseCacheOptions := cache.ByObject{Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}}}
-	if nodeName != "" {
-		log.Info("Node already registered, found name", "nodeName", nodeName)
-		leaseCacheOptions.Field = fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: lease.ObjectName(nodeName)})
-	}
 
 	log.Info("Setting up manager")
 	mgr, err := manager.New(restConfig, manager.Options{
@@ -185,11 +168,8 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		},
 
 		Cache: cache.Options{ByObject: map[client.Object]cache.ByObject{
-			&corev1.Secret{}: {
-				Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}},
-				Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: cfg.Controllers.OperatingSystemConfig.SecretName}),
-			},
-			&coordinationv1.Lease{}: leaseCacheOptions,
+			&corev1.Secret{}: {Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}}},
+			&corev1.Node{}:   {Label: labels.SelectorFromSet(labels.Set{corev1.LabelHostname: hostName})},
 		}},
 		LeaderElection: false,
 		Controller: controllerconfig.Controller{
@@ -213,11 +193,6 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		dbus = dbus.New()
 	)
 
-	log.Info("Creating directory for temporary files", "path", nodeagentv1alpha1.TempDir)
-	if err := fs.MkdirAll(nodeagentv1alpha1.TempDir, os.ModeDir); err != nil {
-		return fmt.Errorf("unable to create directory for temporary files %q: %w", nodeagentv1alpha1.TempDir, err)
-	}
-
 	log.Info("Adding runnables to manager")
 	if err := mgr.Add(&controllerutils.ControlledRunner{
 		Manager: mgr,
@@ -225,7 +200,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 			&bootstrappers.KubeletBootstrapKubeconfig{Log: log.WithName("kubelet-bootstrap-kubeconfig-creator"), FS: fs, APIServerConfig: cfg.APIServer},
 		},
 		ActualRunnables: []manager.Runnable{
-			manager.RunnableFunc(func(ctx context.Context) error { return controller.AddToManager(ctx, cancel, mgr, cfg, hostName) }),
+			manager.RunnableFunc(func(_ context.Context) error { return controller.AddToManager(cancel, mgr, cfg, hostName) }),
 			&bootstrappers.CloudConfigDownloaderCleaner{Log: log.WithName("legacy-cloud-config-downloader-cleaner"), FS: fs, DBus: dbus},
 		},
 	}); err != nil {
@@ -303,22 +278,4 @@ func fetchAccessToken(ctx context.Context, log logr.Logger, restConfig *rest.Con
 	log.Info("Token written to disk")
 	restConfig.BearerTokenFile = nodeagentv1alpha1.TokenFilePath
 	return nil
-}
-
-func fetchNodeName(ctx context.Context, restConfig *rest.Config, hostName string) (string, error) {
-	c, err := client.New(restConfig, client.Options{})
-	if err != nil {
-		return "", fmt.Errorf("unable to create client: %w", err)
-	}
-
-	node, err := nodeagent.FetchNodeByHostName(ctx, c, hostName)
-	if err != nil {
-		return "", err
-	}
-
-	if node == nil {
-		return "", nil
-	}
-
-	return node.Name, nil
 }

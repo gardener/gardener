@@ -25,8 +25,6 @@ const (
 	BaseDir = "/var/lib/gardener-node-agent"
 	// CredentialsDir is the directory on the worker node that contains credentials for the gardener-node-agent.
 	CredentialsDir = BaseDir + "/credentials"
-	// TempDir is the directory on the worker node that contains temporary directories of files.
-	TempDir = BaseDir + "/tmp"
 	// BinaryDir is the directory on the worker node that contains the binary for the gardener-node-agent.
 	BinaryDir = "/opt/bin"
 
@@ -133,9 +131,6 @@ type TokenControllerConfig struct {
 	// SyncConfigs is the list of configurations for syncing access tokens.
 	// +optional
 	SyncConfigs []TokenSecretSyncConfig `json:"syncConfigs,omitempty"`
-	// SyncPeriod is the duration how often the access token secrets are synced to the disk.
-	// +optional
-	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
 }
 
 // TokenSecretSyncConfig contains configurations for syncing access tokens.

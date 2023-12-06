@@ -135,6 +135,8 @@ func (r *Reconciler) ServicePredicate() predicate.Predicate {
 				oldService.Annotations[resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias] != service.Annotations[resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias] ||
 				oldService.Annotations[resourcesv1alpha1.NetworkingNamespaceSelectors] != service.Annotations[resourcesv1alpha1.NetworkingNamespaceSelectors] ||
 				oldService.Annotations[resourcesv1alpha1.NetworkingFromWorldToPorts] != service.Annotations[resourcesv1alpha1.NetworkingFromWorldToPorts] ||
+				oldService.Annotations[resourcesv1alpha1.NetworkingFromPolicyPodLabelSelector] != service.Annotations[resourcesv1alpha1.NetworkingFromPolicyPodLabelSelector] ||
+				oldService.Annotations[resourcesv1alpha1.NetworkingFromPolicyAllowedPorts] != service.Annotations[resourcesv1alpha1.NetworkingFromPolicyAllowedPorts] ||
 				fromPolicyAnnotationsChanged(oldService.Annotations, service.Annotations)
 		},
 	}

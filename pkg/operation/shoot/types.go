@@ -54,7 +54,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/component/plutono"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
-	"github.com/gardener/gardener/pkg/component/shootsystem"
 	"github.com/gardener/gardener/pkg/component/vpa"
 	"github.com/gardener/gardener/pkg/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/component/vpnshoot"
@@ -173,7 +172,7 @@ type SystemComponents struct {
 	NodeLocalDNS        nodelocaldns.Interface
 	NodeProblemDetector component.DeployWaiter
 	NodeExporter        nodeexporter.Interface
-	Resources           shootsystem.Interface
+	Resources           component.DeployWaiter
 	VPNShoot            vpnshoot.Interface
 }
 

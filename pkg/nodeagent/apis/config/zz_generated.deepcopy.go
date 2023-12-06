@@ -215,11 +215,6 @@ func (in *TokenControllerConfig) DeepCopyInto(out *TokenControllerConfig) {
 		*out = make([]TokenSecretSyncConfig, len(*in))
 		copy(*out, *in)
 	}
-	if in.SyncPeriod != nil {
-		in, out := &in.SyncPeriod, &out.SyncPeriod
-		*out = new(v1.Duration)
-		**out = **in
-	}
 	return
 }
 

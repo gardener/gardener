@@ -17,8 +17,6 @@ package operatingsystemconfig
 import (
 	"bytes"
 	"context"
-	"slices"
-	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
@@ -40,14 +38,14 @@ import (
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 	"github.com/gardener/gardener/pkg/nodeagent/registry"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 // ControllerName is the name of this controller.
 const ControllerName = "operatingsystemconfig"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) error {
+func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
 	}
@@ -69,8 +67,11 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		Named(ControllerName).
 		WatchesRawSource(
 			source.Kind(mgr.GetCache(), &corev1.Secret{}),
-			r.EnqueueWithJitterDelay(ctx, mgr.GetLogger().WithValues("controller", ControllerName).WithName("reconciliation-delayer")),
+			r.EnqueueWithJitterDelay(mgr.GetLogger().WithValues("controller", ControllerName).WithName("jitterEventHandler")),
 			builder.WithPredicates(
+				predicate.NewPredicateFuncs(func(obj client.Object) bool {
+					return obj.GetNamespace() == metav1.NamespaceSystem && obj.GetName() == r.Config.SecretName
+				}),
 				r.SecretPredicate(),
 				predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
 			),
@@ -108,16 +109,12 @@ func reconcileRequest(obj client.Object) reconcile.Request {
 	}}
 }
 
+// RandomDurationWithMetaDuration is an alias for `utils.RandomDurationWithMetaDuration`. Exposed for unit tests.
+var RandomDurationWithMetaDuration = utils.RandomDurationWithMetaDuration
+
 // EnqueueWithJitterDelay returns handler.Funcs which enqueues the object with a random jitter duration for 'update'
 // events. 'Create' events are enqueued immediately.
-func (r *Reconciler) EnqueueWithJitterDelay(ctx context.Context, log logr.Logger) handler.EventHandler {
-	delay := delayer{
-		log:             log,
-		client:          r.Client,
-		minDelaySeconds: 0,
-		maxDelaySeconds: int(r.Config.SyncJitterPeriod.Duration.Seconds()),
-	}
-
+func (r *Reconciler) EnqueueWithJitterDelay(log logr.Logger) handler.EventHandler {
 	return &handler.Funcs{
 		CreateFunc: func(_ context.Context, evt event.CreateEvent, q workqueue.RateLimitingInterface) {
 			if evt.Object == nil {
@@ -137,47 +134,10 @@ func (r *Reconciler) EnqueueWithJitterDelay(ctx context.Context, log logr.Logger
 			}
 
 			if !bytes.Equal(oldSecret.Data[nodeagentv1alpha1.DataKeyOperatingSystemConfig], newSecret.Data[nodeagentv1alpha1.DataKeyOperatingSystemConfig]) {
-				duration := delay.compute(ctx, r.NodeName)
+				duration := RandomDurationWithMetaDuration(r.Config.SyncJitterPeriod)
 				log.Info("Enqueued secret with operating system config with a jitter period", "duration", duration)
 				q.AddAfter(reconcileRequest(evt.ObjectNew), duration)
 			}
 		},
 	}
-}
-
-type delayer struct {
-	log    logr.Logger
-	client client.Client
-
-	minDelaySeconds int
-	maxDelaySeconds int
-
-	nodeList *metav1.PartialObjectMetadataList
-}
-
-// compute computes a time.Duration that can be used to delay reconciliations by using a simple linear mapping approach
-// based on the index of the node this instance of gardener-node-agent is responsible for in the list of all nodes in
-// the cluster. This way, the delays of all instances of gardener-node-agent are distributed evenly.
-func (d *delayer) compute(ctx context.Context, nodeName string) time.Duration {
-	if nodeName == "" {
-		return 0
-	}
-
-	nodeList := &metav1.PartialObjectMetadataList{}
-	nodeList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NodeList"))
-	if err := d.client.List(ctx, nodeList); err != nil {
-		d.log.Error(err, "Failed to list nodes when computing reconciliation delay", "nodeName", nodeName)
-		// fall back to previously computed list of nodes
-	} else {
-		kubernetesutils.ByName().Sort(nodeList)
-		d.nodeList = nodeList
-	}
-
-	index := slices.IndexFunc(d.nodeList.Items, func(node metav1.PartialObjectMetadata) bool {
-		return node.GetName() == nodeName
-	})
-
-	rangeSize := float64(d.maxDelaySeconds-d.minDelaySeconds) / float64(len(d.nodeList.Items))
-	delaySeconds := float64(d.minDelaySeconds) + float64(index)*rangeSize
-	return time.Duration(delaySeconds * float64(time.Second))
 }

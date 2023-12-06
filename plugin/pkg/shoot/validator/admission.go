@@ -764,7 +764,7 @@ func (c *validationContext) validateKubernetes(a admission.Attributes) field.Err
 		c.shoot.Spec.Kubernetes.Version = *defaultVersion
 	} else {
 		// We assume that the 'defaultVersion' is already calculated correctly, so only run validation if the version was not defaulted.
-		allErrs = append(allErrs, validateKubernetesVersionConstraints(a, c.cloudProfile.Spec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version, false, path.Child("version"))...)
+		allErrs = append(allErrs, validateKubernetesVersionConstraints(a, c.cloudProfile.Spec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version, path.Child("version"))...)
 	}
 
 	if c.shoot.DeletionTimestamp == nil {
@@ -858,11 +858,9 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 
 	for i, worker := range c.shoot.Spec.Provider.Workers {
 		var oldWorker = core.Worker{Machine: core.Machine{Image: &core.ShootMachineImage{}}}
-		isNewWorkerPool := true
 		for _, ow := range c.oldShoot.Spec.Provider.Workers {
 			if ow.Name == worker.Name {
 				oldWorker = ow
-				isNewWorkerPool = false
 				break
 			}
 		}
@@ -891,9 +889,9 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "type"), worker.Machine.Type, fmt.Sprintf("%ssupported types are %+v", detail, supportedMachineTypes)))
 			}
 
-			isMachineImagePresentInCloudprofile, architectureSupported, activeMachineImageVersion, validMachineImageVersions := validateMachineImagesConstraints(a, c.cloudProfile.Spec.MachineImages, isNewWorkerPool, worker.Machine, oldWorker.Machine)
+			isMachineImagePresentInCloudprofile, architectureSupported, activeMachineImageVersion, validMachineImageversions := validateMachineImagesConstraints(a, c.cloudProfile.Spec.MachineImages, worker.Machine, oldWorker.Machine)
 			if !isMachineImagePresentInCloudprofile {
-				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "image"), worker.Machine.Image, fmt.Sprintf("machine image version is not supported, supported machine image versions are: %+v", validMachineImageVersions)))
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "image"), worker.Machine.Image, fmt.Sprintf("machine image version is not supported, supported machine image versions are: %+v", validMachineImageversions)))
 			} else if !architectureSupported || !activeMachineImageVersion {
 				detail := fmt.Sprintf("machine image version '%s:%s' ", worker.Machine.Image.Name, worker.Machine.Image.Version)
 				if !architectureSupported {
@@ -902,7 +900,7 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 				if !activeMachineImageVersion {
 					detail += "is expired, "
 				}
-				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "image"), worker.Machine.Image, fmt.Sprintf("%ssupported machine image versions are: %+v", detail, validMachineImageVersions)))
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "image"), worker.Machine.Image, fmt.Sprintf("%ssupported machine image versions are: %+v", detail, validMachineImageversions)))
 			} else {
 				allErrs = append(allErrs, validateContainerRuntimeConstraints(c.cloudProfile.Spec.MachineImages, worker, oldWorker, idxPath.Child("cri"))...)
 
@@ -954,7 +952,7 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 					worker.Kubernetes.Version = defaultVersion
 				} else {
 					// We assume that the 'defaultVersion' is already calculated correctly, so only run validation if the version was not defaulted.
-					allErrs = append(allErrs, validateKubernetesVersionConstraints(a, c.cloudProfile.Spec.Kubernetes.Versions, *worker.Kubernetes.Version, oldWorkerKubernetesVersion, isNewWorkerPool, idxPath.Child("kubernetes", "version"))...)
+					allErrs = append(allErrs, validateKubernetesVersionConstraints(a, c.cloudProfile.Spec.Kubernetes.Versions, *worker.Kubernetes.Version, oldWorkerKubernetesVersion, idxPath.Child("kubernetes", "version"))...)
 				}
 			}
 		}
@@ -1206,7 +1204,7 @@ func findLatestVersion(constraints []core.ExpirableVersion, major, minor *uint64
 	return latestVersion
 }
 
-func validateKubernetesVersionConstraints(a admission.Attributes, constraints []core.ExpirableVersion, shootVersion, oldShootVersion string, isNewWorkerPool bool, fldPath *field.Path) field.ErrorList {
+func validateKubernetesVersionConstraints(a admission.Attributes, constraints []core.ExpirableVersion, shootVersion, oldShootVersion string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if shootVersion == oldShootVersion {
@@ -1215,9 +1213,7 @@ func validateKubernetesVersionConstraints(a admission.Attributes, constraints []
 
 	var validValues []string
 	for _, versionConstraint := range constraints {
-		// Disallow usage of an expired Kubernetes version on Shoot creation and new worker pool creation
-		// Updating an existing worker to a higher (ensured by validation) expired Kubernetes version is necessary for consecutive maintenance force updates
-		if a.GetOperation() == admission.Create || isNewWorkerPool {
+		if a.GetOperation() == admission.Create {
 			if versionConstraint.ExpirationDate != nil && versionConstraint.ExpirationDate.Time.UTC().Before(time.Now().UTC()) {
 				continue
 			}
@@ -1494,7 +1490,7 @@ func getDefaultMachineImage(machineImages []core.MachineImage, imageName string,
 	return &core.ShootMachineImage{Name: defaultImage.Name, Version: latestMachineImageVersion.Version}, nil
 }
 
-func validateMachineImagesConstraints(a admission.Attributes, constraints []core.MachineImage, isNewWorkerPool bool, machine, oldMachine core.Machine) (bool, bool, bool, []string) {
+func validateMachineImagesConstraints(a admission.Attributes, constraints []core.MachineImage, machine, oldMachine core.Machine) (bool, bool, bool, []string) {
 	if apiequality.Semantic.DeepEqual(machine.Image, oldMachine.Image) && pointer.StringEqual(machine.Architecture, oldMachine.Architecture) {
 		return true, true, true, nil
 	}
@@ -1509,20 +1505,10 @@ func validateMachineImagesConstraints(a admission.Attributes, constraints []core
 		for _, machineVersion := range machineImage.Versions {
 			machineImageVersion := fmt.Sprintf("%s:%s", machineImage.Name, machineVersion.Version)
 
-			if machineVersion.ExpirationDate == nil || machineVersion.ExpirationDate.Time.UTC().After(time.Now().UTC()) {
+			// update to an expired version is allowed (required for maintenance force updates)
+			if a.GetOperation() == admission.Update || machineVersion.ExpirationDate == nil || machineVersion.ExpirationDate.Time.UTC().After(time.Now().UTC()) {
 				activeMachineImageVersions.Insert(machineImageVersion)
-			} else if machineVersion.ExpirationDate != nil && machineVersion.ExpirationDate.Time.UTC().Before(time.Now().UTC()) && a.GetOperation() == admission.Update && !isNewWorkerPool {
-				// An already expired machine image version is a viable machine image version for the worker pool if-and-only-if:
-				//  - this is an update call (no new Shoot creation)
-				//  - updates an existing worker pool (not for a new worker pool)
-				//  - the expired version is higher than the old machine's version
-				// Reason: updating an existing worker pool to an expired machine image version is required for maintenance force updates
-				downgrade, _ := versionutils.CompareVersions(machineVersion.Version, "<", oldMachine.Image.Version)
-				if !downgrade {
-					activeMachineImageVersions.Insert(machineImageVersion)
-				}
 			}
-
 			if slices.Contains(machineVersion.Architectures, *machine.Architecture) {
 				machineImageVersionsWithSupportedArchitecture.Insert(machineImageVersion)
 			}
@@ -1530,17 +1516,16 @@ func validateMachineImagesConstraints(a admission.Attributes, constraints []core
 		}
 	}
 
-	// valid machine image versions are all versions that can be used by this worker pool
-	validMachineImageVersions := sets.List(activeMachineImageVersions.Intersection(machineImageVersionsWithSupportedArchitecture))
+	supportedMachineImageVersions := sets.List(activeMachineImageVersions.Intersection(machineImageVersionsWithSupportedArchitecture))
 	if machine.Image == nil || len(machine.Image.Version) == 0 {
-		return false, false, false, validMachineImageVersions
+		return false, false, false, supportedMachineImageVersions
 	}
 
 	shootMachineImageVersion := fmt.Sprintf("%s:%s", machine.Image.Name, machine.Image.Version)
 	return machineImageVersionsInCloudProfile.Has(shootMachineImageVersion),
 		machineImageVersionsWithSupportedArchitecture.Has(shootMachineImageVersion),
 		activeMachineImageVersions.Has(shootMachineImageVersion),
-		validMachineImageVersions
+		supportedMachineImageVersions
 }
 
 func validateContainerRuntimeConstraints(constraints []core.MachineImage, worker, oldWorker core.Worker, fldPath *field.Path) field.ErrorList {

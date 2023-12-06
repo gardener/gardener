@@ -16,7 +16,6 @@ package nodeagent
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -145,10 +144,6 @@ func ComponentConfig(
 					SecretName: nodeagentv1alpha1.AccessSecretName,
 					Path:       nodeagentv1alpha1.TokenFilePath,
 				}}, additionalTokenSyncConfigs...),
-				// It is enough to sync the access tokens every 12h to the disk because they are only rotated roughly
-				// each 12h. Furthermore, they are valid for 30d, so there should be enough head time to sync an updated
-				// token.
-				SyncPeriod: &metav1.Duration{Duration: 12 * time.Hour},
 			},
 		},
 	}

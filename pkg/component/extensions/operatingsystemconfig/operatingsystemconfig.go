@@ -633,21 +633,15 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 	var (
 		units []extensionsv1alpha1.Unit
 		files []extensionsv1alpha1.File
-
-		initUnits []extensionsv1alpha1.Unit
-		initFiles []extensionsv1alpha1.File
-		err       error
 	)
 
-	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
-		initUnits, initFiles, err = InitConfigFn(
-			d.worker,
-			d.images[imagevector.ImageNameGardenerNodeAgent].String(),
-			nodeagent.ComponentConfig(d.key, d.kubernetesVersion, d.apiServerURL, d.clusterCABundle, d.oscSyncJitterPeriod, nil),
-		)
-		if err != nil {
-			return nil, err
-		}
+	initUnits, initFiles, err := InitConfigFn(
+		d.worker,
+		d.images[imagevector.ImageNameGardenerNodeAgent].String(),
+		nodeagent.ComponentConfig(d.key, d.kubernetesVersion, d.apiServerURL, d.clusterCABundle, d.oscSyncJitterPeriod, nil),
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	// The cloud-config-downloader unit is added regardless of the purpose of the OperatingSystemConfig:

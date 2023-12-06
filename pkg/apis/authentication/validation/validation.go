@@ -27,17 +27,17 @@ import (
 	"github.com/gardener/gardener/pkg/apis/authentication"
 )
 
-// ValidateKubeconfigRequest validates a KubeconfigRequest.
-func ValidateKubeconfigRequest(req *authentication.KubeconfigRequest) field.ErrorList {
+// ValidateAdminKubeconfigRequest validates a AdminKubeconfigRequest.
+func ValidateAdminKubeconfigRequest(acr *authentication.AdminKubeconfigRequest) field.ErrorList {
 	allErrs := field.ErrorList{}
 	specPath := field.NewPath("spec")
 
 	const min = 10 * time.Minute
-	if req.Spec.ExpirationSeconds < int64(min.Seconds()) {
-		allErrs = append(allErrs, field.Invalid(specPath.Child("expirationSeconds"), req.Spec.ExpirationSeconds, "may not specify a duration less than 10 minutes"))
+	if acr.Spec.ExpirationSeconds < int64(min.Seconds()) {
+		allErrs = append(allErrs, field.Invalid(specPath.Child("expirationSeconds"), acr.Spec.ExpirationSeconds, "may not specify a duration less than 10 minutes"))
 	}
-	if req.Spec.ExpirationSeconds > math.MaxUint32 {
-		allErrs = append(allErrs, field.TooLong(specPath.Child("expirationSeconds"), req.Spec.ExpirationSeconds, math.MaxUint32))
+	if acr.Spec.ExpirationSeconds > math.MaxUint32 {
+		allErrs = append(allErrs, field.TooLong(specPath.Child("expirationSeconds"), acr.Spec.ExpirationSeconds, math.MaxUint32))
 	}
 	return allErrs
 }

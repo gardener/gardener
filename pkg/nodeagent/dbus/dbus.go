@@ -25,6 +25,8 @@ import (
 	"k8s.io/client-go/tools/record"
 )
 
+const done = "done"
+
 // DBus is an interface for interacting with systemd via dbus.
 type DBus interface {
 	// DaemonReload reload the systemd configuration, same as executing "systemctl daemon-reload".
@@ -70,34 +72,69 @@ func (_ *db) Disable(ctx context.Context, unitNames ...string) error {
 	return err
 }
 
-func (d *db) Stop(ctx context.Context, recorder record.EventRecorder, node runtime.Object, unitName string) error {
+func (_ *db) Stop(ctx context.Context, recorder record.EventRecorder, node runtime.Object, unitName string) error {
 	dbc, err := dbus.NewWithContext(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to connect to dbus: %w", err)
 	}
 	defer dbc.Close()
 
-	return runCommand(ctx, recorder, node, unitName, dbc.StopUnitContext, "SystemDUnitStop", "stop")
+	jobCh := make(chan string)
+
+	if _, err := dbc.StopUnitContext(ctx, unitName, "replace", jobCh); err != nil {
+		return fmt.Errorf("unable to stop unit %s: %w", unitName, err)
+	}
+
+	if completion := <-jobCh; completion != done {
+		err = fmt.Errorf("stop failed for %s, due %s", unitName, completion)
+	}
+
+	recordEvent(recorder, node, err, unitName, "SystemDUnitStop", "stop")
+	return err
 }
 
-func (d *db) Start(ctx context.Context, recorder record.EventRecorder, node runtime.Object, unitName string) error {
+func (_ *db) Start(ctx context.Context, recorder record.EventRecorder, node runtime.Object, unitName string) error {
 	dbc, err := dbus.NewWithContext(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to connect to dbus: %w", err)
 	}
 	defer dbc.Close()
 
-	return runCommand(ctx, recorder, node, unitName, dbc.StartUnitContext, "SystemDUnitStart", "start")
+	jobCh := make(chan string)
+
+	if _, err := dbc.StartUnitContext(ctx, unitName, "replace", jobCh); err != nil {
+		return fmt.Errorf("unable to start unit %s: %w", unitName, err)
+	}
+
+	completion := <-jobCh
+	if completion != done {
+		err = fmt.Errorf("start failed for %s, due %s", unitName, completion)
+	}
+
+	recordEvent(recorder, node, err, unitName, "SystemDUnitStart", "start")
+	return err
 }
 
-func (d *db) Restart(ctx context.Context, recorder record.EventRecorder, node runtime.Object, unitName string) error {
+func (_ *db) Restart(ctx context.Context, recorder record.EventRecorder, node runtime.Object, unitName string) error {
 	dbc, err := dbus.NewWithContext(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to connect to dbus: %w", err)
 	}
 	defer dbc.Close()
 
-	return runCommand(ctx, recorder, node, unitName, dbc.RestartUnitContext, "SystemDUnitRestart", "restart")
+	jobCh := make(chan string)
+
+	if _, err := dbc.RestartUnitContext(ctx, unitName, "replace", jobCh); err != nil {
+		return fmt.Errorf("unable to restart unit %s: %w", unitName, err)
+	}
+
+	completion := <-jobCh
+	if completion != done {
+		err = fmt.Errorf("restart failed for %s, due %s", unitName, completion)
+	}
+
+	recordEvent(recorder, node, err, unitName, "SystemDUnitRestart", "restart")
+	return nil
 }
 
 func (_ *db) DaemonReload(ctx context.Context) error {
@@ -112,38 +149,6 @@ func (_ *db) DaemonReload(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func runCommand(
-	ctx context.Context,
-	recorder record.EventRecorder,
-	node runtime.Object,
-	unitName string,
-	f func(context.Context, string, string, chan<- string) (int, error),
-	eventReason string,
-	operation string,
-) error {
-	var (
-		jobCh = make(chan string)
-		err   error
-	)
-
-	if _, err := f(ctx, unitName, "replace", jobCh); err != nil {
-		return fmt.Errorf("unable to %s unit %s: %w", operation, unitName, err)
-	}
-
-	select {
-	case <-ctx.Done(): // context is cancelled
-		return ctx.Err()
-
-	case result := <-jobCh: // job channel reported back
-		if result != "done" {
-			err = fmt.Errorf("%s failed for %s, due %s", operation, unitName, result)
-		}
-	}
-
-	recordEvent(recorder, node, err, unitName, eventReason, operation)
-	return err
 }
 
 func recordEvent(recorder record.EventRecorder, node runtime.Object, err error, unitName, reason, operation string) {

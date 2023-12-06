@@ -313,7 +313,9 @@ func (r *Reconciler) reconcile(
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return tokenrequest.RenewAccessSecrets(ctx, r.RuntimeClientSet.Client(),
 					client.InNamespace(r.GardenNamespace),
-					client.MatchingLabels{resourcesv1alpha1.ResourceManagerClass: resourcesv1alpha1.ResourceManagerClassShoot},
+					// TODO(rfranzke): Uncomment the next line after v1.85 has been released
+					//  (together with restricting the garden's/shoot's tokenrequestor to the shoot class).
+					// client.MatchingLabels{resourcesv1alpha1.ResourceManagerClass: resourcesv1alpha1.ResourceManagerClassShoot},
 				)
 			}).RetryUntilTimeout(5*time.Second, 30*time.Second),
 			SkipIf:       helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing,

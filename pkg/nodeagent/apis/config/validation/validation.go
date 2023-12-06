@@ -110,8 +110,6 @@ func validateTokenControllerConfiguration(conf config.TokenControllerConfig, fld
 		allErrs = append(allErrs, field.Required(fldPath.Child("syncConfigs"), "must provide configuration for access token of gardener-node-agent itself"))
 	}
 
-	allErrs = append(allErrs, validateSyncPeriod(conf.SyncPeriod, fldPath)...)
-
 	return allErrs
 }
 

@@ -19,15 +19,19 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/features"
 	shootregistry "github.com/gardener/gardener/pkg/registry/core/shoot"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Strategy", func() {
@@ -54,6 +58,18 @@ var _ = Describe("Strategy", func() {
 					},
 				},
 			}
+		})
+
+		It("should forbid an empty worker list if WorkerlessShoots featuregate is disabled", func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.WorkerlessShoots, false))
+
+			errorList := shootregistry.NewStrategy(0).Validate(context.TODO(), shoot)
+
+			Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal("spec.provider.workers"),
+				"Detail": ContainSubstring("must provide at least one worker pool when WorkerlessShoots feature gate is disabled"),
+			}))))
 		})
 
 		It("should allow an empty worker list if WorkerlessShoots featuregate is enabled", func() {

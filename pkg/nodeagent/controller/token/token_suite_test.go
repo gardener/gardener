@@ -12,6 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate mockgen -package mock -destination=mocks.go github.com/gardener/gardener/pkg/component/shootsystem Interface
+package token_test
 
-package mock
+import (
+	"testing"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+)
+
+func TestToken(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "NodeAgent Controller Token Suite")
+}

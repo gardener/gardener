@@ -24,8 +24,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-
-	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 )
 
 var (
@@ -52,7 +50,7 @@ func formatKubeletDataDevice(log logr.Logger, fs afero.Afero, kubeletDataVolumeS
 	}
 
 	log.Info("Creating temporary file")
-	tmpFile, err := fs.TempFile(nodeagentv1alpha1.TempDir, "format-kubelet-data-volume-")
+	tmpFile, err := fs.TempFile("", "format-kubelet-data-volume-*")
 	if err != nil {
 		return fmt.Errorf("unable to create temporary directory: %w", err)
 	}

@@ -79,26 +79,6 @@ var _ = Describe("Defaults", func() {
 					Expect(obj.SyncJitterPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
 				})
 			})
-
-			Describe("Token controller", func() {
-				It("should default the object", func() {
-					obj := &TokenControllerConfig{}
-
-					SetDefaults_TokenControllerConfig(obj)
-
-					Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Hour})))
-				})
-
-				It("should not overwrite existing values", func() {
-					obj := &TokenControllerConfig{
-						SyncPeriod: &metav1.Duration{Duration: time.Second},
-					}
-
-					SetDefaults_TokenControllerConfig(obj)
-
-					Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Second})))
-				})
-			})
 		})
 
 		Describe("Server configuration", func() {

@@ -1,5 +1,4 @@
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/authentication/v1alpha1,AdminKubeconfigRequestStatus,Kubeconfig
-API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/authentication/v1alpha1,ViewerKubeconfigRequestStatus,Kubeconfig
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,Alerting,EmailReceivers
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,AvailabilityZone,UnavailableMachineTypes
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,AvailabilityZone,UnavailableVolumeTypes

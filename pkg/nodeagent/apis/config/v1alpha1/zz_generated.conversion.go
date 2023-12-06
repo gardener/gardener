@@ -345,7 +345,6 @@ func Convert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration(in *conf
 
 func autoConvert_v1alpha1_TokenControllerConfig_To_config_TokenControllerConfig(in *TokenControllerConfig, out *config.TokenControllerConfig, s conversion.Scope) error {
 	out.SyncConfigs = *(*[]config.TokenSecretSyncConfig)(unsafe.Pointer(&in.SyncConfigs))
-	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
 	return nil
 }
 
@@ -356,7 +355,6 @@ func Convert_v1alpha1_TokenControllerConfig_To_config_TokenControllerConfig(in *
 
 func autoConvert_config_TokenControllerConfig_To_v1alpha1_TokenControllerConfig(in *config.TokenControllerConfig, out *TokenControllerConfig, s conversion.Scope) error {
 	out.SyncConfigs = *(*[]TokenSecretSyncConfig)(unsafe.Pointer(&in.SyncConfigs))
-	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
 	return nil
 }
 

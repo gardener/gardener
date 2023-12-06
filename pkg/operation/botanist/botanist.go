@@ -159,7 +159,6 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	}
 
 	// system components
-	o.Shoot.Components.SystemComponents.Resources = b.DefaultShootSystem()
 	o.Shoot.Components.SystemComponents.Namespaces = b.DefaultShootNamespaces()
 	o.Shoot.Components.SystemComponents.ClusterIdentity = b.DefaultClusterIdentity()
 
@@ -186,6 +185,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		if err != nil {
 			return nil, err
 		}
+		o.Shoot.Components.SystemComponents.Resources = b.DefaultShootSystem()
 		o.Shoot.Components.SystemComponents.VPNShoot, err = b.DefaultVPNShoot()
 		if err != nil {
 			return nil, err
