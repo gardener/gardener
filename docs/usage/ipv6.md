@@ -27,4 +27,4 @@ Please also take a look at the guide on [Deploying Gardener Locally](../deployme
 
 If you plan on using custom images, make sure your registry supports IPv6 access.
 
-Check the [component checklist](https://github.com/gardener/gardener/blob/master/docs/development/component-checklist.md#images) for tips concerning container registries and how to handle their IPv6 support.
+Check the [component checklist](../development/component-checklist.md#images) for tips concerning container registries and how to handle their IPv6 support.
