@@ -20,6 +20,7 @@ import (
 	"reflect"
 
 	"github.com/coreos/go-systemd/v22/dbus"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
@@ -41,11 +42,13 @@ type DBus interface {
 	Restart(ctx context.Context, recorder record.EventRecorder, node runtime.Object, unitName string) error
 }
 
-type db struct{}
+type db struct {
+	log logr.Logger
+}
 
 // New returns a new working DBus
-func New() DBus {
-	return &db{}
+func New(log logr.Logger) DBus {
+	return &db{log: log}
 }
 
 func (_ *db) Enable(ctx context.Context, unitNames ...string) error {
