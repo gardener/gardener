@@ -27,6 +27,4 @@ Please also take a look at the guide on [Deploying Gardener Locally](../deployme
 
 If you plan on using custom images, make sure your registry supports IPv6 access.
 
-While the `docker.io` registry implemented IPv6 support recently (see [Docker Hub Registry IPv6 Support Now Generally Available](https://www.docker.com/blog/docker-hub-registry-ipv6-support-now-generally-available/)) there are others, e.g. `ghcr.io`, which do not support IPv6, yet.
-There is a [prow job](https://github.com/gardener/ci-infra/blob/92782bedd92815639abf4dc14b2c484f77c6e57d/config/jobs/ci-infra/copy-images.yaml) copying images from non-IPv6-enabled registries that are needed in gardener components to the gardener GCR under the prefix `eu.gcr.io/gardener-project/3rd/` (see the [documentation](https://github.com/gardener/ci-infra/tree/master/config/images) or [gardener/ci-infra#619](https://github.com/gardener/ci-infra/issues/619)).
-If you want to use a new image from a non-IPv6-enabled registry or upgrade an already used image to a newer tag, please open a PR to the ci-infra repository that modifies the job's list of images to copy: [`images.yaml`](https://github.com/gardener/ci-infra/blob/master/config/images/images.yaml).
+Check the [component checklist](https://github.com/gardener/gardener/blob/master/docs/development/component-checklist.md#images) for tips concerning container registries and how to handle their IPv6 support.
