@@ -55,7 +55,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		r.Recorder = mgr.GetEventRecorderFor(ControllerName)
 	}
 	if r.DBus == nil {
-		r.DBus = dbus.New()
+		r.DBus = dbus.New(mgr.GetLogger().WithValues("controller", ControllerName).WithName("dbus"))
 	}
 	if r.FS.Fs == nil {
 		r.FS = afero.Afero{Fs: afero.NewOsFs()}
