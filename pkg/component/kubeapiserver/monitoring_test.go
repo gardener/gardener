@@ -188,6 +188,9 @@ metric_relabel_configs:
     expr: histogram_quantile(0.5, sum without (instance, pod) (rate(apiserver_request_duration_seconds_bucket[5m])))
     labels:
       quantile: "0.5"
+  ### API server request duration greater than 1s percentage
+  - record: shoot:apiserver_latency:percentage
+    expr: 1 - sum(rate(apiserver_request_duration_seconds_bucket{le="1",subresource!~"log|portforward|exec|proxy|attach",verb!~"CONNECT|LIST|WATCH"}[1h])) / sum(rate(apiserver_request_duration_seconds_count{subresource!~"log|portforward|exec|proxy|attach",verb!~"CONNECT|LIST|WATCH"}[1h]))
 
   - record: shoot:kube_apiserver:sum_by_pod
     expr: sum(up{job="kube-apiserver"}) by (pod)
