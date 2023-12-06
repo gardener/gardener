@@ -49,7 +49,7 @@ type db struct {
 
 // New returns a new working DBus
 func New(log logr.Logger) DBus {
-	return &db{log: log}
+	return &db{log: log.WithName("dbus")}
 }
 
 func (_ *db) Enable(ctx context.Context, unitNames ...string) error {

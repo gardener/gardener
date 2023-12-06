@@ -38,7 +38,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, nodePredicate predicate.P
 		r.Recorder = mgr.GetEventRecorderFor(ControllerName)
 	}
 	if r.DBus == nil {
-		r.DBus = dbus.New(mgr.GetLogger().WithValues("controller", ControllerName).WithName("dbus"))
+		r.DBus = dbus.New(mgr.GetLogger().WithValues("controller", ControllerName))
 	}
 
 	node := &metav1.PartialObjectMetadata{}
