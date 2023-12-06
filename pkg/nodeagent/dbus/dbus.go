@@ -138,7 +138,7 @@ func (d *db) runCommand(
 
 	select {
 	case <-ctx.Done(): // context is cancelled
-		return ctx.Err()
+		err = ctx.Err()
 
 	case result := <-resultCh: // job channel reported back
 		if result != "done" {
