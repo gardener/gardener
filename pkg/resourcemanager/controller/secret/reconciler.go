@@ -39,7 +39,7 @@ type Reconciler struct {
 
 // Reconcile implements reconcile.Reconciler.
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	// TODO(Kostov6): Drop secret reconciler after v1.86 has been released.
+	// TODO(Kostov6): Drop secret reconciler after v1.89 has been released.
 	log := logf.FromContext(ctx)
 
 	ctx, cancel := controllerutils.GetMainReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
