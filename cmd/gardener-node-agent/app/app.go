@@ -98,7 +98,7 @@ func getBootstrapCommand(opts *options) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return bootstrap.Bootstrap(cmd.Context(), log, afero.Afero{Fs: afero.NewOsFs()}, dbus.New(), opts.config.Bootstrap)
+			return bootstrap.Bootstrap(cmd.Context(), log, afero.Afero{Fs: afero.NewOsFs()}, dbus.New(log), opts.config.Bootstrap)
 		},
 	}
 
@@ -192,7 +192,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 
 	var (
 		fs   = afero.Afero{Fs: afero.NewOsFs()}
-		dbus = dbus.New()
+		dbus = dbus.New(log)
 	)
 
 	log.Info("Creating directory for temporary files", "path", nodeagentv1alpha1.TempDir)
