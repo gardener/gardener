@@ -127,11 +127,11 @@ func runCommand(
 	operation string,
 ) error {
 	var (
-		jobCh = make(chan string)
-		err   error
+		resultCh = make(chan string)
+		err      error
 	)
 
-	if _, err := f(ctx, unitName, "replace", jobCh); err != nil {
+	if _, err := f(ctx, unitName, "replace", resultCh); err != nil {
 		return fmt.Errorf("unable to %s unit %s: %w", operation, unitName, err)
 	}
 
@@ -139,7 +139,7 @@ func runCommand(
 	case <-ctx.Done(): // context is cancelled
 		return ctx.Err()
 
-	case result := <-jobCh: // job channel reported back
+	case result := <-resultCh: // job channel reported back
 		if result != "done" {
 			err = fmt.Errorf("%s failed for %s, due %s", operation, unitName, result)
 		}
