@@ -701,8 +701,6 @@ build:
             - pkg/utils/timewindow
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
-            - third_party/apiserver/pkg/apis/audit/v1alpha1
-            - third_party/apiserver/pkg/apis/audit/v1beta1
             - third_party/controller-runtime/pkg/apiutil
             - VERSION
         ldflags:

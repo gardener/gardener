@@ -124,23 +124,10 @@ rules:
     - group: ""
       resources: ["pods/log", "pods/status"]
 `
+
 		validAuditPolicyV1alpha1 = `
 ---
 apiVersion: audit.k8s.io/v1alpha1
-kind: Policy
-rules:
-  - level: RequestResponse
-    resources:
-    - group: ""
-      resources: ["pods"]
-  - level: Metadata
-    resources:
-    - group: ""
-      resources: ["pods/log", "pods/status"]
-`
-		validAuditPolicyV1beta1 = `
----
-apiVersion: audit.k8s.io/v1beta1
 kind: Policy
 rules:
   - level: RequestResponse
@@ -370,7 +357,7 @@ rules:
 				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "did not find expected key", "")
 			})
 
-			It("references a valid auditPolicy/v1alpha1 (CREATE)", func() {
+			It("references a deprecated auditPolicy/v1alpha1", func() {
 				returnedCm := corev1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{},
 					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "2"},
@@ -380,52 +367,7 @@ rules:
 					*cm = returnedCm
 					return nil
 				})
-				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "audit policy with apiVersion 'v1alpha1' is not supported", "")
-			})
-
-			It("references a valid auditPolicy/v1alpha1 (UPDATE kubernetes version)", func() {
-				returnedCm := corev1.ConfigMap{
-					TypeMeta:   metav1.TypeMeta{},
-					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "2"},
-					Data:       map[string]string{"policy": validAuditPolicyV1alpha1},
-				}
-				mockReader.EXPECT().Get(gomock.Any(), kubernetesutils.Key(shootNamespace, cmName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, key client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
-					*cm = returnedCm
-					return nil
-				})
-
-				newShoot := shootv1beta1.DeepCopy()
-				newShoot.Spec.Kubernetes.Version = "1.26.5"
-				test(admissionv1.Update, shootv1beta1, newShoot, false, statusCodeInvalid, "audit policy with apiVersion 'v1alpha1' is not supported", "")
-			})
-
-			It("references a valid auditPolicy/v1beta1 (CREATE)", func() {
-				returnedCm := corev1.ConfigMap{
-					TypeMeta:   metav1.TypeMeta{},
-					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "2"},
-					Data:       map[string]string{"policy": validAuditPolicyV1beta1},
-				}
-				mockReader.EXPECT().Get(gomock.Any(), kubernetesutils.Key(shootNamespace, cmName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, key client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
-					*cm = returnedCm
-					return nil
-				})
-				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "audit policy with apiVersion 'v1beta1' is not supported", "")
-			})
-
-			It("references a valid auditPolicy/v1beta1 (UPDATE kubernetes version)", func() {
-				returnedCm := corev1.ConfigMap{
-					TypeMeta:   metav1.TypeMeta{},
-					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "2"},
-					Data:       map[string]string{"policy": validAuditPolicyV1beta1},
-				}
-				mockReader.EXPECT().Get(gomock.Any(), kubernetesutils.Key(shootNamespace, cmName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, key client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
-					*cm = returnedCm
-					return nil
-				})
-
-				newShoot := shootv1beta1.DeepCopy()
-				newShoot.Spec.Kubernetes.Version = "1.26.0"
-				test(admissionv1.Update, shootv1beta1, newShoot, false, statusCodeInvalid, "audit policy with apiVersion 'v1beta1' is not supported", "")
+				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "no kind \"Policy\" is registered for version \"audit.k8s.io/v1alpha1\"", "")
 			})
 		})
 	})
@@ -511,13 +453,6 @@ rules:
 					newCm.Data["policy"] = missingKeyAuditPolicy
 
 					test(admissionv1.Update, cm, newCm, false, statusCodeInvalid, "did not find expected key", "")
-				})
-
-				It("holds audit policy with unsupported version", func() {
-					newCm := cm.DeepCopy()
-					newCm.Data["policy"] = validAuditPolicyV1beta1
-
-					test(admissionv1.Update, cm, newCm, false, statusCodeInvalid, "audit policy with apiVersion 'v1beta1' is not supported", "")
 				})
 			})
 		})

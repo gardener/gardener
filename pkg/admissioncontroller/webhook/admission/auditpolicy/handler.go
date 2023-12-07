@@ -42,8 +42,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	auditv1alpha1 "github.com/gardener/gardener/third_party/apiserver/pkg/apis/audit/v1alpha1"
-	auditv1beta1 "github.com/gardener/gardener/third_party/apiserver/pkg/apis/audit/v1beta1"
 )
 
 const auditPolicyConfigMapDataKey = "policy"
@@ -59,8 +57,6 @@ var (
 func init() {
 	auditPolicyScheme := runtime.NewScheme()
 	schemeBuilder := runtime.NewSchemeBuilder(
-		auditv1alpha1.AddToScheme,
-		auditv1beta1.AddToScheme,
 		auditv1.AddToScheme,
 		audit_internal.AddToScheme,
 	)
@@ -231,10 +227,6 @@ func validateAuditPolicySemantics(auditPolicy string) (errCode int32, err error)
 	errList := auditvalidation.ValidatePolicy(auditPolicyInternal)
 	if len(errList) != 0 {
 		return http.StatusUnprocessableEntity, fmt.Errorf("provided invalid audit policy: %v", errList)
-	}
-
-	if schemaVersion.Version != "v1" {
-		return http.StatusUnprocessableEntity, fmt.Errorf("audit policy with apiVersion '%s' is not supported", schemaVersion.Version)
 	}
 
 	return 0, nil
