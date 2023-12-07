@@ -125,7 +125,7 @@ elif name == 'logging':
 elif name == 'etcd-custom-image':
     names = ['etcd']
 elif name == 'egress-filter-refresher':
-    names = ['egress-filter-blackholer', 'egress-filter-firewaller']
+    names = ['egress-filter']
 elif name == 'apiserver-proxy':
     names = ['apiserver-proxy-sidecar']
 else:
