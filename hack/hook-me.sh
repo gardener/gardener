@@ -43,6 +43,7 @@ createOrUpdateWebhookSVC(){
     [[ -z $quicServerPort ]] && echo "Please specify the quic pod server port!" && exit 1
 
     tmpService=$(mktemp)
+    echo ">> A backup copy of the service $namespace/$serviceName is stored in the file $tmpService"
     kubectl -n $namespace get svc $serviceName -o yaml | yq 'del(.metadata.resourceVersion)' > $tmpService
 
     cat <<EOF | kubectl apply -f -
