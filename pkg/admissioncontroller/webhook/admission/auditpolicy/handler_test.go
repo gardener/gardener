@@ -124,6 +124,21 @@ rules:
     - group: ""
       resources: ["pods/log", "pods/status"]
 `
+
+		validAuditPolicyV1alpha1 = `
+---
+apiVersion: audit.k8s.io/v1alpha1
+kind: Policy
+rules:
+  - level: RequestResponse
+    resources:
+    - group: ""
+      resources: ["pods"]
+  - level: Metadata
+    resources:
+    - group: ""
+      resources: ["pods/log", "pods/status"]
+`
 	)
 
 	BeforeEach(func() {
@@ -340,6 +355,19 @@ rules:
 					return nil
 				})
 				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "did not find expected key", "")
+			})
+
+			It("references a deprecated auditPolicy/v1alpha1", func() {
+				returnedCm := corev1.ConfigMap{
+					TypeMeta:   metav1.TypeMeta{},
+					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "2"},
+					Data:       map[string]string{"policy": validAuditPolicyV1alpha1},
+				}
+				mockReader.EXPECT().Get(gomock.Any(), kubernetesutils.Key(shootNamespace, cmName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, key client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
+					*cm = returnedCm
+					return nil
+				})
+				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "no kind \"Policy\" is registered for version \"audit.k8s.io/v1alpha1\"", "")
 			})
 		})
 	})
