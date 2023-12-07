@@ -43,7 +43,7 @@ createOrUpdateWebhookSVC(){
     [[ -z $quicServerPort ]] && echo "Please specify the quic pod server port!" && exit 1
 
     tmpService=$(mktemp)
-    kubectl get svc $serviceName -o yaml | yq 'del(.metadata.resourceVersion)' > $tmpService
+    kubectl -n $namespace get svc $serviceName -o yaml | yq 'del(.metadata.resourceVersion)' > $tmpService
 
     cat <<EOF | kubectl apply -f -
 ---
