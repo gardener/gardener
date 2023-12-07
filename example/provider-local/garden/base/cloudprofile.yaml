@@ -8,12 +8,6 @@ spec:
   - name: local
   kubernetes:
     versions:
-    - version: 1.28.4
-    - version: 1.27.8
-    - version: 1.26.11
-    - version: 1.25.16
-    - version: 1.24.17
-    # TODO(shafeeqes): Drop old versions once gardener v1.86 is released.
     - version: 1.28.2
     - version: 1.27.1
     - version: 1.26.0
