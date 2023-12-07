@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestNode(t *testing.T) {
+func TestHealthCheck(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "NodeAgent Controller Healthcheck Suite")
+	RunSpecs(t, "NodeAgent Controller HealthCheck Suite")
 }

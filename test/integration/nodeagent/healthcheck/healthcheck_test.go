@@ -230,43 +230,37 @@ var _ = Describe("Healthcheck controller tests", func() {
 			return kubeletHealthcheck.HasLastInternalIP()
 		}).Should(BeTrue())
 
-		By("Patch Node Status to Ready")
-		setNodeCondition(ctx, node, corev1.ConditionTrue)
-		Eventually(func() int {
-			return len(kubeletHealthcheck.KubeletReadynessToggles)
-		}).Should(Equal(1))
+		for i := 1; i <= 4; i++ {
+			clock.Step(2 * time.Second)
+			By("Patch Node Status to Ready")
+			setNodeCondition(ctx, node, corev1.ConditionTrue)
+			Eventually(func() bool {
+				return kubeletHealthcheck.NodeReady
+			}).Should(BeTrue())
+			Eventually(func() int {
+				return len(kubeletHealthcheck.KubeletReadinessToggles)
+			}).Should(Equal(i))
 
-		clock.Step(2 * time.Second)
-		By("Patch Node Status to NotReady")
-		setNodeCondition(ctx, node, corev1.ConditionFalse)
-		Eventually(func() int {
-			return len(kubeletHealthcheck.KubeletReadynessToggles)
-		}).Should(Equal(2))
-
-		clock.Step(2 * time.Second)
-		By("Patch Node Status to Ready")
-		setNodeCondition(ctx, node, corev1.ConditionTrue)
-		Eventually(func() int {
-			return len(kubeletHealthcheck.KubeletReadynessToggles)
-		}).Should(Equal(3))
-
-		clock.Step(2 * time.Second)
-		By("Patch Node Status to NotReady")
-		setNodeCondition(ctx, node, corev1.ConditionFalse)
-		Eventually(func() int {
-			return len(kubeletHealthcheck.KubeletReadynessToggles)
-		}).Should(Equal(4))
+			clock.Step(2 * time.Second)
+			By("Patch Node Status to NotReady")
+			setNodeCondition(ctx, node, corev1.ConditionFalse)
+			Eventually(func() bool {
+				return kubeletHealthcheck.NodeReady
+			}).Should(BeFalse())
+			Eventually(func() int {
+				return len(kubeletHealthcheck.KubeletReadinessToggles)
+			}).Should(Equal(i))
+		}
 
 		clock.Step(2 * time.Second)
 		By("Patch Node Status to Ready")
 		setNodeCondition(ctx, node, corev1.ConditionTrue)
+		Eventually(func() bool {
+			return kubeletHealthcheck.NodeReady
+		}).Should(BeTrue())
 		Eventually(func() int {
-			return len(kubeletHealthcheck.KubeletReadynessToggles)
+			return len(kubeletHealthcheck.KubeletReadinessToggles)
 		}).Should(Equal(5))
-
-		clock.Step(2 * time.Second)
-		By("Patch Node Status to NotReady")
-		setNodeCondition(ctx, node, corev1.ConditionFalse)
 
 		clock.Step(80 * time.Second)
 		Eventually(func() []fakedbus.SystemdAction {

@@ -21,13 +21,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-const maxFailureDuration = 60 * time.Second
+const maxFailureDuration = time.Minute
 
-// HealthChecker can be implemented to run a healthcheck against a node component
-// and repair if possible, otherwise fail and report bach.
+// HealthChecker can be implemented to run a health check against a node component
+// and fix it if possible.
 type HealthChecker interface {
 	// Name returns the name of the healthchecker.
 	Name() string
-	// Check executes the healthcheck.
+	// Check executes the health check.
 	Check(ctx context.Context, node *corev1.Node) error
 }

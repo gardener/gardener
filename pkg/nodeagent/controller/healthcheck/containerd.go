@@ -16,6 +16,7 @@ package healthcheck
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/containerd/containerd"
@@ -25,11 +26,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 )
-
-// containerdServiceName is the systemd service name of the containerd.
-const containerdServiceName = "containerd.service"
 
 // ContainerdClient defines the containerd client Interface exported for testing.
 type ContainerdClient interface {
@@ -37,27 +36,27 @@ type ContainerdClient interface {
 }
 
 type containerdHealthChecker struct {
-	kclient client.Client
+	client client.Client
 
-	client       ContainerdClient
-	firstFailure *time.Time
-	clock        clock.Clock
-	dbus         dbus.DBus
-	recorder     record.EventRecorder
+	containerdClient ContainerdClient
+	firstFailure     *time.Time
+	clock            clock.Clock
+	dbus             dbus.DBus
+	recorder         record.EventRecorder
 }
 
-// NewContainerdHealthChecker creates a new instance of a containerd healthcheck.
-func NewContainerdHealthChecker(kclient client.Client, cclient ContainerdClient, clock clock.Clock, dbus dbus.DBus, recorder record.EventRecorder) HealthChecker {
+// NewContainerdHealthChecker creates a new instance of a containerd health check.
+func NewContainerdHealthChecker(client client.Client, containerdClient ContainerdClient, clock clock.Clock, dbus dbus.DBus, recorder record.EventRecorder) HealthChecker {
 	return &containerdHealthChecker{
-		kclient:  kclient,
-		client:   cclient,
-		clock:    clock,
-		dbus:     dbus,
-		recorder: recorder,
+		client:           client,
+		containerdClient: containerdClient,
+		clock:            clock,
+		dbus:             dbus,
+		recorder:         recorder,
 	}
 }
 
-// Name returns the name of this healthcheck.
+// Name returns the name of this health check.
 func (*containerdHealthChecker) Name() string {
 	return "containerd"
 }
@@ -66,32 +65,32 @@ func (*containerdHealthChecker) Name() string {
 func (c *containerdHealthChecker) Check(ctx context.Context, node *corev1.Node) error {
 	log := logf.FromContext(ctx).WithName("containerd")
 
-	_, err := c.client.Version(ctx)
-	if err == nil {
-		if c.firstFailure != nil {
-			log.Info("Containerd is healthy again")
-			c.recorder.Event(node, corev1.EventTypeNormal, "containerd", "healthy")
-			c.firstFailure = nil
+	_, err := c.containerdClient.Version(ctx)
+	if err != nil {
+		if c.firstFailure == nil {
+			now := c.clock.Now()
+			c.firstFailure = &now
+			log.Error(err, "Unable to get containerd version, considered unhealthy")
+			c.recorder.Eventf(node, corev1.EventTypeWarning, "containerd", "Containerd is unhealthy: %s", err.Error())
 		}
+
+		if time.Since(*c.firstFailure).Abs() < maxFailureDuration {
+			return nil
+		}
+
+		log.Error(err, "Unable to get containerd version, restarting containerd")
+		if err := c.dbus.Restart(ctx, c.recorder, node, v1beta1constants.OperatingSystemConfigUnitNameContainerDService); err != nil {
+			return fmt.Errorf("failed restarting containerd: %w", err)
+		}
+
+		c.firstFailure = nil
 		return nil
 	}
 
-	if c.firstFailure == nil {
-		now := c.clock.Now()
-		c.firstFailure = &now
-		log.Error(err, "Unable to get containerd version, considered unhealthy")
-		c.recorder.Eventf(node, corev1.EventTypeWarning, "containerd", "unhealthy: %s", err.Error())
-	}
-
-	if time.Since(*c.firstFailure).Abs() < maxFailureDuration {
-		return nil
-	}
-
-	log.Error(err, "Unable to get containerd version, restarting containerd")
-
-	err = c.dbus.Restart(ctx, c.recorder, node, containerdServiceName)
-	if err == nil {
+	if c.firstFailure != nil {
+		log.Info("Containerd is healthy again")
+		c.recorder.Event(node, corev1.EventTypeNormal, "containerd", "Containerd is healthy")
 		c.firstFailure = nil
 	}
-	return err
+	return nil
 }

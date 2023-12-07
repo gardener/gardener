@@ -53,7 +53,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		taskFns = append(taskFns, func(ctx context.Context) error { return f.Check(ctx, node.DeepCopy()) })
 	}
 
-	err := flow.Parallel(taskFns...)(ctx)
+	if err := flow.Parallel(taskFns...)(ctx); err != nil {
+		return reconcile.Result{}, err
+	}
 
-	return reconcile.Result{RequeueAfter: time.Duration(r.HealthCheckIntervalSeconds) * time.Second}, err
+	return reconcile.Result{RequeueAfter: time.Duration(r.HealthCheckIntervalSeconds) * time.Second}, nil
 }

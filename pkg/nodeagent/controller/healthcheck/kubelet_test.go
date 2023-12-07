@@ -25,23 +25,25 @@ import (
 )
 
 var _ = Describe("Kubelet", func() {
-	Describe("#KubeletToggleStats", func() {
-		var (
-			khc   KubeletHealthChecker
-			clock *testing.FakeClock
-		)
-		BeforeEach(func() {
-			clock = testing.NewFakeClock(time.Now())
-			khc = KubeletHealthChecker{
-				KubeletReadynessToggles: []time.Time{},
-				Clock:                   clock,
-			}
-		})
-		It("toggle the first time should not harm", func() {
+	var (
+		khc   KubeletHealthChecker
+		clock *testing.FakeClock
+	)
+
+	BeforeEach(func() {
+		clock = testing.NewFakeClock(time.Now())
+		khc = KubeletHealthChecker{
+			KubeletReadinessToggles: []time.Time{},
+			Clock:                   clock,
+		}
+	})
+
+	Describe("#ToggleKubeletState", func() {
+		It("should be false when toggling for the first time", func() {
 			Expect(khc.ToggleKubeletState()).To(BeFalse())
 		})
 
-		It("toggle five times must trigger reboot", func() {
+		It("should be true when toggling for five times", func() {
 			Expect(khc.ToggleKubeletState()).To(BeFalse())
 			Expect(khc.ToggleKubeletState()).To(BeFalse())
 			Expect(khc.ToggleKubeletState()).To(BeFalse())
@@ -49,7 +51,7 @@ var _ = Describe("Kubelet", func() {
 			Expect(khc.ToggleKubeletState()).To(BeTrue())
 		})
 
-		It("toggle five times within a too long timespan must not trigger reboot", func() {
+		It("should forget toggles older than 10 minutes", func() {
 			Expect(khc.ToggleKubeletState()).To(BeFalse())
 			Expect(khc.ToggleKubeletState()).To(BeFalse())
 			Expect(khc.ToggleKubeletState()).To(BeFalse())
@@ -58,7 +60,23 @@ var _ = Describe("Kubelet", func() {
 			clock.Step(11 * time.Minute)
 
 			Expect(khc.ToggleKubeletState()).To(BeFalse())
+			Expect(khc.ToggleKubeletState()).To(BeFalse())
+			Expect(khc.KubeletReadinessToggles).To(HaveLen(2))
+		})
+	})
+
+	Describe("#RevertToggleKubeletState", func() {
+		It("should revert a toogle", func() {
+			Expect(khc.ToggleKubeletState()).To(BeFalse())
+			Expect(khc.KubeletReadinessToggles).To(HaveLen(1))
+			khc.RevertToggleKubeletState()
+			Expect(khc.KubeletReadinessToggles).To(BeEmpty())
 		})
 
+		It("should not fail to revert toggles even when there is no one", func() {
+			Expect(khc.KubeletReadinessToggles).To(BeEmpty())
+			khc.RevertToggleKubeletState()
+			Expect(khc.KubeletReadinessToggles).To(BeEmpty())
+		})
 	})
 })
