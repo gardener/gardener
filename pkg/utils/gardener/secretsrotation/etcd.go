@@ -17,14 +17,19 @@ package secretsrotation
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"golang.org/x/time/rate"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -44,6 +49,7 @@ func RewriteEncryptedDataAddLabel(
 	log logr.Logger,
 	c client.Client,
 	secretsManager secretsmanager.Interface,
+	message string,
 	gvks ...schema.GroupVersionKind,
 ) error {
 	etcdEncryptionKeySecret, found := secretsManager.Get(v1beta1constants.SecretNameETCDEncryptionKey, secretsmanager.Current)
@@ -59,6 +65,7 @@ func RewriteEncryptedDataAddLabel(
 		func(objectMeta *metav1.ObjectMeta) {
 			metav1.SetMetaDataLabel(objectMeta, labelKeyRotationKeyName, etcdEncryptionKeySecret.Name)
 		},
+		message,
 		gvks...,
 	)
 }
@@ -74,6 +81,7 @@ func RewriteEncryptedDataRemoveLabel(
 	targetClient client.Client,
 	namespace string,
 	name string,
+	message string,
 	gvks ...schema.GroupVersionKind,
 ) error {
 	if err := rewriteEncryptedData(
@@ -84,6 +92,7 @@ func RewriteEncryptedDataRemoveLabel(
 		func(objectMeta *metav1.ObjectMeta) {
 			delete(objectMeta.Labels, labelKeyRotationKeyName)
 		},
+		message,
 		gvks...,
 	); err != nil {
 		return err
@@ -100,6 +109,7 @@ func rewriteEncryptedData(
 	c client.Client,
 	requirement labels.Requirement,
 	mutateObjectMeta func(*metav1.ObjectMeta),
+	message string,
 	gvks ...schema.GroupVersionKind,
 ) error {
 	var (
@@ -110,17 +120,21 @@ func rewriteEncryptedData(
 	for _, gvk := range gvks {
 		objList := &metav1.PartialObjectMetadataList{}
 		objList.SetGroupVersionKind(gvk)
+
 		if err := c.List(ctx, objList, client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(requirement)}); err != nil {
 			return err
 		}
 
-		log.Info("Objects requiring to be rewritten after ETCD encryption key rotation", "gvk", gvk, "number", len(objList.Items))
+		log.Info(message, "gvk", gvk, "number", len(objList.Items)) //nolint:logcheck
 
 		for _, o := range objList.Items {
 			obj := o
 
 			taskFns = append(taskFns, func(ctx context.Context) error {
-				patch := client.StrategicMergeFrom(obj.DeepCopy())
+				// client.StrategicMergeFrom is not used here because CRDs don't support strategic-merge-patch.
+				// See https://github.com/kubernetes-sigs/controller-runtime/blob/a550f29c8781d1f7f9f19ab435ffac337b35a313/pkg/client/patch.go#L164-L173
+				// This should be okay since we don't modify any lists here.
+				patch := client.MergeFrom(obj.DeepCopy())
 				mutateObjectMeta(&obj.ObjectMeta)
 
 				// Wait until we are allowed by the limiter to not overload the API server with too many requests.
@@ -180,4 +194,81 @@ func PatchAPIServerDeploymentMeta(ctx context.Context, c client.Client, namespac
 	patch := client.MergeFrom(meta.DeepCopy())
 	mutate(meta)
 	return c.Patch(ctx, meta, patch)
+}
+
+// GetResourcesForRewrite returns a list of schema.GroupVersionKind for all the resources that needs to be rewritten, either due to a encryption
+// key rotation or a change in the list of resources requiring encryption.
+func GetResourcesForRewrite(discoveryClient discovery.DiscoveryInterface, resources []string) ([]schema.GroupVersionKind, error) {
+	var (
+		encryptedGVKs           = sets.New[schema.GroupVersionKind]()
+		coreResourcesToEncrypt  = sets.New[string]()
+		groupResourcesToEncrypt = map[string]sets.Set[string]{}
+	)
+
+	for _, resource := range resources {
+		var (
+			split    = strings.Split(resource, ".")
+			group    = strings.Join(split[1:], ".")
+			resource = split[0]
+		)
+
+		if len(split) == 1 {
+			coreResourcesToEncrypt.Insert(resource)
+			continue
+		}
+
+		if _, ok := groupResourcesToEncrypt[group]; !ok {
+			groupResourcesToEncrypt[group] = sets.New[string]()
+		}
+
+		groupResourcesToEncrypt[group].Insert(resource)
+	}
+
+	resourceLists, err := discoveryClient.ServerPreferredResources()
+	if err != nil {
+		return encryptedGVKs.UnsortedList(), fmt.Errorf("error discovering server preferred resources: %w", err)
+	}
+
+	for _, list := range resourceLists {
+		if len(list.APIResources) == 0 {
+			continue
+		}
+
+		gv, err := schema.ParseGroupVersion(list.GroupVersion)
+		if err != nil {
+			return encryptedGVKs.UnsortedList(), fmt.Errorf("error parsing groupVersion: %w", err)
+		}
+
+		for _, apiResource := range list.APIResources {
+			// If the resource doesn't support get, list and patch, we cannot list and rewrite it
+			if !slices.Contains(apiResource.Verbs, "get") ||
+				!slices.Contains(apiResource.Verbs, "list") ||
+				!slices.Contains(apiResource.Verbs, "patch") {
+				continue
+			}
+
+			var (
+				group   = gv.Group
+				version = gv.Version
+			)
+
+			if apiResource.Group != "" {
+				group = apiResource.Group
+			}
+			if apiResource.Version != "" {
+				version = apiResource.Version
+			}
+
+			if group == corev1.SchemeGroupVersion.Group && coreResourcesToEncrypt.Has(apiResource.Name) {
+				encryptedGVKs.Insert(schema.GroupVersionKind{Group: group, Version: version, Kind: apiResource.Kind})
+				continue
+			}
+
+			if resources, ok := groupResourcesToEncrypt[group]; ok && resources.Has(apiResource.Name) {
+				encryptedGVKs.Insert(schema.GroupVersionKind{Group: group, Version: version, Kind: apiResource.Kind})
+			}
+		}
+	}
+
+	return encryptedGVKs.UnsortedList(), nil
 }

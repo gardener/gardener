@@ -23,7 +23,10 @@ import (
 	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	fakediscovery "k8s.io/client-go/discovery/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -58,9 +61,17 @@ var _ = Describe("ETCD", func() {
 
 	Context("etcd encryption key secret rotation", func() {
 		var (
-			namespace1, namespace2    *corev1.Namespace
-			secret1, secret2, secret3 *corev1.Secret
-			kubeAPIServerDeployment   *appsv1.Deployment
+			namespace1, namespace2                *corev1.Namespace
+			secret1, secret2, secret3             *corev1.Secret
+			configMap1, configMap2                *corev1.ConfigMap
+			endpointSlice1, endpointSlice2        *discoveryv1.EndpointSlice
+			deployment1, deployment2, deployment3 *appsv1.Deployment
+			kubeAPIServerDeployment               *appsv1.Deployment
+
+			secret1ResourceVersion, secret2ResourceVersion, secret3ResourceVersion             string
+			configMap1ResourceVersion, configMap2ResourceVersion                               string
+			deployment1ResourceVersion, deployment2ResourceVersion, deployment3ResourceVersion string
+			endpointSlice1ResourceVersion, endpointSlice2ResourceVersion                       string
 		)
 
 		BeforeEach(func() {
@@ -83,9 +94,68 @@ var _ = Describe("ETCD", func() {
 				ObjectMeta: metav1.ObjectMeta{Name: "secret3", Namespace: namespace2.Name, Labels: map[string]string{"credentials.gardener.cloud/key-name": "kube-apiserver-etcd-encryption-key-current"}},
 			}
 
-			Expect(targetClient.Create(ctx, secret1)).To(Succeed())
-			Expect(targetClient.Create(ctx, secret2)).To(Succeed())
-			Expect(targetClient.Create(ctx, secret3)).To(Succeed())
+			configMap1 = &corev1.ConfigMap{
+				TypeMeta:   metav1.TypeMeta{APIVersion: corev1.SchemeGroupVersion.Version, Kind: "ConfigMap"},
+				ObjectMeta: metav1.ObjectMeta{Name: "configMap1", Namespace: namespace1.Name, Labels: map[string]string{"credentials.gardener.cloud/key-name": "kube-apiserver-etcd-encryption-key-current"}},
+			}
+			configMap2 = &corev1.ConfigMap{
+				TypeMeta:   metav1.TypeMeta{APIVersion: corev1.SchemeGroupVersion.Version, Kind: "ConfigMap"},
+				ObjectMeta: metav1.ObjectMeta{Name: "configMap2", Namespace: namespace2.Name},
+			}
+
+			deployment1 = &appsv1.Deployment{
+				TypeMeta:   metav1.TypeMeta{APIVersion: "apps/v1", Kind: "Deployment"},
+				ObjectMeta: metav1.ObjectMeta{Name: "deployment1", Namespace: namespace1.Name},
+			}
+			deployment2 = &appsv1.Deployment{
+				TypeMeta:   metav1.TypeMeta{APIVersion: "apps/v1", Kind: "Deployment"},
+				ObjectMeta: metav1.ObjectMeta{Name: "deployment2", Namespace: namespace1.Name, Labels: map[string]string{"credentials.gardener.cloud/key-name": "kube-apiserver-etcd-encryption-key-current"}},
+			}
+			deployment3 = &appsv1.Deployment{
+				TypeMeta:   metav1.TypeMeta{APIVersion: "apps/v1", Kind: "Deployment"},
+				ObjectMeta: metav1.ObjectMeta{Name: "deployment3", Namespace: namespace2.Name},
+			}
+
+			endpointSlice1 = &discoveryv1.EndpointSlice{
+				TypeMeta:   metav1.TypeMeta{APIVersion: "discovery.k8s.io/v1", Kind: "EndpointSlice"},
+				ObjectMeta: metav1.ObjectMeta{Name: "endpointSlice1", Namespace: namespace1.Name},
+			}
+			endpointSlice2 = &discoveryv1.EndpointSlice{
+				TypeMeta:   metav1.TypeMeta{APIVersion: "discovery.k8s.io/v1", Kind: "EndpointSlice"},
+				ObjectMeta: metav1.ObjectMeta{Name: "endpointSlice2", Namespace: namespace2.Name, Labels: map[string]string{"credentials.gardener.cloud/key-name": "kube-apiserver-etcd-encryption-key-current"}},
+			}
+
+			for _, obj := range []client.Object{
+				secret1, secret2, secret3,
+				deployment1, deployment2, deployment3,
+				configMap1, configMap2,
+				endpointSlice1, endpointSlice2,
+			} {
+				Expect(targetClient.Create(ctx, obj)).To(Succeed())
+			}
+
+			for _, obj := range []client.Object{
+				secret1, secret2, secret3,
+				configMap1, configMap2,
+				deployment1, deployment2, deployment3,
+				endpointSlice1, endpointSlice2,
+			} {
+				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
+			}
+
+			secret1ResourceVersion = secret1.ResourceVersion
+			secret2ResourceVersion = secret2.ResourceVersion
+			secret3ResourceVersion = secret3.ResourceVersion
+
+			configMap1ResourceVersion = configMap1.ResourceVersion
+			configMap2ResourceVersion = configMap2.ResourceVersion
+
+			deployment1ResourceVersion = deployment1.ResourceVersion
+			deployment2ResourceVersion = deployment2.ResourceVersion
+			deployment3ResourceVersion = deployment3.ResourceVersion
+
+			endpointSlice1ResourceVersion = endpointSlice1.ResourceVersion
+			endpointSlice2ResourceVersion = endpointSlice2.ResourceVersion
 
 			kubeAPIServerDeployment = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: kubeAPIServerDeploymentName, Namespace: kubeAPIServerNamespace}}
 			Expect(runtimeClient.Create(ctx, kubeAPIServerDeployment)).To(Succeed())
@@ -95,27 +165,38 @@ var _ = Describe("ETCD", func() {
 			It("should patch all secrets and add the label if not already done", func() {
 				Expect(runtimeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-etcd-encryption-key-current", Namespace: kubeAPIServerNamespace}})).To(Succeed())
 
-				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
-				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
-				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(secret3), secret3)).To(Succeed())
+				Expect(RewriteEncryptedDataAddLabel(ctx, logger, targetClient, fakeSecretsManager,
+					"Add label",
+					corev1.SchemeGroupVersion.WithKind("Secret"),
+					corev1.SchemeGroupVersion.WithKind("ConfigMap"),
+					appsv1.SchemeGroupVersion.WithKind("Deployment"),
+					discoveryv1.SchemeGroupVersion.WithKind("EndpointSlice"),
+				)).To(Succeed())
 
-				secret1ResourceVersion := secret1.ResourceVersion
-				secret2ResourceVersion := secret2.ResourceVersion
-				secret3ResourceVersion := secret3.ResourceVersion
-
-				Expect(RewriteEncryptedDataAddLabel(ctx, logger, targetClient, fakeSecretsManager, corev1.SchemeGroupVersion.WithKind("SecretList"))).To(Succeed())
-
-				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
-				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
-				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(secret3), secret3)).To(Succeed())
-
-				Expect(secret1.Labels).To(HaveKeyWithValue("credentials.gardener.cloud/key-name", "kube-apiserver-etcd-encryption-key-current"))
-				Expect(secret2.Labels).To(HaveKeyWithValue("credentials.gardener.cloud/key-name", "kube-apiserver-etcd-encryption-key-current"))
-				Expect(secret3.Labels).To(HaveKeyWithValue("credentials.gardener.cloud/key-name", "kube-apiserver-etcd-encryption-key-current"))
+				for _, obj := range []client.Object{
+					secret1, secret2, secret3,
+					configMap1, configMap2,
+					deployment1, deployment2, deployment3,
+					endpointSlice1, endpointSlice2,
+				} {
+					Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
+					Expect(obj.GetLabels()).To(HaveKeyWithValue("credentials.gardener.cloud/key-name", "kube-apiserver-etcd-encryption-key-current"))
+				}
 
 				Expect(secret1.ResourceVersion).NotTo(Equal(secret1ResourceVersion))
 				Expect(secret2.ResourceVersion).NotTo(Equal(secret2ResourceVersion))
 				Expect(secret3.ResourceVersion).To(Equal(secret3ResourceVersion))
+
+				Expect(configMap1.ResourceVersion).To(Equal(configMap1ResourceVersion))
+				Expect(configMap2.ResourceVersion).NotTo(Equal(configMap2ResourceVersion))
+
+				Expect(deployment1.ResourceVersion).NotTo(Equal(deployment1ResourceVersion))
+				Expect(deployment2.ResourceVersion).To(Equal(deployment2ResourceVersion))
+				Expect(deployment3.ResourceVersion).NotTo(Equal(deployment3ResourceVersion))
+
+				Expect(endpointSlice1.ResourceVersion).NotTo(Equal(endpointSlice1ResourceVersion))
+				Expect(endpointSlice2.ResourceVersion).To(Equal(endpointSlice2ResourceVersion))
+
 			})
 		})
 
@@ -149,31 +230,160 @@ var _ = Describe("ETCD", func() {
 				metav1.SetMetaDataAnnotation(&kubeAPIServerDeployment.ObjectMeta, "credentials.gardener.cloud/etcd-snapshotted", "true")
 				Expect(runtimeClient.Update(ctx, kubeAPIServerDeployment)).To(Succeed())
 
-				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
-				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
-				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(secret3), secret3)).To(Succeed())
+				Expect(RewriteEncryptedDataRemoveLabel(ctx, logger, runtimeClient, targetClient, kubeAPIServerNamespace, kubeAPIServerDeploymentName,
+					"Remove label",
+					corev1.SchemeGroupVersion.WithKind("Secret"),
+					corev1.SchemeGroupVersion.WithKind("ConfigMap"),
+					appsv1.SchemeGroupVersion.WithKind("Deployment"),
+					discoveryv1.SchemeGroupVersion.WithKind("EndpointSlice"),
+				)).To(Succeed())
 
-				secret1ResourceVersion := secret1.ResourceVersion
-				secret2ResourceVersion := secret2.ResourceVersion
-				secret3ResourceVersion := secret3.ResourceVersion
-
-				Expect(RewriteEncryptedDataRemoveLabel(ctx, logger, runtimeClient, targetClient, kubeAPIServerNamespace, kubeAPIServerDeploymentName, corev1.SchemeGroupVersion.WithKind("SecretList"))).To(Succeed())
-
-				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
-				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
-				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(secret3), secret3)).To(Succeed())
-
-				Expect(secret1.Labels).NotTo(HaveKey("credentials.gardener.cloud/key-name"))
-				Expect(secret2.Labels).NotTo(HaveKey("credentials.gardener.cloud/key-name"))
-				Expect(secret3.Labels).NotTo(HaveKey("credentials.gardener.cloud/key-name"))
+				for _, obj := range []client.Object{
+					secret1, secret2, secret3,
+					configMap1, configMap2,
+					deployment1, deployment2, deployment3,
+					endpointSlice1, endpointSlice2,
+				} {
+					Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
+					Expect(obj.GetLabels()).NotTo(HaveKey("credentials.gardener.cloud/key-name"))
+				}
 
 				Expect(secret1.ResourceVersion).To(Equal(secret1ResourceVersion))
 				Expect(secret2.ResourceVersion).To(Equal(secret2ResourceVersion))
 				Expect(secret3.ResourceVersion).NotTo(Equal(secret3ResourceVersion))
+
+				Expect(configMap1.ResourceVersion).NotTo(Equal(configMap1ResourceVersion))
+				Expect(configMap2.ResourceVersion).To(Equal(configMap2ResourceVersion))
+
+				Expect(deployment1.ResourceVersion).To(Equal(deployment1ResourceVersion))
+				Expect(deployment2.ResourceVersion).NotTo(Equal(deployment2ResourceVersion))
+				Expect(deployment3.ResourceVersion).To(Equal(deployment3ResourceVersion))
+
+				Expect(endpointSlice1.ResourceVersion).To(Equal(endpointSlice1ResourceVersion))
+				Expect(endpointSlice2.ResourceVersion).NotTo(Equal(endpointSlice2ResourceVersion))
 
 				Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(kubeAPIServerDeployment), kubeAPIServerDeployment)).To(Succeed())
 				Expect(kubeAPIServerDeployment.Annotations).NotTo(HaveKey("credentials.gardener.cloud/etcd-snapshotted"))
 			})
 		})
 	})
+
+	Describe("GetResourcesForRewrite", func() {
+		var fakeDiscoveryClient *fakeDiscoveryWithServerPreferredResources
+
+		BeforeEach(func() {
+			fakeDiscoveryClient = &fakeDiscoveryWithServerPreferredResources{}
+		})
+
+		It("should return the correct GVK list", func() {
+			resources := []string{
+				"crontabs.stable.example.com",
+				"managedresources.resources.gardener.cloud",
+				"configmaps",
+				"deployments.apps",
+			}
+
+			list, err := GetResourcesForRewrite(fakeDiscoveryClient, resources)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(list).To(ConsistOf(
+				schema.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"},
+				schema.GroupVersionKind{Group: "stable.example.com", Version: "v1", Kind: "CronTab"},
+				schema.GroupVersionKind{Group: "resources.gardener.cloud", Version: "v1alpha1", Kind: "ManagedResource"},
+				schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"},
+			))
+		})
+	})
 })
+
+type fakeDiscoveryWithServerPreferredResources struct {
+	*fakediscovery.FakeDiscovery
+}
+
+func (c *fakeDiscoveryWithServerPreferredResources) ServerPreferredResources() ([]*metav1.APIResourceList, error) {
+	return []*metav1.APIResourceList{
+		{
+			GroupVersion: "v1",
+			APIResources: []metav1.APIResource{
+				{
+					Name:       "configmaps",
+					Namespaced: true,
+					Group:      corev1.SchemeGroupVersion.Group,
+					Version:    corev1.SchemeGroupVersion.Version,
+					Kind:       "ConfigMap",
+					Verbs:      metav1.Verbs{"delete", "deletecollection", "get", "list", "patch", "create", "update", "watch"},
+				},
+				{
+					Name:       "services",
+					Namespaced: true,
+					Group:      corev1.SchemeGroupVersion.Group,
+					Version:    corev1.SchemeGroupVersion.Version,
+					Kind:       "Service",
+					Verbs:      metav1.Verbs{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
+					ShortNames: []string{"svc"},
+				},
+			},
+		},
+
+		{
+			GroupVersion: "apps/v1",
+			APIResources: []metav1.APIResource{
+				{
+					Name:         "daemonsets",
+					SingularName: "daemonset",
+					Namespaced:   true,
+					Group:        "",
+					Version:      "",
+					Kind:         "DaemonSet",
+					Verbs:        metav1.Verbs{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
+					ShortNames:   []string{"ds"},
+				},
+				{
+					Name:         "deployments",
+					SingularName: "deployment",
+					Namespaced:   true,
+					Group:        "",
+					Version:      "",
+					Kind:         "Deployment",
+					Verbs:        metav1.Verbs{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
+					ShortNames:   []string{"deploy"},
+				},
+			},
+		},
+		{
+			GroupVersion: "resources.gardener.cloud/v1alpha1",
+			APIResources: []metav1.APIResource{
+				{
+					Name:       "managedresources",
+					Namespaced: true,
+					Group:      "resources.gardener.cloud",
+					Version:    "v1alpha1",
+					Kind:       "ManagedResource",
+					Verbs:      metav1.Verbs{"delete", "deletecollection", "get", "list", "patch", "create", "update", "watch"},
+				},
+			},
+		},
+		{
+			GroupVersion: "stable.example.com/v1",
+			APIResources: []metav1.APIResource{
+				{
+					Name:         "crontabs",
+					SingularName: "crontab",
+					Namespaced:   true,
+					Group:        "stable.example.com",
+					Version:      "v1",
+					Kind:         "CronTab",
+					Verbs:        metav1.Verbs{"delete", "deletecollection", "get", "list", "patch", "create", "update", "watch"},
+				},
+				{
+					Name:         "cronbars",
+					SingularName: "cronbar",
+					Namespaced:   true,
+					Group:        "stable.example.com",
+					Version:      "v1",
+					Kind:         "CronBar",
+					Verbs:        metav1.Verbs{"delete", "deletecollection", "get", "list", "patch", "create", "update", "watch"},
+				},
+			},
+		},
+	}, nil
+}
