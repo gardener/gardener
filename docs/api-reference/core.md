@@ -4280,6 +4280,40 @@ triggered.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.EncryptionConfig">EncryptionConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
+</p>
+<p>
+<p>EncryptionConfig contains customizable encryption configuration of the API server.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>resources</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<p>Resources contains the list of resources that shall be encrypted in addition to secrets.
+Each item is a Kubernetes resource name in plural (resource or resource.group) that should be encrypted.
+Note that configuring a custom resource is only supported for versions &gt;= 1.26.
+Wildcards are not supported for now.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md">https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md</a> for more details.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.ErrorCode">ErrorCode
 (<code>string</code> alias)</p></h3>
 <p>
@@ -5248,6 +5282,20 @@ int64
 that is added by default to every pod that does not already have such a toleration (flag <code>--default-unreachable-toleration-seconds</code>).
 The field has effect only when the <code>DefaultTolerationSeconds</code> admission plugin is enabled.
 Defaults to 300.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>encryptionConfig</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.EncryptionConfig">
+EncryptionConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>EncryptionConfig contains customizable encryption configuration of the Kube API server.</p>
 </td>
 </tr>
 </tbody>
@@ -11289,6 +11337,20 @@ LastMaintenance
 <td>
 <em>(Optional)</em>
 <p>LastMaintenance holds information about the last maintenance operations on the Shoot.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>encryptedResources</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>EncryptedResources is the list of resources in the Shoot which are currently encrypted.
+Secrets are encrypted by default and are not part of the list.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md">https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md</a> for more details.</p>
 </td>
 </tr>
 </tbody>

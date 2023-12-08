@@ -394,6 +394,11 @@ func (in *GardenStatus) DeepCopyInto(out *GardenStatus) {
 		*out = new(Credentials)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.EncryptedResources != nil {
+		in, out := &in.EncryptedResources, &out.EncryptedResources
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 
@@ -477,6 +482,11 @@ func (in *GardenerAPIServerConfig) DeepCopyInto(out *GardenerAPIServerConfig) {
 	if in.WatchCacheSizes != nil {
 		in, out := &in.WatchCacheSizes, &out.WatchCacheSizes
 		*out = new(v1beta1.WatchCacheSizes)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.EncryptionConfig != nil {
+		in, out := &in.EncryptionConfig, &out.EncryptionConfig
+		*out = new(v1beta1.EncryptionConfig)
 		(*in).DeepCopyInto(*out)
 	}
 	return
