@@ -84,10 +84,10 @@ var _ = Describe("apigroups", func() {
 				"Field":  Equal("runtimeConfig[resource.k8s.io/v1alpha1]"),
 				"Detail": Equal("api \"resource.k8s.io/v1alpha1\" is not supported in Kubernetes version 1.27.4, only supported in versions >= 1.26, < 1.27"),
 			})))),
-			Entry("unsupported API group version", map[string]bool{"networking.k8s.io/v1alpha1": false}, "1.24.12", false, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("unsupported API group version", map[string]bool{"resource.k8s.io/v1alpha2": false}, "1.24.12", false, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal("runtimeConfig[networking.k8s.io/v1alpha1]"),
-				"Detail": Equal("api \"networking.k8s.io/v1alpha1\" is not supported in Kubernetes version 1.24.12, only supported in versions >= 1.25"),
+				"Field":  Equal("runtimeConfig[resource.k8s.io/v1alpha2]"),
+				"Detail": Equal("api \"resource.k8s.io/v1alpha2\" is not supported in Kubernetes version 1.24.12, only supported in versions >= 1.27"),
 			})))),
 			Entry("disabling non-required API group version", map[string]bool{"batch/v1": false}, "1.26.8", false, BeEmpty()),
 			Entry("disabling non-required API group version for workerless shoot", map[string]bool{"apps/v1": false}, "1.26.8", true, BeEmpty()),
