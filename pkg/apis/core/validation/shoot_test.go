@@ -1629,458 +1629,643 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 		})
 
-		Context("OIDC validation", func() {
-			It("should forbid unsupported OIDC configuration", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.CABundle = pointer.String("")
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.String("")
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.GroupsClaim = pointer.String("")
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.GroupsPrefix = pointer.String("")
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = pointer.String("")
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.UsernameClaim = pointer.String("")
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.UsernamePrefix = pointer.String("")
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.RequiredClaims = map[string]string{}
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.SigningAlgs = []string{"foo"}
+		Context("KubeAPIServer validation", func() {
+			Context("OIDC validation", func() {
+				It("should forbid unsupported OIDC configuration", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.CABundle = pointer.String("")
+					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.String("")
+					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.GroupsClaim = pointer.String("")
+					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.GroupsPrefix = pointer.String("")
+					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = pointer.String("")
+					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.UsernameClaim = pointer.String("")
+					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.UsernamePrefix = pointer.String("")
+					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.RequiredClaims = map[string]string{}
+					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.SigningAlgs = []string{"foo"}
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.issuerURL"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.clientID"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.caBundle"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.groupsClaim"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.groupsPrefix"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeNotSupported),
+						"Field":  Equal("spec.kubernetes.kubeAPIServer.oidcConfig.signingAlgs[0]"),
+						"Detail": Equal("supported values: \"ES256\", \"ES384\", \"ES512\", \"PS256\", \"PS384\", \"PS512\", \"RS256\", \"RS384\", \"RS512\", \"none\""),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.usernameClaim"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.usernamePrefix"),
+					}))))
+				})
+
+				DescribeTable("should forbid issuerURL to be empty string or nil, if clientID exists ", func(errorListSize int, issuerURL *string) {
+					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.String("someClientID")
+					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = issuerURL
+
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(HaveLen(errorListSize))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.issuerURL"),
+					}))
+				},
+					Entry("should add error if clientID is set but issuerURL is nil ", 1, nil),
+					Entry("should add error if clientID is set but issuerURL is empty string", 2, pointer.String("")),
+				)
+
+				It("should forbid issuerURL which is not HTTPS schema", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = pointer.String("http://issuer.com")
+					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.String("someClientID")
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(HaveLen(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.issuerURL"),
+					}))
+				})
+
+				It("should not fail if both clientID and issuerURL are set", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = pointer.String("https://issuer.com")
+					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.String("someClientID")
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(BeEmpty())
+				})
+
+				DescribeTable("should forbid clientID to be empty string or nil, if issuerURL exists ", func(errorListSize int, clientID *string) {
+					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = pointer.String("https://issuer.com")
+					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = clientID
+
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(HaveLen(errorListSize))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.clientID"),
+					}))
+				},
+					Entry("should add error if issuerURL is set but clientID is nil", 1, nil),
+					Entry("should add error if issuerURL is set but clientID is empty string ", 2, pointer.String("")),
+				)
+			})
+
+			Context("admission plugin validation", func() {
+				It("should allow not specifying admission plugins", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = nil
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(BeEmpty())
+				})
+
+				It("should forbid specifying admission plugins without a name", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
+						{
+							Name: "",
+						},
+					}
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(HaveLen(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.admissionPlugins[0].name"),
+					}))
+				})
+
+				It("should forbid specifying the SecurityContextDeny admission plugin", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
+						{
+							Name: "SecurityContextDeny",
+						},
+					}
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.admissionPlugins[0].name"),
+					}))))
+				})
+
+				It("should forbid disabling the required plugins", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
+						{
+							Name:     "MutatingAdmissionWebhook",
+							Disabled: pointer.Bool(true),
+						},
+						{
+							Name:     "NamespaceLifecycle",
+							Disabled: pointer.Bool(false),
+						},
+						{
+							Name:     "NodeRestriction",
+							Disabled: pointer.Bool(true),
+						},
+					}
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.kubernetes.kubeAPIServer.admissionPlugins[0]"),
+						"Detail": Equal(fmt.Sprintf("admission plugin %q cannot be disabled", shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins[0].Name)),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.kubernetes.kubeAPIServer.admissionPlugins[2]"),
+						"Detail": Equal(fmt.Sprintf("admission plugin %q cannot be disabled", shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins[2].Name)),
+					}))))
+				})
+			})
+
+			Context("encryption config", func() {
+				BeforeEach(func() {
+					shoot.Spec.Kubernetes.Version = "1.28"
+				})
+
+				It("should allow specifying valid resources", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources: []string{"configmaps", "nonexistingresource", "postgres.fancyoperator.io"},
+					}
+
+					Expect(ValidateShoot(shoot)).To(BeEmpty())
+				})
+
+				It("should deny specifying duplicated resources", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources: []string{"configmaps", "configmaps"},
+					}
+
+					Expect(ValidateShoot(shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[1]"),
+						})),
+					))
+				})
+
+				It("should deny specifying wildcard resources", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources: []string{"*.apps", "*.*"},
+					}
+
+					Expect(ValidateShoot(shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[0]"),
+							"Detail": Equal("wildcards are not supported"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[1]"),
+							"Detail": Equal("wildcards are not supported"),
+						})),
+					))
+				})
+
+				It("should deny specifying 'secrets' resource in resources", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources: []string{"configmaps", "secrets", "secrets."},
+					}
+
+					Expect(ValidateShoot(shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[1]"),
+							"Detail": Equal("\"secrets\" are always encrypted"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[2]"),
+							"Detail": Equal("\"secrets.\" are always encrypted"),
+						})),
+					))
+				})
+
+				It("should deny using custom resources for Kubernetes versions < 1.26", func() {
+					shoot.Spec.Kubernetes.Version = "1.25"
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources: []string{"deployment.apps", "new.custom.io", "ingresses.networking.k8s.io"},
+					}
+
+					Expect(ValidateShoot(shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[1]"),
+							"BadValue": Equal("new.custom.io"),
+							"Detail":   Equal("custom resources are only supported for Kubernetes versions >= 1.26"),
+						})),
+					))
+				})
+
+				It("should deny changing items when resources in the spec and status are not equal", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources: []string{"configmaps", "deployments.apps"},
+					}
+
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"configmaps", "new.fancyresource.io"}
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources"),
+							"Detail": Equal("resources cannot be changed when the kubernetes resources in spec.kubernetes.kubeAPIServer.encryptionConfig and the status.encryptedResources are not equal"),
+						})),
+					))
+				})
+
+				It("should deny changing items when shoot is in hibernation", func() {
+					resources := []string{"configmaps", "deployments.apps"}
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources: resources,
+					}
+					shoot.Status.EncryptedResources = resources
+					shoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)}
+
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"configmaps", "new.fancyresource.io"}
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources"),
+							"Detail": Equal("resources cannot be changed when shoot is in hibernation"),
+						})),
+					))
+				})
+
+				It("should allow changing items when shoot is waking up", func() {
+					resources := []string{"configmaps", "deployments.apps"}
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources: resources,
+					}
+					shoot.Status.EncryptedResources = resources
+					shoot.Status.IsHibernated = true
+
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)}
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"configmaps", "new.fancyresource.io"}
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+				})
+
+				It("should deny changing items during ETCD Encryption Key rotation", func() {
+					resources := []string{"configmaps", "deployments.apps"}
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources: resources,
+					}
+					shoot.Status.EncryptedResources = resources
+
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"configmaps", "new.fancyresource.io"}
+					newShoot.Status.Credentials = &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
+								Phase: core.RotationPreparing,
+							},
+						},
+					}
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources"),
+							"Detail": Equal("resources cannot be changed when .status.credentials.rotation.etcdEncryptionKey.phase is not \"Completed\""),
+						})),
+					))
+				})
+
+				It("should allow changing items if ETCD Encryption Key rotation is in phase Completed or was never rotated", func() {
+					resources := []string{"configmaps", "deployments.apps"}
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources: resources,
+					}
+					shoot.Status.EncryptedResources = resources
+
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"deployments.apps", "newresource.fancyresource.io"}
+					newShoot.Status.Credentials = nil
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+
+					newShoot.Status.Credentials = &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
+								Phase: core.RotationCompleted,
+							},
+						},
+					}
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+				})
+			})
+
+			Context("WatchCacheSizes validation", func() {
+				var negativeSize int32 = -1
+
+				DescribeTable("watch cache size validation",
+					func(sizes *core.WatchCacheSizes, matcher gomegatypes.GomegaMatcher) {
+						Expect(ValidateWatchCacheSizes(sizes, nil)).To(matcher)
+					},
+
+					Entry("valid (unset)", nil, BeEmpty()),
+					Entry("valid (fields unset)", &core.WatchCacheSizes{}, BeEmpty()),
+					Entry("valid (default=0)", &core.WatchCacheSizes{
+						Default: pointer.Int32(0),
+					}, BeEmpty()),
+					Entry("valid (default>0)", &core.WatchCacheSizes{
+						Default: pointer.Int32(42),
+					}, BeEmpty()),
+					Entry("invalid (default<0)", &core.WatchCacheSizes{
+						Default: pointer.Int32(negativeSize),
+					}, ConsistOf(
+						field.Invalid(field.NewPath("default"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
+					)),
+
+					// APIGroup unset (core group)
+					Entry("valid (core/secrets=0)", &core.WatchCacheSizes{
+						Resources: []core.ResourceWatchCacheSize{{
+							Resource:  "secrets",
+							CacheSize: 0,
+						}},
+					}, BeEmpty()),
+					Entry("valid (core/secrets=>0)", &core.WatchCacheSizes{
+						Resources: []core.ResourceWatchCacheSize{{
+							Resource:  "secrets",
+							CacheSize: 42,
+						}},
+					}, BeEmpty()),
+					Entry("invalid (core/secrets=<0)", &core.WatchCacheSizes{
+						Resources: []core.ResourceWatchCacheSize{{
+							Resource:  "secrets",
+							CacheSize: negativeSize,
+						}},
+					}, ConsistOf(
+						field.Invalid(field.NewPath("resources[0].size"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
+					)),
+					Entry("invalid (core/resource empty)", &core.WatchCacheSizes{
+						Resources: []core.ResourceWatchCacheSize{{
+							Resource:  "",
+							CacheSize: 42,
+						}},
+					}, ConsistOf(
+						field.Required(field.NewPath("resources[0].resource"), "must not be empty"),
+					)),
+
+					// APIGroup set
+					Entry("valid (apps/deployments=0)", &core.WatchCacheSizes{
+						Resources: []core.ResourceWatchCacheSize{{
+							APIGroup:  pointer.String("apps"),
+							Resource:  "deployments",
+							CacheSize: 0,
+						}},
+					}, BeEmpty()),
+					Entry("valid (apps/deployments=>0)", &core.WatchCacheSizes{
+						Resources: []core.ResourceWatchCacheSize{{
+							APIGroup:  pointer.String("apps"),
+							Resource:  "deployments",
+							CacheSize: 42,
+						}},
+					}, BeEmpty()),
+					Entry("invalid (apps/deployments=<0)", &core.WatchCacheSizes{
+						Resources: []core.ResourceWatchCacheSize{{
+							APIGroup:  pointer.String("apps"),
+							Resource:  "deployments",
+							CacheSize: negativeSize,
+						}},
+					}, ConsistOf(
+						field.Invalid(field.NewPath("resources[0].size"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
+					)),
+					Entry("invalid (apps/resource empty)", &core.WatchCacheSizes{
+						Resources: []core.ResourceWatchCacheSize{{
+							Resource:  "",
+							CacheSize: 42,
+						}},
+					}, ConsistOf(
+						field.Required(field.NewPath("resources[0].resource"), "must not be empty"),
+					)),
+				)
+			})
+
+			Context("APIServerLogging validation", func() {
+				var negativeSize int32 = -1
+
+				DescribeTable("APIServerLogging validation",
+					func(loggingConfig *core.APIServerLogging, matcher gomegatypes.GomegaMatcher) {
+						Expect(ValidateAPIServerLogging(loggingConfig, nil)).To(matcher)
+					},
+
+					Entry("valid (unset)", nil, BeEmpty()),
+					Entry("valid (fields unset)", &core.APIServerLogging{}, BeEmpty()),
+					Entry("valid (verbosity=0)", &core.APIServerLogging{
+						Verbosity: pointer.Int32(0),
+					}, BeEmpty()),
+					Entry("valid (httpAccessVerbosity=0)", &core.APIServerLogging{
+						HTTPAccessVerbosity: pointer.Int32(0),
+					}, BeEmpty()),
+					Entry("valid (verbosity>0)", &core.APIServerLogging{
+						Verbosity: pointer.Int32(3),
+					}, BeEmpty()),
+					Entry("valid (httpAccessVerbosity>0)", &core.APIServerLogging{
+						HTTPAccessVerbosity: pointer.Int32(3),
+					}, BeEmpty()),
+					Entry("invalid (verbosity<0)", &core.APIServerLogging{
+						Verbosity: pointer.Int32(negativeSize),
+					}, ConsistOf(
+						field.Invalid(field.NewPath("verbosity"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
+					)),
+					Entry("invalid (httpAccessVerbosity<0)", &core.APIServerLogging{
+						HTTPAccessVerbosity: pointer.Int32(negativeSize),
+					}, ConsistOf(
+						field.Invalid(field.NewPath("httpAccessVerbosity"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
+					)),
+				)
+			})
+
+			Context("requests", func() {
+				It("should not allow too high values for max inflight requests fields", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.Requests = &core.APIServerRequests{
+						MaxNonMutatingInflight: pointer.Int32(123123123),
+						MaxMutatingInflight:    pointer.Int32(412412412),
+					}
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.requests.maxNonMutatingInflight"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.requests.maxMutatingInflight"),
+					}))))
+				})
+
+				It("should not allow negative values for max inflight requests fields", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.Requests = &core.APIServerRequests{
+						MaxNonMutatingInflight: pointer.Int32(-1),
+						MaxMutatingInflight:    pointer.Int32(-1),
+					}
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.requests.maxNonMutatingInflight"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.requests.maxMutatingInflight"),
+					}))))
+				})
+			})
+
+			Context("service account config", func() {
+				It("should not allow to specify a negative max token duration", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
+						MaxTokenExpiration: &metav1.Duration{Duration: -1},
+					}
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration"),
+					}))))
+				})
+
+				It("should forbid too low values for the max token duration", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
+						MaxTokenExpiration: &metav1.Duration{Duration: time.Hour},
+					}
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration"),
+					}))))
+				})
+
+				It("should forbid too high values for the max token duration", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
+						MaxTokenExpiration: &metav1.Duration{Duration: 3000 * time.Hour},
+					}
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration"),
+					}))))
+				})
+
+				It("should not allow to specify duplicates in accepted issuers", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
+						AcceptedIssuers: []string{
+							"foo",
+							"foo",
+						},
+					}
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.acceptedIssuers[1]"),
+					}))))
+				})
+
+				It("should not allow to duplicate the issuer in accepted issuers", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
+						Issuer:          pointer.String("foo"),
+						AcceptedIssuers: []string{"foo"},
+					}
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.acceptedIssuers[0]"),
+						"Detail": ContainSubstring("acceptedIssuers cannot contains the issuer field value: foo"),
+					}))))
+				})
+			})
+
+			It("should not allow to specify a negative event ttl duration", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer.EventTTL = &metav1.Duration{Duration: -1}
 
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.issuerURL"),
-				})), PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.clientID"),
-				})), PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.caBundle"),
-				})), PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.groupsClaim"),
-				})), PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.groupsPrefix"),
-				})), PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeNotSupported),
-					"Field":  Equal("spec.kubernetes.kubeAPIServer.oidcConfig.signingAlgs[0]"),
-					"Detail": Equal("supported values: \"ES256\", \"ES384\", \"ES512\", \"PS256\", \"PS384\", \"PS512\", \"RS256\", \"RS384\", \"RS512\", \"none\""),
-				})), PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.usernameClaim"),
-				})), PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.usernamePrefix"),
+					"Field": Equal("spec.kubernetes.kubeAPIServer.eventTTL"),
 				}))))
 			})
 
-			DescribeTable("should forbid issuerURL to be empty string or nil, if clientID exists ", func(errorListSize int, issuerURL *string) {
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.String("someClientID")
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = issuerURL
-
-				errorList := ValidateShoot(shoot)
-				Expect(errorList).To(HaveLen(errorListSize))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.issuerURL"),
-				}))
-			},
-				Entry("should add error if clientID is set but issuerURL is nil ", 1, nil),
-				Entry("should add error if clientID is set but issuerURL is empty string", 2, pointer.String("")),
-			)
-
-			It("should forbid issuerURL which is not HTTPS schema", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = pointer.String("http://issuer.com")
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.String("someClientID")
+			It("should not allow to specify an event ttl duration longer than 7d", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer.EventTTL = &metav1.Duration{Duration: time.Hour * 24 * 8}
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(errorList).To(HaveLen(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.issuerURL"),
-				}))
+					"Field": Equal("spec.kubernetes.kubeAPIServer.eventTTL"),
+				}))))
 			})
 
-			It("should not fail if both clientID and issuerURL are set", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = pointer.String("https://issuer.com")
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.String("someClientID")
+			It("should not allow to specify a negative defaultNotReadyTolerationSeconds", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds = pointer.Int64(-1)
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds"),
+				}))))
+			})
+
+			It("should allow to specify a valid defaultNotReadyTolerationSeconds", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds = pointer.Int64(120)
 
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(BeEmpty())
 			})
 
-			DescribeTable("should forbid clientID to be empty string or nil, if issuerURL exists ", func(errorListSize int, clientID *string) {
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = pointer.String("https://issuer.com")
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = clientID
+			It("should not allow to specify a negative defaultUnreachableTolerationSeconds", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds = pointer.Int64(-1)
 
 				errorList := ValidateShoot(shoot)
-				Expect(errorList).To(HaveLen(errorListSize))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.clientID"),
-				}))
-			},
-				Entry("should add error if issuerURL is set but clientID is nil", 1, nil),
-				Entry("should add error if issuerURL is set but clientID is empty string ", 2, pointer.String("")),
-			)
-		})
 
-		Context("admission plugin validation", func() {
-			It("should allow not specifying admission plugins", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = nil
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds"),
+				}))))
+			})
+
+			It("should allow to specify a valid defaultUnreachableTolerationSeconds", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds = pointer.Int64(120)
 
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(BeEmpty())
 			})
-
-			It("should forbid specifying admission plugins without a name", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
-					{
-						Name: "",
-					},
-				}
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(HaveLen(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.admissionPlugins[0].name"),
-				}))
-			})
-
-			It("should forbid specifying the SecurityContextDeny admission plugin", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
-					{
-						Name: "SecurityContextDeny",
-					},
-				}
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.admissionPlugins[0].name"),
-				}))))
-			})
-
-			It("should forbid disabling the required plugins", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
-					{
-						Name:     "MutatingAdmissionWebhook",
-						Disabled: pointer.Bool(true),
-					},
-					{
-						Name:     "NamespaceLifecycle",
-						Disabled: pointer.Bool(false),
-					},
-					{
-						Name:     "NodeRestriction",
-						Disabled: pointer.Bool(true),
-					},
-				}
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("spec.kubernetes.kubeAPIServer.admissionPlugins[0]"),
-					"Detail": Equal(fmt.Sprintf("admission plugin %q cannot be disabled", shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins[0].Name)),
-				})), PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("spec.kubernetes.kubeAPIServer.admissionPlugins[2]"),
-					"Detail": Equal(fmt.Sprintf("admission plugin %q cannot be disabled", shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins[2].Name)),
-				}))))
-			})
-		})
-
-		Context("WatchCacheSizes validation", func() {
-			var negativeSize int32 = -1
-
-			DescribeTable("watch cache size validation",
-				func(sizes *core.WatchCacheSizes, matcher gomegatypes.GomegaMatcher) {
-					Expect(ValidateWatchCacheSizes(sizes, nil)).To(matcher)
-				},
-
-				Entry("valid (unset)", nil, BeEmpty()),
-				Entry("valid (fields unset)", &core.WatchCacheSizes{}, BeEmpty()),
-				Entry("valid (default=0)", &core.WatchCacheSizes{
-					Default: pointer.Int32(0),
-				}, BeEmpty()),
-				Entry("valid (default>0)", &core.WatchCacheSizes{
-					Default: pointer.Int32(42),
-				}, BeEmpty()),
-				Entry("invalid (default<0)", &core.WatchCacheSizes{
-					Default: pointer.Int32(negativeSize),
-				}, ConsistOf(
-					field.Invalid(field.NewPath("default"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
-				)),
-
-				// APIGroup unset (core group)
-				Entry("valid (core/secrets=0)", &core.WatchCacheSizes{
-					Resources: []core.ResourceWatchCacheSize{{
-						Resource:  "secrets",
-						CacheSize: 0,
-					}},
-				}, BeEmpty()),
-				Entry("valid (core/secrets=>0)", &core.WatchCacheSizes{
-					Resources: []core.ResourceWatchCacheSize{{
-						Resource:  "secrets",
-						CacheSize: 42,
-					}},
-				}, BeEmpty()),
-				Entry("invalid (core/secrets=<0)", &core.WatchCacheSizes{
-					Resources: []core.ResourceWatchCacheSize{{
-						Resource:  "secrets",
-						CacheSize: negativeSize,
-					}},
-				}, ConsistOf(
-					field.Invalid(field.NewPath("resources[0].size"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
-				)),
-				Entry("invalid (core/resource empty)", &core.WatchCacheSizes{
-					Resources: []core.ResourceWatchCacheSize{{
-						Resource:  "",
-						CacheSize: 42,
-					}},
-				}, ConsistOf(
-					field.Required(field.NewPath("resources[0].resource"), "must not be empty"),
-				)),
-
-				// APIGroup set
-				Entry("valid (apps/deployments=0)", &core.WatchCacheSizes{
-					Resources: []core.ResourceWatchCacheSize{{
-						APIGroup:  pointer.String("apps"),
-						Resource:  "deployments",
-						CacheSize: 0,
-					}},
-				}, BeEmpty()),
-				Entry("valid (apps/deployments=>0)", &core.WatchCacheSizes{
-					Resources: []core.ResourceWatchCacheSize{{
-						APIGroup:  pointer.String("apps"),
-						Resource:  "deployments",
-						CacheSize: 42,
-					}},
-				}, BeEmpty()),
-				Entry("invalid (apps/deployments=<0)", &core.WatchCacheSizes{
-					Resources: []core.ResourceWatchCacheSize{{
-						APIGroup:  pointer.String("apps"),
-						Resource:  "deployments",
-						CacheSize: negativeSize,
-					}},
-				}, ConsistOf(
-					field.Invalid(field.NewPath("resources[0].size"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
-				)),
-				Entry("invalid (apps/resource empty)", &core.WatchCacheSizes{
-					Resources: []core.ResourceWatchCacheSize{{
-						Resource:  "",
-						CacheSize: 42,
-					}},
-				}, ConsistOf(
-					field.Required(field.NewPath("resources[0].resource"), "must not be empty"),
-				)),
-			)
-		})
-
-		Context("APIServerLogging validation", func() {
-			var negativeSize int32 = -1
-
-			DescribeTable("APIServerLogging validation",
-				func(loggingConfig *core.APIServerLogging, matcher gomegatypes.GomegaMatcher) {
-					Expect(ValidateAPIServerLogging(loggingConfig, nil)).To(matcher)
-				},
-
-				Entry("valid (unset)", nil, BeEmpty()),
-				Entry("valid (fields unset)", &core.APIServerLogging{}, BeEmpty()),
-				Entry("valid (verbosity=0)", &core.APIServerLogging{
-					Verbosity: pointer.Int32(0),
-				}, BeEmpty()),
-				Entry("valid (httpAccessVerbosity=0)", &core.APIServerLogging{
-					HTTPAccessVerbosity: pointer.Int32(0),
-				}, BeEmpty()),
-				Entry("valid (verbosity>0)", &core.APIServerLogging{
-					Verbosity: pointer.Int32(3),
-				}, BeEmpty()),
-				Entry("valid (httpAccessVerbosity>0)", &core.APIServerLogging{
-					HTTPAccessVerbosity: pointer.Int32(3),
-				}, BeEmpty()),
-				Entry("invalid (verbosity<0)", &core.APIServerLogging{
-					Verbosity: pointer.Int32(negativeSize),
-				}, ConsistOf(
-					field.Invalid(field.NewPath("verbosity"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
-				)),
-				Entry("invalid (httpAccessVerbosity<0)", &core.APIServerLogging{
-					HTTPAccessVerbosity: pointer.Int32(negativeSize),
-				}, ConsistOf(
-					field.Invalid(field.NewPath("httpAccessVerbosity"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
-				)),
-			)
-		})
-
-		Context("requests", func() {
-			It("should not allow too high values for max inflight requests fields", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.Requests = &core.APIServerRequests{
-					MaxNonMutatingInflight: pointer.Int32(123123123),
-					MaxMutatingInflight:    pointer.Int32(412412412),
-				}
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.requests.maxNonMutatingInflight"),
-				})), PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.requests.maxMutatingInflight"),
-				}))))
-			})
-
-			It("should not allow negative values for max inflight requests fields", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.Requests = &core.APIServerRequests{
-					MaxNonMutatingInflight: pointer.Int32(-1),
-					MaxMutatingInflight:    pointer.Int32(-1),
-				}
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.requests.maxNonMutatingInflight"),
-				})), PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.requests.maxMutatingInflight"),
-				}))))
-			})
-		})
-
-		Context("service account config", func() {
-			It("should not allow to specify a negative max token duration", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
-					MaxTokenExpiration: &metav1.Duration{Duration: -1},
-				}
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration"),
-				}))))
-			})
-
-			It("should forbid too low values for the max token duration", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
-					MaxTokenExpiration: &metav1.Duration{Duration: time.Hour},
-				}
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration"),
-				}))))
-			})
-
-			It("should forbid too high values for the max token duration", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
-					MaxTokenExpiration: &metav1.Duration{Duration: 3000 * time.Hour},
-				}
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration"),
-				}))))
-			})
-
-			It("should not allow to specify duplicates in accepted issuers", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
-					AcceptedIssuers: []string{
-						"foo",
-						"foo",
-					},
-				}
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeDuplicate),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.acceptedIssuers[1]"),
-				}))))
-			})
-
-			It("should not allow to duplicate the issuer in accepted issuers", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
-					Issuer:          pointer.String("foo"),
-					AcceptedIssuers: []string{"foo"},
-				}
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.acceptedIssuers[0]"),
-					"Detail": ContainSubstring("acceptedIssuers cannot contains the issuer field value: foo"),
-				}))))
-			})
-		})
-
-		It("should not allow to specify a negative event ttl duration", func() {
-			shoot.Spec.Kubernetes.KubeAPIServer.EventTTL = &metav1.Duration{Duration: -1}
-
-			errorList := ValidateShoot(shoot)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.kubernetes.kubeAPIServer.eventTTL"),
-			}))))
-		})
-
-		It("should not allow to specify an event ttl duration longer than 7d", func() {
-			shoot.Spec.Kubernetes.KubeAPIServer.EventTTL = &metav1.Duration{Duration: time.Hour * 24 * 8}
-
-			errorList := ValidateShoot(shoot)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.kubernetes.kubeAPIServer.eventTTL"),
-			}))))
-		})
-
-		It("should not allow to specify a negative defaultNotReadyTolerationSeconds", func() {
-			shoot.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds = pointer.Int64(-1)
-
-			errorList := ValidateShoot(shoot)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds"),
-			}))))
-		})
-
-		It("should allow to specify a valid defaultNotReadyTolerationSeconds", func() {
-			shoot.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds = pointer.Int64(120)
-
-			errorList := ValidateShoot(shoot)
-
-			Expect(errorList).To(BeEmpty())
-		})
-
-		It("should not allow to specify a negative defaultUnreachableTolerationSeconds", func() {
-			shoot.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds = pointer.Int64(-1)
-
-			errorList := ValidateShoot(shoot)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds"),
-			}))))
-		})
-
-		It("should allow to specify a valid defaultUnreachableTolerationSeconds", func() {
-			shoot.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds = pointer.Int64(120)
-
-			errorList := ValidateShoot(shoot)
-
-			Expect(errorList).To(BeEmpty())
 		})
 
 		Context("kubernetes.allowPrivilegedContainers field validation", func() {
@@ -3801,6 +3986,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 						},
 					},
 				}),
+				Entry("when shoot spec encrypted resources and status encrypted resources are not equal", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					EncryptedResources: []string{"configmaps"},
+				}),
 			)
 
 			DescribeTable("completing rotation of all credentials",
@@ -4446,6 +4637,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 						},
 					},
 				}),
+				Entry("when shoot spec encrypted resources and status encrypted resources are not equal", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					EncryptedResources: []string{"configmaps"},
+				}),
 			)
 
 			DescribeTable("completing ETCD encryption key rotation",
@@ -4714,6 +4911,40 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}),
 			)
+
+			It("should forbid hibernation when the spec encryption config and status encryption config are different", func() {
+				shoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)}
+				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+					EncryptionConfig: &core.EncryptionConfig{
+						Resources: []string{"events", "configmaps"},
+					},
+				}
+				shoot.Status.EncryptedResources = []string{"events"}
+
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)}
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.hibernation.enabled"),
+					"Detail": ContainSubstring("when spec.kubernetes.kubeAPIServer.encryptionConfig.resources and status.encryptedResources are not equal"),
+				}))))
+			})
+
+			It("should allow hibernation when the spec encryption config and status encryption config are the same", func() {
+				shoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)}
+				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+					EncryptionConfig: &core.EncryptionConfig{
+						Resources: []string{"events", "configmaps"},
+					},
+				}
+				shoot.Status.EncryptedResources = []string{"configmaps", "events"}
+
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)}
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+			})
 		})
 
 		Context("scheduler name", func() {

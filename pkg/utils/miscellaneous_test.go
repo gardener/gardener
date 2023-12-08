@@ -17,6 +17,7 @@ package utils_test
 import (
 	"fmt"
 	"net"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -28,6 +29,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	. "github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 var _ = Describe("utils", func() {
@@ -299,6 +301,91 @@ baz`, spaces)).To(Equal(`foo
 		It("should return no entries", func() {
 			result := FilterEntriesByPrefix(prefix, entries)
 			Expect(result).To(BeEmpty())
+		})
+	})
+
+	Describe("#FilterEntriesByFilterFn", func() {
+		var (
+			entries  []string
+			filterFn func(string) bool
+		)
+
+		BeforeEach(func() {
+			entries = []string{
+				"foo.bash",
+				"bar.bash",
+				"boo.dash",
+				"zig.zag",
+			}
+
+			filterFn = nil
+		})
+
+		It("should return all entries when filter function is nil", func() {
+			result := FilterEntriesByFilterFn(entries, filterFn)
+			Expect(result).To(Equal(entries))
+		})
+
+		It("should return no entries", func() {
+			result := FilterEntriesByFilterFn(nil, filterFn)
+			Expect(result).To(BeEmpty())
+		})
+
+		It("should only return entries matching the filter function", func() {
+			filterFn = func(entry string) bool {
+				return strings.HasSuffix(entry, "bash")
+			}
+
+			result := FilterEntriesByFilterFn(entries, filterFn)
+			Expect(result).To(ConsistOf(
+				"foo.bash",
+				"bar.bash",
+			))
+		})
+
+		It("should only return entries matching the filter function", func() {
+			filterFn = func(entry string) bool {
+				return !strings.HasSuffix(entry, "bash")
+			}
+
+			result := FilterEntriesByFilterFn(entries, filterFn)
+			Expect(result).To(ConsistOf(
+				"boo.dash",
+				"zig.zag",
+			))
+		})
+
+		It("should only return entries matching the filter function", func() {
+			entries = []string{
+				"secrets",
+				"configmaps",
+				"shoots.core.gardener.cloud",
+				"bastions.operations.gardener.cloud",
+			}
+			filterFn = func(s string) bool {
+				return !gardenerutils.IsServedByGardenerAPIServer(s)
+			}
+
+			result := FilterEntriesByFilterFn(entries, filterFn)
+			Expect(result).To(ConsistOf(
+				"secrets",
+				"configmaps",
+			))
+		})
+
+		It("should only return entries matching the filter function", func() {
+			entries = []string{
+				"secrets",
+				"configmaps",
+				"shoots.core.gardener.cloud",
+				"bastions.operations.gardener.cloud",
+			}
+
+			result := FilterEntriesByFilterFn(entries, gardenerutils.IsServedByGardenerAPIServer)
+			Expect(result).To(ConsistOf(
+				"shoots.core.gardener.cloud",
+				"bastions.operations.gardener.cloud",
+			))
 		})
 	})
 })

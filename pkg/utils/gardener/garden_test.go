@@ -23,10 +23,15 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	. "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -318,4 +323,37 @@ var _ = Describe("Garden", func() {
 			Expect(config).To(Equal(baseConfig))
 		})
 	})
+
+	Describe("#DefaultGardenerGVKsForEncryption", func() {
+		It("should return all default GroupVersionKinds", func() {
+			Expect(DefaultGardenerGVKsForEncryption()).To(ConsistOf(
+				schema.GroupVersionKind{Group: "core.gardener.cloud", Version: "v1beta1", Kind: "ControllerDeployment"},
+				schema.GroupVersionKind{Group: "core.gardener.cloud", Version: "v1beta1", Kind: "ControllerRegistration"},
+				schema.GroupVersionKind{Group: "core.gardener.cloud", Version: "v1beta1", Kind: "InternalSecret"},
+				schema.GroupVersionKind{Group: "core.gardener.cloud", Version: "v1beta1", Kind: "ShootState"},
+			))
+		})
+	})
+
+	Describe("#DefaultGardenerResourcesForEncryption", func() {
+		It("should return all default resources", func() {
+			Expect(DefaultGardenerResourcesForEncryption().UnsortedList()).To(ConsistOf(
+				"controllerdeployments.core.gardener.cloud",
+				"controllerregistrations.core.gardener.cloud",
+				"internalsecrets.core.gardener.cloud",
+				"shootstates.core.gardener.cloud",
+			))
+		})
+	})
+
+	DescribeTable("#IsServedByGardenerAPIServer",
+		func(resource string, expected bool) {
+			Expect(IsServedByGardenerAPIServer(resource)).To(Equal(expected))
+		},
+		Entry("core resource", gardencorev1beta1.Resource("shoots").String(), true),
+		Entry("operations resource", operationsv1alpha1.Resource("bastions").String(), true),
+		Entry("settings resource", settingsv1alpha1.Resource("openidconnectpresets").String(), true),
+		Entry("seedmanagement resource", seedmanagementv1alpha1.Resource("managedseeds").String(), true),
+		Entry("any other resource", "foo", false),
+	)
 })

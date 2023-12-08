@@ -17,7 +17,9 @@ package validation
 import (
 	"fmt"
 	"net"
+	"strings"
 
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -37,8 +39,10 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	operatorv1alpha1conversion "github.com/gardener/gardener/pkg/apis/operator/v1alpha1/conversion"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
+	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	"github.com/gardener/gardener/pkg/utils/validation/kubernetesversion"
 	plugin "github.com/gardener/gardener/plugin/pkg"
@@ -78,14 +82,19 @@ func ValidateGarden(garden *operatorv1alpha1.Garden) field.ErrorList {
 func ValidateGardenUpdate(oldGarden, newGarden *operatorv1alpha1.Garden) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, validateVirtualClusterUpdate(oldGarden.Spec.VirtualCluster, newGarden.Spec.VirtualCluster, field.NewPath("spec", "virtualCluster"))...)
+	allErrs = append(allErrs, validateVirtualClusterUpdate(oldGarden, newGarden)...)
 	allErrs = append(allErrs, ValidateGarden(newGarden)...)
 
 	return allErrs
 }
 
-func validateVirtualClusterUpdate(oldVirtualCluster, newVirtualCluster operatorv1alpha1.VirtualCluster, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
+func validateVirtualClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden) field.ErrorList {
+	var (
+		allErrs           = field.ErrorList{}
+		oldVirtualCluster = oldGarden.Spec.VirtualCluster
+		newVirtualCluster = newGarden.Spec.VirtualCluster
+		fldPath           = field.NewPath("spec", "virtualCluster")
+	)
 
 	// First domain is immutable. Changing this would incompatibly change the service account issuer in the cluster, ref https://github.com/gardener/gardener/blob/17ff592e734131ef746560641bdcdec3bcfce0f1/pkg/component/kubeapiserver/deployment.go#L585C8-L585C8
 	// Note: We can consider supporting this scenario in the future but would need to re-issue all service account tokens during the reconcile run.
@@ -99,6 +108,7 @@ func validateVirtualClusterUpdate(oldVirtualCluster, newVirtualCluster operatorv
 	}
 
 	allErrs = append(allErrs, gardencorevalidation.ValidateKubernetesVersionUpdate(newVirtualCluster.Kubernetes.Version, oldVirtualCluster.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
+	allErrs = append(allErrs, validateEncryptionConfigUpdate(oldGarden, newGarden)...)
 
 	return allErrs
 }
@@ -145,7 +155,7 @@ func validateVirtualCluster(virtualCluster operatorv1alpha1.VirtualCluster, runt
 			allErrs = append(allErrs, field.InternalError(path, err))
 		}
 
-		allErrs = append(allErrs, gardencorevalidation.ValidateKubeAPIServer(coreKubeAPIServerConfig, virtualCluster.Kubernetes.Version, true, path)...)
+		allErrs = append(allErrs, gardencorevalidation.ValidateKubeAPIServer(coreKubeAPIServerConfig, virtualCluster.Kubernetes.Version, true, gardenerutils.DefaultResourcesForEncryption(), path)...)
 	}
 
 	if kubeControllerManager := virtualCluster.Kubernetes.KubeControllerManager; kubeControllerManager != nil && kubeControllerManager.KubeControllerManagerConfig != nil {
@@ -207,6 +217,31 @@ func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerC
 
 		if !utils.ValueExists(admissionPlugin.Name, plugin.AllPluginNames()) {
 			allErrs = append(allErrs, field.NotSupported(idxPath.Child("name"), admissionPlugin.Name, plugin.AllPluginNames()))
+		}
+	}
+
+	if config.EncryptionConfig != nil {
+		seenResources := sets.New[string]()
+
+		for i, resource := range config.EncryptionConfig.Resources {
+			idxPath := fldPath.Child("encryptionConfig", "resources").Index(i)
+			if seenResources.Has(resource) {
+				allErrs = append(allErrs, field.Duplicate(idxPath, resource))
+			}
+
+			if gardenerutils.DefaultGardenerResourcesForEncryption().Has(resource) {
+				allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("%q are always encrypted", resource)))
+			}
+
+			if !gardenerutils.IsServedByGardenerAPIServer(resource) {
+				allErrs = append(allErrs, field.Invalid(idxPath, resource, "should be a resource served by gardener-apiserver. ie; should have any of the suffixes {core,operations,settings,seedmanagement}.gardener.cloud"))
+			}
+
+			if strings.HasPrefix(resource, "*.") {
+				allErrs = append(allErrs, field.Invalid(idxPath, resource, "wildcards are not supported"))
+			}
+
+			seenResources.Insert(resource)
 		}
 	}
 
@@ -326,7 +361,20 @@ func validateOperation(operation string, garden *operatorv1alpha1.Garden, fldPat
 }
 
 func validateOperationContext(operation string, garden *operatorv1alpha1.Garden, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
+	var (
+		allErrs                  = field.ErrorList{}
+		encryptionConfig         *gardencorev1beta1.EncryptionConfig
+		gardenerEncryptionConfig *gardencorev1beta1.EncryptionConfig
+	)
+
+	if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil && garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig != nil {
+		encryptionConfig = garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig.EncryptionConfig
+	}
+	if garden.Spec.VirtualCluster.Gardener.APIServer != nil && garden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig != nil {
+		gardenerEncryptionConfig = garden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig
+	}
+
+	resourcesToEncrypt := append(sharedcomponent.GetResourcesForEncryptionFromConfig(encryptionConfig), sharedcomponent.GetResourcesForEncryptionFromConfig(gardenerEncryptionConfig)...)
 
 	switch operation {
 	case v1beta1constants.OperationRotateCredentialsStart:
@@ -341,6 +389,9 @@ func validateOperationContext(operation string, garden *operatorv1alpha1.Garden,
 		}
 		if phase := helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials); len(phase) > 0 && phase != gardencorev1beta1.RotationCompleted {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Completed'"))
+		}
+		if !apiequality.Semantic.DeepEqual(resourcesToEncrypt, garden.Status.EncryptedResources) {
+			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials when resources to encrypt (ie; spec.virtualCluster.{kubernetes.kubeAPIServer.encryptionConfig.resources + gardener.gardenerAPIServer.encryptionConfig.resources}) and status.encryptedResources are not equal"))
 		}
 	case v1beta1constants.OperationRotateCredentialsComplete:
 		if garden.DeletionTimestamp != nil {
@@ -393,6 +444,9 @@ func validateOperationContext(operation string, garden *operatorv1alpha1.Garden,
 		if phase := helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials); len(phase) > 0 && phase != gardencorev1beta1.RotationCompleted {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start ETCD encryption key rotation if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Completed'"))
 		}
+		if !apiequality.Semantic.DeepEqual(resourcesToEncrypt, garden.Status.EncryptedResources) {
+			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start ETCD encryption key rotation when resources to encrypt (ie; spec.virtualCluster.{kubernetes.kubeAPIServer.encryptionConfig.resources + gardener.gardenerAPIServer.encryptionConfig.resources}) and status.encryptedResources are not equal"))
+		}
 	case v1beta1constants.OperationRotateETCDEncryptionKeyComplete:
 		if garden.DeletionTimestamp != nil {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete ETCD encryption key rotation if garden has deletion timestamp"))
@@ -406,6 +460,53 @@ func validateOperationContext(operation string, garden *operatorv1alpha1.Garden,
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start Observability credentials rotation if garden has deletion timestamp"))
 		}
 	}
+
+	return allErrs
+}
+
+func validateEncryptionConfigUpdate(oldGarden, newGarden *operatorv1alpha1.Garden) field.ErrorList {
+	var (
+		allErrs                              = field.ErrorList{}
+		oldKubeAPIServerEncryptionConfig     = &gardencore.EncryptionConfig{}
+		newKubeAPIServerEncryptionConfig     = &gardencore.EncryptionConfig{}
+		oldGAPIServerEncryptionConfig        = &gardencore.EncryptionConfig{}
+		newGAPIServerEncryptionConfig        = &gardencore.EncryptionConfig{}
+		etcdEncryptionKeyRotation            = &gardencore.ETCDEncryptionKeyRotation{}
+		kubeAPIServerEncryptionConfigFldPath = field.NewPath("spec", "virtualCluster", "kubernetes", "kubeAPIServer", "encryptionConfig")
+		gAPIServerEncryptionConfigFldPath    = field.NewPath("spec", "virtualCluster", "gardener", "gardenerAPIServer", "encryptionConfig")
+	)
+
+	if oldKubeAPIServer := oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; oldKubeAPIServer != nil && oldKubeAPIServer.KubeAPIServerConfig != nil && oldKubeAPIServer.KubeAPIServerConfig.EncryptionConfig != nil {
+		if err := gardenCoreScheme.Convert(oldKubeAPIServer.KubeAPIServerConfig.EncryptionConfig, oldKubeAPIServerEncryptionConfig, nil); err != nil {
+			allErrs = append(allErrs, field.InternalError(kubeAPIServerEncryptionConfigFldPath, err))
+		}
+	}
+	if newKubeAPIServer := newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; newKubeAPIServer != nil && newKubeAPIServer.KubeAPIServerConfig != nil && newKubeAPIServer.KubeAPIServerConfig.EncryptionConfig != nil {
+		if err := gardenCoreScheme.Convert(newKubeAPIServer.KubeAPIServerConfig.EncryptionConfig, newKubeAPIServerEncryptionConfig, nil); err != nil {
+			allErrs = append(allErrs, field.InternalError(kubeAPIServerEncryptionConfigFldPath, err))
+		}
+	}
+	if oldGardenerAPIServer := oldGarden.Spec.VirtualCluster.Gardener.APIServer; oldGardenerAPIServer != nil && oldGardenerAPIServer.EncryptionConfig != nil {
+		if err := gardenCoreScheme.Convert(oldGardenerAPIServer.EncryptionConfig, oldGAPIServerEncryptionConfig, nil); err != nil {
+			allErrs = append(allErrs, field.InternalError(gAPIServerEncryptionConfigFldPath, err))
+		}
+	}
+	if newGardenerAPIServer := newGarden.Spec.VirtualCluster.Gardener.APIServer; newGardenerAPIServer != nil && newGardenerAPIServer.EncryptionConfig != nil {
+		if err := gardenCoreScheme.Convert(newGardenerAPIServer.EncryptionConfig, newGAPIServerEncryptionConfig, nil); err != nil {
+			allErrs = append(allErrs, field.InternalError(gAPIServerEncryptionConfigFldPath, err))
+		}
+	}
+	if credentials := newGarden.Status.Credentials; credentials != nil && credentials.Rotation != nil && credentials.Rotation.ETCDEncryptionKey != nil {
+		if err := gardenCoreScheme.Convert(credentials.Rotation.ETCDEncryptionKey, etcdEncryptionKeyRotation, nil); err != nil {
+			allErrs = append(allErrs, field.InternalError(field.NewPath("status", "credentials", "rotation", "etcdEncryptionKey"), err))
+		}
+	}
+
+	currentEncryptedKubernetesResources := utils.FilterEntriesByFilterFn(newGarden.Status.EncryptedResources, func(resource string) bool { return !gardenerutils.IsServedByGardenerAPIServer(resource) })
+	allErrs = append(allErrs, gardencorevalidation.ValidateEncryptionConfigUpdate(newKubeAPIServerEncryptionConfig, oldKubeAPIServerEncryptionConfig, sets.New(currentEncryptedKubernetesResources...), etcdEncryptionKeyRotation, "kubernetes", false, kubeAPIServerEncryptionConfigFldPath)...)
+
+	currentEncryptedGardenerResources := utils.FilterEntriesByFilterFn(newGarden.Status.EncryptedResources, gardenerutils.IsServedByGardenerAPIServer)
+	allErrs = append(allErrs, gardencorevalidation.ValidateEncryptionConfigUpdate(newGAPIServerEncryptionConfig, oldGAPIServerEncryptionConfig, sets.New(currentEncryptedGardenerResources...), etcdEncryptionKeyRotation, "gardener", false, gAPIServerEncryptionConfigFldPath)...)
 
 	return allErrs
 }

@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
@@ -703,4 +704,16 @@ func GetShootConditionTypes(workerless bool) []gardencorev1beta1.ConditionType {
 	}
 
 	return append(shootConditionTypes, gardencorev1beta1.ShootSystemComponentsHealthy)
+}
+
+// DefaultGVKsForEncryption returns the list of GroupVersionKinds which are encrypted by default.
+func DefaultGVKsForEncryption() []schema.GroupVersionKind {
+	return []schema.GroupVersionKind{
+		corev1.SchemeGroupVersion.WithKind("Secret"),
+	}
+}
+
+// DefaultResourcesForEncryption returns the list of resources which are encrypted by default.
+func DefaultResourcesForEncryption() sets.Set[string] {
+	return sets.New(corev1.Resource("secrets").String())
 }

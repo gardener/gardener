@@ -214,6 +214,19 @@ func FilterEntriesByPrefix(prefix string, entries []string) []string {
 	return result
 }
 
+// FilterEntriesByFilterFn returns a list of entries which passes the filter function.
+func FilterEntriesByFilterFn(entries []string, filterFn func(entry string) bool) []string {
+	var result []string
+	for _, entry := range entries {
+		if filterFn != nil && !filterFn(entry) {
+			continue
+		}
+
+		result = append(result, entry)
+	}
+	return result
+}
+
 // ComputeOffsetIP parses the provided <subnet> and offsets with the value of <offset>.
 // For example, <subnet> = 100.64.0.0/11 and <offset> = 10 the result would be 100.64.0.10
 // IPv6 and IPv4 is supported.
