@@ -3007,9 +3007,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 		Context("FeatureGates validation", func() {
 			It("should forbid invalid feature gates", func() {
 				featureGates := map[string]bool{
-					"AnyVolumeDataSource":    true,
-					"GenericEphemeralVolume": true,
-					"Foo":                    true,
+					"AnyVolumeDataSource":  true,
+					"GracefulNodeShutdown": true,
+					"Foo":                  true,
 				}
 				shoot.Spec.Kubernetes.Version = "1.26.14"
 				shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates = featureGates
@@ -3037,40 +3037,20 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).ToNot(BeEmpty())
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.kubernetes.kubeAPIServer.featureGates.GenericEphemeralVolume"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.kubernetes.kubeAPIServer.featureGates.Foo"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.kubernetes.kubeControllerManager.featureGates.GenericEphemeralVolume"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.kubernetes.kubeControllerManager.featureGates.Foo"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.kubernetes.kubeScheduler.featureGates.GenericEphemeralVolume"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.kubernetes.kubeScheduler.featureGates.Foo"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.kubernetes.kubeProxy.featureGates.GenericEphemeralVolume"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.kubernetes.kubeProxy.featureGates.Foo"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.kubernetes.kubelet.featureGates.GenericEphemeralVolume"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
