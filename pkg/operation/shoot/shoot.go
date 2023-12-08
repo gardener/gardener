@@ -107,6 +107,12 @@ func (b *Builder) WithSeedObject(seed *gardencorev1beta1.Seed) *Builder {
 	return b
 }
 
+// WithExposureClassObject sets the exposureClass attribute at the Builder.
+func (b *Builder) WithExposureClassObject(exposureClass *gardencorev1beta1.ExposureClass) *Builder {
+	b.exposureClass = exposureClass
+	return b
+}
+
 // WithShootSecret sets the shootSecretFunc attribute at the Builder.
 func (b *Builder) WithShootSecret(secret *corev1.Secret) *Builder {
 	b.shootSecretFunc = func(context.Context, string, string) (*corev1.Secret, error) { return secret, nil }
@@ -164,6 +170,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 		return nil, err
 	}
 	shoot.CloudProfile = cloudProfile
+	shoot.ExposureClass = b.exposureClass
 
 	if shootObject.Spec.SecretBindingName != nil {
 		secret, err := b.shootSecretFunc(ctx, shootObject.Namespace, *shootObject.Spec.SecretBindingName)

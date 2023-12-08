@@ -277,6 +277,14 @@ func (r *Reconciler) prepareOperation(ctx context.Context, log logr.Logger, shoo
 		return nil, reconcile.Result{}, err
 	}
 
+	var exposureClass *gardencorev1beta1.ExposureClass
+	if shoot.Spec.ExposureClassName != nil {
+		exposureClass = &gardencorev1beta1.ExposureClass{}
+		if err := r.GardenClient.Get(ctx, client.ObjectKey{Name: *shoot.Spec.ExposureClassName}, exposureClass); err != nil {
+			return nil, reconcile.Result{}, err
+		}
+	}
+
 	i := helper.CalculateControllerInfos(shoot, r.Clock, *r.Config.Controllers.Shoot)
 	log.V(1).Info("Calculated infos", "infos", i)
 
@@ -300,7 +308,7 @@ func (r *Reconciler) prepareOperation(ctx context.Context, log logr.Logger, shoo
 		return nil, reconcile.Result{}, err
 	}
 
-	o, operationErr := r.initializeOperation(ctx, log, shoot, project, cloudProfile, seed)
+	o, operationErr := r.initializeOperation(ctx, log, shoot, project, cloudProfile, seed, exposureClass)
 	if operationErr != nil {
 		updateErr := r.patchShootStatusOperationError(ctx, shoot, fmt.Sprintf("Could not initialize a new operation for Shoot cluster: %s", operationErr.Error()), i.OperationType, lastErrorsOperationInitializationFailure(shoot.Status.LastErrors, operationErr)...)
 		return nil, reconcile.Result{}, errorsutils.WithSuppressed(operationErr, updateErr)
@@ -329,6 +337,7 @@ func (r *Reconciler) initializeOperation(
 	project *gardencorev1beta1.Project,
 	cloudProfile *gardencorev1beta1.CloudProfile,
 	seed *gardencorev1beta1.Seed,
+	exposureClass *gardencorev1beta1.ExposureClass,
 ) (
 	*operation.Operation,
 	error,
@@ -362,6 +371,7 @@ func (r *Reconciler) initializeOperation(
 		WithCloudProfileObject(cloudProfile).
 		WithShootSecretFrom(r.GardenClient).
 		WithSeedObject(seed).
+		WithExposureClassObject(exposureClass).
 		WithProjectName(project.Name).
 		WithInternalDomain(gardenObj.InternalDomain).
 		WithDefaultDomains(gardenObj.DefaultDomains).

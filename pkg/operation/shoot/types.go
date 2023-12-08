@@ -67,6 +67,7 @@ type Builder struct {
 	cloudProfileFunc func(context.Context, string) (*gardencorev1beta1.CloudProfile, error)
 	shootSecretFunc  func(context.Context, string, string) (*corev1.Secret, error)
 	seed             *gardencorev1beta1.Seed
+	exposureClass    *gardencorev1beta1.ExposureClass
 	projectName      string
 	internalDomain   *gardenerutils.Domain
 	defaultDomains   []*gardenerutils.Domain
@@ -79,8 +80,9 @@ type Shoot struct {
 
 	shootState atomic.Value
 
-	Secret       *corev1.Secret
-	CloudProfile *gardencorev1beta1.CloudProfile
+	Secret        *corev1.Secret
+	CloudProfile  *gardencorev1beta1.CloudProfile
+	ExposureClass *gardencorev1beta1.ExposureClass
 
 	SeedNamespace     string
 	KubernetesVersion *semver.Version

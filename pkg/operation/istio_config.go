@@ -61,9 +61,9 @@ func (o *Operation) IstioLabels() map[string]string {
 }
 
 func (o *Operation) exposureClassHandler() *gardenletconfig.ExposureClassHandler {
-	if exposureClassName := o.Shoot.GetInfo().Spec.ExposureClassName; exposureClassName != nil {
+	if exposureClass := o.Shoot.ExposureClass; exposureClass != nil {
 		for _, handler := range o.Config.ExposureClassHandlers {
-			if *exposureClassName == handler.Name {
+			if exposureClass.Handler == handler.Name {
 				return &handler
 			}
 		}

@@ -37,6 +37,7 @@ var _ = Describe("istioconfig", func() {
 			defaultServiceName         = "default-service"
 			defaultNamespaceName       = "default-namespace"
 			defaultLabels              = map[string]string{"default": "label", "istio": "gateway"}
+			exposureClassName          = "my-exposureclass"
 			exposureClassHandlerName   = "my-handler"
 			exposureClassServiceName   = "exposure-service"
 			exposureClassNamespaceName = "exposure-namespace"
@@ -66,7 +67,15 @@ var _ = Describe("istioconfig", func() {
 			zoneName           = "my-zone"
 			multiZone          = zoneName + ",other-zone"
 			zoneAnnotations    = map[string]string{"zone": "annotation"}
-			seed               = &gardencorev1beta1.Seed{
+
+			operation     *Operation
+			exposureClass *gardencorev1beta1.ExposureClass
+			shoot         *gardencorev1beta1.Shoot
+			seed          *gardencorev1beta1.Seed
+		)
+
+		BeforeEach(func() {
+			seed = &gardencorev1beta1.Seed{
 				Spec: gardencorev1beta1.SeedSpec{
 					Provider: gardencorev1beta1.SeedProvider{
 						Zones: []string{zoneName, "some-random-zone"},
@@ -84,7 +93,13 @@ var _ = Describe("istioconfig", func() {
 					},
 				},
 			}
-			shoot     = &gardencorev1beta1.Shoot{}
+			exposureClass = &gardencorev1beta1.ExposureClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: exposureClassName,
+				},
+				Handler: exposureClassHandlerName,
+			}
+			shoot = &gardencorev1beta1.Shoot{}
 			operation = &Operation{
 				Config: gardenletConfig,
 				Seed:   &seedpkg.Seed{},
@@ -95,9 +110,7 @@ var _ = Describe("istioconfig", func() {
 					},
 				},
 			}
-		)
 
-		BeforeEach(func() {
 			operation.Seed.SetInfo(seed)
 			operation.Shoot.SetInfo(shoot)
 		})
@@ -109,8 +122,9 @@ var _ = Describe("istioconfig", func() {
 				}
 				if useExposureClass {
 					shootCopy := shoot.DeepCopy()
-					shootCopy.Spec.ExposureClassName = &exposureClassHandlerName
+					shootCopy.Spec.ExposureClassName = &exposureClassName
 					operation.Shoot.SetInfo(shootCopy)
+					operation.Shoot.ExposureClass = exposureClass
 				}
 
 				Expect(operation.IstioServiceName()).To(matcherService)
@@ -171,8 +185,9 @@ var _ = Describe("istioconfig", func() {
 					}
 					if useExposureClass {
 						shootCopy := shoot.DeepCopy()
-						shootCopy.Spec.ExposureClassName = &exposureClassHandlerName
+						shootCopy.Spec.ExposureClassName = &exposureClassName
 						operation.Shoot.SetInfo(shootCopy)
+						operation.Shoot.ExposureClass = exposureClass
 					}
 
 					Expect(operation.IstioServiceName()).To(matcherService)
