@@ -192,7 +192,7 @@ There is no automatic rotation and **it is the responsibility of the end-user to
 The rotation happens in three stages:
 
 - In stage one, a new encryption key is created and added to the bundle (together with the old encryption key).
-- In stage two, all `Secret`s in the cluster are rewritten by the `kube-apiserver` so that they become encrypted with the new encryption key.
+- In stage two, all `Secret`s in the cluster and resources configured in the `spec.kubernetes.kubeAPIServer.encryptionConfig` of the Shoot (See [ETCD Encryption Config](./shoot_etcd_encryption_config.md)) are rewritten by the `kube-apiserver` so that they become encrypted with the new encryption key.
 - In stage three, the old encryption is dropped from the bundle.
 
 Technically, the `Preparing` phase indicates the stages one and two.

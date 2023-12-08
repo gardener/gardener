@@ -36,6 +36,7 @@
 * [DNS Autoscaling](usage/dns-autoscaling.md)
 * [DNS Search Path Optimization](usage/dns-search-path-optimization.md)
 * [Endpoints and Ports of a Shoot Control-Plane](usage/control-plane-endpoints-and-ports.md)
+* [ETCD Encryption Config](usage/etcd_encryption_config.md)
 * [ExposureClasses](usage/exposureclasses.md)
 * [Hibernate a Cluster](usage/shoot_hibernate.md)
 * [IPv6 in Gardener Clusters](usage/ipv6.md)
