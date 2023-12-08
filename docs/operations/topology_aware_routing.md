@@ -116,8 +116,6 @@ spec:
 The topology-aware routing setting can be only enabled for a Seed cluster with more than one zone.
 gardenlet enables topology-aware Services only for Shoot control planes with failure tolerance type `zone` (`.spec.controlPlane.highAvailability.failureTolerance.type=zone`). Control plane Pods of non-HA Shoots and HA Shoots with failure tolerance type `node` are pinned to single zone. For more details, see [High Availability Of Deployed Components](../development/high-availability.md).
 
-⚠️ For K8s < 1.24 Seed clusters, the topology-aware routing setting requires the Kubernetes `TopologyAwareHints` feature gate to be enabled for kube-apiserver, kube-controller-manager and kube-proxy. This is required because the `TopologyAwareHints` feature gate is disabled by default in K8s < 1.24. When `TopologyAwareHints` is disabled, the kube-apiserver does not allow anything to be persisted in the `.endpoints[].hints` field in the EndpointSlice resource. Also, the kube-controller-manager removes the hints, hence kube-proxy is not using topology-aware routing.
-
 ## How to enable the topology-aware routing for a garden runtime cluster?
 
 For a garden runtime cluster the topology-aware routing functionality can be enabled in the Garden resource specification:
@@ -134,5 +132,3 @@ spec:
 ```
 
 The topology-aware routing setting can be only enabled for a garden runtime cluster with more than one zone.
-
-⚠️ For K8s < 1.24 garden runtime clusters, the topology-aware routing setting requires the Kubernetes `TopologyAwareHints` feature gate to be enabled for kube-apiserver, kube-controller-manager and kube-proxy. For more details, see the above section.
