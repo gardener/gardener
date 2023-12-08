@@ -54,8 +54,11 @@ if [ -n "$GOPATH" ] && [ ! -d "$GOPATH/pkg" ]; then mkdir -p "$GOPATH/pkg"; fi
 VIRTUAL_GOPATH="$(mktemp -d)"
 trap 'rm -rf "$VIRTUAL_GOPATH"' EXIT
 
-# Setup virtual GOPATH so the codegen tools work as expected.
-(cd "$SCRIPT_DIR/.."; go mod download && "$VGOPATH" -o "$VIRTUAL_GOPATH")
+# Use REPO_ROOT if set, otherwise default to $SCRIPT_DIR/..
+TARGET_DIR="${REPO_ROOT:-$SCRIPT_DIR/..}"
+
+# Setup virtual GOPATH
+(cd "$TARGET_DIR"; go mod download && "$VGOPATH" -o "$VIRTUAL_GOPATH")
 
 export GOROOT="${GOROOT:-"$(go env GOROOT)"}"
 export GOPATH="$VIRTUAL_GOPATH"
