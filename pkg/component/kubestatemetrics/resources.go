@@ -16,11 +16,13 @@ package kubestatemetrics
 
 import (
 	"fmt"
+	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,6 +47,7 @@ func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName s
 		service            = k.emptyService()
 		deployment         = k.emptyDeployment()
 		vpa                = k.emptyVerticalPodAutoscaler()
+		pdb                = k.emptyPodDisruptionBudget()
 
 		configs = component.ResourceConfigs{
 			{Obj: clusterRole, Class: component.Application, MutateFn: func() { k.reconcileClusterRole(clusterRole) }},
@@ -60,6 +63,7 @@ func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName s
 			component.ResourceConfig{Obj: serviceAccount, Class: component.Runtime, MutateFn: func() { k.reconcileServiceAccount(serviceAccount) }},
 			component.ResourceConfig{Obj: clusterRoleBinding, Class: component.Application, MutateFn: func() { k.reconcileClusterRoleBinding(clusterRoleBinding, clusterRole, serviceAccount) }},
 			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { k.reconcileDeployment(deployment, serviceAccount, "", nil) }},
+			component.ResourceConfig{Obj: pdb, Class: component.Runtime, MutateFn: func() { k.reconcilePodDisruptionBudget(pdb, deployment) }},
 		)
 	}
 
@@ -217,6 +221,7 @@ func (k *kubeStateMetrics) reconcileDeployment(
 			"--resources=deployments,pods,statefulsets,nodes,verticalpodautoscalers,horizontalpodautoscalers,persistentvolumeclaims,replicasets,namespaces",
 			"--metric-labels-allowlist=nodes=[*]",
 			"--metric-annotations-allowlist=namespaces=[shoot.gardener.cloud/uid]",
+			fmt.Sprintf("--metric-allowlist=%s", strings.Join(centralMonitoringAllowedMetrics, ",")),
 		)
 	}
 
@@ -329,6 +334,20 @@ func (k *kubeStateMetrics) reconcileVerticalPodAutoscaler(vpa *vpaautoscalingv1.
 				},
 			},
 		},
+	}
+}
+
+func (k *kubeStateMetrics) emptyPodDisruptionBudget() *policyv1.PodDisruptionBudget {
+	return &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics-pdb", Namespace: k.namespace}}
+}
+
+func (k *kubeStateMetrics) reconcilePodDisruptionBudget(podDisruptionBudget *policyv1.PodDisruptionBudget, deployment *appsv1.Deployment) {
+	maxUnavailable := intstr.FromInt32(1)
+
+	podDisruptionBudget.Labels = k.getLabels()
+	podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
+		MaxUnavailable: &maxUnavailable,
+		Selector:       deployment.Spec.Selector,
 	}
 }
 
