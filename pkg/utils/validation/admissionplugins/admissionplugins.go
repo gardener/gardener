@@ -69,7 +69,6 @@ var (
 		"PersistentVolumeLabel":                {},
 		"PodNodeSelector":                      {},
 		"PodSecurity":                          {Required: true},
-		"PodSecurityPolicy":                    {VersionRange: versionutils.VersionRange{RemovedInVersion: "1.25"}},
 		"PodTolerationRestriction":             {},
 		"Priority":                             {Required: true},
 		"ResourceQuota":                        {},

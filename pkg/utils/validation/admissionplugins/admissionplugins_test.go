@@ -39,7 +39,7 @@ var _ = Describe("admissionplugins", func() {
 			}
 		},
 		Entry("Unknown admission plugin", "Unknown", "1.25", false, false),
-		Entry("Known admission plugin but version not present in supported range", "PodSecurityPolicy", "1.25", false, true),
+		Entry("Known admission plugin but version not present in supported range", "ClusterTrustBundleAttest", "1.25", false, true),
 		Entry("Known admission plugin and version present in supported range", "DenyServiceExternalIPs", "1.25", true, true),
 		Entry("Known admission plugin but version range not present", "PodNodeSelector", "1.25", true, true),
 	)
@@ -56,11 +56,6 @@ var _ = Describe("admissionplugins", func() {
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal(field.NewPath("admissionPlugins[0].name").String()),
 				"Detail": Equal("admission plugin \"ClusterTrustBundleAttest\" is not supported in Kubernetes version 1.25.10"),
-			})))),
-			Entry("unsupported admission plugin", []core.AdmissionPlugin{{Name: "PodSecurityPolicy"}}, "1.26.6", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal(field.NewPath("admissionPlugins[0].name").String()),
-				"Detail": Equal("admission plugin \"PodSecurityPolicy\" is not supported in Kubernetes version 1.26.6"),
 			})))),
 			Entry("unsupported admission plugin but is disabled", []core.AdmissionPlugin{{Name: "ClusterTrustBundleAttest", Disabled: ptr.To(true)}}, "1.26.6", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
