@@ -145,7 +145,7 @@ func getCluster(number int) *extensionsv1alpha1.Cluster {
 		Status: gardencorev1beta1.ShootStatus{
 			LastOperation: &gardencorev1beta1.LastOperation{
 				Progress: 50,
-				// The logs are sent to central loki only if the operation is Create.
+				// The logs are sent to central vali only if the operation is Create.
 				Type: gardencorev1beta1.LastOperationTypeCreate,
 			},
 		},

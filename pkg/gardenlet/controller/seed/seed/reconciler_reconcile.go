@@ -25,7 +25,6 @@ import (
 	"github.com/go-logr/logr"
 	istiov1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -58,7 +57,6 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	"github.com/gardener/gardener/pkg/operation/common"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -342,35 +340,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 	if err := cleanupOrphanExposureClassHandlerResources(ctx, log, seedClient, r.Config.ExposureClassHandlers, seed.GetInfo().Spec.Provider.Zones); err != nil {
 		return err
-	}
-
-	// Delete Grafana artifacts.
-	if err := common.DeleteGrafana(ctx, r.SeedClientSet, r.GardenNamespace); err != nil {
-		return err
-	}
-
-	// Delete Grafana ingress which doesn't have the component label in the garden namespace.
-	if err := seedClient.Delete(
-		ctx,
-		&networkingv1.Ingress{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "grafana",
-				Namespace: r.GardenNamespace,
-			}},
-	); client.IgnoreNotFound(err) != nil {
-		return err
-	}
-
-	// TODO(rickardsjp, istvanballok): Remove in release v1.77 once the Loki to Vali migration is complete.
-	if exists, err := common.LokiPvcExists(ctx, seedClient, r.GardenNamespace, log); err != nil {
-		return err
-	} else if exists {
-		if err := common.DeleteLokiRetainPvc(ctx, seedClient, r.GardenNamespace, log); err != nil {
-			return err
-		}
-		if err := common.RenameLokiPvcToValiPvc(ctx, seedClient, r.GardenNamespace, log); err != nil {
-			return err
-		}
 	}
 
 	// setup for flow graph

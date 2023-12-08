@@ -143,15 +143,14 @@ var _ = Describe("Vali", func() {
 						Begin: maintenanceBegin,
 						End:   maintenanceEnd,
 					},
-					ValiImage:             valiImage,
-					CuratorImage:          curatorImage,
-					RenameLokiToValiImage: alpineImage,
-					InitLargeDirImage:     initLargeDirImage,
-					TelegrafImage:         telegrafImage,
-					KubeRBACProxyImage:    kubeRBACProxyImage,
-					PriorityClassName:     priorityClassName,
-					ClusterType:           "shoot",
-					IngressHost:           valiHost,
+					ValiImage:          valiImage,
+					CuratorImage:       curatorImage,
+					InitLargeDirImage:  initLargeDirImage,
+					TelegrafImage:      telegrafImage,
+					KubeRBACProxyImage: kubeRBACProxyImage,
+					PriorityClassName:  priorityClassName,
+					ClusterType:        "shoot",
+					IngressHost:        valiHost,
 				},
 			)
 
@@ -247,12 +246,11 @@ var _ = Describe("Vali", func() {
 						Begin: maintenanceBegin,
 						End:   maintenanceEnd,
 					},
-					ValiImage:             valiImage,
-					CuratorImage:          curatorImage,
-					RenameLokiToValiImage: alpineImage,
-					InitLargeDirImage:     initLargeDirImage,
-					PriorityClassName:     priorityClassName,
-					ClusterType:           "seed",
+					ValiImage:         valiImage,
+					CuratorImage:      curatorImage,
+					InitLargeDirImage: initLargeDirImage,
+					PriorityClassName: priorityClassName,
+					ClusterType:       "seed",
 				},
 			)
 
@@ -312,14 +310,13 @@ var _ = Describe("Vali", func() {
 				namespace,
 				fakeSecretManager,
 				Values{
-					Replicas:              1,
-					Storage:               &storage,
-					ValiImage:             valiImage,
-					CuratorImage:          curatorImage,
-					RenameLokiToValiImage: alpineImage,
-					InitLargeDirImage:     initLargeDirImage,
-					PriorityClassName:     priorityClassName,
-					ClusterType:           "seed",
+					Replicas:          1,
+					Storage:           &storage,
+					ValiImage:         valiImage,
+					CuratorImage:      curatorImage,
+					InitLargeDirImage: initLargeDirImage,
+					PriorityClassName: priorityClassName,
+					ClusterType:       "seed",
 				},
 			)
 
@@ -465,7 +462,7 @@ var _ = Describe("Vali", func() {
 			ctrl.Finish()
 		})
 
-		It("should patch garden/loki's PVC when new size is greater than the current one", func() {
+		It("should patch garden/vali's PVC when new size is greater than the current one", func() {
 			valiDeployer := New(runtimeClient, gardenNamespace, nil, Values{Storage: &new200GiStorageQuantity})
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
@@ -1241,30 +1238,6 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 									MountPath: "/vali-init.sh",
 									SubPath:   "vali-init.sh",
 									Name:      "config",
-								},
-							},
-						},
-						{
-							Name:  "rename-loki-to-vali",
-							Image: alpineImage,
-							Command: []string{
-								"sh",
-								"-c",
-								`
-set -x
-# TODO (istvanballok): remove in release v1.77
-if [[ -d /data/loki ]]; then
-  echo "Renaming loki folder to vali"
-  time mv /data/loki /data/vali
-else
-  echo "No loki folder found"
-fi
-`,
-							},
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									MountPath: "/data",
-									Name:      "vali",
 								},
 							},
 						},

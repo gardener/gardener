@@ -18,24 +18,16 @@ import (
 	"context"
 	"fmt"
 
-	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/mock"
@@ -172,97 +164,8 @@ var _ = Describe("Logging", func() {
 			Expect(botanist.DeployLogging(ctx)).To(Succeed())
 		})
 
-		It("should successfully clean up the existing Loki based deployment and deploy all of the components in the logging stack when it is enabled", func() {
-			deleteOptions := []interface{}{
-				client.InNamespace(seedNamespace),
-				client.MatchingLabels{
-					v1beta1constants.GardenRole: "logging",
-					v1beta1constants.LabelApp:   "loki",
-				}}
-			gomock.InOrder(
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(nil),
-
-				c.EXPECT().Delete(ctx, &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}),
-				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-from-prometheus-to-loki-telegraf", Namespace: seedNamespace}}),
-				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "telegraf-config", Namespace: seedNamespace}}),
-				// Delete Loki
-				c.EXPECT().Delete(ctx, &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "loki-0", Namespace: seedNamespace}}, client.GracePeriodSeconds(5)),
-
-				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-loki", Namespace: seedNamespace}}),
-				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-loki", Namespace: seedNamespace}}),
-				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}),
-				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}),
-				c.EXPECT().Delete(ctx, &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}),
-				c.EXPECT().Delete(ctx, &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-promtail", Namespace: seedNamespace}}),
-				c.EXPECT().DeleteAllOf(ctx, &corev1.ConfigMap{}, deleteOptions...),
-
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Do(func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-					pvc := obj.(*corev1.PersistentVolumeClaim)
-					pvc.Spec.VolumeName = "volumeIDofLoki"
-					return nil
-				}),
-
-				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: seedNamespace, Name: "loki-0"}, gomock.AssignableToTypeOf(&corev1.Pod{})).Return(nil),
-				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: seedNamespace, Name: "loki-0"}, gomock.AssignableToTypeOf(&corev1.Pod{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "Pod"}, "loki-0")),
-
-				c.EXPECT().Get(ctx, client.ObjectKey{Name: "volumeIDofLoki"}, gomock.AssignableToTypeOf(&corev1.PersistentVolume{})).Do(func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-					pv := obj.(*corev1.PersistentVolume)
-					pv.Spec.PersistentVolumeReclaimPolicy = corev1.PersistentVolumeReclaimDelete
-					return nil
-				}),
-
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.PersistentVolume{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
-					pv := obj.(*corev1.PersistentVolume)
-					Expect(pv.Spec.PersistentVolumeReclaimPolicy).To(Equal(corev1.PersistentVolumeReclaimRetain))
-					return nil
-				}),
-
-				c.EXPECT().Delete(ctx, &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "loki-loki-0", Namespace: seedNamespace}, Spec: corev1.PersistentVolumeClaimSpec{VolumeName: "volumeIDofLoki"}}),
-
-				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(nil),
-				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
-
-				c.EXPECT().Get(ctx, client.ObjectKey{Name: "volumeIDofLoki"}, gomock.AssignableToTypeOf(&corev1.PersistentVolume{})).Return(nil),
-
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.PersistentVolume{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
-					pv := obj.(*corev1.PersistentVolume)
-					Expect(pv.Spec.ClaimRef).To(BeNil())
-					return nil
-				}),
-
-				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Do(func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
-					pvc := obj.(*corev1.PersistentVolumeClaim)
-					Expect(pvc.ObjectMeta.Name).To(Equal("vali-vali-0"))
-					return nil
-				}),
-
-				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: seedNamespace, Name: "vali-vali-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "vali-vali-0")),
-				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: seedNamespace, Name: "vali-vali-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(nil),
-				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: seedNamespace, Name: "vali-vali-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Do(func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-					pvc := obj.(*corev1.PersistentVolumeClaim)
-					pvc.Status.Phase = corev1.ClaimBound
-					return nil
-				}),
-
-				c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&corev1.PersistentVolume{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
-					pv := obj.(*corev1.PersistentVolume)
-					Expect(pv.Spec.PersistentVolumeReclaimPolicy).To(Equal(corev1.PersistentVolumeReclaimDelete))
-					return nil
-				}),
-
-				// deploy Shoot Event Logging
-				eventLoggerDeployer.EXPECT().Deploy(ctx),
-				// deploy Vali
-				valiDeployer.EXPECT().Deploy(ctx),
-			)
-
-			Expect(botanist.DeployLogging(ctx)).To(Succeed())
-		})
-
 		It("should successfully deploy all of the components in the logging stack when it is enabled", func() {
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 				// deploy Shoot Event Logging
 				eventLoggerDeployer.EXPECT().Deploy(ctx),
 				// deploy Vali
@@ -275,7 +178,6 @@ var _ = Describe("Logging", func() {
 		It("should not deploy event logger when it is disabled", func() {
 			*botanist.Config.Logging.ShootEventLogging.Enabled = false
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 				// destroy Shoot Event Logging
 				eventLoggerDeployer.EXPECT().Destroy(ctx),
 				// deploy Vali
@@ -288,7 +190,6 @@ var _ = Describe("Logging", func() {
 		It("should not deploy shoot node logging for workerless shoot", func() {
 			botanist.Shoot.IsWorkerless = true
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 				// deploy Shoot Event Logging
 				eventLoggerDeployer.EXPECT().Deploy(ctx),
 				// deploy Vali
@@ -301,7 +202,6 @@ var _ = Describe("Logging", func() {
 		It("should not deploy shoot node logging when it is disabled", func() {
 			botanist.Config.Logging.ShootNodeLogging = nil
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 				// deploy Shoot Event Logging
 				eventLoggerDeployer.EXPECT().Deploy(ctx),
 				// deploy Vali
@@ -314,7 +214,6 @@ var _ = Describe("Logging", func() {
 		It("should not deploy shoot node logging and Vali when Vali is disabled", func() {
 			*botanist.Config.Logging.Vali.Enabled = false
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 				// deploy Shoot Event Logging
 				eventLoggerDeployer.EXPECT().Deploy(ctx),
 				// deploy Vali
@@ -347,7 +246,6 @@ var _ = Describe("Logging", func() {
 
 			It("should fail to deploy the logging stack when ShootEventLoggerDeployer Deploy returns an error", func() {
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 					eventLoggerDeployer.EXPECT().Deploy(ctx).Return(fakeErr),
 				)
 
@@ -356,7 +254,6 @@ var _ = Describe("Logging", func() {
 
 			It("should fail to deploy the logging stack when deploying of the shoot event logging fails", func() {
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 					// deploy Shoot Event Logging
 					eventLoggerDeployer.EXPECT().Deploy(ctx).Return(fakeErr),
 				)
@@ -366,7 +263,6 @@ var _ = Describe("Logging", func() {
 
 			It("should fail to deploy the logging stack when ValiDeployer Deploy returns error", func() {
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 					eventLoggerDeployer.EXPECT().Deploy(ctx),
 					valiDeployer.EXPECT().Deploy(ctx).Return(fakeErr),
 				)

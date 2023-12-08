@@ -129,12 +129,11 @@ type Interface interface {
 
 // Values are the values for the Vali.
 type Values struct {
-	ValiImage             string
-	CuratorImage          string
-	TelegrafImage         string
-	KubeRBACProxyImage    string
-	RenameLokiToValiImage string
-	InitLargeDirImage     string
+	ValiImage          string
+	CuratorImage       string
+	TelegrafImage      string
+	KubeRBACProxyImage string
+	InitLargeDirImage  string
 
 	ClusterType             component.ClusterType
 	Replicas                int32
@@ -663,30 +662,6 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 										MountPath: valiMountPathInitScript + valiDataKeyInitScript,
 										SubPath:   valiDataKeyInitScript,
 										Name:      valiConfigMapVolumeName,
-									},
-								},
-							},
-							{
-								Name:  "rename-loki-to-vali",
-								Image: v.values.RenameLokiToValiImage,
-								Command: []string{
-									"sh",
-									"-c",
-									`
-set -x
-# TODO (istvanballok): remove in release v1.77
-if [[ -d ` + valiMountPathData + `/loki ]]; then
-  echo "Renaming loki folder to vali"
-  time mv ` + valiMountPathData + `/loki ` + valiMountPathData + `/vali
-else
-  echo "No loki folder found"
-fi
-`,
-								},
-								VolumeMounts: []corev1.VolumeMount{
-									{
-										MountPath: valiMountPathData,
-										Name:      valiPVCName,
 									},
 								},
 							},

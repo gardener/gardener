@@ -57,11 +57,6 @@ func NewVali(
 		return nil, err
 	}
 
-	alpineImage, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlpine)
-	if err != nil {
-		return nil, err
-	}
-
 	kubeRBACProxyImage, err := imagevector.ImageVector().FindImage(imagevector.ImageNameKubeRbacProxy)
 	if err != nil {
 		return nil, err
@@ -75,7 +70,6 @@ func NewVali(
 	deployer := vali.New(c, namespace, secretsManager, vali.Values{
 		ValiImage:               valiImage.String(),
 		CuratorImage:            curatorImage.String(),
-		RenameLokiToValiImage:   alpineImage.String(),
 		InitLargeDirImage:       tune2fsImage.String(),
 		KubeRBACProxyImage:      kubeRBACProxyImage.String(),
 		TelegrafImage:           telegrafImage.String(),
