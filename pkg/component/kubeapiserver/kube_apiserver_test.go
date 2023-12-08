@@ -140,7 +140,7 @@ var _ = Describe("KubeAPIServer", func() {
 		values = Values{
 			Values: apiserver.Values{
 				Autoscaling:    autoscalingConfig,
-				ETCDEncryption: apiserver.ETCDEncryptionConfig{Resources: []string{"secrets"}},
+				ETCDEncryption: apiserver.ETCDEncryptionConfig{ResourcesToEncrypt: []string{"secrets"}},
 				RuntimeVersion: runtimeVersion},
 			PriorityClassName: priorityClassName,
 			Version:           version,
@@ -910,7 +910,7 @@ resources:
 				func(encryptWithCurrentKey bool) {
 					kapi = New(kubernetesInterface, namespace, sm, Values{
 						Values: apiserver.Values{
-							ETCDEncryption: apiserver.ETCDEncryptionConfig{EncryptWithCurrentKey: encryptWithCurrentKey, Resources: []string{"secrets"}},
+							ETCDEncryption: apiserver.ETCDEncryptionConfig{EncryptWithCurrentKey: encryptWithCurrentKey, ResourcesToEncrypt: []string{"secrets"}},
 							RuntimeVersion: runtimeVersion,
 						},
 						Version: version,

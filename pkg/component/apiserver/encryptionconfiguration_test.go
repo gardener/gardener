@@ -48,7 +48,7 @@ var _ = Describe("EncryptionConfiguration", func() {
 	)
 
 	BeforeEach(func() {
-		config = ETCDEncryptionConfig{Resources: []string{"foo"}}
+		config = ETCDEncryptionConfig{ResourcesToEncrypt: []string{"foo"}}
 
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		fakeSecretManager = fakesecretsmanager.New(fakeClient, namespace)
@@ -67,6 +67,76 @@ resources:
   - identity: {}
   resources:
   - foo
+`
+
+			By("Verify encryption config secret")
+			expectedSecretETCDEncryptionConfiguration := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: "apiserver-encryption-config", Namespace: namespace},
+				Data:       map[string][]byte{"encryption-configuration.yaml": []byte(etcdEncryptionConfiguration)},
+			}
+			Expect(kubernetesutils.MakeUnique(expectedSecretETCDEncryptionConfiguration)).To(Succeed())
+
+			actualSecretETCDEncryptionConfiguration := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "apiserver-encryption-config", Namespace: namespace}}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(actualSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(BeNotFoundError())
+
+			Expect(ReconcileSecretETCDEncryptionConfiguration(ctx, fakeClient, fakeSecretManager, config, actualSecretETCDEncryptionConfiguration, secretNameETCDEncryptionKey, encryptionRoleLabel)).To(Succeed())
+
+			Expect(actualSecretETCDEncryptionConfiguration).To(Equal(&corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      expectedSecretETCDEncryptionConfiguration.Name,
+					Namespace: expectedSecretETCDEncryptionConfiguration.Namespace,
+					Labels: map[string]string{
+						"resources.gardener.cloud/garbage-collectable-reference": "true",
+						"role": encryptionRoleLabel,
+					},
+					ResourceVersion: "1",
+				},
+				Immutable: pointer.Bool(true),
+				Data:      expectedSecretETCDEncryptionConfiguration.Data,
+			}))
+
+			By("Deploy again and ensure that labels are still present")
+			actualSecretETCDEncryptionConfiguration.ResourceVersion = ""
+			Expect(ReconcileSecretETCDEncryptionConfiguration(ctx, fakeClient, fakeSecretManager, config, actualSecretETCDEncryptionConfiguration, secretNameETCDEncryptionKey, encryptionRoleLabel)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(Succeed())
+			Expect(actualSecretETCDEncryptionConfiguration.Labels).To(Equal(map[string]string{
+				"resources.gardener.cloud/garbage-collectable-reference": "true",
+				"role": encryptionRoleLabel,
+			}))
+
+			By("Verify encryption key secret")
+			secretList := &corev1.SecretList{}
+			Expect(fakeClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
+				"name":       secretNameETCDEncryptionKey,
+				"managed-by": "secrets-manager",
+			})).To(Succeed())
+			Expect(secretList.Items).To(HaveLen(1))
+			Expect(secretList.Items[0].Labels).To(HaveKeyWithValue("persist", "true"))
+		})
+
+		It("should successfully deploy the ETCD encryption configuration secret resource with the right config when resources are removed from encryption", func() {
+			config = ETCDEncryptionConfig{ResourcesToEncrypt: []string{"foo", "bin"}, EncryptedResources: []string{"bar", "bin"}}
+
+			etcdEncryptionConfiguration := `apiVersion: apiserver.config.k8s.io/v1
+kind: EncryptionConfiguration
+resources:
+- providers:
+  - aescbc:
+      keys:
+      - name: key-62135596800
+        secret: ________________________________
+  - identity: {}
+  resources:
+  - foo
+  - bin
+- providers:
+  - identity: {}
+  - aescbc:
+      keys:
+      - name: key-62135596800
+        secret: ________________________________
+  resources:
+  - bar
 `
 
 			By("Verify encryption config secret")

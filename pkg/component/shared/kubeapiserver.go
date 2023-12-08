@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	admissionapiv1 "k8s.io/pod-security-admission/admission/api/v1"
 	admissionapiv1alpha1 "k8s.io/pod-security-admission/admission/api/v1alpha1"
 	admissionapiv1beta1 "k8s.io/pod-security-admission/admission/api/v1beta1"
@@ -43,6 +44,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -211,6 +213,8 @@ func DeployKubeAPIServer(
 	sniConfig kubeapiserver.SNIConfig,
 	externalHostname string,
 	externalServer string,
+	resourcesToEncrypt []string,
+	encryptedResources []string,
 	etcdEncryptionKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase,
 	serviceAccountKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase,
 	wantScaleDown bool,
@@ -246,7 +250,15 @@ func DeployKubeAPIServer(
 	kubeAPIServer.SetExternalHostname(externalHostname)
 	kubeAPIServer.SetExternalServer(externalServer)
 
-	etcdEncryptionConfig, err := computeAPIServerETCDEncryptionConfig(ctx, runtimeClient, runtimeNamespace, deploymentName, etcdEncryptionKeyRotationPhase, []string{corev1.Resource("secrets").String()})
+	etcdEncryptionConfig, err := computeAPIServerETCDEncryptionConfig(
+		ctx,
+		runtimeClient,
+		runtimeNamespace,
+		deploymentName,
+		etcdEncryptionKeyRotationPhase,
+		append(resourcesToEncrypt, sets.List(gardenerutils.DefaultResourcesForEncryption())...),
+		append(encryptedResources, sets.List(gardenerutils.DefaultResourcesForEncryption())...),
+	)
 	if err != nil {
 		return err
 	}

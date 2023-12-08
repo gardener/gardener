@@ -31,6 +31,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/component/vpnseedserver"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -236,6 +237,10 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	shoot.Purpose = v1beta1helper.GetPurpose(shootObject)
 
 	shoot.PSPDisabled = v1beta1helper.IsPSPDisabled(shoot.GetInfo())
+
+	if shoot.GetInfo().Spec.Kubernetes.KubeAPIServer != nil {
+		shoot.ResourcesToEncrypt = sharedcomponent.GetResourcesForEncryptionFromConfig(shoot.GetInfo().Spec.Kubernetes.KubeAPIServer.EncryptionConfig)
+	}
 
 	if b.seed == nil {
 		return nil, fmt.Errorf("seed object is required but not set")

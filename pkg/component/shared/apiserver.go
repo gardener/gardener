@@ -22,6 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -136,7 +137,8 @@ func computeAPIServerETCDEncryptionConfig(
 	runtimeNamespace string,
 	deploymentName string,
 	etcdEncryptionKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase,
-	resources []string,
+	resourcesToEncrypt []string,
+	encryptedResources []string,
 ) (
 	apiserver.ETCDEncryptionConfig,
 	error,
@@ -144,7 +146,8 @@ func computeAPIServerETCDEncryptionConfig(
 	config := apiserver.ETCDEncryptionConfig{
 		RotationPhase:         etcdEncryptionKeyRotationPhase,
 		EncryptWithCurrentKey: true,
-		Resources:             resources,
+		ResourcesToEncrypt:    resourcesToEncrypt,
+		EncryptedResources:    encryptedResources,
 	}
 
 	if etcdEncryptionKeyRotationPhase == gardencorev1beta1.RotationPreparing {
@@ -210,4 +213,26 @@ func handleETCDEncryptionKeyRotation(
 	}
 
 	return nil
+}
+
+// GetResourcesForEncryptionFromConfig returns the list of resources requiring encryption from the EncryptionConfig.
+func GetResourcesForEncryptionFromConfig(encryptionConfig *gardencorev1beta1.EncryptionConfig) []string {
+	if encryptionConfig == nil {
+		return nil
+	}
+
+	return sets.List(sets.New(encryptionConfig.Resources...))
+}
+
+// GetModifiedResources returns the union of added resources and removed resources between the two passed lists.
+func GetModifiedResources(encryptedResources []string, resourcesToEncrypt []string) []string {
+	var (
+		oldResources = sets.New(encryptedResources...)
+		newResources = sets.New(resourcesToEncrypt...)
+
+		addedResources   = newResources.Difference(oldResources)
+		removedResources = oldResources.Difference(newResources)
+	)
+
+	return sets.List(addedResources.Union(removedResources))
 }

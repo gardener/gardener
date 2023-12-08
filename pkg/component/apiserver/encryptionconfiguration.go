@@ -17,6 +17,7 @@ package apiserver
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -26,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/config/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -92,22 +94,45 @@ func ReconcileSecretETCDEncryptionConfiguration(
 		return err
 	}
 
-	keySecretOld, _ := secretsManager.Get(secretNameETCDEncryptionKey, secretsmanager.Old)
-
-	encryptionConfiguration := &apiserverconfigv1.EncryptionConfiguration{
-		Resources: []apiserverconfigv1.ResourceConfiguration{{
-			Resources: config.Resources,
-			Providers: []apiserverconfigv1.ProviderConfiguration{
+	var (
+		keySecretOld, _         = secretsManager.Get(secretNameETCDEncryptionKey, secretsmanager.Old)
+		encryptionKeys          = etcdEncryptionAESKeys(keySecret, keySecretOld, config.EncryptWithCurrentKey)
+		encryptionConfiguration = &apiserverconfigv1.EncryptionConfiguration{
+			Resources: []apiserverconfigv1.ResourceConfiguration{
 				{
-					AESCBC: &apiserverconfigv1.AESConfiguration{
-						Keys: etcdEncryptionAESKeys(keySecret, keySecretOld, config.EncryptWithCurrentKey),
+					Resources: config.ResourcesToEncrypt,
+					Providers: []apiserverconfigv1.ProviderConfiguration{
+						{
+							AESCBC: &apiserverconfigv1.AESConfiguration{
+								Keys: encryptionKeys,
+							},
+						},
+						{
+							Identity: &apiserverconfigv1.IdentityConfiguration{},
+						},
 					},
 				},
-				{
-					Identity: &apiserverconfigv1.IdentityConfiguration{},
-				},
 			},
-		}},
+		}
+	)
+
+	if !reflect.DeepEqual(config.ResourcesToEncrypt, config.EncryptedResources) {
+		removedResources := sets.New(config.EncryptedResources...).Difference(sets.New(config.ResourcesToEncrypt...))
+		if removedResources.Len() > 0 {
+			encryptionConfiguration.Resources = append(encryptionConfiguration.Resources, apiserverconfigv1.ResourceConfiguration{
+				Resources: sets.List(removedResources),
+				Providers: []apiserverconfigv1.ProviderConfiguration{
+					{
+						Identity: &apiserverconfigv1.IdentityConfiguration{},
+					},
+					{
+						AESCBC: &apiserverconfigv1.AESConfiguration{
+							Keys: encryptionKeys,
+						},
+					},
+				},
+			})
+		}
 	}
 
 	data, err := runtime.Encode(encryptionCodec, encryptionConfiguration)
