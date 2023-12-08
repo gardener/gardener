@@ -19,6 +19,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/component-base/version"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/gardenerapiserver"
 	"github.com/gardener/gardener/pkg/logger"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -120,14 +122,19 @@ func DeployGardenerAPIServer(
 	runtimeClient client.Client,
 	runtimeNamespace string,
 	gardenerAPIServer gardenerapiserver.Interface,
+	resourcesToEncrypt []string,
+	encryptedResources []string,
 	etcdEncryptionKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase,
 ) error {
-	etcdEncryptionConfig, err := computeAPIServerETCDEncryptionConfig(ctx, runtimeClient, runtimeNamespace, gardenerapiserver.DeploymentName, etcdEncryptionKeyRotationPhase, []string{
-		gardencorev1beta1.Resource("controllerdeployments").String(),
-		gardencorev1beta1.Resource("controllerregistrations").String(),
-		gardencorev1beta1.Resource("internalsecrets").String(),
-		gardencorev1beta1.Resource("shootstates").String(),
-	})
+	etcdEncryptionConfig, err := computeAPIServerETCDEncryptionConfig(
+		ctx,
+		runtimeClient,
+		runtimeNamespace,
+		gardenerapiserver.DeploymentName,
+		etcdEncryptionKeyRotationPhase,
+		append(resourcesToEncrypt, sets.List(gardenerutils.DefaultGardenerResourcesForEncryption())...),
+		append(encryptedResources, sets.List(gardenerutils.DefaultGardenerResourcesForEncryption())...),
+	)
 	if err != nil {
 		return err
 	}

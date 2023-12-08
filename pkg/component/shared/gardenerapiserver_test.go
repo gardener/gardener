@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -35,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	mockgardenerapiserver "github.com/gardener/gardener/pkg/component/gardenerapiserver/mock"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 )
@@ -409,7 +411,7 @@ var _ = Describe("GardenerAPIServer", func() {
 			etcdEncryptionKeyRotationPhase = ""
 		})
 
-		DescribeTable("ETCDEncryptionConfig",
+		DescribeTable("ETCD Encryption key rotation",
 			func(rotationPhase gardencorev1beta1.CredentialsRotationPhase, prepTest func(), expectedETCDEncryptionConfig apiserver.ETCDEncryptionConfig, finalizeTest func()) {
 				if len(rotationPhase) > 0 {
 					etcdEncryptionKeyRotationPhase = rotationPhase
@@ -422,7 +424,7 @@ var _ = Describe("GardenerAPIServer", func() {
 				gardenerAPIServer.EXPECT().SetETCDEncryptionConfig(expectedETCDEncryptionConfig)
 				gardenerAPIServer.EXPECT().Deploy(ctx)
 
-				Expect(DeployGardenerAPIServer(ctx, runtimeClient, namespace, gardenerAPIServer, etcdEncryptionKeyRotationPhase)).To(Succeed())
+				Expect(DeployGardenerAPIServer(ctx, runtimeClient, namespace, gardenerAPIServer, nil, nil, etcdEncryptionKeyRotationPhase)).To(Succeed())
 
 				if finalizeTest != nil {
 					finalizeTest()
@@ -432,12 +434,7 @@ var _ = Describe("GardenerAPIServer", func() {
 			Entry("no rotation",
 				gardencorev1beta1.CredentialsRotationPhase(""),
 				nil,
-				apiserver.ETCDEncryptionConfig{EncryptWithCurrentKey: true, Resources: []string{
-					"controllerdeployments.core.gardener.cloud",
-					"controllerregistrations.core.gardener.cloud",
-					"internalsecrets.core.gardener.cloud",
-					"shootstates.core.gardener.cloud",
-				}},
+				apiserver.ETCDEncryptionConfig{RotationPhase: "", EncryptWithCurrentKey: true, ResourcesToEncrypt: sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()), EncryptedResources: sets.List(gardenerutils.DefaultGardenerResourcesForEncryption())},
 				nil,
 			),
 			Entry("preparing phase, new key already populated",
@@ -451,12 +448,7 @@ var _ = Describe("GardenerAPIServer", func() {
 						},
 					})).To(Succeed())
 				},
-				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPreparing, EncryptWithCurrentKey: true, Resources: []string{
-					"controllerdeployments.core.gardener.cloud",
-					"controllerregistrations.core.gardener.cloud",
-					"internalsecrets.core.gardener.cloud",
-					"shootstates.core.gardener.cloud",
-				}},
+				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPreparing, EncryptWithCurrentKey: true, ResourcesToEncrypt: sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()), EncryptedResources: sets.List(gardenerutils.DefaultGardenerResourcesForEncryption())},
 				nil,
 			),
 			Entry("preparing phase, new key not yet populated",
@@ -474,21 +466,12 @@ var _ = Describe("GardenerAPIServer", func() {
 					gardenerAPIServer.EXPECT().SetETCDEncryptionConfig(apiserver.ETCDEncryptionConfig{
 						RotationPhase:         gardencorev1beta1.RotationPreparing,
 						EncryptWithCurrentKey: true,
-						Resources: []string{
-							"controllerdeployments.core.gardener.cloud",
-							"controllerregistrations.core.gardener.cloud",
-							"internalsecrets.core.gardener.cloud",
-							"shootstates.core.gardener.cloud",
-						},
+						ResourcesToEncrypt:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
+						EncryptedResources:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
 					})
 					gardenerAPIServer.EXPECT().Deploy(ctx)
 				},
-				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPreparing, EncryptWithCurrentKey: false, Resources: []string{
-					"controllerdeployments.core.gardener.cloud",
-					"controllerregistrations.core.gardener.cloud",
-					"internalsecrets.core.gardener.cloud",
-					"shootstates.core.gardener.cloud",
-				}},
+				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPreparing, EncryptWithCurrentKey: false, ResourcesToEncrypt: sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()), EncryptedResources: sets.List(gardenerutils.DefaultGardenerResourcesForEncryption())},
 				func() {
 					deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-apiserver", Namespace: namespace}}
 					Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
@@ -498,12 +481,7 @@ var _ = Describe("GardenerAPIServer", func() {
 			Entry("prepared phase",
 				gardencorev1beta1.RotationPrepared,
 				nil,
-				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPrepared, EncryptWithCurrentKey: true, Resources: []string{
-					"controllerdeployments.core.gardener.cloud",
-					"controllerregistrations.core.gardener.cloud",
-					"internalsecrets.core.gardener.cloud",
-					"shootstates.core.gardener.cloud",
-				}},
+				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPrepared, EncryptWithCurrentKey: true, ResourcesToEncrypt: sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()), EncryptedResources: sets.List(gardenerutils.DefaultGardenerResourcesForEncryption())},
 				nil,
 			),
 			Entry("completing phase",
@@ -517,12 +495,7 @@ var _ = Describe("GardenerAPIServer", func() {
 						},
 					})).To(Succeed())
 				},
-				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationCompleting, EncryptWithCurrentKey: true, Resources: []string{
-					"controllerdeployments.core.gardener.cloud",
-					"controllerregistrations.core.gardener.cloud",
-					"internalsecrets.core.gardener.cloud",
-					"shootstates.core.gardener.cloud",
-				}},
+				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationCompleting, EncryptWithCurrentKey: true, ResourcesToEncrypt: sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()), EncryptedResources: sets.List(gardenerutils.DefaultGardenerResourcesForEncryption())},
 				func() {
 					deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-apiserver", Namespace: namespace}}
 					Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
@@ -532,14 +505,71 @@ var _ = Describe("GardenerAPIServer", func() {
 			Entry("completed phase",
 				gardencorev1beta1.RotationCompleted,
 				nil,
-				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationCompleted, EncryptWithCurrentKey: true, Resources: []string{
-					"controllerdeployments.core.gardener.cloud",
-					"controllerregistrations.core.gardener.cloud",
-					"internalsecrets.core.gardener.cloud",
-					"shootstates.core.gardener.cloud",
-				}},
+				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationCompleted, EncryptWithCurrentKey: true, ResourcesToEncrypt: sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()), EncryptedResources: sets.List(gardenerutils.DefaultGardenerResourcesForEncryption())},
 				nil,
 			),
 		)
+
+		Describe("ETCDEncryptionConfig", func() {
+			It("It should deploy GardenerAPIServer with the default ETCDEncryptionConfig when resources are nil", func() {
+				expectedETCDEncryptionConfig := apiserver.ETCDEncryptionConfig{
+					EncryptWithCurrentKey: true,
+					ResourcesToEncrypt: []string{
+						"controllerdeployments.core.gardener.cloud",
+						"controllerregistrations.core.gardener.cloud",
+						"internalsecrets.core.gardener.cloud",
+						"shootstates.core.gardener.cloud",
+					},
+					EncryptedResources: []string{
+						"controllerdeployments.core.gardener.cloud",
+						"controllerregistrations.core.gardener.cloud",
+						"internalsecrets.core.gardener.cloud",
+						"shootstates.core.gardener.cloud",
+					},
+				}
+
+				gardenerAPIServer.EXPECT().SetETCDEncryptionConfig(expectedETCDEncryptionConfig)
+				gardenerAPIServer.EXPECT().Deploy(ctx)
+
+				Expect(DeployGardenerAPIServer(ctx, runtimeClient, namespace, gardenerAPIServer, nil, nil, etcdEncryptionKeyRotationPhase)).To(Succeed())
+			})
+
+			It("It should deploy GardenerAPIServer with the default resources appended to the passed resources", func() {
+				expectedETCDEncryptionConfig := apiserver.ETCDEncryptionConfig{
+					EncryptWithCurrentKey: true,
+					ResourcesToEncrypt: []string{
+						"shoots.core.gardener.cloud",
+						"managedseeds.seedmanagement.gardener.cloud",
+						"controllerdeployments.core.gardener.cloud",
+						"controllerregistrations.core.gardener.cloud",
+						"internalsecrets.core.gardener.cloud",
+						"shootstates.core.gardener.cloud",
+					},
+					EncryptedResources: []string{
+						"projects.core.gardener.cloud",
+						"bastions.operations.gardener.cloud",
+						"controllerdeployments.core.gardener.cloud",
+						"controllerregistrations.core.gardener.cloud",
+						"internalsecrets.core.gardener.cloud",
+						"shootstates.core.gardener.cloud",
+					},
+				}
+
+				gardenerAPIServer.EXPECT().SetETCDEncryptionConfig(expectedETCDEncryptionConfig)
+				gardenerAPIServer.EXPECT().Deploy(ctx)
+
+				resourcesToEncrypt := []string{
+					"shoots.core.gardener.cloud",
+					"managedseeds.seedmanagement.gardener.cloud",
+				}
+
+				encryptedResources := []string{
+					"projects.core.gardener.cloud",
+					"bastions.operations.gardener.cloud",
+				}
+
+				Expect(DeployGardenerAPIServer(ctx, runtimeClient, namespace, gardenerAPIServer, resourcesToEncrypt, encryptedResources, etcdEncryptionKeyRotationPhase)).To(Succeed())
+			})
+		})
 	})
 })

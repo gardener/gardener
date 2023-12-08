@@ -134,7 +134,7 @@ var _ = Describe("GardenerAPIServer", func() {
 					APIServerResources: resources,
 				},
 				ETCDEncryption: apiserver.ETCDEncryptionConfig{
-					Resources: []string{"shootstates.core.gardener.cloud"},
+					ResourcesToEncrypt: []string{"shootstates.core.gardener.cloud"},
 				},
 				RuntimeVersion: semver.MustParse("1.27.1"),
 			},
@@ -843,7 +843,7 @@ resources:
 						func(encryptWithCurrentKey bool) {
 							deployer = New(fakeClient, namespace, fakeSecretManager, Values{
 								Values: apiserver.Values{
-									ETCDEncryption: apiserver.ETCDEncryptionConfig{EncryptWithCurrentKey: encryptWithCurrentKey, Resources: []string{"shootstates.core.gardener.cloud"}},
+									ETCDEncryption: apiserver.ETCDEncryptionConfig{EncryptWithCurrentKey: encryptWithCurrentKey, ResourcesToEncrypt: []string{"shootstates.core.gardener.cloud"}},
 								},
 							})
 
