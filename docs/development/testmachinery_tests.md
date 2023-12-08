@@ -27,14 +27,17 @@ The `test` directory is structured as follows:
 ```console
 test
 ├── e2e           # end-to-end tests (using provider-local)
-│  └── shoot
+│  ├── gardener
+│  │  ├── seed
+│  │  ├── shoot
+|  |  └── ...
+|  └──operator
 ├── framework     # helper code shared across integration, e2e and testmachinery tests
 ├── integration   # integration tests (envtests)
 │  ├── controllermanager
 │  ├── envtest
 │  ├── resourcemanager
 │  ├── scheduler
-│  ├── shootmaintenance
 │  └── ...
 └── testmachinery # test machinery tests
    ├── gardener   # actual test cases imported by suites/gardener
@@ -216,22 +219,14 @@ An example document for one test case would look like the following document:
 
 **Resources**
 
-The resources directory contains all the templates, helm config files (e.g., repositories.yaml, charts, and cache index which are downloaded upon the start of the test), shoot configs, etc.
+The resources directory contains templates used by the tests.
 
 ```console
 resources
-├── charts
-├── repository
-│   └── repositories.yaml
 └── templates
     ├── guestbook-app.yaml.tpl
     └── logger-app.yaml.tpl
 ```
-
-There are two special directories that are dynamically filled with the correct test files:
-
-- **charts** - the charts will be downloaded and saved in this directory
-- **repository** - contains the `repository.yaml` file that the target helm repos will be read from and the cache where the `stable-index.yaml` file will be created
 
 ### System Tests
 
