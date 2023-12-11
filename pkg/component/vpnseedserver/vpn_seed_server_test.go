@@ -93,9 +93,10 @@ var _ = Describe("VpnSeedServer", func() {
 		}
 
 		listenAddress   = "0.0.0.0"
-		dnsLookUpFamily = "V4_ONLY"
+		listenAddressV6 = "::"
+		dnsLookUpFamily = "V4_PREFERRED"
 
-		configMap = seedConfigMap(listenAddress, dnsLookUpFamily, namespace)
+		configMap = seedConfigMap(listenAddress, listenAddressV6, dnsLookUpFamily, namespace)
 		secretDH  = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{Name: "vpn-seed-server-dh", Namespace: namespace},
 			Type:       corev1.SecretTypeOpaque,
@@ -659,9 +660,10 @@ var _ = Describe("VpnSeedServer", func() {
 
 		Context("IPv6", func() {
 			BeforeEach(func() {
-				listenAddress = "::"
-				dnsLookUpFamily = "V6_ONLY"
-				configMap = seedConfigMap(listenAddress, dnsLookUpFamily, namespace)
+				listenAddress = "0.0.0.0"
+				listenAddressV6 = "::"
+				dnsLookUpFamily = "V4_PREFERRED"
+				configMap = seedConfigMap(listenAddress, listenAddressV6, dnsLookUpFamily, namespace)
 				networkConfig := NetworkValues{
 					PodCIDR:     "2001:db8:1::/48",
 					ServiceCIDR: "2001:db8:3::/48",
@@ -1179,7 +1181,7 @@ var _ = Describe("VpnSeedServer", func() {
 	})
 })
 
-func seedConfigMap(listenAddress string, dnsLookUpFamily string, namespace string) *corev1.ConfigMap {
+func seedConfigMap(listenAddress, listenAddressV6 string, dnsLookUpFamily string, namespace string) *corev1.ConfigMap {
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "vpn-seed-server-envoy-config",
@@ -1194,6 +1196,11 @@ func seedConfigMap(listenAddress string, dnsLookUpFamily string, namespace strin
         protocol: TCP
         address: "` + listenAddress + `"
         port_value: 9443
+    additional_addresses:
+    - address:
+        socket_address:
+          address: "` + listenAddressV6 + `"
+          port_value: 9443
     listener_filters:
     - name: "envoy.filters.listener.tls_inspector"
       typed_config:

@@ -885,16 +885,10 @@ func getLabels() map[string]string {
 
 func (v *vpnSeedServer) getEnvoyConfig() string {
 	var (
-		listenAddress = "0.0.0.0"
-		// we don't want to use AUTO for single-stack clusters as it causes an unnecessary failed lookup
-		// ref https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#enum-config-cluster-v3-cluster-dnslookupfamily
-		dnsLookupFamily = "V4_ONLY"
+		listenAddress   = "0.0.0.0"
+		listenAddressV6 = "::"
+		dnsLookupFamily = "V4_PREFERRED"
 	)
-
-	if gardencorev1beta1.IsIPv6SingleStack(v.values.Network.IPFamilies) {
-		listenAddress = "::"
-		dnsLookupFamily = "V6_ONLY"
-	}
 
 	return `static_resources:
   listeners:
@@ -904,6 +898,11 @@ func (v *vpnSeedServer) getEnvoyConfig() string {
         protocol: TCP
         address: "` + listenAddress + `"
         port_value: ` + fmt.Sprintf("%d", EnvoyPort) + `
+    additional_addresses:
+    - address:
+        socket_address:
+          address: "` + listenAddressV6 + `"
+          port_value: ` + fmt.Sprintf("%d", EnvoyPort) + `
     listener_filters:
     - name: "envoy.filters.listener.tls_inspector"
       typed_config:
