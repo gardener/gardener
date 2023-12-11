@@ -27,7 +27,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controller/tokenrequestor"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/csrapprover"
@@ -119,7 +118,9 @@ func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targe
 			Clock:           clock.RealClock{},
 			JitterFunc:      wait.Jitter,
 			APIAudiences:    []string{v1beta1constants.GardenerAudience},
-			Class:           pointer.String(resourcesv1alpha1.ResourceManagerClassShoot),
+			// TODO(rfranzke): Uncomment the next line after v1.90 has been released
+			// and after handling access Secrets without any class in the runtime cluster.
+			// Class: pointer.String(resourcesv1alpha1.ResourceManagerClassShoot),
 		}).AddToManager(mgr, sourceCluster, targetCluster); err != nil {
 			return fmt.Errorf("failed adding token requestor controller: %w", err)
 		}
