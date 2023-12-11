@@ -639,7 +639,6 @@ spec:
       containers:
       - args:
         - --ip-address=` + advertiseIPAddress + `
-        - --setup-iptables=false
         - --interface=lo
         image: sidecar-image:some-tag
         imagePullPolicy: IfNotPresent
@@ -705,7 +704,6 @@ spec:
       initContainers:
       - args:
         - --ip-address=` + advertiseIPAddress + `
-        - --setup-iptables=false
         - --daemon=false
         - --interface=lo
         image: sidecar-image:some-tag
