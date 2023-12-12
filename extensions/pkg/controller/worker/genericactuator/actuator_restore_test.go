@@ -102,6 +102,24 @@ var _ = Describe("ActuatorRestore", func() {
 			Expect(wantedMachineDeployments[2].State).To(BeNil())
 		})
 
+		It("should do nothing because machine state data in ShootState is null", func() {
+			patch := client.MergeFrom(shootState.DeepCopy())
+			shootState.Spec = gardencorev1beta1.ShootStateSpec{
+				Gardener: []gardencorev1beta1.GardenerResourceData{{
+					Name: "machine-state",
+					Type: "machine-state",
+					Data: runtime.RawExtension{Raw: []byte("null")},
+				}},
+			}
+			Expect(fakeGardenClient.Patch(ctx, shootState, patch)).To(Succeed())
+
+			Expect(addStateToMachineDeployment(ctx, log, fakeGardenClient, shoot, worker, wantedMachineDeployments)).To(Succeed())
+
+			Expect(wantedMachineDeployments[0].State).To(BeNil())
+			Expect(wantedMachineDeployments[1].State).To(BeNil())
+			Expect(wantedMachineDeployments[2].State).To(BeNil())
+		})
+
 		It("should fetch the machine state from the ShootState", func() {
 			patch := client.MergeFrom(shootState.DeepCopy())
 			shootState.Spec = gardencorev1beta1.ShootStateSpec{
