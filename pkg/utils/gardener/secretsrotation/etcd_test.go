@@ -31,6 +31,8 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/client/kubernetes/test"
 	mocketcd "github.com/gardener/gardener/pkg/component/etcd/mock"
 	. "github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -46,9 +48,11 @@ var _ = Describe("ETCD", func() {
 		namePrefix                  = "baz-"
 		kubeAPIServerDeploymentName = namePrefix + "kube-apiserver"
 
-		runtimeClient      client.Client
-		targetClient       client.Client
-		fakeSecretsManager secretsmanager.Interface
+		runtimeClient       client.Client
+		targetClient        client.Client
+		fakeTargetInterface kubernetes.Interface
+		fakeSecretsManager  secretsmanager.Interface
+		fakeDiscoveryClient *fakeDiscoveryWithServerPreferredResources
 	)
 
 	BeforeEach(func() {
@@ -56,6 +60,8 @@ var _ = Describe("ETCD", func() {
 
 		runtimeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		targetClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
+		fakeDiscoveryClient = &fakeDiscoveryWithServerPreferredResources{}
+		fakeTargetInterface = kubernetesfake.NewClientSetBuilder().WithKubernetes(test.NewClientSetWithDiscovery(nil, fakeDiscoveryClient)).WithClient(targetClient).Build()
 		fakeSecretsManager = fakesecretsmanager.New(runtimeClient, kubeAPIServerNamespace)
 	})
 
@@ -162,16 +168,19 @@ var _ = Describe("ETCD", func() {
 		})
 
 		Describe("#RewriteEncryptedDataAddLabel", func() {
-			It("should patch all secrets and add the label if not already done", func() {
+			It("should patch all resources and add the label if not already done", func() {
 				Expect(runtimeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-etcd-encryption-key-current", Namespace: kubeAPIServerNamespace}})).To(Succeed())
 
-				Expect(RewriteEncryptedDataAddLabel(ctx, logger, targetClient, fakeSecretsManager,
-					"Add label",
-					corev1.SchemeGroupVersion.WithKind("Secret"),
-					corev1.SchemeGroupVersion.WithKind("ConfigMap"),
-					appsv1.SchemeGroupVersion.WithKind("Deployment"),
-					discoveryv1.SchemeGroupVersion.WithKind("EndpointSlice"),
-				)).To(Succeed())
+				resources := []string{
+					corev1.Resource("secrets").String(),
+					corev1.Resource("configmaps").String(),
+					appsv1.Resource("deployments").String(),
+					discoveryv1.Resource("endpointslices").String(),
+				}
+
+				defaultGVKs := []schema.GroupVersionKind{corev1.SchemeGroupVersion.WithKind("Secret")}
+
+				Expect(RewriteEncryptedDataAddLabel(ctx, logger, fakeTargetInterface, fakeSecretsManager, resources, resources, defaultGVKs)).To(Succeed())
 
 				for _, obj := range []client.Object{
 					secret1, secret2, secret3,
@@ -226,17 +235,20 @@ var _ = Describe("ETCD", func() {
 		})
 
 		Describe("#RewriteEncryptedDataRemoveLabel", func() {
-			It("should patch all secrets and remove the label if not already done", func() {
+			It("should patch all resources and remove the label if not already done", func() {
 				metav1.SetMetaDataAnnotation(&kubeAPIServerDeployment.ObjectMeta, "credentials.gardener.cloud/etcd-snapshotted", "true")
 				Expect(runtimeClient.Update(ctx, kubeAPIServerDeployment)).To(Succeed())
 
-				Expect(RewriteEncryptedDataRemoveLabel(ctx, logger, runtimeClient, targetClient, kubeAPIServerNamespace, kubeAPIServerDeploymentName,
-					"Remove label",
-					corev1.SchemeGroupVersion.WithKind("Secret"),
-					corev1.SchemeGroupVersion.WithKind("ConfigMap"),
-					appsv1.SchemeGroupVersion.WithKind("Deployment"),
-					discoveryv1.SchemeGroupVersion.WithKind("EndpointSlice"),
-				)).To(Succeed())
+				resources := []string{
+					corev1.Resource("secrets").String(),
+					corev1.Resource("configmaps").String(),
+					appsv1.Resource("deployments").String(),
+					discoveryv1.Resource("endpointslices").String(),
+				}
+
+				defaultGVKs := []schema.GroupVersionKind{corev1.SchemeGroupVersion.WithKind("Secret")}
+
+				Expect(RewriteEncryptedDataRemoveLabel(ctx, logger, runtimeClient, fakeTargetInterface, kubeAPIServerNamespace, kubeAPIServerDeploymentName, resources, resources, defaultGVKs)).To(Succeed())
 
 				for _, obj := range []client.Object{
 					secret1, secret2, secret3,
@@ -269,30 +281,61 @@ var _ = Describe("ETCD", func() {
 	})
 
 	Describe("GetResourcesForRewrite", func() {
-		var fakeDiscoveryClient *fakeDiscoveryWithServerPreferredResources
+		It("should return the correct GVK list when the resources to encrypt and encrypted resources are equal (encryption key rotation)", func() {
+			var (
+				resources = []string{
+					"crontabs.stable.example.com",
+					"managedresources.resources.gardener.cloud",
+					"configmaps",
+					"deployments.apps",
+				}
 
-		BeforeEach(func() {
-			fakeDiscoveryClient = &fakeDiscoveryWithServerPreferredResources{}
-		})
+				defaultGVKs = []schema.GroupVersionKind{corev1.SchemeGroupVersion.WithKind("Secret")}
+			)
 
-		It("should return the correct GVK list", func() {
-			resources := []string{
-				"crontabs.stable.example.com",
-				"managedresources.resources.gardener.cloud",
-				"configmaps",
-				"deployments.apps",
-			}
-
-			list, err := GetResourcesForRewrite(fakeDiscoveryClient, resources)
+			list, message, err := GetResourcesForRewrite(fakeDiscoveryClient, resources, resources, defaultGVKs)
 			Expect(err).NotTo(HaveOccurred())
+			Expect(message).To(Equal("Objects requiring to be rewritten after ETCD encryption key rotation"))
 			Expect(list).To(ConsistOf(
 				schema.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"},
+				schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"},
 				schema.GroupVersionKind{Group: "stable.example.com", Version: "v1", Kind: "CronTab"},
 				schema.GroupVersionKind{Group: "resources.gardener.cloud", Version: "v1alpha1", Kind: "ManagedResource"},
 				schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"},
 			))
 		})
+
+		It("should return the correct GVK list for the modified resources when the resources to encrypt and encrypted resources are not equal", func() {
+			var (
+				resourcesToEncrypt = []string{
+					"crontabs.stable.example.com",
+					"configmaps",
+					"managedresources.resources.gardener.cloud",
+					"deployments.apps",
+				}
+
+				encryptedResources = []string{
+					"managedresources.resources.gardener.cloud",
+					"deployments.apps",
+					"services",
+					"cronbars.stable.example.com",
+				}
+
+				defaultGVKs = []schema.GroupVersionKind{corev1.SchemeGroupVersion.WithKind("Secret")}
+			)
+
+			list, message, err := GetResourcesForRewrite(fakeDiscoveryClient, resourcesToEncrypt, encryptedResources, defaultGVKs)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(message).To(Equal("Objects requiring to be rewritten after modification of encryption config"))
+			Expect(list).To(ConsistOf(
+				schema.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"},
+				schema.GroupVersionKind{Group: "stable.example.com", Version: "v1", Kind: "CronTab"},
+				schema.GroupVersionKind{Group: "stable.example.com", Version: "v1", Kind: "CronBar"},
+				schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Service"},
+			))
+		})
 	})
+
 })
 
 type fakeDiscoveryWithServerPreferredResources struct {
@@ -323,7 +366,6 @@ func (c *fakeDiscoveryWithServerPreferredResources) ServerPreferredResources() (
 				},
 			},
 		},
-
 		{
 			GroupVersion: "apps/v1",
 			APIResources: []metav1.APIResource{
@@ -331,8 +373,8 @@ func (c *fakeDiscoveryWithServerPreferredResources) ServerPreferredResources() (
 					Name:         "daemonsets",
 					SingularName: "daemonset",
 					Namespaced:   true,
-					Group:        "",
-					Version:      "",
+					Group:        appsv1.SchemeGroupVersion.Group,
+					Version:      appsv1.SchemeGroupVersion.Version,
 					Kind:         "DaemonSet",
 					Verbs:        metav1.Verbs{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
 					ShortNames:   []string{"ds"},
@@ -346,6 +388,20 @@ func (c *fakeDiscoveryWithServerPreferredResources) ServerPreferredResources() (
 					Kind:         "Deployment",
 					Verbs:        metav1.Verbs{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
 					ShortNames:   []string{"deploy"},
+				},
+			},
+		},
+		{
+			GroupVersion: "discovery/v1",
+			APIResources: []metav1.APIResource{
+				{
+					Name:         "endpointslices",
+					SingularName: "endpointslice",
+					Namespaced:   true,
+					Group:        discoveryv1.SchemeGroupVersion.Group,
+					Version:      discoveryv1.SchemeGroupVersion.Version,
+					Kind:         "EndpointSlice",
+					Verbs:        metav1.Verbs{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
 				},
 			},
 		},

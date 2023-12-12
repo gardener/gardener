@@ -223,16 +223,3 @@ func GetResourcesForEncryptionFromConfig(encryptionConfig *gardencorev1beta1.Enc
 
 	return sets.List(sets.New(encryptionConfig.Resources...))
 }
-
-// GetModifiedResources returns the union of added resources and removed resources between the two passed lists.
-func GetModifiedResources(encryptedResources []string, resourcesToEncrypt []string) []string {
-	var (
-		oldResources = sets.New(encryptedResources...)
-		newResources = sets.New(resourcesToEncrypt...)
-
-		addedResources   = newResources.Difference(oldResources)
-		removedResources = oldResources.Difference(newResources)
-	)
-
-	return sets.List(addedResources.Union(removedResources))
-}

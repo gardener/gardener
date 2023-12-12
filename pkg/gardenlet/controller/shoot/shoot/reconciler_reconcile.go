@@ -31,7 +31,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
-	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot/helper"
@@ -413,26 +412,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		rewriteResourcesAddLabel = g.Add(flow.Task{
 			Name: "Labeling resources after modification of encryption config or to encrypt them with new ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				var (
-					resourcesForRewrite = o.Shoot.ResourcesToEncrypt
-					message             = "Objects requiring to be rewritten after modification of encryption config (Add label)"
-				)
-
-				if !apiequality.Semantic.DeepEqual(o.Shoot.ResourcesToEncrypt, o.Shoot.GetInfo().Status.EncryptedResources) {
-					resourcesForRewrite = shared.GetModifiedResources(o.Shoot.GetInfo().Status.EncryptedResources, o.Shoot.ResourcesToEncrypt)
-				}
-
-				encryptedGVKs, err := secretsrotation.GetResourcesForRewrite(o.ShootClientSet.Kubernetes().Discovery(), resourcesForRewrite)
-				if err != nil {
-					return err
-				}
-
-				if v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationPreparing {
-					encryptedGVKs = append(encryptedGVKs, gardenerutils.DefaultGVKsForEncryption()...)
-					message = "Objects requiring to be rewritten after ETCD encryption key rotation (Add label)"
-				}
-
-				return secretsrotation.RewriteEncryptedDataAddLabel(ctx, o.Logger, o.ShootClientSet.Client(), o.SecretsManager, message, encryptedGVKs...)
+				return secretsrotation.RewriteEncryptedDataAddLabel(ctx, o.Logger, o.ShootClientSet, o.SecretsManager, o.Shoot.ResourcesToEncrypt, o.Shoot.GetInfo().Status.EncryptedResources, gardenerutils.DefaultGVKsForEncryption())
 			}).RetryUntilTimeout(30*time.Second, 10*time.Minute),
 			SkipIf: v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) != gardencorev1beta1.RotationPreparing &&
 				apiequality.Semantic.DeepEqual(o.Shoot.ResourcesToEncrypt, o.Shoot.GetInfo().Status.EncryptedResources),
@@ -451,31 +431,11 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		_ = g.Add(flow.Task{
 			Name: "Removing label from resources after modification of encryption config or rotation of ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				var (
-					resourcesForRewrite        = o.Shoot.ResourcesToEncrypt
-					encryptionConfigHasChanged = !apiequality.Semantic.DeepEqual(o.Shoot.ResourcesToEncrypt, o.Shoot.GetInfo().Status.EncryptedResources)
-					message                    = "Objects requiring to be rewritten after modification of encryption config (Remove label)"
-				)
-
-				if encryptionConfigHasChanged {
-					resourcesForRewrite = shared.GetModifiedResources(o.Shoot.GetInfo().Status.EncryptedResources, o.Shoot.ResourcesToEncrypt)
-				}
-
-				encryptedGVKs, err := secretsrotation.GetResourcesForRewrite(o.ShootClientSet.Kubernetes().Discovery(), resourcesForRewrite)
-				if err != nil {
+				if err := secretsrotation.RewriteEncryptedDataRemoveLabel(ctx, o.Logger, o.SeedClientSet.Client(), o.ShootClientSet, o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer, o.Shoot.ResourcesToEncrypt, o.Shoot.GetInfo().Status.EncryptedResources, gardenerutils.DefaultGVKsForEncryption()); err != nil {
 					return err
 				}
 
-				if v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationCompleting {
-					encryptedGVKs = append(encryptedGVKs, gardenerutils.DefaultGVKsForEncryption()...)
-					message = "Objects requiring to be rewritten after ETCD encryption key rotation (Remove label)"
-				}
-
-				if err := secretsrotation.RewriteEncryptedDataRemoveLabel(ctx, o.Logger, o.SeedClientSet.Client(), o.ShootClientSet.Client(), o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer, message, encryptedGVKs...); err != nil {
-					return err
-				}
-
-				if encryptionConfigHasChanged {
+				if !apiequality.Semantic.DeepEqual(o.Shoot.ResourcesToEncrypt, o.Shoot.GetInfo().Status.EncryptedResources) {
 					if err := o.Shoot.UpdateInfoStatus(ctx, o.GardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
 						shoot.Status.EncryptedResources = o.Shoot.ResourcesToEncrypt
 						return nil

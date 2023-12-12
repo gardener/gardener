@@ -42,28 +42,4 @@ var _ = Describe("APIServer", func() {
 		})
 	})
 
-	Describe("#GetModifiedResources", func() {
-		It("should return the correct list of modified resources", func() {
-			oldResources := []string{
-				"secrets",
-				"configmaps",
-				"foo.bar",
-				"custom.operator.io",
-			}
-
-			newResources := []string{
-				"secrets",
-				"custom.operator.io",
-				"zig.zag",
-				"deployments.apps",
-			}
-
-			Expect(GetModifiedResources(oldResources, newResources)).To(ConsistOf(
-				"configmaps",
-				"deployments.apps",
-				"foo.bar",
-				"zig.zag",
-			))
-		})
-	})
 })

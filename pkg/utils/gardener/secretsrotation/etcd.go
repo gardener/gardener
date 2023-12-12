@@ -24,6 +24,7 @@ import (
 	"golang.org/x/time/rate"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -33,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -47,11 +49,17 @@ import (
 func RewriteEncryptedDataAddLabel(
 	ctx context.Context,
 	log logr.Logger,
-	c client.Client,
+	clientSet kubernetes.Interface,
 	secretsManager secretsmanager.Interface,
-	message string,
-	gvks ...schema.GroupVersionKind,
+	resourcesToEncrypt []string,
+	encryptedResources []string,
+	defaultGVKs []schema.GroupVersionKind,
 ) error {
+	encryptedGVKs, message, err := GetResourcesForRewrite(clientSet.Kubernetes().Discovery(), resourcesToEncrypt, encryptedResources, defaultGVKs)
+	if err != nil {
+		return err
+	}
+
 	etcdEncryptionKeySecret, found := secretsManager.Get(v1beta1constants.SecretNameETCDEncryptionKey, secretsmanager.Current)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameETCDEncryptionKey)
@@ -60,13 +68,13 @@ func RewriteEncryptedDataAddLabel(
 	return rewriteEncryptedData(
 		ctx,
 		log,
-		c,
+		clientSet.Client(),
 		utils.MustNewRequirement(labelKeyRotationKeyName, selection.NotEquals, etcdEncryptionKeySecret.Name),
 		func(objectMeta *metav1.ObjectMeta) {
 			metav1.SetMetaDataLabel(objectMeta, labelKeyRotationKeyName, etcdEncryptionKeySecret.Name)
 		},
-		message,
-		gvks...,
+		message+" (Add label)",
+		encryptedGVKs...,
 	)
 }
 
@@ -78,22 +86,28 @@ func RewriteEncryptedDataRemoveLabel(
 	ctx context.Context,
 	log logr.Logger,
 	runtimeClient client.Client,
-	targetClient client.Client,
+	targetClientSet kubernetes.Interface,
 	namespace string,
 	name string,
-	message string,
-	gvks ...schema.GroupVersionKind,
+	resourcesToEncrypt []string,
+	encryptedResources []string,
+	defaultGVKs []schema.GroupVersionKind,
 ) error {
+	encryptedGVKs, message, err := GetResourcesForRewrite(targetClientSet.Kubernetes().Discovery(), resourcesToEncrypt, encryptedResources, defaultGVKs)
+	if err != nil {
+		return err
+	}
+
 	if err := rewriteEncryptedData(
 		ctx,
 		log,
-		targetClient,
+		targetClientSet.Client(),
 		utils.MustNewRequirement(labelKeyRotationKeyName, selection.Exists),
 		func(objectMeta *metav1.ObjectMeta) {
 			delete(objectMeta.Labels, labelKeyRotationKeyName)
 		},
-		message,
-		gvks...,
+		message+" (Remove label)",
+		encryptedGVKs...,
 	); err != nil {
 		return err
 	}
@@ -198,14 +212,32 @@ func PatchAPIServerDeploymentMeta(ctx context.Context, c client.Client, namespac
 
 // GetResourcesForRewrite returns a list of schema.GroupVersionKind for all the resources that needs to be rewritten, either due to a encryption
 // key rotation or a change in the list of resources requiring encryption.
-func GetResourcesForRewrite(discoveryClient discovery.DiscoveryInterface, resources []string) ([]schema.GroupVersionKind, error) {
+func GetResourcesForRewrite(
+	discoveryClient discovery.DiscoveryInterface,
+	resourcesToEncrypt []string,
+	encryptedResources []string,
+	defaultGVKs []schema.GroupVersionKind,
+) (
+	[]schema.GroupVersionKind,
+	string,
+	error,
+) {
 	var (
-		encryptedGVKs           = sets.New[schema.GroupVersionKind]()
-		coreResourcesToEncrypt  = sets.New[string]()
-		groupResourcesToEncrypt = map[string]sets.Set[string]{}
+		resourcesForRewrite        = resourcesToEncrypt
+		encryptionConfigHasChanged = !apiequality.Semantic.DeepEqual(resourcesToEncrypt, encryptedResources)
+		encryptedGVKs              = sets.New[schema.GroupVersionKind]()
+		coreResourcesToEncrypt     = sets.New[string]()
+		groupResourcesToEncrypt    = map[string]sets.Set[string]{}
+		message                    = "Objects requiring to be rewritten after ETCD encryption key rotation"
 	)
 
-	for _, resource := range resources {
+	// This means the function is invoked due to ETCD encryption configuration change, so include only the modified resources.
+	if encryptionConfigHasChanged {
+		resourcesForRewrite = getModifiedResources(resourcesToEncrypt, encryptedResources)
+		message = "Objects requiring to be rewritten after modification of encryption config"
+	}
+
+	for _, resource := range resourcesForRewrite {
 		var (
 			split    = strings.Split(resource, ".")
 			group    = strings.Join(split[1:], ".")
@@ -226,7 +258,7 @@ func GetResourcesForRewrite(discoveryClient discovery.DiscoveryInterface, resour
 
 	resourceLists, err := discoveryClient.ServerPreferredResources()
 	if err != nil {
-		return encryptedGVKs.UnsortedList(), fmt.Errorf("error discovering server preferred resources: %w", err)
+		return encryptedGVKs.UnsortedList(), "", fmt.Errorf("error discovering server preferred resources: %w", err)
 	}
 
 	for _, list := range resourceLists {
@@ -236,7 +268,7 @@ func GetResourcesForRewrite(discoveryClient discovery.DiscoveryInterface, resour
 
 		gv, err := schema.ParseGroupVersion(list.GroupVersion)
 		if err != nil {
-			return encryptedGVKs.UnsortedList(), fmt.Errorf("error parsing groupVersion: %w", err)
+			return encryptedGVKs.UnsortedList(), "", fmt.Errorf("error parsing groupVersion: %w", err)
 		}
 
 		for _, apiResource := range list.APIResources {
@@ -270,5 +302,22 @@ func GetResourcesForRewrite(discoveryClient discovery.DiscoveryInterface, resour
 		}
 	}
 
-	return encryptedGVKs.UnsortedList(), nil
+	// This means the function is invoked due to ETCD encryption key rotation, so include default GVKs as well.
+	if !encryptionConfigHasChanged {
+		encryptedGVKs.Insert(defaultGVKs...)
+	}
+
+	return encryptedGVKs.UnsortedList(), message, nil
+}
+
+func getModifiedResources(resourcesToEncrypt []string, encryptedResources []string) []string {
+	var (
+		oldResources = sets.New(encryptedResources...)
+		newResources = sets.New(resourcesToEncrypt...)
+
+		addedResources   = newResources.Difference(oldResources)
+		removedResources = oldResources.Difference(newResources)
+	)
+
+	return sets.List(addedResources.Union(removedResources))
 }

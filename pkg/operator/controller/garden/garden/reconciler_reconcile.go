@@ -366,26 +366,7 @@ func (r *Reconciler) reconcile(
 		rewriteResourcesAddLabel = g.Add(flow.Task{
 			Name: "Labeling encrypted resources after modification of encryption config or to re-encrypt them with new ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				var (
-					resourcesForRewrite = resourcesToEncrypt
-					message             = "Objects requiring to be rewritten after modification of encryption config (Add label)"
-				)
-
-				if !apiequality.Semantic.DeepEqual(resourcesToEncrypt, garden.Status.EncryptedResources) {
-					resourcesForRewrite = shared.GetModifiedResources(garden.Status.EncryptedResources, resourcesToEncrypt)
-				}
-
-				encryptedGVKs, err := secretsrotation.GetResourcesForRewrite(virtualClusterClientSet.Kubernetes().Discovery(), resourcesForRewrite)
-				if err != nil {
-					return err
-				}
-
-				if helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationPreparing {
-					encryptedGVKs = append(encryptedGVKs, defaultEncryptedGVKs...)
-					message = "Objects requiring to be rewritten after ETCD encryption key rotation (Add label)"
-				}
-
-				return secretsrotation.RewriteEncryptedDataAddLabel(ctx, log, virtualClusterClient, secretsManager, message, encryptedGVKs...)
+				return secretsrotation.RewriteEncryptedDataAddLabel(ctx, log, virtualClusterClientSet, secretsManager, resourcesToEncrypt, garden.Status.EncryptedResources, defaultEncryptedGVKs)
 			}).RetryUntilTimeout(30*time.Second, 10*time.Minute),
 			SkipIf: helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing &&
 				apiequality.Semantic.DeepEqual(resourcesToEncrypt, garden.Status.EncryptedResources),
@@ -404,31 +385,11 @@ func (r *Reconciler) reconcile(
 		_ = g.Add(flow.Task{
 			Name: "Removing label from re-encrypted resources after modification of encryption config or rotation of ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				var (
-					resourcesForRewrite        = resourcesToEncrypt
-					encryptionConfigHasChanged = !apiequality.Semantic.DeepEqual(resourcesToEncrypt, garden.Status.EncryptedResources)
-					message                    = "Objects requiring to be rewritten after modification of encryption config (Remove label)"
-				)
-
-				if encryptionConfigHasChanged {
-					resourcesForRewrite = shared.GetModifiedResources(garden.Status.EncryptedResources, resourcesToEncrypt)
-				}
-
-				encryptedGVKs, err := secretsrotation.GetResourcesForRewrite(virtualClusterClientSet.Kubernetes().Discovery(), resourcesForRewrite)
-				if err != nil {
+				if err := secretsrotation.RewriteEncryptedDataRemoveLabel(ctx, log, r.RuntimeClientSet.Client(), virtualClusterClientSet, r.GardenNamespace, namePrefix+v1beta1constants.DeploymentNameKubeAPIServer, resourcesToEncrypt, garden.Status.EncryptedResources, defaultEncryptedGVKs); err != nil {
 					return err
 				}
 
-				if helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationCompleting {
-					encryptedGVKs = append(encryptedGVKs, defaultEncryptedGVKs...)
-					message = "Objects requiring to be rewritten after ETCD encryption key rotation (Remove label)"
-				}
-
-				if err := secretsrotation.RewriteEncryptedDataRemoveLabel(ctx, log, r.RuntimeClientSet.Client(), virtualClusterClient, r.GardenNamespace, namePrefix+v1beta1constants.DeploymentNameKubeAPIServer, message, encryptedGVKs...); err != nil {
-					return err
-				}
-
-				if encryptionConfigHasChanged {
+				if !apiequality.Semantic.DeepEqual(resourcesToEncrypt, garden.Status.EncryptedResources) {
 					patch := client.MergeFrom(garden.DeepCopy())
 					garden.Status.EncryptedResources = resourcesToEncrypt
 					if err := r.RuntimeClientSet.Client().Status().Patch(ctx, garden, patch); err != nil {
