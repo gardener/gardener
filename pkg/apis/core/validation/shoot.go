@@ -89,7 +89,7 @@ var (
 		v1beta1constants.OperationRotateServiceAccountKeyStart,
 		v1beta1constants.OperationRotateServiceAccountKeyComplete,
 	)
-	forbiddenShootOperationsWhenEncryptionResourcesNotEqual = sets.New(
+	forbiddenShootOperationsWhenEncryptionChangeIsRollingOut = sets.New(
 		v1beta1constants.OperationRotateCredentialsStart,
 		v1beta1constants.OperationRotateETCDEncryptionKeyStart,
 	)
@@ -187,7 +187,7 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 		hibernationEnabled = pointer.BoolDeref(newShoot.Spec.Hibernation.Enabled, false)
 	}
 
-	allErrs = append(allErrs, ValidateEncryptionConfigUpdate(newEncryptionConfig, oldEncryptionConfig, sets.New(newShoot.Status.EncryptedResources...), etcdEncryptionKeyRotation, "kubernetes", hibernationEnabled, field.NewPath("spec", "kubernetes", "kubeAPIServer", "encryptionConfig"))...)
+	allErrs = append(allErrs, ValidateEncryptionConfigUpdate(newEncryptionConfig, oldEncryptionConfig, sets.New(newShoot.Status.EncryptedResources...), etcdEncryptionKeyRotation, hibernationEnabled, field.NewPath("spec", "kubernetes", "kubeAPIServer", "encryptionConfig"))...)
 	// validate version updates only to kubernetes 1.25
 	allErrs = append(allErrs, validateKubernetesVersionUpdate125(newShoot, oldShoot)...)
 	allErrs = append(allErrs, ValidateShoot(newShoot)...)
@@ -583,7 +583,7 @@ func ValidateTotalNodeCountWithPodCIDR(shoot *core.Shoot) field.ErrorList {
 }
 
 // ValidateEncryptionConfigUpdate validates the updates to the KubeAPIServer encryption configuration.
-func ValidateEncryptionConfigUpdate(newConfig, oldConfig *core.EncryptionConfig, currentEncryptedResources sets.Set[string], etcdEncryptionKeyRotation *core.ETCDEncryptionKeyRotation, resourceType string, isClusterInHibernation bool, fldPath *field.Path) field.ErrorList {
+func ValidateEncryptionConfigUpdate(newConfig, oldConfig *core.EncryptionConfig, currentEncryptedResources sets.Set[string], etcdEncryptionKeyRotation *core.ETCDEncryptionKeyRotation, isClusterInHibernation bool, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs               = field.ErrorList{}
 		oldEncryptedResources = sets.New[string]()
@@ -604,7 +604,7 @@ func ValidateEncryptionConfigUpdate(newConfig, oldConfig *core.EncryptionConfig,
 		}
 
 		if !oldEncryptedResources.Equal(currentEncryptedResources) {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("resources"), fmt.Sprintf("resources cannot be changed when the %s resources in %s and the status.encryptedResources are not equal", resourceType, fldPath)))
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("resources"), "resources cannot be changed because a previous encryption configuration change is currently being rolled out"))
 		}
 
 		if isClusterInHibernation {
@@ -1093,7 +1093,7 @@ func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, version s
 			allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("%q are always encrypted", resource)))
 		}
 
-		if strings.HasPrefix(resource, "*.") {
+		if strings.HasPrefix(resource, "*") {
 			allErrs = append(allErrs, field.Invalid(idxPath, resource, "wildcards are not supported"))
 		}
 
@@ -2328,8 +2328,8 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, "operation is not permitted when shoot is hibernated or is waking up"))
 		}
 		if !apiequality.Semantic.DeepEqual(getResourcesForEncryption(shoot.Spec.Kubernetes.KubeAPIServer), shoot.Status.EncryptedResources) &&
-			forbiddenShootOperationsWhenEncryptionResourcesNotEqual.Has(operation) {
-			allErrs = append(allErrs, field.Forbidden(fldPathOp, "operation is not permitted when spec.kubernetes.kubeAPIServer.encryptionConfig.resources and status.encryptedResources are not equal"))
+			forbiddenShootOperationsWhenEncryptionChangeIsRollingOut.Has(operation) {
+			allErrs = append(allErrs, field.Forbidden(fldPathOp, "operation is not permitted because a previous encryption configuration change is currently being rolled out"))
 		}
 	}
 
@@ -2340,8 +2340,8 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 		if helper.IsShootInHibernation(shoot) && forbiddenShootOperationsWhenHibernated.Has(maintenanceOperation) {
 			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, "operation is not permitted when shoot is hibernated or is waking up"))
 		}
-		if !apiequality.Semantic.DeepEqual(getResourcesForEncryption(shoot.Spec.Kubernetes.KubeAPIServer), shoot.Status.EncryptedResources) && forbiddenShootOperationsWhenEncryptionResourcesNotEqual.Has(maintenanceOperation) {
-			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, "operation is not permitted when spec.kubernetes.kubeAPIServer.encryptionConfig.resources and status.encryptedResources are not equal"))
+		if !apiequality.Semantic.DeepEqual(getResourcesForEncryption(shoot.Spec.Kubernetes.KubeAPIServer), shoot.Status.EncryptedResources) && forbiddenShootOperationsWhenEncryptionChangeIsRollingOut.Has(maintenanceOperation) {
+			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, "operation is not permitted because a previous encryption configuration change is currently being rolled out"))
 		}
 	}
 

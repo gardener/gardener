@@ -532,9 +532,8 @@ func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, 
 func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, kubeAPIServer kubeapiserver.Interface) flow.TaskFn {
 	return func(ctx context.Context) error {
 		var (
-			apiServerConfig            *gardencorev1beta1.KubeAPIServerConfig
-			sniConfig                  = kubeapiserver.SNIConfig{Enabled: false}
-			filterNonGardenerResources = func(resource string) bool { return !gardenerutils.IsServedByGardenerAPIServer(resource) }
+			apiServerConfig *gardencorev1beta1.KubeAPIServerConfig
+			sniConfig       = kubeapiserver.SNIConfig{Enabled: false}
 		)
 
 		if apiServer := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; apiServer != nil {
@@ -561,7 +560,7 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 			gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0]),
 			gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0]),
 			getKubernetesResourcesForEncryption(garden),
-			utils.FilterEntriesByFilterFn(garden.Status.EncryptedResources, filterNonGardenerResources),
+			utils.FilterEntriesByFilterFn(garden.Status.EncryptedResources, gardenerutils.IsServedByKubeAPIServer),
 			helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials),
 			helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials),
 			false,

@@ -240,7 +240,7 @@ var _ = Describe("Validation Tests", func() {
 					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
-						"Detail": Equal("cannot start rotation of all credentials when resources to encrypt (ie; spec.virtualCluster.{kubernetes.kubeAPIServer.encryptionConfig.resources + gardener.gardenerAPIServer.encryptionConfig.resources}) and status.encryptedResources are not equal"),
+						"Detail": Equal("cannot start rotation of all credentials because a previous encryption configuration change is currently being rolled out"),
 					}))),
 				),
 				Entry("when spec encrypted resources and status encrypted resources are equal", true,
@@ -706,7 +706,7 @@ var _ = Describe("Validation Tests", func() {
 					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
-						"Detail": Equal("cannot start ETCD encryption key rotation when resources to encrypt (ie; spec.virtualCluster.{kubernetes.kubeAPIServer.encryptionConfig.resources + gardener.gardenerAPIServer.encryptionConfig.resources}) and status.encryptedResources are not equal"),
+						"Detail": Equal("cannot start ETCD encryption key rotation because a previous encryption configuration change is currently being rolled out"),
 					}))),
 				),
 				Entry("when spec encrypted resources and status encrypted resources are equal", true,
@@ -1714,12 +1714,12 @@ var _ = Describe("Validation Tests", func() {
 							PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":   Equal(field.ErrorTypeForbidden),
 								"Field":  Equal("spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig.resources"),
-								"Detail": Equal("resources cannot be changed when the kubernetes resources in spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig and the status.encryptedResources are not equal"),
+								"Detail": Equal("resources cannot be changed because a previous encryption configuration change is currently being rolled out"),
 							})),
 							PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":   Equal(field.ErrorTypeForbidden),
 								"Field":  Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources"),
-								"Detail": Equal("resources cannot be changed when the gardener resources in spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig and the status.encryptedResources are not equal"),
+								"Detail": Equal("resources cannot be changed because a previous encryption configuration change is currently being rolled out"),
 							})),
 						))
 					})

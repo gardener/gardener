@@ -1886,7 +1886,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeForbidden),
 							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources"),
-							"Detail": Equal("resources cannot be changed when the kubernetes resources in spec.kubernetes.kubeAPIServer.encryptionConfig and the status.encryptedResources are not equal"),
+							"Detail": Equal("resources cannot be changed because a previous encryption configuration change is currently being rolled out"),
 						})),
 					))
 				})

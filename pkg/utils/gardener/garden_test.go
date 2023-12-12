@@ -350,10 +350,22 @@ var _ = Describe("Garden", func() {
 		func(resource string, expected bool) {
 			Expect(IsServedByGardenerAPIServer(resource)).To(Equal(expected))
 		},
-		Entry("core resource", gardencorev1beta1.Resource("shoots").String(), true),
+		Entry("gardener core resource", gardencorev1beta1.Resource("shoots").String(), true),
 		Entry("operations resource", operationsv1alpha1.Resource("bastions").String(), true),
 		Entry("settings resource", settingsv1alpha1.Resource("openidconnectpresets").String(), true),
 		Entry("seedmanagement resource", seedmanagementv1alpha1.Resource("managedseeds").String(), true),
 		Entry("any other resource", "foo", false),
+	)
+
+	DescribeTable("#IsServedByKubeAPIServer",
+		func(resource string, expected bool) {
+			Expect(IsServedByKubeAPIServer(resource)).To(Equal(expected))
+		},
+		Entry("kubernetes core resource", corev1.Resource("secrets").String(), true),
+		Entry("gardener core resource", gardencorev1beta1.Resource("shoots").String(), false),
+		Entry("operations resource", operationsv1alpha1.Resource("bastions").String(), false),
+		Entry("settings resource", settingsv1alpha1.Resource("openidconnectpresets").String(), false),
+		Entry("seedmanagement resource", seedmanagementv1alpha1.Resource("managedseeds").String(), false),
+		Entry("any other resource", "foo", true),
 	)
 })

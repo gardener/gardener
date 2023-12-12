@@ -237,7 +237,7 @@ func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerC
 				allErrs = append(allErrs, field.Invalid(idxPath, resource, "should be a resource served by gardener-apiserver. ie; should have any of the suffixes {core,operations,settings,seedmanagement}.gardener.cloud"))
 			}
 
-			if strings.HasPrefix(resource, "*.") {
+			if strings.HasPrefix(resource, "*") {
 				allErrs = append(allErrs, field.Invalid(idxPath, resource, "wildcards are not supported"))
 			}
 
@@ -391,7 +391,7 @@ func validateOperationContext(operation string, garden *operatorv1alpha1.Garden,
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Completed'"))
 		}
 		if !apiequality.Semantic.DeepEqual(resourcesToEncrypt, garden.Status.EncryptedResources) {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials when resources to encrypt (ie; spec.virtualCluster.{kubernetes.kubeAPIServer.encryptionConfig.resources + gardener.gardenerAPIServer.encryptionConfig.resources}) and status.encryptedResources are not equal"))
+			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials because a previous encryption configuration change is currently being rolled out"))
 		}
 	case v1beta1constants.OperationRotateCredentialsComplete:
 		if garden.DeletionTimestamp != nil {
@@ -445,7 +445,7 @@ func validateOperationContext(operation string, garden *operatorv1alpha1.Garden,
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start ETCD encryption key rotation if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Completed'"))
 		}
 		if !apiequality.Semantic.DeepEqual(resourcesToEncrypt, garden.Status.EncryptedResources) {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start ETCD encryption key rotation when resources to encrypt (ie; spec.virtualCluster.{kubernetes.kubeAPIServer.encryptionConfig.resources + gardener.gardenerAPIServer.encryptionConfig.resources}) and status.encryptedResources are not equal"))
+			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start ETCD encryption key rotation because a previous encryption configuration change is currently being rolled out"))
 		}
 	case v1beta1constants.OperationRotateETCDEncryptionKeyComplete:
 		if garden.DeletionTimestamp != nil {
@@ -502,11 +502,11 @@ func validateEncryptionConfigUpdate(oldGarden, newGarden *operatorv1alpha1.Garde
 		}
 	}
 
-	currentEncryptedKubernetesResources := utils.FilterEntriesByFilterFn(newGarden.Status.EncryptedResources, func(resource string) bool { return !gardenerutils.IsServedByGardenerAPIServer(resource) })
-	allErrs = append(allErrs, gardencorevalidation.ValidateEncryptionConfigUpdate(newKubeAPIServerEncryptionConfig, oldKubeAPIServerEncryptionConfig, sets.New(currentEncryptedKubernetesResources...), etcdEncryptionKeyRotation, "kubernetes", false, kubeAPIServerEncryptionConfigFldPath)...)
+	currentEncryptedKubernetesResources := utils.FilterEntriesByFilterFn(newGarden.Status.EncryptedResources, gardenerutils.IsServedByKubeAPIServer)
+	allErrs = append(allErrs, gardencorevalidation.ValidateEncryptionConfigUpdate(newKubeAPIServerEncryptionConfig, oldKubeAPIServerEncryptionConfig, sets.New(currentEncryptedKubernetesResources...), etcdEncryptionKeyRotation, false, kubeAPIServerEncryptionConfigFldPath)...)
 
 	currentEncryptedGardenerResources := utils.FilterEntriesByFilterFn(newGarden.Status.EncryptedResources, gardenerutils.IsServedByGardenerAPIServer)
-	allErrs = append(allErrs, gardencorevalidation.ValidateEncryptionConfigUpdate(newGAPIServerEncryptionConfig, oldGAPIServerEncryptionConfig, sets.New(currentEncryptedGardenerResources...), etcdEncryptionKeyRotation, "gardener", false, gAPIServerEncryptionConfigFldPath)...)
+	allErrs = append(allErrs, gardencorevalidation.ValidateEncryptionConfigUpdate(newGAPIServerEncryptionConfig, oldGAPIServerEncryptionConfig, sets.New(currentEncryptedGardenerResources...), etcdEncryptionKeyRotation, false, gAPIServerEncryptionConfigFldPath)...)
 
 	return allErrs
 }

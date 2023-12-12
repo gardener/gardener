@@ -366,3 +366,8 @@ func IsServedByGardenerAPIServer(resource string) bool {
 
 	return false
 }
+
+// IsServedByKubeAPIServer returns true if the passed resources is served by the Kube API Server.
+func IsServedByKubeAPIServer(resource string) bool {
+	return !IsServedByGardenerAPIServer(resource)
+}
