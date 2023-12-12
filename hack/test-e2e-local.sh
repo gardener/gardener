@@ -52,6 +52,7 @@ if [[ "$1" != "operator" ]]; then
     e2e-wake-up-wl.local
     e2e-migrate.local
     e2e-migrate-wl.local
+    e2e-mgr-hib.local
     e2e-rotate.local
     e2e-rotate-wl.local
     e2e-default.local

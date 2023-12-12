@@ -65,6 +65,14 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 	Context("Workerless Shoot", Label("workerless"), func() {
 		test(e2e.DefaultWorkerlessShoot("e2e-migrate"))
 	})
+
+	Context("Hibernated Shoot", Label("hibernated"), func() {
+		shoot := e2e.DefaultShoot("e2e-mgr-hib")
+		shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
+			Enabled: pointer.Bool(true),
+		}
+		test(shoot)
+	})
 })
 
 func newDefaultShootMigrationTest(ctx context.Context, shoot *gardencorev1beta1.Shoot, gardenerFramework *GardenerFramework) (*ShootMigrationTest, error) {
