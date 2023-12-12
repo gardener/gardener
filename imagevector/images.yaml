@@ -139,8 +139,8 @@ images:
   targetVersion: "1.24.x"
 - name: vpn-seed-server
   sourceRepository: github.com/gardener/vpn2
-  repository: eu.gcr.io/gardener-project/gardener/vpn-seed-server
-  tag: "0.20.0"
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/vpn-seed-server
+  tag: "0.21.0"
 
 # Monitoring
 - name: alertmanager
@@ -291,8 +291,8 @@ images:
 # Shoot core addons
 - name: vpn-shoot-client
   sourceRepository: github.com/gardener/vpn2
-  repository: eu.gcr.io/gardener-project/gardener/vpn-shoot-client
-  tag: "0.20.0"
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/vpn-shoot-client
+  tag: "0.21.0"
 - name: coredns
   sourceRepository: github.com/coredns/coredns
   repository: registry.k8s.io/coredns/coredns
