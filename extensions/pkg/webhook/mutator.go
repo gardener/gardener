@@ -18,6 +18,8 @@ import (
 	"context"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/extensions"
 )
 
 // Mutator validates and if needed mutates objects.
@@ -31,7 +33,7 @@ type Mutator interface {
 type MutatorWithShootClient interface {
 	// Mutate validates and if needed mutates the given object.
 	// "old" is optional and it must always be checked for nil.
-	Mutate(ctx context.Context, new, old client.Object, shootClient client.Client) error
+	Mutate(ctx context.Context, new, old client.Object, shootClient client.Client, cluster *extensions.Cluster) error
 }
 
 type mutationWrapper struct {

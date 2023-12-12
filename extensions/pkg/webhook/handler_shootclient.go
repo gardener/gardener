@@ -32,6 +32,7 @@ import (
 	extensionsconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
 	"github.com/gardener/gardener/extensions/pkg/util"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/extensions"
 )
 
 // NewHandlerWithShootClient creates a new handler for the given types, using the given mutator, and logger.
@@ -113,7 +114,11 @@ func (h *handlerShootClient) Handle(ctx context.Context, req admission.Request) 
 			return fmt.Errorf("could not create shoot client: %w", err)
 		}
 
-		return h.mutator.Mutate(ctx, new, old, shootClient)
+		cluster, err := extensions.GetCluster(ctx, h.client, shootNamespace)
+		if err != nil {
+			return fmt.Errorf("could not get cluster object for %s", shootNamespace)
+		}
+		return h.mutator.Mutate(ctx, new, old, shootClient, cluster)
 	}
 
 	// Decode object
