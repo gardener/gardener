@@ -78,7 +78,8 @@ func (c *containerdHealthChecker) Check(ctx context.Context, node *corev1.Node) 
 			return nil
 		}
 
-		log.Error(err, "Unable to get containerd version, restarting containerd")
+		log.Error(err, "Unable to get containerd version, restarting it", "failureDuration", maxFailureDuration)
+		c.recorder.Eventf(node, corev1.EventTypeWarning, "containerd", "Containerd is unhealthy for more than %s, restarting it: %s", maxFailureDuration, err.Error())
 		if err := c.dbus.Restart(ctx, c.recorder, node, v1beta1constants.OperatingSystemConfigUnitNameContainerDService); err != nil {
 			return fmt.Errorf("failed restarting containerd: %w", err)
 		}

@@ -22,6 +22,7 @@ import (
 	"net/netip"
 	"time"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/record"
@@ -52,7 +53,8 @@ type KubeletHealthChecker struct {
 	// NodeReady indicates if the node is ready. Exported for testing.
 	NodeReady bool
 
-	client client.Client
+	client     client.Client
+	httpClient *http.Client
 	// firstFailure stores the time of the first failed kubelet health check
 	firstFailure *time.Time
 	dbus         dbus.DBus
@@ -68,6 +70,7 @@ type KubeletHealthChecker struct {
 func NewKubeletHealthChecker(client client.Client, clock clock.Clock, dbus dbus.DBus, recorder record.EventRecorder, getAddresses func() ([]net.Addr, error)) *KubeletHealthChecker {
 	return &KubeletHealthChecker{
 		client:                  client,
+		httpClient:              &http.Client{Timeout: 10 * time.Second},
 		dbus:                    dbus,
 		Clock:                   clock,
 		recorder:                recorder,
@@ -98,38 +101,20 @@ func (k *KubeletHealthChecker) SetKubeletHealthEndpoint(kubeletHealthEndpoint st
 func (k *KubeletHealthChecker) Check(ctx context.Context, node *corev1.Node) error {
 	log := logf.FromContext(ctx).WithName("kubelet")
 
-	// This mimics the old behavior of the kubelet-health-monitor which checks for
-	// to many NotReady->Ready toggles in a certain time and reboots the node in such a case.
-	if isNodeReady(node) && !k.NodeReady {
-		needsReboot := k.ToggleKubeletState()
-		log.Info("Kubelet became Ready", "readinessChanges", len(k.KubeletReadinessToggles), "timespan", toggleTimeSpan)
-		if needsReboot {
-			log.Info("Kubelet toggled between NotReady and Ready too often. Rebooting the node now")
-			k.recorder.Eventf(node, corev1.EventTypeWarning, "kubelet", "Kubelet toggled between NotReady and Ready at least %d times in a %s time window. Rebooting the node now", maxToggles, toggleTimeSpan)
-			err := k.dbus.Reboot()
-			if err != nil {
-				k.RevertToggleKubeletState()
-				k.recorder.Event(node, corev1.EventTypeWarning, "kubelet", "Rebooting the node failed")
-				return fmt.Errorf("rebooting the node failed %w", err)
-			}
-		}
-	}
-	k.NodeReady = isNodeReady(node)
-
-	err := k.ensureNodeInternalIP(ctx, node)
-	if err != nil {
+	if err := k.verifyNodeReady(log, node); err != nil {
 		return err
 	}
 
-	httpClient := &http.Client{
-		Timeout: 10 * time.Second,
+	if err := k.ensureNodeInternalIP(ctx, node); err != nil {
+		return err
 	}
+
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, k.kubeletHealthEndpoint, nil)
 	if err != nil {
 		log.Error(err, "Creating request to kubelet health endpoint failed")
 		return err
 	}
-	response, err := httpClient.Do(request)
+	response, err := k.httpClient.Do(request)
 	if err != nil {
 		log.Error(err, "HTTP request to kubelet health endpoint failed")
 	}
@@ -145,14 +130,15 @@ func (k *KubeletHealthChecker) Check(ctx context.Context, node *corev1.Node) err
 		now := k.Clock.Now()
 		k.firstFailure = &now
 		log.Error(err, "Kubelet is unhealthy")
-		k.recorder.Event(node, corev1.EventTypeWarning, "kubelet", "Kubelet is unhealthy")
+		k.recorder.Eventf(node, corev1.EventTypeWarning, "kubelet", "Kubelet is unhealthy, health check error: %s", err.Error())
 	}
 
 	if time.Since(*k.firstFailure).Abs() < maxFailureDuration {
 		return nil
 	}
 
-	log.Error(err, "Kubelet is not healthy, restarting")
+	log.Error(err, "Kubelet is unhealthy, restarting it", "failureDuration", maxFailureDuration)
+	k.recorder.Eventf(node, corev1.EventTypeWarning, "kubelet", "Kubelet is unhealthy for more than %s, restarting it. Health check error: %s", maxFailureDuration, err.Error())
 	err = k.dbus.Restart(ctx, k.recorder, node, kubeletServiceName)
 	if err == nil {
 		k.firstFailure = nil
@@ -160,8 +146,7 @@ func (k *KubeletHealthChecker) Check(ctx context.Context, node *corev1.Node) err
 	return err
 }
 
-// ensureNodeInternalIP mimics the old weird logic which restores the internalIP of the node
-// if this was lost for some reason.
+// ensureNodeInternalIP restores the internalIP of the node if this was initially set but lost in the process.
 func (k *KubeletHealthChecker) ensureNodeInternalIP(ctx context.Context, node *corev1.Node) error {
 	log := logf.FromContext(ctx).WithName("kubelet")
 	var (
@@ -228,6 +213,27 @@ func (k *KubeletHealthChecker) ensureNodeInternalIP(ctx context.Context, node *c
 		}
 	}
 
+	return nil
+}
+
+// verifyNodeReady verifies the NodeReady condition of a node.
+// If the condition changes 5 times within 10 minutes from NotReady->Ready the node will be rebooted.
+func (k *KubeletHealthChecker) verifyNodeReady(log logr.Logger, node *corev1.Node) error {
+	if isNodeReady(node) && !k.NodeReady {
+		needsReboot := k.ToggleKubeletState()
+		log.Info("Kubelet became Ready", "readinessChanges", len(k.KubeletReadinessToggles), "timespan", toggleTimeSpan)
+		if needsReboot {
+			log.Info("Kubelet toggled between NotReady and Ready too often. Rebooting the node now")
+			k.recorder.Eventf(node, corev1.EventTypeWarning, "kubelet", "Kubelet toggled between NotReady and Ready at least %d times in a %s time window. Rebooting the node now", maxToggles, toggleTimeSpan)
+			err := k.dbus.Reboot()
+			if err != nil {
+				k.RevertToggleKubeletState()
+				k.recorder.Event(node, corev1.EventTypeWarning, "kubelet", "Rebooting the node failed")
+				return fmt.Errorf("rebooting the node failed %w", err)
+			}
+		}
+	}
+	k.NodeReady = isNodeReady(node)
 	return nil
 }
 
