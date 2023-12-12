@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
@@ -1303,6 +1304,22 @@ var _ = Describe("Shoot", func() {
 				gardencorev1beta1.ConditionType("ControlPlaneHealthy"),
 				gardencorev1beta1.ConditionType("ObservabilityComponentsHealthy"),
 				gardencorev1beta1.ConditionType("SystemComponentsHealthy"),
+			))
+		})
+	})
+
+	Describe("#DefaultGVKsForEncryption", func() {
+		It("should return all default GroupVersionKinds", func() {
+			Expect(DefaultGVKsForEncryption()).To(ConsistOf(
+				schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"},
+			))
+		})
+	})
+
+	Describe("#DefaultResourcesForEncryption", func() {
+		It("should return all default resources", func() {
+			Expect(DefaultResourcesForEncryption().UnsortedList()).To(ConsistOf(
+				"secrets",
 			))
 		})
 	})

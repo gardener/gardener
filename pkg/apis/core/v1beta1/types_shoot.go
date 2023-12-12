@@ -203,6 +203,11 @@ type ShootStatus struct {
 	// LastMaintenance holds information about the last maintenance operations on the Shoot.
 	// +optional
 	LastMaintenance *LastMaintenance `json:"lastMaintenance,omitempty" protobuf:"bytes,17,opt,name=lastMaintenance"`
+	// EncryptedResources is the list of resources in the Shoot which are currently encrypted.
+	// Secrets are encrypted by default and are not part of the list.
+	// See https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md for more details.
+	// +optional
+	EncryptedResources []string `json:"encryptedResources,omitempty" protobuf:"bytes,18,rep,name=encryptedResources"`
 }
 
 // LastMaintenance holds information about a maintenance operation on the Shoot.
@@ -747,6 +752,9 @@ type KubeAPIServerConfig struct {
 	// Defaults to 300.
 	// +optional
 	DefaultUnreachableTolerationSeconds *int64 `json:"defaultUnreachableTolerationSeconds,omitempty" protobuf:"varint,15,opt,name=defaultUnreachableTolerationSeconds"`
+	// EncryptionConfig contains customizable encryption configuration of the Kube API server.
+	// +optional
+	EncryptionConfig *EncryptionConfig `json:"encryptionConfig,omitempty" protobuf:"bytes,16,opt,name=encryptionConfig"`
 }
 
 // APIServerLogging contains configuration for the logs level and http access logs
@@ -770,6 +778,16 @@ type APIServerRequests struct {
 	// exceeds this, it rejects requests.
 	// +optional
 	MaxMutatingInflight *int32 `json:"maxMutatingInflight,omitempty" protobuf:"bytes,2,name=maxMutatingInflight"`
+}
+
+// EncryptionConfig contains customizable encryption configuration of the API server.
+type EncryptionConfig struct {
+	// Resources contains the list of resources that shall be encrypted in addition to secrets.
+	// Each item is a Kubernetes resource name in plural (resource or resource.group) that should be encrypted.
+	// Note that configuring a custom resource is only supported for versions >= 1.26.
+	// Wildcards are not supported for now.
+	// See https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md for more details.
+	Resources []string `json:"resources" protobuf:"bytes,1,rep,name=resources"`
 }
 
 // ServiceAccountConfig is the kube-apiserver configuration for service accounts.

@@ -455,6 +455,25 @@ spec:
                             required:
                             - kubeconfigSecretName
                             type: object
+                          encryptionConfig:
+                            description: EncryptionConfig contains customizable encryption
+                              configuration of the Gardener API server.
+                            properties:
+                              resources:
+                                description: Resources contains the list of resources
+                                  that shall be encrypted in addition to secrets.
+                                  Each item is a Kubernetes resource name in plural
+                                  (resource or resource.group) that should be encrypted.
+                                  Note that configuring a custom resource is only
+                                  supported for versions >= 1.26. Wildcards are not
+                                  supported for now. See https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md
+                                  for more details.
+                                items:
+                                  type: string
+                                type: array
+                            required:
+                            - resources
+                            type: object
                           featureGates:
                             additionalProperties:
                               type: boolean
@@ -957,6 +976,25 @@ spec:
                               anonymous requests to the secure port of the API server
                               should be allowed (flag `--anonymous-auth`). See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/'
                             type: boolean
+                          encryptionConfig:
+                            description: EncryptionConfig contains customizable encryption
+                              configuration of the Kube API server.
+                            properties:
+                              resources:
+                                description: Resources contains the list of resources
+                                  that shall be encrypted in addition to secrets.
+                                  Each item is a Kubernetes resource name in plural
+                                  (resource or resource.group) that should be encrypted.
+                                  Note that configuring a custom resource is only
+                                  supported for versions >= 1.26. Wildcards are not
+                                  supported for now. See https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md
+                                  for more details.
+                                items:
+                                  type: string
+                                type: array
+                            required:
+                            - resources
+                            type: object
                           eventTTL:
                             description: EventTTL controls the amount of time to retain
                               events. Defaults to 1h.
@@ -1542,6 +1580,15 @@ spec:
                         type: object
                     type: object
                 type: object
+              encryptedResources:
+                description: EncryptedResources is the list of resources which are
+                  currently encrypted in the virtual garden by the virtual kube-apiserver.
+                  Resources which are encrypted by default will not appear here. See
+                  https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config
+                  for more details.
+                items:
+                  type: string
+                type: array
               gardener:
                 description: Gardener holds information about the Gardener which last
                   acted on the Garden.

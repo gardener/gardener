@@ -24,12 +24,19 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/operations"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement"
+	"github.com/gardener/gardener/pkg/apis/settings"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -322,4 +329,45 @@ func PrepareGardenClientRestConfig(baseConfig *rest.Config, address *string, caC
 		}
 	}
 	return gardenClientRestConfig
+}
+
+// DefaultGardenerGVKsForEncryption returns the list of GroupVersionKinds served by Gardener API Server which are encrypted by default.
+func DefaultGardenerGVKsForEncryption() []schema.GroupVersionKind {
+	return []schema.GroupVersionKind{
+		gardencorev1beta1.SchemeGroupVersion.WithKind("ControllerDeployment"),
+		gardencorev1beta1.SchemeGroupVersion.WithKind("ControllerRegistration"),
+		gardencorev1beta1.SchemeGroupVersion.WithKind("InternalSecret"),
+		gardencorev1beta1.SchemeGroupVersion.WithKind("ShootState"),
+	}
+}
+
+// DefaultGardenerResourcesForEncryption returns the list of resources served by Gardener API Server which are encrypted by default.
+func DefaultGardenerResourcesForEncryption() sets.Set[string] {
+	return sets.New(
+		gardencorev1beta1.Resource("controllerdeployments").String(),
+		gardencorev1beta1.Resource("controllerregistrations").String(),
+		gardencorev1beta1.Resource("internalsecrets").String(),
+		gardencorev1beta1.Resource("shootstates").String(),
+	)
+}
+
+// IsServedByGardenerAPIServer returns true if the passed resources is served by the Gardener API Server.
+func IsServedByGardenerAPIServer(resource string) bool {
+	for _, groupName := range []string{
+		gardencore.GroupName,
+		operations.GroupName,
+		settings.GroupName,
+		seedmanagement.GroupName,
+	} {
+		if strings.HasSuffix(resource, groupName) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// IsServedByKubeAPIServer returns true if the passed resources is served by the Kube API Server.
+func IsServedByKubeAPIServer(resource string) bool {
+	return !IsServedByGardenerAPIServer(resource)
 }

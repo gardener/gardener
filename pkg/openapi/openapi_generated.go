@@ -87,6 +87,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DataVolume":                                 schema_pkg_apis_core_v1beta1_DataVolume(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DeploymentRef":                              schema_pkg_apis_core_v1beta1_DeploymentRef(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDEncryptionKeyRotation":                  schema_pkg_apis_core_v1beta1_ETCDEncryptionKeyRotation(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionConfig":                           schema_pkg_apis_core_v1beta1_EncryptionConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersion":                           schema_pkg_apis_core_v1beta1_ExpirableVersion(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExposureClass":                              schema_pkg_apis_core_v1beta1_ExposureClass(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExposureClassList":                          schema_pkg_apis_core_v1beta1_ExposureClassList(ref),
@@ -2854,6 +2855,35 @@ func schema_pkg_apis_core_v1beta1_ETCDEncryptionKeyRotation(ref common.Reference
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_EncryptionConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "EncryptionConfig contains customizable encryption configuration of the API server.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"resources": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Resources contains the list of resources that shall be encrypted in addition to secrets. Each item is a Kubernetes resource name in plural (resource or resource.group) that should be encrypted. Note that configuring a custom resource is only supported for versions >= 1.26. Wildcards are not supported for now. See https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md for more details.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"resources"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_ExpirableVersion(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -3713,11 +3743,17 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 							Format:      "int64",
 						},
 					},
+					"encryptionConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EncryptionConfig contains customizable encryption configuration of the Kube API server.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionConfig"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerLogging", "github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerRequests", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerLogging", "github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerRequests", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -8231,6 +8267,21 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 						SchemaProps: spec.SchemaProps{
 							Description: "LastMaintenance holds information about the last maintenance operations on the Shoot.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.LastMaintenance"),
+						},
+					},
+					"encryptedResources": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EncryptedResources is the list of resources in the Shoot which are currently encrypted. Secrets are encrypted by default and are not part of the list. See https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md for more details.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
 						},
 					},
 				},

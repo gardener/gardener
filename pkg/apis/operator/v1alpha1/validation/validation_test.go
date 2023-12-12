@@ -60,6 +60,9 @@ var _ = Describe("Validation Tests", func() {
 						},
 						Kubernetes: operatorv1alpha1.Kubernetes{
 							Version: "1.26.3",
+							KubeAPIServer: &operatorv1alpha1.KubeAPIServerConfig{
+								KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{},
+							},
 						},
 						Networking: operatorv1alpha1.Networking{
 							Services: "10.4.0.0/16",
@@ -97,8 +100,16 @@ var _ = Describe("Validation Tests", func() {
 			)
 
 			DescribeTable("starting rotation of all credentials",
-				func(allowed bool, status operatorv1alpha1.GardenStatus) {
+				func(allowed bool, status operatorv1alpha1.GardenStatus, kubeAPIEncryptionConfig, gardenerEncryptionConfig *gardencorev1beta1.EncryptionConfig, extraMatchers ...gomegatypes.GomegaMatcher) {
 					metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "gardener.cloud/operation", "rotate-credentials-start")
+					garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = &operatorv1alpha1.KubeAPIServerConfig{
+						KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
+							EncryptionConfig: kubeAPIEncryptionConfig,
+						},
+					}
+					garden.Spec.VirtualCluster.Gardener.APIServer = &operatorv1alpha1.GardenerAPIServerConfig{
+						EncryptionConfig: gardenerEncryptionConfig,
+					}
 					garden.Status = status
 
 					matcher := BeEmpty()
@@ -109,7 +120,7 @@ var _ = Describe("Validation Tests", func() {
 						})))
 					}
 
-					Expect(ValidateGarden(garden)).To(matcher)
+					Expect(ValidateGarden(garden)).To(And(matcher, SatisfyAll(extraMatchers...)))
 				},
 
 				Entry("ca rotation phase is preparing", false, operatorv1alpha1.GardenStatus{
@@ -120,7 +131,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
 				Entry("sa rotation phase is preparing", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -129,7 +140,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
 				Entry("etcd key rotation phase is preparing", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -138,7 +149,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
 				Entry("ca rotation phase is prepared", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -147,7 +158,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
 				Entry("sa rotation phase is prepared", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -156,7 +167,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
 				Entry("etcd key rotation phase is prepared", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -165,7 +176,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
 				Entry("ca rotation phase is completing", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -174,7 +185,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
 				Entry("sa rotation phase is completing", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -183,7 +194,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
 				Entry("etcd key rotation phase is completing", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -192,7 +203,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
 				Entry("ca rotation phase is completed", true, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -201,7 +212,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
 				Entry("sa rotation phase is completed", true, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -210,7 +221,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
 				Entry("etcd key rotation phase is completed", true, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -219,7 +230,26 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
+				Entry("when spec encrypted resources and status encrypted resources are not equal", false,
+					operatorv1alpha1.GardenStatus{
+						EncryptedResources: []string{"configmaps", "projects.core.gardener.cloud"},
+					},
+					&gardencorev1beta1.EncryptionConfig{Resources: []string{"deployments.apps"}},
+					&gardencorev1beta1.EncryptionConfig{Resources: []string{"shoots.core.gardener.cloud"}},
+					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+						"Detail": Equal("cannot start rotation of all credentials because a previous encryption configuration change is currently being rolled out"),
+					}))),
+				),
+				Entry("when spec encrypted resources and status encrypted resources are equal", true,
+					operatorv1alpha1.GardenStatus{
+						EncryptedResources: []string{"configmaps", "daemonsets.apps", "projects.core.gardener.cloud", "shoots.core.gardener.cloud"},
+					},
+					&gardencorev1beta1.EncryptionConfig{Resources: []string{"daemonsets.apps", "configmaps"}},
+					&gardencorev1beta1.EncryptionConfig{Resources: []string{"shoots.core.gardener.cloud", "projects.core.gardener.cloud"}},
+				),
 			)
 
 			DescribeTable("completing rotation of all credentials",
@@ -606,8 +636,18 @@ var _ = Describe("Validation Tests", func() {
 			)
 
 			DescribeTable("starting ETCD encryption key rotation",
-				func(allowed bool, status operatorv1alpha1.GardenStatus) {
+				func(allowed bool, status operatorv1alpha1.GardenStatus, kubeAPIEncryptionConfig, gardenerEncryptionConfig *gardencorev1beta1.EncryptionConfig, extraMatchers ...gomegatypes.GomegaMatcher) {
 					metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "gardener.cloud/operation", "rotate-etcd-encryption-key-start")
+
+					garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = &operatorv1alpha1.KubeAPIServerConfig{
+						KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
+							EncryptionConfig: kubeAPIEncryptionConfig,
+						},
+					}
+					garden.Spec.VirtualCluster.Gardener.APIServer = &operatorv1alpha1.GardenerAPIServerConfig{
+						EncryptionConfig: gardenerEncryptionConfig,
+					}
+
 					garden.Status = status
 
 					matcher := BeEmpty()
@@ -618,7 +658,7 @@ var _ = Describe("Validation Tests", func() {
 						})))
 					}
 
-					Expect(ValidateGarden(garden)).To(matcher)
+					Expect(ValidateGarden(garden)).To(And(matcher, SatisfyAll(extraMatchers...)))
 				},
 
 				Entry("rotation phase is prepare", false, operatorv1alpha1.GardenStatus{
@@ -629,7 +669,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
 				Entry("rotation phase is prepared", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -638,7 +678,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
 				Entry("rotation phase is complete", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -647,7 +687,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
 				Entry("rotation phase is completed", true, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -656,7 +696,26 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
+				Entry("when spec encrypted resources and status encrypted resources are not equal", false,
+					operatorv1alpha1.GardenStatus{
+						EncryptedResources: []string{"configmaps", "projects.core.gardener.cloud"},
+					},
+					&gardencorev1beta1.EncryptionConfig{Resources: []string{"deployments.apps"}},
+					&gardencorev1beta1.EncryptionConfig{Resources: []string{"shoots.core.gardener.cloud"}},
+					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+						"Detail": Equal("cannot start ETCD encryption key rotation because a previous encryption configuration change is currently being rolled out"),
+					}))),
+				),
+				Entry("when spec encrypted resources and status encrypted resources are equal", true,
+					operatorv1alpha1.GardenStatus{
+						EncryptedResources: []string{"configmaps", "daemonsets.apps", "projects.core.gardener.cloud", "shoots.core.gardener.cloud"},
+					},
+					&gardencorev1beta1.EncryptionConfig{Resources: []string{"daemonsets.apps", "configmaps"}},
+					&gardencorev1beta1.EncryptionConfig{Resources: []string{"shoots.core.gardener.cloud", "projects.core.gardener.cloud"}},
+				),
 			)
 
 			DescribeTable("completing ETCD encryption key rotation",
@@ -939,6 +998,109 @@ var _ = Describe("Validation Tests", func() {
 								"Type":  Equal(field.ErrorTypeRequired),
 								"Field": Equal("spec.virtualCluster.gardener.gardenerAPIServer.auditConfig.auditPolicy.configMapRef.name"),
 							}))))
+						})
+					})
+
+					Context("EncryptionConfig", func() {
+						It("should deny specifying duplicate resources", func() {
+							garden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+								Resources: []string{"shoots.core.gardener.cloud", "shoots.core.gardener.cloud"},
+							}
+
+							Expect(ValidateGarden(garden)).To(ConsistOf(
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":     Equal(field.ErrorTypeDuplicate),
+									"Field":    Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[1]"),
+									"BadValue": Equal("shoots.core.gardener.cloud"),
+								})),
+							))
+						})
+
+						It("should deny specifying resources encrypted by default", func() {
+							garden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+								Resources: []string{
+									"controllerdeployments.core.gardener.cloud",
+									"controllerregistrations.core.gardener.cloud",
+									"internalsecrets.core.gardener.cloud",
+									"shootstates.core.gardener.cloud",
+									"shoots.core.gardener.cloud",
+									"secretbindings.core.gardener.cloud",
+								},
+							}
+
+							Expect(ValidateGarden(garden)).To(ContainElements(
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":   Equal(field.ErrorTypeForbidden),
+									"Field":  Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[0]"),
+									"Detail": Equal("\"controllerdeployments.core.gardener.cloud\" are always encrypted"),
+								})),
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":   Equal(field.ErrorTypeForbidden),
+									"Field":  Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[1]"),
+									"Detail": Equal("\"controllerregistrations.core.gardener.cloud\" are always encrypted"),
+								})),
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":   Equal(field.ErrorTypeForbidden),
+									"Field":  Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[2]"),
+									"Detail": Equal("\"internalsecrets.core.gardener.cloud\" are always encrypted"),
+								})),
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":   Equal(field.ErrorTypeForbidden),
+									"Field":  Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[3]"),
+									"Detail": Equal("\"shootstates.core.gardener.cloud\" are always encrypted"),
+								})),
+							))
+						})
+
+						It("should deny specifying resources which are not served by gardener-apiserver", func() {
+							garden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+								Resources: []string{"shoots.core.gardener.cloud",
+									"bastions.operations.gardener.cloud",
+									"ingresses.networking.io",
+									"foo.gardener.cloud",
+									"configmaps",
+								},
+							}
+
+							Expect(ValidateGarden(garden)).To(ConsistOf(
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":     Equal(field.ErrorTypeInvalid),
+									"Field":    Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[2]"),
+									"BadValue": Equal("ingresses.networking.io"),
+									"Detail":   Equal("should be a resource served by gardener-apiserver. ie; should have any of the suffixes {core,operations,settings,seedmanagement}.gardener.cloud"),
+								})),
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":     Equal(field.ErrorTypeInvalid),
+									"Field":    Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[3]"),
+									"BadValue": Equal("foo.gardener.cloud"),
+									"Detail":   Equal("should be a resource served by gardener-apiserver. ie; should have any of the suffixes {core,operations,settings,seedmanagement}.gardener.cloud"),
+								})),
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":     Equal(field.ErrorTypeInvalid),
+									"Field":    Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[4]"),
+									"BadValue": Equal("configmaps"),
+									"Detail":   Equal("should be a resource served by gardener-apiserver. ie; should have any of the suffixes {core,operations,settings,seedmanagement}.gardener.cloud"),
+								})),
+							))
+						})
+
+						It("should deny specifying wildcard resources", func() {
+							garden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+								Resources: []string{"*.core.gardener.cloud", "*.operations.gardener.cloud"},
+							}
+
+							Expect(ValidateGarden(garden)).To(ConsistOf(
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":   Equal(field.ErrorTypeInvalid),
+									"Field":  Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[0]"),
+									"Detail": Equal("wildcards are not supported"),
+								})),
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":   Equal(field.ErrorTypeInvalid),
+									"Field":  Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[1]"),
+									"Detail": Equal("wildcards are not supported"),
+								})),
+							))
 						})
 					})
 
@@ -1428,13 +1590,28 @@ var _ = Describe("Validation Tests", func() {
 					Name: "garden",
 				},
 				Spec: operatorv1alpha1.GardenSpec{
+					RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+						Networking: operatorv1alpha1.RuntimeNetworking{
+							Pods:     "10.1.0.0/16",
+							Services: "10.2.0.0/16",
+						},
+					},
 					VirtualCluster: operatorv1alpha1.VirtualCluster{
 						Kubernetes: operatorv1alpha1.Kubernetes{
 							Version: "1.27.0",
+							KubeAPIServer: &operatorv1alpha1.KubeAPIServerConfig{
+								KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
+									EncryptionConfig: &gardencorev1beta1.EncryptionConfig{},
+								},
+							},
+						},
+						Networking: operatorv1alpha1.Networking{
+							Services: "10.4.0.0/16",
 						},
 					},
 				},
 			}
+
 			newGarden = oldGarden.DeepCopy()
 		})
 
@@ -1512,6 +1689,112 @@ var _ = Describe("Validation Tests", func() {
 						"Type":  Equal(field.ErrorTypeForbidden),
 						"Field": Equal("spec.virtualCluster.kubernetes.version"),
 					}))))
+				})
+
+				Context("encryptionConfig", func() {
+					It("should deny changing items if the current resources in the status do not match the current spec", func() {
+						oldResources := []string{"resource.custom.io", "deployments.apps"}
+						oldGardenerResources := []string{"shoots.core.gardener.cloud", "bastions.operations.gardener.cloud"}
+
+						oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+							Resources: oldResources,
+						}
+						oldGarden.Spec.VirtualCluster.Gardener = operatorv1alpha1.Gardener{
+							APIServer: &operatorv1alpha1.GardenerAPIServerConfig{
+								EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+									Resources: oldGardenerResources,
+								},
+							},
+						}
+
+						newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"deployments.apps", "newresource.fancyresource.io"}
+						newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"shoots.core.gardener.cloud"}
+
+						Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ConsistOf(
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal(field.ErrorTypeForbidden),
+								"Field":  Equal("spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig.resources"),
+								"Detail": Equal("resources cannot be changed because a previous encryption configuration change is currently being rolled out"),
+							})),
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal(field.ErrorTypeForbidden),
+								"Field":  Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources"),
+								"Detail": Equal("resources cannot be changed because a previous encryption configuration change is currently being rolled out"),
+							})),
+						))
+					})
+
+					It("should deny changing items during ETCD Encryption Key rotation", func() {
+						oldResources := []string{"resource.custom.io", "deployments.apps"}
+						oldGardenerResources := []string{"shoots.core.gardener.cloud", "bastions.operations.gardener.cloud"}
+						oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+							Resources: oldResources,
+						}
+						oldGarden.Spec.VirtualCluster.Gardener = operatorv1alpha1.Gardener{
+							APIServer: &operatorv1alpha1.GardenerAPIServerConfig{
+								EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+									Resources: oldGardenerResources,
+								},
+							},
+						}
+						newGarden.Status.EncryptedResources = append(oldResources, oldGardenerResources...)
+
+						newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"deployments.apps", "newresource.fancyresource.io"}
+						newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"shoots.core.gardener.cloud"}
+
+						newGarden.Status.Credentials = &operatorv1alpha1.Credentials{
+							Rotation: &operatorv1alpha1.CredentialsRotation{
+								ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+									Phase: gardencorev1beta1.RotationPreparing,
+								},
+							},
+						}
+
+						Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ConsistOf(
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal(field.ErrorTypeForbidden),
+								"Field":  Equal("spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig.resources"),
+								"Detail": Equal("resources cannot be changed when .status.credentials.rotation.etcdEncryptionKey.phase is not \"Completed\""),
+							})),
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal(field.ErrorTypeForbidden),
+								"Field":  Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources"),
+								"Detail": Equal("resources cannot be changed when .status.credentials.rotation.etcdEncryptionKey.phase is not \"Completed\""),
+							})),
+						))
+					})
+
+					It("should allow changing items if ETCD Encryption Key rotation is in phase Completed or was never rotated", func() {
+						oldResources := []string{"resource.custom.io", "deployments.apps"}
+						oldGardenerResources := []string{"shoots.core.gardener.cloud", "bastions.operations.gardener.cloud"}
+						oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+							Resources: oldResources,
+						}
+						oldGarden.Spec.VirtualCluster.Gardener = operatorv1alpha1.Gardener{
+							APIServer: &operatorv1alpha1.GardenerAPIServerConfig{
+								EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+									Resources: oldGardenerResources,
+								},
+							},
+						}
+						newGarden.Status.EncryptedResources = append(oldResources, oldGardenerResources...)
+
+						newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"deployments.apps", "newresource.fancyresource.io"}
+						newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"shoots.core.gardener.cloud"}
+						newGarden.Status.Credentials = nil
+
+						Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(BeEmpty())
+
+						newGarden.Status.Credentials = &operatorv1alpha1.Credentials{
+							Rotation: &operatorv1alpha1.CredentialsRotation{
+								ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+									Phase: gardencorev1beta1.RotationCompleted,
+								},
+							},
+						}
+
+						Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(BeEmpty())
+					})
 				})
 			})
 		})

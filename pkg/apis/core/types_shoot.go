@@ -159,6 +159,10 @@ type ShootStatus struct {
 	Credentials *ShootCredentials
 	// LastMaintenance holds information about the last maintenance operations on the Shoot.
 	LastMaintenance *LastMaintenance
+	// EncryptedResources is the list of resources in the Shoot which are currently encrypted.
+	// Secrets are encrypted by default and are not part of the list.
+	// See https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md for more details.
+	EncryptedResources []string
 }
 
 // LastMaintenance holds information about a maintenance operation on the Shoot.
@@ -581,6 +585,8 @@ type KubeAPIServerConfig struct {
 	// that is added by default to every pod that does not already have such a toleration (flag `--default-unreachable-toleration-seconds`).
 	// The field has effect only when the `DefaultTolerationSeconds` admission plugin is enabled.
 	DefaultUnreachableTolerationSeconds *int64
+	// EncryptionConfig contains customizable encryption configuration of the API server.
+	EncryptionConfig *EncryptionConfig
 }
 
 // APIServerLogging contains configuration for the logs level and http access logs
@@ -599,6 +605,16 @@ type APIServerRequests struct {
 	// MaxMutatingInflight is the maximum number of mutating requests in flight at a given time. When the server
 	// exceeds this, it rejects requests.
 	MaxMutatingInflight *int32
+}
+
+// EncryptionConfig contains customizable encryption configuration of the API server.
+type EncryptionConfig struct {
+	// Resources contains the list of resources that shall be encrypted in addition to secrets.
+	// Each item is a Kubernetes resource name in plural (resource or resource.group) that should be encrypted.
+	// Note that configuring a custom resource is only supported for versions >= 1.26.
+	// Wildcards are not supported for now.
+	// See https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md for more details.
+	Resources []string
 }
 
 // ServiceAccountConfig is the kube-apiserver configuration for service accounts.

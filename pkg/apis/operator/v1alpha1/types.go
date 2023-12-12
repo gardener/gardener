@@ -421,6 +421,9 @@ type GardenerAPIServerConfig struct {
 	// cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).
 	// +optional
 	WatchCacheSizes *gardencorev1beta1.WatchCacheSizes `json:"watchCacheSizes,omitempty"`
+	// EncryptionConfig contains customizable encryption configuration of the Gardener API server.
+	// +optional
+	EncryptionConfig *gardencorev1beta1.EncryptionConfig `json:"encryptionConfig,omitempty"`
 }
 
 // GardenerAdmissionControllerConfig contains configuration settings for the gardener-admission-controller.
@@ -517,6 +520,11 @@ type GardenStatus struct {
 	// Credentials contains information about the virtual garden cluster credentials.
 	// +optional
 	Credentials *Credentials `json:"credentials,omitempty"`
+	// EncryptedResources is the list of resources which are currently encrypted in the virtual garden by the virtual kube-apiserver.
+	// Resources which are encrypted by default will not appear here.
+	// See https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config for more details.
+	// +optional
+	EncryptedResources []string `json:"encryptedResources,omitempty"`
 }
 
 // Credentials contains information about the virtual garden cluster credentials.

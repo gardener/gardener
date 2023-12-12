@@ -709,6 +709,20 @@ Credentials
 <p>Credentials contains information about the virtual garden cluster credentials.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>encryptedResources</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>EncryptedResources is the list of resources which are currently encrypted in the virtual garden by the virtual kube-apiserver.
+Resources which are encrypted by default will not appear here.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config">https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config</a> for more details.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="operator.gardener.cloud/v1alpha1.Gardener">Gardener
@@ -906,6 +920,18 @@ capacity is too small to cope with the amount of update requests and watchers fo
 might happen that controller watches are permanently stopped with <code>too old resource version</code> errors.
 Starting from kubernetes v1.19, the API server&rsquo;s watch cache size is adapted dynamically and setting the watch
 cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>encryptionConfig</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionConfig
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>EncryptionConfig contains customizable encryption configuration of the Gardener API server.</p>
 </td>
 </tr>
 </tbody>
