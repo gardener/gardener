@@ -154,6 +154,11 @@ func addStateToMachineDeployment(
 		state = worker.Status.State.Raw
 	}
 
+	if len(state) == 0 {
+		log.Info("Machine state is empty, no state to add")
+		return nil
+	}
+
 	// Parse the worker state to MachineDeploymentStates
 	machineState := &shootstate.MachineState{MachineDeployments: make(map[string]*shootstate.MachineDeploymentState)}
 	if err := json.Unmarshal(state, &machineState); err != nil {
