@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -42,6 +43,7 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -88,6 +90,8 @@ type Values struct {
 	ClusterType component.ClusterType
 	// TargetNamespace is the namespace in which the resources should be deployed
 	TargetNamespace string
+	// KubernetesVersion is the Kubernetes version of the cluster.
+	KubernetesVersion *semver.Version
 	// ImageController is the container image used for nginx-ingress controller.
 	ImageController string
 	// ImageDefaultBackend is the container image used for default ingress backend.
@@ -640,6 +644,11 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 					MatchLabels: n.getLabels(LabelValueController, false),
 				},
 			},
+		}
+
+		unhealthyPodEvictionPolicyAlwatysAllow := policyv1.AlwaysAllow
+		if versionutils.ConstraintK8sGreaterEqual126.Check(n.values.KubernetesVersion) {
+			podDisruptionBudget.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
 		}
 	}
 
