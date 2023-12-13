@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Masterminds/semver/v3"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	istionetworkingv1beta1 "istio.io/api/networking/v1beta1"
@@ -42,6 +43,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -56,11 +58,13 @@ func New(
 	client client.Client,
 	namespace string,
 	imageExtAuthzServer string,
+	kubernetesVersion *semver.Version,
 ) component.DeployWaiter {
 	return &authzServer{
 		client:              client,
 		namespace:           namespace,
 		imageExtAuthzServer: imageExtAuthzServer,
+		kubernetesVersion:   kubernetesVersion,
 	}
 }
 
@@ -68,6 +72,7 @@ type authzServer struct {
 	client              client.Client
 	namespace           string
 	imageExtAuthzServer string
+	kubernetesVersion   *semver.Version
 }
 
 func (a *authzServer) Deploy(ctx context.Context) error {
@@ -281,7 +286,10 @@ func (a *authzServer) emptyPDB() *policyv1.PodDisruptionBudget {
 }
 
 func (a *authzServer) reconcilePodDisruptionBudget(ctx context.Context, pdb *policyv1.PodDisruptionBudget) error {
-	maxUnavailable := intstr.FromInt32(1)
+	var (
+		maxUnavailable                         = intstr.FromInt32(1)
+		unhealthyPodEvictionPolicyAlwatysAllow = policyv1.AlwaysAllow
+	)
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, pdb, func() error {
 		pdb.Labels = getLabels()
@@ -291,6 +299,11 @@ func (a *authzServer) reconcilePodDisruptionBudget(ctx context.Context, pdb *pol
 				MatchLabels: getLabels(),
 			},
 		}
+
+		if versionutils.ConstraintK8sGreaterEqual126.Check(a.kubernetesVersion) {
+			pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
+		}
+
 		return nil
 	})
 

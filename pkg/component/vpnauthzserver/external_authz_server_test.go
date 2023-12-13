@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -56,6 +57,7 @@ var _ = Describe("ExtAuthzServer", func() {
 		defaultDepWaiter component.DeployWaiter
 		namespace        = "shoot--foo--bar"
 
+		kubernetesVersion *semver.Version
 		image             = "some-image"
 		maxSurge          = intstr.FromInt32(100)
 		maxUnavailable    = intstr.FromInt32(0)
@@ -88,8 +90,7 @@ var _ = Describe("ExtAuthzServer", func() {
 
 		c = fake.NewClientBuilder().WithScheme(s).Build()
 
-		var err error
-		Expect(err).NotTo(HaveOccurred())
+		kubernetesVersion = semver.MustParse("1.26")
 
 		expectedDeployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
@@ -297,7 +298,7 @@ var _ = Describe("ExtAuthzServer", func() {
 	})
 
 	JustBeforeEach(func() {
-		defaultDepWaiter = New(c, namespace, image)
+		defaultDepWaiter = New(c, namespace, image, kubernetesVersion)
 	})
 
 	Describe("#Deploy", func() {
@@ -325,10 +326,27 @@ var _ = Describe("ExtAuthzServer", func() {
 			Expect(actualVpa).To(DeepEqual(expectedVpa))
 		})
 
-		It("should successfully deploy all the components", func() {
-			actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
-			Expect(c.Get(ctx, kubernetesutils.Key(expectedPodDisruptionBudget.Namespace, expectedPodDisruptionBudget.Name), actualPodDisruptionBudget)).To(Succeed())
-			Expect(actualPodDisruptionBudget).To(DeepEqual(expectedPodDisruptionBudget))
+		Context("Kubernetes version < 1.26", func() {
+			BeforeEach(func() {
+				kubernetesVersion = semver.MustParse("1.25")
+			})
+
+			It("should successfully deploy all the components", func() {
+				actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
+				Expect(c.Get(ctx, kubernetesutils.Key(expectedPodDisruptionBudget.Namespace, expectedPodDisruptionBudget.Name), actualPodDisruptionBudget)).To(Succeed())
+				Expect(actualPodDisruptionBudget).To(DeepEqual(expectedPodDisruptionBudget))
+			})
+		})
+
+		Context("Kubernetes version >= 1.26", func() {
+			It("should successfully deploy all the components", func() {
+				unhealthyPodEvictionPolicyAlwatysAllow := policyv1.AlwaysAllow
+				expectedPodDisruptionBudget.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
+
+				actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
+				Expect(c.Get(ctx, kubernetesutils.Key(expectedPodDisruptionBudget.Namespace, expectedPodDisruptionBudget.Name), actualPodDisruptionBudget)).To(Succeed())
+				Expect(actualPodDisruptionBudget).To(DeepEqual(expectedPodDisruptionBudget))
+			})
 		})
 	})
 
