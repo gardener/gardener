@@ -48,22 +48,22 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 var _ = Describe("KubeScheduler", func() {
 	var (
-		c                 client.Client
-		sm                secretsmanager.Interface
-		kubeScheduler     Interface
-		ctx                     = context.TODO()
-		namespace               = "shoot--foo--bar"
-		version                 = "1.27.2"
-		semverVersion, _        = semver.NewVersion(version)
-		image                   = "registry.k8s.io/kube-scheduler:v1.27.2"
-		replicas          int32 = 1
-		profileBinPacking       = gardencorev1beta1.SchedulingProfileBinPacking
-		configEmpty       *gardencorev1beta1.KubeSchedulerConfig
-		configFull        = &gardencorev1beta1.KubeSchedulerConfig{
+		c                             client.Client
+		sm                            secretsmanager.Interface
+		kubeScheduler                 Interface
+		ctx                           = context.TODO()
+		namespace                     = "shoot--foo--bar"
+		runtimeVersion, targetVersion *semver.Version
+		image                               = "registry.k8s.io/kube-scheduler:v1.27.2"
+		replicas                      int32 = 1
+		profileBinPacking                   = gardencorev1beta1.SchedulingProfileBinPacking
+		configEmpty                   *gardencorev1beta1.KubeSchedulerConfig
+		configFull                    = &gardencorev1beta1.KubeSchedulerConfig{
 			KubernetesConfig: gardencorev1beta1.KubernetesConfig{
 				FeatureGates: map[string]bool{"Foo": true, "Bar": false, "Baz": false},
 			},
@@ -113,29 +113,38 @@ var _ = Describe("KubeScheduler", func() {
 		}
 
 		pdbMaxUnavailable = intstr.FromInt32(1)
-		pdb               = &policyv1.PodDisruptionBudget{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: policyv1.SchemeGroupVersion.String(),
-				Kind:       "PodDisruptionBudget",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      pdbName,
-				Namespace: namespace,
-				Labels: map[string]string{
-					"app":  "kubernetes",
-					"role": "scheduler",
+		pdbFor            = func(runtimeVersion *semver.Version) *policyv1.PodDisruptionBudget {
+			pdb := &policyv1.PodDisruptionBudget{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: policyv1.SchemeGroupVersion.String(),
+					Kind:       "PodDisruptionBudget",
 				},
-				ResourceVersion: "1",
-			},
-			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &pdbMaxUnavailable,
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      pdbName,
+					Namespace: namespace,
+					Labels: map[string]string{
 						"app":  "kubernetes",
 						"role": "scheduler",
 					},
+					ResourceVersion: "1",
 				},
-			},
+				Spec: policyv1.PodDisruptionBudgetSpec{
+					MaxUnavailable: &pdbMaxUnavailable,
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"app":  "kubernetes",
+							"role": "scheduler",
+						},
+					},
+				},
+			}
+
+			unhealthyPodEvictionPolicyAlwatysAllow := policyv1.AlwaysAllow
+			if versionutils.ConstraintK8sGreaterEqual126.Check(runtimeVersion) {
+				pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
+			}
+
+			return pdb
 		}
 
 		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
@@ -398,7 +407,9 @@ subjects:
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		sm = fakesecretsmanager.New(c, namespace)
-		kubeScheduler = New(c, namespace, sm, semverVersion, image, replicas, configEmpty)
+		targetVersion = semver.MustParse("1.27.2")
+		runtimeVersion = semver.MustParse("1.25.2")
+		kubeScheduler = New(c, namespace, sm, runtimeVersion, targetVersion, image, replicas, configEmpty)
 
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-client", Namespace: namespace}})).To(Succeed())
@@ -431,13 +442,16 @@ subjects:
 		})
 
 		DescribeTable("success tests for various kubernetes versions",
-			func(version string, config *gardencorev1beta1.KubeSchedulerConfig, expectedComponentConfigFilePath string) {
-				semverVersion, err := semver.NewVersion(version)
+			func(targetVersion, runtimeVersion string, config *gardencorev1beta1.KubeSchedulerConfig, expectedComponentConfigFilePath string) {
+				targetSemverVersion, err := semver.NewVersion(targetVersion)
+				Expect(err).NotTo(HaveOccurred())
+
+				runtimeSemverVersion, err := semver.NewVersion(runtimeVersion)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 
-				kubeScheduler = New(c, namespace, sm, semverVersion, image, replicas, config)
+				kubeScheduler = New(c, namespace, sm, runtimeSemverVersion, targetSemverVersion, image, replicas, config)
 				Expect(kubeScheduler.Deploy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
@@ -479,7 +493,7 @@ subjects:
 					},
 				}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(actualDeployment), actualDeployment)).To(Succeed())
-				Expect(actualDeployment).To(DeepEqual(deploymentFor(version, config, expectedComponentConfigFilePath)))
+				Expect(actualDeployment).To(DeepEqual(deploymentFor(targetVersion, config, expectedComponentConfigFilePath)))
 
 				actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{
 					ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace},
@@ -494,7 +508,7 @@ subjects:
 					},
 				}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(actualService), actualService)).To(Succeed())
-				Expect(actualService).To(DeepEqual(serviceFor(version)))
+				Expect(actualService).To(DeepEqual(serviceFor(targetVersion)))
 
 				actualPDB := &policyv1.PodDisruptionBudget{
 					ObjectMeta: metav1.ObjectMeta{
@@ -503,15 +517,15 @@ subjects:
 					},
 				}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(actualPDB), actualPDB)).To(Succeed())
-				Expect(actualPDB).To(DeepEqual(pdb))
+				Expect(actualPDB).To(DeepEqual(pdbFor(runtimeSemverVersion)))
 			},
 
-			Entry("kubernetes 1.24 w/o config", "1.24.1", configEmpty, "testdata/component-config-1.24.yaml"),
-			Entry("kubernetes 1.24 w/ full config", "1.24.1", configFull, "testdata/component-config-1.24-bin-packing.yaml"),
-			Entry("kubernetes 1.25 w/o config", "1.25.0", configEmpty, "testdata/component-config-1.25.yaml"),
-			Entry("kubernetes 1.25 w/ full config", "1.25.0", configFull, "testdata/component-config-1.25-bin-packing.yaml"),
-			Entry("kubernetes 1.26 w/o config", "1.26.0", configEmpty, "testdata/component-config-1.25.yaml"),
-			Entry("kubernetes 1.26 w/ full config", "1.26.0", configFull, "testdata/component-config-1.25-bin-packing.yaml"),
+			Entry("kubernetes 1.24 w/o config", "1.24.1", "1.24.1", configEmpty, "testdata/component-config-1.24.yaml"),
+			Entry("kubernetes 1.24 w/ full config", "1.24.1", "1.24.1", configFull, "testdata/component-config-1.24-bin-packing.yaml"),
+			Entry("kubernetes 1.25 w/o config", "1.25.0", "1.25.0", configEmpty, "testdata/component-config-1.25.yaml"),
+			Entry("kubernetes 1.25 w/ full config", "1.25.0", "1.25.0", configFull, "testdata/component-config-1.25-bin-packing.yaml"),
+			Entry("kubernetes 1.26 w/o config", "1.26.0", "1.26.0", configEmpty, "testdata/component-config-1.25.yaml"),
+			Entry("kubernetes 1.26 w/ full config", "1.26.0", "1.26.0", configFull, "testdata/component-config-1.25-bin-packing.yaml"),
 		)
 	})
 

@@ -122,7 +122,8 @@ func New(
 	client client.Client,
 	namespace string,
 	secretsManager secretsmanager.Interface,
-	version *semver.Version,
+	runtimeVersion *semver.Version,
+	targetVersion *semver.Version,
 	image string,
 	replicas int32,
 	config *gardencorev1beta1.KubeSchedulerConfig,
@@ -131,7 +132,8 @@ func New(
 		client:         client,
 		namespace:      namespace,
 		secretsManager: secretsManager,
-		version:        version,
+		runtimeVersion: runtimeVersion,
+		targetVersion:  targetVersion,
 		image:          image,
 		replicas:       replicas,
 		config:         config,
@@ -142,7 +144,8 @@ type kubeScheduler struct {
 	client         client.Client
 	namespace      string
 	secretsManager secretsmanager.Interface
-	version        *semver.Version
+	runtimeVersion *semver.Version
+	targetVersion  *semver.Version
 	image          string
 	replicas       int32
 	config         *gardencorev1beta1.KubeSchedulerConfig
@@ -360,12 +363,18 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	unhealthyPodEvictionPolicyAlwatysAllow := policyv1.AlwaysAllow
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client, podDisruptionBudget, func() error {
 		podDisruptionBudget.Labels = getLabels()
 		podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
 			MaxUnavailable: &pdbMaxUnavailable,
 			Selector:       deployment.Spec.Selector,
 		}
+
+		if versionutils.ConstraintK8sGreaterEqual126.Check(k.runtimeVersion) {
+			podDisruptionBudget.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
+		}
+
 		return nil
 	}); err != nil {
 		return err
@@ -490,7 +499,7 @@ func (k *kubeScheduler) computeEnvironmentVariables() []corev1.EnvVar {
 
 func (k *kubeScheduler) computeComponentConfig() (string, error) {
 	var apiVersion string
-	if versionutils.ConstraintK8sGreaterEqual125.Check(k.version) {
+	if versionutils.ConstraintK8sGreaterEqual125.Check(k.targetVersion) {
 		apiVersion = "kubescheduler.config.k8s.io/v1"
 	} else {
 		apiVersion = "kubescheduler.config.k8s.io/v1beta3"
