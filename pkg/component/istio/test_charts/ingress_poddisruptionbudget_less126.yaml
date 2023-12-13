@@ -12,4 +12,3 @@ spec:
     matchLabels:
       app: istio-ingressgateway
       foo: bar
-  unhealthyPodEvictionPolicy: AlwaysAllow
