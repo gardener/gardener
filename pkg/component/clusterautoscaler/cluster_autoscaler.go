@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Masterminds/semver/v3"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -46,6 +47,7 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -77,6 +79,7 @@ func New(
 	image string,
 	replicas int32,
 	config *gardencorev1beta1.ClusterAutoscaler,
+	runtimeVersion *semver.Version,
 ) Interface {
 	return &clusterAutoscaler{
 		client:         client,
@@ -85,6 +88,7 @@ func New(
 		image:          image,
 		replicas:       replicas,
 		config:         config,
+		runtimeVersion: runtimeVersion,
 	}
 }
 
@@ -95,6 +99,7 @@ type clusterAutoscaler struct {
 	image          string
 	replicas       int32
 	config         *gardencorev1beta1.ClusterAutoscaler
+	runtimeVersion *semver.Version
 
 	namespaceUID       types.UID
 	machineDeployments []extensionsv1alpha1.MachineDeployment
@@ -242,12 +247,17 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	unhealthyPodEvictionPolicyAlwatysAllow := policyv1.AlwaysAllow
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, podDisruptionBudget, func() error {
 		podDisruptionBudget.Labels = getLabels()
 		podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
 			MaxUnavailable: &pdbMaxUnavailable,
 			Selector:       deployment.Spec.Selector,
 		}
+		if versionutils.ConstraintK8sGreaterEqual126.Check(c.runtimeVersion) {
+			podDisruptionBudget.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
+		}
+
 		return nil
 	}); err != nil {
 		return err
