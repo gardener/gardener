@@ -458,12 +458,18 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	unhealthyPodEvictionPolicyAlwatysAllow := policyv1.AlwaysAllow
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient.Client(), podDisruptionBudget, func() error {
 		podDisruptionBudget.Labels = getLabels()
 		podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
 			MaxUnavailable: &pdbMaxUnavailable,
 			Selector:       deployment.Spec.Selector,
 		}
+
+		if versionutils.ConstraintK8sGreaterEqual126.Check(k.values.RuntimeVersion) {
+			podDisruptionBudget.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
+		}
+
 		return nil
 	}); err != nil {
 		return err
