@@ -138,6 +138,14 @@ spec:
                   - type
                   type: object
                 type: array
+              egressCIDRs:
+                description: EgressCIDRs is a list of CIDRs used by the shoot as the
+                  source IP for egress traffic. For certain environments the egress
+                  IPs may not be stable in which case the extension controller may
+                  opt to not populate this field.
+                items:
+                  type: string
+                type: array
               lastError:
                 description: LastError holds information about the last occurred error
                   during an operation.
