@@ -226,6 +226,8 @@ cat <<EOF | sudo tee -a /etc/hosts
 127.0.0.1 api.e2e-migrate.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-migrate-wl.local.external.local.gardener.cloud
 127.0.0.1 api.e2e-migrate-wl.local.internal.local.gardener.cloud
+127.0.0.1 api.e2e-mgr-hib.local.external.local.gardener.cloud
+127.0.0.1 api.e2e-mgr-hib.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-rotate.local.external.local.gardener.cloud
 127.0.0.1 api.e2e-rotate.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-rotate-wl.local.external.local.gardener.cloud
