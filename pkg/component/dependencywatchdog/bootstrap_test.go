@@ -51,9 +51,13 @@ var _ = Describe("DependencyWatchdog", func() {
 
 		c   client.Client
 		dwd component.DeployWaiter
+
+		kubernetesVersion *semver.Version
 	)
 
 	BeforeEach(func() {
+		kubernetesVersion = semver.MustParse("1.25.0")
+
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 	})
 
@@ -407,7 +411,8 @@ status: {}
 					return out
 				}
 
-				podDisruptionYAML = `apiVersion: policy/v1
+				podDisruptionYAMLFor = func(k8sGreaterEquals126 bool) string {
+					out := `apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   creationTimestamp: null
@@ -420,16 +425,23 @@ spec:
   selector:
     matchLabels:
       app: ` + dwdName + `
-status:
+`
+					if k8sGreaterEquals126 {
+						out += `  unhealthyPodEvictionPolicy: AlwaysAllow
+`
+					}
+					out += `status:
   currentHealthy: 0
   desiredHealthy: 0
   disruptionsAllowed: 0
   expectedPods: 0
 `
+					return out
+				}
 			)
 
-			BeforeEach(func() {
-				values.KubernetesVersion = semver.MustParse("1.25.0")
+			JustBeforeEach(func() {
+				values.KubernetesVersion = kubernetesVersion
 				dwd = NewBootstrapper(c, namespace, values)
 
 				managedResource = &resourcesv1alpha1.ManagedResource{
@@ -446,49 +458,66 @@ status:
 				}
 			})
 
-			It("should successfully deploy all resources for role "+string(values.Role), func() {
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
+			Context("Different kubernetes versions", func() {
+				JustBeforeEach(func() {
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 
-				Expect(dwd.Deploy(ctx)).To(Succeed())
+					Expect(dwd.Deploy(ctx)).To(Succeed())
 
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-				expectedMr := &resourcesv1alpha1.ManagedResource{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-						Kind:       "ManagedResource",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            managedResource.Name,
-						Namespace:       managedResource.Namespace,
-						Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
-						ResourceVersion: "1",
-					},
-					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						Class: pointer.String("seed"),
-						SecretRefs: []corev1.LocalObjectReference{{
-							Name: managedResource.Spec.SecretRefs[0].Name,
-						}},
-						KeepObjects: pointer.Bool(false),
-					},
-				}
-				utilruntime.Must(references.InjectAnnotations(expectedMr))
-				Expect(managedResource).To(DeepEqual(expectedMr))
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					expectedMr := &resourcesv1alpha1.ManagedResource{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
+							Kind:       "ManagedResource",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            managedResource.Name,
+							Namespace:       managedResource.Namespace,
+							Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
+							ResourceVersion: "1",
+						},
+						Spec: resourcesv1alpha1.ManagedResourceSpec{
+							Class: pointer.String("seed"),
+							SecretRefs: []corev1.LocalObjectReference{{
+								Name: managedResource.Spec.SecretRefs[0].Name,
+							}},
+							KeepObjects: pointer.Bool(false),
+						},
+					}
+					utilruntime.Must(references.InjectAnnotations(expectedMr))
+					Expect(managedResource).To(DeepEqual(expectedMr))
 
-				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
-				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
-				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-				Expect(managedResourceSecret.Data).To(HaveLen(9))
-				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_"+dwdName+".yaml"])).To(DeepEqual(clusterRoleYAMLFor(values.Role)))
-				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_"+dwdName+".yaml"])).To(DeepEqual(clusterRoleBindingYAML))
-				Expect(string(managedResourceSecret.Data["configmap__"+namespace+"__"+configMapName+".yaml"])).To(DeepEqual(configMapYAMLFor(values.Role)))
-				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__"+dwdName+".yaml"])).To(DeepEqual(deploymentYAMLFor(values.Role)))
-				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__"+dwdName+".yaml"])).To(DeepEqual(podDisruptionYAML))
-				Expect(string(managedResourceSecret.Data["role__"+namespace+"__gardener.cloud_"+dwdName+".yaml"])).To(DeepEqual(roleYAMLFor(values.Role)))
-				Expect(string(managedResourceSecret.Data["rolebinding__"+namespace+"__gardener.cloud_"+dwdName+".yaml"])).To(DeepEqual(roleBindingYAML))
-				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__"+dwdName+".yaml"])).To(DeepEqual(serviceAccountYAML))
-				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__"+dwdName+".yaml"])).To(DeepEqual(vpaYAMLFor(values.Role)))
+					managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+					Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+					Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+					Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+					Expect(managedResourceSecret.Data).To(HaveLen(9))
+					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_"+dwdName+".yaml"])).To(DeepEqual(clusterRoleYAMLFor(values.Role)))
+					Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_"+dwdName+".yaml"])).To(DeepEqual(clusterRoleBindingYAML))
+					Expect(string(managedResourceSecret.Data["configmap__"+namespace+"__"+configMapName+".yaml"])).To(DeepEqual(configMapYAMLFor(values.Role)))
+					Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__"+dwdName+".yaml"])).To(DeepEqual(deploymentYAMLFor(values.Role)))
+					Expect(string(managedResourceSecret.Data["role__"+namespace+"__gardener.cloud_"+dwdName+".yaml"])).To(DeepEqual(roleYAMLFor(values.Role)))
+					Expect(string(managedResourceSecret.Data["rolebinding__"+namespace+"__gardener.cloud_"+dwdName+".yaml"])).To(DeepEqual(roleBindingYAML))
+					Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__"+dwdName+".yaml"])).To(DeepEqual(serviceAccountYAML))
+					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__"+dwdName+".yaml"])).To(DeepEqual(vpaYAMLFor(values.Role)))
+				})
+
+				Context("kubernetes versions < 1.26", func() {
+					It("should successfully deploy all resources for role "+string(values.Role), func() {
+						Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__"+dwdName+".yaml"])).To(DeepEqual(podDisruptionYAMLFor(false)))
+					})
+				})
+
+				Context("kubernetes versions >= 1.26", func() {
+					BeforeEach(func() {
+						kubernetesVersion = semver.MustParse("1.26.4")
+					})
+
+					It("should successfully deploy all resources for role "+string(values.Role), func() {
+						Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__"+dwdName+".yaml"])).To(DeepEqual(podDisruptionYAMLFor(true)))
+					})
+				})
 			})
 
 			It("should successfully destroy all resources for role "+string(values.Role), func() {

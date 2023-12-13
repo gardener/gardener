@@ -46,6 +46,7 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // Role is a string alias type.
@@ -452,9 +453,12 @@ func (b *bootstrapper) getDeployment(serviceAccountName string, configMapName st
 }
 
 func (b *bootstrapper) getPDB(deployment *appsv1.Deployment) *policyv1.PodDisruptionBudget {
-	maxUnavailable := intstr.FromInt32(1)
+	var (
+		maxUnavailable                         = intstr.FromInt32(1)
+		unhealthyPodEvictionPolicyAlwatysAllow = policyv1.AlwaysAllow
+	)
 
-	return &policyv1.PodDisruptionBudget{
+	pdb := &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      b.name(),
 			Namespace: deployment.Namespace,
@@ -465,6 +469,12 @@ func (b *bootstrapper) getPDB(deployment *appsv1.Deployment) *policyv1.PodDisrup
 			Selector:       deployment.Spec.Selector,
 		},
 	}
+
+	if versionutils.ConstraintK8sGreaterEqual126.Check(b.values.KubernetesVersion) {
+		pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
+	}
+
+	return pdb
 }
 
 func (b *bootstrapper) getVPA(deploymentName string) *vpaautoscalingv1.VerticalPodAutoscaler {
