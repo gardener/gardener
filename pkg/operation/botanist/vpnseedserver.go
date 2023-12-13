@@ -73,8 +73,9 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 	}
 
 	values := vpnseedserver.Values{
-		ImageAPIServerProxy: imageAPIServerProxy.String(),
-		ImageVPNSeedServer:  imageVPNSeedServer.String(),
+		RuntimeKubernetesVersion: b.Seed.KubernetesVersion,
+		ImageAPIServerProxy:      imageAPIServerProxy.String(),
+		ImageVPNSeedServer:       imageVPNSeedServer.String(),
 		Network: vpnseedserver.NetworkValues{
 			PodCIDR:     b.Shoot.Networks.Pods.String(),
 			ServiceCIDR: b.Shoot.Networks.Services.String(),
