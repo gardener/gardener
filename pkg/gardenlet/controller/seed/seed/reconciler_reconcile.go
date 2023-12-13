@@ -504,6 +504,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			seedClient,
 			r.GardenNamespace,
 			hvpaEnabled,
+			kubernetesVersion,
 			v1beta1constants.PriorityClassNameSeedSystem700,
 		)
 		if err != nil {

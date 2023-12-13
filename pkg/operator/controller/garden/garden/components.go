@@ -348,6 +348,7 @@ func (r *Reconciler) newHVPA() (component.DeployWaiter, error) {
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		hvpaEnabled(),
+		r.RuntimeVersion,
 		v1beta1constants.PriorityClassNameGardenSystem200,
 	)
 }

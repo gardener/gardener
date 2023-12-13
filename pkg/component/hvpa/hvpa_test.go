@@ -17,6 +17,7 @@ package hvpa_test
 import (
 	"context"
 
+	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -58,6 +59,7 @@ var _ = Describe("HVPA", func() {
 		values            = Values{
 			Image:             image,
 			PriorityClassName: priorityClassName,
+			KubernetesVersion: semver.MustParse("1.25.5"),
 		}
 
 		c         client.Client
@@ -67,15 +69,15 @@ var _ = Describe("HVPA", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
-		serviceAccount      *corev1.ServiceAccount
-		clusterRole         *rbacv1.ClusterRole
-		clusterRoleBinding  *rbacv1.ClusterRoleBinding
-		service             *corev1.Service
-		deployment          *appsv1.Deployment
-		role                *rbacv1.Role
-		roleBinding         *rbacv1.RoleBinding
-		vpa                 *vpaautoscalingv1.VerticalPodAutoscaler
-		podDisruptionBudget *policyv1.PodDisruptionBudget
+		serviceAccount         *corev1.ServiceAccount
+		clusterRole            *rbacv1.ClusterRole
+		clusterRoleBinding     *rbacv1.ClusterRoleBinding
+		service                *corev1.Service
+		deployment             *appsv1.Deployment
+		role                   *rbacv1.Role
+		roleBinding            *rbacv1.RoleBinding
+		vpa                    *vpaautoscalingv1.VerticalPodAutoscaler
+		podDisruptionBudgetFor func(bool) *policyv1.PodDisruptionBudget
 	)
 
 	BeforeEach(func() {
@@ -282,19 +284,28 @@ var _ = Describe("HVPA", func() {
 		}
 
 		maxUnavailable := intstr.FromInt32(1)
-		podDisruptionBudget = &policyv1.PodDisruptionBudget{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "hvpa-controller",
-				Namespace: namespace,
-				Labels: map[string]string{
-					"app":                 "hvpa-controller",
-					"gardener.cloud/role": "hvpa",
+		podDisruptionBudgetFor = func(k8sVersionGreaterEquals126 bool) *policyv1.PodDisruptionBudget {
+			podDisruptionBudget := &policyv1.PodDisruptionBudget{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "hvpa-controller",
+					Namespace: namespace,
+					Labels: map[string]string{
+						"app":                 "hvpa-controller",
+						"gardener.cloud/role": "hvpa",
+					},
 				},
-			},
-			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &maxUnavailable,
-				Selector:       deployment.Spec.Selector,
-			},
+				Spec: policyv1.PodDisruptionBudgetSpec{
+					MaxUnavailable: &maxUnavailable,
+					Selector:       deployment.Spec.Selector,
+				},
+			}
+
+			unhealthyPodEvictionPolicyAlwatysAllow := policyv1.AlwaysAllow
+			if k8sVersionGreaterEquals126 {
+				podDisruptionBudget.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
+			}
+
+			return podDisruptionBudget
 		}
 
 		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
@@ -342,7 +353,7 @@ var _ = Describe("HVPA", func() {
 	})
 
 	Describe("#Deploy", func() {
-		It("should successfully deploy all resources", func() {
+		JustBeforeEach(func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 
 			Expect(component.Deploy(ctx)).To(Succeed())
@@ -383,8 +394,24 @@ var _ = Describe("HVPA", func() {
 			Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(deployment)))
 			Expect(string(managedResourceSecret.Data["role__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(role)))
 			Expect(string(managedResourceSecret.Data["rolebinding__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(roleBinding)))
-			Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudget)))
 			Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__hvpa-controller-vpa.yaml"])).To(Equal(componenttest.Serialize(vpa)))
+		})
+
+		Context("Kubernetes versions < 1.26", func() {
+			It("should successfully deploy all resources", func() {
+				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudgetFor(false))))
+			})
+		})
+
+		Context("Kubernetes versions >= 1.26", func() {
+			BeforeEach(func() {
+				values.KubernetesVersion = semver.MustParse("1.27.0")
+				component = New(c, namespace, values)
+			})
+
+			It("should successfully deploy all resources", func() {
+				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudgetFor(true))))
+			})
 		})
 	})
 
