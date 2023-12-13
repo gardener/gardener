@@ -34,15 +34,15 @@ var _ = Describe("ResourceManager defaulting", func() {
 		obj = &ResourceManagerConfiguration{}
 	})
 
-	Describe("#SetDefaults_ResourceManagerConfiguration", func() {
-		It("should default the object", func() {
+	Describe("ResourceManagerConfiguration defaulting", func() {
+		It("should default the ResourceManagerConfiguration", func() {
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
 
 			Expect(obj.LogLevel).To(Equal("info"))
 			Expect(obj.LogFormat).To(Equal("json"))
 		})
 
-		It("should not overwrite existing values", func() {
+		It("should not overwrite already set values for ResourceManagerConfiguration", func() {
 			obj = &ResourceManagerConfiguration{
 				LogLevel:  "foo",
 				LogFormat: "bar",
@@ -55,8 +55,8 @@ var _ = Describe("ResourceManager defaulting", func() {
 		})
 	})
 
-	Describe("#SetDefaults_ClientConnection", func() {
-		It("should default the object", func() {
+	Describe("ClientConnection defaulting", func() {
+		It("should default the ClientConnection", func() {
 			obj.TargetClientConnection = &ClientConnection{}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
@@ -67,7 +67,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 			Expect(obj.TargetClientConnection.Burst).To(Equal(int32(130)))
 		})
 
-		It("should not overwrite existing values", func() {
+		It("should not overwrite already set values for ClientConnection", func() {
 			obj.TargetClientConnection = &ClientConnection{
 				ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 					QPS:   float32(1.2),
@@ -86,8 +86,8 @@ var _ = Describe("ResourceManager defaulting", func() {
 		})
 	})
 
-	Describe("#SetDefaults_LeaderElectionConfiguration", func() {
-		It("should default the object", func() {
+	Describe("LeaderElectionConfiguration defaulting", func() {
+		It("should default the LeaderElectionConfiguration", func() {
 			obj.LeaderElection = componentbaseconfigv1alpha1.LeaderElectionConfiguration{}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
@@ -101,7 +101,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 			Expect(obj.LeaderElection.LeaderElect).To(PointTo(BeTrue()))
 		})
 
-		It("should not overwrite existing values", func() {
+		It("should not overwrite already set values for LeaderElectionConfiguration", func() {
 			obj.LeaderElection = componentbaseconfigv1alpha1.LeaderElectionConfiguration{
 				ResourceLock:      "foo",
 				ResourceName:      "bar",
@@ -124,8 +124,8 @@ var _ = Describe("ResourceManager defaulting", func() {
 		})
 	})
 
-	Describe("#SetDefaults_ServerConfiguration", func() {
-		It("should default the object", func() {
+	Describe("ServerConfiguration defaulting", func() {
+		It("should default the ServerConfiguration", func() {
 			obj.Server = ServerConfiguration{}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
@@ -136,7 +136,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 			Expect(obj.Server.Metrics.Port).To(Equal(8080))
 		})
 
-		It("should not overwrite existing values", func() {
+		It("should not overwrite already set values for ServerConfiguration", func() {
 			obj.Server = ServerConfiguration{
 				Webhooks: HTTPSServer{
 					Server: Server{
@@ -161,8 +161,8 @@ var _ = Describe("ResourceManager defaulting", func() {
 		})
 	})
 
-	Describe("#SetDefaults_ResourceManagerControllerConfiguration", func() {
-		It("should default the object", func() {
+	Describe("ResourceManagerControllerConfiguration defaulting", func() {
+		It("should default the ResourceManagerControllerConfiguration", func() {
 			obj.Controllers = ResourceManagerControllerConfiguration{}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
@@ -171,7 +171,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 			Expect(obj.Controllers.ResourceClass).To(PointTo(Equal("resources")))
 		})
 
-		It("should not overwrite existing values", func() {
+		It("should not overwrite already set values for ResourceManagerControllerConfiguration", func() {
 			obj.Controllers = ResourceManagerControllerConfiguration{
 				ClusterID:     pointer.String("foo"),
 				ResourceClass: pointer.String("bar"),
@@ -184,8 +184,8 @@ var _ = Describe("ResourceManager defaulting", func() {
 		})
 	})
 
-	Describe("#SetDefaults_KubeletCSRApproverControllerConfig", func() {
-		It("should not default the object because disabled", func() {
+	Describe("KubeletCSRApproverControllerConfig defaulting", func() {
+		It("should not default the KubeletCSRApproverControllerConfig because it is disabled", func() {
 			obj.Controllers.KubeletCSRApprover = KubeletCSRApproverControllerConfig{}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
@@ -193,7 +193,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 			Expect(obj.Controllers.KubeletCSRApprover.ConcurrentSyncs).To(BeNil())
 		})
 
-		It("should default the object because enabled", func() {
+		It("should default the KubeletCSRApproverControllerConfig because it is enabled", func() {
 			obj.Controllers.KubeletCSRApprover = KubeletCSRApproverControllerConfig{
 				Enabled: true,
 			}
@@ -203,7 +203,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 			Expect(obj.Controllers.KubeletCSRApprover.ConcurrentSyncs).To(PointTo(Equal(1)))
 		})
 
-		It("should not overwrite existing values", func() {
+		It("should not overwrite already set values for KubeletCSRApproverControllerConfig", func() {
 			obj.Controllers.KubeletCSRApprover = KubeletCSRApproverControllerConfig{
 				Enabled:         true,
 				ConcurrentSyncs: pointer.Int(2),
@@ -215,8 +215,8 @@ var _ = Describe("ResourceManager defaulting", func() {
 		})
 	})
 
-	Describe("#SetDefaults_GarbageCollectorControllerConfig", func() {
-		It("should not default the object because disabled", func() {
+	Describe("GarbageCollectorControllerConfig defaulting", func() {
+		It("should not default the GarbageCollectorControllerConfig because it is disabled", func() {
 			obj.Controllers.GarbageCollector = GarbageCollectorControllerConfig{}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
@@ -224,7 +224,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 			Expect(obj.Controllers.GarbageCollector.SyncPeriod).To(BeNil())
 		})
 
-		It("should default the object because enabled", func() {
+		It("should default the GarbageCollectorControllerConfig because it is enabled", func() {
 			obj.Controllers.GarbageCollector = GarbageCollectorControllerConfig{
 				Enabled: true,
 			}
@@ -234,7 +234,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 			Expect(obj.Controllers.GarbageCollector.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Hour})))
 		})
 
-		It("should not overwrite existing values", func() {
+		It("should not overwrite already set values for GarbageCollectorControllerConfig", func() {
 			obj.Controllers.GarbageCollector = GarbageCollectorControllerConfig{
 				Enabled:    true,
 				SyncPeriod: &metav1.Duration{Duration: time.Second},
@@ -246,8 +246,8 @@ var _ = Describe("ResourceManager defaulting", func() {
 		})
 	})
 
-	Describe("#SetDefaults_NetworkPolicyConfig", func() {
-		It("should not default the object", func() {
+	Describe("NetworkPolicyConfig defaulting", func() {
+		It("should not default the NetworkPolicyConfig because it is disabled", func() {
 			obj.Controllers.NetworkPolicy = NetworkPolicyControllerConfig{}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
@@ -255,7 +255,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 			Expect(obj.Controllers.NetworkPolicy.ConcurrentSyncs).To(BeNil())
 		})
 
-		It("should default the object", func() {
+		It("should default the NetworkPolicyConfig because it is enabled", func() {
 			obj.Controllers.NetworkPolicy = NetworkPolicyControllerConfig{
 				Enabled: true,
 			}
@@ -265,7 +265,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 			Expect(obj.Controllers.NetworkPolicy.ConcurrentSyncs).To(PointTo(Equal(5)))
 		})
 
-		It("should not overwrite existing values", func() {
+		It("should not overwrite already set values for NetworkPolicyConfig", func() {
 			obj.Controllers.NetworkPolicy = NetworkPolicyControllerConfig{
 				Enabled:         true,
 				ConcurrentSyncs: pointer.Int(6),
@@ -277,8 +277,8 @@ var _ = Describe("ResourceManager defaulting", func() {
 		})
 	})
 
-	Describe("#SetDefaults_HealthControllerConfig", func() {
-		It("should not default the object", func() {
+	Describe("HealthControllerConfig defaulting", func() {
+		It("should default the HealthControllerConfig", func() {
 			obj.Controllers.Health = HealthControllerConfig{}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
@@ -287,7 +287,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 			Expect(obj.Controllers.Health.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
 		})
 
-		It("should not overwrite existing values", func() {
+		It("should not overwrite already set values for HealthControllerConfig", func() {
 			obj.Controllers.Health = HealthControllerConfig{
 				ConcurrentSyncs: pointer.Int(1),
 				SyncPeriod:      &metav1.Duration{Duration: time.Second},
@@ -300,8 +300,8 @@ var _ = Describe("ResourceManager defaulting", func() {
 		})
 	})
 
-	Describe("#SetDefaults_ManagedResourceControllerConfig", func() {
-		It("should not default the object", func() {
+	Describe("ManagedResourceControllerConfig defaulting", func() {
+		It("should default the ManagedResourceControllerConfig", func() {
 			obj.Controllers.ManagedResource = ManagedResourceControllerConfig{}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
@@ -312,7 +312,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 			Expect(obj.Controllers.ManagedResource.ManagedByLabelValue).To(PointTo(Equal("gardener")))
 		})
 
-		It("should not overwrite existing values", func() {
+		It("should not overwrite already set values for ManagedResourceControllerConfig", func() {
 			obj.Controllers.ManagedResource = ManagedResourceControllerConfig{
 				ConcurrentSyncs:     pointer.Int(1),
 				SyncPeriod:          &metav1.Duration{Duration: time.Second},
@@ -329,8 +329,8 @@ var _ = Describe("ResourceManager defaulting", func() {
 		})
 	})
 
-	Describe("#SetDefaults_SecretControllerConfig", func() {
-		It("should not default the object", func() {
+	Describe("SecretControllerConfig defaulting", func() {
+		It("should default the SecretControllerConfig", func() {
 			obj.Controllers.Secret = SecretControllerConfig{}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
@@ -338,7 +338,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 			Expect(obj.Controllers.Secret.ConcurrentSyncs).To(PointTo(Equal(5)))
 		})
 
-		It("should not overwrite existing values", func() {
+		It("should not overwrite already set values for SecretControllerConfig", func() {
 			obj.Controllers.Secret = SecretControllerConfig{
 				ConcurrentSyncs: pointer.Int(1),
 			}
@@ -349,8 +349,8 @@ var _ = Describe("ResourceManager defaulting", func() {
 		})
 	})
 
-	Describe("#SetDefaults_TokenInvalidatorControllerConfig", func() {
-		It("should not default the object because disabled", func() {
+	Describe("TokenInvalidatorControllerConfig defaulting", func() {
+		It("should not default the TokenInvalidatorControllerConfig because it is disabled", func() {
 			obj.Controllers.TokenInvalidator = TokenInvalidatorControllerConfig{}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
@@ -358,7 +358,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 			Expect(obj.Controllers.TokenInvalidator.ConcurrentSyncs).To(BeNil())
 		})
 
-		It("should default the object because enabled", func() {
+		It("should default the TokenInvalidatorControllerConfig because it is enabled", func() {
 			obj.Controllers.TokenInvalidator = TokenInvalidatorControllerConfig{
 				Enabled: true,
 			}
@@ -368,7 +368,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 			Expect(obj.Controllers.TokenInvalidator.ConcurrentSyncs).To(PointTo(Equal(5)))
 		})
 
-		It("should not overwrite existing values", func() {
+		It("should not overwrite already set values for TokenInvalidatorControllerConfig", func() {
 			obj.Controllers.TokenInvalidator = TokenInvalidatorControllerConfig{
 				Enabled:         true,
 				ConcurrentSyncs: pointer.Int(2),
@@ -380,8 +380,8 @@ var _ = Describe("ResourceManager defaulting", func() {
 		})
 	})
 
-	Describe("#SetDefaults_TokenRequestorControllerConfig", func() {
-		It("should not default the object because disabled", func() {
+	Describe("TokenRequestorControllerConfig defaulting", func() {
+		It("should not default the TokenRequestorControllerConfig because it is disabled", func() {
 			obj.Controllers.TokenRequestor = TokenRequestorControllerConfig{}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
@@ -389,7 +389,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 			Expect(obj.Controllers.TokenRequestor.ConcurrentSyncs).To(BeNil())
 		})
 
-		It("should default the object because enabled", func() {
+		It("should default the TokenRequestorControllerConfig because it is enabled", func() {
 			obj.Controllers.TokenRequestor = TokenRequestorControllerConfig{
 				Enabled: true,
 			}
@@ -399,7 +399,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 			Expect(obj.Controllers.TokenRequestor.ConcurrentSyncs).To(PointTo(Equal(5)))
 		})
 
-		It("should not overwrite existing values", func() {
+		It("should not overwrite already set values for TokenRequestorControllerConfig", func() {
 			obj.Controllers.TokenRequestor = TokenRequestorControllerConfig{
 				Enabled:         true,
 				ConcurrentSyncs: pointer.Int(2),
@@ -411,8 +411,8 @@ var _ = Describe("ResourceManager defaulting", func() {
 		})
 	})
 
-	Describe("#SetDefaults_NodeControllerConfig", func() {
-		It("should not default the object because disabled", func() {
+	Describe("NodeControllerConfig defaulting", func() {
+		It("should not default the NodeControllerConfig because it is disabled", func() {
 			obj.Controllers.Node = NodeControllerConfig{}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
@@ -420,7 +420,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 			Expect(obj.Controllers.Node.ConcurrentSyncs).To(BeNil())
 		})
 
-		It("should default the object because enabled", func() {
+		It("should default the NodeControllerConfig because it is enabled", func() {
 			obj.Controllers.Node = NodeControllerConfig{
 				Enabled: true,
 			}
@@ -431,7 +431,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 			Expect(obj.Controllers.Node.Backoff).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Second})))
 		})
 
-		It("should not overwrite existing values", func() {
+		It("should not overwrite already set values for NodeControllerConfig", func() {
 			obj.Controllers.Node = NodeControllerConfig{
 				Enabled:         true,
 				ConcurrentSyncs: pointer.Int(2),
@@ -445,8 +445,8 @@ var _ = Describe("ResourceManager defaulting", func() {
 		})
 	})
 
-	Describe("#SetDefaults_PodSchedulerNameWebhookConfig", func() {
-		It("should not default the object because disabled", func() {
+	Describe("PodSchedulerNameWebhookConfig defaulting", func() {
+		It("should not default the PodSchedulerNameWebhookConfig because it is disabled", func() {
 			obj.Webhooks.PodSchedulerName = PodSchedulerNameWebhookConfig{}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
@@ -454,7 +454,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 			Expect(obj.Webhooks.PodSchedulerName.SchedulerName).To(BeNil())
 		})
 
-		It("should default the object because enabled", func() {
+		It("should default the PodSchedulerNameWebhookConfig because it is enabled", func() {
 			obj.Webhooks.PodSchedulerName = PodSchedulerNameWebhookConfig{
 				Enabled: true,
 			}
@@ -464,7 +464,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 			Expect(obj.Webhooks.PodSchedulerName.SchedulerName).To(PointTo(Equal("default-scheduler")))
 		})
 
-		It("should not overwrite existing values", func() {
+		It("should not overwrite already set values for PodSchedulerNameWebhookConfig", func() {
 			obj.Webhooks.PodSchedulerName = PodSchedulerNameWebhookConfig{
 				Enabled:       true,
 				SchedulerName: pointer.String("foo"),
@@ -476,8 +476,8 @@ var _ = Describe("ResourceManager defaulting", func() {
 		})
 	})
 
-	Describe("#SetDefaults_ProjectedTokenMountWebhookConfig", func() {
-		It("should not default the object because disabled", func() {
+	Describe("ProjectedTokenMountWebhookConfig defaulting", func() {
+		It("should not default the ProjectedTokenMountWebhookConfig because it is disabled", func() {
 			obj.Webhooks.ProjectedTokenMount = ProjectedTokenMountWebhookConfig{}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
@@ -485,7 +485,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 			Expect(obj.Webhooks.ProjectedTokenMount.ExpirationSeconds).To(BeNil())
 		})
 
-		It("should default the object because enabled", func() {
+		It("should default the ProjectedTokenMountWebhookConfig because it is enabled", func() {
 			obj.Webhooks.ProjectedTokenMount = ProjectedTokenMountWebhookConfig{
 				Enabled: true,
 			}
@@ -495,7 +495,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 			Expect(obj.Webhooks.ProjectedTokenMount.ExpirationSeconds).To(PointTo(Equal(int64(43200))))
 		})
 
-		It("should not overwrite existing values", func() {
+		It("should not overwrite already set values for ProjectedTokenMountWebhookConfig", func() {
 			obj.Webhooks.ProjectedTokenMount = ProjectedTokenMountWebhookConfig{
 				Enabled:           true,
 				ExpirationSeconds: pointer.Int64(1234),
