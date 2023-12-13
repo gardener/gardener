@@ -265,7 +265,8 @@ func (i *infrastructure) EgressCIDRs() []string {
 func (i *infrastructure) extractStatus(status extensionsv1alpha1.InfrastructureStatus) {
 	i.providerStatus = status.ProviderStatus
 	i.nodesCIDR = status.NodesCIDR
-	i.egressCIDRs = status.DeepCopy().EgressCIDRs
+	i.egressCIDRs = make([]string, len(status.EgressCIDRs))
+	copy(i.egressCIDRs, status.EgressCIDRs)
 }
 
 func (i *infrastructure) lastOperationNotSuccessful() bool {
