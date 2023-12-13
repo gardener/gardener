@@ -49,6 +49,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -264,12 +265,18 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	unhealthyPodEvictionPolicyAlwatysAllow := policyv1.AlwaysAllow
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, m.client, podDisruptionBudget, func() error {
 		podDisruptionBudget.Labels = utils.MergeStringMaps(podDisruptionBudget.Labels, getLabels())
 		podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
 			MaxUnavailable: utils.IntStrPtrFromInt32(1),
 			Selector:       deployment.Spec.Selector,
 		}
+
+		if versionutils.ConstraintK8sGreaterEqual126.Check(m.values.RuntimeKubernetesVersion) {
+			podDisruptionBudget.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
+		}
+
 		return nil
 	}); err != nil {
 		return err
