@@ -23,6 +23,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 func (k *kubeAPIServer) emptyPodDisruptionBudget() *policyv1.PodDisruptionBudget {
@@ -30,7 +31,10 @@ func (k *kubeAPIServer) emptyPodDisruptionBudget() *policyv1.PodDisruptionBudget
 }
 
 func (k *kubeAPIServer) reconcilePodDisruptionBudget(ctx context.Context, pdb *policyv1.PodDisruptionBudget) error {
-	var pdbMaxUnavailable = intstr.FromInt32(1)
+	var (
+		pdbMaxUnavailable                      = intstr.FromInt32(1)
+		unhealthyPodEvictionPolicyAlwatysAllow = policyv1.AlwaysAllow
+	)
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), pdb, func() error {
 		pdb.Labels = getLabels()
@@ -38,6 +42,11 @@ func (k *kubeAPIServer) reconcilePodDisruptionBudget(ctx context.Context, pdb *p
 			MaxUnavailable: &pdbMaxUnavailable,
 			Selector:       &metav1.LabelSelector{MatchLabels: getLabels()},
 		}
+
+		if versionutils.ConstraintK8sGreaterEqual126.Check(k.values.RuntimeVersion) {
+			pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
+		}
+
 		return nil
 	})
 
