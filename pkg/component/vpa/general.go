@@ -30,6 +30,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	vpaconstants "github.com/gardener/gardener/pkg/component/vpa/constants"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -242,11 +243,18 @@ func (v *vpa) reconcileGeneralMutatingWebhookConfiguration(mutatingWebhookConfig
 }
 
 func (v *vpa) reconcilePodDisruptionBudget(pdb *policyv1.PodDisruptionBudget, deployment *appsv1.Deployment) {
-	maxUnavailable := intstr.FromInt32(1)
+	var (
+		maxUnavailable                         = intstr.FromInt32(1)
+		unhealthyPodEvictionPolicyAlwatysAllow = policyv1.AlwaysAllow
+	)
 
 	pdb.Labels = getRoleLabel()
 	pdb.Spec = policyv1.PodDisruptionBudgetSpec{
 		MaxUnavailable: &maxUnavailable,
 		Selector:       deployment.Spec.Selector,
+	}
+
+	if versionutils.ConstraintK8sGreaterEqual126.Check(v.values.RuntimeKubernetesVersion) {
+		pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
 	}
 }
