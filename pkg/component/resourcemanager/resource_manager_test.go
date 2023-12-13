@@ -80,7 +80,7 @@ var _ = Describe("ResourceManager", func() {
 		healthPort                  int32 = 8081
 		metricsPort                 int32 = 8080
 		serverPort                  int32 = 10250
-		version                           = semver.MustParse("1.26.1")
+		version                           = semver.MustParse("1.25.1")
 		binPackingSchedulingProfile       = gardencorev1beta1.SchedulingProfileBinPacking
 
 		// optional configuration
@@ -1879,7 +1879,6 @@ subjects:
 				role.Namespace = watchedNamespace
 				configMap = configMapFor(&watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), false)
 				deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, &watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), true, nil)
-				cfg.RuntimeKubernetesVersion = semver.MustParse("1.24.0")
 				cfg.TargetNamespaces = targetNamespaces
 				resourceManager = New(c, deployNamespace, sm, cfg)
 				resourceManager.SetSecrets(secrets)
@@ -1941,14 +1940,35 @@ subjects:
 					)
 				})
 
-				It("should successfully deploy all resources (w/ shoot access secret)", func() {
-					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, pdb.Name), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}))
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()).
-						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
-							Expect(obj).To(DeepEqual(pdb))
-						})
+				Context("Kubernetes version < 1.26", func() {
+					It("should successfully deploy all resources (w/ shoot access secret)", func() {
+						c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, pdb.Name), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}))
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()).
+							Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+								Expect(obj).To(DeepEqual(pdb))
+							})
 
-					Expect(resourceManager.Deploy(ctx)).To(Succeed())
+						Expect(resourceManager.Deploy(ctx)).To(Succeed())
+					})
+				})
+
+				Context("Kubernetes version >= 1.26", func() {
+					BeforeEach(func() {
+						cfg.RuntimeKubernetesVersion = semver.MustParse("1.26.0")
+					})
+
+					It("should successfully deploy all resources (w/ shoot access secret)", func() {
+						unhealthyPodEvictionPolicyAlwatysAllow := policyv1.AlwaysAllow
+						pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
+
+						c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, pdb.Name), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}))
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()).
+							Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+								Expect(obj).To(DeepEqual(pdb))
+							})
+
+						Expect(resourceManager.Deploy(ctx)).To(Succeed())
+					})
 				})
 			})
 
