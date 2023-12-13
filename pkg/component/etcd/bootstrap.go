@@ -52,6 +52,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -317,8 +318,9 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			},
 		}
 
-		maxUnavailable      = intstr.FromInt32(1)
-		podDisruptionBudget = &policyv1.PodDisruptionBudget{
+		maxUnavailable                         = intstr.FromInt32(1)
+		unhealthyPodEvictionPolicyAlwatysAllow = policyv1.AlwaysAllow
+		podDisruptionBudget                    = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      druidDeploymentName,
 				Namespace: deployment.Namespace,
@@ -334,10 +336,15 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			serviceAccount,
 			clusterRole,
 			clusterRoleBinding,
-			podDisruptionBudget,
 			vpa,
 		}
 	)
+
+	if versionutils.ConstraintK8sGreaterEqual126.Check(b.kubernetesVersion) {
+		podDisruptionBudget.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
+	}
+
+	resourcesToAdd = append(resourcesToAdd, podDisruptionBudget)
 
 	portMetrics := networkingv1.NetworkPolicyPort{
 		Port:     utils.IntStrPtrFromInt32(metricsPort),

@@ -51,7 +51,7 @@ var _ = Describe("Etcd", func() {
 
 		ctx                      = context.TODO()
 		namespace                = "shoot--foo--bar"
-		kubernetesVersion        = semver.MustParse("1.25.0")
+		kubernetesVersion        *semver.Version
 		etcdDruidImage           = "etcd/druid:1.2.3"
 		imageVectorOverwrite     *string
 		imageVectorOverwriteFull = pointer.String("some overwrite")
@@ -107,6 +107,7 @@ var _ = Describe("Etcd", func() {
 		BeforeEach(func() {
 			imageVectorOverwrite = nil
 			featureGates = nil
+			kubernetesVersion = semver.MustParse("1.25.0")
 		})
 
 		var (
@@ -485,7 +486,8 @@ spec:
 status:
   loadBalancer: {}
 `
-			podDisruptionYAML = `apiVersion: policy/v1
+			podDisruptionYAMLFor = func(k8sGreaterEquals126 bool) string {
+				out := `apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   creationTimestamp: null
@@ -498,12 +500,19 @@ spec:
   selector:
     matchLabels:
       gardener.cloud/role: etcd-druid
-status:
+`
+				if k8sGreaterEquals126 {
+					out += `  unhealthyPodEvictionPolicy: AlwaysAllow
+`
+				}
+				out += `status:
   currentHealthy: 0
   desiredHealthy: 0
   disruptionsAllowed: 0
   expectedPods: 0
 `
+				return out
+			}
 		)
 
 		JustBeforeEach(func() {
@@ -544,13 +553,28 @@ status:
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_system_etcd-druid.yaml"])).To(Equal(clusterRoleBindingYAML))
 			Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__etcd-druid-vpa.yaml"])).To(Equal(vpaYAML))
 			Expect(string(managedResourceSecret.Data["service__"+namespace+"__etcd-druid.yaml"])).To(Equal(serviceYAML))
-			Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__etcd-druid.yaml"])).To(Equal(podDisruptionYAML))
 		})
 
 		Context("w/o image vector overwrite", func() {
-			It("should successfully deploy all the resources (w/o image vector overwrite)", func() {
+			JustBeforeEach(func() {
 				Expect(managedResourceSecret.Data).To(HaveLen(7))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__etcd-druid.yaml"])).To(Equal(deploymentWithoutImageVectorOverwriteYAMLFor(false)))
+			})
+
+			Context("kubernetes versions < 1.26", func() {
+				It("should successfully deploy all the resources (w/o image vector overwrite)", func() {
+					Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__etcd-druid.yaml"])).To(Equal(podDisruptionYAMLFor(false)))
+				})
+			})
+
+			Context("kubernetes versions >= 1.26", func() {
+				BeforeEach(func() {
+					kubernetesVersion = semver.MustParse("1.26.0")
+				})
+
+				It("should successfully deploy all the resources", func() {
+					Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__etcd-druid.yaml"])).To(Equal(podDisruptionYAMLFor(true)))
+				})
 			})
 		})
 
@@ -565,6 +589,7 @@ status:
 
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__etcd-druid.yaml"])).To(Equal(deploymentWithImageVectorOverwriteYAML))
 				Expect(string(managedResourceSecret.Data["configmap__"+namespace+"__"+configMapName+".yaml"])).To(Equal(configMapImageVectorOverwriteYAML))
+				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__etcd-druid.yaml"])).To(Equal(podDisruptionYAMLFor(false)))
 			})
 		})
 
@@ -578,6 +603,7 @@ status:
 			It("should successfully deploy all the resources", func() {
 				Expect(managedResourceSecret.Data).To(HaveLen(7))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__etcd-druid.yaml"])).To(Equal(deploymentWithoutImageVectorOverwriteYAMLFor(true)))
+				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__etcd-druid.yaml"])).To(Equal(podDisruptionYAMLFor(false)))
 			})
 		})
 	})
