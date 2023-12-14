@@ -207,15 +207,10 @@ spec:
       priorityClassName: {{ .Values.priorityClassName }}
       affinity:
         podAntiAffinity:
-          {{- if .Values.ensureHostAntiAffinity }}
-          requiredDuringSchedulingIgnoredDuringExecution:
-            - labelSelector:
-          {{- else }}
           preferredDuringSchedulingIgnoredDuringExecution:
           - weight: 100
             podAffinityTerm:
               labelSelector:
-          {{- end }}
                 matchExpressions:
                 {{- range $key, $value := .Values.labels }}
                 - key: {{ $key }}

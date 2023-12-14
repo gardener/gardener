@@ -25,7 +25,6 @@ ingressVersion: "1.19.3"
 replicas: 2
 minReplicas: 2
 maxReplicas: 5
-ensureHostAntiAffinity: false
 
 # Istio Ingress Configuration Resources
 proxyProtocolEnabled: false
