@@ -86,7 +86,7 @@ v1 = client.CoreV1Api(shoot_api_client)
 ## `shoots/viewerkubeconfig` Subresource
 
 The `shoots/viewerkubeconfig` subresource works similar to the [`shoots/adminkubeconfig`](#shootsadminkubeconfig-subresource).
-The difference is that it returns a kubeconfig with read-only access for all APIs except the `core/v1.Secret` API and the resources which are specified in the `spec.kubernetes.kubeAPIServer.encryptionConfig` field in the Shoot (See [this document](./etcd_encryption_config.md)).
+The difference is that it returns a kubeconfig with read-only access for all APIs except the `core/v1.Secret` API and the resources which are specified in the `spec.kubernetes.kubeAPIServer.encryptionConfig` field in the Shoot (see [this document](./etcd_encryption_config.md)).
 
 In order to request such a `kubeconfig`, you can run follow almost the same code as above - the only difference is that you need to use the `viewerkubeconfig` subresource.
 For example, in bash this looks like this:
