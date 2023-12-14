@@ -24,6 +24,20 @@ import (
 )
 
 var _ = Describe("Seed", func() {
+	Describe("SeedSpec", func() {
+		It("should not allow to reuse protobuf numbers of already removed fields", func() {
+			obj := reflect.ValueOf(SeedSpec{}).Type()
+			for i := 0; i < obj.NumField(); i++ {
+				f := obj.Field(i)
+
+				protobufNum := strings.Split(f.Tag.Get("protobuf"), ",")[1]
+				if protobufNum == "5" {
+					Fail("protobuf 5 in SeedSpec is reserved for removed secretRef field")
+				}
+			}
+		})
+	})
+
 	Describe("SeedSettings", func() {
 		It("should not allow to reuse protobuf numbers of already removed fields", func() {
 			obj := reflect.ValueOf(SeedSettings{}).Type()
