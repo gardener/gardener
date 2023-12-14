@@ -1083,7 +1083,8 @@ func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, version s
 	seenResources := sets.New[string]()
 	for i, resource := range encryptionConfig.Resources {
 		idxPath := fldPath.Child("encryptionConfig", "resources").Index(i)
-		if seenResources.Has(resource) {
+		// core resources can be mentioned with empty group (eg: secrets.)
+		if seenResources.Has(resource) || seenResources.Has(strings.TrimSuffix(resource, ".")) {
 			allErrs = append(allErrs, field.Duplicate(idxPath, resource))
 		}
 
