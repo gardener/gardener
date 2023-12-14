@@ -127,7 +127,7 @@ func (h *health) checkSystemComponents(
 	if v1beta1helper.SeedSettingDependencyWatchdogProberEnabled(h.seed.Spec.Settings) {
 		managedResources = append(managedResources, dependencywatchdog.ManagedResourceDependencyWatchdogProber)
 	}
-	if h.loggingEnabled {
+	if h.loggingEnabled && !h.seedIsGarden {
 		managedResources = append(managedResources, fluentoperator.OperatorManagedResourceName)
 		managedResources = append(managedResources, fluentoperator.CustomResourcesManagedResourceName)
 		managedResources = append(managedResources, fluentoperator.FluentBitManagedResourceName)
