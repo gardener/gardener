@@ -17,6 +17,7 @@ package shared
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -222,4 +223,16 @@ func GetResourcesForEncryptionFromConfig(encryptionConfig *gardencorev1beta1.Enc
 	}
 
 	return sets.List(sets.New(encryptionConfig.Resources...))
+}
+
+// NormalizeResources returns the list of resources after trimming the suffix '.' if present.
+// This is needed for core resources which can be specified as '<resource>.' as well.
+func NormalizeResources(resources []string) []string {
+	var out []string
+
+	for _, resource := range resources {
+		out = append(out, strings.TrimSuffix(resource, "."))
+	}
+
+	return out
 }

@@ -482,12 +482,11 @@ func (s *shootSystem) readOnlyRBACResources() []client.Object {
 }
 
 func (s *shootSystem) isEncryptedResource(resource, group string) bool {
+	resourceName := fmt.Sprintf("%s.%s", resource, group)
+
 	if group == corev1.SchemeGroupVersion.Group {
-		// cores resource can also be present as '<resource>.' For example, 'configmaps' as 'configmaps.'
-		coreResourceName := fmt.Sprintf("%s.", resource)
-		return slices.Contains(s.values.EncryptedResources, resource) || slices.Contains(s.values.EncryptedResources, coreResourceName)
+		resourceName = resource
 	}
 
-	resourceName := fmt.Sprintf("%s.%s", resource, group)
 	return slices.Contains(s.values.EncryptedResources, resourceName)
 }

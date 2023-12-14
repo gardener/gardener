@@ -486,7 +486,7 @@ spec:
 
 					values.EncryptedResources = []string{
 						"secrets",
-						"services.",
+						"services",
 						"statefulsets.apps",
 						"fancyresource1.fancyoperator.io",
 						"dash.foo",
