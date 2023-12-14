@@ -86,7 +86,7 @@ v1 = client.CoreV1Api(shoot_api_client)
 ## `shoots/viewerkubeconfig` Subresource
 
 The `shoots/viewerkubeconfig` subresource works similar to the [`shoots/adminkubeconfig`](#shootsadminkubeconfig-subresource).
-The difference is that it returns a kubeconfig with read-only access for all APIs except the `core/v1.Secret` API.
+The difference is that it returns a kubeconfig with read-only access for all APIs except the `core/v1.Secret` API and the resources which are specified in the `spec.kubernetes.kubeAPIServer.encryptionConfig` field in the Shoot (See [this document](./etcd_encryption_config.md)).
 
 In order to request such a `kubeconfig`, you can run follow almost the same code as above - the only difference is that you need to use the `viewerkubeconfig` subresource.
 For example, in bash this looks like this:
@@ -144,11 +144,13 @@ spec:
 ```
 
 It is **not** the recommended method to access the shoot cluster, as the static token `kubeconfig` has some security flaws associated with it:
+
 - The static token in the `kubeconfig` doesn't have any expiration date. Read [this document](shoot_credentials_rotation.md#kubeconfig) to learn how to rotate the static token.
 - The static token doesn't have any user identity associated with it. The user in that token will always be `system:cluster-admin`, irrespective of the person accessing the cluster. Hence, it is impossible to audit the events in cluster.
 
 When `enableStaticTokenKubeconfig` field is not explicitly set in the Shoot spec:
+
 - for Shoot clusters using Kubernetes version < 1.26 the field is defaulted to `true`.
 - for Shoot clusters using Kubernetes version >= 1.26 the field is defaulted to `false`.
 
-> **Note:** Starting with Kubernetes 1.27, the `enableStaticTokenKubeconfig` field will be locked to `false`. 
+> **Note:** Starting with Kubernetes 1.27, the `enableStaticTokenKubeconfig` field will be locked to `false`.
