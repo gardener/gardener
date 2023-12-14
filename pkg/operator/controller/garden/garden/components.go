@@ -162,7 +162,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.istio, err = r.newIstio(ctx, garden)
+	c.istio, err = r.newIstio(garden)
 	if err != nil {
 		return
 	}
@@ -698,14 +698,13 @@ func (r *Reconciler) newKubeStateMetrics() (component.DeployWaiter, error) {
 	)
 }
 
-func (r *Reconciler) newIstio(ctx context.Context, garden *operatorv1alpha1.Garden) (istio.Interface, error) {
+func (r *Reconciler) newIstio(garden *operatorv1alpha1.Garden) (istio.Interface, error) {
 	var annotations map[string]string
 	if settings := garden.Spec.RuntimeCluster.Settings; settings != nil && settings.LoadBalancerServices != nil {
 		annotations = settings.LoadBalancerServices.Annotations
 	}
 
 	return sharedcomponent.NewIstio(
-		ctx,
 		r.RuntimeClientSet.Client(),
 		r.RuntimeClientSet.ChartRenderer(),
 		namePrefix,
