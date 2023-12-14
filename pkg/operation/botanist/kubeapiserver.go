@@ -246,7 +246,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		b.Shoot.ComputeOutOfClusterAPIServerAddress(true),
 		externalServer,
 		b.Shoot.ResourcesToEncrypt,
-		b.Shoot.GetInfo().Status.EncryptedResources,
+		b.Shoot.EncryptedResources,
 		v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials),
 		v1beta1helper.GetShootServiceAccountKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials),
 		b.Shoot.HibernationEnabled,
