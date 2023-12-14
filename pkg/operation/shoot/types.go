@@ -111,6 +111,7 @@ type Shoot struct {
 	// TODO(rfranzke): Remove this field when UseGardenerNodeAgent feature gate gets removed.
 	CloudConfigExecutionMaxDelaySeconds int
 	ResourcesToEncrypt                  []string
+	EncryptedResources                  []string
 
 	Components *Components
 }

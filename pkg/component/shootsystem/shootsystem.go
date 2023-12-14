@@ -65,6 +65,8 @@ type Values struct {
 	IsWorkerless bool
 	// KubernetesVersion is the version of the cluster.
 	KubernetesVersion *semver.Version
+	// EncryptedResources is the list of resources which are encrypted by the kube-apiserver.
+	EncryptedResources []string
 	// Object is the shoot object.
 	Object *gardencorev1beta1.Shoot
 	// PodNetworkCIDR is the CIDR of the pod network.
@@ -423,8 +425,8 @@ func (s *shootSystem) readOnlyRBACResources() []client.Object {
 		}
 
 		for _, resource := range api.APIResources {
-			// We don't want to include privileges for reading secrets.
-			if apiGroup == corev1.GroupName && resource.Name == "secrets" {
+			// We don't want to include privileges for reading encrypted resources.
+			if s.isEncryptedResource(resource.Name, apiGroup) {
 				continue
 			}
 
@@ -477,4 +479,14 @@ func (s *shootSystem) readOnlyRBACResources() []client.Object {
 	}
 
 	return []client.Object{clusterRole, clusterRoleBinding}
+}
+
+func (s *shootSystem) isEncryptedResource(resource, group string) bool {
+	resourceName := fmt.Sprintf("%s.%s", resource, group)
+
+	if group == corev1.SchemeGroupVersion.Group {
+		resourceName = resource
+	}
+
+	return slices.Contains(s.values.EncryptedResources, resourceName)
 }

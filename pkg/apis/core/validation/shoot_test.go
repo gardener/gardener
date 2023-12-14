@@ -1809,7 +1809,24 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				It("should deny specifying duplicated resources", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
-						Resources: []string{"configmaps", "configmaps"},
+						Resources: []string{"configmaps", "configmaps", "services", "services."},
+					}
+
+					Expect(ValidateShoot(shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[1]"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[3]"),
+						})),
+					))
+				})
+
+				It("should deny specifying duplicated resources", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources: []string{"services.", "services."},
 					}
 
 					Expect(ValidateShoot(shoot)).To(ConsistOf(
@@ -1841,7 +1858,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				It("should deny specifying 'secrets' resource in resources", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
-						Resources: []string{"configmaps", "secrets", "secrets."},
+						Resources: []string{"configmaps", "secrets"},
 					}
 
 					Expect(ValidateShoot(shoot)).To(ConsistOf(
@@ -1850,9 +1867,18 @@ var _ = Describe("Shoot Validation Tests", func() {
 							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[1]"),
 							"Detail": Equal("\"secrets\" are always encrypted"),
 						})),
+					))
+				})
+
+				It("should deny specifying 'secrets.' resource in resources", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources: []string{"configmaps", "secrets."},
+					}
+
+					Expect(ValidateShoot(shoot)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeForbidden),
-							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[2]"),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[1]"),
 							"Detail": Equal("\"secrets.\" are always encrypted"),
 						})),
 					))

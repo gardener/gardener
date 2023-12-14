@@ -42,4 +42,21 @@ var _ = Describe("APIServer", func() {
 		})
 	})
 
+	Describe("#NormalizeResources", func() {
+		It("should return nil when encryptionConfig is nil", func() {
+			Expect(NormalizeResources(nil)).To(BeNil())
+		})
+
+		It("should return the correct list of resources when encryptionConfig is not nil", func() {
+			resources := []string{"deployments.apps", "fancyresource.customoperator.io", "endpoints.", "configmaps", "services."}
+
+			Expect(NormalizeResources(resources)).To(ConsistOf(
+				"deployments.apps",
+				"fancyresource.customoperator.io",
+				"configmaps",
+				"services",
+				"endpoints",
+			))
+		})
+	})
 })
