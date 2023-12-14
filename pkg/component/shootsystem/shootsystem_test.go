@@ -450,6 +450,7 @@ spec:
 							APIResources: []metav1.APIResource{
 								{Name: "bar", Verbs: metav1.Verbs{"create", "delete"}},
 								{Name: "baz", Verbs: metav1.Verbs{"get", "list", "watch"}},
+								{Name: "dash", Verbs: metav1.Verbs{"get", "list", "watch"}},
 							},
 						},
 						{
@@ -457,6 +458,7 @@ spec:
 							APIResources: []metav1.APIResource{
 								{Name: "secrets", Verbs: metav1.Verbs{"get", "list", "watch"}},
 								{Name: "configmaps", Verbs: metav1.Verbs{"get", "list", "watch"}},
+								{Name: "services", Verbs: metav1.Verbs{"get", "list", "watch"}},
 							},
 						},
 						{
@@ -466,11 +468,33 @@ spec:
 								{Name: "baz", Verbs: metav1.Verbs{"get", "list", "watch"}},
 							},
 						},
+						{
+							GroupVersion: "fancyoperator.io/v1alpha1",
+							APIResources: []metav1.APIResource{
+								{Name: "fancyresource1", Verbs: metav1.Verbs{"get", "list", "watch"}},
+								{Name: "fancyresource2", Verbs: metav1.Verbs{"get", "list", "watch"}},
+							},
+						},
+						{
+							GroupVersion: "apps/v1",
+							APIResources: []metav1.APIResource{
+								{Name: "deployments", Verbs: metav1.Verbs{"get", "list", "watch"}},
+								{Name: "statefulsets", Verbs: metav1.Verbs{"get", "list", "watch"}},
+							},
+						},
+					}
+
+					values.EncryptedResources = []string{
+						"secrets",
+						"services",
+						"statefulsets.apps",
+						"fancyresource1.fancyoperator.io",
+						"dash.foo",
 					}
 				})
 
 				It("should successfully deploy the related RBAC resources", func() {
-					Expect(managedResourceSecret.Data["clusterrole____gardener.cloud_system_read-only.yaml"]).To(Equal([]byte(`apiVersion: rbac.authorization.k8s.io/v1
+					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_read-only.yaml"])).To(Equal(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
@@ -485,10 +509,26 @@ rules:
   - list
   - watch
 - apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - bar
   resources:
   - foo
   - baz
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - fancyoperator.io
+  resources:
+  - fancyresource2
   verbs:
   - get
   - list
@@ -501,8 +541,8 @@ rules:
   - get
   - list
   - watch
-`)))
-					Expect(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_system_read-only.yaml"]).To(Equal([]byte(`apiVersion: rbac.authorization.k8s.io/v1
+`))
+					Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_system_read-only.yaml"])).To(Equal(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   annotations:
@@ -516,7 +556,7 @@ roleRef:
 subjects:
 - kind: Group
   name: gardener.cloud:system:viewers
-`)))
+`))
 				})
 			})
 		})

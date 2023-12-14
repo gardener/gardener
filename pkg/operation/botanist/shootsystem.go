@@ -19,7 +19,10 @@ import (
 	"fmt"
 	"slices"
 
+	"k8s.io/apimachinery/pkg/util/sets"
+
 	"github.com/gardener/gardener/pkg/component/shootsystem"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // DefaultShootSystem returns a deployer for the shoot system resources.
@@ -39,6 +42,7 @@ func (b *Botanist) DefaultShootSystem() shootsystem.Interface {
 		PodNetworkCIDR:        b.Shoot.Networks.Pods.String(),
 		ServiceNetworkCIDR:    b.Shoot.Networks.Services.String(),
 		ProjectName:           b.Garden.Project.Name,
+		EncryptedResources:    append(sets.List(gardenerutils.DefaultResourcesForEncryption()), b.Shoot.ResourcesToEncrypt...),
 	}
 
 	return shootsystem.New(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, values)
