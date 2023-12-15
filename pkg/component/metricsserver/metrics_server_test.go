@@ -18,6 +18,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -295,7 +296,8 @@ status: {}
 			return out
 		}
 
-		pdbYAML = `apiVersion: policy/v1
+		pdbYAMLFor = func(k8sGreaterEquals126 bool) string {
+			out := `apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   creationTimestamp: null
@@ -308,12 +310,19 @@ spec:
   selector:
     matchLabels:
       k8s-app: metrics-server
-status:
+`
+			if k8sGreaterEquals126 {
+				out += `  unhealthyPodEvictionPolicy: AlwaysAllow
+`
+			}
+			out += `status:
   currentHealthy: 0
   desiredHealthy: 0
   disruptionsAllowed: 0
   expectedPods: 0
 `
+			return out
+		}
 
 		managedResourceName       = "shoot-core-metrics-server"
 		managedResourceSecretName = "managedresource-shoot-core-metrics-server"
@@ -321,7 +330,8 @@ status:
 		managedResourceSecret *corev1.Secret
 		managedResource       *resourcesv1alpha1.ManagedResource
 
-		secretName string
+		secretName          string
+		k8sGreaterEquals126 bool
 	)
 
 	BeforeEach(func() {
@@ -331,10 +341,12 @@ status:
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-metrics-server", Namespace: namespace}})).To(Succeed())
 
+		k8sGreaterEquals126 = false
 		values = Values{
 			Image:             image,
 			VPAEnabled:        false,
 			KubeAPIServerHost: nil,
+			KubernetesVersion: semver.MustParse("1.25.0"),
 		}
 
 		metricsServer = New(fakeClient, namespace, sm, values)
@@ -394,7 +406,11 @@ status:
 			Expect(string(managedResourceSecret.Data["clusterrole____system_metrics-server.yaml"])).To(Equal(clusterRoleYAML))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____system_metrics-server.yaml"])).To(Equal(clusterRoleBindingYAML))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____metrics-server_system_auth-delegator.yaml"])).To(Equal(clusterRoleBindingAuthDelegatorYAML))
-			Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__metrics-server.yaml"])).To(Equal(pdbYAML))
+			if k8sGreaterEquals126 {
+				Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__metrics-server.yaml"])).To(Equal(pdbYAMLFor(true)))
+			} else {
+				Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__metrics-server.yaml"])).To(Equal(pdbYAMLFor(false)))
+			}
 			Expect(string(managedResourceSecret.Data["rolebinding__kube-system__metrics-server-auth-reader.yaml"])).To(Equal(roleBindingYAML))
 			Expect(string(managedResourceSecret.Data["service__kube-system__metrics-server.yaml"])).To(Equal(serviceYAML))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__metrics-server.yaml"])).To(Equal(serviceAccountYAML))
@@ -427,6 +443,29 @@ status:
 			BeforeEach(func() {
 				values.VPAEnabled = true
 				values.KubeAPIServerHost = &kubeAPIServerHost
+			})
+
+			It("should successfully deploy all resources (w/ VPA, w/ host env)", func() {
+				Expect(managedResourceSecret.Data).To(HaveLen(11))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__metrics-server.yaml"])).To(Equal(vpaYAML))
+
+				for key := range managedResourceSecret.Data {
+					if strings.HasPrefix(key, "secret__kube-system__") {
+						secretName = strings.TrimSuffix(strings.TrimPrefix(key, "secret__kube-system__"), ".yaml")
+						break
+					}
+				}
+
+				Expect(string(managedResourceSecret.Data["deployment__kube-system__metrics-server.yaml"])).To(Equal(deploymentYAMLFor(secretName, true, true)))
+			})
+		})
+
+		Context("w/ VPA, w/ host env, kubernetes version >= 1.26", func() {
+			BeforeEach(func() {
+				values.VPAEnabled = true
+				values.KubeAPIServerHost = &kubeAPIServerHost
+				values.KubernetesVersion = semver.MustParse("1.26.0")
+				k8sGreaterEquals126 = true
 			})
 
 			It("should successfully deploy all resources (w/ VPA, w/ host env)", func() {
