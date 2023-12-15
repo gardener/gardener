@@ -4,7 +4,7 @@
 #
 # COMPONENT_PREFIXES: Set the image prefix that should be used to
 #                     determine if an image is defined by another component.
-#                     Defaults to "eu.gcr.io/gardener-project/gardener,europe-docker.pkg.dev/gardener-project"
+#                     Defaults to "europe-docker.pkg.dev/gardener-project"
 #
 # COMPONENT_CLI_ARGS: Set all component-cli arguments.
 #                     This should be used with care as all defaults are overwritten.
@@ -55,7 +55,7 @@ fi
 if [[ ! -z "$image_vector_path" ]]; then
   # default environment variables
   if [[ -z "${COMPONENT_PREFIXES}" ]]; then
-    COMPONENT_PREFIXES="eu.gcr.io/gardener-project/gardener,europe-docker.pkg.dev/gardener-project"
+    COMPONENT_PREFIXES="europe-docker.pkg.dev/gardener-project"
   fi
 
   if [[ -z "${COMPONENT_CLI_ARGS}" ]]; then

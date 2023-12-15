@@ -3,7 +3,7 @@ revisionHistoryLimit: 2
 serviceAccountName: gardener-operator
 invalidateServiceAccountToken: true
 image:
-  repository: eu.gcr.io/gardener-project/gardener/operator
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/operator
   tag: latest
   pullPolicy: IfNotPresent
 resources:

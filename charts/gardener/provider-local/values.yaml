@@ -1,4 +1,4 @@
-image: eu.gcr.io/gardener-project/gardener/extensions/provider-local:latest
+image: europe-docker.pkg.dev/gardener-project/releases/gardener/extensions/provider-local:latest
 imagePullPolicy: IfNotPresent
 
 replicaCount: 1

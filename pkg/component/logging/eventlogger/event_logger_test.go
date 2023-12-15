@@ -50,7 +50,7 @@ var _ = Describe("EventLogger", func() {
 		managedResourceName = "shoot-event-logger"
 		name                = "event-logger"
 		vpaName             = "event-logger-vpa"
-		image               = "eu.gcr.io/gardener-project/gardener/event-logger:v0.41.0"
+		image               = "europe-docker.pkg.dev/gardener-project/releases/gardener/event-logger:v0.41.0"
 	)
 
 	var (

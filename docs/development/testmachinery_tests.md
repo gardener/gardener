@@ -326,9 +326,9 @@ Test machinery tests usually deploy a workload to the Shoot cluster as part of t
 - Do not use container images from Docker Hub.
   - Docker Hub has rate limiting (see [Download rate limit](https://docs.docker.com/docker-hub/download-rate-limit/)). For anonymous users, the rate limit is set to 100 pulls per 6 hours per IP address. In some fenced environments the network setup can be such that all egress connections are issued from single IP (or set of IPs). In such scenarios the allowed rate limit can be exhausted too fast. See https://github.com/gardener/gardener/issues/4160.
   - Docker Hub registry doesn't support pulling images over IPv6 (see [Beta IPv6 Support on Docker Hub Registry](https://www.docker.com/blog/beta-ipv6-support-on-docker-hub-registry/)).
-  - Avoid manually copying Docker Hub images to Gardener GCR (`eu.gcr.io/gardener-project/3rd/`). Use the existing prow job for this (see [Copy Images](https://github.com/gardener/ci-infra/tree/master/config/images)).
+  - Avoid manually copying Docker Hub images to Gardener GCR (`europe-docker.pkg.dev/gardener-project/releases/3rd/`). Use the existing prow job for this (see [Copy Images](https://github.com/gardener/ci-infra/tree/master/config/images)).
   - If possible, use a Kubernetes e2e image (`registry.k8s.io/e2e-test-images/<image-name>`).
     - In some cases, there is already a Kubernetes e2e image alternative of the Docker Hub image.
-      - For example, use `registry.k8s.io/e2e-test-images/busybox` instead of `eu.gcr.io/gardener-project/3rd/busybox` or `docker.io/busybox`.
+      - For example, use `registry.k8s.io/e2e-test-images/busybox` instead of `europe-docker.pkg.dev/gardener-project/releases/3rd/busybox` or `docker.io/busybox`.
     - Kubernetes has multiple test images - see https://github.com/kubernetes/kubernetes/tree/v1.27.0/test/images. `agnhost` is the most widely used image in Kubernetes e2e tests. It contains multiple testing related binaries inside such as `pause`, `logs-generator`, `serve-hostname`, `webhook` and others. See all of them in the [agnhost's README.md](https://github.com/kubernetes/kubernetes/blob/v1.27.0/test/images/agnhost/README.md).
     - The list of available Kubernetes e2e images and tags can be checked in [this page](https://github.com/kubernetes/k8s.io/blob/main/registry.k8s.io/images/k8s-staging-e2e-test-images/images.yaml).

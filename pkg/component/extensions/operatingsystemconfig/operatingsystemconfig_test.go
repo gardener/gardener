@@ -209,7 +209,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				}
 
 				if useGardenerNodeAgent {
-					imagesCopy["hyperkube"] = &imagevector.Image{Repository: "eu.gcr.io/gardener-project/hyperkube", Tag: pointer.String("v" + k8sVersion.String())}
+					imagesCopy["hyperkube"] = &imagevector.Image{Repository: "europe-docker.pkg.dev/gardener-project/releases/hyperkube", Tag: pointer.String("v" + k8sVersion.String())}
 				}
 
 				downloaderUnits, downloaderFiles, _ := downloaderConfigFn(

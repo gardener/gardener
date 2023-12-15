@@ -205,7 +205,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 			}
 
 			image := seedmanagement.Image{
-				Repository: pointer.String("eu.gcr.io/gardener-project/gardener/gardenlet"),
+				Repository: pointer.String("europe-docker.pkg.dev/gardener-project/releases/gardener/gardenlet"),
 				Tag:        pointer.String("latest"),
 			}
 

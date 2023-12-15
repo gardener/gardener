@@ -1,6 +1,6 @@
 global:
   image:
-    repository: eu.gcr.io/gardener-project/gardener/gardener-resource-manager
+    repository: europe-docker.pkg.dev/gardener-project/releases/gardener/gardener-resource-manager
     tag: latest
     pullPolicy: IfNotPresent
 
