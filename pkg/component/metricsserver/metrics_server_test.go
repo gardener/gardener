@@ -320,6 +320,8 @@ status:
 
 		managedResourceSecret *corev1.Secret
 		managedResource       *resourcesv1alpha1.ManagedResource
+
+		secretName string
 	)
 
 	BeforeEach(func() {
@@ -352,8 +354,10 @@ status:
 	})
 
 	Describe("#Deploy", func() {
-		It("should successfully deploy all resources (w/o VPA, w/o host env)", func() {
+		JustBeforeEach(func() {
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
+
+			metricsServer = New(fakeClient, namespace, sm, values)
 
 			Expect(metricsServer.Deploy(ctx)).To(Succeed())
 
@@ -385,7 +389,7 @@ status:
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-			Expect(managedResourceSecret.Data).To(HaveLen(10))
+
 			Expect(string(managedResourceSecret.Data["apiservice____v1beta1.metrics.k8s.io.yaml"])).To(Equal(apiServiceYAML))
 			Expect(string(managedResourceSecret.Data["clusterrole____system_metrics-server.yaml"])).To(Equal(clusterRoleYAML))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____system_metrics-server.yaml"])).To(Equal(clusterRoleBindingYAML))
@@ -394,17 +398,9 @@ status:
 			Expect(string(managedResourceSecret.Data["rolebinding__kube-system__metrics-server-auth-reader.yaml"])).To(Equal(roleBindingYAML))
 			Expect(string(managedResourceSecret.Data["service__kube-system__metrics-server.yaml"])).To(Equal(serviceYAML))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__metrics-server.yaml"])).To(Equal(serviceAccountYAML))
+		})
 
-			var secretName string
-			for key := range managedResourceSecret.Data {
-				if strings.HasPrefix(key, "secret__kube-system__") {
-					secretName = strings.TrimSuffix(strings.TrimPrefix(key, "secret__kube-system__"), ".yaml")
-					break
-				}
-			}
-
-			Expect(string(managedResourceSecret.Data["deployment__kube-system__metrics-server.yaml"])).To(Equal(deploymentYAMLFor(secretName, false, false)))
-
+		JustAfterEach(func() {
 			secret := &corev1.Secret{}
 			Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["secret__kube-system__"+secretName+".yaml"], secret)).To(Succeed())
 			Expect(secret.Immutable).To(PointTo(BeTrue()))
@@ -412,69 +408,40 @@ status:
 			Expect(secret.Labels).To(HaveKeyWithValue("resources.gardener.cloud/garbage-collectable-reference", "true"))
 		})
 
-		It("should successfully deploy all resources (w/ VPA, w/ host env)", func() {
-			values.VPAEnabled = true
-			values.KubeAPIServerHost = &kubeAPIServerHost
-			metricsServer = New(fakeClient, namespace, sm, values)
+		Context("w/o VPA, w/o host env", func() {
+			It("should successfully deploy all resources", func() {
+				Expect(managedResourceSecret.Data).To(HaveLen(10))
 
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
-
-			Expect(metricsServer.Deploy(ctx)).To(Succeed())
-
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-			expectedMr := &resourcesv1alpha1.ManagedResource{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-					Kind:       "ManagedResource",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            managedResource.Name,
-					Namespace:       managedResource.Namespace,
-					ResourceVersion: "1",
-					Labels:          map[string]string{"origin": "gardener"},
-				},
-				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-					SecretRefs: []corev1.LocalObjectReference{{
-						Name: managedResource.Spec.SecretRefs[0].Name,
-					}},
-					KeepObjects: pointer.Bool(false),
-				},
-			}
-			utilruntime.Must(references.InjectAnnotations(expectedMr))
-			Expect(managedResource).To(DeepEqual(expectedMr))
-
-			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
-			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
-			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-			Expect(managedResourceSecret.Data).To(HaveLen(11))
-			Expect(string(managedResourceSecret.Data["apiservice____v1beta1.metrics.k8s.io.yaml"])).To(Equal(apiServiceYAML))
-			Expect(string(managedResourceSecret.Data["clusterrole____system_metrics-server.yaml"])).To(Equal(clusterRoleYAML))
-			Expect(string(managedResourceSecret.Data["clusterrolebinding____system_metrics-server.yaml"])).To(Equal(clusterRoleBindingYAML))
-			Expect(string(managedResourceSecret.Data["clusterrolebinding____metrics-server_system_auth-delegator.yaml"])).To(Equal(clusterRoleBindingAuthDelegatorYAML))
-			Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__metrics-server.yaml"])).To(Equal(pdbYAML))
-			Expect(string(managedResourceSecret.Data["rolebinding__kube-system__metrics-server-auth-reader.yaml"])).To(Equal(roleBindingYAML))
-			Expect(string(managedResourceSecret.Data["service__kube-system__metrics-server.yaml"])).To(Equal(serviceYAML))
-			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__metrics-server.yaml"])).To(Equal(serviceAccountYAML))
-			Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__metrics-server.yaml"])).To(Equal(vpaYAML))
-
-			var secretName string
-			for key := range managedResourceSecret.Data {
-				if strings.HasPrefix(key, "secret__kube-system__") {
-					secretName = strings.TrimSuffix(strings.TrimPrefix(key, "secret__kube-system__"), ".yaml")
-					break
+				for key := range managedResourceSecret.Data {
+					if strings.HasPrefix(key, "secret__kube-system__") {
+						secretName = strings.TrimSuffix(strings.TrimPrefix(key, "secret__kube-system__"), ".yaml")
+						break
+					}
 				}
-			}
 
-			Expect(string(managedResourceSecret.Data["deployment__kube-system__metrics-server.yaml"])).To(Equal(deploymentYAMLFor(secretName, true, true)))
+				Expect(string(managedResourceSecret.Data["deployment__kube-system__metrics-server.yaml"])).To(Equal(deploymentYAMLFor(secretName, false, false)))
+			})
+		})
 
-			secret := &corev1.Secret{}
-			Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["secret__kube-system__"+secretName+".yaml"], secret)).To(Succeed())
-			Expect(secret.Immutable).To(PointTo(BeTrue()))
-			Expect(secret.Data).NotTo(BeEmpty())
-			Expect(secret.Labels).To(HaveKeyWithValue("resources.gardener.cloud/garbage-collectable-reference", "true"))
+		Context("w/ VPA, w/ host env", func() {
+			BeforeEach(func() {
+				values.VPAEnabled = true
+				values.KubeAPIServerHost = &kubeAPIServerHost
+			})
+
+			It("should successfully deploy all resources (w/ VPA, w/ host env)", func() {
+				Expect(managedResourceSecret.Data).To(HaveLen(11))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__metrics-server.yaml"])).To(Equal(vpaYAML))
+
+				for key := range managedResourceSecret.Data {
+					if strings.HasPrefix(key, "secret__kube-system__") {
+						secretName = strings.TrimSuffix(strings.TrimPrefix(key, "secret__kube-system__"), ".yaml")
+						break
+					}
+				}
+
+				Expect(string(managedResourceSecret.Data["deployment__kube-system__metrics-server.yaml"])).To(Equal(deploymentYAMLFor(secretName, true, true)))
+			})
 		})
 	})
 
