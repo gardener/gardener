@@ -4130,11 +4130,6 @@ func (in *SeedSpec) DeepCopyInto(out *SeedSpec) {
 	in.DNS.DeepCopyInto(&out.DNS)
 	in.Networks.DeepCopyInto(&out.Networks)
 	in.Provider.DeepCopyInto(&out.Provider)
-	if in.SecretRef != nil {
-		in, out := &in.SecretRef, &out.SecretRef
-		*out = new(v1.SecretReference)
-		**out = **in
-	}
 	if in.Taints != nil {
 		in, out := &in.Taints, &out.Taints
 		*out = make([]SeedTaint, len(*in))

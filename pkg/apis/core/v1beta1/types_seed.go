@@ -72,13 +72,10 @@ type SeedSpec struct {
 	Networks SeedNetworks `json:"networks" protobuf:"bytes,3,opt,name=networks"`
 	// Provider defines the provider type and region for this Seed cluster.
 	Provider SeedProvider `json:"provider" protobuf:"bytes,4,opt,name=provider"`
-	// SecretRef is a reference to a Secret object containing the Kubeconfig of the Kubernetes
-	// cluster to be registered as Seed.
-	//
-	// Deprecated: This field is deprecated, gardenlet must run in the Seed cluster,
-	// hence it should use the in-cluster rest config via ServiceAccount to communicate with the Seed cluster.
-	// +optional
-	SecretRef *corev1.SecretReference `json:"secretRef,omitempty" protobuf:"bytes,5,opt,name=secretRef"`
+
+	// SecretRef is tombstoned to show why 5 is reserved protobuf tag.
+	// SecretRef *corev1.SecretReference `json:"secretRef,omitempty" protobuf:"bytes,5,opt,name=secretRef"`
+
 	// Taints describes taints on the seed.
 	// +optional
 	Taints []SeedTaint `json:"taints,omitempty" protobuf:"bytes,6,rep,name=taints"`

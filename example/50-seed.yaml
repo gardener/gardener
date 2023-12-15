@@ -12,10 +12,6 @@ spec:
     - europe-1a
   # providerConfig:
   #   <some-provider-specific-config-for-the-seed>
-# Optional, only needed if controlled by a Gardenlet running outside
-# secretRef:
-#   name: seed-secret
-#   namespace: garden
 # Configuration of backup object store provider into which the backups will be stored.
 # If you don't want to have backups then don't specify the `.spec.backup` key.
   backup:

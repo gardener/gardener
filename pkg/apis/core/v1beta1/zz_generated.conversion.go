@@ -5367,7 +5367,6 @@ func autoConvert_v1beta1_SeedSpec_To_core_SeedSpec(in *SeedSpec, out *core.SeedS
 	if err := Convert_v1beta1_SeedProvider_To_core_SeedProvider(&in.Provider, &out.Provider, s); err != nil {
 		return err
 	}
-	out.SecretRef = (*v1.SecretReference)(unsafe.Pointer(in.SecretRef))
 	out.Taints = *(*[]core.SeedTaint)(unsafe.Pointer(&in.Taints))
 	out.Volume = (*core.SeedVolume)(unsafe.Pointer(in.Volume))
 	out.Settings = (*core.SeedSettings)(unsafe.Pointer(in.Settings))
@@ -5391,7 +5390,6 @@ func autoConvert_core_SeedSpec_To_v1beta1_SeedSpec(in *core.SeedSpec, out *SeedS
 	if err := Convert_core_SeedProvider_To_v1beta1_SeedProvider(&in.Provider, &out.Provider, s); err != nil {
 		return err
 	}
-	out.SecretRef = (*v1.SecretReference)(unsafe.Pointer(in.SecretRef))
 	out.Settings = (*SeedSettings)(unsafe.Pointer(in.Settings))
 	out.Taints = *(*[]SeedTaint)(unsafe.Pointer(&in.Taints))
 	out.Volume = (*SeedVolume)(unsafe.Pointer(in.Volume))
