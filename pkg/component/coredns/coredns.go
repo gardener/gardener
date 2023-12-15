@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -43,6 +44,7 @@ import (
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -78,6 +80,8 @@ type Interface interface {
 
 // Values is a set of configuration values for the coredns component.
 type Values struct {
+	// KubernetesVersion is the Kubernetes version of the Shoot.
+	KubernetesVersion *semver.Version
 	// APIServerHost is the host of the kube-apiserver.
 	APIServerHost *string
 	// ClusterDomain is the domain used for cluster-wide DNS records handled by CoreDNS.
@@ -643,6 +647,7 @@ import custom/*.server
 				Selector:       deployment.Spec.Selector,
 			},
 		}
+		unhealthyPodEvictionPolicyAlwatysAllow = policyv1.AlwaysAllow
 
 		horizontalPodAutoscaler = &autoscalingv2.HorizontalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
@@ -673,6 +678,10 @@ import custom/*.server
 			},
 		}
 	)
+
+	if versionutils.ConstraintK8sGreaterEqual126.Check(c.values.KubernetesVersion) {
+		podDisruptionBudget.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
+	}
 
 	managedObjects := []client.Object{
 		serviceAccount,

@@ -18,6 +18,7 @@ import (
 	"context"
 	"regexp"
 
+	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -395,7 +396,9 @@ status: {}
 `
 			return out
 		}
-		pdbYAML = `apiVersion: policy/v1
+
+		pdbYAMLFor = func(k8sGreaterEquals126 bool) string {
+			out := `apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   creationTimestamp: null
@@ -408,12 +411,20 @@ spec:
   selector:
     matchLabels:
       k8s-app: kube-dns
-status:
+`
+			if k8sGreaterEquals126 {
+				out += `  unhealthyPodEvictionPolicy: AlwaysAllow
+`
+			}
+			out += `status:
   currentHealthy: 0
   desiredHealthy: 0
   disruptionsAllowed: 0
   expectedPods: 0
 `
+			return out
+		}
+
 		hpaYAML = `apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -587,12 +598,14 @@ status: {}
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		values = Values{
-			ClusterDomain:   clusterDomain,
-			ClusterIP:       clusterIP,
-			Image:           image,
-			PodNetworkCIDR:  podNetworkCIDR,
-			NodeNetworkCIDR: &nodeNetworkCIDR,
+			ClusterDomain:     clusterDomain,
+			ClusterIP:         clusterIP,
+			Image:             image,
+			PodNetworkCIDR:    podNetworkCIDR,
+			NodeNetworkCIDR:   &nodeNetworkCIDR,
+			KubernetesVersion: semver.MustParse("1.25.0"),
 		}
+
 		component = New(c, namespace, values)
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
@@ -611,10 +624,11 @@ status: {}
 
 	Describe("#Deploy", func() {
 		var (
-			cpaEnabled       bool
-			vpaEnabled       bool
-			rewritingEnabled bool
-			commonSuffixes   []string
+			cpaEnabled          bool
+			vpaEnabled          bool
+			rewritingEnabled    bool
+			commonSuffixes      []string
+			k8sGreaterEquals126 bool
 		)
 
 		BeforeEach(func() {
@@ -622,11 +636,13 @@ status: {}
 			vpaEnabled = false
 			rewritingEnabled = false
 			commonSuffixes = []string{}
+			k8sGreaterEquals126 = false
 		})
 
 		JustBeforeEach(func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 
+			component = New(c, namespace, values)
 			Expect(component.Deploy(ctx)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
@@ -673,7 +689,11 @@ status: {}
 			Expect(string(managedResourceSecret.Data["configmap__kube-system__coredns-custom.yaml"])).To(Equal(configMapCustomYAML))
 			Expect(string(managedResourceSecret.Data["service__kube-system__kube-dns.yaml"])).To(Equal(serviceYAML))
 			Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-dns.yaml"])).To(Equal(networkPolicyYAML))
-			Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__coredns.yaml"])).To(Equal(pdbYAML))
+			if k8sGreaterEquals126 {
+				Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__coredns.yaml"])).To(Equal(pdbYAMLFor(true)))
+			} else {
+				Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__coredns.yaml"])).To(Equal(pdbYAMLFor(false)))
+			}
 			if cpaEnabled {
 				Expect(string(managedResourceSecret.Data["horizontalpodautoscaler__kube-system__coredns.yaml"])).To(Equal(""))
 				Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__coredns-autoscaler.yaml"])).To(Equal(cpasaYAML))
@@ -702,6 +722,17 @@ status: {}
 			})
 		})
 
+		Context("w/o apiserver host, w/o pod annotations, kubernetes versions >= 1.26 ", func() {
+			BeforeEach(func() {
+				values.KubernetesVersion = semver.MustParse("1.26.4")
+				k8sGreaterEquals126 = true
+			})
+
+			It("should successfully deploy all resources", func() {
+				Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor("", nil, true, true)))
+			})
+		})
+
 		Context("w/ apiserver host, w/ pod annotations", func() {
 			var (
 				apiserverHost  = "apiserver.host"
@@ -711,7 +742,6 @@ status: {}
 			BeforeEach(func() {
 				values.APIServerHost = &apiserverHost
 				values.PodAnnotations = podAnnotations
-				component = New(c, namespace, values)
 			})
 
 			It("should successfully deploy all resources", func() {
@@ -725,7 +755,6 @@ status: {}
 				commonSuffixes = []string{"gardener.cloud", "github.com"}
 				values.SearchPathRewritesEnabled = true
 				values.SearchPathRewriteCommonSuffixes = commonSuffixes
-				component = New(c, namespace, values)
 			})
 
 			It("should successfully deploy all resources", func() {
@@ -745,7 +774,6 @@ status: {}
 				cpaEnabled = true
 				values.AutoscalingMode = gardencorev1beta1.CoreDNSAutoscalingModeClusterProportional
 				values.ClusterProportionalAutoscalerImage = cpaImage
-				component = New(c, namespace, values)
 			})
 
 			Context("w/o apiserver host, w/o pod annotations", func() {
@@ -763,7 +791,6 @@ status: {}
 				BeforeEach(func() {
 					values.APIServerHost = &apiserverHost
 					values.PodAnnotations = podAnnotations
-					component = New(c, namespace, values)
 				})
 
 				It("should successfully deploy all resources", func() {
@@ -775,7 +802,6 @@ status: {}
 				BeforeEach(func() {
 					vpaEnabled = true
 					values.WantsVerticalPodAutoscaler = true
-					component = New(c, namespace, values)
 				})
 
 				Context("w/o apiserver host, w/o pod annotations", func() {
