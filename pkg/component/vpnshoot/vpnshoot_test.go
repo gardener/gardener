@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -76,7 +77,8 @@ var _ = Describe("VPNShoot", func() {
 				Header:      reversedVPNHeader,
 				IPFamilies:  []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
 			},
-			PSPDisabled: true,
+			PSPDisabled:       true,
+			KubernetesVersion: semver.MustParse("1.25.0"),
 		}
 	)
 
@@ -271,6 +273,35 @@ spec:
     updateMode: Auto
 status: {}
 `
+
+			pdbYAMLFor = func(k8sGreaterEquals126 bool) string {
+				out := `apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  creationTimestamp: null
+  labels:
+    app: vpn-shoot
+  name: vpn-shoot
+  namespace: kube-system
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: vpn-shoot
+`
+				if k8sGreaterEquals126 {
+					out += `  unhealthyPodEvictionPolicy: AlwaysAllow
+`
+				}
+				out += `status:
+  currentHealthy: 0
+  desiredHealthy: 0
+  disruptionsAllowed: 0
+  expectedPods: 0
+`
+				return out
+			}
+
 			containerFor = func(clients int, index *int, vpaEnabled, highAvailable bool) *corev1.Container {
 				var (
 					limits = corev1.ResourceList{
@@ -712,7 +743,6 @@ status: {}
 		})
 
 		Context("VPNShoot with ReversedVPN enabled", func() {
-
 			Context("w/o VPA", func() {
 				BeforeEach(func() {
 					values.VPAEnabled = false
@@ -759,7 +789,7 @@ status: {}
 					values.HighAvailabilityNumberOfShootClients = 2
 				})
 
-				It("should successfully deploy all resources", func() {
+				JustBeforeEach(func() {
 					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__vpn-shoot.yaml"])).To(Equal(vpaHAYAML))
 
 					var (
@@ -773,6 +803,22 @@ status: {}
 					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["statefulset__kube-system__vpn-shoot.yaml"], statefulSet)).To(Succeed())
 					expected := statefulSetFor(3, 2, []string{secretNameClient0, secretNameClient1}, secretNameCA, secretNameTLSAuth, values.VPAEnabled)
 					Expect(statefulSet).To(DeepEqual(expected))
+				})
+
+				Context("kubernetes versions < 1.26", func() {
+					It("should successfully deploy all resources", func() {
+						Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__vpn-shoot.yaml"])).To(Equal(pdbYAMLFor(false)))
+					})
+				})
+
+				Context("kubernetes versions >= 1.26", func() {
+					BeforeEach(func() {
+						values.KubernetesVersion = semver.MustParse("1.26.0")
+					})
+
+					It("should successfully deploy all resources", func() {
+						Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__vpn-shoot.yaml"])).To(Equal(pdbYAMLFor(true)))
+					})
 				})
 
 				AfterEach(func() {

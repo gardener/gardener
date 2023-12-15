@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -47,6 +48,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -90,6 +92,8 @@ type ReversedVPNValues struct {
 type Values struct {
 	// Image is the container image used for vpnShoot.
 	Image string
+	// KubernetesVersion is the Kubernetes version of the Shoot.
+	KubernetesVersion *semver.Version
 	// PodAnnotations is the set of additional annotations to be used for the pods.
 	PodAnnotations map[string]string
 	// VPAEnabled marks whether VerticalPodAutoscaler is enabled for the shoot.
@@ -489,9 +493,12 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 }
 
 func (v *vpnShoot) podDisruptionBudget() (client.Object, error) {
-	pdbMaxUnavailable := intstr.FromInt32(1)
+	var (
+		pdbMaxUnavailable                      = intstr.FromInt32(1)
+		unhealthyPodEvictionPolicyAlwatysAllow = policyv1.AlwaysAllow
+	)
 
-	return &policyv1.PodDisruptionBudget{
+	pdb := &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      deploymentName,
 			Namespace: metav1.NamespaceSystem,
@@ -501,7 +508,13 @@ func (v *vpnShoot) podDisruptionBudget() (client.Object, error) {
 			MaxUnavailable: &pdbMaxUnavailable,
 			Selector:       &metav1.LabelSelector{MatchLabels: getLabels()},
 		},
-	}, nil
+	}
+
+	if versionutils.ConstraintK8sGreaterEqual126.Check(v.values.KubernetesVersion) {
+		pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
+	}
+
+	return pdb, nil
 }
 
 func (v *vpnShoot) podTemplate(serviceAccount *corev1.ServiceAccount, secrets []vpnSecret, secretCA, secretTLSAuth *corev1.Secret) *corev1.PodTemplateSpec {
