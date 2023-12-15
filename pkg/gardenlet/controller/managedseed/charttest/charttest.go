@@ -613,8 +613,9 @@ func ValidateGardenletChartServiceAccount(ctx context.Context, c client.Client, 
 }
 
 // ValidateGardenletChartPodDisruptionBudget validates the PodDisruptionBudget of the Gardenlet chart.
-func ValidateGardenletChartPodDisruptionBudget(ctx context.Context, c client.Client, expectedLabels map[string]string, replicaCount *int32) {
+func ValidateGardenletChartPodDisruptionBudget(ctx context.Context, c client.Client, expectedLabels map[string]string, replicaCount *int32, k8sGreaterEquals126 bool) {
 	maxUnavailable := intstr.FromInt32(1)
+	unhealthyPodEvictionPolicyAlwatysAllow := policyv1.AlwaysAllow
 
 	pdb := &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
@@ -625,6 +626,10 @@ func ValidateGardenletChartPodDisruptionBudget(ctx context.Context, c client.Cli
 			MaxUnavailable: &maxUnavailable,
 			Selector:       &metav1.LabelSelector{},
 		},
+	}
+
+	if k8sGreaterEquals126 {
+		pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
 	}
 
 	if pointer.Int32Deref(replicaCount, 2) < 2 {
@@ -638,7 +643,7 @@ func ValidateGardenletChartPodDisruptionBudget(ctx context.Context, c client.Cli
 
 	Expect(c.Get(ctx, client.ObjectKeyFromObject(pdb), pdb)).To(Succeed())
 	Expect(pdb.Labels).To(DeepEqual(expectedPodDisruptionBudget.Labels))
-	Expect(pdb.Spec.Selector.MatchLabels).To(DeepEqual(expectedPodDisruptionBudget.Spec.Selector.MatchLabels))
+	Expect(pdb.Spec).To(DeepEqual(expectedPodDisruptionBudget.Spec))
 }
 
 // ComputeExpectedGardenletConfiguration computes the expected Gardenlet configuration based

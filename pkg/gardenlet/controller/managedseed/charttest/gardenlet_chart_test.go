@@ -79,9 +79,10 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 		deployer         component.Deployer
 		chartApplier     kubernetes.ChartApplier
 		universalDecoder runtime.Decoder
+		mapper           *meta.DefaultRESTMapper
 	)
 
-	BeforeEach(func() {
+	JustBeforeEach(func() {
 		ctx = context.TODO()
 
 		s := runtime.NewScheme()
@@ -108,7 +109,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 		// fake client to use for the chart applier
 		c = fake.NewClientBuilder().WithScheme(s).Build()
 
-		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{corev1.SchemeGroupVersion, appsv1.SchemeGroupVersion})
+		mapper = meta.NewDefaultRESTMapper([]schema.GroupVersion{corev1.SchemeGroupVersion, appsv1.SchemeGroupVersion})
 
 		mapper.Add(appsv1.SchemeGroupVersion.WithKind("Deployment"), meta.RESTScopeNamespace)
 		mapper.Add(corev1.SchemeGroupVersion.WithKind("ConfigMap"), meta.RESTScopeNamespace)
@@ -118,9 +119,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 		mapper.Add(rbacv1.SchemeGroupVersion.WithKind("ClusterRoleBinding"), meta.RESTScopeRoot)
 
 		// set the git version required for rendering of the Gardenlet chart -  chart helpers determine resource API versions based on that
-		renderer := chartrenderer.NewWithServerVersion(&version.Info{
-			GitVersion: "1.14.0",
-		})
+		renderer := chartrenderer.NewWithServerVersion(&version.Info{GitVersion: "1.25.0"})
 
 		chartApplier = kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(c, mapper))
 		Expect(chartApplier).NotTo(BeNil(), "should return chart applier")
@@ -153,6 +152,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 			componentImageVectorOverwrites *string,
 			featureGates map[string]bool,
 			cmAndSecretNameToUniqueName map[string]string,
+			k8sGreaterEqual126 bool,
 		) {
 			gardenletValues := map[string]interface{}{
 				"enabled": true,
@@ -257,6 +257,11 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				gardenletValues["vpa"] = *deploymentConfiguration.VPA
 			}
 
+			if k8sGreaterEqual126 {
+				renderer := chartrenderer.NewWithServerVersion(&version.Info{GitVersion: "1.26.0"})
+				chartApplier = kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(c, mapper))
+			}
+
 			deployer = NewGardenletChartApplier(chartApplier, gardenletValues)
 
 			Expect(deployer.Deploy(ctx)).ToNot(HaveOccurred(), "Gardenlet chart deployment succeeds")
@@ -276,7 +281,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 			if deploymentConfiguration != nil {
 				replicaCount = deploymentConfiguration.ReplicaCount
 			}
-			ValidateGardenletChartPodDisruptionBudget(ctx, c, expectedLabels, replicaCount)
+			ValidateGardenletChartPodDisruptionBudget(ctx, c, expectedLabels, replicaCount, k8sGreaterEqual126)
 
 			expectedGardenletConfig := ComputeExpectedGardenletConfiguration(
 				gardenClientConnectionKubeconfig != nil,
@@ -350,15 +355,15 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				ValidateGardenletChartVPA(ctx, c)
 			}
 		},
-		Entry("verify the default values for the Gardenlet chart & the Gardenlet component config", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-64fb6ca6"}),
+		Entry("verify the default values for the Gardenlet chart & the Gardenlet component config", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-64fb6ca6"}, false),
 		Entry("verify Gardenlet with component config having the Garden client connection kubeconfig set", pointer.String("dummy garden kubeconfig"), nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]string{
 			"gardenlet-configmap":         "gardenlet-configmap-a33669a5",
 			"gardenlet-kubeconfig-garden": "gardenlet-kubeconfig-garden-8c9ae097",
-		}),
+		}, false),
 		Entry("verify Gardenlet with component config having the Seed client connection kubeconfig set", nil, pointer.String("dummy seed kubeconfig"), nil, nil, nil, nil, nil, nil, nil, nil, map[string]string{
 			"gardenlet-configmap":       "gardenlet-configmap-3f1c11bd",
 			"gardenlet-kubeconfig-seed": "gardenlet-kubeconfig-seed-662d92ae",
-		}),
+		}, false),
 		Entry("verify Gardenlet with component config having a Bootstrap kubeconfig set", nil, nil, &corev1.SecretReference{
 			Name:      "gardenlet-kubeconfig-bootstrap",
 			Namespace: "garden",
@@ -367,7 +372,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 			Namespace: v1beta1constants.GardenNamespace,
 		}, pointer.String("dummy bootstrap kubeconfig"), nil, nil, nil, nil, nil, map[string]string{
 			"gardenlet-configmap": "gardenlet-configmap-84fd9f4e",
-		}),
+		}, false),
 		Entry("verify that the SeedConfig is set in the component config Config Map", nil, nil, nil, nil, nil,
 			&gardenletv1alpha1.SeedConfig{
 				SeedTemplate: gardencorev1beta1.SeedTemplate{
@@ -378,7 +383,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 						Provider: gardencorev1beta1.SeedProvider{},
 					},
 				},
-			}, nil, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-4b5dc832"}),
+			}, nil, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-4b5dc832"}, false),
 		Entry("verify deployment with two replica and three zones", nil, nil, nil, nil, nil,
 			&gardenletv1alpha1.SeedConfig{
 				SeedTemplate: gardencorev1beta1.SeedTemplate{
@@ -393,7 +398,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				},
 			}, &seedmanagement.GardenletDeployment{
 				ReplicaCount: pointer.Int32(2),
-			}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-c61b5286"}),
+			}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-c61b5286"}, false),
 		Entry("verify deployment with only one replica", nil, nil, nil, nil, nil,
 			&gardenletv1alpha1.SeedConfig{
 				SeedTemplate: gardencorev1beta1.SeedTemplate{
@@ -408,7 +413,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				},
 			}, &seedmanagement.GardenletDeployment{
 				ReplicaCount: pointer.Int32(1),
-			}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-c61b5286"}),
+			}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-c61b5286"}, false),
 		Entry("verify deployment with only one zone", nil, nil, nil, nil, nil,
 			&gardenletv1alpha1.SeedConfig{
 				SeedTemplate: gardencorev1beta1.SeedTemplate{
@@ -421,23 +426,23 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 						},
 					},
 				},
-			}, nil, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-f209639a"}),
+			}, nil, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-f209639a"}, false),
 		Entry("verify deployment with image vector override", nil, nil, nil, nil, nil, nil, nil, pointer.String("dummy-override-content"), nil, nil, map[string]string{
 			"gardenlet-configmap":             "gardenlet-configmap-64fb6ca6",
 			"gardenlet-imagevector-overwrite": "gardenlet-imagevector-overwrite-32ecb769",
-		}),
+		}, false),
 		Entry("verify deployment with component image vector override", nil, nil, nil, nil, nil, nil, nil, nil, pointer.String("dummy-override-content"), nil, map[string]string{
 			"gardenlet-configmap":                        "gardenlet-configmap-64fb6ca6",
 			"gardenlet-imagevector-overwrite-components": "gardenlet-imagevector-overwrite-components-53f94952",
-		}),
+		}, false),
 
 		Entry("verify deployment with custom replica count", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			ReplicaCount: pointer.Int32(3),
-		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-64fb6ca6"}),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-64fb6ca6"}, false),
 
 		Entry("verify deployment with service account", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			ServiceAccountName: pointer.String("ax"),
-		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-64fb6ca6"}),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-64fb6ca6"}, false),
 
 		Entry("verify deployment with resources", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			Resources: &corev1.ResourceRequirements{
@@ -449,19 +454,19 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 					corev1.ResourceMemory: resource.MustParse("25Mi"),
 				},
 			},
-		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-64fb6ca6"}),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-64fb6ca6"}, false),
 
 		Entry("verify deployment with pod labels", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			PodLabels: map[string]string{
 				"x": "y",
 			},
-		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-64fb6ca6"}),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-64fb6ca6"}, false),
 
 		Entry("verify deployment with pod annotations", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			PodAnnotations: map[string]string{
 				"x": "y",
 			},
-		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-64fb6ca6"}),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-64fb6ca6"}, false),
 
 		Entry("verify deployment with additional volumes", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			AdditionalVolumes: []corev1.Volume{
@@ -470,7 +475,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 					VolumeSource: corev1.VolumeSource{},
 				},
 			},
-		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-64fb6ca6"}),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-64fb6ca6"}, false),
 
 		Entry("verify deployment with additional volume mounts", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			AdditionalVolumeMounts: []corev1.VolumeMount{
@@ -478,7 +483,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 					Name: "a",
 				},
 			},
-		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-64fb6ca6"}),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-64fb6ca6"}, false),
 
 		Entry("verify deployment with env variables", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			Env: []corev1.EnvVar{
@@ -487,11 +492,15 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 					Value: "XY",
 				},
 			},
-		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-64fb6ca6"}),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-64fb6ca6"}, false),
 
 		Entry("verify deployment with VPA enabled", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			VPA: pointer.Bool(true),
-		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-64fb6ca6"}),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-64fb6ca6"}, false),
+
+		Entry("verify deployment with VPA enabled and kubernetes version >= 1.26", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
+			VPA: pointer.Bool(true),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-64fb6ca6"}, true),
 	)
 })
 
