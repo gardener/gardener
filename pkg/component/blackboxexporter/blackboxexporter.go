@@ -39,6 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -298,9 +299,14 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 				Selector:       deployment.Spec.Selector,
 			},
 		}
+		unhealthyPodEvictionPolicyAlwatysAllow = policyv1.AlwaysAllow
 
 		vpa *vpaautoscalingv1.VerticalPodAutoscaler
 	)
+
+	if versionutils.ConstraintK8sGreaterEqual126.Check(b.values.KubernetesVersion) {
+		podDisruptionBudget.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
+	}
 
 	utilruntime.Must(references.InjectAnnotations(deployment))
 

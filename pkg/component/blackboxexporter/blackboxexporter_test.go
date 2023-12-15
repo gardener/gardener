@@ -82,7 +82,6 @@ var _ = Describe("BlackboxExporter", func() {
 
 	Describe("#Deploy", func() {
 		var (
-			vpaEnabled    = false
 			configMapName = "blackbox-exporter-config-07d191e0"
 
 			serviceAccountYAML = `apiVersion: v1
@@ -125,7 +124,8 @@ metadata:
   namespace: kube-system
 `
 
-			pdbYAML = `apiVersion: policy/v1
+			pdbYAMLFor = func(k8sGreaterEquals126 bool) string {
+				out := `apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   creationTimestamp: null
@@ -139,12 +139,19 @@ spec:
   selector:
     matchLabels:
       component: blackbox-exporter
-status:
+`
+				if k8sGreaterEquals126 {
+					out += `  unhealthyPodEvictionPolicy: AlwaysAllow
+`
+				}
+				out += `status:
   currentHealthy: 0
   desiredHealthy: 0
   disruptionsAllowed: 0
   expectedPods: 0
 `
+				return out
+			}
 
 			deploymentYAML = `apiVersion: apps/v1
 kind: Deployment
@@ -262,13 +269,10 @@ status: {}
 `
 		)
 
-		BeforeEach(func() {
-			vpaEnabled = false
-		})
-
 		JustBeforeEach(func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 
+			component = New(c, namespace, values)
 			Expect(component.Deploy(ctx)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
@@ -299,37 +303,41 @@ status: {}
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-			if vpaEnabled {
-				Expect(managedResourceSecret.Data).To(HaveLen(6))
-			} else {
-				Expect(managedResourceSecret.Data).To(HaveLen(5))
-			}
+
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__blackbox-exporter.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecret.Data["configmap__kube-system__blackbox-exporter-config-07d191e0.yaml"])).To(Equal(configMapYAML))
 			Expect(string(managedResourceSecret.Data["deployment__kube-system__blackbox-exporter.yaml"])).To(Equal(deploymentYAML))
 			Expect(string(managedResourceSecret.Data["service__kube-system__blackbox-exporter.yaml"])).To(Equal(serviceYAML))
 		})
 
-		BeforeEach(func() {
-			values.KubernetesVersion = semver.MustParse("1.26.0")
-			component = New(c, namespace, values)
-		})
-
 		Context("w/o vpa enabled", func() {
-			It("should successfully deploy the resources", func() {
-				Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__blackbox-exporter.yaml"])).To(Equal(pdbYAML))
+			Context("kubernetes versions < 1.26", func() {
+				It("should successfully deploy the resources", func() {
+					Expect(managedResourceSecret.Data).To(HaveLen(5))
+					Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__blackbox-exporter.yaml"])).To(Equal(pdbYAMLFor(false)))
+				})
+			})
+
+			Context("kubernetes versions >= 1.26", func() {
+				BeforeEach(func() {
+					values.KubernetesVersion = semver.MustParse("1.26")
+				})
+
+				It("should successfully deploy the resources", func() {
+					Expect(managedResourceSecret.Data).To(HaveLen(5))
+					Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__blackbox-exporter.yaml"])).To(Equal(pdbYAMLFor(true)))
+				})
 			})
 		})
 
 		Context("w/ vpa enabled", func() {
 			BeforeEach(func() {
-				vpaEnabled = true
 				values.VPAEnabled = true
-				component = New(c, namespace, values)
 			})
 
 			It("should successfully deploy the resources", func() {
-				Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__blackbox-exporter.yaml"])).To(Equal(pdbYAML))
+				Expect(managedResourceSecret.Data).To(HaveLen(6))
+				Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__blackbox-exporter.yaml"])).To(Equal(pdbYAMLFor(false)))
 				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__blackbox-exporter.yaml"])).To(Equal(vpaYAML))
 			})
 		})
