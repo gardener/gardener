@@ -924,8 +924,9 @@ func (r *Reconciler) newGardenerControllerManager(garden *operatorv1alpha1.Garde
 	image.WithOptionalTag(version.Get().GitVersion)
 
 	values := gardenercontrollermanager.Values{
-		Image:    image.String(),
-		LogLevel: logger.InfoLevel,
+		Image:          image.String(),
+		LogLevel:       logger.InfoLevel,
+		RuntimeVersion: r.RuntimeVersion,
 	}
 
 	if config := garden.Spec.VirtualCluster.Gardener.ControllerManager; config != nil {
