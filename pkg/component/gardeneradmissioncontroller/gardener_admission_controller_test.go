@@ -28,6 +28,7 @@ import (
 	certificatesv1 "k8s.io/api/certificates/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,7 +51,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -136,7 +137,7 @@ var _ = Describe("GardenerAdmissionController", func() {
 		Context("with common values", func() {
 			It("should successfully deploy", func() {
 				Expect(deployer.Deploy(ctx)).To(Succeed())
-				verifyExpectations(ctx, fakeClient, fakeSecretManager, namespace, "4ef77c17", testValues)
+				verifyExpectations(ctx, fakeClient, fakeSecretManager, namespace, "4ef77c17", testValues, true)
 			})
 		})
 
@@ -147,7 +148,18 @@ var _ = Describe("GardenerAdmissionController", func() {
 
 			It("should successfully deploy", func() {
 				Expect(deployer.Deploy(ctx)).To(Succeed())
-				verifyExpectations(ctx, fakeClient, fakeSecretManager, namespace, "4ef77c17", testValues)
+				verifyExpectations(ctx, fakeClient, fakeSecretManager, namespace, "4ef77c17", testValues, true)
+			})
+		})
+
+		Context("when Kubernetes version is < 1.26", func() {
+			BeforeEach(func() {
+				testValues.RuntimeVersion = semver.MustParse("1.25.0")
+			})
+
+			It("should successfully deploy", func() {
+				Expect(deployer.Deploy(ctx)).To(Succeed())
+				verifyExpectations(ctx, fakeClient, fakeSecretManager, namespace, "4ef77c17", testValues, false)
 			})
 		})
 
@@ -159,7 +171,7 @@ var _ = Describe("GardenerAdmissionController", func() {
 
 			It("should successfully deploy", func() {
 				Expect(deployer.Deploy(ctx)).To(Succeed())
-				verifyExpectations(ctx, fakeClient, fakeSecretManager, namespace, "4ef77c17", testValues)
+				verifyExpectations(ctx, fakeClient, fakeSecretManager, namespace, "4ef77c17", testValues, true)
 			})
 		})
 
@@ -170,7 +182,7 @@ var _ = Describe("GardenerAdmissionController", func() {
 
 			It("should successfully deploy", func() {
 				Expect(deployer.Deploy(ctx)).To(Succeed())
-				verifyExpectations(ctx, fakeClient, fakeSecretManager, namespace, "6d282905", testValues)
+				verifyExpectations(ctx, fakeClient, fakeSecretManager, namespace, "6d282905", testValues, true)
 			})
 		})
 
@@ -181,7 +193,7 @@ var _ = Describe("GardenerAdmissionController", func() {
 
 			It("should successfully deploy", func() {
 				Expect(deployer.Deploy(ctx)).To(Succeed())
-				verifyExpectations(ctx, fakeClient, fakeSecretManager, namespace, "4ef77c17", testValues)
+				verifyExpectations(ctx, fakeClient, fakeSecretManager, namespace, "4ef77c17", testValues, true)
 			})
 		})
 	})
@@ -411,7 +423,7 @@ func verifyResourcesGone(ctx context.Context, fakeClient client.Client, namespac
 	ExpectWithOffset(1, fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-access-gardener-admission-controller"}, &corev1.Secret{})).To(matchers.BeNotFoundError())
 }
 
-func verifyExpectations(ctx context.Context, fakeClient client.Client, fakeSecretManager secretsmanager.Interface, namespace, configMapChecksum string, testValues Values) {
+func verifyExpectations(ctx context.Context, fakeClient client.Client, fakeSecretManager secretsmanager.Interface, namespace, configMapChecksum string, testValues Values, k8sGreaterEqual126 bool) {
 	By("Check Gardener Access Secret")
 	accessSecret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
@@ -456,10 +468,11 @@ func verifyExpectations(ctx context.Context, fakeClient client.Client, fakeSecre
 	}
 	Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(runtimeManagedResourceSecret), runtimeManagedResourceSecret)).To(Succeed())
 
-	Expect(string(runtimeManagedResourceSecret.Data["configmap__some-namespace__gardener-admission-controller-"+configMapChecksum+".yaml"])).To(Equal(configMap(namespace, testValues)))
-	Expect(string(runtimeManagedResourceSecret.Data["deployment__some-namespace__gardener-admission-controller.yaml"])).To(Equal(deployment(namespace, "gardener-admission-controller-"+configMapChecksum, serverCert.Name, testValues)))
-	Expect(string(runtimeManagedResourceSecret.Data["service__some-namespace__gardener-admission-controller.yaml"])).To(Equal(service(namespace, testValues)))
+	Expect(string(runtimeManagedResourceSecret.Data["configmap__some-namespace__gardener-admission-controller-"+configMapChecksum+".yaml"])).To(Equal(configMap(namespace, testValues)), true)
+	Expect(string(runtimeManagedResourceSecret.Data["deployment__some-namespace__gardener-admission-controller.yaml"])).To(Equal(deployment(namespace, "gardener-admission-controller-"+configMapChecksum, serverCert.Name, testValues)), true)
+	Expect(string(runtimeManagedResourceSecret.Data["service__some-namespace__gardener-admission-controller.yaml"])).To(Equal(service(namespace, testValues)), true)
 	Expect(string(runtimeManagedResourceSecret.Data["verticalpodautoscaler__some-namespace__gardener-admission-controller.yaml"])).To(Equal(vpa(namespace)))
+	Expect(string(runtimeManagedResourceSecret.Data["poddisruptionbudget__some-namespace__gardener-admission-controller.yaml"])).To(Equal(podDisruptionBudget(namespace, k8sGreaterEqual126)))
 	Expect(runtimeManagedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
 	Expect(runtimeManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
@@ -482,7 +495,7 @@ func verifyExpectations(ctx context.Context, fakeClient client.Client, fakeSecre
 
 	Expect(string(virtualManagedResourceSecret.Data["clusterrole____gardener.cloud_system_admission-controller.yaml"])).To(Equal(clusterRole()))
 	Expect(string(virtualManagedResourceSecret.Data["clusterrolebinding____gardener.cloud_admission-controller.yaml"])).To(Equal(clusterRoleBinding()))
-	Expect(string(virtualManagedResourceSecret.Data["validatingwebhookconfiguration____gardener-admission-controller.yaml"])).To(Equal(validatingWebhookConfiguration(namespace, caGardener.Data["bundle.crt"], testValues)))
+	Expect(string(virtualManagedResourceSecret.Data["validatingwebhookconfiguration____gardener-admission-controller.yaml"])).To(Equal(validatingWebhookConfiguration(namespace, caGardener.Data["bundle.crt"], testValues)), true)
 	Expect(virtualManagedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
 	Expect(virtualManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 }
@@ -557,7 +570,7 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: utils.MergeStringMaps(GetLabels(), map[string]string{
+					Labels: gardenerutils.MergeStringMaps(GetLabels(), map[string]string{
 						"app":                              "gardener",
 						"role":                             "admission-controller",
 						"networking.gardener.cloud/to-dns": "allowed",
@@ -736,6 +749,29 @@ func service(namespace string, testValues Values) string {
 	}
 
 	return componenttest.Serialize(svc)
+}
+
+func podDisruptionBudget(namespace string, k8sGreaterEqual126 bool) string {
+	var (
+		unhealthyPodEvictionPolicyAlwatysAllow = policyv1.AlwaysAllow
+		pdb                                    = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      DeploymentName,
+				Namespace: namespace,
+				Labels:    GetLabels(),
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: gardenerutils.IntStrPtrFromInt32(1),
+				Selector:       &metav1.LabelSelector{MatchLabels: GetLabels()},
+			},
+		}
+	)
+
+	if k8sGreaterEqual126 {
+		pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
+	}
+
+	return componenttest.Serialize(pdb)
 }
 
 func vpa(namespace string) string {
