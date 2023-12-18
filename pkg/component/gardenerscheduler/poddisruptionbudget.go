@@ -19,18 +19,28 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 func (g *gardenerScheduler) podDisruptionBudget() *policyv1.PodDisruptionBudget {
-	return &policyv1.PodDisruptionBudget{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      DeploymentName,
-			Namespace: g.namespace,
-			Labels:    GetLabels(),
-		},
-		Spec: policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: gardenerutils.IntStrPtrFromInt32(1),
-			Selector:       &metav1.LabelSelector{MatchLabels: GetLabels()},
-		},
+	var (
+		unhealthyPodEvictionPolicyAlwatysAllow = policyv1.AlwaysAllow
+		pdb                                    = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      DeploymentName,
+				Namespace: g.namespace,
+				Labels:    GetLabels(),
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: gardenerutils.IntStrPtrFromInt32(1),
+				Selector:       &metav1.LabelSelector{MatchLabels: GetLabels()},
+			},
+		}
+	)
+
+	if versionutils.ConstraintK8sGreaterEqual126.Check(g.values.RuntimeVersion) {
+		pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
 	}
+
+	return pdb
 }

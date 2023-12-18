@@ -954,8 +954,9 @@ func (r *Reconciler) newGardenerScheduler(garden *operatorv1alpha1.Garden, secre
 	image.WithOptionalTag(version.Get().GitVersion)
 
 	values := gardenerscheduler.Values{
-		Image:    image.String(),
-		LogLevel: logger.InfoLevel,
+		Image:          image.String(),
+		LogLevel:       logger.InfoLevel,
+		RuntimeVersion: r.RuntimeVersion,
 	}
 
 	if config := garden.Spec.VirtualCluster.Gardener.Scheduler; config != nil {
