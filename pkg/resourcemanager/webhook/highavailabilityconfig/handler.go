@@ -161,6 +161,11 @@ func (h *Handler) handleDeployment(
 		&deployment.Spec.Template,
 	)
 
+	enforceSpreadAcrossHosts := false
+	if b, err := strconv.ParseBool(deployment.Annotations[resourcesv1alpha1.HighAvailabilityConfigHostSpread]); err == nil {
+		enforceSpreadAcrossHosts = b
+	}
+
 	h.mutateTopologySpreadConstraints(
 		failureToleranceType,
 		zones,
@@ -168,6 +173,7 @@ func (h *Handler) handleDeployment(
 		deployment.Spec.Replicas,
 		maxReplicas,
 		&deployment.Spec.Template,
+		enforceSpreadAcrossHosts,
 	)
 
 	h.mutatePodTolerationSeconds(
@@ -214,6 +220,11 @@ func (h *Handler) handleStatefulSet(
 		&statefulSet.Spec.Template,
 	)
 
+	enforceSpreadAcrossHosts := false
+	if b, err := strconv.ParseBool(statefulSet.Annotations[resourcesv1alpha1.HighAvailabilityConfigHostSpread]); err == nil {
+		enforceSpreadAcrossHosts = b
+	}
+
 	h.mutateTopologySpreadConstraints(
 		failureToleranceType,
 		zones,
@@ -221,6 +232,7 @@ func (h *Handler) handleStatefulSet(
 		statefulSet.Spec.Replicas,
 		maxReplicas,
 		&statefulSet.Spec.Template,
+		enforceSpreadAcrossHosts,
 	)
 
 	h.mutatePodTolerationSeconds(
@@ -424,6 +436,7 @@ func (h *Handler) mutateTopologySpreadConstraints(
 	currentReplicas *int32,
 	maxReplicas int32,
 	podTemplateSpec *corev1.PodTemplateSpec,
+	enforceSpreadAcrossHosts bool,
 ) {
 	replicas := pointer.Int32Deref(currentReplicas, 0)
 
@@ -433,7 +446,7 @@ func (h *Handler) mutateTopologySpreadConstraints(
 		maxReplicas = replicas
 	}
 
-	if constraints := kubernetesutils.GetTopologySpreadConstraints(replicas, maxReplicas, metav1.LabelSelector{MatchLabels: podTemplateSpec.Labels}, int32(len(zones)), failureToleranceType); constraints != nil {
+	if constraints := kubernetesutils.GetTopologySpreadConstraints(replicas, maxReplicas, metav1.LabelSelector{MatchLabels: podTemplateSpec.Labels}, int32(len(zones)), failureToleranceType, enforceSpreadAcrossHosts); constraints != nil {
 		// Filter existing constraints with the same topology key to prevent that we are trying to add a constraint with
 		// the same key multiple times.
 		var filteredConstraints []corev1.TopologySpreadConstraint

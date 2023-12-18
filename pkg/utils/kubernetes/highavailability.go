@@ -63,13 +63,14 @@ func GetTopologySpreadConstraints(
 	labelSelector metav1.LabelSelector,
 	numberOfZones int32,
 	failureToleranceType *gardencorev1beta1.FailureToleranceType,
+	enforceSpreadAcrossHosts bool,
 ) []corev1.TopologySpreadConstraint {
 	if replicas <= 1 {
 		return nil
 	}
 
 	whenUnsatisfiable := corev1.ScheduleAnyway
-	if failureToleranceType != nil && *failureToleranceType != "" {
+	if (failureToleranceType != nil && *failureToleranceType != "") || enforceSpreadAcrossHosts {
 		whenUnsatisfiable = corev1.DoNotSchedule
 	}
 
