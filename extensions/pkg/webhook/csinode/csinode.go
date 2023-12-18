@@ -17,7 +17,6 @@ import (
 	"golang.org/x/exp/maps"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	storagev1 "k8s.io/api/storage/v1"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
@@ -28,8 +27,6 @@ const (
 	WebhookName = "csinode"
 )
 
-var logger = log.Log.WithName("csinode-webhook")
-
 // Args are the requirements to create a csinode webhook.
 type Args struct {
 	// Drivers is a list that maps a csidriver to the mutating function. CSIDrivers without an entry in this map will be ignored by the webhook.
@@ -38,10 +35,11 @@ type Args struct {
 }
 
 // New creates a new cloudprovider webhook.
-func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
-	logger := logger.WithValues("csi-drivers", maps.Keys(args.Drivers))
+func New(mgr manager.Manager, args *Args) (*extensionswebhook.Webhook, error) {
+	logger := mgr.GetLogger().WithName("csinode-webhook")
 
 	logger.Info("Adding webhook to manager")
+	logger.Info("Monitoring CSI Drivers to mutate", "driver-names", maps.Keys(args.Drivers))
 	types := []extensionswebhook.Type{extensionswebhook.Type{
 		Obj: &storagev1.CSINode{},
 	}}

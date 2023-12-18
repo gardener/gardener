@@ -33,9 +33,9 @@ const (
 	errMsg = "failed to mutate CSINode %s: %v"
 )
 
-// NewMutator creates a new accelerated network mutator.
-func NewMutator(mgr manager.Manager, logger logr.Logger, args Args) webhook.MutatorWithShootClient {
-	return &mutator{
+// NewMutator creates a new accelerated network Mutator.
+func NewMutator(mgr manager.Manager, logger logr.Logger, args *Args) webhook.MutatorWithShootClient {
+	return &Mutator{
 		client:   mgr.GetClient(),
 		logger:   logger,
 		drivers:  args.Drivers,
@@ -46,7 +46,8 @@ func NewMutator(mgr manager.Manager, logger logr.Logger, args Args) webhook.Muta
 // CSINodeMutateFunc mutates the given CSINodeDriver in-place
 type CSINodeMutateFunc func(logr.Logger, *storagev1.CSINodeDriver, *extensionsv1alpha1.WorkerPool, *extensions.Cluster) error
 
-type mutator struct {
+// Mutator implements the required interface for a mutating webhook using the shoot client.
+type Mutator struct {
 	client   client.Client
 	logger   logr.Logger
 	drivers  map[string]CSINodeMutateFunc
@@ -54,7 +55,7 @@ type mutator struct {
 }
 
 // Mutate validates and if needed mutates the given object.
-func (m *mutator) Mutate(ctx context.Context, new, old client.Object, sc client.Client, cluster *extensions.Cluster) error {
+func (m *Mutator) Mutate(ctx context.Context, new, old client.Object, sc client.Client, cluster *extensions.Cluster) error {
 	var (
 		cnNew, cnOld *storagev1.CSINode
 		ok           bool
@@ -117,7 +118,7 @@ Outer:
 			if pool.Name != poolName {
 				continue
 			}
-			m.logger.Info("Driver", "name", &cnNew.Spec.Drivers[idx], "pool", pool.Name)
+
 			err := m.drivers[driver.Name](m.logger, &cnNew.Spec.Drivers[idx], &pool, cluster)
 			if err != nil {
 				return err
@@ -127,12 +128,20 @@ Outer:
 	return nil
 }
 
-// GenericCSINodeMutate is a generic way to implement the csi node
+// GenericCSINodeMutate is a generic way to implement the csi node allocatable calculation by subtracting data volumes.
 func GenericCSINodeMutate(log logr.Logger, driver *storagev1.CSINodeDriver, pool *extensionsv1alpha1.WorkerPool, _ *extensions.Cluster) error {
 	if pool.DataVolumes != nil {
 		if driver.Allocatable != nil && driver.Allocatable.Count != nil {
-			driver.Allocatable.Count = toPtr(*driver.Allocatable.Count - int32(len(pool.DataVolumes)))
+			newCount := *driver.Allocatable.Count - int32(len(pool.DataVolumes))
+			// this is a special case due to how k8s treats the 0 value. Currently, 0 represents that infinite volumes can be attached to a node.
+			// see also https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1859 for a similar treatment.
+			// This creates a potential issue for nodes whose dataVolumes is equal to the attach limit.
+			if newCount <= 0 {
+				newCount = 1
+			}
+			driver.Allocatable.Count = &newCount
 			log.Info("Set allocatable field for csi driver", "driver", driver.Name, "value", *driver.Allocatable.Count)
+			return nil
 		}
 	}
 
