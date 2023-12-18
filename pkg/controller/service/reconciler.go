@@ -82,6 +82,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		switch {
 		case (key == keyIstioIngressGateway || key == keyVirtualGardenIstioIngressGateway) && servicePort.Name == "tcp":
 			service.Spec.Ports[i].NodePort = nodePortIstioIngressGateway
+			// Docker desktop for mac v4.23 breaks traffic going through a port mapping to a different docker container.
+			// Setting external traffic policy to local mitigates the issue for multi-node setups, e.g. for gardener-operator.
+			service.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
 			ip = r.HostIP
 		case key == keyIstioIngressGatewayZone0 && servicePort.Name == "tcp":
 			service.Spec.Ports[i].NodePort = nodePortIstioIngressGatewayZone0
