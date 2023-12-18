@@ -34,22 +34,23 @@ var (
 // IngressGatewayValues holds values for the istio-ingress chart.
 // The only opened port is 15021.
 type IngressGatewayValues struct {
-	Annotations           map[string]string
-	Labels                map[string]string
-	NetworkPolicyLabels   map[string]string
-	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType
-	Image                 string
-	IstiodNamespace       string
-	LoadBalancerIP        *string
-	MaxReplicas           *int
-	MinReplicas           *int
-	Namespace             string
-	PriorityClassName     string
-	TrustDomain           string
-	ProxyProtocolEnabled  bool
-	VPNEnabled            bool
-	Zones                 []string
-	DualStack             bool
+	Annotations              map[string]string
+	Labels                   map[string]string
+	NetworkPolicyLabels      map[string]string
+	ExternalTrafficPolicy    *corev1.ServiceExternalTrafficPolicyType
+	Image                    string
+	IstiodNamespace          string
+	LoadBalancerIP           *string
+	MaxReplicas              *int
+	MinReplicas              *int
+	Namespace                string
+	PriorityClassName        string
+	TrustDomain              string
+	ProxyProtocolEnabled     bool
+	VPNEnabled               bool
+	Zones                    []string
+	DualStack                bool
+	EnforceSpreadAcrossHosts bool
 
 	// Ports is a list of all Ports the istio-ingress gateways is listening on.
 	// Port 15021 and 15000 cannot be used.
@@ -78,6 +79,7 @@ func (i *istiod) generateIstioIngressGatewayChart() (*chartrenderer.RenderedChar
 			"vpn": map[string]interface{}{
 				"enabled": istioIngressGateway.VPNEnabled,
 			},
+			"enforceSpreadAcrossHosts": istioIngressGateway.EnforceSpreadAcrossHosts,
 		}
 
 		if istioIngressGateway.MinReplicas != nil {

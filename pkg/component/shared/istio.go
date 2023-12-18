@@ -15,10 +15,12 @@
 package shared
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,6 +41,7 @@ var ImageVector = imagevector.ImageVector()
 
 // NewIstio returns a deployer for Istio.
 func NewIstio(
+	ctx context.Context,
 	cl client.Client,
 	chartRenderer chartrenderer.Interface,
 	namePrefix string,
@@ -88,23 +91,29 @@ func NewIstio(
 	policyLabels := commonIstioIngressNetworkPolicyLabels(vpnEnabled)
 	policyLabels[toKubeAPIServerPolicyLabel] = v1beta1constants.LabelNetworkPolicyAllowed
 
+	enforceSpreadAcrossHosts, err := ShouldEnforceSpreadAcrossHosts(ctx, cl, zones)
+	if err != nil {
+		return nil, err
+	}
+
 	defaultIngressGatewayConfig := istio.IngressGatewayValues{
-		TrustDomain:           gardencorev1beta1.DefaultDomain,
-		Image:                 igwImage.String(),
-		IstiodNamespace:       v1beta1constants.IstioSystemNamespace,
-		Annotations:           lbAnnotations,
-		ExternalTrafficPolicy: externalTrafficPolicy,
-		MinReplicas:           minReplicas,
-		MaxReplicas:           maxReplicas,
-		Ports:                 servicePorts,
-		LoadBalancerIP:        serviceExternalIP,
-		Labels:                labels,
-		NetworkPolicyLabels:   policyLabels,
-		Namespace:             namePrefix + ingressNamespace,
-		PriorityClassName:     priorityClassName,
-		ProxyProtocolEnabled:  proxyProtocolEnabled,
-		VPNEnabled:            vpnEnabled,
-		DualStack:             dualStack,
+		TrustDomain:              gardencorev1beta1.DefaultDomain,
+		Image:                    igwImage.String(),
+		IstiodNamespace:          v1beta1constants.IstioSystemNamespace,
+		Annotations:              lbAnnotations,
+		ExternalTrafficPolicy:    externalTrafficPolicy,
+		MinReplicas:              minReplicas,
+		MaxReplicas:              maxReplicas,
+		Ports:                    servicePorts,
+		LoadBalancerIP:           serviceExternalIP,
+		Labels:                   labels,
+		NetworkPolicyLabels:      policyLabels,
+		Namespace:                namePrefix + ingressNamespace,
+		PriorityClassName:        priorityClassName,
+		ProxyProtocolEnabled:     proxyProtocolEnabled,
+		VPNEnabled:               vpnEnabled,
+		DualStack:                dualStack,
+		EnforceSpreadAcrossHosts: enforceSpreadAcrossHosts,
 	}
 
 	return istio.NewIstio(
@@ -132,6 +141,8 @@ func NewIstio(
 // to fill out common chart values. Hence, it is assumed that at least one Ingress Gateway was added to the given
 // `istioDeployer` before calling this function.
 func AddIstioIngressGateway(
+	ctx context.Context,
+	cl client.Client,
 	istioDeployer istio.Interface,
 	namespace string,
 	annotations map[string]string,
@@ -150,36 +161,45 @@ func AddIstioIngressGateway(
 	templateValues := gatewayValues[0]
 
 	var (
-		zones       []string
-		minReplicas *int
-		maxReplicas *int
+		zones                    []string
+		minReplicas              *int
+		maxReplicas              *int
+		enforceSpreadAcrossHosts bool
+		err                      error
 	)
 
 	if zone == nil {
 		minReplicas = templateValues.MinReplicas
 		maxReplicas = templateValues.MaxReplicas
+		enforceSpreadAcrossHosts = templateValues.EnforceSpreadAcrossHosts
 	} else {
 		zones = []string{*zone}
+
+		enforceSpreadAcrossHosts, err = ShouldEnforceSpreadAcrossHosts(ctx, cl, []string{*zone})
+		if err != nil {
+			return err
+		}
 	}
 
 	istioDeployer.AddIngressGateway(istio.IngressGatewayValues{
-		Annotations:           utils.MergeStringMaps(annotations),
-		Labels:                utils.MergeStringMaps(labels),
-		NetworkPolicyLabels:   utils.MergeStringMaps(templateValues.NetworkPolicyLabels),
-		Namespace:             namespace,
-		MinReplicas:           minReplicas,
-		MaxReplicas:           maxReplicas,
-		ExternalTrafficPolicy: externalTrafficPolicy,
-		LoadBalancerIP:        serviceExternalIP,
-		Image:                 templateValues.Image,
-		IstiodNamespace:       v1beta1constants.IstioSystemNamespace,
-		Ports:                 templateValues.Ports,
-		PriorityClassName:     templateValues.PriorityClassName,
-		ProxyProtocolEnabled:  templateValues.ProxyProtocolEnabled,
-		TrustDomain:           gardencorev1beta1.DefaultDomain,
-		VPNEnabled:            templateValues.VPNEnabled,
-		Zones:                 zones,
-		DualStack:             dualStack,
+		Annotations:              utils.MergeStringMaps(annotations),
+		Labels:                   utils.MergeStringMaps(labels),
+		NetworkPolicyLabels:      utils.MergeStringMaps(templateValues.NetworkPolicyLabels),
+		Namespace:                namespace,
+		MinReplicas:              minReplicas,
+		MaxReplicas:              maxReplicas,
+		ExternalTrafficPolicy:    externalTrafficPolicy,
+		LoadBalancerIP:           serviceExternalIP,
+		Image:                    templateValues.Image,
+		IstiodNamespace:          v1beta1constants.IstioSystemNamespace,
+		Ports:                    templateValues.Ports,
+		PriorityClassName:        templateValues.PriorityClassName,
+		ProxyProtocolEnabled:     templateValues.ProxyProtocolEnabled,
+		TrustDomain:              gardencorev1beta1.DefaultDomain,
+		VPNEnabled:               templateValues.VPNEnabled,
+		Zones:                    zones,
+		DualStack:                dualStack,
+		EnforceSpreadAcrossHosts: enforceSpreadAcrossHosts,
 	})
 
 	return nil
@@ -242,6 +262,37 @@ func IsZonalIstioExtension(labels map[string]string) (bool, string) {
 		}
 	}
 	return false, ""
+}
+
+// ShouldEnforceSpreadAcrossHosts checks whether all given zones have at least two nodes so that Istio can be spread across hosts in each zone
+func ShouldEnforceSpreadAcrossHosts(ctx context.Context, cl client.Client, zones []string) (bool, error) {
+	const targetNodeCount = 2
+	nodeList := &metav1.PartialObjectMetadataList{}
+	nodeList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NodeList"))
+	if err := cl.List(ctx, nodeList); err != nil {
+		return false, err
+	}
+	nodesPerZone := make([]int, len(zones))
+	zonesIncomplete := len(zones)
+forNode:
+	for _, node := range nodeList.Items {
+		nodeZone := node.Labels[corev1.LabelTopologyZone]
+		for i, zone := range zones {
+			if strings.HasSuffix(nodeZone, zone) {
+				if nodesPerZone[i] < targetNodeCount {
+					nodesPerZone[i] = nodesPerZone[i] + 1
+					if nodesPerZone[i] >= targetNodeCount {
+						zonesIncomplete = zonesIncomplete - 1
+						if zonesIncomplete == 0 {
+							break forNode
+						}
+					}
+				}
+				break
+			}
+		}
+	}
+	return zonesIncomplete == 0 && len(zones) > 0, nil
 }
 
 func commonIstioIngressNetworkPolicyLabels(vpnEnabled bool) map[string]string {

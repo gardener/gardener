@@ -1,6 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  {{- if .Values.enforceSpreadAcrossHosts }}
+  annotations:
+    high-availability-config.resources.gardener.cloud/host-spread: "true"
+  {{- end }}
   name: istio-ingressgateway
   namespace: {{ .Release.Namespace }}
   labels:
