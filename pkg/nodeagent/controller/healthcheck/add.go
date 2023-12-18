@@ -50,8 +50,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, nodePredicate predicate.P
 		r.DBus = dbus.New(mgr.GetLogger().WithValues("controller", ControllerName))
 	}
 	if len(r.HealthCheckers) == 0 {
-		err := r.setDefaultHealthChecks()
-		if err != nil {
+		if err := r.setDefaultHealthChecks(); err != nil {
 			return err
 		}
 	}

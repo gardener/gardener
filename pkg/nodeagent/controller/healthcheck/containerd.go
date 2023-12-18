@@ -63,7 +63,7 @@ func (*containerdHealthChecker) Name() string {
 
 // Check performs the actual health check for containerd.
 func (c *containerdHealthChecker) Check(ctx context.Context, node *corev1.Node) error {
-	log := logf.FromContext(ctx).WithName("containerd")
+	log := logf.FromContext(ctx).WithName(c.Name())
 
 	_, err := c.containerdClient.Version(ctx)
 	if err != nil {

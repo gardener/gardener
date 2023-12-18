@@ -55,13 +55,21 @@ var _ = Describe("Kubelet", func() {
 			Expect(khc.ToggleKubeletState()).To(BeFalse())
 			Expect(khc.ToggleKubeletState()).To(BeFalse())
 			Expect(khc.ToggleKubeletState()).To(BeFalse())
+
+			clock.Step(3 * time.Minute)
+
 			Expect(khc.ToggleKubeletState()).To(BeFalse())
+
+			clock.Step(8 * time.Minute)
+
+			Expect(khc.ToggleKubeletState()).To(BeFalse())
+			Expect(khc.ToggleKubeletState()).To(BeFalse())
+			Expect(khc.KubeletReadinessToggles).To(HaveLen(3))
 
 			clock.Step(11 * time.Minute)
 
 			Expect(khc.ToggleKubeletState()).To(BeFalse())
-			Expect(khc.ToggleKubeletState()).To(BeFalse())
-			Expect(khc.KubeletReadinessToggles).To(HaveLen(2))
+			Expect(khc.KubeletReadinessToggles).To(HaveLen(1))
 		})
 	})
 
