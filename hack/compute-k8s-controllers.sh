@@ -73,6 +73,7 @@ declare -A path_map=(
   ["root-ca-cert-publisher"]="pkg/controller/certificates/rootcacertpublisher/publisher.go"
   ["route"]="staging/src/k8s.io/cloud-provider/controllers/route/route_controller.go"
   ["service"]="staging/src/k8s.io/cloud-provider/controllers/service/controller.go"
+  ["service-cidr"]="pkg/controller/servicecidrs/servicecidrs_controller.go"
   ["serviceaccount"]="pkg/controller/serviceaccount/serviceaccounts_controller.go"
   ["serviceaccount-token"]="pkg/controller/serviceaccount/tokens_controller.go"
   ["statefulset"]="pkg/controller/statefulset/stateful_set.go"

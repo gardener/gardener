@@ -108,6 +108,7 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 		"root-ca-cert-publisher":               {},
 		"route":                                {},
 		"service":                              {},
+		"service-cidr":                         {AddedInVersion: "1.29"},
 		"serviceaccount":                       {},
 		"serviceaccount-token":                 {},
 		"statefulset":                          {},
