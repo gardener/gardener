@@ -22,6 +22,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -70,6 +71,7 @@ var _ = Describe("KubeStateMetrics", func() {
 		serviceAccount    *corev1.ServiceAccount
 		secretShootAccess *corev1.Secret
 		vpa               *vpaautoscalingv1.VerticalPodAutoscaler
+		pdb               *policyv1.PodDisruptionBudget
 		clusterRoleFor    = func(clusterType component.ClusterType) *rbacv1.ClusterRole {
 			name := "gardener.cloud:monitoring:kube-state-metrics"
 			if clusterType == component.ClusterTypeSeed {
@@ -245,6 +247,58 @@ var _ = Describe("KubeStateMetrics", func() {
 					"--resources=deployments,pods,statefulsets,nodes,verticalpodautoscalers,horizontalpodautoscalers,persistentvolumeclaims,replicasets,namespaces",
 					"--metric-labels-allowlist=nodes=[*]",
 					"--metric-annotations-allowlist=namespaces=[shoot.gardener.cloud/uid]",
+					"--metric-allowlist=" +
+						"kube_daemonset_metadata_generation," +
+						"kube_daemonset_status_current_number_scheduled," +
+						"kube_daemonset_status_desired_number_scheduled," +
+						"kube_daemonset_status_number_available," +
+						"kube_daemonset_status_number_unavailable," +
+						"kube_daemonset_status_updated_number_scheduled," +
+						"kube_deployment_metadata_generation," +
+						"kube_deployment_spec_replicas," +
+						"kube_deployment_status_observed_generation," +
+						"kube_deployment_status_replicas," +
+						"kube_deployment_status_replicas_available," +
+						"kube_deployment_status_replicas_unavailable," +
+						"kube_deployment_status_replicas_updated," +
+						"kube_horizontalpodautoscaler_spec_max_replicas," +
+						"kube_horizontalpodautoscaler_spec_min_replicas," +
+						"kube_horizontalpodautoscaler_status_current_replicas," +
+						"kube_horizontalpodautoscaler_status_desired_replicas," +
+						"kube_horizontalpodautoscaler_status_condition," +
+						"kube_namespace_annotations," +
+						"kube_node_info," +
+						"kube_node_labels," +
+						"kube_node_spec_taint," +
+						"kube_node_spec_unschedulable," +
+						"kube_node_status_allocatable," +
+						"kube_node_status_capacity," +
+						"kube_node_status_condition," +
+						"kube_persistentvolumeclaim_resource_requests_storage_bytes," +
+						"kube_pod_container_info," +
+						"kube_pod_container_resource_limits," +
+						"kube_pod_container_resource_requests," +
+						"kube_pod_container_status_restarts_total," +
+						"kube_pod_info," +
+						"kube_pod_labels," +
+						"kube_pod_owner," +
+						"kube_pod_spec_volumes_persistentvolumeclaims_info," +
+						"kube_pod_status_phase," +
+						"kube_pod_status_ready," +
+						"kube_replicaset_owner," +
+						"kube_statefulset_metadata_generation," +
+						"kube_statefulset_replicas," +
+						"kube_statefulset_status_observed_generation," +
+						"kube_statefulset_status_replicas," +
+						"kube_statefulset_status_replicas_current," +
+						"kube_statefulset_status_replicas_ready," +
+						"kube_statefulset_status_replicas_updated," +
+						"kube_verticalpodautoscaler_status_recommendation_containerrecommendations_target," +
+						"kube_verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound," +
+						"kube_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound," +
+						"kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_minallowed," +
+						"kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_maxallowed," +
+						"kube_verticalpodautoscaler_spec_updatepolicy_updatemode",
 				}
 				serviceAccountName = "kube-state-metrics"
 			}
@@ -396,6 +450,11 @@ var _ = Describe("KubeStateMetrics", func() {
 		ksm = New(c, namespace, sm, values)
 		managedResourceName = ""
 
+		selectorLabelsClusterTypeSeed := map[string]string{
+			"component": "kube-state-metrics",
+			"type":      string(component.ClusterTypeSeed),
+		}
+
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 
@@ -407,10 +466,7 @@ var _ = Describe("KubeStateMetrics", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kube-state-metrics",
 				Namespace: namespace,
-				Labels: map[string]string{
-					"component": "kube-state-metrics",
-					"type":      "seed",
-				},
+				Labels:    selectorLabelsClusterTypeSeed,
 			},
 			AutomountServiceAccountToken: pointer.Bool(false),
 		}
@@ -460,6 +516,24 @@ var _ = Describe("KubeStateMetrics", func() {
 						},
 					},
 				},
+			},
+		}
+		maxUnavailable := intstr.FromInt32(1)
+		pdb = &policyv1.PodDisruptionBudget{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "PodDisruptionBudget",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "kube-state-metrics-pdb",
+				Namespace: namespace,
+				Labels:    selectorLabelsClusterTypeSeed,
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				Selector: &metav1.LabelSelector{
+					MatchLabels: selectorLabelsClusterTypeSeed,
+				},
+				MaxUnavailable: &maxUnavailable,
 			},
 		}
 	})
@@ -522,7 +596,7 @@ var _ = Describe("KubeStateMetrics", func() {
 				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(6))
+				Expect(managedResourceSecret.Data).To(HaveLen(7))
 				Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
@@ -532,6 +606,7 @@ var _ = Describe("KubeStateMetrics", func() {
 				Expect(string(managedResourceSecret.Data["service__"+namespace+"__kube-state-metrics.yaml"])).To(Equal(componenttest.Serialize(serviceFor(component.ClusterTypeSeed))))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__kube-state-metrics.yaml"])).To(Equal(componenttest.Serialize(deploymentFor(component.ClusterTypeSeed))))
 				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__kube-state-metrics-vpa.yaml"])).To(Equal(componenttest.Serialize(vpa)))
+				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__kube-state-metrics-pdb.yaml"])).To(Equal(componenttest.Serialize(pdb)))
 			})
 		})
 
