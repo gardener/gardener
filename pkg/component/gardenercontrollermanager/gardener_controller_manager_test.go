@@ -93,7 +93,7 @@ var _ = Describe("GardenerControllerManager", func() {
 		fakeSecretManager = fakesecretsmanager.New(fakeClient, namespace)
 
 		values = Values{
-			RuntimeVersion: semver.MustParse("1.27.1"),
+			RuntimeVersion: semver.MustParse("1.26.1"),
 		}
 
 		fakeOps = &retryfake.Ops{MaxAttempts: 2}

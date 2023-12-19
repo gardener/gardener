@@ -1533,13 +1533,13 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 
 				Context("when kubernetes version is < 1.27", func() {
 					BeforeEach(func() {
-						values.RuntimeVersion = semver.MustParse("1.25.0")
+						values.RuntimeVersion = semver.MustParse("1.26.0")
 						deployer = New(fakeClient, namespace, fakeSecretManager, values)
 					})
 
 					It("should successfully deploy all resources", func() {
 						Expect(string(managedResourceSecretRuntime.Data["verticalpodautoscaler__some-namespace__gardener-apiserver-vpa.yaml"])).To(Equal(componenttest.Serialize(vpa)))
-						Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudgetFor(false))))
+						Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudgetFor(true))))
 						Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(serviceRuntimeFor(false))))
 					})
 				})

@@ -405,7 +405,7 @@ var _ = Describe("HVPA", func() {
 
 		Context("Kubernetes versions >= 1.26", func() {
 			BeforeEach(func() {
-				values.KubernetesVersion = semver.MustParse("1.27.0")
+				values.KubernetesVersion = semver.MustParse("1.26.2")
 				component = New(c, namespace, values)
 			})
 

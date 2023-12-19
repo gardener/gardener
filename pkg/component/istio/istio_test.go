@@ -236,7 +236,7 @@ var _ = Describe("istiod", func() {
 		networkLabels = map[string]string{"to-target": "allowed"}
 
 		c = fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		renderer = chartrenderer.NewWithServerVersion(&version.Info{GitVersion: "v1.27.2"})
+		renderer = chartrenderer.NewWithServerVersion(&version.Info{GitVersion: "v1.26.2"})
 
 		gardenletfeatures.RegisterFeatureGates()
 
