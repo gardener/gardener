@@ -90,7 +90,8 @@ var _ = Describe("GardenerScheduler", func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
 		fakeSecretManager = fakesecretsmanager.New(fakeClient, namespace)
 		values = Values{
-			RuntimeVersion: semver.MustParse("1.26.1"),
+			LogLevel:       "info",
+			RuntimeVersion: semver.MustParse("1.26.4"),
 		}
 
 		fakeOps = &retryfake.Ops{MaxAttempts: 2}
@@ -297,12 +298,6 @@ var _ = Describe("GardenerScheduler", func() {
 	Describe("#Deploy", func() {
 		Context("resources generation", func() {
 			BeforeEach(func() {
-				// test with typical values
-				values = Values{
-					LogLevel:       "info",
-					RuntimeVersion: semver.MustParse("1.26.1"),
-				}
-
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntime), managedResourceRuntime)).To(BeNotFoundError())
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceVirtual), managedResourceVirtual)).To(BeNotFoundError())
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretRuntime), managedResourceSecretRuntime)).To(BeNotFoundError())
