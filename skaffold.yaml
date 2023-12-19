@@ -1149,6 +1149,7 @@ build:
             - pkg/nodeagent/apis/config/validation
             - pkg/nodeagent/bootstrap
             - pkg/nodeagent/controller
+            - pkg/nodeagent/controller/healthcheck
             - pkg/nodeagent/controller/lease
             - pkg/nodeagent/controller/node
             - pkg/nodeagent/controller/operatingsystemconfig

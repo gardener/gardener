@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
+	"github.com/gardener/gardener/pkg/nodeagent/controller/healthcheck"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/lease"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/node"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/operatingsystemconfig"
@@ -57,6 +58,10 @@ func AddToManager(ctx context.Context, cancel context.CancelFunc, mgr manager.Ma
 
 	if err := (&lease.Reconciler{}).AddToManager(mgr, nodePredicate); err != nil {
 		return fmt.Errorf("failed adding lease controller: %w", err)
+	}
+
+	if err := (&healthcheck.Reconciler{}).AddToManager(mgr, nodePredicate); err != nil {
+		return fmt.Errorf("failed adding healthcheck controller: %w", err)
 	}
 
 	return nil
