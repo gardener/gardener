@@ -142,7 +142,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	CoreDNSQueryRewriting:              {Default: false, PreRelease: featuregate.Alpha},
 	IPv6SingleStack:                    {Default: false, PreRelease: featuregate.Alpha},
 	MutableShootSpecNetworkingNodes:    {Default: false, PreRelease: featuregate.Alpha},
-	WorkerlessShoots:                   {Default: true, PreRelease: featuregate.Beta, LockToDefault: true},
+	WorkerlessShoots:                   {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	ShootForceDeletion:                 {Default: false, PreRelease: featuregate.Alpha},
 	MachineControllerManagerDeployment: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	ContainerdRegistryHostsDir:         {Default: true, PreRelease: featuregate.Beta},
