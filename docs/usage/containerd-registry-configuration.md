@@ -60,8 +60,6 @@ server = "https://registry-1.docker.io"
 
 ### Configuring `containerd` Registries for a Shoot
 
-> Note: The below-described functionality is provided by the `ContainerdRegistryHostsDir` feature gate in gardenlet.
-
 Gardener supports configuring `containerd` registries on a Shoot using the new [hosts directory pattern](https://github.com/containerd/containerd/blob/main/docs/hosts.md). For each Shoot Node, Gardener creates the `/etc/containerd/certs.d` directory and adds the following section to the containerd's `/etc/containerd/config.toml` file:
 
 ```toml
@@ -73,36 +71,4 @@ This allows Shoot owners to use the [hosts directory pattern](https://github.com
 
 ### The registry-cache Extension
 
-[Configuring `containerd` registries for a Shoot](#configuring-containerd-registries-for-a-shoot) won't be the recommended approach for configuring a pull through cache for a Shoot in near future. There is a Gardener-native extension named [registry-cache](https://github.com/gardener/gardener-extension-registry-cache) that manages a pull through cache for a Shoot using the upstream [distribution/distribution](https://github.com/distribution/distribution) project.
-
-> Note: The [registry-cache](https://github.com/gardener/gardener-extension-registry-cache) extension is currently under active development and not recommended for productive usage.
-
-### Migration
-
-This section describe the migration process from the old and deprecated pattern to the hosts directory pattern for a Shoot cluster.
-
-Let's assume that the following `containerd` registries configuration using the old and deprecated pattern is being configured (for example via DaemonSet) for a Shoot:
-
-```toml
-version = 2
-
-[plugins."io.containerd.grpc.v1.cri".registry]
-  [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
-    [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
-      endpoint = ["https://public-mirror.example.com"]
-```
-
-The migration steps are as follows:
-1. The `containerd` registries configuration has to be adapted to the hosts directory pattern.
-
-   1.1 The `/etc/containerd/config.toml` file needs to be adapted as follows:
-   ```toml
-   version = 2
-   
-   [plugins."io.containerd.grpc.v1.cri".registry]
-      config_path = "/etc/containerd/certs.d"
-   ```
-
-   1.2 The appropriate directory structure and `hosts.toml` file has to be created as described in the [hosts directory pattern section](#hosts-directory-pattern).
-
-2. When the `ContainerdRegistryHostsDir` feature gate is GA, then the machinery that performs step 1.1 can be removed. A Shoot cluster can rely that the `config_path` will be always set by gardenlet.
+[Configuring `containerd` registries for a Shoot](#configuring-containerd-registries-for-a-shoot) is not the recommended approach for configuring a pull through cache for a Shoot. There is a Gardener-native extension named [registry-cache](https://github.com/gardener/gardener-extension-registry-cache) that manages a pull through cache for a Shoot using the upstream [distribution/distribution](https://github.com/distribution/distribution) project.
