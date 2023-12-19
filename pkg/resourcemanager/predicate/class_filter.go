@@ -79,13 +79,13 @@ func (f *ClassFilter) Responsible(o runtime.Object) bool {
 	return c == f.resourceClass || (c == "" && f.resourceClass == resourcemanagerv1alpha1.DefaultResourceClass)
 }
 
-// NoLongerHandles checks if an MR has changed its class and should have its resources cleaned by the given controller instance.
-func (f *ClassFilter) NoLongerHandles(mr *resourcesv1alpha1.ManagedResource) bool {
+// IsTransferringResponsibility checks if a MR has changed its class and should have its resources cleaned by the given controller instance.
+func (f *ClassFilter) IsTransferringResponsibility(mr *resourcesv1alpha1.ManagedResource) bool {
 	return controllerutil.ContainsFinalizer(mr, f.objectFinalizer) && !f.Responsible(mr)
 }
 
-// WaitForCleanup checks if a MR has changed its class and a given controller instance should wait for its resources to be cleaned.
-func (f *ClassFilter) WaitForCleanup(mr *resourcesv1alpha1.ManagedResource) bool {
+// IsWaitForCleanupRequired checks if a MR has changed its class and a given controller instance should wait for its resources to be cleaned.
+func (f *ClassFilter) IsWaitForCleanupRequired(mr *resourcesv1alpha1.ManagedResource) bool {
 	for _, finalizer := range mr.GetFinalizers() {
 		if strings.HasPrefix(finalizer, FinalizerName) {
 			// mr has a controller responsible for it's resources deletion

@@ -105,9 +105,9 @@ var _ = Describe("ClassFilter", func() {
 		Entry("MR with same finalizer and with same class", mrSameFinalizerSameClass, true),
 	)
 
-	DescribeTable("NoLongerHandles",
+	DescribeTable("IsTransferringResponsibility",
 		func(mr *resourcesv1alpha1.ManagedResource, shouldCleanup bool) {
-			cleanup := filter.NoLongerHandles(mr)
+			cleanup := filter.IsTransferringResponsibility(mr)
 			Expect(cleanup).To(Equal(shouldCleanup))
 		},
 		Entry("MR without a finalizer and with different class", mrWithoutFinalizerDifferentClass, false),
@@ -118,9 +118,9 @@ var _ = Describe("ClassFilter", func() {
 		Entry("MR with same finalizer and with same class", mrSameFinalizerSameClass, false),
 	)
 
-	DescribeTable("WaitForCleanup",
+	DescribeTable("IsWaitForCleanupRequired",
 		func(mr *resourcesv1alpha1.ManagedResource, shouldWait bool) {
-			wait := filter.WaitForCleanup(mr)
+			wait := filter.IsWaitForCleanupRequired(mr)
 			Expect(wait).To(Equal(shouldWait))
 		},
 		Entry("MR without a finalizer and with different class", mrWithoutFinalizerDifferentClass, false),
