@@ -257,7 +257,6 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		probeURIScheme           = corev1.URISchemeHTTPS
 		command                  = k.computeCommand(port)
 		controlledValues         = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		pdbMaxUnavailable        = intstr.FromInt32(1)
 		hvpaResourcePolicy       = &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
 				ContainerName: containerName,
@@ -458,17 +457,14 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	unhealthyPodEvictionPolicyAlwatysAllow := policyv1.AlwaysAllow
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient.Client(), podDisruptionBudget, func() error {
 		podDisruptionBudget.Labels = getLabels()
 		podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: &pdbMaxUnavailable,
+			MaxUnavailable: utils.IntStrPtrFromInt32(1),
 			Selector:       deployment.Spec.Selector,
 		}
 
-		if versionutils.ConstraintK8sGreaterEqual126.Check(k.values.RuntimeVersion) {
-			podDisruptionBudget.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
-		}
+		kubernetesutils.SetUnhealthyPodEvictionPolicy(podDisruptionBudget, k.values.RuntimeVersion)
 
 		return nil
 	}); err != nil {

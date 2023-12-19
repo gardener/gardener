@@ -25,7 +25,6 @@ import (
 	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
@@ -39,7 +38,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -118,8 +116,6 @@ func (b *blackboxExporter) WaitCleanup(ctx context.Context) error {
 
 func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 	var (
-		intStrOne = intstr.FromInt32(1)
-
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
 		serviceAccount = &corev1.ServiceAccount{
@@ -295,19 +291,15 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 				},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &intStrOne,
+				MaxUnavailable: utils.IntStrPtrFromInt32(1),
 				Selector:       deployment.Spec.Selector,
 			},
 		}
-		unhealthyPodEvictionPolicyAlwatysAllow = policyv1.AlwaysAllow
 
 		vpa *vpaautoscalingv1.VerticalPodAutoscaler
 	)
 
-	if versionutils.ConstraintK8sGreaterEqual126.Check(b.values.KubernetesVersion) {
-		podDisruptionBudget.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
-	}
-
+	kubernetesutils.SetUnhealthyPodEvictionPolicy(podDisruptionBudget, b.values.KubernetesVersion)
 	utilruntime.Must(references.InjectAnnotations(deployment))
 
 	if b.values.VPAEnabled {

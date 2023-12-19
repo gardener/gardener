@@ -43,7 +43,6 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -214,7 +213,6 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		roleBindingAnnotations            map[string]string
 		schedulerName                     string
 
-		intStrOne            = intstr.FromInt32(1)
 		healthProbePort      = intstr.FromInt32(10254)
 		resourceRequirements = corev1.ResourceRequirements{
 			Limits: corev1.ResourceList{
@@ -639,17 +637,14 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				Labels:    n.getLabels(LabelValueController, false),
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MinAvailable: &intStrOne,
+				MinAvailable: utils.IntStrPtrFromInt32(1),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: n.getLabels(LabelValueController, false),
 				},
 			},
 		}
 
-		unhealthyPodEvictionPolicyAlwatysAllow := policyv1.AlwaysAllow
-		if versionutils.ConstraintK8sGreaterEqual126.Check(n.values.KubernetesVersion) {
-			podDisruptionBudget.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
-		}
+		kubernetesutils.SetUnhealthyPodEvictionPolicy(podDisruptionBudget, n.values.KubernetesVersion)
 	}
 
 	if n.values.ClusterType == component.ClusterTypeShoot {

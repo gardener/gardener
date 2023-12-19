@@ -43,7 +43,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -368,16 +367,14 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 			},
 		}
 
-		intStrOne                              = intstr.FromInt32(1)
-		unhealthyPodEvictionPolicyAlwatysAllow = policyv1.AlwaysAllow
-		podDisruptionBudget                    = &policyv1.PodDisruptionBudget{
+		podDisruptionBudget = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "metrics-server",
 				Namespace: metav1.NamespaceSystem,
 				Labels:    getLabels(),
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &intStrOne,
+				MaxUnavailable: utils.IntStrPtrFromInt32(1),
 				Selector:       deployment.Spec.Selector,
 			},
 		}
@@ -385,9 +382,7 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 		vpa *vpaautoscalingv1.VerticalPodAutoscaler
 	)
 
-	if versionutils.ConstraintK8sGreaterEqual126.Check(m.values.KubernetesVersion) {
-		podDisruptionBudget.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
-	}
+	kubernetesutils.SetUnhealthyPodEvictionPolicy(podDisruptionBudget, m.values.KubernetesVersion)
 
 	if m.values.KubeAPIServerHost != nil {
 		deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{

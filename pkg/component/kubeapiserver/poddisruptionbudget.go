@@ -19,11 +19,11 @@ import (
 
 	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
+	"github.com/gardener/gardener/pkg/utils"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 func (k *kubeAPIServer) emptyPodDisruptionBudget() *policyv1.PodDisruptionBudget {
@@ -31,21 +31,14 @@ func (k *kubeAPIServer) emptyPodDisruptionBudget() *policyv1.PodDisruptionBudget
 }
 
 func (k *kubeAPIServer) reconcilePodDisruptionBudget(ctx context.Context, pdb *policyv1.PodDisruptionBudget) error {
-	var (
-		pdbMaxUnavailable                      = intstr.FromInt32(1)
-		unhealthyPodEvictionPolicyAlwatysAllow = policyv1.AlwaysAllow
-	)
-
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), pdb, func() error {
 		pdb.Labels = getLabels()
 		pdb.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: &pdbMaxUnavailable,
+			MaxUnavailable: utils.IntStrPtrFromInt32(1),
 			Selector:       &metav1.LabelSelector{MatchLabels: getLabels()},
 		}
 
-		if versionutils.ConstraintK8sGreaterEqual126.Check(k.values.RuntimeVersion) {
-			pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
-		}
+		kubernetesutils.SetUnhealthyPodEvictionPolicy(pdb, k.values.RuntimeVersion)
 
 		return nil
 	})

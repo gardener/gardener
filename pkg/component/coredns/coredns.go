@@ -43,8 +43,8 @@ import (
 	corednsconstants "github.com/gardener/gardener/pkg/component/coredns/constants"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
 	"github.com/gardener/gardener/pkg/utils"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -166,8 +166,6 @@ func (c *coreDNS) computeResourcesData() (map[string][]byte, error) {
 		portMetricsEndpoint = intstr.FromInt32(portMetrics)
 		protocolTCP         = corev1.ProtocolTCP
 		protocolUDP         = corev1.ProtocolUDP
-		intStrOne           = intstr.FromInt32(1)
-		intStrZero          = intstr.FromInt32(0)
 
 		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
 		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
@@ -357,8 +355,8 @@ import custom/*.server
 				Strategy: appsv1.DeploymentStrategy{
 					Type: appsv1.RollingUpdateDeploymentStrategyType,
 					RollingUpdate: &appsv1.RollingUpdateDeployment{
-						MaxSurge:       &intStrOne,
-						MaxUnavailable: &intStrZero,
+						MaxSurge:       utils.IntStrPtrFromInt32(1),
+						MaxUnavailable: utils.IntStrPtrFromInt32(0),
 					},
 				},
 				Selector: &metav1.LabelSelector{
@@ -643,11 +641,10 @@ import custom/*.server
 				Labels:    map[string]string{corednsconstants.LabelKey: corednsconstants.LabelValue},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &intStrOne,
+				MaxUnavailable: utils.IntStrPtrFromInt32(1),
 				Selector:       deployment.Spec.Selector,
 			},
 		}
-		unhealthyPodEvictionPolicyAlwatysAllow = policyv1.AlwaysAllow
 
 		horizontalPodAutoscaler = &autoscalingv2.HorizontalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
@@ -679,9 +676,7 @@ import custom/*.server
 		}
 	)
 
-	if versionutils.ConstraintK8sGreaterEqual126.Check(c.values.KubernetesVersion) {
-		podDisruptionBudget.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
-	}
+	kubernetesutils.SetUnhealthyPodEvictionPolicy(podDisruptionBudget, c.values.KubernetesVersion)
 
 	managedObjects := []client.Object{
 		serviceAccount,

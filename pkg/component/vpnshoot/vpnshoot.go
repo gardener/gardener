@@ -44,11 +44,11 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -493,11 +493,6 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 }
 
 func (v *vpnShoot) podDisruptionBudget() (client.Object, error) {
-	var (
-		pdbMaxUnavailable                      = intstr.FromInt32(1)
-		unhealthyPodEvictionPolicyAlwatysAllow = policyv1.AlwaysAllow
-	)
-
 	pdb := &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      deploymentName,
@@ -505,14 +500,12 @@ func (v *vpnShoot) podDisruptionBudget() (client.Object, error) {
 			Labels:    getLabels(),
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: &pdbMaxUnavailable,
+			MaxUnavailable: utils.IntStrPtrFromInt32(1),
 			Selector:       &metav1.LabelSelector{MatchLabels: getLabels()},
 		},
 	}
 
-	if versionutils.ConstraintK8sGreaterEqual126.Check(v.values.KubernetesVersion) {
-		pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
-	}
+	kubernetesutils.SetUnhealthyPodEvictionPolicy(pdb, v.values.KubernetesVersion)
 
 	return pdb, nil
 }

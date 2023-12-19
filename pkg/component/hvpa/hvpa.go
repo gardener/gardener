@@ -40,8 +40,8 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -294,24 +294,20 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 			},
 		}
 
-		maxUnavailable                         = intstr.FromInt32(1)
-		unhealthyPodEvictionPolicyAlwatysAllow = policyv1.AlwaysAllow
-		podDisruptionBudget                    = &policyv1.PodDisruptionBudget{
+		podDisruptionBudget = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      deploymentName,
 				Namespace: deployment.Namespace,
 				Labels:    utils.MergeStringMaps(getLabels(), getDeploymentLabels()),
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &maxUnavailable,
+				MaxUnavailable: utils.IntStrPtrFromInt32(1),
 				Selector:       deployment.Spec.Selector,
 			},
 		}
 	)
 
-	if versionutils.ConstraintK8sGreaterEqual126.Check(h.values.KubernetesVersion) {
-		podDisruptionBudget.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
-	}
+	kubernetesutils.SetUnhealthyPodEvictionPolicy(podDisruptionBudget, h.values.KubernetesVersion)
 
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, networkingv1.NetworkPolicyPort{
 		Port:     utils.IntStrPtrFromInt32(portMetrics),

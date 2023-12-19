@@ -194,13 +194,12 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		deployment          = k.emptyDeployment()
 		podDisruptionBudget = k.emptyPodDisruptionBudget()
 
-		pdbMaxUnavailable       = intstr.FromInt32(1)
-		vpaUpdateMode           = vpaautoscalingv1.UpdateModeAuto
-		controlledValues        = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		port              int32 = 10259
-		probeURIScheme          = corev1.URISchemeHTTPS
-		env                     = k.computeEnvironmentVariables()
-		command                 = k.computeCommand(port)
+		vpaUpdateMode          = vpaautoscalingv1.UpdateModeAuto
+		controlledValues       = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+		port             int32 = 10259
+		probeURIScheme         = corev1.URISchemeHTTPS
+		env                    = k.computeEnvironmentVariables()
+		command                = k.computeCommand(port)
 	)
 
 	if err := k.client.Create(ctx, configMap); client.IgnoreAlreadyExists(err) != nil {
@@ -363,17 +362,14 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	unhealthyPodEvictionPolicyAlwatysAllow := policyv1.AlwaysAllow
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client, podDisruptionBudget, func() error {
 		podDisruptionBudget.Labels = getLabels()
 		podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: &pdbMaxUnavailable,
+			MaxUnavailable: utils.IntStrPtrFromInt32(1),
 			Selector:       deployment.Spec.Selector,
 		}
 
-		if versionutils.ConstraintK8sGreaterEqual126.Check(k.runtimeVersion) {
-			podDisruptionBudget.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
-		}
+		kubernetesutils.SetUnhealthyPodEvictionPolicy(podDisruptionBudget, k.runtimeVersion)
 
 		return nil
 	}); err != nil {

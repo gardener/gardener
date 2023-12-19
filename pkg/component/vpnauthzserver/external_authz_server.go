@@ -43,7 +43,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -286,23 +285,16 @@ func (a *authzServer) emptyPDB() *policyv1.PodDisruptionBudget {
 }
 
 func (a *authzServer) reconcilePodDisruptionBudget(ctx context.Context, pdb *policyv1.PodDisruptionBudget) error {
-	var (
-		maxUnavailable                         = intstr.FromInt32(1)
-		unhealthyPodEvictionPolicyAlwatysAllow = policyv1.AlwaysAllow
-	)
-
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, pdb, func() error {
 		pdb.Labels = getLabels()
 		pdb.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: &maxUnavailable,
+			MaxUnavailable: utils.IntStrPtrFromInt32(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: getLabels(),
 			},
 		}
 
-		if versionutils.ConstraintK8sGreaterEqual126.Check(a.kubernetesVersion) {
-			pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
-		}
+		kubernetesutils.SetUnhealthyPodEvictionPolicy(pdb, a.kubernetesVersion)
 
 		return nil
 	})

@@ -52,7 +52,6 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -653,22 +652,16 @@ func (v *vpnSeedServer) deployStatefulSet(ctx context.Context, labels map[string
 }
 
 func (v *vpnSeedServer) deployPodDisruptionBudget(ctx context.Context, podLabels map[string]string) error {
-	var (
-		pdb                                    = v.emptyPodDisruptionBudget()
-		pdbMaxUnavailable                      = intstr.FromInt32(1)
-		unhealthyPodEvictionPolicyAlwatysAllow = policyv1.AlwaysAllow
-	)
+	pdb := v.emptyPodDisruptionBudget()
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, pdb, func() error {
 		pdb.Labels = podLabels
 		pdb.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: &pdbMaxUnavailable,
+			MaxUnavailable: utils.IntStrPtrFromInt32(1),
 			Selector:       &metav1.LabelSelector{MatchLabels: podLabels},
 		}
 
-		if versionutils.ConstraintK8sGreaterEqual126.Check(v.values.RuntimeKubernetesVersion) {
-			pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
-		}
+		kubernetesutils.SetUnhealthyPodEvictionPolicy(pdb, v.values.RuntimeKubernetesVersion)
 
 		return nil
 	})

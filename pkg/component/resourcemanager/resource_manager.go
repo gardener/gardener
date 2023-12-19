@@ -82,7 +82,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 var (
@@ -1090,24 +1089,18 @@ func (r *resourceManager) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 }
 
 func (r *resourceManager) ensurePodDisruptionBudget(ctx context.Context) error {
-	var (
-		pdb                                    = r.emptyPodDisruptionBudget()
-		maxUnavailable                         = intstr.FromInt32(1)
-		unhealthyPodEvictionPolicyAlwatysAllow = policyv1.AlwaysAllow
-	)
+	pdb := r.emptyPodDisruptionBudget()
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, pdb, func() error {
 		pdb.Labels = r.getLabels()
 		pdb.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: &maxUnavailable,
+			MaxUnavailable: utils.IntStrPtrFromInt32(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: r.getDeploymentTemplateLabels(),
 			},
 		}
 
-		if versionutils.ConstraintK8sGreaterEqual126.Check(r.values.RuntimeKubernetesVersion) {
-			pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
-		}
+		kubernetesutils.SetUnhealthyPodEvictionPolicy(pdb, r.values.RuntimeKubernetesVersion)
 
 		return nil
 	})
