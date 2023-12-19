@@ -385,7 +385,7 @@ func (g *garden) Start(ctx context.Context) error {
 	}
 
 	log.Info("Cleaning up GRM secret finalizers")
-	if err := g.cleanupGRMSecretFinalizers(ctx, g.mgr.GetClient(), log); err != nil {
+	if err := g.cleanupGRMSecretFinalizers(ctx, g.mgr.GetClient()); err != nil {
 		return err
 	}
 
@@ -469,7 +469,7 @@ func (g *garden) cleanupOrphanedExtensionsServiceAccounts(ctx context.Context, g
 }
 
 // TODO(Kostov6): Remove this code after v1.91 has been released.
-func (g *garden) cleanupGRMSecretFinalizers(ctx context.Context, seedClient client.Client, log logr.Logger) error {
+func (g *garden) cleanupGRMSecretFinalizers(ctx context.Context, seedClient client.Client) error {
 	mrs := &resourcesv1alpha1.ManagedResourceList{}
 	if err := seedClient.List(ctx, mrs); err != nil {
 		if meta.IsNoMatchError(err) {
