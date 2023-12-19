@@ -1,0 +1,126 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: Gardener
+Upstream-Contact: The Gardener project <gardener@googlegroups.com>
+Source: https://github.com/gardener/gardener
+
+# --------------------------------------------------
+# source code
+
+Files:
+  .ci/*
+  .github/*
+  */charts/*
+  docs/*
+  *.tpl
+  */mocks*.go
+  */funcs.go
+  */zz_funcs.go
+  *.yaml
+  *.template
+  *.gitignore
+  *.helmignore
+  *.dockerignore
+  logo/*
+  *.env
+  *.crt
+  *.key
+  *ssh_config
+  *sshd_config
+  pkg/component/plutono/dashboards/*
+  *.import-restrictions
+  *.report
+  hack/api-reference/*.json
+  go.mod
+  go.sum
+  Makefile
+  *Dockerfile
+  ADOPTERS.md
+  CONTRIBUTING.md
+  OWNERS
+  OWNERS_ALIASES
+  SECURITY.md
+  VERSION
+  hack/tools/logcheck/*
+  example/gardener-local/calico/ipv6/cni_network_config.json
+  pkg/component/logging/vali/templates/vali-init.sh
+  pkg/component/kubeproxy/resources/cleanup.sh
+  pkg/component/kubeproxy/resources/conntrack-fix.sh
+  pkg/component/kubeapiserver/resources/watchdog.sh
+Copyright: 2023 SAP SE or an SAP affiliate company and Gardener contributors
+License: Apache-2.0
+
+# --------------------------------------------------
+# documentation
+
+Files:
+  *README.md
+  NOTICE.md
+Copyright: 2023 SAP SE or an SAP affiliate company and IronCore contributors
+License: Apache-2.0
+
+# --------------------------------------------------
+# source dependencies
+
+Files: third_party/gopkg.in/yaml.v2/*
+Copyright: 2011-2016 Canonical Ltd.
+License: Apache-2.0
+
+Files: third_party/controller-runtime/*
+Copyright: 2019 The Kubernetes Authors.
+License: Apache-2.0
+
+Files: third_party/apiserver/*
+Copyright: 2017 The Kubernetes Authors.
+License: Apache-2.0
+
+Files: test/framework/cleanup.go
+Copyright: 2016 The Kubernetes Authors.
+License: Apache-2.0
+
+Files: pkg/utils/validation/kubernetes/core/*
+Copyright: 2014 The Kubernetes Authors.
+License: Apache-2.0
+
+Files: pkg/resourcemanager/controller/node/helper/daemon_controller.go
+Copyright: 2015 The Kubernetes Authors.
+License: Apache-2.0
+
+Files: pkg/operation/botanist/matchers/rule_matcher.go
+Copyright: 2017 The Kubernetes Authors.
+License: Apache-2.0
+
+Files: pkg/gardenlet/bootstrap/certificate/certificate_util.go
+Copyright: 2017 The Kubernetes Authors.
+License: Apache-2.0
+
+Files: pkg/envtest/port.go
+Copyright: 2021 The Kubernetes Authors.
+License: Apache-2.0
+
+Files: pkg/controllermanager/controller/certificatesigningrequest/reconciler.go
+Copyright: 2016 The Kubernetes Authors.
+License: Apache-2.0
+
+Files: pkg/chartrenderer/sorter.go
+Copyright: The Helm Authors.
+License: Apache-2.0
+
+Files: pkg/admissioncontroller/webhook/auth/seed/graph/doc.go
+Copyright: 2017 The Kubernetes Authors.
+License: Apache-2.0
+
+Files: pkg/admissioncontroller/webhook/auth/seed/attributes.go
+Copyright: 2016 The Kubernetes Authors.
+License: Apache-2.0
+
+Files: hack/generate-internal-groups.sh
+Copyright: 2017 The Kubernetes Authors.
+License: Apache-2.0
+
+Files: hack/generate-groups.sh
+Copyright: 2017 The Kubernetes Authors.
+License: Apache-2.0
+
+Files: hack/cherry-pick-pull.sh
+Copyright: 2015 The Kubernetes Authors.
+License: Apache-2.0
