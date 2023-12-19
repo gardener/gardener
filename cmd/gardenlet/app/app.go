@@ -79,6 +79,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	clientutils "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	thirdpartyapiutil "github.com/gardener/gardener/third_party/controller-runtime/pkg/apiutil"
 )
 
@@ -469,32 +470,34 @@ func (g *garden) cleanupOrphanedExtensionsServiceAccounts(ctx context.Context, g
 
 // TODO(Kostov6): Remove this code after v1.91 has been released.
 func (g *garden) cleanupGRMSecretFinalizers(ctx context.Context, seedClient client.Client, log logr.Logger) error {
-	var taskFns []flow.TaskFn
-
 	mrs := &resourcesv1alpha1.ManagedResourceList{}
 	if err := seedClient.List(ctx, mrs); err != nil {
+		if meta.IsNoMatchError(err) {
+			// resources.gardener.cloud/v1alpha1 CRD not yet applied
+			return nil
+		}
 		return fmt.Errorf("failed to list ManagedResources while cleaning up GRM finalizers: %w", err)
 	}
-	for _, mr := range mrs.Items {
-		mr := mr
-		taskFns = append(taskFns, func(ctx context.Context) error {
-			for _, ref := range mr.Spec.SecretRefs {
-				secret := &corev1.Secret{}
-				if err := g.mgr.GetClient().Get(ctx, client.ObjectKey{Namespace: mr.Namespace, Name: ref.Name}, secret); err != nil {
-					return fmt.Errorf("failed to get secret while cleaning up GRM finalizers: %w", err)
-				}
-				for _, finalizer := range secret.Finalizers {
-					if strings.HasPrefix(finalizer, predicate.FinalizerName) {
-						if err := controllerutils.RemoveFinalizers(ctx, seedClient, secret, finalizer); err != nil {
-							return fmt.Errorf("failed to remove finalizer while cleaning up GRM finalizers: %w", err)
-						}
+	return clientutils.ApplyToObjects(ctx, mrs, func(ctx context.Context, obj client.Object) error {
+		mr, ok := obj.(*resourcesv1alpha1.ManagedResource)
+		if !ok {
+			return fmt.Errorf("expected *resourcesv1alpha1.ManagedResource but got %T", obj)
+		}
+		for _, ref := range mr.Spec.SecretRefs {
+			secret := &corev1.Secret{}
+			if err := g.mgr.GetClient().Get(ctx, client.ObjectKey{Namespace: mr.Namespace, Name: ref.Name}, secret); err != nil {
+				return fmt.Errorf("failed to get secret while cleaning up GRM finalizers: %w", err)
+			}
+			for _, finalizer := range secret.Finalizers {
+				if strings.HasPrefix(finalizer, predicate.FinalizerName) {
+					if err := controllerutils.RemoveFinalizers(ctx, seedClient, secret, finalizer); err != nil {
+						return fmt.Errorf("failed to remove finalizer while cleaning up GRM finalizers: %w", err)
 					}
 				}
 			}
-			return nil
-		})
-	}
-	return flow.Parallel(taskFns...)(ctx)
+		}
+		return nil
+	})
 }
 
 const (
