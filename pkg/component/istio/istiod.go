@@ -84,6 +84,8 @@ type IstiodValues struct {
 	TrustDomain string
 	// Zones are the availability zones used for this `istiod` deployment.
 	Zones []string
+	// DualStack
+	DualStack bool
 }
 
 // Values contains configuration values for the Istio component.
@@ -312,7 +314,8 @@ func (i *istiod) generateIstiodChart() (*chartrenderer.RenderedChart, error) {
 		"portsNames": map[string]interface{}{
 			"metrics": istiodServicePortNameMetrics,
 		},
-		"image": istiodValues.Image,
+		"image":     istiodValues.Image,
+		"dualStack": istiodValues.DualStack,
 	})
 }
 

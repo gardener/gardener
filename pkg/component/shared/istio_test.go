@@ -46,6 +46,7 @@ type istioTestValues struct {
 	proxyProtocolEnabled              bool
 	vpnEnabled                        bool
 	zones                             []string
+	dualStack                         bool
 }
 
 func createIstio(testValues istioTestValues) istio.Interface {
@@ -72,7 +73,9 @@ func createIstio(testValues istioTestValues) istio.Interface {
 		testValues.servicePorts,
 		testValues.proxyProtocolEnabled,
 		testValues.vpnEnabled,
-		testValues.zones)
+		testValues.zones,
+		testValues.dualStack,
+	)
 
 	Expect(err).To(Not(HaveOccurred()))
 	return istio
@@ -279,7 +282,7 @@ var _ = Describe("Istio", func() {
 				labels,
 				&externalTrafficPolicy,
 				serviceExternalIP,
-				zone)).To(MatchError("at least one ingress gateway must be present before adding further ones"))
+				zone, false)).To(MatchError("at least one ingress gateway must be present before adding further ones"))
 		})
 
 		Context("without zone", func() {
@@ -295,7 +298,8 @@ var _ = Describe("Istio", func() {
 					labels,
 					&externalTrafficPolicy,
 					serviceExternalIP,
-					zone)).To(Succeed())
+					zone,
+					false)).To(Succeed())
 
 				checkAdditionalIstioGateway(
 					istioDeploy,
@@ -322,7 +326,8 @@ var _ = Describe("Istio", func() {
 					labels,
 					&externalTrafficPolicy,
 					serviceExternalIP,
-					zone)).To(Succeed())
+					zone,
+					false)).To(Succeed())
 
 				checkAdditionalIstioGateway(
 					istioDeploy,
