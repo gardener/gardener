@@ -296,7 +296,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 	if !seedIsGarden {
 		var (
 			plutono               = plutono.New(seedClient, r.GardenNamespace, nil, plutono.Values{})
-			kubeStateMetrics      = kubestatemetrics.New(seedClient, r.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
+			kubeStateMetrics      = kubestatemetrics.New(seedClient, r.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed, KubernetesVersion: kubernetesVersion})
 			etcdCRD               = etcd.NewCRD(seedClient, r.SeedClientSet.Applier())
 			etcdDruid             = etcd.NewBootstrapper(seedClient, r.GardenNamespace, nil, r.Config.ETCDConfig, "", nil, "")
 			hvpa                  = hvpa.New(seedClient, r.GardenNamespace, hvpa.Values{})

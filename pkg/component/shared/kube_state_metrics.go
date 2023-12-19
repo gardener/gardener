@@ -41,6 +41,7 @@ func NewKubeStateMetrics(
 
 	return kubestatemetrics.New(c, gardenNamespaceName, nil, kubestatemetrics.Values{
 		ClusterType:       component.ClusterTypeSeed,
+		KubernetesVersion: runtimeVersion,
 		Image:             image.String(),
 		PriorityClassName: priorityClassName,
 		Replicas:          2,

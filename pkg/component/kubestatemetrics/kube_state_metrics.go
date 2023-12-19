@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -81,6 +82,8 @@ type Values struct {
 	// only the runtime resources (like Deployment, Service, etc.) are being deployed directly (with the client). All
 	// other application-related resources (like RBAC roles, CRD, etc.) are deployed as part of a ManagedResource.
 	ClusterType component.ClusterType
+	// KubernetesVersion is the Kubernetes version of the cluster.
+	KubernetesVersion *semver.Version
 	// Image is the container image.
 	Image string
 	// PriorityClassName is the name of the priority class.
