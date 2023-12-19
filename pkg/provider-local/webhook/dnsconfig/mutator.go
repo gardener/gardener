@@ -77,7 +77,7 @@ func (m *mutator) Mutate(ctx context.Context, newObj, oldObj client.Object) erro
 	}
 
 	metav1.SetMetaDataLabel(podMeta, local.LabelNetworkPolicyToIstioIngressGateway, v1beta1constants.LabelNetworkPolicyAllowed)
-	injectDNSConfig(podSpec, newObj.GetNamespace(), service.Spec.ClusterIP)
+	injectDNSConfig(podSpec, newObj.GetNamespace(), service.Spec.ClusterIPs)
 	return nil
 }
 
@@ -86,12 +86,10 @@ func (m *mutator) Mutate(ctx context.Context, newObj, oldObj client.Object) erro
 // the gardener-extension-provider-local-coredns instead of the cluster's default DNS server. This is because this
 // extension coredns can resolve the local domains (local.gardener.cloud). It otherwise forwards the traffic to the
 // cluster's default DNS server.
-func injectDNSConfig(podSpec *corev1.PodSpec, namespace, coreDNSClusterIP string) {
+func injectDNSConfig(podSpec *corev1.PodSpec, namespace string, coreDNSClusterIPs []string) {
 	podSpec.DNSPolicy = corev1.DNSNone
 	podSpec.DNSConfig = &corev1.PodDNSConfig{
-		Nameservers: []string{
-			coreDNSClusterIP,
-		},
+		Nameservers: coreDNSClusterIPs,
 		Searches: []string{
 			fmt.Sprintf("%s.svc.%s", namespace, v1beta1.DefaultDomain),
 			"svc." + v1beta1.DefaultDomain,
