@@ -467,28 +467,34 @@ func (g *garden) cleanupOrphanedExtensionsServiceAccounts(ctx context.Context, g
 	return flow.Parallel(taskFns...)(ctx)
 }
 
-// TODO(Kostov6): Remove this code after v1.89 has been released.
+// TODO(Kostov6): Remove this code after v1.91 has been released.
 func (g *garden) cleanupGRMSecretFinalizers(ctx context.Context, seedClient client.Client, log logr.Logger) error {
+	var taskFns []flow.TaskFn
+
 	mrs := &resourcesv1alpha1.ManagedResourceList{}
 	if err := seedClient.List(ctx, mrs); err != nil {
-		log.Error(err, "Failed to list ManagedResources while cleaing up GRM finalizers")
+		return fmt.Errorf("failed to list ManagedResources while cleaning up GRM finalizers: %w", err)
 	}
-	secret := &corev1.Secret{}
 	for _, mr := range mrs.Items {
-		for _, ref := range mr.Spec.SecretRefs {
-			if err := g.mgr.GetClient().Get(ctx, client.ObjectKey{Namespace: mr.Namespace, Name: ref.Name}, secret); err != nil {
-				log.Error(err, "Failed to get secret while cleaing up GRM finalizers")
-			}
-			for _, finalizer := range secret.Finalizers {
-				if strings.HasPrefix(finalizer, predicate.FinalizerName) {
-					if err := controllerutils.RemoveFinalizers(ctx, seedClient, secret, finalizer); err != nil {
-						log.Error(err, "Failed to remove finalizer while cleaing up GRM finalizers")
+		mr := mr
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			for _, ref := range mr.Spec.SecretRefs {
+				secret := &corev1.Secret{}
+				if err := g.mgr.GetClient().Get(ctx, client.ObjectKey{Namespace: mr.Namespace, Name: ref.Name}, secret); err != nil {
+					return fmt.Errorf("failed to get secret while cleaning up GRM finalizers: %w", err)
+				}
+				for _, finalizer := range secret.Finalizers {
+					if strings.HasPrefix(finalizer, predicate.FinalizerName) {
+						if err := controllerutils.RemoveFinalizers(ctx, seedClient, secret, finalizer); err != nil {
+							return fmt.Errorf("failed to remove finalizer while cleaning up GRM finalizers: %w", err)
+						}
 					}
 				}
 			}
-		}
+			return nil
+		})
 	}
-	return nil
+	return flow.Parallel(taskFns...)(ctx)
 }
 
 const (
