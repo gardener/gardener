@@ -88,3 +88,4 @@ echo "Kubernetes API group versions removed in $2 compared to $1:"
 diff "${out_dir}/k8s-apiGVs-$1.txt" "${out_dir}/k8s-apiGVs-$2.txt" | grep '<' | awk '{print $2}'
 echo
 echo "Kubernetes API GVRs removed in $2 compared to $1:"
+diff "${out_dir}/k8s-apiGVRs-$1.txt" "${out_dir}/k8s-apiGVRs-$2.txt" | grep '<' | awk '{print $2}'
