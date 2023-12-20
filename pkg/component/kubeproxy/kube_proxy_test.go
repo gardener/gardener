@@ -385,77 +385,6 @@ metadata:
   namespace: kube-system
 `
 
-			podSecurityPolicyYAML = `apiVersion: policy/v1beta1
-kind: PodSecurityPolicy
-metadata:
-  annotations:
-    seccomp.security.alpha.kubernetes.io/allowedProfileNames: runtime/default
-    seccomp.security.alpha.kubernetes.io/defaultProfileName: runtime/default
-  creationTimestamp: null
-  name: gardener.kube-system.kube-proxy
-spec:
-  allowedCapabilities:
-  - NET_ADMIN
-  allowedHostPaths:
-  - pathPrefix: /usr/share/ca-certificates
-  - pathPrefix: /var/run/dbus/system_bus_socket
-  - pathPrefix: /lib/modules
-  - pathPrefix: /var/lib/kube-proxy
-  fsGroup:
-    rule: RunAsAny
-  hostNetwork: true
-  hostPorts:
-  - max: 10249
-    min: 10249
-  privileged: true
-  runAsUser:
-    rule: RunAsAny
-  seLinux:
-    rule: RunAsAny
-  supplementalGroups:
-    rule: RunAsAny
-  volumes:
-  - hostPath
-  - secret
-  - configMap
-  - projected
-`
-
-			clusterRolePSPYAML = `apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  creationTimestamp: null
-  name: gardener.cloud:psp:kube-system:kube-proxy
-rules:
-- apiGroups:
-  - policy
-  - extensions
-  resourceNames:
-  - gardener.kube-system.kube-proxy
-  resources:
-  - podsecuritypolicies
-  verbs:
-  - use
-`
-
-			roleBindingPSPYAML = `apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  annotations:
-    resources.gardener.cloud/delete-on-invalid-update: "true"
-  creationTimestamp: null
-  name: gardener.cloud:psp:kube-proxy
-  namespace: kube-system
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: gardener.cloud:psp:kube-system:kube-proxy
-subjects:
-- kind: ServiceAccount
-  name: kube-proxy
-  namespace: kube-system
-`
-
 			daemonSetNameFor = func(pool WorkerPool) string {
 				return "kube-proxy-" + pool.Name + "-v" + pool.KubernetesVersion.String()
 			}
@@ -744,7 +673,7 @@ status: {}
 		)
 
 		Context("IPVS Enabled", func() {
-			JustBeforeEach(func() {
+			It("should successfully deploy all resources when PSP is not disabled", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceCentral), managedResourceCentral)).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretCentral), managedResourceSecretCentral)).To(BeNotFoundError())
 
@@ -790,6 +719,7 @@ status: {}
 					"origin":    "gardener",
 				}))
 				Expect(managedResourceSecretCentral.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecretCentral.Data).To(HaveLen(7))
 				Expect(string(managedResourceSecretCentral.Data["serviceaccount__kube-system__kube-proxy.yaml"])).To(Equal(serviceAccountYAML))
 				Expect(string(managedResourceSecretCentral.Data["clusterrolebinding____gardener.cloud_target_node-proxier.yaml"])).To(Equal(clusterRoleBindingYAML))
 				Expect(string(managedResourceSecretCentral.Data["service__kube-system__kube-proxy.yaml"])).To(Equal(serviceYAML))
@@ -850,31 +780,6 @@ status: {}
 					utilruntime.Must(references.InjectAnnotations(expectedPoolMr))
 					Expect(managedResource).To(DeepEqual(expectedPoolMr))
 				}
-			})
-
-			Context("PSP is not disabled", func() {
-				BeforeEach(func() {
-					values.PSPDisabled = false
-					component = New(c, namespace, values)
-				})
-
-				It("should successfully deploy all resources when PSP is not disabled", func() {
-					Expect(managedResourceSecretCentral.Data).To(HaveLen(10))
-					Expect(string(managedResourceSecretCentral.Data["podsecuritypolicy____gardener.kube-system.kube-proxy.yaml"])).To(Equal(podSecurityPolicyYAML))
-					Expect(string(managedResourceSecretCentral.Data["clusterrole____gardener.cloud_psp_kube-system_kube-proxy.yaml"])).To(Equal(clusterRolePSPYAML))
-					Expect(string(managedResourceSecretCentral.Data["rolebinding__kube-system__gardener.cloud_psp_kube-proxy.yaml"])).To(Equal(roleBindingPSPYAML))
-				})
-			})
-
-			Context("PSP is disabled", func() {
-				BeforeEach(func() {
-					values.PSPDisabled = true
-					component = New(c, namespace, values)
-				})
-
-				It("should successfully deploy all resources when PSP is disabled", func() {
-					Expect(managedResourceSecretCentral.Data).To(HaveLen(7))
-				})
 			})
 		})
 
