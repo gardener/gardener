@@ -43,7 +43,6 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -438,10 +437,6 @@ func (k *kubeAPIServer) computeKubeAPIServerArgs() []string {
 			"policy/v1/poddisruptionbudgets": false,
 			"storage.k8s.io/v1/csidrivers":   false,
 			"storage.k8s.io/v1/csinodes":     false,
-		}
-
-		if version.ConstraintK8sLess125.Check(k.values.Version) {
-			disableAPIs["policy/v1beta1/podsecuritypolicies"] = false
 		}
 
 		// Allow users to explicitly enable disabled APIs via RuntimeConfig.

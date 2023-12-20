@@ -126,7 +126,6 @@ var _ = Describe("KubeAPIServer", func() {
 						Pods:      podNetwork,
 						Services:  serviceNetwork,
 					},
-					PSPDisabled:       false,
 					KubernetesVersion: semver.MustParse("1.26.1"),
 				},
 				APIServerAddress:   apiServerAddress,
