@@ -22,8 +22,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -32,7 +30,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/utils"
@@ -72,8 +69,6 @@ type Values struct {
 	Image string
 	// VPAEnabled marks whether VerticalPodAutoscaler is enabled for the shoot.
 	VPAEnabled bool
-	// PSPDisabled marks whether the PodSecurityPolicy admission plugin is disabled.
-	PSPDisabled bool
 }
 
 // New creates a new instance of DeployWaiter for node-exporter.
@@ -307,10 +302,7 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 			},
 		}
 
-		vpa               *vpaautoscalingv1.VerticalPodAutoscaler
-		podSecurityPolicy *policyv1beta1.PodSecurityPolicy
-		clusterRolePSP    *rbacv1.ClusterRole
-		roleBindingPSP    *rbacv1.RoleBinding
+		vpa *vpaautoscalingv1.VerticalPodAutoscaler
 	)
 
 	if n.values.VPAEnabled {
@@ -346,95 +338,10 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 		}
 	}
 
-	if !n.values.PSPDisabled {
-		podSecurityPolicy = &policyv1beta1.PodSecurityPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "gardener.kube-system.node-exporter",
-				Annotations: map[string]string{
-					v1beta1constants.AnnotationSeccompAllowedProfiles: v1beta1constants.AnnotationSeccompAllowedProfilesRuntimeDefaultValue,
-					v1beta1constants.AnnotationSeccompDefaultProfile:  v1beta1constants.AnnotationSeccompAllowedProfilesRuntimeDefaultValue,
-				},
-			},
-			Spec: policyv1beta1.PodSecurityPolicySpec{
-				Privileged: false,
-				Volumes: []policyv1beta1.FSType{
-					"hostPath",
-				},
-				HostNetwork: true,
-				HostPID:     true,
-				AllowedHostPaths: []policyv1beta1.AllowedHostPath{
-					{
-						PathPrefix: "/",
-					},
-					{
-						PathPrefix: "/sys",
-					},
-					{
-						PathPrefix: "/proc",
-					},
-				},
-				HostPorts: []policyv1beta1.HostPortRange{
-					{
-						Min: portMetrics,
-						Max: portMetrics,
-					},
-				},
-				RunAsUser: policyv1beta1.RunAsUserStrategyOptions{
-					Rule: policyv1beta1.RunAsUserStrategyMustRunAsNonRoot,
-				},
-				SELinux: policyv1beta1.SELinuxStrategyOptions{
-					Rule: policyv1beta1.SELinuxStrategyRunAsAny,
-				},
-				SupplementalGroups: policyv1beta1.SupplementalGroupsStrategyOptions{
-					Rule: policyv1beta1.SupplementalGroupsStrategyRunAsAny,
-				},
-				FSGroup: policyv1beta1.FSGroupStrategyOptions{
-					Rule: policyv1beta1.FSGroupStrategyRunAsAny,
-				},
-				ReadOnlyRootFilesystem: false,
-			},
-		}
-
-		clusterRolePSP = &rbacv1.ClusterRole{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "gardener.cloud:psp:kube-system:node-exporter",
-			},
-			Rules: []rbacv1.PolicyRule{
-				{
-					APIGroups:     []string{"policy", "extensions"},
-					ResourceNames: []string{podSecurityPolicy.Name},
-					Resources:     []string{"podsecuritypolicies"},
-					Verbs:         []string{"use"},
-				},
-			},
-		}
-
-		roleBindingPSP = &rbacv1.RoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        "gardener.cloud:psp:node-exporter",
-				Namespace:   metav1.NamespaceSystem,
-				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     clusterRolePSP.Name,
-			},
-			Subjects: []rbacv1.Subject{{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      serviceAccount.Name,
-				Namespace: serviceAccount.Namespace,
-			}},
-		}
-	}
-
 	return registry.AddAllAndSerialize(
 		serviceAccount,
 		service,
 		daemonSet,
-		podSecurityPolicy,
-		clusterRolePSP,
-		roleBindingPSP,
 		vpa,
 	)
 }

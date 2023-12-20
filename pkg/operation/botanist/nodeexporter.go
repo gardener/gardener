@@ -30,9 +30,8 @@ func (b *Botanist) DefaultNodeExporter() (nodeexporter.Interface, error) {
 	}
 
 	values := nodeexporter.Values{
-		Image:       image.String(),
-		VPAEnabled:  b.Shoot.WantsVerticalPodAutoscaler,
-		PSPDisabled: b.Shoot.PSPDisabled,
+		Image:      image.String(),
+		VPAEnabled: b.Shoot.WantsVerticalPodAutoscaler,
 	}
 
 	return nodeexporter.New(
