@@ -55,8 +55,8 @@ var _ = Describe("#bootstrapCluster", func() {
 	})
 
 	It("should return an error because the garden version is too low", func() {
-		fakeDiscoveryClient.FakedServerVersion.GitVersion = "1.22.5"
-		Expect(bootstrapCluster(ctx, fakeClient, fakeDiscoveryClient, sm)).To(MatchError(ContainSubstring("the Kubernetes version of the Garden cluster must be at least 1.24")))
+		fakeDiscoveryClient.FakedServerVersion.GitVersion = "1.24.5"
+		Expect(bootstrapCluster(ctx, fakeClient, fakeDiscoveryClient, sm)).To(MatchError(ContainSubstring("the Kubernetes version of the Garden cluster must be at least 1.25")))
 	})
 
 	It("should generate a global monitoring secret because none exists yet", func() {
