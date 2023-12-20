@@ -101,88 +101,6 @@ metadata:
   name: apiserver-proxy
   namespace: kube-system
 `
-
-		clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  creationTimestamp: null
-  labels:
-    app: kubernetes
-    gardener.cloud/role: system-component
-    origin: gardener
-    role: apiserver-proxy
-  name: gardener.cloud:psp:kube-system:apiserver-proxy
-rules:
-- apiGroups:
-  - policy
-  - extensions
-  resourceNames:
-  - gardener.kube-system.apiserver-proxy
-  resources:
-  - podsecuritypolicies
-  verbs:
-  - use
-`
-
-		pspYAML = `apiVersion: policy/v1beta1
-kind: PodSecurityPolicy
-metadata:
-  annotations:
-    seccomp.security.alpha.kubernetes.io/allowedProfileNames: runtime/default
-    seccomp.security.alpha.kubernetes.io/defaultProfileName: runtime/default
-  creationTimestamp: null
-  labels:
-    app: kubernetes
-    gardener.cloud/role: system-component
-    origin: gardener
-    role: apiserver-proxy
-  name: gardener.kube-system.apiserver-proxy
-spec:
-  allowedCapabilities:
-  - NET_ADMIN
-  - NET_BIND_SERVICE
-  fsGroup:
-    rule: RunAsAny
-  hostNetwork: true
-  hostPorts:
-  - max: 443
-    min: 443
-  - max: 16910
-    min: 16910
-  runAsUser:
-    rule: RunAsAny
-  seLinux:
-    rule: RunAsAny
-  supplementalGroups:
-    rule: RunAsAny
-  volumes:
-  - secret
-  - configMap
-  - emptyDir
-`
-
-		roleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  annotations:
-    resources.gardener.cloud/delete-on-invalid-update: "true"
-  creationTimestamp: null
-  labels:
-    app: kubernetes
-    gardener.cloud/role: system-component
-    origin: gardener
-    role: apiserver-proxy
-  name: gardener.cloud:psp:apiserver-proxy
-  namespace: kube-system
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: gardener.cloud:psp:kube-system:apiserver-proxy
-subjects:
-- kind: ServiceAccount
-  name: apiserver-proxy
-  namespace: kube-system
-`
 	)
 
 	BeforeEach(func() {
@@ -220,12 +138,11 @@ subjects:
 	})
 
 	Describe("#Deploy", func() {
-		test := func(pspDisabled bool) {
+		test := func() {
 			By("Verify that managed resource does not exist yet")
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 
 			By("Deploy the managed resource successfully")
-			values.PSPDisabled = pspDisabled
 			component = New(c, namespace, sm, values)
 			component.SetAdvertiseIPAddress(advertiseIPAddress)
 			Expect(component.Deploy(ctx)).To(Succeed())
@@ -261,12 +178,6 @@ subjects:
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 			expectedLen := 4
-			if !pspDisabled {
-				expectedLen += 3
-				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_apiserver-proxy.yaml"])).To(Equal(clusterRoleYAML))
-				Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.apiserver-proxy.yaml"])).To(Equal(pspYAML))
-				Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_apiserver-proxy.yaml"])).To(Equal(roleBindingYAML))
-			}
 			Expect(managedResourceSecret.Data).To(HaveLen(expectedLen))
 			hash := extractConfigMapHash(managedResourceSecret.Data)
 			Expect(string(managedResourceSecret.Data["configmap__kube-system__apiserver-proxy-config-"+hash+".yaml"])).To(Equal(getConfigYAML(hash, values.DNSLookupFamily, advertiseIPAddress)))
@@ -276,16 +187,8 @@ subjects:
 		}
 
 		Context("IPv4", func() {
-			Context("PSP disabled", func() {
-				It("should deploy the managed resource successfully", func() {
-					test(true)
-				})
-			})
-
-			Context("PSP enabled", func() {
-				It("should deploy the managed resource successfully", func() {
-					test(false)
-				})
+			It("should deploy the managed resource successfully", func() {
+				test()
 			})
 		})
 
@@ -295,16 +198,8 @@ subjects:
 				advertiseIPAddress = "2001:db8::1"
 			})
 
-			Context("PSP disabled", func() {
-				It("should deploy the managed resource successfully", func() {
-					test(true)
-				})
-			})
-
-			Context("PSP enabled", func() {
-				It("should deploy the managed resource successfully", func() {
-					test(false)
-				})
+			It("should deploy the managed resource successfully", func() {
+				test()
 			})
 		})
 	})
