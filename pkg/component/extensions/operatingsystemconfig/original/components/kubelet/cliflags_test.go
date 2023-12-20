@@ -51,7 +51,7 @@ var _ = Describe("CLIFlags", func() {
 				"worker.gardener.cloud/pool":                    "worker", // allowed
 				"containerruntime.worker.gardener.cloud/gvisor": "true",   // allowed
 			}
-			Expect(kubelet.CLIFlags(v, nodeLabels, criName, image, cliFlags)).To(matcher)
+			Expect(kubelet.CLIFlags(v, nodeLabels, criName, image, cliFlags, false)).To(matcher)
 		},
 
 		Entry(

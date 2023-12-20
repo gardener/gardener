@@ -100,6 +100,7 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 				ValiIngressHostName: valiIngressHost,
 				NodeLocalDNSEnabled: v1beta1helper.IsNodeLocalDNSEnabled(b.Shoot.GetInfo().Spec.SystemComponents),
 				SyncJitterPeriod:    b.Shoot.OSCSyncJitterPeriod,
+				PrimaryIPFamily:     b.Shoot.GetInfo().Spec.Networking.IPFamilies[0],
 			},
 		},
 		operatingsystemconfig.DefaultInterval,
