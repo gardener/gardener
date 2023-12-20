@@ -1,3 +1,0 @@
-allowPrivilegedContainers: false
-global:
-  kubernetesVersion: 1.20.1

@@ -1,3 +1,0 @@
-podsecuritypolicies:
-  enabled: true
-  allowPrivilegedContainers: false
