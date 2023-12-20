@@ -20,6 +20,7 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -98,14 +99,17 @@ var _ = Describe("Etcd", func() {
 		backupLeaderElectionEtcdConnectionTimeout = &metav1.Duration{Duration: 10 * time.Second}
 		backupLeaderElectionReelectionPeriod      = &metav1.Duration{Duration: 11 * time.Second}
 
-		updateModeAuto     = hvpav1alpha1.UpdateModeAuto
-		containerPolicyOff = vpaautoscalingv1.ContainerScalingModeOff
-		controlledValues   = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		metricsBasic       = druidv1alpha1.Basic
-		metricsExtensive   = druidv1alpha1.Extensive
+		updateModeAuto      = hvpav1alpha1.UpdateModeAuto
+		vpaUpdateMode       = vpaautoscalingv1.UpdateModeAuto
+		containerPolicyOff  = vpaautoscalingv1.ContainerScalingModeOff
+		containerPolicyAuto = vpaautoscalingv1.ContainerScalingModeAuto
+		controlledValues    = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+		metricsBasic        = druidv1alpha1.Basic
+		metricsExtensive    = druidv1alpha1.Extensive
 
 		etcdName = "etcd-" + testRole
 		hvpaName = "etcd-" + testRole
+		vpaName  = etcdName
 
 		etcdObjFor = func(
 			class Class,
@@ -481,6 +485,43 @@ var _ = Describe("Etcd", func() {
 
 			return obj
 		}
+
+		expectedVPA = &vpaautoscalingv1.VerticalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      vpaName,
+				Namespace: testNamespace,
+				Labels:    map[string]string{v1beta1constants.LabelRole: "etcd-vpa-main"},
+			},
+			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+				TargetRef: &autoscalingv1.CrossVersionObjectReference{
+					Name: etcdName, Kind: "StatefulSet",
+					APIVersion: appsv1.SchemeGroupVersion.String(),
+				},
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+					UpdateMode: &vpaUpdateMode,
+				},
+				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+						{
+							ContainerName: "etcd",
+							MinAllowed:    corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("200M")},
+							MaxAllowed: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("4"),
+								corev1.ResourceMemory: resource.MustParse("28G"),
+							},
+							ControlledValues: &controlledValues,
+							Mode:             &containerPolicyAuto,
+						},
+						{
+							ContainerName:    "backup-restore",
+							Mode:             &containerPolicyOff,
+							ControlledValues: &controlledValues,
+						},
+					},
+				},
+			},
+		}
+
 		serviceMonitor = &monitoringv1.ServiceMonitor{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "garden-virtual-garden-etcd-" + testRole,
@@ -1249,6 +1290,10 @@ var _ = Describe("Etcd", func() {
 						)))
 					}),
 					c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, vpaName), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
+					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
+						Expect(obj).To(DeepEqual(expectedVPA))
+					}),
 				)
 			}
 
@@ -1466,6 +1511,10 @@ var _ = Describe("Etcd", func() {
 							Expect(obj.(*druidv1alpha1.Etcd).Spec.Etcd.PeerUrlTLS).NotTo(BeNil())
 						}),
 						c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
+						c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, vpaName), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
+						c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
+							Expect(obj).To(DeepEqual(expectedVPA))
+						}),
 					)
 
 					Expect(etcd.Deploy(ctx)).To(Succeed())
@@ -1500,6 +1549,10 @@ var _ = Describe("Etcd", func() {
 							Expect(obj.(*druidv1alpha1.Etcd).Spec.Etcd.PeerUrlTLS).NotTo(BeNil())
 						}),
 						c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
+						c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, vpaName), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
+						c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
+							Expect(obj).To(DeepEqual(expectedVPA))
+						}),
 					)
 
 					Expect(etcd.Deploy(ctx)).To(Succeed())
@@ -1586,10 +1639,10 @@ var _ = Describe("Etcd", func() {
 					TopologyAwareRoutingEnabled: true,
 					NamePrefix:                  "virtual-garden-",
 				})
-				newSetHVPAConfigFunc(updateMode)()
 
 				DeferCleanup(test.WithVar(&etcdName, "virtual-garden-"+etcdName))
 				DeferCleanup(test.WithVar(&hvpaName, "virtual-garden-"+hvpaName))
+				DeferCleanup(test.WithVar(&vpaName, "virtual-garden-"+vpaName))
 
 				etcdObj := etcdObjFor(
 					class,
@@ -1623,10 +1676,8 @@ var _ = Describe("Etcd", func() {
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(etcdObj))
 					}),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, hvpaName), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-						Expect(obj).To(DeepEqual(hvpaObj))
-					}),
+					c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: hvpaName, Namespace: testNamespace}}),
+					c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: testNamespace}}),
 					c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, "garden-virtual-garden-etcd-main"), gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(serviceMonitor))
@@ -1673,9 +1724,11 @@ var _ = Describe("Etcd", func() {
 
 		It("should properly delete all expected objects", func() {
 			defer test.WithVar(&gardener.TimeNow, nowFunc)()
+
 			gomock.InOrder(
 				c.EXPECT().Patch(ctx, etcdRes, gomock.Any()),
 				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
+				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 				c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: "garden-etcd-" + testRole, Namespace: testNamespace, Labels: map[string]string{"prometheus": "garden"}}}),
 				c.EXPECT().Delete(ctx, etcdRes),
 			)
@@ -1693,12 +1746,25 @@ var _ = Describe("Etcd", func() {
 			Expect(etcd.Destroy(ctx)).To(MatchError(fakeErr))
 		})
 
+		It("should fail when VPA deletion fails", func() {
+			defer test.WithVar(&gardener.TimeNow, nowFunc)()
+
+			gomock.InOrder(
+				c.EXPECT().Patch(ctx, etcdRes, gomock.Any()),
+				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
+				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}).Return(fakeErr),
+			)
+
+			Expect(etcd.Destroy(ctx)).To(MatchError(fakeErr))
+		})
+
 		It("should fail when the service monitor deletion fails", func() {
 			defer test.WithVar(&gardener.TimeNow, nowFunc)()
 
 			gomock.InOrder(
 				c.EXPECT().Patch(ctx, etcdRes, gomock.Any()),
 				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
+				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 				c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: "garden-etcd-" + testRole, Namespace: testNamespace, Labels: map[string]string{"prometheus": "garden"}}}).Return(fakeErr),
 			)
 
@@ -1711,6 +1777,7 @@ var _ = Describe("Etcd", func() {
 			gomock.InOrder(
 				c.EXPECT().Patch(ctx, etcdRes, gomock.Any()),
 				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
+				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 				c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: "garden-etcd-" + testRole, Namespace: testNamespace, Labels: map[string]string{"prometheus": "garden"}}}),
 				c.EXPECT().Delete(ctx, etcdRes).Return(fakeErr),
 			)

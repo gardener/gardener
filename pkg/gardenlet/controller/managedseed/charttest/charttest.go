@@ -783,6 +783,9 @@ func ComputeExpectedGardenletConfiguration(
 			TokenRequestor: &gardenletv1alpha1.TokenRequestorControllerConfiguration{
 				ConcurrentSyncs: &five,
 			},
+			VPAEvictionRequirements: &gardenletv1alpha1.VPAEvictionRequirementsControllerConfiguration{
+				ConcurrentSyncs: &five,
+			},
 			ControllerInstallation: &gardenletv1alpha1.ControllerInstallationControllerConfiguration{
 				ConcurrentSyncs: &twenty,
 			},
