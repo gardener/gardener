@@ -144,80 +144,6 @@ subjects:
   name: node-problem-detector
   namespace: kube-system
 `
-			clusterRolePSPYAML = `apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  creationTimestamp: null
-  labels:
-    app.kubernetes.io/instance: shoot-core
-    app.kubernetes.io/name: node-problem-detector
-  name: gardener.cloud:psp:kube-system:node-problem-detector
-rules:
-- apiGroups:
-  - extensions
-  - policy
-  resourceNames:
-  - node-problem-detector
-  resources:
-  - podsecuritypolicies
-  verbs:
-  - use
-`
-			clusterRoleBindingPSPYAML = `apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  annotations:
-    resources.gardener.cloud/delete-on-invalid-update: "true"
-  creationTimestamp: null
-  labels:
-    app.kubernetes.io/instance: shoot-core
-    app.kubernetes.io/name: node-problem-detector
-  name: gardener.cloud:psp:node-problem-detector
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: gardener.cloud:psp:kube-system:node-problem-detector
-subjects:
-- kind: ServiceAccount
-  name: node-problem-detector
-  namespace: kube-system
-`
-			podSecurityPolicyYAML = `apiVersion: policy/v1beta1
-kind: PodSecurityPolicy
-metadata:
-  annotations:
-    seccomp.security.alpha.kubernetes.io/allowedProfileNames: runtime/default
-    seccomp.security.alpha.kubernetes.io/defaultProfileName: runtime/default
-  creationTimestamp: null
-  labels:
-    app.kubernetes.io/instance: shoot-core
-    app.kubernetes.io/name: node-problem-detector
-  name: node-problem-detector
-spec:
-  allowPrivilegeEscalation: true
-  allowedCapabilities:
-  - '*'
-  allowedHostPaths:
-  - pathPrefix: /etc/localtime
-  - pathPrefix: /var/log
-  - pathPrefix: /dev/kmsg
-  fsGroup:
-    rule: RunAsAny
-  privileged: true
-  runAsUser:
-    rule: RunAsAny
-  seLinux:
-    rule: RunAsAny
-  supplementalGroups:
-    rule: RunAsAny
-  volumes:
-  - configMap
-  - emptyDir
-  - projected
-  - secret
-  - downwardAPI
-  - hostPath
-`
 			hostPathFileOrCreate = corev1.HostPathFileOrCreate
 
 			daemonsetYAMLFor = func(apiserverHost string, vpaEnabled bool) string {
@@ -394,6 +320,7 @@ status: {}
 
 		Context("w/o apiserver host, w/o vpaEnabled", func() {
 			It("should successfully deploy all resources", func() {
+				Expect(managedResourceSecret.Data).To(HaveLen(4))
 				Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor("", false)))
 			})
 		})
@@ -410,33 +337,9 @@ status: {}
 			})
 
 			It("should successfully deploy all resources", func() {
+				Expect(managedResourceSecret.Data).To(HaveLen(5))
 				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-problem-detector.yaml"])).To(Equal(vpaYAML))
 				Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor(apiserverHost, vpaEnabled)))
-			})
-		})
-
-		Context("PSP is disabled", func() {
-			BeforeEach(func() {
-				values.PSPDisabled = true
-			})
-
-			It("should successfully deploy all PSP resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(4))
-				Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor("", false)))
-			})
-		})
-
-		Context("PSP is not disabled", func() {
-			BeforeEach(func() {
-				values.PSPDisabled = false
-			})
-
-			It("should successfully deploy all PSP resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(7))
-				Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor("", false)))
-				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_psp_node-problem-detector.yaml"])).To(Equal(clusterRoleBindingPSPYAML))
-				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-problem-detector.yaml"])).To(Equal(clusterRolePSPYAML))
-				Expect(string(managedResourceSecret.Data["podsecuritypolicy____node-problem-detector.yaml"])).To(Equal(podSecurityPolicyYAML))
 			})
 		})
 	})
