@@ -188,8 +188,6 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 	}
 
 	allErrs = append(allErrs, ValidateEncryptionConfigUpdate(newEncryptionConfig, oldEncryptionConfig, sets.New(newShoot.Status.EncryptedResources...), etcdEncryptionKeyRotation, hibernationEnabled, field.NewPath("spec", "kubernetes", "kubeAPIServer", "encryptionConfig"))...)
-	// validate version updates only to kubernetes 1.25
-	allErrs = append(allErrs, validateKubernetesVersionUpdate125(newShoot, oldShoot)...)
 	allErrs = append(allErrs, ValidateShoot(newShoot)...)
 	allErrs = append(allErrs, ValidateShootHAConfigUpdate(newShoot, oldShoot)...)
 	allErrs = append(allErrs, validateHibernationUpdate(newShoot, oldShoot)...)
@@ -1178,42 +1176,6 @@ func ValidateVerticalPodAutoscaler(autoScaler core.VerticalPodAutoscaler, fldPat
 	}
 
 	return allErrs
-}
-
-func validateKubernetesVersionUpdate125(new, old *core.Shoot) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	newShootVersionGreaterEqual125, err := versionutils.CheckVersionMeetsConstraint(new.Spec.Kubernetes.Version, ">= 1.25")
-	if err != nil {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "kubernetes", "version"), new.Spec.Kubernetes.Version, "Invalid new kubernetes version"))
-	}
-	oldShootVersionLess125, err := versionutils.CheckVersionMeetsConstraint(old.Spec.Kubernetes.Version, "< 1.25")
-	if err != nil {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "kubernetes", "version"), old.Spec.Kubernetes.Version, "Invalid old kubernetes version"))
-	}
-
-	// since we have disabled the policy/v1beta1/podsecuritypolicies API for workerless shoots, we only need to check for disabled PSPs for regular shoots.
-	if !helper.IsWorkerless(new) && newShootVersionGreaterEqual125 && oldShootVersionLess125 {
-		pspDisabledInNewSpec := isPSPDisabled(new.Spec.Kubernetes.KubeAPIServer)
-		pspDisabledInOldSpec := isPSPDisabled(old.Spec.Kubernetes.KubeAPIServer)
-		if !pspDisabledInNewSpec || !pspDisabledInOldSpec {
-			allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "kubernetes", "version"), `admission plugin "PodSecurityPolicy" should be disabled for Kubernetes versions >=1.25, please check https://github.com/gardener/gardener/blob/master/docs/usage/pod-security.md#migrating-from-podsecuritypolicys-to-podsecurity-admission-controller`))
-		} else if shootReconciliationSuccessful, msg := shootReconciliationSuccessful(old); !shootReconciliationSuccessful {
-			allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "kubernetes", "version"), fmt.Sprintf("Shoot should have been reconciled successfully before upgrading to v1.25; error: %s", msg)))
-		}
-	}
-	return allErrs
-}
-
-func isPSPDisabled(kubeAPIServerConfig *core.KubeAPIServerConfig) bool {
-	if kubeAPIServerConfig != nil {
-		for _, plugin := range kubeAPIServerConfig.AdmissionPlugins {
-			if plugin.Name == "PodSecurityPolicy" && ptr.Deref(plugin.Disabled, false) {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 func validateHibernationUpdate(new, old *core.Shoot) field.ErrorList {

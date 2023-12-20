@@ -15,7 +15,6 @@
 package validation
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -141,28 +140,6 @@ func ValidateFailureToleranceTypeValue(value core.FailureToleranceType, fldPath 
 	}
 
 	return allErrs
-}
-
-// shootReconciliationSuccessful checks if a shoot is successfully reconciled.
-// In case it is not, it also returns a descriptive message stating the reason.
-func shootReconciliationSuccessful(shoot *core.Shoot) (bool, string) {
-	if shoot.Generation != shoot.Status.ObservedGeneration {
-		return false, "shoot generation did not equal observed generation"
-	}
-	if shoot.Status.LastOperation == nil {
-		return false, "no last operation present yet"
-	}
-
-	if shoot.Status.LastOperation.Type == core.LastOperationTypeCreate ||
-		shoot.Status.LastOperation.Type == core.LastOperationTypeReconcile {
-		if shoot.Status.LastOperation.State == core.LastOperationStateSucceeded {
-			return true, ""
-		} else {
-			return false, fmt.Sprintf("last operation type was %s but state was not succeeded", shoot.Status.LastOperation.Type)
-		}
-	}
-
-	return false, fmt.Sprintf("last operation was %s, not Reconcile", shoot.Status.LastOperation.Type)
 }
 
 var availableIPFamilies = sets.New(

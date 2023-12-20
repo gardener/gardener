@@ -2928,77 +2928,6 @@ var _ = Describe("Helper", func() {
 		)
 	})
 
-	Describe("#IsPSPDisabled", func() {
-		var shoot *gardencorev1beta1.Shoot
-
-		BeforeEach(func() {
-			shoot = &gardencorev1beta1.Shoot{
-				Spec: gardencorev1beta1.ShootSpec{
-					Kubernetes: gardencorev1beta1.Kubernetes{
-						Version:       "1.24.0",
-						KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
-					},
-					Provider: gardencorev1beta1.Provider{
-						Workers: []gardencorev1beta1.Worker{
-							{
-								Name: "worker",
-							},
-						},
-					},
-				},
-			}
-		})
-
-		It("should return true if Kubernetes version >= 1.25", func() {
-			shoot.Spec.Kubernetes.Version = "1.25.0"
-
-			Expect(IsPSPDisabled(shoot)).To(BeTrue())
-		})
-
-		It("should return true if PodSecurityPolicy admissionPlugin is disabled", func() {
-			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
-				{
-					Name:     "PodSecurityPolicy",
-					Disabled: ptr.To(true),
-				},
-			}
-
-			Expect(IsPSPDisabled(shoot)).To(BeTrue())
-		})
-
-		It("should return false if PodSecurityPolicy admissionPlugin is not disabled", func() {
-			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
-				{
-					Name: "PodSecurityPolicy",
-				},
-			}
-
-			Expect(IsPSPDisabled(shoot)).To(BeFalse())
-		})
-
-		It("should return false if PodSecurityPolicy admissionPlugin is not specified in the shootSpec", func() {
-			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
-				{
-					Name: "NamespaceLifecycle",
-				},
-			}
-
-			Expect(IsPSPDisabled(shoot)).To(BeFalse())
-		})
-
-		It("should return false if KubeAPIServerConfig is nil", func() {
-			shoot.Spec.Kubernetes.KubeAPIServer = nil
-
-			Expect(IsPSPDisabled(shoot)).To(BeFalse())
-		})
-
-		It("should return true for workerless Shoots", func() {
-			shoot.Spec.Provider.Workers = nil
-
-			Expect(IsPSPDisabled(shoot)).To(BeTrue())
-		})
-	})
-
 	Describe("#GetAllZonesFromShoot", func() {
 		It("should return an empty list because there are no zones", func() {
 			Expect(sets.List(GetAllZonesFromShoot(&gardencorev1beta1.Shoot{}))).To(BeEmpty())
@@ -3035,8 +2964,8 @@ var _ = Describe("Helper", func() {
 			Expect(IsFailureToleranceTypeZone(failureToleranceType)).To(Equal(expectedResult))
 		},
 
-		Entry("failureToleranceType is zone", failureToleranceTypePointer(gardencorev1beta1.FailureToleranceTypeZone), true),
-		Entry("failureToleranceType is node", failureToleranceTypePointer(gardencorev1beta1.FailureToleranceTypeNode), false),
+		Entry("failureToleranceType is zone", ptr.To(gardencorev1beta1.FailureToleranceTypeZone), true),
+		Entry("failureToleranceType is node", ptr.To(gardencorev1beta1.FailureToleranceTypeNode), false),
 		Entry("failureToleranceType is nil", nil, false),
 	)
 
@@ -3045,8 +2974,8 @@ var _ = Describe("Helper", func() {
 			Expect(IsFailureToleranceTypeNode(failureToleranceType)).To(Equal(expectedResult))
 		},
 
-		Entry("failureToleranceType is zone", failureToleranceTypePointer(gardencorev1beta1.FailureToleranceTypeZone), false),
-		Entry("failureToleranceType is node", failureToleranceTypePointer(gardencorev1beta1.FailureToleranceTypeNode), true),
+		Entry("failureToleranceType is zone", ptr.To(gardencorev1beta1.FailureToleranceTypeZone), false),
+		Entry("failureToleranceType is node", ptr.To(gardencorev1beta1.FailureToleranceTypeNode), true),
 		Entry("failureToleranceType is nil", nil, false),
 	)
 
@@ -3492,8 +3421,4 @@ var _ = Describe("Helper", func() {
 
 func timePointer(t time.Time) *metav1.Time {
 	return &metav1.Time{Time: t}
-}
-
-func failureToleranceTypePointer(failureToleranceType gardencorev1beta1.FailureToleranceType) *gardencorev1beta1.FailureToleranceType {
-	return &failureToleranceType
 }
