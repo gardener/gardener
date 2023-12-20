@@ -18,9 +18,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// SetDefaults_ClusterOpenIDConnectPreset sets default values for ClusterOpenIDConnectPreset objects.
-func SetDefaults_ClusterOpenIDConnectPreset(obj *ClusterOpenIDConnectPreset) {
-	if obj.Spec.ProjectSelector == nil {
-		obj.Spec.ProjectSelector = &metav1.LabelSelector{}
+// SetDefaults_ClusterOpenIDConnectPresetSpec sets default values for ClusterOpenIDConnectPreset objects.
+func SetDefaults_ClusterOpenIDConnectPresetSpec(obj *ClusterOpenIDConnectPresetSpec) {
+	if obj.ProjectSelector == nil {
+		obj.ProjectSelector = &metav1.LabelSelector{}
 	}
 }
