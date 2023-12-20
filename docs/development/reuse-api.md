@@ -2,8 +2,8 @@
 
 We are using the [REUSE API](https://api.reuse.software/) to check and display the compliance with the REUSE guidelines.
 
-To run the REUSE linter to ensure the compliance of the project in case you added new files to the project you need to 
-runt the following steps:
+To run the REUSE linter to ensure the compliance of the project in case you add new files to the project you need to 
+run the following steps:
 
 1. Install the `reuse` tool
 
