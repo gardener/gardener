@@ -191,7 +191,6 @@ subjects:
 			Image:               image,
 			SidecarImage:        sidecarImage,
 			ProxySeedServerHost: proxySeedServerHost,
-			ListenIPAddress:     "0.0.0.0",
 			DNSLookupFamily:     "V4_ONLY",
 		}
 	})
@@ -270,7 +269,7 @@ subjects:
 			}
 			Expect(managedResourceSecret.Data).To(HaveLen(expectedLen))
 			hash := extractConfigMapHash(managedResourceSecret.Data)
-			Expect(string(managedResourceSecret.Data["configmap__kube-system__apiserver-proxy-config-"+hash+".yaml"])).To(Equal(getConfigYAML(hash, values.ListenIPAddress, values.DNSLookupFamily, advertiseIPAddress)))
+			Expect(string(managedResourceSecret.Data["configmap__kube-system__apiserver-proxy-config-"+hash+".yaml"])).To(Equal(getConfigYAML(hash, values.DNSLookupFamily, advertiseIPAddress)))
 			Expect(string(managedResourceSecret.Data["daemonset__kube-system__apiserver-proxy.yaml"])).To(Equal(getDaemonSetYAML(hash, advertiseIPAddress)))
 			Expect(string(managedResourceSecret.Data["service__kube-system__apiserver-proxy.yaml"])).To(Equal(serviceYAML))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__apiserver-proxy.yaml"])).To(Equal(serviceAccountYAML))
@@ -292,7 +291,6 @@ subjects:
 
 		Context("IPv6", func() {
 			BeforeEach(func() {
-				values.ListenIPAddress = "::"
 				values.DNSLookupFamily = "V6_ONLY"
 				advertiseIPAddress = "2001:db8::1"
 			})
@@ -417,7 +415,7 @@ subjects:
 	})
 })
 
-func getConfigYAML(hash string, listenIPAddress string, dnsLookUpFamily string, advertiseIPAddress string) string {
+func getConfigYAML(hash string, dnsLookUpFamily string, advertiseIPAddress string) string {
 	return `apiVersion: v1
 data:
   envoy.yaml: |
@@ -484,8 +482,13 @@ data:
       - name: metrics
         address:
           socket_address:
-            address: "` + listenIPAddress + `"
+            address: "0.0.0.0"
             port_value: 16910
+        additional_addresses:
+        - address:
+            socket_address:
+              address: "::"
+              port_value: 16910
         filter_chains:
         - filters:
           - name: envoy.filters.network.http_connection_manager

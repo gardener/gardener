@@ -61,8 +61,13 @@ static_resources:
   - name: metrics
     address:
       socket_address:
-        address: {{ .listenAddress | quote }}
+        address: "0.0.0.0"
         port_value: {{ .adminPort }}
+    additional_addresses:
+    - address:
+        socket_address:
+          address: "::"
+          port_value: {{ .adminPort }}
     filter_chains:
     - filters:
       - name: envoy.filters.network.http_connection_manager
