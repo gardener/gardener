@@ -161,9 +161,6 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 		"cluster": map[string]interface{}{
 			"enabled": false,
 		},
-		"podSecurityPolicy": map[string]interface{}{
-			"create": !v1beta1helper.IsPSPDisabled(shoot),
-		},
 		"rbac": map[string]interface{}{
 			"create": true,
 		},
