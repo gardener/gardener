@@ -24,11 +24,10 @@ import (
 
 var _ = Describe("kubernetes", func() {
 	Describe("#GetAdmissionPluginsForVersion", func() {
-		It("should return the correct list for 1.24", func() {
+		It("should return the correct list for 1.25", func() {
 			expected := []string{"Priority",
 				"NamespaceLifecycle",
 				"LimitRanger",
-				"PodSecurityPolicy",
 				"PodSecurity",
 				"ServiceAccount",
 				"NodeRestriction",
@@ -40,14 +39,14 @@ var _ = Describe("kubernetes", func() {
 				"ValidatingAdmissionWebhook",
 			}
 
-			plugins := GetAdmissionPluginsForVersion("1.24.0")
+			plugins := GetAdmissionPluginsForVersion("1.25.0")
 
 			for _, plugin := range expected {
 				Expect(plugins).To(ContainElement(gardencorev1beta1.AdmissionPlugin{Name: plugin}))
 			}
 		})
 
-		It("should return the correct list for 1.25 or higher", func() {
+		It("should return the correct list for > 1.25", func() {
 			expected := []string{"Priority",
 				"NamespaceLifecycle",
 				"LimitRanger",

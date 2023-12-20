@@ -124,7 +124,7 @@ func NewKubeAPIServer(
 	)
 
 	if apiServerConfig != nil {
-		enabledAdmissionPlugins = computeEnabledKubeAPIServerAdmissionPlugins(enabledAdmissionPlugins, apiServerConfig.AdmissionPlugins, isWorkerless)
+		enabledAdmissionPlugins = computeEnabledAPIServerAdmissionPlugins(enabledAdmissionPlugins, apiServerConfig.AdmissionPlugins)
 		disabledAdmissionPlugins = computeDisabledAPIServerAdmissionPlugins(apiServerConfig.AdmissionPlugins)
 
 		enabledAdmissionPlugins, err = ensureKubeAPIServerAdmissionPluginConfig(enabledAdmissionPlugins)
@@ -351,18 +351,6 @@ func ensureKubeAPIServerAdmissionPluginConfig(plugins []gardencorev1beta1.Admiss
 	}
 
 	return plugins, nil
-}
-
-func computeEnabledKubeAPIServerAdmissionPlugins(defaultPlugins, configuredPlugins []gardencorev1beta1.AdmissionPlugin, isWorkerless bool) []gardencorev1beta1.AdmissionPlugin {
-	var admissionPlugins []gardencorev1beta1.AdmissionPlugin
-	for _, defaultPlugin := range computeEnabledAPIServerAdmissionPlugins(defaultPlugins, configuredPlugins) {
-		// if it's a workerless cluster, we don't add the PodSecurityPolicy plugin, because the API is disabled already
-		if isWorkerless && defaultPlugin.Name == "PodSecurityPolicy" {
-			continue
-		}
-		admissionPlugins = append(admissionPlugins, defaultPlugin)
-	}
-	return admissionPlugins
 }
 
 func computeKubeAPIServerReplicas(autoscalingConfig apiserver.AutoscalingConfig, deployment *appsv1.Deployment, wantScaleDown bool) *int32 {
