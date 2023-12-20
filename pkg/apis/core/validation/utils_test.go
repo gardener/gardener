@@ -100,19 +100,6 @@ var _ = Describe("Utils tests", func() {
 			))
 		})
 
-		It("should deny dual-stack IP families", func() {
-			ipFamilies := []core.IPFamily{core.IPFamilyIPv4, core.IPFamilyIPv6}
-			errorList := ValidateIPFamilies(ipFamilies, fldPath)
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":     Equal(field.ErrorTypeInvalid),
-					"Field":    Equal(fldPath.String()),
-					"BadValue": Equal(ipFamilies),
-					"Detail":   Equal("dual-stack networking is not supported"),
-				})),
-			))
-		})
-
 		It("should allow IPv4 single-stack", func() {
 			errorList := ValidateIPFamilies([]core.IPFamily{core.IPFamilyIPv4}, fldPath)
 			Expect(errorList).To(BeEmpty())

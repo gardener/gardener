@@ -69,6 +69,10 @@ func (s *SeedConfigChecker) Start(ctx context.Context) error {
 	return nil
 }
 
+func isSameIPFamily(ip net.IP, ipNet *net.IPNet) bool {
+	return (ip.To4() == nil && ipNet.IP.To4() == nil) || (ip.To4() != nil && ipNet.IP.To4() != nil)
+}
+
 // checkSeedConfigHeuristically validates the networking configuration of the seed configuration heuristically against the actual cluster.
 func checkSeedConfigHeuristically(ctx context.Context, seedClient client.Client, seedConfig *config.SeedConfig) error {
 	// Restrict the heuristic to a maximum of 100 entries to prevent initialization delays for big clusters
@@ -88,7 +92,7 @@ func checkSeedConfigHeuristically(ctx context.Context, seedClient client.Client,
 		for _, node := range nodeList.Items {
 			for _, address := range node.Status.Addresses {
 				if address.Type == corev1.NodeInternalIP {
-					if ip := net.ParseIP(address.Address); ip != nil && !seedConfigNodes.Contains(ip) {
+					if ip := net.ParseIP(address.Address); ip != nil && !seedConfigNodes.Contains(ip) && isSameIPFamily(ip, seedConfigNodes) {
 						return fmt.Errorf("incorrect node network specified in seed configuration (cluster node=%q vs. config=%q)", ip, *seedConfig.Spec.Networks.Nodes)
 					}
 				}
