@@ -74,8 +74,6 @@ const (
 	addonBackendName          = "addons-nginx-ingress-nginx-ingress-k8s-backend"
 	addonContainerNameBackend = "nginx-ingress-nginx-ingress-k8s-backend"
 
-	roleBindingPSPName = "gardener.cloud:psp:addons-nginx-ingress"
-
 	servicePortControllerHttp   int32 = 80
 	containerPortControllerHttp int32 = 80
 	// ServicePortControllerHttps is the service port used by the controller.
@@ -113,8 +111,6 @@ type Values struct {
 	ExternalTrafficPolicy corev1.ServiceExternalTrafficPolicyType
 	// VPAEnabled marks whether VerticalPodAutoscaler is enabled for the shoot.
 	VPAEnabled bool
-	// PSPDisabled marks whether the PodSecurityPolicy admission plugin is disabled.
-	PSPDisabled bool
 	// WildcardIngressDomains are the wildcard domains used by all ingress resources exposed by nginx-ingress.
 	WildcardIngressDomains []string
 	// IstioIngressGatewayLabels are the labels for identifying the used istio ingress gateway.
@@ -613,7 +609,6 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 
 		updateMode          = vpaautoscalingv1.UpdateModeAuto
 		vpa                 *vpaautoscalingv1.VerticalPodAutoscaler
-		roleBindingPSP      *rbacv1.RoleBinding
 		podDisruptionBudget *policyv1.PodDisruptionBudget
 		networkPolicy       *networkingv1.NetworkPolicy
 
@@ -748,28 +743,6 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		}
 	}
 
-	if !n.values.PSPDisabled {
-		roleBindingPSP = &rbacv1.RoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      roleBindingPSPName,
-				Namespace: metav1.NamespaceSystem,
-				Annotations: map[string]string{
-					resourcesv1alpha1.DeleteOnInvalidUpdate: "true",
-				},
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     "gardener.cloud:psp:privileged",
-			},
-			Subjects: []rbacv1.Subject{{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      serviceAccount.Name,
-				Namespace: serviceAccount.Namespace,
-			}},
-		}
-	}
-
 	if err := registry.Add(virtualServices...); err != nil {
 		return nil, err
 	}
@@ -788,7 +761,6 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		serviceBackend,
 		deploymentBackend,
 		ingressClass,
-		roleBindingPSP,
 		networkPolicy,
 		destinationRule,
 		gateway,
