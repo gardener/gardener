@@ -32,13 +32,13 @@ import (
 )
 
 var _ = Describe("Defaults", func() {
+	var obj *GardenletConfiguration
+
+	BeforeEach(func() {
+		obj = &GardenletConfiguration{}
+	})
+
 	Describe("GardenletConfiguration", func() {
-		var obj *GardenletConfiguration
-
-		BeforeEach(func() {
-			obj = &GardenletConfiguration{}
-		})
-
 		It("should default the gardenlet configuration", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)
 
@@ -234,189 +234,118 @@ var _ = Describe("Defaults", func() {
 	})
 
 	Describe("#SetDefaults_GardenClientConnection", func() {
-		var obj *GardenClientConnection
-
-		BeforeEach(func() {
-			obj = &GardenClientConnection{}
-		})
-
 		It("should default the configuration", func() {
-			SetDefaults_GardenClientConnection(obj)
+			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.KubeconfigValidity).NotTo(BeNil())
+			Expect(obj.GardenClientConnection.KubeconfigValidity).NotTo(BeNil())
 		})
 	})
 
 	Describe("#SetDefaults_KubeconfigValidity", func() {
-		var obj *KubeconfigValidity
-
-		BeforeEach(func() {
-			obj = &KubeconfigValidity{}
-		})
-
 		It("should default the configuration", func() {
-			SetDefaults_KubeconfigValidity(obj)
+			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Validity).To(BeNil())
-			Expect(obj.AutoRotationJitterPercentageMin).To(PointTo(Equal(int32(70))))
-			Expect(obj.AutoRotationJitterPercentageMax).To(PointTo(Equal(int32(90))))
+			Expect(obj.GardenClientConnection.KubeconfigValidity.Validity).To(BeNil())
+			Expect(obj.GardenClientConnection.KubeconfigValidity.AutoRotationJitterPercentageMin).To(PointTo(Equal(int32(70))))
+			Expect(obj.GardenClientConnection.KubeconfigValidity.AutoRotationJitterPercentageMax).To(PointTo(Equal(int32(90))))
 		})
 	})
 
 	Describe("#SetDefaults_ManagedSeedControllerConfiguration", func() {
-		var obj *ManagedSeedControllerConfiguration
-
-		BeforeEach(func() {
-			obj = &ManagedSeedControllerConfiguration{}
-		})
-
 		It("should default the configuration", func() {
-			SetDefaults_ManagedSeedControllerConfiguration(obj)
+			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(DefaultControllerConcurrentSyncs)))
-			Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 1 * time.Hour})))
-			Expect(obj.WaitSyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 15 * time.Second})))
-			Expect(obj.SyncJitterPeriod).To(PointTo(Equal(metav1.Duration{Duration: 5 * time.Minute})))
-			Expect(obj.JitterUpdates).To(PointTo(BeFalse()))
+			Expect(obj.Controllers.ManagedSeed.ConcurrentSyncs).To(PointTo(Equal(DefaultControllerConcurrentSyncs)))
+			Expect(obj.Controllers.ManagedSeed.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 1 * time.Hour})))
+			Expect(obj.Controllers.ManagedSeed.WaitSyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 15 * time.Second})))
+			Expect(obj.Controllers.ManagedSeed.SyncJitterPeriod).To(PointTo(Equal(metav1.Duration{Duration: 5 * time.Minute})))
+			Expect(obj.Controllers.ManagedSeed.JitterUpdates).To(PointTo(BeFalse()))
 		})
 	})
 
 	Describe("#SetDefaults_SeedControllerConfiguration", func() {
-		var obj *SeedControllerConfiguration
-
-		BeforeEach(func() {
-			obj = &SeedControllerConfiguration{}
-		})
-
 		It("should default the configuration", func() {
-			SetDefaults_SeedControllerConfiguration(obj)
+			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.SyncPeriod).To(PointTo(Equal(DefaultControllerSyncPeriod)))
-			Expect(obj.LeaseResyncSeconds).To(PointTo(Equal(int32(2))))
-			Expect(obj.LeaseResyncMissThreshold).To(PointTo(Equal(int32(10))))
+			Expect(obj.Controllers.Seed.SyncPeriod).To(PointTo(Equal(DefaultControllerSyncPeriod)))
+			Expect(obj.Controllers.Seed.LeaseResyncSeconds).To(PointTo(Equal(int32(2))))
+			Expect(obj.Controllers.Seed.LeaseResyncMissThreshold).To(PointTo(Equal(int32(10))))
 		})
 	})
 
 	Describe("#SetDefaults_SeedCareControllerConfiguration", func() {
-		var obj *SeedCareControllerConfiguration
-
-		BeforeEach(func() {
-			obj = &SeedCareControllerConfiguration{}
-		})
-
 		It("should default the configuration", func() {
-			SetDefaults_SeedCareControllerConfiguration(obj)
+			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 30 * time.Second})))
+			Expect(obj.Controllers.SeedCare.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 30 * time.Second})))
 		})
 	})
 
 	Describe("#SetDefaults_ShootControllerConfiguration", func() {
-		var obj *ShootControllerConfiguration
-
-		BeforeEach(func() {
-			obj = &ShootControllerConfiguration{}
-		})
-
 		It("should default the configuration", func() {
-			SetDefaults_ShootControllerConfiguration(obj)
+			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(20)))
-			Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Hour})))
-			Expect(obj.RespectSyncPeriodOverwrite).To(PointTo(Equal(false)))
-			Expect(obj.ReconcileInMaintenanceOnly).To(PointTo(Equal(false)))
-			Expect(obj.RetryDuration).To(PointTo(Equal(metav1.Duration{Duration: 12 * time.Hour})))
-			Expect(obj.DNSEntryTTLSeconds).To(PointTo(Equal(int64(120))))
+			Expect(obj.Controllers.Shoot.ConcurrentSyncs).To(PointTo(Equal(20)))
+			Expect(obj.Controllers.Shoot.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Hour})))
+			Expect(obj.Controllers.Shoot.RespectSyncPeriodOverwrite).To(PointTo(Equal(false)))
+			Expect(obj.Controllers.Shoot.ReconcileInMaintenanceOnly).To(PointTo(Equal(false)))
+			Expect(obj.Controllers.Shoot.RetryDuration).To(PointTo(Equal(metav1.Duration{Duration: 12 * time.Hour})))
+			Expect(obj.Controllers.Shoot.DNSEntryTTLSeconds).To(PointTo(Equal(int64(120))))
 		})
 	})
 
 	Describe("#SetDefaults_ShootCareControllerConfiguration", func() {
-		var obj *ShootCareControllerConfiguration
-
-		BeforeEach(func() {
-			obj = &ShootCareControllerConfiguration{}
-		})
-
 		It("should default the configuration", func() {
-			SetDefaults_ShootCareControllerConfiguration(obj)
+			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.SyncPeriod).To(PointTo(Equal(DefaultControllerSyncPeriod)))
-			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(DefaultControllerConcurrentSyncs)))
-			Expect(obj.StaleExtensionHealthChecks).To(PointTo(Equal(StaleExtensionHealthChecks{Enabled: true})))
+			Expect(obj.Controllers.ShootCare.SyncPeriod).To(PointTo(Equal(DefaultControllerSyncPeriod)))
+			Expect(obj.Controllers.ShootCare.ConcurrentSyncs).To(PointTo(Equal(DefaultControllerConcurrentSyncs)))
+			Expect(obj.Controllers.ShootCare.StaleExtensionHealthChecks.Enabled).To(BeTrue())
+			Expect(obj.Controllers.ShootCare.StaleExtensionHealthChecks.Threshold).To(PointTo(Equal(metav1.Duration{Duration: 5 * time.Minute})))
 		})
 	})
 
 	Describe("#SetDefaults_ShootStateControllerConfiguration", func() {
-		var obj *ShootStateControllerConfiguration
-
-		BeforeEach(func() {
-			obj = &ShootStateControllerConfiguration{}
-		})
-
 		It("should default the configuration", func() {
-			SetDefaults_ShootStateControllerConfiguration(obj)
+			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
-			Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 6 * time.Hour})))
+			Expect(obj.Controllers.ShootState.ConcurrentSyncs).To(PointTo(Equal(5)))
+			Expect(obj.Controllers.ShootState.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 6 * time.Hour})))
 		})
 	})
 
 	Describe("#SetDefaults_BackupEntryControllerConfiguration", func() {
-		var obj *BackupEntryControllerConfiguration
-
-		BeforeEach(func() {
-			obj = &BackupEntryControllerConfiguration{}
-		})
-
 		It("should default the configuration", func() {
-			SetDefaults_BackupEntryControllerConfiguration(obj)
+			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(20)))
-			Expect(obj.DeletionGracePeriodHours).To(PointTo(Equal(0)))
-			Expect(obj.DeletionGracePeriodShootPurposes).To(BeEmpty())
+			Expect(obj.Controllers.BackupEntry.ConcurrentSyncs).To(PointTo(Equal(20)))
+			Expect(obj.Controllers.BackupEntry.DeletionGracePeriodHours).To(PointTo(Equal(0)))
+			Expect(obj.Controllers.BackupEntry.DeletionGracePeriodShootPurposes).To(BeEmpty())
 		})
 	})
 
 	Describe("#SetDefaults_BastionControllerConfiguration", func() {
-		var obj *BastionControllerConfiguration
-
-		BeforeEach(func() {
-			obj = &BastionControllerConfiguration{}
-		})
-
 		It("should default the configuration", func() {
-			SetDefaults_BastionControllerConfiguration(obj)
+			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(20)))
+			Expect(obj.Controllers.Bastion.ConcurrentSyncs).To(PointTo(Equal(20)))
 		})
 	})
 
 	Describe("#SetDefaults_MonitoringConfig", func() {
-		var obj *MonitoringConfig
-
-		BeforeEach(func() {
-			obj = &MonitoringConfig{}
-		})
-
 		It("should default to the configuration", func() {
-			SetDefaults_MonitoringConfig(obj)
+			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Shoot).ToNot(BeNil())
+			Expect(obj.Monitoring.Shoot).ToNot(BeNil())
 		})
 	})
 
 	Describe("#SetDefaults_ShootMonitoringConfig", func() {
-		var obj *ShootMonitoringConfig
-
-		BeforeEach(func() {
-			obj = &ShootMonitoringConfig{}
-		})
-
 		It("should default to the configuration", func() {
-			SetDefaults_ShootMonitoringConfig(obj)
+			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj).ToNot(BeNil())
-			Expect(*obj.Enabled).To(BeTrue())
+			Expect(obj.Monitoring.Shoot).ToNot(BeNil())
+			Expect(*obj.Monitoring.Shoot.Enabled).To(BeTrue())
 		})
 	})
 })
