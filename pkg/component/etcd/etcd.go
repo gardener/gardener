@@ -26,6 +26,7 @@ import (
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -549,6 +550,12 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		if err := kubernetesutils.DeleteObjects(ctx, e.client, hvpa); err != nil {
 			return err
 		}
+
+		vpa := e.emptyVerticalPodAutoscaler()
+
+		if err := e.reconcileVerticalPodAutoscaler(ctx, vpa, minAllowed); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -582,6 +589,83 @@ func GetLabels() map[string]string {
 
 func (e *etcd) emptyHVPA() *hvpav1alpha1.Hvpa {
 	return &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: e.etcd.Name, Namespace: e.namespace}}
+}
+
+func (e *etcd) emptyVerticalPodAutoscaler() *vpaautoscalingv1.VerticalPodAutoscaler {
+	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: e.etcd.Name + "-vpa", Namespace: e.namespace}}
+}
+
+func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautoscalingv1.VerticalPodAutoscaler, minAllowed corev1.ResourceList) error {
+	vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
+	containerPolicyOff := vpaautoscalingv1.ContainerScalingModeOff
+	containerPolicyAuto := vpaautoscalingv1.ContainerScalingModeAuto
+	controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+	vpaLabels := vpa.GetLabels()
+	if vpaLabels == nil {
+		vpaLabels = map[string]string{}
+	}
+	vpaLabels[v1beta1constants.LabelRole] = "etcd-vpa-" + e.values.Role
+	vpaAnnotations := map[string]string{}
+	var scaleDownUpdateMode *string
+
+	if e.values.HvpaConfig != nil {
+		scaleDownUpdateMode = e.values.HvpaConfig.ScaleDownUpdateMode
+	}
+	if pointer.StringDeref(scaleDownUpdateMode, "") == hvpav1alpha1.UpdateModeOff {
+		vpaLabels[v1beta1constants.LabelVPAEvictionRequirementsController] = "managed-by-controller"
+		vpaLabels[v1beta1constants.LabelVPAEvictionRequirementDownscaleDisabled] = "true"
+		delete(vpaLabels, v1beta1constants.LabelVPAEvictionRequirementDownscaleInMaintenanceOnly)
+	} else if pointer.StringDeref(scaleDownUpdateMode, "") == hvpav1alpha1.UpdateModeMaintenanceWindow {
+		vpaLabels[v1beta1constants.LabelVPAEvictionRequirementsController] = "managed-by-controller"
+		vpaLabels[v1beta1constants.LabelVPAEvictionRequirementDownscaleInMaintenanceOnly] = "true"
+		vpaAnnotations[v1beta1constants.AnnotationShootMaintenanceWindow] = e.values.HvpaConfig.MaintenanceTimeWindow.Begin + "," + e.values.HvpaConfig.MaintenanceTimeWindow.End
+
+		delete(vpaLabels, v1beta1constants.LabelVPAEvictionRequirementDownscaleDisabled)
+	} else {
+		delete(vpaLabels, v1beta1constants.LabelVPAEvictionRequirementDownscaleInMaintenanceOnly)
+		delete(vpaLabels, v1beta1constants.LabelVPAEvictionRequirementDownscaleDisabled)
+	}
+
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, vpa, func() error {
+		vpa.Spec = vpaautoscalingv1.VerticalPodAutoscalerSpec{
+			TargetRef: &autoscalingv1.CrossVersionObjectReference{
+				APIVersion: appsv1.SchemeGroupVersion.String(),
+				Kind:       "StatefulSet",
+				Name:       e.etcd.Name,
+			},
+			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+				UpdateMode: &vpaUpdateMode,
+			},
+			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+					{
+						ContainerName: containerNameEtcd,
+						MinAllowed:    minAllowed,
+						MaxAllowed: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("4"),
+							corev1.ResourceMemory: resource.MustParse("30G"),
+						},
+						ControlledValues: &controlledValues,
+						Mode:             &containerPolicyAuto,
+					},
+					{
+						ContainerName:    containerNameBackupRestore,
+						Mode:             &containerPolicyOff,
+						ControlledValues: &controlledValues,
+					},
+				},
+			},
+		}
+
+		vpa.SetLabels(vpaLabels)
+		for key, value := range vpaAnnotations {
+			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, key, value)
+		}
+
+		return nil
+	})
+
+	return err
 }
 
 func (e *etcd) Snapshot(ctx context.Context, httpClient rest.HTTPClient) error {

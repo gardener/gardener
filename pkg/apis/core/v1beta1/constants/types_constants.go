@@ -549,6 +549,22 @@ const (
 	// The value can be true or false.
 	LabelNodeLocalDNS = "networking.gardener.cloud/node-local-dns-enabled"
 
+	// LabelVPAEvictionRequirementsController is a constant for a label indicating that a VPA resource is under control
+	// of the VPAEvictionRequirementsController.
+	LabelVPAEvictionRequirementsController = "evictionrequirements.gardener.cloud"
+
+	// LabelVPAEvictionRequirementDownscaleInMaintenanceOnly is a constant for a label key on a VPA object indicating that
+	// the VPAEvictionRequirementsController should add an EvictionRestriction that prevents downscaling when the
+	// corresponding Shoot is not in its maintenance window.
+	LabelVPAEvictionRequirementDownscaleInMaintenanceOnly = "evictionrequirements.gardener.cloud/allow-downscale-in-maintenance-window-only"
+
+	// LabelVPAEvictionRequirementDownscaleDisabled is a constant for a label key on a VPA object indicating that
+	// the VPAEvictionRequirementsController should add an EvictionRestriction that prevents downscaling entirely.
+	LabelVPAEvictionRequirementDownscaleDisabled = "evictionrequirements.gardener.cloud/disable-downscale"
+
+	// AnnotationShootMaintenanceWindow is a constant for an annotation key used on VPA objects to hold the Shoot's maintenance window start and end.
+	AnnotationShootMaintenanceWindow = "shootmaintenancewindow.gardener.cloud"
+
 	// GardenNamespace is the namespace in which the configuration and secrets for
 	// the Gardener controller manager will be stored (e.g., secrets for the Seed clusters).
 	// It is also used by the gardener-apiserver.
