@@ -977,6 +977,7 @@ build:
             - pkg/gardenlet/controller/shoot/shoot
             - pkg/gardenlet/controller/shoot/shoot/helper
             - pkg/gardenlet/controller/shoot/state
+            - pkg/gardenlet/controller/vpaevictionrequirements
             - pkg/gardenlet/features
             - pkg/gardenlet/operation
             - pkg/gardenlet/operation/botanist
