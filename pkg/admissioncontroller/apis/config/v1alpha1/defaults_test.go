@@ -61,15 +61,26 @@ var _ = Describe("Defaults", func() {
 	Describe("ServerConfiguration defaulting", func() {
 		It("should default ServerConfiguration correctly", func() {
 			obj := &AdmissionControllerConfiguration{}
+			expected := &ServerConfiguration{
+				Webhooks: HTTPSServer{
+					Server: Server{
+						BindAddress: "",
+						Port:        2721,
+					},
+				},
+				ResourceAdmissionConfiguration: &ResourceAdmissionConfiguration{},
+				HealthProbes: &Server{
+					BindAddress: "",
+					Port:        2722,
+				},
+				Metrics: &Server{
+					BindAddress: "",
+					Port:        2723,
+				},
+			}
 			SetObjectDefaults_AdmissionControllerConfiguration(obj)
 
-			Expect(obj.Server.Webhooks.BindAddress).To(BeEmpty())
-			Expect(obj.Server.Webhooks.Port).To(Equal(2721))
-			Expect(obj.Server.ResourceAdmissionConfiguration).To(Equal(&ResourceAdmissionConfiguration{}))
-			Expect(obj.Server.HealthProbes.BindAddress).To(BeEmpty())
-			Expect(obj.Server.HealthProbes.Port).To(Equal(2722))
-			Expect(obj.Server.Metrics.BindAddress).To(BeEmpty())
-			Expect(obj.Server.Metrics.Port).To(Equal(2723))
+			Expect(&obj.Server).To(Equal(expected))
 		})
 
 		It("should correctly default the resource admission configuration if given", func() {
@@ -84,11 +95,16 @@ var _ = Describe("Defaults", func() {
 					},
 				},
 			}
+			expected := &ResourceAdmissionConfiguration{
+				UnrestrictedSubjects: []rbacv1.Subject{
+					{Kind: rbacv1.UserKind, Name: "foo", APIGroup: rbacv1.GroupName},
+					{Kind: rbacv1.GroupKind, Name: "bar", APIGroup: rbacv1.GroupName},
+					{Kind: rbacv1.ServiceAccountKind, Name: "foobar", Namespace: "default", APIGroup: ""},
+				},
+			}
 			SetObjectDefaults_AdmissionControllerConfiguration(obj)
 
-			Expect(obj.Server.ResourceAdmissionConfiguration.UnrestrictedSubjects[0].APIGroup).To(Equal(rbacv1.GroupName))
-			Expect(obj.Server.ResourceAdmissionConfiguration.UnrestrictedSubjects[1].APIGroup).To(Equal(rbacv1.GroupName))
-			Expect(obj.Server.ResourceAdmissionConfiguration.UnrestrictedSubjects[2].APIGroup).To(Equal(""))
+			Expect(obj.Server.ResourceAdmissionConfiguration).To(Equal(expected))
 		})
 
 		It("should not default other fields that are set", func() {
