@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Masterminds/semver/v3"
 	"k8s.io/apimachinery/pkg/util/wait"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/utils/clock"
@@ -48,16 +47,6 @@ func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targe
 		return fmt.Errorf("failed creating Kubernetes client: %w", err)
 	}
 
-	targetServerVersion, err := targetClientSet.Discovery().ServerVersion()
-	if err != nil {
-		return err
-	}
-
-	targetKubernetesVersion, err := semver.NewVersion(targetServerVersion.GitVersion)
-	if err != nil {
-		return err
-	}
-
 	if cfg.Controllers.KubeletCSRApprover.Enabled {
 		if err := (&csrapprover.Reconciler{
 			CertificatesClient: targetClientSet.CertificatesV1().CertificateSigningRequests(),
@@ -69,9 +58,8 @@ func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targe
 
 	if cfg.Controllers.GarbageCollector.Enabled {
 		if err := (&garbagecollector.Reconciler{
-			Config:                  cfg.Controllers.GarbageCollector,
-			Clock:                   clock.RealClock{},
-			TargetKubernetesVersion: targetKubernetesVersion,
+			Config: cfg.Controllers.GarbageCollector,
+			Clock:  clock.RealClock{},
 		}).AddToManager(mgr, targetCluster); err != nil {
 			return fmt.Errorf("failed adding garbage collector controller: %w", err)
 		}
