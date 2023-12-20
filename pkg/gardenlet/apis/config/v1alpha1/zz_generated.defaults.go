@@ -99,6 +99,7 @@ func SetObjectDefaults_GardenletConfiguration(in *GardenletConfiguration) {
 	if in.LeaderElection != nil {
 		SetDefaults_LeaderElectionConfiguration(in.LeaderElection)
 	}
+	SetDefaults_ServerConfiguration(&in.Server)
 	if in.Logging != nil {
 		SetDefaults_Logging(in.Logging)
 	}
@@ -110,6 +111,15 @@ func SetObjectDefaults_GardenletConfiguration(in *GardenletConfiguration) {
 	}
 	if in.ETCDConfig != nil {
 		SetDefaults_ETCDConfig(in.ETCDConfig)
+		if in.ETCDConfig.ETCDController != nil {
+			SetDefaults_ETCDController(in.ETCDConfig.ETCDController)
+		}
+		if in.ETCDConfig.CustodianController != nil {
+			SetDefaults_CustodianController(in.ETCDConfig.CustodianController)
+		}
+		if in.ETCDConfig.BackupCompactionController != nil {
+			SetDefaults_BackupCompactionController(in.ETCDConfig.BackupCompactionController)
+		}
 	}
 	for i := range in.ExposureClassHandlers {
 		a := &in.ExposureClassHandlers[i]
