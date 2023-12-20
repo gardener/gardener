@@ -61,6 +61,7 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
 			Expect(&obj.GardenClientConnection).To(Equal(expected))
 		})
+
 		It("should not default ContentType and AcceptContentTypes", func() {
 			obj := &ControllerManagerConfiguration{}
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
@@ -100,6 +101,7 @@ var _ = Describe("Defaults", func() {
 
 			Expect(obj.LeaderElection).To(Equal(expected))
 		})
+
 		It("should not default fields that are set", func() {
 			obj := &ControllerManagerConfiguration{
 				LeaderElection: &componentbaseconfigv1alpha1.LeaderElectionConfiguration{
@@ -470,6 +472,7 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
 			Expect(obj.Controllers.SecretBinding).To(Equal(expected))
 		})
+
 		It("should not default fields that are set", func() {
 			obj := &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
@@ -483,6 +486,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.SecretBinding).To(Equal(expected))
 		})
 	})
+
 	Describe("SeedExtensionsCheckControllerConfiguration defaulting", func() {
 		It("should default SeedExtensionsCheckControllerConfiguration correctly", func() {
 			obj := &ControllerManagerConfiguration{}
@@ -493,6 +497,7 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
 			Expect(obj.Controllers.SeedExtensionsCheck).To(Equal(expected))
 		})
+
 		It("should not default fields that are set", func() {
 			obj := &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
@@ -507,6 +512,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.SeedExtensionsCheck).To(Equal(expected))
 		})
 	})
+
 	Describe("SeedBackupBucketsCheckControllerConfiguration defaulting", func() {
 		It("should default SeedBackupBucketsCheckControllerConfiguration correctly", func() {
 			obj := &ControllerManagerConfiguration{}
@@ -517,6 +523,7 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
 			Expect(obj.Controllers.SeedBackupBucketsCheck).To(Equal(expected))
 		})
+
 		It("should not default fields that are set", func() {
 			obj := &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
@@ -531,6 +538,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.SeedBackupBucketsCheck).To(Equal(expected))
 		})
 	})
+
 	Describe("ShootHibernationControllerConfiguration defaulting", func() {
 		It("should default ShootHibernationControllerConfiguration correctly", func() {
 			obj := &ControllerManagerConfiguration{}
@@ -541,6 +549,7 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
 			Expect(&obj.Controllers.ShootHibernation).To(Equal(expected))
 		})
+
 		It("should not default fields that are set", func() {
 			obj := &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
@@ -555,6 +564,7 @@ var _ = Describe("Defaults", func() {
 			Expect(&obj.Controllers.ShootHibernation).To(Equal(expected))
 		})
 	})
+
 	Describe("ShootMaintenanceControllerConfiguration defaulting", func() {
 		It("should default ShootMaintenanceControllerConfiguration correctly", func() {
 			obj := &ControllerManagerConfiguration{}
@@ -565,6 +575,7 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
 			Expect(&obj.Controllers.ShootMaintenance).To(Equal(expected))
 		})
+
 		It("should not default fields that are set", func() {
 			obj := &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
