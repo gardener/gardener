@@ -180,6 +180,9 @@ func SetDefaults_GardenletControllerConfiguration(obj *GardenletControllerConfig
 	if obj.TokenRequestor == nil {
 		obj.TokenRequestor = &TokenRequestorControllerConfiguration{}
 	}
+	if obj.VPAEvictionRequirements == nil {
+		obj.VPAEvictionRequirements = &VPAEvictionRequirementsControllerConfiguration{}
+	}
 }
 
 // SetDefaults_ClientConnectionConfiguration sets defaults for the client connection objects.
@@ -416,6 +419,13 @@ func SetDefaults_ManagedSeedControllerConfiguration(obj *ManagedSeedControllerCo
 func SetDefaults_TokenRequestorControllerConfiguration(obj *TokenRequestorControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
 		obj.ConcurrentSyncs = ptr.To(5)
+	}
+}
+
+// SetDefaults_VPAEvictionRequirementsControllerConfiguration sets defaults for the VPAEvictionRequirements controller.
+func SetDefaults_VPAEvictionRequirementsControllerConfiguration(obj *VPAEvictionRequirementsControllerConfiguration) {
+	if obj.ConcurrentSyncs == nil {
+		obj.ConcurrentSyncs = pointer.Int(5)
 	}
 }
 

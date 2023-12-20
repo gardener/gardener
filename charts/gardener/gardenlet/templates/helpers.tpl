@@ -258,6 +258,12 @@ config.yaml: |
     {{- end }}
     tokenRequestor:
       concurrentSyncs: {{ required ".Values.config.controllers.tokenRequestor.concurrentSyncs is required" .Values.config.controllers.tokenRequestor.concurrentSyncs }}
+    {{- if .Values.config.controllers.vpaEvictionRequirements }}
+    vpaEvictionRequirements:
+      {{- if .Values.config.controllers.vpaEvictionRequirements.concurrentSyncs }}
+      concurrentSyncs: {{ .Values.config.controllers.vpaEvictionRequirements.concurrentSyncs }}
+      {{- end }}
+    {{- end }}
   resources:
     capacity:
       shoots: {{ required ".Values.config.resources.capacity.shoots is required" .Values.config.resources.capacity.shoots }}

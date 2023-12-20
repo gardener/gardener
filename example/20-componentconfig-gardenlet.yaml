@@ -87,6 +87,8 @@ controllers:
     syncJitterPeriod: 5m
   tokenRequestor:
     concurrentSyncs: 5
+  vpaEvictionRequirements:
+    concurrentSyncs: 5
 resources:
   capacity:
     shoots: 200
