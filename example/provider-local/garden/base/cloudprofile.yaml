@@ -13,7 +13,6 @@ spec:
     - version: 1.27.1
     - version: 1.26.0
     - version: 1.25.4
-    - version: 1.24.8
   # These values do not represent the actual machine capacity. The actual
   # capacity of the machine depends on your docker resource allocation. 
   machineTypes:
