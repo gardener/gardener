@@ -103,7 +103,6 @@ type Shoot struct {
 	VPNHighAvailabilityNumberOfSeedServers  int
 	VPNHighAvailabilityNumberOfShootClients int
 	NodeLocalDNSEnabled                     bool
-	PSPDisabled                             bool
 	TopologyAwareRoutingEnabled             bool
 	Networks                                *Networks
 	BackupEntryName                         string
