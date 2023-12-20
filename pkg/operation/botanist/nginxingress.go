@@ -58,7 +58,6 @@ func (b *Botanist) DefaultNginxIngress() (component.DeployWaiter, error) {
 		nil,
 		loadBalancerSourceRanges,
 		v1beta1constants.PriorityClassNameShootSystem600,
-		b.Shoot.PSPDisabled,
 		b.Shoot.WantsVerticalPodAutoscaler,
 		component.ClusterTypeShoot,
 		externalTrafficPolicy,
