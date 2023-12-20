@@ -508,6 +508,23 @@ var _ = Describe("Defaults", func() {
 		})
 	})
 
+	Describe("VPAEvictionRequirementsControllerConfiguration defaulting", func() {
+		It("should default the VPA eviction requirements controller configuration", func() {
+			SetObjectDefaults_GardenletConfiguration(obj)
+
+			Expect(obj.Controllers.VPAEvictionRequirements.ConcurrentSyncs).To(PointTo(Equal(5)))
+		})
+
+		It("should not overwrite already set values for the VPA eviction requirements controller configuration", func() {
+			obj.Controllers = &GardenletControllerConfiguration{
+				VPAEvictionRequirements: &VPAEvictionRequirementsControllerConfiguration{ConcurrentSyncs: ptr.To(10)},
+			}
+			SetObjectDefaults_GardenletConfiguration(obj)
+
+			Expect(obj.Controllers.VPAEvictionRequirements.ConcurrentSyncs).To(PointTo(Equal(10)))
+		})
+	})
+
 	Describe("LeaderElectionConfiguration defaulting", func() {
 		It("should correctly default the leader election configuration", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)

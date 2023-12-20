@@ -200,8 +200,8 @@ func (m *MaintenanceTimeWindow) RandomDurationUntilNext(from time.Time, shiftBeg
 	from = from.UTC()
 
 	var (
-		begin = m.adjustedBegin(from)
-		end   = m.adjustedEnd(from)
+		begin = m.AdjustedBegin(from)
+		end   = m.AdjustedEnd(from)
 	)
 
 	if shiftBeginToFromIfContained && m.Contains(from) {
@@ -226,17 +226,19 @@ func (m *MaintenanceTimeWindow) RandomDurationUntilNext(from time.Time, shiftBeg
 func (m *MaintenanceTimeWindow) Duration() time.Duration {
 	var (
 		from  = time.Date(0, time.January, 1, 0, 0, 0, 0, time.UTC)
-		begin = m.adjustedBegin(from)
-		end   = m.adjustedEnd(from)
+		begin = m.AdjustedBegin(from)
+		end   = m.AdjustedEnd(from)
 	)
 	return end.Sub(begin)
 }
 
-func (m *MaintenanceTimeWindow) adjustedBegin(t time.Time) time.Time {
+// AdjustedBegin returns the MaintenanceTimeWindow's begin time, projected on the day, month and year given by the parameter t.
+func (m *MaintenanceTimeWindow) AdjustedBegin(t time.Time) time.Time {
 	return m.begin.adjust(t)
 }
 
-func (m *MaintenanceTimeWindow) adjustedEnd(t time.Time) time.Time {
+// AdjustedEnd returns the MaintenanceWindow's end time, projected on the day, month and year given by the parameter t.
+func (m *MaintenanceTimeWindow) AdjustedEnd(t time.Time) time.Time {
 	end := m.end.adjust(t)
 	if m.end.Compare(m.begin) <= 0 {
 		return end.AddDate(0, 0, 1)
