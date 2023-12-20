@@ -23,8 +23,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -35,7 +33,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	nodelocaldnsconstants "github.com/gardener/gardener/pkg/component/nodelocaldns/constants"
@@ -82,8 +79,6 @@ type Values struct {
 	ClusterDNS string
 	// DNSServer is the ClusterIP of kube-system/coredns Service
 	DNSServer string
-	// PSPDisabled marks whether the PodSecurityPolicy admission plugin is disabled.
-	PSPDisabled bool
 	// KubernetesVersion is the Kubernetes version of the Shoot.
 	KubernetesVersion *semver.Version
 }
@@ -419,10 +414,7 @@ ip6.arpa:53 {
 				},
 			},
 		}
-		vpa               *vpaautoscalingv1.VerticalPodAutoscaler
-		podSecurityPolicy *policyv1beta1.PodSecurityPolicy
-		clusterRolePSP    *rbacv1.ClusterRole
-		roleBindingPSP    *rbacv1.RoleBinding
+		vpa *vpaautoscalingv1.VerticalPodAutoscaler
 	)
 	utilruntime.Must(references.InjectAnnotations(daemonSet))
 
@@ -460,108 +452,8 @@ ip6.arpa:53 {
 		}
 	}
 
-	if !c.values.PSPDisabled {
-		podSecurityPolicy = &policyv1beta1.PodSecurityPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "gardener.kube-system.node-local-dns",
-				Annotations: map[string]string{
-					v1beta1constants.AnnotationSeccompAllowedProfiles: v1beta1constants.AnnotationSeccompAllowedProfilesRuntimeDefaultValue,
-					v1beta1constants.AnnotationSeccompDefaultProfile:  v1beta1constants.AnnotationSeccompAllowedProfilesRuntimeDefaultValue,
-				},
-				Labels: map[string]string{
-					v1beta1constants.LabelApp: nodelocaldnsconstants.LabelValue,
-				},
-			},
-			Spec: policyv1beta1.PodSecurityPolicySpec{
-				AllowedCapabilities: []corev1.Capability{
-					"NET_ADMIN",
-				},
-				AllowedHostPaths: []policyv1beta1.AllowedHostPath{
-					{
-						PathPrefix: "/run/xtables.lock",
-					},
-				},
-				FSGroup: policyv1beta1.FSGroupStrategyOptions{
-					Rule: policyv1beta1.FSGroupStrategyRunAsAny,
-				},
-				HostNetwork: true,
-				HostPorts: []policyv1beta1.HostPortRange{
-					{
-						Min: int32(53),
-						Max: int32(53),
-					},
-					{
-						Min: prometheusPort,
-						Max: prometheusPort,
-					},
-					{
-						Min: prometheusErrorPort,
-						Max: prometheusErrorPort,
-					},
-				},
-				Privileged: false,
-				RunAsUser: policyv1beta1.RunAsUserStrategyOptions{
-					Rule: policyv1beta1.RunAsUserStrategyRunAsAny,
-				},
-				SELinux: policyv1beta1.SELinuxStrategyOptions{
-					Rule: policyv1beta1.SELinuxStrategyRunAsAny,
-				},
-				SupplementalGroups: policyv1beta1.SupplementalGroupsStrategyOptions{
-					Rule: policyv1beta1.SupplementalGroupsStrategyRunAsAny,
-				},
-				Volumes: []policyv1beta1.FSType{
-					"secret",
-					"hostPath",
-					"configMap",
-					"projected",
-				},
-			},
-		}
-
-		clusterRolePSP = &rbacv1.ClusterRole{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "gardener.cloud:psp:kube-system:node-local-dns",
-				Labels: map[string]string{
-					v1beta1constants.LabelApp: nodelocaldnsconstants.LabelValue,
-				},
-			},
-			Rules: []rbacv1.PolicyRule{
-				{
-					APIGroups:     []string{"policy", "extensions"},
-					ResourceNames: []string{podSecurityPolicy.Name},
-					Resources:     []string{"podsecuritypolicies"},
-					Verbs:         []string{"use"},
-				},
-			},
-		}
-
-		roleBindingPSP = &rbacv1.RoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardener.cloud:psp:node-local-dns",
-				Namespace: metav1.NamespaceSystem,
-				Labels: map[string]string{
-					v1beta1constants.LabelApp: nodelocaldnsconstants.LabelValue,
-				},
-				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     clusterRolePSP.Name,
-			},
-			Subjects: []rbacv1.Subject{{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      serviceAccount.Name,
-				Namespace: serviceAccount.Namespace,
-			}},
-		}
-	}
-
 	return registry.AddAllAndSerialize(
 		serviceAccount,
-		podSecurityPolicy,
-		clusterRolePSP,
-		roleBindingPSP,
 		configMap,
 		service,
 		daemonSet,
