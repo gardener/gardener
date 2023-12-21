@@ -483,7 +483,7 @@ type ClusterAutoscaler struct {
 	MaxGracefulTerminationSeconds *int32
 	// IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
 	IgnoreTaints []string
-	// IgnoreDaemonsetsUtilization allow CA to ignore DaemonSet pods when calculating resource utilization for scaling down
+	// IgnoreDaemonsetsUtilization allows CA to ignore DaemonSet pods when calculating resource utilization for scaling down.
 	IgnoreDaemonsetsUtilization *bool
 	// NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up.
 	NewPodScaleUpDelay *metav1.Duration
