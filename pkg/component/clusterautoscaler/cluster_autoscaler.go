@@ -388,6 +388,7 @@ func (c *clusterAutoscaler) computeCommand() []string {
 		fmt.Sprintf("--scale-down-delay-after-delete=%s", c.config.ScaleDownDelayAfterDelete.Duration),
 		fmt.Sprintf("--scale-down-delay-after-failure=%s", c.config.ScaleDownDelayAfterFailure.Duration),
 		fmt.Sprintf("--scan-interval=%s", c.config.ScanInterval.Duration),
+		fmt.Sprintf("--ignore-daemonsets-utilization=%t", *c.config.IgnoreDaemonsetsUtilization),
 	)
 
 	if c.config.MaxEmptyBulkDelete != nil {

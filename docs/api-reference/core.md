@@ -3125,6 +3125,18 @@ int32
 </tr>
 <tr>
 <td>
+<code>ignoreDaemonsetsUtilization</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>IgnoreDaemonsetsUtilization allow CA to ignore DaemonSet pods when calculating resource utilization for scaling down</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>newPodScaleUpDelay</code></br>
 <em>
 <a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">

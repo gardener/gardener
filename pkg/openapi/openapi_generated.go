@@ -1831,6 +1831,13 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 							},
 						},
 					},
+					"ignoreDaemonsetsUtilization": {
+						SchemaProps: spec.SchemaProps{
+							Description: "IgnoreDaemonsetsUtilization allow CA to ignore DaemonSet pods when calculating resource utilization for scaling down",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 					"newPodScaleUpDelay": {
 						SchemaProps: spec.SchemaProps{
 							Description: "NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up.",

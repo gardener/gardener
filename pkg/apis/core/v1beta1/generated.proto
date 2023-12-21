@@ -407,6 +407,10 @@ message ClusterAutoscaler {
   // +optional
   repeated string ignoreTaints = 10;
 
+  // IgnoreDaemonsetsUtilization allow CA to ignore DaemonSet pods when calculating resource utilization for scaling down
+  // +optional
+  optional bool ignoreDaemonsetsUtilization = 13;
+
   // NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration newPodScaleUpDelay = 11;

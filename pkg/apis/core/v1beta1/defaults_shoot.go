@@ -329,6 +329,9 @@ func SetDefaults_ClusterAutoscaler(obj *ClusterAutoscaler) {
 	if obj.MaxGracefulTerminationSeconds == nil {
 		obj.MaxGracefulTerminationSeconds = pointer.Int32(600)
 	}
+	if obj.IgnoreDaemonsetsUtilization == nil {
+		obj.IgnoreDaemonsetsUtilization = pointer.Bool(false)
+	}
 }
 
 // SetDefaults_NginxIngress sets default values for NginxIngress objects.
