@@ -3125,18 +3125,6 @@ int32
 </tr>
 <tr>
 <td>
-<code>ignoreDaemonsetsUtilization</code></br>
-<em>
-bool
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>IgnoreDaemonsetsUtilization allow CA to ignore DaemonSet pods when calculating resource utilization for scaling down</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>newPodScaleUpDelay</code></br>
 <em>
 <a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
@@ -3159,6 +3147,18 @@ int32
 <td>
 <em>(Optional)</em>
 <p>MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: 10).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>ignoreDaemonsetsUtilization</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>IgnoreDaemonsetsUtilization allows CA to ignore DaemonSet pods when calculating resource utilization for scaling down.</p>
 </td>
 </tr>
 </tbody>
