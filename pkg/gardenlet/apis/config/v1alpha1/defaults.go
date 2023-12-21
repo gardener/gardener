@@ -19,16 +19,11 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
-
-func addDefaultingFuncs(scheme *runtime.Scheme) error {
-	return RegisterDefaults(scheme)
-}
 
 // SetDefaults_GardenletConfiguration sets defaults for the configuration of the Gardenlet.
 func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
@@ -251,7 +246,7 @@ func SetDefaults_ShootMonitoringConfig(obj *ShootMonitoringConfig) {
 	}
 }
 
-// SetDefaults_BastionControllerConfiguration sets defaults for the backup bucket controller.
+// SetDefaults_BastionControllerConfiguration sets defaults for the bastion controller.
 func SetDefaults_BastionControllerConfiguration(obj *BastionControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
 		v := DefaultControllerConcurrentSyncs
@@ -372,7 +367,7 @@ func SetDefaults_StaleExtensionHealthChecks(obj *StaleExtensionHealthChecks) {
 	}
 }
 
-// SetDefaults_ShootStateControllerConfiguration sets defaults for the shoot secret controller.
+// SetDefaults_ShootStateControllerConfiguration sets defaults for the shoot state controller.
 func SetDefaults_ShootStateControllerConfiguration(obj *ShootStateControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
 		obj.ConcurrentSyncs = pointer.Int(5)
@@ -506,7 +501,7 @@ func SetDefaults_CustodianController(obj *CustodianController) {
 	}
 }
 
-// SetDefaults_BackupCompactionController sets defaults for the backup compaction controller.
+// SetDefaults_BackupCompactionController sets defaults for the ETCD backup compaction controller.
 func SetDefaults_BackupCompactionController(obj *BackupCompactionController) {
 	if obj.Workers == nil {
 		obj.Workers = pointer.Int64(3)
