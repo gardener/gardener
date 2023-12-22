@@ -60,6 +60,9 @@ func SetDefaults_SeedNetworks(obj *SeedNetworks) {
 	if len(obj.IPFamilies) == 0 {
 		obj.IPFamilies = []IPFamily{IPFamilyIPv4}
 	}
+
+	// TODO(VPN) do we need to set the default VPN Network (depending on IPv4
+	// or IPv6) alredy here?
 }
 
 // SetDefaults_SeedSettingDependencyWatchdog sets defaults for SeedSettingDependencyWatchdog objects.

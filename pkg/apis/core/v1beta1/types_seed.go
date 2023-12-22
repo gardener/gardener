@@ -208,6 +208,9 @@ type SeedNetworks struct {
 	// Defaults to ["IPv4"].
 	// +optional
 	IPFamilies []IPFamily `json:"ipFamilies,omitempty" protobuf:"bytes,6,rep,name=ipFamilies,casttype=IPFamily"`
+	// VPN is the CIDR of the VPN network. This field is immutable.
+	// +optional
+	VPN *string `json:"vpn,omitempty" protobuf:"bytes,7,opt,name=vpn"`
 }
 
 // ShootNetworks contains the default networks CIDRs for shoots.

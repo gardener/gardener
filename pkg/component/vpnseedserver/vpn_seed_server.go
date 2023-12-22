@@ -122,6 +122,8 @@ type NetworkValues struct {
 	ServiceCIDR string
 	// NodeCIDR is the CIDR of the node network.
 	NodeCIDR string
+	// VPNCIDR is the CIDR of the VPN network.
+	VPNCIDR string
 	// IPFamilies are the IPFamilies of the shoot
 	IPFamilies []gardencorev1beta1.IPFamily
 }

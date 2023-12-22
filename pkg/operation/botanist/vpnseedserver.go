@@ -81,6 +81,8 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 			ServiceCIDR: b.Shoot.Networks.Services.String(),
 			NodeCIDR:    pointer.StringDeref(b.Shoot.GetInfo().Spec.Networking.Nodes, ""),
 			IPFamilies:  b.Shoot.GetInfo().Spec.Networking.IPFamilies,
+			// TODO(VPN) select the IPv6 VPN default network when IPv6 is used
+			VPNCIDR: pointer.StringDeref(b.Seed.GetInfo().Spec.Networks.VPN, v1beta1constants.DefaultVPNRange),
 		},
 		Replicas:                             b.Shoot.GetReplicas(1),
 		HighAvailabilityEnabled:              b.Shoot.VPNHighAvailabilityEnabled,

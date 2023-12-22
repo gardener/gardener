@@ -160,6 +160,8 @@ type SeedNetworks struct {
 	Pods string
 	// Services is the CIDR of the service network. This field is immutable.
 	Services string
+	// VPN is the CIDR of the VPN network. This field is immutable.
+	VPN *string
 	// ShootDefaults contains the default networks CIDRs for shoots.
 	ShootDefaults *ShootNetworks
 	// BlockCIDRs is a list of network addresses that should be blocked for shoot control plane components running

@@ -5043,6 +5043,7 @@ func autoConvert_v1beta1_SeedNetworks_To_core_SeedNetworks(in *SeedNetworks, out
 	out.ShootDefaults = (*core.ShootNetworks)(unsafe.Pointer(in.ShootDefaults))
 	out.BlockCIDRs = *(*[]string)(unsafe.Pointer(&in.BlockCIDRs))
 	out.IPFamilies = *(*[]core.IPFamily)(unsafe.Pointer(&in.IPFamilies))
+	out.VPN = (*string)(unsafe.Pointer(in.VPN))
 	return nil
 }
 
@@ -5055,6 +5056,7 @@ func autoConvert_core_SeedNetworks_To_v1beta1_SeedNetworks(in *core.SeedNetworks
 	out.Nodes = (*string)(unsafe.Pointer(in.Nodes))
 	out.Pods = in.Pods
 	out.Services = in.Services
+	out.VPN = (*string)(unsafe.Pointer(in.VPN))
 	out.ShootDefaults = (*ShootNetworks)(unsafe.Pointer(in.ShootDefaults))
 	out.BlockCIDRs = *(*[]string)(unsafe.Pointer(&in.BlockCIDRs))
 	out.IPFamilies = *(*[]IPFamily)(unsafe.Pointer(&in.IPFamilies))

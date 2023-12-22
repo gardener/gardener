@@ -8930,6 +8930,18 @@ See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md
 Defaults to [&ldquo;IPv4&rdquo;].</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>vpn</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>VPN is the CIDR of the VPN network. This field is immutable.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.SeedProvider">SeedProvider

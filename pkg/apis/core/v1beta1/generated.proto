@@ -2219,6 +2219,10 @@ message SeedNetworks {
   // Defaults to ["IPv4"].
   // +optional
   repeated string ipFamilies = 6;
+
+  // VPN is the CIDR of the VPN network. This field is immutable.
+  // +optional
+  optional string vpn = 7;
 }
 
 // SeedProvider defines the provider-specific information of this Seed cluster.
