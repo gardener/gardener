@@ -294,7 +294,7 @@ func (a *authzServer) reconcilePodDisruptionBudget(ctx context.Context, pdb *pol
 			},
 		}
 
-		kubernetesutils.SetUnhealthyPodEvictionPolicy(pdb, a.kubernetesVersion)
+		kubernetesutils.SetAlwaysAllowEviction(pdb, a.kubernetesVersion)
 
 		return nil
 	})

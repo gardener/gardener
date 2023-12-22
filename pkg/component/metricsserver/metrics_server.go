@@ -382,7 +382,7 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 		vpa *vpaautoscalingv1.VerticalPodAutoscaler
 	)
 
-	kubernetesutils.SetUnhealthyPodEvictionPolicy(podDisruptionBudget, m.values.KubernetesVersion)
+	kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, m.values.KubernetesVersion)
 
 	if m.values.KubeAPIServerHost != nil {
 		deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{

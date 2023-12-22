@@ -38,7 +38,7 @@ func (k *kubeAPIServer) reconcilePodDisruptionBudget(ctx context.Context, pdb *p
 			Selector:       &metav1.LabelSelector{MatchLabels: getLabels()},
 		}
 
-		kubernetesutils.SetUnhealthyPodEvictionPolicy(pdb, k.values.RuntimeVersion)
+		kubernetesutils.SetAlwaysAllowEviction(pdb, k.values.RuntimeVersion)
 
 		return nil
 	})

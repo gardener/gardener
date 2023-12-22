@@ -250,5 +250,5 @@ func (v *vpa) reconcilePodDisruptionBudget(pdb *policyv1.PodDisruptionBudget, de
 		Selector:       deployment.Spec.Selector,
 	}
 
-	kubernetesutils.SetUnhealthyPodEvictionPolicy(pdb, v.values.RuntimeKubernetesVersion)
+	kubernetesutils.SetAlwaysAllowEviction(pdb, v.values.RuntimeKubernetesVersion)
 }

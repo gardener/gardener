@@ -644,7 +644,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			},
 		}
 
-		kubernetesutils.SetUnhealthyPodEvictionPolicy(podDisruptionBudget, n.values.KubernetesVersion)
+		kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, n.values.KubernetesVersion)
 	}
 
 	if n.values.ClusterType == component.ClusterTypeShoot {

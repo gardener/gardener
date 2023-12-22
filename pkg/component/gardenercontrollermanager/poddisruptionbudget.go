@@ -35,7 +35,7 @@ func (g *gardenerControllerManager) podDisruptionBudget() *policyv1.PodDisruptio
 		},
 	}
 
-	kubernetesutils.SetUnhealthyPodEvictionPolicy(pdb, g.values.RuntimeVersion)
+	kubernetesutils.SetAlwaysAllowEviction(pdb, g.values.RuntimeVersion)
 
 	return pdb
 }

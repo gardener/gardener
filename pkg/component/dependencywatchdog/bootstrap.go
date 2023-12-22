@@ -463,7 +463,7 @@ func (b *bootstrapper) getPDB(deployment *appsv1.Deployment) *policyv1.PodDisrup
 		},
 	}
 
-	kubernetesutils.SetUnhealthyPodEvictionPolicy(pdb, b.values.KubernetesVersion)
+	kubernetesutils.SetAlwaysAllowEviction(pdb, b.values.KubernetesVersion)
 
 	return pdb
 }

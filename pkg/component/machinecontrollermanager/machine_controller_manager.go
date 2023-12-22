@@ -271,7 +271,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 			Selector:       deployment.Spec.Selector,
 		}
 
-		kubernetesutils.SetUnhealthyPodEvictionPolicy(podDisruptionBudget, m.values.RuntimeKubernetesVersion)
+		kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, m.values.RuntimeKubernetesVersion)
 
 		return nil
 	}); err != nil {

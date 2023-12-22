@@ -337,7 +337,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		}
 	)
 
-	kubernetesutils.SetUnhealthyPodEvictionPolicy(podDisruptionBudget, b.kubernetesVersion)
+	kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, b.kubernetesVersion)
 
 	resourcesToAdd = append(resourcesToAdd, podDisruptionBudget)
 

@@ -299,7 +299,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 		vpa *vpaautoscalingv1.VerticalPodAutoscaler
 	)
 
-	kubernetesutils.SetUnhealthyPodEvictionPolicy(podDisruptionBudget, b.values.KubernetesVersion)
+	kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, b.values.KubernetesVersion)
 	utilruntime.Must(references.InjectAnnotations(deployment))
 
 	if b.values.VPAEnabled {

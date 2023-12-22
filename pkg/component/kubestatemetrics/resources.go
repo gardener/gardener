@@ -348,7 +348,7 @@ func (k *kubeStateMetrics) reconcilePodDisruptionBudget(podDisruptionBudget *pol
 		Selector:       deployment.Spec.Selector,
 	}
 
-	kubernetesutils.SetUnhealthyPodEvictionPolicy(podDisruptionBudget, k.values.KubernetesVersion)
+	kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, k.values.KubernetesVersion)
 }
 
 func (k *kubeStateMetrics) getLabels() map[string]string {

@@ -1100,7 +1100,7 @@ func (r *resourceManager) ensurePodDisruptionBudget(ctx context.Context) error {
 			},
 		}
 
-		kubernetesutils.SetUnhealthyPodEvictionPolicy(pdb, r.values.RuntimeKubernetesVersion)
+		kubernetesutils.SetAlwaysAllowEviction(pdb, r.values.RuntimeKubernetesVersion)
 
 		return nil
 	})

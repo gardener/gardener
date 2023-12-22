@@ -250,7 +250,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 			MaxUnavailable: utils.IntStrPtrFromInt32(1),
 			Selector:       deployment.Spec.Selector,
 		}
-		kubernetesutils.SetUnhealthyPodEvictionPolicy(podDisruptionBudget, c.runtimeVersion)
+		kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, c.runtimeVersion)
 
 		return nil
 	}); err != nil {

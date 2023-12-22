@@ -505,7 +505,7 @@ func (v *vpnShoot) podDisruptionBudget() (client.Object, error) {
 		},
 	}
 
-	kubernetesutils.SetUnhealthyPodEvictionPolicy(pdb, v.values.KubernetesVersion)
+	kubernetesutils.SetAlwaysAllowEviction(pdb, v.values.KubernetesVersion)
 
 	return pdb, nil
 }

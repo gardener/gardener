@@ -21,11 +21,11 @@ import (
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
-// SetUnhealthyPodEvictionPolicy sets the UnhealthyPodEvictionPolicy field if the kubernetes version is >= 1.26.
-func SetUnhealthyPodEvictionPolicy(pdb *policyv1.PodDisruptionBudget, kubernetesVersion *semver.Version) {
-	var unhealthyPodEvictionPolicyAlwatysAllow = policyv1.AlwaysAllow
+// SetAlwaysAllowEviction sets the UnhealthyPodEvictionPolicy field to AlwaysAllow if the kubernetes version is >= 1.26.
+func SetAlwaysAllowEviction(pdb *policyv1.PodDisruptionBudget, kubernetesVersion *semver.Version) {
+	var unhealthyPodEvictionPolicyAlwaysAllow = policyv1.AlwaysAllow
 
 	if versionutils.ConstraintK8sGreaterEqual126.Check(kubernetesVersion) {
-		pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
+		pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwaysAllow
 	}
 }

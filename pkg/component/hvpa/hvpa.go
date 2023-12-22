@@ -307,7 +307,7 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 		}
 	)
 
-	kubernetesutils.SetUnhealthyPodEvictionPolicy(podDisruptionBudget, h.values.KubernetesVersion)
+	kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, h.values.KubernetesVersion)
 
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, networkingv1.NetworkPolicyPort{
 		Port:     utils.IntStrPtrFromInt32(portMetrics),

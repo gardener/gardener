@@ -35,7 +35,7 @@ func (g *gardenerAPIServer) podDisruptionBudget() *policyv1.PodDisruptionBudget 
 		},
 	}
 
-	kubernetesutils.SetUnhealthyPodEvictionPolicy(pdb, g.values.RuntimeVersion)
+	kubernetesutils.SetAlwaysAllowEviction(pdb, g.values.RuntimeVersion)
 
 	return pdb
 }

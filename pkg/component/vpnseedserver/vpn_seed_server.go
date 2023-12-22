@@ -661,7 +661,7 @@ func (v *vpnSeedServer) deployPodDisruptionBudget(ctx context.Context, podLabels
 			Selector:       &metav1.LabelSelector{MatchLabels: podLabels},
 		}
 
-		kubernetesutils.SetUnhealthyPodEvictionPolicy(pdb, v.values.RuntimeKubernetesVersion)
+		kubernetesutils.SetAlwaysAllowEviction(pdb, v.values.RuntimeKubernetesVersion)
 
 		return nil
 	})

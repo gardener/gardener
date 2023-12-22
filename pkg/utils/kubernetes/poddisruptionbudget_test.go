@@ -22,7 +22,7 @@ import (
 	policyv1 "k8s.io/api/policy/v1"
 )
 
-var _ = Describe("#SetUnhealthyPodEvictionPolicy", func() {
+var _ = Describe("#SetAlwaysAllowEviction", func() {
 	var pdb *policyv1.PodDisruptionBudget
 
 	BeforeEach(func() {
@@ -30,13 +30,13 @@ var _ = Describe("#SetUnhealthyPodEvictionPolicy", func() {
 	})
 
 	It("should set the UnhealthyPodEvictionPolicy field if version is >= 1.26", func() {
-		SetUnhealthyPodEvictionPolicy(pdb, semver.MustParse("1.26.0"))
+		SetAlwaysAllowEviction(pdb, semver.MustParse("1.26.0"))
 
 		Expect(pdb.Spec.UnhealthyPodEvictionPolicy).To(PointTo(Equal(policyv1.AlwaysAllow)))
 	})
 
 	It("should not set the UnhealthyPodEvictionPolicy field if version is < 1.26", func() {
-		SetUnhealthyPodEvictionPolicy(pdb, semver.MustParse("1.25.0"))
+		SetAlwaysAllowEviction(pdb, semver.MustParse("1.25.0"))
 
 		Expect(pdb.Spec.UnhealthyPodEvictionPolicy).To(BeNil())
 	})

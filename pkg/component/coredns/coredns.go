@@ -676,7 +676,7 @@ import custom/*.server
 		}
 	)
 
-	kubernetesutils.SetUnhealthyPodEvictionPolicy(podDisruptionBudget, c.values.KubernetesVersion)
+	kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, c.values.KubernetesVersion)
 
 	managedObjects := []client.Object{
 		serviceAccount,
