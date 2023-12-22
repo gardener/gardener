@@ -122,7 +122,8 @@ func New(
 	client client.Client,
 	namespace string,
 	secretsManager secretsmanager.Interface,
-	version *semver.Version,
+	runtimeVersion *semver.Version,
+	targetVersion *semver.Version,
 	image string,
 	replicas int32,
 	config *gardencorev1beta1.KubeSchedulerConfig,
@@ -131,7 +132,8 @@ func New(
 		client:         client,
 		namespace:      namespace,
 		secretsManager: secretsManager,
-		version:        version,
+		runtimeVersion: runtimeVersion,
+		targetVersion:  targetVersion,
 		image:          image,
 		replicas:       replicas,
 		config:         config,
@@ -142,7 +144,8 @@ type kubeScheduler struct {
 	client         client.Client
 	namespace      string
 	secretsManager secretsmanager.Interface
-	version        *semver.Version
+	runtimeVersion *semver.Version
+	targetVersion  *semver.Version
 	image          string
 	replicas       int32
 	config         *gardencorev1beta1.KubeSchedulerConfig
@@ -191,13 +194,12 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		deployment          = k.emptyDeployment()
 		podDisruptionBudget = k.emptyPodDisruptionBudget()
 
-		pdbMaxUnavailable       = intstr.FromInt32(1)
-		vpaUpdateMode           = vpaautoscalingv1.UpdateModeAuto
-		controlledValues        = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		port              int32 = 10259
-		probeURIScheme          = corev1.URISchemeHTTPS
-		env                     = k.computeEnvironmentVariables()
-		command                 = k.computeCommand(port)
+		vpaUpdateMode          = vpaautoscalingv1.UpdateModeAuto
+		controlledValues       = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+		port             int32 = 10259
+		probeURIScheme         = corev1.URISchemeHTTPS
+		env                    = k.computeEnvironmentVariables()
+		command                = k.computeCommand(port)
 	)
 
 	if err := k.client.Create(ctx, configMap); client.IgnoreAlreadyExists(err) != nil {
@@ -363,9 +365,12 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client, podDisruptionBudget, func() error {
 		podDisruptionBudget.Labels = getLabels()
 		podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: &pdbMaxUnavailable,
+			MaxUnavailable: utils.IntStrPtrFromInt32(1),
 			Selector:       deployment.Spec.Selector,
 		}
+
+		kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, k.runtimeVersion)
+
 		return nil
 	}); err != nil {
 		return err
@@ -490,7 +495,7 @@ func (k *kubeScheduler) computeEnvironmentVariables() []corev1.EnvVar {
 
 func (k *kubeScheduler) computeComponentConfig() (string, error) {
 	var apiVersion string
-	if versionutils.ConstraintK8sGreaterEqual125.Check(k.version) {
+	if versionutils.ConstraintK8sGreaterEqual125.Check(k.targetVersion) {
 		apiVersion = "kubescheduler.config.k8s.io/v1"
 	} else {
 		apiVersion = "kubescheduler.config.k8s.io/v1beta3"

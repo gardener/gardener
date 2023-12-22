@@ -342,13 +342,13 @@ func (k *kubeStateMetrics) emptyPodDisruptionBudget() *policyv1.PodDisruptionBud
 }
 
 func (k *kubeStateMetrics) reconcilePodDisruptionBudget(podDisruptionBudget *policyv1.PodDisruptionBudget, deployment *appsv1.Deployment) {
-	maxUnavailable := intstr.FromInt32(1)
-
 	podDisruptionBudget.Labels = k.getLabels()
 	podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
-		MaxUnavailable: &maxUnavailable,
+		MaxUnavailable: utils.IntStrPtrFromInt32(1),
 		Selector:       deployment.Spec.Selector,
 	}
+
+	kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, k.values.KubernetesVersion)
 }
 
 func (k *kubeStateMetrics) getLabels() map[string]string {

@@ -73,7 +73,7 @@ var _ = Describe("KubeControllerManager", func() {
 		namespace                     = "shoot--foo--bar"
 		version                       = "1.27.3"
 		semverVersion, _              = semver.NewVersion(version)
-		runtimeKubernetesVersion      = semver.MustParse("1.25.0")
+		runtimeKubernetesVersion      = semver.MustParse("1.26.3")
 		image                         = "registry.k8s.io/kube-controller-manager:v1.25.3"
 		hvpaConfigDisabled            = &HVPAConfig{Enabled: false}
 		hvpaConfigEnabled             = &HVPAConfig{Enabled: true}
@@ -190,29 +190,38 @@ var _ = Describe("KubeControllerManager", func() {
 		}
 
 		pdbMaxUnavailable = intstr.FromInt32(1)
-		pdb               = &policyv1.PodDisruptionBudget{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: policyv1.SchemeGroupVersion.String(),
-				Kind:       "PodDisruptionBudget",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      pdbName,
-				Namespace: namespace,
-				Labels: map[string]string{
-					"app":  "kubernetes",
-					"role": "controller-manager",
+		pdbFor            = func(runtimeKubernetesVersionGreaterEquals126 bool) *policyv1.PodDisruptionBudget {
+			pdb := &policyv1.PodDisruptionBudget{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: policyv1.SchemeGroupVersion.String(),
+					Kind:       "PodDisruptionBudget",
 				},
-				ResourceVersion: "1",
-			},
-			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &pdbMaxUnavailable,
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      pdbName,
+					Namespace: namespace,
+					Labels: map[string]string{
 						"app":  "kubernetes",
 						"role": "controller-manager",
 					},
+					ResourceVersion: "1",
 				},
-			},
+				Spec: policyv1.PodDisruptionBudgetSpec{
+					MaxUnavailable: &pdbMaxUnavailable,
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"app":  "kubernetes",
+							"role": "controller-manager",
+						},
+					},
+				},
+			}
+
+			if runtimeKubernetesVersionGreaterEquals126 {
+				unhealthyPodEvictionPolicyAllowPolicy := policyv1.AlwaysAllow
+				pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAllowPolicy
+			}
+
+			return pdb
 		}
 
 		hvpaUpdateModeAuto = hvpav1alpha1.UpdateModeAuto
@@ -630,7 +639,7 @@ namespace: kube-system
 	})
 
 	Describe("#Deploy", func() {
-		verifyDeployment := func(config *gardencorev1beta1.KubeControllerManagerConfig, isWorkless bool, hvpaConfig *HVPAConfig, controllerWorkers ControllerWorkers) {
+		verifyDeployment := func(config *gardencorev1beta1.KubeControllerManagerConfig, isWorkless bool, hvpaConfig *HVPAConfig, controllerWorkers ControllerWorkers, runtimeVersionGreaterEqual126 bool) {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 			expectedMr := &resourcesv1alpha1.ManagedResource{
 				TypeMeta: metav1.TypeMeta{
@@ -682,14 +691,15 @@ namespace: kube-system
 
 			actualPDB := &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: pdbName, Namespace: namespace}}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(actualPDB), actualPDB)).To(Succeed())
-			Expect(actualPDB).To(DeepEqual(pdb))
+			Expect(actualPDB).To(DeepEqual(pdbFor(runtimeVersionGreaterEqual126)))
 
 			actualSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: namespace}}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(actualSecret), actualSecret)).To(Succeed())
 			Expect(actualSecret).To(DeepEqual(secret))
 		}
+
 		DescribeTable("success tests for various kubernetes versions (shoots with workers)",
-			func(config *gardencorev1beta1.KubeControllerManagerConfig, hvpaConfig *HVPAConfig) {
+			func(config *gardencorev1beta1.KubeControllerManagerConfig, hvpaConfig *HVPAConfig, runtimeKubernetesVersion *semver.Version) {
 				isWorkerless = false
 				semverVersion, err := semver.NewVersion(version)
 				Expect(err).NotTo(HaveOccurred())
@@ -713,17 +723,18 @@ namespace: kube-system
 
 				Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
 
-				verifyDeployment(config, isWorkerless, hvpaConfig, controllerWorkers)
+				verifyDeployment(config, isWorkerless, hvpaConfig, controllerWorkers, versionutils.ConstraintK8sGreaterEqual126.Check(runtimeKubernetesVersion))
 			},
 
-			Entry("w/o config", emptyConfig, hvpaConfigDisabled),
-			Entry("with HVPA", emptyConfig, hvpaConfigEnabled),
-			Entry("with HVPA and custom scale-down update mode", emptyConfig, hvpaConfigEnabledScaleDownOff),
-			Entry("with non-default autoscaler config", configWithAutoscalerConfig, hvpaConfigDisabled),
-			Entry("with feature flags", configWithFeatureFlags, hvpaConfigDisabled),
-			Entry("with NodeCIDRMaskSize", configWithNodeCIDRMaskSize, hvpaConfigDisabled),
-			Entry("with PodEvictionTimeout", configWithPodEvictionTimeout, hvpaConfigDisabled),
-			Entry("with NodeMonitorGradePeriod", configWithNodeMonitorGracePeriod, hvpaConfigDisabled),
+			Entry("w/o config k8s >=1.26", emptyConfig, hvpaConfigDisabled, runtimeKubernetesVersion),
+			Entry("w/o config k8s < 1.26", emptyConfig, hvpaConfigDisabled, semver.MustParse("1.25.0")),
+			Entry("with HVPA", emptyConfig, hvpaConfigEnabled, runtimeKubernetesVersion),
+			Entry("with HVPA and custom scale-down update mode", emptyConfig, hvpaConfigEnabledScaleDownOff, runtimeKubernetesVersion),
+			Entry("with non-default autoscaler config", configWithAutoscalerConfig, hvpaConfigDisabled, runtimeKubernetesVersion),
+			Entry("with feature flags", configWithFeatureFlags, hvpaConfigDisabled, runtimeKubernetesVersion),
+			Entry("with NodeCIDRMaskSize", configWithNodeCIDRMaskSize, hvpaConfigDisabled, runtimeKubernetesVersion),
+			Entry("with PodEvictionTimeout", configWithPodEvictionTimeout, hvpaConfigDisabled, runtimeKubernetesVersion),
+			Entry("with NodeMonitorGradePeriod", configWithNodeMonitorGracePeriod, hvpaConfigDisabled, runtimeKubernetesVersion),
 		)
 
 		DescribeTable("success tests for various kubernetes versions (workerless shoot)",
@@ -751,7 +762,7 @@ namespace: kube-system
 
 				Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
 
-				verifyDeployment(config, isWorkerless, hvpaConfig, controllerWorkers)
+				verifyDeployment(config, isWorkerless, hvpaConfig, controllerWorkers, true)
 			},
 
 			Entry("w/o config", emptyConfig, hvpaConfigDisabled, controllerWorkers),

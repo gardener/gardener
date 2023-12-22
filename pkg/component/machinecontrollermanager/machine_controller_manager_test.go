@@ -54,7 +54,7 @@ var _ = Describe("MachineControllerManager", func() {
 		namespace = "shoot--foo--bar"
 
 		image                    = "mcm-image:tag"
-		runtimeKubernetesVersion = semver.MustParse("1.26.1")
+		runtimeKubernetesVersion *semver.Version
 		namespaceUID             = types.UID("uid")
 		replicas                 = int32(1)
 
@@ -75,7 +75,7 @@ var _ = Describe("MachineControllerManager", func() {
 		managedResource                   *resourcesv1alpha1.ManagedResource
 	)
 
-	BeforeEach(func() {
+	JustBeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		sm = fakesecretsmanager.New(fakeClient, namespace)
 		values = Values{
@@ -526,7 +526,7 @@ subjects:
 	})
 
 	Describe("#Deploy", func() {
-		It("should successfully deploy all resources", func() {
+		JustBeforeEach(func() {
 			Expect(mcm.Deploy(ctx)).To(Succeed())
 
 			actualServiceAccount := &corev1.ServiceAccount{}
@@ -554,11 +554,6 @@ subjects:
 			deployment.ResourceVersion = "1"
 			Expect(actualDeployment).To(Equal(deployment))
 
-			actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), actualPodDisruptionBudget)).To(Succeed())
-			podDisruptionBudget.ResourceVersion = "1"
-			Expect(actualPodDisruptionBudget).To(Equal(podDisruptionBudget))
-
 			actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(vpa), actualVPA)).To(Succeed())
 			vpa.ResourceVersion = "1"
@@ -578,6 +573,37 @@ subjects:
 			Expect(actualManagedResourceSecret).To(Equal(managedResourceSecret))
 		})
 
+		Context("Kubernetes versions < 1.26", func() {
+			BeforeEach(func() {
+				runtimeKubernetesVersion = semver.MustParse("1.25.0")
+			})
+
+			It("should successfully deploy all resources", func() {
+				actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), actualPodDisruptionBudget)).To(Succeed())
+				podDisruptionBudget.ResourceVersion = "1"
+				Expect(actualPodDisruptionBudget).To(Equal(podDisruptionBudget))
+			})
+		})
+
+		Context("Kubernetes versions >= 1.26", func() {
+			BeforeEach(func() {
+				runtimeKubernetesVersion = semver.MustParse("1.26.1")
+			})
+
+			It("should successfully deploy all resources", func() {
+				actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), actualPodDisruptionBudget)).To(Succeed())
+				podDisruptionBudget.ResourceVersion = "1"
+
+				unhealthyPodEvictionPolicyAllowPolicy := policyv1.AlwaysAllow
+				podDisruptionBudget.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAllowPolicy
+				Expect(actualPodDisruptionBudget).To(Equal(podDisruptionBudget))
+			})
+		})
+	})
+
+	Describe("Cleanup clusterrolebinding", func() {
 		It("should successfully delete unsupported clusterrolebinding and create new one", func() {
 			Expect(fakeClient.Create(ctx, unsupportedClusterRoleBindingSeed)).To(Succeed())
 			Expect(mcm.Deploy(ctx)).To(Succeed())

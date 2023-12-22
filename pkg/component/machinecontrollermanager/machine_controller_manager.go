@@ -270,6 +270,9 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 			MaxUnavailable: utils.IntStrPtrFromInt32(1),
 			Selector:       deployment.Spec.Selector,
 		}
+
+		kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, m.values.RuntimeKubernetesVersion)
+
 		return nil
 	}); err != nil {
 		return err

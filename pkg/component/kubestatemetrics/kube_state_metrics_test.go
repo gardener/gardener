@@ -17,6 +17,7 @@ package kubestatemetrics_test
 import (
 	"context"
 
+	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -71,7 +72,7 @@ var _ = Describe("KubeStateMetrics", func() {
 		serviceAccount    *corev1.ServiceAccount
 		secretShootAccess *corev1.Secret
 		vpa               *vpaautoscalingv1.VerticalPodAutoscaler
-		pdb               *policyv1.PodDisruptionBudget
+		pdbFor            func(bool) *policyv1.PodDisruptionBudget
 		clusterRoleFor    = func(clusterType component.ClusterType) *rbacv1.ClusterRole {
 			name := "gardener.cloud:monitoring:kube-state-metrics"
 			if clusterType == component.ClusterTypeSeed {
@@ -519,22 +520,33 @@ var _ = Describe("KubeStateMetrics", func() {
 			},
 		}
 		maxUnavailable := intstr.FromInt32(1)
-		pdb = &policyv1.PodDisruptionBudget{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "PodDisruptionBudget",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "kube-state-metrics-pdb",
-				Namespace: namespace,
-				Labels:    selectorLabelsClusterTypeSeed,
-			},
-			Spec: policyv1.PodDisruptionBudgetSpec{
-				Selector: &metav1.LabelSelector{
-					MatchLabels: selectorLabelsClusterTypeSeed,
-				},
-				MaxUnavailable: &maxUnavailable,
-			},
+		pdbFor = func(k8sGreaterEqual126 bool) *policyv1.PodDisruptionBudget {
+			var (
+				unhealthyPodEvictionPolicyAlwatysAllow = policyv1.AlwaysAllow
+				pdb                                    = &policyv1.PodDisruptionBudget{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "v1",
+						Kind:       "PodDisruptionBudget",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "kube-state-metrics-pdb",
+						Namespace: namespace,
+						Labels:    selectorLabelsClusterTypeSeed,
+					},
+					Spec: policyv1.PodDisruptionBudgetSpec{
+						Selector: &metav1.LabelSelector{
+							MatchLabels: selectorLabelsClusterTypeSeed,
+						},
+						MaxUnavailable: &maxUnavailable,
+					},
+				}
+			)
+
+			if k8sGreaterEqual126 {
+				pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
+			}
+
+			return pdb
 		}
 	})
 
@@ -558,6 +570,7 @@ var _ = Describe("KubeStateMetrics", func() {
 			BeforeEach(func() {
 				ksm = New(c, namespace, nil, Values{
 					ClusterType:       component.ClusterTypeSeed,
+					KubernetesVersion: semver.MustParse("1.26.3"),
 					Image:             image,
 					PriorityClassName: priorityClassName,
 					IsWorkerless:      false,
@@ -565,7 +578,7 @@ var _ = Describe("KubeStateMetrics", func() {
 				managedResourceName = "kube-state-metrics"
 			})
 
-			It("should successfully deploy all resources", func() {
+			JustBeforeEach(func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 
 				Expect(ksm.Deploy(ctx)).To(Succeed())
@@ -606,7 +619,28 @@ var _ = Describe("KubeStateMetrics", func() {
 				Expect(string(managedResourceSecret.Data["service__"+namespace+"__kube-state-metrics.yaml"])).To(Equal(componenttest.Serialize(serviceFor(component.ClusterTypeSeed))))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__kube-state-metrics.yaml"])).To(Equal(componenttest.Serialize(deploymentFor(component.ClusterTypeSeed))))
 				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__kube-state-metrics-vpa.yaml"])).To(Equal(componenttest.Serialize(vpa)))
-				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__kube-state-metrics-pdb.yaml"])).To(Equal(componenttest.Serialize(pdb)))
+			})
+
+			Context("Kubernetes versions >= 1.26", func() {
+				It("should successfully deploy all resources", func() {
+					Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__kube-state-metrics-pdb.yaml"])).To(Equal(componenttest.Serialize(pdbFor(true))))
+				})
+			})
+
+			Context("Kubernetes versions < 1.26", func() {
+				BeforeEach(func() {
+					ksm = New(c, namespace, nil, Values{
+						ClusterType:       component.ClusterTypeSeed,
+						KubernetesVersion: semver.MustParse("1.25.3"),
+						Image:             image,
+						PriorityClassName: priorityClassName,
+						IsWorkerless:      false,
+					})
+				})
+
+				It("should successfully deploy all resources", func() {
+					Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__kube-state-metrics-pdb.yaml"])).To(Equal(componenttest.Serialize(pdbFor(false))))
+				})
 			})
 		})
 

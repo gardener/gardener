@@ -317,7 +317,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			},
 		}
 
-		maxUnavailable      = intstr.FromInt32(1)
 		podDisruptionBudget = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      druidDeploymentName,
@@ -325,7 +324,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				Labels:    labels(),
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &maxUnavailable,
+				MaxUnavailable: utils.IntStrPtrFromInt32(1),
 				Selector:       deployment.Spec.Selector,
 			},
 		}
@@ -334,10 +333,13 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			serviceAccount,
 			clusterRole,
 			clusterRoleBinding,
-			podDisruptionBudget,
 			vpa,
 		}
 	)
+
+	kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, b.kubernetesVersion)
+
+	resourcesToAdd = append(resourcesToAdd, podDisruptionBudget)
 
 	portMetrics := networkingv1.NetworkPolicyPort{
 		Port:     utils.IntStrPtrFromInt32(metricsPort),

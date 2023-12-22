@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -42,6 +43,7 @@ import (
 	corednsconstants "github.com/gardener/gardener/pkg/component/coredns/constants"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
 	"github.com/gardener/gardener/pkg/utils"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -78,6 +80,8 @@ type Interface interface {
 
 // Values is a set of configuration values for the coredns component.
 type Values struct {
+	// KubernetesVersion is the Kubernetes version of the Shoot.
+	KubernetesVersion *semver.Version
 	// APIServerHost is the host of the kube-apiserver.
 	APIServerHost *string
 	// ClusterDomain is the domain used for cluster-wide DNS records handled by CoreDNS.
@@ -162,8 +166,6 @@ func (c *coreDNS) computeResourcesData() (map[string][]byte, error) {
 		portMetricsEndpoint = intstr.FromInt32(portMetrics)
 		protocolTCP         = corev1.ProtocolTCP
 		protocolUDP         = corev1.ProtocolUDP
-		intStrOne           = intstr.FromInt32(1)
-		intStrZero          = intstr.FromInt32(0)
 
 		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
 		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
@@ -353,8 +355,8 @@ import custom/*.server
 				Strategy: appsv1.DeploymentStrategy{
 					Type: appsv1.RollingUpdateDeploymentStrategyType,
 					RollingUpdate: &appsv1.RollingUpdateDeployment{
-						MaxSurge:       &intStrOne,
-						MaxUnavailable: &intStrZero,
+						MaxSurge:       utils.IntStrPtrFromInt32(1),
+						MaxUnavailable: utils.IntStrPtrFromInt32(0),
 					},
 				},
 				Selector: &metav1.LabelSelector{
@@ -639,7 +641,7 @@ import custom/*.server
 				Labels:    map[string]string{corednsconstants.LabelKey: corednsconstants.LabelValue},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &intStrOne,
+				MaxUnavailable: utils.IntStrPtrFromInt32(1),
 				Selector:       deployment.Spec.Selector,
 			},
 		}
@@ -673,6 +675,8 @@ import custom/*.server
 			},
 		}
 	)
+
+	kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, c.values.KubernetesVersion)
 
 	managedObjects := []client.Object{
 		serviceAccount,

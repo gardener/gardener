@@ -12,4 +12,3 @@ spec:
     matchLabels:
       app: istiod
       istio: pilot
-  unhealthyPodEvictionPolicy: AlwaysAllow

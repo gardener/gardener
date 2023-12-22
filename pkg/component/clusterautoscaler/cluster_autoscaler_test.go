@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
@@ -615,7 +616,7 @@ subjects:
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 
-		clusterAutoscaler = New(c, namespace, sm, image, replicas, nil)
+		clusterAutoscaler = New(c, namespace, sm, image, replicas, nil, nil)
 		clusterAutoscaler.SetNamespaceUID(namespaceUID)
 		clusterAutoscaler.SetMachineDeployments(machineDeployments)
 	})
@@ -626,13 +627,17 @@ subjects:
 
 	Describe("#Deploy", func() {
 		Context("should successfully deploy all the resources", func() {
-			test := func(withConfig bool) {
+			test := func(withConfig bool, runtimeVersionGreaterEquals126 bool) {
 				var config *gardencorev1beta1.ClusterAutoscaler
 				if withConfig {
 					config = configFull
 				}
 
-				clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config)
+				if runtimeVersionGreaterEquals126 {
+					clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, semver.MustParse("1.26.1"))
+				} else {
+					clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, semver.MustParse("1.25.0"))
+				}
 				clusterAutoscaler.SetNamespaceUID(namespaceUID)
 				clusterAutoscaler.SetMachineDeployments(machineDeployments)
 
@@ -672,7 +677,11 @@ subjects:
 				Expect(actualDeployment).To(DeepEqual(deploy))
 
 				actualPDB := &policyv1.PodDisruptionBudget{}
+				unhealthyPodEvictionPolicyAlwatysAllow := policyv1.AlwaysAllow
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(pdb), actualPDB)).To(Succeed())
+				if runtimeVersionGreaterEquals126 {
+					pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
+				}
 				Expect(actualPDB).To(DeepEqual(pdb))
 
 				actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{}
@@ -680,8 +689,9 @@ subjects:
 				Expect(actualVPA).To(DeepEqual(vpa))
 			}
 
-			It("w/o config", func() { test(false) })
-			It("w/ config", func() { test(true) })
+			It("w/o config", func() { test(false, false) })
+			It("w/ config, kubernetes version < 1.26", func() { test(true, false) })
+			It("w/ config, kubernetes version >= 1.26", func() { test(true, true) })
 		})
 	})
 

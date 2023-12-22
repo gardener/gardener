@@ -610,34 +610,75 @@ var _ = Describe("KubeAPIServer", func() {
 		})
 
 		Describe("PodDisruptionBudget", func() {
-			It("should successfully deploy the PDB resource", func() {
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: policyv1.SchemeGroupVersion.Group, Resource: "poddisruptionbudgets"}, podDisruptionBudget.Name)))
-				Expect(kapi.Deploy(ctx)).To(Succeed())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(Succeed())
-				Expect(podDisruptionBudget).To(DeepEqual(&policyv1.PodDisruptionBudget{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: policyv1.SchemeGroupVersion.String(),
-						Kind:       "PodDisruptionBudget",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            podDisruptionBudget.Name,
-						Namespace:       podDisruptionBudget.Namespace,
-						ResourceVersion: "1",
-						Labels: map[string]string{
-							"app":  "kubernetes",
-							"role": "apiserver",
+			Context("Kubernetes version < 1.26", func() {
+				It("should successfully deploy the PDB resource", func() {
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: policyv1.SchemeGroupVersion.Group, Resource: "poddisruptionbudgets"}, podDisruptionBudget.Name)))
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(Succeed())
+					Expect(podDisruptionBudget).To(DeepEqual(&policyv1.PodDisruptionBudget{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: policyv1.SchemeGroupVersion.String(),
+							Kind:       "PodDisruptionBudget",
 						},
-					},
-					Spec: policyv1.PodDisruptionBudgetSpec{
-						MaxUnavailable: utils.IntStrPtrFromInt32(1),
-						Selector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            podDisruptionBudget.Name,
+							Namespace:       podDisruptionBudget.Namespace,
+							ResourceVersion: "1",
+							Labels: map[string]string{
 								"app":  "kubernetes",
 								"role": "apiserver",
 							},
 						},
-					},
-				}))
+						Spec: policyv1.PodDisruptionBudgetSpec{
+							MaxUnavailable: utils.IntStrPtrFromInt32(1),
+							Selector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"app":  "kubernetes",
+									"role": "apiserver",
+								},
+							},
+						},
+					}))
+				})
+			})
+
+			Context("Kubernetes version >= 1.26", func() {
+				BeforeEach(func() {
+					runtimeVersion = semver.MustParse("1.26.4")
+				})
+
+				It("should successfully deploy the PDB resource", func() {
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: policyv1.SchemeGroupVersion.Group, Resource: "poddisruptionbudgets"}, podDisruptionBudget.Name)))
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(Succeed())
+
+					unhealthyPodEvictionPolicyAlwaysAllow := policyv1.AlwaysAllow
+					Expect(podDisruptionBudget).To(DeepEqual(&policyv1.PodDisruptionBudget{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: policyv1.SchemeGroupVersion.String(),
+							Kind:       "PodDisruptionBudget",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            podDisruptionBudget.Name,
+							Namespace:       podDisruptionBudget.Namespace,
+							ResourceVersion: "1",
+							Labels: map[string]string{
+								"app":  "kubernetes",
+								"role": "apiserver",
+							},
+						},
+						Spec: policyv1.PodDisruptionBudgetSpec{
+							MaxUnavailable: utils.IntStrPtrFromInt32(1),
+							Selector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"app":  "kubernetes",
+									"role": "apiserver",
+								},
+							},
+							UnhealthyPodEvictionPolicy: &unhealthyPodEvictionPolicyAlwaysAllow,
+						},
+					}))
+				})
 			})
 		})
 

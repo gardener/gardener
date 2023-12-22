@@ -51,6 +51,7 @@ func (b *Botanist) DefaultCoreDNS() (coredns.Interface, error) {
 		AutoscalingMode:                 gardencorev1beta1.CoreDNSAutoscalingModeHorizontal,
 		SearchPathRewritesEnabled:       v1beta1helper.IsCoreDNSRewritingEnabled(features.DefaultFeatureGate.Enabled(features.CoreDNSQueryRewriting), b.Shoot.GetInfo().GetAnnotations()),
 		SearchPathRewriteCommonSuffixes: getCommonSuffixesForRewriting(b.Shoot.GetInfo().Spec.SystemComponents),
+		KubernetesVersion:               b.Shoot.KubernetesVersion,
 	}
 
 	if b.ShootUsesDNS() {

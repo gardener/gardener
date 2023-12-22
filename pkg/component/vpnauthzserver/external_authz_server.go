@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Masterminds/semver/v3"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	istionetworkingv1beta1 "istio.io/api/networking/v1beta1"
@@ -56,11 +57,13 @@ func New(
 	client client.Client,
 	namespace string,
 	imageExtAuthzServer string,
+	kubernetesVersion *semver.Version,
 ) component.DeployWaiter {
 	return &authzServer{
 		client:              client,
 		namespace:           namespace,
 		imageExtAuthzServer: imageExtAuthzServer,
+		kubernetesVersion:   kubernetesVersion,
 	}
 }
 
@@ -68,6 +71,7 @@ type authzServer struct {
 	client              client.Client
 	namespace           string
 	imageExtAuthzServer string
+	kubernetesVersion   *semver.Version
 }
 
 func (a *authzServer) Deploy(ctx context.Context) error {
@@ -281,16 +285,17 @@ func (a *authzServer) emptyPDB() *policyv1.PodDisruptionBudget {
 }
 
 func (a *authzServer) reconcilePodDisruptionBudget(ctx context.Context, pdb *policyv1.PodDisruptionBudget) error {
-	maxUnavailable := intstr.FromInt32(1)
-
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, pdb, func() error {
 		pdb.Labels = getLabels()
 		pdb.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: &maxUnavailable,
+			MaxUnavailable: utils.IntStrPtrFromInt32(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: getLabels(),
 			},
 		}
+
+		kubernetesutils.SetAlwaysAllowEviction(pdb, a.kubernetesVersion)
+
 		return nil
 	})
 

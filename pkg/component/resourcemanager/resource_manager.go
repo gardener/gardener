@@ -1091,16 +1091,17 @@ func (r *resourceManager) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 func (r *resourceManager) ensurePodDisruptionBudget(ctx context.Context) error {
 	pdb := r.emptyPodDisruptionBudget()
 
-	maxUnavailable := intstr.FromInt32(1)
-
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, pdb, func() error {
 		pdb.Labels = r.getLabels()
 		pdb.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: &maxUnavailable,
+			MaxUnavailable: utils.IntStrPtrFromInt32(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: r.getDeploymentTemplateLabels(),
 			},
 		}
+
+		kubernetesutils.SetAlwaysAllowEviction(pdb, r.values.RuntimeKubernetesVersion)
+
 		return nil
 	})
 

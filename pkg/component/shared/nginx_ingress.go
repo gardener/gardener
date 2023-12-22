@@ -54,6 +54,7 @@ func NewNginxIngress(
 	}
 
 	values := nginxingress.Values{
+		KubernetesVersion:        kubernetesVersion,
 		ImageController:          imageController.String(),
 		ImageDefaultBackend:      imageDefaultBackend.String(),
 		IngressClass:             ingressClass,

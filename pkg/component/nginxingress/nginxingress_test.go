@@ -17,6 +17,7 @@ package nginxingress_test
 import (
 	"context"
 
+	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -95,6 +96,7 @@ var _ = Describe("NginxIngress", func() {
 
 			values = Values{
 				ClusterType:             component.ClusterTypeSeed,
+				KubernetesVersion:       semver.MustParse("1.26"),
 				TargetNamespace:         namespace,
 				IngressClass:            v1beta1constants.SeedNginxIngressClass,
 				PriorityClassName:       v1beta1constants.PriorityClassNameSeedSystem600,
@@ -361,7 +363,8 @@ metadata:
 spec:
   controller: k8s.io/` + v1beta1constants.SeedNginxIngressClass + `
 `
-				podDisruptionBudgetYAML = `apiVersion: policy/v1
+				podDisruptionBudgetYAMLFor = func(k8sGreaterEquals126 bool) string {
+					out := `apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   creationTimestamp: null
@@ -376,12 +379,21 @@ spec:
     matchLabels:
       app: nginx-ingress
       component: controller
-status:
+`
+					if k8sGreaterEquals126 {
+						out += `  unhealthyPodEvictionPolicy: AlwaysAllow
+`
+					}
+
+					out += `status:
   currentHealthy: 0
   desiredHealthy: 0
   disruptionsAllowed: 0
   expectedPods: 0
 `
+					return out
+				}
+
 				vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
@@ -568,7 +580,7 @@ status: {}
 				}
 			)
 
-			It("should successfully deploy all resources", func() {
+			JustBeforeEach(func() {
 				nginxIngress = New(c, namespace, values)
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
@@ -614,9 +626,24 @@ status: {}
 				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(vpaYAML))
 				Expect(string(managedResourceSecret.Data["configmap__"+namespace+"__"+configMapName+".yaml"])).To(Equal(configMapYAMLFor(configMapName)))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-k8s-backend.yaml"])).To(Equal(deploymentBackendYAML))
-				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(podDisruptionBudgetYAML))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(configMapName)))
 				Expect(string(managedResourceSecret.Data["ingressclass____"+v1beta1constants.SeedNginxIngressClass+".yaml"])).To(Equal(ingressClassYAML))
+			})
+
+			Context("Kubernetes version < 1.26", func() {
+				BeforeEach(func() {
+					values.KubernetesVersion = semver.MustParse("1.25")
+				})
+
+				It("should successfully deploy all resources", func() {
+					Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(podDisruptionBudgetYAMLFor(false)))
+				})
+			})
+
+			Context("Kubernetes version >= 1.26", func() {
+				It("should successfully deploy all resources", func() {
+					Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(podDisruptionBudgetYAMLFor(true)))
+				})
 			})
 		})
 

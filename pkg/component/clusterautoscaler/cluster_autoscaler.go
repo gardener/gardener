@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Masterminds/semver/v3"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -27,7 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
@@ -77,6 +77,7 @@ func New(
 	image string,
 	replicas int32,
 	config *gardencorev1beta1.ClusterAutoscaler,
+	runtimeVersion *semver.Version,
 ) Interface {
 	return &clusterAutoscaler{
 		client:         client,
@@ -85,6 +86,7 @@ func New(
 		image:          image,
 		replicas:       replicas,
 		config:         config,
+		runtimeVersion: runtimeVersion,
 	}
 }
 
@@ -95,6 +97,7 @@ type clusterAutoscaler struct {
 	image          string
 	replicas       int32
 	config         *gardencorev1beta1.ClusterAutoscaler
+	runtimeVersion *semver.Version
 
 	namespaceUID       types.UID
 	machineDeployments []extensionsv1alpha1.MachineDeployment
@@ -110,10 +113,9 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		deployment          = c.emptyDeployment()
 		podDisruptionBudget = c.emptyPodDisruptionBudget()
 
-		pdbMaxUnavailable = intstr.FromInt32(1)
-		vpaUpdateMode     = vpaautoscalingv1.UpdateModeAuto
-		controlledValues  = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		command           = c.computeCommand()
+		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
+		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+		command          = c.computeCommand()
 	)
 
 	genericTokenKubeconfigSecret, found := c.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
@@ -245,9 +247,11 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, podDisruptionBudget, func() error {
 		podDisruptionBudget.Labels = getLabels()
 		podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: &pdbMaxUnavailable,
+			MaxUnavailable: utils.IntStrPtrFromInt32(1),
 			Selector:       deployment.Spec.Selector,
 		}
+		kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, c.runtimeVersion)
+
 		return nil
 	}); err != nil {
 		return err

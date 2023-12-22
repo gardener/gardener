@@ -26,13 +26,13 @@ import (
 
 var _ = Describe("Monitoring", func() {
 	It("should successfully test the scrape config", func() {
-		kubeScheduler := New(nil, "", nil, semver.MustParse("1.26.0"), "", 0, nil)
+		kubeScheduler := New(nil, "", nil, semver.MustParse("1.26.0"), semver.MustParse("1.26.0"), "", 0, nil)
 
 		test.ScrapeConfigs(kubeScheduler, expectedScrapeConfig)
 	})
 
 	It("should successfully test the alerting rules", func() {
-		kubeScheduler := New(nil, "", nil, semver.MustParse("1.26.4"), "", 0, nil)
+		kubeScheduler := New(nil, "", nil, semver.MustParse("1.26.4"), semver.MustParse("1.26.4"), "", 0, nil)
 
 		test.AlertingRulesWithPromtool(
 			kubeScheduler,

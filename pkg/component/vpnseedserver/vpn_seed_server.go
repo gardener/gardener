@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	istionetworkingv1beta1 "istio.io/api/networking/v1beta1"
@@ -127,6 +128,8 @@ type NetworkValues struct {
 
 // Values is a set of configuration values for the VPNSeedServer component.
 type Values struct {
+	// RuntimeKubernetesVersion is the Kubernetes version of the runtime cluster.
+	RuntimeKubernetesVersion *semver.Version
 	// ImageAPIServerProxy is the image name of the apiserver-proxy
 	ImageAPIServerProxy string
 	// ImageVPNSeedServer is the image name of the vpn-seed-server
@@ -649,16 +652,17 @@ func (v *vpnSeedServer) deployStatefulSet(ctx context.Context, labels map[string
 }
 
 func (v *vpnSeedServer) deployPodDisruptionBudget(ctx context.Context, podLabels map[string]string) error {
-	pdbMaxUnavailable := intstr.FromInt32(1)
-
 	pdb := v.emptyPodDisruptionBudget()
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, pdb, func() error {
 		pdb.Labels = podLabels
 		pdb.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: &pdbMaxUnavailable,
+			MaxUnavailable: utils.IntStrPtrFromInt32(1),
 			Selector:       &metav1.LabelSelector{MatchLabels: podLabels},
 		}
+
+		kubernetesutils.SetAlwaysAllowEviction(pdb, v.values.RuntimeKubernetesVersion)
+
 		return nil
 	})
 

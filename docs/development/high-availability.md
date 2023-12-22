@@ -212,11 +212,12 @@ In order to apply those conveniently and easily for developers, Gardener install
 
 1. Check if `components` are prepared to run concurrently with multiple replicas, e.g. controllers usually use [leader election](https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/leaderelection) to achieve this.
 
-1. All components should be generally equipped with `PodDisruptionBudget`s with `.spec.maxUnavailable=1`:
+1. All components should be generally equipped with `PodDisruptionBudget`s with `.spec.maxUnavailable=1` and `unhealthyPodEvictionPolicy=AlwaysAllow`:
 
 ```yaml
 spec:
   maxUnavailable: 1
+  unhealthyPodEvictionPolicy: AlwaysAllow
   selector:
     matchLabels: ...
 ```

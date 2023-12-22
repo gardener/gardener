@@ -107,6 +107,11 @@ var _ = Describe("istiod", func() {
 			return string(data)
 		}
 
+		istiodPodDisruptionBudgetLess126 = func() string {
+			data, _ := os.ReadFile("./test_charts/istiod_poddisruptionbudget_less126.yaml")
+			return string(data)
+		}
+
 		istiodRole = func() string {
 			data, _ := os.ReadFile("./test_charts/istiod_role.yaml")
 			return string(data)
@@ -169,6 +174,11 @@ var _ = Describe("istiod", func() {
 			return string(data)
 		}
 
+		istioIngressPodDisruptionBudgetLess126 = func() string {
+			data, _ := os.ReadFile("./test_charts/ingress_poddisruptionbudget_less126.yaml")
+			return string(data)
+		}
+
 		istioIngressRole = func() string {
 			data, _ := os.ReadFile("./test_charts/ingress_role.yaml")
 			return string(data)
@@ -226,7 +236,7 @@ var _ = Describe("istiod", func() {
 		networkLabels = map[string]string{"to-target": "allowed"}
 
 		c = fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		renderer = chartrenderer.NewWithServerVersion(&version.Info{GitVersion: "v1.22.4"})
+		renderer = chartrenderer.NewWithServerVersion(&version.Info{GitVersion: "v1.26.2"})
 
 		gardenletfeatures.RegisterFeatureGates()
 
@@ -390,6 +400,41 @@ var _ = Describe("istiod", func() {
 			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_serviceaccount.yaml"]), istiodServiceAccount())).To(BeEmpty())
 			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_autoscale.yaml"]), istiodAutoscale())).To(BeEmpty())
 			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_validatingwebhookconfiguration.yaml"]), istiodValidationWebhook())).To(BeEmpty())
+		})
+
+		Context("kubernetes version < 1.26", func() {
+			BeforeEach(func() {
+				renderer = chartrenderer.NewWithServerVersion(&version.Info{GitVersion: "v1.25.4"})
+
+				istiod = NewIstio(
+					c,
+					renderer,
+					Values{
+						Istiod: IstiodValues{
+							Enabled:           true,
+							Image:             "foo/bar",
+							Namespace:         deployNS,
+							PriorityClassName: v1beta1constants.PriorityClassNameSeedSystemCritical,
+							TrustDomain:       "foo.local",
+							Zones:             []string{"a", "b", "c"},
+						},
+						IngressGateway: igw,
+					},
+				)
+			})
+
+			It("should succesfully deploy pdb with the correct spec", func() {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
+				Expect(managedResourceIstioSecret.Data).To(HaveLen(14))
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSystem), managedResourceIstioSystem)).To(Succeed())
+				managedResourceIstioSystemSecret.Name = managedResourceIstioSystem.Spec.SecretRefs[0].Name
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSystemSecret), managedResourceIstioSystemSecret)).To(Succeed())
+				Expect(managedResourceIstioSystemSecret.Data).To(HaveLen(12))
+
+				Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_poddisruptionbudget_test-ingress.yaml"]), istioIngressPodDisruptionBudgetLess126())).To(BeEmpty())
+				Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_poddisruptionbudget.yaml"]), istiodPodDisruptionBudgetLess126())).To(BeEmpty())
+			})
 		})
 
 		Context("with outdated stats filters", func() {

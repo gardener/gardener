@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Masterminds/semver/v3"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -78,6 +79,8 @@ func New(
 type Values struct {
 	// Image is the container image used for the metrics-server.
 	Image string
+	// KubernetesVersion is the Kubernetes version of the Shoot.
+	KubernetesVersion *semver.Version
 	// VPAEnabled marks whether VerticalPodAutoscaler is enabled for the shoot.
 	VPAEnabled bool
 	// KubeAPIServerHost is the kube-apiserver host name.
@@ -364,7 +367,6 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 			},
 		}
 
-		intStrOne           = intstr.FromInt32(1)
 		podDisruptionBudget = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "metrics-server",
@@ -372,13 +374,15 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 				Labels:    getLabels(),
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &intStrOne,
+				MaxUnavailable: utils.IntStrPtrFromInt32(1),
 				Selector:       deployment.Spec.Selector,
 			},
 		}
 
 		vpa *vpaautoscalingv1.VerticalPodAutoscaler
 	)
+
+	kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, m.values.KubernetesVersion)
 
 	if m.values.KubeAPIServerHost != nil {
 		deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{

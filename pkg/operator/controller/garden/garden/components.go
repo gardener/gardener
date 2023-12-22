@@ -348,6 +348,7 @@ func (r *Reconciler) newHVPA() (component.DeployWaiter, error) {
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		hvpaEnabled(),
+		r.RuntimeVersion,
 		v1beta1constants.PriorityClassNameGardenSystem200,
 	)
 }
@@ -923,8 +924,9 @@ func (r *Reconciler) newGardenerControllerManager(garden *operatorv1alpha1.Garde
 	image.WithOptionalTag(version.Get().GitVersion)
 
 	values := gardenercontrollermanager.Values{
-		Image:    image.String(),
-		LogLevel: logger.InfoLevel,
+		Image:          image.String(),
+		LogLevel:       logger.InfoLevel,
+		RuntimeVersion: r.RuntimeVersion,
 	}
 
 	if config := garden.Spec.VirtualCluster.Gardener.ControllerManager; config != nil {
@@ -952,8 +954,9 @@ func (r *Reconciler) newGardenerScheduler(garden *operatorv1alpha1.Garden, secre
 	image.WithOptionalTag(version.Get().GitVersion)
 
 	values := gardenerscheduler.Values{
-		Image:    image.String(),
-		LogLevel: logger.InfoLevel,
+		Image:          image.String(),
+		LogLevel:       logger.InfoLevel,
+		RuntimeVersion: r.RuntimeVersion,
 	}
 
 	if config := garden.Spec.VirtualCluster.Gardener.Scheduler; config != nil {

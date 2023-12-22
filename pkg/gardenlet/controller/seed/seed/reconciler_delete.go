@@ -181,7 +181,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 		dwdWeeder                = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleWeeder})
 		dwdProber                = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProber})
 		systemResources          = seedsystem.New(seedClient, r.GardenNamespace, seedsystem.Values{})
-		vpnAuthzServer           = vpnauthzserver.New(seedClient, r.GardenNamespace, "")
+		vpnAuthzServer           = vpnauthzserver.New(seedClient, r.GardenNamespace, "", kubernetesVersion)
 		istioCRDs                = istio.NewCRD(r.SeedClientSet.ChartApplier())
 		istio                    = istio.NewIstio(seedClient, r.SeedClientSet.ChartRenderer(), istio.Values{
 			Istiod: istio.IstiodValues{
@@ -296,7 +296,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 	if !seedIsGarden {
 		var (
 			plutono               = plutono.New(seedClient, r.GardenNamespace, nil, plutono.Values{})
-			kubeStateMetrics      = kubestatemetrics.New(seedClient, r.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
+			kubeStateMetrics      = kubestatemetrics.New(seedClient, r.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed, KubernetesVersion: kubernetesVersion})
 			etcdCRD               = etcd.NewCRD(seedClient, r.SeedClientSet.Applier())
 			etcdDruid             = etcd.NewBootstrapper(seedClient, r.GardenNamespace, nil, r.Config.ETCDConfig, "", nil, "")
 			hvpa                  = hvpa.New(seedClient, r.GardenNamespace, hvpa.Values{})

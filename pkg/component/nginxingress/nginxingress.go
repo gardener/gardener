@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -88,6 +89,8 @@ type Values struct {
 	ClusterType component.ClusterType
 	// TargetNamespace is the namespace in which the resources should be deployed
 	TargetNamespace string
+	// KubernetesVersion is the Kubernetes version of the cluster.
+	KubernetesVersion *semver.Version
 	// ImageController is the container image used for nginx-ingress controller.
 	ImageController string
 	// ImageDefaultBackend is the container image used for default ingress backend.
@@ -210,7 +213,6 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		roleBindingAnnotations            map[string]string
 		schedulerName                     string
 
-		intStrOne            = intstr.FromInt32(1)
 		healthProbePort      = intstr.FromInt32(10254)
 		resourceRequirements = corev1.ResourceRequirements{
 			Limits: corev1.ResourceList{
@@ -635,12 +637,14 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				Labels:    n.getLabels(LabelValueController, false),
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MinAvailable: &intStrOne,
+				MinAvailable: utils.IntStrPtrFromInt32(1),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: n.getLabels(LabelValueController, false),
 				},
 			},
 		}
+
+		kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, n.values.KubernetesVersion)
 	}
 
 	if n.values.ClusterType == component.ClusterTypeShoot {
