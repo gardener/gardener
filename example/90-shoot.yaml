@@ -283,17 +283,17 @@ spec:
   # clusterAutoscaler:
   #   expander: "priority,least-waste" # see: https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/FAQ.md#what-are-expanders
   #   maxGracefulTerminationSeconds: 600
-  #   maxNodeProvisionTime: 20m
+  #   maxNodeProvisionTime: 15m
   #   scaleDownUtilizationThreshold: 0.5
-  #   scaleDownUnneededTime: 30m
-  #   scaleDownDelayAfterAdd: 1h
+  #   scaleDownUnneededTime: 10m
+  #   scaleDownDelayAfterAdd: 10m
   #   scaleDownDelayAfterFailure: 3m
   #   scaleDownDelayAfterDelete: 0s
   #   scanInterval: 10s
   #   ignoreTaints: 
   #     - "node.kubernetes.io/memory-pressure"
   #     - "node.kubernetes.io/disk-pressure"
-  #   newPodScaleUpDelay: 10s
+  #   newPodScaleUpDelay: 0s
   #   maxEmptyBulkDelete: 10
   # verticalPodAutoscaler:
   #   enabled: true
