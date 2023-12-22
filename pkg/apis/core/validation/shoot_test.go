@@ -2831,7 +2831,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			ignoreTaintsUnique                  = []string{"taint-1", "taint-2"}
 			ignoreTaintsDuplicate               = []string{"taint-1", "taint-1"}
 			ignoreTaintsInvalid                 = []string{"taint 1", "taint-1"}
-			version                             = "1.24"
+			version                             = "1.27.0"
 		)
 
 		Context("ClusterAutoscaler validation", func() {

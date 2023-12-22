@@ -62,7 +62,7 @@ var _ = Describe("GenericClientMap", func() {
 			ctrl = gomock.NewController(GinkgoT())
 			factory = mockclientmap.NewMockClientSetFactory(ctrl)
 			cs = kubernetesmock.NewMockInterface(ctrl)
-			csVersion = &version.Info{GitVersion: "1.24.0"}
+			csVersion = &version.Info{GitVersion: "1.27.0"}
 			cs.EXPECT().Version().Return(csVersion.GitVersion).AnyTimes()
 
 			fakeClock = testclock.NewFakeClock(time.Now())
@@ -131,7 +131,7 @@ var _ = Describe("GenericClientMap", func() {
 				By("Should refresh the ClientSet's server version")
 				// let the max refresh interval pass
 				fakeClock.Sleep(MaxRefreshInterval)
-				cs.EXPECT().DiscoverVersion().Return(&version.Info{GitVersion: "1.24.1"}, nil)
+				cs.EXPECT().DiscoverVersion().Return(&version.Info{GitVersion: "1.27.1"}, nil)
 				clientSet, err := cm.GetClient(ctx, key)
 				Expect(clientSet).To(BeIdenticalTo(cs))
 				Expect(err).NotTo(HaveOccurred())

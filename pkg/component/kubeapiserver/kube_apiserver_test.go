@@ -3135,7 +3135,7 @@ rules:
 							RuntimeVersion: runtimeVersion,
 						},
 						Images:                       images,
-						Version:                      semver.MustParse("1.24.9"),
+						Version:                      semver.MustParse("1.26.9"),
 						StaticTokenKubeconfigEnabled: ptr.To(true),
 					})
 					deployAndRead()
