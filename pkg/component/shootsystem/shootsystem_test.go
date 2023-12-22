@@ -244,6 +244,18 @@ metadata:
 					}
 				})
 			})
+
+			Context("k8s >= 1.29", func() {
+				BeforeEach(func() {
+					values.KubernetesVersion = semver.MustParse("1.29.1")
+				})
+
+				It("should successfully deploy all resources", func() {
+					for _, name := range append(defaultKCMControllerSANames, "default", "endpointslicemirroring-controller", "ephemeral-volume-controller", "storage-version-garbage-collector", "service-controller", "route-controller", "node-controller", "resource-claim-controller", "legacy-service-account-token-cleaner", "service-cidrs-controller") {
+						Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__"+name+".yaml"])).To(Equal(serviceAccountYAMLFor(name)), name)
+					}
+				})
+			})
 		})
 
 		Context("shoot-info ConfigMap", func() {
