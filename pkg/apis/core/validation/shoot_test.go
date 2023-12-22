@@ -6106,16 +6106,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			Entry("valid configuration", "1.25", true, nil, BeEmpty()),
 			Entry("valid configuration with set feature gate", "1.25", true, ptr.To(true), BeEmpty()),
-			Entry("do not allow to set SeccompDefault to true when k8s version < 1.25", "1.24", true, nil, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal("seccompDefault"),
-				"Detail": Equal("seccomp defaulting is not available for kubernetes versions < 1.25"),
-			})))),
-			Entry("do not allow to set SeccompDefault to false when k8s version < 1.25", "1.24", false, nil, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal("seccompDefault"),
-				"Detail": Equal("seccomp defaulting is not available for kubernetes versions < 1.25"),
-			})))),
 			Entry("do not allow to set SeccompDefault to true when feature gate is disabled", "1.25", true, ptr.To(false), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal("seccompDefault"),

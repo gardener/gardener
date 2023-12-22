@@ -4,11 +4,7 @@ title: Default Seccomp Profile
 
 # Default Seccomp Profile and Configuration 
 
-This is a short guide describing how to enable the defaulting of seccomp profiles for Gardener managed workloads in the seed.
-
-## Default Kubernetes Behavior
-
-The state of Kubernetes in versions < 1.25 is such that all workloads by default run in `Unconfined` (seccomp disabled) mode. This is undesirable since this is the least restrictive profile. Also, mind that any privileged container will always run as `Unconfined`. More information about seccomp can be found in this [Kubernetes tutorial](https://kubernetes.io/docs/tutorials/security/seccomp/).
+This is a short guide describing how to enable the defaulting of seccomp profiles for Gardener managed workloads in the seed. Running pods in `Unconfined` (seccomp disabled) mode is undesirable since this is the least restrictive profile. Also, mind that any privileged container will always run as `Unconfined`. More information about seccomp can be found in this [Kubernetes tutorial](https://kubernetes.io/docs/tutorials/security/seccomp/).
 
 ## Setting the Seccomp Profile to RuntimeDefault for Seed Clusters
 
@@ -41,9 +37,9 @@ Once the feature gate is enabled, the webhook will be registered and configured 
 
 ## Setting the Seccomp Profile to RuntimeDefault for Shoot Clusters
 
-For Kubernetes shoot versions >= 1.25, you can enable the use of `RuntimeDefault` as the default seccomp profile for all workloads. If enabled, the kubelet will use the `RuntimeDefault` seccomp profile by default, which is defined by the container runtime, instead of using the `Unconfined` mode. More information for this feature can be found in the [Kubernetes documentation](https://kubernetes.io/docs/tutorials/security/seccomp/#enable-the-use-of-runtimedefault-as-the-default-seccomp-profile-for-all-workloads).
+You can enable the use of `RuntimeDefault` as the default seccomp profile for all workloads. If enabled, the kubelet will use the `RuntimeDefault` seccomp profile by default, which is defined by the container runtime, instead of using the `Unconfined` mode. More information for this feature can be found in the [Kubernetes documentation](https://kubernetes.io/docs/tutorials/security/seccomp/#enable-the-use-of-runtimedefault-as-the-default-seccomp-profile-for-all-workloads).
 
-To use seccomp profile defaulting, you must run the kubelet with the `SeccompDefault` feature gate enabled (this is the default for k8s versions >= 1.25).
+To use seccomp profile defaulting, you must run the kubelet with the `SeccompDefault` feature gate should have been enabled (this is the default).
 
 ### How to Configure
 
