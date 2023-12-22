@@ -54,6 +54,7 @@ var (
 		"flowcontrol.apiserver.k8s.io/v1beta1":  {},
 		"flowcontrol.apiserver.k8s.io/v1beta2":  {},
 		"flowcontrol.apiserver.k8s.io/v1beta3":  {VersionRange: versionutils.VersionRange{AddedInVersion: "1.26"}},
+		"flowcontrol.apiserver.k8s.io/v1":       {VersionRange: versionutils.VersionRange{AddedInVersion: "1.29"}},
 		"internal.apiserver.k8s.io/v1alpha1":    {},
 		"networking.k8s.io/v1":                  {Required: true, RequiredForWorkerless: true},
 		"networking.k8s.io/v1beta1":             {},
