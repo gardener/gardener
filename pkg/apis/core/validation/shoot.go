@@ -881,6 +881,10 @@ func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking,
 	allErrs = append(allErrs, ValidateKubeAPIServer(kubernetes.KubeAPIServer, kubernetes.Version, workerless, gardenerutils.DefaultResourcesForEncryption(), fldPath.Child("kubeAPIServer"))...)
 	allErrs = append(allErrs, ValidateKubeControllerManager(kubernetes.KubeControllerManager, networking, kubernetes.Version, workerless, fldPath.Child("kubeControllerManager"))...)
 
+	if kubernetes.AllowPrivilegedContainers != nil {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("allowPrivilegedContainers"), "allowPrivilegedContainers field should not be set"))
+	}
+
 	if workerless {
 		allErrs = append(allErrs, validateKubernetesForWorkerlessShoot(kubernetes, fldPath)...)
 	} else {
@@ -897,11 +901,6 @@ func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking,
 
 		if verticalPodAutoscaler := kubernetes.VerticalPodAutoscaler; verticalPodAutoscaler != nil {
 			allErrs = append(allErrs, ValidateVerticalPodAutoscaler(*verticalPodAutoscaler, fldPath.Child("verticalPodAutoscaler"))...)
-		}
-
-		k8sGreaterEqual125, _ := versionutils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.25")
-		if k8sGreaterEqual125 && kubernetes.AllowPrivilegedContainers != nil {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("allowPrivilegedContainers"), "for Kubernetes versions >= 1.25, allowPrivilegedContainers field should not be set, please see https://github.com/gardener/gardener/blob/master/docs/usage/pod-security.md#speckubernetesallowprivilegedcontainers-in-the-shoot-spec"))
 		}
 	}
 
@@ -929,10 +928,6 @@ func validateKubernetesForWorkerlessShoot(kubernetes core.Kubernetes, fldPath *f
 
 	if kubernetes.VerticalPodAutoscaler != nil {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("verticalPodAutoScaler"), workerlessErrorMsg))
-	}
-
-	if kubernetes.AllowPrivilegedContainers != nil {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("allowPrivilegedContainers"), workerlessErrorMsg))
 	}
 
 	return allErrs

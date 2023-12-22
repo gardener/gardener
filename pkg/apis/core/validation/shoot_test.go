@@ -2363,43 +2363,15 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("kubernetes.allowPrivilegedContainers field validation", func() {
-			Context("kubernetes version < 1.25", func() {
-				It("should allow creating shoots with this field set", func() {
-					shoot.Spec.Kubernetes.Version = "1.24.6"
-					shoot.Spec.Kubernetes.AllowPrivilegedContainers = ptr.To(true)
+			It("should deny creating shoots with this field set", func() {
+				shoot.Spec.Kubernetes.AllowPrivilegedContainers = ptr.To(true)
 
-					errorList := ValidateShoot(shoot)
-					Expect(errorList).To(BeEmpty())
-				})
-			})
-
-			Context("kubernetes version >= 1.25", func() {
-				It("should deny creating shoots with this field set", func() {
-					shoot.Spec.Kubernetes.Version = "1.25.0"
-					shoot.Spec.Kubernetes.AllowPrivilegedContainers = ptr.To(true)
-
-					errorList := ValidateShoot(shoot)
-					Expect(errorList).Should(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeForbidden),
-						"Field":  Equal("spec.kubernetes.allowPrivilegedContainers"),
-						"Detail": ContainSubstring("for Kubernetes versions >= 1.25, allowPrivilegedContainers field should not be set"),
-					}))))
-				})
-
-				It("should deny updating shoots to v1.25 with this field set", func() {
-					shoot.Spec.Kubernetes.Version = "1.24.0"
-					shoot.Spec.Kubernetes.AllowPrivilegedContainers = ptr.To(true)
-
-					newShoot := prepareShootForUpdate(shoot)
-					newShoot.Spec.Kubernetes.Version = "1.25.0"
-
-					errorList := ValidateShootUpdate(newShoot, shoot)
-					Expect(errorList).Should(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeForbidden),
-						"Field":  Equal("spec.kubernetes.allowPrivilegedContainers"),
-						"Detail": ContainSubstring("for Kubernetes versions >= 1.25, allowPrivilegedContainers field should not be set"),
-					}))))
-				})
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).Should(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.kubernetes.allowPrivilegedContainers"),
+					"Detail": ContainSubstring("allowPrivilegedContainers field should not be set"),
+				}))))
 			})
 		})
 
