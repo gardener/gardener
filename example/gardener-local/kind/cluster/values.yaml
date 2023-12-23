@@ -1,3 +1,4 @@
+# TODO(acumino): Update to 1.29.0 after support for 1.29 has been merged and released (after 1.87 has been released).
 image: kindest/node:v1.28.0
 
 gardener:
