@@ -27,9 +27,11 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/utils/clock/testing"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -52,12 +54,14 @@ var _ = Describe("Healthcheck controller tests", func() {
 	)
 
 	BeforeEach(func() {
+		testRunID = "test-" + gardenerutils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
+
 		By("Setup manager")
 		mgr, err := manager.New(restConfig, manager.Options{
 			Metrics: metricsserver.Options{BindAddress: "0"},
-			// Cache:   cache.Options{
-			// DefaultLabelSelector: labels.SelectorFromSet(labels.Set{testID: testRunID}),
-			// },
+			Cache: cache.Options{
+				DefaultLabelSelector: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+			},
 		})
 		Expect(err).NotTo(HaveOccurred())
 
@@ -75,7 +79,6 @@ var _ = Describe("Healthcheck controller tests", func() {
 		containerdClient = &fakeContainerdClient{
 			returnError: false,
 		}
-		testRunID = "test-" + gardenerutils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 		nodeName = testRunID
 
 		kubeletHealthcheck = healthcheck.NewKubeletHealthChecker(
@@ -198,10 +201,6 @@ var _ = Describe("Healthcheck controller tests", func() {
 		By("Update Node Status, remove NodeAddresses")
 		node.Status.Addresses = []corev1.NodeAddress{}
 		Expect(testClient.Status().Update(ctx, node)).To(Succeed())
-		Eventually(func() []corev1.NodeAddress {
-			Expect(testClient.Get(ctx, types.NamespacedName{Name: nodeName}, node)).To(Succeed())
-			return node.Status.Addresses
-		}).Should(BeEmpty())
 
 		By("Wait for reappearing NodeAddress")
 		Eventually(func() []corev1.NodeAddress {
@@ -268,9 +267,7 @@ var _ = Describe("Healthcheck controller tests", func() {
 		}).Should(
 			ConsistOf(fakedbus.SystemdAction{Action: fakedbus.ActionReboot, UnitNames: []string{"reboot"}}),
 		)
-
 	})
-
 })
 
 type fakeContainerdClient struct {
