@@ -80,7 +80,7 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)
 
 			// ContentType fields will be defaulted by client constructors / controller-runtime based on whether a
-			// given APIGroup supports protobuf or not. defaults must not touch these, otherwise the integelligent
+			// given APIGroup supports protobuf or not. defaults must not touch these, otherwise the intelligent
 			// logic will be overwritten
 			Expect(obj.GardenClientConnection.ContentType).To(BeEmpty())
 			Expect(obj.GardenClientConnection.AcceptContentTypes).To(BeEmpty())
@@ -135,7 +135,7 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)
 
 			// ContentType fields will be defaulted by client constructors / controller-runtime based on whether a
-			// given APIGroup supports protobuf or not. defaults must not touch these, otherwise the integelligent
+			// given APIGroup supports protobuf or not. defaults must not touch these, otherwise the intelligent
 			// logic will be overwritten
 			Expect(obj.SeedClientConnection.ContentType).To(BeEmpty())
 			Expect(obj.SeedClientConnection.AcceptContentTypes).To(BeEmpty())
@@ -162,7 +162,7 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)
 
 			// ContentType fields will be defaulted by client constructors / controller-runtime based on whether a
-			// given APIGroup supports protobuf or not. defaults must not touch these, otherwise the integelligent
+			// given APIGroup supports protobuf or not. defaults must not touch these, otherwise the intelligent
 			// logic will be overwritten
 			Expect(obj.ShootClientConnection.ContentType).To(BeEmpty())
 			Expect(obj.ShootClientConnection.AcceptContentTypes).To(BeEmpty())
