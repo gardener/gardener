@@ -27,6 +27,9 @@ import (
 
 // SetDefaults_ResourceManagerConfiguration sets defaults for the configuration of the ResourceManagerConfiguration.
 func SetDefaults_ResourceManagerConfiguration(obj *ResourceManagerConfiguration) {
+	if obj.TargetClientConnection == nil {
+		obj.TargetClientConnection = &ClientConnection{}
+	}
 	if len(obj.LogLevel) == 0 {
 		obj.LogLevel = "info"
 	}
@@ -37,8 +40,6 @@ func SetDefaults_ResourceManagerConfiguration(obj *ResourceManagerConfiguration)
 
 // SetDefaults_ClientConnection sets defaults for the client connection.
 func SetDefaults_ClientConnection(obj *ClientConnection) {
-	SetDefaults_ClientConnectionConfiguration(&obj.ClientConnectionConfiguration)
-
 	if obj.CacheResyncPeriod == nil {
 		obj.CacheResyncPeriod = &metav1.Duration{Duration: 24 * time.Hour}
 	}

@@ -55,10 +55,37 @@ var _ = Describe("ResourceManager defaulting", func() {
 		})
 	})
 
-	Describe("ClientConnection defaulting", func() {
+	Describe("SourceClientConnection defaulting", func() {
 		It("should default the ClientConnection", func() {
-			obj.TargetClientConnection = &ClientConnection{}
+			SetObjectDefaults_ResourceManagerConfiguration(obj)
 
+			Expect(obj.SourceClientConnection.Namespaces).To(BeEmpty())
+			Expect(obj.SourceClientConnection.CacheResyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 24 * time.Hour})))
+			Expect(obj.SourceClientConnection.QPS).To(Equal(float32(100.0)))
+			Expect(obj.SourceClientConnection.Burst).To(Equal(int32(130)))
+		})
+
+		It("should not overwrite already set values for ClientConnection", func() {
+			obj.SourceClientConnection = ClientConnection{
+				ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
+					QPS:   float32(1.2),
+					Burst: int32(34),
+				},
+				Namespaces:        []string{"foo"},
+				CacheResyncPeriod: &metav1.Duration{Duration: time.Hour},
+			}
+
+			SetObjectDefaults_ResourceManagerConfiguration(obj)
+
+			Expect(obj.SourceClientConnection.Namespaces).To(ConsistOf("foo"))
+			Expect(obj.SourceClientConnection.CacheResyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Hour})))
+			Expect(obj.SourceClientConnection.QPS).To(Equal(float32(1.2)))
+			Expect(obj.SourceClientConnection.Burst).To(Equal(int32(34)))
+		})
+	})
+
+	Describe("TargetClientConnection defaulting", func() {
+		It("should default the ClientConnection", func() {
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
 
 			Expect(obj.TargetClientConnection.Namespaces).To(BeEmpty())
