@@ -24,7 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	. "github.com/gardener/gardener/plugin/pkg/utils"
 )
 
@@ -109,7 +109,7 @@ var _ = Describe("Miscellaneous", func() {
 			kind     = "foo"
 
 			coreInformerFactory gardencoreinformers.SharedInformerFactory
-			shootLister         gardencorelisters.ShootLister
+			shootLister         gardencorev1beta1listers.ShootLister
 
 			oldSeedSpec, newSeedSpec *core.SeedSpec
 			shoot                    *gardencorev1beta1.Shoot

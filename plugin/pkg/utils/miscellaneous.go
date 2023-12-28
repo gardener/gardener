@@ -25,7 +25,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 )
 
 // SkipVerification is a common function to skip object verification during admission
@@ -47,7 +47,7 @@ func IsSeedUsedByShoot(seedName string, shoots []*gardencorev1beta1.Shoot) bool 
 }
 
 // GetFilteredShootList returns shoots returned by the shootLister filtered via the predicateFn.
-func GetFilteredShootList(shootLister gardencorelisters.ShootLister, predicateFn func(*gardencorev1beta1.Shoot) bool) ([]*gardencorev1beta1.Shoot, error) {
+func GetFilteredShootList(shootLister gardencorev1beta1listers.ShootLister, predicateFn func(*gardencorev1beta1.Shoot) bool) ([]*gardencorev1beta1.Shoot, error) {
 	var matchingShoots []*gardencorev1beta1.Shoot
 	shoots, err := shootLister.List(labels.Everything())
 	if err != nil {
@@ -78,7 +78,7 @@ func NewAttributesWithName(a admission.Attributes, name string) admission.Attrib
 
 // ValidateZoneRemovalFromSeeds returns an error when zones are removed from the old seed while it is still in use by
 // shoots.
-func ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec *core.SeedSpec, seedName string, shootLister gardencorelisters.ShootLister, kind string) error {
+func ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec *core.SeedSpec, seedName string, shootLister gardencorev1beta1listers.ShootLister, kind string) error {
 	if removedZones := sets.New(oldSeedSpec.Provider.Zones...).Difference(sets.New(newSeedSpec.Provider.Zones...)); removedZones.Len() > 0 {
 		shoots, err := shootLister.List(labels.Everything())
 		if err != nil {

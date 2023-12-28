@@ -41,7 +41,7 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
@@ -61,8 +61,8 @@ func Register(plugins *admission.Plugins) {
 // ManagedSeed contains listers and admission handler.
 type ManagedSeed struct {
 	*admission.Handler
-	shootLister          gardencorelisters.ShootLister
-	secretBindingLister  gardencorelisters.SecretBindingLister
+	shootLister          gardencorev1beta1listers.ShootLister
+	secretBindingLister  gardencorev1beta1listers.SecretBindingLister
 	secretLister         kubecorev1listers.SecretLister
 	coreClient           gardencoreclientset.Interface
 	seedManagementClient seedmanagementclientset.Interface

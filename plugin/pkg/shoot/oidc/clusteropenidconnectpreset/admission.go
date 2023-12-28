@@ -31,7 +31,7 @@ import (
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	settingsinformers "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 	settingsv1alpha1lister "github.com/gardener/gardener/pkg/client/settings/listers/settings/v1alpha1"
 	plugin "github.com/gardener/gardener/plugin/pkg"
@@ -49,7 +49,7 @@ func Register(plugins *admission.Plugins) {
 type ClusterOpenIDConnectPreset struct {
 	*admission.Handler
 
-	projectLister     gardencorelisters.ProjectLister
+	projectLister     gardencorev1beta1listers.ProjectLister
 	clusterOIDCLister settingsv1alpha1lister.ClusterOpenIDConnectPresetLister
 	readyFunc         admission.ReadyFunc
 }

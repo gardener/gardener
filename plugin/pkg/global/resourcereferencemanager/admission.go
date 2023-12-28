@@ -49,7 +49,7 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	"github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 	"github.com/gardener/gardener/plugin/pkg/utils"
@@ -71,15 +71,15 @@ type ReferenceManager struct {
 	authorizer                 authorizer.Authorizer
 	secretLister               kubecorev1listers.SecretLister
 	configMapLister            kubecorev1listers.ConfigMapLister
-	backupBucketLister         gardencorelisters.BackupBucketLister
-	cloudProfileLister         gardencorelisters.CloudProfileLister
-	seedLister                 gardencorelisters.SeedLister
-	shootLister                gardencorelisters.ShootLister
-	secretBindingLister        gardencorelisters.SecretBindingLister
-	projectLister              gardencorelisters.ProjectLister
-	quotaLister                gardencorelisters.QuotaLister
-	controllerDeploymentLister gardencorelisters.ControllerDeploymentLister
-	exposureClassLister        gardencorelisters.ExposureClassLister
+	backupBucketLister         gardencorev1beta1listers.BackupBucketLister
+	cloudProfileLister         gardencorev1beta1listers.CloudProfileLister
+	seedLister                 gardencorev1beta1listers.SeedLister
+	shootLister                gardencorev1beta1listers.ShootLister
+	secretBindingLister        gardencorev1beta1listers.SecretBindingLister
+	projectLister              gardencorev1beta1listers.ProjectLister
+	quotaLister                gardencorev1beta1listers.QuotaLister
+	controllerDeploymentLister gardencorev1beta1listers.ControllerDeploymentLister
+	exposureClassLister        gardencorev1beta1listers.ExposureClassLister
 	readyFunc                  admission.ReadyFunc
 }
 

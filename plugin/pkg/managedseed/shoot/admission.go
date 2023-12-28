@@ -29,7 +29,7 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
@@ -45,7 +45,7 @@ func Register(plugins *admission.Plugins) {
 // Shoot contains listers and admission handler.
 type Shoot struct {
 	*admission.Handler
-	shootLister          gardencorelisters.ShootLister
+	shootLister          gardencorev1beta1listers.ShootLister
 	seedManagementClient seedmanagementclientset.Interface
 	readyFunc            admission.ReadyFunc
 }

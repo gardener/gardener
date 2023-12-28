@@ -30,7 +30,7 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	"github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	plugin "github.com/gardener/gardener/plugin/pkg"
@@ -50,9 +50,9 @@ func NewFactory(_ io.Reader) (admission.Interface, error) {
 type DeletionConfirmation struct {
 	*admission.Handler
 	gardenCoreClient versioned.Interface
-	shootLister      gardencorelisters.ShootLister
-	shootStateLister gardencorelisters.ShootStateLister
-	projectLister    gardencorelisters.ProjectLister
+	shootLister      gardencorev1beta1listers.ShootLister
+	shootStateLister gardencorev1beta1listers.ShootStateLister
+	projectLister    gardencorev1beta1listers.ProjectLister
 	readyFunc        admission.ReadyFunc
 }
 

@@ -49,7 +49,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -73,11 +73,11 @@ type ValidateShoot struct {
 	*admission.Handler
 	authorizer          authorizer.Authorizer
 	secretLister        kubecorev1listers.SecretLister
-	cloudProfileLister  gardencorelisters.CloudProfileLister
-	seedLister          gardencorelisters.SeedLister
-	shootLister         gardencorelisters.ShootLister
-	projectLister       gardencorelisters.ProjectLister
-	secretBindingLister gardencorelisters.SecretBindingLister
+	cloudProfileLister  gardencorev1beta1listers.CloudProfileLister
+	seedLister          gardencorev1beta1listers.SeedLister
+	shootLister         gardencorev1beta1listers.ShootLister
+	projectLister       gardencorev1beta1listers.ProjectLister
+	secretBindingLister gardencorev1beta1listers.SecretBindingLister
 	readyFunc           admission.ReadyFunc
 }
 
@@ -366,7 +366,7 @@ func (c *validationContext) validateSeedSelectionForMultiZonalShoot() error {
 	return nil
 }
 
-func (c *validationContext) validateScheduling(ctx context.Context, a admission.Attributes, authorizer authorizer.Authorizer, shootLister gardencorelisters.ShootLister, seedLister gardencorelisters.SeedLister) error {
+func (c *validationContext) validateScheduling(ctx context.Context, a admission.Attributes, authorizer authorizer.Authorizer, shootLister gardencorev1beta1listers.ShootLister, seedLister gardencorev1beta1listers.SeedLister) error {
 	var (
 		shootIsBeingScheduled          = c.oldShoot.Spec.SeedName == nil && c.shoot.Spec.SeedName != nil
 		shootIsBeingRescheduled        = c.oldShoot.Spec.SeedName != nil && c.shoot.Spec.SeedName != nil && *c.shoot.Spec.SeedName != *c.oldShoot.Spec.SeedName
@@ -504,7 +504,7 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 	return nil
 }
 
-func getNumberOfShootsOnSeed(shootLister gardencorelisters.ShootLister, seedName string) (int64, error) {
+func getNumberOfShootsOnSeed(shootLister gardencorev1beta1listers.ShootLister, seedName string) (int64, error) {
 	allShoots, err := shootLister.Shoots(metav1.NamespaceAll).List(labels.Everything())
 	if err != nil {
 		return 0, fmt.Errorf("could not list all shoots: %w", err)
@@ -1078,7 +1078,7 @@ func validateVolumeSize(volumeTypeConstraints []gardencorev1beta1.VolumeType, ma
 	return true, ""
 }
 
-func (c *validationContext) validateDNSDomainUniqueness(shootLister gardencorelisters.ShootLister) (field.ErrorList, error) {
+func (c *validationContext) validateDNSDomainUniqueness(shootLister gardencorev1beta1listers.ShootLister) (field.ErrorList, error) {
 	var (
 		allErrs field.ErrorList
 		dns     = c.shoot.Spec.DNS

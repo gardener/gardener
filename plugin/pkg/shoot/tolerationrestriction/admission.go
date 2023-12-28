@@ -30,7 +30,7 @@ import (
 	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/utils"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 	"github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction/apis/shoottolerationrestriction"
@@ -58,7 +58,7 @@ func Register(plugins *admission.Plugins) {
 type TolerationRestriction struct {
 	*admission.Handler
 
-	projectLister gardencorelisters.ProjectLister
+	projectLister gardencorev1beta1listers.ProjectLister
 	readyFunc     admission.ReadyFunc
 
 	defaults  []core.Toleration

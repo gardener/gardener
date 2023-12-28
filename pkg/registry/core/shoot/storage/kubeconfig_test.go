@@ -41,13 +41,13 @@ import (
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 func kubeconfigTests(
-	newKubeconfigREST func(getter, kubecorev1listers.SecretLister, gardencorelisters.InternalSecretLister, kubecorev1listers.ConfigMapLister, time.Duration) *KubeconfigREST,
+	newKubeconfigREST func(getter, kubecorev1listers.SecretLister, gardencorev1beta1listers.InternalSecretLister, kubecorev1listers.ConfigMapLister, time.Duration) *KubeconfigREST,
 	newObjectFunc func() runtime.Object,
 	setExpirationSeconds func(runtime.Object, *int64),
 	getExpirationTimestamp func(runtime.Object) metav1.Time,
@@ -348,12 +348,12 @@ func (f fakeSecretLister) Get(_ string) (*corev1.Secret, error) {
 }
 
 type fakeInternalSecretLister struct {
-	gardencorelisters.InternalSecretLister
+	gardencorev1beta1listers.InternalSecretLister
 	obj *gardencorev1beta1.InternalSecret
 	err error
 }
 
-func (f fakeInternalSecretLister) InternalSecrets(string) gardencorelisters.InternalSecretNamespaceLister {
+func (f fakeInternalSecretLister) InternalSecrets(string) gardencorev1beta1listers.InternalSecretNamespaceLister {
 	return f
 }
 

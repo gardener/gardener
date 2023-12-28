@@ -35,7 +35,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
@@ -52,8 +52,8 @@ func NewFactory(_ io.Reader) (admission.Interface, error) {
 // ExtensionValidator contains listers and admission handler.
 type ExtensionValidator struct {
 	*admission.Handler
-	controllerRegistrationLister gardencorelisters.ControllerRegistrationLister
-	backupBucketLister           gardencorelisters.BackupBucketLister
+	controllerRegistrationLister gardencorev1beta1listers.ControllerRegistrationLister
+	backupBucketLister           gardencorev1beta1listers.BackupBucketLister
 	readyFunc                    admission.ReadyFunc
 }
 
