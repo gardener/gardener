@@ -52,3 +52,7 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	)
 	return nil
 }
+
+func addDefaultingFuncs(scheme *runtime.Scheme) error {
+	return RegisterDefaults(scheme)
+}
