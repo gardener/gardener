@@ -42,6 +42,9 @@ func SetDefaults_OperatorConfiguration(obj *OperatorConfiguration) {
 	if obj.Controllers.Garden.ETCDConfig == nil {
 		obj.Controllers.Garden.ETCDConfig = &gardenletv1alpha1.ETCDConfig{}
 		gardenletv1alpha1.SetDefaults_ETCDConfig(obj.Controllers.Garden.ETCDConfig)
+		gardenletv1alpha1.SetDefaults_ETCDController(obj.Controllers.Garden.ETCDConfig.ETCDController)
+		gardenletv1alpha1.SetDefaults_CustodianController(obj.Controllers.Garden.ETCDConfig.CustodianController)
+		gardenletv1alpha1.SetDefaults_BackupCompactionController(obj.Controllers.Garden.ETCDConfig.BackupCompactionController)
 	}
 }
 
