@@ -418,6 +418,9 @@ message ClusterAutoscaler {
   // IgnoreDaemonsetsUtilization allows CA to ignore DaemonSet pods when calculating resource utilization for scaling down.
   // +optional
   optional bool ignoreDaemonsetsUtilization = 13;
+
+  // Verbosity allows CA to modify it's log level
+  optional int32 verbosity = 14;
 }
 
 // Condition holds the information about the state of a resource.

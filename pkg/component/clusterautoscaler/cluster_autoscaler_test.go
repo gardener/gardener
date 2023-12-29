@@ -86,7 +86,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 		configScaleDownUnneededTime               = &metav1.Duration{Duration: time.Second}
 		configScaleDownUtilizationThreshold       = pointer.Float64(1.2345)
 		configScanInterval                        = &metav1.Duration{Duration: time.Second}
-		configIgnoreDaemonsetsUtilization   bool  = false
+		configIgnoreDaemonsetsUtilization   bool  = true
+		configVerbosity                     int32 = 4
 		configIgnoreTaints                        = []string{"taint-1", "taint-2"}
 		configFull                                = &gardencorev1beta1.ClusterAutoscaler{
 			Expander:                      &configExpander,
@@ -99,6 +100,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 			ScaleDownUtilizationThreshold: configScaleDownUtilizationThreshold,
 			ScanInterval:                  configScanInterval,
 			IgnoreTaints:                  configIgnoreTaints,
+			IgnoreDaemonsetsUtilization:   &configIgnoreDaemonsetsUtilization,
+			Verbosity:                     &configVerbosity,
 		}
 
 		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"
@@ -274,6 +277,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					"--scale-down-delay-after-failure=3m0s",
 					"--scan-interval=10s",
 					"--ignore-daemonsets-utilization=false",
+					"--v=2",
 				)
 			} else {
 				commandConfigFlags = append(commandConfigFlags,
@@ -287,6 +291,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					fmt.Sprintf("--scale-down-delay-after-failure=%s", configScaleDownDelayAfterFailure.Duration),
 					fmt.Sprintf("--scan-interval=%s", configScanInterval.Duration),
 					fmt.Sprintf("--ignore-daemonsets-utilization=%t", configIgnoreDaemonsetsUtilization),
+					fmt.Sprintf("--v=%d", configVerbosity),
 					fmt.Sprintf("--ignore-taint=%s", configIgnoreTaints[0]),
 					fmt.Sprintf("--ignore-taint=%s", configIgnoreTaints[1]),
 				)
@@ -302,7 +307,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 				"--skip-nodes-with-local-storage=false",
 				"--expendable-pods-priority-cutoff=-10",
 				"--balance-similar-node-groups=true",
-				"--v=2",
 				"--ignore-taint=node.gardener.cloud/critical-components-not-ready",
 			}, commandConfigFlags...)
 			command = append(command,

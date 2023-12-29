@@ -332,6 +332,9 @@ func SetDefaults_ClusterAutoscaler(obj *ClusterAutoscaler) {
 	if obj.IgnoreDaemonsetsUtilization == nil {
 		obj.IgnoreDaemonsetsUtilization = pointer.Bool(false)
 	}
+	if obj.Verbosity == nil {
+		obj.Verbosity = pointer.Int32(2)
+	}
 }
 
 // SetDefaults_NginxIngress sets default values for NginxIngress objects.

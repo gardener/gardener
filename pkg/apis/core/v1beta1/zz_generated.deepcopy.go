@@ -744,6 +744,11 @@ func (in *ClusterAutoscaler) DeepCopyInto(out *ClusterAutoscaler) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.Verbosity != nil {
+		in, out := &in.Verbosity, &out.Verbosity
+		*out = new(int32)
+		**out = **in
+	}
 	return
 }
 

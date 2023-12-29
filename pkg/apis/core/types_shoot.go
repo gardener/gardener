@@ -489,6 +489,8 @@ type ClusterAutoscaler struct {
 	NewPodScaleUpDelay *metav1.Duration
 	// MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: 10).
 	MaxEmptyBulkDelete *int32
+	// Verbosity specifies the log level for the CA.
+	Verbosity *int32
 }
 
 // ExpanderMode is type used for Expander values

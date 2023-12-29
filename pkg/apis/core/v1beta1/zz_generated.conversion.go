@@ -2321,6 +2321,7 @@ func autoConvert_v1beta1_ClusterAutoscaler_To_core_ClusterAutoscaler(in *Cluster
 	out.NewPodScaleUpDelay = (*metav1.Duration)(unsafe.Pointer(in.NewPodScaleUpDelay))
 	out.MaxEmptyBulkDelete = (*int32)(unsafe.Pointer(in.MaxEmptyBulkDelete))
 	out.IgnoreDaemonsetsUtilization = (*bool)(unsafe.Pointer(in.IgnoreDaemonsetsUtilization))
+	out.Verbosity = (*int32)(unsafe.Pointer(in.Verbosity))
 	return nil
 }
 
@@ -2343,6 +2344,7 @@ func autoConvert_core_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler(in *core.Cl
 	out.IgnoreDaemonsetsUtilization = (*bool)(unsafe.Pointer(in.IgnoreDaemonsetsUtilization))
 	out.NewPodScaleUpDelay = (*metav1.Duration)(unsafe.Pointer(in.NewPodScaleUpDelay))
 	out.MaxEmptyBulkDelete = (*int32)(unsafe.Pointer(in.MaxEmptyBulkDelete))
+	out.Verbosity = (*int32)(unsafe.Pointer(in.Verbosity))
 	return nil
 }
 

@@ -3161,6 +3161,17 @@ bool
 <p>IgnoreDaemonsetsUtilization allows CA to ignore DaemonSet pods when calculating resource utilization for scaling down.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>verbosity</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<p>Verbosity allows CA to modify it&rsquo;s log level</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.Condition">Condition

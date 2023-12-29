@@ -880,9 +880,10 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.Expander).To(PointTo(Equal(expanderLeastWaste)))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxGracefulTerminationSeconds).To(PointTo(Equal(int32(600))))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.IgnoreDaemonsetsUtilization).To(PointTo(Equal(false)))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.Verbosity).To(PointTo(Equal(int32(2))))
 		})
 
-		It("sshould not overwrite the already set values for ClusterAutoscaler field", func() {
+		It("should not overwrite the already set values for ClusterAutoscaler field", func() {
 			obj.Spec.Kubernetes.ClusterAutoscaler = &ClusterAutoscaler{
 				ScaleDownDelayAfterAdd:        &metav1.Duration{Duration: 1 * time.Hour},
 				ScaleDownDelayAfterDelete:     &metav1.Duration{Duration: 2 * time.Hour},
@@ -893,6 +894,8 @@ var _ = Describe("Shoot defaulting", func() {
 				Expander:                      &expanderRandom,
 				MaxNodeProvisionTime:          &metav1.Duration{Duration: 6 * time.Hour},
 				MaxGracefulTerminationSeconds: pointer.Int32(60 * 60 * 24),
+				IgnoreDaemonsetsUtilization:   pointer.Bool(true),
+				Verbosity:                     pointer.Int32(4),
 			}
 
 			SetObjectDefaults_Shoot(obj)
@@ -906,6 +909,8 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxNodeProvisionTime).To(PointTo(Equal(metav1.Duration{Duration: 6 * time.Hour})))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.Expander).To(PointTo(Equal(ClusterAutoscalerExpanderRandom)))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxGracefulTerminationSeconds).To(PointTo(Equal(int32(60 * 60 * 24))))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.IgnoreDaemonsetsUtilization).To(PointTo(Equal(true)))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.Verbosity).To(PointTo(Equal(int32(4))))
 		})
 	})
 

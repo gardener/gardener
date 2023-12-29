@@ -365,7 +365,6 @@ func (c *clusterAutoscaler) computeCommand() []string {
 			"--skip-nodes-with-local-storage=false",
 			"--expendable-pods-priority-cutoff=-10",
 			"--balance-similar-node-groups=true",
-			"--v=2",
 			// Ignore our taint for nodes with unready critical components.
 			// Otherwise, cluster-autoscaler would continue to scale up worker groups even if new Nodes already joined the
 			// cluster (with the taint).
@@ -389,6 +388,7 @@ func (c *clusterAutoscaler) computeCommand() []string {
 		fmt.Sprintf("--scale-down-delay-after-failure=%s", c.config.ScaleDownDelayAfterFailure.Duration),
 		fmt.Sprintf("--scan-interval=%s", c.config.ScanInterval.Duration),
 		fmt.Sprintf("--ignore-daemonsets-utilization=%t", *c.config.IgnoreDaemonsetsUtilization),
+		fmt.Sprintf("--v=%d", *c.config.Verbosity),
 	)
 
 	if c.config.MaxEmptyBulkDelete != nil {

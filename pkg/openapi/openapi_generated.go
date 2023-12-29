@@ -1851,6 +1851,13 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 							Format:      "",
 						},
 					},
+					"verbosity": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Verbosity allows CA to modify it's log level",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 				},
 			},
 		},
