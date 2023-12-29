@@ -419,7 +419,8 @@ message ClusterAutoscaler {
   // +optional
   optional bool ignoreDaemonsetsUtilization = 13;
 
-  // Verbosity allows CA to modify it's log level
+  // Verbosity allows CA to modify it's log level.
+  // +optional
   optional int32 verbosity = 14;
 }
 

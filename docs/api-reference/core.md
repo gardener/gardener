@@ -3169,7 +3169,8 @@ int32
 </em>
 </td>
 <td>
-<p>Verbosity allows CA to modify it&rsquo;s log level</p>
+<em>(Optional)</em>
+<p>Verbosity allows CA to modify it&rsquo;s log level.</p>
 </td>
 </tr>
 </tbody>
