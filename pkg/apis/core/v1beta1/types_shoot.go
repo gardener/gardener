@@ -607,7 +607,7 @@ type ClusterAutoscaler struct {
 	// IgnoreDaemonsetsUtilization allows CA to ignore DaemonSet pods when calculating resource utilization for scaling down (default: false).
 	// +optional
 	IgnoreDaemonsetsUtilization *bool `json:"ignoreDaemonsetsUtilization,omitempty" protobuf:"varint,13,opt,name=ignoreDaemonsetsUtilization"`
-	// Verbosity allows CA to modify it's log level.
+	// Verbosity allows CA to modify its log level (default: 2).
 	// +optional
 	Verbosity *int32 `json:"verbosity,omitempty" protobuf:"varint,14,opt,name=verbosity"`
 }
