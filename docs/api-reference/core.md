@@ -3158,7 +3158,7 @@ bool
 </td>
 <td>
 <em>(Optional)</em>
-<p>IgnoreDaemonsetsUtilization allows CA to ignore DaemonSet pods when calculating resource utilization for scaling down.</p>
+<p>IgnoreDaemonsetsUtilization allows CA to ignore DaemonSet pods when calculating resource utilization for scaling down (default: false).</p>
 </td>
 </tr>
 <tr>
@@ -3170,7 +3170,7 @@ int32
 </td>
 <td>
 <em>(Optional)</em>
-<p>Verbosity allows CA to modify it&rsquo;s log level.</p>
+<p>Verbosity allows CA to modify its log level (default: 2).</p>
 </td>
 </tr>
 </tbody>
