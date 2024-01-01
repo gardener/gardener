@@ -489,7 +489,7 @@ type ClusterAutoscaler struct {
 	MaxEmptyBulkDelete *int32
 	// IgnoreDaemonsetsUtilization allows CA to ignore DaemonSet pods when calculating resource utilization for scaling down.
 	IgnoreDaemonsetsUtilization *bool
-	// Verbosity allows CA to modify it's log level.
+	// Verbosity allows CA to modify its log level.
 	Verbosity *int32
 }
 
