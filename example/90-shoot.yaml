@@ -295,6 +295,7 @@ spec:
   #     - "node.kubernetes.io/disk-pressure"
   #   newPodScaleUpDelay: 10s
   #   maxEmptyBulkDelete: 10
+  #   ignoreDaemonsetsUtilization: false
   #   verbosity: 2
   # verticalPodAutoscaler:
   #   enabled: true
