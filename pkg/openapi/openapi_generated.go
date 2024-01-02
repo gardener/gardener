@@ -1844,6 +1844,20 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 							Format:      "int32",
 						},
 					},
+					"ignoreDaemonsetsUtilization": {
+						SchemaProps: spec.SchemaProps{
+							Description: "IgnoreDaemonsetsUtilization allows CA to ignore DaemonSet pods when calculating resource utilization for scaling down (default: false).",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"verbosity": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Verbosity allows CA to modify its log level (default: 2).",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 				},
 			},
 		},

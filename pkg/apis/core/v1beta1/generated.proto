@@ -414,6 +414,14 @@ message ClusterAutoscaler {
   // MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: 10).
   // +optional
   optional int32 maxEmptyBulkDelete = 12;
+
+  // IgnoreDaemonsetsUtilization allows CA to ignore DaemonSet pods when calculating resource utilization for scaling down (default: false).
+  // +optional
+  optional bool ignoreDaemonsetsUtilization = 13;
+
+  // Verbosity allows CA to modify its log level (default: 2).
+  // +optional
+  optional int32 verbosity = 14;
 }
 
 // Condition holds the information about the state of a resource.
