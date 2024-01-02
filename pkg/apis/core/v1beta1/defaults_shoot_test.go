@@ -915,8 +915,8 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxGracefulTerminationSeconds).To(PointTo(Equal(int32(60 * 60 * 24))))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.IgnoreDaemonsetsUtilization).To(PointTo(Equal(true)))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.Verbosity).To(PointTo(Equal(int32(4))))
-			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.NewPodScaleUpDelay).To(PointTo(Equal(metav1.Duration{Duration: 7 * time.Hour})))
-			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete).To(PointTo(Equal(int32(60 * 60 * 24))))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.NewPodScaleUpDelay).To(PointTo(Equal(metav1.Duration{Duration: 1})))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete).To(PointTo(Equal(int32(20))))
 		})
 	})
 
