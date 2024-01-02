@@ -407,7 +407,7 @@ message ClusterAutoscaler {
   // +optional
   repeated string ignoreTaints = 10;
 
-  // NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up.
+  // NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up (default: 0s).
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration newPodScaleUpDelay = 11;
 

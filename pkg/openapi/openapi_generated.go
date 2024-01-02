@@ -1833,7 +1833,7 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 					},
 					"newPodScaleUpDelay": {
 						SchemaProps: spec.SchemaProps{
-							Description: "NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up.",
+							Description: "NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up (default: 0s).",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
