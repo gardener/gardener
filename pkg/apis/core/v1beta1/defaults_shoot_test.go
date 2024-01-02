@@ -898,8 +898,8 @@ var _ = Describe("Shoot defaulting", func() {
 				MaxGracefulTerminationSeconds: pointer.Int32(60 * 60 * 24),
 				IgnoreDaemonsetsUtilization:   pointer.Bool(true),
 				Verbosity:                     pointer.Int32(4),
-				NewPodScaleUpDelay:            &metav1.Duration{Duration: 7 * time.Hour},
-				MaxEmptyBulkDelete:            pointer.Int32(60 * 60 * 24),
+				NewPodScaleUpDelay:            &metav1.Duration{Duration: 1},
+				MaxEmptyBulkDelete:            pointer.Int32(20),
 			}
 
 			SetObjectDefaults_Shoot(obj)
