@@ -45,13 +45,31 @@ const (
 	nodePortIngress                  int32 = 30448
 )
 
+// MultiZone is an interface for identifying if the cluster has multiple availability zones.
+type MultiZone interface {
+	HasNodesInMultipleZones(_ context.Context, _ client.Client) (bool, error)
+}
+
+func StaticMultiZone(multiZone bool) MultiZone {
+	return &staticMultiZone{multiZone: multiZone}
+}
+
+type staticMultiZone struct {
+	multiZone bool
+}
+
+func (smz *staticMultiZone) HasNodesInMultipleZones(_ context.Context, _ client.Client) (bool, error) {
+	return smz.multiZone, nil
+}
+
 // Reconciler is a reconciler for Service resources.
 type Reconciler struct {
-	Client  client.Client
-	HostIP  string
-	Zone0IP string
-	Zone1IP string
-	Zone2IP string
+	Client    client.Client
+	HostIP    string
+	Zone0IP   string
+	Zone1IP   string
+	Zone2IP   string
+	MultiZone MultiZone
 }
 
 // Reconcile reconciles Service resources.
@@ -82,9 +100,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		switch {
 		case (key == keyIstioIngressGateway || key == keyVirtualGardenIstioIngressGateway) && servicePort.Name == "tcp":
 			service.Spec.Ports[i].NodePort = nodePortIstioIngressGateway
-			// Docker desktop for mac v4.23 breaks traffic going through a port mapping to a different docker container.
-			// Setting external traffic policy to local mitigates the issue for multi-node setups, e.g. for gardener-operator.
-			service.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
+			if multiZone, err := r.MultiZone.HasNodesInMultipleZones(ctx, r.Client); err != nil {
+				return reconcile.Result{}, fmt.Errorf("error identifying number of availability zones: %w", err)
+			} else if multiZone {
+				// Docker desktop for mac v4.23 breaks traffic going through a port mapping to a different docker container.
+				// Setting external traffic policy to local mitigates the issue for multi-node setups, e.g. for gardener-operator.
+				service.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
+			}
 			ip = r.HostIP
 		case key == keyIstioIngressGatewayZone0 && servicePort.Name == "tcp":
 			service.Spec.Ports[i].NodePort = nodePortIstioIngressGatewayZone0
