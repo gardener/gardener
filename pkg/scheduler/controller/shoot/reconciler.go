@@ -308,12 +308,14 @@ func applyStrategy(log logr.Logger, shoot *gardencorev1beta1.Shoot, seedList []g
 	return candidates, nil
 }
 
-func filterCandidates(shoot *gardencorev1beta1.Shoot, shootList []gardencorev1beta1.Shoot, seedList []gardencorev1beta1.Seed) ([]gardencorev1beta1.Seed, error) {
+func filterCandidates(shoot *gardencorev1beta1.Shoot, versionedShootList []gardencorev1beta1.Shoot, seedList []gardencorev1beta1.Seed) ([]gardencorev1beta1.Seed, error) {
 	var (
 		candidates      []gardencorev1beta1.Seed
 		candidateErrors = make(map[string]error)
-		seedUsage       = v1beta1helper.CalculateSeedUsage(shootList)
+		seedUsage       map[string]int
+		shootList       = convertList(versionedShootList)
 	)
+	seedUsage = v1beta1helper.CalculateSeedUsage(shootList)
 
 	for _, seed := range seedList {
 		if shoot.Spec.Networking != nil {
@@ -347,8 +349,10 @@ func getSeedWithLeastShootsDeployed(seedList []gardencorev1beta1.Seed, shootList
 	var (
 		bestCandidate gardencorev1beta1.Seed
 		min           *int
-		seedUsage     = v1beta1helper.CalculateSeedUsage(shootList)
+		seedUsage     map[string]int
+		sl            = convertList(shootList)
 	)
+	seedUsage = v1beta1helper.CalculateSeedUsage(sl)
 
 	for _, seed := range seedList {
 		if numberOfManagedShoots := seedUsage[seed.Name]; min == nil || numberOfManagedShoots < *min {
@@ -358,6 +362,16 @@ func getSeedWithLeastShootsDeployed(seedList []gardencorev1beta1.Seed, shootList
 	}
 
 	return &bestCandidate, nil
+}
+
+func convertList(shootList []gardencorev1beta1.Shoot) []*gardencorev1beta1.Shoot {
+	var res []*gardencorev1beta1.Shoot
+
+	for i := 0; i < len(shootList); i++ {
+		res = append(res, &shootList[i])
+	}
+
+	return res
 }
 
 func matchProvider(seedProviderType, shootProviderType string, enabledProviderTypes []string) bool {
