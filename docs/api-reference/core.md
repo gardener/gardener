@@ -3134,7 +3134,7 @@ Kubernetes meta/v1.Duration
 </td>
 <td>
 <em>(Optional)</em>
-<p>NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up.</p>
+<p>NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up (default: 0s).</p>
 </td>
 </tr>
 <tr>

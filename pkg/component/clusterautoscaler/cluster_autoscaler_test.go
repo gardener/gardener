@@ -89,6 +89,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 		configScanInterval                        = &metav1.Duration{Duration: time.Second}
 		configIgnoreDaemonsetsUtilization   bool  = true
 		configVerbosity                     int32 = 4
+		configMaxEmptyBulkDelete                  = pointer.Int32(20)
+		configNewPodScaleUpDelay                  = &metav1.Duration{Duration: time.Second}
 		configIgnoreTaints                        = []string{"taint-1", "taint-2"}
 		configFull                                = &gardencorev1beta1.ClusterAutoscaler{
 			Expander:                      &configExpander,
@@ -103,6 +105,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 			IgnoreTaints:                  configIgnoreTaints,
 			IgnoreDaemonsetsUtilization:   &configIgnoreDaemonsetsUtilization,
 			Verbosity:                     &configVerbosity,
+			MaxEmptyBulkDelete:            configMaxEmptyBulkDelete,
+			NewPodScaleUpDelay:            configNewPodScaleUpDelay,
 		}
 
 		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"
@@ -279,6 +283,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 					"--scan-interval=10s",
 					"--ignore-daemonsets-utilization=false",
 					"--v=2",
+					"--max-empty-bulk-delete=10",
+					"--new-pod-scale-up-delay=0s",
 				)
 			} else {
 				commandConfigFlags = append(commandConfigFlags,
@@ -293,6 +299,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 					fmt.Sprintf("--scan-interval=%s", configScanInterval.Duration),
 					fmt.Sprintf("--ignore-daemonsets-utilization=%t", configIgnoreDaemonsetsUtilization),
 					fmt.Sprintf("--v=%d", configVerbosity),
+					fmt.Sprintf("--max-empty-bulk-delete=%d", *configMaxEmptyBulkDelete),
+					fmt.Sprintf("--new-pod-scale-up-delay=%s", configNewPodScaleUpDelay.Duration),
 					fmt.Sprintf("--ignore-taint=%s", configIgnoreTaints[0]),
 					fmt.Sprintf("--ignore-taint=%s", configIgnoreTaints[1]),
 				)
