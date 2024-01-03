@@ -96,15 +96,15 @@ func (r *chartRenderer) RenderEmbeddedFS(embeddedFS embed.FS, chartPath, release
 func (r *chartRenderer) renderRelease(chart *helmchart.Chart, releaseName, namespace string, values interface{}) (*RenderedChart, error) {
 	parsedValues, err := json.Marshal(values)
 	if err != nil {
-		return nil, fmt.Errorf("can't parse variables for chart %s: ,%s", chart.Metadata.Name, err)
+		return nil, fmt.Errorf("failed to parse values for chart %s: ,%w", chart.Metadata.Name, err)
 	}
 	valuesCopy, err := chartutil.ReadValues(parsedValues)
 	if err != nil {
-		return nil, fmt.Errorf("can't read variables for chart %s: ,%s", chart.Metadata.Name, err)
+		return nil, fmt.Errorf("failed to read values for chart %s: ,%w", chart.Metadata.Name, err)
 	}
 
 	if err := chartutil.ProcessDependencies(chart, valuesCopy); err != nil {
-		return nil, fmt.Errorf("can't process chart %s: ,%s", chart.Metadata.Name, err)
+		return nil, fmt.Errorf("failed to process chart %s: ,%w", chart.Metadata.Name, err)
 	}
 
 	caps := r.capabilities
@@ -138,7 +138,7 @@ func (r *chartRenderer) renderResources(ch *helmchart.Chart, values chartutil.Va
 
 	_, manifests, err := releaseutil.SortManifests(files, chartutil.DefaultVersionSet, releaseutil.InstallOrder)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to sort manifests: %w", err)
 	}
 
 	return &RenderedChart{
@@ -207,9 +207,11 @@ func (c *RenderedChart) AsSecretData() map[string][]byte {
 	return data
 }
 
-// loadEmbeddedFS is a copy of chartutil.LoadDir with the difference that it uses an embed.FS.
+// loadEmbeddedFS is a copy of helm.sh/helm/v3/pkg/chart/loader.LoadDir with the difference that it uses an embed.FS.
+// Keep this func in sync with https://github.com/helm/helm/blob/v3.10.3/pkg/chart/loader/directory.go#L44-L120.
 func loadEmbeddedFS(embeddedFS embed.FS, chartPath string) (*helmchart.Chart, error) {
 	var (
+		// use ignore from helm.sh/helm once helm/helm#12662 is fixed.
 		rules = ignore.Empty()
 		files []*helmloader.BufferedFile
 	)
