@@ -50,6 +50,7 @@ type MultiZone interface {
 	HasNodesInMultipleZones(_ context.Context, _ client.Client) (bool, error)
 }
 
+// StaticMultiZone returns an object implementing the MultiZone interface always returning a static value.
 func StaticMultiZone(multiZone bool) MultiZone {
 	return &staticMultiZone{multiZone: multiZone}
 }

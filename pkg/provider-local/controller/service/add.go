@@ -50,7 +50,7 @@ type AddOptions struct {
 
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
 // The opts.Reconciler is being set with a newly instantiated actuator.
-func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddOptions) error {
+func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
 	var istioIngressGatewayPredicates []predicate.Predicate
 	for _, zone := range []*string{
 		nil,
@@ -78,13 +78,13 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddO
 		Zone0IP:   opts.Zone0IP,
 		Zone1IP:   opts.Zone1IP,
 		Zone2IP:   opts.Zone2IP,
-		MultiZone: &nodeZoneInitializer{},
+		MultiZone: &NodeZoneInitializer{},
 	}).AddToManager(mgr, predicate.Or(nginxIngressPredicate, predicate.Or(istioIngressGatewayPredicates...)))
 }
 
 // AddToManager adds a controller with the default Options.
-func AddToManager(ctx context.Context, mgr manager.Manager) error {
-	return AddToManagerWithOptions(ctx, mgr, DefaultAddOptions)
+func AddToManager(_ context.Context, mgr manager.Manager) error {
+	return AddToManagerWithOptions(mgr, DefaultAddOptions)
 }
 
 func matchExpressionsIstioIngressGateway(zone *string) []metav1.LabelSelectorRequirement {
@@ -107,11 +107,13 @@ func matchExpressionsIstioIngressGateway(zone *string) []metav1.LabelSelectorReq
 	}
 }
 
-type nodeZoneInitializer struct {
+// NodeZoneInitializer checks the nodes to for the number of availability zones.
+type NodeZoneInitializer struct {
 	multiZone *bool
 }
 
-func (nzi *nodeZoneInitializer) HasNodesInMultipleZones(ctx context.Context, c client.Client) (bool, error) {
+// HasNodesInMultipleZones determines the availability zones from the corresponding topology zone labels of the nodes.
+func (nzi *NodeZoneInitializer) HasNodesInMultipleZones(ctx context.Context, c client.Client) (bool, error) {
 	if nzi.multiZone == nil {
 		multiZone, err := hasNodesInMultipleZones(ctx, c)
 		if err != nil {
