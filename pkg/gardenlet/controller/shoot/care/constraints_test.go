@@ -34,7 +34,6 @@ import (
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	rbacv1alpha1 "k8s.io/api/rbac/v1alpha1"
 	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
@@ -379,7 +378,6 @@ var _ = Describe("Constraints", func() {
 		kubeSystemNamespaceTables(extensionsv1beta1.SchemeGroupVersion.WithResource("replicasets/status"))
 		kubeSystemNamespaceTables(extensionsv1beta1.SchemeGroupVersion.WithResource("replicasets/scale"))
 		kubeSystemNamespaceTables(extensionsv1beta1.SchemeGroupVersion.WithResource("networkpolicies"))
-		withoutSelectorsTables(extensionsv1beta1.SchemeGroupVersion.WithResource("podsecuritypolicies"))
 
 		// there are no non-problematic webhooks expected for leases because
 		// Gardener considers all leases in all namespaces
@@ -389,8 +387,6 @@ var _ = Describe("Constraints", func() {
 
 		kubeSystemNamespaceTables(networkingv1.SchemeGroupVersion.WithResource("networkpolicies"))
 		kubeSystemNamespaceTables(networkingv1beta1.SchemeGroupVersion.WithResource("networkpolicies"))
-
-		withoutSelectorsTables(policyv1beta1.SchemeGroupVersion.WithResource("podsecuritypolicies"))
 
 		withoutSelectorsTables(rbacv1.SchemeGroupVersion.WithResource("clusterroles"))
 		withoutSelectorsTables(rbacv1.SchemeGroupVersion.WithResource("clusterrolebindings"))
