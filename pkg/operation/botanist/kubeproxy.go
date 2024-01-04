@@ -36,7 +36,7 @@ import (
 
 // DefaultKubeProxy returns a deployer for the kube-proxy.
 func (b *Botanist) DefaultKubeProxy() (kubeproxy.Interface, error) {
-	imageAlpine, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlpine, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	imageAlpine, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlpineConntrack, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}

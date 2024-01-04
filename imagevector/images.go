@@ -23,6 +23,8 @@ const (
 	ImageNameAlertmanager = "alertmanager"
 	// ImageNameAlpine is a constant for an image in the image vector with name 'alpine'.
 	ImageNameAlpine = "alpine"
+	// ImageNameAlpineConntrack is a constant for an image in the image vector with name 'alpine-conntrack'.
+	ImageNameAlpineConntrack = "alpine-conntrack"
 	// ImageNameApiserverProxy is a constant for an image in the image vector with name 'apiserver-proxy'.
 	ImageNameApiserverProxy = "apiserver-proxy"
 	// ImageNameApiserverProxySidecar is a constant for an image in the image vector with name 'apiserver-proxy-sidecar'.

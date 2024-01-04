@@ -354,6 +354,9 @@ images:
 - name: alpine
   repository: europe-docker.pkg.dev/gardener-project/releases/3rd/alpine
   tag: "3.18.4"
+- name: alpine-conntrack
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/alpine-conntrack
+  tag: "3.18.4"
 
 # Logging
 - name: fluent-operator
