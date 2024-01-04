@@ -50,7 +50,7 @@ type AddOptions struct {
 
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
 // The opts.Reconciler is being set with a newly instantiated actuator.
-func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
+func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddOptions) error {
 	var istioIngressGatewayPredicates []predicate.Predicate
 	for _, zone := range []*string{
 		nil,
@@ -73,18 +73,23 @@ func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
 		return err
 	}
 
+	isMultiZone, err := HasNodesInMultipleZones(ctx, mgr.GetAPIReader())
+	if err != nil {
+		return err
+	}
+
 	return (&service.Reconciler{
-		HostIP:    opts.HostIP,
-		Zone0IP:   opts.Zone0IP,
-		Zone1IP:   opts.Zone1IP,
-		Zone2IP:   opts.Zone2IP,
-		MultiZone: &NodeZoneInitializer{},
+		HostIP:      opts.HostIP,
+		Zone0IP:     opts.Zone0IP,
+		Zone1IP:     opts.Zone1IP,
+		Zone2IP:     opts.Zone2IP,
+		IsMultiZone: isMultiZone,
 	}).AddToManager(mgr, predicate.Or(nginxIngressPredicate, predicate.Or(istioIngressGatewayPredicates...)))
 }
 
 // AddToManager adds a controller with the default Options.
-func AddToManager(_ context.Context, mgr manager.Manager) error {
-	return AddToManagerWithOptions(mgr, DefaultAddOptions)
+func AddToManager(ctx context.Context, mgr manager.Manager) error {
+	return AddToManagerWithOptions(ctx, mgr, DefaultAddOptions)
 }
 
 func matchExpressionsIstioIngressGateway(zone *string) []metav1.LabelSelectorRequirement {
@@ -107,25 +112,7 @@ func matchExpressionsIstioIngressGateway(zone *string) []metav1.LabelSelectorReq
 	}
 }
 
-// NodeZoneInitializer checks the nodes to for the number of availability zones.
-type NodeZoneInitializer struct {
-	multiZone *bool
-}
-
-// HasNodesInMultipleZones determines the availability zones from the corresponding topology zone labels of the nodes.
-func (nzi *NodeZoneInitializer) HasNodesInMultipleZones(ctx context.Context, c client.Client) (bool, error) {
-	if nzi.multiZone == nil {
-		multiZone, err := hasNodesInMultipleZones(ctx, c)
-		if err != nil {
-			// Propagate the error, but retry on next call
-			return false, err
-		}
-		nzi.multiZone = &multiZone
-	}
-	return *nzi.multiZone, nil
-}
-
-func hasNodesInMultipleZones(ctx context.Context, c client.Client) (bool, error) {
+func HasNodesInMultipleZones(ctx context.Context, c client.Reader) (bool, error) {
 	nodes := &metav1.PartialObjectMetadataList{}
 	nodes.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NodeList"))
 	if err := c.List(ctx, nodes); err != nil {

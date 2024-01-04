@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestReference(t *testing.T) {
+func TestService(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Provider-Local Controller Service Suite")
 }
