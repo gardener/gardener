@@ -123,6 +123,7 @@ setup_containerd_registry_mirrors() {
   REGISTRY_HOSTNAME="garden.local.gardener.cloud"
 
   for NODE in $(kind get nodes --name="$CLUSTER_NAME"); do
+    echo "Setting up containerd registry mirrors on node ${NODE}.";
     setup_containerd_registry_mirror $NODE "localhost:5001" "http://localhost:5001" "http://${REGISTRY_HOSTNAME}:5001"
     setup_containerd_registry_mirror $NODE "gcr.io" "https://gcr.io" "http://${REGISTRY_HOSTNAME}:5003"
     setup_containerd_registry_mirror $NODE "eu.gcr.io" "https://eu.gcr.io" "http://${REGISTRY_HOSTNAME}:5004"
