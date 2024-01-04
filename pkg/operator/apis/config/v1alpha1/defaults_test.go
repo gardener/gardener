@@ -114,6 +114,55 @@ var _ = Describe("Defaults", func() {
 				Burst: 130,
 			}))
 		})
+
+		It("should not overwrite already set values for RuntimeClientConnection", func() {
+			obj.RuntimeClientConnection = componentbaseconfigv1alpha1.ClientConnectionConfiguration{
+				QPS:   60.0,
+				Burst: 90,
+			}
+
+			SetObjectDefaults_OperatorConfiguration(obj)
+
+			Expect(obj.RuntimeClientConnection).To(Equal(componentbaseconfigv1alpha1.ClientConnectionConfiguration{
+				QPS:   60.0,
+				Burst: 90,
+			}))
+		})
+	})
+
+	Describe("VirtualClientConnection defaulting", func() {
+		It("should not default ContentType and AcceptContentTypes", func() {
+			SetObjectDefaults_OperatorConfiguration(obj)
+
+			// ContentType fields will be defaulted by client constructors / controller-runtime based on whether a
+			// given APIGroup supports protobuf or not. defaults must not touch these, otherwise the integelligent
+			// logic will be overwritten
+			Expect(obj.VirtualClientConnection.ContentType).To(BeEmpty())
+			Expect(obj.VirtualClientConnection.AcceptContentTypes).To(BeEmpty())
+		})
+
+		It("should correctly default VirtualClientConnection", func() {
+			SetObjectDefaults_OperatorConfiguration(obj)
+
+			Expect(obj.VirtualClientConnection).To(Equal(componentbaseconfigv1alpha1.ClientConnectionConfiguration{
+				QPS:   100.0,
+				Burst: 130,
+			}))
+		})
+
+		It("should not overwrite already set values for VirtualClientConnection", func() {
+			obj.VirtualClientConnection = componentbaseconfigv1alpha1.ClientConnectionConfiguration{
+				QPS:   60.0,
+				Burst: 90,
+			}
+
+			SetObjectDefaults_OperatorConfiguration(obj)
+
+			Expect(obj.VirtualClientConnection).To(Equal(componentbaseconfigv1alpha1.ClientConnectionConfiguration{
+				QPS:   60.0,
+				Burst: 90,
+			}))
+		})
 	})
 
 	Describe("LeaderElection defaulting", func() {
@@ -167,7 +216,6 @@ var _ = Describe("Defaults", func() {
 			})
 
 			It("should not overwrite already set values for Garden controller config", func() {
-				v := metav1.Duration{Duration: 30 * time.Second}
 				obj = &OperatorConfiguration{
 					Controllers: ControllerConfiguration{
 						Garden: GardenControllerConfig{
@@ -180,7 +228,7 @@ var _ = Describe("Defaults", func() {
 									Workers:                   pointer.Int64(4),
 									EnableBackupCompaction:    pointer.Bool(true),
 									EventsThreshold:           pointer.Int64(900000),
-									MetricsScrapeWaitDuration: &v,
+									MetricsScrapeWaitDuration: &metav1.Duration{Duration: 30 * time.Second},
 								},
 							},
 						},
@@ -196,7 +244,7 @@ var _ = Describe("Defaults", func() {
 				Expect(obj.Controllers.Garden.ETCDConfig.BackupCompactionController.Workers).To(PointTo(Equal(int64(4))))
 				Expect(obj.Controllers.Garden.ETCDConfig.BackupCompactionController.EnableBackupCompaction).To(PointTo(Equal(true)))
 				Expect(obj.Controllers.Garden.ETCDConfig.BackupCompactionController.EventsThreshold).To(PointTo(Equal(int64(900000))))
-				Expect(obj.Controllers.Garden.ETCDConfig.BackupCompactionController.MetricsScrapeWaitDuration).To(PointTo(Equal(v)))
+				Expect(obj.Controllers.Garden.ETCDConfig.BackupCompactionController.MetricsScrapeWaitDuration).To(PointTo(Equal(metav1.Duration{Duration: 30 * time.Second})))
 			})
 		})
 
