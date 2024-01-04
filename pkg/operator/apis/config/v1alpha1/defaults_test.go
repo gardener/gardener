@@ -136,28 +136,31 @@ var _ = Describe("Defaults", func() {
 		Describe("Controller configuration", func() {
 			Describe("Garden controller", func() {
 				It("should default the object", func() {
-					obj := &GardenControllerConfig{}
+					SetObjectDefaults_OperatorConfiguration(obj)
 
-					SetDefaults_GardenControllerConfig(obj)
-
-					Expect(obj.ConcurrentSyncs).To(PointTo(Equal(1)))
-					Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Hour})))
+					Expect(obj.Controllers.Garden.ConcurrentSyncs).To(PointTo(Equal(1)))
+					Expect(obj.Controllers.Garden.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Hour})))
 				})
 
 				It("should not overwrite existing values", func() {
-					obj := &GardenControllerConfig{
-						ConcurrentSyncs: pointer.Int(5),
-						SyncPeriod:      &metav1.Duration{Duration: time.Second},
+					obj = &OperatorConfiguration{
+						Controllers: ControllerConfiguration{
+							Garden: GardenControllerConfig{
+								ConcurrentSyncs: pointer.Int(5),
+								SyncPeriod:      &metav1.Duration{Duration: time.Second},
+							},
+						},
 					}
 
-					SetDefaults_GardenControllerConfig(obj)
+					SetObjectDefaults_OperatorConfiguration(obj)
 
-					Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
-					Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Second})))
+					Expect(obj.Controllers.Garden.ConcurrentSyncs).To(PointTo(Equal(5)))
+					Expect(obj.Controllers.Garden.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Second})))
 				})
 
 				It("should correctly default ETCDConfig configuration", func() {
-					SetDefaults_OperatorConfiguration(obj)
+					SetObjectDefaults_OperatorConfiguration(obj)
+
 					Expect(obj.Controllers.Garden.ETCDConfig).NotTo(BeNil())
 					Expect(obj.Controllers.Garden.ETCDConfig.ETCDController).NotTo(BeNil())
 					Expect(obj.Controllers.Garden.ETCDConfig.ETCDController.Workers).To(PointTo(Equal(int64(50))))
@@ -172,21 +175,23 @@ var _ = Describe("Defaults", func() {
 
 			Describe("GardenCare controller", func() {
 				It("should default the object", func() {
-					obj := &GardenCareControllerConfiguration{}
+					SetObjectDefaults_OperatorConfiguration(obj)
 
-					SetDefaults_GardenCareControllerConfiguration(obj)
-
-					Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
+					Expect(obj.Controllers.GardenCare.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
 				})
 
 				It("should not overwrite existing values", func() {
-					obj := &GardenCareControllerConfiguration{
-						SyncPeriod: &metav1.Duration{Duration: time.Second},
+					obj = &OperatorConfiguration{
+						Controllers: ControllerConfiguration{
+							GardenCare: GardenCareControllerConfiguration{
+								SyncPeriod: &metav1.Duration{Duration: time.Second},
+							},
+						},
 					}
 
-					SetDefaults_GardenCareControllerConfiguration(obj)
+					SetObjectDefaults_OperatorConfiguration(obj)
 
-					Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Second})))
+					Expect(obj.Controllers.GardenCare.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Second})))
 				})
 			})
 		})
