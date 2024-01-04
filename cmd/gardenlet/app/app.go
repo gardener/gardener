@@ -74,12 +74,11 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	clientutils "github.com/gardener/gardener/pkg/utils/kubernetes/client"
+	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	thirdpartyapiutil "github.com/gardener/gardener/third_party/controller-runtime/pkg/apiutil"
 )
 
@@ -385,8 +384,8 @@ func (g *garden) Start(ctx context.Context) error {
 	}
 
 	log.Info("Cleaning up GRM secret finalizers")
-	if err := g.cleanupGRMSecretFinalizers(ctx, g.mgr.GetClient()); err != nil {
-		return err
+	if err := cleanupGRMSecretFinalizers(ctx, g.mgr.GetClient(), log); err != nil {
+		return fmt.Errorf("failed to clean up GRM secret finalizers: %w", err)
 	}
 
 	log.Info("Recreating wrongly deleted managed resource secrets")
@@ -469,29 +468,32 @@ func (g *garden) cleanupOrphanedExtensionsServiceAccounts(ctx context.Context, g
 }
 
 // TODO(Kostov6): Remove this code after v1.91 has been released.
-func (g *garden) cleanupGRMSecretFinalizers(ctx context.Context, seedClient client.Client) error {
+func cleanupGRMSecretFinalizers(ctx context.Context, seedClient client.Client, log logr.Logger) error {
 	mrs := &resourcesv1alpha1.ManagedResourceList{}
 	if err := seedClient.List(ctx, mrs); err != nil {
 		if meta.IsNoMatchError(err) {
-			// resources.gardener.cloud/v1alpha1 CRD not yet applied
+			log.Info("Received a 'no match error' while trying to list managed resources. Will assume that the managed resources CRD is not yet installed (for example new Seed creation) and will skip cleaning up GRM finalizers.")
 			return nil
 		}
-		return fmt.Errorf("failed to list ManagedResources while cleaning up GRM finalizers: %w", err)
+		return fmt.Errorf("failed to list managed resources: %w", err)
 	}
-	return clientutils.ApplyToObjects(ctx, mrs, func(ctx context.Context, obj client.Object) error {
+
+	return utilclient.ApplyToObjects(ctx, mrs, func(ctx context.Context, obj client.Object) error {
 		mr, ok := obj.(*resourcesv1alpha1.ManagedResource)
 		if !ok {
 			return fmt.Errorf("expected *resourcesv1alpha1.ManagedResource but got %T", obj)
 		}
+
 		for _, ref := range mr.Spec.SecretRefs {
 			secret := &corev1.Secret{}
-			if err := g.mgr.GetClient().Get(ctx, client.ObjectKey{Namespace: mr.Namespace, Name: ref.Name}, secret); err != nil {
-				return fmt.Errorf("failed to get secret while cleaning up GRM finalizers: %w", err)
+			if err := seedClient.Get(ctx, client.ObjectKey{Namespace: mr.Namespace, Name: ref.Name}, secret); err != nil {
+				return fmt.Errorf("failed to get secret '%s': %w", client.ObjectKeyFromObject(secret), err)
 			}
+
 			for _, finalizer := range secret.Finalizers {
-				if strings.HasPrefix(finalizer, predicate.FinalizerName) {
+				if strings.HasPrefix(finalizer, grmFinalizer) {
 					if err := controllerutils.RemoveFinalizers(ctx, seedClient, secret, finalizer); err != nil {
-						return fmt.Errorf("failed to remove finalizer while cleaning up GRM finalizers: %w", err)
+						return fmt.Errorf("failed to remove finalizer from secret '%s': %w", client.ObjectKeyFromObject(secret), err)
 					}
 				}
 			}
