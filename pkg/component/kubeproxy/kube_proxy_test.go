@@ -40,7 +40,7 @@ import (
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	"github.com/gardener/gardener/pkg/utils/version"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 var _ = Describe("KubeProxy", func() {
@@ -131,7 +131,7 @@ var _ = Describe("KubeProxy", func() {
 			VPAEnabled:  false,
 			WorkerPools: []WorkerPool{
 				{Name: "pool1", KubernetesVersion: semver.MustParse("1.24.13"), Image: "some-image:some-tag1"},
-				{Name: "pool2", KubernetesVersion: semver.MustParse("1.25.4"), Image: "some-image:some-tag2"},
+				{Name: "pool2", KubernetesVersion: semver.MustParse("1.29.0"), Image: "some-image:some-tag2"},
 			},
 		}
 		component = New(c, namespace, values)
@@ -459,7 +459,7 @@ subjects:
 			daemonSetNameFor = func(pool WorkerPool) string {
 				return "kube-proxy-" + pool.Name + "-v" + pool.KubernetesVersion.String()
 			}
-			daemonSetYAMLFor = func(pool WorkerPool, ipvsEnabled, vpaEnabled bool) string {
+			daemonSetYAMLFor = func(pool WorkerPool, ipvsEnabled, vpaEnabled, k8sGreaterEqual129 bool) string {
 				referenceAnnotations := func() string {
 					var annotations []string
 
@@ -540,8 +540,19 @@ spec:
           requests:
             cpu: 20m
             memory: 64Mi
-        securityContext:
-          privileged: true
+        securityContext:`
+
+				if k8sGreaterEqual129 {
+					out += `
+          capabilities:
+            add:
+            - NET_ADMIN`
+				} else {
+					out += `
+          privileged: true`
+				}
+
+				out += `
         volumeMounts:
         - mountPath: /var/lib/kube-proxy-kubeconfig
           name: kubeconfig
@@ -587,7 +598,7 @@ spec:
 
 				out += `
         - name: EXECUTE_WORKAROUND_FOR_K8S_ISSUE_109286
-          value: "` + strconv.FormatBool(version.ConstraintK8sLess125.Check(pool.KubernetesVersion)) + `"
+          value: "` + strconv.FormatBool(versionutils.ConstraintK8sLess125.Check(pool.KubernetesVersion)) + `"
         image: ` + pool.Image + `
         imagePullPolicy: IfNotPresent
         name: cleanup
@@ -606,7 +617,52 @@ spec:
         - mountPath: /var/lib/kube-proxy-kubeconfig
           name: kubeconfig
         - mountPath: /var/lib/kube-proxy-config
+          name: kube-proxy-config`
+
+				if k8sGreaterEqual129 {
+					out += `
+      - command:
+        - /usr/local/bin/kube-proxy
+        - --config=/var/lib/kube-proxy-config/config.yaml
+        - --v=2
+        - --init-only
+        image: ` + pool.Image + `
+        imagePullPolicy: IfNotPresent
+        name: kube-proxy
+        ports:
+        - containerPort: 10249
+          hostPort: 10249
+          name: metrics
+          protocol: TCP
+        resources:`
+
+					if vpaEnabled {
+						out += `
+          limits:
+            memory: 2Gi`
+					}
+
+					out += `
+          requests:
+            cpu: 20m
+            memory: 64Mi
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - mountPath: /var/lib/kube-proxy-kubeconfig
+          name: kubeconfig
+        - mountPath: /var/lib/kube-proxy-config
           name: kube-proxy-config
+        - mountPath: /etc/ssl/certs
+          name: ssl-certs-hosts
+          readOnly: true
+        - mountPath: /var/run/dbus/system_bus_socket
+          name: systembussocket
+        - mountPath: /lib/modules
+          name: kernel-modules`
+				}
+
+				out += `
       nodeSelector:
         worker.gardener.cloud/kubernetes-version: ` + pool.KubernetesVersion.String() + `
         worker.gardener.cloud/pool: ` + pool.Name + `
@@ -792,7 +848,12 @@ status: {}
 						"pool-name":          pool.Name,
 						"kubernetes-version": pool.KubernetesVersion.String(),
 					}))
-					Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled)))
+
+					if versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion) {
+						Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled, true)))
+					} else {
+						Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled, false)))
+					}
 
 					expectedPoolMr.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}}
 					utilruntime.Must(references.InjectAnnotations(expectedPoolMr))
@@ -919,7 +980,11 @@ status: {}
 					"role": "pool",
 				}))
 				Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
-				Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled)))
+				if versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion) {
+					Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled, true)))
+				} else {
+					Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled, false)))
+				}
 
 				poolExpectedMr.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}}
 				utilruntime.Must(references.InjectAnnotations(poolExpectedMr))
@@ -956,7 +1021,11 @@ status: {}
 					"pool-name":          pool.Name,
 					"kubernetes-version": pool.KubernetesVersion.String(),
 				}))
-				Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled)))
+				if versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion) {
+					Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled, true)))
+				} else {
+					Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled, false)))
+				}
 
 				expectedMr := &resourcesv1alpha1.ManagedResource{
 					TypeMeta: metav1.TypeMeta{
@@ -988,7 +1057,11 @@ status: {}
 				Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 				Expect(managedResourceSecret.Data).To(HaveLen(1))
-				Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled)))
+				if versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion) {
+					Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled, true)))
+				} else {
+					Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled, false)))
+				}
 
 				// assertions for resources specific to the major/minor parts only of the Kubernetes version
 				managedResourceForMajorMinorVersionOnly := managedResourceForPoolForMajorMinorVersionOnly(pool)

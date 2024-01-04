@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/Masterminds/semver/v3"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -296,8 +297,9 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
-		directoryOrCreate = corev1.HostPathDirectoryOrCreate
-		fileOrCreate      = corev1.HostPathFileOrCreate
+		directoryOrCreate  = corev1.HostPathDirectoryOrCreate
+		fileOrCreate       = corev1.HostPathFileOrCreate
+		k8sGreaterEqual129 = versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion)
 
 		daemonSet = &appsv1.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{
@@ -328,55 +330,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 							v1beta1constants.LabelWorkerPool:              pool.Name,
 							v1beta1constants.LabelWorkerKubernetesVersion: pool.KubernetesVersion.String(),
 						},
-						InitContainers: []corev1.Container{{
-							Name:            "cleanup",
-							Image:           pool.Image,
-							ImagePullPolicy: corev1.PullIfNotPresent,
-							Command: []string{
-								"sh",
-								"-c",
-								fmt.Sprintf("%s/%s %s", volumeMountPathCleanupScript, dataKeyCleanupScript, volumeMountPathMode),
-							},
-							Env: []corev1.EnvVar{
-								{
-									Name:  "KUBE_PROXY_MODE",
-									Value: string(k.getMode()),
-								},
-								{
-									Name:  "EXECUTE_WORKAROUND_FOR_K8S_ISSUE_109286",
-									Value: strconv.FormatBool(versionutils.ConstraintK8sLess125.Check(pool.KubernetesVersion)),
-								},
-							},
-							SecurityContext: &corev1.SecurityContext{
-								Privileged: pointer.Bool(true),
-							},
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      volumeNameCleanupScript,
-									MountPath: volumeMountPathCleanupScript,
-								},
-								{
-									Name:      volumeNameKernelModules,
-									MountPath: volumeMountPathKernelModules,
-								},
-								{
-									Name:      volumeNameDir,
-									MountPath: volumeMountPathDir,
-								},
-								{
-									Name:      volumeNameMode,
-									MountPath: volumeMountPathMode,
-								},
-								{
-									Name:      volumeNameKubeconfig,
-									MountPath: volumeMountPathKubeconfig,
-								},
-								{
-									Name:      volumeNameConfig,
-									MountPath: volumeMountPathConfig,
-								},
-							},
-						}},
+						InitContainers:    k.getInitContainers(pool.KubernetesVersion, pool.Image),
 						PriorityClassName: "system-node-critical",
 						SecurityContext: &corev1.PodSecurityContext{
 							SeccompProfile: &corev1.SeccompProfile{
@@ -396,56 +350,9 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 						HostNetwork:        true,
 						ServiceAccountName: k.serviceAccount.Name,
 						Containers: []corev1.Container{
+							k.getKubeProxyContainer(k8sGreaterEqual129, pool.Image, false),
 							{
-								Name:            containerName,
-								Image:           pool.Image,
-								ImagePullPolicy: corev1.PullIfNotPresent,
-								Command: []string{
-									"/usr/local/bin/kube-proxy",
-									fmt.Sprintf("--config=%s/%s", volumeMountPathConfig, dataKeyConfig),
-									"--v=2",
-								},
-								SecurityContext: &corev1.SecurityContext{
-									Privileged: pointer.Bool(true),
-								},
-								Resources: corev1.ResourceRequirements{
-									Requests: corev1.ResourceList{
-										corev1.ResourceCPU:    resource.MustParse("20m"),
-										corev1.ResourceMemory: resource.MustParse("64Mi"),
-									},
-								},
-								Ports: []corev1.ContainerPort{{
-									Name:          portNameMetrics,
-									ContainerPort: portMetrics,
-									HostPort:      portMetrics,
-									Protocol:      corev1.ProtocolTCP,
-								}},
-								VolumeMounts: []corev1.VolumeMount{
-									{
-										Name:      volumeNameKubeconfig,
-										MountPath: volumeMountPathKubeconfig,
-									},
-									{
-										Name:      volumeNameConfig,
-										MountPath: volumeMountPathConfig,
-									},
-									{
-										Name:      volumeNameSSLCertsHosts,
-										MountPath: volumeMountPathSSLCertsHosts,
-										ReadOnly:  true,
-									},
-									{
-										Name:      volumeNameSystemBusSocket,
-										MountPath: volumeMountPathSystemBusSocket,
-									},
-									{
-										Name:      volumeNameKernelModules,
-										MountPath: volumeMountPathKernelModules,
-									},
-								},
-							},
-							// sidecar container with fix for conntrack
-							{
+								// sidecar container with fix for conntrack
 								Name:            "conntrack-fix",
 								Image:           k.values.ImageAlpine,
 								ImagePullPolicy: corev1.PullIfNotPresent,
@@ -559,6 +466,11 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 		daemonSet.Spec.Template.Spec.Containers[0].Resources.Limits = corev1.ResourceList{
 			corev1.ResourceMemory: resource.MustParse("2048Mi"),
 		}
+		if k8sGreaterEqual129 {
+			daemonSet.Spec.Template.Spec.InitContainers[1].Resources.Limits = corev1.ResourceList{
+				corev1.ResourceMemory: resource.MustParse("2048Mi"),
+			}
+		}
 	}
 
 	utilruntime.Must(references.InjectAnnotations(daemonSet))
@@ -653,4 +565,129 @@ func (k *kubeProxy) getMode() kubeproxyconfigv1alpha1.ProxyMode {
 		return "ipvs"
 	}
 	return "iptables"
+}
+
+func (k *kubeProxy) getInitContainers(kubernetesVersion *semver.Version, image string) []corev1.Container {
+	initContainers := []corev1.Container{
+		{
+			Name:            "cleanup",
+			Image:           image,
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			Command: []string{
+				"sh",
+				"-c",
+				fmt.Sprintf("%s/%s %s", volumeMountPathCleanupScript, dataKeyCleanupScript, volumeMountPathMode),
+			},
+			Env: []corev1.EnvVar{
+				{
+					Name:  "KUBE_PROXY_MODE",
+					Value: string(k.getMode()),
+				},
+				{
+					Name:  "EXECUTE_WORKAROUND_FOR_K8S_ISSUE_109286",
+					Value: strconv.FormatBool(versionutils.ConstraintK8sLess125.Check(kubernetesVersion)),
+				},
+			},
+			SecurityContext: &corev1.SecurityContext{
+				Privileged: pointer.Bool(true),
+			},
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      volumeNameCleanupScript,
+					MountPath: volumeMountPathCleanupScript,
+				},
+				{
+					Name:      volumeNameKernelModules,
+					MountPath: volumeMountPathKernelModules,
+				},
+				{
+					Name:      volumeNameDir,
+					MountPath: volumeMountPathDir,
+				},
+				{
+					Name:      volumeNameMode,
+					MountPath: volumeMountPathMode,
+				},
+				{
+					Name:      volumeNameKubeconfig,
+					MountPath: volumeMountPathKubeconfig,
+				},
+				{
+					Name:      volumeNameConfig,
+					MountPath: volumeMountPathConfig,
+				},
+			},
+		},
+	}
+
+	k8sGreaterEqual129 := versionutils.ConstraintK8sGreaterEqual129.Check(kubernetesVersion)
+	if k8sGreaterEqual129 {
+		initContainers = append(initContainers, k.getKubeProxyContainer(k8sGreaterEqual129, image, true))
+	}
+
+	return initContainers
+}
+
+func (k *kubeProxy) getKubeProxyContainer(k8sGreaterEqual129 bool, image string, init bool) corev1.Container {
+	container := corev1.Container{
+		Name:            containerName,
+		Image:           image,
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Command: []string{
+			"/usr/local/bin/kube-proxy",
+			fmt.Sprintf("--config=%s/%s", volumeMountPathConfig, dataKeyConfig),
+			"--v=2",
+		},
+		SecurityContext: &corev1.SecurityContext{
+			Capabilities: &corev1.Capabilities{
+				Add: []corev1.Capability{"NET_ADMIN"},
+			},
+		},
+		Resources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("20m"),
+				corev1.ResourceMemory: resource.MustParse("64Mi"),
+			},
+		},
+		Ports: []corev1.ContainerPort{{
+			Name:          portNameMetrics,
+			ContainerPort: portMetrics,
+			HostPort:      portMetrics,
+			Protocol:      corev1.ProtocolTCP,
+		}},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      volumeNameKubeconfig,
+				MountPath: volumeMountPathKubeconfig,
+			},
+			{
+				Name:      volumeNameConfig,
+				MountPath: volumeMountPathConfig,
+			},
+			{
+				Name:      volumeNameSSLCertsHosts,
+				MountPath: volumeMountPathSSLCertsHosts,
+				ReadOnly:  true,
+			},
+			{
+				Name:      volumeNameSystemBusSocket,
+				MountPath: volumeMountPathSystemBusSocket,
+			},
+			{
+				Name:      volumeNameKernelModules,
+				MountPath: volumeMountPathKernelModules,
+			},
+		},
+	}
+
+	if !k8sGreaterEqual129 || init {
+		container.SecurityContext = &corev1.SecurityContext{
+			Privileged: pointer.Bool(true),
+		}
+	}
+	if init {
+		container.Command = append(container.Command, "--init-only")
+	}
+
+	return container
 }
