@@ -59,7 +59,6 @@ func (b *Botanist) ShootUsesDNS() bool {
 func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 	return component.OpDestroyWithoutWait(kubeapiserverexposure.NewSNI(
 		b.SeedClientSet.Client(),
-		b.SeedClientSet.Applier(),
 		v1beta1constants.DeploymentNameKubeAPIServer,
 		b.Shoot.SeedNamespace,
 		func() *kubeapiserverexposure.SNIValues {
@@ -82,7 +81,6 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 	b.APIServerClusterIP = clusterIP
 	b.Shoot.Components.ControlPlane.KubeAPIServerSNI = kubeapiserverexposure.NewSNI(
 		b.SeedClientSet.Client(),
-		b.SeedClientSet.Applier(),
 		v1beta1constants.DeploymentNameKubeAPIServer,
 		b.Shoot.SeedNamespace,
 		func() *kubeapiserverexposure.SNIValues {

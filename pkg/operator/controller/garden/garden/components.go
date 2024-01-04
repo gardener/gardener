@@ -733,7 +733,6 @@ func (r *Reconciler) newSNI(garden *operatorv1alpha1.Garden, ingressGatewayValue
 
 	return kubeapiserverexposure.NewSNI(
 		r.RuntimeClientSet.Client(),
-		r.RuntimeClientSet.Applier(),
 		namePrefix+v1beta1constants.DeploymentNameKubeAPIServer,
 		r.GardenNamespace,
 		func() *kubeapiserverexposure.SNIValues {

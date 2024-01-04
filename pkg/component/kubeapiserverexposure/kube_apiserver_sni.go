@@ -38,8 +38,12 @@ import (
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 	netutils "github.com/gardener/gardener/pkg/utils/net"
 )
+
+// ManagedResourceName is the name of the managed resource for the envoy filter.
+const ManagedResourceName = "kube-apiserver-sni"
 
 var (
 	//go:embed templates/envoyfilter.yaml
@@ -78,7 +82,6 @@ type IstioIngressGateway struct {
 // kube-apiserver SNI access.
 func NewSNI(
 	client client.Client,
-	applier kubernetes.Applier,
 	name string,
 	namespace string,
 	valuesFunc func() *SNIValues,
@@ -89,7 +92,6 @@ func NewSNI(
 
 	return &sni{
 		client:     client,
-		applier:    applier,
 		name:       name,
 		namespace:  namespace,
 		valuesFunc: valuesFunc,
@@ -98,7 +100,6 @@ func NewSNI(
 
 type sni struct {
 	client     client.Client
-	applier    kubernetes.Applier
 	name       string
 	namespace  string
 	valuesFunc func() *SNIValues
@@ -144,7 +145,11 @@ func (s *sni) Deploy(ctx context.Context) error {
 		}); err != nil {
 			return err
 		}
-		if err := s.applier.ApplyManifest(ctx, kubernetes.NewManifestReader(envoyFilterSpec.Bytes()), kubernetes.DefaultMergeFuncs); err != nil {
+
+		filename := fmt.Sprintf("envoyfilter__%s__%s.yaml", envoyFilter.Namespace, s.namespace)
+		registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+		registry.AddSerialized(filename, envoyFilterSpec.Bytes())
+		if err := managedresources.CreateForSeed(ctx, s.client, s.namespace, ManagedResourceName, false, registry.SerializedObjects()); err != nil {
 			return err
 		}
 	}
@@ -233,6 +238,10 @@ func (s *sni) Deploy(ctx context.Context) error {
 }
 
 func (s *sni) Destroy(ctx context.Context) error {
+	if err := managedresources.DeleteForSeed(ctx, s.client, s.namespace, ManagedResourceName); err != nil {
+		return err
+	}
+
 	return kubernetesutils.DeleteObjects(
 		ctx,
 		s.client,
