@@ -472,7 +472,7 @@ func cleanupGRMSecretFinalizers(ctx context.Context, seedClient client.Client, l
 	mrs := &resourcesv1alpha1.ManagedResourceList{}
 	if err := seedClient.List(ctx, mrs); err != nil {
 		if meta.IsNoMatchError(err) {
-			log.Info("Received a 'no match error' while trying to list managed resources. Will assume that the managed resources CRD is not yet installed (for example new Seed creation) and will skip cleaning up GRM finalizers.")
+			log.Info("Received a 'no match error' while trying to list managed resources. Will assume that the managed resources CRD is not yet installed (for example new Seed creation) and will skip cleaning up GRM finalizers")
 			return nil
 		}
 		return fmt.Errorf("failed to list managed resources: %w", err)
