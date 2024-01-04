@@ -7,35 +7,35 @@ images:
 # Gardener components
 - name: gardener-apiserver
   sourceRepository: github.com/gardener/gardener
-  repository: eu.gcr.io/gardener-project/gardener/apiserver
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/apiserver
   resourceId:
     name: apiserver
 - name: gardener-admission-controller
   sourceRepository: github.com/gardener/gardener
-  repository: eu.gcr.io/gardener-project/gardener/admission-controller
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/admission-controller
   resourceId:
     name: admission-controller
 - name: gardener-controller-manager
   sourceRepository: github.com/gardener/gardener
-  repository: eu.gcr.io/gardener-project/gardener/controller-manager
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/controller-manager
   resourceId:
     name: controller-manager
 - name: gardener-scheduler
   sourceRepository: github.com/gardener/gardener
-  repository: eu.gcr.io/gardener-project/gardener/scheduler
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/scheduler
   resourceId:
     name: scheduler
 - name: gardenlet
   sourceRepository: github.com/gardener/gardener
-  repository: eu.gcr.io/gardener-project/gardener/gardenlet
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/gardenlet
 - name: gardener-resource-manager
   sourceRepository: github.com/gardener/gardener
-  repository: eu.gcr.io/gardener-project/gardener/resource-manager
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/resource-manager
   resourceId:
     name: resource-manager
 - name: gardener-node-agent
   sourceRepository: github.com/gardener/gardener
-  repository: eu.gcr.io/gardener-project/gardener/node-agent
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/node-agent
   resourceId:
     name: node-agent
 
@@ -53,11 +53,11 @@ images:
         interacted with from other containers or other systems
 - name: etcd-druid
   sourceRepository: github.com/gardener/etcd-druid
-  repository: eu.gcr.io/gardener-project/gardener/etcd-druid
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/etcd-druid
   tag: "v0.21.0"
 - name: dependency-watchdog
   sourceRepository: github.com/gardener/dependency-watchdog
-  repository: eu.gcr.io/gardener-project/gardener/dependency-watchdog
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/dependency-watchdog
   tag: "v1.1.2"
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
@@ -74,7 +74,7 @@ images:
       availability_requirement: 'low'
 - name: ingress-default-backend
   sourceRepository: github.com/gardener/ingress-default-backend
-  repository: eu.gcr.io/gardener-project/gardener/ingress-default-backend
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/ingress-default-backend
   tag: "0.18.0"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
@@ -91,7 +91,7 @@ images:
 #   hyperkube is used for kubectl + kubelet binaries on the worker nodes
 - name: hyperkube
   sourceRepository: github.com/gardener/hyperkube
-  repository: eu.gcr.io/gardener-project/hyperkube
+  repository: europe-docker.pkg.dev/gardener-project/releases/hyperkube
 - name: kube-apiserver
   sourceRepository: github.com/kubernetes/kubernetes
   repository: registry.k8s.io/kube-apiserver
@@ -106,7 +106,7 @@ images:
   repository: registry.k8s.io/kube-proxy
 - name: machine-controller-manager
   sourceRepository: github.com/gardener/machine-controller-manager
-  repository: eu.gcr.io/gardener-project/gardener/machine-controller-manager
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/machine-controller-manager
   tag: "v0.50.1"
   labels:
   - name: gardener.cloud/cve-categorisation
@@ -119,22 +119,22 @@ images:
       availability_requirement: low
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
-  repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/autoscaler/cluster-autoscaler
   tag: "v1.27.1"
   targetVersion: ">= 1.27"
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
-  repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/autoscaler/cluster-autoscaler
   tag: "v1.26.2"
   targetVersion: "1.26.x"
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
-  repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/autoscaler/cluster-autoscaler
   tag: "v1.25.3"
   targetVersion: "1.25.x"
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
-  repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/autoscaler/cluster-autoscaler
   tag: "v1.24.3"
   targetVersion: "1.24.x"
 - name: vpn-seed-server
@@ -213,7 +213,7 @@ images:
       teamname: 'gardener/monitoring-maintainers'
 - name: gardener-metrics-exporter
   sourceRepository: github.com/gardener/gardener-metrics-exporter
-  repository: eu.gcr.io/gardener-project/gardener/metrics-exporter
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/metrics-exporter
   tag: "0.28.0"
   resourceId:
     name: metrics-exporter
@@ -335,7 +335,7 @@ images:
 # Shoot optional addons
 - name: kubernetes-dashboard
   sourceRepository: github.com/kubernetes/dashboard
-  repository: eu.gcr.io/gardener-project/3rd/kubernetesui/dashboard
+  repository: europe-docker.pkg.dev/gardener-project/releases/3rd/kubernetesui/dashboard
   tag: v2.5.1
   labels: &optionalAddonLabels
   - name: cloud.gardener.cnudie/dso/scanning-hints/binary_id/v1
@@ -346,19 +346,19 @@ images:
         purposes only, accompanied w/ warning that no support be provided.
 - name: kubernetes-dashboard-metrics-scraper
   sourceRepository: github.com/kubernetes/dashboard
-  repository: eu.gcr.io/gardener-project/3rd/kubernetesui/metrics-scraper
+  repository: europe-docker.pkg.dev/gardener-project/releases/3rd/kubernetesui/metrics-scraper
   tag: v1.0.7
   labels: *optionalAddonLabels
 
 # Miscellaenous
 - name: alpine
-  repository: eu.gcr.io/gardener-project/3rd/alpine
+  repository: europe-docker.pkg.dev/gardener-project/releases/3rd/alpine
   tag: "3.18.4"
 
 # Logging
 - name: fluent-operator
   sourceRepository: github.com/fluent/fluent-operator
-  repository: eu.gcr.io/gardener-project/3rd/kubesphere/fluent-operator
+  repository: europe-docker.pkg.dev/gardener-project/releases/3rd/kubesphere/fluent-operator
   tag: "v2.3.0"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
@@ -375,7 +375,7 @@ images:
       teamname: 'gardener/logging-maintainers'
 - name: fluent-bit
   sourceRepository: github.com/fluent/fluent-operator
-  repository: eu.gcr.io/gardener-project/3rd/kubesphere/fluent-bit
+  repository: europe-docker.pkg.dev/gardener-project/releases/3rd/kubesphere/fluent-bit
   tag: "v2.1.4"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
@@ -394,7 +394,7 @@ images:
   resourceId:
     name: fluent-bit-to-vali
   sourceRepository: github.com/gardener/logging
-  repository: eu.gcr.io/gardener-project/gardener/fluent-bit-to-vali
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/fluent-bit-to-vali
   tag: "v0.55.4"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
@@ -429,7 +429,7 @@ images:
       teamname: 'gardener/logging-maintainers'
 - name: vali-curator
   sourceRepository: github.com/gardener/logging
-  repository: eu.gcr.io/gardener-project/gardener/vali-curator
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/vali-curator
   tag: "v0.55.4"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
@@ -484,7 +484,7 @@ images:
   resourceId:
     name: telegraf-iptables
   sourceRepository: github.com/gardener/logging
-  repository: eu.gcr.io/gardener-project/gardener/telegraf-iptables
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/telegraf-iptables
   tag: "v0.55.4"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
@@ -504,7 +504,7 @@ images:
       teamname: 'gardener/logging-maintainers'
 - name: event-logger
   sourceRepository: github.com/gardener/logging
-  repository: eu.gcr.io/gardener-project/gardener/event-logger
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/event-logger
   tag: "v0.55.4"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
@@ -521,7 +521,7 @@ images:
       teamname: 'gardener/logging-maintainers'
 - name: tune2fs
   sourceRepository: github.com/gardener/logging
-  repository: eu.gcr.io/gardener-project/gardener/tune2fs
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/tune2fs
   tag: "v0.55.4"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
@@ -581,7 +581,7 @@ images:
 # HVPA
 - name: hvpa-controller
   sourceRepository: github.com/gardener/hvpa-controller
-  repository: eu.gcr.io/gardener-project/gardener/hvpa-controller
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/hvpa-controller
   tag: "v0.15.0"
   labels:
     - name: 'gardener.cloud/cve-categorisation'
@@ -638,13 +638,13 @@ images:
 # External Authorization Server for the Istio Endpoint of Reversed VPN
 - name: ext-authz-server
   sourceRepository: github.com/gardener/ext-authz-server
-  repository: eu.gcr.io/gardener-project/gardener/ext-authz-server
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/ext-authz-server
   tag: "0.9.0"
 
 # API Server SNI
 - name: apiserver-proxy
   sourceRepository: github.com/envoyproxy/envoy
-  repository: eu.gcr.io/gardener-project/3rd/envoyproxy/envoy-distroless
+  repository: europe-docker.pkg.dev/gardener-project/releases/3rd/envoyproxy/envoy-distroless
   tag: "v1.26.4"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
@@ -663,5 +663,5 @@ images:
   resourceId:
     name: apiserver-proxy
   sourceRepository: github.com/gardener/apiserver-proxy
-  repository: eu.gcr.io/gardener-project/gardener/apiserver-proxy
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/apiserver-proxy
   tag: "v0.15.0"

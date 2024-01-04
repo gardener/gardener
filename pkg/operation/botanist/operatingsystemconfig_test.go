@@ -300,7 +300,7 @@ var _ = Describe("operatingsystemconfig", func() {
 				kubernetesInterfaceShoot *kubernetesmock.MockInterface
 				kubernetesClientShoot    *mockclient.MockClient
 
-				hyperkubeImage = &imagevector.ImageSource{Name: "hyperkube", Repository: "eu.gcr.io/gardener-project/hyperkube"}
+				hyperkubeImage = &imagevector.ImageSource{Name: "hyperkube", Repository: "europe-docker.pkg.dev/gardener-project/releases/hyperkube"}
 			)
 
 			BeforeEach(func() {
@@ -436,14 +436,14 @@ metadata:
 										Namespace: namespace,
 										Labels:    map[string]string{"origin": "gardener"},
 										Annotations: map[string]string{
-											"reference.resources.gardener.cloud/secret-f3205bea": "managedresource-shoot-cloud-config-execution-worker1-cca6d1e7",
-											"reference.resources.gardener.cloud/secret-1d4d1d6c": "managedresource-shoot-cloud-config-execution-worker2-4744286d",
+											"reference.resources.gardener.cloud/secret-99da0a78": "managedresource-shoot-cloud-config-execution-worker1-4ba77085",
+											"reference.resources.gardener.cloud/secret-34039e5e": "managedresource-shoot-cloud-config-execution-worker2-4448afb0",
 											"reference.resources.gardener.cloud/secret-db6befd8": "managedresource-shoot-cloud-config-rbac-94106240",
 										},
 									}))
 									Expect(obj.Spec.SecretRefs).To(ConsistOf(
-										corev1.LocalObjectReference{Name: "managedresource-shoot-cloud-config-execution-" + worker1Name + "-cca6d1e7"},
-										corev1.LocalObjectReference{Name: "managedresource-shoot-cloud-config-execution-" + worker2Name + "-4744286d"},
+										corev1.LocalObjectReference{Name: "managedresource-shoot-cloud-config-execution-" + worker1Name + "-4ba77085"},
+										corev1.LocalObjectReference{Name: "managedresource-shoot-cloud-config-execution-" + worker2Name + "-4448afb0"},
 										corev1.LocalObjectReference{Name: "managedresource-shoot-cloud-config-rbac-94106240"},
 									))
 									Expect(obj.Spec.InjectLabels).To(Equal(map[string]string{"shoot.gardener.cloud/no-cleanup": "true"}))

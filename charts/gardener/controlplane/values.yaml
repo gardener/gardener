@@ -13,7 +13,7 @@ global:
     logFormat: json
     logVerbosity: "2"
     image:
-      repository: eu.gcr.io/gardener-project/gardener/apiserver
+      repository: europe-docker.pkg.dev/gardener-project/releases/gardener/apiserver
       tag: latest
       pullPolicy: IfNotPresent
     livenessProbe:
@@ -285,7 +285,7 @@ global:
     replicaCount: 3
     serviceAccountName: gardener-admission-controller
     image:
-      repository: eu.gcr.io/gardener-project/gardener/admission-controller
+      repository: europe-docker.pkg.dev/gardener-project/releases/gardener/admission-controller
       tag: latest
       pullPolicy: IfNotPresent
     resources:
@@ -358,7 +358,7 @@ global:
     replicaCount: 1
     serviceAccountName: gardener-controller-manager
     image:
-      repository: eu.gcr.io/gardener-project/gardener/controller-manager
+      repository: europe-docker.pkg.dev/gardener-project/releases/gardener/controller-manager
       tag: latest
       pullPolicy: IfNotPresent
     resources:
@@ -468,7 +468,7 @@ global:
     replicaCount: 1
     serviceAccountName: gardener-scheduler
     image:
-      repository: eu.gcr.io/gardener-project/gardener/scheduler
+      repository: europe-docker.pkg.dev/gardener-project/releases/gardener/scheduler
       tag: latest
       pullPolicy: IfNotPresent
     resources:

@@ -3,7 +3,7 @@ revisionHistoryLimit: 2
 serviceAccountName: gardenlet
 invalidateServiceAccountToken: true
 image:
-  repository: eu.gcr.io/gardener-project/gardener/gardenlet
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/gardenlet
   tag: latest
   pullPolicy: IfNotPresent
 resources:

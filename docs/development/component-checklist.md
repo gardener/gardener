@@ -65,7 +65,7 @@ This document provides a checklist for them that you can walk through.
 
    Check if the upstream image is being also maintained in a registry that support IPv6 natively such as Artifact Registry, Quay (`quay.io`). If there is such image, use the image from registry with IPv6 support.
 
-   If the image is not available in a registry with IPv6 then copy the image to the gardener GCR. There is a [prow job](https://github.com/gardener/ci-infra/blob/92782bedd92815639abf4dc14b2c484f77c6e57d/config/jobs/ci-infra/copy-images.yaml) copying images that are needed in gardener components from a source registry to the gardener GCR under the prefix `eu.gcr.io/gardener-project/3rd/` (see the [documentation](https://github.com/gardener/ci-infra/tree/master/config/images) or [gardener/ci-infra#619](https://github.com/gardener/ci-infra/issues/619)).
+   If the image is not available in a registry with IPv6 then copy the image to the gardener GCR. There is a [prow job](https://github.com/gardener/ci-infra/blob/92782bedd92815639abf4dc14b2c484f77c6e57d/config/jobs/ci-infra/copy-images.yaml) copying images that are needed in gardener components from a source registry to the gardener GCR under the prefix `europe-docker.pkg.dev/gardener-project/releases/3rd/` (see the [documentation](https://github.com/gardener/ci-infra/tree/master/config/images) or [gardener/ci-infra#619](https://github.com/gardener/ci-infra/issues/619)).
 
    If you want to use a new image from a registry without IPv6 support or upgrade an already used image to a newer tag, please open a PR to the ci-infra repository that modifies the job's list of images to copy: [`images.yaml`](https://github.com/gardener/ci-infra/blob/master/config/images/images.yaml).
 

@@ -155,7 +155,7 @@ var _ = Describe("ValuesHelper", func() {
 			ReplicaCount:         pointer.Int32(1),
 			RevisionHistoryLimit: pointer.Int32(1),
 			Image: &seedmanagementv1alpha1.Image{
-				Repository: pointer.String("eu.gcr.io/gardener-project/gardener/gardenlet"),
+				Repository: pointer.String("europe-docker.pkg.dev/gardener-project/releases/gardener/gardenlet"),
 				Tag:        pointer.String("v0.0.0-master+$Format:%H$"),
 				PullPolicy: pullPolicyPtr(corev1.PullIfNotPresent),
 			},
@@ -233,7 +233,7 @@ var _ = Describe("ValuesHelper", func() {
 				"replicaCount":         float64(replicaCount),
 				"revisionHistoryLimit": float64(1),
 				"image": map[string]interface{}{
-					"repository": "eu.gcr.io/gardener-project/gardener/gardenlet",
+					"repository": "europe-docker.pkg.dev/gardener-project/releases/gardener/gardenlet",
 					"tag":        "v0.0.0-master+$Format:%H$",
 					"pullPolicy": "IfNotPresent",
 				},

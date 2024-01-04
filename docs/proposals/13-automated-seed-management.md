@@ -148,7 +148,7 @@ spec:
       revisionHistoryLimit: 10
       serviceAccountName: gardenlet
       image:
-        repository: eu.gcr.io/gardener-project/gardener/gardenlet
+        repository: europe-docker.pkg.dev/gardener-project/releases/gardener/gardenlet
         tag: latest
         pullPolicy: IfNotPresent
       resources:
