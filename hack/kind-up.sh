@@ -123,7 +123,6 @@ setup_containerd_registry_mirrors() {
   REGISTRY_HOSTNAME="garden.local.gardener.cloud"
 
   for NODE in $(kind get nodes --name="$CLUSTER_NAME"); do
-    echo "Setting up containerd registry mirrors on node ${NODE}.";
     setup_containerd_registry_mirror $NODE "localhost:5001" "http://localhost:5001" "http://${REGISTRY_HOSTNAME}:5001"
     setup_containerd_registry_mirror $NODE "gcr.io" "https://gcr.io" "http://${REGISTRY_HOSTNAME}:5003"
     setup_containerd_registry_mirror $NODE "eu.gcr.io" "https://eu.gcr.io" "http://${REGISTRY_HOSTNAME}:5004"
@@ -141,7 +140,7 @@ setup_containerd_registry_mirror() {
   UPSTREAM_SERVER=$3
   MIRROR_HOST=$4
 
-  echo "Setting up containerd registry mirror for host ${UPSTREAM_HOST}.";
+  echo "[${NODE}] Setting up containerd registry mirror for host ${UPSTREAM_HOST}.";
   REGISTRY_DIR="/etc/containerd/certs.d/${UPSTREAM_HOST}"
   docker exec "${NODE}" mkdir -p "${REGISTRY_DIR}"
   cat <<EOF | docker exec -i "${NODE}" cp /dev/stdin "${REGISTRY_DIR}/hosts.toml"
