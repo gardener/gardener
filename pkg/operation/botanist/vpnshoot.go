@@ -18,6 +18,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/imagevector"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/component/vpnshoot"
@@ -39,14 +40,18 @@ func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 			Endpoint:    b.outOfClusterAPIServerFQDN(),
 			OpenVPNPort: 8132,
 			IPFamilies:  b.Shoot.GetInfo().Spec.Networking.IPFamilies,
-			// TODO select the IPv6 VPN default network when IPv6 is used
-			Network: pointer.StringDeref(b.Seed.GetInfo().Spec.Networks.VPN, v1beta1constants.DefaultVPNRange),
 		},
 		HighAvailabilityEnabled:              b.Shoot.VPNHighAvailabilityEnabled,
 		HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,
 		HighAvailabilityNumberOfShootClients: b.Shoot.VPNHighAvailabilityNumberOfShootClients,
 		PSPDisabled:                          b.Shoot.PSPDisabled,
 		KubernetesVersion:                    b.Shoot.KubernetesVersion,
+	}
+
+	if gardencorev1beta1.IsIPv6SingleStack(b.Shoot.GetInfo().Spec.Networking.IPFamilies) {
+		values.ReversedVPN.Network = pointer.StringDeref(b.Seed.GetInfo().Spec.Networks.VPN, v1beta1constants.DefaultVPNRangeV6)
+	} else {
+		values.ReversedVPN.Network = pointer.StringDeref(b.Seed.GetInfo().Spec.Networks.VPN, v1beta1constants.DefaultVPNRange)
 	}
 
 	return vpnshoot.New(

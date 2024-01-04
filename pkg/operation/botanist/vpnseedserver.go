@@ -20,6 +20,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/imagevector"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/vpnseedserver"
@@ -81,13 +82,17 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 			ServiceCIDR: b.Shoot.Networks.Services.String(),
 			NodeCIDR:    pointer.StringDeref(b.Shoot.GetInfo().Spec.Networking.Nodes, ""),
 			IPFamilies:  b.Shoot.GetInfo().Spec.Networking.IPFamilies,
-			// TODO(VPN) select the IPv6 VPN default network when IPv6 is used
-			VPNCIDR: pointer.StringDeref(b.Seed.GetInfo().Spec.Networks.VPN, v1beta1constants.DefaultVPNRange),
 		},
 		Replicas:                             b.Shoot.GetReplicas(1),
 		HighAvailabilityEnabled:              b.Shoot.VPNHighAvailabilityEnabled,
 		HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,
 		HighAvailabilityNumberOfShootClients: b.Shoot.VPNHighAvailabilityNumberOfShootClients,
+	}
+
+	if gardencorev1beta1.IsIPv6SingleStack(b.Shoot.GetInfo().Spec.Networking.IPFamilies) {
+		values.Network.VPNCIDR = pointer.StringDeref(b.Seed.GetInfo().Spec.Networks.VPN, v1beta1constants.DefaultVPNRangeV6)
+	} else {
+		values.Network.VPNCIDR = pointer.StringDeref(b.Seed.GetInfo().Spec.Networks.VPN, v1beta1constants.DefaultVPNRange)
 	}
 
 	if b.ShootUsesDNS() {
