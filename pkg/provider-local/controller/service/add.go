@@ -112,6 +112,7 @@ func matchExpressionsIstioIngressGateway(zone *string) []metav1.LabelSelectorReq
 	}
 }
 
+// HasNodesInMultipleZones indicates whether there are nodes in multiple availability zones or not.
 func HasNodesInMultipleZones(ctx context.Context, c client.Reader) (bool, error) {
 	nodes := &metav1.PartialObjectMetadataList{}
 	nodes.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NodeList"))
