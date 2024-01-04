@@ -109,8 +109,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	// If the object should be deleted or the responsibility changed
 	// the actual deployments have to be deleted
-	if noLongerHandledByInstance := r.ClassFilter.IsTransferringResponsibility(mr); mr.DeletionTimestamp != nil || noLongerHandledByInstance {
-		if noLongerHandledByInstance {
+	if isTransferringResponsibility := r.ClassFilter.IsTransferringResponsibility(mr); mr.DeletionTimestamp != nil || isTransferringResponsibility {
+		if isTransferringResponsibility {
 			log.Info("Class of ManagedResource changed. Cleaning resources as the responsibility changed")
 		}
 		return r.delete(ctx, log, mr)
