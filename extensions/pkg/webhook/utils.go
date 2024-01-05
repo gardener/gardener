@@ -65,51 +65,51 @@ func SerializeCommandLine(command []string, n int, sep string) string {
 	return strings.Join(command[0:n], " ") + " " + strings.Join(command[n:], sep)
 }
 
-// ContainerWithName returns the container with the given name if it exists in the given slice, nil otherwise.
+// ContainerWithName returns the first occurrence of a container with the given name if it exists in the given slice, nil otherwise.
 func ContainerWithName(containers []corev1.Container, name string) *corev1.Container {
-	for _, container := range containers {
+	for i, container := range containers {
 		if container.Name == name {
-			return &container
+			return &containers[i]
 		}
 	}
 	return nil
 }
 
-// PVCWithName returns the PersistentVolumeClaim with the given name if it exists in the given slice, nil otherwise.
+// PVCWithName returns the first occurrence of a PersistentVolumeClaim with the given name if it exists in the given slice, nil otherwise.
 func PVCWithName(pvcs []corev1.PersistentVolumeClaim, name string) *corev1.PersistentVolumeClaim {
-	for _, pvc := range pvcs {
+	for i, pvc := range pvcs {
 		if pvc.Name == name {
-			return &pvc
+			return &pvcs[i]
 		}
 	}
 	return nil
 }
 
-// UnitWithName returns the unit with the given name if it exists in the given slice, nil otherwise.
+// UnitWithName returns the first occurrence of a unit with the given name if it exists in the given slice, nil otherwise.
 func UnitWithName(units []extensionsv1alpha1.Unit, name string) *extensionsv1alpha1.Unit {
-	for _, unit := range units {
+	for i, unit := range units {
 		if unit.Name == name {
-			return &unit
+			return &units[i]
 		}
 	}
 	return nil
 }
 
-// FileWithPath returns the file with the given path if it exists in the given slice, nil otherwise.
+// FileWithPath returns the first occurrence of a file with the given path if it exists in the given slice, nil otherwise.
 func FileWithPath(files []extensionsv1alpha1.File, path string) *extensionsv1alpha1.File {
-	for _, file := range files {
+	for i, file := range files {
 		if file.Path == path {
-			return &file
+			return &files[i]
 		}
 	}
 	return nil
 }
 
-// UnitOptionWithSectionAndName returns the unit option with the given section and name if it exists in the given slice, nil otherwise.
+// UnitOptionWithSectionAndName returns the first occurrence of a unit option with the given section and name if it exists in the given slice, nil otherwise.
 func UnitOptionWithSectionAndName(opts []*unit.UnitOption, section, name string) *unit.UnitOption {
-	for _, opt := range opts {
+	for i, opt := range opts {
 		if opt.Section == section && opt.Name == name {
-			return opt
+			return opts[i]
 		}
 	}
 
