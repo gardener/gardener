@@ -24,9 +24,14 @@ import (
 )
 
 var _ = Describe("Defaults", func() {
+	var obj *AdmissionControllerConfiguration
+
+	BeforeEach(func() {
+		obj = &AdmissionControllerConfiguration{}
+	})
+
 	Describe("AdmissionControllerConfiguration defaulting", func() {
-		It("should default AdmissionControllerConfiguration correctly", func() {
-			obj := &AdmissionControllerConfiguration{}
+		It("should correctly default the AdmissionControllerConfiguration", func() {
 			SetObjectDefaults_AdmissionControllerConfiguration(obj)
 			// ContentType fields will be defaulted by client constructors / controller-runtime based on whether a
 			// given APIGroup supports protobuf or not. defaults must not touch these, otherwise the integelligent
@@ -42,8 +47,8 @@ var _ = Describe("Defaults", func() {
 
 		})
 
-		It("should not default other fields that are set", func() {
-			obj := &AdmissionControllerConfiguration{
+		It("should not overwrite already set values", func() {
+			obj = &AdmissionControllerConfiguration{
 				LogLevel:  "warning",
 				LogFormat: "md",
 			}
@@ -59,8 +64,7 @@ var _ = Describe("Defaults", func() {
 	})
 
 	Describe("ServerConfiguration defaulting", func() {
-		It("should default ServerConfiguration correctly", func() {
-			obj := &AdmissionControllerConfiguration{}
+		It("should correctly default the ServerConfiguration", func() {
 			expected := &ServerConfiguration{
 				Webhooks: HTTPSServer{
 					Server: Server{
@@ -84,7 +88,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should correctly default the resource admission configuration if given", func() {
-			obj := &AdmissionControllerConfiguration{
+			obj = &AdmissionControllerConfiguration{
 				Server: ServerConfiguration{
 					ResourceAdmissionConfiguration: &ResourceAdmissionConfiguration{
 						UnrestrictedSubjects: []rbacv1.Subject{
@@ -107,8 +111,8 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Server.ResourceAdmissionConfiguration).To(Equal(expected))
 		})
 
-		It("should not default other fields that are set", func() {
-			obj := &AdmissionControllerConfiguration{
+		It("should not overwrite already set values", func() {
+			obj = &AdmissionControllerConfiguration{
 				Server: ServerConfiguration{
 					Webhooks: HTTPSServer{
 						Server: Server{
