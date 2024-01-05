@@ -93,6 +93,7 @@ func SetDefaults_SeedControllerConfiguration(obj *SeedControllerConfiguration) {
 	}
 }
 
+// SetDefaults_ProjectControllerConfiguration sets defaults for the ProjectControllerConfiguration.
 func SetDefaults_ProjectControllerConfiguration(obj *ProjectControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
 		obj.ConcurrentSyncs = pointer.Int(DefaultControllerConcurrentSyncs)
@@ -118,6 +119,7 @@ func SetDefaults_ProjectControllerConfiguration(obj *ProjectControllerConfigurat
 	}
 }
 
+// SetDefaults_ServerConfiguration sets defaults for the ServerConfiguration.
 func SetDefaults_ServerConfiguration(obj *ServerConfiguration) {
 	if obj.HealthProbes == nil {
 		obj.HealthProbes = &Server{}
@@ -134,6 +136,7 @@ func SetDefaults_ServerConfiguration(obj *ServerConfiguration) {
 	}
 }
 
+// SetDefaults_BastionControllerConfiguration sets defaults for the BastionControllerConfiguration.
 func SetDefaults_BastionControllerConfiguration(obj *BastionControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
 		obj.ConcurrentSyncs = pointer.Int(DefaultControllerConcurrentSyncs)
@@ -143,48 +146,56 @@ func SetDefaults_BastionControllerConfiguration(obj *BastionControllerConfigurat
 	}
 }
 
+// SetDefaults_CertificateSigningRequestControllerConfiguration sets defaults for the CertificateSigningRequestControllerConfiguration.
 func SetDefaults_CertificateSigningRequestControllerConfiguration(obj *CertificateSigningRequestControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
 		obj.ConcurrentSyncs = pointer.Int(DefaultControllerConcurrentSyncs)
 	}
 }
 
+// SetDefaults_CloudProfileControllerConfiguration sets defaults for the CloudProfileControllerConfiguration.
 func SetDefaults_CloudProfileControllerConfiguration(obj *CloudProfileControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
 		obj.ConcurrentSyncs = pointer.Int(DefaultControllerConcurrentSyncs)
 	}
 }
 
+// SetDefaults_ControllerDeploymentControllerConfiguration sets defaults for the ControllerDeploymentControllerConfiguration.
 func SetDefaults_ControllerDeploymentControllerConfiguration(obj *ControllerDeploymentControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
 		obj.ConcurrentSyncs = pointer.Int(DefaultControllerConcurrentSyncs)
 	}
 }
 
+// SetDefaults_ControllerRegistrationControllerConfiguration sets defaults for the ControllerRegistrationControllerConfiguration.
 func SetDefaults_ControllerRegistrationControllerConfiguration(obj *ControllerRegistrationControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
 		obj.ConcurrentSyncs = pointer.Int(DefaultControllerConcurrentSyncs)
 	}
 }
 
+// SetDefaults_ExposureClassControllerConfiguration sets defaults for the ExposureClassControllerConfiguration.
 func SetDefaults_ExposureClassControllerConfiguration(obj *ExposureClassControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
 		obj.ConcurrentSyncs = pointer.Int(DefaultControllerConcurrentSyncs)
 	}
 }
 
+// SetDefaults_QuotaControllerConfiguration sets defaults for the QuotaControllerConfiguration.
 func SetDefaults_QuotaControllerConfiguration(obj *QuotaControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
 		obj.ConcurrentSyncs = pointer.Int(DefaultControllerConcurrentSyncs)
 	}
 }
 
+// SetDefaults_SecretBindingControllerConfiguration sets defaults for the SecretBindingControllerConfiguration.
 func SetDefaults_SecretBindingControllerConfiguration(obj *SecretBindingControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
 		obj.ConcurrentSyncs = pointer.Int(DefaultControllerConcurrentSyncs)
 	}
 }
 
+// SetDefaults_SeedExtensionsCheckControllerConfiguration sets defaults for the SeedExtensionsCheckControllerConfiguration.
 func SetDefaults_SeedExtensionsCheckControllerConfiguration(obj *SeedExtensionsCheckControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
 		obj.ConcurrentSyncs = pointer.Int(DefaultControllerConcurrentSyncs)
@@ -194,6 +205,7 @@ func SetDefaults_SeedExtensionsCheckControllerConfiguration(obj *SeedExtensionsC
 	}
 }
 
+// SetDefaults_SeedBackupBucketsCheckControllerConfiguration sets defaults for the SeedBackupBucketsCheckControllerConfiguration.
 func SetDefaults_SeedBackupBucketsCheckControllerConfiguration(obj *SeedBackupBucketsCheckControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
 		obj.ConcurrentSyncs = pointer.Int(DefaultControllerConcurrentSyncs)
@@ -203,6 +215,7 @@ func SetDefaults_SeedBackupBucketsCheckControllerConfiguration(obj *SeedBackupBu
 	}
 }
 
+// SetDefaults_ShootHibernationControllerConfiguration sets defaults for the ShootHibernationControllerConfiguration.
 func SetDefaults_ShootHibernationControllerConfiguration(obj *ShootHibernationControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
 		obj.ConcurrentSyncs = pointer.Int(DefaultControllerConcurrentSyncs)
@@ -212,6 +225,7 @@ func SetDefaults_ShootHibernationControllerConfiguration(obj *ShootHibernationCo
 	}
 }
 
+// SetDefaults_ShootMaintenanceControllerConfiguration sets defaults for the ShootMaintenanceControllerConfiguration.
 func SetDefaults_ShootMaintenanceControllerConfiguration(obj *ShootMaintenanceControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
 		obj.ConcurrentSyncs = pointer.Int(DefaultControllerConcurrentSyncs)
@@ -221,6 +235,7 @@ func SetDefaults_ShootMaintenanceControllerConfiguration(obj *ShootMaintenanceCo
 	}
 }
 
+// SetDefaults_ShootQuotaControllerConfiguration sets defaults for the ShootQuotaControllerConfiguration.
 func SetDefaults_ShootQuotaControllerConfiguration(obj *ShootQuotaControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
 		obj.ConcurrentSyncs = pointer.Int(DefaultControllerConcurrentSyncs)
@@ -232,18 +247,21 @@ func SetDefaults_ShootQuotaControllerConfiguration(obj *ShootQuotaControllerConf
 	}
 }
 
+// SetDefaults_ShootReferenceControllerConfiguration sets defaults for the ShootReferenceControllerConfiguration.
 func SetDefaults_ShootReferenceControllerConfiguration(obj *ShootReferenceControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
 		obj.ConcurrentSyncs = pointer.Int(DefaultControllerConcurrentSyncs)
 	}
 }
 
+// SetDefaults_ShootConditionsControllerConfiguration sets defaults for the ShootConditionsControllerConfiguration.
 func SetDefaults_ShootConditionsControllerConfiguration(obj *ShootConditionsControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
 		obj.ConcurrentSyncs = pointer.Int(DefaultControllerConcurrentSyncs)
 	}
 }
 
+// SetDefaults_EventControllerConfiguration sets defaults for the EventControllerConfiguration.
 func SetDefaults_EventControllerConfiguration(obj *EventControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
 		obj.ConcurrentSyncs = pointer.Int(DefaultControllerConcurrentSyncs)
@@ -253,12 +271,14 @@ func SetDefaults_EventControllerConfiguration(obj *EventControllerConfiguration)
 	}
 }
 
+// SetDefaults_ShootStatusLabelControllerConfiguration sets defaults for the ShootStatusLabelControllerConfiguration.
 func SetDefaults_ShootStatusLabelControllerConfiguration(obj *ShootStatusLabelControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
 		obj.ConcurrentSyncs = pointer.Int(DefaultControllerConcurrentSyncs)
 	}
 }
 
+// SetDefaults_ManagedSeedSetControllerConfiguration sets defaults for the ManagedSeedSetControllerConfiguration.
 func SetDefaults_ManagedSeedSetControllerConfiguration(obj *ManagedSeedSetControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
 		obj.ConcurrentSyncs = pointer.Int(DefaultControllerConcurrentSyncs)
@@ -268,6 +288,7 @@ func SetDefaults_ManagedSeedSetControllerConfiguration(obj *ManagedSeedSetContro
 	}
 }
 
+// SetDefaults_ControllerManagerControllerConfiguration sets defaults for the ControllerManagerControllerConfiguration.
 func SetDefaults_ControllerManagerControllerConfiguration(obj *ControllerManagerControllerConfiguration) {
 	if obj.Bastion == nil {
 		obj.Bastion = &BastionControllerConfiguration{}

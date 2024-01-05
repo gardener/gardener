@@ -28,10 +28,14 @@ import (
 )
 
 var _ = Describe("Defaults", func() {
+	var obj *ControllerManagerConfiguration
+
+	BeforeEach(func() {
+		obj = &ControllerManagerConfiguration{}
+	})
 
 	Describe("ControllerManagerConfiguration defaulting", func() {
 		It("should default ControllerManagerConfiguration correctly", func() {
-			obj := &ControllerManagerConfiguration{}
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
 
 			Expect(obj.LogLevel).To(Equal(logger.InfoLevel))
@@ -48,22 +52,20 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.LogLevel).To(Equal("warning"))
 			Expect(obj.LogFormat).To(Equal("md"))
 		})
-
 	})
 
 	Describe("ClientConnectionConfiguration defaulting", func() {
 		It("should default ClientConnectionConfiguration correctly", func() {
-			obj := &ControllerManagerConfiguration{}
 			expected := &componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 				QPS:   50.0,
 				Burst: 100,
 			}
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
 			Expect(&obj.GardenClientConnection).To(Equal(expected))
 		})
 
 		It("should not default ContentType and AcceptContentTypes", func() {
-			obj := &ControllerManagerConfiguration{}
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
 			// ContentType fields will be defaulted by client constructors / controller-runtime based on whether a
 			// given APIGroup supports protobuf or not. defaults must not touch these, otherwise the integelligent
@@ -81,13 +83,13 @@ var _ = Describe("Defaults", func() {
 			}
 			expected := obj.GardenClientConnection.DeepCopy()
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
 			Expect(&obj.GardenClientConnection).To(Equal(expected))
 		})
 	})
 
 	Describe("LeaderElectionConfiguration defaulting", func() {
 		It("should default LeaderElectionConfiguration correctly", func() {
-			obj := &ControllerManagerConfiguration{}
 			expected := &componentbaseconfigv1alpha1.LeaderElectionConfiguration{
 				LeaderElect:       pointer.Bool(true),
 				ResourceLock:      "leases",
@@ -123,7 +125,6 @@ var _ = Describe("Defaults", func() {
 
 	Describe("ShootRetryControllerConfiguration defaulting", func() {
 		It("should default ShootRetryControllerConfiguration correctly", func() {
-			obj := &ControllerManagerConfiguration{}
 			expected := &ShootRetryControllerConfiguration{
 				ConcurrentSyncs:   pointer.Int(DefaultControllerConcurrentSyncs),
 				RetryPeriod:       &metav1.Duration{Duration: 10 * time.Minute},
@@ -153,7 +154,6 @@ var _ = Describe("Defaults", func() {
 
 	Describe("SeedControllerConfiguration defaulting", func() {
 		It("should default SeedControllerConfiguration correctly", func() {
-			obj := &ControllerManagerConfiguration{}
 			expected := &SeedControllerConfiguration{
 				ConcurrentSyncs:    pointer.Int(DefaultControllerConcurrentSyncs),
 				SyncPeriod:         &metav1.Duration{Duration: 10 * time.Second},
@@ -185,7 +185,6 @@ var _ = Describe("Defaults", func() {
 
 	Describe("ProjectControllerConfiguration defaulting", func() {
 		It("should default ProjectControllerConfiguration correctly", func() {
-			obj := &ControllerManagerConfiguration{}
 			expected := &ProjectControllerConfiguration{
 				ConcurrentSyncs:         pointer.Int(DefaultControllerConcurrentSyncs),
 				MinimumLifetimeDays:     pointer.Int(30),
@@ -247,7 +246,6 @@ var _ = Describe("Defaults", func() {
 
 	Describe("ServerConfiguration defaulting", func() {
 		It("should default ServerConfiguration correctly", func() {
-			obj := &ControllerManagerConfiguration{}
 			expected := &ServerConfiguration{
 				HealthProbes: &Server{
 					Port: 2718,
@@ -281,7 +279,6 @@ var _ = Describe("Defaults", func() {
 
 	Describe("BastionControllerConfiguration defaulting", func() {
 		It("should default BastionControllerConfiguration correctly", func() {
-			obj := &ControllerManagerConfiguration{}
 			expected := &BastionControllerConfiguration{
 				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
 				MaxLifetime:     &metav1.Duration{Duration: 24 * time.Hour},
@@ -309,7 +306,6 @@ var _ = Describe("Defaults", func() {
 
 	Describe("CertificateSigningRequestControllerConfiguration defaulting", func() {
 		It("should default CertificateSigningRequestControllerConfiguration correctly", func() {
-			obj := &ControllerManagerConfiguration{}
 			expected := &CertificateSigningRequestControllerConfiguration{
 				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
 			}
@@ -335,7 +331,6 @@ var _ = Describe("Defaults", func() {
 
 	Describe("CloudProfileControllerConfiguration defaulting", func() {
 		It("should default CloudProfileControllerConfiguration correctly", func() {
-			obj := &ControllerManagerConfiguration{}
 			expected := &CloudProfileControllerConfiguration{
 				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
 			}
@@ -361,7 +356,6 @@ var _ = Describe("Defaults", func() {
 
 	Describe("ControllerDeploymentControllerConfiguration defaulting", func() {
 		It("should default ControllerDeploymentControllerConfiguration correctly", func() {
-			obj := &ControllerManagerConfiguration{}
 			expected := &ControllerDeploymentControllerConfiguration{
 				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
 			}
@@ -387,7 +381,6 @@ var _ = Describe("Defaults", func() {
 
 	Describe("ControllerRegistrationControllerConfiguration defaulting", func() {
 		It("should default ControllerRegistrationControllerConfiguration correctly", func() {
-			obj := &ControllerManagerConfiguration{}
 			expected := &ControllerRegistrationControllerConfiguration{
 				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
 			}
@@ -413,7 +406,6 @@ var _ = Describe("Defaults", func() {
 
 	Describe("ExposureClassControllerConfiguration defaulting", func() {
 		It("should default ExposureClassControllerConfiguration correctly", func() {
-			obj := &ControllerManagerConfiguration{}
 			expected := &ExposureClassControllerConfiguration{
 				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
 			}
@@ -439,7 +431,6 @@ var _ = Describe("Defaults", func() {
 
 	Describe("QuotaControllerConfiguration defaulting", func() {
 		It("should default QuotaControllerConfiguration correctly", func() {
-			obj := &ControllerManagerConfiguration{}
 			expected := &QuotaControllerConfiguration{
 				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
 			}
@@ -465,11 +456,11 @@ var _ = Describe("Defaults", func() {
 
 	Describe("SecretBindingControllerConfiguration defaulting", func() {
 		It("should default SecretBindingControllerConfiguration correctly", func() {
-			obj := &ControllerManagerConfiguration{}
 			expected := &SecretBindingControllerConfiguration{
 				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
 			}
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
 			Expect(obj.Controllers.SecretBinding).To(Equal(expected))
 		})
 
@@ -483,18 +474,19 @@ var _ = Describe("Defaults", func() {
 			}
 			expected := obj.Controllers.SecretBinding.DeepCopy()
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
 			Expect(obj.Controllers.SecretBinding).To(Equal(expected))
 		})
 	})
 
 	Describe("SeedExtensionsCheckControllerConfiguration defaulting", func() {
 		It("should default SeedExtensionsCheckControllerConfiguration correctly", func() {
-			obj := &ControllerManagerConfiguration{}
 			expected := &SeedExtensionsCheckControllerConfiguration{
 				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
 				SyncPeriod:      &metav1.Duration{Duration: 30 * time.Second},
 			}
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
 			Expect(obj.Controllers.SeedExtensionsCheck).To(Equal(expected))
 		})
 
@@ -509,18 +501,19 @@ var _ = Describe("Defaults", func() {
 			}
 			expected := obj.Controllers.SeedExtensionsCheck.DeepCopy()
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
 			Expect(obj.Controllers.SeedExtensionsCheck).To(Equal(expected))
 		})
 	})
 
 	Describe("SeedBackupBucketsCheckControllerConfiguration defaulting", func() {
 		It("should default SeedBackupBucketsCheckControllerConfiguration correctly", func() {
-			obj := &ControllerManagerConfiguration{}
 			expected := &SeedBackupBucketsCheckControllerConfiguration{
 				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
 				SyncPeriod:      &metav1.Duration{Duration: 30 * time.Second},
 			}
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
 			Expect(obj.Controllers.SeedBackupBucketsCheck).To(Equal(expected))
 		})
 
@@ -535,18 +528,19 @@ var _ = Describe("Defaults", func() {
 			}
 			expected := obj.Controllers.SeedBackupBucketsCheck.DeepCopy()
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
 			Expect(obj.Controllers.SeedBackupBucketsCheck).To(Equal(expected))
 		})
 	})
 
 	Describe("ShootHibernationControllerConfiguration defaulting", func() {
 		It("should default ShootHibernationControllerConfiguration correctly", func() {
-			obj := &ControllerManagerConfiguration{}
 			expected := &ShootHibernationControllerConfiguration{
 				ConcurrentSyncs:         pointer.Int(DefaultControllerConcurrentSyncs),
 				TriggerDeadlineDuration: &metav1.Duration{Duration: 2 * time.Hour},
 			}
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
 			Expect(&obj.Controllers.ShootHibernation).To(Equal(expected))
 		})
 
@@ -561,18 +555,19 @@ var _ = Describe("Defaults", func() {
 			}
 			expected := obj.Controllers.ShootHibernation.DeepCopy()
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
 			Expect(&obj.Controllers.ShootHibernation).To(Equal(expected))
 		})
 	})
 
 	Describe("ShootMaintenanceControllerConfiguration defaulting", func() {
 		It("should default ShootMaintenanceControllerConfiguration correctly", func() {
-			obj := &ControllerManagerConfiguration{}
 			expected := &ShootMaintenanceControllerConfiguration{
 				ConcurrentSyncs:                  pointer.Int(DefaultControllerConcurrentSyncs),
 				EnableShootControlPlaneRestarter: pointer.Bool(true),
 			}
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
 			Expect(&obj.Controllers.ShootMaintenance).To(Equal(expected))
 		})
 
@@ -587,13 +582,13 @@ var _ = Describe("Defaults", func() {
 			}
 			expected := obj.Controllers.ShootMaintenance.DeepCopy()
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
 			Expect(&obj.Controllers.ShootMaintenance).To(Equal(expected))
 		})
 	})
 
 	Describe("ShootQuotaControllerConfiguration defaulting", func() {
 		It("should default ShootQuotaControllerConfiguration correctly", func() {
-			obj := &ControllerManagerConfiguration{}
 			expected := &ShootQuotaControllerConfiguration{
 				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
 				SyncPeriod: &metav1.Duration{
@@ -625,7 +620,6 @@ var _ = Describe("Defaults", func() {
 
 	Describe("ShootReferenceControllerConfiguration defaulting", func() {
 		It("should default ShootReferenceControllerConfiguration correctly", func() {
-			obj := &ControllerManagerConfiguration{}
 			expected := &ShootReferenceControllerConfiguration{
 				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
 			}
@@ -651,7 +645,6 @@ var _ = Describe("Defaults", func() {
 
 	Describe("ShootConditionsControllerConfiguration defaulting", func() {
 		It("should default ShootConditionsControllerConfiguration correctly", func() {
-			obj := &ControllerManagerConfiguration{}
 			expected := &ShootConditionsControllerConfiguration{
 				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
 			}
@@ -692,7 +685,6 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default EventControllerConfiguration if not set", func() {
-			obj := &ControllerManagerConfiguration{}
 			var expected *EventControllerConfiguration
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
 
@@ -717,7 +709,6 @@ var _ = Describe("Defaults", func() {
 
 	Describe("ShootStatusLabelControllerConfiguration defaulting", func() {
 		It("should default ShootStatusLabelControllerConfiguration correctly", func() {
-			obj := &ControllerManagerConfiguration{}
 			expected := &ShootStatusLabelControllerConfiguration{
 				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
 			}
@@ -743,7 +734,6 @@ var _ = Describe("Defaults", func() {
 
 	Describe("ManagedSeedSetControllerConfiguration defaulting", func() {
 		It("should default ManagedSeedSetControllerConfiguration correctly if nil", func() {
-			obj := &ControllerManagerConfiguration{}
 			expected := &ManagedSeedSetControllerConfiguration{
 				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
 				MaxShootRetries: pointer.Int(3),
