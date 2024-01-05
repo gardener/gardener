@@ -157,7 +157,10 @@ func EnsureStringWithPrefixContains(items []string, prefix, value, sep string) [
 		if valuesList != "" {
 			values = strings.Split(valuesList, sep)
 		}
-		if j := StringIndex(values, value); j < 0 {
+		j := slices.IndexFunc(values, func(s string) bool {
+			return s == value
+		})
+		if j < 0 {
 			values = append(values, value)
 			items = append(append(items[:i], prefix+strings.Join(values, sep)), items[i+1:]...)
 		}
@@ -170,7 +173,10 @@ func EnsureStringWithPrefixContains(items []string, prefix, value, sep string) [
 func EnsureNoStringWithPrefixContains(items []string, prefix, value, sep string) []string {
 	if i := StringWithPrefixIndex(items, prefix); i >= 0 {
 		values := strings.Split(strings.TrimPrefix(items[i], prefix), sep)
-		if j := StringIndex(values, value); j >= 0 {
+		j := slices.IndexFunc(values, func(s string) bool {
+			return s == value
+		})
+		if j >= 0 {
 			values = append(values[:j], values[j+1:]...)
 			items = append(append(items[:i], prefix+strings.Join(values, sep)), items[i+1:]...)
 		}
@@ -325,13 +331,6 @@ func EnsureAnnotationOrLabel(annotationOrLabelMap map[string]string, key, value 
 	}
 	annotationOrLabelMap[key] = value
 	return annotationOrLabelMap
-}
-
-// StringIndex returns the index of the first occurrence of the given string in the given slice, or -1 if not found.
-func StringIndex(items []string, value string) int {
-	return slices.IndexFunc(items, func(s string) bool {
-		return s == value
-	})
 }
 
 // StringWithPrefixIndex returns the index of the first occurrence of a string having the given prefix in the given slice, or -1 if not found.

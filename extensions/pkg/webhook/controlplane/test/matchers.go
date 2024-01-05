@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"strings"
 
+	"slices"
+
 	"github.com/onsi/gomega/types"
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
@@ -48,7 +50,9 @@ func (m *containElementWithPrefixContainingMatcher) Match(actual interface{}) (s
 		return false, nil
 	}
 	values := strings.Split(strings.TrimPrefix(items[i], m.prefix), m.sep)
-	j := extensionswebhook.StringIndex(values, m.value)
+	j := slices.IndexFunc(values, func(s string) bool {
+		return s == m.value
+	})
 	return j >= 0, nil
 }
 
