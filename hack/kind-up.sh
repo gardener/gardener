@@ -140,7 +140,7 @@ setup_containerd_registry_mirror() {
   UPSTREAM_SERVER=$3
   MIRROR_HOST=$4
 
-  echo "Setting up containerd registry mirror for host ${UPSTREAM_HOST}.";
+  echo "[${NODE}] Setting up containerd registry mirror for host ${UPSTREAM_HOST}.";
   REGISTRY_DIR="/etc/containerd/certs.d/${UPSTREAM_HOST}"
   docker exec "${NODE}" mkdir -p "${REGISTRY_DIR}"
   cat <<EOF | docker exec -i "${NODE}" cp /dev/stdin "${REGISTRY_DIR}/hosts.toml"
