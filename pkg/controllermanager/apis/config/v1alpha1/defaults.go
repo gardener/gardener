@@ -349,5 +349,4 @@ func SetDefaults_ControllerManagerControllerConfiguration(obj *ControllerManager
 			},
 		}
 	}
-
 }
