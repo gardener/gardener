@@ -118,15 +118,14 @@ func UnitOptionWithSectionAndName(opts []*unit.UnitOption, section, name string)
 // EnsureStringWithPrefix ensures that a string having the given prefix exists in the given slice
 // and all matches are with a value equal to prefix + value.
 func EnsureStringWithPrefix(items []string, prefix, value string) []string {
-	if i := StringWithPrefixIndex(items, prefix); i < 0 {
+	if StringWithPrefixIndex(items, prefix) < 0 {
 		return append(items, prefix+value)
 	}
 
 	for i, item := range items {
-		if !strings.HasPrefix(item, prefix) {
-			continue
+		if strings.HasPrefix(item, prefix) {
+			items[i] = prefix + value
 		}
-		items[i] = prefix + value
 	}
 	return items
 }
@@ -141,7 +140,7 @@ func EnsureNoStringWithPrefix(items []string, prefix string) []string {
 // EnsureStringWithPrefixContains ensures that a string having the given prefix exists in the given slice
 // and all matches contain the given value in a list separated by sep.
 func EnsureStringWithPrefixContains(items []string, prefix, value, sep string) []string {
-	if i := StringWithPrefixIndex(items, prefix); i < 0 {
+	if StringWithPrefixIndex(items, prefix) < 0 {
 		return append(items, prefix+value)
 	}
 
@@ -149,12 +148,8 @@ func EnsureStringWithPrefixContains(items []string, prefix, value, sep string) [
 		if !strings.HasPrefix(item, prefix) {
 			continue
 		}
-		valuesList := strings.TrimPrefix(items[i], prefix)
-		var values []string
-		if valuesList != "" {
-			values = strings.Split(valuesList, sep)
-		}
-		if j := slices.Index(values, value); j < 0 {
+		values := strings.Split(strings.TrimPrefix(items[i], prefix), sep)
+		if slices.Index(values, value) < 0 {
 			values = append(values, value)
 			items[i] = prefix + strings.Join(values, sep)
 		}
