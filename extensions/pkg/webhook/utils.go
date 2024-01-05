@@ -112,7 +112,6 @@ func UnitOptionWithSectionAndName(opts []*unit.UnitOption, section, name string)
 			return opts[i]
 		}
 	}
-
 	return nil
 }
 
@@ -127,9 +126,7 @@ func EnsureStringWithPrefix(items []string, prefix, value string) []string {
 		if !strings.HasPrefix(item, prefix) {
 			continue
 		}
-		if item != prefix+value {
-			items = append(append(items[:i], prefix+value), items[i+1:]...)
-		}
+		items[i] = prefix + value
 	}
 	return items
 }
@@ -157,12 +154,9 @@ func EnsureStringWithPrefixContains(items []string, prefix, value, sep string) [
 		if valuesList != "" {
 			values = strings.Split(valuesList, sep)
 		}
-		j := slices.IndexFunc(values, func(s string) bool {
-			return s == value
-		})
-		if j < 0 {
+		if j := slices.Index(values, value); j < 0 {
 			values = append(values, value)
-			items = append(append(items[:i], prefix+strings.Join(values, sep)), items[i+1:]...)
+			items[i] = prefix + strings.Join(values, sep)
 		}
 	}
 	return items
@@ -171,15 +165,14 @@ func EnsureStringWithPrefixContains(items []string, prefix, value, sep string) [
 // EnsureNoStringWithPrefixContains ensures that either a string having the given prefix does not exist in the given slice,
 // or it doesn't contain the given value in a list separated by sep.
 func EnsureNoStringWithPrefixContains(items []string, prefix, value, sep string) []string {
-	if i := StringWithPrefixIndex(items, prefix); i >= 0 {
-		values := strings.Split(strings.TrimPrefix(items[i], prefix), sep)
-		j := slices.IndexFunc(values, func(s string) bool {
-			return s == value
-		})
-		if j >= 0 {
-			values = append(values[:j], values[j+1:]...)
-			items = append(append(items[:i], prefix+strings.Join(values, sep)), items[i+1:]...)
-		}
+	i := StringWithPrefixIndex(items, prefix)
+	if i < 0 {
+		return items
+	}
+	values := strings.Split(strings.TrimPrefix(items[i], prefix), sep)
+	if j := slices.Index(values, value); j >= 0 {
+		values = append(values[:j], values[j+1:]...)
+		items[i] = prefix + strings.Join(values, sep)
 	}
 	return items
 }
@@ -193,7 +186,8 @@ func EnsureEnvVarWithName(items []corev1.EnvVar, item corev1.EnvVar) []corev1.En
 	if i < 0 {
 		return append(items, item)
 	}
-	return append(append(items[:i], item), items[i+1:]...)
+	items[i] = item
+	return items
 }
 
 // EnsureNoEnvVarWithName ensures that a EnvVar with the given name does not exist in the given slice.
@@ -212,7 +206,8 @@ func EnsureVolumeMountWithName(items []corev1.VolumeMount, item corev1.VolumeMou
 	if i < 0 {
 		return append(items, item)
 	}
-	return append(append(items[:i], item), items[i+1:]...)
+	items[i] = item
+	return items
 }
 
 // EnsureNoVolumeMountWithName ensures that a VolumeMount with the given name does not exist in the given slice.
@@ -231,7 +226,8 @@ func EnsureVolumeWithName(items []corev1.Volume, item corev1.Volume) []corev1.Vo
 	if i < 0 {
 		return append(items, item)
 	}
-	return append(append(items[:i], item), items[i+1:]...)
+	items[i] = item
+	return items
 }
 
 // EnsureNoVolumeWithName ensures that a Volume with the given name does not exist in the given slice.
@@ -250,7 +246,8 @@ func EnsureContainerWithName(items []corev1.Container, item corev1.Container) []
 	if i < 0 {
 		return append(items, item)
 	}
-	return append(append(items[:i], item), items[i+1:]...)
+	items[i] = item
+	return items
 }
 
 // EnsureNoContainerWithName ensures that a Container with the given name does not exist in the given slice.
@@ -269,7 +266,8 @@ func EnsureVPAContainerResourcePolicyWithName(items []vpaautoscalingv1.Container
 	if i < 0 {
 		return append(items, item)
 	}
-	return append(append(items[:i], item), items[i+1:]...)
+	items[i] = item
+	return items
 }
 
 // EnsurePVCWithName ensures that a PVC with a name equal to the name of the given PVC exists
@@ -281,7 +279,8 @@ func EnsurePVCWithName(items []corev1.PersistentVolumeClaim, item corev1.Persist
 	if i < 0 {
 		return append(items, item)
 	}
-	return append(append(items[:i], item), items[i+1:]...)
+	items[i] = item
+	return items
 }
 
 // EnsureNoPVCWithName ensures that a PVC with the given name does not exist in the given slice.
@@ -321,7 +320,8 @@ func EnsureUnitWithName(items []extensionsv1alpha1.Unit, item extensionsv1alpha1
 	} else if !reflect.DeepEqual(items[i], item) {
 		items[i] = item
 	}
-	return append(append(items[:i], item), items[i+1:]...)
+	items[i] = item
+	return items
 }
 
 // EnsureAnnotationOrLabel ensures the given key/value exists in the annotationOrLabelMap map.

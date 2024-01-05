@@ -50,10 +50,7 @@ func (m *containElementWithPrefixContainingMatcher) Match(actual interface{}) (s
 		return false, nil
 	}
 	values := strings.Split(strings.TrimPrefix(items[i], m.prefix), m.sep)
-	j := slices.IndexFunc(values, func(s string) bool {
-		return s == m.value
-	})
-	return j >= 0, nil
+	return slices.Index(values, m.value) >= 0, nil
 }
 
 func (m *containElementWithPrefixContainingMatcher) FailureMessage(actual interface{}) (message string) {
