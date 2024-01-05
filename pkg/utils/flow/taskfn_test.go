@@ -163,8 +163,9 @@ var _ = Describe("task functions", func() {
 						return nil
 					}
 				}
-				taskIds = sets.New("1", "2", "3", "4", "5")
-				tasks   = []flow.TaskFn{fn("1"), fn("2"), fn("3"), fn("4"), fn("5")}
+				taskIds    = sets.New("1", "2", "3", "4", "5")
+				tasks      = []flow.TaskFn{fn("1"), fn("2"), fn("3"), fn("4"), fn("5")}
+				tasksFound sets.Set[string]
 			)
 
 			go func() {
@@ -175,19 +176,19 @@ var _ = Describe("task functions", func() {
 			By("Checking active tasks after initial ParallelN call")
 			Eventually(func() int {
 				// find two of the active tasks and remove them from the ids
-				tasksFound := findTasks(taskIds, activeTasks)
-				taskIds = taskIds.Difference(tasksFound)
+				tasksFound = findTasks(taskIds, activeTasks)
 				return tasksFound.Len()
 			}).Should(Equal(n))
+			taskIds = taskIds.Difference(tasksFound)
 
 			By("Unblocking single task")
 			blockCh <- struct{}{}
 			Eventually(func() int {
 				// find the newest active task and remove it from the ids
-				tasksFound := findTasks(taskIds, activeTasks)
-				taskIds = taskIds.Difference(tasksFound)
+				tasksFound = findTasks(taskIds, activeTasks)
 				return tasksFound.Len()
 			}).Should(Equal(1))
+			taskIds = taskIds.Difference(tasksFound)
 
 			Eventually(func(g Gomega) {
 				doneTasks.Range(func(key, value any) bool {
@@ -201,10 +202,10 @@ var _ = Describe("task functions", func() {
 			blockCh <- struct{}{}
 			Eventually(func() int {
 				// find the remaining 2 active tasks and remove them from the ids
-				tasksFound := findTasks(taskIds, activeTasks)
-				taskIds = taskIds.Difference(tasksFound)
+				tasksFound = findTasks(taskIds, activeTasks)
 				return tasksFound.Len()
 			}).Should(Equal(2))
+			taskIds = taskIds.Difference(tasksFound)
 
 			Eventually(func(g Gomega) {
 				doneTasks.Range(func(key, value any) bool {
