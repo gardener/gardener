@@ -43,7 +43,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default fields that are set", func() {
-			obj := &ControllerManagerConfiguration{
+			obj = &ControllerManagerConfiguration{
 				LogLevel:  "warning",
 				LogFormat: "md",
 			}
@@ -75,7 +75,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default fields that are set", func() {
-			obj := &ControllerManagerConfiguration{
+			obj = &ControllerManagerConfiguration{
 				GardenClientConnection: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 					QPS:   60.0,
 					Burst: 120,
@@ -105,7 +105,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default fields that are set", func() {
-			obj := &ControllerManagerConfiguration{
+			obj = &ControllerManagerConfiguration{
 				LeaderElection: &componentbaseconfigv1alpha1.LeaderElectionConfiguration{
 					LeaderElect:       pointer.Bool(true),
 					ResourceLock:      "foo",
@@ -136,7 +136,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default fields that are set", func() {
-			obj := &ControllerManagerConfiguration{
+			obj = &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
 					ShootRetry: &ShootRetryControllerConfiguration{
 						ConcurrentSyncs:   pointer.Int(10),
@@ -166,7 +166,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default fields that are set", func() {
-			obj := &ControllerManagerConfiguration{
+			obj = &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
 					Seed: &SeedControllerConfiguration{
 						ConcurrentSyncs:    pointer.Int(10),
@@ -200,7 +200,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should default ProjectControllerConfiguration unset QuotaConfiguration correctly", func() {
-			obj := &ControllerManagerConfiguration{
+			obj = &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
 					Project: &ProjectControllerConfiguration{
 						Quotas: []QuotaConfiguration{
@@ -224,7 +224,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default fields that are set", func() {
-			obj := &ControllerManagerConfiguration{
+			obj = &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
 					Project: &ProjectControllerConfiguration{
 						ConcurrentSyncs:         pointer.Int(20),
@@ -260,7 +260,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default fields that are set", func() {
-			obj := &ControllerManagerConfiguration{
+			obj = &ControllerManagerConfiguration{
 				Server: ServerConfiguration{
 					HealthProbes: &Server{
 						Port: 3000,
@@ -289,7 +289,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default fields that are set", func() {
-			obj := &ControllerManagerConfiguration{
+			obj = &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
 					Bastion: &BastionControllerConfiguration{
 						ConcurrentSyncs: pointer.Int(10),
@@ -315,7 +315,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default fields that are set", func() {
-			obj := &ControllerManagerConfiguration{
+			obj = &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
 					CertificateSigningRequest: &CertificateSigningRequestControllerConfiguration{
 						ConcurrentSyncs: pointer.Int(10),
@@ -340,7 +340,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default fields that are set", func() {
-			obj := &ControllerManagerConfiguration{
+			obj = &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
 					CloudProfile: &CloudProfileControllerConfiguration{
 						ConcurrentSyncs: pointer.Int(10),
@@ -365,7 +365,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default fields that are set", func() {
-			obj := &ControllerManagerConfiguration{
+			obj = &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
 					ControllerDeployment: &ControllerDeploymentControllerConfiguration{
 						ConcurrentSyncs: pointer.Int(10),
@@ -390,7 +390,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default fields that are set", func() {
-			obj := &ControllerManagerConfiguration{
+			obj = &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
 					ControllerRegistration: &ControllerRegistrationControllerConfiguration{
 						ConcurrentSyncs: pointer.Int(10),
@@ -415,7 +415,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default fields that are set", func() {
-			obj := &ControllerManagerConfiguration{
+			obj = &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
 					ExposureClass: &ExposureClassControllerConfiguration{
 						ConcurrentSyncs: pointer.Int(10),
@@ -440,7 +440,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default fields that are set", func() {
-			obj := &ControllerManagerConfiguration{
+			obj = &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
 					Quota: &QuotaControllerConfiguration{
 						ConcurrentSyncs: pointer.Int(10),
@@ -465,7 +465,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default fields that are set", func() {
-			obj := &ControllerManagerConfiguration{
+			obj = &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
 					SecretBinding: &SecretBindingControllerConfiguration{
 						ConcurrentSyncs: pointer.Int(10),
@@ -491,7 +491,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default fields that are set", func() {
-			obj := &ControllerManagerConfiguration{
+			obj = &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
 					SeedExtensionsCheck: &SeedExtensionsCheckControllerConfiguration{
 						ConcurrentSyncs: pointer.Int(10),
@@ -518,7 +518,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default fields that are set", func() {
-			obj := &ControllerManagerConfiguration{
+			obj = &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
 					SeedBackupBucketsCheck: &SeedBackupBucketsCheckControllerConfiguration{
 						ConcurrentSyncs: pointer.Int(10),
@@ -545,7 +545,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default fields that are set", func() {
-			obj := &ControllerManagerConfiguration{
+			obj = &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
 					ShootHibernation: ShootHibernationControllerConfiguration{
 						ConcurrentSyncs:         pointer.Int(10),
@@ -572,7 +572,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default fields that are set", func() {
-			obj := &ControllerManagerConfiguration{
+			obj = &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
 					ShootMaintenance: ShootMaintenanceControllerConfiguration{
 						ConcurrentSyncs:                  pointer.Int(10),
@@ -601,7 +601,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default fields that are set", func() {
-			obj := &ControllerManagerConfiguration{
+			obj = &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
 					ShootQuota: &ShootQuotaControllerConfiguration{
 						ConcurrentSyncs: pointer.Int(10),
@@ -629,7 +629,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default fields that are set", func() {
-			obj := &ControllerManagerConfiguration{
+			obj = &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
 					ShootReference: &ShootReferenceControllerConfiguration{
 						ConcurrentSyncs: pointer.Int(10),
@@ -654,7 +654,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default fields that are set", func() {
-			obj := &ControllerManagerConfiguration{
+			obj = &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
 					ShootConditions: &ShootConditionsControllerConfiguration{
 						ConcurrentSyncs: pointer.Int(10),
@@ -670,7 +670,7 @@ var _ = Describe("Defaults", func() {
 
 	Describe("EventControllerConfiguration defaulting", func() {
 		It("should default EventControllerConfiguration correctly if set", func() {
-			obj := &ControllerManagerConfiguration{
+			obj = &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
 					Event: &EventControllerConfiguration{},
 				},
@@ -692,7 +692,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default fields that are set", func() {
-			obj := &ControllerManagerConfiguration{
+			obj = &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
 					Event: &EventControllerConfiguration{
 						ConcurrentSyncs:   pointer.Int(10),
@@ -718,7 +718,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default fields that are set", func() {
-			obj := &ControllerManagerConfiguration{
+			obj = &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
 					ShootStatusLabel: &ShootStatusLabelControllerConfiguration{
 						ConcurrentSyncs: pointer.Int(10),
@@ -747,7 +747,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should default ManagedSeedSetControllerConfiguration correctly if not nil", func() {
-			obj := &ControllerManagerConfiguration{
+			obj = &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
 					ManagedSeedSet: &ManagedSeedSetControllerConfiguration{},
 				},
@@ -762,7 +762,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default fields that are set", func() {
-			obj := &ControllerManagerConfiguration{
+			obj = &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
 					ManagedSeedSet: &ManagedSeedSetControllerConfiguration{
 						ConcurrentSyncs: pointer.Int(10),
