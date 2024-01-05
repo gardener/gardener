@@ -62,7 +62,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 			return err
 		}
 
-		if err := (&service.Reconciler{}).AddToManager(mgr, predicate.Or(virtualGardenIstioIngressPredicate, nginxIngressPredicate)); err != nil {
+		if err := (&service.Reconciler{IsMultiZone: true}).AddToManager(mgr, predicate.Or(virtualGardenIstioIngressPredicate, nginxIngressPredicate)); err != nil {
 			return fmt.Errorf("failed adding Service controller: %w", err)
 		}
 	}

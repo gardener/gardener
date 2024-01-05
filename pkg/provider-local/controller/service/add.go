@@ -17,8 +17,10 @@ package service
 import (
 	"context"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -48,7 +50,7 @@ type AddOptions struct {
 
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
 // The opts.Reconciler is being set with a newly instantiated actuator.
-func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
+func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddOptions) error {
 	var istioIngressGatewayPredicates []predicate.Predicate
 	for _, zone := range []*string{
 		nil,
@@ -71,17 +73,23 @@ func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
 		return err
 	}
 
+	isMultiZone, err := HasNodesInMultipleZones(ctx, mgr.GetAPIReader())
+	if err != nil {
+		return err
+	}
+
 	return (&service.Reconciler{
-		HostIP:  opts.HostIP,
-		Zone0IP: opts.Zone0IP,
-		Zone1IP: opts.Zone1IP,
-		Zone2IP: opts.Zone2IP,
+		HostIP:      opts.HostIP,
+		Zone0IP:     opts.Zone0IP,
+		Zone1IP:     opts.Zone1IP,
+		Zone2IP:     opts.Zone2IP,
+		IsMultiZone: isMultiZone,
 	}).AddToManager(mgr, predicate.Or(nginxIngressPredicate, predicate.Or(istioIngressGatewayPredicates...)))
 }
 
 // AddToManager adds a controller with the default Options.
-func AddToManager(_ context.Context, mgr manager.Manager) error {
-	return AddToManagerWithOptions(mgr, DefaultAddOptions)
+func AddToManager(ctx context.Context, mgr manager.Manager) error {
+	return AddToManagerWithOptions(ctx, mgr, DefaultAddOptions)
 }
 
 func matchExpressionsIstioIngressGateway(zone *string) []metav1.LabelSelectorRequirement {
@@ -102,4 +110,23 @@ func matchExpressionsIstioIngressGateway(zone *string) []metav1.LabelSelectorReq
 			Values:   []string{istioLabelValue},
 		},
 	}
+}
+
+// HasNodesInMultipleZones indicates whether there are nodes in multiple availability zones or not.
+func HasNodesInMultipleZones(ctx context.Context, c client.Reader) (bool, error) {
+	nodes := &metav1.PartialObjectMetadataList{}
+	nodes.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NodeList"))
+	if err := c.List(ctx, nodes); err != nil {
+		return false, err
+	}
+
+	var firstZone *string
+	for _, node := range nodes.Items {
+		if zone := node.Labels[corev1.LabelTopologyZone]; firstZone == nil {
+			firstZone = &zone
+		} else if *firstZone != zone {
+			return true, nil
+		}
+	}
+	return false, nil
 }
