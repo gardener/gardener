@@ -213,6 +213,10 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		minAllowed          = corev1.ResourceList{
 			corev1.ResourceMemory: resource.MustParse("200M"),
 		}
+		maxAllowed = corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("4"),
+			corev1.ResourceMemory: resource.MustParse("30G"),
+		}
 	)
 
 	if e.values.Class == ClassImportant {
@@ -512,12 +516,9 @@ func (e *etcd) Deploy(ctx context.Context) error {
 						ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 							ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 								{
-									ContainerName: containerNameEtcd,
-									MinAllowed:    minAllowed,
-									MaxAllowed: corev1.ResourceList{
-										corev1.ResourceCPU:    resource.MustParse("4"),
-										corev1.ResourceMemory: resource.MustParse("30G"),
-									},
+									ContainerName:    containerNameEtcd,
+									MinAllowed:       minAllowed,
+									MaxAllowed:       maxAllowed,
 									ControlledValues: &controlledValues,
 								},
 								{
@@ -553,7 +554,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 		vpa := e.emptyVerticalPodAutoscaler()
 
-		if err := e.reconcileVerticalPodAutoscaler(ctx, vpa, minAllowed); err != nil {
+		if err := e.reconcileVerticalPodAutoscaler(ctx, vpa, minAllowed, maxAllowed); err != nil {
 			return err
 		}
 	}
@@ -595,38 +596,43 @@ func (e *etcd) emptyVerticalPodAutoscaler() *vpaautoscalingv1.VerticalPodAutosca
 	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: e.etcd.Name + "-vpa", Namespace: e.namespace}}
 }
 
-func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautoscalingv1.VerticalPodAutoscaler, minAllowed corev1.ResourceList) error {
+func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautoscalingv1.VerticalPodAutoscaler, minAllowed, maxAllowed corev1.ResourceList) error {
 	vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
 	containerPolicyOff := vpaautoscalingv1.ContainerScalingModeOff
 	containerPolicyAuto := vpaautoscalingv1.ContainerScalingModeAuto
 	controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-	vpaLabels := vpa.GetLabels()
-	if vpaLabels == nil {
-		vpaLabels = map[string]string{}
-	}
-	vpaLabels[v1beta1constants.LabelRole] = "etcd-vpa-" + e.values.Role
-	vpaAnnotations := map[string]string{}
+
 	var scaleDownUpdateMode *string
 
-	if e.values.HvpaConfig != nil {
-		scaleDownUpdateMode = e.values.HvpaConfig.ScaleDownUpdateMode
-	}
-	if pointer.StringDeref(scaleDownUpdateMode, "") == hvpav1alpha1.UpdateModeOff {
-		vpaLabels[v1beta1constants.LabelVPAEvictionRequirementsController] = "managed-by-controller"
-		vpaLabels[v1beta1constants.LabelVPAEvictionRequirementDownscaleDisabled] = "true"
-		delete(vpaLabels, v1beta1constants.LabelVPAEvictionRequirementDownscaleInMaintenanceOnly)
-	} else if pointer.StringDeref(scaleDownUpdateMode, "") == hvpav1alpha1.UpdateModeMaintenanceWindow {
-		vpaLabels[v1beta1constants.LabelVPAEvictionRequirementsController] = "managed-by-controller"
-		vpaLabels[v1beta1constants.LabelVPAEvictionRequirementDownscaleInMaintenanceOnly] = "true"
-		vpaAnnotations[v1beta1constants.AnnotationShootMaintenanceWindow] = e.values.HvpaConfig.MaintenanceTimeWindow.Begin + "," + e.values.HvpaConfig.MaintenanceTimeWindow.End
-
-		delete(vpaLabels, v1beta1constants.LabelVPAEvictionRequirementDownscaleDisabled)
-	} else {
-		delete(vpaLabels, v1beta1constants.LabelVPAEvictionRequirementDownscaleInMaintenanceOnly)
-		delete(vpaLabels, v1beta1constants.LabelVPAEvictionRequirementDownscaleDisabled)
-	}
-
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, vpa, func() error {
+		vpaLabels := vpa.GetLabels()
+		if vpaLabels == nil {
+			vpaLabels = map[string]string{}
+		}
+		vpaAnnotations := vpa.GetAnnotations()
+		if vpaAnnotations == nil {
+			vpaAnnotations = map[string]string{}
+		}
+
+		vpaLabels[v1beta1constants.LabelRole] = "etcd-vpa-" + e.values.Role
+		if e.values.HvpaConfig != nil {
+			scaleDownUpdateMode = e.values.HvpaConfig.ScaleDownUpdateMode
+		}
+		if pointer.StringDeref(scaleDownUpdateMode, "") == hvpav1alpha1.UpdateModeOff {
+			vpaLabels[v1beta1constants.LabelVPAEvictionRequirementsController] = "managed-by-controller"
+			vpaLabels[v1beta1constants.LabelVPAEvictionRequirementDownscaleDisabled] = "true"
+			delete(vpaLabels, v1beta1constants.LabelVPAEvictionRequirementDownscaleInMaintenanceOnly)
+		} else if pointer.StringDeref(scaleDownUpdateMode, "") == hvpav1alpha1.UpdateModeMaintenanceWindow {
+			vpaLabels[v1beta1constants.LabelVPAEvictionRequirementsController] = "managed-by-controller"
+			vpaLabels[v1beta1constants.LabelVPAEvictionRequirementDownscaleInMaintenanceOnly] = "true"
+			vpaAnnotations[v1beta1constants.AnnotationShootMaintenanceWindow] = e.values.HvpaConfig.MaintenanceTimeWindow.Begin + "," + e.values.HvpaConfig.MaintenanceTimeWindow.End
+			delete(vpaLabels, v1beta1constants.LabelVPAEvictionRequirementDownscaleDisabled)
+		} else {
+			delete(vpaLabels, v1beta1constants.LabelVPAEvictionRequirementDownscaleInMaintenanceOnly)
+			delete(vpaLabels, v1beta1constants.LabelVPAEvictionRequirementDownscaleDisabled)
+			delete(vpaLabels, v1beta1constants.LabelVPAEvictionRequirementsController)
+		}
+
 		vpa.Spec = vpaautoscalingv1.VerticalPodAutoscalerSpec{
 			TargetRef: &autoscalingv1.CrossVersionObjectReference{
 				APIVersion: appsv1.SchemeGroupVersion.String(),
@@ -639,12 +645,9 @@ func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautos
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 					{
-						ContainerName: containerNameEtcd,
-						MinAllowed:    minAllowed,
-						MaxAllowed: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("4"),
-							corev1.ResourceMemory: resource.MustParse("30G"),
-						},
+						ContainerName:    containerNameEtcd,
+						MinAllowed:       minAllowed,
+						MaxAllowed:       maxAllowed,
 						ControlledValues: &controlledValues,
 						Mode:             &containerPolicyAuto,
 					},
@@ -658,9 +661,7 @@ func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautos
 		}
 
 		vpa.SetLabels(vpaLabels)
-		for key, value := range vpaAnnotations {
-			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, key, value)
-		}
+		vpa.SetAnnotations(vpaAnnotations)
 
 		return nil
 	})

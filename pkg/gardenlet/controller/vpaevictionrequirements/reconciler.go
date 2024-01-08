@@ -16,11 +16,11 @@ package vpaevictionrequirements
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/clock"
@@ -35,6 +35,20 @@ import (
 )
 
 var cpuAndMemory = []corev1.ResourceName{corev1.ResourceMemory, corev1.ResourceCPU}
+var upscaleOnlyRequirement = []*vpaautoscalingv1.EvictionRequirement{
+	{
+		Resources:         cpuAndMemory,
+		ChangeRequirement: vpaautoscalingv1.TargetHigherThanRequests,
+	},
+}
+
+func removeAllEvictionRequirements(vpa *vpaautoscalingv1.VerticalPodAutoscaler) {
+	vpa.Spec.UpdatePolicy.EvictionRequirements = []*vpaautoscalingv1.EvictionRequirement{}
+}
+
+func addDenyDownscalingEvictionRequirement(vpa *vpaautoscalingv1.VerticalPodAutoscaler) {
+	vpa.Spec.UpdatePolicy.EvictionRequirements = upscaleOnlyRequirement
+}
 
 // Reconciler implements the reconciliation logic for adding/removing EvictionRequirements to VPA objects.
 type Reconciler struct {
@@ -59,64 +73,67 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	// double check just for fun: does the vpa have our label?
 	if metav1.HasLabel(vpa.ObjectMeta, constants.LabelVPAEvictionRequirementDownscaleInMaintenanceOnly) {
-		log.Info("Found the label " + constants.LabelVPAEvictionRequirementDownscaleInMaintenanceOnly)
+		log.Info("Found the label "+constants.LabelVPAEvictionRequirementDownscaleInMaintenanceOnly, "namespace/name", request.NamespacedName)
 		return r.reconcileVPAForDownscaleInMaintenanceOnly(seedCtx, vpa)
 	} else if metav1.HasLabel(vpa.ObjectMeta, constants.LabelVPAEvictionRequirementDownscaleDisabled) {
-		log.Info("Found the label " + constants.LabelVPAEvictionRequirementDownscaleDisabled)
+		log.Info("Found the label "+constants.LabelVPAEvictionRequirementDownscaleDisabled, "namespace/name", request.NamespacedName)
 		return r.reconcileVPAForDownscaleDisabled(seedCtx, vpa)
 	}
 	return reconcile.Result{}, nil
 }
 
-func (r *Reconciler) reconcileVPAForDownscaleInMaintenanceOnly(seedCtx context.Context, vpa *vpaautoscalingv1.VerticalPodAutoscaler) (reconcile.Result, error) {
-	log := logf.FromContext(seedCtx)
+func (r *Reconciler) reconcileVPAForDownscaleInMaintenanceOnly(ctx context.Context, vpa *vpaautoscalingv1.VerticalPodAutoscaler) (reconcile.Result, error) {
+	log := logf.FromContext(ctx).WithValues("namespace", vpa.Namespace, "name", vpa.Name)
 	if !metav1.HasAnnotation(vpa.ObjectMeta, constants.AnnotationShootMaintenanceWindow) {
-		err := errors.New("didn't find maintenance window annotation on VPA, but VPA had label to be downscaled in maintenance only")
+		err := fmt.Errorf("didn't find maintenance window annotation, but VPA had label to be downscaled in maintenance only")
+		log.Error(err, "Error during reconciling for downscaling in maintenance only:")
 		return reconcile.Result{}, err
 	}
 
 	windowAnnotation := vpa.GetAnnotations()[constants.AnnotationShootMaintenanceWindow]
 	splitWindowAnnotation := strings.Split(windowAnnotation, ",")
-	maintenanceTimeWindow, err := timewindow.ParseMaintenanceTimeWindow(splitWindowAnnotation[0], splitWindowAnnotation[1])
-	if err != nil {
-		log.Error(err, "Error during parsing the maintenance window from annotation", "begin", splitWindowAnnotation[0], "end", splitWindowAnnotation[1])
+	if len(splitWindowAnnotation) != 2 {
+		err := fmt.Errorf("error during parsing the maintenance window from annotation. Value is not in format '<begin>,<end>': %q", windowAnnotation)
+		log.Error(err, "Error during reconciling for downscaling in maintenance only:")
 		return reconcile.Result{}, err
 	}
-	isNowInMaintenanceTimeWindow := maintenanceTimeWindow.Contains(r.Clock.Now())
+	maintenanceTimeWindow, err := timewindow.ParseMaintenanceTimeWindow(splitWindowAnnotation[0], splitWindowAnnotation[1])
+	if err != nil {
+		log.Error(err, "Error during parsing the maintenance window from start and end time", "begin", splitWindowAnnotation[0], "end", splitWindowAnnotation[1])
+		return reconcile.Result{}, err
+	}
 
-	if isNowInMaintenanceTimeWindow {
+	if isNowInMaintenanceTimeWindow := maintenanceTimeWindow.Contains(r.Clock.Now()); isNowInMaintenanceTimeWindow {
 		log.Info("Shoot is inside maintenance window, removing the EvictionRequirement to allow downscaling", "shoot-namespace", vpa.GetNamespace(), "maintenanceWindow", maintenanceTimeWindow)
-		_, err := controllerutils.GetAndCreateOrMergePatch(seedCtx, r.SeedClient, vpa, func() error {
-			if !hasUpscaleOnlyEvictionRequirement(vpa.Spec.UpdatePolicy.EvictionRequirements) {
-				return nil
-			}
-			vpa.Spec.UpdatePolicy.EvictionRequirements = []*vpaautoscalingv1.EvictionRequirement{}
-			return nil
-		})
-		if err != nil {
+
+		existing := vpa.DeepCopyObject()
+
+		removeAllEvictionRequirements(vpa)
+
+		if equality.Semantic.DeepEqual(existing, vpa) {
+			return reconcile.Result{}, nil
+		}
+
+		if err := r.SeedClient.Update(ctx, vpa); err != nil {
 			return reconcile.Result{}, err
 		}
 
 		// requeue when the maintenance window ends, such that we can add the EvictionRequirement again
 		endTime := maintenanceTimeWindow.AdjustedEnd(r.Clock.Now())
 		requeueAfter := endTime.Sub(r.Clock.Now())
-		log.Info("Requeueing VPA", "requeueAfter", requeueAfter)
+		log.Info("Requeueing VPA", "namespace", vpa.Namespace, "name", vpa.Name, "requeueAfter", requeueAfter)
 		return reconcile.Result{RequeueAfter: requeueAfter}, nil
 	} else {
 		log.Info("Shoot is not inside maintenance window, adding EvictionRequirement to deny downscaling", "shoot-namespace", vpa.GetNamespace(), "maintenanceWindow", maintenanceTimeWindow)
-		_, err := controllerutils.GetAndCreateOrMergePatch(seedCtx, r.SeedClient, vpa, func() error {
-			if hasUpscaleOnlyEvictionRequirement(vpa.Spec.UpdatePolicy.EvictionRequirements) {
-				return nil
-			}
-			vpa.Spec.UpdatePolicy.EvictionRequirements = []*vpaautoscalingv1.EvictionRequirement{
-				{
-					Resources:         cpuAndMemory,
-					ChangeRequirement: vpaautoscalingv1.TargetHigherThanRequests,
-				},
-			}
-			return nil
-		})
-		if err != nil {
+		existing := vpa.DeepCopyObject()
+
+		addDenyDownscalingEvictionRequirement(vpa)
+
+		if equality.Semantic.DeepEqual(existing, vpa) {
+			return reconcile.Result{}, nil
+		}
+
+		if err := r.SeedClient.Update(ctx, vpa); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -131,34 +148,22 @@ func (r *Reconciler) reconcileVPAForDownscaleInMaintenanceOnly(seedCtx context.C
 	}
 }
 
-func (r *Reconciler) reconcileVPAForDownscaleDisabled(seedCtx context.Context, vpa *vpaautoscalingv1.VerticalPodAutoscaler) (reconcile.Result, error) {
-	log := logf.FromContext(seedCtx)
-	log.Info("Adding EvictionRequirement to deny downscaling")
+func (r *Reconciler) reconcileVPAForDownscaleDisabled(ctx context.Context, vpa *vpaautoscalingv1.VerticalPodAutoscaler) (reconcile.Result, error) {
+	log := logf.FromContext(ctx).WithValues("namespace", vpa.Namespace, "name", vpa.Name)
+	log.Info("Adding EvictionRequirement for vpa to deny downscaling")
 
-	_, err := controllerutils.GetAndCreateOrMergePatch(seedCtx, r.SeedClient, vpa, func() error {
-		if !hasUpscaleOnlyEvictionRequirement(vpa.Spec.UpdatePolicy.EvictionRequirements) {
-			vpa.Spec.UpdatePolicy.EvictionRequirements = []*vpaautoscalingv1.EvictionRequirement{
-				{
-					Resources:         []corev1.ResourceName{corev1.ResourceCPU, corev1.ResourceMemory},
-					ChangeRequirement: vpaautoscalingv1.TargetHigherThanRequests,
-				},
-			}
-		}
-		return nil
-	})
-	if err != nil {
+	existing := vpa.DeepCopyObject()
+
+	addDenyDownscalingEvictionRequirement(vpa)
+
+	if equality.Semantic.DeepEqual(existing, vpa) {
+		return reconcile.Result{}, nil
+	}
+
+	if err := r.SeedClient.Update(ctx, vpa); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	log.Info("Not requeueing VPA")
 	return reconcile.Result{}, nil
-}
-
-func hasUpscaleOnlyEvictionRequirement(existingEvictionRequirements []*vpaautoscalingv1.EvictionRequirement) bool {
-	for _, requirement := range existingEvictionRequirements {
-		if requirement.ChangeRequirement == vpaautoscalingv1.TargetHigherThanRequests {
-			return true
-		}
-	}
-	return false
 }

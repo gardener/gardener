@@ -45,11 +45,11 @@ func (r *Reconciler) AddToManager(_ context.Context, mgr manager.Manager, seedCl
 		r.Clock = clock.RealClock{}
 	}
 
-	vpaDownscaleInMaintenanceOnlyPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
+	vpaEvictionRequirementsManagedByControllerPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
 		MatchLabels: map[string]string{constants.LabelVPAEvictionRequirementsController: "managed-by-controller"},
 	})
 	if err != nil {
-		return fmt.Errorf("failed computing label selector predicate for downscaling in maintenance window: %w", err)
+		return fmt.Errorf("failed computing label selector predicate for eviction requirements managed by controller: %w", err)
 	}
 
 	c, err := builder.
@@ -58,7 +58,7 @@ func (r *Reconciler) AddToManager(_ context.Context, mgr manager.Manager, seedCl
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 		}).
-		WatchesRawSource(source.Kind(seedCluster.GetCache(), &vpaautoscalingv1.VerticalPodAutoscaler{}), &handler.EnqueueRequestForObject{}, builder.WithPredicates(vpaDownscaleInMaintenanceOnlyPredicate, predicate.GenerationChangedPredicate{})).
+		WatchesRawSource(source.Kind(seedCluster.GetCache(), &vpaautoscalingv1.VerticalPodAutoscaler{}), &handler.EnqueueRequestForObject{}, builder.WithPredicates(vpaEvictionRequirementsManagedByControllerPredicate, predicate.GenerationChangedPredicate{})).
 		Build(r)
 	if err != nil {
 		return err
@@ -67,7 +67,7 @@ func (r *Reconciler) AddToManager(_ context.Context, mgr manager.Manager, seedCl
 	return c.Watch(
 		source.Kind(seedCluster.GetCache(), &vpaautoscalingv1.VerticalPodAutoscaler{}),
 		&handler.EnqueueRequestForObject{},
-		vpaDownscaleInMaintenanceOnlyPredicate,
+		vpaEvictionRequirementsManagedByControllerPredicate,
 		predicate.GenerationChangedPredicate{},
 	)
 }
