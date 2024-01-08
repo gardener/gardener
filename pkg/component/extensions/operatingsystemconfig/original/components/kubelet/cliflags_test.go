@@ -38,7 +38,7 @@ var _ = Describe("CLIFlags", func() {
 	}
 
 	DescribeTable("#CLIFlags",
-		func(kubernetesVersion string, criName extensionsv1alpha1.CRIName, image *imagevector.Image, cliFlags components.ConfigurableKubeletCLIFlags, matcher gomegatypes.GomegaMatcher) {
+		func(kubernetesVersion string, criName extensionsv1alpha1.CRIName, image *imagevector.Image, cliFlags components.ConfigurableKubeletCLIFlags, preferIPv6 bool, matcher gomegatypes.GomegaMatcher) {
 			v := semver.MustParse(kubernetesVersion)
 			nodeLabels := map[string]string{
 				"test":  "foo",
@@ -51,7 +51,7 @@ var _ = Describe("CLIFlags", func() {
 				"worker.gardener.cloud/pool":                    "worker", // allowed
 				"containerruntime.worker.gardener.cloud/gvisor": "true",   // allowed
 			}
-			Expect(kubelet.CLIFlags(v, nodeLabels, criName, image, cliFlags, false)).To(matcher)
+			Expect(kubelet.CLIFlags(v, nodeLabels, criName, image, cliFlags, preferIPv6)).To(matcher)
 		},
 
 		Entry(
@@ -60,6 +60,7 @@ var _ = Describe("CLIFlags", func() {
 			extensionsv1alpha1.CRINameDocker,
 			image,
 			components.ConfigurableKubeletCLIFlags{ImagePullProgressDeadline: &metav1.Duration{Duration: 2 * time.Minute}},
+			false,
 			ConsistOf(
 				"--bootstrap-kubeconfig=/var/lib/kubelet/kubeconfig-bootstrap",
 				"--config=/var/lib/kubelet/config/kubelet",
@@ -84,6 +85,7 @@ var _ = Describe("CLIFlags", func() {
 			extensionsv1alpha1.CRINameContainerD,
 			image,
 			components.ConfigurableKubeletCLIFlags{},
+			false,
 			ConsistOf(
 				"--bootstrap-kubeconfig=/var/lib/kubelet/kubeconfig-bootstrap",
 				"--config=/var/lib/kubelet/config/kubelet",
@@ -106,6 +108,7 @@ var _ = Describe("CLIFlags", func() {
 			extensionsv1alpha1.CRINameContainerD,
 			image,
 			components.ConfigurableKubeletCLIFlags{},
+			false,
 			ConsistOf(
 				"--bootstrap-kubeconfig=/var/lib/kubelet/kubeconfig-bootstrap",
 				"--config=/var/lib/kubelet/config/kubelet",
@@ -119,6 +122,29 @@ var _ = Describe("CLIFlags", func() {
 				"--container-runtime-endpoint=unix:///run/containerd/containerd.sock",
 				"--runtime-cgroups=/system.slice/containerd.service",
 				"--v=2",
+			),
+		),
+		Entry(
+			"kubernetes 1.27 w/ containerd, w/o imagePullProgressDeadline",
+			"1.27.0",
+			extensionsv1alpha1.CRINameContainerD,
+			image,
+			components.ConfigurableKubeletCLIFlags{},
+			true,
+			ConsistOf(
+				"--bootstrap-kubeconfig=/var/lib/kubelet/kubeconfig-bootstrap",
+				"--config=/var/lib/kubelet/config/kubelet",
+				"--kubeconfig=/var/lib/kubelet/kubeconfig-real",
+				"--node-labels=worker.gardener.cloud/kubernetes-version=1.27.0",
+				"--node-labels=containerruntime.worker.gardener.cloud/gvisor=true",
+				"--node-labels=kubernetes.io/arch=amd64",
+				"--node-labels=test=foo",
+				"--node-labels=test2=bar",
+				"--node-labels=worker.gardener.cloud/pool=worker",
+				"--container-runtime-endpoint=unix:///run/containerd/containerd.sock",
+				"--runtime-cgroups=/system.slice/containerd.service",
+				"--v=2",
+				"--node-ip=\"::\"",
 			),
 		),
 	)

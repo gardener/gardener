@@ -140,7 +140,8 @@ func checkAdditionalIstioGateway(istioDeploy istio.Interface,
 	labels map[string]string,
 	externalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType,
 	serviceExternalIP *string,
-	zone *string) {
+	zone *string,
+	dualstack bool) {
 	var (
 		zones       []string
 		minReplicas *int
@@ -173,6 +174,7 @@ func checkAdditionalIstioGateway(istioDeploy istio.Interface,
 		ProxyProtocolEnabled:  ingressValues[0].ProxyProtocolEnabled,
 		VPNEnabled:            true,
 		Zones:                 zones,
+		DualStack:             dualstack,
 	}))
 }
 
@@ -282,7 +284,8 @@ var _ = Describe("Istio", func() {
 				labels,
 				&externalTrafficPolicy,
 				serviceExternalIP,
-				zone, false)).To(MatchError("at least one ingress gateway must be present before adding further ones"))
+				zone,
+				false)).To(MatchError("at least one ingress gateway must be present before adding further ones"))
 		})
 
 		Context("without zone", func() {
@@ -309,6 +312,7 @@ var _ = Describe("Istio", func() {
 					&externalTrafficPolicy,
 					serviceExternalIP,
 					zone,
+					false,
 				)
 			})
 		})
@@ -337,6 +341,36 @@ var _ = Describe("Istio", func() {
 					&externalTrafficPolicy,
 					serviceExternalIP,
 					zone,
+					false,
+				)
+			})
+		})
+
+		Context("without zone, dualstack enabled", func() {
+			BeforeEach(func() {
+				zone = nil
+			})
+
+			It("should successfully add an additional ingress gateway", func() {
+				Expect(AddIstioIngressGateway(
+					istioDeploy,
+					namespace,
+					annotations,
+					labels,
+					&externalTrafficPolicy,
+					serviceExternalIP,
+					zone,
+					true)).To(Succeed())
+
+				checkAdditionalIstioGateway(
+					istioDeploy,
+					namespace,
+					annotations,
+					labels,
+					&externalTrafficPolicy,
+					serviceExternalIP,
+					zone,
+					true,
 				)
 			})
 		})

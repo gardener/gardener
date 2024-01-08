@@ -79,10 +79,12 @@ func (b *Botanist) DeployKubeAPIServerSNI(ctx context.Context) error {
 }
 
 func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
-	if len(b.Shoot.Networks.Services.IP)*8 == 32 {
+	if b.Shoot.Networks.Services.IP.To4() != nil {
 		b.APIServerClusterIP = clusterIP
 	} else {
-		b.APIServerClusterIP = "64:ff9b::" + clusterIP
+		// "64:ff9b:1::" is a well known prefix for address translation for use
+		// in local networks.
+		b.APIServerClusterIP = "64:ff9b:1::" + clusterIP
 	}
 	b.Shoot.Components.ControlPlane.KubeAPIServerSNI = kubeapiserverexposure.NewSNI(
 		b.SeedClientSet.Client(),

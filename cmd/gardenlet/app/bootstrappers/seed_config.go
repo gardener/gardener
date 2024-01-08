@@ -70,7 +70,7 @@ func (s *SeedConfigChecker) Start(ctx context.Context) error {
 }
 
 func isSameIPFamily(ip net.IP, ipNet *net.IPNet) bool {
-	return (ip.To4() == nil && ipNet.IP.To4() == nil) || (ip.To4() != nil && ipNet.IP.To4() != nil)
+	return ip.To4() != nil && ipNet.IP.To4() != nil || ip.To16() != nil && ip.To4() == nil && ipNet.IP.To16() != nil && ipNet.IP.To4() == nil
 }
 
 // checkSeedConfigHeuristically validates the networking configuration of the seed configuration heuristically against the actual cluster.

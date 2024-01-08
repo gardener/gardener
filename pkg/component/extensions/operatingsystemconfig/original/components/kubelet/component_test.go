@@ -46,7 +46,7 @@ var _ = Describe("Component", func() {
 	})
 
 	DescribeTable("#Config",
-		func(kubernetesVersion string, kubeletConfig string, useGardenerNodeAgentEnabled bool) {
+		func(kubernetesVersion string, kubeletConfig string, useGardenerNodeAgentEnabled bool, preferIPv6 bool) {
 			defer test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, useGardenerNodeAgentEnabled)()
 
 			ctx.CRIName = extensionsv1alpha1.CRINameContainerD
@@ -68,8 +68,9 @@ var _ = Describe("Component", func() {
 				"test": "foo",
 				"blub": "bar",
 			}
+			ctx.PreferIPv6 = preferIPv6
 
-			cliFlags := CLIFlags(ctx.KubernetesVersion, ctx.NodeLabels, ctx.CRIName, ctx.Images["pause-container"], ctx.KubeletCLIFlags, false)
+			cliFlags := CLIFlags(ctx.KubernetesVersion, ctx.NodeLabels, ctx.CRIName, ctx.Images["pause-container"], ctx.KubeletCLIFlags, ctx.PreferIPv6)
 			units, files, err := component.Config(ctx)
 
 			Expect(err).NotTo(HaveOccurred())
@@ -95,23 +96,34 @@ var _ = Describe("Component", func() {
 			"1.25.1",
 			kubeletConfig(true, true, false),
 			false,
+			false,
 		),
 		Entry(
 			"kubernetes 1.25 w/ node-agent",
 			"1.25.1",
 			kubeletConfig(true, true, false),
 			true,
+			false,
 		),
 		Entry(
 			"kubernetes 1.26",
 			"1.26.1",
 			kubeletConfig(true, true, true),
 			false,
+			false,
 		),
 		Entry(
 			"kubernetes 1.26 w/ node-agent",
 			"1.26.1",
 			kubeletConfig(true, true, true),
+			true,
+			false,
+		),
+		Entry(
+			"kubernetes 1.26 w/ node-agent and preferIPv6",
+			"1.26.1",
+			kubeletConfig(true, true, true),
+			true,
 			true,
 		),
 	)

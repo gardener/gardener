@@ -134,7 +134,7 @@ type OriginalValues struct {
 	NodeLocalDNSEnabled bool
 	// SyncJitterPeriod is the duration of how the operating system config sync will be jittered on updates.
 	SyncJitterPeriod *metav1.Duration
-	// IPFamily string
+	// PrimaryIPFamily represents the preferred IP family (IPv4 or IPv6) to be used.
 	PrimaryIPFamily gardencorev1beta1.IPFamily
 }
 
