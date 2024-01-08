@@ -238,7 +238,7 @@ images:
 - name: plutono
   sourceRepository: github.com/credativ/plutono
   repository: ghcr.io/credativ/plutono
-  tag: "v7.5.26"
+  tag: "v7.5.28"
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
@@ -413,7 +413,7 @@ images:
 - name: vali
   sourceRepository: github.com/credativ/vali
   repository: ghcr.io/credativ/vali
-  tag: "v2.2.11"
+  tag: "v2.2.13"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -465,7 +465,7 @@ images:
 - name: valitail
   sourceRepository: github.com/credativ/vali
   repository: ghcr.io/credativ/valitail
-  tag: "v2.2.11"
+  tag: "v2.2.13"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
