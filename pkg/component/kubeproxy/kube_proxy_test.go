@@ -313,7 +313,6 @@ data:
   conntrack_fix.sh: |
     #!/bin/sh -e
     trap "kill -s INT 1" TERM
-    apk add conntrack-tools
     sleep 120 & wait
     date
     # conntrack example:
