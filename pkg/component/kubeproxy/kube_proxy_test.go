@@ -307,7 +307,7 @@ metadata:
 				return out
 			}
 
-			configMapConntrackFixScriptName = "kube-proxy-conntrack-fix-script-ebff3d39" //40092541"
+			configMapConntrackFixScriptName = "kube-proxy-conntrack-fix-script-ebff3d39"
 			configMapConntrackFixScriptYAML = `apiVersion: v1
 data:
   conntrack_fix.sh: |
