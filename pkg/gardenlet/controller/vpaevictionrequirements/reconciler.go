@@ -69,21 +69,21 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	log.Info("Reconciling vpa", "namespace/name", request.NamespacedName)
+	log.Info("Reconciling vpa")
 
 	// double check just for fun: does the vpa have our label?
 	if metav1.HasLabel(vpa.ObjectMeta, constants.LabelVPAEvictionRequirementDownscaleInMaintenanceOnly) {
-		log.Info("Found the label "+constants.LabelVPAEvictionRequirementDownscaleInMaintenanceOnly, "namespace/name", request.NamespacedName)
+		log.Info("Found the label " + constants.LabelVPAEvictionRequirementDownscaleInMaintenanceOnly)
 		return r.reconcileVPAForDownscaleInMaintenanceOnly(seedCtx, vpa)
 	} else if metav1.HasLabel(vpa.ObjectMeta, constants.LabelVPAEvictionRequirementDownscaleDisabled) {
-		log.Info("Found the label "+constants.LabelVPAEvictionRequirementDownscaleDisabled, "namespace/name", request.NamespacedName)
+		log.Info("Found the label " + constants.LabelVPAEvictionRequirementDownscaleDisabled)
 		return r.reconcileVPAForDownscaleDisabled(seedCtx, vpa)
 	}
 	return reconcile.Result{}, nil
 }
 
 func (r *Reconciler) reconcileVPAForDownscaleInMaintenanceOnly(ctx context.Context, vpa *vpaautoscalingv1.VerticalPodAutoscaler) (reconcile.Result, error) {
-	log := logf.FromContext(ctx).WithValues("namespace", vpa.Namespace, "name", vpa.Name)
+	log := logf.FromContext(ctx)
 	if !metav1.HasAnnotation(vpa.ObjectMeta, constants.AnnotationShootMaintenanceWindow) {
 		err := fmt.Errorf("didn't find maintenance window annotation, but VPA had label to be downscaled in maintenance only")
 		log.Error(err, "Error during reconciling for downscaling in maintenance only:")
@@ -149,7 +149,7 @@ func (r *Reconciler) reconcileVPAForDownscaleInMaintenanceOnly(ctx context.Conte
 }
 
 func (r *Reconciler) reconcileVPAForDownscaleDisabled(ctx context.Context, vpa *vpaautoscalingv1.VerticalPodAutoscaler) (reconcile.Result, error) {
-	log := logf.FromContext(ctx).WithValues("namespace", vpa.Namespace, "name", vpa.Name)
+	log := logf.FromContext(ctx)
 	log.Info("Adding EvictionRequirement for vpa to deny downscaling")
 
 	existing := vpa.DeepCopyObject()
