@@ -113,15 +113,8 @@ func (r *Reconciler) reconcileVPAForDownscaleInMaintenanceOnly(ctx context.Conte
 	if isNowInMaintenanceTimeWindow := maintenanceTimeWindow.Contains(r.Clock.Now()); isNowInMaintenanceTimeWindow {
 		log.Info("Shoot is inside maintenance window, removing the EvictionRequirement to allow downscaling", "shoot-namespace", vpa.GetNamespace(), "maintenanceWindow", maintenanceTimeWindow)
 
-		existing := vpa.DeepCopyObject()
-
-		removeAllEvictionRequirements(vpa)
-
-		if equality.Semantic.DeepEqual(existing, vpa) {
-			return reconcile.Result{}, nil
-		}
-
-		if err := r.SeedClient.Update(ctx, vpa); err != nil {
+		err := r.patchVPA(ctx, vpa, removeAllEvictionRequirements)
+		if err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -132,15 +125,9 @@ func (r *Reconciler) reconcileVPAForDownscaleInMaintenanceOnly(ctx context.Conte
 		return reconcile.Result{RequeueAfter: requeueAfter}, nil
 	} else {
 		log.Info("Shoot is not inside maintenance window, adding EvictionRequirement to deny downscaling", "shoot-namespace", vpa.GetNamespace(), "maintenanceWindow", maintenanceTimeWindow)
-		existing := vpa.DeepCopyObject()
 
-		addDenyDownscalingEvictionRequirement(vpa)
-
-		if equality.Semantic.DeepEqual(existing, vpa) {
-			return reconcile.Result{}, nil
-		}
-
-		if err := r.SeedClient.Update(ctx, vpa); err != nil {
+		err := r.patchVPA(ctx, vpa, addDenyDownscalingEvictionRequirement)
+		if err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -173,4 +160,19 @@ func (r *Reconciler) reconcileVPAForDownscaleDisabled(ctx context.Context, vpa *
 
 	log.Info("Not requeueing VPA")
 	return reconcile.Result{}, nil
+}
+
+func (r *Reconciler) patchVPA(ctx context.Context, vpa *vpaautoscalingv1.VerticalPodAutoscaler, patchFn func(autoscaler *vpaautoscalingv1.VerticalPodAutoscaler)) error {
+	existing := vpa.DeepCopyObject()
+
+	patchFn(vpa)
+
+	if equality.Semantic.DeepEqual(existing, vpa) {
+		return nil
+	}
+
+	if err := r.SeedClient.Update(ctx, vpa); err != nil {
+		return err
+	}
+	return nil
 }
