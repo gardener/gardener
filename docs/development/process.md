@@ -25,10 +25,10 @@ Version | Week No     | Begin Validation Phase | Due Date           | Release Re
 v1.85   | Week 47-48  | November 20, 2023      | December 3, 2023   | [@plkokanov](https://github.com/plkokanov)       |
 v1.86   | Week 49-50  | December 4, 2023       | December 17, 2023  | [@ialidzhikov](https://github.com/ialidzhikov)   |
 v1.87   | Week 01-04  | January 1, 2024        | January 28, 2024   | [@acumino](https://github.com/acumino)           |
-v1.88   | Week 05-06  | January 29, 2024       | February 11, 2024  | [@shafeeqes](https://github.com/shafeeqes)       |
+v1.88   | Week 05-06  | January 29, 2024       | February 11, 2024  | [@timuthy](https://github.com/timuthy)           |
 v1.89   | Week 07-08  | February 12, 2024      | February 25, 2024  | [@ScheererJ](https://github.com/ScheererJ)       |
 v1.90   | Week 09-10  | February 26, 2024      | March 10, 2024     | [@ary1992](https://github.com/ary1992)           |
-v1.91   | Week 11-12  | March 11, 2024         | March 24, 2024     | [@timuthy](https://github.com/timuthy)           |
+v1.91   | Week 11-12  | March 11, 2024         | March 24, 2024     | [@shafeeqes](https://github.com/shafeeqes)       |
 v1.92   | Week 13-14  | March 25, 2024         | April 7, 2024      | [@oliver-goetz](https://github.com/oliver-goetz) |
 v1.93   | Week 15-16  | April 8, 2024          | April 21, 2024     | [@rfranzke](https://github.com/rfranzke)         |
 
