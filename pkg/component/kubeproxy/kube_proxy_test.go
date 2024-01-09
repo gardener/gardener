@@ -307,13 +307,12 @@ metadata:
 				return out
 			}
 
-			configMapConntrackFixScriptName = "kube-proxy-conntrack-fix-script-40092541"
+			configMapConntrackFixScriptName = "kube-proxy-conntrack-fix-script-ebff3d39"
 			configMapConntrackFixScriptYAML = `apiVersion: v1
 data:
   conntrack_fix.sh: |
     #!/bin/sh -e
     trap "kill -s INT 1" TERM
-    apk add conntrack-tools
     sleep 120 & wait
     date
     # conntrack example:
@@ -466,16 +465,16 @@ subjects:
 
 					if ipvsEnabled {
 						annotations = []string{
-							references.AnnotationKey(references.KindConfigMap, configMapConntrackFixScriptName) + `: ` + configMapConntrackFixScriptName,
 							references.AnnotationKey(references.KindConfigMap, configMapCleanupScriptName) + `: ` + configMapCleanupScriptName,
 							references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)) + `: ` + configMapNameFor(ipvsEnabled),
+							references.AnnotationKey(references.KindConfigMap, configMapConntrackFixScriptName) + `: ` + configMapConntrackFixScriptName,
 							references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName,
 						}
 					} else {
 						annotations = []string{
-							references.AnnotationKey(references.KindConfigMap, configMapConntrackFixScriptName) + `: ` + configMapConntrackFixScriptName,
 							references.AnnotationKey(references.KindConfigMap, configMapCleanupScriptName) + `: ` + configMapCleanupScriptName,
 							references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)) + `: ` + configMapNameFor(ipvsEnabled),
+							references.AnnotationKey(references.KindConfigMap, configMapConntrackFixScriptName) + `: ` + configMapConntrackFixScriptName,
 							references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName,
 						}
 					}
