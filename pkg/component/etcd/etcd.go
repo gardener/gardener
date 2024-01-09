@@ -620,16 +620,13 @@ func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautos
 		}
 		if pointer.StringDeref(scaleDownUpdateMode, "") == hvpav1alpha1.UpdateModeOff {
 			vpaLabels[v1beta1constants.LabelVPAEvictionRequirementsController] = "managed-by-controller"
-			vpaLabels[v1beta1constants.LabelVPAEvictionRequirementDownscaleDisabled] = "true"
-			delete(vpaLabels, v1beta1constants.LabelVPAEvictionRequirementDownscaleInMaintenanceOnly)
+			vpaLabels[v1beta1constants.LabelVPAEvictionRequirementDownscaleRestriction] = v1beta1constants.Never
 		} else if pointer.StringDeref(scaleDownUpdateMode, "") == hvpav1alpha1.UpdateModeMaintenanceWindow {
 			vpaLabels[v1beta1constants.LabelVPAEvictionRequirementsController] = "managed-by-controller"
-			vpaLabels[v1beta1constants.LabelVPAEvictionRequirementDownscaleInMaintenanceOnly] = "true"
+			vpaLabels[v1beta1constants.LabelVPAEvictionRequirementDownscaleRestriction] = v1beta1constants.InMaintenanceWindowOnly
 			vpaAnnotations[v1beta1constants.AnnotationShootMaintenanceWindow] = e.values.HvpaConfig.MaintenanceTimeWindow.Begin + "," + e.values.HvpaConfig.MaintenanceTimeWindow.End
-			delete(vpaLabels, v1beta1constants.LabelVPAEvictionRequirementDownscaleDisabled)
 		} else {
-			delete(vpaLabels, v1beta1constants.LabelVPAEvictionRequirementDownscaleInMaintenanceOnly)
-			delete(vpaLabels, v1beta1constants.LabelVPAEvictionRequirementDownscaleDisabled)
+			delete(vpaLabels, v1beta1constants.LabelVPAEvictionRequirementDownscaleRestriction)
 			delete(vpaLabels, v1beta1constants.LabelVPAEvictionRequirementsController)
 		}
 

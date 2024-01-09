@@ -72,12 +72,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	log.Info("Reconciling vpa")
 
 	// double check just for fun: does the vpa have our label?
-	if metav1.HasLabel(vpa.ObjectMeta, constants.LabelVPAEvictionRequirementDownscaleInMaintenanceOnly) {
-		log.Info("Found the label " + constants.LabelVPAEvictionRequirementDownscaleInMaintenanceOnly)
-		return r.reconcileVPAForDownscaleInMaintenanceOnly(seedCtx, vpa)
-	} else if metav1.HasLabel(vpa.ObjectMeta, constants.LabelVPAEvictionRequirementDownscaleDisabled) {
-		log.Info("Found the label " + constants.LabelVPAEvictionRequirementDownscaleDisabled)
-		return r.reconcileVPAForDownscaleDisabled(seedCtx, vpa)
+	if metav1.HasLabel(vpa.ObjectMeta, constants.LabelVPAEvictionRequirementDownscaleRestriction) {
+		value := vpa.GetLabels()[constants.LabelVPAEvictionRequirementsController]
+		log.Info("Found the label "+constants.LabelVPAEvictionRequirementDownscaleRestriction, "value", value)
+		switch value {
+		case constants.Never:
+			return r.reconcileVPAForDownscaleDisabled(ctx, vpa)
+		case constants.InMaintenanceWindowOnly:
+			return r.reconcileVPAForDownscaleInMaintenanceOnly(ctx, vpa)
+		default:
+			err := fmt.Errorf("unsupported label value found: %q, supported are only %q and %q", value, constants.Never, constants.InMaintenanceWindowOnly)
+			log.Error(err, "Error while parsing the label value:")
+			return reconcile.Result{}, err
+		}
 	}
 	return reconcile.Result{}, nil
 }
