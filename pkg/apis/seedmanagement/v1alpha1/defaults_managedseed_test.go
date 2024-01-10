@@ -37,22 +37,22 @@ const (
 )
 
 var _ = Describe("Defaults", func() {
+	var obj *ManagedSeed
+
+	BeforeEach(func() {
+		obj = &ManagedSeed{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+			},
+		}
+	})
+
 	Describe("#SetDefaults_ManagedSeed", func() {
-		var obj *ManagedSeed
-
-		BeforeEach(func() {
-			obj = &ManagedSeed{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      name,
-					Namespace: namespace,
-				},
-			}
-		})
-
 		It("should default gardenlet deployment and configuration", func() {
 			obj.Spec.Gardenlet = &Gardenlet{}
 
-			SetDefaults_ManagedSeed(obj)
+			SetObjectDefaults_ManagedSeed(obj)
 
 			Expect(obj).To(Equal(&ManagedSeed{
 				ObjectMeta: metav1.ObjectMeta{
@@ -102,7 +102,7 @@ var _ = Describe("Defaults", func() {
 				},
 			}
 
-			SetDefaults_ManagedSeed(obj)
+			SetObjectDefaults_ManagedSeed(obj)
 
 			Expect(obj).To(Equal(&ManagedSeed{
 				ObjectMeta: metav1.ObjectMeta{
@@ -146,16 +146,11 @@ var _ = Describe("Defaults", func() {
 	})
 
 	Describe("#SetDefaults_GardenletDeployment", func() {
-		var obj *GardenletDeployment
-
-		BeforeEach(func() {
-			obj = &GardenletDeployment{}
-		})
-
 		It("should default replica count, revision history limit, image, and vpa", func() {
-			SetDefaults_GardenletDeployment(obj)
+			obj.Spec.Gardenlet = &Gardenlet{}
+			SetObjectDefaults_ManagedSeed(obj)
 
-			Expect(obj).To(Equal(&GardenletDeployment{
+			Expect(obj.Spec.Gardenlet.Deployment).To(Equal(&GardenletDeployment{
 				ReplicaCount:         pointer.Int32(2),
 				RevisionHistoryLimit: pointer.Int32(2),
 				Image:                &Image{},
@@ -165,26 +160,24 @@ var _ = Describe("Defaults", func() {
 	})
 
 	Describe("#SetDefaults_Image", func() {
-		var obj *Image
-
-		BeforeEach(func() {
-			obj = &Image{}
-		})
-
 		It("should default pull policy to IfNotPresent", func() {
-			SetDefaults_Image(obj)
+			obj.Spec.Gardenlet = &Gardenlet{}
+			SetObjectDefaults_ManagedSeed(obj)
 
-			Expect(obj).To(Equal(&Image{
+			Expect(obj.Spec.Gardenlet.Deployment.Image).To(Equal(&Image{
 				PullPolicy: pullPolicyPtr(corev1.PullIfNotPresent),
 			}))
 		})
 
 		It("should default pull policy to Always if tag is latest", func() {
-			obj.Tag = pointer.String("latest")
+			obj.Spec.Gardenlet = &Gardenlet{
+				Deployment: &GardenletDeployment{
+					Image: &Image{Tag: pointer.String("latest")},
+				}}
 
-			SetDefaults_Image(obj)
+			SetObjectDefaults_ManagedSeed(obj)
 
-			Expect(obj).To(Equal(&Image{
+			Expect(obj.Spec.Gardenlet.Deployment.Image).To(Equal(&Image{
 				Tag:        pointer.String("latest"),
 				PullPolicy: pullPolicyPtr(corev1.PullAlways),
 			}))
