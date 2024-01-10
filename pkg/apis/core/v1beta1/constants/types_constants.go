@@ -561,7 +561,7 @@ const (
 	// indicating that downscaling should be restricted to the Shoot's maintenance window.
 	InMaintenanceWindowOnly = "in-maintenance-window-only"
 	// Never is a constant to be used as a value for the label LabelVPAEvictionRequirementDownscaleRestriction,
-	//	// indicating that downscaling should never be allowed.
+	// indicating that downscaling should never be allowed.
 	Never = "never"
 
 	// AnnotationShootMaintenanceWindow is a constant for an annotation key used on VPA objects to hold the Shoot's maintenance window start and end.

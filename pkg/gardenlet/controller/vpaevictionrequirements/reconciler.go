@@ -73,7 +73,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	// double check just for fun: does the vpa have our label?
 	if metav1.HasLabel(vpa.ObjectMeta, constants.LabelVPAEvictionRequirementDownscaleRestriction) {
-		value := vpa.GetLabels()[constants.LabelVPAEvictionRequirementsController]
+		value := vpa.GetLabels()[constants.LabelVPAEvictionRequirementDownscaleRestriction]
 		log.Info("Found the label "+constants.LabelVPAEvictionRequirementDownscaleRestriction, "value", value)
 		switch value {
 		case constants.Never:
@@ -113,8 +113,7 @@ func (r *Reconciler) reconcileVPAForDownscaleInMaintenanceOnly(ctx context.Conte
 	if isNowInMaintenanceTimeWindow := maintenanceTimeWindow.Contains(r.Clock.Now()); isNowInMaintenanceTimeWindow {
 		log.Info("Shoot is inside maintenance window, removing the EvictionRequirement to allow downscaling", "shoot-namespace", vpa.GetNamespace(), "maintenanceWindow", maintenanceTimeWindow)
 
-		err := r.patchVPA(ctx, vpa, removeAllEvictionRequirements)
-		if err != nil {
+		if err := r.patchVPA(ctx, vpa, removeAllEvictionRequirements); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -126,8 +125,7 @@ func (r *Reconciler) reconcileVPAForDownscaleInMaintenanceOnly(ctx context.Conte
 	} else {
 		log.Info("Shoot is not inside maintenance window, adding EvictionRequirement to deny downscaling", "shoot-namespace", vpa.GetNamespace(), "maintenanceWindow", maintenanceTimeWindow)
 
-		err := r.patchVPA(ctx, vpa, addDenyDownscalingEvictionRequirement)
-		if err != nil {
+		if err := r.patchVPA(ctx, vpa, addDenyDownscalingEvictionRequirement); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -171,8 +169,5 @@ func (r *Reconciler) patchVPA(ctx context.Context, vpa *vpaautoscalingv1.Vertica
 		return nil
 	}
 
-	if err := r.SeedClient.Update(ctx, vpa); err != nil {
-		return err
-	}
-	return nil
+	return r.SeedClient.Update(ctx, vpa)
 }
