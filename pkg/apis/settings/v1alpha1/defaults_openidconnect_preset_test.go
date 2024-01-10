@@ -39,7 +39,7 @@ var _ = Describe("OpenIDConnectPreset defaulting", func() {
 		}
 		SetObjectDefaults_OpenIDConnectPreset(obj)
 
-		Expect(obj).To(BeEquivalentTo(expected))
+		Expect(obj).To(Equal(expected))
 	})
 
 	It("should not default OpenIDConnectPreset if it is already set", func() {
@@ -57,7 +57,7 @@ var _ = Describe("OpenIDConnectPreset defaulting", func() {
 		expected := obj.DeepCopy()
 		SetObjectDefaults_OpenIDConnectPreset(obj)
 
-		Expect(obj).To(BeEquivalentTo(expected))
+		Expect(obj).To(Equal(expected))
 	})
 
 })
