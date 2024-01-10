@@ -469,8 +469,19 @@ func (g *garden) cleanupOrphanedExtensionsServiceAccounts(ctx context.Context, g
 
 // TODO(Kostov6): Remove this code after v1.91 has been released.
 func cleanupGRMSecretFinalizers(ctx context.Context, seedClient client.Client, log logr.Logger) error {
-	mrs := &resourcesv1alpha1.ManagedResourceList{}
-	if err := seedClient.List(ctx, mrs); err != nil {
+	var (
+		mrs      = &resourcesv1alpha1.ManagedResourceList{}
+		selector = labels.NewSelector()
+	)
+
+	// Exclude seed system components while listing
+	requirement, err := labels.NewRequirement(v1beta1constants.GardenRole, selection.NotIn, []string{v1beta1constants.GardenRoleSeedSystemComponent})
+	if err != nil {
+		return fmt.Errorf("failed to construct the requirement: %w", err)
+	}
+	labelSelector := selector.Add(*requirement)
+
+	if err := seedClient.List(ctx, mrs, client.MatchingLabelsSelector{Selector: labelSelector}); err != nil {
 		if meta.IsNoMatchError(err) {
 			log.Info("Received a 'no match error' while trying to list managed resources. Will assume that the managed resources CRD is not yet installed (for example new Seed creation) and will skip cleaning up GRM finalizers")
 			return nil
@@ -484,10 +495,18 @@ func cleanupGRMSecretFinalizers(ctx context.Context, seedClient client.Client, l
 			return fmt.Errorf("expected *resourcesv1alpha1.ManagedResource but got %T", obj)
 		}
 
+		// only patch MR secrets in shoot namespaces
+		if mr.Namespace == v1beta1constants.GardenNamespace {
+			return nil
+		}
+
 		for _, ref := range mr.Spec.SecretRefs {
 			secret := &corev1.Secret{}
 			if err := seedClient.Get(ctx, client.ObjectKey{Namespace: mr.Namespace, Name: ref.Name}, secret); err != nil {
-				return fmt.Errorf("failed to get secret '%s': %w", client.ObjectKeyFromObject(secret), err)
+				if apierrors.IsNotFound(err) {
+					return nil
+				}
+				return fmt.Errorf("failed to get secret '%s': %w", kubernetesutils.Key(mr.Namespace, ref.Name), err)
 			}
 
 			for _, finalizer := range secret.Finalizers {
