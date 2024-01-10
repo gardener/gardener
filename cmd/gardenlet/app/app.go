@@ -504,7 +504,7 @@ func cleanupGRMSecretFinalizers(ctx context.Context, seedClient client.Client, l
 			secret := &corev1.Secret{}
 			if err := seedClient.Get(ctx, client.ObjectKey{Namespace: mr.Namespace, Name: ref.Name}, secret); err != nil {
 				if apierrors.IsNotFound(err) {
-					return nil
+					continue
 				}
 				return fmt.Errorf("failed to get secret '%s': %w", kubernetesutils.Key(mr.Namespace, ref.Name), err)
 			}
