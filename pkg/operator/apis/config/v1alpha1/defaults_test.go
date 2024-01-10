@@ -100,7 +100,7 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_OperatorConfiguration(obj)
 
 			// ContentType fields will be defaulted by client constructors / controller-runtime based on whether a
-			// given APIGroup supports protobuf or not. defaults must not touch these, otherwise the integelligent
+			// given APIGroup supports protobuf or not. defaults must not touch these, otherwise the intelligent
 			// logic will be overwritten
 			Expect(obj.RuntimeClientConnection.ContentType).To(BeEmpty())
 			Expect(obj.RuntimeClientConnection.AcceptContentTypes).To(BeEmpty())
@@ -135,7 +135,7 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_OperatorConfiguration(obj)
 
 			// ContentType fields will be defaulted by client constructors / controller-runtime based on whether a
-			// given APIGroup supports protobuf or not. defaults must not touch these, otherwise the integelligent
+			// given APIGroup supports protobuf or not. defaults must not touch these, otherwise the intelligent
 			// logic will be overwritten
 			Expect(obj.VirtualClientConnection.ContentType).To(BeEmpty())
 			Expect(obj.VirtualClientConnection.AcceptContentTypes).To(BeEmpty())
@@ -213,6 +213,7 @@ var _ = Describe("Defaults", func() {
 				Expect(obj.Controllers.Garden.ETCDConfig.BackupCompactionController.Workers).To(PointTo(Equal(int64(3))))
 				Expect(obj.Controllers.Garden.ETCDConfig.BackupCompactionController.EnableBackupCompaction).To(PointTo(Equal(false)))
 				Expect(obj.Controllers.Garden.ETCDConfig.BackupCompactionController.EventsThreshold).To(PointTo(Equal(int64(1000000))))
+				Expect(obj.Controllers.Garden.ETCDConfig.BackupCompactionController.MetricsScrapeWaitDuration).To(PointTo(Equal(metav1.Duration{Duration: 60 * time.Second})))
 			})
 
 			It("should not overwrite already set values for Garden controller config", func() {
