@@ -688,24 +688,19 @@ func updateShootPrometheusConfigForConnectionToCachePrometheusAndSeedAlertManage
 
 // TODO(shafeeqes): Remove this code after gardener v1.92 has been released.
 func cleanupShootCoreManagedResource(ctx context.Context, seedClient client.Client) error {
-	managedResourceList := &metav1.PartialObjectMetadataList{}
-	managedResourceList.SetGroupVersionKind(resourcesv1alpha1.SchemeGroupVersion.WithKind("ManagedResourceList"))
-	if err := seedClient.List(ctx, managedResourceList); err != nil {
-		if meta.IsNoMatchError(err) {
-			return nil
-		}
+	shootNamespaceList := &corev1.NamespaceList{}
+	if err := seedClient.List(ctx, shootNamespaceList, client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}); err != nil {
 		return err
 	}
 
 	var taskFns []flow.TaskFn
-	for _, managedResource := range managedResourceList.Items {
-		if managedResource.GetName() == "shoot-core" {
-			mr := managedResource
 
-			taskFns = append(taskFns, func(ctx context.Context) error {
-				return managedresources.DeleteForShoot(ctx, seedClient, mr.Namespace, "shoot-core")
-			})
-		}
+	for _, ns := range shootNamespaceList.Items {
+		namespace := ns
+
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			return managedresources.DeleteForShoot(ctx, seedClient, namespace.Name, "shoot-core")
+		})
 	}
 
 	return flow.Parallel(taskFns...)(ctx)

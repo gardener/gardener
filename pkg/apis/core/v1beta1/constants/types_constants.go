@@ -625,14 +625,6 @@ const (
 	// AnnotationCoreDNSRewritingDisabled disables core dns query rewriting even if the corresponding feature gate is enabled.
 	AnnotationCoreDNSRewritingDisabled = "alpha.featuregates.shoot.gardener.cloud/core-dns-rewriting-disabled"
 
-	// AnnotationSeccompDefaultProfile is the key for an annotation applied to a PodSecurityPolicy which specifies
-	// which is the default seccomp profile to apply to containers.
-	AnnotationSeccompDefaultProfile = "seccomp.security.alpha.kubernetes.io/defaultProfileName"
-	// AnnotationSeccompAllowedProfiles is the key for an annotation applied to a PodSecurityPolicy which specifies
-	// which values are allowed for the pod seccomp annotations.
-	AnnotationSeccompAllowedProfiles = "seccomp.security.alpha.kubernetes.io/allowedProfileNames"
-	// AnnotationSeccompAllowedProfilesRuntimeDefaultValue is the value for the default container runtime profile.
-	AnnotationSeccompAllowedProfilesRuntimeDefaultValue = "runtime/default"
 	// AnnotationPodSecurityEnforce is a constant for an annotation on `ControllerRegistration`s and `ControllerInstallation`s. When set the
 	// `extension` namespace is created with "pod-security.kubernetes.io/enforce" label set to AnnotationPodSecurityEnforce's value.
 	AnnotationPodSecurityEnforce = "security.gardener.cloud/pod-security-enforce"

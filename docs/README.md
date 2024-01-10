@@ -68,6 +68,7 @@
 * [Trusted TLS certificate for shoot control planes](usage/trusted-tls-for-control-planes.md)
 * [Trusted TLS certificate for garden runtime cluster](usage/trusted-tls-for-garden-runtime.md)
 * [Controlling the Kubernetes versions for specific worker pools](usage/worker_pool_k8s_versions.md)
+* [Admission Configuration for the `PodSecurity` Admission Plugin](usage/pod-security.md)
 * [Supported CPU Architectures for Shoot Worker Nodes](usage/shoot_supported_architectures.md)
 * [Workerless `Shoot`s](usage/shoot_workerless.md)
 

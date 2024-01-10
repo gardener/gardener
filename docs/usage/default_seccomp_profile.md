@@ -39,7 +39,7 @@ Once the feature gate is enabled, the webhook will be registered and configured 
 
 You can enable the use of `RuntimeDefault` as the default seccomp profile for all workloads. If enabled, the kubelet will use the `RuntimeDefault` seccomp profile by default, which is defined by the container runtime, instead of using the `Unconfined` mode. More information for this feature can be found in the [Kubernetes documentation](https://kubernetes.io/docs/tutorials/security/seccomp/#enable-the-use-of-runtimedefault-as-the-default-seccomp-profile-for-all-workloads).
 
-To use seccomp profile defaulting, you must run the kubelet with the `SeccompDefault` feature gate should have been enabled (this is the default).
+To use seccomp profile defaulting, you must run the kubelet with the `SeccompDefault` feature gate enabled (this is the default).
 
 ### How to Configure
 

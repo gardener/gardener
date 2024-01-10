@@ -104,7 +104,6 @@ const (
 	volumeMountPathCentOS                          = "/etc/pki/ca-trust/extracted/pem"
 	volumeMountPathEtcSSL                          = "/etc/ssl"
 	volumeMountPathUsrShareCaCerts                 = "/usr/share/ca-certificates"
-	volumeMountPathWatchdog                        = "/var/watchdog/bin"
 )
 
 func (k *kubeAPIServer) emptyDeployment() *appsv1.Deployment {
