@@ -168,7 +168,7 @@ var _ = Describe("chart applier", func() {
 					TypeMeta: configMapTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      configMapName,
-						Namespace: configMapName,
+						Namespace: namespace,
 					},
 				}
 				Expect(c.Create(ctx, existingCM)).To(Succeed(), "dummy configmap creation should succeed")

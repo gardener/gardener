@@ -96,15 +96,15 @@ func (r *chartRenderer) RenderEmbeddedFS(embeddedFS embed.FS, chartPath, release
 func (r *chartRenderer) renderRelease(chart *helmchart.Chart, releaseName, namespace string, values interface{}) (*RenderedChart, error) {
 	parsedValues, err := json.Marshal(values)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse values for chart %s: ,%w", chart.Metadata.Name, err)
+		return nil, fmt.Errorf("failed to parse values for chart %s: %w", chart.Metadata.Name, err)
 	}
 	valuesCopy, err := chartutil.ReadValues(parsedValues)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read values for chart %s: ,%w", chart.Metadata.Name, err)
+		return nil, fmt.Errorf("failed to read values for chart %s: %w", chart.Metadata.Name, err)
 	}
 
 	if err := chartutil.ProcessDependencies(chart, valuesCopy); err != nil {
-		return nil, fmt.Errorf("failed to process chart %s: ,%w", chart.Metadata.Name, err)
+		return nil, fmt.Errorf("failed to process chart %s: %w", chart.Metadata.Name, err)
 	}
 
 	caps := r.capabilities
@@ -159,7 +159,10 @@ func (c *RenderedChart) Manifest() []byte {
 	return b.Bytes()
 }
 
-// Files returns all rendered manifests mapping their names to their content.
+// Files returns a map representing the files associated with the RenderedChart.
+// The map has the file names as keys and their content represented as a nested map.
+// The nested map has keys in the format of strings.ToLower(manifest.Head.Kind+"/"+manifest.Head.Metadata.Name)
+// and values as the content of the corresponding file.
 func (c *RenderedChart) Files() map[string]map[string]string {
 	var files = make(map[string]map[string]string)
 	for _, manifest := range c.Manifests {
@@ -174,18 +177,18 @@ func (c *RenderedChart) Files() map[string]map[string]string {
 
 // FileContent returns explicitly the content of the provided <filename>.
 func (c *RenderedChart) FileContent(filename string) string {
-	var fileContent string
+	var fileContent strings.Builder
 	for _, mf := range c.Manifests {
 		if mf.Name == fmt.Sprintf("%s/templates/%s", c.ChartName, filename) {
-			if fileContent != "" {
+			if fileContent.String() != "" {
 				// add `---` to seperate charts
-				fileContent = fileContent + "\n---\n"
+				fileContent.WriteString("\n---\n")
 			}
-			fileContent = fileContent + mf.Content
+			fileContent.WriteString(mf.Content)
 			continue
 		}
 	}
-	return fileContent
+	return fileContent.String()
 }
 
 // AsSecretData returns all rendered manifests that is capable for used as data of a secret
@@ -211,7 +214,7 @@ func (c *RenderedChart) AsSecretData() map[string][]byte {
 // Keep this func in sync with https://github.com/helm/helm/blob/v3.10.3/pkg/chart/loader/directory.go#L44-L120.
 func loadEmbeddedFS(embeddedFS embed.FS, chartPath string) (*helmchart.Chart, error) {
 	var (
-		// use ignore from helm.sh/helm once helm/helm#12662 is fixed.
+		// TODO(acumino): Replace "k8s.io/helm/pkg/ignore" with "helm.sh/helm/v3/pkg/ignore" when we upgrade to a helm version that contains https://github.com/helm/helm/pull/12662.
 		rules = ignore.Empty()
 		files []*helmloader.BufferedFile
 	)
