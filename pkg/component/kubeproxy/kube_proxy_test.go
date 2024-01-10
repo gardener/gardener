@@ -849,12 +849,7 @@ status: {}
 						"kubernetes-version": pool.KubernetesVersion.String(),
 					}))
 
-					if versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion) {
-						Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled, true)))
-					} else {
-						Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled, false)))
-					}
-
+					Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled, versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion))))
 					expectedPoolMr.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}}
 					utilruntime.Must(references.InjectAnnotations(expectedPoolMr))
 					Expect(managedResource).To(DeepEqual(expectedPoolMr))
@@ -980,12 +975,7 @@ status: {}
 					"role": "pool",
 				}))
 				Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
-				if versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion) {
-					Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled, true)))
-				} else {
-					Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled, false)))
-				}
-
+				Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled, versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion))))
 				poolExpectedMr.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}}
 				utilruntime.Must(references.InjectAnnotations(poolExpectedMr))
 				Expect(managedResource).To(DeepEqual(poolExpectedMr))
@@ -1021,11 +1011,7 @@ status: {}
 					"pool-name":          pool.Name,
 					"kubernetes-version": pool.KubernetesVersion.String(),
 				}))
-				if versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion) {
-					Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled, true)))
-				} else {
-					Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled, false)))
-				}
+				Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled, versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion))))
 
 				expectedMr := &resourcesv1alpha1.ManagedResource{
 					TypeMeta: metav1.TypeMeta{
@@ -1057,11 +1043,7 @@ status: {}
 				Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 				Expect(managedResourceSecret.Data).To(HaveLen(1))
-				if versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion) {
-					Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled, true)))
-				} else {
-					Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled, false)))
-				}
+				Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled, versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion))))
 
 				// assertions for resources specific to the major/minor parts only of the Kubernetes version
 				managedResourceForMajorMinorVersionOnly := managedResourceForPoolForMajorMinorVersionOnly(pool)
