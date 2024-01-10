@@ -138,14 +138,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       seedName,
 					Finalizers: finalizers,
-				},
-				Spec: gardencorev1beta1.SeedSpec{
-					SecretRef: &corev1.SecretReference{
-						Name:      secretName,
-						Namespace: namespace,
-					},
-				},
-			}
+				}}
 			quota = gardencorev1beta1.Quota{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      quotaName,
