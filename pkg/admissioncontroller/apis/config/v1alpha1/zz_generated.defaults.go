@@ -39,4 +39,7 @@ func SetObjectDefaults_AdmissionControllerConfiguration(in *AdmissionControllerC
 	SetDefaults_AdmissionControllerConfiguration(in)
 	SetDefaults_ClientConnectionConfiguration(&in.GardenClientConnection)
 	SetDefaults_ServerConfiguration(&in.Server)
+	if in.Server.ResourceAdmissionConfiguration != nil {
+		SetDefaults_ResourceAdmissionConfiguration(in.Server.ResourceAdmissionConfiguration)
+	}
 }

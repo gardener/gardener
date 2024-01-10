@@ -52,10 +52,13 @@ func SetDefaults_ServerConfiguration(obj *ServerConfiguration) {
 	if obj.Metrics.Port == 0 {
 		obj.Metrics.Port = 2723
 	}
+}
 
-	for i, subject := range obj.ResourceAdmissionConfiguration.UnrestrictedSubjects {
+// SetDefaults_ResourceAdmissionConfiguration sets defaults for the resource admission configuration.
+func SetDefaults_ResourceAdmissionConfiguration(obj *ResourceAdmissionConfiguration) {
+	for i, subject := range obj.UnrestrictedSubjects {
 		if (subject.Kind == rbacv1.UserKind || subject.Kind == rbacv1.GroupKind) && subject.APIGroup == "" {
-			obj.ResourceAdmissionConfiguration.UnrestrictedSubjects[i].APIGroup = rbacv1.GroupName
+			obj.UnrestrictedSubjects[i].APIGroup = rbacv1.GroupName
 		}
 	}
 }

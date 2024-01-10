@@ -33,18 +33,9 @@ var _ = Describe("Defaults", func() {
 	Describe("AdmissionControllerConfiguration defaulting", func() {
 		It("should correctly default the AdmissionControllerConfiguration", func() {
 			SetObjectDefaults_AdmissionControllerConfiguration(obj)
-			// ContentType fields will be defaulted by client constructors / controller-runtime based on whether a
-			// given APIGroup supports protobuf or not. defaults must not touch these, otherwise the integelligent
-			// logic will be overwritten
-			Expect(obj.GardenClientConnection.ContentType).To(BeEmpty())
-			Expect(obj.GardenClientConnection.AcceptContentTypes).To(BeEmpty())
-			Expect(obj.GardenClientConnection).To(Equal(componentbaseconfigv1alpha1.ClientConnectionConfiguration{
-				QPS:   50.0,
-				Burst: 100,
-			}))
+
 			Expect(obj.LogLevel).To(Equal("info"))
 			Expect(obj.LogFormat).To(Equal("json"))
-
 		})
 
 		It("should not overwrite already set values", func() {
@@ -53,13 +44,43 @@ var _ = Describe("Defaults", func() {
 				LogFormat: "md",
 			}
 			SetObjectDefaults_AdmissionControllerConfiguration(obj)
+
+			Expect(obj.LogLevel).To(Equal("warning"))
+			Expect(obj.LogFormat).To(Equal("md"))
+		})
+	})
+
+	Describe("GardenClientConnection defaulting", func() {
+		It("should not default ContentType and AcceptContentTypes", func() {
+			SetObjectDefaults_AdmissionControllerConfiguration(obj)
 			// ContentType fields will be defaulted by client constructors / controller-runtime based on whether a
-			// given APIGroup supports protobuf or not. defaults must not touch these, otherwise the integelligent
+			// given APIGroup supports protobuf or not. defaults must not touch these, otherwise the intelligent
 			// logic will be overwritten
 			Expect(obj.GardenClientConnection.ContentType).To(BeEmpty())
 			Expect(obj.GardenClientConnection.AcceptContentTypes).To(BeEmpty())
-			Expect(obj.LogLevel).To(Equal("warning"))
-			Expect(obj.LogFormat).To(Equal("md"))
+		})
+
+		It("should correctly default the GardenClientConnection", func() {
+			expected := componentbaseconfigv1alpha1.ClientConnectionConfiguration{
+				QPS:   50.0,
+				Burst: 100,
+			}
+			SetObjectDefaults_AdmissionControllerConfiguration(obj)
+
+			Expect(obj.GardenClientConnection).To(Equal(expected))
+		})
+
+		It("should not overwrite already set values", func() {
+			obj = &AdmissionControllerConfiguration{
+				GardenClientConnection: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
+					QPS:   67.0,
+					Burst: 230,
+				},
+			}
+			expected := obj.GardenClientConnection.DeepCopy()
+			SetObjectDefaults_AdmissionControllerConfiguration(obj)
+
+			Expect(&obj.GardenClientConnection).To(Equal(expected))
 		})
 	})
 
@@ -87,30 +108,6 @@ var _ = Describe("Defaults", func() {
 			Expect(&obj.Server).To(Equal(expected))
 		})
 
-		It("should correctly default the resource admission configuration if given", func() {
-			obj = &AdmissionControllerConfiguration{
-				Server: ServerConfiguration{
-					ResourceAdmissionConfiguration: &ResourceAdmissionConfiguration{
-						UnrestrictedSubjects: []rbacv1.Subject{
-							{Kind: rbacv1.UserKind, Name: "foo"},
-							{Kind: rbacv1.GroupKind, Name: "bar"},
-							{Kind: rbacv1.ServiceAccountKind, Name: "foobar", Namespace: "default"},
-						},
-					},
-				},
-			}
-			expected := &ResourceAdmissionConfiguration{
-				UnrestrictedSubjects: []rbacv1.Subject{
-					{Kind: rbacv1.UserKind, Name: "foo", APIGroup: rbacv1.GroupName},
-					{Kind: rbacv1.GroupKind, Name: "bar", APIGroup: rbacv1.GroupName},
-					{Kind: rbacv1.ServiceAccountKind, Name: "foobar", Namespace: "default", APIGroup: ""},
-				},
-			}
-			SetObjectDefaults_AdmissionControllerConfiguration(obj)
-
-			Expect(obj.Server.ResourceAdmissionConfiguration).To(Equal(expected))
-		})
-
 		It("should not overwrite already set values", func() {
 			obj = &AdmissionControllerConfiguration{
 				Server: ServerConfiguration{
@@ -133,12 +130,34 @@ var _ = Describe("Defaults", func() {
 			}
 			expected := obj.Server.DeepCopy()
 			SetObjectDefaults_AdmissionControllerConfiguration(obj)
-			// ContentType fields will be defaulted by client constructors / controller-runtime based on whether a
-			// given APIGroup supports protobuf or not. defaults must not touch these, otherwise the integelligent
-			// logic will be overwritten
-			Expect(obj.GardenClientConnection.ContentType).To(BeEmpty())
-			Expect(obj.GardenClientConnection.AcceptContentTypes).To(BeEmpty())
+
 			Expect(&obj.Server).To(Equal(expected))
+		})
+	})
+
+	Describe("ResourceAdmissionConfiguration defaulting", func() {
+		It("should correctly default the resource admission configuration", func() {
+			obj = &AdmissionControllerConfiguration{
+				Server: ServerConfiguration{
+					ResourceAdmissionConfiguration: &ResourceAdmissionConfiguration{
+						UnrestrictedSubjects: []rbacv1.Subject{
+							{Kind: rbacv1.UserKind, Name: "foo"},
+							{Kind: rbacv1.GroupKind, Name: "bar"},
+							{Kind: rbacv1.ServiceAccountKind, Name: "foobar", Namespace: "default"},
+						},
+					},
+				},
+			}
+			expected := &ResourceAdmissionConfiguration{
+				UnrestrictedSubjects: []rbacv1.Subject{
+					{Kind: rbacv1.UserKind, Name: "foo", APIGroup: rbacv1.GroupName},
+					{Kind: rbacv1.GroupKind, Name: "bar", APIGroup: rbacv1.GroupName},
+					{Kind: rbacv1.ServiceAccountKind, Name: "foobar", Namespace: "default", APIGroup: ""},
+				},
+			}
+			SetObjectDefaults_AdmissionControllerConfiguration(obj)
+
+			Expect(obj.Server.ResourceAdmissionConfiguration).To(Equal(expected))
 		})
 	})
 })
