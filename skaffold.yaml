@@ -972,6 +972,7 @@ build:
             - pkg/utils/gardener/shootstate
             - pkg/utils/gardener/tokenrequest
             - pkg/utils/imagevector
+            - pkg/utils/istio
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/bootstraptoken
             - pkg/utils/kubernetes/client
