@@ -65,7 +65,7 @@ func createIstio(testValues istioTestValues) istio.Interface {
 	))
 
 	istio, err := NewIstio(
-		context.TODO(),
+		context.Background(),
 		testValues.client,
 		testValues.chartRenderer,
 		testValues.prefix,
@@ -167,7 +167,7 @@ func checkAdditionalIstioGateway(cl client.Client,
 	} else {
 		zones = []string{*zone}
 
-		enforceSpreadAcrossHosts, err = ShouldEnforceSpreadAcrossHosts(context.TODO(), cl, []string{*zone})
+		enforceSpreadAcrossHosts, err = ShouldEnforceSpreadAcrossHosts(context.Background(), cl, []string{*zone})
 		Expect(err).ToNot(HaveOccurred())
 	}
 
@@ -261,8 +261,8 @@ var _ = Describe("Istio", func() {
 				JustBeforeEach(func() {
 					testValues.client = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 					testValues.enforceSpreadAcrossHosts = true
-					Expect(testValues.client.Create(context.TODO(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "1"}}})).To(Succeed())
-					Expect(testValues.client.Create(context.TODO(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "1"}}})).To(Succeed())
+					Expect(testValues.client.Create(context.Background(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "1"}}})).To(Succeed())
+					Expect(testValues.client.Create(context.Background(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "1"}}})).To(Succeed())
 					istioDeploy = createIstio(testValues)
 				})
 
@@ -285,12 +285,12 @@ var _ = Describe("Istio", func() {
 				JustBeforeEach(func() {
 					testValues.client = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 					testValues.enforceSpreadAcrossHosts = true
-					Expect(testValues.client.Create(context.TODO(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "1"}}})).To(Succeed())
-					Expect(testValues.client.Create(context.TODO(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "1"}}})).To(Succeed())
-					Expect(testValues.client.Create(context.TODO(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-2", Labels: map[string]string{"topology.kubernetes.io/zone": "2"}}})).To(Succeed())
-					Expect(testValues.client.Create(context.TODO(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-3", Labels: map[string]string{"topology.kubernetes.io/zone": "2"}}})).To(Succeed())
-					Expect(testValues.client.Create(context.TODO(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-4", Labels: map[string]string{"topology.kubernetes.io/zone": "3"}}})).To(Succeed())
-					Expect(testValues.client.Create(context.TODO(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-5", Labels: map[string]string{"topology.kubernetes.io/zone": "3"}}})).To(Succeed())
+					Expect(testValues.client.Create(context.Background(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "1"}}})).To(Succeed())
+					Expect(testValues.client.Create(context.Background(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "1"}}})).To(Succeed())
+					Expect(testValues.client.Create(context.Background(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-2", Labels: map[string]string{"topology.kubernetes.io/zone": "2"}}})).To(Succeed())
+					Expect(testValues.client.Create(context.Background(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-3", Labels: map[string]string{"topology.kubernetes.io/zone": "2"}}})).To(Succeed())
+					Expect(testValues.client.Create(context.Background(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-4", Labels: map[string]string{"topology.kubernetes.io/zone": "3"}}})).To(Succeed())
+					Expect(testValues.client.Create(context.Background(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-5", Labels: map[string]string{"topology.kubernetes.io/zone": "3"}}})).To(Succeed())
 					istioDeploy = createIstio(testValues)
 				})
 
@@ -327,7 +327,7 @@ var _ = Describe("Istio", func() {
 			istioDeploy = istio.NewIstio(nil, nil, istio.Values{})
 
 			Expect(AddIstioIngressGateway(
-				context.TODO(),
+				context.Background(),
 				testValues.client,
 				istioDeploy,
 				namespace,
@@ -346,7 +346,7 @@ var _ = Describe("Istio", func() {
 
 			It("should successfully add an additional ingress gateway", func() {
 				Expect(AddIstioIngressGateway(
-					context.TODO(),
+					context.Background(),
 					testValues.client,
 					istioDeploy,
 					namespace,
@@ -378,7 +378,7 @@ var _ = Describe("Istio", func() {
 
 			It("should successfully add an additional ingress gateway", func() {
 				Expect(AddIstioIngressGateway(
-					context.TODO(),
+					context.Background(),
 					testValues.client,
 					istioDeploy,
 					namespace,
@@ -406,14 +406,14 @@ var _ = Describe("Istio", func() {
 				JustBeforeEach(func() {
 					testValues.client = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 					testValues.enforceSpreadAcrossHosts = true
-					Expect(testValues.client.Create(context.TODO(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "1"}}})).To(Succeed())
-					Expect(testValues.client.Create(context.TODO(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "1"}}})).To(Succeed())
+					Expect(testValues.client.Create(context.Background(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "1"}}})).To(Succeed())
+					Expect(testValues.client.Create(context.Background(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "1"}}})).To(Succeed())
 					istioDeploy = createIstio(testValues)
 				})
 
 				It("should successfully create a new Istio deployer", func() {
 					Expect(AddIstioIngressGateway(
-						context.TODO(),
+						context.Background(),
 						testValues.client,
 						istioDeploy,
 						namespace,
@@ -518,9 +518,9 @@ var _ = Describe("Istio", func() {
 		func(nodes []corev1.Node, zones []string, expectedHostSpreading bool) {
 			cl := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 			for _, n := range nodes {
-				Expect(cl.Create(context.TODO(), &n)).To(Succeed())
+				Expect(cl.Create(context.Background(), &n)).To(Succeed())
 			}
-			hostSpreadingEnabled, err := ShouldEnforceSpreadAcrossHosts(context.TODO(), cl, zones)
+			hostSpreadingEnabled, err := ShouldEnforceSpreadAcrossHosts(context.Background(), cl, zones)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(hostSpreadingEnabled).To(Equal(expectedHostSpreading))
 		},

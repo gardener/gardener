@@ -264,7 +264,7 @@ func IsZonalIstioExtension(labels map[string]string) (bool, string) {
 	return false, ""
 }
 
-// ShouldEnforceSpreadAcrossHosts checks whether all given zones have at least two nodes so that Istio can be spread across hosts in each zone
+// ShouldEnforceSpreadAcrossHosts checks whether all given zones have at least two nodes so that Istio can be spread across hosts in each zone.
 func ShouldEnforceSpreadAcrossHosts(ctx context.Context, cl client.Client, zones []string) (bool, error) {
 	const targetNodeCount = 2
 	nodeList := &metav1.PartialObjectMetadataList{}
@@ -278,6 +278,9 @@ forNode:
 	for _, node := range nodeList.Items {
 		nodeZone := node.Labels[corev1.LabelTopologyZone]
 		for i, zone := range zones {
+			// In theory, this should be an equals check, but cloud provider handle regions/zones differently so that we might end up
+			// with a more complete label value on the node compared to what we might get as parameter, i.e. <region>-<zone> vs. <zone>.
+			// Hence, we do a best effort match here using only the suffix. If it fails, the spreading is not enforced, which is acceptable.
 			if strings.HasSuffix(nodeZone, zone) {
 				if nodesPerZone[i] < targetNodeCount {
 					nodesPerZone[i] = nodesPerZone[i] + 1
