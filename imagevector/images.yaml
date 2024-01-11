@@ -53,8 +53,8 @@ images:
         interacted with from other containers or other systems
 - name: etcd-druid
   sourceRepository: github.com/gardener/etcd-druid
-  repository: eu.gcr.io/gardener-project/gardener/etcd-druid
-  tag: "v0.21.0"
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/etcd-druid
+  tag: "v0.21.1"
 - name: dependency-watchdog
   sourceRepository: github.com/gardener/dependency-watchdog
   repository: eu.gcr.io/gardener-project/gardener/dependency-watchdog
