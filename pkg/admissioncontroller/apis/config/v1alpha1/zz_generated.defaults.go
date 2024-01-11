@@ -38,4 +38,8 @@ func RegisterDefaults(scheme *runtime.Scheme) error {
 func SetObjectDefaults_AdmissionControllerConfiguration(in *AdmissionControllerConfiguration) {
 	SetDefaults_AdmissionControllerConfiguration(in)
 	SetDefaults_ClientConnectionConfiguration(&in.GardenClientConnection)
+	SetDefaults_ServerConfiguration(&in.Server)
+	if in.Server.ResourceAdmissionConfiguration != nil {
+		SetDefaults_ResourceAdmissionConfiguration(in.Server.ResourceAdmissionConfiguration)
+	}
 }
