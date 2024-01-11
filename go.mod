@@ -11,7 +11,7 @@ require (
 	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/fluent/fluent-operator/v2 v2.2.0
 	github.com/gardener/dependency-watchdog v1.1.2
-	github.com/gardener/etcd-druid v0.21.0
+	github.com/gardener/etcd-druid v0.22.0
 	github.com/gardener/hvpa-controller/api v0.5.0
 	github.com/gardener/machine-controller-manager v0.50.0
 	github.com/go-logr/logr v1.2.4
@@ -156,6 +156,7 @@ require (
 	github.com/prometheus/client_model v0.4.0 // indirect
 	github.com/prometheus/common v0.44.0 // indirect
 	github.com/prometheus/procfs v0.10.1 // indirect
+	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
