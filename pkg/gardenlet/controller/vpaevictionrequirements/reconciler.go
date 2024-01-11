@@ -72,21 +72,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	log.Info("Reconciling vpa")
 
 	// double check just for fun: does the vpa have our label?
-	if metav1.HasLabel(vpa.ObjectMeta, constants.LabelVPAEvictionRequirementDownscaleRestriction) {
-		value := vpa.GetLabels()[constants.LabelVPAEvictionRequirementDownscaleRestriction]
-		log.Info("Found the label "+constants.LabelVPAEvictionRequirementDownscaleRestriction, "value", value)
-		switch value {
-		case constants.EvictionRequirementNever:
-			return r.reconcileVPAForDownscaleDisabled(ctx, vpa)
-		case constants.EvictionRequirementInMaintenanceWindowOnly:
-			return r.reconcileVPAForDownscaleInMaintenanceOnly(ctx, vpa)
-		default:
-			err := fmt.Errorf("unsupported label value found: %q, supported are only %q and %q", value, constants.EvictionRequirementNever, constants.EvictionRequirementInMaintenanceWindowOnly)
-			log.Error(err, "Error while parsing the label value:")
-			return reconcile.Result{}, err
-		}
+	if !metav1.HasLabel(vpa.ObjectMeta, constants.LabelVPAEvictionRequirementDownscaleRestriction) {
+		err := fmt.Errorf("label %q not found, although marker label %q is present", constants.LabelVPAEvictionRequirementDownscaleRestriction, constants.LabelVPAEvictionRequirementsController)
+		log.Error(err, "Error while parsing the label value:")
+		return reconcile.Result{}, err
 	}
-	return reconcile.Result{}, nil
+	value := vpa.GetLabels()[constants.LabelVPAEvictionRequirementDownscaleRestriction]
+	log.Info("Found the label "+constants.LabelVPAEvictionRequirementDownscaleRestriction, "value", value)
+	switch value {
+	case constants.EvictionRequirementNever:
+		return r.reconcileVPAForDownscaleDisabled(ctx, vpa)
+	case constants.EvictionRequirementInMaintenanceWindowOnly:
+		return r.reconcileVPAForDownscaleInMaintenanceOnly(ctx, vpa)
+	default:
+		err := fmt.Errorf("unsupported label value found: %q, supported are only %q and %q", value, constants.EvictionRequirementNever, constants.EvictionRequirementInMaintenanceWindowOnly)
+		log.Error(err, "Error while parsing the label value:")
+		return reconcile.Result{}, err
+	}
 }
 
 func (r *Reconciler) reconcileVPAForDownscaleInMaintenanceOnly(ctx context.Context, vpa *vpaautoscalingv1.VerticalPodAutoscaler) (reconcile.Result, error) {
