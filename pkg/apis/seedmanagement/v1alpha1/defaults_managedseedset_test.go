@@ -23,53 +23,41 @@ import (
 )
 
 var _ = Describe("Defaults", func() {
+	var obj *ManagedSeedSet
+
+	BeforeEach(func() {
+		obj = &ManagedSeedSet{}
+	})
+
 	Describe("#SetDefaults_ManagedSeedSet", func() {
-		var obj *ManagedSeedSet
-
-		BeforeEach(func() {
-			obj = &ManagedSeedSet{}
-		})
-
 		It("should default replicas to 1 and revisionHistoryLimit to 10", func() {
-			SetDefaults_ManagedSeedSet(obj)
+			SetObjectDefaults_ManagedSeedSet(obj)
 
-			Expect(obj).To(Equal(&ManagedSeedSet{
-				Spec: ManagedSeedSetSpec{
-					Replicas:             pointer.Int32(1),
-					UpdateStrategy:       &UpdateStrategy{},
-					RevisionHistoryLimit: pointer.Int32(10),
-				},
-			}))
+			Expect(obj.Spec.Replicas).To(Equal(pointer.Int32(1)))
+			Expect(obj.Spec.UpdateStrategy).NotTo(BeNil())
+			Expect(obj.Spec.RevisionHistoryLimit).To(Equal(pointer.Int32(10)))
 		})
 	})
 
 	Describe("#SetDefaults_UpdateStrategy", func() {
-		var obj *UpdateStrategy
-
-		BeforeEach(func() {
-			obj = &UpdateStrategy{}
-		})
-
 		It("should default type to RollingUpdate", func() {
-			SetDefaults_UpdateStrategy(obj)
+			obj.Spec.UpdateStrategy = &UpdateStrategy{}
+			SetObjectDefaults_ManagedSeedSet(obj)
 
-			Expect(obj).To(Equal(&UpdateStrategy{
+			Expect(obj.Spec.UpdateStrategy).To(Equal(&UpdateStrategy{
 				Type: updateStrategyTypePtr(RollingUpdateStrategyType),
 			}))
 		})
 	})
 
 	Describe("#SetDefaults_RollingUpdateStrategy", func() {
-		var obj *RollingUpdateStrategy
-
-		BeforeEach(func() {
-			obj = &RollingUpdateStrategy{}
-		})
-
 		It("should default partition to 0", func() {
-			SetDefaults_RollingUpdateStrategy(obj)
+			obj.Spec.UpdateStrategy = &UpdateStrategy{
+				RollingUpdate: &RollingUpdateStrategy{},
+			}
+			SetObjectDefaults_ManagedSeedSet(obj)
 
-			Expect(obj).To(Equal(&RollingUpdateStrategy{
+			Expect(obj.Spec.UpdateStrategy.RollingUpdate).To(Equal(&RollingUpdateStrategy{
 				Partition: pointer.Int32(0),
 			}))
 		})
