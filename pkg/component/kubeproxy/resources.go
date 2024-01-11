@@ -468,7 +468,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 		}
 		if k8sGreaterEqual129 {
 			daemonSet.Spec.Template.Spec.InitContainers[1].Resources.Limits = corev1.ResourceList{
-				corev1.ResourceMemory: resource.MustParse("2048Mi"),
+				corev1.ResourceMemory: resource.MustParse("256Mi"),
 			}
 		}
 	}
@@ -640,7 +640,7 @@ func (k *kubeProxy) getKubeProxyContainer(k8sGreaterEqual129 bool, image string,
 		},
 		SecurityContext: &corev1.SecurityContext{
 			Capabilities: &corev1.Capabilities{
-				Add: []corev1.Capability{"NET_ADMIN"},
+				Add: []corev1.Capability{"NET_ADMIN", "SYS_RESOURCE"},
 			},
 		},
 		Resources: corev1.ResourceRequirements{
@@ -649,12 +649,6 @@ func (k *kubeProxy) getKubeProxyContainer(k8sGreaterEqual129 bool, image string,
 				corev1.ResourceMemory: resource.MustParse("64Mi"),
 			},
 		},
-		Ports: []corev1.ContainerPort{{
-			Name:          portNameMetrics,
-			ContainerPort: portMetrics,
-			HostPort:      portMetrics,
-			Protocol:      corev1.ProtocolTCP,
-		}},
 		VolumeMounts: []corev1.VolumeMount{
 			{
 				Name:      volumeNameKubeconfig,
@@ -686,7 +680,15 @@ func (k *kubeProxy) getKubeProxyContainer(k8sGreaterEqual129 bool, image string,
 		}
 	}
 	if init {
+		container.Name += "-init"
 		container.Command = append(container.Command, "--init-only")
+	} else {
+		container.Ports = []corev1.ContainerPort{{
+			Name:          portNameMetrics,
+			ContainerPort: portMetrics,
+			HostPort:      portMetrics,
+			Protocol:      corev1.ProtocolTCP,
+		}}
 	}
 
 	return container

@@ -546,7 +546,8 @@ spec:
 					out += `
           capabilities:
             add:
-            - NET_ADMIN`
+            - NET_ADMIN
+            - SYS_RESOURCE`
 				} else {
 					out += `
           privileged: true`
@@ -628,18 +629,13 @@ spec:
         - --init-only
         image: ` + pool.Image + `
         imagePullPolicy: IfNotPresent
-        name: kube-proxy
-        ports:
-        - containerPort: 10249
-          hostPort: 10249
-          name: metrics
-          protocol: TCP
+        name: kube-proxy-init
         resources:`
 
 					if vpaEnabled {
 						out += `
           limits:
-            memory: 2Gi`
+            memory: 256Mi`
 					}
 
 					out += `
