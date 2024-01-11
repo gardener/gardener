@@ -39,7 +39,9 @@ func RegisterDefaults(scheme *runtime.Scheme) error {
 }
 
 func SetObjectDefaults_ClusterOpenIDConnectPreset(in *ClusterOpenIDConnectPreset) {
-	SetDefaults_ClusterOpenIDConnectPreset(in)
+	SetDefaults_ClusterOpenIDConnectPresetSpec(&in.Spec)
+	SetDefaults_OpenIDConnectPresetSpec(&in.Spec.OpenIDConnectPresetSpec)
+	SetDefaults_KubeAPIServerOpenIDConnect(&in.Spec.OpenIDConnectPresetSpec.Server)
 }
 
 func SetObjectDefaults_ClusterOpenIDConnectPresetList(in *ClusterOpenIDConnectPresetList) {
@@ -50,7 +52,8 @@ func SetObjectDefaults_ClusterOpenIDConnectPresetList(in *ClusterOpenIDConnectPr
 }
 
 func SetObjectDefaults_OpenIDConnectPreset(in *OpenIDConnectPreset) {
-	SetDefaults_OpenIDConnectPreset(in)
+	SetDefaults_OpenIDConnectPresetSpec(&in.Spec)
+	SetDefaults_KubeAPIServerOpenIDConnect(&in.Spec.Server)
 }
 
 func SetObjectDefaults_OpenIDConnectPresetList(in *OpenIDConnectPresetList) {
