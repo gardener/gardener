@@ -602,9 +602,9 @@ func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautos
 	containerPolicyAuto := vpaautoscalingv1.ContainerScalingModeAuto
 	controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 
-	var scaleDownUpdateMode *string
-
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, vpa, func() error {
+		var scaleDownUpdateMode *string
+
 		vpaLabels := vpa.GetLabels()
 		if vpaLabels == nil {
 			vpaLabels = map[string]string{}
