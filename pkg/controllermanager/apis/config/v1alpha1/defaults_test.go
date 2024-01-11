@@ -68,7 +68,7 @@ var _ = Describe("Defaults", func() {
 		It("should not default ContentType and AcceptContentTypes", func() {
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
 			// ContentType fields will be defaulted by client constructors / controller-runtime based on whether a
-			// given APIGroup supports protobuf or not. defaults must not touch these, otherwise the integelligent
+			// given APIGroup supports protobuf or not. defaults must not touch these, otherwise the intelligent
 			// logic will be overwritten
 			Expect(obj.GardenClientConnection.ContentType).To(BeEmpty())
 			Expect(obj.GardenClientConnection.AcceptContentTypes).To(BeEmpty())
@@ -749,12 +749,19 @@ var _ = Describe("Defaults", func() {
 		It("should default ManagedSeedSetControllerConfiguration correctly if not nil", func() {
 			obj = &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
-					ManagedSeedSet: &ManagedSeedSetControllerConfiguration{},
+					ManagedSeedSet: &ManagedSeedSetControllerConfiguration{
+						SyncPeriod: metav1.Duration{
+							Duration: 20 * time.Minute,
+						},
+					},
 				},
 			}
 			expected := &ManagedSeedSetControllerConfiguration{
 				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
 				MaxShootRetries: pointer.Int(3),
+				SyncPeriod: metav1.Duration{
+					Duration: 20 * time.Minute,
+				},
 			}
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
 
@@ -767,6 +774,9 @@ var _ = Describe("Defaults", func() {
 					ManagedSeedSet: &ManagedSeedSetControllerConfiguration{
 						ConcurrentSyncs: pointer.Int(10),
 						MaxShootRetries: pointer.Int(5),
+						SyncPeriod: metav1.Duration{
+							Duration: 10 * time.Minute,
+						},
 					},
 				},
 			}
