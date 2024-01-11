@@ -29,7 +29,7 @@ var _ = Describe("Defaults", func() {
 		obj = &ManagedSeedSet{}
 	})
 
-	Describe("#SetDefaults_ManagedSeedSet", func() {
+	Describe("ManagedSeedSet defaulting", func() {
 		It("should default replicas to 1 and revisionHistoryLimit to 10", func() {
 			SetObjectDefaults_ManagedSeedSet(obj)
 
@@ -37,9 +37,21 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.UpdateStrategy).NotTo(BeNil())
 			Expect(obj.Spec.RevisionHistoryLimit).To(Equal(pointer.Int32(10)))
 		})
+
+		It("should not overwrite the already set values for ManagedSeedSet spec", func() {
+			obj.Spec = ManagedSeedSetSpec{
+				Replicas:             pointer.Int32(5),
+				RevisionHistoryLimit: pointer.Int32(15),
+			}
+			SetObjectDefaults_ManagedSeedSet(obj)
+
+			Expect(obj.Spec.Replicas).To(Equal(pointer.Int32(5)))
+			Expect(obj.Spec.UpdateStrategy).NotTo(BeNil())
+			Expect(obj.Spec.RevisionHistoryLimit).To(Equal(pointer.Int32(15)))
+		})
 	})
 
-	Describe("#SetDefaults_UpdateStrategy", func() {
+	Describe("UpdateStrategy defaulting", func() {
 		It("should default type to RollingUpdate", func() {
 			obj.Spec.UpdateStrategy = &UpdateStrategy{}
 			SetObjectDefaults_ManagedSeedSet(obj)
@@ -48,9 +60,20 @@ var _ = Describe("Defaults", func() {
 				Type: updateStrategyTypePtr(RollingUpdateStrategyType),
 			}))
 		})
+
+		It("should not overwrite already set values for UpdateStrategy", func() {
+			obj.Spec.UpdateStrategy = &UpdateStrategy{
+				Type: updateStrategyTypePtr(UpdateStrategyType("foo")),
+			}
+			SetObjectDefaults_ManagedSeedSet(obj)
+
+			Expect(obj.Spec.UpdateStrategy).To(Equal(&UpdateStrategy{
+				Type: updateStrategyTypePtr(UpdateStrategyType("foo")),
+			}))
+		})
 	})
 
-	Describe("#SetDefaults_RollingUpdateStrategy", func() {
+	Describe("RollingUpdateStrategy defaulting", func() {
 		It("should default partition to 0", func() {
 			obj.Spec.UpdateStrategy = &UpdateStrategy{
 				RollingUpdate: &RollingUpdateStrategy{},
@@ -59,6 +82,19 @@ var _ = Describe("Defaults", func() {
 
 			Expect(obj.Spec.UpdateStrategy.RollingUpdate).To(Equal(&RollingUpdateStrategy{
 				Partition: pointer.Int32(0),
+			}))
+		})
+
+		It("should not overwrote the already set values for RollingUpdateStrategy", func() {
+			obj.Spec.UpdateStrategy = &UpdateStrategy{
+				RollingUpdate: &RollingUpdateStrategy{
+					Partition: pointer.Int32(1),
+				},
+			}
+			SetObjectDefaults_ManagedSeedSet(obj)
+
+			Expect(obj.Spec.UpdateStrategy.RollingUpdate).To(Equal(&RollingUpdateStrategy{
+				Partition: pointer.Int32(1),
 			}))
 		})
 	})
