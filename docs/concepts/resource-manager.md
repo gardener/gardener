@@ -147,8 +147,8 @@ A default class is assumed if no class is specified.
 For instance, the `gardener-resource-manager` which is deployed in the Shoot’s control plane namespace in the Seed does not specify a `.spec.class` and watches only for resources in the control plane namespace by specifying it in the `.sourceClientConnection.namespace`  field.
 
 If the `.spec.class` changes this means that the resources have to be handled by a different Gardener Resource Manager. That is achieved by:
-1. Cleaning all referenced resources by the GRM that was responsible for the old class in its target cluster
-2. Creating all referenced resources by the GRM that is responsible for the new class in its target cluster 
+1. Cleaning all referenced resources by the Gardener Resource Manager that was responsible for the old class in its target cluster.
+2. Creating all referenced resources by the Gardener Resource Manager that is responsible for the new class in its target cluster.
 
 #### [Conditions](../../pkg/resourcemanager/controller/health)
 
