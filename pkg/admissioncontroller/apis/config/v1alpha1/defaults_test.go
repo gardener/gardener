@@ -159,5 +159,23 @@ var _ = Describe("Defaults", func() {
 
 			Expect(obj.Server.ResourceAdmissionConfiguration).To(Equal(expected))
 		})
+
+		It("should not overwrite already set values", func() {
+			obj = &AdmissionControllerConfiguration{
+				Server: ServerConfiguration{
+					ResourceAdmissionConfiguration: &ResourceAdmissionConfiguration{
+						UnrestrictedSubjects: []rbacv1.Subject{
+							{Kind: rbacv1.UserKind, Name: "foo", APIGroup: "fooGroup"},
+							{Kind: rbacv1.GroupKind, Name: "bar", APIGroup: "barGroup"},
+							{Kind: rbacv1.ServiceAccountKind, Name: "foobar", Namespace: "default", APIGroup: "foobarGroup"},
+						},
+					},
+				},
+			}
+			expected := obj.Server.ResourceAdmissionConfiguration.DeepCopy()
+			SetObjectDefaults_AdmissionControllerConfiguration(obj)
+
+			Expect(obj.Server.ResourceAdmissionConfiguration).To(Equal(expected))
+		})
 	})
 })
