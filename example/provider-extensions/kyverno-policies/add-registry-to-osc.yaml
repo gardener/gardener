@@ -10,6 +10,8 @@ metadata:
       Locally built Gardener images are pushed to a container registry on the seed. One of those images is node-agent.
       The registry is password protected. This policy adds a registry-cache component to each node via OperatingSystemConfig.
       The registry-cache component allows pulling node-agent image during node bootstrapping and operation.
+      Additionally, these images are built with ko which uses a different non-configurable entrypoint.
+      Thus, the path of gardener-node-agent in OperatingSystemConfig needs to be modified accordingly.
 spec:
   rules:
   - name: add-registry-files-to-osc
@@ -126,3 +128,39 @@ spec:
           - path: "/spec/units/{{elementIndex}}/dropIns"
             op: add
             value: [{"name":"start-seed-registry-cache.conf","content":"{{startDropIn|base64_decode(@)}}"}]
+  - name: modify-gardener-node-init-path
+    match:
+      all:
+      - resources:
+          kinds:
+          - OperatingSystemConfig
+    mutate:
+      foreach:
+      - list: "request.object.spec.files[]"
+        preconditions:
+          all:
+          - key: "{{ element.path  || '' }}"
+            operator: Equals
+            value: "/var/lib/gardener-node-agent/init.sh"
+        patchesJson6902: |-
+          - path: "/spec/files/{{elementIndex}}"
+            op: replace
+            value: {"content":{"inline":{"data":"{{base64_encode('{{replace_all('{{base64_decode(element.content.inline.data)}}','$tmp_dir/gardener-node-agent','$tmp_dir/ko-app/gardener-node-agent')}}')}}","encoding":"b64"}},"path":"/var/lib/gardener-node-agent/init.sh","permissions":493}
+  - name: modify-gardener-node-agent-path
+    match:
+      all:
+      - resources:
+          kinds:
+          - OperatingSystemConfig
+    mutate:
+      foreach:
+      - list: "request.object.spec.files[]"
+        preconditions:
+          all:
+          - key: "{{ element.path  || '' }}"
+            operator: Equals
+            value: "/opt/bin/gardener-node-agent"
+        patchesJson6902: |-
+          - path: "/spec/files/{{elementIndex}}"
+            op: replace
+            value: {"content":{"imageRef":{"filePathInImage":"/ko-app/gardener-node-agent","image":"{{element.content.imageRef.image}}"}},"path":"/opt/bin/gardener-node-agent","permissions":493}
