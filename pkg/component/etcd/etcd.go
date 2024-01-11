@@ -620,10 +620,10 @@ func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautos
 		}
 		if pointer.StringDeref(scaleDownUpdateMode, "") == hvpav1alpha1.UpdateModeOff {
 			vpaLabels[v1beta1constants.LabelVPAEvictionRequirementsController] = "managed-by-controller"
-			vpaLabels[v1beta1constants.LabelVPAEvictionRequirementDownscaleRestriction] = v1beta1constants.Never
+			vpaLabels[v1beta1constants.LabelVPAEvictionRequirementDownscaleRestriction] = v1beta1constants.EvictionRequirementNever
 		} else if pointer.StringDeref(scaleDownUpdateMode, "") == hvpav1alpha1.UpdateModeMaintenanceWindow {
 			vpaLabels[v1beta1constants.LabelVPAEvictionRequirementsController] = "managed-by-controller"
-			vpaLabels[v1beta1constants.LabelVPAEvictionRequirementDownscaleRestriction] = v1beta1constants.InMaintenanceWindowOnly
+			vpaLabels[v1beta1constants.LabelVPAEvictionRequirementDownscaleRestriction] = v1beta1constants.EvictionRequirementInMaintenanceWindowOnly
 			vpaAnnotations[v1beta1constants.AnnotationShootMaintenanceWindow] = e.values.HvpaConfig.MaintenanceTimeWindow.Begin + "," + e.values.HvpaConfig.MaintenanceTimeWindow.End
 		} else {
 			delete(vpaLabels, v1beta1constants.LabelVPAEvictionRequirementDownscaleRestriction)

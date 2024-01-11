@@ -76,12 +76,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		value := vpa.GetLabels()[constants.LabelVPAEvictionRequirementDownscaleRestriction]
 		log.Info("Found the label "+constants.LabelVPAEvictionRequirementDownscaleRestriction, "value", value)
 		switch value {
-		case constants.Never:
+		case constants.EvictionRequirementNever:
 			return r.reconcileVPAForDownscaleDisabled(ctx, vpa)
-		case constants.InMaintenanceWindowOnly:
+		case constants.EvictionRequirementInMaintenanceWindowOnly:
 			return r.reconcileVPAForDownscaleInMaintenanceOnly(ctx, vpa)
 		default:
-			err := fmt.Errorf("unsupported label value found: %q, supported are only %q and %q", value, constants.Never, constants.InMaintenanceWindowOnly)
+			err := fmt.Errorf("unsupported label value found: %q, supported are only %q and %q", value, constants.EvictionRequirementNever, constants.EvictionRequirementInMaintenanceWindowOnly)
 			log.Error(err, "Error while parsing the label value:")
 			return reconcile.Result{}, err
 		}

@@ -557,12 +557,12 @@ const (
 	// the VPAEvictionRequirementsController should add an EvictionRestriction that prevents downscaling.
 	// Possible values are "in-maintenance-window-only" and "never", available as constants below.
 	LabelVPAEvictionRequirementDownscaleRestriction = "evictionrequirements.gardener.cloud/downscale-restriction"
-	// InMaintenanceWindowOnly is a constant to be used as a value for the label LabelVPAEvictionRequirementDownscaleRestriction,
+	// EvictionRequirementInMaintenanceWindowOnly is a constant to be used as a value for the label LabelVPAEvictionRequirementDownscaleRestriction,
 	// indicating that downscaling should be restricted to the Shoot's maintenance window.
-	InMaintenanceWindowOnly = "in-maintenance-window-only"
-	// Never is a constant to be used as a value for the label LabelVPAEvictionRequirementDownscaleRestriction,
+	EvictionRequirementInMaintenanceWindowOnly = "in-maintenance-window-only"
+	// EvictionRequirementNever is a constant to be used as a value for the label LabelVPAEvictionRequirementDownscaleRestriction,
 	// indicating that downscaling should never be allowed.
-	Never = "never"
+	EvictionRequirementNever = "never"
 
 	// AnnotationShootMaintenanceWindow is a constant for an annotation key used on VPA objects to hold the Shoot's maintenance window start and end.
 	AnnotationShootMaintenanceWindow = "shootmaintenancewindow.gardener.cloud"
