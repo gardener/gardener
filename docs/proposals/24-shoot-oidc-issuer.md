@@ -73,7 +73,7 @@ Once annotated shoots will be easily identifiable by the `gardenlet`. If a shoot
 status:
   advertisedAddresses:
     ...
-    - name: issuer
+    - name: service-account-issuer
       url: https://<central.domain.name>/projects/<project-name>/shoots/<shoot-uid>/issuer
 ```
 
