@@ -628,6 +628,7 @@ func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautos
 		} else {
 			delete(vpaLabels, v1beta1constants.LabelVPAEvictionRequirementDownscaleRestriction)
 			delete(vpaLabels, v1beta1constants.LabelVPAEvictionRequirementsController)
+			delete(vpaAnnotations, v1beta1constants.AnnotationShootMaintenanceWindow)
 		}
 
 		vpa.Spec = vpaautoscalingv1.VerticalPodAutoscalerSpec{
