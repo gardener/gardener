@@ -49,6 +49,7 @@ type IngressGatewayValues struct {
 	ProxyProtocolEnabled  bool
 	VPNEnabled            bool
 	Zones                 []string
+	DualStack             bool
 
 	// Ports is a list of all Ports the istio-ingress gateways is listening on.
 	// Port 15021 and 15000 cannot be used.
@@ -65,6 +66,7 @@ func (i *istiod) generateIstioIngressGatewayChart() (*chartrenderer.RenderedChar
 			"networkPolicyLabels":   istioIngressGateway.NetworkPolicyLabels,
 			"annotations":           istioIngressGateway.Annotations,
 			"externalTrafficPolicy": istioIngressGateway.ExternalTrafficPolicy,
+			"dualStack":             istioIngressGateway.DualStack,
 			"deployNamespace":       false,
 			"priorityClassName":     istioIngressGateway.PriorityClassName,
 			"ports":                 istioIngressGateway.Ports,

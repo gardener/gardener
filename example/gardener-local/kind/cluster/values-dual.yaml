@@ -1,0 +1,11 @@
+gardener:
+  seed:
+    istio:
+      listenAddresses:
+      - "::1"
+      - "127.0.0.1"
+
+networking:
+  ipFamily: dual
+  podSubnet: "10.1.0.0/16,fd00:10:1::/56"
+  serviceSubnet: "10.2.0.0/16,fd00:10:2::/112"

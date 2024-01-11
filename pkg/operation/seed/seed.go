@@ -210,3 +210,9 @@ func (s *Seed) GetZonalLoadBalancerServiceExternalTrafficPolicy(zone string) *co
 	}
 	return s.GetLoadBalancerServiceExternalTrafficPolicy()
 }
+
+// IsDualStack checks if the seed is a dual-stack seed.
+func (s *Seed) IsDualStack() bool {
+	seed := s.GetInfo()
+	return len(seed.Spec.Networks.IPFamilies) == 2
+}

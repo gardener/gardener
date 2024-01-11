@@ -79,7 +79,13 @@ func (b *Botanist) DeployKubeAPIServerSNI(ctx context.Context) error {
 }
 
 func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
-	b.APIServerClusterIP = clusterIP
+	if b.Shoot.Networks.Services.IP.To4() != nil {
+		b.APIServerClusterIP = clusterIP
+	} else {
+		// "64:ff9b:1::" is a well known prefix for address translation for use
+		// in local networks.
+		b.APIServerClusterIP = "64:ff9b:1::" + clusterIP
+	}
 	b.Shoot.Components.ControlPlane.KubeAPIServerSNI = kubeapiserverexposure.NewSNI(
 		b.SeedClientSet.Client(),
 		b.SeedClientSet.Applier(),
@@ -92,7 +98,7 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 					gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 				},
 				APIServerProxy: &kubeapiserverexposure.APIServerProxy{
-					APIServerClusterIP: clusterIP,
+					APIServerClusterIP: b.APIServerClusterIP,
 					NamespaceUID:       b.SeedNamespaceObject.UID,
 				},
 				IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{

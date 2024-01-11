@@ -99,6 +99,10 @@ spec:
                 resource: limits.cpu
           - name: PLATFORM
             value: ""
+{{- if eq .Values.dualStack true }}
+          - name: ISTIO_DUAL_STACK
+            value: "true"
+{{- end }}
           resources:
             requests:
               cpu: 250m

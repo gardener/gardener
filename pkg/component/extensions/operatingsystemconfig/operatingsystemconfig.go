@@ -134,6 +134,8 @@ type OriginalValues struct {
 	NodeLocalDNSEnabled bool
 	// SyncJitterPeriod is the duration of how the operating system config sync will be jittered on updates.
 	SyncJitterPeriod *metav1.Duration
+	// PrimaryIPFamily represents the preferred IP family (IPv4 or IPv6) to be used.
+	PrimaryIPFamily gardencorev1beta1.IPFamily
 }
 
 // New creates a new instance of Interface.
@@ -554,6 +556,7 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		valitailEnabled:         o.values.ValitailEnabled,
 		nodeLocalDNSEnabled:     o.values.NodeLocalDNSEnabled,
 		oscSyncJitterPeriod:     o.values.SyncJitterPeriod,
+		primaryIPFamily:         o.values.PrimaryIPFamily,
 	}, nil
 }
 
@@ -617,6 +620,7 @@ type deployer struct {
 	valitailEnabled         bool
 	nodeLocalDNSEnabled     bool
 	oscSyncJitterPeriod     *metav1.Duration
+	primaryIPFamily         gardencorev1beta1.IPFamily
 }
 
 // exposed for testing
@@ -690,6 +694,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 			APIServerURL:            d.apiServerURL,
 			Sysctls:                 d.worker.Sysctls,
 			OSCSyncJitterPeriod:     d.oscSyncJitterPeriod,
+			PreferIPv6:              d.primaryIPFamily == gardencorev1beta1.IPFamilyIPv6,
 		})
 		if err != nil {
 			return nil, err

@@ -194,10 +194,6 @@ func ValidateIPFamilies(ipFamilies []core.IPFamily, fldPath *field.Path) field.E
 		return allErrs
 	}
 
-	// validate: only supported single-stack/dual-stack combinations
-	if len(ipFamilies) > 1 {
-		allErrs = append(allErrs, field.Invalid(fldPath, ipFamilies, "dual-stack networking is not supported"))
-	}
 	if len(ipFamilies) > 0 && ipFamilies[0] == core.IPFamilyIPv6 && !features.DefaultFeatureGate.Enabled(features.IPv6SingleStack) {
 		allErrs = append(allErrs, field.Invalid(fldPath, ipFamilies, "IPv6 single-stack networking is not supported"))
 	}

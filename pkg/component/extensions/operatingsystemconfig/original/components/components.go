@@ -51,4 +51,5 @@ type Context struct {
 	APIServerURL            string
 	Sysctls                 map[string]string
 	OSCSyncJitterPeriod     *metav1.Duration
+	PreferIPv6              bool
 }

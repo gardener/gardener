@@ -704,6 +704,14 @@ profiles:
         paths:
           - example/provider-local/garden/skaffold-ipv6
           - example/provider-local/seed-kind/skaffold
+  - name: dual
+    activation:
+      - env: IPFAMILY=dual
+    manifests:
+      kustomize:
+        paths:
+          - example/provider-local/garden/skaffold-dual
+          - example/provider-local/seed-kind/skaffold
   - name: ha-single-zone
     manifests:
       kustomize:
@@ -1281,6 +1289,13 @@ profiles:
       - op: add
         path: /deploy/helm/releases/0/valuesFiles/-
         value: example/gardener-local/gardenlet/values-ipv6.yaml
+  - name: dual
+    activation:
+      - env: IPFAMILY=dual
+    patches:
+      - op: add
+        path: /deploy/helm/releases/0/valuesFiles/-
+        value: example/gardener-local/gardenlet/values-dual.yaml
   - name: debug
     activation:
       - command: debug

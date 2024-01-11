@@ -36,14 +36,12 @@ func (b *Botanist) DefaultAPIServerProxy() (apiserverproxy.Interface, error) {
 	}
 
 	var (
-		listenAddress = "0.0.0.0"
 		// we don't want to use AUTO for single-stack clusters as it causes an unnecessary failed lookup
 		// ref https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#enum-config-cluster-v3-cluster-dnslookupfamily
 		dnsLookupFamily = "V4_ONLY"
 	)
 
 	if gardencorev1beta1.IsIPv6SingleStack(b.Shoot.GetInfo().Spec.Networking.IPFamilies) {
-		listenAddress = "::"
 		dnsLookupFamily = "V6_ONLY"
 	}
 
@@ -52,7 +50,6 @@ func (b *Botanist) DefaultAPIServerProxy() (apiserverproxy.Interface, error) {
 		SidecarImage:        sidecarImage.String(),
 		ProxySeedServerHost: b.outOfClusterAPIServerFQDN(),
 		PSPDisabled:         b.Shoot.PSPDisabled,
-		ListenIPAddress:     listenAddress,
 		DNSLookupFamily:     dnsLookupFamily,
 	}
 
