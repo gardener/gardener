@@ -19,6 +19,3 @@ config:
         - name: gardenlet-bootstrap
           user:
             token: 07401d.f395accd246ae52d
-  featureGates:
-    # TODO(oliver-goetz): Remove this as soon as the local provider extensions setup supports this feature gate.
-    UseGardenerNodeAgent: false
