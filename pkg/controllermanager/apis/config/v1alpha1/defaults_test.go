@@ -19,7 +19,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
@@ -29,149 +28,85 @@ import (
 )
 
 var _ = Describe("Defaults", func() {
-	Describe("ControllerManagerConfiguration", func() {
-		var obj *ControllerManagerConfiguration
+	var obj *ControllerManagerConfiguration
 
-		BeforeEach(func() {
-			obj = &ControllerManagerConfiguration{}
-		})
+	BeforeEach(func() {
+		obj = &ControllerManagerConfiguration{}
+	})
 
-		It("should correctly default the controller manager configuration", func() {
+	Describe("ControllerManagerConfiguration defaulting", func() {
+		It("should default ControllerManagerConfiguration correctly", func() {
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
-
-			Expect(obj.Controllers.Bastion).NotTo(BeNil())
-			Expect(obj.Controllers.Bastion.ConcurrentSyncs).NotTo(BeNil())
-			Expect(obj.Controllers.Bastion.ConcurrentSyncs).To(PointTo(Equal(5)))
-			Expect(obj.Controllers.Bastion.MaxLifetime).To(PointTo(Equal(metav1.Duration{Duration: 24 * time.Hour})))
-
-			Expect(obj.Controllers.CertificateSigningRequest).NotTo(BeNil())
-
-			Expect(obj.Controllers.CloudProfile).NotTo(BeNil())
-			Expect(obj.Controllers.CloudProfile.ConcurrentSyncs).NotTo(BeNil())
-			Expect(obj.Controllers.CloudProfile.ConcurrentSyncs).To(PointTo(Equal(5)))
-
-			Expect(obj.Controllers.ControllerDeployment).NotTo(BeNil())
-			Expect(obj.Controllers.ControllerDeployment.ConcurrentSyncs).NotTo(BeNil())
-			Expect(obj.Controllers.ControllerDeployment.ConcurrentSyncs).To(PointTo(Equal(5)))
-
-			Expect(obj.Controllers.ControllerRegistration).NotTo(BeNil())
-			Expect(obj.Controllers.ControllerRegistration.ConcurrentSyncs).NotTo(BeNil())
-			Expect(obj.Controllers.ControllerRegistration.ConcurrentSyncs).To(PointTo(Equal(5)))
-
-			Expect(obj.Controllers.ExposureClass).NotTo(BeNil())
-			Expect(obj.Controllers.ExposureClass.ConcurrentSyncs).NotTo(BeNil())
-			Expect(obj.Controllers.ExposureClass.ConcurrentSyncs).To(PointTo(Equal(5)))
-
-			Expect(obj.Controllers.Project).NotTo(BeNil())
-			Expect(obj.Controllers.Project.ConcurrentSyncs).NotTo(BeNil())
-			Expect(obj.Controllers.Project.ConcurrentSyncs).To(PointTo(Equal(5)))
-			Expect(obj.Controllers.Project.MinimumLifetimeDays).To(PointTo(Equal(30)))
-			Expect(obj.Controllers.Project.StaleGracePeriodDays).To(PointTo(Equal(14)))
-			Expect(obj.Controllers.Project.StaleExpirationTimeDays).To(PointTo(Equal(90)))
-			Expect(obj.Controllers.Project.StaleSyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 12 * time.Hour})))
-			Expect(obj.Controllers.Project.Quotas).To(BeNil())
-
-			Expect(obj.Controllers.Quota).NotTo(BeNil())
-			Expect(obj.Controllers.Quota.ConcurrentSyncs).NotTo(BeNil())
-			Expect(obj.Controllers.Quota.ConcurrentSyncs).To(PointTo(Equal(5)))
-
-			Expect(obj.Controllers.SecretBinding).NotTo(BeNil())
-			Expect(obj.Controllers.SecretBinding.ConcurrentSyncs).NotTo(BeNil())
-			Expect(obj.Controllers.SecretBinding.ConcurrentSyncs).To(PointTo(Equal(5)))
-
-			Expect(obj.Controllers.Seed).NotTo(BeNil())
-			Expect(obj.Controllers.SeedExtensionsCheck).NotTo(BeNil())
-			Expect(obj.Controllers.SeedBackupBucketsCheck).NotTo(BeNil())
-
-			Expect(obj.Controllers.ShootMaintenance.ConcurrentSyncs).NotTo(BeNil())
-			Expect(obj.Controllers.ShootMaintenance.ConcurrentSyncs).To(PointTo(Equal(5)))
-			Expect(obj.Controllers.ShootMaintenance.EnableShootControlPlaneRestarter).NotTo(BeNil())
-			Expect(obj.Controllers.ShootMaintenance.EnableShootControlPlaneRestarter).To(PointTo(Equal(true)))
-
-			Expect(obj.Controllers.ShootQuota).NotTo(BeNil())
-			Expect(obj.Controllers.ShootQuota.ConcurrentSyncs).NotTo(BeNil())
-			Expect(obj.Controllers.ShootQuota.ConcurrentSyncs).To(PointTo(Equal(5)))
-			Expect(obj.Controllers.ShootQuota.SyncPeriod).NotTo(BeNil())
-			Expect(obj.Controllers.ShootQuota.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 60 * time.Minute})))
-
-			Expect(obj.Controllers.ShootReference).NotTo(BeNil())
-			Expect(obj.Controllers.ShootReference.ConcurrentSyncs).NotTo(BeNil())
-			Expect(obj.Controllers.ShootReference.ConcurrentSyncs).To(PointTo(Equal(5)))
-
-			Expect(obj.Controllers.ShootRetry).NotTo(BeNil())
-			Expect(obj.Controllers.ShootRetry.ConcurrentSyncs).NotTo(BeNil())
-			Expect(obj.Controllers.ShootRetry.ConcurrentSyncs).To(PointTo(Equal(5)))
-
-			Expect(obj.Controllers.ShootConditions).NotTo(BeNil())
-			Expect(obj.Controllers.ShootConditions.ConcurrentSyncs).NotTo(BeNil())
-			Expect(obj.Controllers.ShootConditions.ConcurrentSyncs).To(PointTo(Equal(5)))
-
-			Expect(obj.Controllers.ShootStatusLabel).NotTo(BeNil())
-			Expect(obj.Controllers.ShootStatusLabel.ConcurrentSyncs).NotTo(BeNil())
-			Expect(obj.Controllers.ShootStatusLabel.ConcurrentSyncs).To(PointTo(Equal(5)))
 
 			Expect(obj.LogLevel).To(Equal(logger.InfoLevel))
 			Expect(obj.LogFormat).To(Equal(logger.FormatJSON))
-
-			Expect(obj.Server.HealthProbes.BindAddress).To(BeEmpty())
-			Expect(obj.Server.HealthProbes.Port).To(Equal(2718))
-			Expect(obj.Server.Metrics.BindAddress).To(BeEmpty())
-			Expect(obj.Server.Metrics.Port).To(Equal(2719))
 		})
 
-		It("should correctly default the project quota configuration", func() {
-			fooSelector, _ := metav1.ParseToLabelSelector("role = foo")
-
-			obj.Controllers = ControllerManagerControllerConfiguration{
-				Project: &ProjectControllerConfiguration{
-					Quotas: []QuotaConfiguration{
-						{
-							ProjectSelector: fooSelector,
-						},
-						{},
-					},
-				},
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				LogLevel:  "warning",
+				LogFormat: "md",
 			}
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
 
-			Expect(obj.Controllers.Project.Quotas[0].ProjectSelector).To(Equal(fooSelector))
-			Expect(obj.Controllers.Project.Quotas[1].ProjectSelector).To(Equal(&metav1.LabelSelector{}))
+			Expect(obj.LogLevel).To(Equal("warning"))
+			Expect(obj.LogFormat).To(Equal("md"))
+		})
+	})
+
+	Describe("ClientConnectionConfiguration defaulting", func() {
+		It("should default ClientConnectionConfiguration correctly", func() {
+			expected := &componentbaseconfigv1alpha1.ClientConnectionConfiguration{
+				QPS:   50.0,
+				Burst: 100,
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(&obj.GardenClientConnection).To(Equal(expected))
 		})
 
-		Describe("GardenClientConnection", func() {
-			It("should not default ContentType and AcceptContentTypes", func() {
-				SetObjectDefaults_ControllerManagerConfiguration(obj)
-
-				// ContentType fields will be defaulted by client constructors / controller-runtime based on whether a
-				// given APIGroup supports protobuf or not. defaults must not touch these, otherwise the integelligent
-				// logic will be overwritten
-				Expect(obj.GardenClientConnection.ContentType).To(BeEmpty())
-				Expect(obj.GardenClientConnection.AcceptContentTypes).To(BeEmpty())
-			})
-			It("should correctly default GardenClientConnection", func() {
-				SetObjectDefaults_ControllerManagerConfiguration(obj)
-				Expect(obj.GardenClientConnection).To(Equal(componentbaseconfigv1alpha1.ClientConnectionConfiguration{
-					QPS:   50.0,
-					Burst: 100,
-				}))
-			})
+		It("should not default ContentType and AcceptContentTypes", func() {
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+			// ContentType fields will be defaulted by client constructors / controller-runtime based on whether a
+			// given APIGroup supports protobuf or not. defaults must not touch these, otherwise the intelligent
+			// logic will be overwritten
+			Expect(obj.GardenClientConnection.ContentType).To(BeEmpty())
+			Expect(obj.GardenClientConnection.AcceptContentTypes).To(BeEmpty())
 		})
 
-		Describe("leader election settings", func() {
-			It("should correctly default leader election settings", func() {
-				SetObjectDefaults_ControllerManagerConfiguration(obj)
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				GardenClientConnection: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
+					QPS:   60.0,
+					Burst: 120,
+				},
+			}
+			expected := obj.GardenClientConnection.DeepCopy()
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
 
-				Expect(obj.LeaderElection).NotTo(BeNil())
-				Expect(obj.LeaderElection.LeaderElect).To(PointTo(BeTrue()))
-				Expect(obj.LeaderElection.LeaseDuration).To(Equal(metav1.Duration{Duration: 15 * time.Second}))
-				Expect(obj.LeaderElection.RenewDeadline).To(Equal(metav1.Duration{Duration: 10 * time.Second}))
-				Expect(obj.LeaderElection.RetryPeriod).To(Equal(metav1.Duration{Duration: 2 * time.Second}))
-				Expect(obj.LeaderElection.ResourceLock).To(Equal("leases"))
-				Expect(obj.LeaderElection.ResourceNamespace).To(Equal("garden"))
-				Expect(obj.LeaderElection.ResourceName).To(Equal("gardener-controller-manager-leader-election"))
-			})
-			It("should not overwrite custom settings", func() {
-				expectedLeaderElection := &componentbaseconfigv1alpha1.LeaderElectionConfiguration{
+			Expect(&obj.GardenClientConnection).To(Equal(expected))
+		})
+	})
+
+	Describe("LeaderElectionConfiguration defaulting", func() {
+		It("should default LeaderElectionConfiguration correctly", func() {
+			expected := &componentbaseconfigv1alpha1.LeaderElectionConfiguration{
+				LeaderElect:       pointer.Bool(true),
+				ResourceLock:      "leases",
+				RetryPeriod:       metav1.Duration{Duration: 2 * time.Second},
+				RenewDeadline:     metav1.Duration{Duration: 10 * time.Second},
+				LeaseDuration:     metav1.Duration{Duration: 15 * time.Second},
+				ResourceNamespace: "garden",
+				ResourceName:      "gardener-controller-manager-leader-election",
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.LeaderElection).To(Equal(expected))
+		})
+
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				LeaderElection: &componentbaseconfigv1alpha1.LeaderElectionConfiguration{
 					LeaderElect:       pointer.Bool(true),
 					ResourceLock:      "foo",
 					RetryPeriod:       metav1.Duration{Duration: 40 * time.Second},
@@ -179,95 +114,679 @@ var _ = Describe("Defaults", func() {
 					LeaseDuration:     metav1.Duration{Duration: 42 * time.Second},
 					ResourceNamespace: "other-garden-ns",
 					ResourceName:      "lock-object",
-				}
-				obj.LeaderElection = expectedLeaderElection.DeepCopy()
-				SetObjectDefaults_ControllerManagerConfiguration(obj)
+				},
+			}
+			expected := obj.LeaderElection.DeepCopy()
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
 
-				Expect(obj.LeaderElection).To(Equal(expectedLeaderElection))
-			})
+			Expect(obj.LeaderElection).To(Equal(expected))
 		})
 	})
 
-	Describe("#SetDefaults_EventControllerConfiguration", func() {
-		It("should correctly default the Event Controller configuration", func() {
-			obj := &EventControllerConfiguration{}
+	Describe("ShootRetryControllerConfiguration defaulting", func() {
+		It("should default ShootRetryControllerConfiguration correctly", func() {
+			expected := &ShootRetryControllerConfiguration{
+				ConcurrentSyncs:   pointer.Int(DefaultControllerConcurrentSyncs),
+				RetryPeriod:       &metav1.Duration{Duration: 10 * time.Minute},
+				RetryJitterPeriod: &metav1.Duration{Duration: 5 * time.Minute},
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
 
-			SetDefaults_EventControllerConfiguration(obj)
-			Expect(obj.ConcurrentSyncs).NotTo(BeNil())
-			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
-			Expect(obj.TTLNonShootEvents).To(PointTo(Equal(metav1.Duration{Duration: time.Hour})))
+			Expect(obj.Controllers.ShootRetry).To(Equal(expected))
+		})
+
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					ShootRetry: &ShootRetryControllerConfiguration{
+						ConcurrentSyncs:   pointer.Int(10),
+						RetryPeriod:       &metav1.Duration{Duration: 12 * time.Minute},
+						RetryJitterPeriod: &metav1.Duration{Duration: 8 * time.Minute},
+					},
+				},
+			}
+			expected := obj.Controllers.ShootRetry.DeepCopy()
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.ShootRetry).To(Equal(expected))
 		})
 	})
 
-	Describe("#SetDefaults_ShootRetryControllerConfiguration", func() {
-		It("should correctly default the ShootRetry Controller configuration", func() {
-			obj := &ShootRetryControllerConfiguration{}
+	Describe("SeedControllerConfiguration defaulting", func() {
+		It("should default SeedControllerConfiguration correctly", func() {
+			expected := &SeedControllerConfiguration{
+				ConcurrentSyncs:    pointer.Int(DefaultControllerConcurrentSyncs),
+				SyncPeriod:         &metav1.Duration{Duration: 10 * time.Second},
+				MonitorPeriod:      &metav1.Duration{Duration: 40 * time.Second},
+				ShootMonitorPeriod: &metav1.Duration{Duration: 5 * 40 * time.Second},
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
 
-			SetDefaults_ShootRetryControllerConfiguration(obj)
-			Expect(obj.RetryPeriod).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Minute})))
-			Expect(obj.RetryJitterPeriod).To(PointTo(Equal(metav1.Duration{Duration: 5 * time.Minute})))
+			Expect(obj.Controllers.Seed).To(Equal(expected))
+		})
+
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					Seed: &SeedControllerConfiguration{
+						ConcurrentSyncs:    pointer.Int(10),
+						SyncPeriod:         &metav1.Duration{Duration: 12 * time.Second},
+						MonitorPeriod:      &metav1.Duration{Duration: 42 * time.Second},
+						ShootMonitorPeriod: &metav1.Duration{Duration: 6 * 42 * time.Second},
+					},
+				},
+			}
+			expected := obj.Controllers.Seed.DeepCopy()
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.Seed).To(Equal(expected))
 		})
 	})
 
-	Describe("#SetDefaults_ManagedSeedSetControllerConfiguration", func() {
-		It("should correctly default the ManagedSeedSet Controller configuration", func() {
-			obj := &ManagedSeedSetControllerConfiguration{}
+	Describe("ProjectControllerConfiguration defaulting", func() {
+		It("should default ProjectControllerConfiguration correctly", func() {
+			expected := &ProjectControllerConfiguration{
+				ConcurrentSyncs:         pointer.Int(DefaultControllerConcurrentSyncs),
+				MinimumLifetimeDays:     pointer.Int(30),
+				StaleGracePeriodDays:    pointer.Int(14),
+				StaleExpirationTimeDays: pointer.Int(90),
+				StaleSyncPeriod: &metav1.Duration{
+					Duration: 12 * time.Hour,
+				},
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
 
-			SetDefaults_ManagedSeedSetControllerConfiguration(obj)
-			Expect(obj.MaxShootRetries).To(PointTo(Equal(3)))
+			Expect(obj.Controllers.Project).To(Equal(expected))
+		})
+
+		It("should default ProjectControllerConfiguration unset QuotaConfiguration correctly", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					Project: &ProjectControllerConfiguration{
+						Quotas: []QuotaConfiguration{
+							{},
+							{ProjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}}},
+							{},
+						},
+					},
+				},
+			}
+			expected := &ProjectControllerConfiguration{
+				Quotas: []QuotaConfiguration{
+					{ProjectSelector: &metav1.LabelSelector{}},
+					{ProjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}}},
+					{ProjectSelector: &metav1.LabelSelector{}},
+				},
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.Project.Quotas).To(Equal(expected.Quotas))
+		})
+
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					Project: &ProjectControllerConfiguration{
+						ConcurrentSyncs:         pointer.Int(20),
+						MinimumLifetimeDays:     pointer.Int(40),
+						StaleGracePeriodDays:    pointer.Int(24),
+						StaleExpirationTimeDays: pointer.Int(100),
+						StaleSyncPeriod: &metav1.Duration{
+							Duration: 12 * time.Hour,
+						},
+					},
+				},
+			}
+			expected := obj.Controllers.Project.DeepCopy()
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.Project).To(Equal(expected))
 		})
 	})
 
-	Describe("#SetDefaults_ShootHibernationControllerConfiguration", func() {
-		It("should correctly default the ShootHibernation Controller configuration", func() {
-			obj := &ShootHibernationControllerConfiguration{}
+	Describe("ServerConfiguration defaulting", func() {
+		It("should default ServerConfiguration correctly", func() {
+			expected := &ServerConfiguration{
+				HealthProbes: &Server{
+					Port: 2718,
+				},
+				Metrics: &Server{
+					Port: 2719,
+				},
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
 
-			SetDefaults_ShootHibernationControllerConfiguration(obj)
-			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
-			Expect(obj.TriggerDeadlineDuration).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Hour})))
+			Expect(&obj.Server).To(Equal(expected))
+		})
+
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				Server: ServerConfiguration{
+					HealthProbes: &Server{
+						Port: 3000,
+					},
+					Metrics: &Server{
+						Port: 4000,
+					},
+				},
+			}
+			expected := obj.Server.DeepCopy()
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(&obj.Server).To(Equal(expected))
 		})
 	})
 
-	Describe("#SetDefaults_SeedExtensionsCheckControllerConfiguration", func() {
-		It("should correctly default the SeedExtensionsCheck Controller configuration", func() {
-			obj := &SeedExtensionsCheckControllerConfiguration{}
+	Describe("BastionControllerConfiguration defaulting", func() {
+		It("should default BastionControllerConfiguration correctly", func() {
+			expected := &BastionControllerConfiguration{
+				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
+				MaxLifetime:     &metav1.Duration{Duration: 24 * time.Hour},
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
 
-			SetDefaults_SeedExtensionsCheckControllerConfiguration(obj)
-			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
-			Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 30 * time.Second})))
+			Expect(obj.Controllers.Bastion).To(Equal(expected))
+		})
+
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					Bastion: &BastionControllerConfiguration{
+						ConcurrentSyncs: pointer.Int(10),
+						MaxLifetime:     &metav1.Duration{Duration: 48 * time.Hour},
+					},
+				},
+			}
+			expected := obj.Controllers.Bastion.DeepCopy()
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.Bastion).To(Equal(expected))
 		})
 	})
 
-	Describe("#SetDefaults_SeedBackupBucketsCheckControllerConfiguration", func() {
-		It("should correctly default the SeedBackupBucketsCheck Controller configuration", func() {
-			obj := &SeedBackupBucketsCheckControllerConfiguration{}
+	Describe("CertificateSigningRequestControllerConfiguration defaulting", func() {
+		It("should default CertificateSigningRequestControllerConfiguration correctly", func() {
+			expected := &CertificateSigningRequestControllerConfiguration{
+				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
 
-			SetDefaults_SeedBackupBucketsCheckControllerConfiguration(obj)
-			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
-			Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 30 * time.Second})))
+			Expect(obj.Controllers.CertificateSigningRequest).To(Equal(expected))
+		})
+
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					CertificateSigningRequest: &CertificateSigningRequestControllerConfiguration{
+						ConcurrentSyncs: pointer.Int(10),
+					},
+				},
+			}
+			expected := obj.Controllers.CertificateSigningRequest.DeepCopy()
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.CertificateSigningRequest).To(Equal(expected))
 		})
 	})
 
-	Describe("#SetDefaults_CertificateSigningRequestControllerConfiguration", func() {
-		It("should correctly default the CertificateSigningRequest Controller configuration", func() {
-			obj := &CertificateSigningRequestControllerConfiguration{}
+	Describe("CloudProfileControllerConfiguration defaulting", func() {
+		It("should default CloudProfileControllerConfiguration correctly", func() {
+			expected := &CloudProfileControllerConfiguration{
+				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
 
-			SetDefaults_CertificateSigningRequestControllerConfiguration(obj)
-			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
+			Expect(obj.Controllers.CloudProfile).To(Equal(expected))
+		})
+
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					CloudProfile: &CloudProfileControllerConfiguration{
+						ConcurrentSyncs: pointer.Int(10),
+					},
+				},
+			}
+			expected := obj.Controllers.CloudProfile.DeepCopy()
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.CloudProfile).To(Equal(expected))
 		})
 	})
 
-	Describe("#SetDefaults_SeedControllerConfiguration", func() {
-		It("should correctly default the Seed Controller configuration", func() {
-			obj := &SeedControllerConfiguration{}
+	Describe("ControllerDeploymentControllerConfiguration defaulting", func() {
+		It("should default ControllerDeploymentControllerConfiguration correctly", func() {
+			expected := &ControllerDeploymentControllerConfiguration{
+				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
 
-			SetDefaults_SeedControllerConfiguration(obj)
-			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
-			Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Second})))
-			Expect(obj.MonitorPeriod).To(PointTo(Equal(metav1.Duration{Duration: 40 * time.Second})))
-			Expect(obj.ShootMonitorPeriod).To(PointTo(Equal(metav1.Duration{Duration: 200 * time.Second})))
+			Expect(obj.Controllers.ControllerDeployment).To(Equal(expected))
+		})
+
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					ControllerDeployment: &ControllerDeploymentControllerConfiguration{
+						ConcurrentSyncs: pointer.Int(10),
+					},
+				},
+			}
+			expected := obj.Controllers.ControllerDeployment.DeepCopy()
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.ControllerDeployment).To(Equal(expected))
 		})
 	})
+
+	Describe("ControllerRegistrationControllerConfiguration defaulting", func() {
+		It("should default ControllerRegistrationControllerConfiguration correctly", func() {
+			expected := &ControllerRegistrationControllerConfiguration{
+				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.ControllerRegistration).To(Equal(expected))
+		})
+
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					ControllerRegistration: &ControllerRegistrationControllerConfiguration{
+						ConcurrentSyncs: pointer.Int(10),
+					},
+				},
+			}
+			expected := obj.Controllers.ControllerRegistration.DeepCopy()
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.ControllerRegistration).To(Equal(expected))
+		})
+	})
+
+	Describe("ExposureClassControllerConfiguration defaulting", func() {
+		It("should default ExposureClassControllerConfiguration correctly", func() {
+			expected := &ExposureClassControllerConfiguration{
+				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.ExposureClass).To(Equal(expected))
+		})
+
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					ExposureClass: &ExposureClassControllerConfiguration{
+						ConcurrentSyncs: pointer.Int(10),
+					},
+				},
+			}
+			expected := obj.Controllers.ExposureClass.DeepCopy()
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.ExposureClass).To(Equal(expected))
+		})
+	})
+
+	Describe("QuotaControllerConfiguration defaulting", func() {
+		It("should default QuotaControllerConfiguration correctly", func() {
+			expected := &QuotaControllerConfiguration{
+				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.Quota).To(Equal(expected))
+		})
+
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					Quota: &QuotaControllerConfiguration{
+						ConcurrentSyncs: pointer.Int(10),
+					},
+				},
+			}
+			expected := obj.Controllers.Quota.DeepCopy()
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.Quota).To(Equal(expected))
+		})
+	})
+
+	Describe("SecretBindingControllerConfiguration defaulting", func() {
+		It("should default SecretBindingControllerConfiguration correctly", func() {
+			expected := &SecretBindingControllerConfiguration{
+				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.SecretBinding).To(Equal(expected))
+		})
+
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					SecretBinding: &SecretBindingControllerConfiguration{
+						ConcurrentSyncs: pointer.Int(10),
+					},
+				},
+			}
+			expected := obj.Controllers.SecretBinding.DeepCopy()
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.SecretBinding).To(Equal(expected))
+		})
+	})
+
+	Describe("SeedExtensionsCheckControllerConfiguration defaulting", func() {
+		It("should default SeedExtensionsCheckControllerConfiguration correctly", func() {
+			expected := &SeedExtensionsCheckControllerConfiguration{
+				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
+				SyncPeriod:      &metav1.Duration{Duration: 30 * time.Second},
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.SeedExtensionsCheck).To(Equal(expected))
+		})
+
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					SeedExtensionsCheck: &SeedExtensionsCheckControllerConfiguration{
+						ConcurrentSyncs: pointer.Int(10),
+						SyncPeriod:      &metav1.Duration{Duration: 60 * time.Second},
+					},
+				},
+			}
+			expected := obj.Controllers.SeedExtensionsCheck.DeepCopy()
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.SeedExtensionsCheck).To(Equal(expected))
+		})
+	})
+
+	Describe("SeedBackupBucketsCheckControllerConfiguration defaulting", func() {
+		It("should default SeedBackupBucketsCheckControllerConfiguration correctly", func() {
+			expected := &SeedBackupBucketsCheckControllerConfiguration{
+				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
+				SyncPeriod:      &metav1.Duration{Duration: 30 * time.Second},
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.SeedBackupBucketsCheck).To(Equal(expected))
+		})
+
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					SeedBackupBucketsCheck: &SeedBackupBucketsCheckControllerConfiguration{
+						ConcurrentSyncs: pointer.Int(10),
+						SyncPeriod:      &metav1.Duration{Duration: 60 * time.Second},
+					},
+				},
+			}
+			expected := obj.Controllers.SeedBackupBucketsCheck.DeepCopy()
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.SeedBackupBucketsCheck).To(Equal(expected))
+		})
+	})
+
+	Describe("ShootHibernationControllerConfiguration defaulting", func() {
+		It("should default ShootHibernationControllerConfiguration correctly", func() {
+			expected := &ShootHibernationControllerConfiguration{
+				ConcurrentSyncs:         pointer.Int(DefaultControllerConcurrentSyncs),
+				TriggerDeadlineDuration: &metav1.Duration{Duration: 2 * time.Hour},
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(&obj.Controllers.ShootHibernation).To(Equal(expected))
+		})
+
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					ShootHibernation: ShootHibernationControllerConfiguration{
+						ConcurrentSyncs:         pointer.Int(10),
+						TriggerDeadlineDuration: &metav1.Duration{Duration: 3 * time.Hour},
+					},
+				},
+			}
+			expected := obj.Controllers.ShootHibernation.DeepCopy()
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(&obj.Controllers.ShootHibernation).To(Equal(expected))
+		})
+	})
+
+	Describe("ShootMaintenanceControllerConfiguration defaulting", func() {
+		It("should default ShootMaintenanceControllerConfiguration correctly", func() {
+			expected := &ShootMaintenanceControllerConfiguration{
+				ConcurrentSyncs:                  pointer.Int(DefaultControllerConcurrentSyncs),
+				EnableShootControlPlaneRestarter: pointer.Bool(true),
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(&obj.Controllers.ShootMaintenance).To(Equal(expected))
+		})
+
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					ShootMaintenance: ShootMaintenanceControllerConfiguration{
+						ConcurrentSyncs:                  pointer.Int(10),
+						EnableShootControlPlaneRestarter: pointer.Bool(false),
+					},
+				},
+			}
+			expected := obj.Controllers.ShootMaintenance.DeepCopy()
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(&obj.Controllers.ShootMaintenance).To(Equal(expected))
+		})
+	})
+
+	Describe("ShootQuotaControllerConfiguration defaulting", func() {
+		It("should default ShootQuotaControllerConfiguration correctly", func() {
+			expected := &ShootQuotaControllerConfiguration{
+				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
+				SyncPeriod: &metav1.Duration{
+					Duration: 60 * time.Minute,
+				},
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.ShootQuota).To(Equal(expected))
+		})
+
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					ShootQuota: &ShootQuotaControllerConfiguration{
+						ConcurrentSyncs: pointer.Int(10),
+						SyncPeriod: &metav1.Duration{
+							Duration: 120 * time.Minute,
+						},
+					},
+				},
+			}
+			expected := obj.Controllers.ShootQuota.DeepCopy()
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.ShootQuota).To(Equal(expected))
+		})
+	})
+
+	Describe("ShootReferenceControllerConfiguration defaulting", func() {
+		It("should default ShootReferenceControllerConfiguration correctly", func() {
+			expected := &ShootReferenceControllerConfiguration{
+				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.ShootReference).To(Equal(expected))
+		})
+
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					ShootReference: &ShootReferenceControllerConfiguration{
+						ConcurrentSyncs: pointer.Int(10),
+					},
+				},
+			}
+			expected := obj.Controllers.ShootReference.DeepCopy()
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.ShootReference).To(Equal(expected))
+		})
+	})
+
+	Describe("ShootConditionsControllerConfiguration defaulting", func() {
+		It("should default ShootConditionsControllerConfiguration correctly", func() {
+			expected := &ShootConditionsControllerConfiguration{
+				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.ShootConditions).To(Equal(expected))
+		})
+
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					ShootConditions: &ShootConditionsControllerConfiguration{
+						ConcurrentSyncs: pointer.Int(10),
+					},
+				},
+			}
+			expected := obj.Controllers.ShootConditions.DeepCopy()
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.ShootConditions).To(Equal(expected))
+		})
+	})
+
+	Describe("EventControllerConfiguration defaulting", func() {
+		It("should default EventControllerConfiguration correctly if set", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					Event: &EventControllerConfiguration{},
+				},
+			}
+			expected := &EventControllerConfiguration{
+				ConcurrentSyncs:   pointer.Int(DefaultControllerConcurrentSyncs),
+				TTLNonShootEvents: &metav1.Duration{Duration: 1 * time.Hour},
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.Event).To(Equal(expected))
+		})
+
+		It("should not default EventControllerConfiguration if not set", func() {
+			var expected *EventControllerConfiguration
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.Event).To(Equal(expected))
+		})
+
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					Event: &EventControllerConfiguration{
+						ConcurrentSyncs:   pointer.Int(10),
+						TTLNonShootEvents: &metav1.Duration{Duration: 2 * time.Hour},
+					},
+				},
+			}
+			expected := obj.Controllers.Event.DeepCopy()
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.Event).To(Equal(expected))
+		})
+	})
+
+	Describe("ShootStatusLabelControllerConfiguration defaulting", func() {
+		It("should default ShootStatusLabelControllerConfiguration correctly", func() {
+			expected := &ShootStatusLabelControllerConfiguration{
+				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.ShootStatusLabel).To(Equal(expected))
+		})
+
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					ShootStatusLabel: &ShootStatusLabelControllerConfiguration{
+						ConcurrentSyncs: pointer.Int(10),
+					},
+				},
+			}
+			expected := obj.Controllers.ShootStatusLabel.DeepCopy()
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.ShootStatusLabel).To(Equal(expected))
+		})
+	})
+
+	Describe("ManagedSeedSetControllerConfiguration defaulting", func() {
+		It("should default ManagedSeedSetControllerConfiguration correctly if nil", func() {
+			expected := &ManagedSeedSetControllerConfiguration{
+				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
+				MaxShootRetries: pointer.Int(3),
+				SyncPeriod: metav1.Duration{
+					Duration: 30 * time.Minute,
+				},
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.ManagedSeedSet).To(Equal(expected))
+		})
+
+		It("should default ManagedSeedSetControllerConfiguration correctly if not nil", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					ManagedSeedSet: &ManagedSeedSetControllerConfiguration{
+						SyncPeriod: metav1.Duration{
+							Duration: 20 * time.Minute,
+						},
+					},
+				},
+			}
+			expected := &ManagedSeedSetControllerConfiguration{
+				ConcurrentSyncs: pointer.Int(DefaultControllerConcurrentSyncs),
+				MaxShootRetries: pointer.Int(3),
+				SyncPeriod: metav1.Duration{
+					Duration: 20 * time.Minute,
+				},
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.ManagedSeedSet).To(Equal(expected))
+		})
+
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					ManagedSeedSet: &ManagedSeedSetControllerConfiguration{
+						ConcurrentSyncs: pointer.Int(10),
+						MaxShootRetries: pointer.Int(5),
+						SyncPeriod: metav1.Duration{
+							Duration: 10 * time.Minute,
+						},
+					},
+				},
+			}
+			expected := obj.Controllers.ManagedSeedSet.DeepCopy()
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.ManagedSeedSet).To(Equal(expected))
+		})
+	})
+
 })
 
 var _ = Describe("Constants", func() {
