@@ -134,7 +134,7 @@ The mode for a resource can be specified with the `resources.gardener.cloud/mode
 
 If a resource in the `ManagedResource` is annotated with `resources.gardener.cloud/skip-health-check=true`, then the resource will be skipped during health checks by the health controller. The `ManagedResource` conditions will not reflect the health condition of this resource anymore. The `ResourcesProgressing` condition will also be set to `False`.
 
-#### Resource Class
+#### Resource Class and Reconcilation Scope
 
 By default, the `gardener-resource-manager` controller watches for `ManagedResource`s in all namespaces.
 The `.sourceClientConnection.namespace` field in the component configuration restricts the watch to `ManagedResource`s in a single namespace only.
@@ -143,6 +143,12 @@ Note that this setting also affects all other controllers and webhooks since it'
 A `ManagedResource` has an optional `.spec.class` field that allows it to indicate that it belongs to a given class of resources.
 The `.controllers.resourceClass` field in the component configuration restricts the watch to `ManagedResource`s with the given `.spec.class`.
 A default class is assumed if no class is specified.
+
+For instance, the `gardener-resource-manager` which is deployed in the Shoot’s control plane namespace in the Seed does not specify a `.spec.class` and watches only for resources in the control plane namespace by specifying it in the `.sourceClientConnection.namespace`  field.
+
+If the `.spec.class` changes this means that the resources have to be handled by a different Gardener Resource Manager. That is achieved by:
+1. Cleaning all referenced resources by the Gardener Resource Manager that was responsible for the old class in its target cluster.
+2. Creating all referenced resources by the Gardener Resource Manager that is responsible for the new class in its target cluster.
 
 #### [Conditions](../../pkg/resourcemanager/controller/health)
 

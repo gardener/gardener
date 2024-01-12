@@ -71,7 +71,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	// Check responsibility
-	if _, responsible := r.ClassFilter.Active(mr); !responsible {
+	if responsible := r.ClassFilter.Responsible(mr); !responsible {
 		log.Info("Stopping checks as the responsibility changed")
 		return reconcile.Result{}, nil
 	}

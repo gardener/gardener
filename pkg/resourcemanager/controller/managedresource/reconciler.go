@@ -107,19 +107,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, nil
 	}
 
-	action, responsible := r.ClassFilter.Active(mr)
-	log.Info("Reconciling ManagedResource", "actionRequired", action, "responsible", responsible)
-
 	// If the object should be deleted or the responsibility changed
 	// the actual deployments have to be deleted
-	if mr.DeletionTimestamp != nil || (action && !responsible) {
+	if isTransferringResponsibility := r.ClassFilter.IsTransferringResponsibility(mr); mr.DeletionTimestamp != nil || isTransferringResponsibility {
+		if isTransferringResponsibility {
+			log.Info("Class of ManagedResource changed. Cleaning resources as the responsibility changed")
+		}
 		return r.delete(ctx, log, mr)
 	}
 
 	// If the deletion after a change of responsibility is still
 	// pending, the handling of the object by the responsible controller
 	// must be delayed, until the deletion is finished.
-	if responsible && !action {
+	if r.ClassFilter.IsWaitForCleanupRequired(mr) {
+		log.Info("Waiting for previous handler to clean resources created by ManagedResource")
 		return reconcile.Result{Requeue: true}, nil
 	}
 	return r.reconcile(ctx, log, mr)
@@ -376,7 +377,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 }
 
 func (r *Reconciler) delete(ctx context.Context, log logr.Logger, mr *resourcesv1alpha1.ManagedResource) (reconcile.Result, error) {
-	log.Info("Starting to delete ManagedResource")
+	log.Info("Started deleting resources created by ManagedResource")
 
 	deleteCtx, cancel := controllerutils.GetMainReconciliationContext(ctx, r.Config.SyncPeriod.Duration)
 	defer cancel()
@@ -440,7 +441,7 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, mr *resourcesv
 		}
 	}
 
-	log.Info("Finished to delete ManagedResource")
+	log.Info("Finished deleting resources created by ManagedResource")
 	return reconcile.Result{}, nil
 }
 
