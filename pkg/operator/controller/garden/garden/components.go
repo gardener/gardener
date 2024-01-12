@@ -170,7 +170,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.nginxIngressController, err = r.newNginxIngressController(garden)
+	c.nginxIngressController, err = r.newNginxIngressController(garden, c.istio.GetValues().IngressGateway)
 	if err != nil {
 		return
 	}
@@ -777,10 +777,14 @@ func getAPIServerDomains(domains []string) []string {
 	return apiServerDomains
 }
 
-func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden) (component.DeployWaiter, error) {
+func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden, ingressGatewayValues []istio.IngressGatewayValues) (component.DeployWaiter, error) {
 	providerConfig, err := getNginxIngressConfig(garden)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(ingressGatewayValues) != 1 {
+		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the SNI config")
 	}
 
 	return sharedcomponent.NewNginxIngress(
@@ -797,6 +801,8 @@ func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden) 
 		component.ClusterTypeSeed,
 		"",
 		v1beta1constants.SeedNginxIngressClass,
+		"*."+garden.Spec.RuntimeCluster.Ingress.Domain,
+		ingressGatewayValues[0].Labels,
 	)
 }
 
