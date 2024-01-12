@@ -137,6 +137,7 @@ rules:`
   - list
   - watch
   - update
+  - patch
 `
 					}
 
