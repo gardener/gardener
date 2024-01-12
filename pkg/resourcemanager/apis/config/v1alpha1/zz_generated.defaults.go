@@ -41,7 +41,6 @@ func SetObjectDefaults_ResourceManagerConfiguration(in *ResourceManagerConfigura
 	SetDefaults_NetworkPolicyControllerConfig(&in.Controllers.NetworkPolicy)
 	SetDefaults_NodeCriticalComponentsControllerConfig(&in.Controllers.NodeCriticalComponents)
 	SetDefaults_NodeAgentReconciliationDelayControllerConfig(&in.Controllers.NodeAgentReconciliationDelay)
-	SetDefaults_TokenInvalidatorControllerConfig(&in.Controllers.TokenInvalidator)
 	SetDefaults_TokenRequestorControllerConfig(&in.Controllers.TokenRequestor)
 	SetDefaults_PodSchedulerNameWebhookConfig(&in.Webhooks.PodSchedulerName)
 	SetDefaults_ProjectedTokenMountWebhookConfig(&in.Webhooks.ProjectedTokenMount)

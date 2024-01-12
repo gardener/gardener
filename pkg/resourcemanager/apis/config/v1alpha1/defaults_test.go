@@ -346,37 +346,6 @@ var _ = Describe("ResourceManager defaulting", func() {
 		})
 	})
 
-	Describe("TokenInvalidatorControllerConfig defaulting", func() {
-		It("should not default the TokenInvalidatorControllerConfig because it is disabled", func() {
-			obj.Controllers.TokenInvalidator = TokenInvalidatorControllerConfig{}
-
-			SetObjectDefaults_ResourceManagerConfiguration(obj)
-
-			Expect(obj.Controllers.TokenInvalidator.ConcurrentSyncs).To(BeNil())
-		})
-
-		It("should default the TokenInvalidatorControllerConfig because it is enabled", func() {
-			obj.Controllers.TokenInvalidator = TokenInvalidatorControllerConfig{
-				Enabled: true,
-			}
-
-			SetObjectDefaults_ResourceManagerConfiguration(obj)
-
-			Expect(obj.Controllers.TokenInvalidator.ConcurrentSyncs).To(PointTo(Equal(5)))
-		})
-
-		It("should not overwrite already set values for TokenInvalidatorControllerConfig", func() {
-			obj.Controllers.TokenInvalidator = TokenInvalidatorControllerConfig{
-				Enabled:         true,
-				ConcurrentSyncs: ptr.To(2),
-			}
-
-			SetObjectDefaults_ResourceManagerConfiguration(obj)
-
-			Expect(obj.Controllers.TokenInvalidator.ConcurrentSyncs).To(PointTo(Equal(2)))
-		})
-	})
-
 	Describe("TokenRequestorControllerConfig defaulting", func() {
 		It("should not default the TokenRequestorControllerConfig because it is disabled", func() {
 			obj.Controllers.TokenRequestor = TokenRequestorControllerConfig{}

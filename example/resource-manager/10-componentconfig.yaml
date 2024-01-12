@@ -70,9 +70,6 @@ controllers:
     enabled: true
     minDelay: 0s
     maxDelay: 5m
-  tokenInvalidator:
-    enabled: true
-    concurrentSyncs: 5
   tokenRequestor:
     enabled: true
     concurrentSyncs: 5
@@ -112,8 +109,6 @@ webhooks:
   #   value: someValue
   #   effect: NoSchedule
   #   tolerationSeconds: 300
-  tokenInvalidator:
-    enabled: true
   nodeAgentAuthorizer:
     enabled: true
     machineNamespace: shoot--foo--bar
