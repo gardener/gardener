@@ -119,8 +119,6 @@ type ResourceManagerControllerConfiguration struct {
 	Node NodeControllerConfig `json:"node"`
 	// Secret is the configuration for the secret controller.
 	Secret SecretControllerConfig `json:"secret"`
-	// TokenInvalidator is the configuration for the token-invalidator controller.
-	TokenInvalidator TokenInvalidatorControllerConfig `json:"tokenInvalidator"`
 	// TokenRequestor is the configuration for the token-requestor controller.
 	TokenRequestor TokenRequestorControllerConfig `json:"tokenRequestor"`
 }
@@ -207,15 +205,6 @@ type SecretControllerConfig struct {
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 }
 
-// TokenInvalidatorControllerConfig is the configuration for the token-invalidator controller.
-type TokenInvalidatorControllerConfig struct {
-	// Enabled defines whether this controller is enabled.
-	Enabled bool `json:"enabled"`
-	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
-	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
-}
-
 // TokenRequestorControllerConfig is the configuration for the token-requestor controller.
 type TokenRequestorControllerConfig struct {
 	// Enabled defines whether this controller is enabled.
@@ -259,8 +248,6 @@ type ResourceManagerWebhookConfiguration struct {
 	ProjectedTokenMount ProjectedTokenMountWebhookConfig `json:"projectedTokenMount"`
 	// SeccompProfile is the configuration for the seccomp-profile webhook.
 	SeccompProfile SeccompProfileWebhookConfig `json:"seccompProfile"`
-	// TokenInvalidator is the configuration for the token-invalidator webhook.
-	TokenInvalidator TokenInvalidatorWebhookConfig `json:"tokenInvalidator"`
 }
 
 // CRDDeletionProtection is the configuration for the crd-deletion-protection webhook.
@@ -344,12 +331,6 @@ type ProjectedTokenMountWebhookConfig struct {
 
 // SeccompProfileWebhookConfig is the configuration for the seccomp-profile webhook.
 type SeccompProfileWebhookConfig struct {
-	// Enabled defines whether this webhook is enabled.
-	Enabled bool `json:"enabled"`
-}
-
-// TokenInvalidatorWebhookConfig is the configuration for the token-invalidator webhook.
-type TokenInvalidatorWebhookConfig struct {
 	// Enabled defines whether this webhook is enabled.
 	Enabled bool `json:"enabled"`
 }

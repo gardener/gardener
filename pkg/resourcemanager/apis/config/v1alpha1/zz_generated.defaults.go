@@ -41,7 +41,6 @@ func SetObjectDefaults_ResourceManagerConfiguration(in *ResourceManagerConfigura
 	SetDefaults_NetworkPolicyControllerConfig(&in.Controllers.NetworkPolicy)
 	SetDefaults_NodeControllerConfig(&in.Controllers.Node)
 	SetDefaults_SecretControllerConfig(&in.Controllers.Secret)
-	SetDefaults_TokenInvalidatorControllerConfig(&in.Controllers.TokenInvalidator)
 	SetDefaults_TokenRequestorControllerConfig(&in.Controllers.TokenRequestor)
 	SetDefaults_PodSchedulerNameWebhookConfig(&in.Webhooks.PodSchedulerName)
 	SetDefaults_ProjectedTokenMountWebhookConfig(&in.Webhooks.ProjectedTokenMount)

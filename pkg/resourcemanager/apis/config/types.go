@@ -110,8 +110,6 @@ type ResourceManagerControllerConfiguration struct {
 	Node NodeControllerConfig
 	// Secret is the configuration for the secret controller.
 	Secret SecretControllerConfig
-	// TokenInvalidator is the configuration for the token-invalidator controller.
-	TokenInvalidator TokenInvalidatorControllerConfig
 	// TokenRequestor is the configuration for the token-requestor controller.
 	TokenRequestor TokenRequestorControllerConfig
 }
@@ -186,14 +184,6 @@ type SecretControllerConfig struct {
 	ConcurrentSyncs *int
 }
 
-// TokenInvalidatorControllerConfig is the configuration for the token-invalidator controller.
-type TokenInvalidatorControllerConfig struct {
-	// Enabled defines whether this controller is enabled.
-	Enabled bool
-	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
-	ConcurrentSyncs *int
-}
-
 // TokenRequestorControllerConfig is the configuration for the token-requestor controller.
 type TokenRequestorControllerConfig struct {
 	// Enabled defines whether this controller is enabled.
@@ -234,8 +224,6 @@ type ResourceManagerWebhookConfiguration struct {
 	SeccompProfile SeccompProfileWebhookConfig
 	// SystemComponentsConfig is the configuration for the system-components-config webhook.
 	SystemComponentsConfig SystemComponentsConfigWebhookConfig
-	// TokenInvalidator is the configuration for the token-invalidator webhook.
-	TokenInvalidator TokenInvalidatorWebhookConfig
 }
 
 // CRDDeletionProtection is the configuration for the crd-deletion-protection webhook.
@@ -312,12 +300,6 @@ type ProjectedTokenMountWebhookConfig struct {
 
 // SeccompProfileWebhookConfig is the configuration for the seccomp-profile webhook.
 type SeccompProfileWebhookConfig struct {
-	// Enabled defines whether this webhook is enabled.
-	Enabled bool
-}
-
-// TokenInvalidatorWebhookConfig is the configuration for the token-invalidator webhook.
-type TokenInvalidatorWebhookConfig struct {
 	// Enabled defines whether this webhook is enabled.
 	Enabled bool
 }

@@ -104,9 +104,6 @@ global:
       # backoff: 10s
       secret:
         concurrentSyncs: 5
-      tokenInvalidator:
-        enabled: false
-      # concurrentSyncs: 5
       tokenRequestor:
         enabled: false
       # concurrentSyncs: 5
@@ -144,5 +141,3 @@ global:
       #   value: someValue
       #   effect: NoSchedule
       #   tolerationSeconds: 300
-      tokenInvalidator:
-        enabled: false

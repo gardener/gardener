@@ -957,7 +957,6 @@ build:
             - pkg/resourcemanager/webhook/projectedtokenmount
             - pkg/resourcemanager/webhook/seccompprofile
             - pkg/resourcemanager/webhook/systemcomponentsconfig
-            - pkg/resourcemanager/webhook/tokeninvalidator
             - pkg/utils
             - pkg/utils/chart
             - pkg/utils/context
@@ -1060,7 +1059,6 @@ build:
             - pkg/resourcemanager/controller/node
             - pkg/resourcemanager/controller/node/helper
             - pkg/resourcemanager/controller/secret
-            - pkg/resourcemanager/controller/tokeninvalidator
             - pkg/resourcemanager/predicate
             - pkg/resourcemanager/webhook
             - pkg/resourcemanager/webhook/crddeletionprotection
@@ -1073,7 +1071,6 @@ build:
             - pkg/resourcemanager/webhook/projectedtokenmount
             - pkg/resourcemanager/webhook/seccompprofile
             - pkg/resourcemanager/webhook/systemcomponentsconfig
-            - pkg/resourcemanager/webhook/tokeninvalidator
             - pkg/utils
             - pkg/utils/context
             - pkg/utils/errors

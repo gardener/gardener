@@ -68,9 +68,6 @@ controllers:
     backoff: 10s
   secret:
     concurrentSyncs: 5
-  tokenInvalidator:
-    enabled: true
-    concurrentSyncs: 5
   tokenRequestor:
     enabled: true
     concurrentSyncs: 5
@@ -110,5 +107,3 @@ webhooks:
   #   value: someValue
   #   effect: NoSchedule
   #   tolerationSeconds: 300
-  tokenInvalidator:
-    enabled: true
