@@ -29,15 +29,6 @@
 {{- end -}}
 {{- end -}}
 
-{{- define "extraPortMappings.gardener.nginx" -}}
-{{- if or .Values.gardener.garden.deployed .Values.gardener.controlPlane.deployed -}}
-{{- if .Values.gardener.nginxIngress.deployed -}}
-- containerPort: 30448
-  hostPort: 8448
-{{- end -}}
-{{- end -}}
-{{- end -}}
-
 {{- define "extraPortMappings.registry" -}}
 {{- if .Values.registry.deployed -}}
 - containerPort: 5001
