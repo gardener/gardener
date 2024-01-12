@@ -74,9 +74,10 @@ const (
 
 	roleBindingPSPName = "gardener.cloud:psp:addons-nginx-ingress"
 
-	servicePortControllerHttp    int32 = 80
-	containerPortControllerHttp  int32 = 80
-	servicePortControllerHttps   int32 = 443
+	servicePortControllerHttp   int32 = 80
+	containerPortControllerHttp int32 = 80
+	// ServicePortControllerHttps is the service port used by the controller.
+	ServicePortControllerHttps   int32 = 443
 	containerPortControllerHttps int32 = 443
 
 	servicePortBackend   int32 = 80
@@ -275,7 +276,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 					},
 					{
 						Name:       "https",
-						Port:       servicePortControllerHttps,
+						Port:       ServicePortControllerHttps,
 						Protocol:   corev1.ProtocolTCP,
 						TargetPort: intstr.FromInt32(containerPortControllerHttps),
 					},
@@ -645,6 +646,10 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		}
 
 		kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, n.values.KubernetesVersion)
+
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(serviceController, []metav1.LabelSelector{
+			{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
+		}...))
 	}
 
 	if n.values.ClusterType == component.ClusterTypeShoot {
@@ -836,4 +841,10 @@ func (n *nginxIngress) getName(kind string, backend bool) string {
 	}
 
 	return ""
+}
+
+// GetServiceName provides the name of the service resource of the controller in the seed scenario.
+func GetServiceName() string {
+	n := &nginxIngress{values: Values{ClusterType: component.ClusterTypeSeed}}
+	return n.getName("Service", false)
 }
