@@ -58,12 +58,11 @@ var _ = Describe("ResourceManager", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resourceManager.GetValues()).To(Equal(resourcemanager.Values{
-				ClusterIdentity:                      ptr.To("foo"),
-				ConcurrentSyncs:                      ptr.To(21),
-				HealthSyncPeriod:                     &metav1.Duration{Duration: time.Minute},
-				Image:                                "europe-docker.pkg.dev/gardener-project/releases/gardener/resource-manager:v0.0.0-master+$Format:%H$",
-				MaxConcurrentNetworkPolicyWorkers:    ptr.To(20),
-				MaxConcurrentTokenInvalidatorWorkers: ptr.To(5),
+				ClusterIdentity:                   ptr.To("foo"),
+				ConcurrentSyncs:                   ptr.To(21),
+				HealthSyncPeriod:                  &metav1.Duration{Duration: time.Minute},
+				Image:                             "europe-docker.pkg.dev/gardener-project/releases/gardener/resource-manager:v0.0.0-master+$Format:%H$",
+				MaxConcurrentNetworkPolicyWorkers: ptr.To(20),
 				NetworkPolicyControllerIngressControllerSelector: &resourcemanagerconfigv1alpha1.IngressControllerSelector{
 					Namespace: "garden",
 					PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{
@@ -80,24 +79,22 @@ var _ = Describe("ResourceManager", func() {
 
 		It("should apply the defaults for new target resource managers", func() {
 			resourceManager, err := NewTargetGardenerResourceManager(fakeClient, namespace, sm, resourcemanager.Values{
-				ClusterIdentity:                      ptr.To("foo"),
-				MaxConcurrentTokenInvalidatorWorkers: ptr.To(6),
-				TargetNamespaces:                     []string{},
+				ClusterIdentity:  ptr.To("foo"),
+				TargetNamespaces: []string{},
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resourceManager.GetValues()).To(Equal(resourcemanager.Values{
-				AlwaysUpdate:                         ptr.To(true),
-				ClusterIdentity:                      ptr.To("foo"),
-				ConcurrentSyncs:                      ptr.To(20),
-				HealthSyncPeriod:                     &metav1.Duration{Duration: time.Minute},
-				Image:                                "europe-docker.pkg.dev/gardener-project/releases/gardener/resource-manager:v0.0.0-master+$Format:%H$",
-				MaxConcurrentCSRApproverWorkers:      ptr.To(5),
-				MaxConcurrentHealthWorkers:           ptr.To(10),
-				MaxConcurrentTokenInvalidatorWorkers: ptr.To(6),
-				MaxConcurrentTokenRequestorWorkers:   ptr.To(5),
-				ResponsibilityMode:                   resourcemanager.ForTarget,
-				TargetNamespaces:                     []string{},
-				WatchedNamespace:                     &namespace,
+				AlwaysUpdate:                       ptr.To(true),
+				ClusterIdentity:                    ptr.To("foo"),
+				ConcurrentSyncs:                    ptr.To(20),
+				HealthSyncPeriod:                   &metav1.Duration{Duration: time.Minute},
+				Image:                              "europe-docker.pkg.dev/gardener-project/releases/gardener/resource-manager:v0.0.0-master+$Format:%H$",
+				MaxConcurrentCSRApproverWorkers:    ptr.To(5),
+				MaxConcurrentHealthWorkers:         ptr.To(10),
+				MaxConcurrentTokenRequestorWorkers: ptr.To(5),
+				ResponsibilityMode:                 resourcemanager.ForTarget,
+				TargetNamespaces:                   []string{},
+				WatchedNamespace:                   &namespace,
 			}))
 		})
 	})

@@ -57,13 +57,6 @@ const (
 	// GardenerManager is a constant for the default value of the 'ManagedBy' label.
 	GardenerManager = "gardener"
 
-	// StaticTokenSkip is a constant for a label on a ServiceAccount which indicates that this ServiceAccount should not
-	// be considered by this controller.
-	StaticTokenSkip = "token-invalidator.resources.gardener.cloud/skip"
-	// StaticTokenConsider is a constant for a label on a Secret which indicates that this Secret should be considered
-	// for the invalidation of the static ServiceAccount token.
-	StaticTokenConsider = "token-invalidator.resources.gardener.cloud/consider"
-
 	// TokenRequestorTargetSecretName is a constant for an annotation on a Secret which indicates that the token requestor
 	// shall sync the token to a secret in the target cluster with the given name.
 	TokenRequestorTargetSecretName = "token-requestor.resources.gardener.cloud/target-secret-name"
@@ -77,9 +70,6 @@ const (
 	// LabelPurposeTokenRequest is a constant for a label value indicating that this secret should be reconciled by the
 	// token-requestor.
 	LabelPurposeTokenRequest = "token-requestor"
-	// LabelPurposeTokenInvalidation is a constant for a label value indicating that this secret should be considered by
-	// the token-invalidator.
-	LabelPurposeTokenInvalidation = "token-invalidator"
 	// ResourceManagerClass is a constant for the key in a label describing the class of the respective object. This can
 	// be used to differentiate between multiple instances of the same controller (e.g., token-requestor).
 	ResourceManagerClass = "resources.gardener.cloud/class"
