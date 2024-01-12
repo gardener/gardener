@@ -72,6 +72,7 @@ import (
 )
 
 func defaultIstio(
+	ctx context.Context,
 	seedClient client.Client,
 	chartRenderer chartrenderer.Interface,
 	seed *seedpkg.Seed,
@@ -87,6 +88,7 @@ func defaultIstio(
 	)
 
 	istioDeployer, err := shared.NewIstio(
+		ctx,
 		seedClient,
 		chartRenderer,
 		"",
@@ -116,6 +118,8 @@ func defaultIstio(
 	if len(seedObj.Spec.Provider.Zones) > 1 {
 		for _, zone := range seedObj.Spec.Provider.Zones {
 			if err := shared.AddIstioIngressGateway(
+				ctx,
+				seedClient,
 				istioDeployer,
 				shared.GetIstioNamespaceForZone(*conf.SNI.Ingress.Namespace, zone),
 				seed.GetZonalLoadBalancerServiceAnnotations(zone),
@@ -133,6 +137,8 @@ func defaultIstio(
 	// Add for each ExposureClass handler in the config an own Ingress Gateway and Proxy Gateway.
 	for _, handler := range conf.ExposureClassHandlers {
 		if err := shared.AddIstioIngressGateway(
+			ctx,
+			seedClient,
 			istioDeployer,
 			*handler.SNI.Ingress.Namespace,
 			// handler.LoadBalancerService.Annotations must put last to override non-exposure class related keys.
@@ -150,6 +156,8 @@ func defaultIstio(
 		if len(seedObj.Spec.Provider.Zones) > 1 {
 			for _, zone := range seedObj.Spec.Provider.Zones {
 				if err := shared.AddIstioIngressGateway(
+					ctx,
+					seedClient,
 					istioDeployer,
 					shared.GetIstioNamespaceForZone(*handler.SNI.Ingress.Namespace, zone),
 					// handler.LoadBalancerService.Annotations must put last to override non-exposure class related keys.

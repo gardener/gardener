@@ -15,14 +15,19 @@
 package shared_test
 
 import (
+	"context"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/istio"
 	. "github.com/gardener/gardener/pkg/component/shared"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
@@ -47,6 +52,7 @@ type istioTestValues struct {
 	vpnEnabled                        bool
 	zones                             []string
 	dualStack                         bool
+	enforceSpreadAcrossHosts          bool
 }
 
 func createIstio(testValues istioTestValues) istio.Interface {
@@ -59,6 +65,7 @@ func createIstio(testValues istioTestValues) istio.Interface {
 	))
 
 	istio, err := NewIstio(
+		context.Background(),
 		testValues.client,
 		testValues.chartRenderer,
 		testValues.prefix,
@@ -113,28 +120,30 @@ func checkIstio(istioDeploy istio.Interface, testValues istioTestValues) {
 		},
 		IngressGateway: []istio.IngressGatewayValues{
 			{
-				TrustDomain:           "cluster.local",
-				Image:                 testValues.ingressImageName,
-				IstiodNamespace:       "istio-system",
-				Annotations:           testValues.lbAnnotations,
-				ExternalTrafficPolicy: testValues.externalTrafficPolicy,
-				MinReplicas:           minReplicas,
-				MaxReplicas:           maxReplicas,
-				Ports:                 testValues.servicePorts,
-				LoadBalancerIP:        testValues.serviceExternalIP,
-				Labels:                testValues.labels,
-				NetworkPolicyLabels:   networkPolicyLabels,
-				Namespace:             "shared-istio-test-some-istio-ingress",
-				PriorityClassName:     testValues.priorityClassName,
-				ProxyProtocolEnabled:  testValues.proxyProtocolEnabled,
-				VPNEnabled:            testValues.vpnEnabled,
+				TrustDomain:              "cluster.local",
+				Image:                    testValues.ingressImageName,
+				IstiodNamespace:          "istio-system",
+				Annotations:              testValues.lbAnnotations,
+				ExternalTrafficPolicy:    testValues.externalTrafficPolicy,
+				MinReplicas:              minReplicas,
+				MaxReplicas:              maxReplicas,
+				Ports:                    testValues.servicePorts,
+				LoadBalancerIP:           testValues.serviceExternalIP,
+				Labels:                   testValues.labels,
+				NetworkPolicyLabels:      networkPolicyLabels,
+				Namespace:                "shared-istio-test-some-istio-ingress",
+				PriorityClassName:        testValues.priorityClassName,
+				ProxyProtocolEnabled:     testValues.proxyProtocolEnabled,
+				VPNEnabled:               testValues.vpnEnabled,
+				EnforceSpreadAcrossHosts: testValues.enforceSpreadAcrossHosts,
 			},
 		},
 		NamePrefix: testValues.prefix,
 	}))
 }
 
-func checkAdditionalIstioGateway(istioDeploy istio.Interface,
+func checkAdditionalIstioGateway(cl client.Client,
+	istioDeploy istio.Interface,
 	namespace string,
 	annotations map[string]string,
 	labels map[string]string,
@@ -143,9 +152,11 @@ func checkAdditionalIstioGateway(istioDeploy istio.Interface,
 	zone *string,
 	dualstack bool) {
 	var (
-		zones       []string
-		minReplicas *int
-		maxReplicas *int
+		zones                    []string
+		minReplicas              *int
+		maxReplicas              *int
+		enforceSpreadAcrossHosts bool
+		err                      error
 
 		ingressValues = istioDeploy.GetValues().IngressGateway
 	)
@@ -155,26 +166,30 @@ func checkAdditionalIstioGateway(istioDeploy istio.Interface,
 		maxReplicas = ingressValues[0].MaxReplicas
 	} else {
 		zones = []string{*zone}
+
+		enforceSpreadAcrossHosts, err = ShouldEnforceSpreadAcrossHosts(context.Background(), cl, []string{*zone})
+		Expect(err).ToNot(HaveOccurred())
 	}
 
 	Expect(ingressValues[len(ingressValues)-1]).To(Equal(istio.IngressGatewayValues{
-		TrustDomain:           "cluster.local",
-		Image:                 ingressValues[0].Image,
-		IstiodNamespace:       "istio-system",
-		Annotations:           annotations,
-		ExternalTrafficPolicy: externalTrafficPolicy,
-		MinReplicas:           minReplicas,
-		MaxReplicas:           maxReplicas,
-		Ports:                 ingressValues[0].Ports,
-		LoadBalancerIP:        serviceExternalIP,
-		Labels:                labels,
-		NetworkPolicyLabels:   ingressValues[0].NetworkPolicyLabels,
-		Namespace:             namespace,
-		PriorityClassName:     ingressValues[0].PriorityClassName,
-		ProxyProtocolEnabled:  ingressValues[0].ProxyProtocolEnabled,
-		VPNEnabled:            true,
-		Zones:                 zones,
-		DualStack:             dualstack,
+		TrustDomain:              "cluster.local",
+		Image:                    ingressValues[0].Image,
+		IstiodNamespace:          "istio-system",
+		Annotations:              annotations,
+		ExternalTrafficPolicy:    externalTrafficPolicy,
+		MinReplicas:              minReplicas,
+		MaxReplicas:              maxReplicas,
+		Ports:                    ingressValues[0].Ports,
+		LoadBalancerIP:           serviceExternalIP,
+		Labels:                   labels,
+		NetworkPolicyLabels:      ingressValues[0].NetworkPolicyLabels,
+		Namespace:                namespace,
+		PriorityClassName:        ingressValues[0].PriorityClassName,
+		ProxyProtocolEnabled:     ingressValues[0].ProxyProtocolEnabled,
+		VPNEnabled:               true,
+		Zones:                    zones,
+		DualStack:                dualstack,
+		EnforceSpreadAcrossHosts: enforceSpreadAcrossHosts,
 	}))
 }
 
@@ -194,6 +209,7 @@ var _ = Describe("Istio", func() {
 	JustBeforeEach(func() {
 		trafficPolicy := corev1.ServiceExternalTrafficPolicyTypeLocal
 		testValues = istioTestValues{
+			client:                   fakeclient.NewClientBuilder().Build(),
 			istiodImageName:          "istiod",
 			ingressImageName:         "istio-ingress",
 			prefix:                   "shared-istio-test-",
@@ -209,6 +225,7 @@ var _ = Describe("Istio", func() {
 			proxyProtocolEnabled:     false,
 			vpnEnabled:               vpnEnabled,
 			zones:                    zones,
+			enforceSpreadAcrossHosts: false,
 		}
 
 		istioDeploy = createIstio(testValues)
@@ -239,6 +256,20 @@ var _ = Describe("Istio", func() {
 			It("should successfully create a new Istio deployer", func() {
 				checkIstio(istioDeploy, testValues)
 			})
+
+			Context("with nodes in single zone", func() {
+				JustBeforeEach(func() {
+					testValues.client = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+					testValues.enforceSpreadAcrossHosts = true
+					Expect(testValues.client.Create(context.Background(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "1"}}})).To(Succeed())
+					Expect(testValues.client.Create(context.Background(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "1"}}})).To(Succeed())
+					istioDeploy = createIstio(testValues)
+				})
+
+				It("should successfully create a new Istio deployer", func() {
+					checkIstio(istioDeploy, testValues)
+				})
+			})
 		})
 
 		Context("with multiple zones", func() {
@@ -248,6 +279,24 @@ var _ = Describe("Istio", func() {
 
 			It("should successfully create a new Istio deployer", func() {
 				checkIstio(istioDeploy, testValues)
+			})
+
+			Context("with nodes in the zones", func() {
+				JustBeforeEach(func() {
+					testValues.client = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+					testValues.enforceSpreadAcrossHosts = true
+					Expect(testValues.client.Create(context.Background(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "1"}}})).To(Succeed())
+					Expect(testValues.client.Create(context.Background(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "1"}}})).To(Succeed())
+					Expect(testValues.client.Create(context.Background(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-2", Labels: map[string]string{"topology.kubernetes.io/zone": "2"}}})).To(Succeed())
+					Expect(testValues.client.Create(context.Background(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-3", Labels: map[string]string{"topology.kubernetes.io/zone": "2"}}})).To(Succeed())
+					Expect(testValues.client.Create(context.Background(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-4", Labels: map[string]string{"topology.kubernetes.io/zone": "3"}}})).To(Succeed())
+					Expect(testValues.client.Create(context.Background(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-5", Labels: map[string]string{"topology.kubernetes.io/zone": "3"}}})).To(Succeed())
+					istioDeploy = createIstio(testValues)
+				})
+
+				It("should successfully create a new Istio deployer", func() {
+					checkIstio(istioDeploy, testValues)
+				})
 			})
 		})
 	})
@@ -278,6 +327,8 @@ var _ = Describe("Istio", func() {
 			istioDeploy = istio.NewIstio(nil, nil, istio.Values{})
 
 			Expect(AddIstioIngressGateway(
+				context.Background(),
+				testValues.client,
 				istioDeploy,
 				namespace,
 				annotations,
@@ -295,6 +346,8 @@ var _ = Describe("Istio", func() {
 
 			It("should successfully add an additional ingress gateway", func() {
 				Expect(AddIstioIngressGateway(
+					context.Background(),
+					testValues.client,
 					istioDeploy,
 					namespace,
 					annotations,
@@ -305,6 +358,7 @@ var _ = Describe("Istio", func() {
 					false)).To(Succeed())
 
 				checkAdditionalIstioGateway(
+					testValues.client,
 					istioDeploy,
 					namespace,
 					annotations,
@@ -324,6 +378,8 @@ var _ = Describe("Istio", func() {
 
 			It("should successfully add an additional ingress gateway", func() {
 				Expect(AddIstioIngressGateway(
+					context.Background(),
+					testValues.client,
 					istioDeploy,
 					namespace,
 					annotations,
@@ -334,6 +390,7 @@ var _ = Describe("Istio", func() {
 					false)).To(Succeed())
 
 				checkAdditionalIstioGateway(
+					testValues.client,
 					istioDeploy,
 					namespace,
 					annotations,
@@ -344,6 +401,42 @@ var _ = Describe("Istio", func() {
 					false,
 				)
 			})
+
+			Context("with nodes in zone", func() {
+				JustBeforeEach(func() {
+					testValues.client = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+					testValues.enforceSpreadAcrossHosts = true
+					Expect(testValues.client.Create(context.Background(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "1"}}})).To(Succeed())
+					Expect(testValues.client.Create(context.Background(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "1"}}})).To(Succeed())
+					istioDeploy = createIstio(testValues)
+				})
+
+				It("should successfully create a new Istio deployer", func() {
+					Expect(AddIstioIngressGateway(
+						context.Background(),
+						testValues.client,
+						istioDeploy,
+						namespace,
+						annotations,
+						labels,
+						&externalTrafficPolicy,
+						serviceExternalIP,
+						zone,
+						false)).To(Succeed())
+
+					checkAdditionalIstioGateway(
+						testValues.client,
+						istioDeploy,
+						namespace,
+						annotations,
+						labels,
+						&externalTrafficPolicy,
+						serviceExternalIP,
+						zone,
+						false,
+					)
+				})
+			})
 		})
 
 		Context("without zone, dualstack enabled", func() {
@@ -353,6 +446,8 @@ var _ = Describe("Istio", func() {
 
 			It("should successfully add an additional ingress gateway", func() {
 				Expect(AddIstioIngressGateway(
+					context.Background(),
+					testValues.client,
 					istioDeploy,
 					namespace,
 					annotations,
@@ -363,6 +458,7 @@ var _ = Describe("Istio", func() {
 					true)).To(Succeed())
 
 				checkAdditionalIstioGateway(
+					testValues.client,
 					istioDeploy,
 					namespace,
 					annotations,
@@ -416,5 +512,46 @@ var _ = Describe("Istio", func() {
 		Entry("zone and gardener.cloud/role label without handler", map[string]string{"gardener.cloud/role": "exposureclass-handler-gardener-role--zone--some-zone"}, BeFalse(), Equal("")),
 		Entry("zone and gardener.cloud/role label with handler", map[string]string{"gardener.cloud/role": "exposureclass-handler-gardener-role--zone--some-zone", "handler.exposureclass.gardener.cloud/name": ""}, BeTrue(), Equal("some-zone")),
 		Entry("zone and incorrect gardener.cloud/role label with handler", map[string]string{"gardener.cloud/role": "gardener-role--zone--some-zone", "handler.exposureclass.gardener.cloud/name": ""}, BeFalse(), Equal("")),
+	)
+
+	DescribeTable("#ShouldEnforceSpreadAcrossHosts",
+		func(nodes []corev1.Node, zones []string, expectedHostSpreading bool) {
+			cl := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+			for _, n := range nodes {
+				Expect(cl.Create(context.Background(), &n)).To(Succeed())
+			}
+			hostSpreadingEnabled, err := ShouldEnforceSpreadAcrossHosts(context.Background(), cl, zones)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(hostSpreadingEnabled).To(Equal(expectedHostSpreading))
+		},
+
+		Entry("no nodes", []corev1.Node{}, []string{}, false),
+		Entry("single node", []corev1.Node{{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}}}, []string{"z1"}, false),
+		Entry("two nodes", []corev1.Node{
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
+		}, []string{"z1"}, true),
+		Entry("three nodes with different zones targeting one zone", []corev1.Node{
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-2", Labels: map[string]string{"topology.kubernetes.io/zone": "z2"}}},
+		}, []string{"z1"}, true),
+		Entry("three nodes with different zones targeting two zones", []corev1.Node{
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-2", Labels: map[string]string{"topology.kubernetes.io/zone": "z2"}}},
+		}, []string{"z1", "z2"}, false),
+		Entry("four nodes with different zones targeting two zones", []corev1.Node{
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-2", Labels: map[string]string{"topology.kubernetes.io/zone": "z2"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-3", Labels: map[string]string{"topology.kubernetes.io/zone": "z2"}}},
+		}, []string{"z1", "z2"}, true),
+		Entry("four nodes with different zones targeting different zone", []corev1.Node{
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-2", Labels: map[string]string{"topology.kubernetes.io/zone": "z2"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "node-3", Labels: map[string]string{"topology.kubernetes.io/zone": "z2"}}},
+		}, []string{"z3"}, false),
 	)
 })

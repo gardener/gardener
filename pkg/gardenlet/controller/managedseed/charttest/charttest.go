@@ -1106,7 +1106,7 @@ func ComputeExpectedGardenletDeploymentSpec(
 				numberOfZones = len(seedConfig.Spec.Provider.Zones)
 			}
 
-			deployment.Template.Spec.TopologySpreadConstraints = kubernetesutils.GetTopologySpreadConstraints(replicas, replicas, metav1.LabelSelector{MatchLabels: map[string]string{"app": "gardener", "role": "gardenlet"}}, int32(numberOfZones), nil)
+			deployment.Template.Spec.TopologySpreadConstraints = kubernetesutils.GetTopologySpreadConstraints(replicas, replicas, metav1.LabelSelector{MatchLabels: map[string]string{"app": "gardener", "role": "gardenlet"}}, int32(numberOfZones), nil, false)
 		}
 
 		if deploymentConfiguration.Env != nil {

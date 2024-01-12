@@ -135,6 +135,9 @@ const (
 	HighAvailabilityConfigZonePinning = "high-availability-config.resources.gardener.cloud/zone-pinning"
 	// HighAvailabilityConfigType is a constant for a label on a resource which describes which component type it is.
 	HighAvailabilityConfigType = "high-availability-config.resources.gardener.cloud/type"
+	// HighAvailabilityConfigHostSpread is a constant for an annotation on a resource which enforces a topology spread
+	// constraint across hosts.
+	HighAvailabilityConfigHostSpread = "high-availability-config.resources.gardener.cloud/host-spread"
 	// HighAvailabilityConfigTypeController is a constant for a label value on a resource describing it's a controller.
 	HighAvailabilityConfigTypeController = "controller"
 	// HighAvailabilityConfigTypeServer is a constant for a label value on a resource describing it's a (webhook)

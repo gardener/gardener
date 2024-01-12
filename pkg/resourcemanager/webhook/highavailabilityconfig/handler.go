@@ -168,6 +168,7 @@ func (h *Handler) handleDeployment(
 		deployment.Spec.Replicas,
 		maxReplicas,
 		&deployment.Spec.Template,
+		deployment.Annotations,
 	)
 
 	h.mutatePodTolerationSeconds(
@@ -221,6 +222,7 @@ func (h *Handler) handleStatefulSet(
 		statefulSet.Spec.Replicas,
 		maxReplicas,
 		&statefulSet.Spec.Template,
+		statefulSet.Annotations,
 	)
 
 	h.mutatePodTolerationSeconds(
@@ -424,6 +426,7 @@ func (h *Handler) mutateTopologySpreadConstraints(
 	currentReplicas *int32,
 	maxReplicas int32,
 	podTemplateSpec *corev1.PodTemplateSpec,
+	annotations map[string]string,
 ) {
 	replicas := pointer.Int32Deref(currentReplicas, 0)
 
@@ -433,7 +436,12 @@ func (h *Handler) mutateTopologySpreadConstraints(
 		maxReplicas = replicas
 	}
 
-	if constraints := kubernetesutils.GetTopologySpreadConstraints(replicas, maxReplicas, metav1.LabelSelector{MatchLabels: podTemplateSpec.Labels}, int32(len(zones)), failureToleranceType); constraints != nil {
+	enforceSpreadAcrossHosts := false
+	if b, err := strconv.ParseBool(annotations[resourcesv1alpha1.HighAvailabilityConfigHostSpread]); err == nil {
+		enforceSpreadAcrossHosts = b
+	}
+
+	if constraints := kubernetesutils.GetTopologySpreadConstraints(replicas, maxReplicas, metav1.LabelSelector{MatchLabels: podTemplateSpec.Labels}, int32(len(zones)), failureToleranceType, enforceSpreadAcrossHosts); constraints != nil {
 		// Filter existing constraints with the same topology key to prevent that we are trying to add a constraint with
 		// the same key multiple times.
 		var filteredConstraints []corev1.TopologySpreadConstraint
