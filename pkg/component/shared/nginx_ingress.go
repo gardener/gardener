@@ -40,6 +40,8 @@ func NewNginxIngress(
 	clusterType component.ClusterType,
 	externalTrafficPolicy corev1.ServiceExternalTrafficPolicyType,
 	ingressClass string,
+	wildcardIngressDomain string,
+	istioIngressGatewayLabels map[string]string,
 ) (
 	component.DeployWaiter,
 	error,
@@ -54,19 +56,21 @@ func NewNginxIngress(
 	}
 
 	values := nginxingress.Values{
-		KubernetesVersion:        kubernetesVersion,
-		ImageController:          imageController.String(),
-		ImageDefaultBackend:      imageDefaultBackend.String(),
-		IngressClass:             ingressClass,
-		ConfigData:               config,
-		LoadBalancerAnnotations:  loadBalancerAnnotations,
-		LoadBalancerSourceRanges: loadBalancerSourceRanges,
-		PriorityClassName:        priorityClassName,
-		PSPDisabled:              pspDisabled,
-		VPAEnabled:               vpaEnabled,
-		TargetNamespace:          targetNamespace,
-		ClusterType:              clusterType,
-		ExternalTrafficPolicy:    externalTrafficPolicy,
+		KubernetesVersion:         kubernetesVersion,
+		ImageController:           imageController.String(),
+		ImageDefaultBackend:       imageDefaultBackend.String(),
+		IngressClass:              ingressClass,
+		ConfigData:                config,
+		LoadBalancerAnnotations:   loadBalancerAnnotations,
+		LoadBalancerSourceRanges:  loadBalancerSourceRanges,
+		PriorityClassName:         priorityClassName,
+		PSPDisabled:               pspDisabled,
+		VPAEnabled:                vpaEnabled,
+		TargetNamespace:           targetNamespace,
+		ClusterType:               clusterType,
+		ExternalTrafficPolicy:     externalTrafficPolicy,
+		WildcardIngressDomain:     wildcardIngressDomain,
+		IstioIngressGatewayLabels: istioIngressGatewayLabels,
 	}
 
 	return nginxingress.New(c, namespaceName, values), nil
