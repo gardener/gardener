@@ -350,7 +350,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	// setup for flow graph
 	var dnsRecord component.DeployMigrateWaiter
 
-	istio, err := defaultIstio(ctx, seedClient, chartRenderer, seed, &r.Config, seedIsGarden)
+	istio, istioDefaultLabels, istioDefaultNamespace, err := defaultIstio(ctx, seedClient, chartRenderer, seed, &r.Config, seedIsGarden)
 	if err != nil {
 		return err
 	}
@@ -379,22 +379,34 @@ func (r *Reconciler) runReconcileSeedFlow(
 	}
 
 	var (
-		g = flow.NewGraph("Seed cluster creation")
-		_ = g.Add(flow.Task{
+		g             = flow.NewGraph("Seed cluster creation")
+		istioDeployed = g.Add(flow.Task{
 			Name: "Deploying Istio",
 			Fn:   istio.Deploy,
 		})
-		nginxLBReady = g.Add(flow.Task{
-			Name: "Waiting until nginx ingress LoadBalancer is ready",
+		istioLBReady = g.Add(flow.Task{
+			Name: "Waiting until istio LoadBalancer is ready",
 			Fn: func(ctx context.Context) error {
-				dnsRecord, err = waitForNginxIngressServiceAndGetDNSComponent(ctx, log, seed, r.GardenClient, seedClient, kubernetesVersion, r.GardenNamespace, seedIsGarden)
+				dnsRecord, err = deployNginxIngressAndWaitForIstioServiceAndGetDNSComponent(
+					ctx,
+					log,
+					seed,
+					r.GardenClient,
+					seedClient,
+					kubernetesVersion,
+					r.GardenNamespace,
+					seedIsGarden,
+					istioDefaultLabels,
+					istioDefaultNamespace,
+				)
 				return err
 			},
+			Dependencies: flow.NewTaskIDs(istioDeployed),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying managed ingress DNS record",
 			Fn:           func(ctx context.Context) error { return deployDNSResources(ctx, dnsRecord) },
-			Dependencies: flow.NewTaskIDs(nginxLBReady),
+			Dependencies: flow.NewTaskIDs(istioLBReady),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying cluster-autoscaler resources",
@@ -851,7 +863,7 @@ func renewGardenKubeconfig(ctx context.Context, seedClient client.Client, garden
 // WaitUntilLoadBalancerIsReady is an alias for kubernetesutils.WaitUntilLoadBalancerIsReady. Exposed for tests.
 var WaitUntilLoadBalancerIsReady = kubernetesutils.WaitUntilLoadBalancerIsReady
 
-func waitForNginxIngressServiceAndGetDNSComponent(
+func deployNginxIngressAndWaitForIstioServiceAndGetDNSComponent(
 	ctx context.Context,
 	log logr.Logger,
 	seed *seedpkg.Seed,
@@ -859,6 +871,8 @@ func waitForNginxIngressServiceAndGetDNSComponent(
 	kubernetesVersion *semver.Version,
 	gardenNamespaceName string,
 	seedIsGarden bool,
+	istioDefaultLabels map[string]string,
+	istioDefaultNamespace string,
 ) (
 	component.DeployMigrateWaiter,
 	error,
@@ -889,6 +903,8 @@ func waitForNginxIngressServiceAndGetDNSComponent(
 			component.ClusterTypeSeed,
 			"",
 			v1beta1constants.SeedNginxIngressClass,
+			seed.GetIngressFQDN("*"),
+			istioDefaultLabels,
 		)
 		if err != nil {
 			return nil, err
@@ -903,8 +919,8 @@ func waitForNginxIngressServiceAndGetDNSComponent(
 		ctx,
 		log,
 		seedClient,
-		gardenNamespaceName,
-		"nginx-ingress-controller",
+		istioDefaultNamespace,
+		v1beta1constants.DefaultSNIIngressServiceName,
 		time.Minute,
 	)
 	if err != nil {

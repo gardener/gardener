@@ -80,6 +80,8 @@ func defaultIstio(
 	isGardenCluster bool,
 ) (
 	component.DeployWaiter,
+	map[string]string,
+	string,
 	error,
 ) {
 	var (
@@ -111,7 +113,7 @@ func defaultIstio(
 		seed.IsDualStack(),
 	)
 	if err != nil {
-		return nil, err
+		return nil, nil, "", err
 	}
 
 	// Automatically create ingress gateways for single-zone control planes on multi-zonal seeds
@@ -129,7 +131,7 @@ func defaultIstio(
 				&zone,
 				seed.IsDualStack(),
 			); err != nil {
-				return nil, err
+				return nil, nil, "", err
 			}
 		}
 	}
@@ -149,7 +151,7 @@ func defaultIstio(
 			nil,
 			seed.IsDualStack(),
 		); err != nil {
-			return nil, err
+			return nil, nil, "", err
 		}
 
 		// Automatically create ingress gateways for single-zone control planes on multi-zonal seeds
@@ -168,13 +170,13 @@ func defaultIstio(
 					&zone,
 					seed.IsDualStack(),
 				); err != nil {
-					return nil, err
+					return nil, nil, "", err
 				}
 			}
 		}
 	}
 
-	return istioDeployer, nil
+	return istioDeployer, labels, istioDeployer.GetValues().IngressGateway[0].Namespace, nil
 }
 
 func defaultDependencyWatchdogs(
