@@ -943,7 +943,10 @@ The webhook performs the following actions:
       In case the number of replicas is larger than twice the number of zones, then the `maxSkew=2` for the second spread constraints.
       The `minDomains` calculation is based on whatever value is lower - (maximum) replicas or number of zones. This is the number of minimum domains required to schedule pods in a highly available manner.
 
-   Independent on the number of zones, when the `high-availability-config.resources.gardener.cloud/host-spread` annotation is set to `true` or the `high-availability-config.resources.gardener.cloud/failure-tolerance-type` annotation is set and NOT empty, then the `whenUnsatisfiable` is set to `DoNotSchedule` for the constraint with `topologyKey=kubernetes.io/hostname` (which enforces the node-spread).
+   Independent on the number of zones, when one of the following conditions is true, then the field `whenUnsatisfiable` is set to `DoNotSchedule` for the constraint with `topologyKey=kubernetes.io/hostname` (which enforces the node-spread):
+
+   - The `high-availability-config.resources.gardener.cloud/host-spread` annotation is set to `true`.
+   - The `high-availability-config.resources.gardener.cloud/failure-tolerance-type` annotation is set and NOT empty.
 
 4. Adds default tolerations for [taint-based evictions](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/#taint-based-evictions):
 
