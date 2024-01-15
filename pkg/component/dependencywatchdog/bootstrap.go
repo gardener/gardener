@@ -330,7 +330,7 @@ func (b *bootstrapper) getClusterRolePolicyRules() []rbacv1.PolicyRule {
 			{
 				APIGroups: []string{"apps"},
 				Resources: []string{"deployments", "deployments/scale"},
-				Verbs:     []string{"get", "list", "watch", "update"},
+				Verbs:     []string{"get", "list", "watch", "update", "patch"},
 			},
 		}
 	}
