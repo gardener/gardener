@@ -1,4 +1,4 @@
-// Copyright 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2024 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,9 +17,8 @@ package webhook
 import (
 	"reflect"
 	"regexp"
-	"strings"
-
 	"slices"
+	"strings"
 
 	"github.com/coreos/go-systemd/v22/unit"
 	"github.com/go-logr/logr"
@@ -160,14 +159,16 @@ func EnsureStringWithPrefixContains(items []string, prefix, value, sep string) [
 // EnsureNoStringWithPrefixContains ensures that either a string having the given prefix does not exist in the given slice,
 // or it doesn't contain the given value in a list separated by sep.
 func EnsureNoStringWithPrefixContains(items []string, prefix, value, sep string) []string {
-	i := StringWithPrefixIndex(items, prefix)
-	if i < 0 {
-		return items
-	}
-	values := strings.Split(strings.TrimPrefix(items[i], prefix), sep)
-	if j := slices.Index(values, value); j >= 0 {
-		values = append(values[:j], values[j+1:]...)
-		items[i] = prefix + strings.Join(values, sep)
+
+	for i, item := range items {
+		if !strings.HasPrefix(item, prefix) {
+			continue
+		}
+		values := strings.Split(strings.TrimPrefix(items[i], prefix), sep)
+		if j := slices.Index(values, value); j >= 0 {
+			values = append(values[:j], values[j+1:]...)
+			items[i] = prefix + strings.Join(values, sep)
+		}
 	}
 	return items
 }

@@ -16,9 +16,8 @@ package test
 
 import (
 	"fmt"
-	"strings"
-
 	"slices"
+	"strings"
 
 	"github.com/onsi/gomega/types"
 
