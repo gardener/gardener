@@ -16,7 +16,6 @@ package chartrenderer_test
 
 import (
 	"embed"
-	"fmt"
 	"path/filepath"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -124,7 +123,6 @@ var _ = Describe("ChartRenderer", func() {
 
 			data := chart.AsSecretData()
 			Expect(data).To(Not(BeNil()))
-			fmt.Print(data)
 			Expect(string(data["alpine_templates_secret.yaml"])).To(Equal(testSecret))
 			Expect(string(data["alpine_templates_alpine-pod_secret_test.yaml"])).To(Equal(testSecret))
 			Expect(string(data["alpine_templates_alpine-pod_pod_alpine.yaml"])).To(Equal(alpinePod))

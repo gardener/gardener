@@ -181,11 +181,10 @@ func (c *RenderedChart) FileContent(filename string) string {
 	for _, mf := range c.Manifests {
 		if mf.Name == fmt.Sprintf("%s/templates/%s", c.ChartName, filename) {
 			if fileContent.String() != "" {
-				// add `---` to seperate charts
+				// Add "---" to separate different resources
 				fileContent.WriteString("\n---\n")
 			}
 			fileContent.WriteString(mf.Content)
-			continue
 		}
 	}
 	return fileContent.String()
@@ -198,7 +197,7 @@ func (c *RenderedChart) AsSecretData() map[string][]byte {
 		multipleResources := len(fileContent) > 1
 		for resourceName, resourceContent := range fileContent {
 			if len(resourceContent) != 0 {
-				// prevents old behaviour if there is only one resource in file.
+				// Keep old behaviour if there is only one resource in the file.
 				key := strings.ReplaceAll(fileName, "/", "_")
 				if multipleResources {
 					key = strings.ReplaceAll(strings.TrimSuffix(fileName, ".yaml")+"/"+resourceName+".yaml", "/", "_")
