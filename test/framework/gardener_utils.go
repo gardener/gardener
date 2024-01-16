@@ -321,6 +321,32 @@ func (f *GardenerFramework) UpdateShoot(ctx context.Context, shoot *gardencorev1
 	return nil
 }
 
+func (f *GardenerFramework) updateBinding(ctx context.Context, shoot *gardencorev1beta1.Shoot, seedName string) error {
+	log := f.Logger.WithValues("shoot", client.ObjectKeyFromObject(shoot))
+
+	err := retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
+		updatedShoot := &gardencorev1beta1.Shoot{}
+		if err := f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot); err != nil {
+			return retry.MinorError(err)
+		}
+
+		updatedShoot.Spec.SeedName = pointer.String(seedName)
+		if err := f.GardenClient.Client().SubResource("binding").Update(ctx, updatedShoot); err != nil {
+			log.Error(err, "Unable to update binding")
+			return retry.MinorError(err)
+		}
+
+		*shoot = *updatedShoot
+		return retry.Ok()
+	})
+	if err != nil {
+		return fmt.Errorf("failed updating binding for shoot %q: %w", client.ObjectKeyFromObject(shoot), err)
+	}
+
+	log.Info("Shoot binding was successfully updated")
+	return nil
+}
+
 // HibernateShoot hibernates the test shoot
 func (f *GardenerFramework) HibernateShoot(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
 	log := f.Logger.WithValues("shoot", client.ObjectKeyFromObject(shoot))
@@ -500,12 +526,11 @@ func (f *GardenerFramework) MigrateShoot(ctx context.Context, shoot *gardencorev
 		return err
 	}
 
-	shoot.Spec.SeedName = &seed.Name
-	if err := f.GardenClient.Client().SubResource("binding").Update(ctx, shoot); err != nil {
-		return fmt.Errorf("failed updating binding for shoot %q: %w", client.ObjectKeyFromObject(shoot), err)
+	if err := f.updateBinding(ctx, shoot, seed.Name); err != nil {
+		return err
 	}
 
-	return f.WaitForShootToBeCreated(ctx, shoot)
+	return f.WaitForShootToBeReconciled(ctx, shoot)
 }
 
 // GetCloudProfile returns the cloudprofile from gardener with the give name
