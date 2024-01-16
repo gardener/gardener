@@ -42,8 +42,7 @@ import (
 	netutils "github.com/gardener/gardener/pkg/utils/net"
 )
 
-// ManagedResourceName is the name of the managed resource for the envoy filter.
-const ManagedResourceName = "kube-apiserver-sni"
+const managedResourceName = "kube-apiserver-sni"
 
 var (
 	//go:embed templates/envoyfilter.yaml
@@ -146,10 +145,10 @@ func (s *sni) Deploy(ctx context.Context) error {
 			return err
 		}
 
-		filename := fmt.Sprintf("envoyfilter__%s__%s.yaml", envoyFilter.Namespace, s.namespace)
+		filename := fmt.Sprintf("envoyfilter__%s__%s.yaml", envoyFilter.Namespace, envoyFilter.Name)
 		registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 		registry.AddSerialized(filename, envoyFilterSpec.Bytes())
-		if err := managedresources.CreateForSeed(ctx, s.client, s.namespace, ManagedResourceName, false, registry.SerializedObjects()); err != nil {
+		if err := managedresources.CreateForSeed(ctx, s.client, s.namespace, managedResourceName, false, registry.SerializedObjects()); err != nil {
 			return err
 		}
 	}
@@ -238,7 +237,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 }
 
 func (s *sni) Destroy(ctx context.Context) error {
-	if err := managedresources.DeleteForSeed(ctx, s.client, s.namespace, ManagedResourceName); err != nil {
+	if err := managedresources.DeleteForSeed(ctx, s.client, s.namespace, managedResourceName); err != nil {
 		return err
 	}
 

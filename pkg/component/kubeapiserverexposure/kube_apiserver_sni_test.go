@@ -201,7 +201,7 @@ var _ = Describe("#SNI", func() {
 				Kind:       "ManagedResource",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            ManagedResourceName,
+				Name:            "kube-apiserver-sni",
 				Namespace:       namespace,
 				ResourceVersion: "1",
 				Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
@@ -259,6 +259,7 @@ var _ = Describe("#SNI", func() {
 
 				managedResourceEnvoyFilter, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["envoyfilter__istio-foo__test-namespace.yaml"], nil, &istionetworkingv1alpha3.EnvoyFilter{})
 				Expect(err).ToNot(HaveOccurred())
+				Expect(managedResourceEnvoyFilter.GetObjectKind()).To(Equal(&metav1.TypeMeta{Kind: "EnvoyFilter", APIVersion: "networking.istio.io/v1alpha3"}))
 				actualEnvoyFilter := managedResourceEnvoyFilter.(*istionetworkingv1alpha3.EnvoyFilter)
 				// cannot validate the Spec as there is no meaningful way to unmarshal the data into the Golang structure
 				Expect(actualEnvoyFilter.ObjectMeta).To(DeepEqual(expectedEnvoyFilterObjectMeta))
