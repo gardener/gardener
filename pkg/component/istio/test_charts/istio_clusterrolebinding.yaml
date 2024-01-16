@@ -5,7 +5,6 @@ metadata:
   labels:
     app: istiod
     istio: pilot
-    
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -23,7 +22,6 @@ metadata:
   labels:
     app: istiod
     istio: pilot
-    
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -40,7 +38,6 @@ metadata:
   labels:
     app: istiod
     istio: pilot
-    
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

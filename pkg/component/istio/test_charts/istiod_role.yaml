@@ -6,7 +6,6 @@ metadata:
   labels:
     app: istiod
     istio: pilot
-    
 rules:
 # permissions to verify the webhook is ready and rejecting
 # invalid config. We use --server-dry-run so no config is persisted.

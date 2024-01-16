@@ -7,13 +7,11 @@ metadata:
   labels:
     app: istio-ingressgateway
     foo: bar
-    
 spec:
   workloadSelector:
     labels:
       app: istio-ingressgateway
       foo: bar
-      
   configPatches:
   - applyTo: LISTENER
     match:

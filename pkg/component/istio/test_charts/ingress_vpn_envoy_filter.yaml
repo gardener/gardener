@@ -58,7 +58,6 @@ spec:
     labels:
       app: istio-ingressgateway
       foo: bar
-      
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
@@ -89,4 +88,3 @@ spec:
     labels:
       app: istio-ingressgateway
       foo: bar
-      

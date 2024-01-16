@@ -17,7 +17,7 @@ package chartrenderer
 import (
 	"embed"
 
-	"k8s.io/helm/pkg/manifest"
+	"helm.sh/helm/v3/pkg/releaseutil"
 )
 
 // Interface is an interface for rendering Helm Charts from path, name, namespace and values.
@@ -30,5 +30,5 @@ type Interface interface {
 // rendered template as value.
 type RenderedChart struct {
 	ChartName string
-	Manifests []manifest.Manifest
+	Manifests []releaseutil.Manifest
 }

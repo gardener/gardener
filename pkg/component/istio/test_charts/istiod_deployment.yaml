@@ -6,7 +6,6 @@ metadata:
   labels:
     app: istiod
     istio: pilot
-    
 spec:
   replicas: 2
   revisionHistoryLimit: 1
@@ -18,7 +17,6 @@ spec:
     matchLabels:
       app: istiod
       istio: pilot
-      
   template:
     metadata:
       labels:
@@ -26,7 +24,6 @@ spec:
         networking.gardener.cloud/to-runtime-apiserver: allowed
         app: istiod
         istio: pilot
-        
       annotations:
         sidecar.istio.io/inject: "false"
         checksum/istio-config: <CHECKSUM>

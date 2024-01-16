@@ -7,7 +7,6 @@ metadata:
   labels:
     app: istio-ingressgateway
     foo: bar
-    
 spec:
   hosts:
   - blackhole.local

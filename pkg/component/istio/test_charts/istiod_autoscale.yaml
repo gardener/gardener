@@ -6,7 +6,6 @@ metadata:
   labels:
     app: istiod
     istio: pilot
-    
 spec:
   targetRef:
     apiVersion: apps/v1

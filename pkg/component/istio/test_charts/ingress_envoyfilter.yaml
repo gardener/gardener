@@ -1,4 +1,3 @@
-
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
@@ -7,7 +6,6 @@ metadata:
   labels:
     app: istio-ingressgateway
     foo: bar
-    
 spec:
   configPatches:
   - applyTo: LISTENER

@@ -6,7 +6,6 @@ metadata:
   labels:
     app: istiod
     istio: pilot
-    
 data:
 
   # Configuration file for the mesh networks to be used by the Split Horizon EDS.
