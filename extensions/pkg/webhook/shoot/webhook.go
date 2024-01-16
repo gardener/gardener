@@ -51,7 +51,7 @@ func ReconcileWebhookConfig(
 		return fmt.Errorf("no shoot found in cluster resource")
 	}
 
-	// TODO(rfranzke): Remove this after Gardener v1.86 has been released.
+	// TODO(rfranzke): Remove this after Gardener v1.89 has been released.
 	{
 		if err := c.Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: shootNamespace, Name: "gardener-extension-" + extensionName}}); client.IgnoreNotFound(err) != nil {
 			return fmt.Errorf("could not delete old egress network policy for shoot webhooks in namespace '%s': %w", shootNamespace, err)
