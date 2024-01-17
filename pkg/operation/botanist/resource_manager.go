@@ -63,7 +63,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		b.Shoot.TopologyAwareRoutingEnabled,
 		ptr.To(b.Shoot.ComputeOutOfClusterAPIServerAddress(true)),
 		b.Shoot.IsWorkerless,
-		[]string{metav1.NamespaceSystem, v1beta1constants.KubernetesDashboardNamespace},
+		[]string{metav1.NamespaceSystem, v1beta1constants.KubernetesDashboardNamespace, v1beta1constants.KubeNodeLease},
 	)
 }
 

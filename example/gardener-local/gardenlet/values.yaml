@@ -102,3 +102,8 @@ config:
           visible: true
         verticalPodAutoscaler:
           enabled: true
+        dependencyWatchdog:
+          weeder:
+            enabled: true
+          prober:
+            enabled: true

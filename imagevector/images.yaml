@@ -57,8 +57,8 @@ images:
   tag: "v0.22.0"
 - name: dependency-watchdog
   sourceRepository: github.com/gardener/dependency-watchdog
-  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/dependency-watchdog
-  tag: "v1.1.2"
+  repository: aaronfernandes/dwd #europe-docker.pkg.dev/gardener-project/releases/gardener/dependency-watchdog
+  tag: "node_lease_0.1"
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: registry.k8s.io/ingress-nginx/controller-chroot

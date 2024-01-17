@@ -42,7 +42,8 @@ var _ = Describe("Access", func() {
 		namespace = "shoot--foo--bar"
 
 		externalProbeSecretName = "shoot-access-dependency-watchdog-external-probe"
-		internalProbeSecretName = "shoot-access-dependency-watchdog-internal-probe"
+		//internalProbeSecretName = "shoot-access-dependency-watchdog-internal-probe"
+		probeSecretName = "shoot-access-dependency-watchdog-probe"
 
 		serverOutOfCluster = "out-of-cluster"
 		serverInCluster    = "in-cluster"
@@ -59,8 +60,8 @@ var _ = Describe("Access", func() {
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
 
 		access = NewAccess(fakeClient, namespace, sm, AccessValues{
-			ServerOutOfCluster: serverOutOfCluster,
-			ServerInCluster:    serverInCluster,
+			//ServerOutOfCluster: serverOutOfCluster,
+			ServerInCluster: serverInCluster,
 		})
 
 		expectedExternalProbeSecret = &corev1.Secret{
@@ -107,11 +108,11 @@ users:
 				Kind:       "Secret",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            internalProbeSecretName,
+				Name:            probeSecretName,
 				Namespace:       namespace,
 				ResourceVersion: "1",
 				Annotations: map[string]string{
-					"serviceaccount.resources.gardener.cloud/name":      "dependency-watchdog-internal-probe",
+					"serviceaccount.resources.gardener.cloud/name":      "dependency-watchdog-probe",
 					"serviceaccount.resources.gardener.cloud/namespace": "kube-system",
 				},
 				Labels: map[string]string{
@@ -149,11 +150,15 @@ users:
 		It("should successfully deploy all resources", func() {
 			Expect(access.Deploy(ctx)).To(Succeed())
 
-			reconciledExternalProbeSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: externalProbeSecretName, Namespace: namespace}}
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledExternalProbeSecret), reconciledExternalProbeSecret)).To(Succeed())
-			Expect(reconciledExternalProbeSecret).To(DeepEqual(expectedExternalProbeSecret))
+			// reconciledExternalProbeSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: externalProbeSecretName, Namespace: namespace}}
+			// Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledExternalProbeSecret), reconciledExternalProbeSecret)).To(Succeed())
+			// Expect(reconciledExternalProbeSecret).To(DeepEqual(expectedExternalProbeSecret))
 
-			reconciledInternalProbeSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: internalProbeSecretName, Namespace: namespace}}
+			// reconciledInternalProbeSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: internalProbeSecretName, Namespace: namespace}}
+			// Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledInternalProbeSecret), reconciledInternalProbeSecret)).To(Succeed())
+			// Expect(reconciledInternalProbeSecret).To(DeepEqual(expectedInternalProbeSecret))
+
+			reconciledInternalProbeSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: probeSecretName, Namespace: namespace}}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledInternalProbeSecret), reconciledInternalProbeSecret)).To(Succeed())
 			Expect(reconciledInternalProbeSecret).To(DeepEqual(expectedInternalProbeSecret))
 		})
@@ -163,12 +168,14 @@ users:
 		It("should delete the secrets", func() {
 			reconciledExternalProbeSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: externalProbeSecretName, Namespace: namespace}}
 			Expect(fakeClient.Create(ctx, reconciledExternalProbeSecret)).To(Succeed())
-			reconciledInternalProbeSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: internalProbeSecretName, Namespace: namespace}}
+			// reconciledInternalProbeSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: internalProbeSecretName, Namespace: namespace}}
+			// Expect(fakeClient.Create(ctx, reconciledInternalProbeSecret)).To(Succeed())
+			reconciledInternalProbeSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: probeSecretName, Namespace: namespace}}
 			Expect(fakeClient.Create(ctx, reconciledInternalProbeSecret)).To(Succeed())
 
 			Expect(access.Destroy(ctx)).To(Succeed())
 
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledExternalProbeSecret), &corev1.Secret{})).To(BeNotFoundError())
+			//Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledExternalProbeSecret), &corev1.Secret{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledInternalProbeSecret), &corev1.Secret{})).To(BeNotFoundError())
 		})
 	})

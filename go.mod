@@ -206,3 +206,5 @@ require (
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.1.2 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 )
+
+replace github.com/gardener/dependency-watchdog v1.1.2 => github.com/rishabh-11/dependency-watchdog v0.0.0-20240112142313-1002b1a1f5f0 // indirect

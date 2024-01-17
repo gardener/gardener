@@ -558,6 +558,8 @@ const (
 	// KubernetesDashboardNamespace is the kubernetes-dashboard namespace.
 	KubernetesDashboardNamespace = "kubernetes-dashboard"
 
+	KubeNodeLease = "kube-node-lease"
+
 	// DefaultSNIIngressNamespace is the default sni ingress namespace.
 	DefaultSNIIngressNamespace = "istio-ingress"
 	// DefaultSNIIngressServiceName is the default sni ingress service name.
