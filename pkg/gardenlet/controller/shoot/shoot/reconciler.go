@@ -861,7 +861,7 @@ func lastErrorsOperationInitializationFailure(lastErrors []gardencorev1beta1.Las
 
 	if errors.As(err, &incompleteDNSConfigError) {
 		return v1beta1helper.UpsertLastError(lastErrors, gardencorev1beta1.LastError{
-			TaskID:      pointer.String(taskID),
+			TaskID:      ptr.To(taskID),
 			Description: err.Error(),
 			Codes:       []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorConfigurationProblem},
 		})

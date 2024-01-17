@@ -484,7 +484,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 
 		scaleDownUpdateMode := k.values.HVPAConfig.ScaleDownUpdateMode
 		if scaleDownUpdateMode == nil {
-			scaleDownUpdateMode = pointer.String(hvpav1alpha1.UpdateModeAuto)
+			scaleDownUpdateMode = ptr.To(hvpav1alpha1.UpdateModeAuto)
 		}
 
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient.Client(), hvpa, func() error {

@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -65,7 +66,7 @@ var _ = Describe("cleaner", func() {
 							Spec: corev1.PersistentVolumeClaimSpec{
 								AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 								VolumeName:       "foo-pvc",
-								StorageClassName: pointer.String("ultra-fast"),
+								StorageClassName: ptr.To("ultra-fast"),
 							},
 						},
 					},
@@ -129,7 +130,7 @@ var _ = Describe("cleaner", func() {
 								Spec: corev1.PersistentVolumeClaimSpec{
 									AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 									VolumeName:       "foo-pvc-foo-0",
-									StorageClassName: pointer.String("ultra-fast"),
+									StorageClassName: ptr.To("ultra-fast"),
 								},
 							},
 						}
@@ -154,7 +155,7 @@ var _ = Describe("cleaner", func() {
 								Spec: corev1.PersistentVolumeClaimSpec{
 									AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 									VolumeName:       "foo-pvc-foo-0",
-									StorageClassName: pointer.String("ultra-fast"),
+									StorageClassName: ptr.To("ultra-fast"),
 								},
 							},
 						}

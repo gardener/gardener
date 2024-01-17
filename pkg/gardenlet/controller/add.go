@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -127,7 +128,7 @@ func AddToManager(
 		ConcurrentSyncs: pointer.IntDeref(cfg.Controllers.TokenRequestor.ConcurrentSyncs, 0),
 		Clock:           clock.RealClock{},
 		JitterFunc:      wait.Jitter,
-		Class:           pointer.String(resourcesv1alpha1.ResourceManagerClassGarden),
+		Class:           ptr.To(resourcesv1alpha1.ResourceManagerClassGarden),
 		TargetNamespace: gardenerutils.ComputeGardenNamespace(cfg.SeedConfig.Name),
 	}).AddToManager(mgr, seedCluster, gardenCluster); err != nil {
 		return fmt.Errorf("failed adding token requestor controller: %w", err)

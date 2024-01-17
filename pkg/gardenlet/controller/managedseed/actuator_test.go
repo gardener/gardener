@@ -139,8 +139,8 @@ var _ = Describe("Actuator", func() {
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					EnableStaticTokenKubeconfig: ptr.To(true),
 				},
-				SecretBindingName: pointer.String(secretBindingName),
-				SeedName:          pointer.String(seedName),
+				SecretBindingName: ptr.To(secretBindingName),
+				SeedName:          ptr.To(seedName),
 			},
 			Status: gardencorev1beta1.ShootStatus{
 				LastOperation: &gardencorev1beta1.LastOperation{
@@ -396,8 +396,8 @@ var _ = Describe("Actuator", func() {
 		expectMergeWithParent = func() {
 			mergedDeployment = managedSeed.Spec.Gardenlet.Deployment.DeepCopy()
 			mergedDeployment.Image = &seedmanagementv1alpha1.Image{
-				Repository: pointer.String("repository"),
-				Tag:        pointer.String("tag"),
+				Repository: ptr.To("repository"),
+				Tag:        ptr.To("tag"),
 				PullPolicy: pullPolicyPtr(corev1.PullIfNotPresent),
 			}
 
@@ -829,7 +829,7 @@ var _ = Describe("Utils", func() {
 			}
 
 			dnsWithDomain = &gardencorev1beta1.DNS{
-				Domain: pointer.String("my-shoot.example.com"),
+				Domain: ptr.To("my-shoot.example.com"),
 			}
 			dnsWithoutDomain = &gardencorev1beta1.DNS{
 				Domain: nil,

@@ -24,7 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -46,7 +46,7 @@ var _ = Describe("Scheduler tests", func() {
 		It("should fail because no Seed in same region exist", func() {
 			cloudProfile := createCloudProfile(providerType, "other-region")
 			createSeed(providerType, "some-region", nil)
-			shoot := createShoot(providerType, cloudProfile.Name, "other-region", nil, pointer.String("somedns.example.com"), nil)
+			shoot := createShoot(providerType, cloudProfile.Name, "other-region", nil, ptr.To("somedns.example.com"), nil)
 
 			Consistently(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -65,7 +65,7 @@ var _ = Describe("Scheduler tests", func() {
 		It("should fail because shoot doesn't configure the default scheduler", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
 			_ = createSeed(providerType, "some-region", nil)
-			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("foo-scheduler"), pointer.String("somedns.example.com"), nil)
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", ptr.To("foo-scheduler"), ptr.To("somedns.example.com"), nil)
 
 			Consistently(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -77,7 +77,7 @@ var _ = Describe("Scheduler tests", func() {
 		It("should pass because Seed and Shoot in the same region", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
 			seed := createSeed(providerType, "some-region", nil)
-			shoot := createShoot(providerType, cloudProfile.Name, "some-region", nil, pointer.String("somedns.example.com"), nil)
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", nil, ptr.To("somedns.example.com"), nil)
 
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -89,7 +89,7 @@ var _ = Describe("Scheduler tests", func() {
 		It("should pass because there is a seed with < 3 zones for non-HA shoot", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
 			seed := createSeed(providerType, "some-region", []string{"1"})
-			shoot := createShoot(providerType, cloudProfile.Name, "some-region", nil, pointer.String("somedns.example.com"), nil)
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", nil, ptr.To("somedns.example.com"), nil)
 
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -101,7 +101,7 @@ var _ = Describe("Scheduler tests", func() {
 		It("should pass because there is a seed with >= 3 zones for non-HA shoot", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
 			seed := createSeed(providerType, "some-region", []string{"1", "2", "3"})
-			shoot := createShoot(providerType, cloudProfile.Name, "some-region", nil, pointer.String("somedns.example.com"), nil)
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", nil, ptr.To("somedns.example.com"), nil)
 
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -113,7 +113,7 @@ var _ = Describe("Scheduler tests", func() {
 		It("should pass because there is a seed with < 3 zones for shoot with failure tolerance type 'node'", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
 			seed := createSeed(providerType, "some-region", []string{"1", "2"})
-			shoot := createShoot(providerType, cloudProfile.Name, "some-region", nil, pointer.String("somedns.example.com"), getControlPlaneWithType("node"))
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", nil, ptr.To("somedns.example.com"), getControlPlaneWithType("node"))
 
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -125,7 +125,7 @@ var _ = Describe("Scheduler tests", func() {
 		It("should pass because there is a seed with >= 3 zones for shoot with failure tolerance type 'node'", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
 			seed := createSeed(providerType, "some-region", []string{"1", "2", "3"})
-			shoot := createShoot(providerType, cloudProfile.Name, "some-region", nil, pointer.String("somedns.example.com"), getControlPlaneWithType("node"))
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", nil, ptr.To("somedns.example.com"), getControlPlaneWithType("node"))
 
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -137,7 +137,7 @@ var _ = Describe("Scheduler tests", func() {
 		It("should fail because there is no seed with >= 3 zones for shoot with failure tolerance type 'zone'", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
 			_ = createSeed(providerType, "some-region", []string{"1", "2"})
-			shoot := createShoot(providerType, cloudProfile.Name, "some-region", nil, pointer.String("somedns.example.com"), getControlPlaneWithType("zone"))
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", nil, ptr.To("somedns.example.com"), getControlPlaneWithType("zone"))
 
 			Consistently(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -156,7 +156,7 @@ var _ = Describe("Scheduler tests", func() {
 		It("should pass because there is a seed with >= 3 zones for shoot with failure tolerance type 'zone'", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
 			seed := createSeed(providerType, "some-region", []string{"1", "2", "3"})
-			shoot := createShoot(providerType, cloudProfile.Name, "some-region", nil, pointer.String("somedns.example.com"), getControlPlaneWithType("zone"))
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", nil, ptr.To("somedns.example.com"), getControlPlaneWithType("zone"))
 
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -220,7 +220,7 @@ us-central-2: 220`,
 					return testClient.Get(ctx, client.ObjectKeyFromObject(regionConfig), &corev1.ConfigMap{})
 				}).Should(Succeed())
 
-				shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", nil, pointer.String("somedns.example.com"), nil)
+				shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", nil, ptr.To("somedns.example.com"), nil)
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -262,7 +262,7 @@ us-central-2: 220`,
 					return testClient.Get(ctx, client.ObjectKeyFromObject(regionConfig), &corev1.ConfigMap{})
 				}).Should(Succeed())
 
-				shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", nil, pointer.String("somedns.example.com"), nil)
+				shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", nil, ptr.To("somedns.example.com"), nil)
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -329,7 +329,7 @@ us-central-2: 220`,
 					return configMapList.Items, nil
 				}).Should(HaveLen(2))
 
-				shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", nil, pointer.String("somedns.example.com"), nil)
+				shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", nil, ptr.To("somedns.example.com"), nil)
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -368,7 +368,7 @@ us-central-2: 220`,
 					return testClient.Get(ctx, client.ObjectKeyFromObject(regionConfig), &corev1.ConfigMap{})
 				}).Should(Succeed())
 
-				shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", nil, pointer.String("somedns.example.com"), nil)
+				shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", nil, ptr.To("somedns.example.com"), nil)
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -410,7 +410,7 @@ us-central-3: 220`,
 					return testClient.Get(ctx, client.ObjectKeyFromObject(regionConfig), &corev1.ConfigMap{})
 				}).Should(Succeed())
 
-				shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", nil, pointer.String("somedns.example.com"), nil)
+				shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", nil, ptr.To("somedns.example.com"), nil)
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -446,7 +446,7 @@ us-central-3: 220`,
 					return testClient.Get(ctx, client.ObjectKeyFromObject(regionConfig), &corev1.ConfigMap{})
 				}).Should(Succeed())
 
-				shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", nil, pointer.String("somedns.example.com"), nil)
+				shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", nil, ptr.To("somedns.example.com"), nil)
 
 				Consistently(func() *string {
 					Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -467,7 +467,7 @@ us-central-3: 220`,
 			It("should successfully schedule to Seed in region with minimal distance (prefer own region)", func() {
 				cloudProfile := createCloudProfile(providerType, "eu-west-1")
 
-				shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", nil, pointer.String("somedns.example.com"), nil)
+				shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", nil, ptr.To("somedns.example.com"), nil)
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -479,7 +479,7 @@ us-central-3: 220`,
 			It("should successfully schedule to Seed in region with minimal distance (prefer own zone)", func() {
 				cloudProfile := createCloudProfile(providerType, "eu-west-1")
 
-				shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", nil, pointer.String("somedns.example.com"), nil)
+				shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", nil, ptr.To("somedns.example.com"), nil)
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -491,7 +491,7 @@ us-central-3: 220`,
 			It("should successfully schedule to Seed in region with minimal distance (prefer same continent - multiple options)", func() {
 				cloudProfile := createCloudProfile(providerType, "eu-central-1")
 
-				shoot := createShoot(providerType, cloudProfile.Name, "eu-central-1", nil, pointer.String("somedns.example.com"), nil)
+				shoot := createShoot(providerType, cloudProfile.Name, "eu-central-1", nil, ptr.To("somedns.example.com"), nil)
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -503,7 +503,7 @@ us-central-3: 220`,
 			It("should successfully schedule to Seed minimal distance in different region", func() {
 				cloudProfile := createCloudProfile(providerType, "jp-west-1")
 
-				shoot := createShoot(providerType, cloudProfile.Name, "jp-west-1", nil, pointer.String("somedns.example.com"), nil)
+				shoot := createShoot(providerType, cloudProfile.Name, "jp-west-1", nil, ptr.To("somedns.example.com"), nil)
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -523,7 +523,7 @@ us-central-3: 220`,
 
 				cloudProfile := createCloudProfile(providerType, "eu-east-1")
 
-				shoot := createShoot(providerType, cloudProfile.Name, "eu-east-1", nil, pointer.String("somedns.example.com"), getControlPlaneWithType("zone"))
+				shoot := createShoot(providerType, cloudProfile.Name, "eu-east-1", nil, ptr.To("somedns.example.com"), getControlPlaneWithType("zone"))
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -599,7 +599,7 @@ func createSeed(providerType, region string, zones []string) *gardencorev1beta1.
 			Networks: gardencorev1beta1.SeedNetworks{
 				Pods:     "10.0.0.0/16",
 				Services: "10.1.0.0/16",
-				Nodes:    pointer.String("10.2.0.0/16"),
+				Nodes:    ptr.To("10.2.0.0/16"),
 			},
 		},
 	}
@@ -698,13 +698,13 @@ func createShoot(providerType, cloudProfile, region string, schedulerName, dnsDo
 				},
 			},
 			Networking: &gardencorev1beta1.Networking{
-				Pods:     pointer.String("10.3.0.0/16"),
-				Services: pointer.String("10.4.0.0/16"),
-				Nodes:    pointer.String("10.5.0.0/16"),
-				Type:     pointer.String("some-type"),
+				Pods:     ptr.To("10.3.0.0/16"),
+				Services: ptr.To("10.4.0.0/16"),
+				Nodes:    ptr.To("10.5.0.0/16"),
+				Type:     ptr.To("some-type"),
 			},
 			Kubernetes:        gardencorev1beta1.Kubernetes{Version: "1.25.1"},
-			SecretBindingName: pointer.String(testSecretBinding.Name),
+			SecretBindingName: ptr.To(testSecretBinding.Name),
 			SchedulerName:     schedulerName,
 			DNS:               &gardencorev1beta1.DNS{Domain: dnsDomain},
 		},

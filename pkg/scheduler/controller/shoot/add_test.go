@@ -17,7 +17,7 @@ package shoot_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -73,7 +73,7 @@ var _ = Describe("Add", func() {
 
 		Context("shoot is assigned", func() {
 			BeforeEach(func() {
-				shoot.Spec.SeedName = pointer.String("seed")
+				shoot.Spec.SeedName = ptr.To("seed")
 			})
 
 			It("should be false", func() {
@@ -87,7 +87,7 @@ var _ = Describe("Add", func() {
 		Context("shoot defines schedulerName", func() {
 			Context("default-scheduler", func() {
 				BeforeEach(func() {
-					shoot.Spec.SchedulerName = pointer.String("default-scheduler")
+					shoot.Spec.SchedulerName = ptr.To("default-scheduler")
 				})
 
 				It("should be true", func() {
@@ -100,7 +100,7 @@ var _ = Describe("Add", func() {
 
 			Context("arbitrary scheduler name", func() {
 				BeforeEach(func() {
-					shoot.Spec.SchedulerName = pointer.String("foo-scheduler")
+					shoot.Spec.SchedulerName = ptr.To("foo-scheduler")
 				})
 
 				It("should be false", func() {

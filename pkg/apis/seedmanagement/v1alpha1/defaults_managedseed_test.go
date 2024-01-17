@@ -230,13 +230,13 @@ var _ = Describe("Defaults", func() {
 		It("should default pull policy to Always if tag is latest", func() {
 			obj.Spec.Gardenlet = &Gardenlet{
 				Deployment: &GardenletDeployment{
-					Image: &Image{Tag: pointer.String("latest")},
+					Image: &Image{Tag: ptr.To("latest")},
 				}}
 
 			SetObjectDefaults_ManagedSeed(obj)
 
 			Expect(obj.Spec.Gardenlet.Deployment.Image).To(Equal(&Image{
-				Tag:        pointer.String("latest"),
+				Tag:        ptr.To("latest"),
 				PullPolicy: pullPolicyPtr(corev1.PullAlways),
 			}))
 		})
@@ -245,7 +245,7 @@ var _ = Describe("Defaults", func() {
 			obj.Spec.Gardenlet = &Gardenlet{
 				Deployment: &GardenletDeployment{
 					Image: &Image{
-						Tag:        pointer.String("foo"),
+						Tag:        ptr.To("foo"),
 						PullPolicy: pullPolicyPtr(corev1.PullNever),
 					},
 				}}
@@ -253,7 +253,7 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_ManagedSeed(obj)
 
 			Expect(obj.Spec.Gardenlet.Deployment.Image).To(Equal(&Image{
-				Tag:        pointer.String("foo"),
+				Tag:        ptr.To("foo"),
 				PullPolicy: pullPolicyPtr(corev1.PullNever),
 			}))
 		})

@@ -1167,7 +1167,7 @@ func defaultKubernetesVersion(constraints []core.ExpirableVersion, shootVersion 
 	}
 
 	if latestVersion := findLatestVersion(constraints, shootVersionMajor, shootVersionMinor); latestVersion != nil {
-		return pointer.String(latestVersion.String()), nil
+		return ptr.To(latestVersion.String()), nil
 	}
 
 	allErrs = append(allErrs, field.Invalid(fldPath, shootVersion, fmt.Sprintf("couldn't find a suitable version for %s. Suitable versions have a non-expired expiration date and are no 'preview' versions. 'Preview'-classified versions have to be selected explicitly", shootVersion)))

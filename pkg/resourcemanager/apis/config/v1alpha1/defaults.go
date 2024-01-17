@@ -95,10 +95,10 @@ func SetDefaults_ServerConfiguration(obj *ServerConfiguration) {
 // SetDefaults_ResourceManagerControllerConfiguration sets defaults for the controller configuration.
 func SetDefaults_ResourceManagerControllerConfiguration(obj *ResourceManagerControllerConfiguration) {
 	if obj.ClusterID == nil {
-		obj.ClusterID = pointer.String("")
+		obj.ClusterID = ptr.To("")
 	}
 	if obj.ResourceClass == nil {
-		obj.ResourceClass = pointer.String(DefaultResourceClass)
+		obj.ResourceClass = ptr.To(DefaultResourceClass)
 	}
 }
 
@@ -145,7 +145,7 @@ func SetDefaults_ManagedResourceControllerConfig(obj *ManagedResourceControllerC
 		obj.AlwaysUpdate = ptr.To(false)
 	}
 	if obj.ManagedByLabelValue == nil {
-		obj.ManagedByLabelValue = pointer.String(resourcesv1alpha1.GardenerManager)
+		obj.ManagedByLabelValue = ptr.To(resourcesv1alpha1.GardenerManager)
 	}
 }
 
@@ -185,7 +185,7 @@ func SetDefaults_NodeControllerConfig(obj *NodeControllerConfig) {
 // SetDefaults_PodSchedulerNameWebhookConfig sets defaults for the PodSchedulerNameWebhookConfig object.
 func SetDefaults_PodSchedulerNameWebhookConfig(obj *PodSchedulerNameWebhookConfig) {
 	if obj.Enabled && obj.SchedulerName == nil {
-		obj.SchedulerName = pointer.String(corev1.DefaultSchedulerName)
+		obj.SchedulerName = ptr.To(corev1.DefaultSchedulerName)
 	}
 }
 

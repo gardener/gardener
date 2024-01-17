@@ -19,7 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
@@ -35,7 +35,7 @@ var _ = Describe("Miscellaneous", func() {
 				Namespace: "garden-pr1",
 			},
 			Spec: core.ShootSpec{
-				SeedName: pointer.String("seed1"),
+				SeedName: ptr.To("seed1"),
 			},
 		}
 
@@ -45,10 +45,10 @@ var _ = Describe("Miscellaneous", func() {
 				Namespace: "garden-pr1",
 			},
 			Spec: core.ShootSpec{
-				SeedName: pointer.String("seed1"),
+				SeedName: ptr.To("seed1"),
 			},
 			Status: core.ShootStatus{
-				SeedName: pointer.String("seed2"),
+				SeedName: ptr.To("seed2"),
 			},
 		}
 

@@ -429,7 +429,7 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("no need for external DNS",
 					func() {
-						botanist.Shoot.GetInfo().Spec.DNS.Providers = []gardencorev1beta1.DNSProvider{{Type: pointer.String("unmanaged")}}
+						botanist.Shoot.GetInfo().Spec.DNS.Providers = []gardencorev1beta1.DNSProvider{{Type: ptr.To("unmanaged")}}
 						botanist.Shoot.ExternalClusterDomain = nil
 						botanist.Garden.InternalDomain = &gardenerutils.Domain{}
 					},
@@ -441,9 +441,9 @@ var _ = Describe("KubeAPIServer", func() {
 					func() {
 						botanist.Garden.InternalDomain = &gardenerutils.Domain{}
 						botanist.Shoot.ExternalDomain = &gardenerutils.Domain{}
-						botanist.Shoot.ExternalClusterDomain = pointer.String("some-domain")
+						botanist.Shoot.ExternalClusterDomain = ptr.To("some-domain")
 						botanist.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{
-							Domain:    pointer.String("some-domain"),
+							Domain:    ptr.To("some-domain"),
 							Providers: []gardencorev1beta1.DNSProvider{{}},
 						}
 					},
@@ -521,7 +521,7 @@ var _ = Describe("KubeAPIServer", func() {
 			shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
 				KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
 					ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
-						Issuer:          pointer.String("issuer"),
+						Issuer:          ptr.To("issuer"),
 						AcceptedIssuers: []string{"issuer1", "issuer2"},
 					},
 				},

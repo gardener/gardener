@@ -19,7 +19,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -54,9 +54,9 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddO
 	var istioIngressGatewayPredicates []predicate.Predicate
 	for _, zone := range []*string{
 		nil,
-		pointer.String("0"),
-		pointer.String("1"),
-		pointer.String("2"),
+		ptr.To("0"),
+		ptr.To("1"),
+		ptr.To("2"),
 	} {
 		predicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{MatchExpressions: matchExpressionsIstioIngressGateway(zone)})
 		if err != nil {

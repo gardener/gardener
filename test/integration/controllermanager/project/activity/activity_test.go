@@ -205,7 +205,7 @@ var _ = Describe("Project Activity controller tests", func() {
 						Labels:       map[string]string{testID: testRunID},
 					},
 					Spec: gardencorev1beta1.ShootSpec{
-						SecretBindingName: pointer.String("mysecretbinding"),
+						SecretBindingName: ptr.To("mysecretbinding"),
 						CloudProfileName:  "cloudprofile1",
 						Region:            "europe-central-1",
 						Provider: gardencorev1beta1.Provider{
@@ -222,13 +222,13 @@ var _ = Describe("Project Activity controller tests", func() {
 							},
 						},
 						DNS: &gardencorev1beta1.DNS{
-							Domain: pointer.String("some-domain.example.com"),
+							Domain: ptr.To("some-domain.example.com"),
 						},
 						Kubernetes: gardencorev1beta1.Kubernetes{
 							Version: "1.25.1",
 						},
 						Networking: &gardencorev1beta1.Networking{
-							Type: pointer.String("foo-networking"),
+							Type: ptr.To("foo-networking"),
 						},
 					},
 				}
@@ -256,7 +256,7 @@ var _ = Describe("Project Activity controller tests", func() {
 				}
 			},
 			func(obj client.Object) {
-				obj.(*gardencorev1beta1.BackupEntry).Spec.SeedName = pointer.String("foo")
+				obj.(*gardencorev1beta1.BackupEntry).Spec.SeedName = ptr.To("foo")
 			},
 			false,
 		)

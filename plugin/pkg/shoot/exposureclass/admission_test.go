@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
@@ -191,7 +191,7 @@ var _ = Describe("exposureclass", func() {
 			BeforeEach(func() {
 				exposureClass.Scheduling.Tolerations = []core.Toleration{{
 					Key:   "abc",
-					Value: pointer.String("def"),
+					Value: ptr.To("def"),
 				}}
 
 				shoot.Spec.Tolerations = []core.Toleration{{
@@ -225,7 +225,7 @@ var _ = Describe("exposureclass", func() {
 					},
 					{
 						Key:   "abc",
-						Value: pointer.String("def"),
+						Value: ptr.To("def"),
 					},
 				}))
 			})

@@ -37,9 +37,9 @@ var _ = Describe("Config", func() {
 		clusterDNSAddress = "foo"
 		clusterDomain     = "bar"
 		params            = components.ConfigurableKubeletConfigParameters{
-			ContainerLogMaxSize:              pointer.String("123Mi"),
+			ContainerLogMaxSize:              ptr.To("123Mi"),
 			CpuCFSQuota:                      ptr.To(false),
-			CpuManagerPolicy:                 pointer.String("policy"),
+			CpuManagerPolicy:                 ptr.To("policy"),
 			EvictionHard:                     map[string]string{"memory.available": "123"},
 			EvictionMinimumReclaim:           map[string]string{"imagefs.available": "123"},
 			EvictionSoft:                     map[string]string{"imagefs.inodesFree": "123"},
@@ -145,7 +145,7 @@ var _ = Describe("Config", func() {
 			MaxPods:        110,
 			PodsPerCore:    0,
 			ReadOnlyPort:   0,
-			ResolverConfig: pointer.String("/etc/resolv.conf"),
+			ResolverConfig: ptr.To("/etc/resolv.conf"),
 			RegisterWithTaints: []corev1.Taint{{
 				Key:    "node.gardener.cloud/critical-components-not-ready",
 				Effect: corev1.TaintEffectNoSchedule,
@@ -243,7 +243,7 @@ var _ = Describe("Config", func() {
 			}},
 			RegistryBurst:                  20,
 			RegistryPullQPS:                pointer.Int32(10),
-			ResolverConfig:                 pointer.String("/etc/resolv.conf"),
+			ResolverConfig:                 ptr.To("/etc/resolv.conf"),
 			RuntimeRequestTimeout:          metav1.Duration{Duration: 2 * time.Minute},
 			SerializeImagePulls:            params.SerializeImagePulls,
 			SeccompDefault:                 params.SeccompDefault,

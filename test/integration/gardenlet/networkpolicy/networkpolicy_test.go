@@ -24,7 +24,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -116,9 +116,9 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 				Shoot: runtime.RawExtension{Object: &gardencorev1beta1.Shoot{
 					Spec: gardencorev1beta1.ShootSpec{
 						Networking: &gardencorev1beta1.Networking{
-							Pods:     pointer.String("10.150.0.0/16"),
-							Services: pointer.String("192.168.1.0/17"),
-							Nodes:    pointer.String("172.16.2.0/18"),
+							Pods:     ptr.To("10.150.0.0/16"),
+							Services: ptr.To("192.168.1.0/17"),
+							Nodes:    ptr.To("172.16.2.0/18"),
 						},
 						Provider: gardencorev1beta1.Provider{
 							Workers: []gardencorev1beta1.Worker{},

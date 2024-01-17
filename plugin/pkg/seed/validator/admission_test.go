@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
@@ -55,7 +55,7 @@ var _ = Describe("validator", func() {
 				Spec: core.ShootSpec{
 					CloudProfileName:  "profile",
 					Region:            "europe",
-					SecretBindingName: pointer.String("my-secret"),
+					SecretBindingName: ptr.To("my-secret"),
 					SeedName:          &seedName,
 				},
 			}
@@ -130,7 +130,7 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should disallow seed deletion because shoot migration is yet not finished", func() {
-				shoot.Spec.SeedName = pointer.String(seedName + "-1")
+				shoot.Spec.SeedName = ptr.To(seedName + "-1")
 				shoot.Status.SeedName = &seedName
 
 				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
@@ -143,7 +143,7 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should allow deletion of empty seed", func() {
-				shoot.Spec.SeedName = pointer.String(seedName + "-1")
+				shoot.Spec.SeedName = ptr.To(seedName + "-1")
 				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&seed, nil, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 

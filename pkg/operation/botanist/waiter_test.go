@@ -23,7 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -204,7 +204,7 @@ var _ = Describe("Waiter", func() {
 		})
 
 		It("should return an error when shoot's pod network is invalid", func() {
-			shoot.Spec.Networking.Pods = pointer.String("abc123")
+			shoot.Spec.Networking.Pods = ptr.To("abc123")
 			botanist.Shoot.SetInfo(shoot)
 
 			err := botanist.WaitUntilEndpointsDoNotContainPodIPs(ctx)
@@ -216,7 +216,7 @@ var _ = Describe("Waiter", func() {
 			ctxCanceled, cancel := context.WithCancel(ctx)
 			cancel()
 
-			shoot.Spec.Networking.Pods = pointer.String("10.0.0.0/8")
+			shoot.Spec.Networking.Pods = ptr.To("10.0.0.0/8")
 			botanist.Shoot.SetInfo(shoot)
 
 			Expect(botanist.ShootClientSet.Client().Create(ctx, endpoint)).To(Succeed())
@@ -230,7 +230,7 @@ var _ = Describe("Waiter", func() {
 			ctxCanceled, cancel := context.WithCancel(ctx)
 			cancel()
 
-			shoot.Spec.Networking.Pods = pointer.String("10.0.0.0/8")
+			shoot.Spec.Networking.Pods = ptr.To("10.0.0.0/8")
 			botanist.Shoot.SetInfo(shoot)
 
 			endpoint.Subsets[0].Addresses[0].IP = "128.0.0.1"
@@ -243,7 +243,7 @@ var _ = Describe("Waiter", func() {
 			ctxCanceled, cancel := context.WithCancel(ctx)
 			cancel()
 
-			shoot.Spec.Networking.Pods = pointer.String("10.0.0.0/8")
+			shoot.Spec.Networking.Pods = ptr.To("10.0.0.0/8")
 			botanist.Shoot.SetInfo(shoot)
 
 			Expect(botanist.WaitUntilEndpointsDoNotContainPodIPs(ctxCanceled)).To(Succeed())

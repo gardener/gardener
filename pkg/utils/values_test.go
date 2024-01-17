@@ -53,7 +53,7 @@ var _ = Describe("Values", func() {
 			Objects: []object{
 				{
 					Object: &object{
-						String: pointer.String("foo"),
+						String: ptr.To("foo"),
 					},
 					Int: pointer.Int32(42),
 				},
@@ -65,7 +65,7 @@ var _ = Describe("Values", func() {
 			Objects: []objectUpperCase{
 				{
 					Object: &objectUpperCase{
-						String: pointer.String("foo"),
+						String: ptr.To("foo"),
 					},
 					Int: pointer.Int32(42),
 				},
@@ -136,13 +136,13 @@ var _ = Describe("Values", func() {
 				Objects: []objectUpperCase{
 					{
 						Object: &objectUpperCase{
-							String: pointer.String("foo"),
+							String: ptr.To("foo"),
 						},
 						Objects: []objectUpperCase{
 							{
 								Int: pointer.Int32(50),
 								Object: &objectUpperCase{
-									String: pointer.String("bar"),
+									String: ptr.To("bar"),
 								},
 							},
 						},
@@ -178,14 +178,14 @@ var _ = Describe("Values", func() {
 		})
 
 		It("should convert an object to a values map removing entries with zero values", func() {
-			obj.String = pointer.String("")
+			obj.String = ptr.To("")
 			result, err := ToValuesMapWithOptions(obj, Options{RemoveZeroEntries: true})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(values))
 		})
 
 		It("should convert an object to a values map containing empty entries", func() {
-			obj.String = pointer.String("")
+			obj.String = ptr.To("")
 
 			result, err := ToValuesMapWithOptions(obj, Options{RemoveZeroEntries: false})
 			Expect(err).ToNot(HaveOccurred())
@@ -194,25 +194,25 @@ var _ = Describe("Values", func() {
 		})
 
 		It("should convert an object to a values map with nested slices", func() {
-			obj.String = pointer.String("")
+			obj.String = ptr.To("")
 
 			obj = &object{
 				Objects: []object{
 					{
 						Object: &object{
-							String: pointer.String("one"),
+							String: ptr.To("one"),
 							Objects: []object{
 								{
-									String: pointer.String("two-l1"),
+									String: ptr.To("two-l1"),
 									Objects: []object{
 										{
-											String: pointer.String(""),
+											String: ptr.To(""),
 											Int:    pointer.Int32(3),
 										},
 									},
 								},
 								{
-									String: pointer.String("two-l2"),
+									String: ptr.To("two-l2"),
 									Objects: []object{
 										{
 											Int: pointer.Int32(4),

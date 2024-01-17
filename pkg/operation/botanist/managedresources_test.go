@@ -25,7 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -66,11 +66,11 @@ var _ = Describe("ManagedResources", func() {
 		}
 		seedManagedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{Name: "seed", Namespace: namespace.Name},
-			Spec:       resourcesv1alpha1.ManagedResourceSpec{Class: pointer.String("seed")},
+			Spec:       resourcesv1alpha1.ManagedResourceSpec{Class: ptr.To("seed")},
 		}
 		shootManagedResouceZeroClass = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{Name: "shoot-zero-class", Namespace: namespace.Name},
-			Spec:       resourcesv1alpha1.ManagedResourceSpec{Class: pointer.String("")},
+			Spec:       resourcesv1alpha1.ManagedResourceSpec{Class: ptr.To("")},
 		}
 		shootManagedResouceNoClass = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{Name: "shoot-no-class", Namespace: namespace.Name},

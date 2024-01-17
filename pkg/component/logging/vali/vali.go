@@ -357,43 +357,43 @@ func (v *vali) getHVPA() *hvpav1alpha1.Hvpa {
 					Deploy: true,
 					ScaleUp: hvpav1alpha1.ScaleType{
 						UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-							UpdateMode: pointer.String(hvpav1alpha1.UpdateModeAuto),
+							UpdateMode: ptr.To(hvpav1alpha1.UpdateModeAuto),
 						},
-						StabilizationDuration: pointer.String("5m"),
+						StabilizationDuration: ptr.To("5m"),
 						MinChange: hvpav1alpha1.ScaleParams{
 							CPU: hvpav1alpha1.ChangeParams{
-								Value:      pointer.String("100m"),
+								Value:      ptr.To("100m"),
 								Percentage: pointer.Int32(80),
 							},
 							Memory: hvpav1alpha1.ChangeParams{
-								Value:      pointer.String("300M"),
+								Value:      ptr.To("300M"),
 								Percentage: pointer.Int32(80),
 							},
 						},
 					},
 					ScaleDown: hvpav1alpha1.ScaleType{
 						UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-							UpdateMode: pointer.String(hvpav1alpha1.UpdateModeAuto),
+							UpdateMode: ptr.To(hvpav1alpha1.UpdateModeAuto),
 						},
-						StabilizationDuration: pointer.String("168h"),
+						StabilizationDuration: ptr.To("168h"),
 						MinChange: hvpav1alpha1.ScaleParams{
 							CPU: hvpav1alpha1.ChangeParams{
-								Value:      pointer.String("200m"),
+								Value:      ptr.To("200m"),
 								Percentage: pointer.Int32(80),
 							},
 							Memory: hvpav1alpha1.ChangeParams{
-								Value:      pointer.String("500M"),
+								Value:      ptr.To("500M"),
 								Percentage: pointer.Int32(80),
 							},
 						},
 					},
 					LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
 						CPU: hvpav1alpha1.ChangeParams{
-							Value:      pointer.String("300m"),
+							Value:      ptr.To("300m"),
 							Percentage: pointer.Int32(40),
 						},
 						Memory: hvpav1alpha1.ChangeParams{
-							Value:      pointer.String("1G"),
+							Value:      ptr.To("1G"),
 							Percentage: pointer.Int32(40),
 						},
 					},
@@ -448,7 +448,7 @@ func (v *vali) getHVPA() *hvpav1alpha1.Hvpa {
 
 	if v.values.MaintenanceTimeWindow != nil {
 		hvpa.Spec.MaintenanceTimeWindow = v.values.MaintenanceTimeWindow
-		hvpa.Spec.Vpa.ScaleDown.UpdatePolicy.UpdateMode = pointer.String(hvpav1alpha1.UpdateModeMaintenanceWindow)
+		hvpa.Spec.Vpa.ScaleDown.UpdatePolicy.UpdateMode = ptr.To(hvpav1alpha1.UpdateModeMaintenanceWindow)
 	}
 
 	if v.values.ShootNodeLoggingEnabled {
@@ -479,7 +479,7 @@ func (v *vali) getIngress(secretName string) *networkingv1.Ingress {
 			Labels:    getLabels(),
 		},
 		Spec: networkingv1.IngressSpec{
-			IngressClassName: pointer.String(v1beta1constants.SeedNginxIngressClass),
+			IngressClassName: ptr.To(v1beta1constants.SeedNginxIngressClass),
 			TLS: []networkingv1.IngressTLS{{
 				SecretName: secretName,
 				Hosts:      []string{v.values.IngressHost},

@@ -25,7 +25,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -381,7 +381,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 			ensureNoManagedResourcesExist = g.Add(flow.Task{
 				Name: "Ensuring all ManagedResources are gone",
 				Fn: func(ctx context.Context) error {
-					managedResourcesStillExist, err := managedresources.CheckIfManagedResourcesExist(ctx, r.SeedClientSet.Client(), pointer.String(v1beta1constants.SeedResourceManagerClass))
+					managedResourcesStillExist, err := managedresources.CheckIfManagedResourcesExist(ctx, r.SeedClientSet.Client(), ptr.To(v1beta1constants.SeedResourceManagerClass))
 					if err != nil {
 						return err
 					}

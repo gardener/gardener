@@ -26,7 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	apiextensions "github.com/gardener/gardener/pkg/api/extensions"
@@ -245,7 +245,7 @@ func computeExtensionsDataAndResources(
 
 			dataList = append(dataList, gardencorev1beta1.ExtensionResourceState{
 				Kind:      extension.objKind,
-				Name:      pointer.String(extensionObj.GetName()),
+				Name:      ptr.To(extensionObj.GetName()),
 				Purpose:   extensionObj.GetExtensionSpec().GetExtensionPurpose(),
 				State:     extensionObj.GetExtensionStatus().GetState(),
 				Resources: extensionObj.GetExtensionStatus().GetResources(),

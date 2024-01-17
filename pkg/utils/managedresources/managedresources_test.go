@@ -25,7 +25,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -264,7 +263,7 @@ var _ = Describe("managedresources", func() {
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					SecretRefs:  []corev1.LocalObjectReference{{Name: secretName}},
 					KeepObjects: ptr.To(keepObjects),
-					Class:       pointer.String("seed"),
+					Class:       ptr.To("seed"),
 				},
 			}
 		})
@@ -738,7 +737,7 @@ var _ = Describe("managedresources", func() {
 
 			It("should return false because existing resources have another class", func() {
 				obj := managedResource(false)
-				obj.Spec.Class = pointer.String("bar")
+				obj.Spec.Class = ptr.To("bar")
 				Expect(fakeClient.Create(ctx, obj)).To(Succeed())
 
 				resourcesExist, err := CheckIfManagedResourcesExist(ctx, fakeClient, &class)

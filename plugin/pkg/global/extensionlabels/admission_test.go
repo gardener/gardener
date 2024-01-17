@@ -22,7 +22,6 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -224,7 +223,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 					Namespace: "test-namespace",
 				},
 				Spec: core.ShootSpec{
-					Networking: &core.Networking{Type: pointer.String(networkingType)},
+					Networking: &core.Networking{Type: ptr.To(networkingType)},
 					DNS: &core.DNS{
 						Providers: []core.DNSProvider{
 							{Type: &dnsProviderType1},

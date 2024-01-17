@@ -20,7 +20,7 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -98,7 +98,7 @@ var _ = Describe("Shoot Reference controller tests", func() {
 				Labels:       map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: pointer.String("secretbinding"),
+				SecretBindingName: ptr.To("secretbinding"),
 				CloudProfileName:  "cloudprofile1",
 				Region:            "europe-central-1",
 				Provider: gardencorev1beta1.Provider{
@@ -115,10 +115,10 @@ var _ = Describe("Shoot Reference controller tests", func() {
 					},
 				},
 				DNS: &gardencorev1beta1.DNS{
-					Domain: pointer.String("some-domain.example.com"),
+					Domain: ptr.To("some-domain.example.com"),
 					Providers: []gardencorev1beta1.DNSProvider{
-						{Type: pointer.String("type"), SecretName: pointer.String(secret1.Name)},
-						{Type: pointer.String("type"), SecretName: pointer.String(secret2.Name)},
+						{Type: ptr.To("type"), SecretName: ptr.To(secret1.Name)},
+						{Type: ptr.To("type"), SecretName: ptr.To(secret2.Name)},
 					},
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{
@@ -134,7 +134,7 @@ var _ = Describe("Shoot Reference controller tests", func() {
 					},
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: pointer.String("foo-networking"),
+					Type: ptr.To("foo-networking"),
 				},
 				Resources: []gardencorev1beta1.NamedResourceReference{
 					{

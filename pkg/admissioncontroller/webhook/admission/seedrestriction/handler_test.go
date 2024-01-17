@@ -37,7 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -207,7 +207,7 @@ var _ = Describe("handler", func() {
 						},
 
 						Entry("seed name is nil", nil),
-						Entry("seed name is different", pointer.String("some-different-seed")),
+						Entry("seed name is different", ptr.To("some-different-seed")),
 					)
 
 					It("should allow the request because seed name in spec matches", func() {
@@ -303,7 +303,7 @@ var _ = Describe("handler", func() {
 						},
 
 						Entry("seed name is nil", nil),
-						Entry("seed name is different", pointer.String("some-different-seed")),
+						Entry("seed name is different", ptr.To("some-different-seed")),
 					)
 
 					It("should allow the request because seed name matches", func() {
@@ -454,9 +454,9 @@ var _ = Describe("handler", func() {
 						},
 
 						Entry("seed name is nil", nil, nil),
-						Entry("seed name is different", pointer.String("some-different-seed"), nil),
+						Entry("seed name is different", ptr.To("some-different-seed"), nil),
 						Entry("seed name is equal but bucket's seed name is nil", &seedName, nil),
-						Entry("seed name is equal but bucket's seed name is different", &seedName, pointer.String("some-different-seed")),
+						Entry("seed name is equal but bucket's seed name is different", &seedName, ptr.To("some-different-seed")),
 					)
 
 					It("should allow the request because seed name matches for both entry and bucket", func() {
@@ -584,7 +584,7 @@ var _ = Describe("handler", func() {
 								be := &gardencorev1beta1.BackupEntry{
 									Spec: gardencorev1beta1.BackupEntrySpec{
 										BucketName: "some-different-bucket",
-										SeedName:   pointer.String("some-differnet-seedname"),
+										SeedName:   ptr.To("some-differnet-seedname"),
 									},
 								}
 								be.DeepCopyInto(obj)
@@ -861,7 +861,7 @@ var _ = Describe("handler", func() {
 										},
 
 										Entry("seed name is nil", nil),
-										Entry("seed name is different", pointer.String("some-different-seed")),
+										Entry("seed name is different", ptr.To("some-different-seed")),
 									)
 
 									It("should allow the request because the seed name of the shoot referenced by the managedseed matches", func() {
@@ -983,7 +983,7 @@ var _ = Describe("handler", func() {
 
 						It("should forbid because the related backupbucket does not belong to gardenlet's seed", func() {
 							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(name), gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucket{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.BackupBucket, _ ...client.GetOption) error {
-								(&gardencorev1beta1.BackupBucket{Spec: gardencorev1beta1.BackupBucketSpec{SeedName: pointer.String("some-different-seed")}}).DeepCopyInto(obj)
+								(&gardencorev1beta1.BackupBucket{Spec: gardencorev1beta1.BackupBucketSpec{SeedName: ptr.To("some-different-seed")}}).DeepCopyInto(obj)
 								return nil
 							})
 
@@ -1044,7 +1044,7 @@ var _ = Describe("handler", func() {
 
 							It("should forbid because the related shoot does not belong to gardenlet's seed", func() {
 								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
-									(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: pointer.String("some-different-seed")}}).DeepCopyInto(obj)
+									(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: ptr.To("some-different-seed")}}).DeepCopyInto(obj)
 									return nil
 								})
 
@@ -1250,7 +1250,7 @@ var _ = Describe("handler", func() {
 						})
 
 						It("should return an error if the shoot does not belong to the gardenlet's seed", func() {
-							shoot.Spec.SeedName = pointer.String("some-other-seed")
+							shoot.Spec.SeedName = ptr.To("some-other-seed")
 
 							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 								managedSeed.DeepCopyInto(obj)
@@ -1378,7 +1378,7 @@ var _ = Describe("handler", func() {
 									Namespace: managedSeed1Namespace,
 									Name:      "shoot1",
 								},
-								Spec: gardencorev1beta1.ShootSpec{SeedName: pointer.String("some-other-seed-name")},
+								Spec: gardencorev1beta1.ShootSpec{SeedName: ptr.To("some-other-seed-name")},
 							}
 							shoot2 = &gardencorev1beta1.Shoot{
 								ObjectMeta: metav1.ObjectMeta{
@@ -1642,7 +1642,7 @@ var _ = Describe("handler", func() {
 
 							It("should forbid because the related shoot does not belong to gardenlet's seed", func() {
 								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
-									(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: pointer.String("some-different-seed")}}).DeepCopyInto(obj)
+									(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: ptr.To("some-different-seed")}}).DeepCopyInto(obj)
 									return nil
 								})
 
@@ -2029,7 +2029,7 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 							})
 
 							It("should return an error if the shoot does not belong to the gardenlet's seed", func() {
-								shoot.Spec.SeedName = pointer.String("some-other-seed")
+								shoot.Spec.SeedName = ptr.To("some-other-seed")
 
 								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 									managedSeed.DeepCopyInto(obj)
@@ -2337,7 +2337,7 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 						})
 
 						It("should return an error if the shoot does not belong to the gardenlet's seed", func() {
-							shoot.Spec.SeedName = pointer.String("some-other-seed")
+							shoot.Spec.SeedName = ptr.To("some-other-seed")
 
 							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 								managedSeed.DeepCopyInto(obj)

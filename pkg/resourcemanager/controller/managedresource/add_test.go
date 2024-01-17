@@ -26,7 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -94,7 +94,7 @@ var _ = Describe("#MapSecretToManagedResources", func() {
 
 	It("should do nothing, if there are no ManagedResources we are responsible for", func() {
 		mr := resourcesv1alpha1.ManagedResource{
-			Spec: resourcesv1alpha1.ManagedResourceSpec{Class: pointer.String("other")},
+			Spec: resourcesv1alpha1.ManagedResourceSpec{Class: ptr.To("other")},
 		}
 
 		c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResourceList{}), client.InNamespace(secret.Namespace)).
@@ -114,7 +114,7 @@ var _ = Describe("#MapSecretToManagedResources", func() {
 				Namespace: secret.Namespace,
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				Class:      pointer.String(filter.ResourceClass()),
+				Class:      ptr.To(filter.ResourceClass()),
 				SecretRefs: []corev1.LocalObjectReference{{Name: secret.Name}},
 			},
 		}

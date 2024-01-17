@@ -22,7 +22,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -296,7 +296,7 @@ func (r *Reconciler) delete(
 
 func (r *Reconciler) checkIfManagedResourcesExist() func(context.Context) error {
 	return func(ctx context.Context) error {
-		managedResourcesStillExist, err := managedresources.CheckIfManagedResourcesExist(ctx, r.RuntimeClientSet.Client(), pointer.String(v1beta1constants.SeedResourceManagerClass))
+		managedResourcesStillExist, err := managedresources.CheckIfManagedResourcesExist(ctx, r.RuntimeClientSet.Client(), ptr.To(v1beta1constants.SeedResourceManagerClass))
 		if err != nil {
 			return err
 		}

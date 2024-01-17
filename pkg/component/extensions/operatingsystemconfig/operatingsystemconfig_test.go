@@ -35,6 +35,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	kubernetesfake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -78,7 +79,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			now     time.Time
 
 			apiServerURL                = "https://url-to-apiserver"
-			caBundle                    = pointer.String("ca-bundle")
+			caBundle                    = ptr.To("ca-bundle")
 			clusterCASecretName         = "ca"
 			clusterDNSAddress           = "cluster-dns"
 			clusterDomain               = "cluster-domain"
@@ -154,7 +155,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				{
 					Name: worker1Name,
 					Machine: gardencorev1beta1.Machine{
-						Architecture: pointer.String(v1beta1constants.ArchitectureAMD64),
+						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
 						Image: &gardencorev1beta1.ShootMachineImage{
 							Name:           "type1",
 							ProviderConfig: &runtime.RawExtension{Raw: []byte(`{"foo":"bar"}`)},
@@ -165,7 +166,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				{
 					Name: worker2Name,
 					Machine: gardencorev1beta1.Machine{
-						Architecture: pointer.String(v1beta1constants.ArchitectureAMD64),
+						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
 						Image: &gardencorev1beta1.ShootMachineImage{
 							Name: "type2",
 						},
@@ -209,7 +210,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				}
 
 				if useGardenerNodeAgent {
-					imagesCopy["hyperkube"] = &imagevector.Image{Repository: "europe-docker.pkg.dev/gardener-project/releases/hyperkube", Tag: pointer.String("v" + k8sVersion.String())}
+					imagesCopy["hyperkube"] = &imagevector.Image{Repository: "europe-docker.pkg.dev/gardener-project/releases/hyperkube", Tag: ptr.To("v" + k8sVersion.String())}
 				}
 
 				downloaderUnits, downloaderFiles, _ := downloaderConfigFn(
@@ -297,7 +298,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						},
 						Purpose:              extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
 						CRIConfig:            criConfig,
-						ReloadConfigFilePath: pointer.String("/var/lib/cloud-config-downloader/downloads/cloud_config"),
+						ReloadConfigFilePath: ptr.To("/var/lib/cloud-config-downloader/downloads/cloud_config"),
 						Units:                originalUnits,
 						Files:                originalFiles,
 					},
@@ -529,15 +530,15 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 					extensions = append(extensions,
 						gardencorev1beta1.ExtensionResourceState{
-							Name:    pointer.String(key + "-" + worker.Machine.Image.Name + "-downloader"),
+							Name:    ptr.To(key + "-" + worker.Machine.Image.Name + "-downloader"),
 							Kind:    extensionsv1alpha1.OperatingSystemConfigResource,
-							Purpose: pointer.String(string(extensionsv1alpha1.OperatingSystemConfigPurposeProvision)),
+							Purpose: ptr.To(string(extensionsv1alpha1.OperatingSystemConfigPurposeProvision)),
 							State:   &runtime.RawExtension{Raw: stateDownloader},
 						},
 						gardencorev1beta1.ExtensionResourceState{
-							Name:    pointer.String(key + "-" + worker.Machine.Image.Name + "-original"),
+							Name:    ptr.To(key + "-" + worker.Machine.Image.Name + "-original"),
 							Kind:    extensionsv1alpha1.OperatingSystemConfigResource,
-							Purpose: pointer.String(string(extensionsv1alpha1.OperatingSystemConfigPurposeReconcile)),
+							Purpose: ptr.To(string(extensionsv1alpha1.OperatingSystemConfigPurposeReconcile)),
 							State:   &runtime.RawExtension{Raw: stateOriginal},
 						},
 					)
@@ -686,7 +687,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						},
 					}
 					// set other status fields
-					expected[i].Status.Command = pointer.String("foo-" + expected[i].Name)
+					expected[i].Status.Command = ptr.To("foo-" + expected[i].Name)
 					expected[i].Status.Units = []string{"bar-" + expected[i].Name, "baz-" + expected[i].Name}
 					Expect(c.Patch(ctx, expected[i], patch)).ToNot(HaveOccurred(), "patching operatingsystemconfig succeeds")
 
@@ -739,7 +740,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						},
 					}
 					// set other status fields
-					expected[i].Status.Command = pointer.String("foo-" + expected[i].Name)
+					expected[i].Status.Command = ptr.To("foo-" + expected[i].Name)
 					expected[i].Status.Units = []string{"bar-" + expected[i].Name, "baz-" + expected[i].Name}
 					Expect(c.Patch(ctx, expected[i], patch)).ToNot(HaveOccurred(), "patching operatingsystemconfig succeeds")
 
@@ -778,7 +779,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						},
 					}
 					// set other status fields
-					expected[i].Status.Command = pointer.String("foo-" + expected[i].Name)
+					expected[i].Status.Command = ptr.To("foo-" + expected[i].Name)
 					expected[i].Status.Units = []string{"bar-" + expected[i].Name, "baz-" + expected[i].Name}
 					Expect(c.Create(ctx, expected[i])).To(Succeed())
 
@@ -816,7 +817,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					worker1Name: {
 						Downloader: Data{
 							Content: "foobar-cloud-config-" + worker1Name + "-77ac3-type1-downloader",
-							Command: pointer.String("foo-cloud-config-" + worker1Name + "-77ac3-type1-downloader"),
+							Command: ptr.To("foo-cloud-config-" + worker1Name + "-77ac3-type1-downloader"),
 							Units: []string{
 								"bar-cloud-config-" + worker1Name + "-77ac3-type1-downloader",
 								"baz-cloud-config-" + worker1Name + "-77ac3-type1-downloader",
@@ -825,7 +826,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						},
 						Original: Data{
 							Content: "foobar-cloud-config-" + worker1Name + "-77ac3-type1-original",
-							Command: pointer.String("foo-cloud-config-" + worker1Name + "-77ac3-type1-original"),
+							Command: ptr.To("foo-cloud-config-" + worker1Name + "-77ac3-type1-original"),
 							Units: []string{
 								"bar-cloud-config-" + worker1Name + "-77ac3-type1-original",
 								"baz-cloud-config-" + worker1Name + "-77ac3-type1-original",
@@ -836,7 +837,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					worker2Name: {
 						Downloader: Data{
 							Content: "foobar-cloud-config-" + worker2Name + "-d9e53-type2-downloader",
-							Command: pointer.String("foo-cloud-config-" + worker2Name + "-d9e53-type2-downloader"),
+							Command: ptr.To("foo-cloud-config-" + worker2Name + "-d9e53-type2-downloader"),
 							Units: []string{
 								"bar-cloud-config-" + worker2Name + "-d9e53-type2-downloader",
 								"baz-cloud-config-" + worker2Name + "-d9e53-type2-downloader",
@@ -845,7 +846,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						},
 						Original: Data{
 							Content: "foobar-cloud-config-" + worker2Name + "-d9e53-type2-original",
-							Command: pointer.String("foo-cloud-config-" + worker2Name + "-d9e53-type2-original"),
+							Command: ptr.To("foo-cloud-config-" + worker2Name + "-d9e53-type2-original"),
 							Units: []string{
 								"bar-cloud-config-" + worker2Name + "-d9e53-type2-original",
 								"baz-cloud-config-" + worker2Name + "-d9e53-type2-original",

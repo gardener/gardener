@@ -22,7 +22,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -125,7 +125,7 @@ var _ = Describe("#Ingress", func() {
 		})
 
 		It("should create the expected ingress object for backend protocol HTTPS", func() {
-			Expect(getDeployer(pointer.String("foobar")).Deploy(ctx)).To(Succeed())
+			Expect(getDeployer(ptr.To("foobar")).Deploy(ctx)).To(Succeed())
 
 			actual := &networkingv1.Ingress{}
 			Expect(c.Get(ctx, ingressObjKey, actual)).To(Succeed())

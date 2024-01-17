@@ -29,7 +29,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -269,7 +268,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 			}
 			shoot.Status.LastMaintenance.Description = "Maintenance failed"
 			shoot.Status.LastMaintenance.State = gardencorev1beta1.LastOperationStateFailed
-			shoot.Status.LastMaintenance.FailureReason = pointer.String(fmt.Sprintf("Updates to the Shoot failed to be applied: %s", err.Error()))
+			shoot.Status.LastMaintenance.FailureReason = ptr.To(fmt.Sprintf("Updates to the Shoot failed to be applied: %s", err.Error()))
 			if err := r.Client.Status().Patch(ctx, shoot, patch); err != nil {
 				return err
 			}

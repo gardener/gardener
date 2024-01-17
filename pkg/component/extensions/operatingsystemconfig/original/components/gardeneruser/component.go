@@ -84,7 +84,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 			{
 				Name:   "gardener-user.service",
 				Enable: ptr.To(true),
-				Content: pointer.String(`[Unit]
+				Content: ptr.To(`[Unit]
 Description=Configure gardener user
 After=sshd.service
 [Service]

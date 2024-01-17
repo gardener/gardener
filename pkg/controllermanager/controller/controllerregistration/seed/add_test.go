@@ -23,7 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -132,7 +132,7 @@ var _ = Describe("Add", func() {
 			})
 
 			It("should return true when seed name is set", func() {
-				backupBucket.Spec.SeedName = pointer.String("some-seed")
+				backupBucket.Spec.SeedName = ptr.To("some-seed")
 				Expect(p.Create(event.CreateEvent{Object: backupBucket})).To(BeTrue())
 			})
 		})
@@ -152,7 +152,7 @@ var _ = Describe("Add", func() {
 
 			It("should return true because seed name changed", func() {
 				oldBackupBucket := backupBucket.DeepCopy()
-				backupBucket.Spec.SeedName = pointer.String("new-seed")
+				backupBucket.Spec.SeedName = ptr.To("new-seed")
 				Expect(p.Update(event.UpdateEvent{ObjectNew: backupBucket, ObjectOld: oldBackupBucket})).To(BeTrue())
 			})
 
@@ -169,7 +169,7 @@ var _ = Describe("Add", func() {
 			})
 
 			It("should return true when seed name is set", func() {
-				backupBucket.Spec.SeedName = pointer.String("some-seed")
+				backupBucket.Spec.SeedName = ptr.To("some-seed")
 				Expect(p.Delete(event.DeleteEvent{Object: backupBucket})).To(BeTrue())
 			})
 		})
@@ -198,7 +198,7 @@ var _ = Describe("Add", func() {
 			})
 
 			It("should return true when seed name is set", func() {
-				backupEntry.Spec.SeedName = pointer.String("some-seed")
+				backupEntry.Spec.SeedName = ptr.To("some-seed")
 				Expect(p.Create(event.CreateEvent{Object: backupEntry})).To(BeTrue())
 			})
 		})
@@ -218,7 +218,7 @@ var _ = Describe("Add", func() {
 
 			It("should return true because seed name changed", func() {
 				oldBackupEntry := backupEntry.DeepCopy()
-				backupEntry.Spec.SeedName = pointer.String("new-seed")
+				backupEntry.Spec.SeedName = ptr.To("new-seed")
 				Expect(p.Update(event.UpdateEvent{ObjectNew: backupEntry, ObjectOld: oldBackupEntry})).To(BeTrue())
 			})
 
@@ -235,7 +235,7 @@ var _ = Describe("Add", func() {
 			})
 
 			It("should return true when seed name is set", func() {
-				backupEntry.Spec.SeedName = pointer.String("some-seed")
+				backupEntry.Spec.SeedName = ptr.To("some-seed")
 				Expect(p.Delete(event.DeleteEvent{Object: backupEntry})).To(BeTrue())
 			})
 		})
@@ -268,7 +268,7 @@ var _ = Describe("Add", func() {
 			})
 
 			It("should return true when seed name is set", func() {
-				shoot.Spec.SeedName = pointer.String("some-seed")
+				shoot.Spec.SeedName = ptr.To("some-seed")
 				Expect(p.Create(event.CreateEvent{Object: shoot})).To(BeTrue())
 			})
 		})
@@ -288,7 +288,7 @@ var _ = Describe("Add", func() {
 
 			It("should return true because seed name changed", func() {
 				oldShoot := shoot.DeepCopy()
-				shoot.Spec.SeedName = pointer.String("new-seed")
+				shoot.Spec.SeedName = ptr.To("new-seed")
 				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeTrue())
 			})
 
@@ -326,13 +326,13 @@ var _ = Describe("Add", func() {
 			It("should return true because old networking field was nil and new has type", func() {
 				oldShoot := shoot.DeepCopy()
 				oldShoot.Spec.Networking = nil
-				shoot.Spec.Networking.Type = pointer.String("type")
+				shoot.Spec.Networking.Type = ptr.To("type")
 				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeTrue())
 			})
 
 			It("should return true because old networking field was non-nil and had type set and new is nil", func() {
 				oldShoot := shoot.DeepCopy()
-				oldShoot.Spec.Networking.Type = pointer.String("type")
+				oldShoot.Spec.Networking.Type = ptr.To("type")
 				shoot.Spec.Networking = nil
 				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeTrue())
 			})
@@ -345,8 +345,8 @@ var _ = Describe("Add", func() {
 
 			It("should return true because networking type is changed", func() {
 				oldShoot := shoot.DeepCopy()
-				oldShoot.Spec.Networking.Type = pointer.String("foo")
-				shoot.Spec.Networking.Type = pointer.String("bar")
+				oldShoot.Spec.Networking.Type = ptr.To("foo")
+				shoot.Spec.Networking.Type = ptr.To("bar")
 				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeTrue())
 			})
 
@@ -363,7 +363,7 @@ var _ = Describe("Add", func() {
 			})
 
 			It("should return true when seed name is set", func() {
-				shoot.Spec.SeedName = pointer.String("some-seed")
+				shoot.Spec.SeedName = ptr.To("some-seed")
 				Expect(p.Delete(event.DeleteEvent{Object: shoot})).To(BeTrue())
 			})
 		})

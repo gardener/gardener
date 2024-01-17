@@ -19,7 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	. "github.com/gardener/gardener/pkg/utils/imagevector"
@@ -37,9 +37,9 @@ var _ = Describe("validation", func() {
 				{
 					Name:           name,
 					Repository:     repository,
-					Tag:            pointer.String(tag),
-					RuntimeVersion: pointer.String(runtimeVersion),
-					TargetVersion:  pointer.String(targetVersion),
+					Tag:            ptr.To(tag),
+					RuntimeVersion: ptr.To(runtimeVersion),
+					TargetVersion:  ptr.To(targetVersion),
 				},
 			}
 		}

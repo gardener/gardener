@@ -28,6 +28,7 @@ import (
 	"k8s.io/client-go/rest"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -130,7 +131,7 @@ var _ = BeforeSuite(func() {
 			// Higher sync period is used because in some tests, we want to assert an intermediate state of the
 			// resource, which won't be possible if the controller reconciles it back too quickly.
 			SyncPeriod:          &metav1.Duration{Duration: time.Minute},
-			ManagedByLabelValue: pointer.String("gardener"),
+			ManagedByLabelValue: ptr.To("gardener"),
 		},
 		Clock:                         fakeClock,
 		ClassFilter:                   filter,

@@ -23,7 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/client-go/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
@@ -63,7 +63,7 @@ var _ = Describe("Shoot", func() {
 					Namespace: namespace,
 				},
 				Spec: core.ShootSpec{
-					SeedName: pointer.String(name),
+					SeedName: ptr.To(name),
 				},
 			}
 

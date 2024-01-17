@@ -21,6 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/component/apiserver"
@@ -50,8 +51,8 @@ var _ = Describe("Deployment", func() {
 					WatchCacheSizes: &gardencorev1beta1.WatchCacheSizes{
 						Default: pointer.Int32(6),
 						Resources: []gardencorev1beta1.ResourceWatchCacheSize{
-							{APIGroup: pointer.String("foo"), Resource: "bar"},
-							{APIGroup: pointer.String("baz"), Resource: "foo", CacheSize: 7},
+							{APIGroup: ptr.To("foo"), Resource: "bar"},
+							{APIGroup: ptr.To("baz"), Resource: "foo", CacheSize: 7},
 						},
 					},
 				}

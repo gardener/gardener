@@ -291,12 +291,12 @@ var _ = Describe("GardenerAPIServer", func() {
 					Deploy:   true,
 					ScaleUp: hvpav1alpha1.ScaleType{
 						UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-							UpdateMode: pointer.String("Auto"),
+							UpdateMode: ptr.To("Auto"),
 						},
 					},
 					ScaleDown: hvpav1alpha1.ScaleType{
 						UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-							UpdateMode: pointer.String("Auto"),
+							UpdateMode: ptr.To("Auto"),
 						},
 					},
 					Template: hvpav1alpha1.HpaTemplate{
@@ -330,43 +330,43 @@ var _ = Describe("GardenerAPIServer", func() {
 					Deploy:   true,
 					ScaleUp: hvpav1alpha1.ScaleType{
 						UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-							UpdateMode: pointer.String("Auto"),
+							UpdateMode: ptr.To("Auto"),
 						},
-						StabilizationDuration: pointer.String("3m"),
+						StabilizationDuration: ptr.To("3m"),
 						MinChange: hvpav1alpha1.ScaleParams{
 							CPU: hvpav1alpha1.ChangeParams{
-								Value:      pointer.String("300m"),
+								Value:      ptr.To("300m"),
 								Percentage: pointer.Int32(80),
 							},
 							Memory: hvpav1alpha1.ChangeParams{
-								Value:      pointer.String("200M"),
+								Value:      ptr.To("200M"),
 								Percentage: pointer.Int32(80),
 							},
 						},
 					},
 					ScaleDown: hvpav1alpha1.ScaleType{
 						UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-							UpdateMode: pointer.String("Auto"),
+							UpdateMode: ptr.To("Auto"),
 						},
-						StabilizationDuration: pointer.String("15m"),
+						StabilizationDuration: ptr.To("15m"),
 						MinChange: hvpav1alpha1.ScaleParams{
 							CPU: hvpav1alpha1.ChangeParams{
-								Value:      pointer.String("600m"),
+								Value:      ptr.To("600m"),
 								Percentage: pointer.Int32(80),
 							},
 							Memory: hvpav1alpha1.ChangeParams{
-								Value:      pointer.String("600M"),
+								Value:      ptr.To("600M"),
 								Percentage: pointer.Int32(80),
 							},
 						},
 					},
 					LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
 						CPU: hvpav1alpha1.ChangeParams{
-							Value:      pointer.String("1"),
+							Value:      ptr.To("1"),
 							Percentage: pointer.Int32(70),
 						},
 						Memory: hvpav1alpha1.ChangeParams{
-							Value:      pointer.String("1G"),
+							Value:      ptr.To("1G"),
 							Percentage: pointer.Int32(70),
 						},
 					},
@@ -1436,7 +1436,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 							Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
 						},
 						Spec: resourcesv1alpha1.ManagedResourceSpec{
-							Class:       pointer.String("seed"),
+							Class:       ptr.To("seed"),
 							SecretRefs:  []corev1.LocalObjectReference{{Name: managedResourceRuntime.Spec.SecretRefs[0].Name}},
 							KeepObjects: ptr.To(false),
 						},

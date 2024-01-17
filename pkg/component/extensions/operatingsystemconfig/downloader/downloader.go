@@ -150,7 +150,7 @@ func Config(cloudConfigUserDataSecretName, apiServerURL, clusterCASecretName str
 			Name:    Name + ".service",
 			Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 			Enable:  ptr.To(true),
-			Content: pointer.String(`[Unit]
+			Content: ptr.To(`[Unit]
 Description=Downloads the actual cloud config from the Shoot API server and executes it
 After=docker.service docker.socket
 Wants=docker.socket

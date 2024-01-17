@@ -24,7 +24,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -171,7 +170,7 @@ func (p *projectRBAC) Deploy(ctx context.Context) error {
 				ctx,
 				namePrefixSpecificProjectMember+p.project.Name,
 				true,
-				pointer.String(nameProjectMember),
+				ptr.To(nameProjectMember),
 				nil,
 				members,
 				nil,
@@ -198,7 +197,7 @@ func (p *projectRBAC) Deploy(ctx context.Context) error {
 				ctx,
 				namePrefixSpecificProjectViewer+p.project.Name,
 				true,
-				pointer.String(nameProjectViewer),
+				ptr.To(nameProjectViewer),
 				nil,
 				viewers,
 				nil,

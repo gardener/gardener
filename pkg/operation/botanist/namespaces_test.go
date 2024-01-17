@@ -27,7 +27,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -145,7 +144,7 @@ var _ = Describe("Namespaces", func() {
 						Type: shootProviderType,
 					},
 					Networking: &gardencorev1beta1.Networking{
-						Type: pointer.String(networkingProviderType),
+						Type: ptr.To(networkingProviderType),
 					},
 				},
 				Status: gardencorev1beta1.ShootStatus{

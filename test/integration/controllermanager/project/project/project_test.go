@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -53,7 +52,7 @@ var _ = Describe("Project controller tests", func() {
 				Labels: map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.ProjectSpec{
-				Namespace: pointer.String("garden-" + projectName),
+				Namespace: ptr.To("garden-" + projectName),
 			},
 		}
 
@@ -67,7 +66,7 @@ var _ = Describe("Project controller tests", func() {
 				Labels:       map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: pointer.String("mysecretbinding"),
+				SecretBindingName: ptr.To("mysecretbinding"),
 				CloudProfileName:  "cloudprofile1",
 				Region:            "europe-central-1",
 				Provider: gardencorev1beta1.Provider{
@@ -84,13 +83,13 @@ var _ = Describe("Project controller tests", func() {
 					},
 				},
 				DNS: &gardencorev1beta1.DNS{
-					Domain: pointer.String("some-domain.example.com"),
+					Domain: ptr.To("some-domain.example.com"),
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					Version: "1.25.1",
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: pointer.String("foo-networking"),
+					Type: ptr.To("foo-networking"),
 				},
 			},
 		}
@@ -128,7 +127,7 @@ var _ = Describe("Project controller tests", func() {
 	triggerAndWaitForReconciliation := func(project *gardencorev1beta1.Project) {
 		By("Trigger Project Reconciliation")
 		patch := client.MergeFrom(project.DeepCopy())
-		project.Spec.Description = pointer.String(time.Now().UTC().Format(time.RFC3339Nano))
+		project.Spec.Description = ptr.To(time.Now().UTC().Format(time.RFC3339Nano))
 		Expect(testClient.Patch(ctx, project, patch)).To(Succeed())
 
 		By("Wait for Project to be reconciled")

@@ -27,7 +27,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
 	kubeinformers "k8s.io/client-go/informers"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -234,7 +233,7 @@ var _ = Describe("dns", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
 				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(MatchFields(IgnoreExtras, Fields{
-					"Type":    Equal(pointer.String(providerType)),
+					"Type":    Equal(ptr.To(providerType)),
 					"Primary": Equal(ptr.To(true)),
 				})))
 			})
@@ -264,13 +263,13 @@ var _ = Describe("dns", func() {
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
 				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
-						"Type":    Equal(pointer.String(providerType)),
+						"Type":    Equal(ptr.To(providerType)),
 						"Primary": Equal(ptr.To(true)),
 					}),
 					MatchFields(IgnoreExtras, Fields{
-						"Type":       Equal(pointer.String(providerType)),
+						"Type":       Equal(ptr.To(providerType)),
 						"Primary":    BeNil(),
-						"SecretName": Equal(pointer.String(secretName)),
+						"SecretName": Equal(ptr.To(secretName)),
 					}),
 				))
 			})
@@ -305,12 +304,12 @@ var _ = Describe("dns", func() {
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
 				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
-						"Type": Equal(pointer.String(providerType)),
+						"Type": Equal(ptr.To(providerType)),
 					}),
 					MatchFields(IgnoreExtras, Fields{
-						"Type":       Equal(pointer.String(providerType)),
+						"Type":       Equal(ptr.To(providerType)),
 						"Primary":    Equal(ptr.To(true)),
-						"SecretName": Equal(pointer.String(secretName)),
+						"SecretName": Equal(ptr.To(secretName)),
 					}),
 				))
 			})
@@ -375,16 +374,16 @@ var _ = Describe("dns", func() {
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
 				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
-						"Type":    Equal(pointer.String(providerType)),
+						"Type":    Equal(ptr.To(providerType)),
 						"Primary": BeNil(),
 					}),
 					MatchFields(IgnoreExtras, Fields{
-						"Type":       Equal(pointer.String(providerType)),
+						"Type":       Equal(ptr.To(providerType)),
 						"Primary":    BeNil(),
-						"SecretName": Equal(pointer.String(secretName)),
+						"SecretName": Equal(ptr.To(secretName)),
 					}),
 					MatchFields(IgnoreExtras, Fields{
-						"Type":    Equal(pointer.String(providerType)),
+						"Type":    Equal(ptr.To(providerType)),
 						"Primary": BeNil(),
 					}),
 				))
@@ -460,14 +459,14 @@ var _ = Describe("dns", func() {
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
 				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
-						"Type": Equal(pointer.String(providerType)),
+						"Type": Equal(ptr.To(providerType)),
 					}),
 					MatchFields(IgnoreExtras, Fields{
-						"Type":    Equal(pointer.String(providerType)),
+						"Type":    Equal(ptr.To(providerType)),
 						"Primary": Equal(ptr.To(true)),
 					}),
 					MatchFields(IgnoreExtras, Fields{
-						"Type": Equal(pointer.String(providerType)),
+						"Type": Equal(ptr.To(providerType)),
 					}),
 				))
 			})
@@ -532,9 +531,9 @@ var _ = Describe("dns", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(fmt.Sprintf("%s.%s.%s", shootName, projectName, domain)))
 				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(MatchFields(IgnoreExtras, Fields{
-					"Type":       Equal(pointer.String(providerType)),
+					"Type":       Equal(ptr.To(providerType)),
 					"Primary":    BeNil(),
-					"SecretName": Equal(pointer.String(secretName)),
+					"SecretName": Equal(ptr.To(secretName)),
 				})))
 			})
 

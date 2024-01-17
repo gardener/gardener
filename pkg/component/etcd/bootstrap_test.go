@@ -55,7 +55,7 @@ var _ = Describe("Etcd", func() {
 		kubernetesVersion        *semver.Version
 		etcdDruidImage           = "etcd/druid:1.2.3"
 		imageVectorOverwrite     *string
-		imageVectorOverwriteFull = pointer.String("some overwrite")
+		imageVectorOverwriteFull = ptr.To("some overwrite")
 
 		priorityClassName = "some-priority-class"
 
@@ -533,7 +533,7 @@ spec:
 					ResourceVersion: "1",
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: pointer.String("seed"),
+					Class: ptr.To("seed"),
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},

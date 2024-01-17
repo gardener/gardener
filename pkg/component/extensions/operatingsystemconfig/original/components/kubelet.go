@@ -17,7 +17,7 @@ package components
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
@@ -89,7 +89,7 @@ func KubeletConfigParametersFromCoreV1beta1KubeletConfig(kubeletConfig *gardenco
 	if kubeletConfig != nil {
 		out.ContainerLogMaxFiles = kubeletConfig.ContainerLogMaxFiles
 		if val := kubeletConfig.ContainerLogMaxSize; val != nil {
-			out.ContainerLogMaxSize = pointer.String(val.String())
+			out.ContainerLogMaxSize = ptr.To(val.String())
 		}
 		out.CpuCFSQuota = kubeletConfig.CPUCFSQuota
 		out.CpuManagerPolicy = kubeletConfig.CPUManagerPolicy

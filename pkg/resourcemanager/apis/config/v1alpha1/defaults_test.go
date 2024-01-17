@@ -201,8 +201,8 @@ var _ = Describe("ResourceManager defaulting", func() {
 
 		It("should not overwrite already set values for ResourceManagerControllerConfiguration", func() {
 			obj.Controllers = ResourceManagerControllerConfiguration{
-				ClusterID:     pointer.String("foo"),
-				ResourceClass: pointer.String("bar"),
+				ClusterID:     ptr.To("foo"),
+				ResourceClass: ptr.To("bar"),
 			}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
@@ -345,7 +345,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 				ConcurrentSyncs:     pointer.Int(1),
 				SyncPeriod:          &metav1.Duration{Duration: time.Second},
 				AlwaysUpdate:        ptr.To(true),
-				ManagedByLabelValue: pointer.String("foo"),
+				ManagedByLabelValue: ptr.To("foo"),
 			}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
@@ -495,7 +495,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 		It("should not overwrite already set values for PodSchedulerNameWebhookConfig", func() {
 			obj.Webhooks.PodSchedulerName = PodSchedulerNameWebhookConfig{
 				Enabled:       true,
-				SchedulerName: pointer.String("foo"),
+				SchedulerName: ptr.To("foo"),
 			}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)

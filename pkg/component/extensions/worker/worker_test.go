@@ -31,7 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -97,7 +97,7 @@ var _ = Describe("Worker", func() {
 		worker1ProviderConfig                 = &runtime.RawExtension{Raw: []byte(`{"bar":"baz"}`)}
 		worker1Zone1                          = "worker1zone1"
 		worker1Zone2                          = "worker1zone1"
-		worker1Arch                           = pointer.String("amd64")
+		worker1Arch                           = ptr.To("amd64")
 
 		worker2Name                      = "worker2"
 		worker2Minimum             int32 = 5
@@ -108,7 +108,7 @@ var _ = Describe("Worker", func() {
 		worker2MachineImageName          = "worker2machineimage"
 		worker2MachineImageVersion       = "worker2machineimagev1"
 		worker2UserData                  = []byte("bootstrap-me-now")
-		worker2Arch                      = pointer.String("arm64")
+		worker2Arch                      = ptr.To("arm64")
 
 		machineTypes = []gardencorev1beta1.MachineType{
 			{
@@ -305,7 +305,7 @@ var _ = Describe("Worker", func() {
 						},
 					},
 					KubeletDataVolumeName:            &worker1KubeletDataVolumeName,
-					KubernetesVersion:                pointer.String(kubernetesVersion.String()),
+					KubernetesVersion:                ptr.To(kubernetesVersion.String()),
 					Zones:                            []string{worker1Zone1, worker1Zone2},
 					MachineControllerManagerSettings: worker1MCMSettings,
 					NodeTemplate:                     workerPool1NodeTemplate,

@@ -125,7 +125,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 					Spec: gardencorev1beta1.SeedSpec{
 						Backup: &gardencorev1beta1.SeedBackup{
 							Provider: "test",
-							Region:   pointer.String("bar"),
+							Region:   ptr.To("bar"),
 							SecretRef: corev1.SecretReference{
 								Name:      backupSecret.Name,
 								Namespace: backupSecret.Namespace,
@@ -173,10 +173,10 @@ var _ = Describe("ManagedSeed controller test", func() {
 					EnableStaticTokenKubeconfig: ptr.To(true),
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: pointer.String("foo"),
+					Type: ptr.To("foo"),
 				},
 				DNS: &gardencorev1beta1.DNS{
-					Domain: pointer.String("replica-name.example.com"),
+					Domain: ptr.To("replica-name.example.com"),
 				},
 				Provider: gardencorev1beta1.Provider{
 					Type: "foo",
@@ -185,7 +185,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 							Name: "some-worker",
 							Machine: gardencorev1beta1.Machine{
 								Type:         "some-machine-type",
-								Architecture: pointer.String("amd64"),
+								Architecture: ptr.To("amd64"),
 							},
 							Maximum: 2,
 							Minimum: 1,
@@ -275,7 +275,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 		})
 
 		By("Create Shoot")
-		shoot.Spec.SecretBindingName = pointer.String(shootSecretBinding.Name)
+		shoot.Spec.SecretBindingName = ptr.To(shootSecretBinding.Name)
 		Expect(testClient.Create(ctx, shoot)).To(Succeed())
 		log.Info("Created Shoot for test", "shoot", client.ObjectKeyFromObject(shoot))
 

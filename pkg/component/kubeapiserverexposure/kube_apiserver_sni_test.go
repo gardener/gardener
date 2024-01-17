@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -208,7 +207,7 @@ var _ = Describe("#SNI", func() {
 				Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				Class:       pointer.String("seed"),
+				Class:       ptr.To("seed"),
 				KeepObjects: ptr.To(false),
 			},
 		}

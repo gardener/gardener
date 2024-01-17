@@ -23,7 +23,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -44,7 +44,7 @@ var _ = Describe("Identity", func() {
 		fakeClient = fakeclient.NewClientBuilder().Build()
 		cfg = &config.ResourceManagerConfiguration{
 			Controllers: config.ResourceManagerControllerConfiguration{
-				ClusterID: pointer.String(""),
+				ClusterID: ptr.To(""),
 			},
 		}
 		determiner = &IdentityDeterminer{
@@ -68,7 +68,7 @@ var _ = Describe("Identity", func() {
 		})
 
 		It("should do nothing because cluster id is already set", func() {
-			determiner.Config.Controllers.ClusterID = pointer.String("foo")
+			determiner.Config.Controllers.ClusterID = ptr.To("foo")
 
 			Expect(determiner.Start(ctx)).To(Succeed())
 			Expect(cfg.Controllers.ClusterID).To(PointTo(Equal("foo")))
@@ -76,7 +76,7 @@ var _ = Describe("Identity", func() {
 
 		Context("when cluster id shall be determined but not forced", func() {
 			BeforeEach(func() {
-				determiner.Config.Controllers.ClusterID = pointer.String("<default>")
+				determiner.Config.Controllers.ClusterID = ptr.To("<default>")
 			})
 
 			It("should do nothing because cluster-identity configmap does not exist", func() {
@@ -102,7 +102,7 @@ var _ = Describe("Identity", func() {
 
 		Context("when cluster id shall be determined and forced", func() {
 			BeforeEach(func() {
-				determiner.Config.Controllers.ClusterID = pointer.String("<cluster>")
+				determiner.Config.Controllers.ClusterID = ptr.To("<cluster>")
 			})
 
 			It("should return an error because the cluster-identity configmap does not exist", func() {

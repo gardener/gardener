@@ -110,14 +110,14 @@ ExecStart=/opt/bin/valitail -config.file=` + PathConfig
 						Name:    UnitName,
 						Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 						Enable:  ptr.To(true),
-						Content: pointer.String(unitContent),
+						Content: ptr.To(unitContent),
 					}
 
 					valitailTokenFetchUnit := extensionsv1alpha1.Unit{
 						Name:    "valitail-fetch-token.service",
 						Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 						Enable:  ptr.To(true),
-						Content: pointer.String(`[Unit]
+						Content: ptr.To(`[Unit]
 Description=valitail token fetcher
 After=` + afterUnit + `
 [Install]
@@ -419,13 +419,13 @@ ExecStart=/bin/sh -c "echo service valitail.service is removed!; while true; do 
 							Name:    "valitail.service",
 							Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 							Enable:  ptr.To(true),
-							Content: pointer.String(unitContent),
+							Content: ptr.To(unitContent),
 						},
 						{
 							Name:    "valitail-fetch-token.service",
 							Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 							Enable:  ptr.To(true),
-							Content: pointer.String(`[Unit]
+							Content: ptr.To(`[Unit]
 Description=valitail token fetcher
 After=` + afterUnit + `
 [Install]

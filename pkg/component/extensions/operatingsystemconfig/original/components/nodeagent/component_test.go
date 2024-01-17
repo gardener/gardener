@@ -62,8 +62,8 @@ var _ = Describe("Component", func() {
 				Key:                 key,
 				KubernetesVersion:   kubernetesVersion,
 				APIServerURL:        apiServerURL,
-				CABundle:            pointer.String(string(caBundle)),
-				Images:              map[string]*imagevectorutils.Image{"gardener-node-agent": {Repository: "gardener-node-agent", Tag: pointer.String("v1")}},
+				CABundle:            ptr.To(string(caBundle)),
+				Images:              map[string]*imagevectorutils.Image{"gardener-node-agent": {Repository: "gardener-node-agent", Tag: ptr.To("v1")}},
 				OSCSyncJitterPeriod: syncJitterPeriod,
 			})
 
@@ -83,7 +83,7 @@ var _ = Describe("Component", func() {
 				extensionsv1alpha1.Unit{
 					Name:   "gardener-node-agent.service",
 					Enable: ptr.To(true),
-					Content: pointer.String(`[Unit]
+					Content: ptr.To(`[Unit]
 Description=Gardener Node Agent
 After=network-online.target
 

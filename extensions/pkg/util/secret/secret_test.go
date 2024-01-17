@@ -23,7 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -77,7 +77,7 @@ var _ = Describe("Secret", func() {
 					Provider: gardencorev1beta1.Provider{
 						Type: "gcp",
 					},
-					SecretBindingName: pointer.String(secretBinding.Name),
+					SecretBindingName: ptr.To(secretBinding.Name),
 				},
 			}
 

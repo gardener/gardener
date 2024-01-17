@@ -39,7 +39,7 @@ var _ = Describe("Downloader", func() {
 				Name:    "cloud-config-downloader.service",
 				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 				Enable:  ptr.To(true),
-				Content: pointer.String(unitContent),
+				Content: ptr.To(unitContent),
 			}))
 			Expect(files).To(ConsistOf(
 				extensionsv1alpha1.File{

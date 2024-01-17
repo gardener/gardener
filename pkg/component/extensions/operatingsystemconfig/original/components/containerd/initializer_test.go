@@ -37,7 +37,7 @@ var _ = Describe("Initializer", func() {
 				"pause-container": {
 					Name:       "pause-container",
 					Repository: pauseContainerImageRepo,
-					Tag:        pointer.String(pauseContainerImageTag),
+					Tag:        ptr.To(pauseContainerImageTag),
 				},
 			}
 		)
@@ -56,7 +56,7 @@ var _ = Describe("Initializer", func() {
 					Name:    "containerd-initializer.service",
 					Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 					Enable:  ptr.To(true),
-					Content: pointer.String(`[Unit]
+					Content: ptr.To(`[Unit]
 Description=Containerd initializer
 [Install]
 WantedBy=multi-user.target

@@ -27,7 +27,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -169,7 +168,7 @@ var _ = Describe("Reconciler", func() {
 					},
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: pointer.String(type3),
+					Type: ptr.To(type3),
 				},
 				Extensions: []gardencorev1beta1.Extension{
 					{Type: type4},
@@ -195,7 +194,7 @@ var _ = Describe("Reconciler", func() {
 					},
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: pointer.String(type3),
+					Type: ptr.To(type3),
 				},
 			},
 		}
@@ -530,7 +529,7 @@ var _ = Describe("Reconciler", func() {
 						Name: "s4",
 					},
 					Spec: gardencorev1beta1.ShootSpec{
-						SeedName: pointer.String("anotherSeed"),
+						SeedName: ptr.To("anotherSeed"),
 						Provider: gardencorev1beta1.Provider{
 							Type: type2,
 							Workers: []gardencorev1beta1.Worker{
@@ -544,7 +543,7 @@ var _ = Describe("Reconciler", func() {
 							},
 						},
 						Networking: &gardencorev1beta1.Networking{
-							Type: pointer.String(type3),
+							Type: ptr.To(type3),
 						},
 						Extensions: []gardencorev1beta1.Extension{
 							{Type: type4},

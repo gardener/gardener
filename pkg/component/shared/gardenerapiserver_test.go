@@ -323,11 +323,11 @@ var _ = Describe("GardenerAPIServer", func() {
 								},
 							},
 						}
-						auditWebhookConfig = &apiserver.AuditWebhook{Version: pointer.String("audit-version")}
+						auditWebhookConfig = &apiserver.AuditWebhook{Version: ptr.To("audit-version")}
 					},
 					&apiserver.AuditConfig{
 						Policy:  &policy,
-						Webhook: &apiserver.AuditWebhook{Version: pointer.String("audit-version")},
+						Webhook: &apiserver.AuditWebhook{Version: ptr.To("audit-version")},
 					},
 					Not(HaveOccurred()),
 				),

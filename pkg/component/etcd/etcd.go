@@ -310,7 +310,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 						Name:      etcdCASecret.Name,
 						Namespace: etcdCASecret.Namespace,
 					},
-					DataKey: pointer.String(secretsutils.DataKeyCertificateBundle),
+					DataKey: ptr.To(secretsutils.DataKeyCertificateBundle),
 				},
 				ServerTLSSecretRef: corev1.SecretReference{
 					Name:      serverSecret.Name,
@@ -340,7 +340,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 						Name:      etcdPeerCASecretName,
 						Namespace: e.namespace,
 					},
-					DataKey: pointer.String(secretsutils.DataKeyCertificateBundle),
+					DataKey: ptr.To(secretsutils.DataKeyCertificateBundle),
 				},
 				ServerTLSSecretRef: corev1.SecretReference{
 					Name:      peerServerSecretName,
@@ -356,7 +356,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 						Name:      etcdCASecret.Name,
 						Namespace: etcdCASecret.Namespace,
 					},
-					DataKey: pointer.String(secretsutils.DataKeyCertificateBundle),
+					DataKey: ptr.To(secretsutils.DataKeyCertificateBundle),
 				},
 				ServerTLSSecretRef: corev1.SecretReference{
 					Name:      serverSecret.Name,
@@ -418,7 +418,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 		scaleDownUpdateMode := e.values.HvpaConfig.ScaleDownUpdateMode
 		if scaleDownUpdateMode == nil {
-			scaleDownUpdateMode = pointer.String(hvpav1alpha1.UpdateModeMaintenanceWindow)
+			scaleDownUpdateMode = ptr.To(hvpav1alpha1.UpdateModeMaintenanceWindow)
 		}
 
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, hvpa, func() error {
@@ -466,14 +466,14 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					UpdatePolicy: hvpav1alpha1.UpdatePolicy{
 						UpdateMode: &updateModeAuto,
 					},
-					StabilizationDuration: pointer.String("5m"),
+					StabilizationDuration: ptr.To("5m"),
 					MinChange: hvpav1alpha1.ScaleParams{
 						CPU: hvpav1alpha1.ChangeParams{
-							Value:      pointer.String("1"),
+							Value:      ptr.To("1"),
 							Percentage: pointer.Int32(80),
 						},
 						Memory: hvpav1alpha1.ChangeParams{
-							Value:      pointer.String("2G"),
+							Value:      ptr.To("2G"),
 							Percentage: pointer.Int32(80),
 						},
 					},
@@ -482,25 +482,25 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					UpdatePolicy: hvpav1alpha1.UpdatePolicy{
 						UpdateMode: scaleDownUpdateMode,
 					},
-					StabilizationDuration: pointer.String("15m"),
+					StabilizationDuration: ptr.To("15m"),
 					MinChange: hvpav1alpha1.ScaleParams{
 						CPU: hvpav1alpha1.ChangeParams{
-							Value:      pointer.String("1"),
+							Value:      ptr.To("1"),
 							Percentage: pointer.Int32(80),
 						},
 						Memory: hvpav1alpha1.ChangeParams{
-							Value:      pointer.String("2G"),
+							Value:      ptr.To("2G"),
 							Percentage: pointer.Int32(80),
 						},
 					},
 				},
 				LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
 					CPU: hvpav1alpha1.ChangeParams{
-						Value:      pointer.String("2"),
+						Value:      ptr.To("2"),
 						Percentage: pointer.Int32(40),
 					},
 					Memory: hvpav1alpha1.ChangeParams{
-						Value:      pointer.String("5G"),
+						Value:      ptr.To("5G"),
 						Percentage: pointer.Int32(40),
 					},
 				},

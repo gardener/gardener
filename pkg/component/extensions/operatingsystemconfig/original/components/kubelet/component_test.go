@@ -57,12 +57,12 @@ var _ = Describe("Component", func() {
 				"hyperkube": {
 					Name:       "pause-container",
 					Repository: hyperkubeImageRepo,
-					Tag:        pointer.String(hyperkubeImageTag),
+					Tag:        ptr.To(hyperkubeImageTag),
 				},
 				"pause-container": {
 					Name:       "pause-container",
 					Repository: pauseContainerImageRepo,
-					Tag:        pointer.String(pauseContainerImageTag),
+					Tag:        ptr.To(pauseContainerImageTag),
 				},
 			}
 			ctx.NodeLabels = map[string]string{
@@ -408,7 +408,7 @@ ExecStartPre=` + PathScriptCopyKubernetesBinary + ` kubelet`
 		Name:    "kubelet.service",
 		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 		Enable:  ptr.To(true),
-		Content: pointer.String(`[Unit]
+		Content: ptr.To(`[Unit]
 Description=kubelet daemon
 Documentation=https://kubernetes.io/docs/admin/kubelet
 After=containerd.service
@@ -476,7 +476,7 @@ func kubeletMonitorUnit() extensionsv1alpha1.Unit {
 		Name:    "kubelet-monitor.service",
 		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 		Enable:  ptr.To(true),
-		Content: pointer.String(`[Unit]
+		Content: ptr.To(`[Unit]
 Description=Kubelet-monitor daemon
 After=kubelet.service
 [Install]

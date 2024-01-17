@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -57,8 +58,8 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 					Version: "1.18.14",
 				},
 				Networking: &core.Networking{
-					Type:  pointer.String("foo"),
-					Nodes: pointer.String("10.181.0.0/18"),
+					Type:  ptr.To("foo"),
+					Nodes: ptr.To("10.181.0.0/18"),
 				},
 				Provider: core.Provider{
 					Type: "foo",
@@ -67,7 +68,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 							Name: "some-worker",
 							Machine: core.Machine{
 								Type:         "some-machine-type",
-								Architecture: pointer.String("amd64"),
+								Architecture: ptr.To("amd64"),
 							},
 							Maximum: 2,
 							Minimum: 1,
@@ -75,7 +76,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 					},
 				},
 				Region:            "some-region",
-				SecretBindingName: pointer.String("shoot-operator-foo"),
+				SecretBindingName: ptr.To("shoot-operator-foo"),
 			},
 		}
 
@@ -401,7 +402,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 			DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.MutableShootSpecNetworkingNodes, true))
 			shootCopy := shoot.DeepCopy()
 			shootCopy.Spec.Region = "other-region"
-			shootCopy.Spec.Networking.Nodes = pointer.String("10.181.0.0/16")
+			shootCopy.Spec.Networking.Nodes = ptr.To("10.181.0.0/16")
 			newManagedSeedSet.Spec.ShootTemplate.Spec = shootCopy.Spec
 
 			errorList := ValidateManagedSeedSetUpdate(newManagedSeedSet, managedSeedSet)

@@ -534,7 +534,7 @@ var _ = Describe("merger", func() {
 					Spec: corev1.PersistentVolumeClaimSpec{
 						AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 						VolumeName:       "pvc-foo",
-						StorageClassName: pointer.String("ultra-fast"),
+						StorageClassName: ptr.To("ultra-fast"),
 					},
 				},
 			}
@@ -552,7 +552,7 @@ var _ = Describe("merger", func() {
 					Spec: corev1.PersistentVolumeClaimSpec{
 						AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 						VolumeName:       "pvc-foo",
-						StorageClassName: pointer.String("ultra-fast"),
+						StorageClassName: ptr.To("ultra-fast"),
 					},
 				},
 			}

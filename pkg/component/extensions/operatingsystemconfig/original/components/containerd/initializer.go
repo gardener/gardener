@@ -78,7 +78,7 @@ func (initializer) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []
 				Name:    unitNameInitializer,
 				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 				Enable:  ptr.To(true),
-				Content: pointer.String(`[Unit]
+				Content: ptr.To(`[Unit]
 Description=Containerd initializer
 [Install]
 WantedBy=multi-user.target

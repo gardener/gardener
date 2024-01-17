@@ -289,7 +289,7 @@ var _ = Describe("Shoot", func() {
 			workerPool = gardencorev1beta1.Worker{
 				Name: "worker",
 				Machine: gardencorev1beta1.Machine{
-					Architecture: pointer.String("arm64"),
+					Architecture: ptr.To("arm64"),
 				},
 				SystemComponents: &gardencorev1beta1.WorkerSystemComponents{
 					Allow: true,
@@ -682,14 +682,14 @@ var _ = Describe("Shoot", func() {
 		It("returns the correct seed names of a Shoot", func() {
 			specSeedName, statusSeedName := GetShootSeedNames(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
-					SeedName: pointer.String("spec"),
+					SeedName: ptr.To("spec"),
 				},
 				Status: gardencorev1beta1.ShootStatus{
-					SeedName: pointer.String("status"),
+					SeedName: ptr.To("status"),
 				},
 			})
-			Expect(specSeedName).To(Equal(pointer.String("spec")))
-			Expect(statusSeedName).To(Equal(pointer.String("status")))
+			Expect(specSeedName).To(Equal(ptr.To("spec")))
+			Expect(statusSeedName).To(Equal(ptr.To("status")))
 		})
 	})
 
@@ -1111,14 +1111,14 @@ var _ = Describe("Shoot", func() {
 						},
 					},
 					Networking: &gardencorev1beta1.Networking{
-						Type: pointer.String(networkingType),
+						Type: ptr.To(networkingType),
 					},
 					Extensions: []gardencorev1beta1.Extension{
 						{Type: extensionType1},
 					},
 					DNS: &gardencorev1beta1.DNS{
 						Providers: []gardencorev1beta1.DNSProvider{
-							{Type: pointer.String(dnsProviderType3)},
+							{Type: ptr.To(dnsProviderType3)},
 						},
 					},
 				},

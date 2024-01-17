@@ -23,6 +23,7 @@ import (
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -119,7 +120,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targe
 			Clock:           clock.RealClock{},
 			JitterFunc:      wait.Jitter,
 			APIAudiences:    []string{v1beta1constants.GardenerAudience},
-			Class:           pointer.String(resourcesv1alpha1.ResourceManagerClassShoot),
+			Class:           ptr.To(resourcesv1alpha1.ResourceManagerClassShoot),
 		}).AddToManager(mgr, sourceCluster, targetCluster); err != nil {
 			return fmt.Errorf("failed adding token requestor controller: %w", err)
 		}

@@ -1228,7 +1228,7 @@ var _ = Describe("VPA", func() {
 				Name:                    "vpa.k8s.io",
 				AdmissionReviewVersions: []string{"v1"},
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
-					URL: pointer.String(fmt.Sprintf("https://vpa-webhook.%s:443", namespace)),
+					URL: ptr.To(fmt.Sprintf("https://vpa-webhook.%s:443", namespace)),
 				},
 				FailurePolicy:      &webhookFailurePolicy,
 				MatchPolicy:        &webhookMatchPolicy,
@@ -1309,7 +1309,7 @@ var _ = Describe("VPA", func() {
 							ResourceVersion: "1",
 						},
 						Spec: resourcesv1alpha1.ManagedResourceSpec{
-							Class: pointer.String("seed"),
+							Class: ptr.To("seed"),
 							SecretRefs: []corev1.LocalObjectReference{{
 								Name: managedResource.Spec.SecretRefs[0].Name,
 							}},
@@ -1465,7 +1465,7 @@ var _ = Describe("VPA", func() {
 						ResourceVersion: "1",
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						Class: pointer.String("seed"),
+						Class: ptr.To("seed"),
 						SecretRefs: []corev1.LocalObjectReference{{
 							Name: managedResource.Spec.SecretRefs[0].Name,
 						}},

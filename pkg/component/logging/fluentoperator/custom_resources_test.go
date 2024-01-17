@@ -29,7 +29,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -196,7 +195,7 @@ var _ = Describe("Custom Resources", func() {
 					ResourceVersion: "1",
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: pointer.String("seed"),
+					Class: ptr.To("seed"),
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: customResourcesManagedResource.Spec.SecretRefs[0].Name,
 					}},

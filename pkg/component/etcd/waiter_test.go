@@ -100,7 +100,7 @@ var _ = Describe("#Wait", func() {
 				Begin: "1234",
 				End:   "5678",
 			},
-			ScaleDownUpdateMode: pointer.String(hvpav1alpha1.UpdateModeMaintenanceWindow),
+			ScaleDownUpdateMode: ptr.To(hvpav1alpha1.UpdateModeMaintenanceWindow),
 		})
 
 		expected = &druidv1alpha1.Etcd{
@@ -134,7 +134,7 @@ var _ = Describe("#Wait", func() {
 			&TimeNow, mockNow.Do,
 		)()
 		mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
-		expected.Status.LastError = pointer.String("some error")
+		expected.Status.LastError = ptr.To("some error")
 
 		Expect(c.Create(ctx, expected)).To(Succeed(), "creating etcd succeeds")
 		Expect(etcd.Wait(ctx)).To(MatchError(ContainSubstring("some error")))
@@ -205,7 +205,7 @@ var _ = Describe("#CheckEtcdObject", func() {
 	})
 
 	It("should return error if reconciliation failed", func() {
-		obj.Status.LastError = pointer.String("foo")
+		obj.Status.LastError = ptr.To("foo")
 		err := CheckEtcdObject(obj)
 		Expect(err).To(MatchError("foo"))
 		Expect(retry.IsRetriable(err)).To(BeTrue())

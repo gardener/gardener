@@ -241,7 +241,7 @@ rules:
 			InjectAuditSettings(deployment, configMapAuditPolicy, secretWebhookKubeconfig, &AuditConfig{Webhook: &AuditWebhook{
 				Kubeconfig:   []byte("foo"),
 				BatchMaxSize: pointer.Int32(2),
-				Version:      pointer.String("bar"),
+				Version:      ptr.To("bar"),
 			}})
 
 			Expect(deployment).To(Equal(&appsv1.Deployment{

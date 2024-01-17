@@ -20,7 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/registry/core/seed"
@@ -41,7 +41,7 @@ var _ = Describe("Strategy", func() {
 		})
 
 		It("should preserve the status", func() {
-			newSeed.Status = core.SeedStatus{KubernetesVersion: pointer.String("1.2.3")}
+			newSeed.Status = core.SeedStatus{KubernetesVersion: ptr.To("1.2.3")}
 			strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
 			Expect(newSeed.Status).To(Equal(oldSeed.Status))
 		})

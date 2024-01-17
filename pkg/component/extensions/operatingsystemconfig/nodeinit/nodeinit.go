@@ -58,7 +58,7 @@ func Config(
 			Name:    nodeagentv1alpha1.InitUnitName,
 			Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 			Enable:  ptr.To(true),
-			Content: pointer.String(`[Unit]
+			Content: ptr.To(`[Unit]
 Description=Downloads the gardener-node-agent binary from the container registry and bootstraps it.
 After=network-online.target
 Wants=network-online.target

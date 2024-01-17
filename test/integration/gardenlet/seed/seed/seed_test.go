@@ -140,7 +140,7 @@ var _ = Describe("Seed controller tests", func() {
 				},
 				SNI: &config.SNI{
 					Ingress: &config.SNIIngress{
-						Namespace: pointer.String(testNamespace.Name + "-istio"),
+						Namespace: ptr.To(testNamespace.Name + "-istio"),
 					},
 				},
 				Logging: &config.Logging{
@@ -226,7 +226,7 @@ var _ = Describe("Seed controller tests", func() {
 				Networks: gardencorev1beta1.SeedNetworks{
 					Pods:     "10.0.0.0/16",
 					Services: "10.1.0.0/16",
-					Nodes:    pointer.String("10.2.0.0/16"),
+					Nodes:    ptr.To("10.2.0.0/16"),
 				},
 				Ingress: &gardencorev1beta1.Ingress{
 					Domain: "someingress.example.com",

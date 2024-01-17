@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/rest"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -77,14 +76,14 @@ var _ = Describe("Strategy", func() {
 			BeforeEach(func() {
 				oldShoot = &core.Shoot{
 					Spec: core.ShootSpec{
-						SeedName: pointer.String("seed"),
+						SeedName: ptr.To("seed"),
 					},
 				}
 				newShoot = oldShoot.DeepCopy()
 			})
 
 			It("should not allow change of seedName on shoot spec update", func() {
-				newShoot.Spec.SeedName = pointer.String("new-seed")
+				newShoot.Spec.SeedName = ptr.To("new-seed")
 				strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 
 				Expect(newShoot.Spec.SeedName).To(Equal(oldShoot.Spec.SeedName))
@@ -436,8 +435,8 @@ var _ = Describe("Strategy", func() {
 			It("should correctly add the seed labels", func() {
 				metav1.SetMetaDataLabel(&shoot.ObjectMeta, "foo", "bar")
 				metav1.SetMetaDataLabel(&shoot.ObjectMeta, "seed.gardener.cloud/foo", "true")
-				shoot.Spec.SeedName = pointer.String("spec-seed")
-				shoot.Status.SeedName = pointer.String("status-seed")
+				shoot.Spec.SeedName = ptr.To("spec-seed")
+				shoot.Status.SeedName = ptr.To("status-seed")
 
 				strategy.Canonicalize(shoot)
 

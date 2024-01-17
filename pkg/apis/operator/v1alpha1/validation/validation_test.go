@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/component-base/featuregate"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
@@ -1160,21 +1161,21 @@ var _ = Describe("Validation Tests", func() {
 							// APIGroup set
 							Entry("valid (apps/deployments=0)", &gardencorev1beta1.WatchCacheSizes{
 								Resources: []gardencorev1beta1.ResourceWatchCacheSize{{
-									APIGroup:  pointer.String("apps"),
+									APIGroup:  ptr.To("apps"),
 									Resource:  "deployments",
 									CacheSize: 0,
 								}},
 							}, BeEmpty()),
 							Entry("valid (apps/deployments=>0)", &gardencorev1beta1.WatchCacheSizes{
 								Resources: []gardencorev1beta1.ResourceWatchCacheSize{{
-									APIGroup:  pointer.String("apps"),
+									APIGroup:  ptr.To("apps"),
 									Resource:  "deployments",
 									CacheSize: 42,
 								}},
 							}, BeEmpty()),
 							Entry("invalid (apps/deployments=<0)", &gardencorev1beta1.WatchCacheSizes{
 								Resources: []gardencorev1beta1.ResourceWatchCacheSize{{
-									APIGroup:  pointer.String("apps"),
+									APIGroup:  ptr.To("apps"),
 									Resource:  "deployments",
 									CacheSize: negativeSize,
 								}},

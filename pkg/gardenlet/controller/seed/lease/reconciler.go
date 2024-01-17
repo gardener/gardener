@@ -25,7 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -112,7 +112,7 @@ func (r *Reconciler) renewLeaseForSeed(ctx context.Context, seed *gardencorev1be
 			Name:       seed.GetName(),
 			UID:        seed.GetUID(),
 		}}
-		lease.Spec.HolderIdentity = pointer.String(seed.Name)
+		lease.Spec.HolderIdentity = ptr.To(seed.Name)
 		lease.Spec.LeaseDurationSeconds = r.Config.LeaseResyncSeconds
 		lease.Spec.RenewTime = &metav1.MicroTime{Time: r.Clock.Now()}
 		return nil

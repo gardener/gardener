@@ -36,6 +36,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -161,7 +162,7 @@ var _ = Describe("Certificates tests", func() {
 		shootMutatingWebhook = admissionregistrationv1.MutatingWebhook{
 			Name: fmt.Sprintf("%s.%s.extensions.gardener.cloud", shootMutatingWebhookName, extensionType),
 			ClientConfig: admissionregistrationv1.WebhookClientConfig{
-				URL: pointer.String("https://gardener-extension-" + extensionName + "." + extensionNamespace.Name + ":443/" + shootMutatingWebhookPath),
+				URL: ptr.To("https://gardener-extension-" + extensionName + "." + extensionNamespace.Name + ":443/" + shootMutatingWebhookPath),
 			},
 			Rules: []admissionregistrationv1.RuleWithOperations{
 				{
@@ -181,7 +182,7 @@ var _ = Describe("Certificates tests", func() {
 		shootValidatingWebhook = admissionregistrationv1.ValidatingWebhook{
 			Name: fmt.Sprintf("%s.%s.extensions.gardener.cloud", shootValidatingWebhookName, extensionType),
 			ClientConfig: admissionregistrationv1.WebhookClientConfig{
-				URL: pointer.String("https://gardener-extension-" + extensionName + "." + extensionNamespace.Name + ":443/" + shootMutatingWebhookPath),
+				URL: ptr.To("https://gardener-extension-" + extensionName + "." + extensionNamespace.Name + ":443/" + shootMutatingWebhookPath),
 			},
 			Rules: []admissionregistrationv1.RuleWithOperations{
 				{
@@ -353,7 +354,7 @@ var _ = Describe("Certificates tests", func() {
 					Service: &admissionregistrationv1.ServiceReference{
 						Name:      "gardener-extension-" + extensionName,
 						Namespace: extensionNamespace.Name,
-						Path:      pointer.String("/" + seedWebhookPath),
+						Path:      ptr.To("/" + seedWebhookPath),
 						Port:      pointer.Int32(443),
 					},
 				},
@@ -366,7 +367,7 @@ var _ = Describe("Certificates tests", func() {
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
 				// here variable failurePolicyFail can't be used as it can be overwritten to
 				// `Ignore` by previous tests
-				FailurePolicy:      (*admissionregistrationv1.FailurePolicyType)(pointer.String("Fail")),
+				FailurePolicy:      (*admissionregistrationv1.FailurePolicyType)(ptr.To("Fail")),
 				MatchPolicy:        &matchPolicyExact,
 				SideEffects:        &sideEffectsNone,
 				TimeoutSeconds:     &timeoutSeconds,

@@ -22,6 +22,7 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
@@ -104,7 +105,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	updateCACertsUnit := extensionsv1alpha1.Unit{
 		Name:    "updatecacerts.service",
 		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-		Content: pointer.String(`[Unit]
+		Content: ptr.To(`[Unit]
 Description=Update local certificate authorities
 # Since other services depend on the certificate store run this early
 DefaultDependencies=no

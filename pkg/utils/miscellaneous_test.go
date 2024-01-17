@@ -26,7 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -90,7 +90,7 @@ var _ = Describe("utils", func() {
 			Expect(IDForKeyWithOptionalValue(key, value)).To(Equal(expectation))
 		},
 		Entry("only key", "foo", nil, "foo"),
-		Entry("key and value", "foo", pointer.String("bar"), "foo=bar"),
+		Entry("key and value", "foo", ptr.To("bar"), "foo=bar"),
 	)
 
 	Describe("#Indent", func() {

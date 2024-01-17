@@ -50,7 +50,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 			Spec: core.SeedSpec{
 				Backup: &core.SeedBackup{
 					Provider: "foo",
-					Region:   pointer.String("some-region"),
+					Region:   ptr.To("some-region"),
 					SecretRef: corev1.SecretReference{
 						Name:      "backup-test",
 						Namespace: "garden",
@@ -72,12 +72,12 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 					},
 				},
 				Networks: core.SeedNetworks{
-					Nodes:    pointer.String("10.250.0.0/16"),
+					Nodes:    ptr.To("10.250.0.0/16"),
 					Pods:     "100.96.0.0/11",
 					Services: "100.64.0.0/13",
 					ShootDefaults: &core.ShootNetworks{
-						Pods:     pointer.String("10.240.0.0/16"),
-						Services: pointer.String("10.241.0.0/16"),
+						Pods:     ptr.To("10.240.0.0/16"),
+						Services: ptr.To("10.241.0.0/16"),
 					},
 				},
 				Provider: core.SeedProvider{
@@ -249,15 +249,15 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 
 			It("should forbid empty or invalid fields in gardenlet", func() {
 				seedx.Name = "foo"
-				seedx.Spec.Networks.Nodes = pointer.String("")
+				seedx.Spec.Networks.Nodes = ptr.To("")
 
 				managedSeed.Spec.Gardenlet.Deployment = &seedmanagement.GardenletDeployment{
 					ReplicaCount:         pointer.Int32(-1),
 					RevisionHistoryLimit: pointer.Int32(-1),
-					ServiceAccountName:   pointer.String(""),
+					ServiceAccountName:   ptr.To(""),
 					Image: &seedmanagement.Image{
-						Repository: pointer.String(""),
-						Tag:        pointer.String(""),
+						Repository: ptr.To(""),
+						Tag:        ptr.To(""),
 						PullPolicy: pullPolicyPtr("foo"),
 					},
 					PodLabels:      map[string]string{"foo!": "bar"},

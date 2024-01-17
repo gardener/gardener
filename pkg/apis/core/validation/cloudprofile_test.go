@@ -25,7 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
@@ -40,7 +40,7 @@ var (
 		CPU:          resource.MustParse("2"),
 		GPU:          resource.MustParse("0"),
 		Memory:       resource.MustParse("100Gi"),
-		Architecture: pointer.String("amd64"),
+		Architecture: ptr.To("amd64"),
 	}
 	machineTypesConstraint = []core.MachineType{
 		machineType,
@@ -63,7 +63,7 @@ var (
 		Storage: &core.MachineTypeStorage{
 			MinSize: &negativeQuantity,
 		},
-		Architecture: pointer.String("amd64"),
+		Architecture: ptr.To("amd64"),
 	}
 	invalidMachineType2 = core.MachineType{
 		Name:   "negative-storage-size",
@@ -73,7 +73,7 @@ var (
 		Storage: &core.MachineTypeStorage{
 			StorageSize: &negativeQuantity,
 		},
-		Architecture: pointer.String("amd64"),
+		Architecture: ptr.To("amd64"),
 	}
 	invalidMachineType3 = core.MachineType{
 		Name:   "min-size-and-storage-size",
@@ -84,7 +84,7 @@ var (
 			MinSize:     &validQuantity,
 			StorageSize: &validQuantity,
 		},
-		Architecture: pointer.String("arm64"),
+		Architecture: ptr.To("arm64"),
 	}
 	invalidMachineType4 = core.MachineType{
 		Name:         "empty-storage-config",
@@ -92,7 +92,7 @@ var (
 		GPU:          resource.MustParse("0"),
 		Memory:       resource.MustParse("100Gi"),
 		Storage:      &core.MachineTypeStorage{},
-		Architecture: pointer.String("foo"),
+		Architecture: ptr.To("foo"),
 	}
 	invalidMachineTypes = []core.MachineType{
 		invalidMachineType,
@@ -279,7 +279,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 			})
 
 			It("should forbid ca bundles with unsupported format", func() {
-				cloudProfile.Spec.CABundle = pointer.String("unsupported")
+				cloudProfile.Spec.CABundle = ptr.To("unsupported")
 
 				errorList := ValidateCloudProfile(cloudProfile)
 
@@ -676,14 +676,14 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 										Version: "0.1.2",
 									},
 									CRI:                      []core.CRI{{Name: "docker"}},
-									KubeletVersionConstraint: pointer.String("< 1.26"),
+									KubeletVersionConstraint: ptr.To("< 1.26"),
 								},
 								{
 									ExpirableVersion: core.ExpirableVersion{
 										Version: "0.1.3",
 									},
 									CRI:                      []core.CRI{{Name: "docker"}},
-									KubeletVersionConstraint: pointer.String(">= 1.26"),
+									KubeletVersionConstraint: ptr.To(">= 1.26"),
 								},
 							},
 						},
@@ -703,14 +703,14 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 										Version: "0.1.2",
 									},
 									CRI:                      []core.CRI{{Name: "docker"}},
-									KubeletVersionConstraint: pointer.String(""),
+									KubeletVersionConstraint: ptr.To(""),
 								},
 								{
 									ExpirableVersion: core.ExpirableVersion{
 										Version: "0.1.3",
 									},
 									CRI:                      []core.CRI{{Name: "docker"}},
-									KubeletVersionConstraint: pointer.String("invalid-version"),
+									KubeletVersionConstraint: ptr.To("invalid-version"),
 								},
 							},
 						},

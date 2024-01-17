@@ -238,7 +238,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 							Options: []corev1.PodDNSConfigOption{
 								{
 									Name:  "ndots",
-									Value: pointer.String("3"),
+									Value: ptr.To("3"),
 								},
 							},
 						},

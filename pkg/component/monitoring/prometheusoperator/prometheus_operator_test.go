@@ -354,7 +354,7 @@ var _ = Describe("PrometheusOperator", func() {
 						Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						Class:       pointer.String("seed"),
+						Class:       ptr.To("seed"),
 						SecretRefs:  []corev1.LocalObjectReference{{Name: managedResource.Spec.SecretRefs[0].Name}},
 						KeepObjects: ptr.To(false),
 					},

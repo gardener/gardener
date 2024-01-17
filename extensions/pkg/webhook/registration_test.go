@@ -122,7 +122,7 @@ var _ = Describe("Registration", func() {
 					Action:            "mutating",
 					Name:              "webhook3",
 					Provider:          "provider3",
-					Types:             []Type{{Obj: &corev1.ServiceAccount{}, Subresource: pointer.String("token")}},
+					Types:             []Type{{Obj: &corev1.ServiceAccount{}, Subresource: ptr.To("token")}},
 					Target:            TargetShoot,
 					Path:              "path3",
 					NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"baz": "foo"}},
@@ -162,7 +162,7 @@ var _ = Describe("Registration", func() {
 					Action:            "validating",
 					Name:              "webhook3",
 					Provider:          "provider3",
-					Types:             []Type{{Obj: &corev1.ServiceAccount{}, Subresource: pointer.String("token")}},
+					Types:             []Type{{Obj: &corev1.ServiceAccount{}, Subresource: ptr.To("token")}},
 					Target:            TargetShoot,
 					Path:              "path3",
 					NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"baz": "foo"}},
@@ -207,16 +207,16 @@ var _ = Describe("Registration", func() {
 							out.Service = &admissionregistrationv1.ServiceReference{
 								Name:      "gardener-extension-" + providerName,
 								Namespace: namespace,
-								Path:      pointer.String("/" + path),
+								Path:      ptr.To("/" + path),
 							}
 						}
 
 						if mode == ModeURL {
-							out.URL = pointer.String("https://" + url + "/" + path)
+							out.URL = ptr.To("https://" + url + "/" + path)
 						}
 
 						if mode == ModeURLWithServiceName {
-							out.URL = pointer.String(fmt.Sprintf("https://gardener-extension-%s.%s:%d/%s", providerName, namespace, servicePort, path))
+							out.URL = ptr.To(fmt.Sprintf("https://gardener-extension-%s.%s:%d/%s", providerName, namespace, servicePort, path))
 						}
 
 						return out
@@ -224,11 +224,11 @@ var _ = Describe("Registration", func() {
 
 					buildShootClientConfig = func(path string) admissionregistrationv1.WebhookClientConfig {
 						out := admissionregistrationv1.WebhookClientConfig{
-							URL: pointer.String(fmt.Sprintf("https://gardener-extension-%s.%s:%d/%s", providerName, namespace, servicePort, path)),
+							URL: ptr.To(fmt.Sprintf("https://gardener-extension-%s.%s:%d/%s", providerName, namespace, servicePort, path)),
 						}
 
 						if url != "" {
-							out.URL = pointer.String("https://" + url + "/" + path)
+							out.URL = ptr.To("https://" + url + "/" + path)
 						}
 
 						return out

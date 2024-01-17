@@ -19,7 +19,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -61,7 +61,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		v1beta1constants.SecretNameCACluster,
 		gardenerutils.ExtractSystemComponentsTolerations(b.Shoot.GetInfo().Spec.Provider.Workers),
 		b.Shoot.TopologyAwareRoutingEnabled,
-		pointer.String(b.Shoot.ComputeOutOfClusterAPIServerAddress(true)),
+		ptr.To(b.Shoot.ComputeOutOfClusterAPIServerAddress(true)),
 		b.Shoot.IsWorkerless,
 		[]string{metav1.NamespaceSystem, v1beta1constants.KubernetesDashboardNamespace},
 	)

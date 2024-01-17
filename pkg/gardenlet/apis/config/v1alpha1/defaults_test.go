@@ -645,8 +645,8 @@ var _ = Describe("Defaults", func() {
 		It("should not overwrite already set values for the SNI ingressgateway", func() {
 			obj.SNI = &SNI{
 				Ingress: &SNIIngress{
-					Namespace:   pointer.String("namespace"),
-					ServiceName: pointer.String("svc"),
+					Namespace:   ptr.To("namespace"),
+					ServiceName: ptr.To("svc"),
 					Labels:      map[string]string{"label1": "value1"},
 				},
 			}
@@ -765,8 +765,8 @@ var _ = Describe("Defaults", func() {
 				{Name: "test1"},
 				{Name: "test2", SNI: &SNI{
 					Ingress: &SNIIngress{
-						Namespace:   pointer.String("namespace"),
-						ServiceName: pointer.String("svc"),
+						Namespace:   ptr.To("namespace"),
+						ServiceName: ptr.To("svc"),
 						Labels:      map[string]string{"label1": "value1"},
 					},
 				}},

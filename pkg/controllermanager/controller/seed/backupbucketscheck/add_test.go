@@ -22,7 +22,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -44,7 +44,7 @@ var _ = Describe("Add", func() {
 		reconciler = &Reconciler{}
 		backupBucket = &gardencorev1beta1.BackupBucket{
 			Spec: gardencorev1beta1.BackupBucketSpec{
-				SeedName: pointer.String("seed"),
+				SeedName: ptr.To("seed"),
 			},
 		}
 	})

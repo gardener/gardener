@@ -33,6 +33,7 @@ import (
 	"k8s.io/utils/clock"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -88,7 +89,7 @@ var _ = Describe("LeaseReconciler", func() {
 				}},
 			},
 			Spec: coordinationv1.LeaseSpec{
-				HolderIdentity:       pointer.String(seed.Name),
+				HolderIdentity:       ptr.To(seed.Name),
 				LeaseDurationSeconds: pointer.Int32(2),
 				RenewTime:            &renewTime,
 			},

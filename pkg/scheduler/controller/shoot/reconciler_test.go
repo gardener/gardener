@@ -25,7 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -68,7 +68,7 @@ var _ = Describe("Scheduler_Control", func() {
 					Region: region,
 				},
 				Networks: gardencorev1beta1.SeedNetworks{
-					Nodes:    pointer.String("10.10.0.0/16"),
+					Nodes:    ptr.To("10.10.0.0/16"),
 					Pods:     "10.20.0.0/16",
 					Services: "10.30.0.0/16",
 				},
@@ -105,9 +105,9 @@ var _ = Describe("Scheduler_Control", func() {
 					},
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Nodes:    pointer.String("10.40.0.0/16"),
-					Pods:     pointer.String("10.50.0.0/16"),
-					Services: pointer.String("10.60.0.0/16"),
+					Nodes:    ptr.To("10.40.0.0/16"),
+					Pods:     ptr.To("10.50.0.0/16"),
+					Services: ptr.To("10.60.0.0/16"),
 				},
 			},
 		}
@@ -632,8 +632,8 @@ var _ = Describe("Scheduler_Control", func() {
 
 		It("should find a seed cluster 1) referencing the same profile 2) same region 3) indicating availability 4) using shoot default networks", func() {
 			seed.Spec.Networks.ShootDefaults = &gardencorev1beta1.ShootNetworks{
-				Pods:     pointer.String("10.50.0.0/16"),
-				Services: pointer.String("10.60.0.0/16"),
+				Pods:     ptr.To("10.50.0.0/16"),
+				Services: ptr.To("10.60.0.0/16"),
 			}
 			shoot.Spec.Networking.Pods = nil
 			shoot.Spec.Networking.Services = nil

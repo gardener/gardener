@@ -100,7 +100,7 @@ func (containerd) Config(_ components.Context) ([]extensionsv1alpha1.Unit, []ext
 		Name:    UnitNameMonitor,
 		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 		Enable:  ptr.To(true),
-		Content: pointer.String(`[Unit]
+		Content: ptr.To(`[Unit]
 Description=Containerd-monitor daemon
 After=` + UnitName + `
 [Install]

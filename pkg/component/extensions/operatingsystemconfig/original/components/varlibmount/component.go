@@ -15,11 +15,10 @@
 package varlibmount
 
 import (
-	"k8s.io/utils/pointer"
-
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
+	"k8s.io/utils/ptr"
 )
 
 // UnitName is the name of the var-lib-mount unit.
@@ -46,7 +45,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	return []extensionsv1alpha1.Unit{
 		{
 			Name: "var-lib.mount",
-			Content: pointer.String(`[Unit]
+			Content: ptr.To(`[Unit]
 Description=mount ` + pathVarLib + ` on kubelet data device
 Before=` + kubelet.UnitName + `
 [Mount]

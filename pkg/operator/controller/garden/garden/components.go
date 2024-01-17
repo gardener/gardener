@@ -395,7 +395,7 @@ func (r *Reconciler) newEtcd(
 
 	switch role {
 	case v1beta1constants.ETCDRoleMain:
-		hvpaScaleDownUpdateMode = pointer.String(hvpav1alpha1.UpdateModeOff)
+		hvpaScaleDownUpdateMode = ptr.To(hvpav1alpha1.UpdateModeOff)
 		defragmentationScheduleFormat = "%d %d * * *" // defrag main etcd daily in the maintenance window
 		storageCapacity = "25Gi"
 		if etcd := garden.Spec.VirtualCluster.ETCD; etcd != nil && etcd.Main != nil && etcd.Main.Storage != nil {
@@ -406,7 +406,7 @@ func (r *Reconciler) newEtcd(
 		}
 
 	case v1beta1constants.ETCDRoleEvents:
-		hvpaScaleDownUpdateMode = pointer.String(hvpav1alpha1.UpdateModeMaintenanceWindow)
+		hvpaScaleDownUpdateMode = ptr.To(hvpav1alpha1.UpdateModeMaintenanceWindow)
 		defragmentationScheduleFormat = "%d %d */3 * *"
 		storageCapacity = "10Gi"
 		if etcd := garden.Spec.VirtualCluster.ETCD; etcd != nil && etcd.Events != nil && etcd.Events.Storage != nil {
@@ -813,7 +813,7 @@ func (r *Reconciler) newGardenerMetricsExporter(secretsManager secretsmanager.In
 func (r *Reconciler) newPlutono(secretsManager secretsmanager.Interface, ingressDomain string, wildcardCert *corev1.Secret) (plutono.Interface, error) {
 	var wildcardCertName *string
 	if wildcardCert != nil {
-		wildcardCertName = pointer.String(wildcardCert.GetName())
+		wildcardCertName = ptr.To(wildcardCert.GetName())
 	}
 
 	return sharedcomponent.NewPlutono(

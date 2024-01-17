@@ -18,6 +18,7 @@ import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -58,7 +59,7 @@ func AddToManagerWithOptions(
 
 	var (
 		provider = local.Type
-		types    = []extensionswebhook.Type{{Obj: &corev1.Node{}, Subresource: pointer.String("status")}}
+		types    = []extensionswebhook.Type{{Obj: &corev1.Node{}, Subresource: ptr.To("status")}}
 	)
 
 	logger = logger.WithValues("provider", provider)

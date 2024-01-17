@@ -173,13 +173,13 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		gnaUnit = extensionsv1alpha1.Unit{
 			Name:    "gardener-node-agent.service",
 			Enable:  ptr.To(false),
-			Content: pointer.String("#gna"),
+			Content: ptr.To("#gna"),
 		}
 		unit1 = extensionsv1alpha1.Unit{
 			Name:    "unit1",
 			Enable:  ptr.To(true),
 			Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-			Content: pointer.String("#unit1"),
+			Content: ptr.To("#unit1"),
 			DropIns: []extensionsv1alpha1.DropIn{{
 				Name:    "drop",
 				Content: "#unit1drop",
@@ -189,7 +189,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			Name:    "unit2",
 			Enable:  ptr.To(false),
 			Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStop),
-			Content: pointer.String("#unit2"),
+			Content: ptr.To("#unit2"),
 		}
 		unit3 = extensionsv1alpha1.Unit{
 			Name: "unit3",
@@ -203,7 +203,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			Name:    "unit4",
 			Enable:  ptr.To(true),
 			Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-			Content: pointer.String("#unit4"),
+			Content: ptr.To("#unit4"),
 			DropIns: []extensionsv1alpha1.DropIn{{
 				Name:    "drop",
 				Content: "#unit4drop",
@@ -213,7 +213,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			Name:    "unit5",
 			Enable:  ptr.To(true),
 			Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-			Content: pointer.String("#unit5"),
+			Content: ptr.To("#unit5"),
 			DropIns: []extensionsv1alpha1.DropIn{
 				{
 					Name:    "drop1",
@@ -235,20 +235,20 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		unit6 = extensionsv1alpha1.Unit{
 			Name:      "unit6",
 			Enable:    ptr.To(true),
-			Content:   pointer.String("#unit6"),
+			Content:   ptr.To("#unit6"),
 			FilePaths: []string{file3.Path},
 		}
 		unit7 = extensionsv1alpha1.Unit{
 			Name:      "unit7",
 			Enable:    ptr.To(true),
-			Content:   pointer.String("#unit7"),
+			Content:   ptr.To("#unit7"),
 			FilePaths: []string{file5.Path},
 		}
 		unit8 = extensionsv1alpha1.Unit{
 			Name:      "unit8",
 			Enable:    ptr.To(true),
 			Command:   extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-			Content:   pointer.String("#unit8"),
+			Content:   ptr.To("#unit8"),
 			FilePaths: []string{file6.Path},
 		}
 		unit9 = extensionsv1alpha1.Unit{

@@ -18,6 +18,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -58,7 +59,7 @@ var _ = Describe("Component", func() {
 			updateCACertsUnit := extensionsv1alpha1.Unit{
 				Name:    "updatecacerts.service",
 				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-				Content: pointer.String(`[Unit]
+				Content: ptr.To(`[Unit]
 Description=Update local certificate authorities
 # Since other services depend on the certificate store run this early
 DefaultDependencies=no

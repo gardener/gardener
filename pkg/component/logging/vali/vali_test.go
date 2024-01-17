@@ -175,7 +175,7 @@ var _ = Describe("Vali", func() {
 					ResourceVersion: "1",
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: pointer.String("seed"),
+					Class: ptr.To("seed"),
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
@@ -282,7 +282,7 @@ var _ = Describe("Vali", func() {
 					ResourceVersion: "1",
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: pointer.String("seed"),
+					Class: ptr.To("seed"),
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
@@ -338,7 +338,7 @@ var _ = Describe("Vali", func() {
 					ResourceVersion: "1",
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: pointer.String("seed"),
+					Class: ptr.To("seed"),
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
@@ -1040,43 +1040,43 @@ func getHVPA(isRBACProxyEnabled bool) *hvpav1alpha1.Hvpa {
 				Deploy: true,
 				ScaleUp: hvpav1alpha1.ScaleType{
 					UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-						UpdateMode: pointer.String("Auto"),
+						UpdateMode: ptr.To("Auto"),
 					},
-					StabilizationDuration: pointer.String("5m"),
+					StabilizationDuration: ptr.To("5m"),
 					MinChange: hvpav1alpha1.ScaleParams{
 						CPU: hvpav1alpha1.ChangeParams{
-							Value:      pointer.String("100m"),
+							Value:      ptr.To("100m"),
 							Percentage: pointer.Int32(80),
 						},
 						Memory: hvpav1alpha1.ChangeParams{
-							Value:      pointer.String("300M"),
+							Value:      ptr.To("300M"),
 							Percentage: pointer.Int32(80),
 						},
 					},
 				},
 				ScaleDown: hvpav1alpha1.ScaleType{
 					UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-						UpdateMode: pointer.String("MaintenanceWindow"),
+						UpdateMode: ptr.To("MaintenanceWindow"),
 					},
-					StabilizationDuration: pointer.String("168h"),
+					StabilizationDuration: ptr.To("168h"),
 					MinChange: hvpav1alpha1.ScaleParams{
 						CPU: hvpav1alpha1.ChangeParams{
-							Value:      pointer.String("200m"),
+							Value:      ptr.To("200m"),
 							Percentage: pointer.Int32(80),
 						},
 						Memory: hvpav1alpha1.ChangeParams{
-							Value:      pointer.String("500M"),
+							Value:      ptr.To("500M"),
 							Percentage: pointer.Int32(80),
 						},
 					},
 				},
 				LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
 					CPU: hvpav1alpha1.ChangeParams{
-						Value:      pointer.String("300m"),
+						Value:      ptr.To("300m"),
 						Percentage: pointer.Int32(40),
 					},
 					Memory: hvpav1alpha1.ChangeParams{
-						Value:      pointer.String("1G"),
+						Value:      ptr.To("1G"),
 						Percentage: pointer.Int32(40),
 					},
 				},
@@ -1157,7 +1157,7 @@ func getIngress() *networkingv1.Ingress {
 			Labels:    getLabels(),
 		},
 		Spec: networkingv1.IngressSpec{
-			IngressClassName: pointer.String("nginx-ingress-gardener"),
+			IngressClassName: ptr.To("nginx-ingress-gardener"),
 			TLS: []networkingv1.IngressTLS{
 				{
 					SecretName: "vali-tls",

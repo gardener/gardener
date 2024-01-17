@@ -98,7 +98,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	units := []extensionsv1alpha1.Unit{{
 		Name:      nodeagentv1alpha1.UnitName,
 		Enable:    ptr.To(true),
-		Content:   pointer.String(UnitContent()),
+		Content:   ptr.To(UnitContent()),
 		FilePaths: extensionsv1alpha1helper.FilePathsFrom(files),
 	}}
 

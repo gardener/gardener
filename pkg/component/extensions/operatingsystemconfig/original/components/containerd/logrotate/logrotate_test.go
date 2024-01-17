@@ -46,7 +46,7 @@ var _ = Describe("Logrotate", func() {
 				serviceUnit := extensionsv1alpha1.Unit{
 					Name:   prefix + "-logrotate.service",
 					Enable: ptr.To(true),
-					Content: pointer.String(`[Unit]
+					Content: ptr.To(`[Unit]
 Description=Rotate and Compress System Logs
 [Service]
 ExecStart=/usr/sbin/logrotate -s /var/lib/` + prefix + `-logrotate.status ` + pathConfig + `
@@ -59,7 +59,7 @@ WantedBy=multi-user.target`),
 					Name:    prefix + "-logrotate.timer",
 					Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 					Enable:  ptr.To(true),
-					Content: pointer.String(`[Unit]
+					Content: ptr.To(`[Unit]
 Description=Log Rotation at each 10 minutes
 [Timer]
 OnCalendar=*:0/10

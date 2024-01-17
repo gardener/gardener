@@ -313,7 +313,7 @@ var _ = Describe("Garden", func() {
 		})
 
 		It("should use the overwrites but copy overthing else", func() {
-			config := PrepareGardenClientRestConfig(baseConfig, pointer.String("other"), []byte("ca2"))
+			config := PrepareGardenClientRestConfig(baseConfig, ptr.To("other"), []byte("ca2"))
 			Expect(config).NotTo(BeIdenticalTo(baseConfig))
 			Expect(config.Host).To(Equal("other"))
 			Expect(config.TLSClientConfig.CAData).To(BeEquivalentTo("ca2"))

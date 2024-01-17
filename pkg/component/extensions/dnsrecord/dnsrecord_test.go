@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -95,7 +96,7 @@ var _ = Describe("DNSRecord", func() {
 			SecretData: map[string][]byte{
 				"foo": []byte("bar"),
 			},
-			Zone:              pointer.String(zone),
+			Zone:              ptr.To(zone),
 			DNSName:           dnsName,
 			RecordType:        extensionsv1alpha1.DNSRecordTypeA,
 			Values:            []string{address},
@@ -122,7 +123,7 @@ var _ = Describe("DNSRecord", func() {
 					Name:      secretName,
 					Namespace: namespace,
 				},
-				Zone:       pointer.String(zone),
+				Zone:       ptr.To(zone),
 				Name:       dnsName,
 				RecordType: extensionsv1alpha1.DNSRecordTypeA,
 				Values:     []string{address},
@@ -557,7 +558,7 @@ var _ = Describe("DNSRecord", func() {
 				Expect(deployedDNS).To(DeepEqual(expectedDNSRecord))
 			},
 				Entry("secretName changes", func() { values.SecretName = "new-secret-name" }, func() { expectedDNSRecord.Spec.SecretRef.Name = "new-secret-name" }),
-				Entry("zone changes", func() { values.Zone = pointer.String("new-zone") }, func() { expectedDNSRecord.Spec.Zone = pointer.String("new-zone") }),
+				Entry("zone changes", func() { values.Zone = ptr.To("new-zone") }, func() { expectedDNSRecord.Spec.Zone = ptr.To("new-zone") }),
 				Entry("values changes", func() { values.Values = []string{"8.8.8.8"} }, func() { expectedDNSRecord.Spec.Values = []string{"8.8.8.8"} }),
 				Entry("TTL changes", func() { values.TTL = pointer.Int64(1337) }, func() { expectedDNSRecord.Spec.TTL = pointer.Int64(1337) }),
 				Entry("zone is nil", func() { values.Zone = nil }, func() { expectedDNSRecord.Spec.Zone = nil }),
@@ -712,7 +713,7 @@ var _ = Describe("DNSRecord", func() {
 					Extensions: []gardencorev1beta1.ExtensionResourceState{
 						{
 							Kind:  extensionsv1alpha1.DNSRecordResource,
-							Name:  pointer.String(name),
+							Name:  ptr.To(name),
 							State: state,
 						},
 					},

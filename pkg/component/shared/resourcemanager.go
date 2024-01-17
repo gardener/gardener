@@ -98,7 +98,7 @@ func NewRuntimeGardenerResourceManager(
 		PodTopologySpreadConstraintsEnabled: true,
 		PriorityClassName:                   priorityClassName,
 		Replicas:                            pointer.Int32(2),
-		ResourceClass:                       pointer.String(v1beta1constants.SeedResourceManagerClass),
+		ResourceClass:                       ptr.To(v1beta1constants.SeedResourceManagerClass),
 		SecretNameServerCA:                  secretNameServerCA,
 		SyncPeriod:                          &metav1.Duration{Duration: time.Hour},
 		RuntimeKubernetesVersion:            runtimeVersion,

@@ -347,7 +347,7 @@ var _ = Describe("Fluent Operator", func() {
 					ResourceVersion: "1",
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: pointer.String("seed"),
+					Class: ptr.To("seed"),
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: operatorManagedResource.Spec.SecretRefs[0].Name,
 					}},

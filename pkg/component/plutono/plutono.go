@@ -769,7 +769,7 @@ func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error)
 			},
 		},
 		Spec: networkingv1.IngressSpec{
-			IngressClassName: pointer.String(v1beta1constants.SeedNginxIngressClass),
+			IngressClassName: ptr.To(v1beta1constants.SeedNginxIngressClass),
 			TLS: []networkingv1.IngressTLS{{
 				SecretName: ingressTLSSecretName,
 				Hosts:      []string{p.values.IngressHost},

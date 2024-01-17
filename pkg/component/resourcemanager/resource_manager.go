@@ -627,7 +627,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 
 	if r.values.SchedulingProfile != nil && *r.values.SchedulingProfile != gardencorev1beta1.SchedulingProfileBalanced {
 		config.Webhooks.PodSchedulerName.Enabled = true
-		config.Webhooks.PodSchedulerName.SchedulerName = pointer.String(kubescheduler.BinPackingSchedulerName)
+		config.Webhooks.PodSchedulerName.SchedulerName = ptr.To(kubescheduler.BinPackingSchedulerName)
 	}
 
 	if r.values.KubernetesServiceHost != nil {
@@ -1941,7 +1941,7 @@ func (r *resourceManager) buildWebhookClientConfig(secretServerCA *corev1.Secret
 	clientConfig := admissionregistrationv1.WebhookClientConfig{CABundle: secretServerCA.Data[secrets.DataKeyCertificateBundle]}
 
 	if r.values.TargetDiffersFromSourceCluster {
-		clientConfig.URL = pointer.String(fmt.Sprintf("https://%s.%s:%d%s", r.values.NamePrefix+resourcemanagerconstants.ServiceName, r.namespace, serverServicePort, path))
+		clientConfig.URL = ptr.To(fmt.Sprintf("https://%s.%s:%d%s", r.values.NamePrefix+resourcemanagerconstants.ServiceName, r.namespace, serverServicePort, path))
 	} else {
 		clientConfig.Service = &admissionregistrationv1.ServiceReference{
 			Name:      r.values.NamePrefix + resourcemanagerconstants.ServiceName,

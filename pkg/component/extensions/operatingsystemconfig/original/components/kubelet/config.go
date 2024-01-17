@@ -92,7 +92,7 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 		PodPidsLimit:                     params.PodPidsLimit,
 		ProtectKernelDefaults:            *params.ProtectKernelDefaults,
 		ReadOnlyPort:                     0,
-		ResolverConfig:                   pointer.String("/etc/resolv.conf"),
+		ResolverConfig:                   ptr.To("/etc/resolv.conf"),
 		RotateCertificates:               true,
 		RuntimeRequestTimeout:            metav1.Duration{Duration: 2 * time.Minute},
 		SeccompDefault:                   params.SeccompDefault,
@@ -178,7 +178,7 @@ func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters, kubern
 	}
 
 	if c.CpuManagerPolicy == nil {
-		c.CpuManagerPolicy = pointer.String(kubeletconfigv1beta1.NoneTopologyManagerPolicy)
+		c.CpuManagerPolicy = ptr.To(kubeletconfigv1beta1.NoneTopologyManagerPolicy)
 	}
 
 	if c.EvictionHard == nil {
@@ -255,7 +255,7 @@ func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters, kubern
 	}
 
 	if c.ContainerLogMaxSize == nil {
-		c.ContainerLogMaxSize = pointer.String("100Mi")
+		c.ContainerLogMaxSize = ptr.To("100Mi")
 	}
 
 	c.ProtectKernelDefaults = ptr.To(ShouldProtectKernelDefaultsBeEnabled(c, kubernetesVersion))

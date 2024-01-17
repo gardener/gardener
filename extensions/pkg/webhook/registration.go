@@ -355,9 +355,9 @@ func BuildClientConfigFor(webhookPath string, namespace, componentName string, s
 
 	switch mode {
 	case ModeURL:
-		clientConfig.URL = pointer.String(fmt.Sprintf("https://%s%s", url, path))
+		clientConfig.URL = ptr.To(fmt.Sprintf("https://%s%s", url, path))
 	case ModeURLWithServiceName:
-		clientConfig.URL = pointer.String(fmt.Sprintf("https://%s.%s:%d%s", PrefixedName(componentName), namespace, servicePort, path))
+		clientConfig.URL = ptr.To(fmt.Sprintf("https://%s.%s:%d%s", PrefixedName(componentName), namespace, servicePort, path))
 	case ModeService:
 		clientConfig.Service = &admissionregistrationv1.ServiceReference{
 			Namespace: namespace,

@@ -61,7 +61,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 
 	for i, worker := range obj.Spec.Provider.Workers {
 		if worker.Machine.Architecture == nil {
-			obj.Spec.Provider.Workers[i].Machine.Architecture = pointer.String(v1beta1constants.ArchitectureAMD64)
+			obj.Spec.Provider.Workers[i].Machine.Architecture = ptr.To(v1beta1constants.ArchitectureAMD64)
 		}
 
 		if worker.CRI == nil {
@@ -206,7 +206,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 	}
 
 	if obj.Spec.SchedulerName == nil {
-		obj.Spec.SchedulerName = pointer.String(v1beta1constants.DefaultSchedulerName)
+		obj.Spec.SchedulerName = ptr.To(v1beta1constants.DefaultSchedulerName)
 	}
 }
 

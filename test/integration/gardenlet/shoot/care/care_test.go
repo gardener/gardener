@@ -22,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -86,7 +87,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 				Labels:    map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: pointer.String(secretBinding.Name),
+				SecretBindingName: ptr.To(secretBinding.Name),
 				CloudProfileName:  "cloudprofile1",
 				SeedName:          &seedName,
 				Region:            "europe-central-1",
@@ -107,9 +108,9 @@ var _ = Describe("Shoot Care controller tests", func() {
 					Version: "1.25.1",
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type:     pointer.String("foo-networking"),
-					Services: pointer.String("10.0.0.0/16"),
-					Pods:     pointer.String("10.1.0.0/16"),
+					Type:     ptr.To("foo-networking"),
+					Services: ptr.To("10.0.0.0/16"),
+					Pods:     ptr.To("10.1.0.0/16"),
 				},
 			},
 		}
@@ -296,7 +297,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 					shoot.Spec.Provider.Workers = nil
 					shoot.Spec.SecretBindingName = nil
 					shoot.Spec.Networking = &gardencorev1beta1.Networking{
-						Services: pointer.String("10.0.0.0/16"),
+						Services: ptr.To("10.0.0.0/16"),
 					}
 				})
 
@@ -342,7 +343,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 					shoot.Spec.Provider.Workers = nil
 					shoot.Spec.SecretBindingName = nil
 					shoot.Spec.Networking = &gardencorev1beta1.Networking{
-						Services: pointer.String("10.0.0.0/16"),
+						Services: ptr.To("10.0.0.0/16"),
 					}
 				})
 
@@ -426,7 +427,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 						},
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						Class: pointer.String("test"),
+						Class: ptr.To("test"),
 						SecretRefs: []corev1.LocalObjectReference{
 							{Name: "test-2"},
 						},
@@ -473,7 +474,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 					shoot.Spec.Provider.Workers = nil
 					shoot.Spec.SecretBindingName = nil
 					shoot.Spec.Networking = &gardencorev1beta1.Networking{
-						Services: pointer.String("10.0.0.0/16"),
+						Services: ptr.To("10.0.0.0/16"),
 					}
 				})
 
@@ -574,7 +575,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 					shoot.Spec.Provider.Workers = nil
 					shoot.Spec.SecretBindingName = nil
 					shoot.Spec.Networking = &gardencorev1beta1.Networking{
-						Services: pointer.String("10.0.0.0/16"),
+						Services: ptr.To("10.0.0.0/16"),
 					}
 				})
 

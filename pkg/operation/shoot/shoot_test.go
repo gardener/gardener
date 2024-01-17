@@ -20,7 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -43,8 +43,8 @@ var _ = Describe("shoot", func() {
 				shoot = &gardencorev1beta1.Shoot{
 					Spec: gardencorev1beta1.ShootSpec{
 						Networking: &gardencorev1beta1.Networking{
-							Pods:     pointer.String("10.0.0.0/24"),
-							Services: pointer.String("20.0.0.0/24"),
+							Pods:     ptr.To("10.0.0.0/24"),
+							Services: ptr.To("20.0.0.0/24"),
 						},
 					},
 				}
@@ -104,14 +104,14 @@ var _ = Describe("shoot", func() {
 				Entry("services is nil", func(s *gardencorev1beta1.Shoot) { s.Spec.Networking.Services = nil }),
 				Entry("pods is nil", func(s *gardencorev1beta1.Shoot) { s.Spec.Networking.Pods = nil }),
 				Entry("services is invalid", func(s *gardencorev1beta1.Shoot) {
-					s.Spec.Networking.Services = pointer.String("foo")
+					s.Spec.Networking.Services = ptr.To("foo")
 				}),
-				Entry("pods is invalid", func(s *gardencorev1beta1.Shoot) { s.Spec.Networking.Pods = pointer.String("foo") }),
+				Entry("pods is invalid", func(s *gardencorev1beta1.Shoot) { s.Spec.Networking.Pods = ptr.To("foo") }),
 				Entry("apiserver cannot be calculated", func(s *gardencorev1beta1.Shoot) {
-					s.Spec.Networking.Services = pointer.String("10.0.0.0/32")
+					s.Spec.Networking.Services = ptr.To("10.0.0.0/32")
 				}),
 				Entry("coreDNS cannot be calculated", func(s *gardencorev1beta1.Shoot) {
-					s.Spec.Networking.Services = pointer.String("10.0.0.0/29")
+					s.Spec.Networking.Services = ptr.To("10.0.0.0/29")
 				}),
 			)
 		})

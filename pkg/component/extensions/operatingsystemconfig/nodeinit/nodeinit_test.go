@@ -63,7 +63,7 @@ var _ = Describe("Init", func() {
 					Name:    nodeagentv1alpha1.InitUnitName,
 					Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 					Enable:  ptr.To(true),
-					Content: pointer.String(`[Unit]
+					Content: ptr.To(`[Unit]
 Description=Downloads the gardener-node-agent binary from the container registry and bootstraps it.
 After=network-online.target
 Wants=network-online.target
@@ -159,7 +159,7 @@ exec "/opt/bin/gardener-node-agent" bootstrap --config="/var/lib/gardener-node-a
 
 		When("kubelet data volume is configured", func() {
 			BeforeEach(func() {
-				worker.KubeletDataVolumeName = pointer.String("kubelet-data-vol")
+				worker.KubeletDataVolumeName = ptr.To("kubelet-data-vol")
 				worker.DataVolumes = []gardencorev1beta1.DataVolume{{
 					Name:       *worker.KubeletDataVolumeName,
 					VolumeSize: "1337Ki",

@@ -78,7 +78,7 @@ var _ = Describe("KubeControllerManager", func() {
 		image                         = "registry.k8s.io/kube-controller-manager:v1.25.3"
 		hvpaConfigDisabled            = &HVPAConfig{Enabled: false}
 		hvpaConfigEnabled             = &HVPAConfig{Enabled: true}
-		hvpaConfigEnabledScaleDownOff = &HVPAConfig{Enabled: true, ScaleDownUpdateMode: pointer.String(hvpav1alpha1.UpdateModeOff)}
+		hvpaConfigEnabledScaleDownOff = &HVPAConfig{Enabled: true, ScaleDownUpdateMode: ptr.To(hvpav1alpha1.UpdateModeOff)}
 		isWorkerless                  = false
 		priorityClassName             = v1beta1constants.PriorityClassNameShootControlPlane300
 
@@ -229,7 +229,7 @@ var _ = Describe("KubeControllerManager", func() {
 		hvpaFor            = func(config *HVPAConfig) *hvpav1alpha1.Hvpa {
 			scaleDownUpdateMode := config.ScaleDownUpdateMode
 			if scaleDownUpdateMode == nil {
-				scaleDownUpdateMode = pointer.String(hvpav1alpha1.UpdateModeAuto)
+				scaleDownUpdateMode = ptr.To(hvpav1alpha1.UpdateModeAuto)
 			}
 
 			return &hvpav1alpha1.Hvpa{

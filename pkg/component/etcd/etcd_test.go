@@ -210,7 +210,7 @@ var _ = Describe("Etcd", func() {
 									Name:      caSecretName,
 									Namespace: testNamespace,
 								},
-								DataKey: pointer.String("bundle.crt"),
+								DataKey: ptr.To("bundle.crt"),
 							},
 							ServerTLSSecretRef: corev1.SecretReference{
 								Name:      serverSecretName,
@@ -238,7 +238,7 @@ var _ = Describe("Etcd", func() {
 									Name:      caSecretName,
 									Namespace: testNamespace,
 								},
-								DataKey: pointer.String("bundle.crt"),
+								DataKey: ptr.To("bundle.crt"),
 							},
 							ServerTLSSecretRef: corev1.SecretReference{
 								Name:      serverSecretName,
@@ -257,14 +257,14 @@ var _ = Describe("Etcd", func() {
 					},
 					StorageCapacity:     &storageCapacityQuantity,
 					StorageClass:        &storageClassName,
-					VolumeClaimTemplate: pointer.String(etcdName),
+					VolumeClaimTemplate: ptr.To(etcdName),
 				},
 			}
 
 			if class == ClassImportant {
 				obj.Spec.Annotations = map[string]string{"cluster-autoscaler.kubernetes.io/safe-to-evict": "false"}
 				obj.Spec.Etcd.Metrics = &metricsExtensive
-				obj.Spec.VolumeClaimTemplate = pointer.String(testRole + "-etcd")
+				obj.Spec.VolumeClaimTemplate = ptr.To(testRole + "-etcd")
 			}
 
 			if replicas == 3 {
@@ -283,7 +283,7 @@ var _ = Describe("Etcd", func() {
 							Name:      secretNamePeerCA,
 							Namespace: testNamespace,
 						},
-						DataKey: pointer.String(secretsutils.DataKeyCertificateBundle),
+						DataKey: ptr.To(secretsutils.DataKeyCertificateBundle),
 					},
 				}
 			}
@@ -301,7 +301,7 @@ var _ = Describe("Etcd", func() {
 						Name:      *peerCASecretName,
 						Namespace: testNamespace,
 					},
-					DataKey: pointer.String(secretsutils.DataKeyCertificateBundle),
+					DataKey: ptr.To(secretsutils.DataKeyCertificateBundle),
 				}
 			}
 
@@ -399,14 +399,14 @@ var _ = Describe("Etcd", func() {
 							UpdatePolicy: hvpav1alpha1.UpdatePolicy{
 								UpdateMode: &updateModeAuto,
 							},
-							StabilizationDuration: pointer.String("5m"),
+							StabilizationDuration: ptr.To("5m"),
 							MinChange: hvpav1alpha1.ScaleParams{
 								CPU: hvpav1alpha1.ChangeParams{
-									Value:      pointer.String("1"),
+									Value:      ptr.To("1"),
 									Percentage: pointer.Int32(80),
 								},
 								Memory: hvpav1alpha1.ChangeParams{
-									Value:      pointer.String("2G"),
+									Value:      ptr.To("2G"),
 									Percentage: pointer.Int32(80),
 								},
 							},
@@ -415,25 +415,25 @@ var _ = Describe("Etcd", func() {
 							UpdatePolicy: hvpav1alpha1.UpdatePolicy{
 								UpdateMode: &scaleDownUpdateMode,
 							},
-							StabilizationDuration: pointer.String("15m"),
+							StabilizationDuration: ptr.To("15m"),
 							MinChange: hvpav1alpha1.ScaleParams{
 								CPU: hvpav1alpha1.ChangeParams{
-									Value:      pointer.String("1"),
+									Value:      ptr.To("1"),
 									Percentage: pointer.Int32(80),
 								},
 								Memory: hvpav1alpha1.ChangeParams{
-									Value:      pointer.String("2G"),
+									Value:      ptr.To("2G"),
 									Percentage: pointer.Int32(80),
 								},
 							},
 						},
 						LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
 							CPU: hvpav1alpha1.ChangeParams{
-								Value:      pointer.String("2"),
+								Value:      ptr.To("2"),
 								Percentage: pointer.Int32(40),
 							},
 							Memory: hvpav1alpha1.ChangeParams{
-								Value:      pointer.String("5G"),
+								Value:      ptr.To("5G"),
 								Percentage: pointer.Int32(40),
 							},
 						},
@@ -524,7 +524,7 @@ var _ = Describe("Etcd", func() {
 				etcd.SetHVPAConfig(&HVPAConfig{
 					Enabled:               true,
 					MaintenanceTimeWindow: maintenanceTimeWindow,
-					ScaleDownUpdateMode:   pointer.String(updateMode),
+					ScaleDownUpdateMode:   ptr.To(updateMode),
 				})
 			}
 		}
@@ -1776,7 +1776,7 @@ var _ = Describe("Etcd", func() {
 										Name:      caName,
 										Namespace: testNamespace,
 									},
-									DataKey: pointer.String(secretsutils.DataKeyCertificateBundle),
+									DataKey: ptr.To(secretsutils.DataKeyCertificateBundle),
 								},
 							},
 						},

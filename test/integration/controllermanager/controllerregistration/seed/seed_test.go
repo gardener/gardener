@@ -19,7 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -43,7 +43,7 @@ var _ = Describe("ControllerRegistration controller test", func() {
 				Labels:       map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: pointer.String("my-provider-account"),
+				SecretBindingName: ptr.To("my-provider-account"),
 				CloudProfileName:  "test-cloudprofile",
 				Region:            "foo-region",
 				Provider: gardencorev1beta1.Provider{
@@ -57,7 +57,7 @@ var _ = Describe("ControllerRegistration controller test", func() {
 								Type: "large",
 								Image: &gardencorev1beta1.ShootMachineImage{
 									Name:    shootProviderType,
-									Version: pointer.String("0.0.0"),
+									Version: ptr.To("0.0.0"),
 								},
 							},
 							CRI: &gardencorev1beta1.CRI{
@@ -73,7 +73,7 @@ var _ = Describe("ControllerRegistration controller test", func() {
 					Version: "1.26.1",
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: pointer.String(shootProviderType),
+					Type: ptr.To(shootProviderType),
 				},
 				Extensions: []gardencorev1beta1.Extension{{
 					Type: shootProviderType,

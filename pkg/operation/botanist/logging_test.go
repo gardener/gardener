@@ -24,7 +24,6 @@ import (
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
@@ -118,7 +117,7 @@ var _ = Describe("Logging", func() {
 
 		botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
 			Status: gardencorev1beta1.SeedStatus{
-				KubernetesVersion: pointer.String("1.2.3"),
+				KubernetesVersion: ptr.To("1.2.3"),
 			},
 		})
 

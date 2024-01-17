@@ -26,7 +26,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -150,78 +149,78 @@ var _ = Describe("helper", func() {
 			false,
 		),
 		Entry("taints with keys+values only, tolerations with keys+values only (tolerated)",
-			[]core.SeedTaint{{Key: "foo", Value: pointer.String("bar")}},
-			[]core.Toleration{{Key: "foo", Value: pointer.String("bar")}},
+			[]core.SeedTaint{{Key: "foo", Value: ptr.To("bar")}},
+			[]core.Toleration{{Key: "foo", Value: ptr.To("bar")}},
 			true,
 		),
 		Entry("taints with keys+values only, tolerations with keys+values only (non-tolerated)",
-			[]core.SeedTaint{{Key: "foo", Value: pointer.String("bar")}},
-			[]core.Toleration{{Key: "bar", Value: pointer.String("foo")}},
+			[]core.SeedTaint{{Key: "foo", Value: ptr.To("bar")}},
+			[]core.Toleration{{Key: "bar", Value: ptr.To("foo")}},
 			false,
 		),
 		Entry("taints with mixed key(+values), tolerations with mixed key(+values) (tolerated)",
 			[]core.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
 			},
 			[]core.Toleration{
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
 			},
 			true,
 		),
 		Entry("taints with mixed key(+values), tolerations with mixed key(+values) (non-tolerated)",
 			[]core.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
 			},
 			[]core.Toleration{
 				{Key: "bar"},
-				{Key: "foo", Value: pointer.String("baz")},
+				{Key: "foo", Value: ptr.To("baz")},
 			},
 			false,
 		),
 		Entry("taints with mixed key(+values), tolerations with key+values only (tolerated)",
 			[]core.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
 			},
 			[]core.Toleration{
-				{Key: "foo", Value: pointer.String("bar")},
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "foo", Value: ptr.To("bar")},
+				{Key: "bar", Value: ptr.To("baz")},
 			},
 			true,
 		),
 		Entry("taints with mixed key(+values), tolerations with key+values only (untolerated)",
 			[]core.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
 			},
 			[]core.Toleration{
-				{Key: "foo", Value: pointer.String("bar")},
-				{Key: "bar", Value: pointer.String("foo")},
+				{Key: "foo", Value: ptr.To("bar")},
+				{Key: "bar", Value: ptr.To("foo")},
 			},
 			false,
 		),
 		Entry("taints > tolerations",
 			[]core.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
 			},
 			[]core.Toleration{
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
 			},
 			false,
 		),
 		Entry("tolerations > taints",
 			[]core.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
 			},
 			[]core.Toleration{
-				{Key: "foo", Value: pointer.String("bar")},
-				{Key: "bar", Value: pointer.String("baz")},
-				{Key: "baz", Value: pointer.String("foo")},
+				{Key: "foo", Value: ptr.To("bar")},
+				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "baz", Value: ptr.To("foo")},
 			},
 			true,
 		),
@@ -284,34 +283,34 @@ var _ = Describe("helper", func() {
 		},
 
 		Entry("no providers", nil, BeNil()),
-		Entry("one non primary provider", []core.DNSProvider{{Type: pointer.String("provider")}}, BeNil()),
-		Entry("one primary provider", []core.DNSProvider{{Type: pointer.String("provider"),
-			Primary: ptr.To(true)}}, Equal(&core.DNSProvider{Type: pointer.String("provider"), Primary: ptr.To(true)})),
+		Entry("one non primary provider", []core.DNSProvider{{Type: ptr.To("provider")}}, BeNil()),
+		Entry("one primary provider", []core.DNSProvider{{Type: ptr.To("provider"),
+			Primary: ptr.To(true)}}, Equal(&core.DNSProvider{Type: ptr.To("provider"), Primary: ptr.To(true)})),
 		Entry("multiple w/ one primary provider", []core.DNSProvider{
 			{
-				Type: pointer.String("provider2"),
+				Type: ptr.To("provider2"),
 			},
 			{
-				Type:    pointer.String("provider1"),
+				Type:    ptr.To("provider1"),
 				Primary: ptr.To(true),
 			},
 			{
-				Type: pointer.String("provider3"),
+				Type: ptr.To("provider3"),
 			},
-		}, Equal(&core.DNSProvider{Type: pointer.String("provider1"), Primary: ptr.To(true)})),
+		}, Equal(&core.DNSProvider{Type: ptr.To("provider1"), Primary: ptr.To(true)})),
 		Entry("multiple w/ multiple primary providers", []core.DNSProvider{
 			{
-				Type:    pointer.String("provider1"),
+				Type:    ptr.To("provider1"),
 				Primary: ptr.To(true),
 			},
 			{
-				Type:    pointer.String("provider2"),
+				Type:    ptr.To("provider2"),
 				Primary: ptr.To(true),
 			},
 			{
-				Type: pointer.String("provider3"),
+				Type: ptr.To("provider3"),
 			},
-		}, Equal(&core.DNSProvider{Type: pointer.String("provider1"), Primary: ptr.To(true)})),
+		}, Equal(&core.DNSProvider{Type: ptr.To("provider1"), Primary: ptr.To(true)})),
 	)
 
 	Describe("#GetRemovedVersions", func() {
@@ -794,10 +793,10 @@ var _ = Describe("helper", func() {
 				s := &core.Shoot{}
 				s.Name = fmt.Sprintf("shoot-%d", i)
 				if shoot.specSeedName != "" {
-					s.Spec.SeedName = pointer.String(shoot.specSeedName)
+					s.Spec.SeedName = ptr.To(shoot.specSeedName)
 				}
 				if shoot.statusSeedName != "" {
-					s.Status.SeedName = pointer.String(shoot.statusSeedName)
+					s.Status.SeedName = ptr.To(shoot.statusSeedName)
 				}
 				shootList = append(shootList, s)
 			}
@@ -843,7 +842,7 @@ var _ = Describe("helper", func() {
 
 		Entry("workerKubernetes = nil", semver.MustParse("1.2.3"), nil, semver.MustParse("1.2.3")),
 		Entry("workerKubernetes.version = nil", semver.MustParse("1.2.3"), &core.WorkerKubernetes{}, semver.MustParse("1.2.3")),
-		Entry("workerKubernetes.version != nil", semver.MustParse("1.2.3"), &core.WorkerKubernetes{Version: pointer.String("4.5.6")}, semver.MustParse("4.5.6")),
+		Entry("workerKubernetes.version != nil", semver.MustParse("1.2.3"), &core.WorkerKubernetes{Version: ptr.To("4.5.6")}, semver.MustParse("4.5.6")),
 	)
 
 	DescribeTable("#GetSecretBindingTypes",

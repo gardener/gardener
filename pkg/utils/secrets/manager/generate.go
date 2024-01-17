@@ -24,7 +24,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -41,7 +40,7 @@ func (m *manager) Generate(ctx context.Context, config secretsutils.ConfigInterf
 
 	var bundleFor *string
 	if options.isBundleSecret {
-		bundleFor = pointer.String(strings.TrimSuffix(config.GetName(), nameSuffixBundle))
+		bundleFor = ptr.To(strings.TrimSuffix(config.GetName(), nameSuffixBundle))
 	}
 
 	objectMeta, err := ObjectMeta(
@@ -471,7 +470,7 @@ func SignedByCA(name string, opts ...SignedByCAOption) GenerateOption {
 		}
 
 		certificateConfig.SigningCA = ca
-		options.signingCAChecksum = pointer.String(kubernetesutils.TruncateLabelValue(secret.dataChecksum))
+		options.signingCAChecksum = ptr.To(kubernetesutils.TruncateLabelValue(secret.dataChecksum))
 		return nil
 	}
 }

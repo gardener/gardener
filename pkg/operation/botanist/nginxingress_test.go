@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -140,7 +141,7 @@ var _ = Describe("NginxIngress", func() {
 				},
 				Shoot: &shootpkg.Shoot{
 					SeedNamespace:         seedNamespace,
-					ExternalClusterDomain: pointer.String(externalDomain),
+					ExternalClusterDomain: ptr.To(externalDomain),
 					ExternalDomain: &gardenerutils.Domain{
 						Domain:   externalDomain,
 						Provider: externalProvider,
@@ -166,7 +167,7 @@ var _ = Describe("NginxIngress", func() {
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				DNS: &gardencorev1beta1.DNS{
-					Domain: pointer.String(externalDomain),
+					Domain: ptr.To(externalDomain),
 				},
 				Addons: &gardencorev1beta1.Addons{
 					NginxIngress: &gardencorev1beta1.NginxIngress{
@@ -177,7 +178,7 @@ var _ = Describe("NginxIngress", func() {
 				},
 			},
 			Status: gardencorev1beta1.ShootStatus{
-				ClusterIdentity: pointer.String("shoot-cluster-identity"),
+				ClusterIdentity: ptr.To("shoot-cluster-identity"),
 			},
 		})
 
@@ -225,7 +226,7 @@ var _ = Describe("NginxIngress", func() {
 				Namespace:  seedNamespace,
 				TTL:        pointer.Int64(ttl),
 				Type:       externalProvider,
-				Zone:       pointer.String(externalZone),
+				Zone:       ptr.To(externalZone),
 				SecretData: map[string][]byte{
 					"external-foo": []byte("external-bar"),
 				},
@@ -271,7 +272,7 @@ var _ = Describe("NginxIngress", func() {
 				Namespace:  seedNamespace,
 				TTL:        pointer.Int64(ttl),
 				Type:       externalProvider,
-				Zone:       pointer.String(externalZone),
+				Zone:       ptr.To(externalZone),
 				SecretData: map[string][]byte{
 					"external-foo": []byte("external-bar"),
 				},
@@ -318,7 +319,7 @@ var _ = Describe("NginxIngress", func() {
 						Name:      DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordExternalName,
 						Namespace: seedNamespace,
 					},
-					Zone:       pointer.String(externalZone),
+					Zone:       ptr.To(externalZone),
 					Name:       "*.ingress." + externalDomain,
 					RecordType: extensionsv1alpha1.DNSRecordTypeA,
 					Values:     []string{address},

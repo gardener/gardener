@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	. "github.com/gardener/gardener/pkg/resourcemanager/apis/config/validation"
@@ -45,8 +46,8 @@ var _ = Describe("Validation", func() {
 					},
 				},
 				Controllers: config.ResourceManagerControllerConfiguration{
-					ClusterID:     pointer.String(""),
-					ResourceClass: pointer.String("foo"),
+					ClusterID:     ptr.To(""),
+					ResourceClass: ptr.To("foo"),
 					Health: config.HealthControllerConfig{
 						ConcurrentSyncs: pointer.Int(5),
 						SyncPeriod:      &metav1.Duration{Duration: time.Minute},
@@ -54,7 +55,7 @@ var _ = Describe("Validation", func() {
 					ManagedResource: config.ManagedResourceControllerConfig{
 						ConcurrentSyncs:     pointer.Int(5),
 						SyncPeriod:          &metav1.Duration{Duration: time.Minute},
-						ManagedByLabelValue: pointer.String("foo"),
+						ManagedByLabelValue: ptr.To("foo"),
 					},
 					Secret: config.SecretControllerConfig{
 						ConcurrentSyncs: pointer.Int(5),
@@ -311,7 +312,7 @@ var _ = Describe("Validation", func() {
 				})
 
 				It("should return errors because managed by label value is empty", func() {
-					conf.Controllers.ManagedResource.ManagedByLabelValue = pointer.String("")
+					conf.Controllers.ManagedResource.ManagedByLabelValue = ptr.To("")
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
@@ -338,7 +339,7 @@ var _ = Describe("Validation", func() {
 
 				It("should return errors when scheduler name is empty", func() {
 					conf.Webhooks.PodSchedulerName.Enabled = true
-					conf.Webhooks.PodSchedulerName.SchedulerName = pointer.String("")
+					conf.Webhooks.PodSchedulerName.SchedulerName = ptr.To("")
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{

@@ -668,7 +668,7 @@ var _ = Describe("VpnSeedServer", func() {
 		values = Values{
 			ImageAPIServerProxy: "envoyproxy/envoy:v4.5.6",
 			ImageVPNSeedServer:  vpnImage,
-			KubeAPIServerHost:   pointer.String("foo.bar"),
+			KubeAPIServerHost:   ptr.To("foo.bar"),
 			Network: NetworkValues{
 				PodCIDR:     "10.0.1.0/24",
 				ServiceCIDR: "10.0.0.0/24",

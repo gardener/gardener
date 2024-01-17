@@ -19,7 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction/apis/shoottolerationrestriction"
@@ -43,7 +43,7 @@ var _ = Describe("Validation", func() {
 		It("should allow valid tolerations", func() {
 			tolerations := []core.Toleration{
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
 			}
 			config.Defaults = tolerations
 			config.Whitelist = tolerations
@@ -58,8 +58,8 @@ var _ = Describe("Validation", func() {
 				{},
 				{Key: "foo"},
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.String("baz")},
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
 			}
 			config.Defaults = tolerations
 			config.Whitelist = tolerations

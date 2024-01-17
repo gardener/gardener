@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -118,7 +119,7 @@ var _ = Describe("dnsrecord", func() {
 				},
 				Shoot: &shoot.Shoot{
 					SeedNamespace:         seedNamespace,
-					ExternalClusterDomain: pointer.String(externalDomain),
+					ExternalClusterDomain: ptr.To(externalDomain),
 					ExternalDomain: &gardenerutils.Domain{
 						Domain:   externalDomain,
 						Provider: externalProvider,
@@ -156,7 +157,7 @@ var _ = Describe("dnsrecord", func() {
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				DNS: &gardencorev1beta1.DNS{
-					Domain: pointer.String(externalDomain),
+					Domain: ptr.To(externalDomain),
 				},
 			},
 		})
@@ -194,7 +195,7 @@ var _ = Describe("dnsrecord", func() {
 				Namespace:  seedNamespace,
 				TTL:        pointer.Int64(ttl),
 				Type:       externalProvider,
-				Zone:       pointer.String(externalZone),
+				Zone:       ptr.To(externalZone),
 				SecretData: map[string][]byte{
 					"external-foo": []byte("external-bar"),
 				},
@@ -262,7 +263,7 @@ var _ = Describe("dnsrecord", func() {
 						Name:      DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordExternalName,
 						Namespace: seedNamespace,
 					},
-					Zone:       pointer.String(externalZone),
+					Zone:       ptr.To(externalZone),
 					Name:       "api." + externalDomain,
 					RecordType: extensionsv1alpha1.DNSRecordTypeA,
 					Values:     []string{address},
@@ -304,7 +305,7 @@ var _ = Describe("dnsrecord", func() {
 				Namespace:  seedNamespace,
 				TTL:        pointer.Int64(ttl),
 				Type:       internalProvider,
-				Zone:       pointer.String(internalZone),
+				Zone:       ptr.To(internalZone),
 				SecretData: map[string][]byte{
 					"internal-foo": []byte("internal-bar"),
 				},
@@ -377,7 +378,7 @@ var _ = Describe("dnsrecord", func() {
 						Name:      DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordInternalName,
 						Namespace: seedNamespace,
 					},
-					Zone:       pointer.String(internalZone),
+					Zone:       ptr.To(internalZone),
 					Name:       "api." + internalDomain,
 					RecordType: extensionsv1alpha1.DNSRecordTypeA,
 					Values:     []string{address},

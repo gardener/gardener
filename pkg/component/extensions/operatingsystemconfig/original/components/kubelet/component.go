@@ -160,7 +160,7 @@ ExecStartPre=` + PathScriptCopyKubernetesBinary + ` kubectl`
 		Name:    UnitName,
 		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 		Enable:  ptr.To(true),
-		Content: pointer.String(`[Unit]
+		Content: ptr.To(`[Unit]
 Description=kubelet daemon
 Documentation=https://kubernetes.io/docs/admin/kubelet
 After=` + containerd.UnitName + `
@@ -179,7 +179,7 @@ ExecStart=` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `/kubelet
 		Name:    "kubelet-monitor.service",
 		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 		Enable:  ptr.To(true),
-		Content: pointer.String(`[Unit]
+		Content: ptr.To(`[Unit]
 Description=Kubelet-monitor daemon
 After=` + UnitName + `
 [Install]

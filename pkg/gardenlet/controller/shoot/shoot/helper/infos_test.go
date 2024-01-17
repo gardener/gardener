@@ -22,7 +22,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/component-base/version"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -55,7 +54,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 
 		shoot = &gardencorev1beta1.Shoot{
 			Spec: gardencorev1beta1.ShootSpec{
-				SeedName: pointer.String("seed"),
+				SeedName: ptr.To("seed"),
 				Maintenance: &gardencorev1beta1.Maintenance{
 					TimeWindow: &gardencorev1beta1.MaintenanceTimeWindow{
 						Begin: "220000+0000",
@@ -64,7 +63,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 				},
 			},
 			Status: gardencorev1beta1.ShootStatus{
-				SeedName:      pointer.String("seed"),
+				SeedName:      ptr.To("seed"),
 				LastOperation: &gardencorev1beta1.LastOperation{},
 				Gardener: gardencorev1beta1.Gardener{
 					// don't bother injecting an arbitrary version,
@@ -413,7 +412,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 		BeforeEach(func() {
 			shoot.Generation = 2
 			shoot.Status.ObservedGeneration = 1
-			shoot.Spec.SeedName = pointer.String("other")
+			shoot.Spec.SeedName = ptr.To("other")
 			shoot.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeReconcile
 			shoot.Status.LastOperation.State = gardencorev1beta1.LastOperationStateSucceeded
 		})
@@ -504,9 +503,9 @@ var _ = Describe("CalculateControllerInfos", func() {
 		BeforeEach(func() {
 			shoot.Generation = 2
 			shoot.Status.ObservedGeneration = 2
-			shoot.Spec.SeedName = pointer.String("other")
+			shoot.Spec.SeedName = ptr.To("other")
 			// after successful Migrate operation, the source gardenlet updates status.seedName to be spec.seedName
-			shoot.Status.SeedName = pointer.String("other")
+			shoot.Status.SeedName = ptr.To("other")
 			shoot.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeMigrate
 			shoot.Status.LastOperation.State = gardencorev1beta1.LastOperationStateSucceeded
 		})

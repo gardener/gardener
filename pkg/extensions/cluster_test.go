@@ -22,7 +22,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -119,7 +119,7 @@ var _ = Describe("Cluster", func() {
 		})
 
 		It("should sync cloudprofile, shoot and seed to cluster", func() {
-			expectedShoot.Spec.SeedName = pointer.String(expectedSeed.Name)
+			expectedShoot.Spec.SeedName = ptr.To(expectedSeed.Name)
 
 			Expect(SyncClusterResourceToSeed(ctx, fakeSeedClient, cluster.Name, expectedShoot, expectedCloudProfile, expectedSeed)).To(Succeed())
 			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(cluster), cluster)).To(Succeed())

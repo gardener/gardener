@@ -33,6 +33,7 @@ import (
 	podsecurityadmissionapi "k8s.io/pod-security-admission/api"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -335,7 +336,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 	var wildCardSecretName *string
 	if wildcardCert != nil {
-		wildCardSecretName = pointer.String(wildcardCert.GetName())
+		wildCardSecretName = ptr.To(wildcardCert.GetName())
 	}
 
 	seedIsOriginOfClusterIdentity, err := clusteridentity.IsClusterIdentityEmptyOrFromOrigin(ctx, seedClient, v1beta1constants.ClusterIdentityOriginSeed)
@@ -621,7 +622,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	if wildcardCert != nil {
 		kubeAPIServerIngress := kubeapiserverexposure.NewIngress(seedClient, r.GardenNamespace, kubeapiserverexposure.IngressValues{
 			Host:             seed.GetIngressFQDN("api-seed"),
-			IngressClassName: pointer.String(v1beta1constants.SeedNginxIngressClass),
+			IngressClassName: ptr.To(v1beta1constants.SeedNginxIngressClass),
 			ServiceName:      v1beta1constants.DeploymentNameKubeAPIServer,
 			TLSSecretName:    &wildcardCert.Name,
 		})

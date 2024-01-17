@@ -22,7 +22,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -49,7 +49,7 @@ var _ = Describe("Add", func() {
 				Name: bucketName,
 			},
 			Spec: gardencorev1beta1.BackupBucketSpec{
-				SeedName: pointer.String("seed"),
+				SeedName: ptr.To("seed"),
 			},
 		}
 	})
@@ -71,7 +71,7 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should return false because the backupbucket doesn't belong to this seed", func() {
-			backupBucket.Spec.SeedName = pointer.String("some-other-seed")
+			backupBucket.Spec.SeedName = ptr.To("some-other-seed")
 
 			Expect(p.Create(event.CreateEvent{Object: backupBucket})).To(BeFalse())
 			Expect(p.Update(event.UpdateEvent{ObjectNew: backupBucket})).To(BeFalse())

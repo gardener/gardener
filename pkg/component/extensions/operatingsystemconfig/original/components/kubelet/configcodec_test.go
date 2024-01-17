@@ -83,7 +83,7 @@ var _ = Describe("ConfigCodec", func() {
 			RuntimeRequestTimeout:       metav1.Duration{Duration: 2 * time.Minute},
 			HairpinMode:                 "promiscuous-bridge",
 			MaxPods:                     110,
-			ResolverConfig:              pointer.String("/etc/resolv.conf"),
+			ResolverConfig:              ptr.To("/etc/resolv.conf"),
 			CPUCFSQuota:                 ptr.To(true),
 			MaxOpenFiles:                1000000,
 			KubeAPIQPS:                  pointer.Int32(50),

@@ -22,6 +22,7 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -96,7 +97,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	sshdEnsurerUnit := extensionsv1alpha1.Unit{
 		Name:    "sshd-ensurer.service",
 		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-		Content: pointer.String(`[Unit]
+		Content: ptr.To(`[Unit]
 Description=Ensure SSHD service is enabled or disabled
 DefaultDependencies=no
 [Service]

@@ -17,12 +17,11 @@ package botanist
 import (
 	"context"
 
-	"k8s.io/utils/pointer"
-
 	"github.com/gardener/gardener/imagevector"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/component/kubernetesdashboard"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
+	"k8s.io/utils/ptr"
 )
 
 // DefaultKubernetesDashboard returns a deployer for kubernetes-dashboard.
@@ -44,7 +43,7 @@ func (b *Botanist) DefaultKubernetesDashboard() (kubernetesdashboard.Interface, 
 	}
 
 	if b.ShootUsesDNS() {
-		values.APIServerHost = pointer.String(b.outOfClusterAPIServerFQDN())
+		values.APIServerHost = ptr.To(b.outOfClusterAPIServerFQDN())
 	}
 
 	if b.Shoot.GetInfo().Spec.Addons.KubernetesDashboard.AuthenticationMode != nil {

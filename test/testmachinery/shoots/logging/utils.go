@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -141,7 +140,7 @@ func getCluster(number int) *extensionsv1alpha1.Cluster {
 			Hibernation: &gardencorev1beta1.Hibernation{
 				Enabled: ptr.To(false),
 			},
-			Purpose: (*gardencorev1beta1.ShootPurpose)(pointer.String("evaluation")),
+			Purpose: (*gardencorev1beta1.ShootPurpose)(ptr.To("evaluation")),
 		},
 		Status: gardencorev1beta1.ShootStatus{
 			LastOperation: &gardencorev1beta1.LastOperation{

@@ -95,7 +95,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 				Namespace: testNamespace.Name,
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				Class:      pointer.String(filter.ResourceClass()),
+				Class:      ptr.To(filter.ResourceClass()),
 				SecretRefs: []corev1.LocalObjectReference{{Name: secretForManagedResource.Name}},
 			},
 		}
@@ -404,7 +404,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 
 	Describe("Resource class", func() {
 		BeforeEach(func() {
-			managedResource.Spec.Class = pointer.String("test")
+			managedResource.Spec.Class = ptr.To("test")
 		})
 
 		It("should not reconcile ManagedResource of any other class except the default class", func() {

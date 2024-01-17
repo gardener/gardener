@@ -68,7 +68,7 @@ var _ = Describe("KubeScheduler", func() {
 			KubernetesConfig: gardencorev1beta1.KubernetesConfig{
 				FeatureGates: map[string]bool{"Foo": true, "Bar": false, "Baz": false},
 			},
-			KubeMaxPDVols: pointer.String("23"),
+			KubeMaxPDVols: ptr.To("23"),
 			Profile:       &profileBinPacking,
 		}
 

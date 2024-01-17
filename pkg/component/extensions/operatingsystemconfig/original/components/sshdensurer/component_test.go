@@ -18,6 +18,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -46,7 +47,7 @@ var _ = Describe("Component", func() {
 
 				Name:    "sshd-ensurer.service",
 				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-				Content: pointer.String(`[Unit]
+				Content: ptr.To(`[Unit]
 Description=Ensure SSHD service is enabled or disabled
 DefaultDependencies=no
 [Service]
@@ -83,7 +84,7 @@ WantedBy=multi-user.target`),
 			sshdEnsurerUnit := extensionsv1alpha1.Unit{
 				Name:    "sshd-ensurer.service",
 				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-				Content: pointer.String(`[Unit]
+				Content: ptr.To(`[Unit]
 Description=Ensure SSHD service is enabled or disabled
 DefaultDependencies=no
 [Service]

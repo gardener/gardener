@@ -15,7 +15,6 @@
 package v1beta1
 
 import (
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -47,7 +46,7 @@ func SetDefaults_MachineImageVersion(obj *MachineImageVersion) {
 // SetDefaults_MachineType sets default values for MachineType objects.
 func SetDefaults_MachineType(obj *MachineType) {
 	if obj.Architecture == nil {
-		obj.Architecture = pointer.String(v1beta1constants.ArchitectureAMD64)
+		obj.Architecture = ptr.To(v1beta1constants.ArchitectureAMD64)
 	}
 
 	if obj.Usable == nil {

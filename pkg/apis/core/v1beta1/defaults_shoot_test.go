@@ -368,7 +368,7 @@ var _ = Describe("Shoot defaulting", func() {
 		})
 
 		It("should not overwrite the already set values for schedulerName field", func() {
-			obj.Spec.SchedulerName = pointer.String("foo-scheduler")
+			obj.Spec.SchedulerName = ptr.To("foo-scheduler")
 
 			SetObjectDefaults_Shoot(obj)
 
@@ -493,7 +493,7 @@ var _ = Describe("Shoot defaulting", func() {
 		It("should not overwrite the already set values for kubernetesDashboard field", func() {
 			obj.Spec.Addons = &Addons{
 				KubernetesDashboard: &KubernetesDashboard{
-					AuthenticationMode: pointer.String("foo"),
+					AuthenticationMode: ptr.To("foo"),
 				},
 			}
 
@@ -740,7 +740,7 @@ var _ = Describe("Shoot defaulting", func() {
 		obj.Spec.Provider.Workers = []Worker{
 			{Name: "Default Worker"},
 			{Name: "Worker with machine architecture type",
-				Machine: Machine{Architecture: pointer.String("test")}},
+				Machine: Machine{Architecture: ptr.To("test")}},
 		}
 
 		SetObjectDefaults_Shoot(obj)

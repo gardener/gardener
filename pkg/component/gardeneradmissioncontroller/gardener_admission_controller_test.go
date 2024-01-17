@@ -934,7 +934,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 					},
 				},
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
-					URL:      pointer.String("https://gardener-admission-controller." + namespace + "/webhooks/validate-namespace-deletion"),
+					URL:      ptr.To("https://gardener-admission-controller." + namespace + "/webhooks/validate-namespace-deletion"),
 					CABundle: caBundle,
 				},
 				SideEffects: &sideEffectsNone,
@@ -959,7 +959,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 					},
 				},
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
-					URL:      pointer.String("https://gardener-admission-controller." + namespace + "/webhooks/validate-kubeconfig-secrets"),
+					URL:      ptr.To("https://gardener-admission-controller." + namespace + "/webhooks/validate-kubeconfig-secrets"),
 					CABundle: caBundle,
 				},
 				SideEffects: &sideEffectsNone,
@@ -983,7 +983,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 					},
 				},
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
-					URL:      pointer.String("https://gardener-admission-controller." + namespace + "/webhooks/admission/validate-internal-domain"),
+					URL:      ptr.To("https://gardener-admission-controller." + namespace + "/webhooks/admission/validate-internal-domain"),
 					CABundle: caBundle,
 				},
 				SideEffects: &sideEffectsNone,
@@ -1017,7 +1017,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 					},
 				},
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
-					URL:      pointer.String("https://gardener-admission-controller." + namespace + "/webhooks/audit-policies"),
+					URL:      ptr.To("https://gardener-admission-controller." + namespace + "/webhooks/audit-policies"),
 					CABundle: caBundle,
 				},
 				SideEffects: &sideEffectsNone,
@@ -1043,7 +1043,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 					},
 				},
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
-					URL:      pointer.String("https://gardener-admission-controller." + namespace + "/webhooks/validate-admission-plugin-secret"),
+					URL:      ptr.To("https://gardener-admission-controller." + namespace + "/webhooks/validate-admission-plugin-secret"),
 					CABundle: caBundle,
 				},
 				SideEffects: &sideEffectsNone,
@@ -1082,7 +1082,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 				},
 			},
 			ClientConfig: admissionregistrationv1.WebhookClientConfig{
-				URL:      pointer.String("https://gardener-admission-controller." + namespace + "/webhooks/validate-resource-size"),
+				URL:      ptr.To("https://gardener-admission-controller." + namespace + "/webhooks/validate-resource-size"),
 				CABundle: caBundle,
 			},
 			SideEffects: &sideEffectsNone,
@@ -1163,7 +1163,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 			FailurePolicy: &failurePolicyFail,
 			MatchPolicy:   &matchPolicyEquivalent,
 			ClientConfig: admissionregistrationv1.WebhookClientConfig{
-				URL:      pointer.String("https://gardener-admission-controller." + namespace + "/webhooks/admission/seedrestriction"),
+				URL:      ptr.To("https://gardener-admission-controller." + namespace + "/webhooks/admission/seedrestriction"),
 				CABundle: caBundle,
 			},
 			SideEffects: &sideEffectsNone,

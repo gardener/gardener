@@ -24,6 +24,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -308,5 +309,5 @@ func buildWebhookConfigRulesForResourceSize(config *admissioncontrollerv1alpha1.
 }
 
 func buildClientConfigURL(webhookPath, namespace string) *string {
-	return pointer.String(fmt.Sprintf("https://%s.%s%s", ServiceName, namespace, webhookPath))
+	return ptr.To(fmt.Sprintf("https://%s.%s%s", ServiceName, namespace, webhookPath))
 }

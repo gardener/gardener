@@ -24,7 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -142,7 +142,7 @@ var _ = Describe("Infrastructure", func() {
 
 			namespace = "namespace"
 			name      = "name"
-			nodesCIDR = pointer.String("1.2.3.4/5")
+			nodesCIDR = ptr.To("1.2.3.4/5")
 			shoot     = &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,

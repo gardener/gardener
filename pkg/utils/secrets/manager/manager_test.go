@@ -26,7 +26,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -352,9 +351,9 @@ var _ = Describe("Manager", func() {
 			},
 
 			Entry("no extras", "a9c2fcb9", nil, nil, nil, nil),
-			Entry("with signing ca checksum", "a11a0b2d", pointer.String("checksum"), nil, nil, map[string]string{"checksum-of-signing-ca": "checksum"}),
+			Entry("with signing ca checksum", "a11a0b2d", ptr.To("checksum"), nil, nil, map[string]string{"checksum-of-signing-ca": "checksum"}),
 			Entry("with persist", "a9c2fcb9", nil, ptr.To(true), nil, map[string]string{"persist": "true"}),
-			Entry("with bundleFor", "a9c2fcb9", nil, nil, pointer.String("bundle-origin"), map[string]string{"bundle-for": "bundle-origin"}),
+			Entry("with bundleFor", "a9c2fcb9", nil, nil, ptr.To("bundle-origin"), map[string]string{"bundle-for": "bundle-origin"}),
 		)
 	})
 

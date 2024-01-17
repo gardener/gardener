@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -777,7 +778,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		}
 
 		if d.purpose == extensionsv1alpha1.OperatingSystemConfigPurposeReconcile {
-			d.osc.Spec.ReloadConfigFilePath = pointer.String(downloader.PathDownloadedCloudConfig)
+			d.osc.Spec.ReloadConfigFilePath = ptr.To(downloader.PathDownloadedCloudConfig)
 		}
 
 		return nil
