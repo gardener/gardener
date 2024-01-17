@@ -59,16 +59,16 @@ spec:
       patchesJson6902: |-
         - path: "/spec/files/0"
           op: add
-          value: {"content":{"inline":{"data":"{{config}}","encoding":"b64"}},"path":"/var/opt/docker/seed-registry-cache-config.yml","permissions":416}
+          value: {"content":{"inline":{"data":"{{config}}","encoding":"b64"}},"path":"/var/opt/docker/seed-registry-cache-config.yml","permissions":0640}
         - path: "/spec/files/1"
           op: add
-          value: {"content":{"inline":{"data":"{{hosts}}","encoding":"b64"}},"path":"/etc/containerd/certs.d/{{registryHost|base64_decode(@)}}/hosts.toml","permissions":416}
+          value: {"content":{"inline":{"data":"{{hosts}}","encoding":"b64"}},"path":"/etc/containerd/certs.d/{{registryHost|base64_decode(@)}}/hosts.toml","permissions":0640}
         - path: "/spec/files/2"
           op: add
-          value: {"content":{"inline":{"data":"{{startScript}}","encoding":"b64"}},"path":"/var/opt/docker/start-seed-registry-cache.sh","permissions":488}
+          value: {"content":{"inline":{"data":"{{startScript}}","encoding":"b64"}},"path":"/var/opt/docker/start-seed-registry-cache.sh","permissions":0750}
         - path: "/spec/files/3"
           op: add
-          value: {"content":{"inline":{"data":"{{stopScript}}","encoding":"b64"}},"path":"/var/opt/docker/stop-seed-registry-cache.sh","permissions":488}
+          value: {"content":{"inline":{"data":"{{stopScript}}","encoding":"b64"}},"path":"/var/opt/docker/stop-seed-registry-cache.sh","permissions":0750}
   - name: add-seed-registry-cache-dropin
     match:
       all:
@@ -145,7 +145,7 @@ spec:
         patchesJson6902: |-
           - path: "/spec/files/{{elementIndex}}"
             op: replace
-            value: {"content":{"inline":{"data":"{{base64_encode('{{replace_all('{{base64_decode(element.content.inline.data)}}','$tmp_dir/gardener-node-agent','$tmp_dir/ko-app/gardener-node-agent')}}')}}","encoding":"b64"}},"path":"/var/lib/gardener-node-agent/init.sh","permissions":493}
+            value: {"content":{"inline":{"data":"{{base64_encode('{{replace_all('{{base64_decode(element.content.inline.data)}}','$tmp_dir/gardener-node-agent','$tmp_dir/ko-app/gardener-node-agent')}}')}}","encoding":"b64"}},"path":"/var/lib/gardener-node-agent/init.sh","permissions":0755}
   - name: modify-gardener-node-agent-path
     match:
       all:
@@ -163,4 +163,4 @@ spec:
         patchesJson6902: |-
           - path: "/spec/files/{{elementIndex}}"
             op: replace
-            value: {"content":{"imageRef":{"filePathInImage":"/ko-app/gardener-node-agent","image":"{{element.content.imageRef.image}}"}},"path":"/opt/bin/gardener-node-agent","permissions":493}
+            value: {"content":{"imageRef":{"filePathInImage":"/ko-app/gardener-node-agent","image":"{{element.content.imageRef.image}}"}},"path":"/opt/bin/gardener-node-agent","permissions":0755}
