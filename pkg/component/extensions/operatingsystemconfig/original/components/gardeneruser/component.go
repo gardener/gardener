@@ -21,7 +21,6 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -97,7 +96,7 @@ ExecStart=` + pathScript + `
 		[]extensionsv1alpha1.File{
 			{
 				Path:        pathAuthorizedSSHKeys,
-				Permissions: pointer.Int32(0644),
+				Permissions: ptr.To(int32(0644)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
@@ -107,7 +106,7 @@ ExecStart=` + pathScript + `
 			},
 			{
 				Path:        pathScript,
-				Permissions: pointer.Int32(0755),
+				Permissions: ptr.To(int32(0755)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",

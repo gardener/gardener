@@ -31,7 +31,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -325,7 +324,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 											"NET_BIND_SERVICE",
 										},
 									},
-									RunAsUser: pointer.Int64(0),
+									RunAsUser: ptr.To(int64(0)),
 								},
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{

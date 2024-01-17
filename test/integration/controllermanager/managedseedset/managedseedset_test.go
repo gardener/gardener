@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -235,7 +234,7 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 				UpdateStrategy: &seedmanagementv1alpha1.UpdateStrategy{
 					Type: updateStrategyTypePtr(seedmanagementv1alpha1.RollingUpdateStrategyType),
 					RollingUpdate: &seedmanagementv1alpha1.RollingUpdateStrategy{
-						Partition: pointer.Int32(0),
+						Partition: ptr.To(int32(0)),
 					},
 				},
 			},
@@ -317,7 +316,7 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 
 			By("Update the Replicas to 2")
 			patch := client.MergeFrom(managedSeedSet.DeepCopy())
-			managedSeedSet.Spec.Replicas = pointer.Int32(2)
+			managedSeedSet.Spec.Replicas = ptr.To(int32(2))
 			Expect(testClient.Patch(ctx, managedSeedSet, patch)).To(Succeed())
 
 			By("Make one replica ready, to enable controller to pick the next replica")
@@ -341,7 +340,7 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 
 			By("Scale-up the Replicas to 2")
 			patch := client.MergeFrom(managedSeedSet.DeepCopy())
-			managedSeedSet.Spec.Replicas = pointer.Int32(2)
+			managedSeedSet.Spec.Replicas = ptr.To(int32(2))
 			Expect(testClient.Patch(ctx, managedSeedSet, patch)).To(Succeed())
 
 			By("Make one replica ready, to enable controller to pick the next replica")
@@ -356,7 +355,7 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 
 			By("Scale-down the Replicas to 1")
 			patch = client.MergeFrom(managedSeedSet.DeepCopy())
-			managedSeedSet.Spec.Replicas = pointer.Int32(1)
+			managedSeedSet.Spec.Replicas = ptr.To(int32(1))
 			Expect(testClient.Patch(ctx, managedSeedSet, patch)).To(Succeed())
 
 			Eventually(func(g Gomega) {

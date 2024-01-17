@@ -34,7 +34,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	kubernetesfake "k8s.io/client-go/kubernetes/fake"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -310,7 +309,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				} else {
 					oscOriginal.Spec.Files = append(append(oscOriginal.Spec.Files, downloaderFiles...), extensionsv1alpha1.File{
 						Path:        "/etc/systemd/system/cloud-config-downloader.service",
-						Permissions: pointer.Int32(0644),
+						Permissions: ptr.To(int32(0644)),
 						Content: extensionsv1alpha1.FileContent{
 							Inline: &extensionsv1alpha1.FileContentInline{
 								Encoding: "b64",

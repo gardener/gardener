@@ -21,10 +21,10 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -48,7 +48,7 @@ var _ = Describe("Seed lease controller tests", func() {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(lease), lease)).To(Succeed())
 			g.Expect(lease.OwnerReferences).To(ConsistOf(metav1.OwnerReference{APIVersion: "core.gardener.cloud/v1beta1", Kind: "Seed", Name: seed.Name, UID: seed.UID}))
 			g.Expect(lease.Spec.RenewTime.Sub(fakeClock.Now())).To(BeNumerically("<=", 0))
-			g.Expect(lease.Spec.LeaseDurationSeconds).To(Equal(pointer.Int32(1)))
+			g.Expect(lease.Spec.LeaseDurationSeconds).To(PointTo(Equal(int32(1))))
 			g.Expect(lease.Spec.HolderIdentity).To(Equal(&seed.Name))
 			g.Expect(healthManager.Get()).To(BeTrue())
 		}).Should(Succeed())
@@ -72,7 +72,7 @@ var _ = Describe("Seed lease controller tests", func() {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(lease), lease)).To(Succeed())
 			g.Expect(lease.Spec.RenewTime.Sub(fakeClock.Now())).To(BeNumerically("<=", 0))
 			g.Expect(lease.OwnerReferences).To(ConsistOf(metav1.OwnerReference{APIVersion: "core.gardener.cloud/v1beta1", Kind: "Seed", Name: seed.Name, UID: seed.UID}))
-			g.Expect(lease.Spec.LeaseDurationSeconds).To(Equal(pointer.Int32(1)))
+			g.Expect(lease.Spec.LeaseDurationSeconds).To(PointTo(Equal(int32(1))))
 			g.Expect(lease.Spec.HolderIdentity).To(Equal(&seed.Name))
 		}).Should(Succeed())
 	})
@@ -86,7 +86,7 @@ var _ = Describe("Seed lease controller tests", func() {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(lease), lease)).To(Succeed())
 			g.Expect(lease.OwnerReferences).To(ConsistOf(metav1.OwnerReference{APIVersion: "core.gardener.cloud/v1beta1", Kind: "Seed", Name: seed.Name, UID: seed.UID}))
 			g.Expect(lease.Spec.RenewTime.Sub(fakeClock.Now())).To(BeNumerically("<=", 0))
-			g.Expect(lease.Spec.LeaseDurationSeconds).To(Equal(pointer.Int32(1)))
+			g.Expect(lease.Spec.LeaseDurationSeconds).To(PointTo(Equal(int32(1))))
 			g.Expect(lease.Spec.HolderIdentity).To(Equal(&seed.Name))
 			g.Expect(healthManager.Get()).To(BeTrue())
 		}).Should(Succeed())
@@ -113,7 +113,7 @@ var _ = Describe("Seed lease controller tests", func() {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(lease), lease)).To(Succeed())
 			g.Expect(fakeClock.Now().Sub(lease.Spec.RenewTime.Time)).To(BeNumerically(">=", time.Hour))
 			g.Expect(lease.OwnerReferences).To(ConsistOf(metav1.OwnerReference{APIVersion: "core.gardener.cloud/v1beta1", Kind: "Seed", Name: seed.Name, UID: seed.UID}))
-			g.Expect(lease.Spec.LeaseDurationSeconds).To(Equal(pointer.Int32(1)))
+			g.Expect(lease.Spec.LeaseDurationSeconds).To(PointTo(Equal(int32(1))))
 			g.Expect(lease.Spec.HolderIdentity).To(Equal(&seed.Name))
 		}).Should(Succeed())
 	})

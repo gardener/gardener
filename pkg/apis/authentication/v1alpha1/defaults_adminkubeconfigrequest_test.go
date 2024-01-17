@@ -19,7 +19,8 @@ package v1alpha1_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	. "github.com/onsi/gomega/gstruct"
+	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 )
@@ -35,15 +36,15 @@ var _ = Describe("AdminKubeconfigRequest defaulting", func() {
 		It("should default expirationSeconds field", func() {
 			SetObjectDefaults_AdminKubeconfigRequest(obj)
 
-			Expect(obj.Spec.ExpirationSeconds).To(Equal(pointer.Int64(60 * 60)))
+			Expect(obj.Spec.ExpirationSeconds).To(PointTo(Equal(int64(60 * 60))))
 		})
 
 		It("should not default expirationSeconds field if it is already set", func() {
-			obj.Spec.ExpirationSeconds = pointer.Int64(10 * 60)
+			obj.Spec.ExpirationSeconds = ptr.To(int64(10 * 60))
 
 			SetObjectDefaults_AdminKubeconfigRequest(obj)
 
-			Expect(obj.Spec.ExpirationSeconds).To(Equal(pointer.Int64(10 * 60)))
+			Expect(obj.Spec.ExpirationSeconds).To(PointTo(Equal(int64(10 * 60))))
 		})
 	})
 })

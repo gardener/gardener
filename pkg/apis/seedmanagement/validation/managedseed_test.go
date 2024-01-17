@@ -23,7 +23,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -252,8 +251,8 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 				seedx.Spec.Networks.Nodes = ptr.To("")
 
 				managedSeed.Spec.Gardenlet.Deployment = &seedmanagement.GardenletDeployment{
-					ReplicaCount:         pointer.Int32(-1),
-					RevisionHistoryLimit: pointer.Int32(-1),
+					ReplicaCount:         ptr.To(int32(-1)),
+					RevisionHistoryLimit: ptr.To(int32(-1)),
 					ServiceAccountName:   ptr.To(""),
 					Image: &seedmanagement.Image{
 						Repository: ptr.To(""),

@@ -23,7 +23,6 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/operator/apis/config"
@@ -193,8 +192,8 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 
 		It("should pass with valid toleration options", func() {
 			conf.NodeToleration = &config.NodeTolerationConfiguration{
-				DefaultNotReadyTolerationSeconds:    pointer.Int64(60),
-				DefaultUnreachableTolerationSeconds: pointer.Int64(120),
+				DefaultNotReadyTolerationSeconds:    ptr.To(int64(60)),
+				DefaultUnreachableTolerationSeconds: ptr.To(int64(120)),
 			}
 
 			Expect(ValidateOperatorConfiguration(conf)).To(BeEmpty())
@@ -202,8 +201,8 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 
 		It("should fail with invalid toleration options", func() {
 			conf.NodeToleration = &config.NodeTolerationConfiguration{
-				DefaultNotReadyTolerationSeconds:    pointer.Int64(-1),
-				DefaultUnreachableTolerationSeconds: pointer.Int64(-2),
+				DefaultNotReadyTolerationSeconds:    ptr.To(int64(-1)),
+				DefaultUnreachableTolerationSeconds: ptr.To(int64(-2)),
 			}
 
 			errorList := ValidateOperatorConfiguration(conf)

@@ -20,7 +20,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -435,7 +434,7 @@ func kubeletFiles(ctx components.Context, kubeletConfig, kubeletCABundleBase64 s
 	files := []extensionsv1alpha1.File{
 		{
 			Path:        "/var/lib/kubelet/ca.crt",
-			Permissions: pointer.Int32(0644),
+			Permissions: ptr.To(int32(0644)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Encoding: "b64",
@@ -445,7 +444,7 @@ func kubeletFiles(ctx components.Context, kubeletConfig, kubeletCABundleBase64 s
 		},
 		{
 			Path:        "/var/lib/kubelet/config/kubelet",
-			Permissions: pointer.Int32(0644),
+			Permissions: ptr.To(int32(0644)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Encoding: "b64",
@@ -458,7 +457,7 @@ func kubeletFiles(ctx components.Context, kubeletConfig, kubeletCABundleBase64 s
 	if useGardenerNodeAgentEnabled {
 		files = append(files, extensionsv1alpha1.File{
 			Path:        "/opt/bin/kubelet",
-			Permissions: pointer.Int32(0755),
+			Permissions: ptr.To(int32(0755)),
 			Content: extensionsv1alpha1.FileContent{
 				ImageRef: &extensionsv1alpha1.FileContentImageRef{
 					Image:           ctx.Images["hyperkube"].String(),
@@ -495,7 +494,7 @@ func kubeletMonitorFiles() []extensionsv1alpha1.File {
 	files := []extensionsv1alpha1.File{
 		{
 			Path:        "/opt/bin/health-monitor-kubelet",
-			Permissions: pointer.Int32(0755),
+			Permissions: ptr.To(int32(0755)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Encoding: "b64",

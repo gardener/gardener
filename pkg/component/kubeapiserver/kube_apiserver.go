@@ -26,7 +26,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -475,7 +474,7 @@ func (k *kubeAPIServer) Wait(ctx context.Context) error {
 		var (
 			retryError *retry.Error
 			headBytes  *int64
-			tailLines  = pointer.Int64(10)
+			tailLines  = ptr.To(int64(10))
 		)
 
 		if !errors.As(err, &retryError) {

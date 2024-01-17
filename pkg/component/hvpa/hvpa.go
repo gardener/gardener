@@ -31,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -228,8 +227,8 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 				}),
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas:             pointer.Int32(1),
-				RevisionHistoryLimit: pointer.Int32(2),
+				Replicas:             ptr.To(int32(1)),
+				RevisionHistoryLimit: ptr.To(int32(2)),
 				Selector:             &metav1.LabelSelector{MatchLabels: utils.MergeStringMaps(getLabels(), getDeploymentLabels())},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{

@@ -25,7 +25,6 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -303,7 +302,7 @@ var _ = Describe("Bastion controller tests", func() {
 					"Reason":  Equal("SuccessfullyReconciled"),
 					"Message": Equal("The bastion has been reconciled successfully."),
 				})))
-				g.Expect(operationsBastion.Status.ObservedGeneration).To(Equal(pointer.Int64(operationsBastion.Generation)))
+				g.Expect(operationsBastion.Status.ObservedGeneration).To(Equal(ptr.To(operationsBastion.Generation)))
 			}).Should(Succeed())
 		})
 	})

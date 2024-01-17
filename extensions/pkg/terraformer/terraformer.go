@@ -27,7 +27,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -397,7 +396,7 @@ func (t *terraformer) deployTerraformerPod(ctx context.Context, generateName, co
 			PriorityClassName:             v1beta1constants.PriorityClassNameShootControlPlane300,
 			RestartPolicy:                 corev1.RestartPolicyNever,
 			ServiceAccountName:            name,
-			TerminationGracePeriodSeconds: pointer.Int64(t.terminationGracePeriodSeconds),
+			TerminationGracePeriodSeconds: ptr.To(t.terminationGracePeriodSeconds),
 		},
 	}
 

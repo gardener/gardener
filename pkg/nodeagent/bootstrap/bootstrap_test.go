@@ -22,7 +22,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/spf13/afero"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
 	. "github.com/gardener/gardener/pkg/nodeagent/bootstrap"
@@ -84,7 +84,7 @@ WantedBy=multi-user.target`
 
 		When("kubelet data volume size is set", func() {
 			BeforeEach(func() {
-				bootstrapConfig.KubeletDataVolumeSize = pointer.Int64(1234)
+				bootstrapConfig.KubeletDataVolumeSize = ptr.To(int64(1234))
 
 				DeferCleanup(test.WithVar(&ExecScript, func(scriptPath string) ([]byte, error) {
 					script, err := fakeFS.ReadFile(scriptPath)

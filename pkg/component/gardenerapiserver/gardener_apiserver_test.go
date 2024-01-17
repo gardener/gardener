@@ -34,7 +34,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -285,7 +284,7 @@ var _ = Describe("GardenerAPIServer", func() {
 				},
 			},
 			Spec: hvpav1alpha1.HvpaSpec{
-				Replicas: pointer.Int32(1),
+				Replicas: ptr.To(int32(1)),
 				Hpa: hvpav1alpha1.HpaSpec{
 					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"role": "gardener-apiserver-hpa"}},
 					Deploy:   true,
@@ -304,21 +303,21 @@ var _ = Describe("GardenerAPIServer", func() {
 							Labels: map[string]string{"role": "gardener-apiserver-hpa"},
 						},
 						Spec: hvpav1alpha1.HpaTemplateSpec{
-							MinReplicas: pointer.Int32(1),
+							MinReplicas: ptr.To(int32(1)),
 							MaxReplicas: 4,
 							Metrics: []autoscalingv2beta1.MetricSpec{
 								{
 									Type: "Resource",
 									Resource: &autoscalingv2beta1.ResourceMetricSource{
 										Name:                     corev1.ResourceCPU,
-										TargetAverageUtilization: pointer.Int32(80),
+										TargetAverageUtilization: ptr.To(int32(80)),
 									},
 								},
 								{
 									Type: "Resource",
 									Resource: &autoscalingv2beta1.ResourceMetricSource{
 										Name:                     corev1.ResourceMemory,
-										TargetAverageUtilization: pointer.Int32(80),
+										TargetAverageUtilization: ptr.To(int32(80)),
 									},
 								},
 							},
@@ -336,11 +335,11 @@ var _ = Describe("GardenerAPIServer", func() {
 						MinChange: hvpav1alpha1.ScaleParams{
 							CPU: hvpav1alpha1.ChangeParams{
 								Value:      ptr.To("300m"),
-								Percentage: pointer.Int32(80),
+								Percentage: ptr.To(int32(80)),
 							},
 							Memory: hvpav1alpha1.ChangeParams{
 								Value:      ptr.To("200M"),
-								Percentage: pointer.Int32(80),
+								Percentage: ptr.To(int32(80)),
 							},
 						},
 					},
@@ -352,22 +351,22 @@ var _ = Describe("GardenerAPIServer", func() {
 						MinChange: hvpav1alpha1.ScaleParams{
 							CPU: hvpav1alpha1.ChangeParams{
 								Value:      ptr.To("600m"),
-								Percentage: pointer.Int32(80),
+								Percentage: ptr.To(int32(80)),
 							},
 							Memory: hvpav1alpha1.ChangeParams{
 								Value:      ptr.To("600M"),
-								Percentage: pointer.Int32(80),
+								Percentage: ptr.To(int32(80)),
 							},
 						},
 					},
 					LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
 						CPU: hvpav1alpha1.ChangeParams{
 							Value:      ptr.To("1"),
-							Percentage: pointer.Int32(70),
+							Percentage: ptr.To(int32(70)),
 						},
 						Memory: hvpav1alpha1.ChangeParams{
 							Value:      ptr.To("1G"),
-							Percentage: pointer.Int32(70),
+							Percentage: ptr.To(int32(70)),
 						},
 					},
 					Template: hvpav1alpha1.VpaTemplate{
@@ -425,7 +424,7 @@ var _ = Describe("GardenerAPIServer", func() {
 			},
 			Spec: appsv1.DeploymentSpec{
 				MinReadySeconds:      30,
-				RevisionHistoryLimit: pointer.Int32(2),
+				RevisionHistoryLimit: ptr.To(int32(2)),
 				Replicas:             &replicas,
 				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 					"app":  "gardener",
@@ -467,9 +466,9 @@ var _ = Describe("GardenerAPIServer", func() {
 						PriorityClassName:            "gardener-garden-system-500",
 						SecurityContext: &corev1.PodSecurityContext{
 							RunAsNonRoot: ptr.To(true),
-							RunAsUser:    pointer.Int64(65532),
-							RunAsGroup:   pointer.Int64(65532),
-							FSGroup:      pointer.Int64(65532),
+							RunAsUser:    ptr.To(int64(65532)),
+							RunAsGroup:   ptr.To(int64(65532)),
+							FSGroup:      ptr.To(int64(65532)),
 						},
 						Containers: []corev1.Container{{
 							Name:            "gardener-apiserver",
@@ -582,7 +581,7 @@ var _ = Describe("GardenerAPIServer", func() {
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
 										SecretName:  "etcd-client",
-										DefaultMode: pointer.Int32(0640),
+										DefaultMode: ptr.To(int32(0640)),
 									},
 								},
 							},
@@ -591,7 +590,7 @@ var _ = Describe("GardenerAPIServer", func() {
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
 										SecretName:  "gardener-apiserver",
-										DefaultMode: pointer.Int32(0640),
+										DefaultMode: ptr.To(int32(0640)),
 									},
 								},
 							},
@@ -628,7 +627,7 @@ var _ = Describe("GardenerAPIServer", func() {
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
 										SecretName:  "gardener-apiserver-etcd-encryption-configuration-944a649a",
-										DefaultMode: pointer.Int32(0640),
+										DefaultMode: ptr.To(int32(0640)),
 									},
 								},
 							},

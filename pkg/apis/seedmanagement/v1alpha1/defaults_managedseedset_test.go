@@ -17,7 +17,7 @@ package v1alpha1_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 )
@@ -33,21 +33,21 @@ var _ = Describe("Defaults", func() {
 		It("should default replicas to 1 and revisionHistoryLimit to 10", func() {
 			SetObjectDefaults_ManagedSeedSet(obj)
 
-			Expect(obj.Spec.Replicas).To(Equal(pointer.Int32(1)))
+			Expect(obj.Spec.Replicas).To(Equal(ptr.To(int32(1))))
 			Expect(obj.Spec.UpdateStrategy).NotTo(BeNil())
-			Expect(obj.Spec.RevisionHistoryLimit).To(Equal(pointer.Int32(10)))
+			Expect(obj.Spec.RevisionHistoryLimit).To(Equal(ptr.To(int32(10))))
 		})
 
 		It("should not overwrite the already set values for ManagedSeedSet spec", func() {
 			obj.Spec = ManagedSeedSetSpec{
-				Replicas:             pointer.Int32(5),
-				RevisionHistoryLimit: pointer.Int32(15),
+				Replicas:             ptr.To(int32(5)),
+				RevisionHistoryLimit: ptr.To(int32(15)),
 			}
 			SetObjectDefaults_ManagedSeedSet(obj)
 
-			Expect(obj.Spec.Replicas).To(Equal(pointer.Int32(5)))
+			Expect(obj.Spec.Replicas).To(Equal(ptr.To(int32(5))))
 			Expect(obj.Spec.UpdateStrategy).NotTo(BeNil())
-			Expect(obj.Spec.RevisionHistoryLimit).To(Equal(pointer.Int32(15)))
+			Expect(obj.Spec.RevisionHistoryLimit).To(Equal(ptr.To(int32(15))))
 		})
 	})
 
@@ -81,20 +81,20 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_ManagedSeedSet(obj)
 
 			Expect(obj.Spec.UpdateStrategy.RollingUpdate).To(Equal(&RollingUpdateStrategy{
-				Partition: pointer.Int32(0),
+				Partition: ptr.To(int32(0)),
 			}))
 		})
 
 		It("should not overwrote the already set values for RollingUpdateStrategy", func() {
 			obj.Spec.UpdateStrategy = &UpdateStrategy{
 				RollingUpdate: &RollingUpdateStrategy{
-					Partition: pointer.Int32(1),
+					Partition: ptr.To(int32(1)),
 				},
 			}
 			SetObjectDefaults_ManagedSeedSet(obj)
 
 			Expect(obj.Spec.UpdateStrategy.RollingUpdate).To(Equal(&RollingUpdateStrategy{
-				Partition: pointer.Int32(1),
+				Partition: ptr.To(int32(1)),
 			}))
 		})
 	})

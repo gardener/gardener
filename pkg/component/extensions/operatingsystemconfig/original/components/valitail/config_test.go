@@ -19,7 +19,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -133,7 +132,7 @@ ExecStart=/var/lib/valitail/scripts/fetch-token.sh`),
 
 					valitailConfigFile := extensionsv1alpha1.File{
 						Path:        "/var/lib/valitail/config/config",
-						Permissions: pointer.Int32(0644),
+						Permissions: ptr.To(int32(0644)),
 						Content: extensionsv1alpha1.FileContent{
 							Inline: &extensionsv1alpha1.FileContentInline{
 								Encoding: "b64",
@@ -279,7 +278,7 @@ scrape_configs:
 
 					valitailBinaryFile := extensionsv1alpha1.File{
 						Path:        "/opt/bin/valitail",
-						Permissions: pointer.Int32(0755),
+						Permissions: ptr.To(int32(0755)),
 						Content: extensionsv1alpha1.FileContent{
 							ImageRef: &extensionsv1alpha1.FileContentImageRef{
 								Image:           ctx.Images["valitail"].String(),
@@ -290,7 +289,7 @@ scrape_configs:
 
 					valitailFetchTokenScriptFile := extensionsv1alpha1.File{
 						Path:        "/var/lib/valitail/scripts/fetch-token.sh",
-						Permissions: pointer.Int32(0744),
+						Permissions: ptr.To(int32(0744)),
 						Content: extensionsv1alpha1.FileContent{
 							Inline: &extensionsv1alpha1.FileContentInline{
 								Encoding: "b64",
@@ -323,7 +322,7 @@ exit $?
 
 					caBundleFile := extensionsv1alpha1.File{
 						Path:        "/var/lib/valitail/ca.crt",
-						Permissions: pointer.Int32(0644),
+						Permissions: ptr.To(int32(0644)),
 						Content: extensionsv1alpha1.FileContent{
 							Inline: &extensionsv1alpha1.FileContentInline{
 								Encoding: "b64",

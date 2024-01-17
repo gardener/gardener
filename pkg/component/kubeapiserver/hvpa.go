@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -55,7 +54,7 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 				Type: autoscalingv2beta1.ResourceMetricSourceType,
 				Resource: &autoscalingv2beta1.ResourceMetricSource{
 					Name:                     corev1.ResourceCPU,
-					TargetAverageUtilization: pointer.Int32(hpaTargetAverageUtilizationCPU),
+					TargetAverageUtilization: ptr.To(hpaTargetAverageUtilizationCPU),
 				},
 			},
 		}
@@ -86,7 +85,7 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 			Type: autoscalingv2beta1.ResourceMetricSourceType,
 			Resource: &autoscalingv2beta1.ResourceMetricSource{
 				Name:                     corev1.ResourceMemory,
-				TargetAverageUtilization: pointer.Int32(hpaTargetAverageUtilizationMemory),
+				TargetAverageUtilization: ptr.To(hpaTargetAverageUtilizationMemory),
 			},
 		})
 	}
@@ -105,7 +104,7 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), hvpa, func() error {
 		metav1.SetMetaDataLabel(&hvpa.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigType, resourcesv1alpha1.HighAvailabilityConfigTypeServer)
-		hvpa.Spec.Replicas = pointer.Int32(1)
+		hvpa.Spec.Replicas = ptr.To(int32(1))
 		hvpa.Spec.Hpa = hvpav1alpha1.HpaSpec{
 			Selector: &metav1.LabelSelector{MatchLabels: hpaLabels},
 			Deploy:   true,
@@ -141,11 +140,11 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 				MinChange: hvpav1alpha1.ScaleParams{
 					CPU: hvpav1alpha1.ChangeParams{
 						Value:      ptr.To("300m"),
-						Percentage: pointer.Int32(80),
+						Percentage: ptr.To(int32(80)),
 					},
 					Memory: hvpav1alpha1.ChangeParams{
 						Value:      ptr.To("200M"),
-						Percentage: pointer.Int32(80),
+						Percentage: ptr.To(int32(80)),
 					},
 				},
 			},
@@ -157,22 +156,22 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 				MinChange: hvpav1alpha1.ScaleParams{
 					CPU: hvpav1alpha1.ChangeParams{
 						Value:      ptr.To("300m"),
-						Percentage: pointer.Int32(80),
+						Percentage: ptr.To(int32(80)),
 					},
 					Memory: hvpav1alpha1.ChangeParams{
 						Value:      ptr.To("200M"),
-						Percentage: pointer.Int32(80),
+						Percentage: ptr.To(int32(80)),
 					},
 				},
 			},
 			LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
 				CPU: hvpav1alpha1.ChangeParams{
 					Value:      ptr.To("1"),
-					Percentage: pointer.Int32(70),
+					Percentage: ptr.To(int32(70)),
 				},
 				Memory: hvpav1alpha1.ChangeParams{
 					Value:      ptr.To("1G"),
-					Percentage: pointer.Int32(70),
+					Percentage: ptr.To(int32(70)),
 				},
 			},
 			Template: hvpav1alpha1.VpaTemplate{

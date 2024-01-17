@@ -16,13 +16,11 @@ limitations under the License.
 
 package v1alpha1
 
-import (
-	"k8s.io/utils/pointer"
-)
+import "k8s.io/utils/ptr"
 
 // SetDefaults_ViewerKubeconfigRequestSpec sets default values for ViewerKubeconfigRequestSpec objects.
 func SetDefaults_ViewerKubeconfigRequestSpec(obj *ViewerKubeconfigRequestSpec) {
 	if obj.ExpirationSeconds == nil {
-		obj.ExpirationSeconds = pointer.Int64(60 * 60)
+		obj.ExpirationSeconds = ptr.To(int64(60 * 60))
 	}
 }

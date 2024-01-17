@@ -17,7 +17,7 @@ package helper_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
@@ -56,7 +56,7 @@ var _ = Describe("helper", func() {
 		},
 
 		Entry("nil value", nil, int64(120)),
-		Entry("non-nil value", pointer.Int64(300), int64(300)),
+		Entry("non-nil value", ptr.To(int64(300)), int64(300)),
 	)
 
 	Describe("#DeterminePrimaryIPFamily", func() {

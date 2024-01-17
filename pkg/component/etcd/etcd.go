@@ -35,7 +35,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -321,8 +320,8 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					Namespace: clientSecret.Namespace,
 				},
 			},
-			ServerPort:              pointer.Int32(int32(etcdconstants.PortEtcdPeer)),
-			ClientPort:              pointer.Int32(int32(etcdconstants.PortEtcdClient)),
+			ServerPort:              ptr.To(etcdconstants.PortEtcdPeer),
+			ClientPort:              ptr.To(etcdconstants.PortEtcdClient),
 			Metrics:                 &metrics,
 			DefragmentationSchedule: e.computeDefragmentationSchedule(existingEtcd),
 			Quota:                   utils.QuantityPtr(resource.MustParse("8Gi")),
@@ -367,7 +366,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					Namespace: clientSecret.Namespace,
 				},
 			},
-			Port:                    pointer.Int32(int32(etcdconstants.PortBackupRestore)),
+			Port:                    ptr.To(etcdconstants.PortBackupRestore),
 			Resources:               resourcesBackupRestore,
 			GarbageCollectionPolicy: &garbageCollectionPolicy,
 			GarbageCollectionPeriod: &garbageCollectionPeriod,
@@ -425,7 +424,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			hvpa.Labels = utils.MergeStringMaps(e.getRoleLabels(), map[string]string{
 				v1beta1constants.LabelApp: LabelAppValue,
 			})
-			hvpa.Spec.Replicas = pointer.Int32(1)
+			hvpa.Spec.Replicas = ptr.To(int32(1))
 			hvpa.Spec.MaintenanceTimeWindow = &hvpav1alpha1.MaintenanceTimeWindow{
 				Begin: e.values.HvpaConfig.MaintenanceTimeWindow.Begin,
 				End:   e.values.HvpaConfig.MaintenanceTimeWindow.End,
@@ -438,21 +437,21 @@ func (e *etcd) Deploy(ctx context.Context) error {
 						Labels: hpaLabels,
 					},
 					Spec: hvpav1alpha1.HpaTemplateSpec{
-						MinReplicas: pointer.Int32(replicas),
+						MinReplicas: ptr.To(replicas),
 						MaxReplicas: replicas,
 						Metrics: []autoscalingv2beta1.MetricSpec{
 							{
 								Type: autoscalingv2beta1.ResourceMetricSourceType,
 								Resource: &autoscalingv2beta1.ResourceMetricSource{
 									Name:                     corev1.ResourceCPU,
-									TargetAverageUtilization: pointer.Int32(80),
+									TargetAverageUtilization: ptr.To(int32(80)),
 								},
 							},
 							{
 								Type: autoscalingv2beta1.ResourceMetricSourceType,
 								Resource: &autoscalingv2beta1.ResourceMetricSource{
 									Name:                     corev1.ResourceMemory,
-									TargetAverageUtilization: pointer.Int32(80),
+									TargetAverageUtilization: ptr.To(int32(80)),
 								},
 							},
 						},
@@ -470,11 +469,11 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					MinChange: hvpav1alpha1.ScaleParams{
 						CPU: hvpav1alpha1.ChangeParams{
 							Value:      ptr.To("1"),
-							Percentage: pointer.Int32(80),
+							Percentage: ptr.To(int32(80)),
 						},
 						Memory: hvpav1alpha1.ChangeParams{
 							Value:      ptr.To("2G"),
-							Percentage: pointer.Int32(80),
+							Percentage: ptr.To(int32(80)),
 						},
 					},
 				},
@@ -486,22 +485,22 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					MinChange: hvpav1alpha1.ScaleParams{
 						CPU: hvpav1alpha1.ChangeParams{
 							Value:      ptr.To("1"),
-							Percentage: pointer.Int32(80),
+							Percentage: ptr.To(int32(80)),
 						},
 						Memory: hvpav1alpha1.ChangeParams{
 							Value:      ptr.To("2G"),
-							Percentage: pointer.Int32(80),
+							Percentage: ptr.To(int32(80)),
 						},
 					},
 				},
 				LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
 					CPU: hvpav1alpha1.ChangeParams{
 						Value:      ptr.To("2"),
-						Percentage: pointer.Int32(40),
+						Percentage: ptr.To(int32(40)),
 					},
 					Memory: hvpav1alpha1.ChangeParams{
 						Value:      ptr.To("5G"),
-						Percentage: pointer.Int32(40),
+						Percentage: ptr.To(int32(40)),
 					},
 				},
 				Template: hvpav1alpha1.VpaTemplate{
@@ -677,7 +676,7 @@ func (e *etcd) Scale(ctx context.Context, replicas int32) error {
 
 		patch := client.MergeFrom(hvpa.DeepCopy())
 		hvpa.Spec.Hpa.Template.Spec.MaxReplicas = replicas
-		hvpa.Spec.Hpa.Template.Spec.MinReplicas = pointer.Int32(replicas)
+		hvpa.Spec.Hpa.Template.Spec.MinReplicas = ptr.To(replicas)
 		return e.client.Patch(ctx, hvpa, patch)
 	}
 

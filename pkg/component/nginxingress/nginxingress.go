@@ -31,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -435,8 +434,8 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				Labels:    n.getLabels(labelValueBackend, true),
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas:             pointer.Int32(1),
-				RevisionHistoryLimit: pointer.Int32(2),
+				Replicas:             ptr.To(int32(1)),
+				RevisionHistoryLimit: ptr.To(int32(2)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: utils.MergeStringMaps(n.getLabels(labelValueBackend, false), map[string]string{
 						labelKeyRelease: labelValueAddons,
@@ -452,8 +451,8 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 						PriorityClassName: n.values.PriorityClassName,
 						NodeSelector:      nodeSelector,
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsUser: pointer.Int64(65534),
-							FSGroup:   pointer.Int64(65534),
+							RunAsUser: ptr.To(int64(65534)),
+							FSGroup:   ptr.To(int64(65534)),
 						},
 						Containers: []corev1.Container{{
 							Name:            n.getName("Container", true),
@@ -484,7 +483,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 								},
 							},
 						}},
-						TerminationGracePeriodSeconds: pointer.Int64(60),
+						TerminationGracePeriodSeconds: ptr.To(int64(60)),
 					},
 				},
 			},
@@ -497,8 +496,8 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				Labels:    n.getLabels(LabelValueController, true),
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas:             pointer.Int32(2),
-				RevisionHistoryLimit: pointer.Int32(2),
+				Replicas:             ptr.To(int32(2)),
+				RevisionHistoryLimit: ptr.To(int32(2)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: utils.MergeStringMaps[string](n.getLabels(LabelValueController, false), map[string]string{
 						labelKeyRelease: labelValueAddons,
@@ -524,7 +523,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 									Drop: []corev1.Capability{"ALL"},
 									Add:  []corev1.Capability{"NET_BIND_SERVICE", "SYS_CHROOT"},
 								},
-								RunAsUser:                pointer.Int64(101),
+								RunAsUser:                ptr.To(int64(101)),
 								AllowPrivilegeEscalation: ptr.To(true),
 								SeccompProfile:           &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeUnconfined},
 							},
@@ -589,7 +588,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 							Resources: resourceRequirements,
 						}},
 						ServiceAccountName:            serviceAccount.Name,
-						TerminationGracePeriodSeconds: pointer.Int64(60),
+						TerminationGracePeriodSeconds: ptr.To(int64(60)),
 					},
 				},
 			},
@@ -656,7 +655,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			Type: corev1.SeccompProfileTypeRuntimeDefault,
 		}
 
-		deploymentController.Spec.Replicas = pointer.Int32(1)
+		deploymentController.Spec.Replicas = ptr.To(int32(1))
 		deploymentController.Spec.Template.Annotations = map[string]string{"checksum/config": utils.ComputeChecksum(configMap.Data)}
 		deploymentController.Spec.Template.Spec.DNSPolicy = corev1.DNSClusterFirst
 		deploymentController.Spec.Template.Spec.RestartPolicy = corev1.RestartPolicyAlways

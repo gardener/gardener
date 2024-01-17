@@ -34,7 +34,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -426,12 +425,12 @@ var _ = Describe("Etcd", func() {
 				It("should properly restore multi-node main etcd from backup if etcd does not exist", func() {
 					gomock.InOrder(
 						etcdMain.EXPECT().Get(ctx).Return(nil, apierrors.NewNotFound(schema.GroupResource{}, "")),
-						etcdMain.EXPECT().GetReplicas().Return(pointer.Int32(3)),
-						etcdMain.EXPECT().SetReplicas(pointer.Int32(1)),
+						etcdMain.EXPECT().GetReplicas().Return(ptr.To(int32(3))),
+						etcdMain.EXPECT().SetReplicas(ptr.To(int32(1))),
 						etcdMain.EXPECT().Deploy(ctx),
 						etcdMain.EXPECT().Wait(ctx),
 						etcdMain.EXPECT().Scale(ctx, int32(3)),
-						etcdMain.EXPECT().SetReplicas(pointer.Int32(3)),
+						etcdMain.EXPECT().SetReplicas(ptr.To(int32(3))),
 					)
 
 					etcdEvents.EXPECT().Deploy(ctx)
@@ -447,12 +446,12 @@ var _ = Describe("Etcd", func() {
 						}, nil
 					})
 					gomock.InOrder(
-						etcdMain.EXPECT().GetReplicas().Return(pointer.Int32(3)),
-						etcdMain.EXPECT().SetReplicas(pointer.Int32(1)),
+						etcdMain.EXPECT().GetReplicas().Return(ptr.To(int32(3))),
+						etcdMain.EXPECT().SetReplicas(ptr.To(int32(1))),
 						etcdMain.EXPECT().Deploy(ctx),
 						etcdMain.EXPECT().Wait(ctx),
 						etcdMain.EXPECT().Scale(ctx, int32(3)),
-						etcdMain.EXPECT().SetReplicas(pointer.Int32(3)),
+						etcdMain.EXPECT().SetReplicas(ptr.To(int32(3))),
 					)
 
 					etcdEvents.EXPECT().Deploy(ctx)

@@ -28,7 +28,6 @@ import (
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -182,7 +181,7 @@ var _ = BeforeSuite(func() {
 	Expect((&lease.Reconciler{
 		SeedRESTClient: kubernetesClient.RESTClient(),
 		Config: config.SeedControllerConfiguration{
-			LeaseResyncSeconds: pointer.Int32(1),
+			LeaseResyncSeconds: ptr.To(int32(1)),
 		},
 		Clock:          fakeClock,
 		HealthManager:  healthManager,

@@ -33,7 +33,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
@@ -544,8 +543,8 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap, dashboar
 			Labels:    getLabels(),
 		},
 		Spec: appsv1.DeploymentSpec{
-			RevisionHistoryLimit: pointer.Int32(2),
-			Replicas:             pointer.Int32(p.values.Replicas),
+			RevisionHistoryLimit: ptr.To(int32(2)),
+			Replicas:             ptr.To(p.values.Replicas),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: getLabels(),
 			},

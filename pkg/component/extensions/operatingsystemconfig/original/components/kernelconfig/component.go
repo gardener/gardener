@@ -20,7 +20,6 @@ import (
 	"strconv"
 
 	"k8s.io/component-helpers/node/util/sysctl"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -77,7 +76,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 
 	kernelSettingsFile := extensionsv1alpha1.File{
 		Path:        v1beta1constants.OperatingSystemConfigFilePathKernelSettings,
-		Permissions: pointer.Int32(0644),
+		Permissions: ptr.To(int32(0644)),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Data: fileContent,

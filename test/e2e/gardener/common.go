@@ -21,7 +21,6 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -81,8 +80,8 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 				EnableStaticTokenKubeconfig: ptr.To(false),
 				Kubelet: &gardencorev1beta1.KubeletConfig{
 					SerializeImagePulls: ptr.To(false),
-					RegistryPullQPS:     pointer.Int32(10),
-					RegistryBurst:       pointer.Int32(20),
+					RegistryPullQPS:     ptr.To(int32(10)),
+					RegistryBurst:       ptr.To(int32(20)),
 				},
 				KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
 			},

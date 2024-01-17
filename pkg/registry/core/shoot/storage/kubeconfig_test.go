@@ -37,7 +37,7 @@ import (
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
@@ -193,7 +193,7 @@ lIwEl8tStnO9u1JUK4w1e+lC37zI2v5k4WMQmJcolUEMwmZjnCR/
 		})
 
 		It("returns an error if validation fails", func() {
-			setExpirationSeconds(obj, pointer.Int64(-1))
+			setExpirationSeconds(obj, ptr.To(int64(-1)))
 		})
 
 		It("returns an error if there is no user in the context", func() {

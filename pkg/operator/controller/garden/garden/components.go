@@ -430,9 +430,9 @@ func (r *Reconciler) newEtcd(
 
 	highAvailabilityEnabled := helper.HighAvailabilityEnabled(garden)
 
-	replicas := pointer.Int32(1)
+	replicas := ptr.To(int32(1))
 	if highAvailabilityEnabled {
-		replicas = pointer.Int32(3)
+		replicas = ptr.To(int32(3))
 	}
 
 	return etcd.New(

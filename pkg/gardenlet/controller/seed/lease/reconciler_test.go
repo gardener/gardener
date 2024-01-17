@@ -32,7 +32,6 @@ import (
 	fakerestclient "k8s.io/client-go/rest/fake"
 	"k8s.io/utils/clock"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -90,7 +89,7 @@ var _ = Describe("LeaseReconciler", func() {
 			},
 			Spec: coordinationv1.LeaseSpec{
 				HolderIdentity:       ptr.To(seed.Name),
-				LeaseDurationSeconds: pointer.Int32(2),
+				LeaseDurationSeconds: ptr.To(int32(2)),
 				RenewTime:            &renewTime,
 			},
 		}
@@ -105,8 +104,8 @@ var _ = Describe("LeaseReconciler", func() {
 		}
 
 		controllerConfig = config.SeedControllerConfiguration{
-			LeaseResyncSeconds:       pointer.Int32(2),
-			LeaseResyncMissThreshold: pointer.Int32(10),
+			LeaseResyncSeconds:       ptr.To(int32(2)),
+			LeaseResyncMissThreshold: ptr.To(int32(10)),
 		}
 	})
 
@@ -162,9 +161,9 @@ var _ = Describe("LeaseReconciler", func() {
 
 	It("should check if LeaseResyncSeconds matches the expectedLease value", func() {
 		expectedCondition = gardenletReadyCondition(clock)
-		expectedLease.Spec.LeaseDurationSeconds = pointer.Int32(3)
+		expectedLease.Spec.LeaseDurationSeconds = ptr.To(int32(3))
 
-		reconciler.Config.LeaseResyncSeconds = pointer.Int32(3)
+		reconciler.Config.LeaseResyncSeconds = ptr.To(int32(3))
 		request = reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)}
 
 		Expect(reconciler.Reconcile(ctx, request)).To(Equal(reconcile.Result{RequeueAfter: 3 * time.Second}))

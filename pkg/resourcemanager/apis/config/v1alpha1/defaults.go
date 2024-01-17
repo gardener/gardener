@@ -20,7 +20,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -192,6 +191,6 @@ func SetDefaults_PodSchedulerNameWebhookConfig(obj *PodSchedulerNameWebhookConfi
 // SetDefaults_ProjectedTokenMountWebhookConfig sets defaults for the ProjectedTokenMountWebhookConfig object.
 func SetDefaults_ProjectedTokenMountWebhookConfig(obj *ProjectedTokenMountWebhookConfig) {
 	if obj.Enabled && obj.ExpirationSeconds == nil {
-		obj.ExpirationSeconds = pointer.Int64(43200)
+		obj.ExpirationSeconds = ptr.To(int64(43200))
 	}
 }

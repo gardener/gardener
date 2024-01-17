@@ -23,7 +23,6 @@ import (
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -146,8 +145,8 @@ var _ = Describe("ManagedSeed controller test", func() {
 			Spec: seedmanagementv1alpha1.ManagedSeedSpec{
 				Gardenlet: &seedmanagementv1alpha1.Gardenlet{
 					Deployment: &seedmanagementv1alpha1.GardenletDeployment{
-						ReplicaCount:         pointer.Int32(1),
-						RevisionHistoryLimit: pointer.Int32(1),
+						ReplicaCount:         ptr.To(int32(1)),
+						RevisionHistoryLimit: ptr.To(int32(1)),
 						Image: &seedmanagementv1alpha1.Image{
 							PullPolicy: pullPolicyPtr(corev1.PullIfNotPresent),
 						},

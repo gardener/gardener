@@ -22,7 +22,6 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/Masterminds/sprig/v3"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/imagevector"
@@ -126,7 +125,7 @@ ExecStartPre=` + PathScriptCopyKubernetesBinary + ` kubectl`
 	kubeletFiles := []extensionsv1alpha1.File{
 		{
 			Path:        PathKubeletCACert,
-			Permissions: pointer.Int32(0644),
+			Permissions: ptr.To(int32(0644)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Encoding: "b64",
@@ -136,7 +135,7 @@ ExecStartPre=` + PathScriptCopyKubernetesBinary + ` kubectl`
 		},
 		{
 			Path:        PathKubeletConfig,
-			Permissions: pointer.Int32(0644),
+			Permissions: ptr.To(int32(0644)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: fileContentKubeletConfig,
 			},
@@ -146,7 +145,7 @@ ExecStartPre=` + PathScriptCopyKubernetesBinary + ` kubectl`
 	healthMonitorFiles := []extensionsv1alpha1.File{
 		{
 			Path:        pathHealthMonitor,
-			Permissions: pointer.Int32(0755),
+			Permissions: ptr.To(int32(0755)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Encoding: "b64",
@@ -193,7 +192,7 @@ ExecStart=` + pathHealthMonitor),
 	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
 		kubeletBinaryFile := extensionsv1alpha1.File{
 			Path:        v1beta1constants.OperatingSystemConfigFilePathBinaries + "/kubelet",
-			Permissions: pointer.Int32(0755),
+			Permissions: ptr.To(int32(0755)),
 			Content: extensionsv1alpha1.FileContent{
 				ImageRef: &extensionsv1alpha1.FileContentImageRef{
 					Image:           ctx.Images[imagevector.ImageNameHyperkube].String(),

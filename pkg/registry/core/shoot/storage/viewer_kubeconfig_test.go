@@ -23,7 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 )
@@ -34,7 +34,7 @@ var _ = Describe("Viewer Kubeconfig", func() {
 		func() runtime.Object {
 			return &authenticationv1alpha1.ViewerKubeconfigRequest{
 				Spec: authenticationv1alpha1.ViewerKubeconfigRequestSpec{
-					ExpirationSeconds: pointer.Int64(int64(time.Minute.Seconds() * 11)),
+					ExpirationSeconds: ptr.To(int64(time.Minute.Seconds() * 11)),
 				},
 			}
 		},

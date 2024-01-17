@@ -24,7 +24,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/component-helpers/node/util/sysctl"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -96,7 +95,7 @@ var _ = Describe("Component", func() {
 
 		kernelSettingsFile := extensionsv1alpha1.File{
 			Path:        "/etc/sysctl.d/99-k8s-general.conf",
-			Permissions: pointer.Int32(0644),
+			Permissions: ptr.To(int32(0644)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Data: modifiedData,

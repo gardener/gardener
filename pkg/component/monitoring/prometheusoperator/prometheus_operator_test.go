@@ -28,7 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -135,8 +134,8 @@ var _ = Describe("PrometheusOperator", func() {
 				Labels:    map[string]string{"app": "prometheus-operator"},
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas:             pointer.Int32(1),
-				RevisionHistoryLimit: pointer.Int32(2),
+				Replicas:             ptr.To(int32(1)),
+				RevisionHistoryLimit: ptr.To(int32(2)),
 				Selector:             &metav1.LabelSelector{MatchLabels: GetLabels()},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
@@ -151,7 +150,7 @@ var _ = Describe("PrometheusOperator", func() {
 						PriorityClassName:  priorityClassName,
 						SecurityContext: &corev1.PodSecurityContext{
 							RunAsNonRoot:   ptr.To(true),
-							RunAsUser:      pointer.Int64(65532),
+							RunAsUser:      ptr.To(int64(65532)),
 							SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
 						},
 						Containers: []corev1.Container{

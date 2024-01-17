@@ -129,10 +129,10 @@ func SetDefaults_GardenClientConnection(obj *GardenClientConnection) {
 // SetDefaults_KubeconfigValidity sets defaults for the controller objects.
 func SetDefaults_KubeconfigValidity(obj *KubeconfigValidity) {
 	if obj.AutoRotationJitterPercentageMin == nil {
-		obj.AutoRotationJitterPercentageMin = pointer.Int32(70)
+		obj.AutoRotationJitterPercentageMin = ptr.To(int32(70))
 	}
 	if obj.AutoRotationJitterPercentageMax == nil {
-		obj.AutoRotationJitterPercentageMax = pointer.Int32(90)
+		obj.AutoRotationJitterPercentageMax = ptr.To(int32(90))
 	}
 }
 
@@ -293,11 +293,11 @@ func SetDefaults_SeedControllerConfiguration(obj *SeedControllerConfiguration) {
 	}
 
 	if obj.LeaseResyncSeconds == nil {
-		obj.LeaseResyncSeconds = pointer.Int32(2)
+		obj.LeaseResyncSeconds = ptr.To(int32(2))
 	}
 
 	if obj.LeaseResyncMissThreshold == nil {
-		obj.LeaseResyncMissThreshold = pointer.Int32(10)
+		obj.LeaseResyncMissThreshold = ptr.To(int32(10))
 	}
 }
 
@@ -337,7 +337,7 @@ func SetDefaults_ShootControllerConfiguration(obj *ShootControllerConfiguration)
 	}
 
 	if obj.DNSEntryTTLSeconds == nil {
-		obj.DNSEntryTTLSeconds = pointer.Int64(120)
+		obj.DNSEntryTTLSeconds = ptr.To(int64(120))
 	}
 }
 
@@ -490,27 +490,27 @@ func SetDefaults_ETCDConfig(obj *ETCDConfig) {
 // SetDefaults_ETCDController sets defaults for the ETCD controller.
 func SetDefaults_ETCDController(obj *ETCDController) {
 	if obj.Workers == nil {
-		obj.Workers = pointer.Int64(50)
+		obj.Workers = ptr.To(int64(50))
 	}
 }
 
 // SetDefaults_CustodianController sets defaults for the ETCD custodian controller.
 func SetDefaults_CustodianController(obj *CustodianController) {
 	if obj.Workers == nil {
-		obj.Workers = pointer.Int64(10)
+		obj.Workers = ptr.To(int64(10))
 	}
 }
 
 // SetDefaults_BackupCompactionController sets defaults for the ETCD backup compaction controller.
 func SetDefaults_BackupCompactionController(obj *BackupCompactionController) {
 	if obj.Workers == nil {
-		obj.Workers = pointer.Int64(3)
+		obj.Workers = ptr.To(int64(3))
 	}
 	if obj.EnableBackupCompaction == nil {
 		obj.EnableBackupCompaction = ptr.To(false)
 	}
 	if obj.EventsThreshold == nil {
-		obj.EventsThreshold = pointer.Int64(1000000)
+		obj.EventsThreshold = ptr.To(int64(1000000))
 	}
 	if obj.MetricsScrapeWaitDuration == nil {
 		obj.MetricsScrapeWaitDuration = &metav1.Duration{Duration: 60 * time.Second}

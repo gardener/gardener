@@ -28,7 +28,6 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -152,14 +151,14 @@ var _ = Describe("Seed controller tests", func() {
 				ETCDConfig: &config.ETCDConfig{
 					BackupCompactionController: &config.BackupCompactionController{
 						EnableBackupCompaction: ptr.To(false),
-						EventsThreshold:        pointer.Int64(1),
-						Workers:                pointer.Int64(1),
+						EventsThreshold:        ptr.To(int64(1)),
+						Workers:                ptr.To(int64(1)),
 					},
 					CustodianController: &config.CustodianController{
-						Workers: pointer.Int64(1),
+						Workers: ptr.To(int64(1)),
 					},
 					ETCDController: &config.ETCDController{
-						Workers: pointer.Int64(1),
+						Workers: ptr.To(int64(1)),
 					},
 				},
 				SeedConfig: &config.SeedConfig{

@@ -727,7 +727,7 @@ var _ = Describe("health check", func() {
 				},
 				Spec: coordinationv1.LeaseSpec{
 					RenewTime:            &metav1.MicroTime{Time: fakeClock.Now()},
-					LeaseDurationSeconds: pointer.Int32(40),
+					LeaseDurationSeconds: ptr.To(int32(40)),
 				},
 			}
 
@@ -737,7 +737,7 @@ var _ = Describe("health check", func() {
 				},
 				Spec: coordinationv1.LeaseSpec{
 					RenewTime:            &metav1.MicroTime{Time: fakeClock.Now()},
-					LeaseDurationSeconds: pointer.Int32(-40),
+					LeaseDurationSeconds: ptr.To(int32(-40)),
 				},
 			}
 
@@ -747,7 +747,7 @@ var _ = Describe("health check", func() {
 				},
 				Spec: coordinationv1.LeaseSpec{
 					RenewTime:            &metav1.MicroTime{Time: fakeClock.Now()},
-					LeaseDurationSeconds: pointer.Int32(40),
+					LeaseDurationSeconds: ptr.To(int32(40)),
 				},
 			}
 

@@ -28,7 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -41,20 +40,20 @@ import (
 
 const (
 	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
-	ManagedResourceName                    = "shoot-core-node-problem-detector"
-	serviceAccountName                     = "node-problem-detector"
-	deploymentName                         = "node-problem-detector"
-	containerName                          = "node-problem-detector"
-	daemonSetName                          = "node-problem-detector"
-	clusterRoleName                        = "node-problem-detector"
-	clusterRoleBindingName                 = "node-problem-detector"
-	clusterRolePSPName                     = "gardener.cloud:psp:kube-system:node-problem-detector"
-	clusterRoleBindingPSPName              = "gardener.cloud:psp:node-problem-detector"
-	vpaName                                = "node-problem-detector"
-	daemonSetTerminationGracePeriodSeconds = 30
-	daemonSetPrometheusPort                = 20257
-	podSecurityPolicyName                  = "node-problem-detector"
-	labelValue                             = "node-problem-detector"
+	ManagedResourceName                          = "shoot-core-node-problem-detector"
+	serviceAccountName                           = "node-problem-detector"
+	deploymentName                               = "node-problem-detector"
+	containerName                                = "node-problem-detector"
+	daemonSetName                                = "node-problem-detector"
+	clusterRoleName                              = "node-problem-detector"
+	clusterRoleBindingName                       = "node-problem-detector"
+	clusterRolePSPName                           = "gardener.cloud:psp:kube-system:node-problem-detector"
+	clusterRoleBindingPSPName                    = "gardener.cloud:psp:node-problem-detector"
+	vpaName                                      = "node-problem-detector"
+	daemonSetTerminationGracePeriodSeconds int64 = 30
+	daemonSetPrometheusPort                      = 20257
+	podSecurityPolicyName                        = "node-problem-detector"
+	labelValue                                   = "node-problem-detector"
 )
 
 // Values is a set of configuration values for the node-problem-detector component.
@@ -211,7 +210,7 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 						DNSPolicy:                     corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
 						ServiceAccountName:            serviceAccount.Name,
 						HostNetwork:                   false,
-						TerminationGracePeriodSeconds: pointer.Int64(daemonSetTerminationGracePeriodSeconds),
+						TerminationGracePeriodSeconds: ptr.To(daemonSetTerminationGracePeriodSeconds),
 						PriorityClassName:             v1beta1constants.PriorityClassNameShootSystem900,
 						SecurityContext: &corev1.PodSecurityContext{
 							SeccompProfile: &corev1.SeccompProfile{

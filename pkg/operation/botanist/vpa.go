@@ -17,13 +17,12 @@ package botanist
 import (
 	"context"
 
-	"k8s.io/utils/pointer"
-
 	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/vpa"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
+	"k8s.io/utils/ptr"
 )
 
 // DefaultVerticalPodAutoscaler returns a deployer for the Kubernetes Vertical Pod Autoscaler.
@@ -47,18 +46,18 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (vpa.Interface, error) {
 		valuesAdmissionController = vpa.ValuesAdmissionController{
 			Image:                       imageAdmissionController.String(),
 			PriorityClassName:           v1beta1constants.PriorityClassNameShootControlPlane200,
-			Replicas:                    pointer.Int32(b.Shoot.GetReplicas(1)),
+			Replicas:                    ptr.To(b.Shoot.GetReplicas(1)),
 			TopologyAwareRoutingEnabled: b.Shoot.TopologyAwareRoutingEnabled,
 		}
 		valuesRecommender = vpa.ValuesRecommender{
 			Image:             imageRecommender.String(),
 			PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane200,
-			Replicas:          pointer.Int32(b.Shoot.GetReplicas(1)),
+			Replicas:          ptr.To(b.Shoot.GetReplicas(1)),
 		}
 		valuesUpdater = vpa.ValuesUpdater{
 			Image:             imageUpdater.String(),
 			PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane200,
-			Replicas:          pointer.Int32(b.Shoot.GetReplicas(1)),
+			Replicas:          ptr.To(b.Shoot.GetReplicas(1)),
 		}
 	)
 

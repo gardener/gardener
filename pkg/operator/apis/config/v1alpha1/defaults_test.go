@@ -223,12 +223,12 @@ var _ = Describe("Defaults", func() {
 							ConcurrentSyncs: ptr.To(5),
 							SyncPeriod:      &metav1.Duration{Duration: time.Second},
 							ETCDConfig: &v1alpha1.ETCDConfig{
-								ETCDController:      &v1alpha1.ETCDController{Workers: pointer.Int64(5)},
-								CustodianController: &v1alpha1.CustodianController{Workers: pointer.Int64(5)},
+								ETCDController:      &v1alpha1.ETCDController{Workers: ptr.To(int64(5))},
+								CustodianController: &v1alpha1.CustodianController{Workers: ptr.To(int64(5))},
 								BackupCompactionController: &v1alpha1.BackupCompactionController{
-									Workers:                   pointer.Int64(4),
+									Workers:                   ptr.To(int64(4)),
 									EnableBackupCompaction:    ptr.To(true),
-									EventsThreshold:           pointer.Int64(900000),
+									EventsThreshold:           ptr.To(int64(900000)),
 									MetricsScrapeWaitDuration: &metav1.Duration{Duration: 30 * time.Second},
 								},
 							},

@@ -26,7 +26,6 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -470,9 +469,9 @@ var _ = Describe("Helper", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(settings).To(Equal(&ManagedSeedAPIServer{
-				Replicas: pointer.Int32(3),
+				Replicas: ptr.To(int32(3)),
 				Autoscaler: &ManagedSeedAPIServerAutoscaler{
-					MinReplicas: pointer.Int32(3),
+					MinReplicas: ptr.To(int32(3)),
 					MaxReplicas: 3,
 				},
 			}))
@@ -487,9 +486,9 @@ var _ = Describe("Helper", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(settings).To(Equal(&ManagedSeedAPIServer{
-				Replicas: pointer.Int32(3),
+				Replicas: ptr.To(int32(3)),
 				Autoscaler: &ManagedSeedAPIServerAutoscaler{
-					MinReplicas: pointer.Int32(3),
+					MinReplicas: ptr.To(int32(3)),
 					MaxReplicas: 6,
 				},
 			}))

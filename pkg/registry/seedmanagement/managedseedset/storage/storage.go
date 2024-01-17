@@ -27,6 +27,7 @@ import (
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	"github.com/gardener/gardener/pkg/registry/seedmanagement/managedseedset"
@@ -282,7 +283,7 @@ func (i *scaleUpdatedObjectInfo) UpdatedObject(ctx context.Context, oldObj runti
 	}
 
 	// Move replicas/resourceVersion fields to object and return
-	mss.Spec.Replicas = pointer.Int32(scale.Spec.Replicas)
+	mss.Spec.Replicas = ptr.To(scale.Spec.Replicas)
 	mss.ResourceVersion = scale.ResourceVersion
 	return mss, nil
 }

@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
@@ -668,22 +668,22 @@ spec:
 					Entry(
 						"old without replicas, new with replicas", func() {
 							oldDeployment.Spec.Replicas = nil
-							newDeployment.Spec.Replicas = pointer.Int32(2)
-							expected.Spec.Replicas = pointer.Int32(2)
+							newDeployment.Spec.Replicas = ptr.To(int32(2))
+							expected.Spec.Replicas = ptr.To(int32(2))
 						},
 					),
 					Entry(
 						"old with replicas, new without replicas", func() {
-							oldDeployment.Spec.Replicas = pointer.Int32(3)
+							oldDeployment.Spec.Replicas = ptr.To(int32(3))
 							newDeployment.Spec.Replicas = nil
-							expected.Spec.Replicas = pointer.Int32(3)
+							expected.Spec.Replicas = ptr.To(int32(3))
 						},
 					),
 					Entry(
 						"old with replicas, new with replicas", func() {
-							oldDeployment.Spec.Replicas = pointer.Int32(3)
-							newDeployment.Spec.Replicas = pointer.Int32(4)
-							expected.Spec.Replicas = pointer.Int32(3)
+							oldDeployment.Spec.Replicas = ptr.To(int32(3))
+							newDeployment.Spec.Replicas = ptr.To(int32(4))
+							expected.Spec.Replicas = ptr.To(int32(3))
 						},
 					),
 				)

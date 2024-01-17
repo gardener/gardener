@@ -17,7 +17,7 @@ package nodeagentosc
 import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -78,7 +78,7 @@ func AddToManagerWithOptions(
 		Path:           name,
 		Webhook:        &admission.Webhook{Handler: handler, RecoverPanic: true},
 		FailurePolicy:  &failurePolicy,
-		TimeoutSeconds: pointer.Int32(5),
+		TimeoutSeconds: ptr.To(int32(5)),
 		NamespaceSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
 			{Key: v1beta1constants.LabelShootProvider, Operator: metav1.LabelSelectorOpIn, Values: []string{provider}},
 		}},

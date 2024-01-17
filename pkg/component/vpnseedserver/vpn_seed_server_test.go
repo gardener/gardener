@@ -36,7 +36,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -210,7 +209,7 @@ var _ = Describe("VpnSeedServer", func() {
 							},
 						},
 					},
-					TerminationGracePeriodSeconds: pointer.Int64(30),
+					TerminationGracePeriodSeconds: ptr.To(int64(30)),
 					Volumes: []corev1.Volume{
 						{
 							Name: "dev-net-tun",
@@ -225,7 +224,7 @@ var _ = Describe("VpnSeedServer", func() {
 							Name: "certs",
 							VolumeSource: corev1.VolumeSource{
 								Projected: &corev1.ProjectedVolumeSource{
-									DefaultMode: pointer.Int32(420),
+									DefaultMode: ptr.To(int32(420)),
 									Sources: []corev1.VolumeProjection{
 										{
 											Secret: &corev1.SecretProjection{
@@ -264,7 +263,7 @@ var _ = Describe("VpnSeedServer", func() {
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretNameTLSAuth,
-									DefaultMode: pointer.Int32(0400),
+									DefaultMode: ptr.To(int32(0400)),
 								},
 							},
 						},
@@ -273,7 +272,7 @@ var _ = Describe("VpnSeedServer", func() {
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  expectedSecretDH.Name,
-									DefaultMode: pointer.Int32(0400),
+									DefaultMode: ptr.To(int32(0400)),
 								},
 							},
 						},
@@ -441,8 +440,8 @@ var _ = Describe("VpnSeedServer", func() {
 					APIVersion: "apps/v1",
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas:             pointer.Int32(values.Replicas),
-					RevisionHistoryLimit: pointer.Int32(1),
+					Replicas:             ptr.To(values.Replicas),
+					RevisionHistoryLimit: ptr.To(int32(1)),
 					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 						v1beta1constants.LabelApp: DeploymentName,
 					}},
@@ -470,8 +469,8 @@ var _ = Describe("VpnSeedServer", func() {
 				},
 				Spec: appsv1.StatefulSetSpec{
 					PodManagementPolicy:  appsv1.ParallelPodManagement,
-					Replicas:             pointer.Int32(3),
-					RevisionHistoryLimit: pointer.Int32(1),
+					Replicas:             ptr.To(int32(3)),
+					RevisionHistoryLimit: ptr.To(int32(1)),
 					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 						v1beta1constants.LabelApp: DeploymentName,
 					}},

@@ -21,7 +21,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -50,7 +49,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 
 	var replicas *int32
 	if !b.Shoot.HibernationEnabled {
-		replicas = pointer.Int32(getEtcdReplicas(b.Shoot.GetInfo()))
+		replicas = ptr.To(getEtcdReplicas(b.Shoot.GetInfo()))
 	}
 
 	e := NewEtcd(
@@ -242,7 +241,7 @@ func (b *Botanist) restoreMultiNodeMainEtcd(ctx context.Context) error {
 		b.Shoot.Components.ControlPlane.EtcdMain.SetReplicas(originalReplicas)
 	}()
 
-	b.Shoot.Components.ControlPlane.EtcdMain.SetReplicas(pointer.Int32(1))
+	b.Shoot.Components.ControlPlane.EtcdMain.SetReplicas(ptr.To(int32(1)))
 	if err := b.Shoot.Components.ControlPlane.EtcdMain.Deploy(ctx); err != nil {
 		return err
 	}

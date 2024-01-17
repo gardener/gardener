@@ -24,7 +24,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -201,7 +200,7 @@ func (v *vpa) reconcileGeneralMutatingWebhookConfiguration(mutatingWebhookConfig
 		clientConfig.Service = &admissionregistrationv1.ServiceReference{
 			Name:      vpaconstants.AdmissionControllerServiceName,
 			Namespace: v.namespace,
-			Port:      pointer.Int32(admissionControllerServicePort),
+			Port:      ptr.To(admissionControllerServicePort),
 		}
 	} else if v.values.ClusterType == component.ClusterTypeShoot {
 		// the port is only respected if register-by-url is true, that's why it's in this if-block
@@ -220,7 +219,7 @@ func (v *vpa) reconcileGeneralMutatingWebhookConfiguration(mutatingWebhookConfig
 		MatchPolicy:             &matchPolicy,
 		ReinvocationPolicy:      &reinvocationPolicy,
 		SideEffects:             &sideEffects,
-		TimeoutSeconds:          pointer.Int32(10),
+		TimeoutSeconds:          ptr.To(int32(10)),
 		Rules: []admissionregistrationv1.RuleWithOperations{
 			{
 				Rule: admissionregistrationv1.Rule{

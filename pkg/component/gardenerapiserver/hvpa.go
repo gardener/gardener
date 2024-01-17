@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -48,7 +47,7 @@ func (g *gardenerAPIServer) hvpa() *hvpav1alpha1.Hvpa {
 			Labels:    utils.MergeStringMaps(GetLabels(), map[string]string{resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer}),
 		},
 		Spec: hvpav1alpha1.HvpaSpec{
-			Replicas: pointer.Int32(1),
+			Replicas: ptr.To(int32(1)),
 			Hpa: hvpav1alpha1.HpaSpec{
 				Selector: &metav1.LabelSelector{MatchLabels: hpaLabels},
 				Deploy:   true,
@@ -67,21 +66,21 @@ func (g *gardenerAPIServer) hvpa() *hvpav1alpha1.Hvpa {
 						Labels: hpaLabels,
 					},
 					Spec: hvpav1alpha1.HpaTemplateSpec{
-						MinReplicas: pointer.Int32(replicas),
+						MinReplicas: ptr.To(replicas),
 						MaxReplicas: maxReplicas,
 						Metrics: []autoscalingv2beta1.MetricSpec{
 							{
 								Type: autoscalingv2beta1.ResourceMetricSourceType,
 								Resource: &autoscalingv2beta1.ResourceMetricSource{
 									Name:                     corev1.ResourceCPU,
-									TargetAverageUtilization: pointer.Int32(80),
+									TargetAverageUtilization: ptr.To(int32(80)),
 								},
 							},
 							{
 								Type: autoscalingv2beta1.ResourceMetricSourceType,
 								Resource: &autoscalingv2beta1.ResourceMetricSource{
 									Name:                     corev1.ResourceMemory,
-									TargetAverageUtilization: pointer.Int32(80),
+									TargetAverageUtilization: ptr.To(int32(80)),
 								},
 							},
 						},
@@ -99,11 +98,11 @@ func (g *gardenerAPIServer) hvpa() *hvpav1alpha1.Hvpa {
 					MinChange: hvpav1alpha1.ScaleParams{
 						CPU: hvpav1alpha1.ChangeParams{
 							Value:      ptr.To("300m"),
-							Percentage: pointer.Int32(80),
+							Percentage: ptr.To(int32(80)),
 						},
 						Memory: hvpav1alpha1.ChangeParams{
 							Value:      ptr.To("200M"),
-							Percentage: pointer.Int32(80),
+							Percentage: ptr.To(int32(80)),
 						},
 					},
 				},
@@ -115,22 +114,22 @@ func (g *gardenerAPIServer) hvpa() *hvpav1alpha1.Hvpa {
 					MinChange: hvpav1alpha1.ScaleParams{
 						CPU: hvpav1alpha1.ChangeParams{
 							Value:      ptr.To("600m"),
-							Percentage: pointer.Int32(80),
+							Percentage: ptr.To(int32(80)),
 						},
 						Memory: hvpav1alpha1.ChangeParams{
 							Value:      ptr.To("600M"),
-							Percentage: pointer.Int32(80),
+							Percentage: ptr.To(int32(80)),
 						},
 					},
 				},
 				LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
 					CPU: hvpav1alpha1.ChangeParams{
 						Value:      ptr.To("1"),
-						Percentage: pointer.Int32(70),
+						Percentage: ptr.To(int32(70)),
 					},
 					Memory: hvpav1alpha1.ChangeParams{
 						Value:      ptr.To("1G"),
-						Percentage: pointer.Int32(70),
+						Percentage: ptr.To(int32(70)),
 					},
 				},
 				Template: hvpav1alpha1.VpaTemplate{

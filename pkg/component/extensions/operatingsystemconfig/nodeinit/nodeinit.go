@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"html/template"
 
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -77,7 +76,7 @@ WantedBy=multi-user.target`),
 		nodeInitFiles = []extensionsv1alpha1.File{
 			{
 				Path:        nodeagentv1alpha1.BootstrapTokenFilePath,
-				Permissions: pointer.Int32(0640),
+				Permissions: ptr.To(int32(0640)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						// The bootstrap token will be created by the machine-controller-manager when creating an actual
@@ -91,7 +90,7 @@ WantedBy=multi-user.target`),
 			},
 			{
 				Path:        PathInitScript,
-				Permissions: pointer.Int32(0755),
+				Permissions: ptr.To(int32(0755)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",

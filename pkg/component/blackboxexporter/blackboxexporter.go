@@ -27,7 +27,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -170,8 +169,8 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 				),
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas:             pointer.Int32(1),
-				RevisionHistoryLimit: pointer.Int32(2),
+				Replicas:             ptr.To(int32(1)),
+				RevisionHistoryLimit: ptr.To(int32(2)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						labelKeyComponent: labelValue,
@@ -194,8 +193,8 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 						ServiceAccountName: serviceAccount.Name,
 						PriorityClassName:  "system-cluster-critical",
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsUser:          pointer.Int64(65534),
-							FSGroup:            pointer.Int64(65534),
+							RunAsUser:          ptr.To(int64(65534)),
+							FSGroup:            ptr.To(int64(65534)),
 							SupplementalGroups: []int64{1},
 							SeccompProfile: &corev1.SeccompProfile{
 								Type: corev1.SeccompProfileTypeRuntimeDefault,

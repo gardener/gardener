@@ -17,7 +17,6 @@ package node
 import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -79,7 +78,7 @@ func AddToManagerWithOptions(
 		Path:           name,
 		Webhook:        &admission.Webhook{Handler: handler, RecoverPanic: true},
 		FailurePolicy:  &failurePolicy,
-		TimeoutSeconds: pointer.Int32(5),
+		TimeoutSeconds: ptr.To(int32(5)),
 	}, nil
 }
 

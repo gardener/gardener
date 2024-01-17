@@ -90,7 +90,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 		configScanInterval                        = &metav1.Duration{Duration: time.Second}
 		configIgnoreDaemonsetsUtilization   bool  = true
 		configVerbosity                     int32 = 4
-		configMaxEmptyBulkDelete                  = pointer.Int32(20)
+		configMaxEmptyBulkDelete                  = ptr.To(int32(20))
 		configNewPodScaleUpDelay                  = &metav1.Duration{Duration: time.Second}
 		configIgnoreTaints                        = []string{"taint-1", "taint-2"}
 		configFull                                = &gardencorev1beta1.ClusterAutoscaler{
@@ -342,7 +342,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				},
 				Spec: appsv1.DeploymentSpec{
 					Replicas:             &replicas,
-					RevisionHistoryLimit: pointer.Int32(1),
+					RevisionHistoryLimit: ptr.To(int32(1)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"app":  "kubernetes",
@@ -395,7 +395,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 							},
 							PriorityClassName:             v1beta1constants.PriorityClassNameShootControlPlane300,
 							ServiceAccountName:            serviceAccountName,
-							TerminationGracePeriodSeconds: pointer.Int64(5),
+							TerminationGracePeriodSeconds: ptr.To(int64(5)),
 						},
 					},
 				},

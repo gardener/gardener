@@ -22,7 +22,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -300,7 +299,7 @@ var _ = Describe("Project Activity controller tests", func() {
 				}
 			},
 			func(obj client.Object) {
-				obj.(*gardencorev1beta1.Quota).Spec.ClusterLifetimeDays = pointer.Int32(14)
+				obj.(*gardencorev1beta1.Quota).Spec.ClusterLifetimeDays = ptr.To(int32(14))
 			},
 			true,
 		)

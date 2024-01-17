@@ -28,7 +28,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -100,7 +99,7 @@ var _ = Describe("DNSRecord", func() {
 			DNSName:           dnsName,
 			RecordType:        extensionsv1alpha1.DNSRecordTypeA,
 			Values:            []string{address},
-			TTL:               pointer.Int64(ttl),
+			TTL:               ptr.To(ttl),
 			AnnotateOperation: true,
 		}
 
@@ -127,7 +126,7 @@ var _ = Describe("DNSRecord", func() {
 				Name:       dnsName,
 				RecordType: extensionsv1alpha1.DNSRecordTypeA,
 				Values:     []string{address},
-				TTL:        pointer.Int64(ttl),
+				TTL:        ptr.To(ttl),
 			},
 		}
 		secret = &corev1.Secret{
@@ -560,7 +559,7 @@ var _ = Describe("DNSRecord", func() {
 				Entry("secretName changes", func() { values.SecretName = "new-secret-name" }, func() { expectedDNSRecord.Spec.SecretRef.Name = "new-secret-name" }),
 				Entry("zone changes", func() { values.Zone = ptr.To("new-zone") }, func() { expectedDNSRecord.Spec.Zone = ptr.To("new-zone") }),
 				Entry("values changes", func() { values.Values = []string{"8.8.8.8"} }, func() { expectedDNSRecord.Spec.Values = []string{"8.8.8.8"} }),
-				Entry("TTL changes", func() { values.TTL = pointer.Int64(1337) }, func() { expectedDNSRecord.Spec.TTL = pointer.Int64(1337) }),
+				Entry("TTL changes", func() { values.TTL = ptr.To(int64(1337)) }, func() { expectedDNSRecord.Spec.TTL = ptr.To(int64(1337)) }),
 				Entry("zone is nil", func() { values.Zone = nil }, func() { expectedDNSRecord.Spec.Zone = nil }),
 			)
 		})

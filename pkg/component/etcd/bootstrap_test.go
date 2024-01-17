@@ -26,7 +26,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -71,15 +70,15 @@ var _ = Describe("Etcd", func() {
 	JustBeforeEach(func() {
 		etcdConfig = &config.ETCDConfig{
 			ETCDController: &config.ETCDController{
-				Workers: pointer.Int64(25),
+				Workers: ptr.To(int64(25)),
 			},
 			CustodianController: &config.CustodianController{
-				Workers: pointer.Int64(3),
+				Workers: ptr.To(int64(3)),
 			},
 			BackupCompactionController: &config.BackupCompactionController{
-				Workers:                   pointer.Int64(3),
+				Workers:                   ptr.To(int64(3)),
 				EnableBackupCompaction:    ptr.To(true),
-				EventsThreshold:           pointer.Int64(1000000),
+				EventsThreshold:           ptr.To(int64(1000000)),
 				MetricsScrapeWaitDuration: &metav1.Duration{Duration: time.Second * 60},
 				ActiveDeadlineDuration:    &metav1.Duration{Duration: time.Hour * 3},
 			},

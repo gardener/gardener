@@ -247,7 +247,7 @@ var _ = Describe("KubeControllerManager", func() {
 					ResourceVersion: "1",
 				},
 				Spec: hvpav1alpha1.HvpaSpec{
-					Replicas: pointer.Int32(1),
+					Replicas: ptr.To(int32(1)),
 					Hpa: hvpav1alpha1.HpaSpec{
 						Deploy: false,
 						Selector: &metav1.LabelSelector{
@@ -264,7 +264,7 @@ var _ = Describe("KubeControllerManager", func() {
 								},
 							},
 							Spec: hvpav1alpha1.HpaTemplateSpec{
-								MinReplicas: pointer.Int32(int32(1)),
+								MinReplicas: ptr.To(int32(1)),
 								MaxReplicas: int32(1),
 							},
 						},
@@ -378,7 +378,7 @@ var _ = Describe("KubeControllerManager", func() {
 					ResourceVersion: "1",
 				},
 				Spec: appsv1.DeploymentSpec{
-					RevisionHistoryLimit: pointer.Int32(1),
+					RevisionHistoryLimit: ptr.To(int32(1)),
 					Replicas:             &replicas,
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
@@ -402,9 +402,9 @@ var _ = Describe("KubeControllerManager", func() {
 							PriorityClassName:            priorityClassName,
 							SecurityContext: &corev1.PodSecurityContext{
 								RunAsNonRoot: ptr.To(true),
-								RunAsUser:    pointer.Int64(65532),
-								RunAsGroup:   pointer.Int64(65532),
-								FSGroup:      pointer.Int64(65532),
+								RunAsUser:    ptr.To(int64(65532)),
+								RunAsGroup:   ptr.To(int64(65532)),
+								FSGroup:      ptr.To(int64(65532)),
 							},
 							Containers: []corev1.Container{
 								{
@@ -487,7 +487,7 @@ var _ = Describe("KubeControllerManager", func() {
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  "ca-client-current",
-											DefaultMode: pointer.Int32(0640),
+											DefaultMode: ptr.To(int32(0640)),
 										},
 									},
 								},
@@ -496,7 +496,7 @@ var _ = Describe("KubeControllerManager", func() {
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  "service-account-key-current",
-											DefaultMode: pointer.Int32(0640),
+											DefaultMode: ptr.To(int32(0640)),
 										},
 									},
 								},
@@ -505,7 +505,7 @@ var _ = Describe("KubeControllerManager", func() {
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  "kube-controller-manager-server",
-											DefaultMode: pointer.Int32(0640),
+											DefaultMode: ptr.To(int32(0640)),
 										},
 									},
 								},
@@ -526,7 +526,7 @@ var _ = Describe("KubeControllerManager", func() {
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  "ca-kubelet-current",
-							DefaultMode: pointer.Int32(0640),
+							DefaultMode: ptr.To(int32(0640)),
 						},
 					},
 				})
@@ -566,7 +566,7 @@ namespace: kube-system
 			NodeCIDRMaskSize: nil,
 		}
 		configWithFeatureFlags           = &gardencorev1beta1.KubeControllerManagerConfig{KubernetesConfig: gardencorev1beta1.KubernetesConfig{FeatureGates: map[string]bool{"Foo": true, "Bar": false, "Baz": false}}}
-		configWithNodeCIDRMaskSize       = &gardencorev1beta1.KubeControllerManagerConfig{NodeCIDRMaskSize: pointer.Int32(26)}
+		configWithNodeCIDRMaskSize       = &gardencorev1beta1.KubeControllerManagerConfig{NodeCIDRMaskSize: ptr.To(int32(26))}
 		configWithPodEvictionTimeout     = &gardencorev1beta1.KubeControllerManagerConfig{PodEvictionTimeout: &podEvictionTimeout}
 		configWithNodeMonitorGracePeriod = &gardencorev1beta1.KubeControllerManagerConfig{NodeMonitorGracePeriod: &nodeMonitorGracePeriod}
 	)
@@ -942,7 +942,7 @@ namespace: kube-system
 					Namespace: namespace,
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas: pointer.Int32(1),
+					Replicas: ptr.To(int32(1)),
 					Selector: &metav1.LabelSelector{MatchLabels: labels},
 				},
 			}
@@ -973,7 +973,7 @@ namespace: kube-system
 
 			timer := time.AfterFunc(10*time.Millisecond, func() {
 				deploy.Generation = 24
-				deploy.Spec.Replicas = pointer.Int32(1)
+				deploy.Spec.Replicas = ptr.To(int32(1))
 				deploy.Status.Conditions = []appsv1.DeploymentCondition{
 					{Type: appsv1.DeploymentProgressing, Status: "True", Reason: "NewReplicaSetAvailable"},
 					{Type: appsv1.DeploymentAvailable, Status: "True"},

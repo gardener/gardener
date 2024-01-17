@@ -28,7 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -758,7 +757,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 						Selector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{"foo": "bar"},
 						},
-						Replicas: pointer.Int32(1),
+						Replicas: ptr.To(int32(1)),
 						Template: *defaultPodTemplateSpec,
 					},
 				}
@@ -888,7 +887,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 						Selector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{"foo": "bar"},
 						},
-						Replicas: pointer.Int32(1),
+						Replicas: ptr.To(int32(1)),
 						Template: *defaultPodTemplateSpec,
 					},
 				}
@@ -927,7 +926,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 						)
 
 						patch := client.MergeFrom(deployment.DeepCopy())
-						deployment.Spec.Replicas = pointer.Int32(5)
+						deployment.Spec.Replicas = ptr.To(int32(5))
 						Expect(testClient.Patch(ctx, deployment, patch)).To(Succeed())
 
 						patch = client.MergeFrom(managedResource.DeepCopy())
@@ -956,7 +955,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 						)
 
 						patch := client.MergeFrom(deployment.DeepCopy())
-						deployment.Spec.Replicas = pointer.Int32(5)
+						deployment.Spec.Replicas = ptr.To(int32(5))
 						Expect(testClient.Patch(ctx, deployment, patch)).To(Succeed())
 
 						Consistently(func(g Gomega) int32 {

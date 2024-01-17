@@ -37,6 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -347,7 +348,7 @@ func getReplicaCount(obj client.Object, currentOrMinReplicas *int32, failureTole
 		if err != nil {
 			return nil, err
 		}
-		replicas = pointer.Int32(int32(v))
+		replicas = ptr.To(int32(v))
 	}
 	return replicas, nil
 }

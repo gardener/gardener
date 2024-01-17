@@ -20,7 +20,7 @@ import (
 	"github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
@@ -35,11 +35,11 @@ var _ = Describe("ReplicationController", func() {
 			ObjectMeta: metav1.ObjectMeta{Generation: 1},
 		}, HaveOccurred()),
 		Entry("not enough ready replicas", &corev1.ReplicationController{
-			Spec:   corev1.ReplicationControllerSpec{Replicas: pointer.Int32(2)},
+			Spec:   corev1.ReplicationControllerSpec{Replicas: ptr.To(int32(2))},
 			Status: corev1.ReplicationControllerStatus{ReadyReplicas: 1},
 		}, HaveOccurred()),
 		Entry("healthy", &corev1.ReplicationController{
-			Spec:   corev1.ReplicationControllerSpec{Replicas: pointer.Int32(2)},
+			Spec:   corev1.ReplicationControllerSpec{Replicas: ptr.To(int32(2))},
 			Status: corev1.ReplicationControllerStatus{ReadyReplicas: 2},
 		}, BeNil()),
 	)

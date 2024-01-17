@@ -303,8 +303,8 @@ var _ = Describe("VPA", func() {
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas:             pointer.Int32(1),
-					RevisionHistoryLimit: pointer.Int32(2),
+					Replicas:             ptr.To(int32(1)),
+					RevisionHistoryLimit: ptr.To(int32(2)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"app": "vpa-updater",
@@ -660,8 +660,8 @@ var _ = Describe("VPA", func() {
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas:             pointer.Int32(1),
-					RevisionHistoryLimit: pointer.Int32(2),
+					Replicas:             ptr.To(int32(1)),
+					RevisionHistoryLimit: ptr.To(int32(2)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"app": "vpa-recommender",
@@ -903,8 +903,8 @@ var _ = Describe("VPA", func() {
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas:             pointer.Int32(1),
-					RevisionHistoryLimit: pointer.Int32(2),
+					Replicas:             ptr.To(int32(1)),
+					RevisionHistoryLimit: ptr.To(int32(2)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"app": "vpa-admission-controller",
@@ -965,7 +965,7 @@ var _ = Describe("VPA", func() {
 								Name: "vpa-tls-certs",
 								VolumeSource: corev1.VolumeSource{
 									Projected: &corev1.ProjectedVolumeSource{
-										DefaultMode: pointer.Int32(420),
+										DefaultMode: ptr.To(int32(420)),
 										Sources: []corev1.VolumeProjection{
 											{
 												Secret: &corev1.SecretProjection{
@@ -1234,7 +1234,7 @@ var _ = Describe("VPA", func() {
 				MatchPolicy:        &webhookMatchPolicy,
 				ReinvocationPolicy: &webhookReinvocationPolicy,
 				SideEffects:        &webhookSideEffects,
-				TimeoutSeconds:     pointer.Int32(10),
+				TimeoutSeconds:     ptr.To(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
 						Rule: admissionregistrationv1.Rule{
@@ -1392,7 +1392,7 @@ var _ = Describe("VPA", func() {
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "vpa-webhook",
 							Namespace: namespace,
-							Port:      pointer.Int32(443),
+							Port:      ptr.To(int32(443)),
 						},
 					}
 
@@ -1436,7 +1436,7 @@ var _ = Describe("VPA", func() {
 
 				valuesUpdater.Interval = &metav1.Duration{Duration: 4 * time.Hour}
 				valuesUpdater.EvictAfterOOMThreshold = &metav1.Duration{Duration: 5 * time.Hour}
-				valuesUpdater.EvictionRateBurst = pointer.Int32(1)
+				valuesUpdater.EvictionRateBurst = ptr.To(int32(1))
 				valuesUpdater.EvictionRateLimit = pointer.Float64(2.34)
 				valuesUpdater.EvictionTolerance = pointer.Float64(5.67)
 

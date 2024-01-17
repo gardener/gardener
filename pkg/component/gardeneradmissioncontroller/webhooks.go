@@ -23,7 +23,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
@@ -50,7 +49,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 			{
 				Name:                    "validate-namespace-deletion.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          pointer.Int32(10),
+				TimeoutSeconds:          ptr.To(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{{
 					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Delete},
 					Rule: admissionregistrationv1.Rule{
@@ -74,7 +73,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 			{
 				Name:                    "validate-kubeconfig-secrets.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          pointer.Int32(10),
+				TimeoutSeconds:          ptr.To(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{{
 					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
 					Rule: admissionregistrationv1.Rule{
@@ -99,7 +98,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 			{
 				Name:                    "internal-domain-secret.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          pointer.Int32(10),
+				TimeoutSeconds:          ptr.To(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{{
 					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update, admissionregistrationv1.Delete},
 					Rule: admissionregistrationv1.Rule{
@@ -123,7 +122,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 			{
 				Name:                    "audit-policies.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          pointer.Int32(10),
+				TimeoutSeconds:          ptr.To(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
 						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
@@ -157,7 +156,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 			{
 				Name:                    "admission-plugin-secret.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          pointer.Int32(10),
+				TimeoutSeconds:          ptr.To(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
 						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update},
@@ -187,7 +186,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 		validatingWebhook.Webhooks = append(validatingWebhook.Webhooks, admissionregistrationv1.ValidatingWebhook{
 			Name:                    "validate-resource-size.gardener.cloud",
 			AdmissionReviewVersions: []string{"v1", "v1beta1"},
-			TimeoutSeconds:          pointer.Int32(10),
+			TimeoutSeconds:          ptr.To(int32(10)),
 			Rules:                   buildWebhookConfigRulesForResourceSize(a.values.ResourceAdmissionConfiguration),
 			FailurePolicy:           &failurePolicyFail,
 			NamespaceSelector: &metav1.LabelSelector{
@@ -208,7 +207,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 		validatingWebhook.Webhooks = append(validatingWebhook.Webhooks, admissionregistrationv1.ValidatingWebhook{
 			Name:                    "seed-restriction.gardener.cloud",
 			AdmissionReviewVersions: []string{"v1", "v1beta1"},
-			TimeoutSeconds:          pointer.Int32(10),
+			TimeoutSeconds:          ptr.To(int32(10)),
 			Rules: []admissionregistrationv1.RuleWithOperations{
 				{
 					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},

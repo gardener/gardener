@@ -36,7 +36,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -561,8 +560,8 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas:             pointer.Int32(1),
-			RevisionHistoryLimit: pointer.Int32(2),
+			Replicas:             ptr.To(int32(1)),
+			RevisionHistoryLimit: ptr.To(int32(2)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app":  "gardener",
@@ -583,9 +582,9 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 					AutomountServiceAccountToken: ptr.To(false),
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsNonRoot: ptr.To(true),
-						RunAsUser:    pointer.Int64(65532),
-						RunAsGroup:   pointer.Int64(65532),
-						FSGroup:      pointer.Int64(65532),
+						RunAsUser:    ptr.To(int64(65532)),
+						RunAsGroup:   ptr.To(int64(65532)),
+						FSGroup:      ptr.To(int64(65532)),
 					},
 					Containers: []corev1.Container{
 						{
@@ -647,7 +646,7 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  serverCertSecretName,
-									DefaultMode: pointer.Int32(0640),
+									DefaultMode: ptr.To(int32(0640)),
 								},
 							},
 						},
@@ -663,7 +662,7 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 							Name: "kubeconfig",
 							VolumeSource: corev1.VolumeSource{
 								Projected: &corev1.ProjectedVolumeSource{
-									DefaultMode: pointer.Int32(420),
+									DefaultMode: ptr.To(int32(420)),
 									Sources: []corev1.VolumeProjection{
 										{
 											Secret: &corev1.SecretProjection{
@@ -918,7 +917,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 			{
 				Name:                    "validate-namespace-deletion.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          pointer.Int32(10),
+				TimeoutSeconds:          ptr.To(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{{
 					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Delete},
 					Rule: admissionregistrationv1.Rule{
@@ -942,7 +941,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 			{
 				Name:                    "validate-kubeconfig-secrets.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          pointer.Int32(10),
+				TimeoutSeconds:          ptr.To(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{{
 					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
 					Rule: admissionregistrationv1.Rule{
@@ -967,7 +966,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 			{
 				Name:                    "internal-domain-secret.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          pointer.Int32(10),
+				TimeoutSeconds:          ptr.To(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{{
 					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update, admissionregistrationv1.Delete},
 					Rule: admissionregistrationv1.Rule{
@@ -991,7 +990,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 			{
 				Name:                    "audit-policies.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          pointer.Int32(10),
+				TimeoutSeconds:          ptr.To(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
 						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
@@ -1025,7 +1024,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 			{
 				Name:                    "admission-plugin-secret.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          pointer.Int32(10),
+				TimeoutSeconds:          ptr.To(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
 						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update},
@@ -1055,7 +1054,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 		webhookConfig.Webhooks = append(webhookConfig.Webhooks, admissionregistrationv1.ValidatingWebhook{
 			Name:                    "validate-resource-size.gardener.cloud",
 			AdmissionReviewVersions: []string{"v1", "v1beta1"},
-			TimeoutSeconds:          pointer.Int32(10),
+			TimeoutSeconds:          ptr.To(int32(10)),
 			Rules: []admissionregistrationv1.RuleWithOperations{
 				{
 					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
@@ -1093,7 +1092,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 		webhookConfig.Webhooks = append(webhookConfig.Webhooks, admissionregistrationv1.ValidatingWebhook{
 			Name:                    "seed-restriction.gardener.cloud",
 			AdmissionReviewVersions: []string{"v1", "v1beta1"},
-			TimeoutSeconds:          pointer.Int32(10),
+			TimeoutSeconds:          ptr.To(int32(10)),
 			Rules: []admissionregistrationv1.RuleWithOperations{
 				{
 					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},

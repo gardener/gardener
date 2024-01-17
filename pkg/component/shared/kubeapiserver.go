@@ -33,7 +33,7 @@ import (
 	admissionapiv1 "k8s.io/pod-security-admission/admission/api/v1"
 	admissionapiv1alpha1 "k8s.io/pod-security-admission/admission/api/v1alpha1"
 	admissionapiv1beta1 "k8s.io/pod-security-admission/admission/api/v1beta1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -392,10 +392,10 @@ func computeKubeAPIServerReplicas(autoscalingConfig apiserver.AutoscalingConfig,
 		// If the scale down is desired and the deployment has already been scaled down then we want to keep it scaled
 		// down. If it has not yet been scaled down then above case applies (replicas are kept) - the scale-down will
 		// happen at a later point in the flow.
-		return pointer.Int32(0)
+		return ptr.To(int32(0))
 	default:
 		// If none of the above cases applies then a default value has to be returned.
-		return pointer.Int32(1)
+		return ptr.To(int32(1))
 	}
 }
 

@@ -135,8 +135,8 @@ func (v *vpa) reconcileUpdaterDeployment(deployment *appsv1.Deployment, serviceA
 	// consequence, don't need a PDB).
 	deployment.Labels = v.getDeploymentLabels(updater)
 	deployment.Spec = appsv1.DeploymentSpec{
-		Replicas:             pointer.Int32(pointer.Int32Deref(v.values.Updater.Replicas, 1)),
-		RevisionHistoryLimit: pointer.Int32(2),
+		Replicas:             ptr.To(pointer.Int32Deref(v.values.Updater.Replicas, 1)),
+		RevisionHistoryLimit: ptr.To(int32(2)),
 		Selector:             &metav1.LabelSelector{MatchLabels: getAppLabel(updater)},
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{

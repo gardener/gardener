@@ -31,7 +31,6 @@ import (
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	kubeproxyconfigv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -424,7 +423,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 										LocalObjectReference: corev1.LocalObjectReference{
 											Name: k.configMapCleanupScript.Name,
 										},
-										DefaultMode: pointer.Int32(0777),
+										DefaultMode: ptr.To(int32(0777)),
 									},
 								},
 							},
@@ -549,7 +548,7 @@ func (k *kubeProxy) getRawComponentConfig() (string, error) {
 		MetricsBindAddress: fmt.Sprintf("0.0.0.0:%d", portMetrics),
 		Mode:               k.getMode(),
 		Conntrack: kubeproxyconfigv1alpha1.KubeProxyConntrackConfiguration{
-			MaxPerCore: pointer.Int32(524288),
+			MaxPerCore: ptr.To(int32(524288)),
 		},
 		FeatureGates: k.values.FeatureGates,
 	}

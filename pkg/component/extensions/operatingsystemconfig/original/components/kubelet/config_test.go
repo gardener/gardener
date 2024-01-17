@@ -23,7 +23,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -45,20 +44,20 @@ var _ = Describe("Config", func() {
 			EvictionSoft:                     map[string]string{"imagefs.inodesFree": "123"},
 			EvictionSoftGracePeriod:          map[string]string{"nodefs.available": "123"},
 			EvictionPressureTransitionPeriod: &metav1.Duration{Duration: 42 * time.Minute},
-			EvictionMaxPodGracePeriod:        pointer.Int32(120),
+			EvictionMaxPodGracePeriod:        ptr.To(int32(120)),
 			FailSwapOn:                       ptr.To(false),
 			FeatureGates:                     map[string]bool{"Foo": false},
-			ImageGCHighThresholdPercent:      pointer.Int32(34),
-			ImageGCLowThresholdPercent:       pointer.Int32(12),
+			ImageGCHighThresholdPercent:      ptr.To(int32(34)),
+			ImageGCLowThresholdPercent:       ptr.To(int32(12)),
 			ProtectKernelDefaults:            ptr.To(true),
 			SeccompDefault:                   ptr.To(true),
 			SerializeImagePulls:              ptr.To(true),
-			RegistryPullQPS:                  pointer.Int32(10),
-			RegistryBurst:                    pointer.Int32(20),
+			RegistryPullQPS:                  ptr.To(int32(10)),
+			RegistryBurst:                    ptr.To(int32(20)),
 			KubeReserved:                     map[string]string{"cpu": "123"},
-			MaxPods:                          pointer.Int32(24),
+			MaxPods:                          ptr.To(int32(24)),
 			MemorySwap:                       &kubeletconfigv1beta1.MemorySwapConfiguration{SwapBehavior: "UnlimitedSwap"},
-			PodPidsLimit:                     pointer.Int64(101),
+			PodPidsLimit:                     ptr.To(int64(101)),
 			SystemReserved:                   map[string]string{"memory": "321"},
 			StreamingConnectionIdleTimeout:   &metav1.Duration{Duration: time.Minute * 12},
 		}
@@ -97,7 +96,7 @@ var _ = Describe("Config", func() {
 			EnableServer:                 ptr.To(true),
 			EnforceNodeAllocatable:       []string{"pods"},
 			EventBurst:                   50,
-			EventRecordQPS:               pointer.Int32(50),
+			EventRecordQPS:               ptr.To(int32(50)),
 			EvictionHard: map[string]string{
 				"memory.available":   "100Mi",
 				"imagefs.available":  "5%",
@@ -132,11 +131,11 @@ var _ = Describe("Config", func() {
 			FileCheckFrequency:               metav1.Duration{Duration: 20 * time.Second},
 			HairpinMode:                      kubeletconfigv1beta1.PromiscuousBridge,
 			HTTPCheckFrequency:               metav1.Duration{Duration: 20 * time.Second},
-			ImageGCHighThresholdPercent:      pointer.Int32(50),
-			ImageGCLowThresholdPercent:       pointer.Int32(40),
+			ImageGCHighThresholdPercent:      ptr.To(int32(50)),
+			ImageGCLowThresholdPercent:       ptr.To(int32(40)),
 			ImageMinimumGCAge:                metav1.Duration{Duration: 2 * time.Minute},
 			KubeAPIBurst:                     50,
-			KubeAPIQPS:                       pointer.Int32(50),
+			KubeAPIQPS:                       ptr.To(int32(50)),
 			KubeReserved: map[string]string{
 				"cpu":    "80m",
 				"memory": "1Gi",
@@ -192,7 +191,7 @@ var _ = Describe("Config", func() {
 			EnableServer:                 ptr.To(true),
 			EnforceNodeAllocatable:       []string{"pods"},
 			EventBurst:                   50,
-			EventRecordQPS:               pointer.Int32(50),
+			EventRecordQPS:               ptr.To(int32(50)),
 			EvictionHard: utils.MergeStringMaps(params.EvictionHard, map[string]string{
 				"imagefs.available":  "5%",
 				"imagefs.inodesFree": "5%",
@@ -228,7 +227,7 @@ var _ = Describe("Config", func() {
 			ImageGCLowThresholdPercent:       params.ImageGCLowThresholdPercent,
 			ImageMinimumGCAge:                metav1.Duration{Duration: 2 * time.Minute},
 			KubeAPIBurst:                     50,
-			KubeAPIQPS:                       pointer.Int32(50),
+			KubeAPIQPS:                       ptr.To(int32(50)),
 			KubeReserved:                     utils.MergeStringMaps(params.KubeReserved, map[string]string{"memory": "1Gi"}),
 			MaxOpenFiles:                     1000000,
 			MaxPods:                          *params.MaxPods,
@@ -242,7 +241,7 @@ var _ = Describe("Config", func() {
 				Effect: corev1.TaintEffectNoSchedule,
 			}},
 			RegistryBurst:                  20,
-			RegistryPullQPS:                pointer.Int32(10),
+			RegistryPullQPS:                ptr.To(int32(10)),
 			ResolverConfig:                 ptr.To("/etc/resolv.conf"),
 			RuntimeRequestTimeout:          metav1.Duration{Duration: 2 * time.Minute},
 			SerializeImagePulls:            params.SerializeImagePulls,

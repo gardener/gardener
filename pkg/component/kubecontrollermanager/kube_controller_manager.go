@@ -324,7 +324,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
 		})
 		deployment.Spec.Replicas = &k.values.Replicas
-		deployment.Spec.RevisionHistoryLimit = pointer.Int32(1)
+		deployment.Spec.RevisionHistoryLimit = ptr.To(int32(1))
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: getLabels()}
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
@@ -342,9 +342,9 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 					// use the nonroot user from a distroless container
 					// https://github.com/GoogleContainerTools/distroless/blob/1a8918fcaa7313fd02ae08089a57a701faea999c/base/base.bzl#L8
 					RunAsNonRoot: ptr.To(true),
-					RunAsUser:    pointer.Int64(65532),
-					RunAsGroup:   pointer.Int64(65532),
-					FSGroup:      pointer.Int64(65532),
+					RunAsUser:    ptr.To(int64(65532)),
+					RunAsGroup:   ptr.To(int64(65532)),
+					FSGroup:      ptr.To(int64(65532)),
 				},
 				Containers: []corev1.Container{
 					{
@@ -408,7 +408,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
 								SecretName:  secretCAClient.Name,
-								DefaultMode: pointer.Int32(0640),
+								DefaultMode: ptr.To(int32(0640)),
 							},
 						},
 					},
@@ -417,7 +417,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
 								SecretName:  serviceAccountKeySecret.Name,
-								DefaultMode: pointer.Int32(0640),
+								DefaultMode: ptr.To(int32(0640)),
 							},
 						},
 					},
@@ -426,7 +426,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
 								SecretName:  serverSecret.Name,
-								DefaultMode: pointer.Int32(0640),
+								DefaultMode: ptr.To(int32(0640)),
 							},
 						},
 					},
@@ -445,7 +445,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
 						SecretName:  secretCAKubelet.Name,
-						DefaultMode: pointer.Int32(0640),
+						DefaultMode: ptr.To(int32(0640)),
 					},
 				},
 			})
@@ -494,7 +494,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 					resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
 				},
 			)
-			hvpa.Spec.Replicas = pointer.Int32(1)
+			hvpa.Spec.Replicas = ptr.To(int32(1))
 			hvpa.Spec.Hpa = hvpav1alpha1.HpaSpec{
 				Deploy:   false,
 				Selector: &metav1.LabelSelector{MatchLabels: getLabels()},
@@ -503,7 +503,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						Labels: getLabels(),
 					},
 					Spec: hvpav1alpha1.HpaTemplateSpec{
-						MinReplicas: pointer.Int32(int32(1)),
+						MinReplicas: ptr.To(int32(1)),
 						MaxReplicas: int32(1),
 					},
 				},

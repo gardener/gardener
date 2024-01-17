@@ -31,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/version"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -135,7 +134,7 @@ var _ = Describe("NginxIngress", func() {
 				Config: &config.GardenletConfiguration{
 					Controllers: &config.GardenletControllerConfiguration{
 						Shoot: &config.ShootControllerConfiguration{
-							DNSEntryTTLSeconds: pointer.Int64(ttl),
+							DNSEntryTTLSeconds: ptr.To(ttl),
 						},
 					},
 				},
@@ -224,7 +223,7 @@ var _ = Describe("NginxIngress", func() {
 				Name:       b.Shoot.GetInfo().Name + "-ingress",
 				SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
 				Namespace:  seedNamespace,
-				TTL:        pointer.Int64(ttl),
+				TTL:        ptr.To(ttl),
 				Type:       externalProvider,
 				Zone:       ptr.To(externalZone),
 				SecretData: map[string][]byte{
@@ -270,7 +269,7 @@ var _ = Describe("NginxIngress", func() {
 				Name:       b.Shoot.GetInfo().Name + "-ingress",
 				SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
 				Namespace:  seedNamespace,
-				TTL:        pointer.Int64(ttl),
+				TTL:        ptr.To(ttl),
 				Type:       externalProvider,
 				Zone:       ptr.To(externalZone),
 				SecretData: map[string][]byte{
@@ -323,7 +322,7 @@ var _ = Describe("NginxIngress", func() {
 					Name:       "*.ingress." + externalDomain,
 					RecordType: extensionsv1alpha1.DNSRecordTypeA,
 					Values:     []string{address},
-					TTL:        pointer.Int64(ttl),
+					TTL:        ptr.To(ttl),
 				},
 			}))
 

@@ -25,7 +25,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -168,7 +167,7 @@ WantedBy=multi-user.target`),
 	files := []extensionsv1alpha1.File{
 		{
 			Path:        PathCredentialsServer,
-			Permissions: pointer.Int32(0644),
+			Permissions: ptr.To(int32(0644)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Encoding: "b64",
@@ -178,7 +177,7 @@ WantedBy=multi-user.target`),
 		},
 		{
 			Path:        PathCredentialsCACert,
-			Permissions: pointer.Int32(0644),
+			Permissions: ptr.To(int32(0644)),
 			Content: extensionsv1alpha1.FileContent{
 				SecretRef: &extensionsv1alpha1.FileContentSecretRef{
 					Name:    clusterCASecretName,
@@ -188,7 +187,7 @@ WantedBy=multi-user.target`),
 		},
 		{
 			Path:        PathCCDScript,
-			Permissions: pointer.Int32(0744),
+			Permissions: ptr.To(int32(0744)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Encoding: "b64",
@@ -198,7 +197,7 @@ WantedBy=multi-user.target`),
 		},
 		{
 			Path:        PathBootstrapToken,
-			Permissions: pointer.Int32(0644),
+			Permissions: ptr.To(int32(0644)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Data: BootstrapTokenPlaceholder,

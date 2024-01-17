@@ -20,7 +20,6 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/imagevector"
@@ -91,7 +90,7 @@ ExecStart=` + pathScript),
 		[]extensionsv1alpha1.File{
 			{
 				Path:        pathScript,
-				Permissions: pointer.Int32(744),
+				Permissions: ptr.To(int32(744)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
@@ -101,7 +100,7 @@ ExecStart=` + pathScript),
 			},
 			{
 				Path:        "/etc/systemd/system/containerd.service.d/10-require-containerd-initializer.conf",
-				Permissions: pointer.Int32(0644),
+				Permissions: ptr.To(int32(0644)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Data: `[Unit]

@@ -22,7 +22,6 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/imagevector"
@@ -94,7 +93,7 @@ func getValitailConfigurationFile(ctx components.Context) (extensionsv1alpha1.Fi
 
 	return extensionsv1alpha1.File{
 		Path:        PathConfig,
-		Permissions: pointer.Int32(0644),
+		Permissions: ptr.To(int32(0644)),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",
@@ -111,7 +110,7 @@ func getValitailCAFile(ctx components.Context) extensionsv1alpha1.File {
 	}
 	return extensionsv1alpha1.File{
 		Path:        PathCACert,
-		Permissions: pointer.Int32(0644),
+		Permissions: ptr.To(int32(0644)),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",
@@ -211,7 +210,7 @@ func getFetchTokenScriptFile() (extensionsv1alpha1.File, error) {
 
 	return extensionsv1alpha1.File{
 		Path:        PathFetchTokenScript,
-		Permissions: pointer.Int32(0744),
+		Permissions: ptr.To(int32(0744)),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",

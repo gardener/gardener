@@ -23,7 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -137,14 +137,14 @@ func (s *seedSystem) addReserveExcessCapacityDeployment(registry *managedresourc
 			},
 			Spec: appsv1.DeploymentSpec{
 				Replicas:             &s.values.ReserveExcessCapacity.Replicas,
-				RevisionHistoryLimit: pointer.Int32(2),
+				RevisionHistoryLimit: ptr.To(int32(2)),
 				Selector:             &metav1.LabelSelector{MatchLabels: getExcessCapacityReservationLabels()},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: getExcessCapacityReservationLabels(),
 					},
 					Spec: corev1.PodSpec{
-						TerminationGracePeriodSeconds: pointer.Int64(5),
+						TerminationGracePeriodSeconds: ptr.To(int64(5)),
 						Containers: []corev1.Container{{
 							Name:            "pause-container",
 							Image:           s.values.ReserveExcessCapacity.Image,

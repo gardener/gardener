@@ -217,7 +217,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							},
 						},
 						KubeControllerManager: &core.KubeControllerManagerConfig{
-							NodeCIDRMaskSize: pointer.Int32(22),
+							NodeCIDRMaskSize: ptr.To(int32(22)),
 							HorizontalPodAutoscalerConfig: &core.HorizontalPodAutoscalerConfig{
 								SyncPeriod: makeDurationPointer(30 * time.Second),
 								Tolerance:  pointer.Float64(0.1),
@@ -1212,7 +1212,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				Context("IPv4", func() {
 					It("should allow valid total number of worker nodes", func() {
-						shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(24)
+						shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = ptr.To(int32(24))
 						shoot.Spec.Networking.Pods = ptr.To("100.96.0.0/20")
 						worker1.Maximum = 4
 						worker2.Maximum = 4
@@ -1228,7 +1228,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					})
 
 					It("should allow valid total number of worker nodes", func() {
-						shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(24)
+						shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = ptr.To(int32(24))
 						shoot.Spec.Networking.Pods = ptr.To("100.96.0.0/16")
 						worker1.Maximum = 128
 						worker2.Maximum = 128
@@ -1244,7 +1244,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					})
 
 					It("should not allow invalid total number of worker nodes", func() {
-						shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(23)
+						shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = ptr.To(int32(23))
 						shoot.Spec.Networking.Pods = ptr.To("100.96.0.0/20")
 						worker1.Maximum = 16
 						worker2.Maximum = 16
@@ -1292,7 +1292,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					})
 
 					It("should allow valid total number of worker nodes", func() {
-						shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(66)
+						shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = ptr.To(int32(66))
 						shoot.Spec.Networking.Pods = ptr.To("2001:db8:1::/48")
 						worker1.Maximum = 4
 						worker2.Maximum = 4
@@ -1308,7 +1308,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					})
 
 					It("should allow valid total number of worker nodes", func() {
-						shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(66)
+						shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = ptr.To(int32(66))
 						shoot.Spec.Networking.Pods = ptr.To("2001:db8:1::/48")
 						worker1.Maximum = 128
 						worker2.Maximum = 128
@@ -1324,7 +1324,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					})
 
 					It("should not allow invalid total number of worker nodes", func() {
-						shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(66)
+						shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = ptr.To(int32(66))
 						shoot.Spec.Networking.Pods = ptr.To("2001:db8:1::/63")
 						worker1.Maximum = 16
 						worker2.Maximum = 16
@@ -2015,13 +2015,13 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Entry("valid (unset)", nil, BeEmpty()),
 					Entry("valid (fields unset)", &core.WatchCacheSizes{}, BeEmpty()),
 					Entry("valid (default=0)", &core.WatchCacheSizes{
-						Default: pointer.Int32(0),
+						Default: ptr.To(int32(0)),
 					}, BeEmpty()),
 					Entry("valid (default>0)", &core.WatchCacheSizes{
-						Default: pointer.Int32(42),
+						Default: ptr.To(int32(42)),
 					}, BeEmpty()),
 					Entry("invalid (default<0)", &core.WatchCacheSizes{
-						Default: pointer.Int32(negativeSize),
+						Default: ptr.To(int32(negativeSize)),
 					}, ConsistOf(
 						field.Invalid(field.NewPath("default"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
 					)),
@@ -2102,24 +2102,24 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Entry("valid (unset)", nil, BeEmpty()),
 					Entry("valid (fields unset)", &core.APIServerLogging{}, BeEmpty()),
 					Entry("valid (verbosity=0)", &core.APIServerLogging{
-						Verbosity: pointer.Int32(0),
+						Verbosity: ptr.To(int32(0)),
 					}, BeEmpty()),
 					Entry("valid (httpAccessVerbosity=0)", &core.APIServerLogging{
-						HTTPAccessVerbosity: pointer.Int32(0),
+						HTTPAccessVerbosity: ptr.To(int32(0)),
 					}, BeEmpty()),
 					Entry("valid (verbosity>0)", &core.APIServerLogging{
-						Verbosity: pointer.Int32(3),
+						Verbosity: ptr.To(int32(3)),
 					}, BeEmpty()),
 					Entry("valid (httpAccessVerbosity>0)", &core.APIServerLogging{
-						HTTPAccessVerbosity: pointer.Int32(3),
+						HTTPAccessVerbosity: ptr.To(int32(3)),
 					}, BeEmpty()),
 					Entry("invalid (verbosity<0)", &core.APIServerLogging{
-						Verbosity: pointer.Int32(negativeSize),
+						Verbosity: ptr.To(negativeSize),
 					}, ConsistOf(
 						field.Invalid(field.NewPath("verbosity"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
 					)),
 					Entry("invalid (httpAccessVerbosity<0)", &core.APIServerLogging{
-						HTTPAccessVerbosity: pointer.Int32(negativeSize),
+						HTTPAccessVerbosity: ptr.To(negativeSize),
 					}, ConsistOf(
 						field.Invalid(field.NewPath("httpAccessVerbosity"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
 					)),
@@ -2129,8 +2129,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 			Context("requests", func() {
 				It("should not allow too high values for max inflight requests fields", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.Requests = &core.APIServerRequests{
-						MaxNonMutatingInflight: pointer.Int32(123123123),
-						MaxMutatingInflight:    pointer.Int32(412412412),
+						MaxNonMutatingInflight: ptr.To(int32(123123123)),
+						MaxMutatingInflight:    ptr.To(int32(412412412)),
 					}
 
 					errorList := ValidateShoot(shoot)
@@ -2146,8 +2146,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				It("should not allow negative values for max inflight requests fields", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.Requests = &core.APIServerRequests{
-						MaxNonMutatingInflight: pointer.Int32(-1),
-						MaxMutatingInflight:    pointer.Int32(-1),
+						MaxNonMutatingInflight: ptr.To(int32(-1)),
+						MaxMutatingInflight:    ptr.To(int32(-1)),
 					}
 
 					errorList := ValidateShoot(shoot)
@@ -2257,7 +2257,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should not allow to specify a negative defaultNotReadyTolerationSeconds", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds = pointer.Int64(-1)
+				shoot.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds = ptr.To(int64(-1))
 
 				errorList := ValidateShoot(shoot)
 
@@ -2268,7 +2268,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should allow to specify a valid defaultNotReadyTolerationSeconds", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds = pointer.Int64(120)
+				shoot.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds = ptr.To(int64(120))
 
 				errorList := ValidateShoot(shoot)
 
@@ -2276,7 +2276,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should not allow to specify a negative defaultUnreachableTolerationSeconds", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds = pointer.Int64(-1)
+				shoot.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds = ptr.To(int64(-1))
 
 				errorList := ValidateShoot(shoot)
 
@@ -2287,7 +2287,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should allow to specify a valid defaultUnreachableTolerationSeconds", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds = pointer.Int64(120)
+				shoot.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds = ptr.To(int64(120))
 
 				errorList := ValidateShoot(shoot)
 
@@ -2383,7 +2383,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})
 
 				It("should prevent setting nodeCIDRMaskSize", func() {
-					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(23)
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = ptr.To(int32(23))
 
 					errorList := ValidateShoot(shoot)
 					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -2458,10 +2458,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should fail updating immutable fields", func() {
-				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(24)
+				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = ptr.To(int32(24))
 
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(22)
+				newShoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = ptr.To(int32(22))
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -2473,10 +2473,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should succeed not changing immutable fields", func() {
-				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(24)
+				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = ptr.To(int32(24))
 
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(24)
+				newShoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = ptr.To(int32(24))
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -2485,7 +2485,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			Describe("nodeCIDRMaskSize validation", func() {
 				It("should fail when nodeCIDRMaskSize is out of upper boundary", func() {
-					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(32)
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = ptr.To(int32(32))
 
 					errorList := ValidateShoot(shoot)
 					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -2496,7 +2496,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})
 
 				It("should fail when nodeCIDRMaskSize is out of lower boundary", func() {
-					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(0)
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = ptr.To(int32(0))
 
 					errorList := ValidateShoot(shoot)
 					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -2507,7 +2507,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})
 
 				It("should succeed when nodeCIDRMaskSize is within boundaries", func() {
-					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(22)
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = ptr.To(int32(22))
 
 					errorList := ValidateShoot(shoot)
 					Expect(errorList).To(BeEmpty())
@@ -2520,18 +2520,18 @@ var _ = Describe("Shoot Validation Tests", func() {
 					)
 
 					BeforeEach(func() {
-						shoot.Spec.Kubernetes.Kubelet = &core.KubeletConfig{MaxPods: pointer.Int32(110)}
+						shoot.Spec.Kubernetes.Kubelet = &core.KubeletConfig{MaxPods: ptr.To(int32(110))}
 
 						firstWorker := shoot.Spec.Provider.Workers[0].DeepCopy()
 						firstWorker.Kubernetes = &core.WorkerKubernetes{
 							Kubelet: &core.KubeletConfig{
-								MaxPods: pointer.Int32(110),
+								MaxPods: ptr.To(int32(110)),
 							},
 						}
 
 						secondWorker := firstWorker.DeepCopy()
 						secondWorker.Name += "2"
-						secondWorker.Kubernetes.Kubelet.MaxPods = pointer.Int32(220)
+						secondWorker.Kubernetes.Kubelet.MaxPods = ptr.To(int32(220))
 						shoot.Spec.Provider.Workers = []core.Worker{*firstWorker, *secondWorker}
 					})
 
@@ -2541,7 +2541,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							defaultNodeCIDRMaskSize = 24
 							// /25 CIDR can host 126 pod IPs (prefix is too large for the largest maxPods setting)
 							tooLargeNodeCIDRMaskSize = 25
-							shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(defaultNodeCIDRMaskSize)
+							shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = ptr.To(defaultNodeCIDRMaskSize)
 						})
 
 						It("should allow the default maxPods and nodeCIDRMaskSize", func() {
@@ -2549,7 +2549,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						})
 
 						It("should deny too large nodeCIDRMaskSize", func() {
-							shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(tooLargeNodeCIDRMaskSize)
+							shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = ptr.To(tooLargeNodeCIDRMaskSize)
 
 							Expect(ValidateShoot(shoot)).To(ConsistOfFields(Fields{
 								"Type":   Equal(field.ErrorTypeInvalid),
@@ -2568,7 +2568,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							defaultNodeCIDRMaskSize = 64
 							// /121 CIDR can host 126 pod IPs (prefix is too large for the largest maxPods setting)
 							tooLargeNodeCIDRMaskSize = 121
-							shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(defaultNodeCIDRMaskSize)
+							shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = ptr.To(defaultNodeCIDRMaskSize)
 						})
 
 						It("should allow the default maxPods and nodeCIDRMaskSize", func() {
@@ -2576,7 +2576,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						})
 
 						It("should deny too large nodeCIDRMaskSize", func() {
-							shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(tooLargeNodeCIDRMaskSize)
+							shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = ptr.To(tooLargeNodeCIDRMaskSize)
 
 							Expect(ValidateShoot(shoot)).To(ConsistOfFields(Fields{
 								"Type":   Equal(field.ErrorTypeInvalid),
@@ -6391,7 +6391,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		DescribeTable("ImageGCHighThresholdPercent",
 			func(imageGCHighThresholdPercent int, matcher gomegatypes.GomegaMatcher) {
 				kubeletConfig := core.KubeletConfig{
-					ImageGCHighThresholdPercent: pointer.Int32(int32(imageGCHighThresholdPercent)),
+					ImageGCHighThresholdPercent: ptr.To(int32(imageGCHighThresholdPercent)),
 				}
 
 				errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
@@ -6417,7 +6417,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		DescribeTable("ImageGCLowThresholdPercent",
 			func(imageGCLowThresholdPercent int, matcher gomegatypes.GomegaMatcher) {
 				kubeletConfig := core.KubeletConfig{
-					ImageGCLowThresholdPercent: pointer.Int32(int32(imageGCLowThresholdPercent)),
+					ImageGCLowThresholdPercent: ptr.To(int32(imageGCLowThresholdPercent)),
 				}
 
 				errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
@@ -6442,8 +6442,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		It("should prevent that imageGCLowThresholdPercent is not less than imageGCHighThresholdPercent", func() {
 			kubeletConfig := core.KubeletConfig{
-				ImageGCLowThresholdPercent:  pointer.Int32(2),
-				ImageGCHighThresholdPercent: pointer.Int32(1),
+				ImageGCLowThresholdPercent:  ptr.To(int32(2)),
+				ImageGCHighThresholdPercent: ptr.To(int32(1)),
 			}
 
 			errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
@@ -6499,15 +6499,15 @@ var _ = Describe("Shoot Validation Tests", func() {
 		Describe("registryPullQPS, registryBurst", func() {
 			It("should allow positive values", func() {
 				Expect(ValidateKubeletConfig(core.KubeletConfig{
-					RegistryPullQPS: pointer.Int32(10),
-					RegistryBurst:   pointer.Int32(20),
+					RegistryPullQPS: ptr.To(int32(10)),
+					RegistryBurst:   ptr.To(int32(20)),
 				}, "", true, nil)).To(BeEmpty())
 			})
 
 			It("should not allow negative values", func() {
 				Expect(ValidateKubeletConfig(core.KubeletConfig{
-					RegistryPullQPS: pointer.Int32(-10),
-					RegistryBurst:   pointer.Int32(-20),
+					RegistryPullQPS: ptr.To(int32(-10)),
+					RegistryBurst:   ptr.To(int32(-20)),
 				}, "", true, nil)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
@@ -6525,7 +6525,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			It("should not accept containerLogMaxSize or containerLogMaxFiles", func() {
 				maxSize := resource.MustParse("100Mi")
 				kubeletConfig := core.KubeletConfig{
-					ContainerLogMaxFiles: pointer.Int32(5),
+					ContainerLogMaxFiles: ptr.To(int32(5)),
 					ContainerLogMaxSize:  &maxSize,
 				}
 
@@ -6548,7 +6548,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			It("should not accept invalid  containerLogMaxFiles", func() {
 				maxSize := resource.MustParse("100Mi")
 				kubeletConfig := core.KubeletConfig{
-					ContainerLogMaxFiles: pointer.Int32(1),
+					ContainerLogMaxFiles: ptr.To(int32(1)),
 					ContainerLogMaxSize:  &maxSize,
 				}
 
@@ -6565,7 +6565,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			It("should accept valid containerLogMaxFiles and containerLogMaxSize", func() {
 				maxSize := resource.MustParse("100Mi")
 				kubeletConfig := core.KubeletConfig{
-					ContainerLogMaxFiles: pointer.Int32(5),
+					ContainerLogMaxFiles: ptr.To(int32(5)),
 					ContainerLogMaxSize:  &maxSize,
 				}
 

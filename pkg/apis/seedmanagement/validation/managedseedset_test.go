@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -91,7 +90,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 				Generation: 1,
 			},
 			Spec: seedmanagement.ManagedSeedSetSpec{
-				Replicas: pointer.Int32(1),
+				Replicas: ptr.To(int32(1)),
 				Selector: *metav1.SetAsLabelSelector(labels.Set{
 					"foo": "bar",
 				}),
@@ -106,10 +105,10 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 				UpdateStrategy: &seedmanagement.UpdateStrategy{
 					Type: updateStrategyTypePtr(seedmanagement.RollingUpdateStrategyType),
 					RollingUpdate: &seedmanagement.RollingUpdateStrategy{
-						Partition: pointer.Int32(0),
+						Partition: ptr.To(int32(0)),
 					},
 				},
-				RevisionHistoryLimit: pointer.Int32(10),
+				RevisionHistoryLimit: ptr.To(int32(10)),
 			},
 			Status: seedmanagement.ManagedSeedSetStatus{
 				ObservedGeneration: 1,
@@ -118,7 +117,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 				NextReplicaNumber:  2,
 				CurrentReplicas:    0,
 				UpdatedReplicas:    1,
-				CollisionCount:     pointer.Int32(1),
+				CollisionCount:     ptr.To(int32(1)),
 			},
 		}
 	})
@@ -184,9 +183,9 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 		)
 
 		It("should forbid negative replicas, updateStrategy.rollingUpdate.partition, and revisionHistoryLimit", func() {
-			managedSeedSet.Spec.Replicas = pointer.Int32(-1)
-			managedSeedSet.Spec.UpdateStrategy.RollingUpdate.Partition = pointer.Int32(-1)
-			managedSeedSet.Spec.RevisionHistoryLimit = pointer.Int32(-1)
+			managedSeedSet.Spec.Replicas = ptr.To(int32(-1))
+			managedSeedSet.Spec.UpdateStrategy.RollingUpdate.Partition = ptr.To(int32(-1))
+			managedSeedSet.Spec.RevisionHistoryLimit = ptr.To(int32(-1))
 
 			errorList := ValidateManagedSeedSet(managedSeedSet)
 
@@ -372,7 +371,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 			newManagedSeedSet.Spec.Selector = *metav1.SetAsLabelSelector(labels.Set{
 				"bar": "baz",
 			})
-			newManagedSeedSet.Spec.RevisionHistoryLimit = pointer.Int32(20)
+			newManagedSeedSet.Spec.RevisionHistoryLimit = ptr.To(int32(20))
 
 			errorList := ValidateManagedSeedSetUpdate(newManagedSeedSet, managedSeedSet)
 
@@ -496,7 +495,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 
 		It("should forbid decrementing the next replica number or the collision count", func() {
 			newManagedSeedSet.Status.NextReplicaNumber = 1
-			newManagedSeedSet.Status.CollisionCount = pointer.Int32(0)
+			newManagedSeedSet.Status.CollisionCount = ptr.To(int32(0))
 
 			errorList := ValidateManagedSeedSetStatusUpdate(newManagedSeedSet, managedSeedSet)
 
@@ -516,7 +515,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 			newManagedSeedSet.Status.PendingReplica = &seedmanagement.PendingReplica{
 				Name:    "foo",
 				Reason:  "unknown",
-				Retries: pointer.Int32(-1),
+				Retries: ptr.To(int32(-1)),
 			}
 
 			errorList := ValidateManagedSeedSetStatusUpdate(newManagedSeedSet, managedSeedSet)

@@ -32,7 +32,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -282,8 +281,8 @@ metadata:
 						Labels:    getLabels(),
 					},
 					Spec: appsv1.DeploymentSpec{
-						RevisionHistoryLimit: pointer.Int32(2),
-						Replicas:             pointer.Int32(values.Replicas),
+						RevisionHistoryLimit: ptr.To(int32(2)),
+						Replicas:             ptr.To(values.Replicas),
 						Selector: &metav1.LabelSelector{
 							MatchLabels: getLabels(),
 						},

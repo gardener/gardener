@@ -21,7 +21,7 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -65,7 +65,7 @@ func (k *kubeAPIServer) reconcileHorizontalPodAutoscaler(ctx context.Context, hp
 						Name: corev1.ResourceCPU,
 						Target: autoscalingv2.MetricTarget{
 							Type:               autoscalingv2.UtilizationMetricType,
-							AverageUtilization: pointer.Int32(hpaTargetAverageUtilizationCPU),
+							AverageUtilization: ptr.To(hpaTargetAverageUtilizationCPU),
 						},
 					},
 				},
@@ -75,7 +75,7 @@ func (k *kubeAPIServer) reconcileHorizontalPodAutoscaler(ctx context.Context, hp
 						Name: corev1.ResourceMemory,
 						Target: autoscalingv2.MetricTarget{
 							Type:               autoscalingv2.UtilizationMetricType,
-							AverageUtilization: pointer.Int32(hpaTargetAverageUtilizationMemory),
+							AverageUtilization: ptr.To(hpaTargetAverageUtilizationMemory),
 						},
 					},
 				},
