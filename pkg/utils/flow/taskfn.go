@@ -146,34 +146,7 @@ func ParallelN(n int, fns ...TaskFn) TaskFn {
 
 // Parallel runs the given TaskFns in parallel, collecting their errors in a multierror.
 func Parallel(fns ...TaskFn) TaskFn {
-	return func(ctx context.Context) error {
-		var (
-			wg     sync.WaitGroup
-			errors = make(chan error)
-			result error
-		)
-
-		for _, fn := range fns {
-			t := fn
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				errors <- t(ctx)
-			}()
-		}
-
-		go func() {
-			defer close(errors)
-			wg.Wait()
-		}()
-
-		for err := range errors {
-			if err != nil {
-				result = multierror.Append(result, err)
-			}
-		}
-		return result
-	}
+	return ParallelN(len(fns), fns...)
 }
 
 // ParallelExitOnError runs the given TaskFns in parallel and stops execution as soon as one TaskFn returns an error.
