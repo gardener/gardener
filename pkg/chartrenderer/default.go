@@ -22,6 +22,7 @@ import (
 	"io/fs"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	helmchart "helm.sh/helm/v3/pkg/chart"
@@ -190,6 +191,9 @@ func (c *RenderedChart) FileContent(filename string) string {
 	return fileContent.String()
 }
 
+// validConfigKey is used to check if the key is a valid key for a secret data.
+var validConfigKey = regexp.MustCompile(`[^-._a-zA-Z0-9]+`)
+
 // AsSecretData returns all rendered manifests that is capable for used as data of a secret
 func (c *RenderedChart) AsSecretData() map[string][]byte {
 	data := make(map[string][]byte)
@@ -201,6 +205,8 @@ func (c *RenderedChart) AsSecretData() map[string][]byte {
 				key := strings.ReplaceAll(fileName, "/", "_")
 				if multipleResources {
 					key = strings.ReplaceAll(strings.TrimSuffix(fileName, ".yaml")+"/"+resourceName+".yaml", "/", "_")
+					// replace all characters with _ which does not match the regex [-._a-zA-Z0-9]+
+					key = validConfigKey.ReplaceAllString(key, "_")
 				}
 				data[key] = []byte(resourceContent)
 			}
