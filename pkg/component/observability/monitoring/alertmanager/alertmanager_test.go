@@ -192,7 +192,7 @@ var _ = Describe("Prometheus", func() {
 						EmbeddedObjectMetadata: monitoringv1.EmbeddedObjectMetadata{Name: "alertmanager-db"},
 						Spec: corev1.PersistentVolumeClaimSpec{
 							AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-							Resources:   corev1.ResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceStorage: storageCapacity}},
+							Resources:   corev1.VolumeResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceStorage: storageCapacity}},
 						},
 					},
 				},
