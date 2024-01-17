@@ -26,6 +26,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -465,7 +466,7 @@ func lastSecretRotationStartTimes(garden *operatorv1alpha1.Garden) map[string]ti
 
 func vpaEnabled(settings *operatorv1alpha1.Settings) bool {
 	if settings != nil && settings.VerticalPodAutoscaler != nil {
-		return pointer.BoolDeref(settings.VerticalPodAutoscaler.Enabled, false)
+		return ptr.Deref(settings.VerticalPodAutoscaler.Enabled, false)
 	}
 	return false
 }

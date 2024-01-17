@@ -21,7 +21,6 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -300,7 +299,7 @@ func name(pool WorkerPool, useMajorMinorVersionOnly *bool) string {
 }
 
 func version(pool WorkerPool, useMajorMinorVersionOnly *bool) string {
-	if pointer.BoolDeref(useMajorMinorVersionOnly, false) {
+	if ptr.Deref(useMajorMinorVersionOnly, false) {
 		return fmt.Sprintf("%d.%d", pool.KubernetesVersion.Major(), pool.KubernetesVersion.Minor())
 	}
 	return pool.KubernetesVersion.String()

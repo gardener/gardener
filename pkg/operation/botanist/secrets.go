@@ -23,7 +23,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -84,7 +84,7 @@ func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
 		// static token secret does not only contain the token for the user kubeconfig but also a token for the health
 		// check of the kube-apiserver. This token must still be rotated even when the user kubeconfig is disabled.
 		// Hence, let's use the last rotation initiation time of the CA rotation also to rotate the static token secret.
-		if !pointer.BoolDeref(b.Shoot.GetInfo().Spec.Kubernetes.EnableStaticTokenKubeconfig, false) {
+		if !ptr.Deref(b.Shoot.GetInfo().Spec.Kubernetes.EnableStaticTokenKubeconfig, false) {
 			if shootStatus.Credentials.Rotation.CertificateAuthorities != nil && shootStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime != nil {
 				rotation[kubeapiserver.SecretStaticTokenName] = shootStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time
 			}

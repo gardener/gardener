@@ -638,7 +638,7 @@ func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gar
 	for _, extension := range shoot.Spec.Extensions {
 		id := ExtensionsID(extensionsv1alpha1.ExtensionResource, extension.Type)
 
-		if pointer.BoolDeref(extension.Disabled, false) {
+		if ptr.Deref(extension.Disabled, false) {
 			disabledExtensions.Insert(id)
 		} else {
 			requiredExtensions.Insert(id)
@@ -677,8 +677,8 @@ func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gar
 	for _, controllerRegistration := range controllerRegistrationList.Items {
 		for _, resource := range controllerRegistration.Spec.Resources {
 			id := ExtensionsID(extensionsv1alpha1.ExtensionResource, resource.Type)
-			if resource.Kind == extensionsv1alpha1.ExtensionResource && pointer.BoolDeref(resource.GloballyEnabled, false) && !disabledExtensions.Has(id) {
-				if v1beta1helper.IsWorkerless(shoot) && !pointer.BoolDeref(resource.WorkerlessSupported, false) {
+			if resource.Kind == extensionsv1alpha1.ExtensionResource && ptr.Deref(resource.GloballyEnabled, false) && !disabledExtensions.Has(id) {
+				if v1beta1helper.IsWorkerless(shoot) && !ptr.Deref(resource.WorkerlessSupported, false) {
 					continue
 				}
 				requiredExtensions.Insert(id)

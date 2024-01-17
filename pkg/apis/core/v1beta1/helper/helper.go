@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -387,7 +388,7 @@ func ShootConfinesSpecUpdateRollout(maintenance *gardencorev1beta1.Maintenance) 
 
 // SeedSettingExcessCapacityReservationEnabled returns true if the 'excess capacity reservation' setting is enabled.
 func SeedSettingExcessCapacityReservationEnabled(settings *gardencorev1beta1.SeedSettings) bool {
-	return settings == nil || settings.ExcessCapacityReservation == nil || pointer.BoolDeref(settings.ExcessCapacityReservation.Enabled, true)
+	return settings == nil || settings.ExcessCapacityReservation == nil || ptr.Deref(settings.ExcessCapacityReservation.Enabled, true)
 }
 
 // SeedSettingVerticalPodAutoscalerEnabled returns true if the 'verticalPodAutoscaler' setting is enabled.
@@ -1439,7 +1440,7 @@ func IsPSPDisabled(shoot *gardencorev1beta1.Shoot) bool {
 
 	if shoot.Spec.Kubernetes.KubeAPIServer != nil {
 		for _, plugin := range shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins {
-			if plugin.Name == "PodSecurityPolicy" && pointer.BoolDeref(plugin.Disabled, false) {
+			if plugin.Name == "PodSecurityPolicy" && ptr.Deref(plugin.Disabled, false) {
 				return true
 			}
 		}

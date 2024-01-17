@@ -20,7 +20,7 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
@@ -35,7 +35,7 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 
 	var warnings []string
 
-	if pointer.BoolDeref(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, true) {
+	if ptr.Deref(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, true) {
 		warnings = append(warnings, "you should consider disabling the static token kubeconfig, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_access.md for details")
 	}
 
@@ -81,7 +81,7 @@ func getWarningsForDueCredentialsRotations(shoot *core.Shoot, credentialsRotatio
 		warnings = append(warnings, "you should consider rotating the ETCD encryption key, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_credentials_rotation.md#etcd-encryption-key for details")
 	}
 
-	if pointer.BoolDeref(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, true) &&
+	if ptr.Deref(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, true) &&
 		(rotation.Kubeconfig == nil || initiationDue(rotation.Kubeconfig.LastInitiationTime, credentialsRotationInterval)) {
 		warnings = append(warnings, "you should consider rotating the static token kubeconfig, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_credentials_rotation.md#kubeconfig for details")
 	}
@@ -153,7 +153,7 @@ func completionWarning(credentials string, recommendedCompletionInterval time.Du
 func getWarningsForPSPAdmissionPlugin(shoot *core.Shoot) string {
 	if !helper.IsWorkerless(shoot) && shoot.Spec.Kubernetes.KubeAPIServer != nil {
 		for _, plugin := range shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins {
-			if plugin.Name == "PodSecurityPolicy" && pointer.BoolDeref(plugin.Disabled, false) {
+			if plugin.Name == "PodSecurityPolicy" && ptr.Deref(plugin.Disabled, false) {
 				return ""
 			}
 		}

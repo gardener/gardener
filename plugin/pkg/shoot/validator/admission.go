@@ -631,7 +631,7 @@ func (c *validationContext) addMetadataAnnotations(a admission.Attributes) {
 	}
 
 	if c.shoot.Spec.Maintenance != nil &&
-		pointer.BoolDeref(c.shoot.Spec.Maintenance.ConfineSpecUpdateRollout, false) &&
+		ptr.Deref(c.shoot.Spec.Maintenance.ConfineSpecUpdateRollout, false) &&
 		!apiequality.Semantic.DeepEqual(c.oldShoot.Spec, c.shoot.Spec) &&
 		c.shoot.Status.LastOperation != nil &&
 		c.shoot.Status.LastOperation.State == core.LastOperationStateFailed {
@@ -969,7 +969,7 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 func isPSPDisabled(shoot *core.Shoot) bool {
 	if shoot.Spec.Kubernetes.KubeAPIServer != nil {
 		for _, plugin := range shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins {
-			if plugin.Name == "PodSecurityPolicy" && pointer.BoolDeref(plugin.Disabled, false) {
+			if plugin.Name == "PodSecurityPolicy" && ptr.Deref(plugin.Disabled, false) {
 				return true
 			}
 		}
@@ -1256,7 +1256,7 @@ func validateMachineTypes(constraints []core.MachineType, machine, oldMachine co
 		if pointer.StringEqual(t.Architecture, machine.Architecture) {
 			machinesWithSupportedArchitecture.Insert(t.Name)
 		}
-		if pointer.BoolDeref(t.Usable, false) {
+		if ptr.Deref(t.Usable, false) {
 			usableMachines.Insert(t.Name)
 		}
 		if !isUnavailableInAtleastOneZone(regions, region, zones, t.Name, func(zone core.AvailabilityZone) []string { return zone.UnavailableMachineTypes }) {
@@ -1360,7 +1360,7 @@ func validateVolumeTypes(constraints []core.VolumeType, volume, oldVolume *core.
 	)
 
 	for _, v := range constraints {
-		if pointer.BoolDeref(v.Usable, false) {
+		if ptr.Deref(v.Usable, false) {
 			usableVolumes.Insert(v.Name)
 		}
 		if !isUnavailableInAtleastOneZone(regions, region, zones, v.Name, func(zone core.AvailabilityZone) []string { return zone.UnavailableVolumeTypes }) {

@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
@@ -36,7 +36,7 @@ func (b *Botanist) DeployManagedResourceForAddons(ctx context.Context) error {
 	values := map[string]interface{}{
 		"podsecuritypolicies": map[string]interface{}{
 			"enabled":                   !b.Shoot.PSPDisabled && !b.Shoot.IsWorkerless,
-			"allowPrivilegedContainers": pointer.BoolDeref(b.Shoot.GetInfo().Spec.Kubernetes.AllowPrivilegedContainers, false),
+			"allowPrivilegedContainers": ptr.Deref(b.Shoot.GetInfo().Spec.Kubernetes.AllowPrivilegedContainers, false),
 		},
 	}
 

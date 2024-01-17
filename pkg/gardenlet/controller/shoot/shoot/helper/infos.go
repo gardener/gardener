@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -90,13 +90,13 @@ type ControllerInfos struct {
 // These results are supposed to be used/handled immediately. Always call CalculateControllerInfos to re-calculate the
 // results before using them.
 func CalculateControllerInfos(shoot *gardencorev1beta1.Shoot, clock clock.Clock, cfg gardenletconfig.ShootControllerConfiguration) ControllerInfos {
-	respectSyncPeriodOverwrite := pointer.BoolDeref(cfg.RespectSyncPeriodOverwrite, false)
+	respectSyncPeriodOverwrite := ptr.Deref(cfg.RespectSyncPeriodOverwrite, false)
 
 	i := ControllerInfos{
 		OperationType: ComputeOperationType(shoot),
 		clock:         clock,
 
-		reconcileInMaintenanceOnly: pointer.BoolDeref(cfg.ReconcileInMaintenanceOnly, false),
+		reconcileInMaintenanceOnly: ptr.Deref(cfg.ReconcileInMaintenanceOnly, false),
 		respectSyncPeriodOverwrite: respectSyncPeriodOverwrite,
 
 		isIgnored:                             gardenerutils.ShouldIgnoreShoot(respectSyncPeriodOverwrite, shoot),

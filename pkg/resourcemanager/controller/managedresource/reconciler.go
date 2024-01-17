@@ -47,7 +47,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -494,7 +494,7 @@ func (r *Reconciler) applyNewResources(ctx context.Context, log logr.Logger, ori
 
 		resourceLogger.V(1).Info("Applying")
 
-		operationResult, err := controllerutils.TypedCreateOrUpdate(ctx, r.TargetClient, r.TargetScheme, current, pointer.BoolDeref(r.Config.AlwaysUpdate, false), func() error {
+		operationResult, err := controllerutils.TypedCreateOrUpdate(ctx, r.TargetClient, r.TargetScheme, current, ptr.Deref(r.Config.AlwaysUpdate, false), func() error {
 			metadata, err := meta.Accessor(obj.obj)
 			if err != nil {
 				return fmt.Errorf("error getting metadata of object %q: %s", resource, err)

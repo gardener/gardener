@@ -22,6 +22,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -281,7 +282,7 @@ func (r *Reconciler) EnqueueWithJitterDelay() handler.EventHandler {
 				return
 			}
 
-			if pointer.BoolDeref(r.Config.Controllers.ManagedSeed.JitterUpdates, false) {
+			if ptr.Deref(r.Config.Controllers.ManagedSeed.JitterUpdates, false) {
 				q.AddAfter(reconcileRequest(evt.ObjectNew), RandomDurationWithMetaDuration(r.Config.Controllers.ManagedSeed.SyncJitterPeriod))
 			} else {
 				q.Add(reconcileRequest(evt.ObjectNew))

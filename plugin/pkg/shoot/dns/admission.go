@@ -30,7 +30,6 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	kubeinformers "k8s.io/client-go/informers"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -240,7 +239,7 @@ func (d *DNS) Admit(_ context.Context, a admission.Attributes, _ admission.Objec
 func checkFunctionlessDNSProviders(a admission.Attributes, shoot *core.Shoot) error {
 	dns := shoot.Spec.DNS
 	for _, provider := range dns.Providers {
-		if !pointer.BoolDeref(provider.Primary, false) && (provider.Type == nil || provider.SecretName == nil) {
+		if !ptr.Deref(provider.Primary, false) && (provider.Type == nil || provider.SecretName == nil) {
 			fieldErr := field.Required(field.NewPath("spec", "dns", "providers"), "non-primary DNS providers in .spec.dns.providers must specify a `type` and `secretName`")
 			return apierrors.NewInvalid(a.GetKind().GroupKind(), shoot.Name, field.ErrorList{fieldErr})
 		}

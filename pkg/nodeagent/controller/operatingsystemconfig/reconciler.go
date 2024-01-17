@@ -32,7 +32,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -331,7 +330,7 @@ func (r *Reconciler) applyChangedUnits(ctx context.Context, log logr.Logger, uni
 			unit.Enable = ptr.To(false)
 		}
 
-		if unit.Name == nodeagentv1alpha1.UnitName || pointer.BoolDeref(unit.Enable, true) {
+		if unit.Name == nodeagentv1alpha1.UnitName || ptr.Deref(unit.Enable, true) {
 			if err := r.DBus.Enable(ctx, unit.Name); err != nil {
 				return fmt.Errorf("unable to enable unit %q: %w", unit.Name, err)
 			}
@@ -401,7 +400,7 @@ func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, n
 		}
 
 		fns = append(fns, func(ctx context.Context) error {
-			if !pointer.BoolDeref(unit.Enable, true) || (unit.Command != nil && *unit.Command == extensionsv1alpha1.CommandStop) {
+			if !ptr.Deref(unit.Enable, true) || (unit.Command != nil && *unit.Command == extensionsv1alpha1.CommandStop) {
 				if err := r.DBus.Stop(ctx, r.Recorder, node, unit.Name); err != nil {
 					return fmt.Errorf("unable to stop unit %q: %w", unit.Name, err)
 				}

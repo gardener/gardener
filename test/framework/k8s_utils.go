@@ -359,7 +359,7 @@ func ShootReconciliationSuccessful(shoot *gardencorev1beta1.Shoot) (bool, string
 			// the `gardenlet` that operates the seed has already been shut down as part of the hibernation, the seed conditions will never
 			// be updated to True if they were previously not True.
 			hibernation := shoot.Spec.Hibernation
-			if !shootConditions.Has(condition.Type) && hibernation != nil && pointer.BoolDeref(hibernation.Enabled, false) {
+			if !shootConditions.Has(condition.Type) && hibernation != nil && ptr.Deref(hibernation.Enabled, false) {
 				continue
 			}
 			return false, fmt.Sprintf("condition type %s is not true yet, had message %s with reason %s", condition.Type, condition.Message, condition.Reason)

@@ -26,6 +26,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -348,7 +349,7 @@ func GetShootAuditPolicyConfigMapRef(apiServerConfig *core.KubeAPIServerConfig) 
 
 // HibernationIsEnabled checks if the given shoot's desired state is hibernated.
 func HibernationIsEnabled(shoot *core.Shoot) bool {
-	return shoot.Spec.Hibernation != nil && pointer.BoolDeref(shoot.Spec.Hibernation.Enabled, false)
+	return shoot.Spec.Hibernation != nil && ptr.Deref(shoot.Spec.Hibernation.Enabled, false)
 }
 
 // IsShootInHibernation checks if the given shoot is in hibernation or is waking up.

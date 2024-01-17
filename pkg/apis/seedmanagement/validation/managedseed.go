@@ -22,7 +22,7 @@ import (
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
@@ -166,7 +166,7 @@ func validateGardenlet(gardenlet *seedmanagement.Gardenlet, fldPath *field.Path,
 		}
 
 		// Validate gardenlet config
-		allErrs = append(allErrs, validateGardenletConfiguration(gardenletConfig, helper.GetBootstrap(gardenlet.Bootstrap), pointer.BoolDeref(gardenlet.MergeWithParent, false), configPath, inTemplate)...)
+		allErrs = append(allErrs, validateGardenletConfiguration(gardenletConfig, helper.GetBootstrap(gardenlet.Bootstrap), ptr.Deref(gardenlet.MergeWithParent, false), configPath, inTemplate)...)
 	}
 
 	if gardenlet.Bootstrap != nil {

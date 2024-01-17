@@ -24,7 +24,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -92,7 +92,7 @@ func computeEnabledAPIServerAdmissionPlugins(defaultPlugins, configuredPlugins [
 
 	var admissionPlugins []gardencorev1beta1.AdmissionPlugin
 	for _, defaultPlugin := range defaultPlugins {
-		if !pointer.BoolDeref(defaultPlugin.Disabled, false) {
+		if !ptr.Deref(defaultPlugin.Disabled, false) {
 			admissionPlugins = append(admissionPlugins, defaultPlugin)
 		}
 	}
@@ -103,7 +103,7 @@ func computeDisabledAPIServerAdmissionPlugins(configuredPlugins []gardencorev1be
 	var disabledAdmissionPlugins []gardencorev1beta1.AdmissionPlugin
 
 	for _, plugin := range configuredPlugins {
-		if pointer.BoolDeref(plugin.Disabled, false) {
+		if ptr.Deref(plugin.Disabled, false) {
 			disabledAdmissionPlugins = append(disabledAdmissionPlugins, plugin)
 		}
 	}

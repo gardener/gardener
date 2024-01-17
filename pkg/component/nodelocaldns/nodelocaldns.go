@@ -30,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -599,7 +598,7 @@ func (c *nodeLocalDNS) forceTcpToUpstreamDNS() string {
 }
 
 func (c *nodeLocalDNS) upstreamDNSAddress() string {
-	if c.values.Config != nil && pointer.BoolDeref(c.values.Config.DisableForwardToUpstreamDNS, false) {
+	if c.values.Config != nil && ptr.Deref(c.values.Config.DisableForwardToUpstreamDNS, false) {
 		return c.values.ClusterDNS
 	}
 	return "__PILLAR__UPSTREAM__SERVERS__"

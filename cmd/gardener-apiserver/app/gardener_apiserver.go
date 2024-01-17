@@ -44,7 +44,6 @@ import (
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/klog/v2"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -350,7 +349,7 @@ func (o *Options) Run(ctx context.Context) error {
 			return err
 		} else if err == nil {
 			// Set immutable flag to true and origin to gardener-apiserver if cluster-identity config map is not immutable, its origin is empty and the cluster-identity is equal the one set by gardener-apiserver
-			if pointer.BoolDeref(clusterIdentity.Immutable, false) {
+			if ptr.Deref(clusterIdentity.Immutable, false) {
 				return nil
 			}
 			if clusterIdentity.Data[v1beta1constants.ClusterIdentityOrigin] == "" && clusterIdentity.Data[v1beta1constants.ClusterIdentity] == o.ExtraOptions.ClusterIdentity {

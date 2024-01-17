@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
@@ -391,7 +391,7 @@ func computeWorkerlessSupportedExtensionTypes(controllerRegistrationList []*core
 
 	for _, controllerRegistration := range controllerRegistrationList {
 		for _, resource := range controllerRegistration.Spec.Resources {
-			if resource.Kind != extensionsv1alpha1.ExtensionResource || !pointer.BoolDeref(resource.WorkerlessSupported, false) {
+			if resource.Kind != extensionsv1alpha1.ExtensionResource || !ptr.Deref(resource.WorkerlessSupported, false) {
 				continue
 			}
 
