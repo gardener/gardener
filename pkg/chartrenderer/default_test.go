@@ -50,6 +50,20 @@ metadata:
     chartName: alpine
     chartVersion: "0.1.0"
 type: Opaque`
+
+	testClusterRole = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: gardener.cloud:test
+rules:
+- apiGroups:
+  - ""
+  resourceNames:
+  - gardener.privileged
+  resources:
+  - configmaps
+  verbs:
+  - create`
 )
 
 //go:embed testdata/alpine/*
@@ -77,9 +91,9 @@ var _ = Describe("ChartRenderer", func() {
 
 			files := chart.Files()
 			Expect(files).To(HaveLen(2))
-			Expect(files).To(HaveKey("alpine/templates/alpine-pod.yaml"))
-			Expect(files["alpine/templates/alpine-pod.yaml"]).To(HaveKeyWithValue("pod/alpine", alpinePod))
-			Expect(files["alpine/templates/alpine-pod.yaml"]).To(HaveKeyWithValue("secret/test", testSecret))
+			Expect(files).To(HaveKey("alpine/templates/alpine-resources.yaml"))
+			Expect(files["alpine/templates/alpine-resources.yaml"]).To(HaveKeyWithValue("pod/alpine", alpinePod))
+			Expect(files["alpine/templates/alpine-resources.yaml"]).To(HaveKeyWithValue("secret/test", testSecret))
 			Expect(files).To(HaveKey("alpine/templates/secret.yaml"))
 			Expect(files["alpine/templates/secret.yaml"]).To(HaveKeyWithValue("secret/test", testSecret))
 		})
@@ -98,8 +112,8 @@ var _ = Describe("ChartRenderer", func() {
 			chart, err := renderer.RenderEmbeddedFS(embeddedFS, alpineChartPath, "alpine", "default", map[string]string{})
 			Expect(err).ToNot(HaveOccurred())
 
-			actual := chart.FileContent("alpine-pod.yaml")
-			Expect(actual).To(Equal(testSecret + "\n---\n" + alpinePod))
+			actual := chart.FileContent("alpine-resources.yaml")
+			Expect(actual).To(Equal(testSecret + "\n---\n" + testClusterRole + "\n---\n" + alpinePod))
 
 			actual = chart.FileContent("secret.yaml")
 			Expect(actual).To(Equal(testSecret))
@@ -124,8 +138,9 @@ var _ = Describe("ChartRenderer", func() {
 			data := chart.AsSecretData()
 			Expect(data).To(Not(BeNil()))
 			Expect(string(data["alpine_templates_secret.yaml"])).To(Equal(testSecret))
-			Expect(string(data["alpine_templates_alpine-pod_secret_test.yaml"])).To(Equal(testSecret))
-			Expect(string(data["alpine_templates_alpine-pod_pod_alpine.yaml"])).To(Equal(alpinePod))
+			Expect(string(data["alpine_templates_alpine-resources_secret_test.yaml"])).To(Equal(testSecret))
+			Expect(string(data["alpine_templates_alpine-resources_pod_alpine.yaml"])).To(Equal(alpinePod))
+			Expect(string(data["alpine_templates_alpine-resources_clusterrole_gardener.cloud_test.yaml"])).To(Equal(testClusterRole))
 		})
 	})
 })
