@@ -175,7 +175,7 @@ func validateHighAvailabilityConfigWebhookConfiguration(conf config.HighAvailabi
 func validateConcurrentSyncs(val *int, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if pointer.IntDeref(val, 0) <= 0 {
+	if ptr.Deref(val, 0) <= 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("concurrentSyncs"), val, "must be at least 1"))
 	}
 

@@ -19,7 +19,7 @@ import (
 	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -55,7 +55,7 @@ func AddToManager(
 		// ManagedSeed was not found, hence gardenlet is responsible for an unmanaged seed.
 		responsibleForUnmanagedSeed = true
 	}
-	shootStateControllerEnabled := responsibleForUnmanagedSeed && pointer.IntDeref(cfg.Controllers.ShootState.ConcurrentSyncs, 0) > 0
+	shootStateControllerEnabled := responsibleForUnmanagedSeed && ptr.Deref(cfg.Controllers.ShootState.ConcurrentSyncs, 0) > 0
 
 	if err := (&shoot.Reconciler{
 		SeedClientSet:               seedClientSet,

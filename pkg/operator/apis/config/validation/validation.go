@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
@@ -89,7 +90,7 @@ func validateNetworkPolicyControllerConfiguration(conf config.NetworkPolicyContr
 func validateConcurrentSyncs(val *int, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if pointer.IntDeref(val, 0) <= 0 {
+	if ptr.Deref(val, 0) <= 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("concurrentSyncs"), val, "must be at least 1"))
 	}
 

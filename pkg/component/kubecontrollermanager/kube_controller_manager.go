@@ -37,7 +37,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -686,20 +685,20 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		}
 
 		command = append(command,
-			fmt.Sprintf("--concurrent-deployment-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.Deployment, defaultControllerWorkersDeployment)),
-			fmt.Sprintf("--concurrent-replicaset-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.ReplicaSet, defaultControllerWorkersReplicaSet)),
-			fmt.Sprintf("--concurrent-statefulset-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.StatefulSet, defaultControllerWorkersStatefulSet)),
+			fmt.Sprintf("--concurrent-deployment-syncs=%d", ptr.Deref(k.values.ControllerWorkers.Deployment, defaultControllerWorkersDeployment)),
+			fmt.Sprintf("--concurrent-replicaset-syncs=%d", ptr.Deref(k.values.ControllerWorkers.ReplicaSet, defaultControllerWorkersReplicaSet)),
+			fmt.Sprintf("--concurrent-statefulset-syncs=%d", ptr.Deref(k.values.ControllerWorkers.StatefulSet, defaultControllerWorkersStatefulSet)),
 		)
 	} else {
-		if v := pointer.IntDeref(k.values.ControllerWorkers.Namespace, defaultControllerWorkersNamespace); v == 0 {
+		if v := ptr.Deref(k.values.ControllerWorkers.Namespace, defaultControllerWorkersNamespace); v == 0 {
 			controllersToDisable.Insert("namespace")
 		}
 
-		if v := pointer.IntDeref(k.values.ControllerWorkers.ServiceAccountToken, defaultControllerWorkersServiceAccountToken); v == 0 {
+		if v := ptr.Deref(k.values.ControllerWorkers.ServiceAccountToken, defaultControllerWorkersServiceAccountToken); v == 0 {
 			controllersToDisable.Insert("serviceaccount-token")
 		}
 
-		if v := pointer.IntDeref(k.values.ControllerWorkers.ResourceQuota, defaultControllerWorkersResourceQuota); v == 0 {
+		if v := ptr.Deref(k.values.ControllerWorkers.ResourceQuota, defaultControllerWorkersResourceQuota); v == 0 {
 			controllersToDisable.Insert("resourcequota")
 		}
 
@@ -721,9 +720,9 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		fmt.Sprintf("--cluster-signing-legacy-unknown-cert-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyCertificateCA),
 		fmt.Sprintf("--cluster-signing-legacy-unknown-key-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyPrivateKeyCA),
 		"--cluster-signing-duration="+ptr.Deref(k.values.ClusterSigningDuration, 720*time.Hour).String(),
-		fmt.Sprintf("--concurrent-endpoint-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.Endpoint, defaultControllerWorkersEndpoint)),
-		fmt.Sprintf("--concurrent-gc-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.GarbageCollector, defaultControllerWorkersGarbageCollector)),
-		fmt.Sprintf("--concurrent-service-endpoint-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.ServiceEndpoint, defaultControllerWorkersServiceEndpoint)),
+		fmt.Sprintf("--concurrent-endpoint-syncs=%d", ptr.Deref(k.values.ControllerWorkers.Endpoint, defaultControllerWorkersEndpoint)),
+		fmt.Sprintf("--concurrent-gc-syncs=%d", ptr.Deref(k.values.ControllerWorkers.GarbageCollector, defaultControllerWorkersGarbageCollector)),
+		fmt.Sprintf("--concurrent-service-endpoint-syncs=%d", ptr.Deref(k.values.ControllerWorkers.ServiceEndpoint, defaultControllerWorkersServiceEndpoint)),
 	)
 
 	for api, enabled := range k.values.RuntimeConfig {
@@ -746,18 +745,18 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 	}
 	command = append(command, cmdControllers)
 
-	if v := pointer.IntDeref(k.values.ControllerWorkers.Namespace, defaultControllerWorkersNamespace); v != 0 {
+	if v := ptr.Deref(k.values.ControllerWorkers.Namespace, defaultControllerWorkersNamespace); v != 0 {
 		command = append(command, fmt.Sprintf("--concurrent-namespace-syncs=%d", v))
 	}
 
-	if v := pointer.IntDeref(k.values.ControllerWorkers.ResourceQuota, defaultControllerWorkersResourceQuota); v != 0 {
+	if v := ptr.Deref(k.values.ControllerWorkers.ResourceQuota, defaultControllerWorkersResourceQuota); v != 0 {
 		command = append(command, fmt.Sprintf("--concurrent-resource-quota-syncs=%d", v))
 		if k.values.ControllerSyncPeriods.ResourceQuota != nil {
 			command = append(command, "--resource-quota-sync-period="+k.values.ControllerSyncPeriods.ResourceQuota.String())
 		}
 	}
 
-	if v := pointer.IntDeref(k.values.ControllerWorkers.ServiceAccountToken, defaultControllerWorkersServiceAccountToken); v != 0 {
+	if v := ptr.Deref(k.values.ControllerWorkers.ServiceAccountToken, defaultControllerWorkersServiceAccountToken); v != 0 {
 		command = append(command, fmt.Sprintf("--concurrent-serviceaccount-token-syncs=%d", v))
 	}
 

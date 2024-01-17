@@ -74,7 +74,7 @@ func NewShootClients(c client.Client, clientset kubernetes.Interface, gardenerCl
 // ApplyRESTOptions applies RESTOptions to the given rest.Config
 func ApplyRESTOptions(restConfig *rest.Config, restOptions extensionsconfig.RESTOptions) *rest.Config {
 	restConfig.QPS = pointer.Float32Deref(restOptions.QPS, restConfig.QPS)
-	restConfig.Burst = pointer.IntDeref(restOptions.Burst, restConfig.Burst)
+	restConfig.Burst = ptr.Deref(restOptions.Burst, restConfig.Burst)
 	restConfig.Timeout = ptr.Deref(restOptions.Timeout, restConfig.Timeout)
 	return restConfig
 }

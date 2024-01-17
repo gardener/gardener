@@ -34,7 +34,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/version"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -150,8 +149,8 @@ var _ = Describe("istiod", func() {
 
 		istioIngressAutoscaler = func(min *int, max *int) string {
 			data, _ := os.ReadFile("./test_charts/ingress_autoscaler.yaml")
-			str := strings.ReplaceAll(string(data), "<MIN_REPLICAS>", strconv.Itoa(pointer.IntDeref(min, 2)))
-			str = strings.ReplaceAll(str, "<MAX_REPLICAS>", strconv.Itoa(pointer.IntDeref(max, 5)))
+			str := strings.ReplaceAll(string(data), "<MIN_REPLICAS>", strconv.Itoa(ptr.Deref(min, 2)))
+			str = strings.ReplaceAll(str, "<MAX_REPLICAS>", strconv.Itoa(ptr.Deref(max, 5)))
 			return str
 		}
 
@@ -222,7 +221,7 @@ var _ = Describe("istiod", func() {
 
 		istioIngressDeployment = func(replicas *int) string {
 			data, _ := os.ReadFile("./test_charts/ingress_deployment.yaml")
-			return strings.ReplaceAll(string(data), "<REPLICAS>", strconv.Itoa(pointer.IntDeref(replicas, 2)))
+			return strings.ReplaceAll(string(data), "<REPLICAS>", strconv.Itoa(ptr.Deref(replicas, 2)))
 		}
 
 		istioProxyProtocolEnvoyFilter = func() string {
