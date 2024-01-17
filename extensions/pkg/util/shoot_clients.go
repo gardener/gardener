@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -73,7 +72,7 @@ func NewShootClients(c client.Client, clientset kubernetes.Interface, gardenerCl
 
 // ApplyRESTOptions applies RESTOptions to the given rest.Config
 func ApplyRESTOptions(restConfig *rest.Config, restOptions extensionsconfig.RESTOptions) *rest.Config {
-	restConfig.QPS = pointer.Float32Deref(restOptions.QPS, restConfig.QPS)
+	restConfig.QPS = ptr.Deref(restOptions.QPS, restConfig.QPS)
 	restConfig.Burst = ptr.Deref(restOptions.Burst, restConfig.Burst)
 	restConfig.Timeout = ptr.Deref(restOptions.Timeout, restConfig.Timeout)
 	return restConfig

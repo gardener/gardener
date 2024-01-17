@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -153,9 +152,9 @@ func (v *vpa) reconcileUpdaterDeployment(deployment *appsv1.Deployment, serviceA
 					Command:         v.computeUpdaterCommands(),
 					Args: []string{
 						"--min-replicas=1",
-						fmt.Sprintf("--eviction-tolerance=%f", pointer.Float64Deref(v.values.Updater.EvictionTolerance, gardencorev1beta1.DefaultEvictionTolerance)),
+						fmt.Sprintf("--eviction-tolerance=%f", ptr.Deref(v.values.Updater.EvictionTolerance, gardencorev1beta1.DefaultEvictionTolerance)),
 						fmt.Sprintf("--eviction-rate-burst=%d", ptr.Deref(v.values.Updater.EvictionRateBurst, gardencorev1beta1.DefaultEvictionRateBurst)),
-						fmt.Sprintf("--eviction-rate-limit=%f", pointer.Float64Deref(v.values.Updater.EvictionRateLimit, gardencorev1beta1.DefaultEvictionRateLimit)),
+						fmt.Sprintf("--eviction-rate-limit=%f", ptr.Deref(v.values.Updater.EvictionRateLimit, gardencorev1beta1.DefaultEvictionRateLimit)),
 						fmt.Sprintf("--evict-after-oom-threshold=%s", durationDeref(v.values.Updater.EvictAfterOOMThreshold, gardencorev1beta1.DefaultEvictAfterOOMThreshold).Duration),
 						fmt.Sprintf("--updater-interval=%s", durationDeref(v.values.Updater.Interval, gardencorev1beta1.DefaultUpdaterInterval).Duration),
 						"--stderrthreshold=info",
