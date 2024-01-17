@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: unapproved, temporarily squatting
-    controller-gen.kubebuilder.io/version: v0.13.0
+    controller-gen.kubebuilder.io/version: v0.14.0
   name: hvpas.autoscaling.k8s.io
 spec:
   group: autoscaling.k8s.io
@@ -21,14 +21,19 @@ spec:
         description: Hvpa is the Schema for the hvpas API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -45,9 +50,9 @@ spec:
                     description: ScaleDown defines the parameters for scale down
                     properties:
                       minChange:
-                        description: MinChange is the minimum change in the resource
-                          on which HVPA acts HVPA uses minimum of the Value and Percentage
-                          value
+                        description: |-
+                          MinChange is the minimum change in the resource on which HVPA acts
+                          HVPA uses minimum of the Value and Percentage value
                         properties:
                           cpu:
                             description: Scale parameters for CPU
@@ -87,18 +92,20 @@ spec:
                             type: object
                         type: object
                       stabilizationDuration:
-                        description: StabilizationDuration defines the minimum delay
-                          in minutes between 2 consecutive scale operations Valid
-                          time units are "ns", "us" (or "µs"), "ms", "s", "m", "h"
+                        description: |-
+                          StabilizationDuration defines the minimum delay in minutes between 2 consecutive scale operations
+                          Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h"
                         type: string
                       updatePolicy:
-                        description: Describes the rules on when changes are applied.
-                          If not specified, all fields in the `UpdatePolicy` are set
-                          to their default values.
+                        description: |-
+                          Describes the rules on when changes are applied.
+                          If not specified, all fields in the `UpdatePolicy` are set to their
+                          default values.
                         properties:
                           updateMode:
-                            description: Controls when autoscaler applies changes
-                              to the resources. The default is 'Auto'.
+                            description: |-
+                              Controls when autoscaler applies changes to the resources.
+                              The default is 'Auto'.
                             type: string
                         type: object
                     type: object
@@ -106,9 +113,9 @@ spec:
                     description: ScaleUp defines the parameters for scale up
                     properties:
                       minChange:
-                        description: MinChange is the minimum change in the resource
-                          on which HVPA acts HVPA uses minimum of the Value and Percentage
-                          value
+                        description: |-
+                          MinChange is the minimum change in the resource on which HVPA acts
+                          HVPA uses minimum of the Value and Percentage value
                         properties:
                           cpu:
                             description: Scale parameters for CPU
@@ -148,49 +155,53 @@ spec:
                             type: object
                         type: object
                       stabilizationDuration:
-                        description: StabilizationDuration defines the minimum delay
-                          in minutes between 2 consecutive scale operations Valid
-                          time units are "ns", "us" (or "µs"), "ms", "s", "m", "h"
+                        description: |-
+                          StabilizationDuration defines the minimum delay in minutes between 2 consecutive scale operations
+                          Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h"
                         type: string
                       updatePolicy:
-                        description: Describes the rules on when changes are applied.
-                          If not specified, all fields in the `UpdatePolicy` are set
-                          to their default values.
+                        description: |-
+                          Describes the rules on when changes are applied.
+                          If not specified, all fields in the `UpdatePolicy` are set to their
+                          default values.
                         properties:
                           updateMode:
-                            description: Controls when autoscaler applies changes
-                              to the resources. The default is 'Auto'.
+                            description: |-
+                              Controls when autoscaler applies changes to the resources.
+                              The default is 'Auto'.
                             type: string
                         type: object
                     type: object
                   selector:
-                    description: 'Selector is a label query that should match HPA.
-                      Must match in order to be controlled. If empty, defaulted to
-                      labels on HPA template. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors'
+                    description: |-
+                      Selector is a label query that should match HPA.
+                      Must match in order to be controlled.
+                      If empty, defaulted to labels on HPA template.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
                     properties:
                       matchExpressions:
                         description: matchExpressions is a list of label selector
                           requirements. The requirements are ANDed.
                         items:
-                          description: A label selector requirement is a selector
-                            that contains values, a key, and an operator that relates
-                            the key and values.
+                          description: |-
+                            A label selector requirement is a selector that contains values, a key, and an operator that
+                            relates the key and values.
                           properties:
                             key:
                               description: key is the label key that the selector
                                 applies to.
                               type: string
                             operator:
-                              description: operator represents a key's relationship
-                                to a set of values. Valid operators are In, NotIn,
-                                Exists and DoesNotExist.
+                              description: |-
+                                operator represents a key's relationship to a set of values.
+                                Valid operators are In, NotIn, Exists and DoesNotExist.
                               type: string
                             values:
-                              description: values is an array of string values. If
-                                the operator is In or NotIn, the values array must
-                                be non-empty. If the operator is Exists or DoesNotExist,
-                                the values array must be empty. This array is replaced
-                                during a strategic merge patch.
+                              description: |-
+                                values is an array of string values. If the operator is In or NotIn,
+                                the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                the values array must be empty. This array is replaced during a strategic
+                                merge patch.
                               items:
                                 type: string
                               type: array
@@ -202,11 +213,10 @@ spec:
                       matchLabels:
                         additionalProperties:
                           type: string
-                        description: matchLabels is a map of {key,value} pairs. A
-                          single {key,value} in the matchLabels map is equivalent
-                          to an element of matchExpressions, whose key field is "key",
-                          the operator is "In", and the values array contains only
-                          "value". The requirements are ANDed.
+                        description: |-
+                          matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                          map is equivalent to an element of matchExpressions, whose key field is "key", the
+                          operator is "In", and the values array contains only "value". The requirements are ANDed.
                         type: object
                     type: object
                     x-kubernetes-map-type: atomic
@@ -222,38 +232,34 @@ spec:
                         description: Spec defines the behavior of a HPA.
                         properties:
                           maxReplicas:
-                            description: maxReplicas is the upper limit for the number
-                              of replicas to which the autoscaler can scale up. It
-                              cannot be less that minReplicas.
+                            description: |-
+                              maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.
+                              It cannot be less that minReplicas.
                             format: int32
                             type: integer
                           metrics:
-                            description: metrics contains the specifications for which
-                              to use to calculate the desired replica count (the maximum
-                              replica count across all metrics will be used).  The
-                              desired replica count is calculated multiplying the
-                              ratio between the target value and the current value
-                              by the current number of pods.  Ergo, metrics used must
-                              decrease as the pod count is increased, and vice-versa.  See
-                              the individual metric source types for more information
-                              about how each type of metric must respond. If not set,
-                              the default metric will be set to 80% average CPU utilization.
+                            description: |-
+                              metrics contains the specifications for which to use to calculate the
+                              desired replica count (the maximum replica count across all metrics will
+                              be used).  The desired replica count is calculated multiplying the
+                              ratio between the target value and the current value by the current
+                              number of pods.  Ergo, metrics used must decrease as the pod count is
+                              increased, and vice-versa.  See the individual metric source types for
+                              more information about how each type of metric must respond.
+                              If not set, the default metric will be set to 80% average CPU utilization.
                             items:
-                              description: MetricSpec specifies how to scale based
-                                on a single metric (only `type` and one other matching
-                                field should be set at once).
+                              description: |-
+                                MetricSpec specifies how to scale based on a single metric
+                                (only `type` and one other matching field should be set at once).
                               properties:
                                 containerResource:
-                                  description: container resource refers to a resource
-                                    metric (such as those specified in requests and
-                                    limits) known to Kubernetes describing a single
-                                    container in each pod of the current scale target
-                                    (e.g. CPU or memory). Such metrics are built in
-                                    to Kubernetes, and have special scaling options
-                                    on top of those available to normal per-pod metrics
-                                    using the "pods" source. This is an alpha feature
-                                    and can be enabled by the HPAContainerMetrics
-                                    feature flag.
+                                  description: |-
+                                    container resource refers to a resource metric (such as those specified in
+                                    requests and limits) known to Kubernetes describing a single container in
+                                    each pod of the current scale target (e.g. CPU or memory). Such metrics are
+                                    built in to Kubernetes, and have special scaling options on top of those
+                                    available to normal per-pod metrics using the "pods" source.
+                                    This is an alpha feature and can be enabled by the HPAContainerMetrics feature flag.
                                   properties:
                                     container:
                                       description: container is the name of the container
@@ -264,22 +270,20 @@ spec:
                                         in question.
                                       type: string
                                     targetAverageUtilization:
-                                      description: targetAverageUtilization is the
-                                        target value of the average of the resource
-                                        metric across all relevant pods, represented
-                                        as a percentage of the requested value of
-                                        the resource for the pods.
+                                      description: |-
+                                        targetAverageUtilization is the target value of the average of the
+                                        resource metric across all relevant pods, represented as a percentage of
+                                        the requested value of the resource for the pods.
                                       format: int32
                                       type: integer
                                     targetAverageValue:
                                       anyOf:
                                       - type: integer
                                       - type: string
-                                      description: targetAverageValue is the target
-                                        value of the average of the resource metric
-                                        across all relevant pods, as a raw value (instead
-                                        of as a percentage of the request), similar
-                                        to the "pods" metric source type.
+                                      description: |-
+                                        targetAverageValue is the target value of the average of the
+                                        resource metric across all relevant pods, as a raw value (instead of as
+                                        a percentage of the request), similar to the "pods" metric source type.
                                       pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                       x-kubernetes-int-or-string: true
                                   required:
@@ -287,50 +291,46 @@ spec:
                                   - name
                                   type: object
                                 external:
-                                  description: external refers to a global metric
-                                    that is not associated with any Kubernetes object.
-                                    It allows autoscaling based on information coming
-                                    from components running outside of cluster (for
-                                    example length of queue in cloud messaging service,
-                                    or QPS from loadbalancer running outside of cluster).
+                                  description: |-
+                                    external refers to a global metric that is not associated
+                                    with any Kubernetes object. It allows autoscaling based on information
+                                    coming from components running outside of cluster
+                                    (for example length of queue in cloud messaging service, or
+                                    QPS from loadbalancer running outside of cluster).
                                   properties:
                                     metricName:
                                       description: metricName is the name of the metric
                                         in question.
                                       type: string
                                     metricSelector:
-                                      description: metricSelector is used to identify
-                                        a specific time series within a given metric.
+                                      description: |-
+                                        metricSelector is used to identify a specific time series
+                                        within a given metric.
                                       properties:
                                         matchExpressions:
                                           description: matchExpressions is a list
                                             of label selector requirements. The requirements
                                             are ANDed.
                                           items:
-                                            description: A label selector requirement
-                                              is a selector that contains values,
-                                              a key, and an operator that relates
-                                              the key and values.
+                                            description: |-
+                                              A label selector requirement is a selector that contains values, a key, and an operator that
+                                              relates the key and values.
                                             properties:
                                               key:
                                                 description: key is the label key
                                                   that the selector applies to.
                                                 type: string
                                               operator:
-                                                description: operator represents a
-                                                  key's relationship to a set of values.
-                                                  Valid operators are In, NotIn, Exists
-                                                  and DoesNotExist.
+                                                description: |-
+                                                  operator represents a key's relationship to a set of values.
+                                                  Valid operators are In, NotIn, Exists and DoesNotExist.
                                                 type: string
                                               values:
-                                                description: values is an array of
-                                                  string values. If the operator is
-                                                  In or NotIn, the values array must
-                                                  be non-empty. If the operator is
-                                                  Exists or DoesNotExist, the values
-                                                  array must be empty. This array
-                                                  is replaced during a strategic merge
-                                                  patch.
+                                                description: |-
+                                                  values is an array of string values. If the operator is In or NotIn,
+                                                  the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                                  the values array must be empty. This array is replaced during a strategic
+                                                  merge patch.
                                                 items:
                                                   type: string
                                                 type: array
@@ -342,12 +342,10 @@ spec:
                                         matchLabels:
                                           additionalProperties:
                                             type: string
-                                          description: matchLabels is a map of {key,value}
-                                            pairs. A single {key,value} in the matchLabels
-                                            map is equivalent to an element of matchExpressions,
-                                            whose key field is "key", the operator
-                                            is "In", and the values array contains
-                                            only "value". The requirements are ANDed.
+                                          description: |-
+                                            matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                            map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                            operator is "In", and the values array contains only "value". The requirements are ANDed.
                                           type: object
                                       type: object
                                       x-kubernetes-map-type: atomic
@@ -355,8 +353,8 @@ spec:
                                       anyOf:
                                       - type: integer
                                       - type: string
-                                      description: targetAverageValue is the target
-                                        per-pod value of global metric (as a quantity).
+                                      description: |-
+                                        targetAverageValue is the target per-pod value of global metric (as a quantity).
                                         Mutually exclusive with TargetValue.
                                       pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                       x-kubernetes-int-or-string: true
@@ -364,26 +362,26 @@ spec:
                                       anyOf:
                                       - type: integer
                                       - type: string
-                                      description: targetValue is the target value
-                                        of the metric (as a quantity). Mutually exclusive
-                                        with TargetAverageValue.
+                                      description: |-
+                                        targetValue is the target value of the metric (as a quantity).
+                                        Mutually exclusive with TargetAverageValue.
                                       pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                       x-kubernetes-int-or-string: true
                                   required:
                                   - metricName
                                   type: object
                                 object:
-                                  description: object refers to a metric describing
-                                    a single kubernetes object (for example, hits-per-second
-                                    on an Ingress object).
+                                  description: |-
+                                    object refers to a metric describing a single kubernetes object
+                                    (for example, hits-per-second on an Ingress object).
                                   properties:
                                     averageValue:
                                       anyOf:
                                       - type: integer
                                       - type: string
-                                      description: averageValue is the target value
-                                        of the average of the metric across all relevant
-                                        pods (as a quantity)
+                                      description: |-
+                                        averageValue is the target value of the average of the
+                                        metric across all relevant pods (as a quantity)
                                       pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                       x-kubernetes-int-or-string: true
                                     metricName:
@@ -391,43 +389,35 @@ spec:
                                         in question.
                                       type: string
                                     selector:
-                                      description: selector is the string-encoded
-                                        form of a standard kubernetes label selector
-                                        for the given metric When set, it is passed
-                                        as an additional parameter to the metrics
-                                        server for more specific metrics scoping When
-                                        unset, just the metricName will be used to
-                                        gather metrics.
+                                      description: |-
+                                        selector is the string-encoded form of a standard kubernetes label selector for the given metric
+                                        When set, it is passed as an additional parameter to the metrics server for more specific metrics scoping
+                                        When unset, just the metricName will be used to gather metrics.
                                       properties:
                                         matchExpressions:
                                           description: matchExpressions is a list
                                             of label selector requirements. The requirements
                                             are ANDed.
                                           items:
-                                            description: A label selector requirement
-                                              is a selector that contains values,
-                                              a key, and an operator that relates
-                                              the key and values.
+                                            description: |-
+                                              A label selector requirement is a selector that contains values, a key, and an operator that
+                                              relates the key and values.
                                             properties:
                                               key:
                                                 description: key is the label key
                                                   that the selector applies to.
                                                 type: string
                                               operator:
-                                                description: operator represents a
-                                                  key's relationship to a set of values.
-                                                  Valid operators are In, NotIn, Exists
-                                                  and DoesNotExist.
+                                                description: |-
+                                                  operator represents a key's relationship to a set of values.
+                                                  Valid operators are In, NotIn, Exists and DoesNotExist.
                                                 type: string
                                               values:
-                                                description: values is an array of
-                                                  string values. If the operator is
-                                                  In or NotIn, the values array must
-                                                  be non-empty. If the operator is
-                                                  Exists or DoesNotExist, the values
-                                                  array must be empty. This array
-                                                  is replaced during a strategic merge
-                                                  patch.
+                                                description: |-
+                                                  values is an array of string values. If the operator is In or NotIn,
+                                                  the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                                  the values array must be empty. This array is replaced during a strategic
+                                                  merge patch.
                                                 items:
                                                   type: string
                                                 type: array
@@ -439,12 +429,10 @@ spec:
                                         matchLabels:
                                           additionalProperties:
                                             type: string
-                                          description: matchLabels is a map of {key,value}
-                                            pairs. A single {key,value} in the matchLabels
-                                            map is equivalent to an element of matchExpressions,
-                                            whose key field is "key", the operator
-                                            is "In", and the values array contains
-                                            only "value". The requirements are ANDed.
+                                          description: |-
+                                            matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                            map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                            operator is "In", and the values array contains only "value". The requirements are ANDed.
                                           type: object
                                       type: object
                                       x-kubernetes-map-type: atomic
@@ -481,54 +469,45 @@ spec:
                                   - targetValue
                                   type: object
                                 pods:
-                                  description: pods refers to a metric describing
-                                    each pod in the current scale target (for example,
-                                    transactions-processed-per-second).  The values
-                                    will be averaged together before being compared
-                                    to the target value.
+                                  description: |-
+                                    pods refers to a metric describing each pod in the current scale target
+                                    (for example, transactions-processed-per-second).  The values will be
+                                    averaged together before being compared to the target value.
                                   properties:
                                     metricName:
                                       description: metricName is the name of the metric
                                         in question
                                       type: string
                                     selector:
-                                      description: selector is the string-encoded
-                                        form of a standard kubernetes label selector
-                                        for the given metric When set, it is passed
-                                        as an additional parameter to the metrics
-                                        server for more specific metrics scoping When
-                                        unset, just the metricName will be used to
-                                        gather metrics.
+                                      description: |-
+                                        selector is the string-encoded form of a standard kubernetes label selector for the given metric
+                                        When set, it is passed as an additional parameter to the metrics server for more specific metrics scoping
+                                        When unset, just the metricName will be used to gather metrics.
                                       properties:
                                         matchExpressions:
                                           description: matchExpressions is a list
                                             of label selector requirements. The requirements
                                             are ANDed.
                                           items:
-                                            description: A label selector requirement
-                                              is a selector that contains values,
-                                              a key, and an operator that relates
-                                              the key and values.
+                                            description: |-
+                                              A label selector requirement is a selector that contains values, a key, and an operator that
+                                              relates the key and values.
                                             properties:
                                               key:
                                                 description: key is the label key
                                                   that the selector applies to.
                                                 type: string
                                               operator:
-                                                description: operator represents a
-                                                  key's relationship to a set of values.
-                                                  Valid operators are In, NotIn, Exists
-                                                  and DoesNotExist.
+                                                description: |-
+                                                  operator represents a key's relationship to a set of values.
+                                                  Valid operators are In, NotIn, Exists and DoesNotExist.
                                                 type: string
                                               values:
-                                                description: values is an array of
-                                                  string values. If the operator is
-                                                  In or NotIn, the values array must
-                                                  be non-empty. If the operator is
-                                                  Exists or DoesNotExist, the values
-                                                  array must be empty. This array
-                                                  is replaced during a strategic merge
-                                                  patch.
+                                                description: |-
+                                                  values is an array of string values. If the operator is In or NotIn,
+                                                  the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                                  the values array must be empty. This array is replaced during a strategic
+                                                  merge patch.
                                                 items:
                                                   type: string
                                                 type: array
@@ -540,12 +519,10 @@ spec:
                                         matchLabels:
                                           additionalProperties:
                                             type: string
-                                          description: matchLabels is a map of {key,value}
-                                            pairs. A single {key,value} in the matchLabels
-                                            map is equivalent to an element of matchExpressions,
-                                            whose key field is "key", the operator
-                                            is "In", and the values array contains
-                                            only "value". The requirements are ANDed.
+                                          description: |-
+                                            matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                            map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                            operator is "In", and the values array contains only "value". The requirements are ANDed.
                                           type: object
                                       type: object
                                       x-kubernetes-map-type: atomic
@@ -553,9 +530,9 @@ spec:
                                       anyOf:
                                       - type: integer
                                       - type: string
-                                      description: targetAverageValue is the target
-                                        value of the average of the metric across
-                                        all relevant pods (as a quantity)
+                                      description: |-
+                                        targetAverageValue is the target value of the average of the
+                                        metric across all relevant pods (as a quantity)
                                       pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                       x-kubernetes-int-or-string: true
                                   required:
@@ -563,55 +540,51 @@ spec:
                                   - targetAverageValue
                                   type: object
                                 resource:
-                                  description: resource refers to a resource metric
-                                    (such as those specified in requests and limits)
-                                    known to Kubernetes describing each pod in the
-                                    current scale target (e.g. CPU or memory). Such
-                                    metrics are built in to Kubernetes, and have special
-                                    scaling options on top of those available to normal
-                                    per-pod metrics using the "pods" source.
+                                  description: |-
+                                    resource refers to a resource metric (such as those specified in
+                                    requests and limits) known to Kubernetes describing each pod in the
+                                    current scale target (e.g. CPU or memory). Such metrics are built in to
+                                    Kubernetes, and have special scaling options on top of those available
+                                    to normal per-pod metrics using the "pods" source.
                                   properties:
                                     name:
                                       description: name is the name of the resource
                                         in question.
                                       type: string
                                     targetAverageUtilization:
-                                      description: targetAverageUtilization is the
-                                        target value of the average of the resource
-                                        metric across all relevant pods, represented
-                                        as a percentage of the requested value of
-                                        the resource for the pods.
+                                      description: |-
+                                        targetAverageUtilization is the target value of the average of the
+                                        resource metric across all relevant pods, represented as a percentage of
+                                        the requested value of the resource for the pods.
                                       format: int32
                                       type: integer
                                     targetAverageValue:
                                       anyOf:
                                       - type: integer
                                       - type: string
-                                      description: targetAverageValue is the target
-                                        value of the average of the resource metric
-                                        across all relevant pods, as a raw value (instead
-                                        of as a percentage of the request), similar
-                                        to the "pods" metric source type.
+                                      description: |-
+                                        targetAverageValue is the target value of the average of the
+                                        resource metric across all relevant pods, as a raw value (instead of as
+                                        a percentage of the request), similar to the "pods" metric source type.
                                       pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                       x-kubernetes-int-or-string: true
                                   required:
                                   - name
                                   type: object
                                 type:
-                                  description: 'type is the type of metric source.  It
-                                    should be one of "ContainerResource", "External",
-                                    "Object", "Pods" or "Resource", each mapping to
-                                    a matching field in the object. Note: "ContainerResource"
-                                    type is available on when the feature-gate HPAContainerMetrics
-                                    is enabled'
+                                  description: |-
+                                    type is the type of metric source.  It should be one of "ContainerResource",
+                                    "External", "Object", "Pods" or "Resource", each mapping to a matching field in the object.
+                                    Note: "ContainerResource" type is available on when the feature-gate
+                                    HPAContainerMetrics is enabled
                                   type: string
                               required:
                               - type
                               type: object
                             type: array
                           minReplicas:
-                            description: minReplicas is the lower limit for the number
-                              of replicas to which the autoscaler can scale down.
+                            description: |-
+                              minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.
                               It defaults to 1 pod.
                             format: int32
                             type: integer
@@ -708,9 +681,9 @@ spec:
                     description: ScaleDown defines the parameters for scale down
                     properties:
                       minChange:
-                        description: MinChange is the minimum change in the resource
-                          on which HVPA acts HVPA uses minimum of the Value and Percentage
-                          value
+                        description: |-
+                          MinChange is the minimum change in the resource on which HVPA acts
+                          HVPA uses minimum of the Value and Percentage value
                         properties:
                           cpu:
                             description: Scale parameters for CPU
@@ -750,18 +723,20 @@ spec:
                             type: object
                         type: object
                       stabilizationDuration:
-                        description: StabilizationDuration defines the minimum delay
-                          in minutes between 2 consecutive scale operations Valid
-                          time units are "ns", "us" (or "µs"), "ms", "s", "m", "h"
+                        description: |-
+                          StabilizationDuration defines the minimum delay in minutes between 2 consecutive scale operations
+                          Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h"
                         type: string
                       updatePolicy:
-                        description: Describes the rules on when changes are applied.
-                          If not specified, all fields in the `UpdatePolicy` are set
-                          to their default values.
+                        description: |-
+                          Describes the rules on when changes are applied.
+                          If not specified, all fields in the `UpdatePolicy` are set to their
+                          default values.
                         properties:
                           updateMode:
-                            description: Controls when autoscaler applies changes
-                              to the resources. The default is 'Auto'.
+                            description: |-
+                              Controls when autoscaler applies changes to the resources.
+                              The default is 'Auto'.
                             type: string
                         type: object
                     type: object
@@ -769,9 +744,9 @@ spec:
                     description: ScaleUp defines the parameters for scale up
                     properties:
                       minChange:
-                        description: MinChange is the minimum change in the resource
-                          on which HVPA acts HVPA uses minimum of the Value and Percentage
-                          value
+                        description: |-
+                          MinChange is the minimum change in the resource on which HVPA acts
+                          HVPA uses minimum of the Value and Percentage value
                         properties:
                           cpu:
                             description: Scale parameters for CPU
@@ -811,49 +786,53 @@ spec:
                             type: object
                         type: object
                       stabilizationDuration:
-                        description: StabilizationDuration defines the minimum delay
-                          in minutes between 2 consecutive scale operations Valid
-                          time units are "ns", "us" (or "µs"), "ms", "s", "m", "h"
+                        description: |-
+                          StabilizationDuration defines the minimum delay in minutes between 2 consecutive scale operations
+                          Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h"
                         type: string
                       updatePolicy:
-                        description: Describes the rules on when changes are applied.
-                          If not specified, all fields in the `UpdatePolicy` are set
-                          to their default values.
+                        description: |-
+                          Describes the rules on when changes are applied.
+                          If not specified, all fields in the `UpdatePolicy` are set to their
+                          default values.
                         properties:
                           updateMode:
-                            description: Controls when autoscaler applies changes
-                              to the resources. The default is 'Auto'.
+                            description: |-
+                              Controls when autoscaler applies changes to the resources.
+                              The default is 'Auto'.
                             type: string
                         type: object
                     type: object
                   selector:
-                    description: 'Selector is a label query that should match VPA.
-                      Must match in order to be controlled. If empty, defaulted to
-                      labels on VPA template. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors'
+                    description: |-
+                      Selector is a label query that should match VPA.
+                      Must match in order to be controlled.
+                      If empty, defaulted to labels on VPA template.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
                     properties:
                       matchExpressions:
                         description: matchExpressions is a list of label selector
                           requirements. The requirements are ANDed.
                         items:
-                          description: A label selector requirement is a selector
-                            that contains values, a key, and an operator that relates
-                            the key and values.
+                          description: |-
+                            A label selector requirement is a selector that contains values, a key, and an operator that
+                            relates the key and values.
                           properties:
                             key:
                               description: key is the label key that the selector
                                 applies to.
                               type: string
                             operator:
-                              description: operator represents a key's relationship
-                                to a set of values. Valid operators are In, NotIn,
-                                Exists and DoesNotExist.
+                              description: |-
+                                operator represents a key's relationship to a set of values.
+                                Valid operators are In, NotIn, Exists and DoesNotExist.
                               type: string
                             values:
-                              description: values is an array of string values. If
-                                the operator is In or NotIn, the values array must
-                                be non-empty. If the operator is Exists or DoesNotExist,
-                                the values array must be empty. This array is replaced
-                                during a strategic merge patch.
+                              description: |-
+                                values is an array of string values. If the operator is In or NotIn,
+                                the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                the values array must be empty. This array is replaced during a strategic
+                                merge patch.
                               items:
                                 type: string
                               type: array
@@ -865,11 +844,10 @@ spec:
                       matchLabels:
                         additionalProperties:
                           type: string
-                        description: matchLabels is a map of {key,value} pairs. A
-                          single {key,value} in the matchLabels map is equivalent
-                          to an element of matchExpressions, whose key field is "key",
-                          the operator is "In", and the values array contains only
-                          "value". The requirements are ANDed.
+                        description: |-
+                          matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                          map is equivalent to an element of matchExpressions, whose key field is "key", the
+                          operator is "In", and the values array contains only "value". The requirements are ANDed.
                         type: object
                     type: object
                     x-kubernetes-map-type: atomic
@@ -885,37 +863,39 @@ spec:
                         description: Spec defines the behavior of a VPA.
                         properties:
                           resourcePolicy:
-                            description: Controls how the autoscaler computes recommended
-                              resources. The resource policy may be used to set constraints
-                              on the recommendations for individual containers. If
-                              not specified, the autoscaler computes recommended resources
-                              for all containers in the pod, without additional constraints.
+                            description: |-
+                              Controls how the autoscaler computes recommended resources.
+                              The resource policy may be used to set constraints on the recommendations
+                              for individual containers. If not specified, the autoscaler computes recommended
+                              resources for all containers in the pod, without additional constraints.
                             properties:
                               containerPolicies:
                                 description: Per-container resource policies.
                                 items:
-                                  description: ContainerResourcePolicy controls how
-                                    autoscaler computes the recommended resources
-                                    for a specific container.
+                                  description: |-
+                                    ContainerResourcePolicy controls how autoscaler computes the recommended
+                                    resources for a specific container.
                                   properties:
                                     containerName:
-                                      description: Name of the container or DefaultContainerResourcePolicy,
-                                        in which case the policy is used by the containers
-                                        that don't have their own policy specified.
+                                      description: |-
+                                        Name of the container or DefaultContainerResourcePolicy, in which
+                                        case the policy is used by the containers that don't have their own
+                                        policy specified.
                                       type: string
                                     controlledResources:
-                                      description: Specifies the type of recommendations
-                                        that will be computed (and possibly applied)
-                                        by VPA. If not specified, the default of [ResourceCPU,
-                                        ResourceMemory] will be used.
+                                      description: |-
+                                        Specifies the type of recommendations that will be computed
+                                        (and possibly applied) by VPA.
+                                        If not specified, the default of [ResourceCPU, ResourceMemory] will be used.
                                       items:
                                         description: ResourceName is the name identifying
                                           various resources in a ResourceList.
                                         type: string
                                       type: array
                                     controlledValues:
-                                      description: Specifies which resource values
-                                        should be controlled. The default is "RequestsAndLimits".
+                                      description: |-
+                                        Specifies which resource values should be controlled.
+                                        The default is "RequestsAndLimits".
                                       enum:
                                       - RequestsAndLimits
                                       - RequestsOnly
@@ -927,9 +907,9 @@ spec:
                                         - type: string
                                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                         x-kubernetes-int-or-string: true
-                                      description: Specifies the maximum amount of
-                                        resources that will be recommended for the
-                                        container. The default is no maximum.
+                                      description: |-
+                                        Specifies the maximum amount of resources that will be recommended
+                                        for the container. The default is no maximum.
                                       type: object
                                     minAllowed:
                                       additionalProperties:
@@ -938,9 +918,9 @@ spec:
                                         - type: string
                                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                         x-kubernetes-int-or-string: true
-                                      description: Specifies the minimal amount of
-                                        resources that will be recommended for the
-                                        container. The default is no minimum.
+                                      description: |-
+                                        Specifies the minimal amount of resources that will be recommended
+                                        for the container. The default is no minimum.
                                       type: object
                                     mode:
                                       description: Whether autoscaler is enabled for
@@ -956,24 +936,23 @@ spec:
                     type: object
                 type: object
               weightBasedScalingIntervals:
-                description: WeightBasedScalingIntervals defines the intervals of
-                  replica counts, and the weights for scaling a deployment vertically
-                  If there are overlapping intervals, then the vpaWeight will be taken
-                  from the first matching interval
+                description: |-
+                  WeightBasedScalingIntervals defines the intervals of replica counts, and the weights for scaling a deployment vertically
+                  If there are overlapping intervals, then the vpaWeight will be taken from the first matching interval
                 items:
                   description: WeightBasedScalingInterval defines the interval of
                     replica counts in which VpaWeight is applied to VPA scaling
                   properties:
                     lastReplicaCount:
-                      description: LastReplicaCount is the number of replicas till
-                        which VpaWeight is applied to VPA scaling If this field is
-                        not provided, it will default to maxReplicas of HPA
+                      description: |-
+                        LastReplicaCount is the number of replicas till which VpaWeight is applied to VPA scaling
+                        If this field is not provided, it will default to maxReplicas of HPA
                       format: int32
                       type: integer
                     startReplicaCount:
-                      description: StartReplicaCount is the number of replicas from
-                        which VpaWeight is applied to VPA scaling If this field is
-                        not provided, it will default to minReplicas of HPA
+                      description: |-
+                        StartReplicaCount is the number of replicas from which VpaWeight is applied to VPA scaling
+                        If this field is not provided, it will default to minReplicas of HPA
                       format: int32
                       type: integer
                     vpaWeight:
@@ -996,7 +975,8 @@ spec:
                 description: Current HPA UpdatePolicy set in the spec
                 properties:
                   updateMode:
-                    description: Controls when autoscaler applies changes to the resources.
+                    description: |-
+                      Controls when autoscaler applies changes to the resources.
                       The default is 'Auto'.
                     type: string
                 type: object
@@ -1004,7 +984,8 @@ spec:
                 description: Current HPA UpdatePolicy set in the spec
                 properties:
                   updateMode:
-                    description: Controls when autoscaler applies changes to the resources.
+                    description: |-
+                      Controls when autoscaler applies changes to the resources.
                       The default is 'Auto'.
                     type: string
                 type: object
@@ -1039,23 +1020,24 @@ spec:
                             state of the autoscaler.
                           properties:
                             conditions:
-                              description: Conditions is the set of conditions required
-                                for this autoscaler to scale its target, and indicates
-                                whether or not those conditions are met.
+                              description: |-
+                                Conditions is the set of conditions required for this autoscaler to scale its target,
+                                and indicates whether or not those conditions are met.
                               items:
-                                description: VerticalPodAutoscalerCondition describes
-                                  the state of a VerticalPodAutoscaler at a certain
-                                  point.
+                                description: |-
+                                  VerticalPodAutoscalerCondition describes the state of
+                                  a VerticalPodAutoscaler at a certain point.
                                 properties:
                                   lastTransitionTime:
-                                    description: lastTransitionTime is the last time
-                                      the condition transitioned from one status to
-                                      another
+                                    description: |-
+                                      lastTransitionTime is the last time the condition transitioned from
+                                      one status to another
                                     format: date-time
                                     type: string
                                   message:
-                                    description: message is a human-readable explanation
-                                      containing details about the transition
+                                    description: |-
+                                      message is a human-readable explanation containing details about
+                                      the transition
                                     type: string
                                   reason:
                                     description: reason is the reason for the condition's
@@ -1074,20 +1056,19 @@ spec:
                                 type: object
                               type: array
                             recommendation:
-                              description: The most recently computed amount of resources
-                                recommended by the autoscaler for the controlled pods.
+                              description: |-
+                                The most recently computed amount of resources recommended by the
+                                autoscaler for the controlled pods.
                               properties:
                                 containerRecommendations:
                                   description: Resources recommended by the autoscaler
                                     for each container.
                                   items:
-                                    description: RecommendedContainerResources is
-                                      the recommendation of resources computed by
-                                      autoscaler for a specific container. Respects
-                                      the container resource policy if present in
-                                      the spec. In particular the recommendation is
-                                      not produced for containers with `ContainerScalingMode`
-                                      set to 'Off'.
+                                    description: |-
+                                      RecommendedContainerResources is the recommendation of resources computed by
+                                      autoscaler for a specific container. Respects the container resource policy
+                                      if present in the spec. In particular the recommendation is not produced for
+                                      containers with `ContainerScalingMode` set to 'Off'.
                                     properties:
                                       containerName:
                                         description: Name of the container.
@@ -1099,13 +1080,10 @@ spec:
                                           - type: string
                                           pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                           x-kubernetes-int-or-string: true
-                                        description: Minimum recommended amount of
-                                          resources. Observes ContainerResourcePolicy.
-                                          This amount is not guaranteed to be sufficient
-                                          for the application to operate in a stable
-                                          way, however running with less resources
-                                          is likely to have significant impact on
-                                          performance/availability.
+                                        description: |-
+                                          Minimum recommended amount of resources. Observes ContainerResourcePolicy.
+                                          This amount is not guaranteed to be sufficient for the application to operate in a stable way, however
+                                          running with less resources is likely to have significant impact on performance/availability.
                                         type: object
                                       target:
                                         additionalProperties:
@@ -1124,16 +1102,14 @@ spec:
                                           - type: string
                                           pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                           x-kubernetes-int-or-string: true
-                                        description: The most recent recommended resources
-                                          target computed by the autoscaler for the
-                                          controlled pods, based only on actual resource
-                                          usage, not taking into account the ContainerResourcePolicy.
-                                          May differ from the Recommendation if the
-                                          actual resource usage causes the target
-                                          to violate the ContainerResourcePolicy (lower
-                                          than MinAllowed or higher that MaxAllowed).
-                                          Used only as status indication, will not
-                                          affect actual resource assignment.
+                                        description: |-
+                                          The most recent recommended resources target computed by the autoscaler
+                                          for the controlled pods, based only on actual resource usage, not taking
+                                          into account the ContainerResourcePolicy.
+                                          May differ from the Recommendation if the actual resource usage causes
+                                          the target to violate the ContainerResourcePolicy (lower than MinAllowed
+                                          or higher that MaxAllowed).
+                                          Used only as status indication, will not affect actual resource assignment.
                                         type: object
                                       upperBound:
                                         additionalProperties:
@@ -1142,12 +1118,10 @@ spec:
                                           - type: string
                                           pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                           x-kubernetes-int-or-string: true
-                                        description: Maximum recommended amount of
-                                          resources. Observes ContainerResourcePolicy.
-                                          Any resources allocated beyond this value
-                                          are likely wasted. This value may be larger
-                                          than the maximum amount of application is
-                                          actually capable of consuming.
+                                        description: |-
+                                          Maximum recommended amount of resources. Observes ContainerResourcePolicy.
+                                          Any resources allocated beyond this value are likely wasted. This value may be larger than the maximum
+                                          amount of application is actually capable of consuming.
                                         type: object
                                     required:
                                     - target
@@ -1194,21 +1168,24 @@ spec:
                       state of the autoscaler.
                     properties:
                       conditions:
-                        description: Conditions is the set of conditions required
-                          for this autoscaler to scale its target, and indicates whether
-                          or not those conditions are met.
+                        description: |-
+                          Conditions is the set of conditions required for this autoscaler to scale its target,
+                          and indicates whether or not those conditions are met.
                         items:
-                          description: VerticalPodAutoscalerCondition describes the
-                            state of a VerticalPodAutoscaler at a certain point.
+                          description: |-
+                            VerticalPodAutoscalerCondition describes the state of
+                            a VerticalPodAutoscaler at a certain point.
                           properties:
                             lastTransitionTime:
-                              description: lastTransitionTime is the last time the
-                                condition transitioned from one status to another
+                              description: |-
+                                lastTransitionTime is the last time the condition transitioned from
+                                one status to another
                               format: date-time
                               type: string
                             message:
-                              description: message is a human-readable explanation
-                                containing details about the transition
+                              description: |-
+                                message is a human-readable explanation containing details about
+                                the transition
                               type: string
                             reason:
                               description: reason is the reason for the condition's
@@ -1227,19 +1204,19 @@ spec:
                           type: object
                         type: array
                       recommendation:
-                        description: The most recently computed amount of resources
-                          recommended by the autoscaler for the controlled pods.
+                        description: |-
+                          The most recently computed amount of resources recommended by the
+                          autoscaler for the controlled pods.
                         properties:
                           containerRecommendations:
                             description: Resources recommended by the autoscaler for
                               each container.
                             items:
-                              description: RecommendedContainerResources is the recommendation
-                                of resources computed by autoscaler for a specific
-                                container. Respects the container resource policy
-                                if present in the spec. In particular the recommendation
-                                is not produced for containers with `ContainerScalingMode`
-                                set to 'Off'.
+                              description: |-
+                                RecommendedContainerResources is the recommendation of resources computed by
+                                autoscaler for a specific container. Respects the container resource policy
+                                if present in the spec. In particular the recommendation is not produced for
+                                containers with `ContainerScalingMode` set to 'Off'.
                               properties:
                                 containerName:
                                   description: Name of the container.
@@ -1251,12 +1228,10 @@ spec:
                                     - type: string
                                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                     x-kubernetes-int-or-string: true
-                                  description: Minimum recommended amount of resources.
-                                    Observes ContainerResourcePolicy. This amount
-                                    is not guaranteed to be sufficient for the application
-                                    to operate in a stable way, however running with
-                                    less resources is likely to have significant impact
-                                    on performance/availability.
+                                  description: |-
+                                    Minimum recommended amount of resources. Observes ContainerResourcePolicy.
+                                    This amount is not guaranteed to be sufficient for the application to operate in a stable way, however
+                                    running with less resources is likely to have significant impact on performance/availability.
                                   type: object
                                 target:
                                   additionalProperties:
@@ -1275,15 +1250,14 @@ spec:
                                     - type: string
                                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                     x-kubernetes-int-or-string: true
-                                  description: The most recent recommended resources
-                                    target computed by the autoscaler for the controlled
-                                    pods, based only on actual resource usage, not
-                                    taking into account the ContainerResourcePolicy.
-                                    May differ from the Recommendation if the actual
-                                    resource usage causes the target to violate the
-                                    ContainerResourcePolicy (lower than MinAllowed
-                                    or higher that MaxAllowed). Used only as status
-                                    indication, will not affect actual resource assignment.
+                                  description: |-
+                                    The most recent recommended resources target computed by the autoscaler
+                                    for the controlled pods, based only on actual resource usage, not taking
+                                    into account the ContainerResourcePolicy.
+                                    May differ from the Recommendation if the actual resource usage causes
+                                    the target to violate the ContainerResourcePolicy (lower than MinAllowed
+                                    or higher that MaxAllowed).
+                                    Used only as status indication, will not affect actual resource assignment.
                                   type: object
                                 upperBound:
                                   additionalProperties:
@@ -1292,11 +1266,10 @@ spec:
                                     - type: string
                                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                     x-kubernetes-int-or-string: true
-                                  description: Maximum recommended amount of resources.
-                                    Observes ContainerResourcePolicy. Any resources
-                                    allocated beyond this value are likely wasted.
-                                    This value may be larger than the maximum amount
-                                    of application is actually capable of consuming.
+                                  description: |-
+                                    Maximum recommended amount of resources. Observes ContainerResourcePolicy.
+                                    Any resources allocated beyond this value are likely wasted. This value may be larger than the maximum
+                                    amount of application is actually capable of consuming.
                                   type: object
                               required:
                               - target
@@ -1320,7 +1293,8 @@ spec:
                 description: Current VPA UpdatePolicy set in the spec
                 properties:
                   updateMode:
-                    description: Controls when autoscaler applies changes to the resources.
+                    description: |-
+                      Controls when autoscaler applies changes to the resources.
                       The default is 'Auto'.
                     type: string
                 type: object
@@ -1328,7 +1302,8 @@ spec:
                 description: Current VPA UpdatePolicy set in the spec
                 properties:
                   updateMode:
-                    description: Controls when autoscaler applies changes to the resources.
+                    description: |-
+                      Controls when autoscaler applies changes to the resources.
                       The default is 'Auto'.
                     type: string
                 type: object

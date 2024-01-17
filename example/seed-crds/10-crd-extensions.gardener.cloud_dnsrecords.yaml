@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.13.0
+    controller-gen.kubebuilder.io/version: v0.14.0
   name: dnsrecords.extensions.gardener.cloud
 spec:
   group: extensions.gardener.cloud
@@ -41,20 +41,26 @@ spec:
         description: DNSRecord is a specification for a DNSRecord resource.
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
           spec:
-            description: Specification of the DNSRecord. If the object's deletion
-              timestamp is set, this field is immutable.
+            description: |-
+              Specification of the DNSRecord.
+              If the object's deletion timestamp is set, this field is immutable.
             properties:
               name:
                 description: Name is the fully qualified domain name, e.g. "api.<shoot
@@ -69,9 +75,9 @@ spec:
                   TXT records are currently supported. This field is immutable.
                 type: string
               region:
-                description: Region is the region of this DNS record. If not specified,
-                  the region specified in SecretRef will be used. If that is also
-                  not specified, the extension controller will use its default region.
+                description: |-
+                  Region is the region of this DNS record. If not specified, the region specified in SecretRef will be used.
+                  If that is also not specified, the extension controller will use its default region.
                 type: string
               secretRef:
                 description: SecretRef is a reference to a secret that contains the
@@ -101,10 +107,9 @@ spec:
                   type: string
                 type: array
               zone:
-                description: Zone is the DNS hosted zone of this DNS record. If not
-                  specified, it will be determined automatically by getting all hosted
-                  zones of the account and searching for the longest zone name that
-                  is a suffix of Name.
+                description: |-
+                  Zone is the DNS hosted zone of this DNS record. If not specified, it will be determined automatically by
+                  getting all hosted zones of the account and searching for the longest zone name that is a suffix of Name.
                 type: string
             required:
             - name

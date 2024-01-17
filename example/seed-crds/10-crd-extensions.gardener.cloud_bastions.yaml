@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.13.0
+    controller-gen.kubebuilder.io/version: v0.14.0
   name: bastions.extensions.gardener.cloud
 spec:
   group: extensions.gardener.cloud
@@ -30,24 +30,31 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Bastion is a bastion or jump host that is dynamically created
+        description: |-
+          Bastion is a bastion or jump host that is dynamically created
           to provide SSH access to shoot nodes.
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
           spec:
-            description: Spec is the specification of this Bastion. If the object's
-              deletion timestamp is set, this field is immutable.
+            description: |-
+              Spec is the specification of this Bastion.
+              If the object's deletion timestamp is set, this field is immutable.
             properties:
               ingress:
                 description: Ingress controls from where the created bastion host
@@ -61,14 +68,15 @@ spec:
                         access the bastion.
                       properties:
                         cidr:
-                          description: cidr is a string representing the IPBlock Valid
-                            examples are "192.168.1.0/24" or "2001:db8::/64"
+                          description: |-
+                            cidr is a string representing the IPBlock
+                            Valid examples are "192.168.1.0/24" or "2001:db8::/64"
                           type: string
                         except:
-                          description: except is a slice of CIDRs that should not
-                            be included within an IPBlock Valid examples are "192.168.1.0/24"
-                            or "2001:db8::/64" Except values will be rejected if they
-                            are outside the cidr range
+                          description: |-
+                            except is a slice of CIDRs that should not be included within an IPBlock
+                            Valid examples are "192.168.1.0/24" or "2001:db8::/64"
+                            Except values will be rejected if they are outside the cidr range
                           items:
                             type: string
                           type: array
@@ -87,9 +95,10 @@ spec:
                 description: Type contains the instance of the resource's kind.
                 type: string
               userData:
-                description: UserData is the base64-encoded user data for the bastion
-                  instance. This should contain code to provision the SSH key on the
-                  bastion instance. This field is immutable.
+                description: |-
+                  UserData is the base64-encoded user data for the bastion instance. This should
+                  contain code to provision the SSH key on the bastion instance.
+                  This field is immutable.
                 format: byte
                 type: string
             required:
@@ -150,26 +159,40 @@ spec:
                   host.
                 properties:
                   hostname:
-                    description: Hostname is set for load-balancer ingress points
-                      that are DNS based (typically AWS load-balancers)
+                    description: |-
+                      Hostname is set for load-balancer ingress points that are DNS based
+                      (typically AWS load-balancers)
                     type: string
                   ip:
-                    description: IP is set for load-balancer ingress points that are
-                      IP based (typically GCE or OpenStack load-balancers)
+                    description: |-
+                      IP is set for load-balancer ingress points that are IP based
+                      (typically GCE or OpenStack load-balancers)
+                    type: string
+                  ipMode:
+                    description: |-
+                      IPMode specifies how the load-balancer IP behaves, and may only be specified when the ip field is specified.
+                      Setting this to "VIP" indicates that traffic is delivered to the node with
+                      the destination set to the load-balancer's IP and port.
+                      Setting this to "Proxy" indicates that traffic is delivered to the node or pod with
+                      the destination set to the node's IP and node port or the pod's IP and port.
+                      Service implementations may use this information to adjust traffic routing.
                     type: string
                   ports:
-                    description: Ports is a list of records of service ports If used,
-                      every port defined in the service should have an entry in it
+                    description: |-
+                      Ports is a list of records of service ports
+                      If used, every port defined in the service should have an entry in it
                     items:
                       properties:
                         error:
-                          description: 'Error is to record the problem with the service
-                            port The format of the error shall comply with the following
-                            rules: - built-in error values shall be specified in this
-                            file and those shall use CamelCase names - cloud provider
-                            specific error values must have names that comply with
-                            the format foo.example.com/CamelCase. --- The regex it
-                            matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)'
+                          description: |-
+                            Error is to record the problem with the service port
+                            The format of the error shall comply with the following rules:
+                            - built-in error values shall be specified in this file and those shall use
+                              CamelCase names
+                            - cloud provider specific error values must have names that comply with the
+                              format foo.example.com/CamelCase.
+                            ---
+                            The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
                           maxLength: 316
                           pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                           type: string
@@ -180,9 +203,9 @@ spec:
                           type: integer
                         protocol:
                           default: TCP
-                          description: 'Protocol is the protocol of the service port
-                            of which status is recorded here The supported values
-                            are: "TCP", "UDP", "SCTP"'
+                          description: |-
+                            Protocol is the protocol of the service port of which status is recorded here
+                            The supported values are: "TCP", "UDP", "SCTP"
                           type: string
                       required:
                       - port
