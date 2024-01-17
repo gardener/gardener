@@ -720,7 +720,7 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		fmt.Sprintf("--cluster-signing-kube-apiserver-client-key-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyPrivateKeyCA),
 		fmt.Sprintf("--cluster-signing-legacy-unknown-cert-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyCertificateCA),
 		fmt.Sprintf("--cluster-signing-legacy-unknown-key-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyPrivateKeyCA),
-		"--cluster-signing-duration="+pointer.DurationDeref(k.values.ClusterSigningDuration, 720*time.Hour).String(),
+		"--cluster-signing-duration="+ptr.Deref(k.values.ClusterSigningDuration, 720*time.Hour).String(),
 		fmt.Sprintf("--concurrent-endpoint-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.Endpoint, defaultControllerWorkersEndpoint)),
 		fmt.Sprintf("--concurrent-gc-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.GarbageCollector, defaultControllerWorkersGarbageCollector)),
 		fmt.Sprintf("--concurrent-service-endpoint-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.ServiceEndpoint, defaultControllerWorkersServiceEndpoint)),
