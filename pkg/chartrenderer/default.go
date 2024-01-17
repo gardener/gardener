@@ -204,7 +204,7 @@ func (c *RenderedChart) AsSecretData() map[string][]byte {
 				// Keep old behaviour if there is only one resource in the file.
 				key := strings.ReplaceAll(fileName, "/", "_")
 				if multipleResources {
-					key = strings.ReplaceAll(strings.TrimSuffix(fileName, ".yaml")+"/"+resourceName+".yaml", "/", "_")
+					key = strings.TrimSuffix(fileName, ".yaml") + "/" + resourceName + ".yaml"
 					// replace all characters with _ which does not match the regex [-._a-zA-Z0-9]+
 					key = validConfigKey.ReplaceAllString(key, "_")
 				}
