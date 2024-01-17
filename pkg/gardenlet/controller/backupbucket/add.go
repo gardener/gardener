@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -93,7 +94,7 @@ func (r *Reconciler) SeedNamePredicate() predicate.Predicate {
 		if !ok {
 			return false
 		}
-		return pointer.StringDeref(backupBucket.Spec.SeedName, "") == r.SeedName
+		return ptr.Deref(backupBucket.Spec.SeedName, "") == r.SeedName
 	})
 }
 

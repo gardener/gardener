@@ -27,7 +27,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -1140,8 +1139,8 @@ func CalculateSeedUsage(shootList []gardencorev1beta1.Shoot) map[string]int {
 
 	for _, shoot := range shootList {
 		var (
-			specSeed   = pointer.StringDeref(shoot.Spec.SeedName, "")
-			statusSeed = pointer.StringDeref(shoot.Status.SeedName, "")
+			specSeed   = ptr.Deref(shoot.Spec.SeedName, "")
+			statusSeed = ptr.Deref(shoot.Status.SeedName, "")
 		)
 
 		if specSeed != "" {

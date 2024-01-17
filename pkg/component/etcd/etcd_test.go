@@ -288,14 +288,14 @@ var _ = Describe("Etcd", func() {
 				}
 			}
 
-			if pointer.StringDeref(peerServerSecretName, "") != "" {
+			if ptr.Deref(peerServerSecretName, "") != "" {
 				obj.Spec.Etcd.PeerUrlTLS.ServerTLSSecretRef = corev1.SecretReference{
 					Name:      *peerServerSecretName,
 					Namespace: testNamespace,
 				}
 			}
 
-			if pointer.StringDeref(peerCASecretName, "") != "" {
+			if ptr.Deref(peerCASecretName, "") != "" {
 				obj.Spec.Etcd.PeerUrlTLS.TLSCASecretRef = druidv1alpha1.SecretReference{
 					SecretReference: corev1.SecretReference{
 						Name:      *peerCASecretName,

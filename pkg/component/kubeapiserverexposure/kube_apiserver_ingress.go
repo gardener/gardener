@@ -19,7 +19,7 @@ import (
 
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -95,7 +95,7 @@ func (i *ingress) Deploy(ctx context.Context) error {
 					},
 				},
 			},
-			TLS: []networkingv1.IngressTLS{{Hosts: []string{i.values.Host}, SecretName: pointer.StringDeref(i.values.TLSSecretName, "")}},
+			TLS: []networkingv1.IngressTLS{{Hosts: []string{i.values.Host}, SecretName: ptr.Deref(i.values.TLSSecretName, "")}},
 		}
 		return nil
 	})

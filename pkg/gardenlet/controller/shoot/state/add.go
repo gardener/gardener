@@ -16,7 +16,7 @@ package state
 
 import (
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -71,7 +71,7 @@ func (r *Reconciler) SeedNameChangedPredicate() predicate.Predicate {
 				return false
 			}
 
-			return pointer.StringDeref(shoot.Spec.SeedName, "") != pointer.StringDeref(oldShoot.Spec.SeedName, "")
+			return ptr.Deref(shoot.Spec.SeedName, "") != ptr.Deref(oldShoot.Spec.SeedName, "")
 		},
 	}
 }

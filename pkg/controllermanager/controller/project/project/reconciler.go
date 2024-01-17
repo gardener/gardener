@@ -28,7 +28,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -188,7 +187,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 
 func (r *Reconciler) reconcileNamespaceForProject(ctx context.Context, log logr.Logger, project *gardencorev1beta1.Project, ownerReference *metav1.OwnerReference) (*corev1.Namespace, error) {
 	var (
-		namespaceName = pointer.StringDeref(project.Spec.Namespace, "")
+		namespaceName = ptr.Deref(project.Spec.Namespace, "")
 
 		projectLabels      = namespaceLabelsFromProject(project)
 		projectAnnotations = namespaceAnnotationsFromProject(project)

@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
@@ -324,7 +324,7 @@ func (q *QuotaValidator) findShootsReferQuota(quota core.Quota, shoot core.Shoot
 			if shoot.Namespace == s.Namespace && shoot.Name == s.Name {
 				continue
 			}
-			if pointer.StringDeref(s.Spec.SecretBindingName, "") == binding.Name {
+			if ptr.Deref(s.Spec.SecretBindingName, "") == binding.Name {
 				shootsReferQuota = append(shootsReferQuota, *s)
 			}
 		}

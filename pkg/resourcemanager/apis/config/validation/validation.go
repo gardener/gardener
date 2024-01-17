@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	componentbaseconfigvalidation "k8s.io/component-base/config/validation"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
@@ -93,7 +94,7 @@ func validateResourceManagerControllerConfiguration(conf config.ResourceManagerC
 	if conf.ClusterID == nil {
 		allErrs = append(allErrs, field.Required(fldPath.Child("clusterID"), "cluster id must be non-nil"))
 	}
-	if len(pointer.StringDeref(conf.ResourceClass, "")) == 0 {
+	if len(ptr.Deref(conf.ResourceClass, "")) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("resourceClass"), "must provide a resource class"))
 	}
 
@@ -124,7 +125,7 @@ func validateManagedResourceControllerConfiguration(conf config.ManagedResourceC
 	allErrs = append(allErrs, validateConcurrentSyncs(conf.ConcurrentSyncs, fldPath)...)
 	allErrs = append(allErrs, validateSyncPeriod(conf.SyncPeriod, fldPath)...)
 
-	if len(pointer.StringDeref(conf.ManagedByLabelValue, "")) == 0 {
+	if len(ptr.Deref(conf.ManagedByLabelValue, "")) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("managedByLabelValue"), "must specify value of managed-by label"))
 	}
 
@@ -145,7 +146,7 @@ func validateResourceManagerWebhookConfiguration(conf config.ResourceManagerWebh
 func validatePodSchedulerNameWebhookConfiguration(conf config.PodSchedulerNameWebhookConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if conf.Enabled && len(pointer.StringDeref(conf.SchedulerName, "")) == 0 {
+	if conf.Enabled && len(ptr.Deref(conf.SchedulerName, "")) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("schedulerName"), "must specify schedulerName when webhook is enabled"))
 	}
 

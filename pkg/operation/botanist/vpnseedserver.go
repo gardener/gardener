@@ -17,7 +17,6 @@ package botanist
 import (
 	"context"
 
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/imagevector"

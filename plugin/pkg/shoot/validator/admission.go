@@ -920,7 +920,7 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 		}
 		isVolumePresentInCloudprofile, availableInAllZones, isUsableVolume, supportedVolumeTypes := validateVolumeTypes(c.cloudProfile.Spec.VolumeTypes, worker.Volume, oldWorker.Volume, c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, worker.Zones)
 		if !isVolumePresentInCloudprofile {
-			allErrs = append(allErrs, field.NotSupported(idxPath.Child("volume", "type"), pointer.StringDeref(worker.Volume.Type, ""), supportedVolumeTypes))
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("volume", "type"), ptr.Deref(worker.Volume.Type, ""), supportedVolumeTypes))
 		} else if !availableInAllZones || !isUsableVolume {
 			detail := fmt.Sprintf("volume type %q ", *worker.Volume.Type)
 			if !isUsableVolume {

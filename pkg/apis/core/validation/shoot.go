@@ -39,7 +39,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -284,7 +283,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	}
 	if spec.SecretBindingName != nil && workerless {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretBindingName"), workerlessErrorMsg))
-	} else if len(pointer.StringDeref(spec.SecretBindingName, "")) == 0 && !workerless {
+	} else if len(ptr.Deref(spec.SecretBindingName, "")) == 0 && !workerless {
 		allErrs = append(allErrs, field.Required(fldPath.Child("secretBindingName"), "must specify a name"))
 	}
 	if spec.SeedName != nil && len(*spec.SeedName) == 0 {
@@ -373,7 +372,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 
 	if !reflect.DeepEqual(oldSpec.SchedulerName, newSpec.SchedulerName) {
 		// only allow to set an empty scheduler name to the default scheduler
-		if oldSpec.SchedulerName != nil || pointer.StringDeref(newSpec.SchedulerName, "") != v1beta1constants.DefaultSchedulerName {
+		if oldSpec.SchedulerName != nil || ptr.Deref(newSpec.SchedulerName, "") != v1beta1constants.DefaultSchedulerName {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("schedulerName"), newSpec.SchedulerName, "field is immutable"))
 		}
 	}
@@ -970,7 +969,7 @@ func validateNetworking(networking *core.Networking, workerless bool, fldPath *f
 			return allErrs
 		}
 
-		if len(pointer.StringDeref(networking.Type, "")) == 0 {
+		if len(ptr.Deref(networking.Type, "")) == 0 {
 			allErrs = append(allErrs, field.Required(fldPath.Child("type"), "networking type must be provided"))
 		}
 	}

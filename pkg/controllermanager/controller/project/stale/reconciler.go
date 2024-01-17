@@ -26,7 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -272,7 +272,7 @@ func (r *Reconciler) secretBindingInUse(ctx context.Context, namespaceToSecretBi
 		}
 
 		for _, shoot := range shootList.Items {
-			if secretBindingNames.Has(pointer.StringDeref(shoot.Spec.SecretBindingName, "")) {
+			if secretBindingNames.Has(ptr.Deref(shoot.Spec.SecretBindingName, "")) {
 				return true, nil
 			}
 		}

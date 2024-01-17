@@ -809,7 +809,7 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 			},
 			{
 				Name:  "NODE_NETWORK",
-				Value: pointer.StringDeref(k.values.VPN.NodeNetworkCIDR, ""),
+				Value: ptr.Deref(k.values.VPN.NodeNetworkCIDR, ""),
 			},
 			{
 				Name:  "VPN_SERVER_INDEX",
@@ -885,7 +885,7 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 			},
 			{
 				Name:  "NODE_NETWORK",
-				Value: pointer.StringDeref(k.values.VPN.NodeNetworkCIDR, ""),
+				Value: ptr.Deref(k.values.VPN.NodeNetworkCIDR, ""),
 			},
 			{
 				Name:  "HA_VPN_CLIENTS",

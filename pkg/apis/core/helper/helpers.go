@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -458,8 +457,8 @@ func CalculateSeedUsage(shootList []*core.Shoot) map[string]int {
 
 	for _, shoot := range shootList {
 		var (
-			specSeed   = pointer.StringDeref(shoot.Spec.SeedName, "")
-			statusSeed = pointer.StringDeref(shoot.Status.SeedName, "")
+			specSeed   = ptr.Deref(shoot.Spec.SeedName, "")
+			statusSeed = ptr.Deref(shoot.Status.SeedName, "")
 		)
 
 		if specSeed != "" {

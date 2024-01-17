@@ -848,7 +848,7 @@ func (v *vpnSeedServer) SetSeedNamespaceObjectUID(namespaceUID types.UID) {
 }
 
 func (v *vpnSeedServer) SetNodeNetworkCIDR(nodes *string) {
-	v.values.Network.NodeCIDR = pointer.StringDeref(nodes, "")
+	v.values.Network.NodeCIDR = ptr.Deref(nodes, "")
 }
 
 func (v *vpnSeedServer) indexedName(idx *int) string {
