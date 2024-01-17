@@ -31,6 +31,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -44,7 +45,6 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/health/progressing"
 	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	thirdpartyapiutil "github.com/gardener/gardener/third_party/controller-runtime/pkg/apiutil"
 )
 
 func TestHealth(t *testing.T) {
@@ -118,8 +118,8 @@ var _ = BeforeSuite(func() {
 		Cache: cache.Options{
 			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
 		},
-		MapperProvider: func(config *rest.Config, _ *http.Client) (meta.RESTMapper, error) {
-			return thirdpartyapiutil.NewDynamicRESTMapper(config)
+		MapperProvider: func(config *rest.Config, httpClient *http.Client) (meta.RESTMapper, error) {
+			return apiutil.NewDynamicRESTMapper(config, httpClient)
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
