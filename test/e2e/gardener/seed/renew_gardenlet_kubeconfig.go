@@ -30,10 +30,18 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 		var seed *gardencorev1beta1.Seed
 
 		BeforeEach(func() {
-			// find the first seed, it doesn't matter which one (seed name differs between test scenarios, e.g., non-ha/ha)
+			// Find the first seed which is not "e2e-managedseed". Seed name differs between test scenarios, e.g., non-ha/ha.
+			// However, this test should not use "e2e-managedseed", because it is created and deleted in a separate e2e test.
+			// This e2e test already includes tests for the "Renew gardenlet kubeconfig" functionality. Additionally,
+			// it might be already gone before the kubeconfig was renewed.
 			seedList := &gardencorev1beta1.SeedList{}
-			Expect(testClient.List(ctx, seedList, client.Limit(1))).To(Succeed())
-			seed = seedList.Items[0].DeepCopy()
+			Expect(testClient.List(ctx, seedList)).To(Succeed())
+			for _, s := range seedList.Items {
+				if s.Name != "e2e-managedseed" {
+					seed = s.DeepCopy()
+					break
+				}
+			}
 			log.Info("Renewing gardenlet kubeconfig", "seedName", seed.Name)
 		})
 
