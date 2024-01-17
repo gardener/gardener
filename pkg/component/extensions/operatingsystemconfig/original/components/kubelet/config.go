@@ -103,7 +103,7 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 			Effect: corev1.TaintEffectNoSchedule,
 		}},
 		RegistryPullQPS:      params.RegistryPullQPS,
-		RegistryBurst:        pointer.Int32Deref(params.RegistryBurst, 0),
+		RegistryBurst:        ptr.Deref(params.RegistryBurst, 0),
 		SyncFrequency:        metav1.Duration{Duration: time.Minute},
 		SystemReserved:       params.SystemReserved,
 		VolumeStatsAggPeriod: metav1.Duration{Duration: time.Minute},

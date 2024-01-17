@@ -24,7 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
@@ -136,8 +136,8 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 	if nodeTolerationCfg := cfg.NodeToleration; nodeTolerationCfg != nil {
 		nodeTolerationConfigPath := fldPath.Child("nodeToleration")
 
-		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(pointer.Int64Deref(nodeTolerationCfg.DefaultNotReadyTolerationSeconds, 0), nodeTolerationConfigPath.Child("defaultNotReadyTolerationSeconds"))...)
-		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(pointer.Int64Deref(nodeTolerationCfg.DefaultUnreachableTolerationSeconds, 0), nodeTolerationConfigPath.Child("defaultUnreachableTolerationSeconds"))...)
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(ptr.Deref(nodeTolerationCfg.DefaultNotReadyTolerationSeconds, 0), nodeTolerationConfigPath.Child("defaultNotReadyTolerationSeconds"))...)
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(ptr.Deref(nodeTolerationCfg.DefaultUnreachableTolerationSeconds, 0), nodeTolerationConfigPath.Child("defaultUnreachableTolerationSeconds"))...)
 	}
 
 	return allErrs

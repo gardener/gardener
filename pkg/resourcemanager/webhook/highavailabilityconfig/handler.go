@@ -36,7 +36,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -323,7 +322,7 @@ func mutateReplicas(
 
 	// only mutate replicas if object is not horizontally scaled or if current replica count is lower than what we have
 	// computed
-	if !isHorizontallyScaled || pointer.Int32Deref(currentReplicas, 0) < *replicas {
+	if !isHorizontallyScaled || ptr.Deref(currentReplicas, 0) < *replicas {
 		log.Info("Mutating replicas", "replicas", *replicas)
 		setReplicas(replicas)
 	}
@@ -333,7 +332,7 @@ func mutateReplicas(
 
 func getReplicaCount(obj client.Object, currentOrMinReplicas *int32, failureToleranceType *gardencorev1beta1.FailureToleranceType) (*int32, error) {
 	// do not mutate replicas if they are set to 0 (hibernation case or HPA disabled)
-	if pointer.Int32Deref(currentOrMinReplicas, 0) == 0 {
+	if ptr.Deref(currentOrMinReplicas, 0) == 0 {
 		return nil, nil
 	}
 
@@ -429,7 +428,7 @@ func (h *Handler) mutateTopologySpreadConstraints(
 	podTemplateSpec *corev1.PodTemplateSpec,
 	annotations map[string]string,
 ) {
-	replicas := pointer.Int32Deref(currentReplicas, 0)
+	replicas := ptr.Deref(currentReplicas, 0)
 
 	// Set maxReplicas to replicas if component is not scaled horizontally or of the replica count is higher than maxReplicas
 	// which can happen if the involved H(V)PA object is not mutated yet.
@@ -514,12 +513,12 @@ func mutateAutoscalingReplicas(
 
 	// For compatibility reasons, only overwrite minReplicas if the current count is lower than the calculated count.
 	// TODO(timuthy): Reconsider if this should be removed in a future version.
-	if pointer.Int32Deref(getMinReplicas(), 0) < *replicas {
+	if ptr.Deref(getMinReplicas(), 0) < *replicas {
 		log.Info("Mutating minReplicas", "minReplicas", replicas)
 		setMinReplicas(replicas)
 	}
 
-	if getMaxReplicas() < pointer.Int32Deref(getMinReplicas(), 0) {
+	if getMaxReplicas() < ptr.Deref(getMinReplicas(), 0) {
 		log.Info("Mutating maxReplicas", "maxReplicas", replicas)
 		setMaxReplicas(*replicas)
 	}

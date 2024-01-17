@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	componentbaseconfigvalidation "k8s.io/component-base/config/validation"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/logger"
@@ -156,8 +155,8 @@ func validatePodSchedulerNameWebhookConfiguration(conf config.PodSchedulerNameWe
 func validateProjectedTokenMountWebhookConfiguration(conf config.ProjectedTokenMountWebhookConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if conf.Enabled && pointer.Int64Deref(conf.ExpirationSeconds, 0) < 600 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("expirationSeconds"), pointer.Int64Deref(conf.ExpirationSeconds, 0), "must be at least 600"))
+	if conf.Enabled && ptr.Deref(conf.ExpirationSeconds, 0) < 600 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("expirationSeconds"), ptr.Deref(conf.ExpirationSeconds, 0), "must be at least 600"))
 	}
 
 	return allErrs
@@ -166,8 +165,8 @@ func validateProjectedTokenMountWebhookConfiguration(conf config.ProjectedTokenM
 func validateHighAvailabilityConfigWebhookConfiguration(conf config.HighAvailabilityConfigWebhookConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(pointer.Int64Deref(conf.DefaultNotReadyTolerationSeconds, 0), fldPath.Child("defaultNotReadyTolerationSeconds"))...)
-	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(pointer.Int64Deref(conf.DefaultUnreachableTolerationSeconds, 0), fldPath.Child("defaultUnreachableTolerationSeconds"))...)
+	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(ptr.Deref(conf.DefaultNotReadyTolerationSeconds, 0), fldPath.Child("defaultNotReadyTolerationSeconds"))...)
+	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(ptr.Deref(conf.DefaultUnreachableTolerationSeconds, 0), fldPath.Child("defaultUnreachableTolerationSeconds"))...)
 
 	return allErrs
 }

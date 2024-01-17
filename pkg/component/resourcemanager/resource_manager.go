@@ -1008,7 +1008,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 				resourcesv1alpha1.HighAvailabilityConfigSkip: "true",
 			})
 
-			deployment.Spec.Template.Spec.TopologySpreadConstraints = kubernetesutils.GetTopologySpreadConstraints(pointer.Int32Deref(r.values.Replicas, 0), pointer.Int32Deref(r.values.Replicas, 0), metav1.LabelSelector{MatchLabels: r.getDeploymentTemplateLabels()}, int32(len(r.values.Zones)), nil, false)
+			deployment.Spec.Template.Spec.TopologySpreadConstraints = kubernetesutils.GetTopologySpreadConstraints(ptr.Deref(r.values.Replicas, 0), ptr.Deref(r.values.Replicas, 0), metav1.LabelSelector{MatchLabels: r.getDeploymentTemplateLabels()}, int32(len(r.values.Zones)), nil, false)
 
 			// ATTENTION: THIS MUST BE THE LAST THING HAPPENING IN THIS FUNCTION TO MAKE SURE THE COMPUTED CHECKSUM IS
 			// ACCURATE!

@@ -135,7 +135,7 @@ func (v *vpa) reconcileUpdaterDeployment(deployment *appsv1.Deployment, serviceA
 	// consequence, don't need a PDB).
 	deployment.Labels = v.getDeploymentLabels(updater)
 	deployment.Spec = appsv1.DeploymentSpec{
-		Replicas:             ptr.To(pointer.Int32Deref(v.values.Updater.Replicas, 1)),
+		Replicas:             ptr.To(ptr.Deref(v.values.Updater.Replicas, 1)),
 		RevisionHistoryLimit: ptr.To(int32(2)),
 		Selector:             &metav1.LabelSelector{MatchLabels: getAppLabel(updater)},
 		Template: corev1.PodTemplateSpec{
@@ -154,7 +154,7 @@ func (v *vpa) reconcileUpdaterDeployment(deployment *appsv1.Deployment, serviceA
 					Args: []string{
 						"--min-replicas=1",
 						fmt.Sprintf("--eviction-tolerance=%f", pointer.Float64Deref(v.values.Updater.EvictionTolerance, gardencorev1beta1.DefaultEvictionTolerance)),
-						fmt.Sprintf("--eviction-rate-burst=%d", pointer.Int32Deref(v.values.Updater.EvictionRateBurst, gardencorev1beta1.DefaultEvictionRateBurst)),
+						fmt.Sprintf("--eviction-rate-burst=%d", ptr.Deref(v.values.Updater.EvictionRateBurst, gardencorev1beta1.DefaultEvictionRateBurst)),
 						fmt.Sprintf("--eviction-rate-limit=%f", pointer.Float64Deref(v.values.Updater.EvictionRateLimit, gardencorev1beta1.DefaultEvictionRateLimit)),
 						fmt.Sprintf("--evict-after-oom-threshold=%s", durationDeref(v.values.Updater.EvictAfterOOMThreshold, gardencorev1beta1.DefaultEvictAfterOOMThreshold).Duration),
 						fmt.Sprintf("--updater-interval=%s", durationDeref(v.values.Updater.Interval, gardencorev1beta1.DefaultUpdaterInterval).Duration),

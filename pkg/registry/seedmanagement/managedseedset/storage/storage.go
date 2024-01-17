@@ -26,7 +26,6 @@ import (
 	"k8s.io/apiserver/pkg/registry/generic"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
@@ -228,7 +227,7 @@ func scaleFromManagedSeedSet(mss *seedmanagement.ManagedSeedSet) (*autoscalingv1
 			CreationTimestamp: mss.CreationTimestamp,
 		},
 		Spec: autoscalingv1.ScaleSpec{
-			Replicas: pointer.Int32Deref(mss.Spec.Replicas, 0),
+			Replicas: ptr.Deref(mss.Spec.Replicas, 0),
 		},
 		Status: autoscalingv1.ScaleStatus{
 			Replicas: mss.Status.Replicas,

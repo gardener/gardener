@@ -28,7 +28,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -710,7 +709,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 									}
 
 									minDomains := ptr.To(int32(len(zones)))
-									if pointer.Int32Deref(maxReplicas, *minDomains) < *minDomains {
+									if ptr.Deref(maxReplicas, *minDomains) < *minDomains {
 										minDomains = maxReplicas
 									}
 

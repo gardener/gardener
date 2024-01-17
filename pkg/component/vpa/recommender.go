@@ -186,7 +186,7 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 	// consequence, don't need a PDB).
 	deployment.Labels = v.getDeploymentLabels(recommender)
 	deployment.Spec = appsv1.DeploymentSpec{
-		Replicas:             ptr.To(pointer.Int32Deref(v.values.Recommender.Replicas, 1)),
+		Replicas:             ptr.To(ptr.Deref(v.values.Recommender.Replicas, 1)),
 		RevisionHistoryLimit: ptr.To(int32(2)),
 		Selector:             &metav1.LabelSelector{MatchLabels: getAppLabel(recommender)},
 		Template: corev1.PodTemplateSpec{

@@ -155,7 +155,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 				deployment := &appsv1.Deployment{}
 				g.Expect(shootClient.Client().Get(ctx, client.ObjectKey{Name: "gardenlet", Namespace: "garden"}, deployment)).To(Succeed())
 
-				if pointer.Int32Deref(deployment.Spec.Replicas, 0) != 0 {
+				if ptr.Deref(deployment.Spec.Replicas, 0) != 0 {
 					By("Scale down gardenlet deployment to prevent interference of old pods with old validity settings")
 					// See https://github.com/gardener/gardener/issues/6766 for details
 

@@ -257,7 +257,7 @@ func DeployGardenerResourceManager(
 }
 
 func mustBootstrapGardenerResourceManager(ctx context.Context, c client.Client, gardenerResourceManager resourcemanager.Interface, namespace string) (bool, error) {
-	if ptr.To32Deref(gardenerResourceManager.GetReplicas(), 0) == 0 {
+	if ptr.Deref(gardenerResourceManager.GetReplicas(), 0) == 0 {
 		return false, nil // GRM should not be scaled up, hence no need to bootstrap.
 	}
 

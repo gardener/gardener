@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -173,7 +172,7 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 		resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
 	})
 	deployment.Spec = appsv1.DeploymentSpec{
-		Replicas:             ptr.To(pointer.Int32Deref(v.values.AdmissionController.Replicas, 1)),
+		Replicas:             ptr.To(ptr.Deref(v.values.AdmissionController.Replicas, 1)),
 		RevisionHistoryLimit: ptr.To(int32(2)),
 		Selector:             &metav1.LabelSelector{MatchLabels: getAppLabel(admissionController)},
 		Template: corev1.PodTemplateSpec{

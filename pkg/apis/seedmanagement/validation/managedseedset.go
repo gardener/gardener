@@ -24,7 +24,7 @@ import (
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -72,7 +72,7 @@ func ValidateManagedSeedSetStatusUpdate(newManagedSeedSet, oldManagedSeedSet *se
 		allErrs = append(allErrs, field.Invalid(statusPath.Child("nextReplicaNumber"), newManagedSeedSet.Status.NextReplicaNumber, "cannot be decremented"))
 	}
 	if isDecremented(newManagedSeedSet.Status.CollisionCount, oldManagedSeedSet.Status.CollisionCount) {
-		value := pointer.Int32Deref(newManagedSeedSet.Status.CollisionCount, 0)
+		value := ptr.Deref(newManagedSeedSet.Status.CollisionCount, 0)
 		allErrs = append(allErrs, field.Invalid(statusPath.Child("collisionCount"), value, "cannot be decremented"))
 	}
 

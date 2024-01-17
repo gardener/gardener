@@ -622,7 +622,7 @@ func ValidateGardenletChartPodDisruptionBudget(ctx context.Context, c client.Cli
 		pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
 	}
 
-	if pointer.Int32Deref(replicaCount, 2) < 2 {
+	if ptr.Deref(replicaCount, 2) < 2 {
 		Expect(c.Get(ctx, client.ObjectKeyFromObject(pdb), pdb)).To(BeNotFoundError())
 		return
 	}
@@ -1090,7 +1090,7 @@ func ComputeExpectedGardenletDeploymentSpec(
 			deployment.Replicas = deploymentConfiguration.ReplicaCount
 		}
 
-		if replicas := pointer.Int32Deref(deployment.Replicas, 2); replicas > 1 {
+		if replicas := ptr.Deref(deployment.Replicas, 2); replicas > 1 {
 			numberOfZones := 1
 			if seedConfig != nil {
 				numberOfZones = len(seedConfig.Spec.Provider.Zones)

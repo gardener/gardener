@@ -477,7 +477,7 @@ var _ = Describe("Garden controller tests", func() {
 			podList := &corev1.PodList{}
 			g.Expect(testClient.List(ctx, podList, client.InNamespace(testNamespace.Name), client.MatchingLabels(kubeapiserver.GetLabels()))).To(Succeed())
 
-			if desiredReplicas := int(pointer.Int32Deref(deployment.Spec.Replicas, 1)); len(podList.Items) != desiredReplicas {
+			if desiredReplicas := int(ptr.Deref(deployment.Spec.Replicas, 1)); len(podList.Items) != desiredReplicas {
 				g.Expect(testClient.DeleteAllOf(ctx, &corev1.Pod{}, client.InNamespace(testNamespace.Name), client.MatchingLabels(kubeapiserver.GetLabels()))).To(Succeed())
 				for i := 0; i < desiredReplicas; i++ {
 					g.Expect(testClient.Create(ctx, &corev1.Pod{
@@ -634,7 +634,7 @@ var _ = Describe("Garden controller tests", func() {
 			podList := &corev1.PodList{}
 			g.Expect(testClient.List(ctx, podList, client.InNamespace(testNamespace.Name), client.MatchingLabels(map[string]string{"app": "kubernetes", "role": "controller-manager"}))).To(Succeed())
 
-			if desiredReplicas := int(pointer.Int32Deref(deployment.Spec.Replicas, 1)); len(podList.Items) != desiredReplicas {
+			if desiredReplicas := int(ptr.Deref(deployment.Spec.Replicas, 1)); len(podList.Items) != desiredReplicas {
 				g.Expect(testClient.DeleteAllOf(ctx, &corev1.Pod{}, client.InNamespace(testNamespace.Name), client.MatchingLabels(map[string]string{"app": "kubernetes", "role": "controller-manager"}))).To(Succeed())
 				for i := 0; i < desiredReplicas; i++ {
 					g.Expect(testClient.Create(ctx, &corev1.Pod{
