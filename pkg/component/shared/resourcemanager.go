@@ -319,7 +319,7 @@ func reconcileGardenerResourceManagerBootstrapKubeconfigSecret(ctx context.Conte
 			CommonName:                  "gardener.cloud:system:gardener-resource-manager",
 			Organization:                []string{user.SystemPrivilegedGroup},
 			CertType:                    secretsutils.ClientCert,
-			Validity:                    pointer.Duration(10 * time.Minute),
+			Validity:                    ptr.To(10 * time.Minute),
 			SkipPublishingCACertificate: true,
 		},
 		KubeConfigRequests: []secretsutils.KubeConfigRequest{{

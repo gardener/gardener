@@ -555,8 +555,8 @@ func (r *Reconciler) newKubeAPIServer(
 
 		authorizationWebhookConfig = &kubeapiserver.AuthorizationWebhook{
 			Kubeconfig:           kubeconfig,
-			CacheAuthorizedTTL:   pointer.Duration(0),
-			CacheUnauthorizedTTL: pointer.Duration(0),
+			CacheAuthorizedTTL:   ptr.To(time.Duration(0)),
+			CacheUnauthorizedTTL: ptr.To(time.Duration(0)),
 		}
 	}
 
@@ -663,7 +663,7 @@ func (r *Reconciler) newKubeControllerManager(
 
 	if controllerManager := garden.Spec.VirtualCluster.Kubernetes.KubeControllerManager; controllerManager != nil {
 		config = controllerManager.KubeControllerManagerConfig
-		certificateSigningDuration = pointer.Duration(controllerManager.CertificateSigningDuration.Duration)
+		certificateSigningDuration = ptr.To(controllerManager.CertificateSigningDuration.Duration)
 	}
 
 	_, services, err := net.ParseCIDR(garden.Spec.VirtualCluster.Networking.Services)
@@ -693,7 +693,7 @@ func (r *Reconciler) newKubeControllerManager(
 			ServiceAccountToken: pointer.Int(0),
 		},
 		kubecontrollermanager.ControllerSyncPeriods{
-			ResourceQuota: pointer.Duration(time.Minute),
+			ResourceQuota: ptr.To(time.Minute),
 		},
 	)
 }

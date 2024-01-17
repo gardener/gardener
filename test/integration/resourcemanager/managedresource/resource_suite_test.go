@@ -135,7 +135,7 @@ var _ = BeforeSuite(func() {
 		},
 		Clock:                         fakeClock,
 		ClassFilter:                   filter,
-		RequeueAfterOnDeletionPending: pointer.Duration(50 * time.Millisecond),
+		RequeueAfterOnDeletionPending: ptr.To(50 * time.Millisecond),
 		GarbageCollectorActivated:     true,
 	}).AddToManager(ctx, mgr, mgr, mgr)).To(Succeed())
 

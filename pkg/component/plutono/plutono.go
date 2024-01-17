@@ -749,7 +749,7 @@ func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error)
 			Organization:                []string{"gardener.cloud:monitoring:ingress"},
 			DNSNames:                    []string{p.values.IngressHost},
 			CertType:                    secrets.ServerCert,
-			Validity:                    pointer.Duration(ingressTLSCertificateValidity),
+			Validity:                    ptr.To(ingressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
 		}, secretsmanager.SignedByCA(caName))
 		if err != nil {

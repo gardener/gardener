@@ -100,7 +100,7 @@ var _ = Describe("KubeControllerManager", func() {
 			PodEvictionTimeout:            &podEvictionTimeout,
 			NodeMonitorGracePeriod:        &nodeMonitorGracePeriod,
 		}
-		clusterSigningDuration = pointer.Duration(time.Hour)
+		clusterSigningDuration = ptr.To(time.Hour)
 		controllerWorkers      = ControllerWorkers{
 			StatefulSet:         pointer.Int(1),
 			Deployment:          pointer.Int(2),
@@ -124,7 +124,7 @@ var _ = Describe("KubeControllerManager", func() {
 			ServiceAccountToken: pointer.Int(0),
 		}
 		controllerSyncPeriods = ControllerSyncPeriods{
-			ResourceQuota: pointer.Duration(time.Minute),
+			ResourceQuota: ptr.To(time.Minute),
 		}
 
 		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"

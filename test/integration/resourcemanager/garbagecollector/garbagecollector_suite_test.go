@@ -28,7 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -121,7 +121,7 @@ var _ = BeforeSuite(func() {
 			SyncPeriod: &metav1.Duration{Duration: 100 * time.Millisecond},
 		},
 		Clock:                 clock.RealClock{},
-		MinimumObjectLifetime: pointer.Duration(0),
+		MinimumObjectLifetime: ptr.To(time.Duration(0)),
 		// Use the same version as the envtest package
 		TargetKubernetesVersion: semver.MustParse("1.28.0"),
 	}).AddToManager(mgr, mgr)).To(Succeed())

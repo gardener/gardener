@@ -205,7 +205,7 @@ func (v *vali) Deploy(ctx context.Context) error {
 			Organization:                []string{"gardener.cloud:monitoring:ingress"},
 			DNSNames:                    []string{v.values.IngressHost},
 			CertType:                    secrets.ServerCert,
-			Validity:                    pointer.Duration(v1beta1constants.IngressTLSCertificateValidity),
+			Validity:                    ptr.To(v1beta1constants.IngressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
 		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
 		if err != nil {

@@ -28,7 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -653,7 +653,7 @@ var _ = Describe("Generate", func() {
 				expectSecretWasCreated(ctx, fakeClient, caSecret)
 
 				By("Generate new control plane secret")
-				serverConfig.Validity = pointer.Duration(1337 * time.Minute)
+				serverConfig.Validity = ptr.To(1337 * time.Minute)
 				controlPlaneSecretConfig := &secretsutils.ControlPlaneSecretConfig{
 					Name:                    "control-plane-secret",
 					CertificateSecretConfig: serverConfig,

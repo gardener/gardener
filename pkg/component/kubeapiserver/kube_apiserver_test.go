@@ -3399,7 +3399,7 @@ rules:
 				It("should properly configure the authentication settings with webhook", func() {
 					values.AuthenticationWebhook = &AuthenticationWebhook{
 						Kubeconfig: []byte("foo"),
-						CacheTTL:   pointer.Duration(30 * time.Second),
+						CacheTTL:   ptr.To(30 * time.Second),
 						Version:    ptr.To("v1beta1"),
 					}
 					kapi = New(kubernetesInterface, namespace, sm, values)
@@ -3432,8 +3432,8 @@ rules:
 				It("should properly configure the authorization settings with webhook", func() {
 					values.AuthorizationWebhook = &AuthorizationWebhook{
 						Kubeconfig:           []byte("foo"),
-						CacheAuthorizedTTL:   pointer.Duration(13 * time.Second),
-						CacheUnauthorizedTTL: pointer.Duration(37 * time.Second),
+						CacheAuthorizedTTL:   ptr.To(13 * time.Second),
+						CacheUnauthorizedTTL: ptr.To(37 * time.Second),
 						Version:              ptr.To("v1alpha1"),
 					}
 					kapi = New(kubernetesInterface, namespace, sm, values)

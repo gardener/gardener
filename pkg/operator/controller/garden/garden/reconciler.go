@@ -409,7 +409,7 @@ func startRotationObservability(garden *operatorv1alpha1.Garden, now *metav1.Tim
 
 func caCertConfigurations() []secretsutils.ConfigInterface {
 	return append([]secretsutils.ConfigInterface{
-		&secretsutils.CertificateSecretConfig{Name: operatorv1alpha1.SecretNameCARuntime, CertType: secretsutils.CACert, Validity: pointer.Duration(30 * 24 * time.Hour)},
+		&secretsutils.CertificateSecretConfig{Name: operatorv1alpha1.SecretNameCARuntime, CertType: secretsutils.CACert, Validity: ptr.To(30 * 24 * time.Hour)},
 	}, nonAutoRotatedCACertConfigurations()...)
 }
 

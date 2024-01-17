@@ -34,7 +34,6 @@ import (
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/component-base/version/verflag"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -128,7 +127,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 	mgr, err := manager.New(sourceRESTConfig, manager.Options{
 		Logger:                  log,
 		Scheme:                  managerScheme,
-		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
+		GracefulShutdownTimeout: ptr.To(5 * time.Second),
 		Cache: cache.Options{
 			DefaultNamespaces: getCacheConfig(cfg.SourceClientConnection.Namespaces),
 			SyncPeriod:        &cfg.SourceClientConnection.CacheResyncPeriod.Duration,
