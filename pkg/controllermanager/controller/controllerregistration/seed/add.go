@@ -21,7 +21,6 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -376,5 +375,5 @@ func shootNetworkingTypeHasChanged(old, new *gardencorev1beta1.Networking) bool 
 		// if old was non-nil and had a type set, return true
 		return old.Type != nil
 	}
-	return !pointer.StringEqual(old.Type, new.Type)
+	return !ptr.Equal(old.Type, new.Type)
 }

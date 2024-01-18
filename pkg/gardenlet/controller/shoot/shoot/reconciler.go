@@ -30,7 +30,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/component-base/version"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -783,7 +782,7 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 	}
 
 	if shoot.Status.Credentials != nil && shoot.Status.Credentials.Rotation != nil {
-		if pointer.BoolEqual(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, ptr.To(false)) {
+		if ptr.Equal(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, ptr.To(false)) {
 			shoot.Status.Credentials.Rotation.Kubeconfig = nil
 		}
 

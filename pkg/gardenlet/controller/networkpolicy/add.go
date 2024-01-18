@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -139,12 +139,12 @@ func ClusterPredicate() predicate.Predicate {
 
 			if v1beta1helper.IsWorkerless(shoot) {
 				// if the shoot has networking field set and the old shoot has nil, then we cannot compare services, so return true right away
-				return oldShoot.Spec.Networking == nil || !pointer.StringEqual(shoot.Spec.Networking.Services, oldShoot.Spec.Networking.Services)
+				return oldShoot.Spec.Networking == nil || !ptr.Equal(shoot.Spec.Networking.Services, oldShoot.Spec.Networking.Services)
 			}
 
-			return !pointer.StringEqual(shoot.Spec.Networking.Pods, oldShoot.Spec.Networking.Pods) ||
-				!pointer.StringEqual(shoot.Spec.Networking.Services, oldShoot.Spec.Networking.Services) ||
-				!pointer.StringEqual(shoot.Spec.Networking.Nodes, oldShoot.Spec.Networking.Nodes)
+			return !ptr.Equal(shoot.Spec.Networking.Pods, oldShoot.Spec.Networking.Pods) ||
+				!ptr.Equal(shoot.Spec.Networking.Services, oldShoot.Spec.Networking.Services) ||
+				!ptr.Equal(shoot.Spec.Networking.Nodes, oldShoot.Spec.Networking.Nodes)
 		},
 		CreateFunc:  func(event.CreateEvent) bool { return false },
 		DeleteFunc:  func(event.DeleteEvent) bool { return false },

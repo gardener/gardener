@@ -25,7 +25,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -388,7 +387,7 @@ func CheckIfManagedResourcesExist(ctx context.Context, c client.Client, class *s
 	}
 
 	for _, managedResource := range managedResourceList.Items {
-		if pointer.StringEqual(managedResource.Spec.Class, class) {
+		if ptr.Equal(managedResource.Spec.Class, class) {
 			return true, nil
 		}
 	}
