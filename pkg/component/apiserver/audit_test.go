@@ -142,10 +142,6 @@ rules:
 			actualConfigMap := &corev1.ConfigMap{ObjectMeta: configMap.ObjectMeta}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(actualConfigMap), actualConfigMap)).To(Succeed())
 			Expect(actualConfigMap).To(DeepEqual(&corev1.ConfigMap{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: corev1.SchemeGroupVersion.String(),
-					Kind:       "ConfigMap",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            configMap.Name,
 					Namespace:       configMap.Namespace,
@@ -173,10 +169,6 @@ rules:
 			actualConfigMap := &corev1.ConfigMap{ObjectMeta: configMap.ObjectMeta}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(actualConfigMap), actualConfigMap)).To(Succeed())
 			Expect(actualConfigMap).To(DeepEqual(&corev1.ConfigMap{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: corev1.SchemeGroupVersion.String(),
-					Kind:       "ConfigMap",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            configMap.Name,
 					Namespace:       configMap.Namespace,

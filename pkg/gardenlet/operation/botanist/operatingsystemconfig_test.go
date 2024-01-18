@@ -613,10 +613,6 @@ metadata:
 					expectedOSCSecretWorker1Raw, err := runtime.Encode(codec, expectedOSCSecretWorker1)
 					Expect(err).NotTo(HaveOccurred())
 					expectedMRSecretWorker1 := &corev1.Secret{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: "v1",
-							Kind:       "Secret",
-						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            "managedresource-shoot-gardener-node-agent-" + worker1Name,
 							Namespace:       namespace,
@@ -633,10 +629,6 @@ metadata:
 					expectedOSCSecretWorker2Raw, err := runtime.Encode(codec, expectedOSCSecretWorker2)
 					Expect(err).NotTo(HaveOccurred())
 					expectedMRSecretWorker2 := &corev1.Secret{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: "v1",
-							Kind:       "Secret",
-						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            "managedresource-shoot-gardener-node-agent-" + worker2Name,
 							Namespace:       namespace,
@@ -651,10 +643,6 @@ metadata:
 					nodeAgentRBACResourcesData, err := NodeAgentRBACResourcesDataFn([]string{expectedOSCSecretWorker1.Name, expectedOSCSecretWorker2.Name})
 					Expect(err).NotTo(HaveOccurred())
 					expectedMRSecretRBAC := &corev1.Secret{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: "v1",
-							Kind:       "Secret",
-						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            "managedresource-shoot-gardener-node-agent-rbac",
 							Namespace:       namespace,

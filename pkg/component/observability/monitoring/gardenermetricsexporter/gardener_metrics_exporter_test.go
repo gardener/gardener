@@ -220,10 +220,6 @@ var _ = Describe("GardenerMetricsExporter", func() {
 
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntime), managedResourceRuntime)).To(Succeed())
 				expectedRuntimeMr := &resourcesv1alpha1.ManagedResource{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-						Kind:       "ManagedResource",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            managedResourceRuntime.Name,
 						Namespace:       managedResourceRuntime.Namespace,
@@ -246,10 +242,6 @@ var _ = Describe("GardenerMetricsExporter", func() {
 
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceVirtual), managedResourceVirtual)).To(Succeed())
 				expectedVirtualMr := &resourcesv1alpha1.ManagedResource{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-						Kind:       "ManagedResource",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            managedResourceVirtual.Name,
 						Namespace:       managedResourceVirtual.Namespace,
@@ -289,10 +281,6 @@ var _ = Describe("GardenerMetricsExporter", func() {
 		Context("secrets", func() {
 			It("should successfully deploy the access secret for the virtual garden", func() {
 				accessSecret := &corev1.Secret{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Secret",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "shoot-access-gardener-metrics-exporter",
 						Namespace: namespace,

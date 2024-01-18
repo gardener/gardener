@@ -825,10 +825,6 @@ resources:
 
 						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(Succeed())
 						Expect(actualSecretETCDEncryptionConfiguration).To(Equal(&corev1.Secret{
-							TypeMeta: metav1.TypeMeta{
-								APIVersion: corev1.SchemeGroupVersion.String(),
-								Kind:       "Secret",
-							},
 							ObjectMeta: metav1.ObjectMeta{
 								Name:      expectedSecretETCDEncryptionConfiguration.Name,
 								Namespace: expectedSecretETCDEncryptionConfiguration.Namespace,
@@ -921,10 +917,6 @@ resources:
 
 							Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(Succeed())
 							Expect(actualSecretETCDEncryptionConfiguration).To(DeepEqual(&corev1.Secret{
-								TypeMeta: metav1.TypeMeta{
-									APIVersion: corev1.SchemeGroupVersion.String(),
-									Kind:       "Secret",
-								},
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      expectedSecretETCDEncryptionConfiguration.Name,
 									Namespace: expectedSecretETCDEncryptionConfiguration.Namespace,
@@ -954,10 +946,6 @@ resources:
 
 				It("should successfully deploy the access secret for the virtual garden", func() {
 					accessSecret := &corev1.Secret{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: "v1",
-							Kind:       "Secret",
-						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "shoot-access-gardener-apiserver",
 							Namespace: namespace,
@@ -1007,10 +995,6 @@ resources:
 
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedSecret), actualSecret)).To(Succeed())
 					Expect(actualSecret).To(DeepEqual(&corev1.Secret{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: corev1.SchemeGroupVersion.String(),
-							Kind:       "Secret",
-						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            expectedSecret.Name,
 							Namespace:       expectedSecret.Namespace,
@@ -1034,10 +1018,6 @@ resources:
 						Expect(deployer.Deploy(ctx)).To(Succeed())
 						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretAdmissionKubeconfigs), secretAdmissionKubeconfigs)).To(Succeed())
 						Expect(secretAdmissionKubeconfigs).To(DeepEqual(&corev1.Secret{
-							TypeMeta: metav1.TypeMeta{
-								APIVersion: corev1.SchemeGroupVersion.String(),
-								Kind:       "Secret",
-							},
 							ObjectMeta: metav1.ObjectMeta{
 								Name:            secretAdmissionKubeconfigs.Name,
 								Namespace:       secretAdmissionKubeconfigs.Namespace,
@@ -1074,10 +1054,6 @@ resources:
 						Expect(deployer.Deploy(ctx)).To(Succeed())
 						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretAdmissionKubeconfigs), secretAdmissionKubeconfigs)).To(Succeed())
 						Expect(secretAdmissionKubeconfigs).To(DeepEqual(&corev1.Secret{
-							TypeMeta: metav1.TypeMeta{
-								APIVersion: corev1.SchemeGroupVersion.String(),
-								Kind:       "Secret",
-							},
 							ObjectMeta: metav1.ObjectMeta{
 								Name:            secretAdmissionKubeconfigs.Name,
 								Namespace:       secretAdmissionKubeconfigs.Namespace,
@@ -1110,10 +1086,6 @@ rules:
 						Expect(deployer.Deploy(ctx)).To(Succeed())
 						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(Succeed())
 						Expect(configMapAuditPolicy).To(DeepEqual(&corev1.ConfigMap{
-							TypeMeta: metav1.TypeMeta{
-								APIVersion: corev1.SchemeGroupVersion.String(),
-								Kind:       "ConfigMap",
-							},
 							ObjectMeta: metav1.ObjectMeta{
 								Name:            configMapAuditPolicy.Name,
 								Namespace:       configMapAuditPolicy.Namespace,
@@ -1148,10 +1120,6 @@ rules:
 						Expect(deployer.Deploy(ctx)).To(Succeed())
 						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(Succeed())
 						Expect(configMapAuditPolicy).To(DeepEqual(&corev1.ConfigMap{
-							TypeMeta: metav1.TypeMeta{
-								APIVersion: corev1.SchemeGroupVersion.String(),
-								Kind:       "ConfigMap",
-							},
 							ObjectMeta: metav1.ObjectMeta{
 								Name:            configMapAuditPolicy.Name,
 								Namespace:       configMapAuditPolicy.Namespace,
@@ -1179,10 +1147,6 @@ plugins: null
 						Expect(deployer.Deploy(ctx)).To(Succeed())
 						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(Succeed())
 						Expect(configMapAdmission).To(DeepEqual(&corev1.ConfigMap{
-							TypeMeta: metav1.TypeMeta{
-								APIVersion: corev1.SchemeGroupVersion.String(),
-								Kind:       "ConfigMap",
-							},
 							ObjectMeta: metav1.ObjectMeta{
 								Name:            configMapAdmission.Name,
 								Namespace:       configMapAdmission.Namespace,
@@ -1260,10 +1224,6 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 						Expect(deployer.Deploy(ctx)).To(Succeed())
 						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(Succeed())
 						Expect(configMapAdmission).To(DeepEqual(&corev1.ConfigMap{
-							TypeMeta: metav1.TypeMeta{
-								APIVersion: corev1.SchemeGroupVersion.String(),
-								Kind:       "ConfigMap",
-							},
 							ObjectMeta: metav1.ObjectMeta{
 								Name:            configMapAdmission.Name,
 								Namespace:       configMapAdmission.Namespace,
@@ -1333,10 +1293,6 @@ kubeConfigFile: ""
 						Expect(deployer.Deploy(ctx)).To(Succeed())
 						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(Succeed())
 						Expect(configMapAdmission).To(DeepEqual(&corev1.ConfigMap{
-							TypeMeta: metav1.TypeMeta{
-								APIVersion: corev1.SchemeGroupVersion.String(),
-								Kind:       "ConfigMap",
-							},
 							ObjectMeta: metav1.ObjectMeta{
 								Name:            configMapAdmission.Name,
 								Namespace:       configMapAdmission.Namespace,
@@ -1400,10 +1356,6 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 						Expect(deployer.Deploy(ctx)).To(Succeed())
 						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(Succeed())
 						Expect(configMapAdmission).To(DeepEqual(&corev1.ConfigMap{
-							TypeMeta: metav1.TypeMeta{
-								APIVersion: corev1.SchemeGroupVersion.String(),
-								Kind:       "ConfigMap",
-							},
 							ObjectMeta: metav1.ObjectMeta{
 								Name:            configMapAdmission.Name,
 								Namespace:       configMapAdmission.Namespace,
@@ -1423,10 +1375,6 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntime), managedResourceRuntime)).To(Succeed())
 					expectedRuntimeMr := &resourcesv1alpha1.ManagedResource{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-							Kind:       "ManagedResource",
-						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            managedResourceRuntime.Name,
 							Namespace:       managedResourceRuntime.Namespace,
@@ -1448,10 +1396,6 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceVirtual), managedResourceVirtual)).To(Succeed())
 					expectedVirtualMr := &resourcesv1alpha1.ManagedResource{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-							Kind:       "ManagedResource",
-						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            managedResourceVirtual.Name,
 							Namespace:       managedResourceVirtual.Namespace,

@@ -82,10 +82,6 @@ var _ = Describe("KubeStateMetrics", func() {
 			}
 
 			obj := &rbacv1.ClusterRole{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "rbac.authorization.k8s.io/v1",
-					Kind:       "ClusterRole",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
 					Labels: map[string]string{
@@ -143,10 +139,6 @@ var _ = Describe("KubeStateMetrics", func() {
 			}
 
 			obj := &rbacv1.ClusterRoleBinding{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "rbac.authorization.k8s.io/v1",
-					Kind:       "ClusterRoleBinding",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
 					Labels: map[string]string{
@@ -178,10 +170,6 @@ var _ = Describe("KubeStateMetrics", func() {
 		}
 		serviceFor = func(clusterType component.ClusterType) *corev1.Service {
 			obj := &corev1.Service{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Service",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "kube-state-metrics",
 					Namespace: namespace,
@@ -370,10 +358,6 @@ var _ = Describe("KubeStateMetrics", func() {
 			}
 
 			return &appsv1.Deployment{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "apps/v1",
-					Kind:       "Deployment",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "kube-state-metrics",
 					Namespace: namespace,
@@ -550,10 +534,6 @@ var _ = Describe("KubeStateMetrics", func() {
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 
 		serviceAccount = &corev1.ServiceAccount{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "ServiceAccount",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kube-state-metrics",
 				Namespace: namespace,
@@ -562,10 +542,6 @@ var _ = Describe("KubeStateMetrics", func() {
 			AutomountServiceAccountToken: ptr.To(false),
 		}
 		secretShootAccess = &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "Secret",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "shoot-access-kube-state-metrics",
 				Namespace: namespace,
@@ -581,10 +557,6 @@ var _ = Describe("KubeStateMetrics", func() {
 			Type: corev1.SecretTypeOpaque,
 		}
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "autoscaling.k8s.io/v1",
-				Kind:       "VerticalPodAutoscaler",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kube-state-metrics-vpa",
 				Namespace: namespace,
@@ -614,10 +586,6 @@ var _ = Describe("KubeStateMetrics", func() {
 			var (
 				unhealthyPodEvictionPolicyAlwatysAllow = policyv1.AlwaysAllow
 				pdb                                    = &policyv1.PodDisruptionBudget{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "PodDisruptionBudget",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "kube-state-metrics-pdb",
 						Namespace: namespace,
@@ -675,10 +643,6 @@ var _ = Describe("KubeStateMetrics", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				expectedMr := &resourcesv1alpha1.ManagedResource{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-						Kind:       "ManagedResource",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            managedResourceName,
 						Namespace:       namespace,
@@ -754,10 +718,6 @@ var _ = Describe("KubeStateMetrics", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				expectedMr := &resourcesv1alpha1.ManagedResource{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-						Kind:       "ManagedResource",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            managedResourceName,
 						Namespace:       namespace,

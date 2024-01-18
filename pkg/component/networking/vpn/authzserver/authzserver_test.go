@@ -102,10 +102,6 @@ var _ = Describe("ExtAuthzServer", func() {
 				},
 				ResourceVersion: "1",
 			},
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Deployment",
-				APIVersion: "apps/v1",
-			},
 			Spec: appsv1.DeploymentSpec{
 				Replicas:             ptr.To(int32(1)),
 				RevisionHistoryLimit: ptr.To(int32(2)),
@@ -155,10 +151,6 @@ var _ = Describe("ExtAuthzServer", func() {
 		}
 
 		expectedDestinationRule = &istionetworkingv1beta1.DestinationRule{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: istionetworkingv1beta1.SchemeGroupVersion.String(),
-				Kind:       "DestinationRule",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            deploymentName,
 				Namespace:       namespace,
@@ -207,10 +199,6 @@ var _ = Describe("ExtAuthzServer", func() {
 				},
 				ResourceVersion: "1",
 			},
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Service",
-				APIVersion: "v1",
-			},
 			Spec: corev1.ServiceSpec{
 				Selector: map[string]string{
 					"app": deploymentName,
@@ -228,10 +216,6 @@ var _ = Describe("ExtAuthzServer", func() {
 		}
 
 		expectedVirtualService = &istionetworkingv1beta1.VirtualService{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: istionetworkingv1beta1.SchemeGroupVersion.String(),
-				Kind:       "VirtualService",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            deploymentName,
 				Namespace:       namespace,
@@ -253,7 +237,6 @@ var _ = Describe("ExtAuthzServer", func() {
 
 		expectedVpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace, ResourceVersion: "1"},
-			TypeMeta:   metav1.TypeMeta{Kind: "VerticalPodAutoscaler", APIVersion: "autoscaling.k8s.io/v1"},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
 					APIVersion: appsv1.SchemeGroupVersion.String(),
@@ -285,7 +268,6 @@ var _ = Describe("ExtAuthzServer", func() {
 					"app": deploymentName,
 				},
 			},
-			TypeMeta: metav1.TypeMeta{Kind: "PodDisruptionBudget", APIVersion: "policy/v1"},
 			Spec: policyv1.PodDisruptionBudgetSpec{
 				MaxUnavailable: &maxUnavailablePDB,
 				Selector: &metav1.LabelSelector{

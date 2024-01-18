@@ -356,10 +356,6 @@ var _ = Describe("istiod", func() {
 		It("should successfully deploy all resources", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstio), managedResourceIstio)).To(Succeed())
 			expectedMr := &resourcesv1alpha1.ManagedResource{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-					Kind:       "ManagedResource",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            managedResourceIstioName,
 					Namespace:       deployNS,

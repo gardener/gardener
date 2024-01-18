@@ -89,10 +89,6 @@ var _ = Describe("MachineControllerManager", func() {
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 
 		serviceAccount = &corev1.ServiceAccount{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "ServiceAccount",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "machine-controller-manager",
 				Namespace: namespace,
@@ -101,10 +97,6 @@ var _ = Describe("MachineControllerManager", func() {
 		}
 
 		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "rbac.authorization.k8s.io/v1",
-				Kind:       "ClusterRoleBinding",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "machine-controller-manager-" + namespace,
 				OwnerReferences: []metav1.OwnerReference{{
@@ -129,10 +121,6 @@ var _ = Describe("MachineControllerManager", func() {
 		}
 
 		service = &corev1.Service{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "Service",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "machine-controller-manager",
 				Namespace: namespace,
@@ -160,10 +148,6 @@ var _ = Describe("MachineControllerManager", func() {
 		}
 
 		shootAccessSecret = &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "Secret",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "shoot-access-machine-controller-manager",
 				Namespace: namespace,
@@ -180,10 +164,6 @@ var _ = Describe("MachineControllerManager", func() {
 		}
 
 		deployment = &appsv1.Deployment{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "apps/v1",
-				Kind:       "Deployment",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "machine-controller-manager",
 				Namespace: namespace,
@@ -270,10 +250,6 @@ var _ = Describe("MachineControllerManager", func() {
 		Expect(gardenerutils.InjectGenericKubeconfig(deployment, "generic-token-kubeconfig", shootAccessSecret.Name)).To(Succeed())
 
 		podDisruptionBudget = &policyv1.PodDisruptionBudget{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "policy/v1",
-				Kind:       "PodDisruptionBudget",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "machine-controller-manager",
 				Namespace: namespace,
@@ -296,10 +272,6 @@ var _ = Describe("MachineControllerManager", func() {
 		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
 		vpaControlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "autoscaling.k8s.io/v1",
-				Kind:       "VerticalPodAutoscaler",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "machine-controller-manager-vpa",
 				Namespace: namespace,
@@ -458,10 +430,6 @@ subjects:
 `
 
 		managedResourceSecret = &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "Secret",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "managedresource-shoot-core-machine-controller-manager",
 				Namespace: namespace,
@@ -479,10 +447,6 @@ subjects:
 			},
 		}
 		managedResource = &resourcesv1alpha1.ManagedResource{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "resources.gardener.cloud/v1alpha1",
-				Kind:       "ManagedResource",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "shoot-core-machine-controller-manager",
 				Namespace: namespace,

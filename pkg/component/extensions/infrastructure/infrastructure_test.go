@@ -114,10 +114,6 @@ var _ = Describe("#Interface", func() {
 		}
 
 		expected = &extensionsv1alpha1.Infrastructure{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-				Kind:       extensionsv1alpha1.InfrastructureResource,
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: namespace,

@@ -133,10 +133,6 @@ var _ = Describe("ControlPlane", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(obj).To(DeepEqual(&extensionsv1alpha1.ControlPlane{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.ControlPlaneResource,
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -165,10 +161,6 @@ var _ = Describe("ControlPlane", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(obj).To(DeepEqual(&extensionsv1alpha1.ControlPlane{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.ControlPlaneResource,
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name + "-exposure",
 					Namespace: namespace,

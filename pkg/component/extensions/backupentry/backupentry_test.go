@@ -105,10 +105,6 @@ var _ = Describe("#BackupEntry", func() {
 		}
 
 		expected = &extensionsv1alpha1.BackupEntry{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-				Kind:       extensionsv1alpha1.BackupEntryResource,
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
 				Annotations: map[string]string{

@@ -68,10 +68,6 @@ var _ = Describe("Resource Manager", func() {
 			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), secret)).To(Succeed())
 
 			Expect(secret).To(Equal(&corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Secret",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        name,
 					Namespace:   namespace,
@@ -110,10 +106,6 @@ var _ = Describe("Resource Manager", func() {
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 
 			Expect(secret).To(Equal(&corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Secret",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        uniqueSecretName,
 					Namespace:   namespace,
@@ -158,10 +150,6 @@ var _ = Describe("Resource Manager", func() {
 			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), secret)).To(Succeed())
 
 			Expect(secret).To(Equal(&corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Secret",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            name,
 					Namespace:       namespace,
@@ -186,10 +174,6 @@ var _ = Describe("Resource Manager", func() {
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(actualSecret), actualSecret)).To(Succeed())
 
 			Expect(actualSecret).To(Equal(&corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Secret",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      secretName,
 					Namespace: namespace,
@@ -228,10 +212,6 @@ var _ = Describe("Resource Manager", func() {
 			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), secret)).To(Succeed())
 
 			Expect(secret).To(Equal(&corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Secret",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            name,
 					Namespace:       namespace,
@@ -334,10 +314,6 @@ var _ = Describe("Resource Manager", func() {
 			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), mr)).To(Succeed())
 
 			expectedMr := &resourcesv1alpha1.ManagedResource{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "resources.gardener.cloud/v1alpha1",
-					Kind:       "ManagedResource",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            name,
 					Namespace:       namespace,
@@ -400,10 +376,6 @@ var _ = Describe("Resource Manager", func() {
 				expected := s.DeepCopy()
 				expected.ObjectMeta.ResourceVersion = "2"
 				expected.Labels["resources.gardener.cloud/garbage-collectable-reference"] = "true"
-				expected.TypeMeta = metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Secret",
-				}
 				Expect(secret).To(Equal(expected))
 			}
 		})
@@ -435,10 +407,6 @@ var _ = Describe("Resource Manager", func() {
 			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), mr)).To(Succeed())
 
 			Expect(mr).To(Equal(&resourcesv1alpha1.ManagedResource{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "resources.gardener.cloud/v1alpha1",
-					Kind:       "ManagedResource",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            name,
 					Namespace:       namespace,
@@ -477,10 +445,6 @@ var _ = Describe("Resource Manager", func() {
 			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), mr)).To(Succeed())
 
 			Expect(mr).To(Equal(&resourcesv1alpha1.ManagedResource{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "resources.gardener.cloud/v1alpha1",
-					Kind:       "ManagedResource",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            name,
 					Namespace:       namespace,

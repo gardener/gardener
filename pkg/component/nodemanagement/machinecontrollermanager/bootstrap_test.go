@@ -119,10 +119,6 @@ rules:
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 			expectedMr := &resourcesv1alpha1.ManagedResource{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-					Kind:       "ManagedResource",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            managedResource.Name,
 					Namespace:       managedResource.Namespace,

@@ -123,10 +123,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
 		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		vpa              = &vpaautoscalingv1.VerticalPodAutoscaler{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: vpaautoscalingv1.SchemeGroupVersion.String(),
-				Kind:       "VerticalPodAutoscaler",
-			},
 			ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace, ResourceVersion: "1"},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
@@ -152,10 +148,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 		}
 		pdbMaxUnavailable = intstr.FromInt32(1)
 		pdb               = &policyv1.PodDisruptionBudget{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: policyv1.SchemeGroupVersion.String(),
-				Kind:       "PodDisruptionBudget",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      pdbName,
 				Namespace: namespace,
@@ -176,10 +168,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 			},
 		}
 		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: rbacv1.SchemeGroupVersion.String(),
-				Kind:       "ClusterRoleBinding",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: clusterRoleBindingName,
 				OwnerReferences: []metav1.OwnerReference{{
@@ -204,10 +192,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 			}},
 		}
 		serviceAccount = &corev1.ServiceAccount{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: corev1.SchemeGroupVersion.String(),
-				Kind:       "ServiceAccount",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            serviceAccountName,
 				Namespace:       namespace,
@@ -216,10 +200,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 			AutomountServiceAccountToken: ptr.To(false),
 		}
 		service = &corev1.Service{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: corev1.SchemeGroupVersion.String(),
-				Kind:       "Service",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      serviceName,
 				Namespace: namespace,
@@ -249,10 +229,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 			},
 		}
 		secret = &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: corev1.SchemeGroupVersion.String(),
-				Kind:       "Secret",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      secretName,
 				Namespace: namespace,
@@ -324,10 +300,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 			)
 
 			deploy := &appsv1.Deployment{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: appsv1.SchemeGroupVersion.String(),
-					Kind:       "Deployment",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      deploymentName,
 					Namespace: namespace,
@@ -582,10 +554,6 @@ subjects:
   name: cluster-autoscaler
 `
 		managedResourceSecret = &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: corev1.SchemeGroupVersion.String(),
-				Kind:       "Secret",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            managedResourceSecretName,
 				Namespace:       namespace,
@@ -604,10 +572,6 @@ subjects:
 			Immutable: ptr.To(true),
 		}
 		managedResource = &resourcesv1alpha1.ManagedResource{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-				Kind:       "ManagedResource",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            managedResourceName,
 				Namespace:       namespace,

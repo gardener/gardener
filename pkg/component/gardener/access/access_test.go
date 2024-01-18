@@ -95,10 +95,6 @@ subjects:
 		})
 
 		expectedGardenerSecret = &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "Secret",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            gardenerSecretName,
 				Namespace:       namespace,
@@ -133,10 +129,6 @@ users:
 		}
 
 		expectedGardenerInternalSecret = &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "Secret",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            gardenerInternalSecretName,
 				Namespace:       namespace,
@@ -171,10 +163,6 @@ users:
 		}
 
 		expectedManagedResourceSecret = &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "Secret",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      managedResourceSecretName,
 				Namespace: namespace,
@@ -190,10 +178,6 @@ users:
 			Immutable: ptr.To(true),
 		}
 		expectedManagedResource = &resourcesv1alpha1.ManagedResource{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "resources.gardener.cloud/v1alpha1",
-				Kind:       "ManagedResource",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            managedResourceName,
 				Namespace:       namespace,

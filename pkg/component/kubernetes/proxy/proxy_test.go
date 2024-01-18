@@ -678,10 +678,6 @@ status: {}
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceCentral), managedResourceCentral)).To(Succeed())
 			expectedMr := &resourcesv1alpha1.ManagedResource{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-					Kind:       "ManagedResource",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            managedResourceCentral.Name,
 					Namespace:       managedResourceCentral.Namespace,
@@ -726,10 +722,6 @@ status: {}
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				expectedPoolMr := &resourcesv1alpha1.ManagedResource{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-						Kind:       "ManagedResource",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            managedResource.Name,
 						Namespace:       managedResource.Namespace,
@@ -778,10 +770,6 @@ status: {}
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceCentral), managedResourceCentral)).To(Succeed())
 			expectedMR := &resourcesv1alpha1.ManagedResource{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-					Kind:       "ManagedResource",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            managedResourceCentral.Name,
 					Namespace:       managedResourceCentral.Namespace,
@@ -823,10 +811,6 @@ status: {}
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				poolExpectedMr := &resourcesv1alpha1.ManagedResource{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-						Kind:       "ManagedResource",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            managedResource.Name,
 						Namespace:       managedResource.Namespace,
@@ -901,10 +885,6 @@ status: {}
 				Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled, versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion))))
 
 				expectedMr := &resourcesv1alpha1.ManagedResource{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-						Kind:       "ManagedResource",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            managedResource.Name,
 						Namespace:       managedResource.Namespace,
@@ -938,10 +918,6 @@ status: {}
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceForMajorMinorVersionOnly), managedResourceForMajorMinorVersionOnly)).To(Succeed())
 				expectedMrForMajorMinorVersionOnly := &resourcesv1alpha1.ManagedResource{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-						Kind:       "ManagedResource",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            managedResourceForMajorMinorVersionOnly.Name,
 						Namespace:       managedResourceForMajorMinorVersionOnly.Namespace,

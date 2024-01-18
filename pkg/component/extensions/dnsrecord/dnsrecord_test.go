@@ -165,10 +165,6 @@ var _ = Describe("DNSRecord", func() {
 			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(deployedDNS).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.DNSRecordResource,
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -185,10 +181,6 @@ var _ = Describe("DNSRecord", func() {
 			err = c.Get(ctx, client.ObjectKey{Name: secretName, Namespace: namespace}, deployedSecret)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(deployedSecret).To(DeepEqual(&corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: corev1.SchemeGroupVersion.String(),
-					Kind:       "Secret",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            secretName,
 					Namespace:       namespace,
@@ -216,10 +208,6 @@ var _ = Describe("DNSRecord", func() {
 			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(deployedDNS).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.DNSRecordResource,
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -244,10 +232,6 @@ var _ = Describe("DNSRecord", func() {
 			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(deployedDNS).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.DNSRecordResource,
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -264,10 +248,6 @@ var _ = Describe("DNSRecord", func() {
 			err = c.Get(ctx, client.ObjectKey{Name: secretName, Namespace: namespace}, deployedSecret)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(deployedSecret).To(DeepEqual(&corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: corev1.SchemeGroupVersion.String(),
-					Kind:       "Secret",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            secretName,
 					Namespace:       namespace,
@@ -295,10 +275,6 @@ var _ = Describe("DNSRecord", func() {
 			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(deployedDNS).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.DNSRecordResource,
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -333,10 +309,6 @@ var _ = Describe("DNSRecord", func() {
 			expectedSpec.Values = []string{address, "8.8.8.8", "1.1.1.1"}
 
 			Expect(deployedDNS).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.DNSRecordResource,
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -352,9 +324,6 @@ var _ = Describe("DNSRecord", func() {
 
 		It("should deploy the DNSRecord with operation annotation if gardener timestamp is after status.lastOperation.lastUpdateTime", func() {
 			expectedDNSRecord := &extensionsv1alpha1.DNSRecord{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.DNSRecordResource},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -399,9 +368,6 @@ var _ = Describe("DNSRecord", func() {
 
 		It("should deploy the DNSRecord with operation annotation if it is in error state", func() {
 			expectedDNSRecord := &extensionsv1alpha1.DNSRecord{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.DNSRecordResource},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -451,10 +417,6 @@ var _ = Describe("DNSRecord", func() {
 			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(deployedDNS).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.DNSRecordResource,
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -497,9 +459,6 @@ var _ = Describe("DNSRecord", func() {
 				values.ReconcileOnlyOnChangeOrError = true
 
 				expectedDNSRecord = &extensionsv1alpha1.DNSRecord{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-						Kind:       extensionsv1alpha1.DNSRecordResource},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      name,
 						Namespace: namespace,
