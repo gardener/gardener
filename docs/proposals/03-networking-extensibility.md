@@ -11,7 +11,7 @@ Gardener is an open-source project that provides a nested user model. Basically,
 
 For the first set of users, the choice of network plugin might not be so important, however, for the second class of users (i.e., Hosted) it is important to be able to customize networking based on their needs.
 
-Furthermore, Gardener provisions clusters on different cloud-providers with different networking requirements. For example, Azure does not support Calico Networking [1], this leads to the introduction of manual exceptions in static add-on charts which is error prone and can lead to failures during upgrades.
+Furthermore, Gardener provisions clusters on different cloud-providers with different networking requirements. For example, Azure does not support Calico overlay networking with IP in IP [1], this leads to the introduction of manual exceptions in static add-on charts which is error prone and can lead to failures during upgrades.
 
 Finally, every provider is different, and thus the network always needs to adapt to the infrastructure needs to provide better performance. Consistency does not necessarily lie in the implementation but in the interface.
 
@@ -102,4 +102,4 @@ The status of the Network resource should reflect the health of the networking c
 
 ## References
 
-[1] [Azure support for Calico Networking](https://docs.projectcalico.org/v3.0/reference/public-cloud/azure)
+[1] [Calico overlay networking on Azure](https://docs.tigera.io/calico/latest/networking/configuring/vxlan-ipip#encapsulation-types)
