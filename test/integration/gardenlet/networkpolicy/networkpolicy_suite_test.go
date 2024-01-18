@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -170,7 +169,7 @@ var _ = BeforeSuite(func() {
 		testCancel,
 		mgr,
 		config.NetworkPolicyControllerConfiguration{
-			ConcurrentSyncs:              pointer.Int(5),
+			ConcurrentSyncs:              ptr.To(5),
 			AdditionalNamespaceSelectors: []metav1.LabelSelector{{MatchLabels: map[string]string{"custom": "namespace"}}},
 		},
 		gardencore.SeedNetworks{

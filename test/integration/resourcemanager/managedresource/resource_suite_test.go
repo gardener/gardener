@@ -27,7 +27,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -127,7 +126,7 @@ var _ = BeforeSuite(func() {
 
 	Expect((&managedresource.Reconciler{
 		Config: config.ManagedResourceControllerConfig{
-			ConcurrentSyncs: pointer.Int(5),
+			ConcurrentSyncs: ptr.To(5),
 			// Higher sync period is used because in some tests, we want to assert an intermediate state of the
 			// resource, which won't be possible if the controller reconciles it back too quickly.
 			SyncPeriod:          &metav1.Duration{Duration: time.Minute},

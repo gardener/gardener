@@ -36,7 +36,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -102,26 +101,26 @@ var _ = Describe("KubeControllerManager", func() {
 		}
 		clusterSigningDuration = ptr.To(time.Hour)
 		controllerWorkers      = ControllerWorkers{
-			StatefulSet:         pointer.Int(1),
-			Deployment:          pointer.Int(2),
-			ReplicaSet:          pointer.Int(3),
-			Endpoint:            pointer.Int(4),
-			GarbageCollector:    pointer.Int(5),
-			Namespace:           pointer.Int(6),
-			ResourceQuota:       pointer.Int(7),
-			ServiceEndpoint:     pointer.Int(8),
-			ServiceAccountToken: pointer.Int(9),
+			StatefulSet:         ptr.To(1),
+			Deployment:          ptr.To(2),
+			ReplicaSet:          ptr.To(3),
+			Endpoint:            ptr.To(4),
+			GarbageCollector:    ptr.To(5),
+			Namespace:           ptr.To(6),
+			ResourceQuota:       ptr.To(7),
+			ServiceEndpoint:     ptr.To(8),
+			ServiceAccountToken: ptr.To(9),
 		}
 		controllerWorkersWithDisabledControllers = ControllerWorkers{
-			StatefulSet:         pointer.Int(1),
-			Deployment:          pointer.Int(2),
-			ReplicaSet:          pointer.Int(3),
-			Endpoint:            pointer.Int(4),
-			GarbageCollector:    pointer.Int(5),
-			Namespace:           pointer.Int(0),
-			ResourceQuota:       pointer.Int(0),
-			ServiceEndpoint:     pointer.Int(8),
-			ServiceAccountToken: pointer.Int(0),
+			StatefulSet:         ptr.To(1),
+			Deployment:          ptr.To(2),
+			ReplicaSet:          ptr.To(3),
+			Endpoint:            ptr.To(4),
+			GarbageCollector:    ptr.To(5),
+			Namespace:           ptr.To(0),
+			ResourceQuota:       ptr.To(0),
+			ServiceEndpoint:     ptr.To(8),
+			ServiceAccountToken: ptr.To(0),
 		}
 		controllerSyncPeriods = ControllerSyncPeriods{
 			ResourceQuota: ptr.To(time.Minute),

@@ -28,7 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -122,7 +122,7 @@ var _ = BeforeSuite(func() {
 
 	By("Register controllers")
 	cfg := config.HealthControllerConfig{
-		ConcurrentSyncs: pointer.Int(5),
+		ConcurrentSyncs: ptr.To(5),
 		SyncPeriod:      &metav1.Duration{Duration: 500 * time.Millisecond},
 	}
 	classFilter := resourcemanagerpredicate.NewClassFilter("")

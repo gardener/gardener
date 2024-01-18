@@ -26,7 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -115,7 +115,7 @@ var _ = BeforeSuite(func() {
 	fakeClock = &testclock.FakeClock{}
 	Expect((&hibernation.Reconciler{
 		Config: config.ShootHibernationControllerConfiguration{
-			ConcurrentSyncs:         pointer.Int(5),
+			ConcurrentSyncs:         ptr.To(5),
 			TriggerDeadlineDuration: &metav1.Duration{Duration: 2 * time.Minute},
 		},
 		Clock: fakeClock,

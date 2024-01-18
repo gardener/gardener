@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -147,7 +146,7 @@ var _ = BeforeSuite(func() {
 	Expect(controllerregistration.AddToManager(ctx, mgr, config.ControllerManagerConfiguration{
 		Controllers: config.ControllerManagerControllerConfiguration{
 			ControllerRegistration: &config.ControllerRegistrationControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(5),
+				ConcurrentSyncs: ptr.To(5),
 			},
 		},
 	})).To(Succeed())

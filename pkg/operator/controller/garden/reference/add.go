@@ -16,7 +16,7 @@ package reference
 
 import (
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -27,7 +27,7 @@ import (
 // AddToManager adds the garden-reference controller to the given manager.
 func AddToManager(mgr manager.Manager, gardenNamespace string) error {
 	return (&reference.Reconciler{
-		ConcurrentSyncs:             pointer.Int(1),
+		ConcurrentSyncs:             ptr.To(1),
 		NewObjectFunc:               func() client.Object { return &operatorv1alpha1.Garden{} },
 		NewObjectListFunc:           func() client.ObjectList { return &operatorv1alpha1.GardenList{} },
 		GetNamespace:                func(client.Object) string { return gardenNamespace },

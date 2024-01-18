@@ -22,7 +22,6 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
@@ -221,7 +220,7 @@ var _ = Describe("Defaults", func() {
 				obj = &OperatorConfiguration{
 					Controllers: ControllerConfiguration{
 						Garden: GardenControllerConfig{
-							ConcurrentSyncs: pointer.Int(5),
+							ConcurrentSyncs: ptr.To(5),
 							SyncPeriod:      &metav1.Duration{Duration: time.Second},
 							ETCDConfig: &v1alpha1.ETCDConfig{
 								ETCDController:      &v1alpha1.ETCDController{Workers: pointer.Int64(5)},

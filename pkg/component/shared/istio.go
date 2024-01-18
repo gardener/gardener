@@ -22,7 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -81,11 +81,11 @@ func NewIstio(
 		// Each availability zone should have at least 2 replicas as on some infrastructures each
 		// zonal load balancer is exposed individually via its own IP address. Therefore, having
 		// just one replica may negatively affect availability.
-		minReplicas = pointer.Int(len(zones) * 2)
+		minReplicas = ptr.To(len(zones) * 2)
 		// The default configuration without availability zones has 5 as the maximum amount of
 		// replicas, which apparently works in all known Gardener scenarios. Reducing it to less
 		// per zone gives some room for autoscaling while it is assumed to never reach the maximum.
-		maxReplicas = pointer.Int(len(zones) * 4)
+		maxReplicas = ptr.To(len(zones) * 4)
 	}
 
 	policyLabels := commonIstioIngressNetworkPolicyLabels(vpnEnabled)

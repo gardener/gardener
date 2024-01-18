@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	controllermanagerv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
@@ -68,17 +67,17 @@ func (g *gardenerControllerManager) configMapControllerManagerConfig() (*corev1.
 		},
 		Controllers: controllermanagerv1alpha1.ControllerManagerControllerConfiguration{
 			ControllerRegistration: &controllermanagerv1alpha1.ControllerRegistrationControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(20),
+				ConcurrentSyncs: ptr.To(20),
 			},
 			Project: &controllermanagerv1alpha1.ProjectControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(20),
+				ConcurrentSyncs: ptr.To(20),
 				Quotas:          g.values.Quotas,
 			},
 			SecretBinding: &controllermanagerv1alpha1.SecretBindingControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(20),
+				ConcurrentSyncs: ptr.To(20),
 			},
 			Seed: &controllermanagerv1alpha1.SeedControllerConfiguration{
-				ConcurrentSyncs:    pointer.Int(20),
+				ConcurrentSyncs:    ptr.To(20),
 				ShootMonitorPeriod: &metav1.Duration{Duration: 300 * time.Second},
 			},
 			SeedExtensionsCheck: &controllermanagerv1alpha1.SeedExtensionsCheckControllerConfiguration{
@@ -94,14 +93,14 @@ func (g *gardenerControllerManager) configMapControllerManagerConfig() (*corev1.
 				}},
 			},
 			Event: &controllermanagerv1alpha1.EventControllerConfiguration{
-				ConcurrentSyncs:   pointer.Int(10),
+				ConcurrentSyncs:   ptr.To(10),
 				TTLNonShootEvents: &metav1.Duration{Duration: 2 * time.Hour},
 			},
 			ShootMaintenance: controllermanagerv1alpha1.ShootMaintenanceControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(20),
+				ConcurrentSyncs: ptr.To(20),
 			},
 			ShootReference: &controllermanagerv1alpha1.ShootReferenceControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(20),
+				ConcurrentSyncs: ptr.To(20),
 			},
 		},
 		LeaderElection: &componentbaseconfigv1alpha1.LeaderElectionConfiguration{

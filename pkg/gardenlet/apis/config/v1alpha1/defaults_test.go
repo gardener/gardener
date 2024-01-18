@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -194,7 +193,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should not overwrite already set values for the backup bucket controller configuration", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
-				BackupBucket: &BackupBucketControllerConfiguration{ConcurrentSyncs: pointer.Int(10)},
+				BackupBucket: &BackupBucketControllerConfiguration{ConcurrentSyncs: ptr.To(10)},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
@@ -215,8 +214,8 @@ var _ = Describe("Defaults", func() {
 			deletionGracePeriodShootPurposes := []gardencorev1beta1.ShootPurpose{gardencorev1beta1.ShootPurposeEvaluation}
 			obj.Controllers = &GardenletControllerConfiguration{
 				BackupEntry: &BackupEntryControllerConfiguration{
-					ConcurrentSyncs:                  pointer.Int(10),
-					DeletionGracePeriodHours:         pointer.Int(1),
+					ConcurrentSyncs:                  ptr.To(10),
+					DeletionGracePeriodHours:         ptr.To(1),
 					DeletionGracePeriodShootPurposes: deletionGracePeriodShootPurposes,
 				},
 			}
@@ -237,7 +236,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should not overwrite already set values for the bastion controller configuration", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
-				Bastion: &BastionControllerConfiguration{ConcurrentSyncs: pointer.Int(10)},
+				Bastion: &BastionControllerConfiguration{ConcurrentSyncs: ptr.To(10)},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
@@ -254,7 +253,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should not overwrite already set values for the controller installation controller configuration", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
-				ControllerInstallation: &ControllerInstallationControllerConfiguration{ConcurrentSyncs: pointer.Int(10)},
+				ControllerInstallation: &ControllerInstallationControllerConfiguration{ConcurrentSyncs: ptr.To(10)},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
@@ -275,7 +274,7 @@ var _ = Describe("Defaults", func() {
 			v := metav1.Duration{Duration: 2 * time.Minute}
 			obj.Controllers = &GardenletControllerConfiguration{
 				ControllerInstallationCare: &ControllerInstallationCareControllerConfiguration{
-					ConcurrentSyncs: pointer.Int(10),
+					ConcurrentSyncs: ptr.To(10),
 					SyncPeriod:      &v,
 				},
 			}
@@ -295,7 +294,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should not overwrite already set values for the controller installation required controller configuration", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
-				ControllerInstallationRequired: &ControllerInstallationRequiredControllerConfiguration{ConcurrentSyncs: pointer.Int(10)},
+				ControllerInstallationRequired: &ControllerInstallationRequiredControllerConfiguration{ConcurrentSyncs: ptr.To(10)},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
@@ -363,7 +362,7 @@ var _ = Describe("Defaults", func() {
 			v := metav1.Duration{Duration: 2 * time.Hour}
 			obj.Controllers = &GardenletControllerConfiguration{
 				Shoot: &ShootControllerConfiguration{
-					ConcurrentSyncs:            pointer.Int(10),
+					ConcurrentSyncs:            ptr.To(10),
 					SyncPeriod:                 &v,
 					RespectSyncPeriodOverwrite: ptr.To(true),
 					ReconcileInMaintenanceOnly: ptr.To(true),
@@ -397,7 +396,7 @@ var _ = Describe("Defaults", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
 				ShootCare: &ShootCareControllerConfiguration{
 					SyncPeriod:                 &syncPeriod,
-					ConcurrentSyncs:            pointer.Int(10),
+					ConcurrentSyncs:            ptr.To(10),
 					StaleExtensionHealthChecks: &StaleExtensionHealthChecks{Enabled: false},
 				},
 			}
@@ -443,7 +442,7 @@ var _ = Describe("Defaults", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
 				ShootState: &ShootStateControllerConfiguration{
 					SyncPeriod:      &syncPeriod,
-					ConcurrentSyncs: pointer.Int(10),
+					ConcurrentSyncs: ptr.To(10),
 				},
 			}
 
@@ -463,7 +462,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should not overwrite already set values for the network policy controller configuration", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
-				NetworkPolicy: &NetworkPolicyControllerConfiguration{ConcurrentSyncs: pointer.Int(10)},
+				NetworkPolicy: &NetworkPolicyControllerConfiguration{ConcurrentSyncs: ptr.To(10)},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
@@ -486,7 +485,7 @@ var _ = Describe("Defaults", func() {
 			v := metav1.Duration{Duration: 2 * time.Minute}
 			obj.Controllers = &GardenletControllerConfiguration{
 				ManagedSeed: &ManagedSeedControllerConfiguration{
-					ConcurrentSyncs:  pointer.Int(10),
+					ConcurrentSyncs:  ptr.To(10),
 					SyncPeriod:       &v,
 					WaitSyncPeriod:   &v,
 					SyncJitterPeriod: &v,
@@ -512,7 +511,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should not overwrite already set values for the token requestor controller configuration", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
-				TokenRequestor: &TokenRequestorControllerConfiguration{ConcurrentSyncs: pointer.Int(10)},
+				TokenRequestor: &TokenRequestorControllerConfiguration{ConcurrentSyncs: ptr.To(10)},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 

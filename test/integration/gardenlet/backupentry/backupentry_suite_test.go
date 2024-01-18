@@ -31,7 +31,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/workqueue"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -245,8 +244,8 @@ var _ = BeforeSuite(func() {
 	Expect((&backupentry.Reconciler{
 		Clock: fakeClock,
 		Config: config.BackupEntryControllerConfiguration{
-			ConcurrentSyncs:                  pointer.Int(5),
-			DeletionGracePeriodHours:         pointer.Int(deletionGracePeriodHours),
+			ConcurrentSyncs:                  ptr.To(5),
+			DeletionGracePeriodHours:         ptr.To(deletionGracePeriodHours),
 			DeletionGracePeriodShootPurposes: []gardencore.ShootPurpose{gardencore.ShootPurposeProduction},
 		},
 		SeedName:        seed.Name,

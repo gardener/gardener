@@ -22,7 +22,6 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
@@ -49,16 +48,16 @@ var _ = Describe("Validation", func() {
 					ClusterID:     ptr.To(""),
 					ResourceClass: ptr.To("foo"),
 					Health: config.HealthControllerConfig{
-						ConcurrentSyncs: pointer.Int(5),
+						ConcurrentSyncs: ptr.To(5),
 						SyncPeriod:      &metav1.Duration{Duration: time.Minute},
 					},
 					ManagedResource: config.ManagedResourceControllerConfig{
-						ConcurrentSyncs:     pointer.Int(5),
+						ConcurrentSyncs:     ptr.To(5),
 						SyncPeriod:          &metav1.Duration{Duration: time.Minute},
 						ManagedByLabelValue: ptr.To("foo"),
 					},
 					Secret: config.SecretControllerConfig{
-						ConcurrentSyncs: pointer.Int(5),
+						ConcurrentSyncs: ptr.To(5),
 					},
 				},
 			}
@@ -189,7 +188,7 @@ var _ = Describe("Validation", func() {
 			Context("kubelet csr approver", func() {
 				It("should return errors because concurrent syncs are <= 0", func() {
 					conf.Controllers.KubeletCSRApprover.Enabled = true
-					conf.Controllers.KubeletCSRApprover.ConcurrentSyncs = pointer.Int(0)
+					conf.Controllers.KubeletCSRApprover.ConcurrentSyncs = ptr.To(0)
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
@@ -227,7 +226,7 @@ var _ = Describe("Validation", func() {
 
 			Context("health", func() {
 				It("should return errors because concurrent syncs are <= 0", func() {
-					conf.Controllers.Health.ConcurrentSyncs = pointer.Int(0)
+					conf.Controllers.Health.ConcurrentSyncs = ptr.To(0)
 					conf.Controllers.Health.SyncPeriod = &metav1.Duration{Duration: time.Hour}
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
@@ -239,7 +238,7 @@ var _ = Describe("Validation", func() {
 				})
 
 				It("should return errors because sync period is nil", func() {
-					conf.Controllers.Health.ConcurrentSyncs = pointer.Int(5)
+					conf.Controllers.Health.ConcurrentSyncs = ptr.To(5)
 					conf.Controllers.Health.SyncPeriod = nil
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
@@ -251,7 +250,7 @@ var _ = Describe("Validation", func() {
 				})
 
 				It("should return errors because sync period is < 15s", func() {
-					conf.Controllers.Health.ConcurrentSyncs = pointer.Int(5)
+					conf.Controllers.Health.ConcurrentSyncs = ptr.To(5)
 					conf.Controllers.Health.SyncPeriod = &metav1.Duration{Duration: time.Second}
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
@@ -265,7 +264,7 @@ var _ = Describe("Validation", func() {
 
 			Context("managed resources", func() {
 				It("should return errors because concurrent syncs are <= 0", func() {
-					conf.Controllers.ManagedResource.ConcurrentSyncs = pointer.Int(0)
+					conf.Controllers.ManagedResource.ConcurrentSyncs = ptr.To(0)
 					conf.Controllers.ManagedResource.SyncPeriod = &metav1.Duration{Duration: time.Hour}
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
@@ -277,7 +276,7 @@ var _ = Describe("Validation", func() {
 				})
 
 				It("should return errors because sync period is nil", func() {
-					conf.Controllers.ManagedResource.ConcurrentSyncs = pointer.Int(5)
+					conf.Controllers.ManagedResource.ConcurrentSyncs = ptr.To(5)
 					conf.Controllers.ManagedResource.SyncPeriod = nil
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
@@ -289,7 +288,7 @@ var _ = Describe("Validation", func() {
 				})
 
 				It("should return errors because sync period is < 15s", func() {
-					conf.Controllers.ManagedResource.ConcurrentSyncs = pointer.Int(5)
+					conf.Controllers.ManagedResource.ConcurrentSyncs = ptr.To(5)
 					conf.Controllers.ManagedResource.SyncPeriod = &metav1.Duration{Duration: time.Second}
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(

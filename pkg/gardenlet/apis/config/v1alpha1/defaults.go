@@ -20,7 +20,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -371,7 +370,7 @@ func SetDefaults_StaleExtensionHealthChecks(obj *StaleExtensionHealthChecks) {
 // SetDefaults_ShootStateControllerConfiguration sets defaults for the shoot state controller.
 func SetDefaults_ShootStateControllerConfiguration(obj *ShootStateControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = pointer.Int(5)
+		obj.ConcurrentSyncs = ptr.To(5)
 	}
 	if obj.SyncPeriod == nil {
 		obj.SyncPeriod = &metav1.Duration{Duration: 6 * time.Hour}
@@ -416,7 +415,7 @@ func SetDefaults_ManagedSeedControllerConfiguration(obj *ManagedSeedControllerCo
 // SetDefaults_TokenRequestorControllerConfiguration sets defaults for the TokenRequestor controller.
 func SetDefaults_TokenRequestorControllerConfiguration(obj *TokenRequestorControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = pointer.Int(5)
+		obj.ConcurrentSyncs = ptr.To(5)
 	}
 }
 

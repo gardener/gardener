@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
@@ -398,7 +397,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 
 			It("should return errors because concurrent syncs are < 0", func() {
-				cfg.Controllers.NetworkPolicy.ConcurrentSyncs = pointer.Int(-1)
+				cfg.Controllers.NetworkPolicy.ConcurrentSyncs = ptr.To(-1)
 
 				Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{

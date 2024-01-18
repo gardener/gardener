@@ -105,7 +105,7 @@ func SetDefaults_ResourceManagerControllerConfiguration(obj *ResourceManagerCont
 // SetDefaults_KubeletCSRApproverControllerConfig sets defaults for the KubeletCSRApproverControllerConfig object.
 func SetDefaults_KubeletCSRApproverControllerConfig(obj *KubeletCSRApproverControllerConfig) {
 	if obj.Enabled && obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = pointer.Int(1)
+		obj.ConcurrentSyncs = ptr.To(1)
 	}
 }
 
@@ -119,14 +119,14 @@ func SetDefaults_GarbageCollectorControllerConfig(obj *GarbageCollectorControlle
 // SetDefaults_NetworkPolicyControllerConfig sets defaults for the NetworkPolicyControllerConfig object.
 func SetDefaults_NetworkPolicyControllerConfig(obj *NetworkPolicyControllerConfig) {
 	if obj.Enabled && obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = pointer.Int(5)
+		obj.ConcurrentSyncs = ptr.To(5)
 	}
 }
 
 // SetDefaults_HealthControllerConfig sets defaults for the HealthControllerConfig object.
 func SetDefaults_HealthControllerConfig(obj *HealthControllerConfig) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = pointer.Int(5)
+		obj.ConcurrentSyncs = ptr.To(5)
 	}
 	if obj.SyncPeriod == nil {
 		obj.SyncPeriod = &metav1.Duration{Duration: time.Minute}
@@ -136,7 +136,7 @@ func SetDefaults_HealthControllerConfig(obj *HealthControllerConfig) {
 // SetDefaults_ManagedResourceControllerConfig sets defaults for the ManagedResourceControllerConfig object.
 func SetDefaults_ManagedResourceControllerConfig(obj *ManagedResourceControllerConfig) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = pointer.Int(5)
+		obj.ConcurrentSyncs = ptr.To(5)
 	}
 	if obj.SyncPeriod == nil {
 		obj.SyncPeriod = &metav1.Duration{Duration: time.Minute}
@@ -152,21 +152,21 @@ func SetDefaults_ManagedResourceControllerConfig(obj *ManagedResourceControllerC
 // SetDefaults_SecretControllerConfig sets defaults for the SecretControllerConfig object.
 func SetDefaults_SecretControllerConfig(obj *SecretControllerConfig) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = pointer.Int(5)
+		obj.ConcurrentSyncs = ptr.To(5)
 	}
 }
 
 // SetDefaults_TokenInvalidatorControllerConfig sets defaults for the TokenInvalidatorControllerConfig object.
 func SetDefaults_TokenInvalidatorControllerConfig(obj *TokenInvalidatorControllerConfig) {
 	if obj.Enabled && obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = pointer.Int(5)
+		obj.ConcurrentSyncs = ptr.To(5)
 	}
 }
 
 // SetDefaults_TokenRequestorControllerConfig sets defaults for the TokenRequestorControllerConfig object.
 func SetDefaults_TokenRequestorControllerConfig(obj *TokenRequestorControllerConfig) {
 	if obj.Enabled && obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = pointer.Int(5)
+		obj.ConcurrentSyncs = ptr.To(5)
 	}
 }
 
@@ -174,7 +174,7 @@ func SetDefaults_TokenRequestorControllerConfig(obj *TokenRequestorControllerCon
 func SetDefaults_NodeControllerConfig(obj *NodeControllerConfig) {
 	if obj.Enabled {
 		if obj.ConcurrentSyncs == nil {
-			obj.ConcurrentSyncs = pointer.Int(5)
+			obj.ConcurrentSyncs = ptr.To(5)
 		}
 		if obj.Backoff == nil {
 			obj.Backoff = &metav1.Duration{Duration: 10 * time.Second}

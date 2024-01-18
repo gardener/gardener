@@ -32,7 +32,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -206,7 +205,7 @@ var _ = Describe("Garden controller tests", func() {
 			Config: config.OperatorConfiguration{
 				Controllers: config.ControllerConfiguration{
 					Garden: config.GardenControllerConfig{
-						ConcurrentSyncs: pointer.Int(5),
+						ConcurrentSyncs: ptr.To(5),
 						SyncPeriod:      &metav1.Duration{Duration: time.Minute},
 						ETCDConfig: &gardenletconfig.ETCDConfig{
 							ETCDController:      &gardenletconfig.ETCDController{Workers: pointer.Int64(5)},

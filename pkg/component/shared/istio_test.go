@@ -22,7 +22,6 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -93,8 +92,8 @@ func checkIstio(istioDeploy istio.Interface, testValues istioTestValues) {
 	var minReplicas, maxReplicas *int
 
 	if zoneSize := len(testValues.zones); zoneSize > 1 {
-		minReplicas = pointer.Int(zoneSize * 2)
-		maxReplicas = pointer.Int(zoneSize * 4)
+		minReplicas = ptr.To(zoneSize * 2)
+		maxReplicas = ptr.To(zoneSize * 4)
 	}
 
 	networkPolicyLabels := map[string]string{

@@ -36,7 +36,6 @@ import (
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/component-base/version"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -687,10 +686,10 @@ func (r *Reconciler) newKubeControllerManager(
 		services,
 		certificateSigningDuration,
 		kubecontrollermanager.ControllerWorkers{
-			GarbageCollector:    pointer.Int(250),
-			Namespace:           pointer.Int(100),
-			ResourceQuota:       pointer.Int(100),
-			ServiceAccountToken: pointer.Int(0),
+			GarbageCollector:    ptr.To(250),
+			Namespace:           ptr.To(100),
+			ResourceQuota:       ptr.To(100),
+			ServiceAccountToken: ptr.To(0),
 		},
 		kubecontrollermanager.ControllerSyncPeriods{
 			ResourceQuota: ptr.To(time.Minute),

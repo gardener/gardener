@@ -28,7 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -139,7 +139,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	Expect((&care.Reconciler{
 		Config: config.ControllerInstallationCareControllerConfiguration{
-			ConcurrentSyncs: pointer.Int(5),
+			ConcurrentSyncs: ptr.To(5),
 			SyncPeriod:      &metav1.Duration{Duration: 500 * time.Millisecond},
 		},
 		GardenNamespace: gardenNamespace.Name,

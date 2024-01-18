@@ -40,7 +40,6 @@ import (
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	kubeinformers "k8s.io/client-go/informers"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -1155,7 +1154,7 @@ func defaultKubernetesVersion(constraints []core.ExpirableVersion, shootVersion 
 			allErrs = append(allErrs, field.Invalid(fldPath, versionParts[1], "must be a semantic version"))
 			return nil, allErrs
 		}
-		shootVersionMinor = pointer.Uint64(uint64(v))
+		shootVersionMinor = ptr.To(uint64(v))
 	}
 	if len(versionParts) >= 1 && len(versionParts[0]) > 0 {
 		v, err := strconv.Atoi(versionParts[0])
@@ -1163,7 +1162,7 @@ func defaultKubernetesVersion(constraints []core.ExpirableVersion, shootVersion 
 			allErrs = append(allErrs, field.Invalid(fldPath, versionParts[0], "must be a semantic version"))
 			return nil, allErrs
 		}
-		shootVersionMajor = pointer.Uint64(uint64(v))
+		shootVersionMajor = ptr.To(uint64(v))
 	}
 
 	if latestVersion := findLatestVersion(constraints, shootVersionMajor, shootVersionMinor); latestVersion != nil {

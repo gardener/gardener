@@ -33,7 +33,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -706,17 +705,17 @@ func configMap(namespace string, testValues Values) string {
 		},
 		Controllers: controllermanagerv1alpha1.ControllerManagerControllerConfiguration{
 			ControllerRegistration: &controllermanagerv1alpha1.ControllerRegistrationControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(20),
+				ConcurrentSyncs: ptr.To(20),
 			},
 			Project: &controllermanagerv1alpha1.ProjectControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(20),
+				ConcurrentSyncs: ptr.To(20),
 				Quotas:          testValues.Quotas,
 			},
 			SecretBinding: &controllermanagerv1alpha1.SecretBindingControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(20),
+				ConcurrentSyncs: ptr.To(20),
 			},
 			Seed: &controllermanagerv1alpha1.SeedControllerConfiguration{
-				ConcurrentSyncs:    pointer.Int(20),
+				ConcurrentSyncs:    ptr.To(20),
 				ShootMonitorPeriod: &metav1.Duration{Duration: 300 * time.Second},
 			},
 			SeedExtensionsCheck: &controllermanagerv1alpha1.SeedExtensionsCheckControllerConfiguration{
@@ -732,14 +731,14 @@ func configMap(namespace string, testValues Values) string {
 				}},
 			},
 			Event: &controllermanagerv1alpha1.EventControllerConfiguration{
-				ConcurrentSyncs:   pointer.Int(10),
+				ConcurrentSyncs:   ptr.To(10),
 				TTLNonShootEvents: &metav1.Duration{Duration: 2 * time.Hour},
 			},
 			ShootMaintenance: controllermanagerv1alpha1.ShootMaintenanceControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(20),
+				ConcurrentSyncs: ptr.To(20),
 			},
 			ShootReference: &controllermanagerv1alpha1.ShootReferenceControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(20),
+				ConcurrentSyncs: ptr.To(20),
 			},
 		},
 		LeaderElection: &componentbaseconfigv1alpha1.LeaderElectionConfiguration{

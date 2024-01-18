@@ -28,7 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -130,10 +130,10 @@ var _ = BeforeSuite(func() {
 
 	Expect((&stale.Reconciler{
 		Config: config.ProjectControllerConfiguration{
-			ConcurrentSyncs:         pointer.Int(5),
-			MinimumLifetimeDays:     pointer.Int(minimumLifetimeDays),
-			StaleGracePeriodDays:    pointer.Int(staleGracePeriodDays),
-			StaleExpirationTimeDays: pointer.Int(staleExpirationTimeDays),
+			ConcurrentSyncs:         ptr.To(5),
+			MinimumLifetimeDays:     ptr.To(minimumLifetimeDays),
+			StaleGracePeriodDays:    ptr.To(staleGracePeriodDays),
+			StaleExpirationTimeDays: ptr.To(staleExpirationTimeDays),
 			StaleSyncPeriod:         &metav1.Duration{Duration: 500 * time.Millisecond},
 		},
 		Clock: fakeClock,
