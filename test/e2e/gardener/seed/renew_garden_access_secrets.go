@@ -31,6 +31,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/test/e2e/gardener/managedseed"
 )
 
 var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
@@ -44,10 +45,17 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 		)
 
 		BeforeEach(func() {
-			// find seed for kind cluster based on label (seed name differs between test scenarios, e.g., non-ha/ha)
+			// Find the first seed which is not "e2e-managedseed". Seed name differs between test scenarios, e.g., non-ha/ha.
+			// However, this test should not use "e2e-managedseed", because it is created and deleted in a separate e2e test.
+			// Thus, it might be already gone before the garden cluster access was renewed.
 			seedList := &gardencorev1beta1.SeedList{}
-			Expect(testClient.List(ctx, seedList, client.MatchingLabels{"base": "kind"}, client.Limit(1))).To(Succeed())
-			seed = seedList.Items[0].DeepCopy()
+			Expect(testClient.List(ctx, seedList)).To(Succeed())
+			for _, s := range seedList.Items {
+				if s.Name != managedseed.SeedName {
+					seed = s.DeepCopy()
+					break
+				}
+			}
 			log.Info("Renewing garden cluster access", "seedName", seed.Name)
 
 			seedNamespace = gardenerutils.ComputeGardenNamespace(seed.Name)
