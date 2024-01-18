@@ -123,7 +123,7 @@ var _ = Describe("ValuesHelper", func() {
 			ReplicaCount:         ptr.To(int32(1)),
 			RevisionHistoryLimit: ptr.To(int32(1)),
 			Image: &seedmanagementv1alpha1.Image{
-				PullPolicy: pullPolicyPtr(corev1.PullIfNotPresent),
+				PullPolicy: ptr.To(corev1.PullIfNotPresent),
 			},
 			PodAnnotations: map[string]string{
 				"foo": "bar",
@@ -157,7 +157,7 @@ var _ = Describe("ValuesHelper", func() {
 			Image: &seedmanagementv1alpha1.Image{
 				Repository: ptr.To("europe-docker.pkg.dev/gardener-project/releases/gardener/gardenlet"),
 				Tag:        ptr.To("v0.0.0-master+$Format:%H$"),
-				PullPolicy: pullPolicyPtr(corev1.PullIfNotPresent),
+				PullPolicy: ptr.To(corev1.PullIfNotPresent),
 			},
 			PodAnnotations: map[string]string{
 				"foo": "bar",

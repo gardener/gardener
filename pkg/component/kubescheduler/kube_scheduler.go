@@ -211,7 +211,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
 			Port:     utils.IntStrPtrFromInt32(port),
-			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+			Protocol: ptr.To(corev1.ProtocolTCP),
 		}))
 
 		service.Spec.Selector = getLabels()

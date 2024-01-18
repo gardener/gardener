@@ -261,8 +261,8 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 	clientService := &corev1.Service{}
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(clientService,
-		networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt32(etcdconstants.PortEtcdClient), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)},
-		networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt32(etcdconstants.PortBackupRestore), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)},
+		networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt32(etcdconstants.PortEtcdClient), Protocol: ptr.To(corev1.ProtocolTCP)},
+		networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt32(etcdconstants.PortBackupRestore), Protocol: ptr.To(corev1.ProtocolTCP)},
 	))
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(clientService, metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}}))
 	metav1.SetMetaDataAnnotation(&clientService.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
@@ -324,7 +324,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			ClientPort:              ptr.To(etcdconstants.PortEtcdClient),
 			Metrics:                 &metrics,
 			DefragmentationSchedule: e.computeDefragmentationSchedule(existingEtcd),
-			Quota:                   utils.QuantityPtr(resource.MustParse("8Gi")),
+			Quota:                   ptr.To(resource.MustParse("8Gi")),
 			ClientService: &druidv1alpha1.ClientService{
 				Annotations: clientService.Annotations,
 				Labels:      clientService.Labels,
@@ -387,7 +387,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			}
 			e.etcd.Spec.Backup.FullSnapshotSchedule = e.computeFullSnapshotSchedule(existingEtcd)
 			e.etcd.Spec.Backup.DeltaSnapshotPeriod = &deltaSnapshotPeriod
-			e.etcd.Spec.Backup.DeltaSnapshotMemoryLimit = utils.QuantityPtr(resource.MustParse("100Mi"))
+			e.etcd.Spec.Backup.DeltaSnapshotMemoryLimit = ptr.To(resource.MustParse("100Mi"))
 			e.etcd.Spec.Backup.DeltaSnapshotRetentionPeriod = e.values.BackupConfig.DeltaSnapshotRetentionPeriod
 
 			if e.values.BackupConfig.LeaderElection != nil {
@@ -398,7 +398,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			}
 		}
 
-		e.etcd.Spec.StorageCapacity = utils.QuantityPtr(resource.MustParse(e.values.StorageCapacity))
+		e.etcd.Spec.StorageCapacity = ptr.To(resource.MustParse(e.values.StorageCapacity))
 		e.etcd.Spec.StorageClass = e.values.StorageClassName
 		e.etcd.Spec.VolumeClaimTemplate = &volumeClaimTemplate
 		return nil

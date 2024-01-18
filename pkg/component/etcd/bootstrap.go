@@ -343,7 +343,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 
 	portMetrics := networkingv1.NetworkPolicyPort{
 		Port:     utils.IntStrPtrFromInt32(metricsPort),
-		Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+		Protocol: ptr.To(corev1.ProtocolTCP),
 	}
 
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, portMetrics))

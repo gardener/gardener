@@ -198,7 +198,7 @@ var _ = Describe("Actuator", func() {
 				ReplicaCount:         ptr.To(int32(1)),
 				RevisionHistoryLimit: ptr.To(int32(1)),
 				Image: &seedmanagementv1alpha1.Image{
-					PullPolicy: pullPolicyPtr(corev1.PullIfNotPresent),
+					PullPolicy: ptr.To(corev1.PullIfNotPresent),
 				},
 				VPA: ptr.To(true),
 			},
@@ -213,7 +213,7 @@ var _ = Describe("Actuator", func() {
 					},
 				},
 			},
-			Bootstrap:       bootstrapPtr(seedmanagementv1alpha1.BootstrapToken),
+			Bootstrap:       ptr.To(seedmanagementv1alpha1.BootstrapToken),
 			MergeWithParent: ptr.To(true),
 		}
 
@@ -397,7 +397,7 @@ var _ = Describe("Actuator", func() {
 			mergedDeployment.Image = &seedmanagementv1alpha1.Image{
 				Repository: ptr.To("repository"),
 				Tag:        ptr.To("tag"),
-				PullPolicy: pullPolicyPtr(corev1.PullIfNotPresent),
+				PullPolicy: ptr.To(corev1.PullIfNotPresent),
 			}
 
 			mergedGardenletConfig = managedSeed.Spec.Gardenlet.Config.Object.(*gardenletv1alpha1.GardenletConfiguration).DeepCopy()
@@ -667,7 +667,7 @@ var _ = Describe("Actuator", func() {
 			})
 
 			It("should create the garden namespace and seed secrets, and deploy gardenlet (without bootstrap)", func() {
-				managedSeed.Spec.Gardenlet.Bootstrap = bootstrapPtr(seedmanagementv1alpha1.BootstrapNone)
+				managedSeed.Spec.Gardenlet.Bootstrap = ptr.To(seedmanagementv1alpha1.BootstrapNone)
 
 				expectGetShoot()
 				expectGetSeed(false)
@@ -865,7 +865,3 @@ var _ = Describe("Utils", func() {
 		})
 	})
 })
-
-func pullPolicyPtr(v corev1.PullPolicy) *corev1.PullPolicy { return &v }
-
-func bootstrapPtr(v seedmanagementv1alpha1.Bootstrap) *seedmanagementv1alpha1.Bootstrap { return &v }

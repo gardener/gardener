@@ -166,7 +166,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
 			Port:     utils.IntStrPtrFromInt32(portMetrics),
-			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+			Protocol: ptr.To(corev1.ProtocolTCP),
 		}))
 
 		service.Spec.Selector = getLabels()

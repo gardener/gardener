@@ -150,7 +150,7 @@ var _ = Describe("Defaults", func() {
 						},
 					}),
 				},
-				Bootstrap:       bootstrapPtr(BootstrapServiceAccount),
+				Bootstrap:       ptr.To(BootstrapServiceAccount),
 				MergeWithParent: ptr.To(false),
 			}
 
@@ -222,7 +222,7 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_ManagedSeed(obj)
 
 			Expect(obj.Spec.Gardenlet.Deployment.Image).To(Equal(&Image{
-				PullPolicy: pullPolicyPtr(corev1.PullIfNotPresent),
+				PullPolicy: ptr.To(corev1.PullIfNotPresent),
 			}))
 		})
 
@@ -236,7 +236,7 @@ var _ = Describe("Defaults", func() {
 
 			Expect(obj.Spec.Gardenlet.Deployment.Image).To(Equal(&Image{
 				Tag:        ptr.To("latest"),
-				PullPolicy: pullPolicyPtr(corev1.PullAlways),
+				PullPolicy: ptr.To(corev1.PullAlways),
 			}))
 		})
 
@@ -245,7 +245,7 @@ var _ = Describe("Defaults", func() {
 				Deployment: &GardenletDeployment{
 					Image: &Image{
 						Tag:        ptr.To("foo"),
-						PullPolicy: pullPolicyPtr(corev1.PullNever),
+						PullPolicy: ptr.To(corev1.PullNever),
 					},
 				}}
 
@@ -253,7 +253,7 @@ var _ = Describe("Defaults", func() {
 
 			Expect(obj.Spec.Gardenlet.Deployment.Image).To(Equal(&Image{
 				Tag:        ptr.To("foo"),
-				PullPolicy: pullPolicyPtr(corev1.PullNever),
+				PullPolicy: ptr.To(corev1.PullNever),
 			}))
 		})
 	})
@@ -263,7 +263,3 @@ func encode(obj runtime.Object) []byte {
 	data, _ := json.Marshal(obj)
 	return data
 }
-
-func pullPolicyPtr(v corev1.PullPolicy) *corev1.PullPolicy { return &v }
-
-func bootstrapPtr(v Bootstrap) *Bootstrap { return &v }

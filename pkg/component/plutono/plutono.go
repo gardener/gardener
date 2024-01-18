@@ -626,7 +626,7 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap, dashboar
 							Name: "plutono-storage",
 							VolumeSource: corev1.VolumeSource{
 								EmptyDir: &corev1.EmptyDirVolumeSource{
-									SizeLimit: utils.QuantityPtr(resource.MustParse("100Mi")),
+									SizeLimit: ptr.To(resource.MustParse("100Mi")),
 								},
 							},
 						},

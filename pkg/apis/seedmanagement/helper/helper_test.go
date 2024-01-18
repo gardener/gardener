@@ -19,6 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -30,9 +31,9 @@ import (
 var _ = Describe("Helper", func() {
 	Describe("#GetBootstrap", func() {
 		It("should return the correct Bootstrap value", func() {
-			Expect(GetBootstrap(bootstrapPtr(seedmanagement.BootstrapToken))).To(Equal(seedmanagement.BootstrapToken))
-			Expect(GetBootstrap(bootstrapPtr(seedmanagement.BootstrapServiceAccount))).To(Equal(seedmanagement.BootstrapServiceAccount))
-			Expect(GetBootstrap(bootstrapPtr(seedmanagement.BootstrapNone))).To(Equal(seedmanagement.BootstrapNone))
+			Expect(GetBootstrap(ptr.To(seedmanagement.BootstrapToken))).To(Equal(seedmanagement.BootstrapToken))
+			Expect(GetBootstrap(ptr.To(seedmanagement.BootstrapServiceAccount))).To(Equal(seedmanagement.BootstrapServiceAccount))
+			Expect(GetBootstrap(ptr.To(seedmanagement.BootstrapNone))).To(Equal(seedmanagement.BootstrapNone))
 			Expect(GetBootstrap(nil)).To(Equal(seedmanagement.BootstrapNone))
 		})
 	})
@@ -117,5 +118,3 @@ var _ = Describe("Helper", func() {
 		})
 	})
 })
-
-func bootstrapPtr(v seedmanagement.Bootstrap) *seedmanagement.Bootstrap { return &v }

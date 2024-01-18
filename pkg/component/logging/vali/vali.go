@@ -529,7 +529,7 @@ func (v *vali) getService() *corev1.Service {
 
 		networkPolicyPorts = []networkingv1.NetworkPolicyPort{{
 			Port:     utils.IntStrPtrFromInt32(ValiPort),
-			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+			Protocol: ptr.To(corev1.ProtocolTCP),
 		}}
 	)
 
@@ -551,7 +551,7 @@ func (v *vali) getService() *corev1.Service {
 
 		networkPolicyPorts = append(networkPolicyPorts, networkingv1.NetworkPolicyPort{
 			Port:     utils.IntStrPtrFromInt32(telegrafServicePort),
-			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+			Protocol: ptr.To(corev1.ProtocolTCP),
 		})
 	}
 

@@ -57,18 +57,18 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_ManagedSeedSet(obj)
 
 			Expect(obj.Spec.UpdateStrategy).To(Equal(&UpdateStrategy{
-				Type: updateStrategyTypePtr(RollingUpdateStrategyType),
+				Type: ptr.To(RollingUpdateStrategyType),
 			}))
 		})
 
 		It("should not overwrite already set values for UpdateStrategy", func() {
 			obj.Spec.UpdateStrategy = &UpdateStrategy{
-				Type: updateStrategyTypePtr(UpdateStrategyType("foo")),
+				Type: ptr.To(UpdateStrategyType("foo")),
 			}
 			SetObjectDefaults_ManagedSeedSet(obj)
 
 			Expect(obj.Spec.UpdateStrategy).To(Equal(&UpdateStrategy{
-				Type: updateStrategyTypePtr(UpdateStrategyType("foo")),
+				Type: ptr.To(UpdateStrategyType("foo")),
 			}))
 		})
 	})
@@ -99,7 +99,3 @@ var _ = Describe("Defaults", func() {
 		})
 	})
 })
-
-func updateStrategyTypePtr(v UpdateStrategyType) *UpdateStrategyType {
-	return &v
-}

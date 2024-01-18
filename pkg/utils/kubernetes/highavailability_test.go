@@ -33,12 +33,12 @@ var _ = Describe("HighAvailability", func() {
 		},
 
 		Entry("component type is empty", nil, "", BeNil()),
-		Entry("component type 'server', failure-tolerance-type nil", nil, "server", Equal(ptr.To(2))),
-		Entry("component type 'server', failure-tolerance-type empty", failureToleranceTypePtr(""), "server", Equal(ptr.To(2))),
-		Entry("component type 'server', failure-tolerance-type non-empty", failureToleranceTypePtr("foo"), "server", Equal(ptr.To(2))),
-		Entry("component type 'controller', failure-tolerance-type nil", nil, "controller", Equal(ptr.To(2))),
-		Entry("component type 'controller', failure-tolerance-type empty", failureToleranceTypePtr(""), "controller", Equal(ptr.To(1))),
-		Entry("component type 'controller', failure-tolerance-type non-empty", failureToleranceTypePtr("foo"), "controller", Equal(ptr.To(2))),
+		Entry("component type 'server', failure-tolerance-type nil", nil, "server", Equal(ptr.To(int32(2)))),
+		Entry("component type 'server', failure-tolerance-type empty", failureToleranceTypePtr(""), "server", Equal(ptr.To(int32(2)))),
+		Entry("component type 'server', failure-tolerance-type non-empty", failureToleranceTypePtr("foo"), "server", Equal(ptr.To(int32(2)))),
+		Entry("component type 'controller', failure-tolerance-type nil", nil, "controller", Equal(ptr.To(int32(2)))),
+		Entry("component type 'controller', failure-tolerance-type empty", failureToleranceTypePtr(""), "controller", Equal(ptr.To(int32(1)))),
+		Entry("component type 'controller', failure-tolerance-type non-empty", failureToleranceTypePtr("foo"), "controller", Equal(ptr.To(int32(2)))),
 	)
 
 	zones := []string{"a", "b", "c"}

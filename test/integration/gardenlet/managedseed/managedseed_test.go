@@ -148,12 +148,12 @@ var _ = Describe("ManagedSeed controller test", func() {
 						ReplicaCount:         ptr.To(int32(1)),
 						RevisionHistoryLimit: ptr.To(int32(1)),
 						Image: &seedmanagementv1alpha1.Image{
-							PullPolicy: pullPolicyPtr(corev1.PullIfNotPresent),
+							PullPolicy: ptr.To(corev1.PullIfNotPresent),
 						},
 						VPA: ptr.To(false),
 					},
 					Config:    *gardenletConfig,
-					Bootstrap: bootstrapPtr(seedmanagementv1alpha1.BootstrapToken),
+					Bootstrap: ptr.To(seedmanagementv1alpha1.BootstrapToken),
 				},
 			},
 		}
@@ -366,7 +366,3 @@ var _ = Describe("ManagedSeed controller test", func() {
 		})
 	})
 })
-
-func bootstrapPtr(v seedmanagementv1alpha1.Bootstrap) *seedmanagementv1alpha1.Bootstrap { return &v }
-
-func pullPolicyPtr(v corev1.PullPolicy) *corev1.PullPolicy { return &v }

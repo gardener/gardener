@@ -311,7 +311,7 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, networkingv1.NetworkPolicyPort{
 		Port:     utils.IntStrPtrFromInt32(portMetrics),
-		Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+		Protocol: ptr.To(corev1.ProtocolTCP),
 	}))
 
 	resources, err := registry.AddAllAndSerialize(

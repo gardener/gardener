@@ -167,7 +167,7 @@ func (k *kubeStateMetrics) reconcileService(service *corev1.Service) {
 
 	metricsPort := networkingv1.NetworkPolicyPort{
 		Port:     utils.IntStrPtrFromInt32(port),
-		Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+		Protocol: ptr.To(corev1.ProtocolTCP),
 	}
 
 	switch k.values.ClusterType {

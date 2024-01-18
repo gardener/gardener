@@ -47,7 +47,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -721,7 +720,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 
 		portMetrics := networkingv1.NetworkPolicyPort{
 			Port:     utils.IntStrPtrFromInt32(metricsPort),
-			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+			Protocol: ptr.To(corev1.ProtocolTCP),
 		}
 
 		if !r.values.TargetDiffersFromSourceCluster {
@@ -731,7 +730,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, portMetrics))
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForWebhookTargets(service, networkingv1.NetworkPolicyPort{
 				Port:     utils.IntStrPtrFromInt32(resourcemanagerconstants.ServerPort),
-				Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+				Protocol: ptr.To(corev1.ProtocolTCP),
 			}))
 		}
 

@@ -563,10 +563,10 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 							},
 						},
 						Ports: []networkingv1.NetworkPolicyPort{
-							{Protocol: utils.ProtocolPtr(corev1.ProtocolUDP), Port: utils.IntStrPtrFromInt32(53)},
-							{Protocol: utils.ProtocolPtr(corev1.ProtocolTCP), Port: utils.IntStrPtrFromInt32(53)},
-							{Protocol: utils.ProtocolPtr(corev1.ProtocolUDP), Port: utils.IntStrPtrFromInt32(8053)},
-							{Protocol: utils.ProtocolPtr(corev1.ProtocolTCP), Port: utils.IntStrPtrFromInt32(8053)},
+							{Protocol: ptr.To(corev1.ProtocolUDP), Port: utils.IntStrPtrFromInt32(53)},
+							{Protocol: ptr.To(corev1.ProtocolTCP), Port: utils.IntStrPtrFromInt32(53)},
+							{Protocol: ptr.To(corev1.ProtocolUDP), Port: utils.IntStrPtrFromInt32(8053)},
+							{Protocol: ptr.To(corev1.ProtocolTCP), Port: utils.IntStrPtrFromInt32(8053)},
 						},
 					}},
 				}
