@@ -19,7 +19,6 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -40,8 +39,8 @@ var (
 			SyncPeriod: metav1.Duration{Duration: defaultSyncPeriod},
 			// Increase default QPS and Burst by factor 10 as a configuration example of custom REST options for shoot clients
 			ShootRESTOptions: &extensionsconfig.RESTOptions{
-				QPS:   pointer.Float32(50),
 				Burst: ptr.To(100),
+				QPS:   ptr.To(float32(50)),
 			},
 		},
 	}

@@ -86,7 +86,7 @@ var _ = Describe("KubeControllerManager", func() {
 			DownscaleStabilization:  &metav1.Duration{Duration: 5 * time.Minute},
 			InitialReadinessDelay:   &metav1.Duration{Duration: 30 * time.Second},
 			SyncPeriod:              &metav1.Duration{Duration: 30 * time.Second},
-			Tolerance:               pointer.Float64(0.1),
+			Tolerance:               ptr.To(float64(0.1)),
 		}
 
 		nodeCIDRMask           int32 = 24
@@ -561,7 +561,7 @@ namespace: kube-system
 				DownscaleStabilization:  &metav1.Duration{Duration: 10 * time.Minute},
 				InitialReadinessDelay:   &metav1.Duration{Duration: 20 * time.Second},
 				SyncPeriod:              &metav1.Duration{Duration: 20 * time.Second},
-				Tolerance:               pointer.Float64(0.3),
+				Tolerance:               ptr.To(float64(0.3)),
 			},
 			NodeCIDRMaskSize: nil,
 		}

@@ -36,7 +36,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -1432,13 +1431,13 @@ var _ = Describe("VPA", func() {
 
 			It("should successfully deploy with special configuration", func() {
 				valuesRecommender.Interval = &metav1.Duration{Duration: 3 * time.Hour}
-				valuesRecommender.RecommendationMarginFraction = pointer.Float64(8.91)
+				valuesRecommender.RecommendationMarginFraction = ptr.To(float64(8.91))
 
 				valuesUpdater.Interval = &metav1.Duration{Duration: 4 * time.Hour}
 				valuesUpdater.EvictAfterOOMThreshold = &metav1.Duration{Duration: 5 * time.Hour}
 				valuesUpdater.EvictionRateBurst = ptr.To(int32(1))
-				valuesUpdater.EvictionRateLimit = pointer.Float64(2.34)
-				valuesUpdater.EvictionTolerance = pointer.Float64(5.67)
+				valuesUpdater.EvictionRateLimit = ptr.To(float64(2.34))
+				valuesUpdater.EvictionTolerance = ptr.To(float64(5.67))
 
 				vpa = New(c, namespace, sm, Values{
 					ClusterType:              component.ClusterTypeSeed,

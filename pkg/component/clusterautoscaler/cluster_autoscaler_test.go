@@ -34,7 +34,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -86,7 +85,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 		configScaleDownDelayAfterDelete           = &metav1.Duration{Duration: time.Second}
 		configScaleDownDelayAfterFailure          = &metav1.Duration{Duration: time.Second}
 		configScaleDownUnneededTime               = &metav1.Duration{Duration: time.Second}
-		configScaleDownUtilizationThreshold       = pointer.Float64(1.2345)
+		configScaleDownUtilizationThreshold       = ptr.To(float64(1.2345))
 		configScanInterval                        = &metav1.Duration{Duration: time.Second}
 		configIgnoreDaemonsetsUtilization   bool  = true
 		configVerbosity                     int32 = 4

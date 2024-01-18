@@ -21,7 +21,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -315,7 +314,7 @@ func SetDefaults_ClusterAutoscaler(obj *ClusterAutoscaler) {
 		obj.ScaleDownUnneededTime = &metav1.Duration{Duration: 30 * time.Minute}
 	}
 	if obj.ScaleDownUtilizationThreshold == nil {
-		obj.ScaleDownUtilizationThreshold = pointer.Float64(0.5)
+		obj.ScaleDownUtilizationThreshold = ptr.To(float64(0.5))
 	}
 	if obj.ScanInterval == nil {
 		obj.ScanInterval = &metav1.Duration{Duration: 10 * time.Second}

@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -892,7 +891,7 @@ var _ = Describe("Shoot defaulting", func() {
 				ScaleDownDelayAfterDelete:     &metav1.Duration{Duration: 2 * time.Hour},
 				ScaleDownDelayAfterFailure:    &metav1.Duration{Duration: 3 * time.Hour},
 				ScaleDownUnneededTime:         &metav1.Duration{Duration: 4 * time.Hour},
-				ScaleDownUtilizationThreshold: pointer.Float64(0.8),
+				ScaleDownUtilizationThreshold: ptr.To(float64(0.8)),
 				ScanInterval:                  &metav1.Duration{Duration: 5 * time.Hour},
 				Expander:                      &expanderRandom,
 				MaxNodeProvisionTime:          &metav1.Duration{Duration: 6 * time.Hour},
@@ -946,7 +945,7 @@ var _ = Describe("Shoot defaulting", func() {
 			obj.Spec.Kubernetes.VerticalPodAutoscaler = &VerticalPodAutoscaler{
 				EvictAfterOOMThreshold:       &metav1.Duration{Duration: 5 * time.Minute},
 				EvictionRateBurst:            ptr.To(int32(2)),
-				EvictionRateLimit:            pointer.Float64(1),
+				EvictionRateLimit:            ptr.To(float64(1)),
 				EvictionTolerance:            &evictionTolerance,
 				RecommendationMarginFraction: &recommendationMarginFraction,
 				UpdaterInterval:              &metav1.Duration{Duration: 2 * time.Minute},

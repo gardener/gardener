@@ -33,7 +33,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -220,7 +219,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							NodeCIDRMaskSize: ptr.To(int32(22)),
 							HorizontalPodAutoscalerConfig: &core.HorizontalPodAutoscalerConfig{
 								SyncPeriod: makeDurationPointer(30 * time.Second),
-								Tolerance:  pointer.Float64(0.1),
+								Tolerance:  ptr.To(float64(0.1)),
 							},
 						},
 					},
@@ -2802,13 +2801,13 @@ var _ = Describe("Shoot Validation Tests", func() {
 				},
 				Entry("valid", core.ClusterAutoscaler{}, version, BeEmpty()),
 				Entry("valid with threshold", core.ClusterAutoscaler{
-					ScaleDownUtilizationThreshold: pointer.Float64(0.5),
+					ScaleDownUtilizationThreshold: ptr.To(float64(0.5)),
 				}, version, BeEmpty()),
 				Entry("invalid negative threshold", core.ClusterAutoscaler{
-					ScaleDownUtilizationThreshold: pointer.Float64(-0.5),
+					ScaleDownUtilizationThreshold: ptr.To(float64(-0.5)),
 				}, version, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), -0.5, "can not be negative"))),
 				Entry("invalid > 1 threshold", core.ClusterAutoscaler{
-					ScaleDownUtilizationThreshold: pointer.Float64(1.5),
+					ScaleDownUtilizationThreshold: ptr.To(float64(1.5)),
 				}, version, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), 1.5, "can not be greater than 1.0"))),
 				Entry("valid with maxNodeProvisionTime", core.ClusterAutoscaler{
 					MaxNodeProvisionTime: &metav1.Duration{Duration: time.Minute},
