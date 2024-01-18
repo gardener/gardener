@@ -22,6 +22,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/test/e2e/gardener/managedseed"
 	"github.com/gardener/gardener/test/utils/rotation"
 )
 
@@ -37,7 +38,7 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 			seedList := &gardencorev1beta1.SeedList{}
 			Expect(testClient.List(ctx, seedList)).To(Succeed())
 			for _, s := range seedList.Items {
-				if s.Name != "e2e-managedseed" {
+				if s.Name != managedseed.SeedName {
 					seed = s.DeepCopy()
 					break
 				}

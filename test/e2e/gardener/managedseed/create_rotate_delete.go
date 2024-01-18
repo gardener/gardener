@@ -43,6 +43,9 @@ import (
 	"github.com/gardener/gardener/test/utils/rotation"
 )
 
+// SeedName is the name of the managed seed used in this e2e test
+const SeedName = "e2e-managedseed"
+
 var parentCtx context.Context
 
 var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
@@ -53,7 +56,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 	f := framework.NewShootCreationFramework(&framework.ShootCreationConfig{
 		GardenerConfig: e2e.DefaultGardenConfig("garden"),
 	})
-	f.Shoot = e2e.DefaultShoot("e2e-managedseed")
+	f.Shoot = e2e.DefaultShoot(SeedName)
 
 	It("Create Shoot, Create ManagedSeed, Delete ManagedSeed, Delete Shoot", func() {
 		By("Create Shoot")
