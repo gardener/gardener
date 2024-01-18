@@ -32,9 +32,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | MachineControllerManagerDeployment  | `false` | `Alpha` | `1.73` |        |
 | MachineControllerManagerDeployment  | `true`  | `Beta`  | `1.81` | `1.81` |
 | MachineControllerManagerDeployment  | `true`  | `GA`    | `1.82` |        |
-| ContainerdRegistryHostsDir          | `false` | `Alpha` | `1.77` | `1.85` |
-| ContainerdRegistryHostsDir          | `true`  | `Beta`  | `1.86` | `1.86` |
-| ContainerdRegistryHostsDir          | `true`  | `GA`    | `1.87` |        |
 | ShootForceDeletion                  | `false` | `Alpha` | `1.81` |        |
 | APIServerFastRollout                | `true`  | `Beta`  | `1.82` |        |
 | UseGardenerNodeAgent                | `false` | `Alpha` | `1.82` |        |
@@ -116,11 +113,11 @@ The following tables are a summary of the feature gates that you can set on diff
 | SeedChange                                   | `false` | `Alpha`      | `1.12` | `1.52` |
 | SeedChange                                   | `true`  | `Beta`       | `1.53` | `1.68` |
 | SeedChange                                   | `true`  | `GA`         | `1.69` | `1.72` |
-| SeedChange                                   | `true`  | `Removed`    | `1.73` |        |
+| SeedChange                                   |         | `Removed`    | `1.73` |        |
 | CopyEtcdBackupsDuringControlPlaneMigration   | `false` | `Alpha`      | `1.37` | `1.52` |
 | CopyEtcdBackupsDuringControlPlaneMigration   | `true`  | `Beta`       | `1.53` | `1.68` |
 | CopyEtcdBackupsDuringControlPlaneMigration   | `true`  | `GA`         | `1.69` | `1.72` |
-| CopyEtcdBackupsDuringControlPlaneMigration   | `true`  | `Removed`    | `1.73` |        |
+| CopyEtcdBackupsDuringControlPlaneMigration   |         | `Removed`    | `1.73` |        |
 | ManagedIstio                                 | `false` | `Alpha`      | `1.5`  | `1.18` |
 | ManagedIstio                                 | `true`  | `Beta`       | `1.19` |        |
 | ManagedIstio                                 | `true`  | `Deprecated` | `1.48` | `1.69` |
@@ -128,19 +125,23 @@ The following tables are a summary of the feature gates that you can set on diff
 | APIServerSNI                                 | `false` | `Alpha`      | `1.7`  | `1.18` |
 | APIServerSNI                                 | `true`  | `Beta`       | `1.19` |        |
 | APIServerSNI                                 | `true`  | `Deprecated` | `1.48` | `1.72` |
-| APIServerSNI                                 | `true`  | `Removed`    | `1.73` |        |
+| APIServerSNI                                 |         | `Removed`    | `1.73` |        |
 | HAControlPlanes                              | `false` | `Alpha`      | `1.49` | `1.70` |
 | HAControlPlanes                              | `true`  | `Beta`       | `1.71` | `1.72` |
 | HAControlPlanes                              | `true`  | `GA`         | `1.73` | `1.73` |
-| HAControlPlanes                              | `true`  | `Removed`    | `1.74` |        |
+| HAControlPlanes                              |         | `Removed`    | `1.74` |        |
 | FullNetworkPoliciesInRuntimeCluster          | `false` | `Alpha`      | `1.66` | `1.70` |
 | FullNetworkPoliciesInRuntimeCluster          | `true`  | `Beta`       | `1.71` | `1.72` |
 | FullNetworkPoliciesInRuntimeCluster          | `true`  | `GA`         | `1.73` | `1.73` |
-| FullNetworkPoliciesInRuntimeCluster          | `true`  | `Removed`    | `1.74` |        |
+| FullNetworkPoliciesInRuntimeCluster          |         | `Removed`    | `1.74` |        |
 | DisableScalingClassesForShoots               | `false` | `Alpha`      | `1.73` | `1.78` |
 | DisableScalingClassesForShoots               | `true`  | `Beta`       | `1.79` | `1.80` |
 | DisableScalingClassesForShoots               | `true`  | `GA`         | `1.81` | `1.81` |
-| DisableScalingClassesForShoots               | `true`  | `Removed`    | `1.82` |        |
+| DisableScalingClassesForShoots               |         | `Removed`    | `1.82` |        |
+| ContainerdRegistryHostsDir                   | `false` | `Alpha`      | `1.77` | `1.85` |
+| ContainerdRegistryHostsDir                   | `true`  | `Beta`       | `1.86` | `1.86` |
+| ContainerdRegistryHostsDir                   | `true`  | `GA`         | `1.87` | `1.87` |
+| ContainerdRegistryHostsDir                   | `true`  | `Removed`    | `1.88` |        |
 
 ## Using a Feature
 
@@ -188,7 +189,6 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | MutableShootSpecNetworkingNodes    | `gardener-apiserver`              | Allows updating the field `spec.networking.nodes`. The validity of the values has to be checked in the provider extensions. Only enable this feature gate when your system runs provider extensions which have implemented the validation.                                                                                                                                         |
 | WorkerlessShoots                   | `gardener-apiserver`              | WorkerlessShoots allows creation of Shoot clusters with no worker pools.                                                                                                                                                                                                                                                                                                           |
 | MachineControllerManagerDeployment | `gardenlet`                       | Enables Gardener to take over the deployment of the machine-controller-manager. If enabled, all registered provider extensions must support injecting the provider-specific MCM sidecar container into the deployment via the `controlplane` webhook.                                                                                                                              |
-| ContainerdRegistryHostsDir         | `gardenlet`                       | Enables registry configuration in containerd based on the hosts directory pattern. The hosts directory pattern is the new way of configuring registries/mirrors in containerd. Ref https://github.com/containerd/containerd/blob/main/docs/hosts.md.                                                                                                                               |
 | ShootForceDeletion                 | `gardener-apiserver`              | Allows forceful deletion of Shoots by annotating them with the `confirmation.gardener.cloud/force-deletion` annotation.                                                                                                                                                                                                                                                            |
-| APIServerFastRollout               | `gardenlet`                       | Enables fast rollouts for Shoot kube-apiservers on the given Seed. When enabled, `maxSurge` for Shoot kube-apiserver deployments is set to 100%.                                                                                                                                                                                                                                                                  |
+| APIServerFastRollout               | `gardenlet`                       | Enables fast rollouts for Shoot kube-apiservers on the given Seed. When enabled, `maxSurge` for Shoot kube-apiserver deployments is set to 100%.                                                                                                                                                                                                                                   |
 | UseGardenerNodeAgent               | `gardenlet`                       | Enables the `gardener-node-agent` instead of the `cloud-config-downloader` for shoot worker nodes.                                                                                                                                                                                                                                                                                 |
