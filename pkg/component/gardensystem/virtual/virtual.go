@@ -543,6 +543,34 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 				},
 			},
 		}
+		roleReadClusterIdentityConfigMap = &rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:system:read-cluster-identity-configmap",
+				Namespace: metav1.NamespaceSystem,
+			},
+			Rules: []rbacv1.PolicyRule{{
+				APIGroups:     []string{corev1.GroupName},
+				Resources:     []string{"configmaps"},
+				ResourceNames: []string{v1beta1constants.ClusterIdentity},
+				Verbs:         []string{"get", "list", "watch"},
+			}},
+		}
+		roleBindingReadClusterIdentityConfigMap = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      roleReadClusterIdentityConfigMap.Name,
+				Namespace: metav1.NamespaceSystem,
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "Role",
+				Name:     roleReadClusterIdentityConfigMap.Name,
+			},
+			Subjects: []rbacv1.Subject{{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "Group",
+				Name:     user.AllAuthenticated,
+			}},
+		}
 	)
 
 	if err := registry.Add(
@@ -565,6 +593,8 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 		clusterRoleProjectServiceAccountManagerAggregated,
 		clusterRoleProjectViewer,
 		clusterRoleProjectViewerAggregated,
+		roleReadClusterIdentityConfigMap,
+		roleBindingReadClusterIdentityConfigMap,
 	); err != nil {
 		return nil, err
 	}
