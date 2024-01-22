@@ -35,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	. "github.com/gardener/gardener/pkg/utils/test"
 	"github.com/gardener/gardener/test/framework"
 )
 
@@ -178,7 +179,7 @@ func DeployZeroDownTimeValidatorJob(ctx context.Context, c client.Client, testNa
 
 func verifyEnvoyFilterInIstioNamespace(ctx context.Context, seedClient kubernetes.Interface, shootName string) {
 	filteredList := []*istionetworkingv1alpha3.EnvoyFilter{}
-	Eventually(func(g Gomega) {
+	CEventually(ctx, func(g Gomega) {
 		envoyFilters := &istionetworkingv1alpha3.EnvoyFilterList{}
 		Expect(seedClient.Client().List(ctx, envoyFilters)).To(Succeed(), "trying to list envoy filters, but did not succeed.")
 		for _, filter := range envoyFilters.Items {
