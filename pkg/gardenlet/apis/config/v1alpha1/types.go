@@ -198,6 +198,7 @@ type GardenletControllerConfiguration struct {
 	// +optional
 	TokenRequestor *TokenRequestorControllerConfiguration `json:"tokenRequestor,omitempty"`
 	// VPAEvictionRequirements defines the configuration of the VPAEvictionRequirements controller.
+	// +optional
 	VPAEvictionRequirements *VPAEvictionRequirementsControllerConfiguration `json:"vpaEvictionRequirements,omitempty"`
 }
 
@@ -432,6 +433,7 @@ type TokenRequestorControllerConfiguration struct {
 // VPAEvictionRequirementsControllerConfiguration defines the configuration of the VPAEvictionRequirements controller.
 type VPAEvictionRequirementsControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on events.
+	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 }
 

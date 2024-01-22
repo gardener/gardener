@@ -551,12 +551,12 @@ const (
 
 	// LabelVPAEvictionRequirementsController is a constant for a label indicating that a VPA resource is under control
 	// of the VPAEvictionRequirementsController.
-	LabelVPAEvictionRequirementsController = "evictionrequirements.gardener.cloud"
+	LabelVPAEvictionRequirementsController = "autoscaling.gardener.cloud/eviction-requirements"
 
 	// LabelVPAEvictionRequirementDownscaleRestriction is a constant for a label key on a VPA object indicating that
 	// the VPAEvictionRequirementsController should add an EvictionRestriction that prevents downscaling.
 	// Possible values are "in-maintenance-window-only" and "never", available as constants below.
-	LabelVPAEvictionRequirementDownscaleRestriction = "evictionrequirements.gardener.cloud/downscale-restriction"
+	LabelVPAEvictionRequirementDownscaleRestriction = "eviction-requirements.autoscaling.gardener.cloud/downscale-restriction"
 	// EvictionRequirementInMaintenanceWindowOnly is a constant to be used as a value for the label LabelVPAEvictionRequirementDownscaleRestriction,
 	// indicating that downscaling should be restricted to the Shoot's maintenance window.
 	EvictionRequirementInMaintenanceWindowOnly = "in-maintenance-window-only"
@@ -565,7 +565,7 @@ const (
 	EvictionRequirementNever = "never"
 
 	// AnnotationShootMaintenanceWindow is a constant for an annotation key used on VPA objects to hold the Shoot's maintenance window start and end.
-	AnnotationShootMaintenanceWindow = "shootmaintenancewindow.gardener.cloud"
+	AnnotationShootMaintenanceWindow = "shoot.gardener.cloud/maintenance-window"
 
 	// GardenNamespace is the namespace in which the configuration and secrets for
 	// the Gardener controller manager will be stored (e.g., secrets for the Seed clusters).

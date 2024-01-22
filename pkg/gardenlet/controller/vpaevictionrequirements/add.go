@@ -31,10 +31,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
 // ControllerName is the name of this controller
-const ControllerName = "vpa-evictionrequirements"
+const ControllerName = "vpa-eviction-requirements"
 
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(_ context.Context, mgr manager.Manager, seedCluster cluster.Cluster) error {
@@ -52,22 +53,19 @@ func (r *Reconciler) AddToManager(_ context.Context, mgr manager.Manager, seedCl
 		return fmt.Errorf("failed computing label selector predicate for eviction requirements managed by controller: %w", err)
 	}
 
-	c, err := builder.
+	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 		}).
-		WatchesRawSource(source.Kind(seedCluster.GetCache(), &vpaautoscalingv1.VerticalPodAutoscaler{}), &handler.EnqueueRequestForObject{}, builder.WithPredicates(vpaEvictionRequirementsManagedByControllerPredicate, predicate.GenerationChangedPredicate{})).
-		Build(r)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		source.Kind(seedCluster.GetCache(), &vpaautoscalingv1.VerticalPodAutoscaler{}),
-		&handler.EnqueueRequestForObject{},
-		vpaEvictionRequirementsManagedByControllerPredicate,
-		predicate.GenerationChangedPredicate{},
-	)
+		WatchesRawSource(
+			source.Kind(seedCluster.GetCache(), &vpaautoscalingv1.VerticalPodAutoscaler{}),
+			&handler.EnqueueRequestForObject{}, builder.WithPredicates(
+				vpaEvictionRequirementsManagedByControllerPredicate,
+				predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
+				predicate.GenerationChangedPredicate{},
+			),
+		).
+		Complete(r)
 }
