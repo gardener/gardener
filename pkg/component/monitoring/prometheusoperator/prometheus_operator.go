@@ -65,6 +65,7 @@ func (p *prometheusOperator) Deploy(ctx context.Context) error {
 
 	resources, err := registry.AddAllAndSerialize(
 		p.serviceAccount(),
+		p.service(),
 	)
 	if err != nil {
 		return err

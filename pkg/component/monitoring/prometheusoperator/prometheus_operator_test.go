@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -56,6 +57,7 @@ var _ = Describe("PrometheusOperator", func() {
 		managedResourceSecret *corev1.Secret
 
 		serviceAccount *corev1.ServiceAccount
+		service        *corev1.Service
 	)
 
 	BeforeEach(func() {
@@ -91,6 +93,22 @@ var _ = Describe("PrometheusOperator", func() {
 				Labels:    map[string]string{"app": "prometheus-operator"},
 			},
 			AutomountServiceAccountToken: pointer.Bool(false),
+		}
+		service = &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "prometheus-operator",
+				Namespace: namespace,
+				Labels:    map[string]string{"app": "prometheus-operator"},
+			},
+			Spec: corev1.ServiceSpec{
+				ClusterIP: corev1.ClusterIPNone,
+				Selector:  map[string]string{"app": "prometheus-operator"},
+				Ports: []corev1.ServicePort{{
+					Name:       "http",
+					Port:       8080,
+					TargetPort: intstr.FromString("http"),
+				}},
+			},
 		}
 	})
 
@@ -153,8 +171,9 @@ var _ = Describe("PrometheusOperator", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(1))
+				Expect(managedResourceSecret.Data).To(HaveLen(2))
 				Expect(string(managedResourceSecret.Data["serviceaccount__some-namespace__prometheus-operator.yaml"])).To(Equal(componenttest.Serialize(serviceAccount)))
+				Expect(string(managedResourceSecret.Data["service__some-namespace__prometheus-operator.yaml"])).To(Equal(componenttest.Serialize(service)))
 			})
 		})
 	})
