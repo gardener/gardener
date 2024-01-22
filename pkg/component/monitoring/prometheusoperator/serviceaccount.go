@@ -20,10 +20,12 @@ import (
 	"k8s.io/utils/pointer"
 )
 
+const serviceAccountName = "prometheus-operator"
+
 func (p *prometheusOperator) serviceAccount() *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "prometheus-operator",
+			Name:      serviceAccountName,
 			Namespace: p.namespace,
 			Labels:    GetLabels(),
 		},

@@ -19,7 +19,9 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -47,6 +49,10 @@ var _ = Describe("PrometheusOperator", func() {
 		managedResourceName = "prometheus-operator"
 		namespace           = "some-namespace"
 
+		image             = "prom-op-image"
+		imageReloader     = "reloader-image"
+		priorityClassName = "priority-class"
+
 		fakeClient client.Client
 		deployer   component.DeployWaiter
 		values     Values
@@ -58,6 +64,7 @@ var _ = Describe("PrometheusOperator", func() {
 
 		serviceAccount *corev1.ServiceAccount
 		service        *corev1.Service
+		deployment     *appsv1.Deployment
 	)
 
 	BeforeEach(func() {
@@ -65,7 +72,11 @@ var _ = Describe("PrometheusOperator", func() {
 
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
-		values = Values{}
+		values = Values{
+			Image:               image,
+			ImageConfigReloader: imageReloader,
+			PriorityClassName:   priorityClassName,
+		}
 
 		fakeOps = &retryfake.Ops{MaxAttempts: 2}
 		DeferCleanup(test.WithVars(
@@ -110,6 +121,65 @@ var _ = Describe("PrometheusOperator", func() {
 				}},
 			},
 		}
+		deployment = &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "prometheus-operator",
+				Namespace: namespace,
+				Labels:    map[string]string{"app": "prometheus-operator"},
+			},
+			Spec: appsv1.DeploymentSpec{
+				Replicas:             pointer.Int32(1),
+				RevisionHistoryLimit: pointer.Int32(2),
+				Selector:             &metav1.LabelSelector{MatchLabels: GetLabels()},
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							"app":                              "prometheus-operator",
+							"networking.gardener.cloud/to-dns": "allowed",
+							"networking.gardener.cloud/to-runtime-apiserver": "allowed",
+						},
+					},
+					Spec: corev1.PodSpec{
+						ServiceAccountName: "prometheus-operator",
+						PriorityClassName:  priorityClassName,
+						SecurityContext: &corev1.PodSecurityContext{
+							RunAsNonRoot:   pointer.Bool(true),
+							RunAsUser:      pointer.Int64(65532),
+							SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
+						},
+						Containers: []corev1.Container{
+							{
+								Name:            "prometheus-operator",
+								Image:           image,
+								ImagePullPolicy: corev1.PullIfNotPresent,
+								Args: []string{
+									"--prometheus-config-reloader=" + imageReloader,
+								},
+								Env: []corev1.EnvVar{{
+									Name:  "GOGC",
+									Value: "30",
+								}},
+								Resources: corev1.ResourceRequirements{
+									Requests: map[corev1.ResourceName]resource.Quantity{
+										corev1.ResourceCPU:    resource.MustParse("100m"),
+										corev1.ResourceMemory: resource.MustParse("100Mi"),
+									},
+								},
+								Ports: []corev1.ContainerPort{{
+									Name:          "http",
+									ContainerPort: 8080,
+								}},
+								SecurityContext: &corev1.SecurityContext{
+									AllowPrivilegeEscalation: pointer.Bool(false),
+									Capabilities:             &corev1.Capabilities{Drop: []corev1.Capability{"ALL"}},
+									ReadOnlyRootFilesystem:   pointer.Bool(true),
+								},
+							},
+						},
+					},
+				},
+			},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -119,9 +189,6 @@ var _ = Describe("PrometheusOperator", func() {
 	Describe("#Deploy", func() {
 		Context("resources generation", func() {
 			BeforeEach(func() {
-				// test with typical values
-				values = Values{}
-
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 
@@ -171,9 +238,10 @@ var _ = Describe("PrometheusOperator", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(2))
+				Expect(managedResourceSecret.Data).To(HaveLen(3))
 				Expect(string(managedResourceSecret.Data["serviceaccount__some-namespace__prometheus-operator.yaml"])).To(Equal(componenttest.Serialize(serviceAccount)))
 				Expect(string(managedResourceSecret.Data["service__some-namespace__prometheus-operator.yaml"])).To(Equal(componenttest.Serialize(service)))
+				Expect(string(managedResourceSecret.Data["deployment__some-namespace__prometheus-operator.yaml"])).To(Equal(componenttest.Serialize(deployment)))
 			})
 		})
 	})

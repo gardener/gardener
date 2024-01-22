@@ -43,6 +43,8 @@ type Values struct {
 	Image string
 	// Image defines the container image of config-reloader.
 	ImageConfigReloader string
+	// PriorityClassName is the name of the priority class for the deployment.
+	PriorityClassName string
 }
 
 // New creates a new instance of DeployWaiter for the prometheus-operator.
@@ -66,6 +68,7 @@ func (p *prometheusOperator) Deploy(ctx context.Context) error {
 	resources, err := registry.AddAllAndSerialize(
 		p.serviceAccount(),
 		p.service(),
+		p.deployment(),
 	)
 	if err != nil {
 		return err
