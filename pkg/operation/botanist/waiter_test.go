@@ -111,7 +111,7 @@ var _ = Describe("Waiter", func() {
 			var coder v1beta1helper.Coder
 			Expect(errors.As(err, &coder)).To(BeFalse())
 
-			Expect(err).To(MatchError("retry failed with context canceled, last error: waiting until there are no running Pods in the shoot cluster ... there is still at least one running Pod in the shoot cluster: \"kube-system/infinity-pod\""))
+			Expect(err).To(MatchError("retry failed with context canceled, last error: waiting until there are no running Pods in the shoot cluster, there is still at least one running Pod in the shoot cluster: \"kube-system/infinity-pod\""))
 		})
 	})
 })
