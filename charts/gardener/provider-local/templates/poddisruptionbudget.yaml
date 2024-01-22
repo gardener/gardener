@@ -11,7 +11,7 @@ spec:
   selector:
     matchLabels:
 {{ include "labels" . | indent 6 }}
-  {{- if semverCompare ">= 1.26-0" .Capabilities.KubeVersion.GitVersion }}
+  {{- if semverCompare ">= 1.26-0" .Capabilities.KubeVersion.Version }}
   unhealthyPodEvictionPolicy: AlwaysAllow
   {{- end }}
 {{- end }}
