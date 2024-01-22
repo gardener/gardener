@@ -29,6 +29,8 @@ import (
 const (
 	// ManagedResourceName is the name of the ManagedResource for the resources.
 	ManagedResourceName = "prometheus-operator"
+
+	portName = "http"
 )
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy or
@@ -61,7 +63,9 @@ type prometheusOperator struct {
 func (p *prometheusOperator) Deploy(ctx context.Context) error {
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
-	resources, err := registry.AddAllAndSerialize()
+	resources, err := registry.AddAllAndSerialize(
+		p.serviceAccount(),
+	)
 	if err != nil {
 		return err
 	}

@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/monitoring/prometheusoperator"
+	componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -53,6 +54,8 @@ var _ = Describe("PrometheusOperator", func() {
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
+
+		serviceAccount *corev1.ServiceAccount
 	)
 
 	BeforeEach(func() {
@@ -79,6 +82,15 @@ var _ = Describe("PrometheusOperator", func() {
 				Name:      "managedresource-" + managedResource.Name,
 				Namespace: namespace,
 			},
+		}
+
+		serviceAccount = &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "prometheus-operator",
+				Namespace: namespace,
+				Labels:    map[string]string{"app": "prometheus-operator"},
+			},
+			AutomountServiceAccountToken: pointer.Bool(false),
 		}
 	})
 
@@ -141,7 +153,8 @@ var _ = Describe("PrometheusOperator", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(0))
+				Expect(managedResourceSecret.Data).To(HaveLen(1))
+				Expect(string(managedResourceSecret.Data["serviceaccount__some-namespace__prometheus-operator.yaml"])).To(Equal(componenttest.Serialize(serviceAccount)))
 			})
 		})
 	})
