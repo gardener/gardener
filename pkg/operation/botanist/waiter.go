@@ -25,7 +25,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
@@ -83,8 +85,14 @@ func (b *Botanist) WaitUntilNoPodRunning(ctx context.Context) error {
 		for _, pod := range podList.Items {
 			if pod.Status.Phase == corev1.PodRunning {
 				b.Logger.Info("Waiting until there are no running pods in the shoot cluster (at least one pod still exists)", "pod", client.ObjectKeyFromObject(&pod))
-				return retry.MinorError(fmt.Errorf("waiting until there are no running Pods in the shoot cluster... "+
-					"there is still at least one running Pod in the shoot cluster: %q", client.ObjectKeyFromObject(&pod).String()))
+
+				message := "waiting until there are no running Pods in the shoot cluster, there is still at least one running Pod in the shoot cluster: %q"
+				if pod.Namespace == metav1.NamespaceSystem {
+					return retry.MinorError(fmt.Errorf(message, client.ObjectKeyFromObject(&pod).String()))
+				}
+				return retry.MinorError(helper.NewErrorWithCodes(fmt.Errorf(message,
+					client.ObjectKeyFromObject(&pod).String()),
+					gardencorev1beta1.ErrorCleanupClusterResources))
 			}
 		}
 
