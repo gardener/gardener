@@ -27,10 +27,12 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
+const deploymentName = "prometheus-operator"
+
 func (p *prometheusOperator) deployment() *appsv1.Deployment {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "prometheus-operator",
+			Name:      deploymentName,
 			Namespace: p.namespace,
 			Labels:    GetLabels(),
 		},

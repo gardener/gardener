@@ -69,6 +69,7 @@ func (p *prometheusOperator) Deploy(ctx context.Context) error {
 		p.serviceAccount(),
 		p.service(),
 		p.deployment(),
+		p.vpa(),
 	)
 	if err != nil {
 		return err
