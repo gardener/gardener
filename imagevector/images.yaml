@@ -143,6 +143,23 @@ images:
   tag: "0.23.1"
 
 # Monitoring
+- name: prometheus-operator
+  sourceRepository: github.com/prometheus-operator/prometheus-operator
+  repository: quay.io/prometheus-operator/prometheus-operator
+  tag: v0.71.0
+  labels:
+  - name: 'gardener.cloud/cve-categorisation'
+    value:
+      network_exposure: 'private'
+      authentication_enforced: false
+      user_interaction: 'gardener-operator'
+      confidentiality_requirement: 'low'
+      integrity_requirement: 'low'
+      availability_requirement: 'low'
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/monitoring-maintainers'
 - name: alertmanager
   sourceRepository: github.com/prometheus/alertmanager
   repository: quay.io/prometheus/alertmanager
