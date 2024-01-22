@@ -40,7 +40,7 @@ import (
 
 // UpgradeAndVerify runs the HA control-plane upgrade tests for an existing shoot cluster.
 func UpgradeAndVerify(ctx context.Context, f *framework.ShootFramework, failureToleranceType gardencorev1beta1.FailureToleranceType) {
-	verifyEnvoyFilterInIstioNamespace(ctx, f.SeedClient, f.ShootSeedNamespace(), false)
+	verifyEnvoyFilterInIstioNamespace(ctx, f.SeedClient, f.ShootSeedNamespace())
 	By("Update Shoot control plane to HA with failure tolerance type " + string(failureToleranceType))
 	Expect(f.UpdateShoot(ctx, func(shoot *gardencorev1beta1.Shoot) error {
 		shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
@@ -56,7 +56,7 @@ func UpgradeAndVerify(ctx context.Context, f *framework.ShootFramework, failureT
 	By("Verify Shoot's control plane components")
 	verifyTopologySpreadConstraint(ctx, f.SeedClient, f.Shoot, f.ShootSeedNamespace())
 	verifyEtcdAffinity(ctx, f.SeedClient, f.Shoot, f.ShootSeedNamespace())
-	verifyEnvoyFilterInIstioNamespace(ctx, f.SeedClient, f.ShootSeedNamespace(), failureToleranceType == gardencorev1beta1.FailureToleranceTypeZone)
+	verifyEnvoyFilterInIstioNamespace(ctx, f.SeedClient, f.ShootSeedNamespace())
 }
 
 func verifyTopologySpreadConstraint(ctx context.Context, seedClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, namespace string) {
@@ -176,21 +176,18 @@ func DeployZeroDownTimeValidatorJob(ctx context.Context, c client.Client, testNa
 	return &job, c.Create(ctx, &job)
 }
 
-func verifyEnvoyFilterInIstioNamespace(ctx context.Context, seedClient kubernetes.Interface, shootName string, multiZone bool) {
-	envoyFilters := &istionetworkingv1alpha3.EnvoyFilterList{}
-	Expect(seedClient.Client().List(ctx, envoyFilters)).To(Succeed(), "trying to list envoy filters, but did not succeed.")
+func verifyEnvoyFilterInIstioNamespace(ctx context.Context, seedClient kubernetes.Interface, shootName string) {
 	filteredList := []*istionetworkingv1alpha3.EnvoyFilter{}
-	for _, filter := range envoyFilters.Items {
-		if filter.Name != shootName {
-			continue
+	Eventually(func(g Gomega) {
+		envoyFilters := &istionetworkingv1alpha3.EnvoyFilterList{}
+		Expect(seedClient.Client().List(ctx, envoyFilters)).To(Succeed(), "trying to list envoy filters, but did not succeed.")
+		for _, filter := range envoyFilters.Items {
+			if filter.Name != shootName {
+				continue
+			}
+			filteredList = append(filteredList, filter)
 		}
-		filteredList = append(filteredList, filter)
-	}
-	Expect(filteredList).To(HaveLen(1))
-	if multiZone {
-		Expect(filteredList[0].Namespace).To(Equal("istio-ingress"))
-	} else {
-		// zonal istio ingress gateway namespaces are called istio-ingress--<zone>
-		Expect(filteredList[0].Namespace).To(HavePrefix("istio-ingress--"))
-	}
+		Expect(filteredList).To(HaveLen(1))
+	}).Should(Succeed())
+	Expect(filteredList[0].Namespace).To(HavePrefix("istio-ingress"))
 }
