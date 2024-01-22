@@ -46,6 +46,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/logging/vali"
+	"github.com/gardener/gardener/pkg/component/monitoring/prometheusoperator"
 	"github.com/gardener/gardener/pkg/component/plutono"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/component/vpa"
@@ -99,6 +100,7 @@ var (
 		plutono.ManagedResourceName,
 		gardenermetricsexporter.ManagedResourceNameRuntime,
 		gardenermetricsexporter.ManagedResourceNameVirtual,
+		prometheusoperator.ManagedResourceName,
 	)
 )
 

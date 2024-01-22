@@ -103,6 +103,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				healthyManagedResource("fluent-operator-custom-resources-garden"),
 				healthyManagedResource("vali"),
 				healthyManagedResource("plutono"),
+				healthyManagedResource("prometheus-operator"),
 				healthyManagedResource("garden-system"),
 				healthyManagedResource("garden-system-virtual"),
 				healthyManagedResource("gardener-apiserver-runtime"),

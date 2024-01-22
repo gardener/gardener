@@ -151,6 +151,10 @@ func (r *Reconciler) reconcile(
 			Name: "Deploying custom resource definitions for fluent-operator",
 			Fn:   c.fluentCRD.Deploy,
 		})
+		deployPrometheusCRD = g.Add(flow.Task{
+			Name: "Deploying custom resource definitions for prometheus-operator",
+			Fn:   c.prometheusCRD.Deploy,
+		})
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying and waiting for gardener-resource-manager to be healthy",
 			Fn:           component.OpWait(c.gardenerResourceManager).Deploy,
@@ -206,10 +210,16 @@ func (r *Reconciler) reconcile(
 			Fn:           c.vali.Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
+		deployPrometheusOperator = g.Add(flow.Task{
+			Name:         "Deploying prometheus-operator",
+			Fn:           c.prometheusOperator.Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployPrometheusCRD),
+		})
 		syncPointSystemComponents = flow.NewTaskIDs(
 			generateGenericTokenKubeconfig,
 			deployRuntimeSystemResources,
 			deployFluentCRD,
+			deployPrometheusCRD,
 			deployVPA,
 			deployHVPA,
 			deployEtcdDruid,
@@ -219,6 +229,7 @@ func (r *Reconciler) reconcile(
 			deployFluentOperatorCustomResources,
 			deployFluentBit,
 			deployVali,
+			deployPrometheusOperator,
 		)
 
 		deployEtcds = g.Add(flow.Task{
