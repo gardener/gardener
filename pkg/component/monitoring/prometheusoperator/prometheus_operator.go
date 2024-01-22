@@ -70,6 +70,8 @@ func (p *prometheusOperator) Deploy(ctx context.Context) error {
 		p.service(),
 		p.deployment(),
 		p.vpa(),
+		p.clusterRole(),
+		p.clusterRoleBinding(),
 	)
 	if err != nil {
 		return err

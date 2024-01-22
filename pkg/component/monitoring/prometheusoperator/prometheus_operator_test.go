@@ -22,6 +22,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -64,10 +65,12 @@ var _ = Describe("PrometheusOperator", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
-		serviceAccount *corev1.ServiceAccount
-		service        *corev1.Service
-		deployment     *appsv1.Deployment
-		vpa            *vpaautoscalingv1.VerticalPodAutoscaler
+		serviceAccount     *corev1.ServiceAccount
+		service            *corev1.Service
+		deployment         *appsv1.Deployment
+		vpa                *vpaautoscalingv1.VerticalPodAutoscaler
+		clusterRole        *rbacv1.ClusterRole
+		clusterRoleBinding *rbacv1.ClusterRoleBinding
 	)
 
 	BeforeEach(func() {
@@ -211,6 +214,106 @@ var _ = Describe("PrometheusOperator", func() {
 				},
 			},
 		}
+		clusterRole = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "prometheus-operator",
+				Labels: map[string]string{"app": "prometheus-operator"},
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"monitoring.coreos.com"},
+					Resources: []string{
+						"alertmanagers",
+						"alertmanagers/finalizers",
+						"alertmanagers/status",
+						"alertmanagerconfigs",
+						"prometheuses",
+						"prometheuses/finalizers",
+						"prometheuses/status",
+						"prometheusagents",
+						"prometheusagents/finalizers",
+						"prometheusagents/status",
+						"thanosrulers",
+						"thanosrulers/finalizers",
+						"thanosrulers/status",
+						"scrapeconfigs",
+						"servicemonitors",
+						"podmonitors",
+						"probes",
+						"prometheusrules",
+					},
+					Verbs: []string{"*"},
+				},
+				{
+					APIGroups: []string{"apps"},
+					Resources: []string{"statefulsets"},
+					Verbs:     []string{"*"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{
+						"configmaps",
+						"secrets",
+					},
+					Verbs: []string{"*"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"pods"},
+					Verbs:     []string{"list", "delete"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{
+						"services",
+						"services/finalizers",
+						"endpoints",
+					},
+					Verbs: []string{"get", "create", "update", "delete"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"nodes"},
+					Verbs:     []string{"list", "watch"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"namespaces"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"events"},
+					Verbs:     []string{"patch", "create"},
+				},
+				{
+					APIGroups: []string{"networking.k8s.io"},
+					Resources: []string{"ingresses"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"storage.k8s.io"},
+					Resources: []string{"storageclasses"},
+					Verbs:     []string{"get"},
+				},
+			},
+		}
+		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "prometheus-operator",
+				Labels: map[string]string{"app": "prometheus-operator"},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.SchemeGroupVersion.Group,
+				Kind:     "ClusterRole",
+				Name:     "prometheus-operator",
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      "prometheus-operator",
+				Namespace: namespace,
+			}},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -269,11 +372,13 @@ var _ = Describe("PrometheusOperator", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(4))
+				Expect(managedResourceSecret.Data).To(HaveLen(6))
 				Expect(string(managedResourceSecret.Data["serviceaccount__some-namespace__prometheus-operator.yaml"])).To(Equal(componenttest.Serialize(serviceAccount)))
 				Expect(string(managedResourceSecret.Data["service__some-namespace__prometheus-operator.yaml"])).To(Equal(componenttest.Serialize(service)))
 				Expect(string(managedResourceSecret.Data["deployment__some-namespace__prometheus-operator.yaml"])).To(Equal(componenttest.Serialize(deployment)))
 				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__prometheus-operator.yaml"])).To(Equal(componenttest.Serialize(vpa)))
+				Expect(string(managedResourceSecret.Data["clusterrole____prometheus-operator.yaml"])).To(Equal(componenttest.Serialize(clusterRole)))
+				Expect(string(managedResourceSecret.Data["clusterrolebinding____prometheus-operator.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
 			})
 		})
 	})
