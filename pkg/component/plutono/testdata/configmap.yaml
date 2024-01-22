@@ -8,7 +8,7 @@ metadata:
 data:
   dashboard_operators: "calico-felix-dashboard.json: |-\n  {\n    \"annotations\":
     {\n      \"list\": [\n        {\n          \"builtIn\": 1,\n          \"datasource\":
-    \"-- Grafana --\",\n          \"enable\": true,\n          \"hide\": true,\n          \"iconColor\":
+    \"-- Plutono --\",\n          \"enable\": true,\n          \"hide\": true,\n          \"iconColor\":
     \"rgba(0, 211, 255, 1)\",\n          \"name\": \"Annotations & Alerts\",\n          \"type\":
     \"dashboard\"\n        }\n      ]\n    },\n    \"description\": \"Felix dashboard
     is part of calico documentation website, you will have great insight about you
@@ -515,7 +515,7 @@ data:
     \"\",\n    \"title\": \"Felix Dashboard (Calico)\",\n    \"uid\": \"calico-felix-dashboard\",\n
     \   \"version\": 1\n  }\n\ncalico-typha-dashboard.json: |-\n  {\n    \"annotations\":
     {\n      \"list\": [\n        {\n          \"builtIn\": 1,\n          \"datasource\":
-    \"-- Grafana --\",\n          \"enable\": true,\n          \"hide\": true,\n          \"iconColor\":
+    \"-- Plutono --\",\n          \"enable\": true,\n          \"hide\": true,\n          \"iconColor\":
     \"rgba(0, 211, 255, 1)\",\n          \"name\": \"Annotations & Alerts\",\n          \"type\":
     \"dashboard\"\n        }\n      ]\n    },\n    \"editable\": true,\n    \"gnetId\":
     null,\n    \"graphTooltip\": 0,\n    \"id\": 1,\n    \"links\": [],\n    \"panels\":

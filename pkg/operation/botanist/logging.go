@@ -17,10 +17,6 @@ package botanist
 import (
 	"context"
 
-	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/gardener/gardener/imagevector"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -30,28 +26,13 @@ import (
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/features"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	"github.com/gardener/gardener/pkg/operation/common"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // DeployLogging will install the logging stack for the Shoot in the Seed clusters.
 func (b *Botanist) DeployLogging(ctx context.Context) error {
 	if !b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config) {
 		return b.DestroySeedLogging(ctx)
-	}
-
-	// TODO(rickardsjp, istvanballok): Remove in release v1.77 once the Loki to Vali migration is complete.
-	if exists, err := b.lokiPvcExists(ctx); err != nil {
-		return err
-	} else if exists {
-		if err := b.destroyLokiBasedShootLoggingStackRetainingPvc(ctx); err != nil {
-			return err
-		}
-		// If a Loki PVC exists, rename it to Vali.
-		if err := b.renameLokiPvcToVali(ctx); err != nil {
-			return err
-		}
 	}
 
 	if b.isShootEventLoggerEnabled() {
@@ -79,35 +60,6 @@ func (b *Botanist) DestroySeedLogging(ctx context.Context) error {
 	}
 
 	return b.Shoot.Components.Logging.Vali.Destroy(ctx)
-}
-
-func (b *Botanist) lokiPvcExists(ctx context.Context) (bool, error) {
-	return common.LokiPvcExists(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, b.Logger)
-}
-
-func (b *Botanist) renameLokiPvcToVali(ctx context.Context) error {
-	return common.RenameLokiPvcToValiPvc(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, b.Logger)
-}
-
-func (b *Botanist) destroyLokiBasedShootLoggingStackRetainingPvc(ctx context.Context) error {
-	if err := b.destroyLokiBasedShootNodeLogging(ctx); err != nil {
-		return err
-	}
-
-	// The EventLogger is not dependent on Loki/Vali and therefore doesn't need to be deleted.
-	// if err := b.Shoot.Components.Logging.EventLogger.Destroy(ctx); err != nil {
-	// 	return err
-	// }
-
-	return common.DeleteLokiRetainPvc(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, b.Logger)
-}
-
-func (b *Botanist) destroyLokiBasedShootNodeLogging(ctx context.Context) error {
-	return kubernetesutils.DeleteObjects(ctx, b.SeedClientSet.Client(),
-		&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: b.Shoot.SeedNamespace}},
-		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-from-prometheus-to-loki-telegraf", Namespace: b.Shoot.SeedNamespace}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "telegraf-config", Namespace: b.Shoot.SeedNamespace}},
-	)
 }
 
 func (b *Botanist) isShootNodeLoggingEnabled() bool {

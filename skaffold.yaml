@@ -942,7 +942,6 @@ build:
             - pkg/operation
             - pkg/operation/botanist
             - pkg/operation/botanist/matchers
-            - pkg/operation/common
             - pkg/operation/garden
             - pkg/operation/seed
             - pkg/operation/shoot

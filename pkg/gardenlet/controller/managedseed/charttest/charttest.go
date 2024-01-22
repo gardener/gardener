@@ -181,16 +181,6 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			},
 			{
 				APIGroups: []string{""},
-				Resources: []string{"persistentvolumes"},
-				Verbs:     []string{"delete", "patch"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"persistentvolumeclaims"},
-				Verbs:     []string{"create"},
-			},
-			{
-				APIGroups: []string{""},
 				Resources: []string{"endpoints", "persistentvolumes"},
 				Verbs:     []string{"get", "list", "watch"},
 			},
@@ -227,7 +217,7 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			{
 				APIGroups:     []string{""},
 				Resources:     []string{"persistentvolumeclaims"},
-				ResourceNames: []string{"alertmanager-db-alertmanager-0", "vali-vali-0", "loki-loki-0", "prometheus-db-prometheus-0"},
+				ResourceNames: []string{"alertmanager-db-alertmanager-0", "vali-vali-0", "prometheus-db-prometheus-0"},
 				Verbs:         []string{"delete"},
 			},
 			{
@@ -300,7 +290,7 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			{
 				APIGroups:     []string{"autoscaling.k8s.io"},
 				Resources:     []string{"hvpas"},
-				ResourceNames: []string{"etcd-events", "etcd-main", "kube-apiserver", "kube-controller-manager", "aggregate-prometheus", "prometheus", "vali", "loki"},
+				ResourceNames: []string{"etcd-events", "etcd-main", "kube-apiserver", "kube-controller-manager", "aggregate-prometheus", "prometheus", "vali"},
 				Verbs:         []string{"delete", "patch", "update"},
 			},
 			{

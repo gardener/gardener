@@ -26,7 +26,6 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/plutono"
 	"github.com/gardener/gardener/pkg/component/shared"
-	"github.com/gardener/gardener/pkg/operation/common"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -65,11 +64,6 @@ func (b *Botanist) DeployPlutono(ctx context.Context) error {
 
 		secretName := gardenerutils.ComputeShootProjectSecretName(b.Shoot.GetInfo().Name, gardenerutils.ShootProjectSecretSuffixMonitoring)
 		return kubernetesutils.DeleteObject(ctx, b.GardenClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.GetInfo().Namespace}})
-	}
-
-	// TODO(rickardsjp, istvanballok): Remove in release v1.77 once the Grafana to Plutono migration is complete.
-	if err := common.DeleteGrafana(ctx, b.SeedClientSet, b.Shoot.SeedNamespace); err != nil {
-		return err
 	}
 
 	if err := b.Shoot.Components.ControlPlane.Plutono.Deploy(ctx); err != nil {
