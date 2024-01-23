@@ -74,17 +74,29 @@ The controller then creates or updates the required `ControllerInstallation` obj
 It also deletes every existing `ControllerInstallation` whose referenced `ControllerRegistration` is not part of the required list.
 For example, if the shoots in the seed are no longer using the DNS provider `aws-route53`, then the controller proceeds to delete the respective `ControllerInstallation` object.
 
-#### ["ControllerRegistration Finalizer" Reconciler](../../pkg/controllermanager/controller/controllerregistration/controllerregistrationfinalizer)
+#### ["`ControllerRegistration` Finalizer" Reconciler](../../pkg/controllermanager/controller/controllerregistration/controllerregistrationfinalizer)
 
 This reconciliation loop watches the `ControllerRegistration` resource and adds finalizers to it when they are created.
 In case a deletion request comes in for the resource, i.e., if a `.metadata.deletionTimestamp` is set, it actively scans for a `ControllerInstallation` resource using this `ControllerRegistration`, and decides whether the deletion can be allowed.
 In case no related `ControllerInstallation` is present, it removes the finalizer and marks it for deletion.
 
-#### ["Seed Finalizer" Reconciler](../../pkg/controllermanager/controller/controllerregistration/seedfinalizer)
+#### ["`Seed` Finalizer" Reconciler](../../pkg/controllermanager/controller/controllerregistration/seedfinalizer)
 
 This loop also watches the `Seed` object and adds finalizers to it at creation.
 If a `.metadata.deletionTimestamp` is set for the seed, then the controller checks for existing `ControllerInstallation` objects which reference this seed.
 If no such objects exist, then it removes the finalizer and allows the deletion.
+
+#### ["Extension `ClusterRole`" Reconciler](../../pkg/controllermanager/controller/controllerregistration/extensionclusterrole)
+
+This reconciler watches two resources in the garden cluster:
+
+- `ClusterRole`s labeled with `authorization.extensions.gardener.cloud/additional-permissions=true`
+- `ServiceAccount`s in seed namespaces prefixed with `extension-`.
+
+Its core task is to maintain a `ClusterRoleBinding` resource referencing the respective `ClusterRole`.
+This gets bound to all `ServiceAccount`s in seed namespaces that belong to extensions enlisted in the `authorization.extensions.gardener.cloud/bind-to` annotation.
+
+You can read more about the purpose of this reconciler in [this document](../extensions/garden-api-access.md#additional-permissions).
 
 ### [`Event` Controller](../../pkg/controllermanager/controller/event)
 

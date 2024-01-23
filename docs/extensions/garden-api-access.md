@@ -127,8 +127,36 @@ With this, extensions are restricted to work with objects in the garden cluster 
 Note that if the plugins are not enabled, extension clients are only granted read access to global resources like `CloudProfiles` (this is granted to all authenticated users).
 There are a few exceptions to the granted permissions as documented [here](../deployment/gardenlet_api_access.md#rule-exceptions-for-extension-clients).
 
+### Additional Permissions
+
 If an extension needs access to additional resources in the garden cluster (e.g., extension-specific custom resources), permissions need to be granted via the usual RBAC means.
-Note that this is done outside of Gardener and might require an additional controller that manages RBAC for extension clients in the garden cluster.
+Let's consider the following example: An extension requires the privileges to create [`authorization.k8s.io/v1.SubjectAccessReview`](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/subject-access-review-v1/)s (which is not covered by the "default" permissions mentioned above).
+This requires a human Gardener operator to create a `ClusterRole` in the garden cluster with the needed rules:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: extension-create-subjectaccessreviews
+  annotations:
+    authorization.extensions.gardener.cloud/bind-to: provider-local
+  labels:
+    authorization.extensions.gardener.cloud/additional-permissions: "true"
+rules:
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+```
+
+Note the label `authorization.extensions.gardener.cloud/bind-to` which contains a comma-separated list of extension names as registered by `ControllerRegistration`s.
+All such extensions are allowed to get bound to this `ClusterRole`.
+
+There is a controller part of `gardener-controller-manager` which takes care of maintaining the respective `ClusterRoleBinding` resources.
+It binds all `ServiceAccount`s in the seed namespaces in the garden cluster (i.e., all extension clients) whose names are prefixed with `extension-<name>`, e.g. `extension-provider-local` or `extension-provider-local-foo`.
+You can read more about this controller [here](../concepts/controller-manager.md).
 
 ## Renewing All Garden Access Secrets
 
