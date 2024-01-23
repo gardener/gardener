@@ -167,13 +167,14 @@ func (c *RenderedChart) Manifest() []byte {
 func (c *RenderedChart) Files() map[string]map[string]string {
 	var files = make(map[string]map[string]string)
 	for _, manifest := range c.Manifests {
-		if _, ok := files[manifest.Name]; ok {
-			if resourceName := getResourceName(manifest); resourceName != "" {
-				files[manifest.Name][resourceName] = manifest.Content
-			}
+		resourceName := getResourceName(manifest)
+		if resourceName == "" {
 			continue
 		}
-		if resourceName := getResourceName(manifest); resourceName != "" {
+
+		if _, ok := files[manifest.Name]; ok {
+			files[manifest.Name][resourceName] = manifest.Content
+		} else {
 			files[manifest.Name] = map[string]string{resourceName: manifest.Content}
 		}
 	}
