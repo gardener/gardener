@@ -167,11 +167,16 @@ func (c *RenderedChart) Manifest() []byte {
 func (c *RenderedChart) Files() map[string]map[string]string {
 	var files = make(map[string]map[string]string)
 	for _, manifest := range c.Manifests {
-		if _, ok := files[manifest.Name]; ok {
-			files[manifest.Name][strings.ToLower(manifest.Head.Kind+"/"+manifest.Head.Metadata.Name)] = manifest.Content
+		resourceName := getResourceName(manifest)
+		if resourceName == "" {
 			continue
 		}
-		files[manifest.Name] = map[string]string{strings.ToLower(manifest.Head.Kind + "/" + manifest.Head.Metadata.Name): manifest.Content}
+
+		if _, ok := files[manifest.Name]; ok {
+			files[manifest.Name][resourceName] = manifest.Content
+		} else {
+			files[manifest.Name] = map[string]string{resourceName: manifest.Content}
+		}
 	}
 	return files
 }
@@ -284,4 +289,11 @@ func loadEmbeddedFS(embeddedFS embed.FS, chartPath string) (*helmchart.Chart, er
 	}
 
 	return helmloader.LoadFiles(files)
+}
+
+func getResourceName(manifest releaseutil.Manifest) string {
+	if manifest.Head != nil && manifest.Head.Metadata != nil {
+		return strings.ToLower(manifest.Head.Kind + "/" + manifest.Head.Metadata.Name)
+	}
+	return ""
 }
