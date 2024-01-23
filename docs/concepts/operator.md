@@ -243,6 +243,7 @@ In addition, there are a few observability components:
 - `vali`
 - `plutono`
 - `kube-state-metrics`
+- `prometheus-operator`
 
 As all of these components are managed by `gardener-operator` in this scenario, the `gardenlet` just skips them.
 

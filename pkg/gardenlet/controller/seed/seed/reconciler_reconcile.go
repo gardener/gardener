@@ -51,6 +51,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/kubeapiserverexposure"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
+	"github.com/gardener/gardener/pkg/component/monitoring/prometheusoperator"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/component/vpa"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -266,6 +267,10 @@ func (r *Reconciler) runReconcileSeedFlow(
 		}
 
 		if err := fluentoperator.NewCRDs(applier).Deploy(ctx); err != nil {
+			return err
+		}
+
+		if err := prometheusoperator.NewCRDs(applier).Deploy(ctx); err != nil {
 			return err
 		}
 
@@ -557,6 +562,15 @@ func (r *Reconciler) runReconcileSeedFlow(
 			return err
 		}
 
+		prometheusOperator, err := sharedcomponent.NewPrometheusOperator(
+			seedClient,
+			r.GardenNamespace,
+			v1beta1constants.PriorityClassNameSeedSystem600,
+		)
+		if err != nil {
+			return err
+		}
+
 		var (
 			_ = g.Add(flow.Task{
 				Name: "Deploying Kubernetes vertical pod autoscaler",
@@ -576,16 +590,16 @@ func (r *Reconciler) runReconcileSeedFlow(
 			})
 			deployFluentOperator = g.Add(flow.Task{
 				Name: "Deploying Fluent Operator",
-				Fn:   component.OpWait(fluentOperator).Deploy,
+				Fn:   fluentOperator.Deploy,
 			})
 			_ = g.Add(flow.Task{
 				Name:         "Deploying Fluent Bit",
-				Fn:           component.OpWait(fluentBit).Deploy,
+				Fn:           fluentBit.Deploy,
 				Dependencies: flow.NewTaskIDs(deployFluentOperator),
 			})
 			_ = g.Add(flow.Task{
 				Name:         "Deploying Fluent Operator custom resources",
-				Fn:           component.OpWait(fluentOperatorCustomResources).Deploy,
+				Fn:           fluentOperatorCustomResources.Deploy,
 				Dependencies: flow.NewTaskIDs(deployFluentOperator),
 			})
 			_ = g.Add(flow.Task{
@@ -595,6 +609,10 @@ func (r *Reconciler) runReconcileSeedFlow(
 			_ = g.Add(flow.Task{
 				Name: "Deploying Vali",
 				Fn:   vali.Deploy,
+			})
+			_ = g.Add(flow.Task{
+				Name: "Deploying Prometheus Operator",
+				Fn:   prometheusOperator.Deploy,
 			})
 		)
 	}

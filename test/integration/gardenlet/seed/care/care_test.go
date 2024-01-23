@@ -40,6 +40,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/component/hvpa"
 	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
+	"github.com/gardener/gardener/pkg/component/monitoring/prometheusoperator"
 	"github.com/gardener/gardener/pkg/component/nginxingress"
 	"github.com/gardener/gardener/pkg/component/seedsystem"
 	"github.com/gardener/gardener/pkg/component/vpa"
@@ -185,6 +186,7 @@ var _ = Describe("Seed Care controller tests", func() {
 			nginxingress.ManagedResourceName,
 			"istio",
 			"istio-system",
+			prometheusoperator.ManagedResourceName,
 		}
 
 		test := func(managedResourceNames []string) {
