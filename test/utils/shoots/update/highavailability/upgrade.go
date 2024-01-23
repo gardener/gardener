@@ -187,6 +187,10 @@ func verifyEnvoyFilterInIstioNamespace(ctx context.Context, seedClient kubernete
 			if filter.Name != shootName {
 				continue
 			}
+			// Old Gardener releases do not manage the envoy filter and hence we may end up with one managed and one unmanaged filter
+			if filter.Labels["resources.gardener.cloud/managed-by"] != "gardener" {
+				continue
+			}
 			filteredList = append(filteredList, filter)
 		}
 		g.Expect(filteredList).To(HaveLen(1))
