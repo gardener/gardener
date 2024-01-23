@@ -87,7 +87,7 @@ func (b *Botanist) WaitUntilNoPodRunning(ctx context.Context) error {
 				b.Logger.Info("Waiting until there are no running pods in the shoot cluster (at least one pod still exists)", "pod", client.ObjectKeyFromObject(&pod))
 
 				message := "waiting until there are no running Pods in the shoot cluster, there is still at least one running Pod in the shoot cluster: %q"
-				if pod.Namespace == metav1.NamespaceSystem {
+				if pod.Namespace == metav1.NamespaceSystem || pod.Namespace == v1beta1constants.KubernetesDashboardNamespace {
 					return retry.MinorError(fmt.Errorf(message, client.ObjectKeyFromObject(&pod).String()))
 				}
 				return retry.MinorError(helper.NewErrorWithCodes(fmt.Errorf(message,
