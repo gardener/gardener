@@ -511,6 +511,7 @@ build:
             - pkg/controllermanager/controller/controllerdeployment
             - pkg/controllermanager/controller/controllerregistration
             - pkg/controllermanager/controller/controllerregistration/controllerregistrationfinalizer
+            - pkg/controllermanager/controller/controllerregistration/extensionclusterrole
             - pkg/controllermanager/controller/controllerregistration/seed
             - pkg/controllermanager/controller/controllerregistration/seedfinalizer
             - pkg/controllermanager/controller/event
