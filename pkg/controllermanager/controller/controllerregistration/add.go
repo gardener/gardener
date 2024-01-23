@@ -22,6 +22,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/controllerregistrationfinalizer"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/extensionclusterrole"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/seed"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/seedfinalizer"
 )
@@ -36,6 +37,10 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg config.Controlle
 
 	if err := (&controllerregistrationfinalizer.Reconciler{}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding ControllerRegistration finalizer reconciler: %w", err)
+	}
+
+	if err := (&extensionclusterrole.Reconciler{}).AddToManager(ctx, mgr); err != nil {
+		return fmt.Errorf("failed adding extension ClusterRole reconciler: %w", err)
 	}
 
 	if err := (&seedfinalizer.Reconciler{}).AddToManager(mgr); err != nil {

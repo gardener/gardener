@@ -513,6 +513,13 @@ const (
 	// server).
 	LabelNetworkPolicyAccessTargetAPIServer = "networking.gardener.cloud/access-target-apiserver"
 
+	// LabelExtensionsAuthorizationBindTo is a constant for an annotation key on ClusterRoles in the garden cluster
+	// which can be used to describe which extensions are allowed to get bound to this ClusterRole.
+	LabelExtensionsAuthorizationBindTo = "authorization.extensions.gardener.cloud/bind-to"
+	// LabelExtensionsAuthorizationAdditionalPermissions is a constant for a label key on ClusterRoles in the garden
+	// cluster which can be used to describe that this ClusterRole contains additional permissions for extensions.
+	LabelExtensionsAuthorizationAdditionalPermissions = "authorization.extensions.gardener.cloud/additional-permissions"
+
 	// LabelApp is a constant for a label key.
 	LabelApp = "app"
 	// LabelRole is a constant for a label key.
