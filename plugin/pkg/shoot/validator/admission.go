@@ -241,11 +241,24 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %+v", err.Error()))
 	}
 
-	var seed *gardencorev1beta1.Seed
+	coreCloudProfile := &core.CloudProfile{}
+	if err := gardencorev1beta1.Convert_v1beta1_CloudProfile_To_core_CloudProfile(cloudProfile, coreCloudProfile, nil); err != nil {
+		return apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 cloud profile: %+v", err.Error()))
+	}
+
+	var (
+		seed     *gardencorev1beta1.Seed
+		coreSeed *core.Seed
+	)
 	if shoot.Spec.SeedName != nil {
 		seed, err = v.seedLister.Get(*shoot.Spec.SeedName)
 		if err != nil {
 			return apierrors.NewInternalError(fmt.Errorf("could not find referenced seed %q: %+v", *shoot.Spec.SeedName, err.Error()))
+		}
+
+		coreSeed = &core.Seed{}
+		if err := gardencorev1beta1.Convert_v1beta1_Seed_To_core_Seed(seed, coreSeed, nil); err != nil {
+			return apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 seed: %+v", err.Error()))
 		}
 	}
 
@@ -254,20 +267,29 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced project: %+v", err.Error()))
 	}
 
-	var secretBinding *gardencorev1beta1.SecretBinding
+	var (
+		secretBinding     *gardencorev1beta1.SecretBinding
+		coreSecretBinding *core.SecretBinding
+	)
+
 	if a.GetOperation() == admission.Create && shoot.Spec.SecretBindingName != nil {
 		secretBinding, err = v.secretBindingLister.SecretBindings(shoot.Namespace).Get(*shoot.Spec.SecretBindingName)
 		if err != nil {
 			return apierrors.NewInternalError(fmt.Errorf("could not find referenced secret binding: %+v", err.Error()))
 		}
+
+		coreSecretBinding = &core.SecretBinding{}
+		if err := gardencorev1beta1.Convert_v1beta1_SecretBinding_To_core_SecretBinding(secretBinding, coreSecretBinding, nil); err != nil {
+			return apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 secret binding: %+v", err.Error()))
+		}
 	}
 
 	// begin of validation code
 	validationContext := &validationContext{
-		cloudProfile:  cloudProfile,
+		cloudProfile:  coreCloudProfile,
 		project:       project,
-		seed:          seed,
-		secretBinding: secretBinding,
+		seed:          coreSeed,
+		secretBinding: coreSecretBinding,
 		shoot:         shoot,
 		oldShoot:      oldShoot,
 	}
@@ -314,10 +336,10 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 }
 
 type validationContext struct {
-	cloudProfile  *gardencorev1beta1.CloudProfile
-	project       *gardencorev1beta1.Project
-	seed          *gardencorev1beta1.Seed
-	secretBinding *gardencorev1beta1.SecretBinding
+	cloudProfile  *core.CloudProfile
+	project       *core.Project
+	seed          *core.Seed
+	secretBinding *core.SecretBinding
 	shoot         *core.Shoot
 	oldShoot      *core.Shoot
 }
@@ -405,12 +427,7 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 			return admission.NewForbidden(a, fmt.Errorf("cannot schedule shoot '%s' on seed '%s' that is already marked for deletion", c.shoot.Name, c.seed.Name))
 		}
 
-		coreSeedSpec := core.SeedSpec{}
-		if err := gardencorev1beta1.Convert_v1beta1_SeedSpec_To_core_SeedSpec(&c.seed.Spec, &coreSeedSpec, nil); err != nil {
-			return apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 seed spec: %+v", err.Error()))
-		}
-
-		if !helper.TaintsAreTolerated(coreSeedSpec.Taints, c.shoot.Spec.Tolerations) {
+		if !helper.TaintsAreTolerated(c.seed.Spec.Taints, c.shoot.Spec.Tolerations) {
 			return admission.NewForbidden(a, fmt.Errorf("forbidden to use a seed whose taints are not tolerated by the shoot"))
 		}
 
@@ -845,7 +862,7 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 	}
 
 	if a.GetOperation() == admission.Create && c.secretBinding != nil {
-		if !v1beta1helper.SecretBindingHasType(c.secretBinding, c.shoot.Spec.Provider.Type) {
+		if !helper.SecretBindingHasType(c.secretBinding, c.shoot.Spec.Provider.Type) {
 			var secretBindingProviderType string
 			if c.secretBinding.Provider != nil {
 				secretBindingProviderType = c.secretBinding.Provider.Type
@@ -1036,7 +1053,7 @@ func usesInternalVersion(ext *runtime.RawExtension) (bool, string) {
 	return false, ""
 }
 
-func validateVolumeSize(volumeTypeConstraints []gardencorev1beta1.VolumeType, machineTypeConstraints []gardencorev1beta1.MachineType, machineType string, volume *core.Volume) (bool, string) {
+func validateVolumeSize(volumeTypeConstraints []core.VolumeType, machineTypeConstraints []core.MachineType, machineType string, volume *core.Volume) (bool, string) {
 	if volume == nil {
 		return true, ""
 	}
@@ -1145,7 +1162,7 @@ func hasDomainIntersection(domainA, domainB string) bool {
 	return strings.HasSuffix(long, short)
 }
 
-func defaultKubernetesVersion(constraints []gardencorev1beta1.ExpirableVersion, shootVersion string, fldPath *field.Path) (*string, field.ErrorList) {
+func defaultKubernetesVersion(constraints []core.ExpirableVersion, shootVersion string, fldPath *field.Path) (*string, field.ErrorList) {
 	var (
 		allErrs           = field.ErrorList{}
 		shootVersionMajor *uint64
@@ -1181,7 +1198,7 @@ func defaultKubernetesVersion(constraints []gardencorev1beta1.ExpirableVersion, 
 	return nil, allErrs
 }
 
-func findLatestVersion(constraints []gardencorev1beta1.ExpirableVersion, major, minor *uint64) *semver.Version {
+func findLatestVersion(constraints []core.ExpirableVersion, major, minor *uint64) *semver.Version {
 	var latestVersion *semver.Version
 	for _, versionConstraint := range constraints {
 		// ignore expired versions
@@ -1190,7 +1207,7 @@ func findLatestVersion(constraints []gardencorev1beta1.ExpirableVersion, major, 
 		}
 
 		// filter preview versions for defaulting
-		if versionConstraint.Classification != nil && *versionConstraint.Classification == gardencorev1beta1.ClassificationPreview {
+		if versionConstraint.Classification != nil && *versionConstraint.Classification == core.ClassificationPreview {
 			continue
 		}
 
@@ -1214,7 +1231,7 @@ func findLatestVersion(constraints []gardencorev1beta1.ExpirableVersion, major, 
 	return latestVersion
 }
 
-func validateKubernetesVersionConstraints(a admission.Attributes, constraints []gardencorev1beta1.ExpirableVersion, shootVersion, oldShootVersion string, isNewWorkerPool bool, fldPath *field.Path) field.ErrorList {
+func validateKubernetesVersionConstraints(a admission.Attributes, constraints []core.ExpirableVersion, shootVersion, oldShootVersion string, isNewWorkerPool bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if shootVersion == oldShootVersion {
@@ -1236,7 +1253,7 @@ func validateKubernetesVersionConstraints(a admission.Attributes, constraints []
 		}
 
 		versionStr := versionConstraint.Version
-		if versionConstraint.Classification != nil && *versionConstraint.Classification == gardencorev1beta1.ClassificationPreview {
+		if versionConstraint.Classification != nil && *versionConstraint.Classification == core.ClassificationPreview {
 			versionStr += " (preview)"
 		}
 		validValues = append(validValues, versionStr)
@@ -1247,7 +1264,7 @@ func validateKubernetesVersionConstraints(a admission.Attributes, constraints []
 	return allErrs
 }
 
-func validateMachineTypes(constraints []gardencorev1beta1.MachineType, machine, oldMachine core.Machine, regions []gardencorev1beta1.Region, region string, zones []string) (bool, bool, bool, bool, []string) {
+func validateMachineTypes(constraints []core.MachineType, machine, oldMachine core.Machine, regions []core.Region, region string, zones []string) (bool, bool, bool, bool, []string) {
 	if machine.Type == oldMachine.Type && ptr.Equal(machine.Architecture, oldMachine.Architecture) {
 		return true, true, true, true, nil
 	}
@@ -1266,7 +1283,7 @@ func validateMachineTypes(constraints []gardencorev1beta1.MachineType, machine, 
 		if ptr.Deref(t.Usable, false) {
 			usableMachines.Insert(t.Name)
 		}
-		if !isUnavailableInAtleastOneZone(regions, region, zones, t.Name, func(zone gardencorev1beta1.AvailabilityZone) []string { return zone.UnavailableMachineTypes }) {
+		if !isUnavailableInAtleastOneZone(regions, region, zones, t.Name, func(zone core.AvailabilityZone) []string { return zone.UnavailableMachineTypes }) {
 			machinesAvailableInAllZones.Insert(t.Name)
 		}
 		if t.Name == machine.Type {
@@ -1281,7 +1298,7 @@ func validateMachineTypes(constraints []gardencorev1beta1.MachineType, machine, 
 		sets.List(machinesWithSupportedArchitecture.Intersection(machinesAvailableInAllZones).Intersection(usableMachines))
 }
 
-func isUnavailableInAtleastOneZone(regions []gardencorev1beta1.Region, region string, zones []string, t string, unavailableTypes func(zone gardencorev1beta1.AvailabilityZone) []string) bool {
+func isUnavailableInAtleastOneZone(regions []core.Region, region string, zones []string, t string, unavailableTypes func(zone core.AvailabilityZone) []string) bool {
 	for _, r := range regions {
 		if r.Name != region {
 			continue
@@ -1304,7 +1321,7 @@ func isUnavailableInAtleastOneZone(regions []gardencorev1beta1.Region, region st
 	return false
 }
 
-func validateKubeletConfig(fldPath *field.Path, machineTypes []gardencorev1beta1.MachineType, workerMachineType string, kubeletConfig *core.KubeletConfig) field.ErrorList {
+func validateKubeletConfig(fldPath *field.Path, machineTypes []core.MachineType, workerMachineType string, kubeletConfig *core.KubeletConfig) field.ErrorList {
 	var allErrs field.ErrorList
 
 	if kubeletConfig == nil {
@@ -1350,7 +1367,7 @@ func validateKubeletConfig(fldPath *field.Path, machineTypes []gardencorev1beta1
 	return allErrs
 }
 
-func validateVolumeTypes(constraints []gardencorev1beta1.VolumeType, volume, oldVolume *core.Volume, regions []gardencorev1beta1.Region, region string, zones []string) (bool, bool, bool, []string) {
+func validateVolumeTypes(constraints []core.VolumeType, volume, oldVolume *core.Volume, regions []core.Region, region string, zones []string) (bool, bool, bool, []string) {
 	if volume == nil || volume.Type == nil || (volume != nil && oldVolume != nil && volume.Type != nil && oldVolume.Type != nil && *volume.Type == *oldVolume.Type) {
 		return true, true, true, nil
 	}
@@ -1370,7 +1387,7 @@ func validateVolumeTypes(constraints []gardencorev1beta1.VolumeType, volume, old
 		if ptr.Deref(v.Usable, false) {
 			usableVolumes.Insert(v.Name)
 		}
-		if !isUnavailableInAtleastOneZone(regions, region, zones, v.Name, func(zone gardencorev1beta1.AvailabilityZone) []string { return zone.UnavailableVolumeTypes }) {
+		if !isUnavailableInAtleastOneZone(regions, region, zones, v.Name, func(zone core.AvailabilityZone) []string { return zone.UnavailableVolumeTypes }) {
 			volumesAvailableInAllZones.Insert(v.Name)
 		}
 		if v.Name == volumeType {
@@ -1406,7 +1423,7 @@ func (c *validationContext) validateRegion() field.ErrorList {
 	return field.ErrorList{field.NotSupported(fldPath, region, validValues)}
 }
 
-func validateZones(constraints []gardencorev1beta1.Region, region, oldRegion string, worker, oldWorker core.Worker, fldPath *field.Path) field.ErrorList {
+func validateZones(constraints []core.Region, region, oldRegion string, worker, oldWorker core.Worker, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if region == oldRegion && reflect.DeepEqual(worker.Zones, oldWorker.Zones) {
 		return allErrs
@@ -1431,7 +1448,7 @@ func validateZones(constraints []gardencorev1beta1.Region, region, oldRegion str
 	return allErrs
 }
 
-func validateZone(constraints []gardencorev1beta1.Region, region, zone string) (bool, []string) {
+func validateZone(constraints []core.Region, region, zone string) (bool, []string) {
 	var validValues []string
 
 	for _, r := range constraints {
@@ -1450,12 +1467,12 @@ func validateZone(constraints []gardencorev1beta1.Region, region, zone string) (
 }
 
 // getDefaultMachineImage determines the latest non-preview machine image version from the first machine image in the CloudProfile and considers that as the default image
-func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, imageName string, arch *string, fldPath *field.Path) (*core.ShootMachineImage, *field.Error) {
+func getDefaultMachineImage(machineImages []core.MachineImage, imageName string, arch *string, fldPath *field.Path) (*core.ShootMachineImage, *field.Error) {
 	if len(machineImages) == 0 {
 		return nil, field.Invalid(fldPath, imageName, "the cloud profile does not contain any machine image - cannot create shoot cluster")
 	}
 
-	var defaultImage *gardencorev1beta1.MachineImage
+	var defaultImage *core.MachineImage
 
 	if len(imageName) != 0 {
 		for _, mi := range machineImages {
@@ -1487,7 +1504,7 @@ func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, imag
 		}
 	}
 
-	var validVersions []gardencorev1beta1.MachineImageVersion
+	var validVersions []core.MachineImageVersion
 
 	for _, version := range defaultImage.Versions {
 		if slices.Contains(version.Architectures, *arch) {
@@ -1495,14 +1512,14 @@ func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, imag
 		}
 	}
 
-	latestMachineImageVersion, err := v1beta1helper.DetermineLatestMachineImageVersion(validVersions, true)
+	latestMachineImageVersion, err := helper.DetermineLatestMachineImageVersion(validVersions, true)
 	if err != nil {
 		return nil, field.Invalid(fldPath, imageName, fmt.Sprintf("failed to determine latest machine image from cloud profile: %s", err.Error()))
 	}
 	return &core.ShootMachineImage{Name: defaultImage.Name, Version: latestMachineImageVersion.Version}, nil
 }
 
-func validateMachineImagesConstraints(a admission.Attributes, constraints []gardencorev1beta1.MachineImage, isNewWorkerPool bool, machine, oldMachine core.Machine) (bool, bool, bool, []string) {
+func validateMachineImagesConstraints(a admission.Attributes, constraints []core.MachineImage, isNewWorkerPool bool, machine, oldMachine core.Machine) (bool, bool, bool, []string) {
 	if apiequality.Semantic.DeepEqual(machine.Image, oldMachine.Image) && ptr.Equal(machine.Architecture, oldMachine.Architecture) {
 		return true, true, true, nil
 	}
@@ -1551,7 +1568,7 @@ func validateMachineImagesConstraints(a admission.Attributes, constraints []gard
 		validMachineImageVersions
 }
 
-func validateContainerRuntimeConstraints(constraints []gardencorev1beta1.MachineImage, worker, oldWorker core.Worker, fldPath *field.Path) field.ErrorList {
+func validateContainerRuntimeConstraints(constraints []core.MachineImage, worker, oldWorker core.Worker, fldPath *field.Path) field.ErrorList {
 	if worker.CRI == nil || worker.Machine.Image == nil {
 		return nil
 	}
@@ -1561,7 +1578,7 @@ func validateContainerRuntimeConstraints(constraints []gardencorev1beta1.Machine
 		return nil
 	}
 
-	machineImageVersion, ok := v1beta1helper.FindMachineImageVersion(constraints, worker.Machine.Image.Name, worker.Machine.Image.Version)
+	machineImageVersion, ok := helper.FindMachineImageVersion(constraints, worker.Machine.Image.Name, worker.Machine.Image.Version)
 	if !ok {
 		return nil
 	}
@@ -1569,22 +1586,16 @@ func validateContainerRuntimeConstraints(constraints []gardencorev1beta1.Machine
 	return validateCRI(machineImageVersion.CRI, worker, fldPath)
 }
 
-func validateCRI(constraints []gardencorev1beta1.CRI, coreWorker core.Worker, fldPath *field.Path) field.ErrorList {
-	if coreWorker.CRI == nil {
+func validateCRI(constraints []core.CRI, worker core.Worker, fldPath *field.Path) field.ErrorList {
+	if worker.CRI == nil {
 		return nil
 	}
 
 	var (
 		allErrors = field.ErrorList{}
 		validCRIs = []string{}
-		foundCRI  *gardencorev1beta1.CRI
+		foundCRI  *core.CRI
 	)
-
-	worker := gardencorev1beta1.Worker{}
-	if err := gardencorev1beta1.Convert_core_Worker_To_v1beta1_Worker(&coreWorker, &worker, nil); err != nil {
-		allErrors = append(allErrors, field.InternalError(fldPath, fmt.Errorf("could not convert core shoot: %+v", err.Error())))
-		return allErrors
-	}
 
 	for _, c := range constraints {
 		criConstraint := c
@@ -1595,7 +1606,7 @@ func validateCRI(constraints []gardencorev1beta1.CRI, coreWorker core.Worker, fl
 		}
 	}
 	if foundCRI == nil {
-		detail := fmt.Sprintf("machine image '%s@%s' does not support CRI '%s', supported values: %+v", worker.Machine.Image.Name, *worker.Machine.Image.Version, worker.CRI.Name, validCRIs)
+		detail := fmt.Sprintf("machine image '%s@%s' does not support CRI '%s', supported values: %+v", worker.Machine.Image.Name, worker.Machine.Image.Version, worker.CRI.Name, validCRIs)
 		allErrors = append(allErrors, field.Invalid(fldPath.Child("name"), worker.CRI.Name, detail))
 		return allErrors
 	}
@@ -1603,7 +1614,7 @@ func validateCRI(constraints []gardencorev1beta1.CRI, coreWorker core.Worker, fl
 	for j, cr := range worker.CRI.ContainerRuntimes {
 		jdxPath := fldPath.Child("containerRuntimes").Index(j)
 		if ok, validValues := validateCRMembership(foundCRI.ContainerRuntimes, cr.Type); !ok {
-			detail := fmt.Sprintf("machine image '%s@%s' does not support container runtime '%s', supported values: %+v", worker.Machine.Image.Name, *worker.Machine.Image.Version, cr.Type, validValues)
+			detail := fmt.Sprintf("machine image '%s@%s' does not support container runtime '%s', supported values: %+v", worker.Machine.Image.Name, worker.Machine.Image.Version, cr.Type, validValues)
 			allErrors = append(allErrors, field.Invalid(jdxPath.Child("type"), cr.Type, detail))
 		}
 	}
@@ -1611,7 +1622,7 @@ func validateCRI(constraints []gardencorev1beta1.CRI, coreWorker core.Worker, fl
 	return allErrors
 }
 
-func validateCRMembership(constraints []gardencorev1beta1.ContainerRuntime, cr string) (bool, []string) {
+func validateCRMembership(constraints []core.ContainerRuntime, cr string) (bool, []string) {
 	var validValues []string
 	for _, constraint := range constraints {
 		validValues = append(validValues, constraint.Type)
@@ -1622,12 +1633,12 @@ func validateCRMembership(constraints []gardencorev1beta1.ContainerRuntime, cr s
 	return false, validValues
 }
 
-func validateKubeletVersionConstraint(constraints []gardencorev1beta1.MachineImage, worker core.Worker, kubeletVersion *semver.Version, fldPath *field.Path) *field.Error {
+func validateKubeletVersionConstraint(constraints []core.MachineImage, worker core.Worker, kubeletVersion *semver.Version, fldPath *field.Path) *field.Error {
 	if worker.Machine.Image == nil {
 		return nil
 	}
 
-	machineImageVersion, ok := v1beta1helper.FindMachineImageVersion(constraints, worker.Machine.Image.Name, worker.Machine.Image.Version)
+	machineImageVersion, ok := helper.FindMachineImageVersion(constraints, worker.Machine.Image.Name, worker.Machine.Image.Version)
 	if !ok {
 		return nil
 	}
@@ -1644,7 +1655,7 @@ func validateKubeletVersionConstraint(constraints []gardencorev1beta1.MachineIma
 	return nil
 }
 
-func ensureMachineImage(oldWorkers []core.Worker, worker core.Worker, images []gardencorev1beta1.MachineImage, fldPath *field.Path) (*core.ShootMachineImage, *field.Error) {
+func ensureMachineImage(oldWorkers []core.Worker, worker core.Worker, images []core.MachineImage, fldPath *field.Path) (*core.ShootMachineImage, *field.Error) {
 	// General approach with machine image defaulting in this code: Try to keep the machine image
 	// from the old shoot object to not accidentally update it to the default machine image.
 	// This should only happen in the maintenance time window of shoots and is performed by the

@@ -71,6 +71,30 @@ var _ = Describe("Miscellaneous", func() {
 	}
 	now := metav1.Now()
 
+	Describe("#ConvertList", func() {
+		v1beta1ShootList := []*gardencorev1beta1.Shoot{&shoot1, &shoot2}
+		coreShoot1 := core.Shoot{}
+		err := gardencorev1beta1.Convert_v1beta1_Shoot_To_core_Shoot(&shoot1, &coreShoot1, nil)
+		Expect(err).NotTo(HaveOccurred())
+		coreShoot2 := core.Shoot{}
+		err = gardencorev1beta1.Convert_v1beta1_Shoot_To_core_Shoot(&shoot2, &coreShoot2, nil)
+		Expect(err).NotTo(HaveOccurred())
+		coreShootList := []*core.Shoot{&coreShoot1, &coreShoot2}
+
+		It("should convert a list of shoots", func() {
+			expected, err := ConvertList(v1beta1ShootList, func(cr *gardencorev1beta1.Shoot) (*core.Shoot, error) {
+				coreShoot := &core.Shoot{}
+				if err := gardencorev1beta1.Convert_v1beta1_Shoot_To_core_Shoot(cr, coreShoot, nil); err != nil {
+					return nil, err
+				}
+				return coreShoot, nil
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(expected).To(Equal(coreShootList))
+		})
+	})
+
 	DescribeTable("#SkipVerification",
 		func(operation admission.Operation, metadata metav1.ObjectMeta, expected bool) {
 			Expect(SkipVerification(operation, metadata)).To(Equal(expected))

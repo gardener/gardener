@@ -92,3 +92,17 @@ func ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec *core.SeedSpec, seedN
 
 	return nil
 }
+
+// ConvertList converts a list of elements from one type to another.
+// It takes a function f that performs the conversion for each element.
+func ConvertList[T, U any](list []T, f func(T) (U, error)) ([]U, error) {
+	result := make([]U, len(list))
+	for i, v := range list {
+		converted, err := f(v)
+		if err != nil {
+			return nil, err
+		}
+		result[i] = converted
+	}
+	return result, nil
+}

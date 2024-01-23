@@ -345,14 +345,14 @@ func filterCandidates(shoot *gardencorev1beta1.Shoot, versionedShootList []garde
 }
 
 // getSeedWithLeastShootsDeployed finds the best candidate (i.e. the one managing the smallest number of shoots right now).
-func getSeedWithLeastShootsDeployed(seedList []gardencorev1beta1.Seed, shootList []gardencorev1beta1.Shoot) (*gardencorev1beta1.Seed, error) {
+func getSeedWithLeastShootsDeployed(seedList []gardencorev1beta1.Seed, versionedShootList []gardencorev1beta1.Shoot) (*gardencorev1beta1.Seed, error) {
 	var (
 		bestCandidate gardencorev1beta1.Seed
 		min           *int
 		seedUsage     map[string]int
-		sl            = convertList(shootList)
+		shootList     = convertList(versionedShootList)
 	)
-	seedUsage = v1beta1helper.CalculateSeedUsage(sl)
+	seedUsage = v1beta1helper.CalculateSeedUsage(shootList)
 
 	for _, seed := range seedList {
 		if numberOfManagedShoots := seedUsage[seed.Name]; min == nil || numberOfManagedShoots < *min {

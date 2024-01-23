@@ -26,7 +26,6 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
@@ -156,14 +155,9 @@ func (t *TolerationRestriction) admitShoot(shoot *core.Shoot) error {
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced project: %+v", err.Error()))
 	}
 
-	coreProjectSpec := core.ProjectSpec{}
-	if err := gardencorev1beta1.Convert_v1beta1_ProjectSpec_To_core_ProjectSpec(&project.Spec, &coreProjectSpec, nil); err != nil {
-		return apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 project spec: %+v", err.Error()))
-	}
-
 	defaults := t.defaults
 	if project.Spec.Tolerations != nil {
-		defaults = append(defaults, coreProjectSpec.Tolerations.Defaults...)
+		defaults = append(defaults, project.Spec.Tolerations.Defaults...)
 	}
 
 	existingKeys := sets.New[string]()
@@ -222,14 +216,9 @@ func (t *TolerationRestriction) validateShoot(shoot, oldShoot *core.Shoot) error
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced project: %+v", err.Error()))
 	}
 
-	coreProjectSpec := core.ProjectSpec{}
-	if err := gardencorev1beta1.Convert_v1beta1_ProjectSpec_To_core_ProjectSpec(&project.Spec, &coreProjectSpec, nil); err != nil {
-		return apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 project spec: %+v", err.Error()))
-	}
-
 	allowlist := t.allowlist
 	if project.Spec.Tolerations != nil {
-		allowlist = append(allowlist, coreProjectSpec.Tolerations.Whitelist...)
+		allowlist = append(allowlist, project.Spec.Tolerations.Whitelist...)
 	}
 
 	if errList := gardencorevalidation.ValidateTolerationsAgainstAllowlist(tolerationsToValidate, allowlist, field.NewPath("spec", "tolerations")); len(errList) > 0 {

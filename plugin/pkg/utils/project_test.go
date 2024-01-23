@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/plugin/pkg/utils"
@@ -41,6 +42,15 @@ var _ = Describe("Project", func() {
 				Name: projectName,
 			},
 			Spec: gardencorev1beta1.ProjectSpec{
+				Namespace: &namespaceName,
+			},
+		}
+
+		coreProject = &core.Project{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: projectName,
+			},
+			Spec: core.ProjectSpec{
 				Namespace: &namespaceName,
 			},
 		}
@@ -66,7 +76,7 @@ var _ = Describe("Project", func() {
 
 			result, err := utils.ProjectForNamespaceFromExternalLister(lister, namespaceName)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(projectInternal))
+			Expect(result).To(Equal(coreProject))
 		})
 
 		It("should return a 'not found' error", func() {

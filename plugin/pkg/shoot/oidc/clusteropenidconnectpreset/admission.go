@@ -164,7 +164,12 @@ func (c *ClusterOpenIDConnectPreset) Admit(_ context.Context, a admission.Attrib
 		return nil
 	}
 
-	preset, err := filterClusterOIDCs(coidcs, shoot, foundProject)
+	coreProject := &core.Project{}
+	if err := gardencorev1beta1.Convert_v1beta1_Project_To_core_Project(foundProject, coreProject, nil); err != nil {
+		return apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 project: %w", err))
+	}
+
+	preset, err := filterClusterOIDCs(coidcs, shoot, coreProject)
 	if err != nil {
 		return apierrors.NewInternalError(err)
 	}
@@ -177,7 +182,7 @@ func (c *ClusterOpenIDConnectPreset) Admit(_ context.Context, a admission.Attrib
 	return nil
 }
 
-func filterClusterOIDCs(oidcs []*settingsv1alpha1.ClusterOpenIDConnectPreset, shoot *core.Shoot, project *gardencorev1beta1.Project) (*settingsv1alpha1.OpenIDConnectPresetSpec, error) {
+func filterClusterOIDCs(oidcs []*settingsv1alpha1.ClusterOpenIDConnectPreset, shoot *core.Shoot, project *core.Project) (*settingsv1alpha1.OpenIDConnectPresetSpec, error) {
 	var matchedPreset *settingsv1alpha1.ClusterOpenIDConnectPreset
 
 	for _, oidc := range oidcs {

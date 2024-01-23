@@ -37,6 +37,7 @@ import (
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	plugin "github.com/gardener/gardener/plugin/pkg"
+	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 )
 
 // Register registers a plugin.
@@ -157,8 +158,19 @@ func (e *ExtensionLabels) Admit(_ context.Context, a admission.Attributes, _ adm
 			return apierrors.NewInternalError(err)
 		}
 
+		coreControllerRegistrations, err1 := admissionutils.ConvertList(controllerRegistrations, func(cr *gardencorev1beta1.ControllerRegistration) (*core.ControllerRegistration, error) {
+			coreControllerRegistration := &core.ControllerRegistration{}
+			if err2 := gardencorev1beta1.Convert_v1beta1_ControllerRegistration_To_core_ControllerRegistration(cr, coreControllerRegistration, nil); err2 != nil {
+				return nil, err2
+			}
+			return coreControllerRegistration, nil
+		})
+		if err1 != nil {
+			return apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 controllerregistration: %w", err1))
+		}
+
 		removeLabels(&shoot.ObjectMeta)
-		addMetaDataLabelsShoot(shoot, controllerRegistrations)
+		addMetaDataLabelsShoot(shoot, coreControllerRegistrations)
 
 	case core.Kind("CloudProfile"):
 		cloudProfile, ok := a.GetObject().(*core.CloudProfile)
@@ -189,8 +201,13 @@ func (e *ExtensionLabels) Admit(_ context.Context, a admission.Attributes, _ adm
 			return apierrors.NewInternalError(err)
 		}
 
+		coreBackupBucket := &core.BackupBucket{}
+		if err := gardencorev1beta1.Convert_v1beta1_BackupBucket_To_core_BackupBucket(backupBucket, coreBackupBucket, nil); err != nil {
+			return apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 backupbucket: %w", err))
+		}
+
 		removeLabels(&backupEntry.ObjectMeta)
-		addMetaDataLabelsBackupEntry(backupEntry, backupBucket)
+		addMetaDataLabelsBackupEntry(backupEntry, coreBackupBucket)
 	}
 	return nil
 }
@@ -215,7 +232,7 @@ func addMetaDataLabelsSecretBinding(secretBinding *core.SecretBinding) {
 	}
 }
 
-func addMetaDataLabelsShoot(shoot *core.Shoot, controllerRegistrations []*gardencorev1beta1.ControllerRegistration) {
+func addMetaDataLabelsShoot(shoot *core.Shoot, controllerRegistrations []*core.ControllerRegistration) {
 	for extensionType := range getEnabledExtensionsForShoot(shoot, controllerRegistrations) {
 		metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionExtensionTypePrefix+extensionType, "true")
 	}
@@ -243,7 +260,7 @@ func addMetaDataLabelsShoot(shoot *core.Shoot, controllerRegistrations []*garden
 	}
 }
 
-func getEnabledExtensionsForShoot(shoot *core.Shoot, controllerRegistrations []*gardencorev1beta1.ControllerRegistration) sets.Set[string] {
+func getEnabledExtensionsForShoot(shoot *core.Shoot, controllerRegistrations []*core.ControllerRegistration) sets.Set[string] {
 	enabledExtensions := sets.New[string]()
 
 	// add globally enabled extensions
@@ -280,7 +297,7 @@ func addMetaDataLabelsBackupBucket(backupBucket *core.BackupBucket) {
 	metav1.SetMetaDataLabel(&backupBucket.ObjectMeta, v1beta1constants.LabelExtensionProviderTypePrefix+backupBucket.Spec.Provider.Type, "true")
 }
 
-func addMetaDataLabelsBackupEntry(backupEntry *core.BackupEntry, backupBucket *gardencorev1beta1.BackupBucket) {
+func addMetaDataLabelsBackupEntry(backupEntry *core.BackupEntry, backupBucket *core.BackupBucket) {
 	metav1.SetMetaDataLabel(&backupEntry.ObjectMeta, v1beta1constants.LabelExtensionProviderTypePrefix+backupBucket.Spec.Provider.Type, "true")
 }
 

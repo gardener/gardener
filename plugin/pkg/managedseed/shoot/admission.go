@@ -187,5 +187,6 @@ func (v *Shoot) getShoots(selector labels.Selector) ([]*gardencorev1beta1.Shoot,
 	if err != nil {
 		return nil, apierrors.NewInternalError(err)
 	}
+
 	return shoots, nil
 }
