@@ -178,17 +178,18 @@ func DeployZeroDownTimeValidatorJob(ctx context.Context, c client.Client, testNa
 }
 
 func verifyEnvoyFilterInIstioNamespace(ctx context.Context, seedClient kubernetes.Interface, shootName string) {
-	filteredList := []*istionetworkingv1alpha3.EnvoyFilter{}
+	var filteredList []*istionetworkingv1alpha3.EnvoyFilter
 	CEventually(ctx, func(g Gomega) {
 		envoyFilters := &istionetworkingv1alpha3.EnvoyFilterList{}
-		Expect(seedClient.Client().List(ctx, envoyFilters)).To(Succeed(), "trying to list envoy filters, but did not succeed.")
+		g.Expect(seedClient.Client().List(ctx, envoyFilters)).To(Succeed(), "trying to list envoy filters, but did not succeed.")
+		filteredList = []*istionetworkingv1alpha3.EnvoyFilter{}
 		for _, filter := range envoyFilters.Items {
 			if filter.Name != shootName {
 				continue
 			}
 			filteredList = append(filteredList, filter)
 		}
-		Expect(filteredList).To(HaveLen(1))
+		g.Expect(filteredList).To(HaveLen(1))
 	}).Should(Succeed())
 	Expect(filteredList[0].Namespace).To(HavePrefix("istio-ingress"))
 }
