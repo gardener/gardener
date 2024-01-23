@@ -237,7 +237,7 @@ images:
       teamname: 'gardener/monitoring-maintainers'
 - name: plutono
   sourceRepository: github.com/credativ/plutono
-  repository: ghcr.io/credativ/plutono
+  repository: europe-docker.pkg.dev/gardener-project/releases/3rd/credativ/plutono
   tag: "v7.5.28"
   labels:
   - name: gardener.cloud/cve-categorisation
@@ -416,7 +416,7 @@ images:
       teamname: 'gardener/logging-maintainers'
 - name: vali
   sourceRepository: github.com/credativ/vali
-  repository: ghcr.io/credativ/vali
+  repository: europe-docker.pkg.dev/gardener-project/releases/3rd/credativ/vali
   tag: "v2.2.13"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
@@ -468,7 +468,7 @@ images:
       teamname: 'gardener/logging-maintainers'
 - name: valitail
   sourceRepository: github.com/credativ/vali
-  repository: ghcr.io/credativ/valitail
+  repository: europe-docker.pkg.dev/gardener-project/releases/3rd/credativ/valitail
   tag: "v2.2.13"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
