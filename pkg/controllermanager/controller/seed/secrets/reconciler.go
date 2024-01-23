@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -58,7 +59,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: gardenerutils.ComputeGardenNamespace(seed.Name),
+			Name:   gardenerutils.ComputeGardenNamespace(seed.Name),
+			Labels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed},
 		},
 	}
 	log = log.WithValues("gardenNamespace", namespace.Name)
@@ -78,6 +80,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		// namespace already exists, check if it has controller ref to seed
 		if !metav1.IsControlledBy(namespace, seed) {
 			return reconcile.Result{}, fmt.Errorf("namespace %q is not controlled by seed %q", namespace.Name, seed.Name)
+		}
+
+		if namespace.Labels[v1beta1constants.GardenRole] != v1beta1constants.GardenRoleSeed {
+			patch := client.MergeFrom(namespace.DeepCopy())
+			metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleSeed)
+			if err := r.Client.Patch(ctx, namespace, patch); err != nil {
+				return reconcile.Result{}, err
+			}
 		}
 	}
 

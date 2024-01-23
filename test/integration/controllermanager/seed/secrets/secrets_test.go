@@ -125,6 +125,7 @@ var _ = Describe("Seed Secrets controller tests", func() {
 			g.Expect(namespace.OwnerReferences).To(HaveLen(1))
 			g.Expect(namespace.OwnerReferences[0].Kind).To(Equal("Seed"))
 			g.Expect(namespace.OwnerReferences[0].Name).To(Equal(seed.Name))
+			g.Expect(namespace.Labels).To(HaveKeyWithValue("gardener.cloud/role", "seed"))
 		}).Should(Succeed())
 
 		By("Expect relevant garden secrets to be synced to seed namespace")
