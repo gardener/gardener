@@ -5930,7 +5930,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 			Entry("at least one worker pool min>0, max>0", zero, zero, one, one, BeEmpty()),
 			Entry("all worker pools min=max=0", zero, zero, zero, zero, ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type": Equal(field.ErrorTypeForbidden),
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("workers"),
+					"Detail": ContainSubstring("at least one active (workers[i].maximum > 0) worker pool with systemComponents.allow=true needed"),
 				})),
 			)),
 		)
@@ -5961,7 +5963,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			Entry("all worker pools min=max=0", zero, zero, zero, zero, true, true, ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type": Equal(field.ErrorTypeForbidden),
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("workers"),
+					"Detail": ContainSubstring("at least one active (workers[i].maximum > 0) worker pool with systemComponents.allow=true needed"),
 				})),
 			)),
 			Entry("at least one worker pool allows system components", zero, zero, one, one, true, true, BeEmpty()),
