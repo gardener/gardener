@@ -126,6 +126,27 @@ make gardener-extensions-down SEED_NAME=<seed-name>
 If it is not the last seed, this command will only remove the seed, but leave the local Gardener cluster and the other seeds untouched.
 To remove all seeds and to cleanup the local Gardener cluster, you have to run the command for each seed.
 
+### Rotate credentials of container image registry in a Seed
+
+There is a container image registry in each Seed cluster where Gardener images required for the Seed and the Shoot nodes are pushed to. This registry is password protected.
+The password is generated when the Seed is deployed via `make gardener-extensions-up`. Afterward, it is not rotated automatically.
+Otherwise, this could break the update of `gardener-node-agent`, because it might not be able to pull its own new image anymore
+This is no general issue of `gardener-node-agent`, but a limitation `provider-extensions` setup. Gardener does not support protected container images out of the box. The function was added for this scenario only.
+
+However, if you want to rotate the credentials for any reason, there are two options for it.
+- run `make gardener-extensions-up` (to ensure that your images are up-to-date)
+- `reconcile` all shoots on the seed where you want to rotate the registry password
+- run `kubectl delete secrets -n registry registry-password` on your seed cluster
+- run `make gardener-extensions-up`
+- `reconcile` the shoots again
+
+or
+- `reconcile` all shoots on the seed where you want to rotate the registry password
+- run `kubectl delete secrets -n registry registry-password` on your seed cluster
+- run `./example/provider-extensions/registry-seed/deploy-registry.sh <path to seed kubeconfig> <seed registry hostname>`
+- `reconcile` the shoots again
+
+
 ## Pause and Unpause the KinD Cluster
 
 The KinD cluster can be paused by stopping and keeping its docker container. This can be done by running:
