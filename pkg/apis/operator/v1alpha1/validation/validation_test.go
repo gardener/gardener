@@ -49,6 +49,9 @@ var _ = Describe("Validation Tests", func() {
 				},
 				Spec: operatorv1alpha1.GardenSpec{
 					RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+						Ingress: operatorv1alpha1.Ingress{
+							Domains: []string{"ingress.bar.com"},
+						},
 						Networking: operatorv1alpha1.RuntimeNetworking{
 							Pods:     "10.1.0.0/16",
 							Services: "10.2.0.0/16",
@@ -854,6 +857,18 @@ var _ = Describe("Validation Tests", func() {
 			})
 
 			Context("Ingress", func() {
+				It("should complain about that no ingress domain is configured", func() {
+					garden.Spec.RuntimeCluster.Ingress.Domain = nil
+					garden.Spec.RuntimeCluster.Ingress.Domains = nil
+
+					Expect(ValidateGarden(garden)).To(ContainElements(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeRequired),
+							"Field": Equal("spec.runtimeCluster.ingress.domains"),
+						})),
+					))
+				})
+
 				It("should complain about invalid ingress domain names", func() {
 					garden.Spec.RuntimeCluster.Ingress.Domain = pointer.String(",,,")
 					garden.Spec.RuntimeCluster.Ingress.Domains = []string{",,,"}
@@ -1639,6 +1654,9 @@ var _ = Describe("Validation Tests", func() {
 				},
 				Spec: operatorv1alpha1.GardenSpec{
 					RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+						Ingress: operatorv1alpha1.Ingress{
+							Domains: []string{"ingress.bar.com"},
+						},
 						Networking: operatorv1alpha1.RuntimeNetworking{
 							Pods:     "10.1.0.0/16",
 							Services: "10.2.0.0/16",

@@ -130,6 +130,11 @@ func validateRuntimeCluster(runtimeCluster operatorv1alpha1.RuntimeCluster, fldP
 		}
 	}
 
+	// TODO(scheererj): Turn this into a native CRD validation as soon as the `ingress.domain` field was dropped (planned after v1.88)
+	if len(runtimeCluster.Ingress.Domains) == 0 && runtimeCluster.Ingress.Domain == nil {
+		allErrs = append(allErrs, field.Required(fldPath.Child("ingress").Child("domains"), "at least one domain is required"))
+	}
+
 	if runtimeCluster.Ingress.Domain != nil {
 		allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(*runtimeCluster.Ingress.Domain, fldPath.Child("ingress", "domain"))...)
 	}
