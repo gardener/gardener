@@ -84,8 +84,8 @@ type RuntimeCluster struct {
 
 // Ingress configures the Ingress specific settings of the runtime cluster.
 type Ingress struct {
-	// Domain specifies the IngressDomain of the cluster pointing to the ingress controller endpoint. It will be used
-	// to construct ingress URLs for system applications running in runtime cluster.
+	// Deprecated: This field is deprecated and will be removed soon. Please use `Domains` instead.
+	// TODO(scheererj): Drop this after v1.88 has been released.
 	// +optional
 	Domain *string `json:"domain,omitempty"`
 	// Domains specify the ingress domains of the cluster pointing to the ingress controller endpoint. They will be used
