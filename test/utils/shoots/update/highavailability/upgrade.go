@@ -41,7 +41,7 @@ import (
 
 // UpgradeAndVerify runs the HA control-plane upgrade tests for an existing shoot cluster.
 func UpgradeAndVerify(ctx context.Context, f *framework.ShootFramework, failureToleranceType gardencorev1beta1.FailureToleranceType) {
-	verifyEnvoyFilterInIstioNamespace(ctx, f.SeedClient, f.ShootSeedNamespace())
+	verifyEnvoyFilterInIstioNamespace(ctx, f.SeedClient, f.ShootSeedNamespace(), false)
 	By("Update Shoot control plane to HA with failure tolerance type " + string(failureToleranceType))
 	Expect(f.UpdateShoot(ctx, func(shoot *gardencorev1beta1.Shoot) error {
 		shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
@@ -57,7 +57,7 @@ func UpgradeAndVerify(ctx context.Context, f *framework.ShootFramework, failureT
 	By("Verify Shoot's control plane components")
 	verifyTopologySpreadConstraint(ctx, f.SeedClient, f.Shoot, f.ShootSeedNamespace())
 	verifyEtcdAffinity(ctx, f.SeedClient, f.Shoot, f.ShootSeedNamespace())
-	verifyEnvoyFilterInIstioNamespace(ctx, f.SeedClient, f.ShootSeedNamespace())
+	verifyEnvoyFilterInIstioNamespace(ctx, f.SeedClient, f.ShootSeedNamespace(), true)
 }
 
 func verifyTopologySpreadConstraint(ctx context.Context, seedClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, namespace string) {
@@ -177,7 +177,7 @@ func DeployZeroDownTimeValidatorJob(ctx context.Context, c client.Client, testNa
 	return &job, c.Create(ctx, &job)
 }
 
-func verifyEnvoyFilterInIstioNamespace(ctx context.Context, seedClient kubernetes.Interface, shootName string) {
+func verifyEnvoyFilterInIstioNamespace(ctx context.Context, seedClient kubernetes.Interface, shootName string, checkLabels bool) {
 	var filteredList []*istionetworkingv1alpha3.EnvoyFilter
 	CEventually(ctx, func(g Gomega) {
 		envoyFilters := &istionetworkingv1alpha3.EnvoyFilterList{}
@@ -188,7 +188,7 @@ func verifyEnvoyFilterInIstioNamespace(ctx context.Context, seedClient kubernete
 				continue
 			}
 			// Old Gardener releases do not manage the envoy filter and hence we may end up with one managed and one unmanaged filter
-			if filter.Labels["resources.gardener.cloud/managed-by"] != "gardener" {
+			if checkLabels && filter.Labels["resources.gardener.cloud/managed-by"] != "gardener" {
 				continue
 			}
 			filteredList = append(filteredList, filter)
