@@ -75,6 +75,8 @@ var _ = Describe("Virtual", func() {
 		clusterRoleProjectServiceAccountManagerAggregated *rbacv1.ClusterRole
 		clusterRoleProjectViewer                          *rbacv1.ClusterRole
 		clusterRoleProjectViewerAggregated                *rbacv1.ClusterRole
+		roleReadClusterIdentityConfigMap                  *rbacv1.Role
+		roleBindingReadClusterIdentityConfigMap           *rbacv1.RoleBinding
 	)
 
 	BeforeEach(func() {
@@ -557,6 +559,34 @@ var _ = Describe("Virtual", func() {
 				},
 			},
 		}
+		roleReadClusterIdentityConfigMap = &rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:system:read-cluster-identity-configmap",
+				Namespace: "kube-system",
+			},
+			Rules: []rbacv1.PolicyRule{{
+				APIGroups:     []string{""},
+				Resources:     []string{"configmaps"},
+				ResourceNames: []string{"cluster-identity"},
+				Verbs:         []string{"get", "list", "watch"},
+			}},
+		}
+		roleBindingReadClusterIdentityConfigMap = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:system:read-cluster-identity-configmap",
+				Namespace: "kube-system",
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Role",
+				Name:     "gardener.cloud:system:read-cluster-identity-configmap",
+			},
+			Subjects: []rbacv1.Subject{{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Group",
+				Name:     "system:authenticated",
+			}},
+		}
 	})
 
 	Describe("#Deploy", func() {
@@ -594,7 +624,7 @@ var _ = Describe("Virtual", func() {
 		})
 
 		It("should successfully deploy the resources when seed authorizer is disabled", func() {
-			Expect(managedResourceSecret.Data).To(HaveLen(21))
+			Expect(managedResourceSecret.Data).To(HaveLen(23))
 			Expect(string(managedResourceSecret.Data["namespace____garden.yaml"])).To(Equal(componenttest.Serialize(namespaceGarden)))
 			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_seed-bootstrapper.yaml"])).To(Equal(componenttest.Serialize(clusterRoleSeedBootstrapper)))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_system_seed-bootstrapper.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingSeedBootstrapper)))
@@ -616,6 +646,8 @@ var _ = Describe("Virtual", func() {
 			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_project-serviceaccountmanager-aggregation.yaml"])).To(Equal(componenttest.Serialize(clusterRoleProjectServiceAccountManager)))
 			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_project-viewer.yaml"])).To(Equal(componenttest.Serialize(clusterRoleProjectViewerAggregated)))
 			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_project-viewer-aggregation.yaml"])).To(Equal(componenttest.Serialize(clusterRoleProjectViewer)))
+			Expect(string(managedResourceSecret.Data["role__kube-system__gardener.cloud_system_read-cluster-identity-configmap.yaml"])).To(Equal(componenttest.Serialize(roleReadClusterIdentityConfigMap)))
+			Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_system_read-cluster-identity-configmap.yaml"])).To(Equal(componenttest.Serialize(roleBindingReadClusterIdentityConfigMap)))
 		})
 
 		Context("when seed authorizer is enabled", func() {
