@@ -76,7 +76,7 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 			SecretBindingName: pointer.String("local"),
 			CloudProfileName:  "local",
 			Kubernetes: gardencorev1beta1.Kubernetes{
-				Version:                     "1.28.2",
+				Version:                     "1.29.0",
 				EnableStaticTokenKubeconfig: pointer.Bool(false),
 				Kubelet: &gardencorev1beta1.KubeletConfig{
 					SerializeImagePulls: pointer.Bool(false),
@@ -128,7 +128,7 @@ func DefaultWorkerlessShoot(name string) *gardencorev1beta1.Shoot {
 			Region:           "local",
 			CloudProfileName: "local",
 			Kubernetes: gardencorev1beta1.Kubernetes{
-				Version:                     "1.28.2",
+				Version:                     "1.29.0",
 				EnableStaticTokenKubeconfig: pointer.Bool(false),
 				KubeAPIServer:               &gardencorev1beta1.KubeAPIServerConfig{},
 			},

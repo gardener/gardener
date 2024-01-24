@@ -192,7 +192,7 @@ fi
 
 kind create cluster \
   --name "$CLUSTER_NAME" \
-  --image "kindest/node:v1.28.0" \
+  --image "kindest/node:v1.29.0" \
   --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" $ADDITIONAL_ARGS --set "gardener.repositoryRoot"=$(dirname "$0")/..)
 
 # adjust Kind's CRI default OCI runtime spec for new containers to include the cgroup namespace
