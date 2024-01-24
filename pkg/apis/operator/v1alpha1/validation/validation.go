@@ -129,6 +129,22 @@ func validateRuntimeCluster(runtimeCluster operatorv1alpha1.RuntimeCluster, fldP
 		}
 	}
 
+	if runtimeCluster.Ingress.Domain != "" {
+		allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(runtimeCluster.Ingress.Domain, fldPath.Child("ingress", "domain"))...)
+	}
+
+	domains := sets.New[string]()
+	for i, domain := range runtimeCluster.Ingress.Domains {
+		allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(domain, fldPath.Child("ingress", "domains").Index(i))...)
+		if domains.Has(domain) {
+			allErrs = append(allErrs, field.Duplicate(fldPath.Child("ingress", "domains").Index(i), domain))
+		}
+		if domain == runtimeCluster.Ingress.Domain {
+			allErrs = append(allErrs, field.Duplicate(fldPath.Child("ingress", "domain"), domain))
+		}
+		domains.Insert(domain)
+	}
+
 	return allErrs
 }
 

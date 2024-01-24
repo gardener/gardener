@@ -852,6 +852,54 @@ var _ = Describe("Validation Tests", func() {
 					Expect(ValidateGarden(garden)).To(BeEmpty())
 				})
 			})
+
+			Context("Ingress", func() {
+				It("should complain about invalid ingress domain names", func() {
+					garden.Spec.RuntimeCluster.Ingress.Domain = ",,,"
+					garden.Spec.RuntimeCluster.Ingress.Domains = []string{",,,"}
+
+					Expect(ValidateGarden(garden)).To(ContainElements(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.runtimeCluster.ingress.domain"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.runtimeCluster.ingress.domains[0]"),
+						})),
+					))
+				})
+
+				It("should complain about duplicate ingress domain names in 'domains'", func() {
+					garden.Spec.RuntimeCluster.Ingress.Domains = []string{
+						"example.com",
+						"foo.bar",
+						"example.com",
+					}
+
+					Expect(ValidateGarden(garden)).To(ContainElements(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal("spec.runtimeCluster.ingress.domains[2]"),
+						})),
+					))
+				})
+
+				It("should complain about duplicate domain names in 'domain'", func() {
+					garden.Spec.RuntimeCluster.Ingress.Domain = "example.com"
+					garden.Spec.RuntimeCluster.Ingress.Domains = []string{
+						"example.com",
+						"foo.bar",
+					}
+
+					Expect(ValidateGarden(garden)).To(ContainElements(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal("spec.runtimeCluster.ingress.domain"),
+						})),
+					))
+				})
+			})
 		})
 
 		Context("virtual cluster", func() {

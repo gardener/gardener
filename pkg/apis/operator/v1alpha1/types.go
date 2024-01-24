@@ -71,8 +71,8 @@ type GardenSpec struct {
 
 // RuntimeCluster contains configuration for the runtime cluster.
 type RuntimeCluster struct {
-	// Ingress configures Ingress specific settings for the Garden cluster. This field is immutable.
-	Ingress gardencorev1beta1.Ingress `json:"ingress"`
+	// Ingress configures Ingress specific settings for the Garden cluster.
+	Ingress Ingress `json:"ingress"`
 	// Networking defines the networking configuration of the runtime cluster.
 	Networking RuntimeNetworking `json:"networking"`
 	// Provider defines the provider-specific information for this cluster.
@@ -80,6 +80,22 @@ type RuntimeCluster struct {
 	// Settings contains certain settings for this cluster.
 	// +optional
 	Settings *Settings `json:"settings,omitempty"`
+}
+
+// Ingress configures the Ingress specific settings of the runtime cluster.
+type Ingress struct {
+	// Domain specifies the IngressDomain of the cluster pointing to the ingress controller endpoint. It will be used
+	// to construct ingress URLs for system applications running in runtime cluster. Once set this field is immutable.
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +kubebuilder:validation:Pattern="^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
+	Domain string `json:"domain"`
+	// Domains specify the ingress domains of the cluster pointing to the ingress controller endpoint. They will be used
+	// to construct ingress URLs for system applications running in runtime cluster.
+	// +optional
+	Domains []string `json:"domains,omitempty"`
+	// Controller configures a Gardener managed Ingress Controller listening on the ingressDomain.
+	Controller gardencorev1beta1.IngressController `json:"controller"`
 }
 
 // RuntimeNetworking defines the networking configuration of the runtime cluster.
