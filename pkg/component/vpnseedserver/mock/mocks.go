@@ -108,6 +108,18 @@ func (mr *MockInterfaceMockRecorder) ScrapeConfigs() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScrapeConfigs", reflect.TypeOf((*MockInterface)(nil).ScrapeConfigs))
 }
 
+// SetNodeNetworkCIDR mocks base method.
+func (m *MockInterface) SetNodeNetworkCIDR(arg0 *string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetNodeNetworkCIDR", arg0)
+}
+
+// SetNodeNetworkCIDR indicates an expected call of SetNodeNetworkCIDR.
+func (mr *MockInterfaceMockRecorder) SetNodeNetworkCIDR(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetNodeNetworkCIDR", reflect.TypeOf((*MockInterface)(nil).SetNodeNetworkCIDR), arg0)
+}
+
 // SetSecrets mocks base method.
 func (m *MockInterface) SetSecrets(arg0 vpnseedserver.Secrets) {
 	m.ctrl.T.Helper()

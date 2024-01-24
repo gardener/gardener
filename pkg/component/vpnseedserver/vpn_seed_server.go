@@ -99,6 +99,7 @@ type Interface interface {
 	component.DeployWaiter
 	component.MonitoringComponent
 
+	SetNodeNetworkCIDR(nodes *string)
 	// SetSecrets sets the secrets.
 	SetSecrets(Secrets)
 	// SetSeedNamespaceObjectUID sets UID for the namespace
@@ -843,6 +844,10 @@ func (v *vpnSeedServer) SetSecrets(secrets Secrets) { v.secrets = secrets }
 
 func (v *vpnSeedServer) SetSeedNamespaceObjectUID(namespaceUID types.UID) {
 	v.namespaceUID = namespaceUID
+}
+
+func (v *vpnSeedServer) SetNodeNetworkCIDR(nodes *string) {
+	v.values.Network.NodeCIDR = pointer.StringDeref(nodes, "")
 }
 
 func (v *vpnSeedServer) indexedName(idx *int) string {
