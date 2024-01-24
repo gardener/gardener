@@ -109,7 +109,7 @@ var _ = Describe("NginxIngress", func() {
 				LoadBalancerAnnotations:   loadBalancerAnnotations,
 				PSPDisabled:               true,
 				VPAEnabled:                true,
-				WildcardIngressDomain:     wildcardIngress,
+				WildcardIngressDomains:    []string{wildcardIngress},
 				IstioIngressGatewayLabels: map[string]string{istioLabelKey: istioLabelValue},
 			}
 		})

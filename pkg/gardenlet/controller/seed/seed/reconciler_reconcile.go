@@ -903,7 +903,7 @@ func deployNginxIngressAndWaitForIstioServiceAndGetDNSComponent(
 			component.ClusterTypeSeed,
 			"",
 			v1beta1constants.SeedNginxIngressClass,
-			seed.GetIngressFQDN("*"),
+			[]string{seed.GetIngressFQDN("*")},
 			istioDefaultLabels,
 		)
 		if err != nil {

@@ -40,7 +40,7 @@ func NewNginxIngress(
 	clusterType component.ClusterType,
 	externalTrafficPolicy corev1.ServiceExternalTrafficPolicyType,
 	ingressClass string,
-	wildcardIngressDomain string,
+	wildcardIngressDomains []string,
 	istioIngressGatewayLabels map[string]string,
 ) (
 	component.DeployWaiter,
@@ -69,7 +69,7 @@ func NewNginxIngress(
 		TargetNamespace:           targetNamespace,
 		ClusterType:               clusterType,
 		ExternalTrafficPolicy:     externalTrafficPolicy,
-		WildcardIngressDomain:     wildcardIngressDomain,
+		WildcardIngressDomains:    wildcardIngressDomains,
 		IstioIngressGatewayLabels: istioIngressGatewayLabels,
 	}
 

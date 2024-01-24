@@ -642,7 +642,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 							Services: "10.2.0.0/16",
 						},
 						Ingress: operatorv1alpha1.Ingress{
-							Domain: pointer.String("ingress.dev.seed.example.com"),
+							Domains: []string{"ingress.dev.seed.example.com"},
 							Controller: gardencorev1beta1.IngressController{
 								Kind: "nginx",
 							},

@@ -87,7 +87,7 @@ func defaultGarden(backupSecret *corev1.Secret) *operatorv1alpha1.Garden {
 					Services: "10.2.0.0/16",
 				},
 				Ingress: operatorv1alpha1.Ingress{
-					Domain: pointer.String("ingress.runtime-garden.local.gardener.cloud"),
+					Domains: []string{"ingress.runtime-garden.local.gardener.cloud"},
 					Controller: gardencorev1beta1.IngressController{
 						Kind: "nginx",
 					},

@@ -116,8 +116,8 @@ type Values struct {
 	VPAEnabled bool
 	// PSPDisabled marks whether the PodSecurityPolicy admission plugin is disabled.
 	PSPDisabled bool
-	// WildcardIngressDomain is the wildcard domain used by all ingress resources exposed by nginx-ingress.
-	WildcardIngressDomain string
+	// WildcardIngressDomains are the wildcard domains used by all ingress resources exposed by nginx-ingress.
+	WildcardIngressDomains []string
 	// IstioIngressGatewayLabels are the labels for identifying the used istio ingress gateway.
 	IstioIngressGatewayLabels map[string]string
 }
@@ -663,15 +663,14 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			return nil, err
 		}
 
-		sniWildcardHosts := []string{n.values.WildcardIngressDomain}
 		port := uint32(ServicePortControllerHttps)
 		gateway = &istionetworkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: controllerName, Namespace: n.values.TargetNamespace}}
-		if err := istio.GatewayWithTLSPassthrough(gateway, n.getLabels(LabelValueController, false), n.values.IstioIngressGatewayLabels, sniWildcardHosts, port)(); err != nil {
+		if err := istio.GatewayWithTLSPassthrough(gateway, n.getLabels(LabelValueController, false), n.values.IstioIngressGatewayLabels, n.values.WildcardIngressDomains, port)(); err != nil {
 			return nil, err
 		}
 
 		virtualService = &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: controllerName, Namespace: n.values.TargetNamespace}}
-		if err := istio.VirtualServiceWithSNIMatch(virtualService, n.getLabels(LabelValueController, false), sniWildcardHosts, gateway.Name, port, destinationHost)(); err != nil {
+		if err := istio.VirtualServiceWithSNIMatch(virtualService, n.getLabels(LabelValueController, false), n.values.WildcardIngressDomains, gateway.Name, port, destinationHost)(); err != nil {
 			return nil, err
 		}
 
