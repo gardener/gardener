@@ -26,6 +26,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
@@ -80,7 +81,7 @@ var _ = Describe("Waiter", func() {
 			Expect(botanist.WaitUntilNoPodRunning(ctxCanceled)).To(Succeed())
 		})
 
-		It("should return an error when a pod is running in non system namespace", func() {
+		It("should return an error with when a pod is running in non system namespace", func() {
 			ctxCanceled, cancel := context.WithCancel(ctx)
 			cancel()
 
@@ -94,10 +95,10 @@ var _ = Describe("Waiter", func() {
 			var coder v1beta1helper.Coder
 			Expect(errors.As(err, &coder)).To(BeTrue())
 
-			Expect(coder.Codes()[0]).To(Equal(gardencorev1beta1.ErrorCleanupClusterResources))
+			Expect(coder.Codes()).To(ContainElement(gardencorev1beta1.ErrorCleanupClusterResources))
 		})
 
-		It("should return an error when a pod is running in system namespace", func() {
+		It("should return an error when a pod is running in kube-system namespace", func() {
 			ctxCanceled, cancel := context.WithCancel(ctx)
 			cancel()
 
@@ -112,6 +113,23 @@ var _ = Describe("Waiter", func() {
 			Expect(errors.As(err, &coder)).To(BeFalse())
 
 			Expect(err).To(MatchError("retry failed with context canceled, last error: waiting until there are no running Pods in the shoot cluster, there is still at least one running Pod in the shoot cluster: \"kube-system/infinity-pod\""))
+		})
+
+		It("should return an error when a pod is running in kubernetes-dashboard namespace", func() {
+			ctxCanceled, cancel := context.WithCancel(ctx)
+			cancel()
+
+			pod.Status = corev1.PodStatus{Phase: corev1.PodRunning}
+			pod.Namespace = v1beta1constants.KubernetesDashboardNamespace
+
+			Expect(botanist.ShootClientSet.Client().Create(ctxCanceled, pod)).To(Succeed())
+
+			err := botanist.WaitUntilNoPodRunning(ctxCanceled)
+
+			var coder v1beta1helper.Coder
+			Expect(errors.As(err, &coder)).To(BeFalse())
+
+			Expect(err).To(MatchError("retry failed with context canceled, last error: waiting until there are no running Pods in the shoot cluster, there is still at least one running Pod in the shoot cluster: \"kubernetes-dashboard/infinity-pod\""))
 		})
 	})
 })
