@@ -855,7 +855,7 @@ var _ = Describe("Validation Tests", func() {
 
 			Context("Ingress", func() {
 				It("should complain about invalid ingress domain names", func() {
-					garden.Spec.RuntimeCluster.Ingress.Domain = ",,,"
+					garden.Spec.RuntimeCluster.Ingress.Domain = pointer.String(",,,")
 					garden.Spec.RuntimeCluster.Ingress.Domains = []string{",,,"}
 
 					Expect(ValidateGarden(garden)).To(ContainElements(
@@ -886,7 +886,7 @@ var _ = Describe("Validation Tests", func() {
 				})
 
 				It("should complain about duplicate domain names in 'domain'", func() {
-					garden.Spec.RuntimeCluster.Ingress.Domain = "example.com"
+					garden.Spec.RuntimeCluster.Ingress.Domain = pointer.String("example.com")
 					garden.Spec.RuntimeCluster.Ingress.Domains = []string{
 						"example.com",
 						"foo.bar",

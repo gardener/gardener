@@ -250,7 +250,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.plutono, err = r.newPlutono(secretsManager, garden.Spec.RuntimeCluster.Ingress.Domain, wildcardCert)
+	c.plutono, err = r.newPlutono(secretsManager, *garden.Spec.RuntimeCluster.Ingress.Domain, wildcardCert)
 	if err != nil {
 		return
 	}
@@ -801,7 +801,7 @@ func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden, 
 		component.ClusterTypeSeed,
 		"",
 		v1beta1constants.SeedNginxIngressClass,
-		"*."+garden.Spec.RuntimeCluster.Ingress.Domain,
+		"*."+*garden.Spec.RuntimeCluster.Ingress.Domain,
 		ingressGatewayValues[0].Labels,
 	)
 }

@@ -159,7 +159,7 @@ var _ = Describe("Garden controller tests", func() {
 						Services: "10.2.0.0/16",
 					},
 					Ingress: operatorv1alpha1.Ingress{
-						Domain: "ingress.runtime-garden.local.gardener.cloud",
+						Domain: pointer.String("ingress.runtime-garden.local.gardener.cloud"),
 						Controller: gardencorev1beta1.IngressController{
 							Kind: "nginx",
 						},

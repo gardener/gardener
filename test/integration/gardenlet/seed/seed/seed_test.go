@@ -753,7 +753,7 @@ var _ = Describe("Seed controller tests", func() {
 										Services: "10.2.0.0/16",
 									},
 									Ingress: operatorv1alpha1.Ingress{
-										Domain: "ingress.dev.seed.example.com",
+										Domain: pointer.String("ingress.dev.seed.example.com"),
 										Controller: gardencorev1beta1.IngressController{
 											Kind: "nginx",
 										},

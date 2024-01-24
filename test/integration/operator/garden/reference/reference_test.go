@@ -19,6 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -99,7 +100,7 @@ var _ = Describe("Garden Reference controller tests", func() {
 						Services: "10.2.0.0/16",
 					},
 					Ingress: operatorv1alpha1.Ingress{
-						Domain: "ingress.runtime-garden.local.gardener.cloud",
+						Domain: pointer.String("ingress.runtime-garden.local.gardener.cloud"),
 						Controller: gardencorev1beta1.IngressController{
 							Kind: "nginx",
 						},

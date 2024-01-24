@@ -85,11 +85,9 @@ type RuntimeCluster struct {
 // Ingress configures the Ingress specific settings of the runtime cluster.
 type Ingress struct {
 	// Domain specifies the IngressDomain of the cluster pointing to the ingress controller endpoint. It will be used
-	// to construct ingress URLs for system applications running in runtime cluster. Once set this field is immutable.
-	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	// +kubebuilder:validation:Pattern="^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
-	Domain string `json:"domain"`
+	// to construct ingress URLs for system applications running in runtime cluster.
+	// +optional
+	Domain *string `json:"domain,omitempty"`
 	// Domains specify the ingress domains of the cluster pointing to the ingress controller endpoint. They will be used
 	// to construct ingress URLs for system applications running in runtime cluster.
 	// +optional

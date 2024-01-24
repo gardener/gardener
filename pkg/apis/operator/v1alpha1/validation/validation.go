@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/component-base/featuregate"
+	"k8s.io/utils/pointer"
 
 	admissioncontrollerconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
@@ -129,8 +130,8 @@ func validateRuntimeCluster(runtimeCluster operatorv1alpha1.RuntimeCluster, fldP
 		}
 	}
 
-	if runtimeCluster.Ingress.Domain != "" {
-		allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(runtimeCluster.Ingress.Domain, fldPath.Child("ingress", "domain"))...)
+	if runtimeCluster.Ingress.Domain != nil {
+		allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(*runtimeCluster.Ingress.Domain, fldPath.Child("ingress", "domain"))...)
 	}
 
 	domains := sets.New[string]()
@@ -139,7 +140,7 @@ func validateRuntimeCluster(runtimeCluster operatorv1alpha1.RuntimeCluster, fldP
 		if domains.Has(domain) {
 			allErrs = append(allErrs, field.Duplicate(fldPath.Child("ingress", "domains").Index(i), domain))
 		}
-		if domain == runtimeCluster.Ingress.Domain {
+		if domain == pointer.StringDeref(runtimeCluster.Ingress.Domain, "") {
 			allErrs = append(allErrs, field.Duplicate(fldPath.Child("ingress", "domain"), domain))
 		}
 		domains.Insert(domain)
