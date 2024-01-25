@@ -46,6 +46,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
+	leasehelper "github.com/gardener/gardener/pkg/nodeagent/controller/lease"
 	"github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -632,6 +633,19 @@ func (h *Health) CheckClusterNodes(
 		}
 	}
 
+	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+		leaseList := coordinationv1.LeaseList{}
+		err := shootClient.Client().List(ctx, &leaseList, client.InNamespace(metav1.NamespaceSystem))
+		if err != nil {
+			return nil, err
+		}
+
+		if err := CheckNodeAgentLease(nodeList, &leaseList, h.clock); err != nil {
+			c := v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "CheckNodeAgent", err.Error())
+			return &c, nil
+		}
+	}
+
 	// First check if the MachineDeployments report failed machines. If false then check if the MachineDeployments are
 	// "available". If false then check if there is a regular scale-up happening or if there are machines with an erroneous
 	// phase. Only then check the other MachineDeployment conditions. As last check, check if there is a scale-down happening
@@ -664,6 +678,30 @@ func (h *Health) CheckClusterNodes(
 	}
 
 	return nil, nil
+}
+
+func CheckNodeAgentLease(nodeList *corev1.NodeList, leaseList *coordinationv1.LeaseList, clock clock.Clock) error {
+
+	for _, node := range nodeList.Items {
+		var nodeLease *coordinationv1.Lease = nil
+		for _, lease := range leaseList.Items {
+			if leasehelper.ObjectName(node.Name) == lease.Name {
+				nodeLease = &lease
+				break
+			}
+		}
+
+		if nodeLease == nil {
+			return fmt.Errorf("NodeAgent is not running in node %q", node.Name)
+		}
+
+		if nodeLease.Spec.RenewTime.Add(time.Second * time.Duration(*nodeLease.Spec.LeaseDurationSeconds)).Before(clock.Now()) {
+			return fmt.Errorf("NodeAgent stopped running in node %q", node.Name)
+		}
+
+	}
+
+	return nil
 }
 
 // CheckNodesScalingUp returns an error if nodes are being scaled up.
