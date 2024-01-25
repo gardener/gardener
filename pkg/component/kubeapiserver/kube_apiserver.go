@@ -64,6 +64,8 @@ type Interface interface {
 	SetExternalHostname(string)
 	// SetExternalServer sets the ExternalServer field in the Values of the deployer.
 	SetExternalServer(string)
+	// SetNodeNetworkCIDR sets the nodesCIDR of the shoot network.
+	SetNodeNetworkCIDR(*string)
 	// SetServerCertificateConfig sets the ServerCertificateConfig field in the Values of the deployer.
 	SetServerCertificateConfig(ServerCertificateConfig)
 	// SetServiceAccountConfig sets the ServiceAccount field in the Values of the deployer.
@@ -541,6 +543,10 @@ func (k *kubeAPIServer) SetExternalHostname(hostname string) {
 
 func (k *kubeAPIServer) SetExternalServer(server string) {
 	k.values.ExternalServer = server
+}
+
+func (k *kubeAPIServer) SetNodeNetworkCIDR(nodes *string) {
+	k.values.VPN.NodeNetworkCIDR = nodes
 }
 
 func (k *kubeAPIServer) SetServerCertificateConfig(config ServerCertificateConfig) {

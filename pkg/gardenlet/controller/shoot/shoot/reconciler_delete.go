@@ -149,7 +149,6 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		cleanupShootResources   = nonTerminatingNamespace && kubeAPIServerDeploymentFound && (infrastructure != nil || o.Shoot.IsWorkerless)
 		defaultInterval         = 5 * time.Second
 		defaultTimeout          = 30 * time.Second
-		staticNodesCIDR         = o.Shoot.GetInfo().Spec.Networking != nil && o.Shoot.GetInfo().Spec.Networking.Nodes != nil
 		useDNS                  = botanist.ShootUsesDNS()
 
 		g = flow.NewGraph("Shoot cluster deletion")
@@ -246,7 +245,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 				waitUntilEtcdReady,
 				waitUntilKubeAPIServerServiceIsReady,
 				waitUntilControlPlaneReady,
-			).InsertIf(!staticNodesCIDR),
+			),
 		})
 		scaleUpKubeAPIServer = g.Add(flow.Task{
 			Name: "Scaling up Kubernetes API server",

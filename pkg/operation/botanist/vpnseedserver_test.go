@@ -137,7 +137,8 @@ var _ = Describe("VPNSeedServer", func() {
 			secretNameDH     = v1beta1constants.GardenRoleOpenVPNDiffieHellman
 			secretChecksumDH = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
-			namespaceUID = types.UID("1234")
+			namespaceUID    = types.UID("1234")
+			nodeNetworkCIDR = "10.0.0.0/24"
 		)
 
 		BeforeEach(func() {
@@ -151,6 +152,13 @@ var _ = Describe("VPNSeedServer", func() {
 					},
 				},
 			}
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Networking: &gardencorev1beta1.Networking{
+						Nodes: &nodeNetworkCIDR,
+					},
+				},
+			})
 			botanist.Config = &config.GardenletConfiguration{
 				SNI: &config.SNI{
 					Ingress: &config.SNIIngress{
@@ -169,6 +177,7 @@ var _ = Describe("VPNSeedServer", func() {
 		})
 
 		BeforeEach(func() {
+			vpnSeedServer.EXPECT().SetNodeNetworkCIDR(&nodeNetworkCIDR)
 			vpnSeedServer.EXPECT().SetSecrets(vpnseedserver.Secrets{
 				DiffieHellmanKey: component.Secret{Name: secretNameDH, Checksum: secretChecksumDH},
 			})

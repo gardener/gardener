@@ -515,6 +515,7 @@ func (r *Reconciler) deployKubeAPIServerFunc(ctx context.Context, garden *operat
 			sniConfig,
 			gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0]),
 			gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0]),
+			nil,
 			helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials),
 			helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials),
 			false,

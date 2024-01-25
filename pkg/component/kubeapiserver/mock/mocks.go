@@ -183,6 +183,18 @@ func (mr *MockInterfaceMockRecorder) SetExternalServer(arg0 interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetExternalServer", reflect.TypeOf((*MockInterface)(nil).SetExternalServer), arg0)
 }
 
+// SetNodeNetworkCIDR mocks base method.
+func (m *MockInterface) SetNodeNetworkCIDR(arg0 *string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetNodeNetworkCIDR", arg0)
+}
+
+// SetNodeNetworkCIDR indicates an expected call of SetNodeNetworkCIDR.
+func (mr *MockInterfaceMockRecorder) SetNodeNetworkCIDR(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetNodeNetworkCIDR", reflect.TypeOf((*MockInterface)(nil).SetNodeNetworkCIDR), arg0)
+}
+
 // SetSNIConfig mocks base method.
 func (m *MockInterface) SetSNIConfig(arg0 kubeapiserver.SNIConfig) {
 	m.ctrl.T.Helper()
