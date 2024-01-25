@@ -17,6 +17,7 @@ package care
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -46,7 +47,6 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	leasehelper "github.com/gardener/gardener/pkg/nodeagent/controller/lease"
 	"github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -634,14 +634,13 @@ func (h *Health) CheckClusterNodes(
 	}
 
 	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
-		leaseList := coordinationv1.LeaseList{}
-		err := shootClient.Client().List(ctx, &leaseList, client.InNamespace(metav1.NamespaceSystem))
-		if err != nil {
+		leaseList := &coordinationv1.LeaseList{}
+		if err := shootClient.Client().List(ctx, leaseList, client.InNamespace(metav1.NamespaceSystem)); err != nil {
 			return nil, err
 		}
 
-		if err := CheckNodeAgentLease(nodeList, &leaseList, h.clock); err != nil {
-			c := v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "CheckNodeAgent", err.Error())
+		if err := CheckNodeAgentLeases(nodeList, leaseList, h.clock); err != nil {
+			c := v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "NodeAgentUnhealthy", err.Error())
 			return &c, nil
 		}
 	}
@@ -680,25 +679,27 @@ func (h *Health) CheckClusterNodes(
 	return nil, nil
 }
 
-func CheckNodeAgentLease(nodeList *corev1.NodeList, leaseList *coordinationv1.LeaseList, clock clock.Clock) error {
+// CheckNodeAgentLeases checks if all given nodes have a corresponding lease
+func CheckNodeAgentLeases(nodeList *corev1.NodeList, leaseList *coordinationv1.LeaseList, clock clock.Clock) error {
+	if len(leaseList.Items) == 0 {
+		return fmt.Errorf("no leases")
+	}
+
+	leases := map[string]coordinationv1.Lease{}
+	for _, lease := range leaseList.Items {
+		nodeName := strings.ReplaceAll(lease.Name, gardenerutils.NodeLeasePrefix, "")
+		leases[nodeName] = lease
+	}
 
 	for _, node := range nodeList.Items {
-		var nodeLease *coordinationv1.Lease = nil
-		for _, lease := range leaseList.Items {
-			if leasehelper.ObjectName(node.Name) == lease.Name {
-				nodeLease = &lease
-				break
-			}
-		}
-
-		if nodeLease == nil {
-			return fmt.Errorf("NodeAgent is not running in node %q", node.Name)
+		nodeLease, ok := leases[node.Name]
+		if !ok {
+			return fmt.Errorf("gardener-node-agent is not running on node %q", node.Name)
 		}
 
 		if nodeLease.Spec.RenewTime.Add(time.Second * time.Duration(*nodeLease.Spec.LeaseDurationSeconds)).Before(clock.Now()) {
-			return fmt.Errorf("NodeAgent stopped running in node %q", node.Name)
+			return fmt.Errorf("gardener-node-agent stopped running on node %q", node.Name)
 		}
-
 	}
 
 	return nil

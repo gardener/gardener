@@ -720,7 +720,6 @@ var _ = Describe("health check", func() {
 	})
 
 	Describe("#CheckingNodeAgentLease", func() {
-
 		var (
 			validLease = coordinationv1.Lease{
 				ObjectMeta: metav1.ObjectMeta{
@@ -760,8 +759,7 @@ var _ = Describe("health check", func() {
 				},
 			}
 
-			err := CheckNodeAgentLease(&nodeList, &leaseList, fakeClock)
-			Expect(err).To(expected)
+			Expect(CheckNodeAgentLeases(&nodeList, &leaseList, fakeClock)).To(expected)
 		},
 			Entry("should return nil if there is a matching lease for node", validLease, BeNil()),
 			Entry("should return Error that node agent is not running if no matching lease could be found for node", nil, MatchError(ContainSubstring("not running"))),
