@@ -26,6 +26,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // Reconciler creates a lease in the kube-system namespace of the shoot.
@@ -48,7 +50,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	lease := &coordinationv1.Lease{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      ObjectName(node.GetName()),
+			Name:      gardenerutils.NodeAgentLeaseName(node.GetName()),
 			Namespace: r.Namespace,
 		},
 	}
@@ -67,9 +69,4 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	})
 	log.V(1).Info("Heartbeat Lease", "lease", client.ObjectKeyFromObject(lease), "operation", op)
 	return reconcile.Result{RequeueAfter: time.Duration(r.LeaseDurationSeconds) * time.Second / 4}, err
-}
-
-// ObjectName returns the name of the Lease object based on the node name.
-func ObjectName(nodeName string) string {
-	return "gardener-node-agent-" + nodeName
 }
