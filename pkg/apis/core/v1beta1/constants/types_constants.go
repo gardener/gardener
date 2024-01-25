@@ -552,6 +552,9 @@ const (
 	// LabelVPAEvictionRequirementsController is a constant for a label indicating that a VPA resource is under control
 	// of the VPAEvictionRequirementsController.
 	LabelVPAEvictionRequirementsController = "autoscaling.gardener.cloud/eviction-requirements"
+	// EvictionRequirementManagedByController is a constant to be used as a value for the label LabelVPAEvictionRequirementsController
+	// to indicate that the vpa-eviction-requirements-controller manages all EvictionRequirements on a VPA object.
+	EvictionRequirementManagedByController = "managed-by-controller"
 
 	// LabelVPAEvictionRequirementDownscaleRestriction is a constant for a label key on a VPA object indicating that
 	// the VPAEvictionRequirementsController should add an EvictionRestriction that prevents downscaling.

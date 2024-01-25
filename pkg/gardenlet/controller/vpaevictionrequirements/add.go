@@ -47,7 +47,7 @@ func (r *Reconciler) AddToManager(_ context.Context, mgr manager.Manager, seedCl
 	}
 
 	vpaEvictionRequirementsManagedByControllerPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
-		MatchLabels: map[string]string{constants.LabelVPAEvictionRequirementsController: "managed-by-controller"},
+		MatchLabels: map[string]string{constants.LabelVPAEvictionRequirementsController: constants.EvictionRequirementManagedByController},
 	})
 	if err != nil {
 		return fmt.Errorf("failed computing label selector predicate for eviction requirements managed by controller: %w", err)
