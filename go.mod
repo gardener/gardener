@@ -14,7 +14,7 @@ require (
 	github.com/gardener/etcd-druid v0.22.0
 	github.com/gardener/hvpa-controller/api v0.5.0
 	github.com/gardener/machine-controller-manager v0.50.0
-	github.com/go-logr/logr v1.2.4
+	github.com/go-logr/logr v1.3.0
 	github.com/go-test/deep v1.1.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/gnostic-models v0.6.8
@@ -27,6 +27,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.13.0
 	github.com/onsi/gomega v1.29.0
 	github.com/opencontainers/image-spec v1.1.0-rc3
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.71.0
 	github.com/prometheus/client_golang v1.16.0
 	github.com/robfig/cron v1.2.0
 	github.com/spf13/afero v1.9.5
@@ -48,30 +49,30 @@ require (
 	helm.sh/helm/v3 v3.11.1
 	istio.io/api v1.19.2-0.20231011000955-f3015ebb5bd4
 	istio.io/client-go v1.19.3
-	k8s.io/api v0.28.3
-	k8s.io/apiextensions-apiserver v0.28.3
-	k8s.io/apimachinery v0.28.3
-	k8s.io/apiserver v0.28.3
+	k8s.io/api v0.28.4
+	k8s.io/apiextensions-apiserver v0.28.4
+	k8s.io/apimachinery v0.28.4
+	k8s.io/apiserver v0.28.4
 	k8s.io/autoscaler/vertical-pod-autoscaler v1.0.0
-	k8s.io/client-go v0.28.3
+	k8s.io/client-go v0.28.4
 	k8s.io/cluster-bootstrap v0.28.3
-	k8s.io/code-generator v0.28.3
-	k8s.io/component-base v0.28.3
+	k8s.io/code-generator v0.28.4
+	k8s.io/component-base v0.28.4
 	k8s.io/component-helpers v0.28.3
 	k8s.io/helm v2.17.0+incompatible
-	k8s.io/klog/v2 v2.100.1
+	k8s.io/klog/v2 v2.110.1
 	k8s.io/kube-aggregator v0.28.3
 	k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9
 	k8s.io/kube-proxy v0.28.3
 	k8s.io/kubelet v0.28.3
 	k8s.io/metrics v0.28.3
 	k8s.io/pod-security-admission v0.28.3
-	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2
+	k8s.io/utils v0.0.0-20231127182322-b307cd553661
 	sigs.k8s.io/controller-runtime v0.16.3
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20231015215740-bf15e44028f9 // v0.16.3
 	sigs.k8s.io/controller-tools v0.13.0
-	sigs.k8s.io/structured-merge-diff/v4 v4.3.0
-	sigs.k8s.io/yaml v1.3.0
+	sigs.k8s.io/structured-merge-diff/v4 v4.4.1
+	sigs.k8s.io/yaml v1.4.0
 )
 
 require (
@@ -94,7 +95,7 @@ require (
 	github.com/containerd/typeurl v1.0.2 // indirect
 	github.com/coreos/go-semver v0.3.1 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.3 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
 	github.com/evanphx/json-patch v5.6.0+incompatible // indirect
@@ -182,7 +183,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29 // indirect
 	golang.org/x/mod v0.12.0 // indirect
-	golang.org/x/net v0.17.0 // indirect
+	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/oauth2 v0.10.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
@@ -199,7 +200,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/gengo v0.0.0-20220902162205-c0856e24416d // indirect
 	k8s.io/klog v1.0.0 // indirect
-	k8s.io/kms v0.28.3 // indirect
+	k8s.io/kms v0.28.4 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.1.2 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 )

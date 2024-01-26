@@ -37,6 +37,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/logging/vali"
+	"github.com/gardener/gardener/pkg/component/monitoring/prometheusoperator"
 	"github.com/gardener/gardener/pkg/component/nginxingress"
 	"github.com/gardener/gardener/pkg/component/seedsystem"
 	"github.com/gardener/gardener/pkg/component/vpa"
@@ -52,6 +53,7 @@ var requiredManagedResourcesSeed = sets.New(
 	nginxingress.ManagedResourceName,
 	seedsystem.ManagedResourceName,
 	vpa.ManagedResourceControlName,
+	prometheusoperator.ManagedResourceName,
 )
 
 // health contains information needed to execute health checks for a seed.

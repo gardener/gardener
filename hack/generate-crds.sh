@@ -67,6 +67,15 @@ get_group_package () {
   "fluentbit.fluent.io")
     echo "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
     ;;
+  "monitoring.coreos.com_v1")
+    echo "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+    ;;
+  "monitoring.coreos.com_v1beta1")
+    echo "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1beta1"
+    ;;
+  "monitoring.coreos.com_v1alpha1")
+    echo "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
+    ;;
   "autoscaling.k8s.io")
     echo "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
     ;;
@@ -87,6 +96,9 @@ generate_all_groups () {
   generate_group hvpaautoscaling.k8s.io
   generate_group autoscaling.k8s.io
   generate_group fluentbit.fluent.io
+  generate_group monitoring.coreos.com_v1
+  generate_group monitoring.coreos.com_v1beta1
+  generate_group monitoring.coreos.com_v1alpha1
   generate_group machine.sapcloud.io
 }
 
@@ -133,6 +145,10 @@ generate_group () {
   fi
 
   local relevant_files=("$@")
+
+  sanitized_group_name="${group/hvpa/}"
+  sanitized_group_name="${sanitized_group_name%%_*}"
+
   while IFS= read -r crd; do
     crd_out="$output_dir/$file_name_prefix$(basename $crd)"
     mv "$crd" "$crd_out"
@@ -155,7 +171,7 @@ generate_group () {
     if [[ ${group} =~ .*\.k8s\.io ]]; then
       sed -i "/^  annotations:.*/a\    api-approved.kubernetes.io: $k8s_io_api_approval_reason" "$crd_out"
     fi
-  done < <(ls "$output_dir_temp/${group/hvpa/}"_*.yaml)
+  done < <(ls "$output_dir_temp/$sanitized_group_name"_*.yaml)
 
   # garbage collection - clean all generated files for this group to account for changed prefix or removed resources
   local pattern=".*${group}_.*\.yaml"

@@ -67,6 +67,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator/customresources"
 	"github.com/gardener/gardener/pkg/component/logging/vali"
+	"github.com/gardener/gardener/pkg/component/monitoring/prometheusoperator"
 	"github.com/gardener/gardener/pkg/component/plutono"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
@@ -83,11 +84,12 @@ import (
 )
 
 type components struct {
-	etcdCRD   component.Deployer
-	vpaCRD    component.Deployer
-	hvpaCRD   component.Deployer
-	istioCRD  component.DeployWaiter
-	fluentCRD component.DeployWaiter
+	etcdCRD       component.Deployer
+	vpaCRD        component.Deployer
+	hvpaCRD       component.Deployer
+	istioCRD      component.Deployer
+	fluentCRD     component.Deployer
+	prometheusCRD component.Deployer
 
 	gardenerResourceManager component.DeployWaiter
 	runtimeSystem           component.DeployWaiter
@@ -119,6 +121,7 @@ type components struct {
 	fluentOperatorCustomResources component.DeployWaiter
 	plutono                       plutono.Interface
 	vali                          component.Deployer
+	prometheusOperator            component.DeployWaiter
 }
 
 func (r *Reconciler) instantiateComponents(
@@ -143,6 +146,7 @@ func (r *Reconciler) instantiateComponents(
 	}
 	c.istioCRD = istio.NewCRD(r.RuntimeClientSet.ChartApplier())
 	c.fluentCRD = fluentoperator.NewCRDs(applier)
+	c.prometheusCRD = prometheusoperator.NewCRDs(applier)
 
 	// garden system components
 	c.gardenerResourceManager, err = r.newGardenerResourceManager(garden, secretsManager)
@@ -246,8 +250,11 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-
 	c.plutono, err = r.newPlutono(secretsManager, garden.Spec.RuntimeCluster.Ingress.Domain, wildcardCert)
+	if err != nil {
+		return
+	}
+	c.prometheusOperator, err = r.newPrometheusOperator()
 	if err != nil {
 		return
 	}
@@ -1016,5 +1023,13 @@ func (r *Reconciler) newVali(garden *operatorv1alpha1.Garden) (vali.Interface, e
 			Begin: garden.Spec.VirtualCluster.Maintenance.TimeWindow.Begin,
 			End:   garden.Spec.VirtualCluster.Maintenance.TimeWindow.End,
 		},
+	)
+}
+
+func (r *Reconciler) newPrometheusOperator() (component.DeployWaiter, error) {
+	return sharedcomponent.NewPrometheusOperator(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		v1beta1constants.PriorityClassNameGardenSystem100,
 	)
 }

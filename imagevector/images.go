@@ -113,6 +113,8 @@ const (
 	ImageNamePlutono = "plutono"
 	// ImageNamePrometheus is a constant for an image in the image vector with name 'prometheus'.
 	ImageNamePrometheus = "prometheus"
+	// ImageNamePrometheusOperator is a constant for an image in the image vector with name 'prometheus-operator'.
+	ImageNamePrometheusOperator = "prometheus-operator"
 	// ImageNameTelegraf is a constant for an image in the image vector with name 'telegraf'.
 	ImageNameTelegraf = "telegraf"
 	// ImageNameTune2fs is a constant for an image in the image vector with name 'tune2fs'.

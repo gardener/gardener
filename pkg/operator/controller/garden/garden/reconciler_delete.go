@@ -184,6 +184,10 @@ func (r *Reconciler) delete(
 			Fn:           component.OpDestroyAndWait(c.nginxIngressController).Destroy,
 			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
 		})
+		destroyPrometheusOperator = g.Add(flow.Task{
+			Name: "Destroying prometheus-operator",
+			Fn:   component.OpDestroyAndWait(c.prometheusOperator).Destroy,
+		})
 		destroyFluentOperatorCustomResources = g.Add(flow.Task{
 			Name:         "Destroying fluent-operator custom resources",
 			Fn:           component.OpDestroyAndWait(c.fluentOperatorCustomResources).Destroy,
@@ -214,6 +218,7 @@ func (r *Reconciler) delete(
 			destroyFluentBit,
 			destroyFluentOperator,
 			destroyVali,
+			destroyPrometheusOperator,
 		)
 
 		destroyRuntimeSystemResources = g.Add(flow.Task{
@@ -230,6 +235,11 @@ func (r *Reconciler) delete(
 			Name:         "Destroying and waiting for gardener-resource-manager to be deleted",
 			Fn:           component.OpWait(c.gardenerResourceManager).Destroy,
 			Dependencies: flow.NewTaskIDs(ensureNoManagedResourcesExistAnymore),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Destroying custom resource definition for prometheus-operator",
+			Fn:           c.prometheusCRD.Destroy,
+			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for fluent-operator",

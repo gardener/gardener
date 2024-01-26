@@ -44,6 +44,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
+	"github.com/gardener/gardener/pkg/component/monitoring/prometheusoperator"
 	"github.com/gardener/gardener/pkg/component/nginxingress"
 	"github.com/gardener/gardener/pkg/component/plutono"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
@@ -306,6 +307,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 			fluentOperator        = fluentoperator.NewFluentOperator(seedClient, r.GardenNamespace, fluentoperator.Values{})
 			fluentBit             = fluentoperator.NewFluentBit(seedClient, r.GardenNamespace, fluentoperator.FluentBitValues{})
 			vali                  = vali.New(seedClient, r.GardenNamespace, nil, vali.Values{})
+			prometheusOperator    = prometheusoperator.New(seedClient, r.GardenNamespace, prometheusoperator.Values{})
 
 			destroyPlutono = g.Add(flow.Task{
 				Name: "Destroying plutono",
@@ -330,6 +332,10 @@ func (r *Reconciler) runDeleteSeedFlow(
 			destroyHVPA = g.Add(flow.Task{
 				Name: "Destroy HVPA controller",
 				Fn:   component.OpDestroyAndWait(hvpa).Destroy,
+			})
+			destroyPrometheusOperator = g.Add(flow.Task{
+				Name: "Destroy Prometheus Operator",
+				Fn:   component.OpDestroyAndWait(prometheusOperator).Destroy,
 			})
 			destroyFluentBit = g.Add(flow.Task{
 				Name: "Destroy Fluent Bit",
@@ -358,6 +364,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 		)
 
 		syncPointCleanedUp.Insert(
+			destroyPrometheusOperator,
 			destroyPlutono,
 			destroyKubeStateMetrics,
 			destroyEtcdDruid,
