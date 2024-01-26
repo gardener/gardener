@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -31,6 +32,7 @@ import (
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
+	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 )
 
 var _ = Describe("Waiter", func() {
@@ -48,8 +50,38 @@ var _ = Describe("Waiter", func() {
 			Operation: &operation.Operation{
 				Logger:         logr.Discard(),
 				ShootClientSet: shootClientSet,
+				Shoot:          &shootpkg.Shoot{},
 			},
 		}
+	})
+
+	Describe("#WaitUntilNodesDeleted", func() {
+		var (
+			node *corev1.Node
+		)
+
+		BeforeEach(func() {
+			node = &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "infinity-node",
+				},
+			}
+		})
+
+		It("should return ok when no node is found", func() {
+			Expect(botanist.WaitUntilNodesDeleted(ctx)).To(Succeed())
+		})
+
+		It("should return an error when a node is still present", func() {
+			ctxCanceled, cancel := context.WithCancel(ctx)
+			cancel()
+
+			Expect(botanist.ShootClientSet.Client().Create(ctxCanceled, node)).To(Succeed())
+
+			err := botanist.WaitUntilNodesDeleted(ctxCanceled)
+
+			Expect(err).To(MatchError("retry failed with context canceled, last error: not all nodes have been deleted in the shoot cluster"))
+		})
 	})
 
 	Describe("#WaitUntilNoPodRunning", func() {
@@ -112,6 +144,91 @@ var _ = Describe("Waiter", func() {
 			Expect(errors.As(err, &coder)).To(BeFalse())
 
 			Expect(err).To(MatchError("retry failed with context canceled, last error: waiting until there are no running Pods in the shoot cluster, there is still at least one running Pod in the shoot cluster: \"kube-system/infinity-pod\""))
+		})
+	})
+
+	Describe("#WaitUntilEndpointsDoNotContainPodIPs", func() {
+		var (
+			shoot    *gardencorev1beta1.Shoot
+			endpoint *corev1.Endpoints
+		)
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Networking: &gardencorev1beta1.Networking{},
+				},
+			}
+			endpoint = &corev1.Endpoints{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default", Name: "basic-endpoint",
+				},
+				Subsets: []corev1.EndpointSubset{
+					{
+						Addresses: []corev1.EndpointAddress{{
+							IP:        "10.0.0.1",
+							Hostname:  "",
+							NodeName:  nil,
+							TargetRef: nil,
+						}},
+						NotReadyAddresses: nil,
+						Ports:             nil,
+					},
+				},
+			}
+		})
+
+		It("should return an error when shoots pod network is empty", func() {
+			botanist.Shoot.SetInfo(shoot)
+
+			err := botanist.WaitUntilEndpointsDoNotContainPodIPs(ctx)
+			Expect(err).To(MatchError("unable to check if there are still Endpoints containing Pod IPs in the shoot cluster. Shoot's Pods network is empty"))
+		})
+
+		It("should return an error when shoots pod network is invalid", func() {
+			shoot.Spec.Networking.Pods = pointer.String("abc123")
+			botanist.Shoot.SetInfo(shoot)
+
+			err := botanist.WaitUntilEndpointsDoNotContainPodIPs(ctx)
+
+			Expect(err).To(MatchError("unable to check if there are still Endpoints containing Pod IPs in the shoot cluster. Shoots's Pods network could not be parsed: invalid CIDR address: abc123"))
+		})
+
+		It("should return an error when an endpoint is still present", func() {
+			ctxCanceled, cancel := context.WithCancel(ctx)
+			cancel()
+
+			shoot.Spec.Networking.Pods = pointer.String("10.0.0.0/8")
+			botanist.Shoot.SetInfo(shoot)
+
+			Expect(botanist.ShootClientSet.Client().Create(ctxCanceled, endpoint)).To(Succeed())
+
+			err := botanist.WaitUntilEndpointsDoNotContainPodIPs(ctxCanceled)
+
+			Expect(err).To(MatchError("retry failed with context canceled, last error: waiting until there are no running Pods in the shoot cluster, there is still at least one Endpoint containing pod IPs in the shoot cluster: \"default/basic-endpoint\""))
+		})
+
+		It("should succeed when endpoints do not contain pod IPs", func() {
+			ctxCanceled, cancel := context.WithCancel(ctx)
+			cancel()
+
+			shoot.Spec.Networking.Pods = pointer.String("10.0.0.0/8")
+			botanist.Shoot.SetInfo(shoot)
+
+			endpoint.Subsets[0].Addresses[0].IP = "128.0.0.1"
+			Expect(botanist.ShootClientSet.Client().Create(ctxCanceled, endpoint)).To(Succeed())
+
+			Expect(botanist.WaitUntilEndpointsDoNotContainPodIPs(ctxCanceled)).To(Succeed())
+		})
+
+		It("should succeed when no endpoints are present", func() {
+			ctxCanceled, cancel := context.WithCancel(ctx)
+			cancel()
+
+			shoot.Spec.Networking.Pods = pointer.String("10.0.0.0/8")
+			botanist.Shoot.SetInfo(shoot)
+
+			Expect(botanist.WaitUntilEndpointsDoNotContainPodIPs(ctxCanceled)).To(Succeed())
 		})
 	})
 })
