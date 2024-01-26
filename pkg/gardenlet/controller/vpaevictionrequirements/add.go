@@ -64,7 +64,7 @@ func (r *Reconciler) AddToManager(_ context.Context, mgr manager.Manager, seedCl
 			&handler.EnqueueRequestForObject{}, builder.WithPredicates(
 				vpaEvictionRequirementsManagedByControllerPredicate,
 				predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
-				predicate.GenerationChangedPredicate{},
+				predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}),
 			),
 		).
 		Complete(r)
