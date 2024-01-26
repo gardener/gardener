@@ -58,16 +58,16 @@ func (b *Botanist) WaitUntilTunnelConnectionExists(ctx context.Context) error {
 // WaitUntilNodesDeleted waits until no nodes exist in the shoot cluster anymore.
 func (b *Botanist) WaitUntilNodesDeleted(ctx context.Context) error {
 	return retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
-		nodesList := &corev1.NodeList{}
-		if err := b.ShootClientSet.Client().List(ctx, nodesList); err != nil {
+		nodeList := &corev1.NodeList{}
+		if err := b.ShootClientSet.Client().List(ctx, nodeList); err != nil {
 			return retry.SevereError(err)
 		}
 
-		if len(nodesList.Items) == 0 {
+		if len(nodeList.Items) == 0 {
 			return retry.Ok()
 		}
 
-		b.Logger.Info("Waiting until all nodes have been deleted in the shoot cluster", "numberOfNodes", len(nodesList.Items))
+		b.Logger.Info("Waiting until all nodes have been deleted in the shoot cluster", "numberOfNodes", len(nodeList.Items))
 		return retry.MinorError(fmt.Errorf("not all nodes have been deleted in the shoot cluster"))
 	})
 }
@@ -142,7 +142,7 @@ func (b *Botanist) WaitUntilEndpointsDoNotContainPodIPs(ctx context.Context) err
 				for _, address := range subset.Addresses {
 					if podsNetwork.Contains(net.ParseIP(address.IP)) {
 						b.Logger.Info("Waiting until there are no endpoints containing pod IPs in the shoot cluster (at least one endpoint still exists)", "endpoint", client.ObjectKeyFromObject(&endpoint))
-						return retry.MinorError(fmt.Errorf("waiting until there are no running Pods in the shoot cluster... "+
+						return retry.MinorError(fmt.Errorf("waiting until there are no running Pods in the shoot cluster, "+
 							"there is still at least one Endpoint containing pod IPs in the shoot cluster: %q", client.ObjectKeyFromObject(&endpoint).String()))
 					}
 				}
