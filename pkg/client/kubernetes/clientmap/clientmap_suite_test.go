@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal_test
+package clientmap_test
 
 import (
 	"testing"
@@ -23,5 +23,5 @@ import (
 
 func TestClientmap(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Client Kubernetes ClientMap Internal Suite")
+	RunSpecs(t, "Client Kubernetes ClientMap Suite")
 }

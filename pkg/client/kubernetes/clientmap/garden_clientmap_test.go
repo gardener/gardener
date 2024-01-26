@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal_test
+package clientmap_test
 
 import (
 	"context"
@@ -29,8 +29,7 @@ import (
 
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
+	. "github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/client/kubernetes/test"
@@ -44,9 +43,9 @@ var _ = Describe("GardenClientMap", func() {
 		ctrl              *gomock.Controller
 		mockRuntimeClient *mockclient.MockClient
 
-		cm                     clientmap.ClientMap
-		key                    clientmap.ClientSetKey
-		factory                *internal.GardenClientSetFactory
+		cm                     ClientMap
+		key                    ClientSetKey
+		factory                *GardenClientSetFactory
 		clientConnectionConfig componentbaseconfig.ClientConnectionConfiguration
 		clientOptions          client.Options
 
@@ -64,7 +63,7 @@ var _ = Describe("GardenClientMap", func() {
 			},
 		}
 
-		internal.LookupHost = func(host string) ([]string, error) {
+		LookupHost = func(host string) ([]string, error) {
 			Expect(host).To(Equal("virtual-garden-kube-apiserver.garden.svc.cluster.local"))
 			return []string{"10.0.1.1"}, nil
 		}
@@ -79,11 +78,11 @@ var _ = Describe("GardenClientMap", func() {
 			Burst:              43,
 		}
 		clientOptions = client.Options{Scheme: operatorclient.VirtualScheme}
-		factory = &internal.GardenClientSetFactory{
+		factory = &GardenClientSetFactory{
 			RuntimeClient:          mockRuntimeClient,
 			ClientConnectionConfig: clientConnectionConfig,
 		}
-		cm = internal.NewGardenClientMap(logr.Discard(), factory)
+		cm = NewGardenClientMap(logr.Discard(), factory)
 	})
 
 	AfterEach(func() {
@@ -104,11 +103,11 @@ var _ = Describe("GardenClientMap", func() {
 				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 					return nil
 				})
-			internal.LookupHost = func(host string) ([]string, error) {
+			LookupHost = func(host string) ([]string, error) {
 				return nil, fakeErr
 			}
 
-			internal.NewClientFromSecretObject = func(secret *corev1.Secret, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
+			NewClientFromSecretObject = func(secret *corev1.Secret, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
 				Expect(secret.Namespace).To(Equal("garden"))
 				Expect(secret.Name).To(Equal("gardener"))
 				return nil, fakeErr
@@ -132,11 +131,11 @@ var _ = Describe("GardenClientMap", func() {
 					}).DeepCopyInto(obj.(*corev1.Secret))
 					return nil
 				})
-			internal.LookupHost = func(host string) ([]string, error) {
+			LookupHost = func(host string) ([]string, error) {
 				return nil, fakeErr
 			}
 
-			internal.NewClientFromSecretObject = func(secret *corev1.Secret, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
+			NewClientFromSecretObject = func(secret *corev1.Secret, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
 				Expect(secret.Namespace).To(Equal("garden"))
 				Expect(secret.Name).To(Equal("gardener"))
 				return nil, fakeErr
@@ -155,7 +154,7 @@ var _ = Describe("GardenClientMap", func() {
 					return nil
 				})
 
-			internal.NewClientFromSecretObject = func(secret *corev1.Secret, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
+			NewClientFromSecretObject = func(secret *corev1.Secret, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
 				Expect(secret.Namespace).To(Equal("garden"))
 				Expect(secret.Name).To(Equal("gardener-internal"))
 				Expect(fns).To(ConsistOfConfigFuncs(
@@ -198,7 +197,7 @@ var _ = Describe("GardenClientMap", func() {
 					}),
 			)
 
-			internal.NewClientFromSecretObject = func(secret *corev1.Secret, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
+			NewClientFromSecretObject = func(secret *corev1.Secret, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
 				Expect(secret.Namespace).To(Equal("garden"))
 				Expect(secret.Name).To(Equal("gardener-internal"))
 				Expect(fns).To(ConsistOfConfigFuncs(
@@ -272,7 +271,7 @@ var _ = Describe("GardenClientMap", func() {
 			})
 
 			It("when out-of-cluster", func() {
-				internal.LookupHost = func(host string) ([]string, error) {
+				LookupHost = func(host string) ([]string, error) {
 					return nil, nil
 				}
 				test("gardener")

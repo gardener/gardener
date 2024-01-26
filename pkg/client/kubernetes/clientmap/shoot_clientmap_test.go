@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal_test
+package clientmap_test
 
 import (
 	"context"
@@ -34,8 +34,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
+	. "github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/client/kubernetes/test"
@@ -50,9 +49,9 @@ var _ = Describe("ShootClientMap", func() {
 		mockGardenClient *mockclient.MockClient
 		mockSeedClient   *mockclient.MockClient
 
-		cm                     clientmap.ClientMap
-		key                    clientmap.ClientSetKey
-		factory                *internal.ShootClientSetFactory
+		cm                     ClientMap
+		key                    ClientSetKey
+		factory                *ShootClientSetFactory
 		clientConnectionConfig componentbaseconfig.ClientConnectionConfiguration
 		clientOptions          client.Options
 
@@ -78,7 +77,7 @@ var _ = Describe("ShootClientMap", func() {
 			},
 		}
 
-		internal.ProjectForNamespaceFromReader = func(ctx context.Context, c client.Reader, namespaceName string) (*gardencorev1beta1.Project, error) {
+		ProjectForNamespaceFromReader = func(ctx context.Context, c client.Reader, namespaceName string) (*gardencorev1beta1.Project, error) {
 			return &gardencorev1beta1.Project{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eden",
@@ -87,7 +86,7 @@ var _ = Describe("ShootClientMap", func() {
 					Namespace: pointer.String("garden-eden"),
 				}}, nil
 		}
-		internal.LookupHost = func(host string) ([]string, error) {
+		LookupHost = func(host string) ([]string, error) {
 			Expect(host).To(Equal("kube-apiserver." + shoot.Status.TechnicalID + ".svc"))
 			return []string{"10.0.1.1"}, nil
 		}
@@ -102,12 +101,12 @@ var _ = Describe("ShootClientMap", func() {
 			Burst:              43,
 		}
 		clientOptions = client.Options{Scheme: kubernetes.ShootScheme}
-		factory = &internal.ShootClientSetFactory{
+		factory = &ShootClientSetFactory{
 			GardenClient:           mockGardenClient,
 			SeedClient:             mockSeedClient,
 			ClientConnectionConfig: clientConnectionConfig,
 		}
-		cm = internal.NewShootClientMap(logr.Discard(), factory)
+		cm = NewShootClientMap(logr.Discard(), factory)
 	})
 
 	AfterEach(func() {
@@ -153,7 +152,7 @@ var _ = Describe("ShootClientMap", func() {
 					shoot.DeepCopyInto(obj.(*gardencorev1beta1.Shoot))
 					return nil
 				})
-			internal.ProjectForNamespaceFromReader = func(ctx context.Context, c client.Reader, namespaceName string) (*gardencorev1beta1.Project, error) {
+			ProjectForNamespaceFromReader = func(ctx context.Context, c client.Reader, namespaceName string) (*gardencorev1beta1.Project, error) {
 				return nil, fakeErr
 			}
 
@@ -176,11 +175,11 @@ var _ = Describe("ShootClientMap", func() {
 				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 					return nil
 				})
-			internal.LookupHost = func(host string) ([]string, error) {
+			LookupHost = func(host string) ([]string, error) {
 				return nil, fakeErr
 			}
 
-			internal.NewClientFromSecretObject = func(secret *corev1.Secret, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
+			NewClientFromSecretObject = func(secret *corev1.Secret, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
 				Expect(secret.Namespace).To(Equal(technicalID))
 				Expect(secret.Name).To(Equal("gardener"))
 				return nil, fakeErr
@@ -212,11 +211,11 @@ var _ = Describe("ShootClientMap", func() {
 					}).DeepCopyInto(obj.(*corev1.Secret))
 					return nil
 				})
-			internal.LookupHost = func(host string) ([]string, error) {
+			LookupHost = func(host string) ([]string, error) {
 				return nil, fakeErr
 			}
 
-			internal.NewClientFromSecretObject = func(secret *corev1.Secret, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
+			NewClientFromSecretObject = func(secret *corev1.Secret, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
 				Expect(secret.Namespace).To(Equal(technicalID))
 				Expect(secret.Name).To(Equal("gardener"))
 				return nil, fakeErr
@@ -242,7 +241,7 @@ var _ = Describe("ShootClientMap", func() {
 					}),
 			)
 
-			internal.NewClientFromSecretObject = func(secret *corev1.Secret, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
+			NewClientFromSecretObject = func(secret *corev1.Secret, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
 				Expect(secret.Namespace).To(Equal(shoot.Status.TechnicalID))
 				Expect(secret.Name).To(Equal("gardener-internal"))
 				Expect(fns).To(ConsistOfConfigFuncs(
@@ -297,7 +296,7 @@ var _ = Describe("ShootClientMap", func() {
 					}),
 			)
 
-			internal.NewClientFromSecretObject = func(secret *corev1.Secret, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
+			NewClientFromSecretObject = func(secret *corev1.Secret, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
 				Expect(secret.Namespace).To(Equal(shoot.Status.TechnicalID))
 				Expect(secret.Name).To(Equal("gardener-internal"))
 				Expect(fns).To(ConsistOfConfigFuncs(
@@ -388,7 +387,7 @@ var _ = Describe("ShootClientMap", func() {
 			})
 
 			It("when out-of-cluster", func() {
-				internal.LookupHost = func(host string) ([]string, error) {
+				LookupHost = func(host string) ([]string, error) {
 					return nil, nil
 				}
 				test("gardener")

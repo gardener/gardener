@@ -22,7 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
 )
 
 // GardenClientMapBuilder can build a ClientMap which can be used to
@@ -65,7 +64,7 @@ func (b *GardenClientMapBuilder) Build(log logr.Logger) (clientmap.ClientMap, er
 		return nil, fmt.Errorf("clientConnectionConfig is required but not set")
 	}
 
-	return internal.NewGardenClientMap(log, &internal.GardenClientSetFactory{
+	return clientmap.NewGardenClientMap(log, &clientmap.GardenClientSetFactory{
 		RuntimeClient:          b.runtimeClient,
 		ClientConnectionConfig: *b.clientConnectionConfig,
 		GardenNamespace:        b.gardenNamespace,

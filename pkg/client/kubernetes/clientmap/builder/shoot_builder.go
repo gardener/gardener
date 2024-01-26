@@ -22,7 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
 )
 
 // ShootClientMapBuilder can build a ClientMap which can be used to construct a ClientMap for requesting and storing
@@ -68,7 +67,7 @@ func (b *ShootClientMapBuilder) Build(log logr.Logger) (clientmap.ClientMap, err
 		return nil, fmt.Errorf("clientConnectionConfig is required but not set")
 	}
 
-	return internal.NewShootClientMap(log, &internal.ShootClientSetFactory{
+	return clientmap.NewShootClientMap(log, &clientmap.ShootClientSetFactory{
 		GardenClient:           b.gardenClient,
 		SeedClient:             b.seedClient,
 		ClientConnectionConfig: *b.clientConnectionConfig,
