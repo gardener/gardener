@@ -461,9 +461,9 @@ func (g ShootConstraints) ConstraintTypes() []gardencorev1beta1.ConditionType {
 // All constraints are retrieved from the given 'shoot' or newly initialized.
 func NewShootConstraints(clock clock.Clock, shoot *gardencorev1beta1.Shoot) ShootConstraints {
 	return ShootConstraints{
-		hibernationPossible:                   v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Conditions, gardencorev1beta1.ShootHibernationPossible),
-		maintenancePreconditionsSatisfied:     v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Conditions, gardencorev1beta1.ShootMaintenancePreconditionsSatisfied),
-		caCertificateValiditiesAcceptable:     v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Conditions, gardencorev1beta1.ShootCACertificateValiditiesAcceptable),
-		crdsWithProblematicConversionWebhooks: v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Conditions, gardencorev1beta1.ShootCRDsWithProblematicConversionWebhooks),
+		hibernationPossible:                   v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootHibernationPossible),
+		maintenancePreconditionsSatisfied:     v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootMaintenancePreconditionsSatisfied),
+		caCertificateValiditiesAcceptable:     v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootCACertificateValiditiesAcceptable),
+		crdsWithProblematicConversionWebhooks: v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootCRDsWithProblematicConversionWebhooks),
 	}
 }
