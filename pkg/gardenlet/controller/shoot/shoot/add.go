@@ -32,9 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot/helper"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // ControllerName is the name of this controller.
@@ -69,7 +67,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 	return c.Watch(
 		source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.Shoot{}),
 		r.EventHandler(c.GetLogger()),
-		predicateutils.SeedNamePredicate(r.Config.SeedConfig.Name, gardenerutils.GetShootSeedNames),
 		&predicate.GenerationChangedPredicate{},
 	)
 }
