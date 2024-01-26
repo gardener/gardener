@@ -396,7 +396,7 @@ func createAndAddToWebhookConfig(
 		webhookToRegister := admissionregistrationv1.ValidatingWebhook{
 			AdmissionReviewVersions: []string{"v1", "v1beta1"},
 			Name:                    fmt.Sprintf("%s.%s.extensions.gardener.cloud", webhook.Name, strings.TrimPrefix(providerName, "provider-")),
-			NamespaceSelector:       webhook.Selector,
+			NamespaceSelector:       webhook.NamespaceSelector,
 			ObjectSelector:          webhook.ObjectSelector,
 			Rules:                   rules,
 			SideEffects:             sideEffects,
@@ -421,7 +421,7 @@ func createAndAddToWebhookConfig(
 		webhookToRegister := admissionregistrationv1.MutatingWebhook{
 			AdmissionReviewVersions: []string{"v1", "v1beta1"},
 			Name:                    fmt.Sprintf("%s.%s.extensions.gardener.cloud", webhook.Name, strings.TrimPrefix(providerName, "provider-")),
-			NamespaceSelector:       webhook.Selector,
+			NamespaceSelector:       webhook.NamespaceSelector,
 			ObjectSelector:          webhook.ObjectSelector,
 			Rules:                   rules,
 			SideEffects:             sideEffects,

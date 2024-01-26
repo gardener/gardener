@@ -40,18 +40,18 @@ const (
 
 // Webhook is the specification of a webhook.
 type Webhook struct {
-	Action         string
-	Name           string
-	Provider       string
-	Path           string
-	Target         string
-	Types          []Type
-	Webhook        *admission.Webhook
-	Handler        http.Handler
-	Selector       *metav1.LabelSelector
-	ObjectSelector *metav1.LabelSelector
-	FailurePolicy  *admissionregistrationv1.FailurePolicyType
-	TimeoutSeconds *int32
+	Action            string
+	Name              string
+	Provider          string
+	Path              string
+	Target            string
+	Types             []Type
+	Webhook           *admission.Webhook
+	Handler           http.Handler
+	NamespaceSelector *metav1.LabelSelector
+	ObjectSelector    *metav1.LabelSelector
+	FailurePolicy     *admissionregistrationv1.FailurePolicyType
+	TimeoutSeconds    *int32
 }
 
 // Type contains information about the Kubernetes object types and subresources the webhook acts upon.
@@ -62,15 +62,15 @@ type Type struct {
 
 // Args contains Webhook creation arguments.
 type Args struct {
-	Provider       string
-	Name           string
-	Path           string
-	Target         string
-	Selector       *metav1.LabelSelector
-	ObjectSelector *metav1.LabelSelector
-	Predicates     []predicate.Predicate
-	Validators     map[Validator][]Type
-	Mutators       map[Mutator][]Type
+	Provider          string
+	Name              string
+	Path              string
+	Target            string
+	NamespaceSelector *metav1.LabelSelector
+	ObjectSelector    *metav1.LabelSelector
+	Predicates        []predicate.Predicate
+	Validators        map[Validator][]Type
+	Mutators          map[Mutator][]Type
 }
 
 // New creates a new Webhook with the given args.
@@ -116,14 +116,14 @@ func New(mgr manager.Manager, args Args) (*Webhook, error) {
 	logger.Info("Creating webhook")
 
 	return &Webhook{
-		Name:           args.Name,
-		Provider:       args.Provider,
-		Action:         actionType,
-		Selector:       args.Selector,
-		ObjectSelector: args.ObjectSelector,
-		Path:           args.Path,
-		Target:         args.Target,
-		Webhook:        &admission.Webhook{Handler: handler, RecoverPanic: true},
-		Types:          objTypes,
+		Name:              args.Name,
+		Provider:          args.Provider,
+		Action:            actionType,
+		NamespaceSelector: args.NamespaceSelector,
+		ObjectSelector:    args.ObjectSelector,
+		Path:              args.Path,
+		Target:            args.Target,
+		Webhook:           &admission.Webhook{Handler: handler, RecoverPanic: true},
+		Types:             objTypes,
 	}, nil
 }
