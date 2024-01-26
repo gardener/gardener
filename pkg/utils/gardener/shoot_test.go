@@ -507,6 +507,12 @@ var _ = Describe("Shoot", func() {
 					Expect(accessSecret.Secret.Annotations).To(HaveKeyWithValue("token-requestor.resources.gardener.cloud/target-secret-name", targetSecretName))
 					Expect(accessSecret.Secret.Annotations).To(HaveKeyWithValue("token-requestor.resources.gardener.cloud/target-secret-namespace", targetSecretNamespace))
 				})
+
+				It("should work w/ service account labels", func() {
+					accessSecret.WithServiceAccountLabels(map[string]string{"foo": "bar"})
+					validate()
+					Expect(accessSecret.Secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/labels", `{"foo":"bar"}`))
+				})
 			})
 
 			Context("update", func() {

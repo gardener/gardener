@@ -43,7 +43,9 @@ By default, extensions are equipped with secure access to the garden cluster usi
 They can simply read the file specified by the `GARDEN_KUBECONFIG` and construct a garden client with it.
 
 When installing a [`ControllerInstallation`](controllerregistration.md), gardenlet creates two secrets in the installation's namespace: a generic garden kubeconfig (`generic-garden-kubeconfig-<hash>`) and a garden access secret (`garden-access-extension`).
-Additionally, it injects `volume`, `volumeMounts`, and two environment variables into all (init) containers in all objects in the `apps` and `batch` API groups:
+Note that the `ServiceAccount` created based on this access secret will be created in the respective `seed-*` namespace in the garden cluster and labelled with `controllerregistration.core.gardener.cloud/name=<name>`.
+
+Additionally, gardenlet injects `volume`, `volumeMounts`, and two environment variables into all (init) containers in all objects in the `apps` and `batch` API groups:
 
 - `GARDEN_KUBECONFIG`: points to the path where the generic garden kubeconfig is mounted.
 - `SEED_NAME`: set to the name of the `Seed` where the extension is installed. 
