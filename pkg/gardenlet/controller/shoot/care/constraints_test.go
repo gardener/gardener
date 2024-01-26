@@ -658,18 +658,19 @@ var _ = Describe("Constraints", func() {
 				))
 			})
 
-			It("should only initialize missing conditions", func() {
+			It("should only initialize missing constraints", func() {
+				hibernationPossibleConstraint := gardencorev1beta1.Condition{Type: "HibernationPossible"}
 				constraints := NewShootConstraints(clock, &gardencorev1beta1.Shoot{
 					Status: gardencorev1beta1.ShootStatus{
 						Constraints: []gardencorev1beta1.Condition{
-							{Type: "HibernationPossible"},
+							hibernationPossibleConstraint,
 							{Type: "Foo"},
 						},
 					},
 				})
 
 				Expect(constraints.ConvertToSlice()).To(ConsistOf(
-					OfType("HibernationPossible"),
+					hibernationPossibleConstraint,
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
