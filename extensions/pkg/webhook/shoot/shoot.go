@@ -59,12 +59,12 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 	}
 
 	wh := &extensionswebhook.Webhook{
-		Name:          WebhookName,
-		Types:         args.Types,
-		Path:          WebhookName,
-		Target:        extensionswebhook.TargetShoot,
-		Selector:      namespaceSelector,
-		FailurePolicy: args.FailurePolicy,
+		Name:              WebhookName,
+		Types:             args.Types,
+		Path:              WebhookName,
+		Target:            extensionswebhook.TargetShoot,
+		NamespaceSelector: namespaceSelector,
+		FailurePolicy:     args.FailurePolicy,
 	}
 
 	switch {

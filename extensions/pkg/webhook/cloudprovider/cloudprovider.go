@@ -53,13 +53,13 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 	logger.Info("Creating webhook")
 
 	webhook := &extensionswebhook.Webhook{
-		Name:     WebhookName,
-		Target:   extensionswebhook.TargetSeed,
-		Provider: args.Provider,
-		Types:    types,
-		Webhook:  &admission.Webhook{Handler: handler, RecoverPanic: true},
-		Path:     WebhookName,
-		Selector: namespaceSelector,
+		Name:              WebhookName,
+		Target:            extensionswebhook.TargetSeed,
+		Provider:          args.Provider,
+		Types:             types,
+		Webhook:           &admission.Webhook{Handler: handler, RecoverPanic: true},
+		Path:              WebhookName,
+		NamespaceSelector: namespaceSelector,
 	}
 
 	if args.EnableObjectSelector {

@@ -43,7 +43,7 @@ var _ = Describe("Webhook", func() {
 			webhook, err := New(mgr, Args{
 				Provider: "test-provider",
 				Name:     "webhook-test",
-				Selector: &metav1.LabelSelector{
+				NamespaceSelector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{"foo": "bar"},
 				},
 				ObjectSelector: &metav1.LabelSelector{
@@ -58,7 +58,7 @@ var _ = Describe("Webhook", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(webhook.Provider).To(Equal("test-provider"))
 			Expect(webhook.Name).To(Equal("webhook-test"))
-			Expect(webhook.Selector).To(Equal(&metav1.LabelSelector{
+			Expect(webhook.NamespaceSelector).To(Equal(&metav1.LabelSelector{
 				MatchLabels: map[string]string{"foo": "bar"},
 			}))
 			Expect(webhook.ObjectSelector).To(Equal(&metav1.LabelSelector{
