@@ -16,6 +16,7 @@ package tokenrequestor
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -119,7 +120,16 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 func (r *Reconciler) reconcileServiceAccount(ctx context.Context, secret *corev1.Secret) (*corev1.ServiceAccount, error) {
 	serviceAccount := r.getServiceAccountFromAnnotations(secret.Annotations)
 
+	var labels map[string]string
+	if labelsJSON := secret.Annotations[resourcesv1alpha1.ServiceAccountLabels]; labelsJSON != "" {
+		labels = make(map[string]string)
+		if err := json.Unmarshal([]byte(labelsJSON), &labels); err != nil {
+			return nil, fmt.Errorf("failed unmarshaling service account labels from secret annotation %q (%s): %w", resourcesv1alpha1.ServiceAccountLabels, labelsJSON, err)
+		}
+	}
+
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.TargetClient, serviceAccount, func() error {
+		serviceAccount.Labels = labels
 		serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
 		return nil
 	}); err != nil {

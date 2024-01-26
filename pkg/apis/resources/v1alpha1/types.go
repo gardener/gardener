@@ -99,6 +99,9 @@ const (
 	// ServiceAccountNamespace is the key of an annotation of a secret whose value contains the service account
 	// namespace.
 	ServiceAccountNamespace = "serviceaccount.resources.gardener.cloud/namespace"
+	// ServiceAccountLabels is the key of an annotation of a secret whose value contains the service account
+	// labels.
+	ServiceAccountLabels = "serviceaccount.resources.gardener.cloud/labels"
 	// ServiceAccountTokenExpirationDuration is the key of an annotation of a secret whose value contains the expiration
 	// duration of the token created.
 	ServiceAccountTokenExpirationDuration = "serviceaccount.resources.gardener.cloud/token-expiration-duration"
