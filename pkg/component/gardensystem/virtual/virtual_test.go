@@ -453,8 +453,11 @@ var _ = Describe("Virtual", func() {
 				},
 				{
 					APIGroups: []string{"core.gardener.cloud"},
-					Resources: []string{"shoots/adminkubeconfig"},
-					Verbs:     []string{"create"},
+					Resources: []string{
+						"shoots/adminkubeconfig",
+						"shoots/viewerkubeconfig",
+					},
+					Verbs: []string{"create"},
 				},
 			},
 		}
@@ -545,6 +548,11 @@ var _ = Describe("Virtual", func() {
 						"rolebindings",
 					},
 					Verbs: []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"core.gardener.cloud"},
+					Resources: []string{"shoots/viewerkubeconfig"},
+					Verbs:     []string{"create"},
 				},
 			},
 		}
