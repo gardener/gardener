@@ -78,11 +78,11 @@ spec:
                 properties:
                   ingress:
                     description: Ingress configures Ingress specific settings for
-                      the Garden cluster. This field is immutable.
+                      the Garden cluster.
                     properties:
                       controller:
                         description: Controller configures a Gardener managed Ingress
-                          Controller listening on the ingressDomain
+                          Controller listening on the ingressDomain.
                         properties:
                           kind:
                             description: Kind defines which kind of IngressController
@@ -99,19 +99,20 @@ spec:
                         - kind
                         type: object
                       domain:
-                        description: Domain specifies the IngressDomain of the cluster
-                          pointing to the ingress controller endpoint. It will be
-                          used to construct ingress URLs for system applications running
-                          in Shoot/Garden clusters. Once set this field is immutable.
-                        maxLength: 253
-                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        description: 'Deprecated: This field is deprecated and will
+                          be removed soon. Please use `Domains` instead. TODO(scheererj):
+                          Drop this after v1.88 has been released.'
                         type: string
-                        x-kubernetes-validations:
-                        - message: Value is immutable
-                          rule: self == oldSelf
+                      domains:
+                        description: Domains specify the ingress domains of the cluster
+                          pointing to the ingress controller endpoint. They will be
+                          used to construct ingress URLs for system applications running
+                          in runtime cluster.
+                        items:
+                          type: string
+                        type: array
                     required:
                     - controller
-                    - domain
                     type: object
                   networking:
                     description: Networking defines the networking configuration of

@@ -1137,6 +1137,62 @@ string
 <p>
 <p>HighAvailability specifies the configuration settings for high availability for a resource.</p>
 </p>
+<h3 id="operator.gardener.cloud/v1alpha1.Ingress">Ingress
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.RuntimeCluster">RuntimeCluster</a>)
+</p>
+<p>
+<p>Ingress configures the Ingress specific settings of the runtime cluster.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>domain</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Deprecated: This field is deprecated and will be removed soon. Please use <code>Domains</code> instead.
+TODO(scheererj): Drop this after v1.88 has been released.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>domains</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Domains specify the ingress domains of the cluster pointing to the ingress controller endpoint. They will be used
+to construct ingress URLs for system applications running in runtime cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>controller</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.IngressController
+</em>
+</td>
+<td>
+<p>Controller configures a Gardener managed Ingress Controller listening on the ingressDomain.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.gardener.cloud/v1alpha1.KubeAPIServerConfig">KubeAPIServerConfig
 </h3>
 <p>
@@ -1629,11 +1685,13 @@ k8s.io/apimachinery/pkg/api/resource.Quantity
 <td>
 <code>ingress</code></br>
 <em>
-github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress
+<a href="#operator.gardener.cloud/v1alpha1.Ingress">
+Ingress
+</a>
 </em>
 </td>
 <td>
-<p>Ingress configures Ingress specific settings for the Garden cluster. This field is immutable.</p>
+<p>Ingress configures Ingress specific settings for the Garden cluster.</p>
 </td>
 </tr>
 <tr>
