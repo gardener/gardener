@@ -435,8 +435,11 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 				},
 				{
 					APIGroups: []string{gardencorev1beta1.GroupName},
-					Resources: []string{"shoots/adminkubeconfig"},
-					Verbs:     []string{"create"},
+					Resources: []string{
+						"shoots/adminkubeconfig",
+						"shoots/viewerkubeconfig",
+					},
+					Verbs: []string{"create"},
 				},
 			},
 		}
@@ -529,6 +532,11 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 						"rolebindings",
 					},
 					Verbs: []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{gardencorev1beta1.GroupName},
+					Resources: []string{"shoots/viewerkubeconfig"},
+					Verbs:     []string{"create"},
 				},
 			},
 		}
