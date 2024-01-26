@@ -33,6 +33,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 type backupEntryStrategy struct {
@@ -109,7 +110,10 @@ func (backupEntryStrategy) Validate(_ context.Context, obj runtime.Object) field
 	return validation.ValidateBackupEntry(backupEntry)
 }
 
-func (backupEntryStrategy) Canonicalize(_ runtime.Object) {
+func (backupEntryStrategy) Canonicalize(obj runtime.Object) {
+	backupEntry := obj.(*core.BackupEntry)
+
+	gardenerutils.MaintainSeedNameLabels(backupEntry, backupEntry.Spec.SeedName, backupEntry.Status.SeedName)
 }
 
 func (backupEntryStrategy) AllowCreateOnUpdate() bool {

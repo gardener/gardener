@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	backupentryregistry "github.com/gardener/gardener/pkg/registry/core/backupentry"
@@ -114,6 +115,31 @@ var _ = Describe("PrepareForUpdate", func() {
 
 		Expect(backupEntry.Generation).To(Equal(oldBackupEntry.Generation))
 		Expect(backupEntry.Annotations).To(HaveKey("gardener.cloud/operation"))
+	})
+})
+
+var _ = Describe("#Canonicalize", func() {
+	var backupEntry *core.BackupEntry
+
+	BeforeEach(func() {
+		backupEntry = &core.BackupEntry{}
+	})
+
+	Context("seed names", func() {
+		It("should correctly add the seed labels", func() {
+			metav1.SetMetaDataLabel(&backupEntry.ObjectMeta, "foo", "bar")
+			metav1.SetMetaDataLabel(&backupEntry.ObjectMeta, "seed.gardener.cloud/foo", "true")
+			backupEntry.Spec.SeedName = pointer.String("spec-seed")
+			backupEntry.Status.SeedName = pointer.String("status-seed")
+
+			backupentryregistry.NewStrategy().Canonicalize(backupEntry)
+
+			Expect(backupEntry.Labels).To(Equal(map[string]string{
+				"foo":                             "bar",
+				"seed.gardener.cloud/spec-seed":   "true",
+				"seed.gardener.cloud/status-seed": "true",
+			}))
+		})
 	})
 })
 
