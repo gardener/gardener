@@ -679,25 +679,27 @@ func (h *Health) CheckClusterNodes(
 	return nil, nil
 }
 
-// CheckNodeAgentLeases checks if all given nodes have a corresponding lease
+// CheckNodeAgentLeases checks if all nodes in the shoot cluster have a corresponding Lease object maintained by gardener-node-agent
 func CheckNodeAgentLeases(nodeList *corev1.NodeList, leaseList *coordinationv1.LeaseList, clock clock.Clock) error {
-	if len(leaseList.Items) == 0 {
-		return fmt.Errorf("no leases")
-	}
-
-	leases := map[string]coordinationv1.Lease{}
+	nodeNameToLease := make(map[string]coordinationv1.Lease, len(leaseList.Items))
 	for _, lease := range leaseList.Items {
-		nodeName := strings.ReplaceAll(lease.Name, gardenerutils.NodeLeasePrefix, "")
-		leases[nodeName] = lease
+		if strings.HasPrefix(lease.Name, gardenerutils.NodeLeasePrefix) {
+			nodeName := strings.ReplaceAll(lease.Name, gardenerutils.NodeLeasePrefix, "")
+			nodeNameToLease[nodeName] = lease
+		}
+	}
+	// TODO(rfranzke): Remove this if-condition as soon as the UseGardenerNodeAgent feature gate gets removed.
+	if len(nodeNameToLease) == 0 {
+		return nil // node-agent might not yet be deployed even though the feature gate is turned on, so let's accept this and don't report an error
 	}
 
 	for _, node := range nodeList.Items {
-		nodeLease, ok := leases[node.Name]
+		lease, ok := nodeNameToLease[node.Name]
 		if !ok {
 			return fmt.Errorf("gardener-node-agent is not running on node %q", node.Name)
 		}
 
-		if nodeLease.Spec.RenewTime.Add(time.Second * time.Duration(*nodeLease.Spec.LeaseDurationSeconds)).Before(clock.Now()) {
+		if lease.Spec.RenewTime.Add(time.Second * time.Duration(*lease.Spec.LeaseDurationSeconds)).Before(clock.Now()) {
 			return fmt.Errorf("gardener-node-agent stopped running on node %q", node.Name)
 		}
 	}

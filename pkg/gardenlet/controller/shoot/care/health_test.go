@@ -741,6 +741,16 @@ var _ = Describe("health check", func() {
 				},
 			}
 
+			nonrelatedLease = coordinationv1.Lease{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "gardener-node-agent-node2",
+				},
+				Spec: coordinationv1.LeaseSpec{
+					RenewTime:            &metav1.MicroTime{Time: fakeClock.Now()},
+					LeaseDurationSeconds: pointer.Int32(40),
+				},
+			}
+
 			nodeList = corev1.NodeList{
 				Items: []corev1.Node{
 					{
@@ -762,7 +772,9 @@ var _ = Describe("health check", func() {
 			Expect(CheckNodeAgentLeases(&nodeList, &leaseList, fakeClock)).To(expected)
 		},
 			Entry("should return nil if there is a matching lease for node", validLease, BeNil()),
-			Entry("should return Error that node agent is not running if no matching lease could be found for node", nil, MatchError(ContainSubstring("not running"))),
+			// TODO(rfranzke): Remove this test-entry as soon as the UseGardenerNodeAgent feature gate gets removed.
+			Entry("should return nil if no leases are present", nil, BeNil()),
+			Entry("should return Error that node agent is not running if no matching lease could be found for node", nonrelatedLease, MatchError(ContainSubstring("not running"))),
 			Entry("should return Error that node agent stopped running if the lease for the node is not valid anymore", invalidLease, MatchError(ContainSubstring("stopped running"))),
 		)
 	})
