@@ -28,6 +28,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
 	"go.uber.org/mock/gomock"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -715,6 +716,66 @@ var _ = Describe("health check", func() {
 					},
 				},
 				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "OperatingSystemConfigOutdated", fmt.Sprintf("the last successfully applied operating system config on node %q is outdated", nodeName)))),
+		)
+	})
+
+	Describe("#CheckingNodeAgentLease", func() {
+		var (
+			validLease = coordinationv1.Lease{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "gardener-node-agent-node1",
+				},
+				Spec: coordinationv1.LeaseSpec{
+					RenewTime:            &metav1.MicroTime{Time: fakeClock.Now()},
+					LeaseDurationSeconds: pointer.Int32(40),
+				},
+			}
+
+			invalidLease = coordinationv1.Lease{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "gardener-node-agent-node1",
+				},
+				Spec: coordinationv1.LeaseSpec{
+					RenewTime:            &metav1.MicroTime{Time: fakeClock.Now()},
+					LeaseDurationSeconds: pointer.Int32(-40),
+				},
+			}
+
+			nonrelatedLease = coordinationv1.Lease{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "gardener-node-agent-node2",
+				},
+				Spec: coordinationv1.LeaseSpec{
+					RenewTime:            &metav1.MicroTime{Time: fakeClock.Now()},
+					LeaseDurationSeconds: pointer.Int32(40),
+				},
+			}
+
+			nodeList = corev1.NodeList{
+				Items: []corev1.Node{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "node1",
+						},
+					},
+				},
+			}
+		)
+
+		DescribeTable("#CheckingNodeAgentLease", func(lease coordinationv1.Lease, expected types.GomegaMatcher) {
+			leaseList := coordinationv1.LeaseList{
+				Items: []coordinationv1.Lease{
+					lease,
+				},
+			}
+
+			Expect(CheckNodeAgentLeases(&nodeList, &leaseList, fakeClock)).To(expected)
+		},
+			Entry("should return nil if there is a matching lease for node", validLease, BeNil()),
+			// TODO(rfranzke): Remove this test-entry as soon as the UseGardenerNodeAgent feature gate gets removed.
+			Entry("should return nil if no leases are present", nil, BeNil()),
+			Entry("should return Error that node agent is not running if no matching lease could be found for node", nonrelatedLease, MatchError(ContainSubstring("not running"))),
+			Entry("should return Error that node agent stopped running if the lease for the node is not valid anymore", invalidLease, MatchError(ContainSubstring("stopped running"))),
 		)
 	})
 

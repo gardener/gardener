@@ -58,8 +58,8 @@ import (
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/bootstrap"
 	"github.com/gardener/gardener/pkg/nodeagent/controller"
-	"github.com/gardener/gardener/pkg/nodeagent/controller/lease"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // Name is a const for the name of this component.
@@ -169,7 +169,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	leaseCacheOptions := cache.ByObject{Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}}}
 	if nodeName != "" {
 		log.Info("Node already registered, found name", "nodeName", nodeName)
-		leaseCacheOptions.Field = fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: lease.ObjectName(nodeName)})
+		leaseCacheOptions.Field = fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: gardenerutils.NodeAgentLeaseName(nodeName)})
 	}
 
 	log.Info("Setting up manager")

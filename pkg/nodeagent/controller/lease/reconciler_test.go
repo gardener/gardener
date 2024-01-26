@@ -18,13 +18,13 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	. "github.com/gardener/gardener/pkg/nodeagent/controller/lease"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 var _ = Describe("Reconciler", func() {
 	Describe("#ObjectName", func() {
 		It("should return the expected name", func() {
-			Expect(ObjectName("foo")).To(Equal("gardener-node-agent-foo"))
+			Expect(gardenerutils.NodeAgentLeaseName("foo")).To(Equal("gardener-node-agent-foo"))
 		})
 	})
 })

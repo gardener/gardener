@@ -17,6 +17,7 @@ package care
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -632,6 +633,18 @@ func (h *Health) CheckClusterNodes(
 		}
 	}
 
+	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+		leaseList := &coordinationv1.LeaseList{}
+		if err := shootClient.Client().List(ctx, leaseList, client.InNamespace(metav1.NamespaceSystem)); err != nil {
+			return nil, err
+		}
+
+		if err := CheckNodeAgentLeases(nodeList, leaseList, h.clock); err != nil {
+			c := v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "NodeAgentUnhealthy", err.Error())
+			return &c, nil
+		}
+	}
+
 	// First check if the MachineDeployments report failed machines. If false then check if the MachineDeployments are
 	// "available". If false then check if there is a regular scale-up happening or if there are machines with an erroneous
 	// phase. Only then check the other MachineDeployment conditions. As last check, check if there is a scale-down happening
@@ -664,6 +677,34 @@ func (h *Health) CheckClusterNodes(
 	}
 
 	return nil, nil
+}
+
+// CheckNodeAgentLeases checks if all nodes in the shoot cluster have a corresponding Lease object maintained by gardener-node-agent
+func CheckNodeAgentLeases(nodeList *corev1.NodeList, leaseList *coordinationv1.LeaseList, clock clock.Clock) error {
+	nodeNameToLease := make(map[string]coordinationv1.Lease, len(leaseList.Items))
+	for _, lease := range leaseList.Items {
+		if strings.HasPrefix(lease.Name, gardenerutils.NodeLeasePrefix) {
+			nodeName := strings.ReplaceAll(lease.Name, gardenerutils.NodeLeasePrefix, "")
+			nodeNameToLease[nodeName] = lease
+		}
+	}
+	// TODO(rfranzke): Remove this if-condition as soon as the UseGardenerNodeAgent feature gate gets removed.
+	if len(nodeNameToLease) == 0 {
+		return nil // node-agent might not yet be deployed even though the feature gate is turned on, so let's accept this and don't report an error
+	}
+
+	for _, node := range nodeList.Items {
+		lease, ok := nodeNameToLease[node.Name]
+		if !ok {
+			return fmt.Errorf("gardener-node-agent is not running on node %q", node.Name)
+		}
+
+		if lease.Spec.RenewTime.Add(time.Second * time.Duration(*lease.Spec.LeaseDurationSeconds)).Before(clock.Now()) {
+			return fmt.Errorf("gardener-node-agent stopped running on node %q", node.Name)
+		}
+	}
+
+	return nil
 }
 
 // CheckNodesScalingUp returns an error if nodes are being scaled up.

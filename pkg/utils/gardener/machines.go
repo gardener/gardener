@@ -36,6 +36,8 @@ const (
 	MachineSetKind = "MachineSet"
 	// MachineDeploymentKind is the kind of the owner reference of a machine deployment
 	MachineDeploymentKind = "MachineDeployment"
+	// NodeLeasePrefix describes the Prefix of the lease that this node is corresponding to
+	NodeLeasePrefix = "gardener-node-agent-"
 )
 
 // BuildOwnerToMachinesMap returns a map that associates `MachineSet` names to the given `machines`.
@@ -167,4 +169,9 @@ func WaitUntilMachineResourcesDeleted(ctx context.Context, log logr.Logger, read
 
 		return retryutils.Ok()
 	})
+}
+
+// NodeAgentLeaseName returns the name of the Lease object based on the node name.
+func NodeAgentLeaseName(nodeName string) string {
+	return NodeLeasePrefix + nodeName
 }
