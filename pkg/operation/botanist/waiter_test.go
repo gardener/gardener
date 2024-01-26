@@ -76,7 +76,7 @@ var _ = Describe("Waiter", func() {
 			ctxCanceled, cancel := context.WithCancel(ctx)
 			cancel()
 
-			Expect(botanist.ShootClientSet.Client().Create(ctxCanceled, node)).To(Succeed())
+			Expect(botanist.ShootClientSet.Client().Create(ctx, node)).To(Succeed())
 
 			err := botanist.WaitUntilNodesDeleted(ctxCanceled)
 
@@ -107,7 +107,7 @@ var _ = Describe("Waiter", func() {
 
 			pod.Status = corev1.PodStatus{Phase: corev1.PodFailed}
 
-			Expect(botanist.ShootClientSet.Client().Create(ctxCanceled, pod)).To(Succeed())
+			Expect(botanist.ShootClientSet.Client().Create(ctx, pod)).To(Succeed())
 
 			Expect(botanist.WaitUntilNoPodRunning(ctxCanceled)).To(Succeed())
 		})
@@ -119,7 +119,7 @@ var _ = Describe("Waiter", func() {
 			pod.Status = corev1.PodStatus{Phase: corev1.PodRunning}
 			pod.Namespace = "foo"
 
-			Expect(botanist.ShootClientSet.Client().Create(ctxCanceled, pod)).To(Succeed())
+			Expect(botanist.ShootClientSet.Client().Create(ctx, pod)).To(Succeed())
 
 			err := botanist.WaitUntilNoPodRunning(ctxCanceled)
 
@@ -136,7 +136,7 @@ var _ = Describe("Waiter", func() {
 			pod.Status = corev1.PodStatus{Phase: corev1.PodRunning}
 			pod.Namespace = metav1.NamespaceSystem
 
-			Expect(botanist.ShootClientSet.Client().Create(ctxCanceled, pod)).To(Succeed())
+			Expect(botanist.ShootClientSet.Client().Create(ctx, pod)).To(Succeed())
 
 			err := botanist.WaitUntilNoPodRunning(ctxCanceled)
 
@@ -178,14 +178,14 @@ var _ = Describe("Waiter", func() {
 			}
 		})
 
-		It("should return an error when shoots pod network is empty", func() {
+		It("should return an error when shoot's pod network is empty", func() {
 			botanist.Shoot.SetInfo(shoot)
 
 			err := botanist.WaitUntilEndpointsDoNotContainPodIPs(ctx)
 			Expect(err).To(MatchError("unable to check if there are still Endpoints containing Pod IPs in the shoot cluster. Shoot's Pods network is empty"))
 		})
 
-		It("should return an error when shoots pod network is invalid", func() {
+		It("should return an error when shoot's pod network is invalid", func() {
 			shoot.Spec.Networking.Pods = pointer.String("abc123")
 			botanist.Shoot.SetInfo(shoot)
 
@@ -201,7 +201,7 @@ var _ = Describe("Waiter", func() {
 			shoot.Spec.Networking.Pods = pointer.String("10.0.0.0/8")
 			botanist.Shoot.SetInfo(shoot)
 
-			Expect(botanist.ShootClientSet.Client().Create(ctxCanceled, endpoint)).To(Succeed())
+			Expect(botanist.ShootClientSet.Client().Create(ctx, endpoint)).To(Succeed())
 
 			err := botanist.WaitUntilEndpointsDoNotContainPodIPs(ctxCanceled)
 
@@ -216,7 +216,7 @@ var _ = Describe("Waiter", func() {
 			botanist.Shoot.SetInfo(shoot)
 
 			endpoint.Subsets[0].Addresses[0].IP = "128.0.0.1"
-			Expect(botanist.ShootClientSet.Client().Create(ctxCanceled, endpoint)).To(Succeed())
+			Expect(botanist.ShootClientSet.Client().Create(ctx, endpoint)).To(Succeed())
 
 			Expect(botanist.WaitUntilEndpointsDoNotContainPodIPs(ctxCanceled)).To(Succeed())
 		})
