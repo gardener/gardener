@@ -1,3 +1,8 @@
+---
+title: Operator
+description: Understand the component responsible for the garden cluster environment and its various features
+---
+
 # Gardener Operator
 
 The `gardener-operator` is responsible for the garden cluster environment.

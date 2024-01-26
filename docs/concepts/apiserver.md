@@ -1,5 +1,6 @@
 ---
 title: API Server
+description: Understand the Gardener API server extension and the resources it exposes
 categories:
   - Users
 ---

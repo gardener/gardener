@@ -1,5 +1,6 @@
 ---
 title: APIServer Admission Plugins
+description: A list of all existing admission plugins together with their responsibilities
 ---
 
 # Admission Plugins

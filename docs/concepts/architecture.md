@@ -1,4 +1,6 @@
 ---
+title: Architecture
+description: The concepts behind the Kubernetes and Gardener architecture
 categories:
   - Users
 ---

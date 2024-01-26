@@ -1,5 +1,6 @@
 ---
 title: gardenlet
+description: Understand how Gardener can manage seed clusters decentrally
 ---
 
 # gardenlet

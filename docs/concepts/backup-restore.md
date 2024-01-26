@@ -1,5 +1,6 @@
 ---
 title: Backup and Restore
+description: Understand the backup and restore configuration of Gardener
 categories:
   - Users
 ---

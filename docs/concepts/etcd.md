@@ -1,5 +1,6 @@
 ---
 title: etcd
+description: How Gardener uses the etcd key-value store
 ---
 
 # etcd - Key-Value Store for Kubernetes

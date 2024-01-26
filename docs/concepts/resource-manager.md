@@ -1,3 +1,8 @@
+---
+title: Resource Manager
+description: Learn more about the component that creates, updates, and deletes Kubernetes resources in a target cluster
+---
+
 # Gardener Resource Manager
 
 Initially, the `gardener-resource-manager` was a project similar to the [kube-addon-manager](https://github.com/kubernetes/kubernetes/tree/master/cluster/addons/addon-manager).

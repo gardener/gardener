@@ -1,5 +1,6 @@
 ---
 title: Cluster API
+description: Understand the evolution of the Gardener API and its relation to the Cluster API
 categories:
   - Users
 ---

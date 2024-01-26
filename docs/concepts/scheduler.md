@@ -1,3 +1,8 @@
+---
+title: Scheduler
+description: Understand the the configuration and flow of the controller that assigns a seed cluster to newly created shoots
+---
+
 # Gardener Scheduler
 
 The Gardener Scheduler is in essence a controller that watches newly created shoots and assigns a seed cluster to them.
