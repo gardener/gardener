@@ -43,9 +43,9 @@ const (
 	DefaultWatchDuration = 5 * time.Minute
 	// KubeConfigSecretName is the name of the kubecfg secret with internal DNS for external access.
 	KubeConfigSecretName = gardenerutils.SecretNamePrefixShootAccess + "dependency-watchdog-probe"
-
+	// managedResourceTargetName is th name of the managed resource created for DWD
 	managedResourceTargetName = "shoot-core-dependency-watchdog"
-
+	// DefaultKCMNodeMonitorGraceDuration is the default value for the NodeMonitorGraceDuration parameter of KCM
 	DefaultKCMNodeMonitorGraceDuration = 40 * time.Second
 )
 
