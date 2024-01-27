@@ -557,7 +557,7 @@ const (
 	IstioSystemNamespace = "istio-system"
 	// KubernetesDashboardNamespace is the kubernetes-dashboard namespace.
 	KubernetesDashboardNamespace = "kubernetes-dashboard"
-
+	// KubeNodeLease is the kube-node-lease namespace
 	KubeNodeLease = "kube-node-lease"
 
 	// DefaultSNIIngressNamespace is the default sni ingress namespace.
