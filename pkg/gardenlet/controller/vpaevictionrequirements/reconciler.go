@@ -81,7 +81,7 @@ func (r *Reconciler) reconcileVPAForDownscaleInMaintenanceOnly(ctx context.Conte
 	windowAnnotation := vpa.GetAnnotations()[constants.AnnotationShootMaintenanceWindow]
 	splitWindowAnnotation := strings.Split(windowAnnotation, ",")
 	if len(splitWindowAnnotation) != 2 {
-		err := fmt.Errorf("error during parsing the maintenance window from annotation. Value is not in format '<begin>,<end>': %q", windowAnnotation)
+		err := fmt.Errorf("error during parsing the maintenance window from annotation. Value is not in format '<begin>,<end>': %s", windowAnnotation)
 		log.Error(err, "Error during reconciling for downscaling in maintenance only")
 		// No need to retry reconciling this VPA until it has been updated with a fixed annotation, therefore not returning the error
 		return reconcile.Result{}, nil
