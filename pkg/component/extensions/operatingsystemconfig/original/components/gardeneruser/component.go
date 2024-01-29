@@ -22,6 +22,7 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -82,7 +83,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	return []extensionsv1alpha1.Unit{
 			{
 				Name:   "gardener-user.service",
-				Enable: pointer.Bool(true),
+				Enable: ptr.To(true),
 				Content: pointer.String(`[Unit]
 Description=Configure gardener user
 After=sshd.service

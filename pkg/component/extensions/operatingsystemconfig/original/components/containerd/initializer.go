@@ -21,6 +21,7 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -76,7 +77,7 @@ func (initializer) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []
 			{
 				Name:    unitNameInitializer,
 				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-				Enable:  pointer.Bool(true),
+				Enable:  ptr.To(true),
 				Content: pointer.String(`[Unit]
 Description=Containerd initializer
 [Install]

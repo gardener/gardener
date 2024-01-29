@@ -22,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -35,13 +36,13 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 	config := &kubeletconfigv1beta1.KubeletConfiguration{
 		Authentication: kubeletconfigv1beta1.KubeletAuthentication{
 			Anonymous: kubeletconfigv1beta1.KubeletAnonymousAuthentication{
-				Enabled: pointer.Bool(false),
+				Enabled: ptr.To(false),
 			},
 			X509: kubeletconfigv1beta1.KubeletX509Authentication{
 				ClientCAFile: PathKubeletCACert,
 			},
 			Webhook: kubeletconfigv1beta1.KubeletWebhookAuthentication{
-				Enabled:  pointer.Bool(true),
+				Enabled:  ptr.To(true),
 				CacheTTL: metav1.Duration{Duration: 2 * time.Minute},
 			},
 		},
@@ -54,7 +55,7 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 		},
 		CgroupDriver:                     getCgroupDriver(params),
 		CgroupRoot:                       "/",
-		CgroupsPerQOS:                    pointer.Bool(true),
+		CgroupsPerQOS:                    ptr.To(true),
 		ClusterDNS:                       []string{clusterDNSAddress},
 		ClusterDomain:                    clusterDomain,
 		ContainerLogMaxSize:              *params.ContainerLogMaxSize,
@@ -62,9 +63,9 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 		CPUCFSQuota:                      params.CpuCFSQuota,
 		CPUManagerPolicy:                 *params.CpuManagerPolicy,
 		CPUManagerReconcilePeriod:        metav1.Duration{Duration: 10 * time.Second},
-		EnableControllerAttachDetach:     pointer.Bool(true),
-		EnableDebuggingHandlers:          pointer.Bool(true),
-		EnableServer:                     pointer.Bool(true),
+		EnableControllerAttachDetach:     ptr.To(true),
+		EnableDebuggingHandlers:          ptr.To(true),
+		EnableServer:                     ptr.To(true),
 		EnforceNodeAllocatable:           []string{"pods"},
 		EventBurst:                       50,
 		EventRecordQPS:                   pointer.Int32(50),
@@ -173,7 +174,7 @@ func getCgroupDriver(kubeletConfigParameters components.ConfigurableKubeletConfi
 
 func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters, kubernetesVersion *semver.Version) {
 	if c.CpuCFSQuota == nil {
-		c.CpuCFSQuota = pointer.Bool(true)
+		c.CpuCFSQuota = ptr.To(true)
 	}
 
 	if c.CpuManagerPolicy == nil {
@@ -225,7 +226,7 @@ func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters, kubern
 	}
 
 	if c.FailSwapOn == nil {
-		c.FailSwapOn = pointer.Bool(true)
+		c.FailSwapOn = ptr.To(true)
 	}
 
 	if c.ImageGCHighThresholdPercent == nil {
@@ -237,7 +238,7 @@ func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters, kubern
 	}
 
 	if c.SerializeImagePulls == nil {
-		c.SerializeImagePulls = pointer.Bool(true)
+		c.SerializeImagePulls = ptr.To(true)
 	}
 
 	if c.KubeReserved == nil {
@@ -257,7 +258,7 @@ func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters, kubern
 		c.ContainerLogMaxSize = pointer.String("100Mi")
 	}
 
-	c.ProtectKernelDefaults = pointer.Bool(ShouldProtectKernelDefaultsBeEnabled(c, kubernetesVersion))
+	c.ProtectKernelDefaults = ptr.To(ShouldProtectKernelDefaultsBeEnabled(c, kubernetesVersion))
 
 	if c.StreamingConnectionIdleTimeout == nil {
 		if version.ConstraintK8sGreaterEqual126.Check(kubernetesVersion) {

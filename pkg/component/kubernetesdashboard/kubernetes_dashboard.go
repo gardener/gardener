@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -228,7 +229,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 				Namespace: v1beta1constants.KubernetesDashboardNamespace,
 				Labels:    map[string]string{labelKey: name},
 			},
-			AutomountServiceAccountToken: pointer.Bool(false),
+			AutomountServiceAccountToken: ptr.To(false),
 		}
 
 		secretCerts = &corev1.Secret{
@@ -339,8 +340,8 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: pointer.Bool(false),
-									ReadOnlyRootFilesystem:   pointer.Bool(true),
+									AllowPrivilegeEscalation: ptr.To(false),
+									ReadOnlyRootFilesystem:   ptr.To(true),
 								},
 								VolumeMounts: []corev1.VolumeMount{
 									{
@@ -419,8 +420,8 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 									TimeoutSeconds:      int32(30),
 								},
 								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: pointer.Bool(false),
-									ReadOnlyRootFilesystem:   pointer.Bool(true),
+									AllowPrivilegeEscalation: ptr.To(false),
+									ReadOnlyRootFilesystem:   ptr.To(true),
 									RunAsUser:                pointer.Int64(1001),
 									RunAsGroup:               pointer.Int64(2001),
 									SeccompProfile: &corev1.SeccompProfile{

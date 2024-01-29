@@ -29,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -431,7 +431,7 @@ status:
 												LocalObjectReference: corev1.LocalObjectReference{
 													Name: "kube-dns",
 												},
-												Optional: pointer.Bool(true),
+												Optional: ptr.To(true),
 											},
 										},
 									},
@@ -505,7 +505,7 @@ status: {}
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: pointer.Bool(false),
+					KeepObjects: ptr.To(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -514,7 +514,7 @@ status: {}
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__node-local-dns.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecret.Data["service__kube-system__kube-dns-upstream.yaml"])).To(Equal(serviceYAML))
@@ -584,9 +584,9 @@ ip6.arpa:53 {
 				Context("ForceTcpToClusterDNS : true and ForceTcpToUpstreamDNS : true", func() {
 					BeforeEach(func() {
 						values.Config = &gardencorev1beta1.NodeLocalDNS{Enabled: true,
-							ForceTCPToClusterDNS:        pointer.Bool(true),
-							ForceTCPToUpstreamDNS:       pointer.Bool(true),
-							DisableForwardToUpstreamDNS: pointer.Bool(false),
+							ForceTCPToClusterDNS:        ptr.To(true),
+							ForceTCPToUpstreamDNS:       ptr.To(true),
+							DisableForwardToUpstreamDNS: ptr.To(false),
 						}
 					})
 					Context("w/o VPA", func() {
@@ -623,9 +623,9 @@ ip6.arpa:53 {
 				Context("ForceTcpToClusterDNS : true and ForceTcpToUpstreamDNS : false", func() {
 					BeforeEach(func() {
 						values.Config = &gardencorev1beta1.NodeLocalDNS{Enabled: true,
-							ForceTCPToClusterDNS:        pointer.Bool(true),
-							ForceTCPToUpstreamDNS:       pointer.Bool(false),
-							DisableForwardToUpstreamDNS: pointer.Bool(false),
+							ForceTCPToClusterDNS:        ptr.To(true),
+							ForceTCPToUpstreamDNS:       ptr.To(false),
+							DisableForwardToUpstreamDNS: ptr.To(false),
 						}
 						forceTcpToClusterDNS = "force_tcp"
 						forceTcpToUpstreamDNS = "prefer_udp"
@@ -664,9 +664,9 @@ ip6.arpa:53 {
 				Context("ForceTcpToClusterDNS : false and ForceTcpToUpstreamDNS : true", func() {
 					BeforeEach(func() {
 						values.Config = &gardencorev1beta1.NodeLocalDNS{Enabled: true,
-							ForceTCPToClusterDNS:        pointer.Bool(false),
-							ForceTCPToUpstreamDNS:       pointer.Bool(true),
-							DisableForwardToUpstreamDNS: pointer.Bool(false),
+							ForceTCPToClusterDNS:        ptr.To(false),
+							ForceTCPToUpstreamDNS:       ptr.To(true),
+							DisableForwardToUpstreamDNS: ptr.To(false),
 						}
 						forceTcpToClusterDNS = "prefer_udp"
 						forceTcpToUpstreamDNS = "force_tcp"
@@ -705,9 +705,9 @@ ip6.arpa:53 {
 				Context("ForceTcpToClusterDNS : false and ForceTcpToUpstreamDNS : false", func() {
 					BeforeEach(func() {
 						values.Config = &gardencorev1beta1.NodeLocalDNS{Enabled: true,
-							ForceTCPToClusterDNS:        pointer.Bool(false),
-							ForceTCPToUpstreamDNS:       pointer.Bool(false),
-							DisableForwardToUpstreamDNS: pointer.Bool(false),
+							ForceTCPToClusterDNS:        ptr.To(false),
+							ForceTCPToUpstreamDNS:       ptr.To(false),
+							DisableForwardToUpstreamDNS: ptr.To(false),
 						}
 						forceTcpToClusterDNS = "prefer_udp"
 						forceTcpToUpstreamDNS = "prefer_udp"
@@ -746,9 +746,9 @@ ip6.arpa:53 {
 				Context("DisableForwardToUpstreamDNS true", func() {
 					BeforeEach(func() {
 						values.Config = &gardencorev1beta1.NodeLocalDNS{Enabled: true,
-							ForceTCPToClusterDNS:        pointer.Bool(true),
-							ForceTCPToUpstreamDNS:       pointer.Bool(true),
-							DisableForwardToUpstreamDNS: pointer.Bool(true),
+							ForceTCPToClusterDNS:        ptr.To(true),
+							ForceTCPToUpstreamDNS:       ptr.To(true),
+							DisableForwardToUpstreamDNS: ptr.To(true),
 						}
 						values.VPAEnabled = true
 						upstreamDNSAddress = values.ClusterDNS
@@ -834,9 +834,9 @@ ip6.arpa:53 {
 				Context("ForceTcpToClusterDNS : true and ForceTcpToUpstreamDNS : true", func() {
 					BeforeEach(func() {
 						values.Config = &gardencorev1beta1.NodeLocalDNS{Enabled: true,
-							ForceTCPToClusterDNS:        pointer.Bool(true),
-							ForceTCPToUpstreamDNS:       pointer.Bool(true),
-							DisableForwardToUpstreamDNS: pointer.Bool(false),
+							ForceTCPToClusterDNS:        ptr.To(true),
+							ForceTCPToUpstreamDNS:       ptr.To(true),
+							DisableForwardToUpstreamDNS: ptr.To(false),
 						}
 					})
 					Context("w/o VPA", func() {
@@ -874,9 +874,9 @@ ip6.arpa:53 {
 				Context("ForceTcpToClusterDNS : true and ForceTcpToUpstreamDNS : false", func() {
 					BeforeEach(func() {
 						values.Config = &gardencorev1beta1.NodeLocalDNS{Enabled: true,
-							ForceTCPToClusterDNS:        pointer.Bool(true),
-							ForceTCPToUpstreamDNS:       pointer.Bool(false),
-							DisableForwardToUpstreamDNS: pointer.Bool(false),
+							ForceTCPToClusterDNS:        ptr.To(true),
+							ForceTCPToUpstreamDNS:       ptr.To(false),
+							DisableForwardToUpstreamDNS: ptr.To(false),
 						}
 						forceTcpToClusterDNS = "force_tcp"
 						forceTcpToUpstreamDNS = "prefer_udp"
@@ -915,9 +915,9 @@ ip6.arpa:53 {
 				Context("ForceTcpToClusterDNS : false and ForceTcpToUpstreamDNS : true", func() {
 					BeforeEach(func() {
 						values.Config = &gardencorev1beta1.NodeLocalDNS{Enabled: true,
-							ForceTCPToClusterDNS:        pointer.Bool(false),
-							ForceTCPToUpstreamDNS:       pointer.Bool(true),
-							DisableForwardToUpstreamDNS: pointer.Bool(false),
+							ForceTCPToClusterDNS:        ptr.To(false),
+							ForceTCPToUpstreamDNS:       ptr.To(true),
+							DisableForwardToUpstreamDNS: ptr.To(false),
 						}
 						forceTcpToClusterDNS = "prefer_udp"
 						forceTcpToUpstreamDNS = "force_tcp"
@@ -956,9 +956,9 @@ ip6.arpa:53 {
 				Context("ForceTcpToClusterDNS : false and ForceTcpToUpstreamDNS : false", func() {
 					BeforeEach(func() {
 						values.Config = &gardencorev1beta1.NodeLocalDNS{Enabled: true,
-							ForceTCPToClusterDNS:        pointer.Bool(false),
-							ForceTCPToUpstreamDNS:       pointer.Bool(false),
-							DisableForwardToUpstreamDNS: pointer.Bool(false),
+							ForceTCPToClusterDNS:        ptr.To(false),
+							ForceTCPToUpstreamDNS:       ptr.To(false),
+							DisableForwardToUpstreamDNS: ptr.To(false),
 						}
 						forceTcpToClusterDNS = "prefer_udp"
 						forceTcpToUpstreamDNS = "prefer_udp"
@@ -1001,9 +1001,9 @@ ip6.arpa:53 {
 				values.ClusterDNS = "1.2.3.4"
 				values.DNSServer = ""
 				values.Config = &gardencorev1beta1.NodeLocalDNS{Enabled: true,
-					ForceTCPToClusterDNS:        pointer.Bool(true),
-					ForceTCPToUpstreamDNS:       pointer.Bool(true),
-					DisableForwardToUpstreamDNS: pointer.Bool(false),
+					ForceTCPToClusterDNS:        ptr.To(true),
+					ForceTCPToUpstreamDNS:       ptr.To(true),
+					DisableForwardToUpstreamDNS: ptr.To(false),
 				}
 				values.VPAEnabled = true
 				forceTcpToClusterDNS = "force_tcp"

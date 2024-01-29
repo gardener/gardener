@@ -16,6 +16,7 @@ package v1beta1
 
 import (
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
@@ -50,13 +51,13 @@ func SetDefaults_MachineType(obj *MachineType) {
 	}
 
 	if obj.Usable == nil {
-		obj.Usable = pointer.Bool(true)
+		obj.Usable = ptr.To(true)
 	}
 }
 
 // SetDefaults_VolumeType sets default values for VolumeType objects.
 func SetDefaults_VolumeType(obj *VolumeType) {
 	if obj.Usable == nil {
-		obj.Usable = pointer.Bool(true)
+		obj.Usable = ptr.To(true)
 	}
 }

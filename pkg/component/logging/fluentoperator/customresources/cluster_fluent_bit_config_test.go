@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/component/logging/fluentoperator/customresources"
 )
@@ -46,10 +47,10 @@ var _ = Describe("Logging", func() {
 					Spec: fluentbitv1alpha2.FluentBitConfigSpec{
 						Service: &fluentbitv1alpha2.Service{
 							FlushSeconds: pointer.Int64(30),
-							Daemon:       pointer.Bool(false),
+							Daemon:       ptr.To(false),
 							LogLevel:     "error",
 							ParsersFile:  "parsers.conf",
-							HttpServer:   pointer.Bool(true),
+							HttpServer:   ptr.To(true),
 							HttpListen:   "0.0.0.0",
 							HttpPort:     pointer.Int32(2020),
 						},

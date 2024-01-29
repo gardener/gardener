@@ -26,6 +26,7 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -148,7 +149,7 @@ func Config(cloudConfigUserDataSecretName, apiServerURL, clusterCASecretName str
 		{
 			Name:    Name + ".service",
 			Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-			Enable:  pointer.Bool(true),
+			Enable:  ptr.To(true),
 			Content: pointer.String(`[Unit]
 Description=Downloads the actual cloud config from the Shoot API server and executes it
 After=docker.service docker.socket
@@ -202,7 +203,7 @@ WantedBy=multi-user.target`),
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Data: BootstrapTokenPlaceholder,
 				},
-				TransmitUnencoded: pointer.Bool(true),
+				TransmitUnencoded: ptr.To(true),
 			},
 		},
 	}

@@ -28,6 +28,7 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/component-base/version"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -142,7 +143,7 @@ func NewTargetGardenerResourceManager(
 	image.WithOptionalTag(version.Get().GitVersion)
 
 	cfg := resourcemanager.Values{
-		AlwaysUpdate:                         pointer.Bool(true),
+		AlwaysUpdate:                         ptr.To(true),
 		ClusterIdentity:                      clusterIdentity,
 		ConcurrentSyncs:                      pointer.Int(20),
 		DefaultNotReadyToleration:            defaultNotReadyTolerationSeconds,

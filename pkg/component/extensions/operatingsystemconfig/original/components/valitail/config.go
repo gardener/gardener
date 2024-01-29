@@ -23,6 +23,7 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -180,7 +181,7 @@ ExecStart=` + execStart
 	unit := extensionsv1alpha1.Unit{
 		Name:    UnitName,
 		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-		Enable:  pointer.Bool(true),
+		Enable:  ptr.To(true),
 		Content: &unitContent,
 	}
 
@@ -258,7 +259,7 @@ ExecStart=` + execStart
 	unit := extensionsv1alpha1.Unit{
 		Name:    unitNameFetchToken,
 		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-		Enable:  pointer.Bool(true),
+		Enable:  ptr.To(true),
 		Content: &unitContent,
 	}
 

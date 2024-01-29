@@ -21,7 +21,7 @@ import (
 
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -58,7 +58,7 @@ func (e *GardenerTestEnvironment) Start() (*rest.Config, error) {
 
 	if e.useExistingGardener() {
 		log.V(1).Info("Using existing gardener setup")
-		e.Environment.UseExistingCluster = pointer.Bool(true)
+		e.Environment.UseExistingCluster = ptr.To(true)
 	} else {
 		// manage k-api cert dir by ourselves, we will add aggregator certs to it
 		kubeAPIServer := e.Environment.ControlPlane.GetAPIServer()

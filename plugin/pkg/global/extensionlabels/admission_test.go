@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -183,18 +184,18 @@ var _ = Describe("ExtensionLabels tests", func() {
 						{
 							Kind:            extensionsv1alpha1.ExtensionResource,
 							Type:            extensionType1,
-							GloballyEnabled: pointer.Bool(true),
+							GloballyEnabled: ptr.To(true),
 						},
 						{
 							Kind:            extensionsv1alpha1.ExtensionResource,
 							Type:            extensionType2,
-							GloballyEnabled: pointer.Bool(true),
+							GloballyEnabled: ptr.To(true),
 						},
 						{
 							Kind:                extensionsv1alpha1.ExtensionResource,
 							Type:                extensionType5,
-							GloballyEnabled:     pointer.Bool(true),
-							WorkerlessSupported: pointer.Bool(true),
+							GloballyEnabled:     ptr.To(true),
+							WorkerlessSupported: ptr.To(true),
 						},
 					},
 					Deployment: nil,
@@ -268,7 +269,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 					Extensions: []core.Extension{
 						{
 							Type:     extensionType2,
-							Disabled: pointer.Bool(true),
+							Disabled: ptr.To(true),
 						},
 						{
 							Type: extensionType3,
@@ -323,7 +324,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 			extension := []core.Extension{
 				{
 					Type:     extensionType2,
-					Disabled: pointer.Bool(false),
+					Disabled: ptr.To(false),
 				},
 				{
 					Type: extensionType4,
@@ -377,7 +378,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 						Extensions: []core.Extension{
 							{
 								Type:     extensionType2,
-								Disabled: pointer.Bool(true),
+								Disabled: ptr.To(true),
 							},
 							{
 								Type: extensionType3,

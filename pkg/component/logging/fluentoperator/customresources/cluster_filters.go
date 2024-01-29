@@ -19,7 +19,7 @@ import (
 	fluentbitv1alpha2filter "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/filter"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 // GetClusterFilters returns the ClusterFilters used by the Fluent Operator.
@@ -38,7 +38,7 @@ func GetClusterFilters(configName string, labels map[string]string) []*fluentbit
 						Parser: &fluentbitv1alpha2filter.Parser{
 							KeyName:     "log",
 							Parser:      "containerd-parser",
-							ReserveData: pointer.Bool(true),
+							ReserveData: ptr.To(true),
 						},
 					},
 				},

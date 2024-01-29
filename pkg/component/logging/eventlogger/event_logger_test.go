@@ -29,6 +29,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -328,7 +329,7 @@ var _ = Describe("EventLogger", func() {
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: pointer.Bool(false),
+					KeepObjects: ptr.To(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -338,7 +339,7 @@ var _ = Describe("EventLogger", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Data).To(HaveLen(2))
-			Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			Expect(string(managedResourceSecret.Data["clusterrole____event-logger.yaml"])).To(Equal(test.Serialize(clusterRoleForShoot())))
@@ -360,7 +361,7 @@ var _ = Describe("EventLogger", func() {
 					},
 					ResourceVersion: "1",
 				},
-				AutomountServiceAccountToken: pointer.Bool(false),
+				AutomountServiceAccountToken: ptr.To(false),
 			}))
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(seedEventLoggerRole), seedEventLoggerRole)).To(Succeed())
@@ -482,7 +483,7 @@ var _ = Describe("EventLogger", func() {
 														LocalObjectReference: corev1.LocalObjectReference{
 															Name: "generic-token-kubeconfig",
 														},
-														Optional: pointer.Bool(false),
+														Optional: ptr.To(false),
 													},
 												},
 												{
@@ -496,7 +497,7 @@ var _ = Describe("EventLogger", func() {
 														LocalObjectReference: corev1.LocalObjectReference{
 															Name: "shoot-access-" + name,
 														},
-														Optional: pointer.Bool(false),
+														Optional: ptr.To(false),
 													},
 												},
 											},

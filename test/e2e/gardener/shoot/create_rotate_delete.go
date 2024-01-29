@@ -22,7 +22,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -46,7 +46,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		f.Shoot.Spec.Kubernetes.Version = "1.26.0"
 
 		// Explicitly enable the static token kubeconfig to test the kubeconfig rotation.
-		f.Shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
+		f.Shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
 
 		It("Create Shoot, Rotate Credentials and Delete Shoot", Offset(1), Label("credentials-rotation"), func() {
 			ctx, cancel := context.WithTimeout(parentCtx, 20*time.Minute)

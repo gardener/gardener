@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -445,7 +446,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 			BeforeEach(func() {
 				configMap.SetAnnotations(map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"})
 				// provoke invalid update by trying to update an immutable configmap's data
-				configMap.Immutable = pointer.Bool(true)
+				configMap.Immutable = ptr.To(true)
 				secretForManagedResource.Data = secretDataForObject(configMap, dataKey)
 			})
 
@@ -1037,7 +1038,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 
 	Describe("Immutable resources", func() {
 		BeforeEach(func() {
-			configMap.Immutable = pointer.Bool(true)
+			configMap.Immutable = ptr.To(true)
 			secretForManagedResource = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resourceName,

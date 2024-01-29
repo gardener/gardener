@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	shootextensionactuator "github.com/gardener/gardener/pkg/provider-local/controller/extension/shoot"
@@ -55,7 +55,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Context("Hibernated Shoot", func() {
 		shoot := e2e.DefaultShoot("e2e-fd-hib")
 		shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
-			Enabled: pointer.Bool(true),
+			Enabled: ptr.To(true),
 		}
 
 		test(shoot)

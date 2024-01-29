@@ -31,6 +31,7 @@ import (
 	"k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/charts"
@@ -136,7 +137,7 @@ var _ = Describe("Actuator", func() {
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				Kubernetes: gardencorev1beta1.Kubernetes{
-					EnableStaticTokenKubeconfig: pointer.Bool(true),
+					EnableStaticTokenKubeconfig: ptr.To(true),
 				},
 				SecretBindingName: pointer.String(secretBindingName),
 				SeedName:          pointer.String(seedName),
@@ -200,7 +201,7 @@ var _ = Describe("Actuator", func() {
 				Image: &seedmanagementv1alpha1.Image{
 					PullPolicy: pullPolicyPtr(corev1.PullIfNotPresent),
 				},
-				VPA: pointer.Bool(true),
+				VPA: ptr.To(true),
 			},
 			Config: runtime.RawExtension{
 				Object: &gardenletv1alpha1.GardenletConfiguration{
@@ -214,7 +215,7 @@ var _ = Describe("Actuator", func() {
 				},
 			},
 			Bootstrap:       bootstrapPtr(seedmanagementv1alpha1.BootstrapToken),
-			MergeWithParent: pointer.Bool(true),
+			MergeWithParent: ptr.To(true),
 		}
 
 		gardenNamespace = &corev1.Namespace{

@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -406,7 +407,7 @@ ExecStartPre=` + PathScriptCopyKubernetesBinary + ` kubelet`
 	unit := extensionsv1alpha1.Unit{
 		Name:    "kubelet.service",
 		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-		Enable:  pointer.Bool(true),
+		Enable:  ptr.To(true),
 		Content: pointer.String(`[Unit]
 Description=kubelet daemon
 Documentation=https://kubernetes.io/docs/admin/kubelet
@@ -474,7 +475,7 @@ func kubeletMonitorUnit() extensionsv1alpha1.Unit {
 	unit := extensionsv1alpha1.Unit{
 		Name:    "kubelet-monitor.service",
 		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-		Enable:  pointer.Bool(true),
+		Enable:  ptr.To(true),
 		Content: pointer.String(`[Unit]
 Description=Kubelet-monitor daemon
 After=kubelet.service

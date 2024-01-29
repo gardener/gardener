@@ -31,6 +31,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -146,7 +147,7 @@ func (c *nodeLocalDNS) computeResourcesData() (map[string][]byte, error) {
 				Name:      "node-local-dns",
 				Namespace: metav1.NamespaceSystem,
 			},
-			AutomountServiceAccountToken: pointer.Bool(false),
+			AutomountServiceAccountToken: ptr.To(false),
 		}
 
 		configMap = &corev1.ConfigMap{
@@ -394,7 +395,7 @@ ip6.arpa:53 {
 										LocalObjectReference: corev1.LocalObjectReference{
 											Name: "kube-dns",
 										},
-										Optional: pointer.Bool(true),
+										Optional: ptr.To(true),
 									},
 								},
 							},

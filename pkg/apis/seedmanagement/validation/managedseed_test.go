@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
@@ -236,7 +237,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 					},
 					Config:          gardenletConfiguration(seedx, nil),
 					Bootstrap:       bootstrapPtr(seedmanagement.BootstrapToken),
-					MergeWithParent: pointer.Bool(true),
+					MergeWithParent: ptr.To(true),
 				}
 			})
 
@@ -346,7 +347,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 						},
 					})
 				managedSeed.Spec.Gardenlet.Bootstrap = bootstrapPtr(seedmanagement.BootstrapNone)
-				managedSeed.Spec.Gardenlet.MergeWithParent = pointer.Bool(false)
+				managedSeed.Spec.Gardenlet.MergeWithParent = ptr.To(false)
 
 				errorList := ValidateManagedSeed(managedSeed)
 
@@ -457,7 +458,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
 					Config:          gardenletConfiguration(seedx, nil),
 					Bootstrap:       bootstrapPtr(seedmanagement.BootstrapToken),
-					MergeWithParent: pointer.Bool(true),
+					MergeWithParent: ptr.To(true),
 				}
 
 				newManagedSeed = managedSeed.DeepCopy()
@@ -476,7 +477,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 
 				newManagedSeed.Spec.Gardenlet.Config = gardenletConfiguration(seedxCopy, nil)
 				newManagedSeed.Spec.Gardenlet.Bootstrap = bootstrapPtr(seedmanagement.BootstrapServiceAccount)
-				newManagedSeed.Spec.Gardenlet.MergeWithParent = pointer.Bool(false)
+				newManagedSeed.Spec.Gardenlet.MergeWithParent = ptr.To(false)
 
 				errorList := ValidateManagedSeedUpdate(newManagedSeed, managedSeed)
 

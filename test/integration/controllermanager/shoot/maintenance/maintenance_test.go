@@ -24,6 +24,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -391,7 +392,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				Maintenance: &gardencorev1beta1.Maintenance{
 					AutoUpdate: &gardencorev1beta1.MaintenanceAutoUpdate{
 						KubernetesVersion:   false,
-						MachineImageVersion: pointer.Bool(false),
+						MachineImageVersion: ptr.To(false),
 					},
 					TimeWindow: &gardencorev1beta1.MaintenanceTimeWindow{
 						Begin: timewindow.NewMaintenanceTime(time.Now().Add(2*time.Hour).Hour(), 0, 0).Formatted(),
@@ -565,7 +566,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 
 				cloneShoot.Spec.Provider.Workers[0].Machine.Image.Version = &highestPatchSameMinorAMD64
 				cloneShoot.Spec.Provider.Workers[1].Machine.Image.Version = &highestPatchSameMinorARM
-				cloneShoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = pointer.Bool(true)
+				cloneShoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = ptr.To(true)
 				Expect(testClient.Patch(ctx, cloneShoot, patch)).ToNot(HaveOccurred())
 
 				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
@@ -694,7 +695,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			It("auto update to latest patch version in minor (update strategy: patch)", func() {
 				// set test specific shoot settings
 				patch := client.MergeFrom(shoot.DeepCopy())
-				shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = pointer.Bool(true)
+				shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = ptr.To(true)
 				Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
 
 				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
@@ -817,7 +818,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), cloneShoot)).ToNot(HaveOccurred())
 				patch := client.StrategicMergeFrom(cloneShoot.DeepCopy())
 
-				cloneShoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = pointer.Bool(true)
+				cloneShoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = ptr.To(true)
 				cloneShoot.Spec.Provider.Workers[0].Machine.Image.Version = &highestPatchNextMinorAMD64
 				cloneShoot.Spec.Provider.Workers[1].Machine.Image.Version = &highestPatchNextMinorARM
 				Expect(testClient.Patch(ctx, cloneShoot, patch)).ToNot(HaveOccurred())
@@ -947,7 +948,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 	Describe("Kubernetes version maintenance tests", func() {
 		BeforeEach(func() {
 			shoot126.Spec.Kubernetes.Version = "1.26.0"
-			shoot126.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
+			shoot126.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
 
 			By("Create k8s v1.26 Shoot")
 			Expect(testClient.Create(ctx, shoot126)).To(Succeed())
@@ -1020,7 +1021,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 					g.Expect(shoot126.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"1.26.0\" to \"1.27.0\". Reason: Kubernetes version expired - force update required, EnableStaticTokenKubeconfig is set to false. Reason: The static token kubeconfig can no longer be enabled for Shoot clusters using Kubernetes version 1.27 and higher"))
 					g.Expect(shoot126.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
 					g.Expect(shoot126.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
-					g.Expect(shoot126.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(Equal(pointer.Bool(false)))
+					g.Expect(shoot126.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(Equal(ptr.To(false)))
 					return shoot126.Spec.Kubernetes.Version
 				}).Should(Equal("1.27.0"))
 			})
@@ -1256,7 +1257,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 					g.Expect(shoot126.Status.LastMaintenance.Description).To(ContainSubstring("EnableStaticTokenKubeconfig is set to false. Reason: The static token kubeconfig can no longer be enabled for Shoot clusters using Kubernetes version 1.27 and higher"))
 					g.Expect(shoot126.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
 					g.Expect(shoot126.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
-					g.Expect(shoot126.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(Equal(pointer.Bool(false)))
+					g.Expect(shoot126.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(Equal(ptr.To(false)))
 					return shoot126.Spec.Kubernetes.Version
 				}).Should(Equal("1.27.0"))
 			})

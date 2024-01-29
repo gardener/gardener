@@ -25,6 +25,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/utils"
@@ -319,7 +320,7 @@ func (m *manager) reconcileSecret(ctx context.Context, secret *corev1.Secret, la
 	var mustPatch bool
 
 	if secret.Immutable == nil || !*secret.Immutable {
-		secret.Immutable = pointer.Bool(true)
+		secret.Immutable = ptr.To(true)
 		mustPatch = true
 	}
 

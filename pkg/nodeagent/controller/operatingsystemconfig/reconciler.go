@@ -33,6 +33,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -327,7 +328,7 @@ func (r *Reconciler) applyChangedUnits(ctx context.Context, log logr.Logger, uni
 		// TODO(rfranzke): Remove this when UseGardenerNodeAgent feature gate gets removed.
 		// Never enable `gardener-node-init.service` to avoid undesired restarts of `gardener-node-agent`
 		if unit.Name == nodeagentv1alpha1.InitUnitName {
-			unit.Enable = pointer.Bool(false)
+			unit.Enable = ptr.To(false)
 		}
 
 		if unit.Name == nodeagentv1alpha1.UnitName || pointer.BoolDeref(unit.Enable, true) {
@@ -391,7 +392,7 @@ func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, n
 		// TODO(rfranzke): Remove this when UseGardenerNodeAgent feature gate gets removed.
 		// Never start `gardener-node-init.service` to avoid undesired restarts of `gardener-node-agent`
 		if unit.Name == nodeagentv1alpha1.InitUnitName {
-			unit.Enable = pointer.Bool(false)
+			unit.Enable = ptr.To(false)
 		}
 
 		if unit.Name == nodeagentv1alpha1.UnitName {

@@ -30,7 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -253,7 +253,7 @@ var _ = Describe("Object", func() {
 			)
 
 			expectedConfigMap.Name += "-e3b0c442"
-			expectedConfigMap.Immutable = pointer.Bool(true)
+			expectedConfigMap.Immutable = ptr.To(true)
 			expectedConfigMap.Labels["resources.gardener.cloud/garbage-collectable-reference"] = "true"
 
 			Expect(MakeUnique(configMap)).To(Succeed())
@@ -272,7 +272,7 @@ var _ = Describe("Object", func() {
 			)
 
 			expectedSecret.Name += "e3b0c442"
-			expectedSecret.Immutable = pointer.Bool(true)
+			expectedSecret.Immutable = ptr.To(true)
 			expectedSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"] = "true"
 
 			Expect(MakeUnique(secret)).To(Succeed())

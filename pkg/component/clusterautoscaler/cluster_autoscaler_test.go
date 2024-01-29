@@ -35,6 +35,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -187,8 +188,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 					Kind:               "Namespace",
 					Name:               namespace,
 					UID:                namespaceUID,
-					Controller:         pointer.Bool(true),
-					BlockOwnerDeletion: pointer.Bool(true),
+					Controller:         ptr.To(true),
+					BlockOwnerDeletion: ptr.To(true),
 				}},
 				ResourceVersion: "1",
 			},
@@ -213,7 +214,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Namespace:       namespace,
 				ResourceVersion: "1",
 			},
-			AutomountServiceAccountToken: pointer.Bool(false),
+			AutomountServiceAccountToken: ptr.To(false),
 		}
 		service = &corev1.Service{
 			TypeMeta: metav1.TypeMeta{
@@ -601,7 +602,7 @@ subjects:
 				"role__kube-system__gardener.cloud_target_cluster-autoscaler.yaml":        []byte(roleYAML),
 				"rolebinding__kube-system__gardener.cloud_target_cluster-autoscaler.yaml": []byte(roleBindingYAML),
 			},
-			Immutable: pointer.Bool(true),
+			Immutable: ptr.To(true),
 		}
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			TypeMeta: metav1.TypeMeta{
@@ -617,7 +618,7 @@ subjects:
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
 				SecretRefs:   []corev1.LocalObjectReference{},
 				InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-				KeepObjects:  pointer.Bool(false),
+				KeepObjects:  ptr.To(false),
 			},
 		}
 	)

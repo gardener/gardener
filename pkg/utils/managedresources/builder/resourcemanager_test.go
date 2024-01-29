@@ -22,6 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -125,7 +126,7 @@ var _ = Describe("Resource Manager", func() {
 				},
 				Type:      corev1.SecretTypeOpaque,
 				Data:      data,
-				Immutable: pointer.Bool(true),
+				Immutable: ptr.To(true),
 			}))
 		})
 
@@ -198,7 +199,7 @@ var _ = Describe("Resource Manager", func() {
 					ResourceVersion: "1",
 				},
 				Type:      corev1.SecretTypeOpaque,
-				Immutable: pointer.Bool(true),
+				Immutable: ptr.To(true),
 			}))
 		})
 	})
@@ -296,10 +297,10 @@ var _ = Describe("Resource Manager", func() {
 					SecretRefs:                   secretRefs,
 					InjectLabels:                 injectedLabels,
 					Class:                        pointer.String(resourceClass),
-					ForceOverwriteAnnotations:    pointer.Bool(forceOverwriteAnnotations),
-					ForceOverwriteLabels:         pointer.Bool(forceOverwriteLabels),
-					KeepObjects:                  pointer.Bool(keepObjects),
-					DeletePersistentVolumeClaims: pointer.Bool(deletePersistentVolumeClaims),
+					ForceOverwriteAnnotations:    ptr.To(forceOverwriteAnnotations),
+					ForceOverwriteLabels:         ptr.To(forceOverwriteLabels),
+					KeepObjects:                  ptr.To(keepObjects),
+					DeletePersistentVolumeClaims: ptr.To(deletePersistentVolumeClaims),
 				},
 			}
 

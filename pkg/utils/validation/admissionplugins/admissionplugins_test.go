@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/utils/validation/admissionplugins"
@@ -62,12 +63,12 @@ var _ = Describe("admissionplugins", func() {
 				"Field":  Equal(field.NewPath("admissionPlugins[0].name").String()),
 				"Detail": Equal("admission plugin \"PodSecurityPolicy\" is not supported in Kubernetes version 1.26.6"),
 			})))),
-			Entry("unsupported admission plugin but is disabled", []core.AdmissionPlugin{{Name: "ClusterTrustBundleAttest", Disabled: pointer.Bool(true)}}, "1.26.6", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("unsupported admission plugin but is disabled", []core.AdmissionPlugin{{Name: "ClusterTrustBundleAttest", Disabled: ptr.To(true)}}, "1.26.6", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal(field.NewPath("admissionPlugins[0].name").String()),
 				"Detail": Equal("admission plugin \"ClusterTrustBundleAttest\" is not supported in Kubernetes version 1.26.6"),
 			})))),
-			Entry("unsupported admission plugin and is disabled but plugin in migration", []core.AdmissionPlugin{{Name: "PodSecurityPolicy", Disabled: pointer.Bool(true)}}, "1.25.6", BeEmpty()),
+			Entry("unsupported admission plugin and is disabled but plugin in migration", []core.AdmissionPlugin{{Name: "PodSecurityPolicy", Disabled: ptr.To(true)}}, "1.25.6", BeEmpty()),
 			Entry("admission plugin without name", []core.AdmissionPlugin{{}}, "1.26.10", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeRequired),
 				"Field":  Equal(field.NewPath("admissionPlugins[0].name").String()),
@@ -79,8 +80,8 @@ var _ = Describe("admissionplugins", func() {
 				"BadValue": Equal("Foo"),
 				"Detail":   Equal("unknown admission plugin \"Foo\""),
 			})))),
-			Entry("disabling non-required admission plugin", []core.AdmissionPlugin{{Name: "AlwaysAdmit", Disabled: pointer.Bool(true)}}, "1.26.8", BeEmpty()),
-			Entry("disabling required admission plugin", []core.AdmissionPlugin{{Name: "MutatingAdmissionWebhook", Disabled: pointer.Bool(true)}}, "1.26.8", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("disabling non-required admission plugin", []core.AdmissionPlugin{{Name: "AlwaysAdmit", Disabled: ptr.To(true)}}, "1.26.8", BeEmpty()),
+			Entry("disabling required admission plugin", []core.AdmissionPlugin{{Name: "MutatingAdmissionWebhook", Disabled: ptr.To(true)}}, "1.26.8", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal(field.NewPath("admissionPlugins[0]").String()),
 				"Detail": Equal("admission plugin \"MutatingAdmissionWebhook\" cannot be disabled"),

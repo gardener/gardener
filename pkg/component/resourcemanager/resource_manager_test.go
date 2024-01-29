@@ -44,6 +44,7 @@ import (
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -362,7 +363,7 @@ var _ = Describe("ResourceManager", func() {
 				Namespace: deployNamespace,
 				Labels:    defaultLabels,
 			},
-			AutomountServiceAccountToken: pointer.Bool(false),
+			AutomountServiceAccountToken: ptr.To(false),
 		}
 
 		configMapFor = func(watchedNamespace *string, targetKubeconfig *string, isWorkerless bool) *corev1.ConfigMap {
@@ -375,7 +376,7 @@ var _ = Describe("ResourceManager", func() {
 
 			config := &resourcemanagerv1alpha1.ResourceManagerConfiguration{
 				LeaderElection: componentbaseconfigv1alpha1.LeaderElectionConfiguration{
-					LeaderElect:       pointer.Bool(true),
+					LeaderElect:       ptr.To(true),
 					ResourceName:      "gardener-resource-manager",
 					ResourceNamespace: deployNamespace,
 				},
@@ -755,7 +756,7 @@ var _ = Describe("ResourceManager", func() {
 											Key:  "kubeconfig",
 											Path: "kubeconfig",
 										}},
-										Optional: pointer.Bool(false),
+										Optional: ptr.To(false),
 									},
 								},
 								{
@@ -767,7 +768,7 @@ var _ = Describe("ResourceManager", func() {
 											Key:  resourcesv1alpha1.DataKeyToken,
 											Path: resourcesv1alpha1.DataKeyToken,
 										}},
-										Optional: pointer.Bool(false),
+										Optional: ptr.To(false),
 									},
 								},
 							},
@@ -1863,7 +1864,7 @@ subjects:
 					{Name: managedResourceSecret.Name},
 				},
 				InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-				KeepObjects:  pointer.Bool(false),
+				KeepObjects:  ptr.To(false),
 			},
 		}
 		utilruntime.Must(references.InjectAnnotations(managedResource))

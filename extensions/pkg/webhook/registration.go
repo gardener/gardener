@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
@@ -176,7 +177,7 @@ func ReconcileSeedWebhookConfig(ctx context.Context, c client.Client, webhookCon
 			return err
 		}
 		ownerReference = metav1.NewControllerRef(ns, corev1.SchemeGroupVersion.WithKind("Namespace"))
-		ownerReference.BlockOwnerDeletion = pointer.Bool(false)
+		ownerReference.BlockOwnerDeletion = ptr.To(false)
 	}
 
 	desiredWebhookConfig := webhookConfig.DeepCopyObject().(client.Object)

@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
@@ -51,7 +52,7 @@ func (p *prometheusOperator) deployment() *appsv1.Deployment {
 					ServiceAccountName: serviceAccountName,
 					PriorityClassName:  p.values.PriorityClassName,
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot:   pointer.Bool(true),
+						RunAsNonRoot:   ptr.To(true),
 						RunAsUser:      pointer.Int64(65532),
 						SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
 					},
@@ -78,9 +79,9 @@ func (p *prometheusOperator) deployment() *appsv1.Deployment {
 								ContainerPort: 8080,
 							}},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: pointer.Bool(false),
+								AllowPrivilegeEscalation: ptr.To(false),
 								Capabilities:             &corev1.Capabilities{Drop: []corev1.Capability{"ALL"}},
-								ReadOnlyRootFilesystem:   pointer.Bool(true),
+								ReadOnlyRootFilesystem:   ptr.To(true),
 							},
 						},
 					},

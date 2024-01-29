@@ -23,6 +23,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/Masterminds/sprig/v3"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -158,7 +159,7 @@ ExecStartPre=` + PathScriptCopyKubernetesBinary + ` kubectl`
 	kubeletUnit := extensionsv1alpha1.Unit{
 		Name:    UnitName,
 		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-		Enable:  pointer.Bool(true),
+		Enable:  ptr.To(true),
 		Content: pointer.String(`[Unit]
 Description=kubelet daemon
 Documentation=https://kubernetes.io/docs/admin/kubelet
@@ -177,7 +178,7 @@ ExecStart=` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `/kubelet
 	healthMonitorUnit := extensionsv1alpha1.Unit{
 		Name:    "kubelet-monitor.service",
 		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-		Enable:  pointer.Bool(true),
+		Enable:  ptr.To(true),
 		Content: pointer.String(`[Unit]
 Description=Kubelet-monitor daemon
 After=` + UnitName + `

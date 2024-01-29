@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/helper"
@@ -285,32 +286,32 @@ var _ = Describe("helper", func() {
 		Entry("no providers", nil, BeNil()),
 		Entry("one non primary provider", []core.DNSProvider{{Type: pointer.String("provider")}}, BeNil()),
 		Entry("one primary provider", []core.DNSProvider{{Type: pointer.String("provider"),
-			Primary: pointer.Bool(true)}}, Equal(&core.DNSProvider{Type: pointer.String("provider"), Primary: pointer.Bool(true)})),
+			Primary: ptr.To(true)}}, Equal(&core.DNSProvider{Type: pointer.String("provider"), Primary: ptr.To(true)})),
 		Entry("multiple w/ one primary provider", []core.DNSProvider{
 			{
 				Type: pointer.String("provider2"),
 			},
 			{
 				Type:    pointer.String("provider1"),
-				Primary: pointer.Bool(true),
+				Primary: ptr.To(true),
 			},
 			{
 				Type: pointer.String("provider3"),
 			},
-		}, Equal(&core.DNSProvider{Type: pointer.String("provider1"), Primary: pointer.Bool(true)})),
+		}, Equal(&core.DNSProvider{Type: pointer.String("provider1"), Primary: ptr.To(true)})),
 		Entry("multiple w/ multiple primary providers", []core.DNSProvider{
 			{
 				Type:    pointer.String("provider1"),
-				Primary: pointer.Bool(true),
+				Primary: ptr.To(true),
 			},
 			{
 				Type:    pointer.String("provider2"),
-				Primary: pointer.Bool(true),
+				Primary: ptr.To(true),
 			},
 			{
 				Type: pointer.String("provider3"),
 			},
-		}, Equal(&core.DNSProvider{Type: pointer.String("provider1"), Primary: pointer.Bool(true)})),
+		}, Equal(&core.DNSProvider{Type: pointer.String("provider1"), Primary: ptr.To(true)})),
 	)
 
 	Describe("#GetRemovedVersions", func() {

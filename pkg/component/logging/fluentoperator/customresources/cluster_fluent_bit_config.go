@@ -18,6 +18,7 @@ import (
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 const (
@@ -36,10 +37,10 @@ func GetClusterFluentBitConfig(fluentBitName string, matchLabels map[string]stri
 		Spec: fluentbitv1alpha2.FluentBitConfigSpec{
 			Service: &fluentbitv1alpha2.Service{
 				FlushSeconds: pointer.Int64(30),
-				Daemon:       pointer.Bool(false),
+				Daemon:       ptr.To(false),
 				LogLevel:     "error",
 				ParsersFile:  "parsers.conf",
-				HttpServer:   pointer.Bool(true),
+				HttpServer:   ptr.To(true),
 				HttpListen:   "0.0.0.0",
 				HttpPort:     pointer.Int32(2020),
 			},

@@ -21,6 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 )
@@ -141,7 +142,7 @@ func SetDefaults_ManagedResourceControllerConfig(obj *ManagedResourceControllerC
 		obj.SyncPeriod = &metav1.Duration{Duration: time.Minute}
 	}
 	if obj.AlwaysUpdate == nil {
-		obj.AlwaysUpdate = pointer.Bool(false)
+		obj.AlwaysUpdate = ptr.To(false)
 	}
 	if obj.ManagedByLabelValue == nil {
 		obj.ManagedByLabelValue = pointer.String(resourcesv1alpha1.GardenerManager)

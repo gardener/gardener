@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -261,7 +262,7 @@ func (p *projectRBAC) reconcileResources(
 	subjectsUnique := removeDuplicateSubjects(subjects)
 
 	ownerRef := metav1.NewControllerRef(&p.project.ObjectMeta, gardencorev1beta1.SchemeGroupVersion.WithKind("Project"))
-	ownerRef.BlockOwnerDeletion = pointer.Bool(false)
+	ownerRef.BlockOwnerDeletion = ptr.To(false)
 
 	clusterRole := emptyClusterRole(clusterRoleName)
 	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, p.client, clusterRole, func() error {
@@ -314,7 +315,7 @@ func (p *projectRBAC) reconcileResources(
 func (p *projectRBAC) reconcileServiceAccountManagerRoleBinding(ctx context.Context, subjects []rbacv1.Subject) error {
 	subjectsUnique := removeDuplicateSubjects(subjects)
 	ownerRef := metav1.NewControllerRef(&p.project.ObjectMeta, gardencorev1beta1.SchemeGroupVersion.WithKind("Project"))
-	ownerRef.BlockOwnerDeletion = pointer.Bool(false)
+	ownerRef.BlockOwnerDeletion = ptr.To(false)
 
 	roleBinding := emptyRoleBinding(nameProjectServiceAccountManager, *p.project.Spec.Namespace)
 	_, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, p.client, roleBinding, func() error {

@@ -34,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -178,7 +179,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Providers: []core.DNSProvider{
 							{
 								Type:    &dnsProviderType,
-								Primary: pointer.Bool(true),
+								Primary: ptr.To(true),
 							},
 						},
 						Domain: &domain,
@@ -418,7 +419,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					shoot.Spec.ControlPlane = &core.ControlPlane{}
 					newShoot := prepareShootForUpdate(shoot)
 					newShoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
-					newShoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)}
+					newShoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
 					errorList := ValidateShootHAConfigUpdate(newShoot, shoot)
 					Expect(errorList).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
@@ -448,7 +449,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					shoot.Spec.ControlPlane = &core.ControlPlane{}
 					newShoot := prepareShootForUpdate(shoot)
 					newShoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}}
-					newShoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)}
+					newShoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)}
 					newShoot.Status.IsHibernated = true
 					errorList := ValidateShootHAConfigUpdate(newShoot, shoot)
 					Expect(errorList).To(ConsistOf(
@@ -464,7 +465,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					shoot.Spec.ControlPlane = &core.ControlPlane{}
 					newShoot := prepareShootForUpdate(shoot)
 					newShoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}}
-					newShoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)}
+					newShoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)}
 					newShoot.Status.IsHibernated = false
 					errorList := ValidateShootHAConfigUpdate(newShoot, shoot)
 					Expect(errorList).To(BeEmpty())
@@ -1407,7 +1408,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
 						Type:    pointer.String(core.DNSUnmanaged),
-						Primary: pointer.Bool(true),
+						Primary: ptr.To(true),
 					},
 				}
 
@@ -1539,7 +1540,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			It("should forbid to remove the primary DNS provider", func() {
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.SeedName = pointer.String("seed")
-				newShoot.Spec.DNS.Providers[0].Primary = pointer.Bool(false)
+				newShoot.Spec.DNS.Providers[0].Primary = ptr.To(false)
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -1553,7 +1554,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.SeedName = pointer.String("seed")
 				newShoot.Spec.DNS.Providers = append(newShoot.Spec.DNS.Providers, core.DNSProvider{
-					Primary: pointer.Bool(true),
+					Primary: ptr.To(true),
 				})
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
@@ -1617,7 +1618,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should forbid having more than one primary provider", func() {
 				shoot.Spec.DNS.Providers = append(shoot.Spec.DNS.Providers, core.DNSProvider{
-					Primary: pointer.Bool(true),
+					Primary: ptr.To(true),
 				})
 
 				errorList := ValidateShoot(shoot)
@@ -1769,15 +1770,15 @@ var _ = Describe("Shoot Validation Tests", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
 						{
 							Name:     "MutatingAdmissionWebhook",
-							Disabled: pointer.Bool(true),
+							Disabled: ptr.To(true),
 						},
 						{
 							Name:     "NamespaceLifecycle",
-							Disabled: pointer.Bool(false),
+							Disabled: ptr.To(false),
 						},
 						{
 							Name:     "NodeRestriction",
-							Disabled: pointer.Bool(true),
+							Disabled: ptr.To(true),
 						},
 					}
 					errorList := ValidateShoot(shoot)
@@ -1923,7 +1924,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Resources: resources,
 					}
 					shoot.Status.EncryptedResources = resources
-					shoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)}
+					shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
 
 					newShoot := prepareShootForUpdate(shoot)
 					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"configmaps", "new.fancyresource.io"}
@@ -1946,7 +1947,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					shoot.Status.IsHibernated = true
 
 					newShoot := prepareShootForUpdate(shoot)
-					newShoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)}
+					newShoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)}
 					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"configmaps", "new.fancyresource.io"}
 
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
@@ -2298,7 +2299,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			Context("kubernetes version < 1.25", func() {
 				It("should allow creating shoots with this field set", func() {
 					shoot.Spec.Kubernetes.Version = "1.24.6"
-					shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(true)
+					shoot.Spec.Kubernetes.AllowPrivilegedContainers = ptr.To(true)
 
 					errorList := ValidateShoot(shoot)
 					Expect(errorList).To(BeEmpty())
@@ -2308,7 +2309,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			Context("kubernetes version >= 1.25", func() {
 				It("should deny creating shoots with this field set", func() {
 					shoot.Spec.Kubernetes.Version = "1.25.0"
-					shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(true)
+					shoot.Spec.Kubernetes.AllowPrivilegedContainers = ptr.To(true)
 
 					errorList := ValidateShoot(shoot)
 					Expect(errorList).Should(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -2320,7 +2321,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				It("should deny updating shoots to v1.25 with this field set", func() {
 					shoot.Spec.Kubernetes.Version = "1.24.0"
-					shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(true)
+					shoot.Spec.Kubernetes.AllowPrivilegedContainers = ptr.To(true)
 
 					newShoot := prepareShootForUpdate(shoot)
 					newShoot.Spec.Kubernetes.Version = "1.25.0"
@@ -2338,7 +2339,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		Context("kubernetes.enableStaticTokenKubeconfig field validation", func() {
 			Context("kubernetes version < 1.27", func() {
 				It("should allow creating shoots with this field set to true", func() {
-					shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
+					shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
 
 					errorList := ValidateShoot(shoot)
 					Expect(errorList).To(BeEmpty())
@@ -2348,7 +2349,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			Context("kubernetes version >= 1.27", func() {
 				It("should deny creating shoots with this field set to true", func() {
 					shoot.Spec.Kubernetes.Version = "1.27.0"
-					shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
+					shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
 
 					errorList := ValidateShoot(shoot)
 					Expect(errorList).Should(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -2360,7 +2361,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				It("should deny updating shoots to v1.27 with this field set to true", func() {
 					shoot.Spec.Kubernetes.Version = "1.26.0"
-					shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
+					shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
 
 					newShoot := prepareShootForUpdate(shoot)
 					newShoot.Spec.Kubernetes.Version = "1.27.0"
@@ -3148,7 +3149,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				newShoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
 					{
 						Name:     "PodSecurityPolicy",
-						Disabled: pointer.Bool(true),
+						Disabled: ptr.To(true),
 					},
 				}
 
@@ -3166,7 +3167,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
 					{
 						Name:     "PodSecurityPolicy",
-						Disabled: pointer.Bool(true),
+						Disabled: ptr.To(true),
 					},
 				}
 				shoot.Status.LastOperation = &core.LastOperation{
@@ -3193,7 +3194,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
 					{
 						Name:     "PodSecurityPolicy",
-						Disabled: pointer.Bool(true),
+						Disabled: ptr.To(true),
 					},
 				}
 				shoot.Status.LastOperation = &core.LastOperation{
@@ -3224,7 +3225,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
 					{
 						Name:     "PodSecurityPolicy",
-						Disabled: pointer.Bool(true),
+						Disabled: ptr.To(true),
 					},
 				}
 				newShoot := prepareShootForUpdate(shoot)
@@ -3683,7 +3684,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should not allow setting machineImageVersion for autoUpdate if it's a workerless Shoot", func() {
 				shoot.Spec.Provider.Workers = nil
-				shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = pointer.Bool(true)
+				shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = ptr.To(true)
 
 				errorList := ValidateShoot(shoot)
 
@@ -4801,7 +4802,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			DescribeTable("forbid certain rotation operations when shoot is hibernated",
 				func(operation string) {
-					shoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)}
+					shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
 
 					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", operation)
 					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -4830,7 +4831,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			DescribeTable("forbid certain rotation operations when shoot is waking up",
 				func(operation string) {
-					shoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)}
+					shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)}
 					shoot.Status = core.ShootStatus{
 						IsHibernated: true,
 					}
@@ -4863,7 +4864,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			DescribeTable("forbid hibernating the shoot when certain rotation maintenance operations are set",
 				func(operation string) {
 					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", operation)
-					shoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)}
+					shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
 
 					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
@@ -4882,11 +4883,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			DescribeTable("forbid hibernating the shoot when certain rotation operations are in progress",
 				func(status core.ShootStatus) {
-					shoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)}
+					shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
 					shoot.Status = status
 
 					oldShoot := shoot.DeepCopy()
-					oldShoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)}
+					oldShoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)}
 
 					Expect(ValidateShootUpdate(shoot, oldShoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeForbidden),
@@ -4939,7 +4940,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			)
 
 			It("should forbid hibernation when the spec encryption config and status encryption config are different", func() {
-				shoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)}
+				shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)}
 				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
 					EncryptionConfig: &core.EncryptionConfig{
 						Resources: []string{"events", "configmaps"},
@@ -4948,7 +4949,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shoot.Status.EncryptedResources = []string{"events"}
 
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)}
+				newShoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
 
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
@@ -4958,7 +4959,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should allow hibernation when the spec encryption config and status encryption config are the same", func() {
-				shoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)}
+				shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)}
 				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
 					EncryptionConfig: &core.EncryptionConfig{
 						Resources: []string{"events", "configmaps"},
@@ -4967,7 +4968,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shoot.Status.EncryptedResources = []string{"configmaps", "events"}
 
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)}
+				newShoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
 
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 			})
@@ -6070,11 +6071,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 					kubeletConfig.MemorySwap = &core.MemorySwapConfiguration{SwapBehavior: (*core.SwapBehavior)(swapBehavior)}
 				}
 
-				kubeletConfig.FailSwapOn = pointer.Bool(true)
+				kubeletConfig.FailSwapOn = ptr.To(true)
 
 				if allowSwap {
 					kubeletConfig.FeatureGates = map[string]bool{"NodeSwap": true}
-					kubeletConfig.FailSwapOn = pointer.Bool(false)
+					kubeletConfig.FailSwapOn = ptr.To(false)
 				}
 
 				errList := ValidateKubeletConfig(kubeletConfig, "1.26", false, nil)
@@ -6219,7 +6220,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			},
 
 			Entry("valid configuration", "1.25", true, nil, BeEmpty()),
-			Entry("valid configuration with set feature gate", "1.25", true, pointer.Bool(true), BeEmpty()),
+			Entry("valid configuration with set feature gate", "1.25", true, ptr.To(true), BeEmpty()),
 			Entry("do not allow to set SeccompDefault to true when k8s version < 1.25", "1.24", true, nil, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal("seccompDefault"),
@@ -6230,7 +6231,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				"Field":  Equal("seccompDefault"),
 				"Detail": Equal("seccomp defaulting is not available for kubernetes versions < 1.25"),
 			})))),
-			Entry("do not allow to set SeccompDefault to true when feature gate is disabled", "1.25", true, pointer.Bool(false), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("do not allow to set SeccompDefault to true when feature gate is disabled", "1.25", true, ptr.To(false), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal("seccompDefault"),
 				"Detail": Equal("seccomp defaulting is not available when kubelet's 'SeccompDefault' feature gate is disabled"),

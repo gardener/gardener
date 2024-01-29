@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -72,7 +73,7 @@ var _ = Describe("Namespaces", func() {
 					{
 						Kind:            extensionsv1alpha1.ExtensionResource,
 						Type:            extensionType3,
-						GloballyEnabled: pointer.Bool(true),
+						GloballyEnabled: ptr.To(true),
 					},
 				},
 			},
@@ -86,7 +87,7 @@ var _ = Describe("Namespaces", func() {
 					{
 						Kind:            extensionsv1alpha1.ExtensionResource,
 						Type:            extensionType4,
-						GloballyEnabled: pointer.Bool(false),
+						GloballyEnabled: ptr.To(false),
 					},
 				},
 			},
@@ -498,7 +499,7 @@ var _ = Describe("Namespaces", func() {
 		It("should successfully remove extension labels from the namespace when extensions are deleted from shoot spec or marked as disabled", func() {
 			defaultShootInfo.Spec.Extensions = []gardencorev1beta1.Extension{
 				{Type: extensionType1},
-				{Type: extensionType3, Disabled: pointer.Bool(true)},
+				{Type: extensionType3, Disabled: ptr.To(true)},
 			}
 			botanist.Shoot.SetInfo(defaultShootInfo)
 

@@ -39,6 +39,7 @@ import (
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -100,7 +101,7 @@ var _ = Describe("Etcd", func() {
 		garbageCollectionPeriod = metav1.Duration{Duration: 12 * time.Hour}
 		compressionPolicy       = druidv1alpha1.GzipCompression
 		compressionSpec         = druidv1alpha1.CompressionSpec{
-			Enabled: pointer.Bool(true),
+			Enabled: ptr.To(true),
 			Policy:  &compressionPolicy,
 		}
 		backupLeaderElectionEtcdConnectionTimeout = &metav1.Duration{Duration: 10 * time.Second}
@@ -1782,7 +1783,7 @@ var _ = Describe("Etcd", func() {
 					},
 					Status: druidv1alpha1.EtcdStatus{
 						ObservedGeneration: pointer.Int64(1),
-						Ready:              pointer.Bool(true),
+						Ready:              ptr.To(true),
 					},
 				}
 			}

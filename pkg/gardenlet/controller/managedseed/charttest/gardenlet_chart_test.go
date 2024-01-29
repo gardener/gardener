@@ -35,6 +35,7 @@ import (
 	"k8s.io/apimachinery/pkg/version"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -495,11 +496,11 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-5d97b50a"}, false),
 
 		Entry("verify deployment with VPA enabled", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
-			VPA: pointer.Bool(true),
+			VPA: ptr.To(true),
 		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-5d97b50a"}, false),
 
 		Entry("verify deployment with VPA enabled and kubernetes version >= 1.26", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
-			VPA: pointer.Bool(true),
+			VPA: ptr.To(true),
 		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-5d97b50a"}, true),
 	)
 })

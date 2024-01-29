@@ -21,6 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
@@ -408,7 +409,7 @@ func SetDefaults_ManagedSeedControllerConfiguration(obj *ManagedSeedControllerCo
 	}
 
 	if obj.JitterUpdates == nil {
-		obj.JitterUpdates = pointer.Bool(false)
+		obj.JitterUpdates = ptr.To(false)
 	}
 }
 
@@ -452,7 +453,7 @@ func SetDefaults_SNIIngress(obj *SNIIngress) {
 // SetDefaults_Logging sets defaults for the Logging stack.
 func SetDefaults_Logging(obj *Logging) {
 	if obj.Enabled == nil {
-		obj.Enabled = pointer.Bool(false)
+		obj.Enabled = ptr.To(false)
 	}
 	if obj.Vali == nil {
 		obj.Vali = &Vali{}
@@ -507,7 +508,7 @@ func SetDefaults_BackupCompactionController(obj *BackupCompactionController) {
 		obj.Workers = pointer.Int64(3)
 	}
 	if obj.EnableBackupCompaction == nil {
-		obj.EnableBackupCompaction = pointer.Bool(false)
+		obj.EnableBackupCompaction = ptr.To(false)
 	}
 	if obj.EventsThreshold == nil {
 		obj.EventsThreshold = pointer.Int64(1000000)

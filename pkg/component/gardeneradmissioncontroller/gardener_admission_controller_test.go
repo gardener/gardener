@@ -37,6 +37,7 @@ import (
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
@@ -473,7 +474,7 @@ func verifyExpectations(ctx context.Context, fakeClient client.Client, fakeSecre
 	Expect(string(runtimeManagedResourceSecret.Data["service__some-namespace__gardener-admission-controller.yaml"])).To(Equal(service(namespace, testValues)), true)
 	Expect(string(runtimeManagedResourceSecret.Data["verticalpodautoscaler__some-namespace__gardener-admission-controller.yaml"])).To(Equal(vpa(namespace)))
 	Expect(string(runtimeManagedResourceSecret.Data["poddisruptionbudget__some-namespace__gardener-admission-controller.yaml"])).To(Equal(podDisruptionBudget(namespace, k8sGreaterEqual126)))
-	Expect(runtimeManagedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+	Expect(runtimeManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 	Expect(runtimeManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 	By("Check Virtual Cluster Resources")
@@ -496,7 +497,7 @@ func verifyExpectations(ctx context.Context, fakeClient client.Client, fakeSecre
 	Expect(string(virtualManagedResourceSecret.Data["clusterrole____gardener.cloud_system_admission-controller.yaml"])).To(Equal(clusterRole()))
 	Expect(string(virtualManagedResourceSecret.Data["clusterrolebinding____gardener.cloud_admission-controller.yaml"])).To(Equal(clusterRoleBinding()))
 	Expect(string(virtualManagedResourceSecret.Data["validatingwebhookconfiguration____gardener-admission-controller.yaml"])).To(Equal(validatingWebhookConfiguration(namespace, caGardener.Data["bundle.crt"], testValues)), true)
-	Expect(virtualManagedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+	Expect(virtualManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 	Expect(virtualManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 }
 
@@ -579,9 +580,9 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 				},
 				Spec: corev1.PodSpec{
 					PriorityClassName:            "gardener-garden-system-400",
-					AutomountServiceAccountToken: pointer.Bool(false),
+					AutomountServiceAccountToken: ptr.To(false),
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: pointer.Bool(true),
+						RunAsNonRoot: ptr.To(true),
 						RunAsUser:    pointer.Int64(65532),
 						RunAsGroup:   pointer.Int64(65532),
 						FSGroup:      pointer.Int64(65532),
@@ -673,7 +674,7 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 													Key:  "kubeconfig",
 													Path: "kubeconfig",
 												}},
-												Optional: pointer.Bool(false),
+												Optional: ptr.To(false),
 											},
 										},
 										{
@@ -685,7 +686,7 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 													Key:  "token",
 													Path: "token",
 												}},
-												Optional: pointer.Bool(false),
+												Optional: ptr.To(false),
 											},
 										},
 									},

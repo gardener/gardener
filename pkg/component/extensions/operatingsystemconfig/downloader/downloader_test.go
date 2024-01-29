@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/downloader"
@@ -37,7 +38,7 @@ var _ = Describe("Downloader", func() {
 			Expect(units).To(ConsistOf(extensionsv1alpha1.Unit{
 				Name:    "cloud-config-downloader.service",
 				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-				Enable:  pointer.Bool(true),
+				Enable:  ptr.To(true),
 				Content: pointer.String(unitContent),
 			}))
 			Expect(files).To(ConsistOf(
@@ -78,7 +79,7 @@ var _ = Describe("Downloader", func() {
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Data: "<<BOOTSTRAP_TOKEN>>",
 						},
-						TransmitUnencoded: pointer.Bool(true),
+						TransmitUnencoded: ptr.To(true),
 					},
 				}))
 		})

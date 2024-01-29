@@ -23,7 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -148,7 +148,7 @@ var _ = Describe("FakeManager", func() {
 						"persist":                       "true",
 					},
 				},
-				Immutable: pointer.Bool(true),
+				Immutable: ptr.To(true),
 				Type:      existingSecret.Type,
 				Data:      existingSecret.Data,
 			}))

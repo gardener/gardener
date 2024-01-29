@@ -29,6 +29,7 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/testing"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
@@ -93,7 +94,7 @@ var _ = Describe("ManagedSeed", func() {
 						Domain: pointer.String(domain),
 					},
 					Kubernetes: core.Kubernetes{
-						EnableStaticTokenKubeconfig: pointer.Bool(true),
+						EnableStaticTokenKubeconfig: ptr.To(true),
 						Version:                     "1.27.5",
 						VerticalPodAutoscaler: &core.VerticalPodAutoscaler{
 							Enabled: true,

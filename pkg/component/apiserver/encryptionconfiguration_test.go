@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -91,7 +92,7 @@ resources:
 					},
 					ResourceVersion: "1",
 				},
-				Immutable: pointer.Bool(true),
+				Immutable: ptr.To(true),
 				Data:      expectedSecretETCDEncryptionConfiguration.Data,
 			}))
 
@@ -161,7 +162,7 @@ resources:
 					},
 					ResourceVersion: "1",
 				},
-				Immutable: pointer.Bool(true),
+				Immutable: ptr.To(true),
 				Data:      expectedSecretETCDEncryptionConfiguration.Data,
 			}))
 
@@ -253,7 +254,7 @@ resources:
 						},
 						ResourceVersion: "1",
 					},
-					Immutable: pointer.Bool(true),
+					Immutable: ptr.To(true),
 					Data:      expectedSecretETCDEncryptionConfiguration.Data,
 				}))
 

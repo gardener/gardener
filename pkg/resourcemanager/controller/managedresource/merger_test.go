@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 )
@@ -61,8 +62,8 @@ var _ = Describe("merger", func() {
 						Kind:               "Namespace",
 						Name:               "default",
 						UID:                "18590d53-3e4d-4616-b411-88212dc69ac6",
-						Controller:         pointer.Bool(true),
-						BlockOwnerDeletion: pointer.Bool(true),
+						Controller:         ptr.To(true),
+						BlockOwnerDeletion: ptr.To(true),
 					}},
 				},
 			}

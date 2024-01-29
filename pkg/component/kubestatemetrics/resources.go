@@ -30,6 +30,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -85,7 +86,7 @@ func (k *kubeStateMetrics) emptyServiceAccount() *corev1.ServiceAccount {
 
 func (k *kubeStateMetrics) reconcileServiceAccount(serviceAccount *corev1.ServiceAccount) {
 	serviceAccount.Labels = k.getLabels()
-	serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
+	serviceAccount.AutomountServiceAccountToken = ptr.To(false)
 }
 
 func (k *kubeStateMetrics) newShootAccessSecret() *gardenerutils.AccessSecret {
@@ -301,7 +302,7 @@ func (k *kubeStateMetrics) reconcileDeployment(
 		deployment.Spec.Template.Spec.ServiceAccountName = serviceAccount.Name
 	}
 	if k.values.ClusterType == component.ClusterTypeShoot {
-		deployment.Spec.Template.Spec.AutomountServiceAccountToken = pointer.Bool(false)
+		deployment.Spec.Template.Spec.AutomountServiceAccountToken = ptr.To(false)
 		utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecretName, shootAccessSecret.Secret.Name))
 	}
 }

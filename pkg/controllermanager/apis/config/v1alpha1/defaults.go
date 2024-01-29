@@ -20,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 // SetDefaults_ControllerManagerConfiguration sets defaults for the configuration of the Gardener controller manager.
@@ -231,7 +232,7 @@ func SetDefaults_ShootMaintenanceControllerConfiguration(obj *ShootMaintenanceCo
 		obj.ConcurrentSyncs = pointer.Int(DefaultControllerConcurrentSyncs)
 	}
 	if obj.EnableShootControlPlaneRestarter == nil {
-		obj.EnableShootControlPlaneRestarter = pointer.Bool(true)
+		obj.EnableShootControlPlaneRestarter = ptr.To(true)
 	}
 }
 

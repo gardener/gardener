@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -219,7 +220,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 					}),
 				},
 				Spec: corev1.PodSpec{
-					AutomountServiceAccountToken:  pointer.Bool(false),
+					AutomountServiceAccountToken:  ptr.To(false),
 					PriorityClassName:             k.values.PriorityClassName,
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,
@@ -228,7 +229,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 					SecurityContext: &corev1.PodSecurityContext{
 						// use the nonroot user from a distroless container
 						// https://github.com/GoogleContainerTools/distroless/blob/1a8918fcaa7313fd02ae08089a57a701faea999c/base/base.bzl#L8
-						RunAsNonRoot: pointer.Bool(true),
+						RunAsNonRoot: ptr.To(true),
 						RunAsUser:    pointer.Int64(65532),
 						RunAsGroup:   pointer.Int64(65532),
 						FSGroup:      pointer.Int64(65532),
@@ -841,7 +842,7 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 			},
 		},
 		SecurityContext: &corev1.SecurityContext{
-			RunAsNonRoot: pointer.Bool(false),
+			RunAsNonRoot: ptr.To(false),
 			RunAsUser:    pointer.Int64(0),
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{"NET_ADMIN"},
@@ -901,7 +902,7 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 			},
 		},
 		SecurityContext: &corev1.SecurityContext{
-			RunAsNonRoot: pointer.Bool(false),
+			RunAsNonRoot: ptr.To(false),
 			RunAsUser:    pointer.Int64(0),
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{"NET_ADMIN"},
@@ -1048,7 +1049,7 @@ func (k *kubeAPIServer) handleWatchdogSidecar(deployment *appsv1.Deployment, con
 		},
 	})
 
-	deployment.Spec.Template.Spec.ShareProcessNamespace = pointer.Bool(true)
+	deployment.Spec.Template.Spec.ShareProcessNamespace = ptr.To(true)
 	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
 		Name: volumeNameWatchdog,
 		VolumeSource: corev1.VolumeSource{

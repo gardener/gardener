@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -388,7 +389,7 @@ var _ = Describe("ExtensionValidator", func() {
 			It("should prevent the object from being created because the extension type doesn't support workerless Shoots", func() {
 				var (
 					nonSupportedType      = "non-supported"
-					nonSupportedExtension = createControllerRegistrationForKindType(extensionsv1alpha1.ExtensionResource, nonSupportedType, true, pointer.Bool(false))
+					nonSupportedExtension = createControllerRegistrationForKindType(extensionsv1alpha1.ExtensionResource, nonSupportedType, true, ptr.To(false))
 
 					shoot = &core.Shoot{
 						Spec: core.ShootSpec{
@@ -439,7 +440,7 @@ var _ = Describe("ExtensionValidator", func() {
 			It("should allow object creation because the extension type supports workerless Shoots", func() {
 				var (
 					supportedType      = "supported"
-					supportedExtension = createControllerRegistrationForKindType(extensionsv1alpha1.ExtensionResource, supportedType, true, pointer.Bool(true))
+					supportedExtension = createControllerRegistrationForKindType(extensionsv1alpha1.ExtensionResource, supportedType, true, ptr.To(true))
 					shoot              = &core.Shoot{
 						Spec: core.ShootSpec{
 							Extensions: []core.Extension{

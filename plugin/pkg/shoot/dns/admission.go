@@ -31,6 +31,7 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
@@ -194,7 +195,7 @@ func (d *DNS) Admit(_ context.Context, a admission.Attributes, _ admission.Objec
 				// Since it was possible to apply shoots w/o a primary provider before, we have to re-add it here.
 				for i, provider := range shoot.Spec.DNS.Providers {
 					if reflect.DeepEqual(provider.Type, oldPrimaryProvider.Type) && reflect.DeepEqual(provider.SecretName, oldPrimaryProvider.SecretName) {
-						shoot.Spec.DNS.Providers[i].Primary = pointer.Bool(true)
+						shoot.Spec.DNS.Providers[i].Primary = ptr.To(true)
 						break
 					}
 				}
@@ -294,7 +295,7 @@ func setPrimaryDNSProvider(a admission.Attributes, shoot *core.Shoot, defaultDom
 
 	primary := helper.FindPrimaryDNSProvider(dns.Providers)
 	if primary == nil && len(dns.Providers) > 0 {
-		dns.Providers[0].Primary = pointer.Bool(true)
+		dns.Providers[0].Primary = ptr.To(true)
 	}
 	return nil
 }

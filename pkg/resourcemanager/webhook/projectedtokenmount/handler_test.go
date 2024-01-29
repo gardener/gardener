@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -67,7 +68,7 @@ var _ = Describe("Handler", func() {
 				Name:      serviceAccountName,
 				Namespace: namespace,
 			},
-			AutomountServiceAccountToken: pointer.Bool(false),
+			AutomountServiceAccountToken: ptr.To(false),
 		}
 
 		expirationSeconds = 1337
@@ -118,7 +119,7 @@ var _ = Describe("Handler", func() {
 				serviceAccount.AutomountServiceAccountToken = nil
 			}),
 			Entry("ServiceAccount's automountServiceAccountToken=true", func() {
-				serviceAccount.AutomountServiceAccountToken = pointer.Bool(true)
+				serviceAccount.AutomountServiceAccountToken = ptr.To(true)
 			}),
 		)
 
@@ -128,7 +129,7 @@ var _ = Describe("Handler", func() {
 			})
 
 			It("should not mutate because pod explicitly disables the service account mount", func() {
-				pod.Spec.AutomountServiceAccountToken = pointer.Bool(false)
+				pod.Spec.AutomountServiceAccountToken = ptr.To(false)
 
 				Expect(handler.Default(ctx, pod)).To(Succeed())
 				Expect(pod.Spec.Volumes).To(BeEmpty())

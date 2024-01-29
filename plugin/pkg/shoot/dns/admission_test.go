@@ -28,6 +28,7 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -190,7 +191,7 @@ var _ = Describe("dns", func() {
 
 		It("should set the 'unmanaged' dns provider as the primary one", func() {
 			shootBefore := shoot.DeepCopy()
-			shootBefore.Spec.DNS.Providers[0].Primary = pointer.Bool(true)
+			shootBefore.Spec.DNS.Providers[0].Primary = ptr.To(true)
 
 			Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 			attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
@@ -234,7 +235,7 @@ var _ = Describe("dns", func() {
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
 				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(MatchFields(IgnoreExtras, Fields{
 					"Type":    Equal(pointer.String(providerType)),
-					"Primary": Equal(pointer.Bool(true)),
+					"Primary": Equal(ptr.To(true)),
 				})))
 			})
 
@@ -264,7 +265,7 @@ var _ = Describe("dns", func() {
 				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
 						"Type":    Equal(pointer.String(providerType)),
-						"Primary": Equal(pointer.Bool(true)),
+						"Primary": Equal(ptr.To(true)),
 					}),
 					MatchFields(IgnoreExtras, Fields{
 						"Type":       Equal(pointer.String(providerType)),
@@ -292,7 +293,7 @@ var _ = Describe("dns", func() {
 				}
 
 				oldShoot := shoot.DeepCopy()
-				oldShoot.Spec.DNS.Providers[1].Primary = pointer.Bool(true)
+				oldShoot.Spec.DNS.Providers[1].Primary = ptr.To(true)
 
 				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
@@ -308,7 +309,7 @@ var _ = Describe("dns", func() {
 					}),
 					MatchFields(IgnoreExtras, Fields{
 						"Type":       Equal(pointer.String(providerType)),
-						"Primary":    Equal(pointer.Bool(true)),
+						"Primary":    Equal(ptr.To(true)),
 						"SecretName": Equal(pointer.String(secretName)),
 					}),
 				))
@@ -402,7 +403,7 @@ var _ = Describe("dns", func() {
 					},
 					{
 						Type:    &providerType,
-						Primary: pointer.Bool(true),
+						Primary: ptr.To(true),
 					},
 					{
 						Type: &providerType,
@@ -439,7 +440,7 @@ var _ = Describe("dns", func() {
 					},
 					{
 						Type:    &providerType,
-						Primary: pointer.Bool(true),
+						Primary: ptr.To(true),
 					},
 					{
 						Type: &providerType,
@@ -463,7 +464,7 @@ var _ = Describe("dns", func() {
 					}),
 					MatchFields(IgnoreExtras, Fields{
 						"Type":    Equal(pointer.String(providerType)),
-						"Primary": Equal(pointer.Bool(true)),
+						"Primary": Equal(ptr.To(true)),
 					}),
 					MatchFields(IgnoreExtras, Fields{
 						"Type": Equal(pointer.String(providerType)),
@@ -542,7 +543,7 @@ var _ = Describe("dns", func() {
 					{
 						Type:       &providerType,
 						SecretName: &secretName,
-						Primary:    pointer.Bool(true),
+						Primary:    ptr.To(true),
 					},
 				}
 
@@ -567,7 +568,7 @@ var _ = Describe("dns", func() {
 					{
 						Type:       &providerType,
 						SecretName: &secretName,
-						Primary:    pointer.Bool(true),
+						Primary:    ptr.To(true),
 					},
 				}
 

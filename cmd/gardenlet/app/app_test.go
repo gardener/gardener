@@ -22,7 +22,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -63,7 +63,7 @@ var _ = Describe("Recreate Managed Resource Secrets", func() {
 				},
 				Finalizers: []string{"resources.gardener.cloud/gardener-resource-manager"},
 			},
-			Immutable: pointer.Bool(true),
+			Immutable: ptr.To(true),
 			Data: map[string][]byte{
 				"test": []byte("foo"),
 			},
@@ -77,7 +77,7 @@ var _ = Describe("Recreate Managed Resource Secrets", func() {
 				},
 				Finalizers: []string{"resources.gardener.cloud/gardener-resource-manager"},
 			},
-			Immutable: pointer.Bool(true),
+			Immutable: ptr.To(true),
 			Data: map[string][]byte{
 				"test": []byte("bar"),
 			},
@@ -95,7 +95,7 @@ var _ = Describe("Recreate Managed Resource Secrets", func() {
 					"resources.gardener.cloud/temp-secret-old-name": "secret3",
 				},
 			},
-			Immutable: pointer.Bool(true),
+			Immutable: ptr.To(true),
 			Data: map[string][]byte{
 				"test": []byte("bar1"),
 			},
@@ -110,7 +110,7 @@ var _ = Describe("Recreate Managed Resource Secrets", func() {
 				},
 				Finalizers: []string{"resources.gardener.cloud/gardener-resource-manager"},
 			},
-			Immutable: pointer.Bool(true),
+			Immutable: ptr.To(true),
 			Data: map[string][]byte{
 				"test": []byte("bar1"),
 			},
@@ -128,7 +128,7 @@ var _ = Describe("Recreate Managed Resource Secrets", func() {
 					"resources.gardener.cloud/temp-secret-old-name": "secret4",
 				},
 			},
-			Immutable: pointer.Bool(true),
+			Immutable: ptr.To(true),
 			Data: map[string][]byte{
 				"test": []byte("bar1"),
 			},
@@ -144,7 +144,7 @@ var _ = Describe("Recreate Managed Resource Secrets", func() {
 				},
 				ResourceVersion: "1",
 			},
-			Immutable: pointer.Bool(true),
+			Immutable: ptr.To(true),
 			Data: map[string][]byte{
 				"test": []byte("foo"),
 			},
@@ -160,7 +160,7 @@ var _ = Describe("Recreate Managed Resource Secrets", func() {
 				},
 				ResourceVersion: "1",
 			},
-			Immutable: pointer.Bool(true),
+			Immutable: ptr.To(true),
 			Data: map[string][]byte{
 				"test": []byte("bar"),
 			},
@@ -176,7 +176,7 @@ var _ = Describe("Recreate Managed Resource Secrets", func() {
 				},
 				ResourceVersion: "1",
 			},
-			Immutable: pointer.Bool(true),
+			Immutable: ptr.To(true),
 			Data: map[string][]byte{
 				"test": []byte("bar1"),
 			},
@@ -192,7 +192,7 @@ var _ = Describe("Recreate Managed Resource Secrets", func() {
 				},
 				ResourceVersion: "1",
 			},
-			Immutable: pointer.Bool(true),
+			Immutable: ptr.To(true),
 			Data: map[string][]byte{
 				"test": []byte("bar1"),
 			},
@@ -207,7 +207,7 @@ var _ = Describe("Recreate Managed Resource Secrets", func() {
 				},
 				Finalizers: []string{"resources.gardener.cloud/gardener-resource-manager"},
 			},
-			Immutable: pointer.Bool(true),
+			Immutable: ptr.To(true),
 			Data: map[string][]byte{
 				"test": []byte("foo"),
 			},

@@ -27,6 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -656,8 +657,8 @@ var _ = Describe("Helper", func() {
 		Entry("setting is nil", nil, true),
 		Entry("excess capacity reservation is nil", &gardencorev1beta1.SeedSettings{}, true),
 		Entry("excess capacity reservation 'enabled' is nil", &gardencorev1beta1.SeedSettings{ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{Enabled: nil}}, true),
-		Entry("excess capacity reservation 'enabled' is false", &gardencorev1beta1.SeedSettings{ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{Enabled: pointer.Bool(false)}}, false),
-		Entry("excess capacity reservation 'enabled' is true", &gardencorev1beta1.SeedSettings{ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{Enabled: pointer.Bool(true)}}, true),
+		Entry("excess capacity reservation 'enabled' is false", &gardencorev1beta1.SeedSettings{ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{Enabled: ptr.To(false)}}, false),
+		Entry("excess capacity reservation 'enabled' is true", &gardencorev1beta1.SeedSettings{ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{Enabled: ptr.To(true)}}, true),
 	)
 
 	DescribeTable("#SeedSettingDependencyWatchdogWeederEnabled",
@@ -753,32 +754,32 @@ var _ = Describe("Helper", func() {
 			{Type: pointer.String("provider")},
 		}, BeNil()),
 		Entry("one primary provider", []gardencorev1beta1.DNSProvider{{Type: pointer.String("provider"),
-			Primary: pointer.Bool(true)}}, Equal(&gardencorev1beta1.DNSProvider{Type: pointer.String("provider"), Primary: pointer.Bool(true)})),
+			Primary: ptr.To(true)}}, Equal(&gardencorev1beta1.DNSProvider{Type: pointer.String("provider"), Primary: ptr.To(true)})),
 		Entry("multiple w/ one primary provider", []gardencorev1beta1.DNSProvider{
 			{
 				Type: pointer.String("provider2"),
 			},
 			{
 				Type:    pointer.String("provider1"),
-				Primary: pointer.Bool(true),
+				Primary: ptr.To(true),
 			},
 			{
 				Type: pointer.String("provider3"),
 			},
-		}, Equal(&gardencorev1beta1.DNSProvider{Type: pointer.String("provider1"), Primary: pointer.Bool(true)})),
+		}, Equal(&gardencorev1beta1.DNSProvider{Type: pointer.String("provider1"), Primary: ptr.To(true)})),
 		Entry("multiple w/ multiple primary providers", []gardencorev1beta1.DNSProvider{
 			{
 				Type:    pointer.String("provider1"),
-				Primary: pointer.Bool(true),
+				Primary: ptr.To(true),
 			},
 			{
 				Type:    pointer.String("provider2"),
-				Primary: pointer.Bool(true),
+				Primary: ptr.To(true),
 			},
 			{
 				Type: pointer.String("provider3"),
 			},
-		}, Equal(&gardencorev1beta1.DNSProvider{Type: pointer.String("provider1"), Primary: pointer.Bool(true)})),
+		}, Equal(&gardencorev1beta1.DNSProvider{Type: pointer.String("provider1"), Primary: ptr.To(true)})),
 	)
 
 	Describe("#ShootMachineImageVersionExists", func() {
@@ -2427,8 +2428,8 @@ var _ = Describe("Helper", func() {
 
 		Entry("kubeProxy nil", nil, BeFalse()),
 		Entry("kubeProxy empty", &gardencorev1beta1.KubeProxyConfig{}, BeFalse()),
-		Entry("kubeProxy disabled", &gardencorev1beta1.KubeProxyConfig{Enabled: pointer.Bool(false)}, BeFalse()),
-		Entry("kubeProxy enabled", &gardencorev1beta1.KubeProxyConfig{Enabled: pointer.Bool(true)}, BeTrue()),
+		Entry("kubeProxy disabled", &gardencorev1beta1.KubeProxyConfig{Enabled: ptr.To(false)}, BeFalse()),
+		Entry("kubeProxy enabled", &gardencorev1beta1.KubeProxyConfig{Enabled: ptr.To(true)}, BeTrue()),
 	)
 
 	DescribeTable("#BackupBucketIsErroneous",
@@ -2711,7 +2712,7 @@ var _ = Describe("Helper", func() {
 		},
 		Entry("with nil", nil, nil),
 		Entry("with system components and nil", nil, nil),
-		Entry("with system components and node local DNS spec", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true, ForceTCPToClusterDNS: pointer.Bool(true), ForceTCPToUpstreamDNS: pointer.Bool(true), DisableForwardToUpstreamDNS: pointer.Bool(true)}}, &gardencorev1beta1.NodeLocalDNS{Enabled: true, ForceTCPToClusterDNS: pointer.Bool(true), ForceTCPToUpstreamDNS: pointer.Bool(true), DisableForwardToUpstreamDNS: pointer.Bool(true)}),
+		Entry("with system components and node local DNS spec", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true, ForceTCPToClusterDNS: ptr.To(true), ForceTCPToUpstreamDNS: ptr.To(true), DisableForwardToUpstreamDNS: ptr.To(true)}}, &gardencorev1beta1.NodeLocalDNS{Enabled: true, ForceTCPToClusterDNS: ptr.To(true), ForceTCPToUpstreamDNS: ptr.To(true), DisableForwardToUpstreamDNS: ptr.To(true)}),
 	)
 
 	DescribeTable("#GetShootCARotationPhase",
@@ -2958,7 +2959,7 @@ var _ = Describe("Helper", func() {
 			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
 				{
 					Name:     "PodSecurityPolicy",
-					Disabled: pointer.Bool(true),
+					Disabled: ptr.To(true),
 				},
 			}
 

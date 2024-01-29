@@ -18,6 +18,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/utils"
 )
@@ -57,7 +58,7 @@ var _ = Describe("Values", func() {
 					Int: pointer.Int32(42),
 				},
 			},
-			Bool: pointer.Bool(true),
+			Bool: ptr.To(true),
 		}
 
 		objUpper = &objectUpperCase{
@@ -69,7 +70,7 @@ var _ = Describe("Values", func() {
 					Int: pointer.Int32(42),
 				},
 			},
-			Bool: pointer.Bool(true),
+			Bool: ptr.To(true),
 		}
 
 		values = map[string]interface{}{
@@ -123,7 +124,7 @@ var _ = Describe("Values", func() {
 		})
 
 		It("should convert an object to a values map with lower-case keys - only the first letter should be changed", func() {
-			objUpper.BoolWithMe = pointer.Bool(true)
+			objUpper.BoolWithMe = ptr.To(true)
 			result, err := ToValuesMapWithOptions(objUpper, Options{LowerCaseKeys: true})
 			Expect(err).ToNot(HaveOccurred())
 			values["boolWithMe"] = true
@@ -148,7 +149,7 @@ var _ = Describe("Values", func() {
 						Int: pointer.Int32(42),
 					},
 				},
-				Bool: pointer.Bool(true),
+				Bool: ptr.To(true),
 			}
 
 			values = map[string]interface{}{
@@ -223,7 +224,7 @@ var _ = Describe("Values", func() {
 						Int: pointer.Int32(42),
 					},
 				},
-				Bool: pointer.Bool(true),
+				Bool: ptr.To(true),
 			}
 
 			values = map[string]interface{}{

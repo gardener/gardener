@@ -45,6 +45,7 @@ import (
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -740,7 +741,7 @@ subjects:
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-						KeepObjects:  pointer.Bool(false),
+						KeepObjects:  ptr.To(false),
 						SecretRefs:   []corev1.LocalObjectReference{{Name: managedResource.Spec.SecretRefs[0].Name}},
 					},
 				}
@@ -763,7 +764,7 @@ subjects:
 						},
 					},
 					Type:      corev1.SecretTypeOpaque,
-					Immutable: pointer.Bool(true),
+					Immutable: ptr.To(true),
 					Data: map[string][]byte{
 						"clusterrole____system_apiserver_kubelet.yaml":        []byte(clusterRoleYAML),
 						"clusterrolebinding____system_apiserver_kubelet.yaml": []byte(clusterRoleBindingYAML),
@@ -795,7 +796,7 @@ subjects:
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: pointer.Bool(true),
+						Immutable: ptr.To(true),
 						Data:      secretAdmissionKubeconfigs.Data,
 					}))
 				})
@@ -836,7 +837,7 @@ subjects:
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: pointer.Bool(true),
+						Immutable: ptr.To(true),
 						Data:      secretAdmissionKubeconfigs.Data,
 					}))
 				})
@@ -879,7 +880,7 @@ subjects:
 						Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 						ResourceVersion: "1",
 					},
-					Immutable: pointer.Bool(true),
+					Immutable: ptr.To(true),
 					Data:      expectedSecretOIDCCABundle.Data,
 				}))
 			})
@@ -925,7 +926,7 @@ resources:
 						},
 						ResourceVersion: "1",
 					},
-					Immutable: pointer.Bool(true),
+					Immutable: ptr.To(true),
 					Data:      expectedSecretETCDEncryptionConfiguration.Data,
 				}))
 
@@ -1022,7 +1023,7 @@ resources:
 							},
 							ResourceVersion: "1",
 						},
-						Immutable: pointer.Bool(true),
+						Immutable: ptr.To(true),
 						Data:      expectedSecretETCDEncryptionConfiguration.Data,
 					}))
 
@@ -1076,7 +1077,7 @@ resources:
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: pointer.Bool(true),
+						Immutable: ptr.To(true),
 						Data:      expectedSecret.Data,
 					}))
 				})
@@ -1131,7 +1132,7 @@ resources:
 						Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 						ResourceVersion: "1",
 					},
-					Immutable: pointer.Bool(true),
+					Immutable: ptr.To(true),
 					Data:      expectedSecret.Data,
 				}))
 			})
@@ -1173,7 +1174,7 @@ resources:
 						Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 						ResourceVersion: "1",
 					},
-					Immutable: pointer.Bool(true),
+					Immutable: ptr.To(true),
 					Data:      expectedSecret.Data,
 				}))
 			})
@@ -1215,7 +1216,7 @@ resources:
 						Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 						ResourceVersion: "1",
 					},
-					Immutable: pointer.Bool(true),
+					Immutable: ptr.To(true),
 					Data:      expectedSecret.Data,
 				}))
 			})
@@ -1247,7 +1248,7 @@ plugins: null
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: pointer.Bool(true),
+						Immutable: ptr.To(true),
 						Data:      configMapAdmission.Data,
 					}))
 				})
@@ -1346,7 +1347,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: pointer.Bool(true),
+						Immutable: ptr.To(true),
 						Data:      configMapAdmission.Data,
 					}))
 				})
@@ -1436,7 +1437,7 @@ kubeConfigFile: ""
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: pointer.Bool(true),
+						Immutable: ptr.To(true),
 						Data:      configMapAdmission.Data,
 					}))
 				})
@@ -1516,7 +1517,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: pointer.Bool(true),
+						Immutable: ptr.To(true),
 						Data:      configMapAdmission.Data,
 					}))
 				})
@@ -1550,7 +1551,7 @@ rules:
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: pointer.Bool(true),
+						Immutable: ptr.To(true),
 						Data:      configMapAuditPolicy.Data,
 					}))
 				})
@@ -1589,7 +1590,7 @@ rules:
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: pointer.Bool(true),
+						Immutable: ptr.To(true),
 						Data:      configMapAuditPolicy.Data,
 					}))
 				})
@@ -1625,7 +1626,7 @@ rules:
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: pointer.Bool(true),
+						Immutable: ptr.To(true),
 						Data:      configMapEgressSelector.Data,
 					}))
 				})
@@ -2026,7 +2027,7 @@ rules:
 				Expect(deployment.Spec.Template.Spec.RestartPolicy).To(Equal(corev1.RestartPolicyAlways))
 				Expect(deployment.Spec.Template.Spec.SchedulerName).To(Equal("default-scheduler"))
 				Expect(deployment.Spec.Template.Spec.TerminationGracePeriodSeconds).To(PointTo(Equal(int64(30))))
-				Expect(deployment.Spec.Template.Spec.SecurityContext.RunAsNonRoot).To(Equal(pointer.Bool(true)))
+				Expect(deployment.Spec.Template.Spec.SecurityContext.RunAsNonRoot).To(Equal(ptr.To(true)))
 				Expect(deployment.Spec.Template.Spec.SecurityContext.RunAsUser).To(Equal(pointer.Int64(65532)))
 				Expect(deployment.Spec.Template.Spec.SecurityContext.RunAsGroup).To(Equal(pointer.Int64(65532)))
 				Expect(deployment.Spec.Template.Spec.SecurityContext.FSGroup).To(Equal(pointer.Int64(65532)))
@@ -2118,7 +2119,7 @@ rules:
 							},
 						},
 						SecurityContext: &corev1.SecurityContext{
-							RunAsNonRoot: pointer.Bool(false),
+							RunAsNonRoot: ptr.To(false),
 							RunAsUser:    pointer.Int64(0),
 							Capabilities: &corev1.Capabilities{
 								Add: []corev1.Capability{"NET_ADMIN"},
@@ -2217,7 +2218,7 @@ rules:
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						RunAsNonRoot: pointer.Bool(false),
+						RunAsNonRoot: ptr.To(false),
 						RunAsUser:    pointer.Int64(0),
 						Capabilities: &corev1.Capabilities{
 							Add: []corev1.Capability{"NET_ADMIN"},
@@ -2803,7 +2804,7 @@ rules:
 							RuntimeVersion: runtimeVersion,
 						},
 						Version:                      version,
-						StaticTokenKubeconfigEnabled: pointer.Bool(false),
+						StaticTokenKubeconfigEnabled: ptr.To(false),
 					})
 					Expect(kapi.Deploy(ctx)).To(Succeed())
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
@@ -2837,7 +2838,7 @@ rules:
 							RuntimeVersion: runtimeVersion,
 						},
 						Version:                      version,
-						StaticTokenKubeconfigEnabled: pointer.Bool(false),
+						StaticTokenKubeconfigEnabled: ptr.To(false),
 					})
 					Expect(kapi.Deploy(ctx)).To(Succeed())
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
@@ -3269,7 +3270,7 @@ rules:
 						},
 						Images:                       images,
 						Version:                      semver.MustParse("1.24.9"),
-						StaticTokenKubeconfigEnabled: pointer.Bool(true),
+						StaticTokenKubeconfigEnabled: ptr.To(true),
 					})
 					deployAndRead()
 

@@ -28,7 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -219,7 +219,7 @@ var _ = Describe("Garden health", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.HVPA, false))
 				garden.Spec.RuntimeCluster.Settings = &operatorv1alpha1.Settings{
 					VerticalPodAutoscaler: &operatorv1alpha1.SettingVerticalPodAutoscaler{
-						Enabled: pointer.Bool(false),
+						Enabled: ptr.To(false),
 					},
 				}
 
@@ -257,7 +257,7 @@ var _ = Describe("Garden health", func() {
 			JustBeforeEach(func() {
 				garden.Spec.RuntimeCluster.Settings = &operatorv1alpha1.Settings{
 					VerticalPodAutoscaler: &operatorv1alpha1.SettingVerticalPodAutoscaler{
-						Enabled: pointer.Bool(true),
+						Enabled: ptr.To(true),
 					},
 				}
 
@@ -869,9 +869,9 @@ func newEtcd(namespace, name, role string, healthy bool, lastError *string) *dru
 		},
 	}
 	if healthy {
-		etcd.Status.Ready = pointer.Bool(true)
+		etcd.Status.Ready = ptr.To(true)
 	} else {
-		etcd.Status.Ready = pointer.Bool(false)
+		etcd.Status.Ready = ptr.To(false)
 		etcd.Status.LastError = lastError
 	}
 

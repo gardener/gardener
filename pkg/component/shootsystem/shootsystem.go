@@ -29,7 +29,7 @@ import (
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -267,7 +267,7 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 					Namespace:   metav1.NamespaceSystem,
 					Annotations: map[string]string{resourcesv1alpha1.KeepObject: "true"},
 				},
-				AutomountServiceAccountToken: pointer.Bool(false),
+				AutomountServiceAccountToken: ptr.To(false),
 			}); err != nil {
 				return nil, err
 			}

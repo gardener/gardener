@@ -22,6 +22,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -77,9 +78,9 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 			CloudProfileName:  "local",
 			Kubernetes: gardencorev1beta1.Kubernetes{
 				Version:                     "1.29.0",
-				EnableStaticTokenKubeconfig: pointer.Bool(false),
+				EnableStaticTokenKubeconfig: ptr.To(false),
 				Kubelet: &gardencorev1beta1.KubeletConfig{
-					SerializeImagePulls: pointer.Bool(false),
+					SerializeImagePulls: ptr.To(false),
 					RegistryPullQPS:     pointer.Int32(10),
 					RegistryBurst:       pointer.Int32(20),
 				},
@@ -129,7 +130,7 @@ func DefaultWorkerlessShoot(name string) *gardencorev1beta1.Shoot {
 			CloudProfileName: "local",
 			Kubernetes: gardencorev1beta1.Kubernetes{
 				Version:                     "1.29.0",
-				EnableStaticTokenKubeconfig: pointer.Bool(false),
+				EnableStaticTokenKubeconfig: ptr.To(false),
 				KubeAPIServer:               &gardencorev1beta1.KubeAPIServerConfig{},
 			},
 			Provider: gardencorev1beta1.Provider{

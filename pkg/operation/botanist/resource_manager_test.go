@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -199,7 +200,7 @@ var _ = Describe("ResourceManager", func() {
 					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 						Spec: gardencorev1beta1.ShootSpec{
 							Hibernation: &gardencorev1beta1.Hibernation{
-								Enabled: pointer.Bool(true),
+								Enabled: ptr.To(true),
 							},
 						},
 						Status: gardencorev1beta1.ShootStatus{
@@ -238,7 +239,7 @@ var _ = Describe("ResourceManager", func() {
 					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 						Spec: gardencorev1beta1.ShootSpec{
 							Hibernation: &gardencorev1beta1.Hibernation{
-								Enabled: pointer.Bool(true),
+								Enabled: ptr.To(true),
 							},
 						},
 						Status: gardencorev1beta1.ShootStatus{
@@ -261,7 +262,7 @@ var _ = Describe("ResourceManager", func() {
 					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 						Spec: gardencorev1beta1.ShootSpec{
 							Hibernation: &gardencorev1beta1.Hibernation{
-								Enabled: pointer.Bool(true),
+								Enabled: ptr.To(true),
 							},
 						},
 						Status: gardencorev1beta1.ShootStatus{

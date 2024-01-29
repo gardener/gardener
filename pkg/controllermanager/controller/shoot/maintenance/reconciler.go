@@ -30,6 +30,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -174,7 +175,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 	// Reset the `EnableStaticTokenKubeconfig` value to false, when shoot cluster is updated to  k8s version >= 1.27.
 	if versionutils.ConstraintK8sLess127.Check(oldShootKubernetesVersion) && versionutils.ConstraintK8sGreaterEqual127.Check(shootKubernetesVersion) {
 		if pointer.BoolDeref(maintainedShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, false) {
-			maintainedShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(false)
+			maintainedShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(false)
 
 			reason := "EnableStaticTokenKubeconfig is set to false. Reason: The static token kubeconfig can no longer be enabled for Shoot clusters using Kubernetes version 1.27 and higher"
 			operations = append(operations, reason)
@@ -820,7 +821,7 @@ func disablePodSecurityPolicyAdmissionController(shoot *gardencorev1beta1.Shoot,
 	for i, admissionPlugin := range shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins {
 		if admissionPlugin.Name == "PodSecurityPolicy" {
 			if !pointer.BoolDeref(admissionPlugin.Disabled, false) {
-				shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins[i].Disabled = pointer.Bool(true)
+				shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins[i].Disabled = ptr.To(true)
 				reasonsForUpdate = append(reasonsForUpdate, reason)
 			}
 			return reasonsForUpdate
@@ -829,7 +830,7 @@ func disablePodSecurityPolicyAdmissionController(shoot *gardencorev1beta1.Shoot,
 
 	disabledAdmissionPlugin := gardencorev1beta1.AdmissionPlugin{
 		Name:     "PodSecurityPolicy",
-		Disabled: pointer.Bool(true),
+		Disabled: ptr.To(true),
 	}
 	shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = append(shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins, disabledAdmissionPlugin)
 	reasonsForUpdate = append(reasonsForUpdate, reason)

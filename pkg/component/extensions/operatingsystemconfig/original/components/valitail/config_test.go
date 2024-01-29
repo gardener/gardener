@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -108,14 +109,14 @@ ExecStart=/opt/bin/valitail -config.file=` + PathConfig
 					valitailDaemonUnit := extensionsv1alpha1.Unit{
 						Name:    UnitName,
 						Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-						Enable:  pointer.Bool(true),
+						Enable:  ptr.To(true),
 						Content: pointer.String(unitContent),
 					}
 
 					valitailTokenFetchUnit := extensionsv1alpha1.Unit{
 						Name:    "valitail-fetch-token.service",
 						Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-						Enable:  pointer.Bool(true),
+						Enable:  ptr.To(true),
 						Content: pointer.String(`[Unit]
 Description=valitail token fetcher
 After=` + afterUnit + `
@@ -417,13 +418,13 @@ ExecStart=/bin/sh -c "echo service valitail.service is removed!; while true; do 
 						{
 							Name:    "valitail.service",
 							Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-							Enable:  pointer.Bool(true),
+							Enable:  ptr.To(true),
 							Content: pointer.String(unitContent),
 						},
 						{
 							Name:    "valitail-fetch-token.service",
 							Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-							Enable:  pointer.Bool(true),
+							Enable:  ptr.To(true),
 							Content: pointer.String(`[Unit]
 Description=valitail token fetcher
 After=` + afterUnit + `

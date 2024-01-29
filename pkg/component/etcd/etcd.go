@@ -36,6 +36,7 @@ import (
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -202,7 +203,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		garbageCollectionPeriod               = metav1.Duration{Duration: 12 * time.Hour}
 		compressionPolicy                     = druidv1alpha1.GzipCompression
 		compressionSpec                       = druidv1alpha1.CompressionSpec{
-			Enabled: pointer.Bool(true),
+			Enabled: ptr.To(true),
 			Policy:  &compressionPolicy,
 		}
 

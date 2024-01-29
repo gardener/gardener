@@ -22,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
@@ -91,7 +92,7 @@ var _ = Describe("Defaults", func() {
 	Describe("LeaderElectionConfiguration defaulting", func() {
 		It("should default LeaderElectionConfiguration correctly", func() {
 			expected := &componentbaseconfigv1alpha1.LeaderElectionConfiguration{
-				LeaderElect:       pointer.Bool(true),
+				LeaderElect:       ptr.To(true),
 				ResourceLock:      "leases",
 				RetryPeriod:       metav1.Duration{Duration: 2 * time.Second},
 				RenewDeadline:     metav1.Duration{Duration: 10 * time.Second},
@@ -107,7 +108,7 @@ var _ = Describe("Defaults", func() {
 		It("should not default fields that are set", func() {
 			obj = &ControllerManagerConfiguration{
 				LeaderElection: &componentbaseconfigv1alpha1.LeaderElectionConfiguration{
-					LeaderElect:       pointer.Bool(true),
+					LeaderElect:       ptr.To(true),
 					ResourceLock:      "foo",
 					RetryPeriod:       metav1.Duration{Duration: 40 * time.Second},
 					RenewDeadline:     metav1.Duration{Duration: 41 * time.Second},
@@ -564,7 +565,7 @@ var _ = Describe("Defaults", func() {
 		It("should default ShootMaintenanceControllerConfiguration correctly", func() {
 			expected := &ShootMaintenanceControllerConfiguration{
 				ConcurrentSyncs:                  pointer.Int(DefaultControllerConcurrentSyncs),
-				EnableShootControlPlaneRestarter: pointer.Bool(true),
+				EnableShootControlPlaneRestarter: ptr.To(true),
 			}
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
 
@@ -576,7 +577,7 @@ var _ = Describe("Defaults", func() {
 				Controllers: ControllerManagerControllerConfiguration{
 					ShootMaintenance: ShootMaintenanceControllerConfiguration{
 						ConcurrentSyncs:                  pointer.Int(10),
-						EnableShootControlPlaneRestarter: pointer.Bool(false),
+						EnableShootControlPlaneRestarter: ptr.To(false),
 					},
 				},
 			}

@@ -38,6 +38,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -336,12 +337,12 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 				}),
 			},
 			Spec: corev1.PodSpec{
-				AutomountServiceAccountToken: pointer.Bool(false),
+				AutomountServiceAccountToken: ptr.To(false),
 				PriorityClassName:            k.values.PriorityClassName,
 				SecurityContext: &corev1.PodSecurityContext{
 					// use the nonroot user from a distroless container
 					// https://github.com/GoogleContainerTools/distroless/blob/1a8918fcaa7313fd02ae08089a57a701faea999c/base/base.bzl#L8
-					RunAsNonRoot: pointer.Bool(true),
+					RunAsNonRoot: ptr.To(true),
 					RunAsUser:    pointer.Int64(65532),
 					RunAsGroup:   pointer.Int64(65532),
 					FSGroup:      pointer.Int64(65532),

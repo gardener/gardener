@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/component-base/featuregate"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -524,7 +525,7 @@ var _ = Describe("KubeAPIServer", func() {
 						AcceptedIssuers: []string{"issuer1", "issuer2"},
 					},
 				},
-				EnableStaticTokenKubeconfig: pointer.Bool(false),
+				EnableStaticTokenKubeconfig: ptr.To(false),
 			}
 			botanist.Shoot.SetInfo(shootCopy)
 

@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
@@ -37,7 +38,7 @@ var _ = Describe("Config", func() {
 		clusterDomain     = "bar"
 		params            = components.ConfigurableKubeletConfigParameters{
 			ContainerLogMaxSize:              pointer.String("123Mi"),
-			CpuCFSQuota:                      pointer.Bool(false),
+			CpuCFSQuota:                      ptr.To(false),
 			CpuManagerPolicy:                 pointer.String("policy"),
 			EvictionHard:                     map[string]string{"memory.available": "123"},
 			EvictionMinimumReclaim:           map[string]string{"imagefs.available": "123"},
@@ -45,13 +46,13 @@ var _ = Describe("Config", func() {
 			EvictionSoftGracePeriod:          map[string]string{"nodefs.available": "123"},
 			EvictionPressureTransitionPeriod: &metav1.Duration{Duration: 42 * time.Minute},
 			EvictionMaxPodGracePeriod:        pointer.Int32(120),
-			FailSwapOn:                       pointer.Bool(false),
+			FailSwapOn:                       ptr.To(false),
 			FeatureGates:                     map[string]bool{"Foo": false},
 			ImageGCHighThresholdPercent:      pointer.Int32(34),
 			ImageGCLowThresholdPercent:       pointer.Int32(12),
-			ProtectKernelDefaults:            pointer.Bool(true),
-			SeccompDefault:                   pointer.Bool(true),
-			SerializeImagePulls:              pointer.Bool(true),
+			ProtectKernelDefaults:            ptr.To(true),
+			SeccompDefault:                   ptr.To(true),
+			SerializeImagePulls:              ptr.To(true),
 			RegistryPullQPS:                  pointer.Int32(10),
 			RegistryBurst:                    pointer.Int32(20),
 			KubeReserved:                     map[string]string{"cpu": "123"},
@@ -65,13 +66,13 @@ var _ = Describe("Config", func() {
 		kubeletConfigWithDefaults = &kubeletconfigv1beta1.KubeletConfiguration{
 			Authentication: kubeletconfigv1beta1.KubeletAuthentication{
 				Anonymous: kubeletconfigv1beta1.KubeletAnonymousAuthentication{
-					Enabled: pointer.Bool(false),
+					Enabled: ptr.To(false),
 				},
 				X509: kubeletconfigv1beta1.KubeletX509Authentication{
 					ClientCAFile: "/var/lib/kubelet/ca.crt",
 				},
 				Webhook: kubeletconfigv1beta1.KubeletWebhookAuthentication{
-					Enabled:  pointer.Bool(true),
+					Enabled:  ptr.To(true),
 					CacheTTL: metav1.Duration{Duration: 2 * time.Minute},
 				},
 			},
@@ -84,16 +85,16 @@ var _ = Describe("Config", func() {
 			},
 			CgroupDriver:                 "cgroupfs",
 			CgroupRoot:                   "/",
-			CgroupsPerQOS:                pointer.Bool(true),
+			CgroupsPerQOS:                ptr.To(true),
 			ClusterDNS:                   []string{clusterDNSAddress},
 			ClusterDomain:                clusterDomain,
 			ContainerLogMaxSize:          "100Mi",
-			CPUCFSQuota:                  pointer.Bool(true),
+			CPUCFSQuota:                  ptr.To(true),
 			CPUManagerPolicy:             "none",
 			CPUManagerReconcilePeriod:    metav1.Duration{Duration: 10 * time.Second},
-			EnableControllerAttachDetach: pointer.Bool(true),
-			EnableDebuggingHandlers:      pointer.Bool(true),
-			EnableServer:                 pointer.Bool(true),
+			EnableControllerAttachDetach: ptr.To(true),
+			EnableDebuggingHandlers:      ptr.To(true),
+			EnableServer:                 ptr.To(true),
 			EnforceNodeAllocatable:       []string{"pods"},
 			EventBurst:                   50,
 			EventRecordQPS:               pointer.Int32(50),
@@ -127,7 +128,7 @@ var _ = Describe("Config", func() {
 			},
 			EvictionPressureTransitionPeriod: metav1.Duration{Duration: 4 * time.Minute},
 			EvictionMaxPodGracePeriod:        90,
-			FailSwapOn:                       pointer.Bool(true),
+			FailSwapOn:                       ptr.To(true),
 			FileCheckFrequency:               metav1.Duration{Duration: 20 * time.Second},
 			HairpinMode:                      kubeletconfigv1beta1.PromiscuousBridge,
 			HTTPCheckFrequency:               metav1.Duration{Duration: 20 * time.Second},
@@ -150,7 +151,7 @@ var _ = Describe("Config", func() {
 				Effect: corev1.TaintEffectNoSchedule,
 			}},
 			RuntimeRequestTimeout:          metav1.Duration{Duration: 2 * time.Minute},
-			SerializeImagePulls:            pointer.Bool(true),
+			SerializeImagePulls:            ptr.To(true),
 			ServerTLSBootstrap:             true,
 			StreamingConnectionIdleTimeout: metav1.Duration{Duration: time.Hour * 4},
 			SyncFrequency:                  metav1.Duration{Duration: time.Minute},
@@ -160,13 +161,13 @@ var _ = Describe("Config", func() {
 		kubeletConfigWithParams = &kubeletconfigv1beta1.KubeletConfiguration{
 			Authentication: kubeletconfigv1beta1.KubeletAuthentication{
 				Anonymous: kubeletconfigv1beta1.KubeletAnonymousAuthentication{
-					Enabled: pointer.Bool(false),
+					Enabled: ptr.To(false),
 				},
 				X509: kubeletconfigv1beta1.KubeletX509Authentication{
 					ClientCAFile: "/var/lib/kubelet/ca.crt",
 				},
 				Webhook: kubeletconfigv1beta1.KubeletWebhookAuthentication{
-					Enabled:  pointer.Bool(true),
+					Enabled:  ptr.To(true),
 					CacheTTL: metav1.Duration{Duration: 2 * time.Minute},
 				},
 			},
@@ -179,16 +180,16 @@ var _ = Describe("Config", func() {
 			},
 			CgroupDriver:                 "cgroupfs",
 			CgroupRoot:                   "/",
-			CgroupsPerQOS:                pointer.Bool(true),
+			CgroupsPerQOS:                ptr.To(true),
 			ClusterDomain:                clusterDomain,
 			ClusterDNS:                   []string{clusterDNSAddress},
 			ContainerLogMaxSize:          "123Mi",
 			CPUCFSQuota:                  params.CpuCFSQuota,
 			CPUManagerPolicy:             *params.CpuManagerPolicy,
 			CPUManagerReconcilePeriod:    metav1.Duration{Duration: 10 * time.Second},
-			EnableControllerAttachDetach: pointer.Bool(true),
-			EnableDebuggingHandlers:      pointer.Bool(true),
-			EnableServer:                 pointer.Bool(true),
+			EnableControllerAttachDetach: ptr.To(true),
+			EnableDebuggingHandlers:      ptr.To(true),
+			EnableServer:                 ptr.To(true),
 			EnforceNodeAllocatable:       []string{"pods"},
 			EventBurst:                   50,
 			EventRecordQPS:               pointer.Int32(50),

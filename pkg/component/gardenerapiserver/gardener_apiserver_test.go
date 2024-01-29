@@ -35,6 +35,7 @@ import (
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -462,10 +463,10 @@ var _ = Describe("GardenerAPIServer", func() {
 						},
 					},
 					Spec: corev1.PodSpec{
-						AutomountServiceAccountToken: pointer.Bool(false),
+						AutomountServiceAccountToken: ptr.To(false),
 						PriorityClassName:            "gardener-garden-system-500",
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsNonRoot: pointer.Bool(true),
+							RunAsNonRoot: ptr.To(true),
 							RunAsUser:    pointer.Int64(65532),
 							RunAsGroup:   pointer.Int64(65532),
 							FSGroup:      pointer.Int64(65532),
@@ -838,7 +839,7 @@ resources:
 								},
 								ResourceVersion: "1",
 							},
-							Immutable: pointer.Bool(true),
+							Immutable: ptr.To(true),
 							Data:      expectedSecretETCDEncryptionConfiguration.Data,
 						}))
 
@@ -934,7 +935,7 @@ resources:
 									},
 									ResourceVersion: "1",
 								},
-								Immutable: pointer.Bool(true),
+								Immutable: ptr.To(true),
 								Data:      expectedSecretETCDEncryptionConfiguration.Data,
 							}))
 
@@ -1017,7 +1018,7 @@ resources:
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: pointer.Bool(true),
+						Immutable: ptr.To(true),
 						Data:      expectedSecret.Data,
 					}))
 				})
@@ -1044,7 +1045,7 @@ resources:
 								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 								ResourceVersion: "1",
 							},
-							Immutable: pointer.Bool(true),
+							Immutable: ptr.To(true),
 							Data:      secretAdmissionKubeconfigs.Data,
 						}))
 					})
@@ -1084,7 +1085,7 @@ resources:
 								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 								ResourceVersion: "1",
 							},
-							Immutable: pointer.Bool(true),
+							Immutable: ptr.To(true),
 							Data:      secretAdmissionKubeconfigs.Data,
 						}))
 					})
@@ -1120,7 +1121,7 @@ rules:
 								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 								ResourceVersion: "1",
 							},
-							Immutable: pointer.Bool(true),
+							Immutable: ptr.To(true),
 							Data:      configMapAuditPolicy.Data,
 						}))
 					})
@@ -1158,7 +1159,7 @@ rules:
 								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 								ResourceVersion: "1",
 							},
-							Immutable: pointer.Bool(true),
+							Immutable: ptr.To(true),
 							Data:      configMapAuditPolicy.Data,
 						}))
 					})
@@ -1189,7 +1190,7 @@ plugins: null
 								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 								ResourceVersion: "1",
 							},
-							Immutable: pointer.Bool(true),
+							Immutable: ptr.To(true),
 							Data:      configMapAdmission.Data,
 						}))
 					})
@@ -1270,7 +1271,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 								ResourceVersion: "1",
 							},
-							Immutable: pointer.Bool(true),
+							Immutable: ptr.To(true),
 							Data:      configMapAdmission.Data,
 						}))
 					})
@@ -1343,7 +1344,7 @@ kubeConfigFile: ""
 								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 								ResourceVersion: "1",
 							},
-							Immutable: pointer.Bool(true),
+							Immutable: ptr.To(true),
 							Data:      configMapAdmission.Data,
 						}))
 					})
@@ -1410,7 +1411,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 								ResourceVersion: "1",
 							},
-							Immutable: pointer.Bool(true),
+							Immutable: ptr.To(true),
 							Data:      configMapAdmission.Data,
 						}))
 					})
@@ -1437,7 +1438,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 						Spec: resourcesv1alpha1.ManagedResourceSpec{
 							Class:       pointer.String("seed"),
 							SecretRefs:  []corev1.LocalObjectReference{{Name: managedResourceRuntime.Spec.SecretRefs[0].Name}},
-							KeepObjects: pointer.Bool(false),
+							KeepObjects: ptr.To(false),
 						},
 					}
 					utilruntime.Must(references.InjectAnnotations(expectedRuntimeMr))
@@ -1462,7 +1463,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 						Spec: resourcesv1alpha1.ManagedResourceSpec{
 							InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 							SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceVirtual.Spec.SecretRefs[0].Name}},
-							KeepObjects:  pointer.Bool(false),
+							KeepObjects:  ptr.To(false),
 						},
 					}
 					utilruntime.Must(references.InjectAnnotations(expectedVirtualMr))
@@ -1474,7 +1475,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
 					Expect(managedResourceSecretRuntime.Data).To(HaveLen(4))
 					Expect(string(managedResourceSecretRuntime.Data["deployment__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(deployment)))
-					Expect(managedResourceSecretRuntime.Immutable).To(Equal(pointer.Bool(true)))
+					Expect(managedResourceSecretRuntime.Immutable).To(Equal(ptr.To(true)))
 					Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 					Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
@@ -1489,7 +1490,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					Expect(string(managedResourceSecretVirtual.Data["clusterrolebinding____gardener.cloud_system_apiserver.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
 					Expect(string(managedResourceSecretVirtual.Data["clusterrolebinding____gardener.cloud_apiserver_auth-delegator.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingAuthDelegation)))
 					Expect(string(managedResourceSecretVirtual.Data["rolebinding__kube-system__gardener.cloud_apiserver_auth-reader.yaml"])).To(Equal(componenttest.Serialize(roleBindingAuthReader)))
-					Expect(managedResourceSecretVirtual.Immutable).To(Equal(pointer.Bool(true)))
+					Expect(managedResourceSecretVirtual.Immutable).To(Equal(ptr.To(true)))
 					Expect(managedResourceSecretVirtual.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 				})
 

@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -228,13 +229,13 @@ var _ = Describe("Reconciler", func() {
 					},
 					{
 						Kind:            extensionsv1alpha1.ExtensionResource,
-						GloballyEnabled: pointer.Bool(true),
+						GloballyEnabled: ptr.To(true),
 						Type:            type10,
 					},
 					{
 						Kind:    extensionsv1alpha1.NetworkResource,
 						Type:    type2,
-						Primary: pointer.Bool(false),
+						Primary: ptr.To(false),
 					},
 				},
 			},

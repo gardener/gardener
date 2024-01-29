@@ -31,6 +31,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -124,7 +125,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 	}
 
 	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, c.client, serviceAccount, func() error {
-		serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
+		serviceAccount.AutomountServiceAccountToken = ptr.To(false)
 		return nil
 	}); err != nil {
 		return err
@@ -136,8 +137,8 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 			Kind:               "Namespace",
 			Name:               c.namespace,
 			UID:                c.namespaceUID,
-			Controller:         pointer.Bool(true),
-			BlockOwnerDeletion: pointer.Bool(true),
+			Controller:         ptr.To(true),
+			BlockOwnerDeletion: ptr.To(true),
 		}}
 		clusterRoleBinding.RoleRef = rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,

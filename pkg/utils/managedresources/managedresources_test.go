@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -147,7 +148,7 @@ var _ = Describe("managedresources", func() {
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-					KeepObjects:  pointer.Bool(keepObjects),
+					KeepObjects:  ptr.To(keepObjects),
 				},
 			}))
 		})
@@ -179,7 +180,7 @@ var _ = Describe("managedresources", func() {
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					SecretRefs:   []corev1.LocalObjectReference{{Name: secretName}},
-					KeepObjects:  pointer.Bool(keepObjects),
+					KeepObjects:  ptr.To(keepObjects),
 					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 				},
 			}
@@ -204,7 +205,7 @@ var _ = Describe("managedresources", func() {
 					Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 				},
 				Data:      data,
-				Immutable: pointer.Bool(true),
+				Immutable: ptr.To(true),
 				Type:      corev1.SecretTypeOpaque,
 			}))
 		})
@@ -262,7 +263,7 @@ var _ = Describe("managedresources", func() {
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					SecretRefs:  []corev1.LocalObjectReference{{Name: secretName}},
-					KeepObjects: pointer.Bool(keepObjects),
+					KeepObjects: ptr.To(keepObjects),
 					Class:       pointer.String("seed"),
 				},
 			}
@@ -299,7 +300,7 @@ var _ = Describe("managedresources", func() {
 					Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 				},
 				Data:      data,
-				Immutable: pointer.Bool(true),
+				Immutable: ptr.To(true),
 				Type:      corev1.SecretTypeOpaque,
 			}))
 		})
@@ -333,7 +334,7 @@ var _ = Describe("managedresources", func() {
 					Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 				},
 				Data:      data,
-				Immutable: pointer.Bool(true),
+				Immutable: ptr.To(true),
 				Type:      corev1.SecretTypeOpaque,
 			}))
 		})

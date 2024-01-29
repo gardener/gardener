@@ -35,6 +35,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -363,7 +364,7 @@ var _ = Describe("istiod", func() {
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResourceIstioSecret.Name,
 					}},
-					KeepObjects: pointer.Bool(false),
+					KeepObjects: ptr.To(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -372,7 +373,7 @@ var _ = Describe("istiod", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 			Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceIstioSecret.Data).To(HaveLen(14))
-			Expect(managedResourceIstioSecret.Immutable).To(Equal(pointer.Bool(true)))
+			Expect(managedResourceIstioSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceIstioSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_autoscale_test-ingress.yaml"]), istioIngressAutoscaler(nil, nil))).To(BeEmpty())
@@ -401,7 +402,7 @@ var _ = Describe("istiod", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSystemSecret), managedResourceIstioSystemSecret)).To(Succeed())
 			Expect(managedResourceIstioSystemSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceIstioSystemSecret.Data).To(HaveLen(16))
-			Expect(managedResourceIstioSystemSecret.Immutable).To(Equal(pointer.Bool(true)))
+			Expect(managedResourceIstioSystemSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceIstioSystemSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_configmap.yaml"]), istiodConfigMap())).To(BeEmpty())

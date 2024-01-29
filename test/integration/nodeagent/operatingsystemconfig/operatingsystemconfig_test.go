@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -171,12 +172,12 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		gnaUnit = extensionsv1alpha1.Unit{
 			Name:    "gardener-node-agent.service",
-			Enable:  pointer.Bool(false),
+			Enable:  ptr.To(false),
 			Content: pointer.String("#gna"),
 		}
 		unit1 = extensionsv1alpha1.Unit{
 			Name:    "unit1",
-			Enable:  pointer.Bool(true),
+			Enable:  ptr.To(true),
 			Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 			Content: pointer.String("#unit1"),
 			DropIns: []extensionsv1alpha1.DropIn{{
@@ -186,7 +187,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		}
 		unit2 = extensionsv1alpha1.Unit{
 			Name:    "unit2",
-			Enable:  pointer.Bool(false),
+			Enable:  ptr.To(false),
 			Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStop),
 			Content: pointer.String("#unit2"),
 		}
@@ -200,7 +201,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		}
 		unit4 = extensionsv1alpha1.Unit{
 			Name:    "unit4",
-			Enable:  pointer.Bool(true),
+			Enable:  ptr.To(true),
 			Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 			Content: pointer.String("#unit4"),
 			DropIns: []extensionsv1alpha1.DropIn{{
@@ -210,7 +211,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		}
 		unit5 = extensionsv1alpha1.Unit{
 			Name:    "unit5",
-			Enable:  pointer.Bool(true),
+			Enable:  ptr.To(true),
 			Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 			Content: pointer.String("#unit5"),
 			DropIns: []extensionsv1alpha1.DropIn{
@@ -233,19 +234,19 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		}
 		unit6 = extensionsv1alpha1.Unit{
 			Name:      "unit6",
-			Enable:    pointer.Bool(true),
+			Enable:    ptr.To(true),
 			Content:   pointer.String("#unit6"),
 			FilePaths: []string{file3.Path},
 		}
 		unit7 = extensionsv1alpha1.Unit{
 			Name:      "unit7",
-			Enable:    pointer.Bool(true),
+			Enable:    ptr.To(true),
 			Content:   pointer.String("#unit7"),
 			FilePaths: []string{file5.Path},
 		}
 		unit8 = extensionsv1alpha1.Unit{
 			Name:      "unit8",
-			Enable:    pointer.Bool(true),
+			Enable:    ptr.To(true),
 			Command:   extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
 			Content:   pointer.String("#unit8"),
 			FilePaths: []string{file6.Path},
@@ -398,10 +399,10 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		// the content of file6 (belonging to unit8) is changed, so unit8 is restarting
 		// the content of file7 (belonging to unit9) is changed, so unit9 is restarting
 		// file1, unit3, and gardener-node-agent unit are unchanged, so unit3 is not restarting and cancel func is not called
-		unit2.Enable = pointer.Bool(true)
+		unit2.Enable = ptr.To(true)
 		unit2.Command = extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart)
 		unit2.DropIns = []extensionsv1alpha1.DropIn{{Name: "dropdropdrop", Content: "#unit2drop"}}
-		unit4.Enable = pointer.Bool(false)
+		unit4.Enable = ptr.To(false)
 		unit4.DropIns = nil
 		unit5.DropIns = unit5.DropIns[1:]
 		unit6.FilePaths = nil

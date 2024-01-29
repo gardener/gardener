@@ -23,7 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -37,7 +37,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	f.Shoot = e2e.DefaultShoot("e2e-unpriv")
 	// This version is pinned here, because we have removed support for this field for shoots with k8s v1.25+
 	f.Shoot.Spec.Kubernetes.Version = "1.24.8"
-	f.Shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(false)
+	f.Shoot.Spec.Kubernetes.AllowPrivilegedContainers = ptr.To(false)
 	f.Shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
 		{
 			Name: "PodSecurity",

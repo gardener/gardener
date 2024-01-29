@@ -37,6 +37,7 @@ import (
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	baseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -703,8 +704,8 @@ func ComputeExpectedGardenletConfiguration(
 				LeaseResyncMissThreshold: pointer.Int32(10),
 			},
 			Shoot: &gardenletv1alpha1.ShootControllerConfiguration{
-				ReconcileInMaintenanceOnly: pointer.Bool(false),
-				RespectSyncPeriodOverwrite: pointer.Bool(false),
+				ReconcileInMaintenanceOnly: ptr.To(false),
+				RespectSyncPeriodOverwrite: ptr.To(false),
 				ConcurrentSyncs:            &twenty,
 				SyncPeriod: &metav1.Duration{
 					Duration: time.Hour,
@@ -716,7 +717,7 @@ func ComputeExpectedGardenletConfiguration(
 			},
 			ManagedSeed: &gardenletv1alpha1.ManagedSeedControllerConfiguration{
 				ConcurrentSyncs: &five,
-				JitterUpdates:   pointer.Bool(false),
+				JitterUpdates:   ptr.To(false),
 				SyncPeriod: &metav1.Duration{
 					Duration: 1 * time.Hour,
 				},
@@ -769,7 +770,7 @@ func ComputeExpectedGardenletConfiguration(
 						},
 					},
 				},
-				WebhookRemediatorEnabled: pointer.Bool(false),
+				WebhookRemediatorEnabled: ptr.To(false),
 			},
 			SeedCare: &gardenletv1alpha1.SeedCareControllerConfiguration{
 				SyncPeriod: &metav1.Duration{
@@ -806,7 +807,7 @@ func ComputeExpectedGardenletConfiguration(
 			},
 		},
 		LeaderElection: &baseconfigv1alpha1.LeaderElectionConfiguration{
-			LeaderElect:       pointer.Bool(true),
+			LeaderElect:       ptr.To(true),
 			LeaseDuration:     metav1.Duration{Duration: 15 * time.Second},
 			RenewDeadline:     metav1.Duration{Duration: 10 * time.Second},
 			RetryPeriod:       metav1.Duration{Duration: 2 * time.Second},
@@ -817,15 +818,15 @@ func ComputeExpectedGardenletConfiguration(
 		LogLevel:  logLevelInfo,
 		LogFormat: logFormatJson,
 		Logging: &gardenletv1alpha1.Logging{
-			Enabled: pointer.Bool(false),
+			Enabled: ptr.To(false),
 			Vali: &gardenletv1alpha1.Vali{
-				Enabled: pointer.Bool(false),
+				Enabled: ptr.To(false),
 				Garden: &gardenletv1alpha1.GardenVali{
 					Storage: &gardenletv1alpha1.DefaultCentralValiStorage,
 				},
 			},
 			ShootEventLogging: &gardenletv1alpha1.ShootEventLogging{
-				Enabled: pointer.Bool(false),
+				Enabled: ptr.To(false),
 			},
 		},
 		Server: gardenletv1alpha1.ServerConfiguration{
@@ -837,8 +838,8 @@ func ComputeExpectedGardenletConfiguration(
 			},
 		},
 		Debugging: &baseconfigv1alpha1.DebuggingConfiguration{
-			EnableProfiling:           pointer.Bool(false),
-			EnableContentionProfiling: pointer.Bool(false),
+			EnableProfiling:           ptr.To(false),
+			EnableContentionProfiling: ptr.To(false),
 		},
 		FeatureGates: featureGates,
 		Resources: &gardenletv1alpha1.ResourcesConfiguration{
@@ -853,12 +854,12 @@ func ComputeExpectedGardenletConfiguration(
 		}},
 		Monitoring: &gardenletv1alpha1.MonitoringConfig{
 			Shoot: &gardenletv1alpha1.ShootMonitoringConfig{
-				Enabled: pointer.Bool(true),
+				Enabled: ptr.To(true),
 			},
 		},
 		ETCDConfig: &gardenletv1alpha1.ETCDConfig{
 			BackupCompactionController: &gardenletv1alpha1.BackupCompactionController{
-				EnableBackupCompaction:    pointer.Bool(false),
+				EnableBackupCompaction:    ptr.To(false),
 				EventsThreshold:           pointer.Int64(1000000),
 				MetricsScrapeWaitDuration: &metav1.Duration{Duration: 60 * time.Second},
 				Workers:                   pointer.Int64(3),
@@ -1210,7 +1211,7 @@ func ComputeExpectedGardenletDeploymentSpec(
 			},
 		})
 		deployment.Template.Spec.ServiceAccountName = ""
-		deployment.Template.Spec.AutomountServiceAccountToken = pointer.Bool(false)
+		deployment.Template.Spec.AutomountServiceAccountToken = ptr.To(false)
 	}
 
 	deployment.Template.Spec.Containers[0].VolumeMounts = append(deployment.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{

@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -61,7 +62,7 @@ var _ = Describe("Init", func() {
 				Expect(units).To(ConsistOf(extensionsv1alpha1.Unit{
 					Name:    nodeagentv1alpha1.InitUnitName,
 					Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-					Enable:  pointer.Bool(true),
+					Enable:  ptr.To(true),
 					Content: pointer.String(`[Unit]
 Description=Downloads the gardener-node-agent binary from the container registry and bootstraps it.
 After=network-online.target
@@ -85,7 +86,7 @@ WantedBy=multi-user.target`),
 							Inline: &extensionsv1alpha1.FileContentInline{
 								Data: "<<BOOTSTRAP_TOKEN>>",
 							},
-							TransmitUnencoded: pointer.Bool(true),
+							TransmitUnencoded: ptr.To(true),
 						},
 					},
 					extensionsv1alpha1.File{

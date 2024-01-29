@@ -20,7 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/component/logging/fluentoperator/customresources"
 )
@@ -46,7 +46,7 @@ var _ = Describe("Logging", func() {
 								Regex:      "^(?<time>[^ ]+) (stdout|stderr) ([^ ]*) (?<log>.*)$",
 								TimeKey:    "time",
 								TimeFormat: "%Y-%m-%dT%H:%M:%S.%L%z",
-								TimeKeep:   pointer.Bool(true),
+								TimeKeep:   ptr.To(true),
 							},
 							Decoders: []fluentbitv1alpha2.Decorder{
 								{

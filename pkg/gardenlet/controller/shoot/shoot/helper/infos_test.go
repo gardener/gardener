@@ -23,6 +23,7 @@ import (
 	"k8s.io/component-base/version"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -81,8 +82,8 @@ var _ = Describe("CalculateControllerInfos", func() {
 		// default shoot controller settings
 		cfg = gardenletconfig.ShootControllerConfiguration{
 			SyncPeriod:                 &metav1.Duration{Duration: time.Hour},
-			RespectSyncPeriodOverwrite: pointer.Bool(false),
-			ReconcileInMaintenanceOnly: pointer.Bool(false),
+			RespectSyncPeriodOverwrite: ptr.To(false),
+			ReconcileInMaintenanceOnly: ptr.To(false),
 		}
 	})
 
@@ -124,7 +125,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 
 		Context("shoot is ignored", func() {
 			BeforeEach(func() {
-				cfg.RespectSyncPeriodOverwrite = pointer.Bool(true)
+				cfg.RespectSyncPeriodOverwrite = ptr.To(true)
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootIgnore, "true")
 			})
 
@@ -235,7 +236,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 				BeforeEach(func() {
 					shootSyncPeriod = 2 * time.Hour
 
-					cfg.RespectSyncPeriodOverwrite = pointer.Bool(true)
+					cfg.RespectSyncPeriodOverwrite = ptr.To(true)
 					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootSyncPeriod, shootSyncPeriod.String())
 				})
 
@@ -335,7 +336,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 
 			Context("confined by operator (reconcileInMaintenanceOnly)", func() {
 				BeforeEach(func() {
-					cfg.ReconcileInMaintenanceOnly = pointer.Bool(true)
+					cfg.ReconcileInMaintenanceOnly = ptr.To(true)
 				})
 
 				testReconciliationsConfined()
@@ -343,7 +344,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 
 			Context("confined by user (confineSpecUpdateRollout)", func() {
 				BeforeEach(func() {
-					shoot.Spec.Maintenance.ConfineSpecUpdateRollout = pointer.Bool(true)
+					shoot.Spec.Maintenance.ConfineSpecUpdateRollout = ptr.To(true)
 				})
 
 				testReconciliationsConfined()
@@ -352,7 +353,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 
 		Context("shoot is ignored", func() {
 			BeforeEach(func() {
-				cfg.RespectSyncPeriodOverwrite = pointer.Bool(true)
+				cfg.RespectSyncPeriodOverwrite = ptr.To(true)
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootIgnore, "true")
 			})
 
@@ -443,7 +444,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 
 		Context("shoot is ignored", func() {
 			BeforeEach(func() {
-				cfg.RespectSyncPeriodOverwrite = pointer.Bool(true)
+				cfg.RespectSyncPeriodOverwrite = ptr.To(true)
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootIgnore, "true")
 			})
 
@@ -536,7 +537,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 
 		Context("shoot is ignored", func() {
 			BeforeEach(func() {
-				cfg.RespectSyncPeriodOverwrite = pointer.Bool(true)
+				cfg.RespectSyncPeriodOverwrite = ptr.To(true)
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootIgnore, "true")
 			})
 
@@ -627,7 +628,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 
 		Context("shoot is ignored", func() {
 			BeforeEach(func() {
-				cfg.RespectSyncPeriodOverwrite = pointer.Bool(true)
+				cfg.RespectSyncPeriodOverwrite = ptr.To(true)
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootIgnore, "true")
 			})
 

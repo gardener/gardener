@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -92,7 +93,7 @@ var _ = Describe("Shoot defaulting", func() {
 			mode := ProxyModeIPVS
 			obj.Spec.Kubernetes.KubeProxy = &KubeProxyConfig{
 				Mode:    &mode,
-				Enabled: pointer.Bool(false),
+				Enabled: ptr.To(false),
 			}
 			SetObjectDefaults_Shoot(obj)
 
@@ -136,7 +137,7 @@ var _ = Describe("Shoot defaulting", func() {
 
 			It("should not overwrite already set values for failSwapOn field", func() {
 				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-				obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(false)
+				obj.Spec.Kubernetes.Kubelet.FailSwapOn = ptr.To(false)
 
 				SetObjectDefaults_Shoot(obj)
 
@@ -145,7 +146,7 @@ var _ = Describe("Shoot defaulting", func() {
 
 			It("should default the swap behaviour", func() {
 				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-				obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(false)
+				obj.Spec.Kubernetes.Kubelet.FailSwapOn = ptr.To(false)
 				obj.Spec.Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
 				SetObjectDefaults_Shoot(obj)
 
@@ -156,7 +157,7 @@ var _ = Describe("Shoot defaulting", func() {
 			It("should not overwrite already set values for swap behaviour", func() {
 				unlimitedSwap := UnlimitedSwap
 				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-				obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(false)
+				obj.Spec.Kubernetes.Kubelet.FailSwapOn = ptr.To(false)
 				obj.Spec.Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
 				obj.Spec.Kubernetes.Kubelet.MemorySwap = &MemorySwapConfiguration{SwapBehavior: &unlimitedSwap}
 				SetObjectDefaults_Shoot(obj)
@@ -167,7 +168,7 @@ var _ = Describe("Shoot defaulting", func() {
 
 			It("should not default the swap behaviour because failSwapOn=true", func() {
 				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-				obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(true)
+				obj.Spec.Kubernetes.Kubelet.FailSwapOn = ptr.To(true)
 				obj.Spec.Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
 				SetObjectDefaults_Shoot(obj)
 
@@ -176,7 +177,7 @@ var _ = Describe("Shoot defaulting", func() {
 
 			It("should not default the swap behaviour because kubelet NodeSwap feature gate is false", func() {
 				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-				obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(false)
+				obj.Spec.Kubernetes.Kubelet.FailSwapOn = ptr.To(false)
 				SetObjectDefaults_Shoot(obj)
 
 				Expect(obj.Spec.Kubernetes.Kubelet.MemorySwap).To(BeNil())
@@ -213,7 +214,7 @@ var _ = Describe("Shoot defaulting", func() {
 
 			It("should not overwrite already set values for serializeImagePulls field", func() {
 				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-				obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = pointer.Bool(false)
+				obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = ptr.To(false)
 
 				SetObjectDefaults_Shoot(obj)
 
@@ -258,7 +259,7 @@ var _ = Describe("Shoot defaulting", func() {
 					},
 				},
 			}
-			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FailSwapOn = pointer.Bool(false)
+			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FailSwapOn = ptr.To(false)
 			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
 			SetObjectDefaults_Shoot(obj)
 
@@ -279,7 +280,7 @@ var _ = Describe("Shoot defaulting", func() {
 					},
 				},
 			}
-			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FailSwapOn = pointer.Bool(false)
+			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FailSwapOn = ptr.To(false)
 			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
 			SetObjectDefaults_Shoot(obj)
 
@@ -308,7 +309,7 @@ var _ = Describe("Shoot defaulting", func() {
 					},
 				},
 			}
-			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FailSwapOn = pointer.Bool(false)
+			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FailSwapOn = ptr.To(false)
 			SetObjectDefaults_Shoot(obj)
 
 			Expect(obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.MemorySwap).To(BeNil())
@@ -573,7 +574,7 @@ var _ = Describe("Shoot defaulting", func() {
 			obj.Spec.Maintenance = &Maintenance{
 				AutoUpdate: &MaintenanceAutoUpdate{
 					KubernetesVersion:   false,
-					MachineImageVersion: pointer.Bool(false),
+					MachineImageVersion: ptr.To(false),
 				},
 			}
 
@@ -622,7 +623,7 @@ var _ = Describe("Shoot defaulting", func() {
 		})
 
 		It("should not overwrite the already set values for anonymous authentication field", func() {
-			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{EnableAnonymousAuthentication: pointer.Bool(true)}
+			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{EnableAnonymousAuthentication: ptr.To(true)}
 
 			SetObjectDefaults_Shoot(obj)
 
@@ -896,7 +897,7 @@ var _ = Describe("Shoot defaulting", func() {
 				Expander:                      &expanderRandom,
 				MaxNodeProvisionTime:          &metav1.Duration{Duration: 6 * time.Hour},
 				MaxGracefulTerminationSeconds: pointer.Int32(60 * 60 * 24),
-				IgnoreDaemonsetsUtilization:   pointer.Bool(true),
+				IgnoreDaemonsetsUtilization:   ptr.To(true),
 				Verbosity:                     pointer.Int32(4),
 				NewPodScaleUpDelay:            &metav1.Duration{Duration: 1},
 				MaxEmptyBulkDelete:            pointer.Int32(20),

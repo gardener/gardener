@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
@@ -364,8 +365,8 @@ var _ = Describe("Defaults", func() {
 				Shoot: &ShootControllerConfiguration{
 					ConcurrentSyncs:            pointer.Int(10),
 					SyncPeriod:                 &v,
-					RespectSyncPeriodOverwrite: pointer.Bool(true),
-					ReconcileInMaintenanceOnly: pointer.Bool(true),
+					RespectSyncPeriodOverwrite: ptr.To(true),
+					ReconcileInMaintenanceOnly: ptr.To(true),
 					RetryDuration:              &v,
 					DNSEntryTTLSeconds:         pointer.Int64(60),
 				},
@@ -489,7 +490,7 @@ var _ = Describe("Defaults", func() {
 					SyncPeriod:       &v,
 					WaitSyncPeriod:   &v,
 					SyncJitterPeriod: &v,
-					JitterUpdates:    pointer.Bool(true),
+					JitterUpdates:    ptr.To(true),
 				},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
@@ -535,7 +536,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should not overwrite already set values for the leader election configuration", func() {
 			expectedLeaderElection := &componentbaseconfigv1alpha1.LeaderElectionConfiguration{
-				LeaderElect:       pointer.Bool(true),
+				LeaderElect:       ptr.To(true),
 				ResourceLock:      "foo",
 				RetryPeriod:       metav1.Duration{Duration: 40 * time.Second},
 				RenewDeadline:     metav1.Duration{Duration: 41 * time.Second},
@@ -596,9 +597,9 @@ var _ = Describe("Defaults", func() {
 		It("should not overwrite already set values for the logging configuration", func() {
 			gardenValiStorage := resource.MustParse("10Gi")
 			expectedLogging := &Logging{
-				Enabled: pointer.Bool(true),
+				Enabled: ptr.To(true),
 				Vali: &Vali{
-					Enabled: pointer.Bool(false),
+					Enabled: ptr.To(false),
 					Garden: &GardenVali{
 						Storage: &gardenValiStorage,
 					},
@@ -610,7 +611,7 @@ var _ = Describe("Defaults", func() {
 					},
 				},
 				ShootEventLogging: &ShootEventLogging{
-					Enabled: pointer.Bool(false),
+					Enabled: ptr.To(false),
 				},
 			}
 
@@ -717,7 +718,7 @@ var _ = Describe("Defaults", func() {
 			obj.ETCDConfig = &ETCDConfig{
 				BackupCompactionController: &BackupCompactionController{
 					Workers:                   pointer.Int64(4),
-					EnableBackupCompaction:    pointer.Bool(true),
+					EnableBackupCompaction:    ptr.To(true),
 					EventsThreshold:           pointer.Int64(900000),
 					MetricsScrapeWaitDuration: &v,
 				}}
@@ -810,7 +811,7 @@ var _ = Describe("Defaults", func() {
 		It("should not overwrite already set values for the shoot monitoring configuration", func() {
 			obj.Monitoring = &MonitoringConfig{
 				&ShootMonitoringConfig{
-					Enabled: pointer.Bool(false),
+					Enabled: ptr.To(false),
 				}}
 			SetObjectDefaults_GardenletConfiguration(obj)
 

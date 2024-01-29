@@ -32,6 +32,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -203,7 +204,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				Namespace: n.values.TargetNamespace,
 				Labels:    map[string]string{v1beta1constants.LabelApp: LabelAppValue},
 			},
-			AutomountServiceAccountToken: pointer.Bool(false),
+			AutomountServiceAccountToken: ptr.To(false),
 		}
 
 		serviceAnnotations                      = n.values.LoadBalancerAnnotations
@@ -524,7 +525,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 									Add:  []corev1.Capability{"NET_BIND_SERVICE", "SYS_CHROOT"},
 								},
 								RunAsUser:                pointer.Int64(101),
-								AllowPrivilegeEscalation: pointer.Bool(true),
+								AllowPrivilegeEscalation: ptr.To(true),
 								SeccompProfile:           &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeUnconfined},
 							},
 							Env: []corev1.EnvVar{

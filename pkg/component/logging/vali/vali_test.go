@@ -35,6 +35,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -178,7 +179,7 @@ var _ = Describe("Vali", func() {
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: pointer.Bool(false),
+					KeepObjects: ptr.To(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -188,7 +189,7 @@ var _ = Describe("Vali", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Data).To(HaveLen(6))
-			Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__"+telegrafConfigMapName+".yaml"])).To(Equal(test.Serialize(getTelegrafConfigMap())))
@@ -215,7 +216,7 @@ var _ = Describe("Vali", func() {
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResourceTarget.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: pointer.Bool(false),
+					KeepObjects: ptr.To(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedTargetMr))
@@ -225,7 +226,7 @@ var _ = Describe("Vali", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretTarget), managedResourceSecretTarget)).To(Succeed())
 			Expect(managedResourceSecretTarget.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecretTarget.Data).To(HaveLen(3))
-			Expect(managedResourceSecretTarget.Immutable).To(Equal(pointer.Bool(true)))
+			Expect(managedResourceSecretTarget.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecretTarget.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			Expect(string(managedResourceSecretTarget.Data["clusterrolebinding____gardener.cloud_logging_kube-rbac-proxy.yaml"])).To(Equal(test.Serialize(getKubeRBACProxyClusterRoleBinding())))
@@ -285,7 +286,7 @@ var _ = Describe("Vali", func() {
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: pointer.Bool(false),
+					KeepObjects: ptr.To(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -295,7 +296,7 @@ var _ = Describe("Vali", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Data).To(HaveLen(4))
-			Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__"+valiConfigMapName+".yaml"])).To(Equal(test.Serialize(getValiConfigMap())))
@@ -341,7 +342,7 @@ var _ = Describe("Vali", func() {
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: pointer.Bool(false),
+					KeepObjects: ptr.To(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -351,7 +352,7 @@ var _ = Describe("Vali", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Data).To(HaveLen(3))
-			Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__"+valiConfigMapName+".yaml"])).To(Equal(test.Serialize(getValiConfigMap())))
@@ -1209,7 +1210,7 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 				},
 				Spec: corev1.PodSpec{
 					PriorityClassName:            priorityClassName,
-					AutomountServiceAccountToken: pointer.Bool(false),
+					AutomountServiceAccountToken: ptr.To(false),
 					SecurityContext: &corev1.PodSecurityContext{
 						FSGroup:             pointer.Int64(10001),
 						FSGroupChangePolicy: &fsGroupChangeOnRootMismatch,
@@ -1224,9 +1225,9 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 								"/vali-init.sh || true",
 							},
 							SecurityContext: &corev1.SecurityContext{
-								Privileged:   pointer.Bool(true),
+								Privileged:   ptr.To(true),
 								RunAsUser:    pointer.Int64(0),
-								RunAsNonRoot: pointer.Bool(false),
+								RunAsNonRoot: ptr.To(false),
 								RunAsGroup:   pointer.Int64(0),
 							},
 							VolumeMounts: []corev1.VolumeMount{
@@ -1298,8 +1299,8 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 							SecurityContext: &corev1.SecurityContext{
 								RunAsUser:              pointer.Int64(10001),
 								RunAsGroup:             pointer.Int64(10001),
-								RunAsNonRoot:           pointer.Bool(true),
-								ReadOnlyRootFilesystem: pointer.Bool(true),
+								RunAsNonRoot:           ptr.To(true),
+								ReadOnlyRootFilesystem: ptr.To(true),
 							},
 						},
 						{
@@ -1338,8 +1339,8 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 							SecurityContext: &corev1.SecurityContext{
 								RunAsUser:              pointer.Int64(10001),
 								RunAsGroup:             pointer.Int64(10001),
-								RunAsNonRoot:           pointer.Bool(true),
-								ReadOnlyRootFilesystem: pointer.Bool(true),
+								RunAsNonRoot:           ptr.To(true),
+								ReadOnlyRootFilesystem: ptr.To(true),
 							},
 						},
 					},
@@ -1419,8 +1420,8 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 				SecurityContext: &corev1.SecurityContext{
 					RunAsUser:              pointer.Int64(65532),
 					RunAsGroup:             pointer.Int64(65534),
-					RunAsNonRoot:           pointer.Bool(true),
-					ReadOnlyRootFilesystem: pointer.Bool(true),
+					RunAsNonRoot:           ptr.To(true),
+					ReadOnlyRootFilesystem: ptr.To(true),
 				},
 			},
 			{
@@ -1503,7 +1504,7 @@ wait
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: "generic-token-kubeconfig",
 									},
-									Optional: pointer.Bool(false),
+									Optional: ptr.To(false),
 								},
 							},
 							{
@@ -1517,7 +1518,7 @@ wait
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: "shoot-access-kube-rbac-proxy",
 									},
-									Optional: pointer.Bool(false),
+									Optional: ptr.To(false),
 								},
 							},
 						},

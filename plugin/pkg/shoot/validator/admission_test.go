@@ -36,6 +36,7 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -135,14 +136,14 @@ var _ = Describe("validator", func() {
 							GPU:          resource.MustParse("0"),
 							Memory:       resource.MustParse("100Gi"),
 							Architecture: pointer.String("amd64"),
-							Usable:       pointer.Bool(true),
+							Usable:       ptr.To(true),
 						},
 						{
 							Name:         "machine-type-old",
 							CPU:          resource.MustParse("2"),
 							GPU:          resource.MustParse("0"),
 							Memory:       resource.MustParse("100Gi"),
-							Usable:       pointer.Bool(false),
+							Usable:       ptr.To(false),
 							Architecture: pointer.String("amd64"),
 						},
 						{
@@ -155,7 +156,7 @@ var _ = Describe("validator", func() {
 								MinSize: &minVolSizeMachine,
 							},
 							Architecture: pointer.String("amd64"),
-							Usable:       pointer.Bool(true),
+							Usable:       ptr.To(true),
 						},
 						{
 							Name:         "machine-type-3",
@@ -163,20 +164,20 @@ var _ = Describe("validator", func() {
 							GPU:          resource.MustParse("0"),
 							Memory:       resource.MustParse("100Gi"),
 							Architecture: pointer.String("arm64"),
-							Usable:       pointer.Bool(true),
+							Usable:       ptr.To(true),
 						},
 					},
 					VolumeTypes: []core.VolumeType{
 						{
 							Name:   volumeType,
 							Class:  "super-premium",
-							Usable: pointer.Bool(true),
+							Usable: ptr.To(true),
 						},
 						{
 							Name:    volumeType2,
 							Class:   "super-premium",
 							MinSize: &minVolSize,
-							Usable:  pointer.Bool(true),
+							Usable:  ptr.To(true),
 						},
 					},
 					Regions: []core.Region{
@@ -234,8 +235,8 @@ var _ = Describe("validator", func() {
 					},
 					Kubernetes: core.Kubernetes{
 						Version:                     "1.6.4",
-						AllowPrivilegedContainers:   pointer.Bool(true),
-						EnableStaticTokenKubeconfig: pointer.Bool(true),
+						AllowPrivilegedContainers:   ptr.To(true),
+						EnableStaticTokenKubeconfig: ptr.To(true),
 						KubeControllerManager: &core.KubeControllerManagerConfig{
 							NodeMonitorGracePeriod: &metav1.Duration{Duration: 40 * time.Second},
 						},
@@ -502,9 +503,9 @@ var _ = Describe("validator", func() {
 			BeforeEach(func() {
 				shoot = *shootBase.DeepCopy()
 				oldShoot = shoot.DeepCopy()
-				oldShoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)}
+				oldShoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)}
 
-				shoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)}
+				shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
 			})
 
 			DescribeTable("should allow/deny hibernating the Shoot according to HibernationPossible constraint",
@@ -563,12 +564,12 @@ var _ = Describe("validator", func() {
 
 			DescribeTable("confine spec roll-out checks",
 				func(specChange, oldConfine, confine bool, oldOperation, operation *core.LastOperation, matcher types.GomegaMatcher) {
-					oldShoot.Spec.Maintenance.ConfineSpecUpdateRollout = pointer.Bool(oldConfine)
+					oldShoot.Spec.Maintenance.ConfineSpecUpdateRollout = ptr.To(oldConfine)
 					oldShoot.Status.LastOperation = oldOperation
-					shoot.Spec.Maintenance.ConfineSpecUpdateRollout = pointer.Bool(confine)
+					shoot.Spec.Maintenance.ConfineSpecUpdateRollout = ptr.To(confine)
 					shoot.Status.LastOperation = operation
 					if specChange {
-						shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(
+						shoot.Spec.Kubernetes.AllowPrivilegedContainers = ptr.To(
 							oldShoot.Spec.Kubernetes.AllowPrivilegedContainers == nil ||
 								!(*oldShoot.Spec.Kubernetes.AllowPrivilegedContainers))
 					}
@@ -909,10 +910,10 @@ var _ = Describe("validator", func() {
 
 			It("should add deploy tasks because shoot is waking up from hibernation", func() {
 				oldShoot.Spec.Hibernation = &core.Hibernation{
-					Enabled: pointer.Bool(true),
+					Enabled: ptr.To(true),
 				}
 				shoot.Spec.Hibernation = &core.Hibernation{
-					Enabled: pointer.Bool(false),
+					Enabled: ptr.To(false),
 				}
 
 				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
@@ -2336,7 +2337,7 @@ var _ = Describe("validator", func() {
 
 				It("should not default the enableStaticTokenKubeconfig field when it is set", func() {
 					shoot.Spec.Kubernetes.Version = "1.26.0"
-					shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(false)
+					shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(false)
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
@@ -2432,7 +2433,7 @@ var _ = Describe("validator", func() {
 							AdmissionPlugins: []core.AdmissionPlugin{
 								{
 									Name:     "PodSecurityPolicy",
-									Disabled: pointer.Bool(true),
+									Disabled: ptr.To(true),
 								},
 							},
 						}
@@ -2451,7 +2452,7 @@ var _ = Describe("validator", func() {
 					})
 
 					It("should not set the field", func() {
-						shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(false)
+						shoot.Spec.Kubernetes.AllowPrivilegedContainers = ptr.To(false)
 
 						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 						err := admissionHandler.Admit(ctx, attrs, nil)
@@ -2605,7 +2606,7 @@ var _ = Describe("validator", func() {
 						GPU:          resource.MustParse("0"),
 						Memory:       resource.MustParse("5Gi"),
 						Architecture: pointer.String("amd64"),
-						Usable:       pointer.Bool(true),
+						Usable:       ptr.To(true),
 					}
 
 					kubeletConfig = &core.KubeletConfig{
@@ -4000,7 +4001,7 @@ var _ = Describe("validator", func() {
 						core.MachineType{
 							Name:         unavailableMachine,
 							Architecture: pointer.String("amd64"),
-							Usable:       pointer.Bool(true),
+							Usable:       ptr.To(true),
 						},
 					)
 					cloudProfile.Spec.Regions = append(cloudProfile.Spec.Regions,
@@ -4037,12 +4038,12 @@ var _ = Describe("validator", func() {
 						{
 							Name:         "machine-type-1",
 							Architecture: pointer.String("arm64"),
-							Usable:       pointer.Bool(false),
+							Usable:       ptr.To(false),
 						},
 						{
 							Name:         "machine-type-2",
 							Architecture: pointer.String("amd64"),
-							Usable:       pointer.Bool(true),
+							Usable:       ptr.To(true),
 						},
 					}
 					cloudProfile.Spec.Regions = append(cloudProfile.Spec.Regions,
@@ -4104,13 +4105,13 @@ var _ = Describe("validator", func() {
 						{
 							Name:   unavailableVolume,
 							Class:  "super-premium",
-							Usable: pointer.Bool(true),
+							Usable: ptr.To(true),
 						},
 						{
 							Name:    volumeType2,
 							Class:   "super-premium",
 							MinSize: &minVolSize,
-							Usable:  pointer.Bool(true),
+							Usable:  ptr.To(true),
 						},
 					}
 
@@ -4152,13 +4153,13 @@ var _ = Describe("validator", func() {
 						{
 							Name:   unavailableVolume,
 							Class:  "super-premium",
-							Usable: pointer.Bool(false),
+							Usable: ptr.To(false),
 						},
 						{
 							Name:    volumeType2,
 							Class:   "super-premium",
 							MinSize: &minVolSize,
-							Usable:  pointer.Bool(true),
+							Usable:  ptr.To(true),
 						},
 					}
 
@@ -4197,13 +4198,13 @@ var _ = Describe("validator", func() {
 						{
 							Name:   volumeType,
 							Class:  "super-premium",
-							Usable: pointer.Bool(false),
+							Usable: ptr.To(false),
 						},
 						{
 							Name:    volumeType2,
 							Class:   "super-premium",
 							MinSize: &minVolSize,
-							Usable:  pointer.Bool(true),
+							Usable:  ptr.To(true),
 						},
 					}
 
@@ -4616,7 +4617,7 @@ var _ = Describe("validator", func() {
 
 				It("should reject update of binding if spec other than .spec.seedName is changed", func() {
 					shoot.Spec.SeedName = pointer.String(newSeed.Name)
-					shoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)}
+					shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
 
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)

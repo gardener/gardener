@@ -34,6 +34,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -553,7 +554,7 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap, dashboar
 					Labels: utils.MergeStringMaps(getLabels(), p.getPodLabels()),
 				},
 				Spec: corev1.PodSpec{
-					AutomountServiceAccountToken: pointer.Bool(false),
+					AutomountServiceAccountToken: ptr.To(false),
 					PriorityClassName:            p.values.PriorityClassName,
 					Containers: []corev1.Container{
 						{

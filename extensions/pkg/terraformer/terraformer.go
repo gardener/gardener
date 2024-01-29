@@ -28,6 +28,7 @@ import (
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -304,7 +305,7 @@ func (t *terraformer) ensureServiceAccount(ctx context.Context) error {
 	serviceAccount := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: name}}
 	_, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, t.client, serviceAccount, func() error {
 		if t.useProjectedTokenMount {
-			serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
+			serviceAccount.AutomountServiceAccountToken = ptr.To(false)
 		} else {
 			serviceAccount.AutomountServiceAccountToken = nil
 		}

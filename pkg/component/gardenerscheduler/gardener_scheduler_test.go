@@ -34,6 +34,7 @@ import (
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
@@ -341,7 +342,7 @@ var _ = Describe("GardenerScheduler", func() {
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						Class:       pointer.String("seed"),
 						SecretRefs:  []corev1.LocalObjectReference{{Name: managedResourceRuntime.Spec.SecretRefs[0].Name}},
-						KeepObjects: pointer.Bool(false),
+						KeepObjects: ptr.To(false),
 					},
 					Status: healthyManagedResourceStatus,
 				}
@@ -367,7 +368,7 @@ var _ = Describe("GardenerScheduler", func() {
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 						SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceVirtual.Spec.SecretRefs[0].Name}},
-						KeepObjects:  pointer.Bool(false),
+						KeepObjects:  ptr.To(false),
 					},
 					Status: healthyManagedResourceStatus,
 				}
@@ -383,14 +384,14 @@ var _ = Describe("GardenerScheduler", func() {
 				Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-scheduler.yaml"])).To(Equal(componenttest.Serialize(serviceRuntime)))
 				Expect(string(managedResourceSecretRuntime.Data["verticalpodautoscaler__some-namespace__gardener-scheduler-vpa.yaml"])).To(Equal(componenttest.Serialize(vpa)))
 				Expect(string(managedResourceSecretRuntime.Data["deployment__some-namespace__gardener-scheduler.yaml"])).To(Equal(deployment(namespace, "gardener-scheduler-config-3cf6616e", values)))
-				Expect(managedResourceSecretRuntime.Immutable).To(Equal(pointer.Bool(true)))
+				Expect(managedResourceSecretRuntime.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecretVirtual.Data).To(HaveLen(2))
 				Expect(string(managedResourceSecretVirtual.Data["clusterrole____gardener.cloud_system_scheduler.yaml"])).To(Equal(componenttest.Serialize(clusterRole)))
 				Expect(string(managedResourceSecretVirtual.Data["clusterrolebinding____gardener.cloud_system_scheduler.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
-				Expect(managedResourceSecretVirtual.Immutable).To(Equal(pointer.Bool(true)))
+				Expect(managedResourceSecretVirtual.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecretVirtual.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 			})
 
@@ -738,7 +739,7 @@ func configMap(namespace string, testValues Values) string {
 			Kubeconfig: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 		},
 		LeaderElection: &componentbaseconfigv1alpha1.LeaderElectionConfiguration{
-			LeaderElect:       pointer.Bool(true),
+			LeaderElect:       ptr.To(true),
 			ResourceName:      "gardener-scheduler-leader-election",
 			ResourceNamespace: "kube-system",
 		},
@@ -815,9 +816,9 @@ func deployment(namespace, configSecretName string, testValues Values) string {
 				},
 				Spec: corev1.PodSpec{
 					PriorityClassName:            "gardener-garden-system-200",
-					AutomountServiceAccountToken: pointer.Bool(false),
+					AutomountServiceAccountToken: ptr.To(false),
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: pointer.Bool(true),
+						RunAsNonRoot: ptr.To(true),
 						RunAsUser:    pointer.Int64(65532),
 						RunAsGroup:   pointer.Int64(65532),
 						FSGroup:      pointer.Int64(65532),
@@ -895,7 +896,7 @@ func deployment(namespace, configSecretName string, testValues Values) string {
 													Key:  "kubeconfig",
 													Path: "kubeconfig",
 												}},
-												Optional: pointer.Bool(false),
+												Optional: ptr.To(false),
 											},
 										},
 										{
@@ -907,7 +908,7 @@ func deployment(namespace, configSecretName string, testValues Values) string {
 													Key:  "token",
 													Path: "token",
 												}},
-												Optional: pointer.Bool(false),
+												Optional: ptr.To(false),
 											},
 										},
 									},

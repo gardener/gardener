@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 )
@@ -136,7 +137,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 				LeaseDuration:     metav1.Duration{Duration: 1 * time.Second},
 				RenewDeadline:     metav1.Duration{Duration: 2 * time.Second},
 				RetryPeriod:       metav1.Duration{Duration: 3 * time.Second},
-				LeaderElect:       pointer.Bool(false),
+				LeaderElect:       ptr.To(false),
 			}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
@@ -343,7 +344,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 			obj.Controllers.ManagedResource = ManagedResourceControllerConfig{
 				ConcurrentSyncs:     pointer.Int(1),
 				SyncPeriod:          &metav1.Duration{Duration: time.Second},
-				AlwaysUpdate:        pointer.Bool(true),
+				AlwaysUpdate:        ptr.To(true),
 				ManagedByLabelValue: pointer.String("foo"),
 			}
 

@@ -22,6 +22,7 @@ import (
 	componentbaseconfig "k8s.io/component-base/config"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -106,7 +107,7 @@ var _ = Describe("ValuesHelper", func() {
 				string("BarFeature"): true,
 			},
 			Logging: &config.Logging{
-				Enabled: pointer.Bool(true),
+				Enabled: ptr.To(true),
 			},
 			SeedConfig: &config.SeedConfig{
 				SeedTemplate: gardencore.SeedTemplate{
@@ -128,7 +129,7 @@ var _ = Describe("ValuesHelper", func() {
 			PodAnnotations: map[string]string{
 				"foo": "bar",
 			},
-			VPA: pointer.Bool(true),
+			VPA: ptr.To(true),
 		}
 		gardenletConfig = &gardenletv1alpha1.GardenletConfiguration{
 			TypeMeta: metav1.TypeMeta{
@@ -162,7 +163,7 @@ var _ = Describe("ValuesHelper", func() {
 			PodAnnotations: map[string]string{
 				"foo": "bar",
 			},
-			VPA: pointer.Bool(true),
+			VPA: ptr.To(true),
 		}
 		mergedGardenletConfig = func(withBootstrap bool) *gardenletv1alpha1.GardenletConfiguration {
 			var kubeconfigPath string
@@ -218,7 +219,7 @@ var _ = Describe("ValuesHelper", func() {
 					string("BarFeature"): true,
 				},
 				Logging: &gardenletv1alpha1.Logging{
-					Enabled: pointer.Bool(true),
+					Enabled: ptr.To(true),
 				},
 			}
 		}

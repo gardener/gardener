@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
@@ -54,7 +55,7 @@ func (g *gardenerMetricsExporter) deployment(secretGenericTokenKubeconfig, secre
 				},
 				Spec: corev1.PodSpec{
 					PriorityClassName:            v1beta1constants.PriorityClassNameGardenSystem100,
-					AutomountServiceAccountToken: pointer.Bool(false),
+					AutomountServiceAccountToken: ptr.To(false),
 					Containers: []corev1.Container{
 						{
 							Name:            deploymentName,
@@ -67,7 +68,7 @@ func (g *gardenerMetricsExporter) deployment(secretGenericTokenKubeconfig, secre
 								"--port=" + fmt.Sprint(probePort),
 							},
 							SecurityContext: &corev1.SecurityContext{
-								ReadOnlyRootFilesystem: pointer.Bool(true),
+								ReadOnlyRootFilesystem: ptr.To(true),
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: map[corev1.ResourceName]resource.Quantity{

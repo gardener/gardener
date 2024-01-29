@@ -19,7 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -127,7 +127,7 @@ var _ = Describe("Kubernetes Utils", func() {
 
 			It("should return false and appropriate message if shoot acts as seed, not all shoot conditions are true and shoot is being hibernated", func() {
 				shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
-					Enabled: pointer.Bool(true),
+					Enabled: ptr.To(true),
 				}
 
 				appendShootConditionsToShoot(shoot)
@@ -139,7 +139,7 @@ var _ = Describe("Kubernetes Utils", func() {
 
 			It("should return true and empty message if shoot acts as seed, not all seed conditions are true and shoot is being hibernated", func() {
 				shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
-					Enabled: pointer.Bool(true),
+					Enabled: ptr.To(true),
 				}
 
 				appendShootConditionsToShoot(shoot)

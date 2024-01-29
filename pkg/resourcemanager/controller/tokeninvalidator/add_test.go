@@ -23,7 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -115,7 +115,7 @@ var _ = Describe("Add", func() {
 
 			It("should return true when auto-token-mount setting changed", func() {
 				oldServiceAccount := serviceAccount.DeepCopy()
-				serviceAccount.AutomountServiceAccountToken = pointer.Bool(true)
+				serviceAccount.AutomountServiceAccountToken = ptr.To(true)
 				Expect(p.Update(event.UpdateEvent{ObjectOld: oldServiceAccount, ObjectNew: serviceAccount})).To(BeTrue())
 			})
 

@@ -29,7 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -100,7 +100,7 @@ func RunTest(
 			}
 			f.Shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = append(f.Shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins, gardencorev1beta1.AdmissionPlugin{
 				Name:     "PodSecurityPolicy",
-				Disabled: pointer.Bool(true),
+				Disabled: ptr.To(true),
 			})
 		}
 

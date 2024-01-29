@@ -24,7 +24,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -70,7 +70,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	clusterRoleBinding := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRole.Name}}
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.Client, clusterRoleBinding, func() error {
 		ownerReference := metav1.NewControllerRef(clusterRole, rbacv1.SchemeGroupVersion.WithKind("ClusterRole"))
-		ownerReference.BlockOwnerDeletion = pointer.Bool(false)
+		ownerReference.BlockOwnerDeletion = ptr.To(false)
 		clusterRoleBinding.OwnerReferences = []metav1.OwnerReference{*ownerReference}
 
 		clusterRoleBinding.RoleRef = rbacv1.RoleRef{

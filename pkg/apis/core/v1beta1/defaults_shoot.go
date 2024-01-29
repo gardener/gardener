@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
@@ -69,7 +70,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 
 		if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil {
 			if worker.Kubernetes.Kubelet.FailSwapOn == nil {
-				obj.Spec.Provider.Workers[i].Kubernetes.Kubelet.FailSwapOn = pointer.Bool(true)
+				obj.Spec.Provider.Workers[i].Kubernetes.Kubelet.FailSwapOn = ptr.To(true)
 			}
 
 			if nodeSwapFeatureGateEnabled, ok := worker.Kubernetes.Kubelet.FeatureGates["NodeSwap"]; ok && nodeSwapFeatureGateEnabled && !*worker.Kubernetes.Kubelet.FailSwapOn {
@@ -118,7 +119,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 			obj.Spec.Kubernetes.KubeProxy.Mode = &defaultProxyMode
 		}
 		if obj.Spec.Kubernetes.KubeProxy.Enabled == nil {
-			obj.Spec.Kubernetes.KubeProxy.Enabled = pointer.Bool(true)
+			obj.Spec.Kubernetes.KubeProxy.Enabled = ptr.To(true)
 		}
 
 		if obj.Spec.Addons == nil {
@@ -136,7 +137,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 			obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
 		}
 		if obj.Spec.Kubernetes.Kubelet.FailSwapOn == nil {
-			obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(true)
+			obj.Spec.Kubernetes.Kubelet.FailSwapOn = ptr.To(true)
 		}
 
 		if nodeSwapFeatureGateEnabled, ok := obj.Spec.Kubernetes.Kubelet.FeatureGates["NodeSwap"]; ok && nodeSwapFeatureGateEnabled && !*obj.Spec.Kubernetes.Kubelet.FailSwapOn {
@@ -155,7 +156,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 			obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent = pointer.Int32(40)
 		}
 		if obj.Spec.Kubernetes.Kubelet.SerializeImagePulls == nil {
-			obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = pointer.Bool(true)
+			obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = ptr.To(true)
 		}
 
 		var (
@@ -180,7 +181,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 		}
 
 		if obj.Spec.Maintenance.AutoUpdate.MachineImageVersion == nil {
-			obj.Spec.Maintenance.AutoUpdate.MachineImageVersion = pointer.Bool(true)
+			obj.Spec.Maintenance.AutoUpdate.MachineImageVersion = ptr.To(true)
 		}
 
 		if obj.Spec.Provider.WorkersSettings == nil {
@@ -221,7 +222,7 @@ func SetDefaults_KubeAPIServerConfig(obj *KubeAPIServerConfig) {
 		obj.Requests.MaxMutatingInflight = pointer.Int32(200)
 	}
 	if obj.EnableAnonymousAuthentication == nil {
-		obj.EnableAnonymousAuthentication = pointer.Bool(false)
+		obj.EnableAnonymousAuthentication = ptr.To(false)
 	}
 	if obj.EventTTL == nil {
 		obj.EventTTL = &metav1.Duration{Duration: time.Hour}
@@ -330,7 +331,7 @@ func SetDefaults_ClusterAutoscaler(obj *ClusterAutoscaler) {
 		obj.MaxGracefulTerminationSeconds = pointer.Int32(600)
 	}
 	if obj.IgnoreDaemonsetsUtilization == nil {
-		obj.IgnoreDaemonsetsUtilization = pointer.Bool(false)
+		obj.IgnoreDaemonsetsUtilization = ptr.To(false)
 	}
 	if obj.Verbosity == nil {
 		obj.Verbosity = pointer.Int32(2)

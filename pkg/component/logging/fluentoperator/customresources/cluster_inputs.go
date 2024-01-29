@@ -19,6 +19,7 @@ import (
 	fluentbitv1alpha2input "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/input"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 // GetClusterInputs Returns the ClusterInputs used by the Fluent Operator.
@@ -36,7 +37,7 @@ func GetClusterInputs(labels map[string]string) []*fluentbitv1alpha2.ClusterInpu
 					ExcludePath:            "*_garden_fluent-bit-*.log,*_garden_vali-*.log",
 					RefreshIntervalSeconds: pointer.Int64(10),
 					MemBufLimit:            "30MB",
-					SkipLongLines:          pointer.Bool(true),
+					SkipLongLines:          ptr.To(true),
 					DB:                     "/var/fluentbit/flb_kube.db",
 					IgnoreOlder:            "30m",
 				},

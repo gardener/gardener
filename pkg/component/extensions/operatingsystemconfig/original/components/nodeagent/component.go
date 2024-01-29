@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -96,7 +97,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 
 	units := []extensionsv1alpha1.Unit{{
 		Name:      nodeagentv1alpha1.UnitName,
-		Enable:    pointer.Bool(true),
+		Enable:    ptr.To(true),
 		Content:   pointer.String(UnitContent()),
 		FilePaths: extensionsv1alpha1helper.FilePathsFrom(files),
 	}}

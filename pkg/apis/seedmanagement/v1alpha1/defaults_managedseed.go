@@ -22,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
@@ -54,7 +55,7 @@ func SetDefaults_GardenletDeployment(obj *GardenletDeployment) {
 
 	// Set default VPA
 	if obj.VPA == nil {
-		obj.VPA = pointer.Bool(true)
+		obj.VPA = ptr.To(true)
 	}
 }
 
@@ -111,7 +112,7 @@ func setDefaultsGardenlet(obj *Gardenlet, name, namespace string) {
 
 	// Set default merge with parent
 	if obj.MergeWithParent == nil {
-		obj.MergeWithParent = pointer.Bool(true)
+		obj.MergeWithParent = ptr.To(true)
 	}
 }
 

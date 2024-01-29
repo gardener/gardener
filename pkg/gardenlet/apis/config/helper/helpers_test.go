@@ -20,7 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -105,7 +105,7 @@ var _ = Describe("helper", func() {
 			gardenletConfig := &config.GardenletConfiguration{
 				Monitoring: &config.MonitoringConfig{
 					Shoot: &config.ShootMonitoringConfig{
-						Enabled: pointer.Bool(false),
+						Enabled: ptr.To(false),
 					},
 				},
 			}
@@ -116,7 +116,7 @@ var _ = Describe("helper", func() {
 			gardenletConfig := &config.GardenletConfiguration{
 				Monitoring: &config.MonitoringConfig{
 					Shoot: &config.ShootMonitoringConfig{
-						Enabled: pointer.Bool(true),
+						Enabled: ptr.To(true),
 					},
 				},
 			}
@@ -157,7 +157,7 @@ var _ = Describe("helper", func() {
 		It("should return false when the logging is not enabled", func() {
 			gardenletConfig := &config.GardenletConfiguration{
 				Logging: &config.Logging{
-					Enabled: pointer.Bool(false),
+					Enabled: ptr.To(false),
 				},
 			}
 
@@ -167,7 +167,7 @@ var _ = Describe("helper", func() {
 		It("should return true when the logging is enabled", func() {
 			gardenletConfig := &config.GardenletConfiguration{
 				Logging: &config.Logging{
-					Enabled: pointer.Bool(true),
+					Enabled: ptr.To(true),
 				},
 			}
 
@@ -190,7 +190,7 @@ var _ = Describe("helper", func() {
 			gardenletConfig := &config.GardenletConfiguration{
 				Logging: &config.Logging{
 					Vali: &config.Vali{
-						Enabled: pointer.Bool(false),
+						Enabled: ptr.To(false),
 					},
 				},
 			}
@@ -202,7 +202,7 @@ var _ = Describe("helper", func() {
 			gardenletConfig := &config.GardenletConfiguration{
 				Logging: &config.Logging{
 					Vali: &config.Vali{
-						Enabled: pointer.Bool(true),
+						Enabled: ptr.To(true),
 					},
 				},
 			}
@@ -233,7 +233,7 @@ var _ = Describe("helper", func() {
 		It("should return false when ShootEventLogging is nil", func() {
 			gardenletConfig := &config.GardenletConfiguration{
 				Logging: &config.Logging{
-					Enabled: pointer.Bool(true),
+					Enabled: ptr.To(true),
 				},
 			}
 
@@ -243,7 +243,7 @@ var _ = Describe("helper", func() {
 		It("should return false when ShootEventLogging is empty", func() {
 			gardenletConfig := &config.GardenletConfiguration{
 				Logging: &config.Logging{
-					Enabled:          pointer.Bool(true),
+					Enabled:          ptr.To(true),
 					ShootNodeLogging: &config.ShootNodeLogging{},
 				},
 			}
@@ -255,7 +255,7 @@ var _ = Describe("helper", func() {
 			gardenletConfig := &config.GardenletConfiguration{
 				Logging: &config.Logging{
 					ShootEventLogging: &config.ShootEventLogging{
-						Enabled: pointer.Bool(false),
+						Enabled: ptr.To(false),
 					},
 				},
 			}
@@ -267,7 +267,7 @@ var _ = Describe("helper", func() {
 			gardenletConfig := &config.GardenletConfiguration{
 				Logging: &config.Logging{
 					ShootEventLogging: &config.ShootEventLogging{
-						Enabled: pointer.Bool(true),
+						Enabled: ptr.To(true),
 					},
 				},
 			}

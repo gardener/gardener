@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/containerd"
@@ -44,7 +45,7 @@ var _ = Describe("Logrotate", func() {
 
 				serviceUnit := extensionsv1alpha1.Unit{
 					Name:   prefix + "-logrotate.service",
-					Enable: pointer.Bool(true),
+					Enable: ptr.To(true),
 					Content: pointer.String(`[Unit]
 Description=Rotate and Compress System Logs
 [Service]
@@ -57,7 +58,7 @@ WantedBy=multi-user.target`),
 				timerUnit := extensionsv1alpha1.Unit{
 					Name:    prefix + "-logrotate.timer",
 					Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-					Enable:  pointer.Bool(true),
+					Enable:  ptr.To(true),
 					Content: pointer.String(`[Unit]
 Description=Log Rotation at each 10 minutes
 [Timer]

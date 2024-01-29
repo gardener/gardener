@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -468,8 +469,8 @@ var _ = Describe("Registration", func() {
 				APIVersion:         "v1",
 				Kind:               "Namespace",
 				Name:               ownerNamespaceName,
-				Controller:         pointer.Bool(true),
-				BlockOwnerDeletion: pointer.Bool(false),
+				Controller:         ptr.To(true),
+				BlockOwnerDeletion: ptr.To(false),
 			}))
 			Expect(webhookConfig.Webhooks[0].ClientConfig.CABundle).To(Equal(caBundle))
 		})
@@ -501,8 +502,8 @@ var _ = Describe("Registration", func() {
 				APIVersion:         "v1",
 				Kind:               "Namespace",
 				Name:               ownerNamespaceName,
-				Controller:         pointer.Bool(true),
-				BlockOwnerDeletion: pointer.Bool(false),
+				Controller:         ptr.To(true),
+				BlockOwnerDeletion: ptr.To(false),
 			}))
 			Expect(webhookConfig.Webhooks[0].ClientConfig.CABundle).To(Equal(caBundle))
 		})
@@ -523,8 +524,8 @@ var _ = Describe("Registration", func() {
 				APIVersion:         "v1",
 				Kind:               "Namespace",
 				Name:               ownerNamespaceName,
-				Controller:         pointer.Bool(true),
-				BlockOwnerDeletion: pointer.Bool(false),
+				Controller:         ptr.To(true),
+				BlockOwnerDeletion: ptr.To(false),
 			}))
 			Expect(webhookConfig.Webhooks[0].ClientConfig.CABundle).To(Equal(caBundle))
 		})

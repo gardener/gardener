@@ -34,6 +34,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -263,9 +264,9 @@ var _ = Describe("KubeScheduler", func() {
 							},
 						},
 						Spec: corev1.PodSpec{
-							AutomountServiceAccountToken: pointer.Bool(false),
+							AutomountServiceAccountToken: ptr.To(false),
 							SecurityContext: &corev1.PodSecurityContext{
-								RunAsNonRoot: pointer.Bool(true),
+								RunAsNonRoot: ptr.To(true),
 								RunAsUser:    pointer.Int64(65532),
 								RunAsGroup:   pointer.Int64(65532),
 								FSGroup:      pointer.Int64(65532),
@@ -436,7 +437,7 @@ subjects:
 						{Name: managedResourceSecretName},
 					},
 					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-					KeepObjects:  pointer.Bool(false),
+					KeepObjects:  ptr.To(false),
 				},
 			}
 		})
@@ -471,7 +472,7 @@ subjects:
 						SecretRefs: []corev1.LocalObjectReference{{
 							Name: managedResource.Spec.SecretRefs[0].Name,
 						}},
-						KeepObjects: pointer.Bool(false),
+						KeepObjects: ptr.To(false),
 					},
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -480,7 +481,7 @@ subjects:
 				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 				Expect(managedResourceSecret.Data).To(HaveLen(2))
 				Expect(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_target_kube-scheduler.yaml"]).To(Equal([]byte(clusterRoleBinding1YAML)))

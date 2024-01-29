@@ -22,7 +22,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -84,7 +84,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 
 		if requiredTypes.Has(resource.Type) {
-			required = pointer.Bool(true)
+			required = ptr.To(true)
 			requiredKindTypes.Insert(fmt.Sprintf("%s/%s", resource.Kind, resource.Type))
 		}
 	}
@@ -98,7 +98,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 
 		// if required wasn't set yet then but all kinds were calculated then the installation is no longer required
-		required = pointer.Bool(false)
+		required = ptr.To(false)
 		message = "no extension objects exist in the seed having the kind/type combinations the controller is responsible for"
 	} else if *required {
 		message = fmt.Sprintf("extension objects still exist in the seed: %+v", requiredKindTypes.UnsortedList())

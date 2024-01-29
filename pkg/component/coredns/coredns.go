@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -178,7 +179,7 @@ func (c *coreDNS) computeResourcesData() (map[string][]byte, error) {
 				Name:      "coredns",
 				Namespace: metav1.NamespaceSystem,
 			},
-			AutomountServiceAccountToken: pointer.Bool(false),
+			AutomountServiceAccountToken: ptr.To(false),
 		}
 
 		clusterRole = &rbacv1.ClusterRole{
@@ -373,7 +374,7 @@ import custom/*.server
 						ServiceAccountName: serviceAccount.Name,
 						DNSPolicy:          corev1.DNSDefault,
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsNonRoot:       pointer.Bool(true),
+							RunAsNonRoot:       ptr.To(true),
 							RunAsUser:          pointer.Int64(65534),
 							FSGroup:            pointer.Int64(1),
 							SupplementalGroups: []int64{1},
@@ -407,11 +408,11 @@ import custom/*.server
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: pointer.Bool(false),
+								AllowPrivilegeEscalation: ptr.To(false),
 								Capabilities: &corev1.Capabilities{
 									Drop: []corev1.Capability{"all"},
 								},
-								ReadOnlyRootFilesystem: pointer.Bool(true),
+								ReadOnlyRootFilesystem: ptr.To(true),
 							},
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
@@ -485,7 +486,7 @@ import custom/*.server
 											Name: configMapCustom.Name,
 										},
 										DefaultMode: pointer.Int32(420),
-										Optional:    pointer.Bool(true),
+										Optional:    ptr.To(true),
 									},
 								},
 							},
@@ -500,7 +501,7 @@ import custom/*.server
 				Name:      "coredns-autoscaler",
 				Namespace: metav1.NamespaceSystem,
 			},
-			AutomountServiceAccountToken: pointer.Bool(false),
+			AutomountServiceAccountToken: ptr.To(false),
 		}
 
 		clusterProportionalDNSAutoscalerClusterRole = &rbacv1.ClusterRole{
@@ -567,7 +568,7 @@ import custom/*.server
 						PriorityClassName:  "system-cluster-critical",
 						ServiceAccountName: clusterProportionalDNSAutoscalerServiceAccount.Name,
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsNonRoot:       pointer.Bool(true),
+							RunAsNonRoot:       ptr.To(true),
 							RunAsUser:          pointer.Int64(65534),
 							SupplementalGroups: []int64{65534},
 							FSGroup:            pointer.Int64(65534),
@@ -589,11 +590,11 @@ import custom/*.server
 								"--v=2",
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: pointer.Bool(false),
+								AllowPrivilegeEscalation: ptr.To(false),
 								Capabilities: &corev1.Capabilities{
 									Drop: []corev1.Capability{"all"},
 								},
-								ReadOnlyRootFilesystem: pointer.Bool(true),
+								ReadOnlyRootFilesystem: ptr.To(true),
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{

@@ -28,7 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -155,7 +155,7 @@ var _ = Describe("operatingsystemconfig", func() {
 				botanist.Shoot.Purpose = "development"
 				botanist.Config = &config.GardenletConfiguration{
 					Logging: &config.Logging{
-						Enabled: pointer.Bool(true),
+						Enabled: ptr.To(true),
 						ShootNodeLogging: &config.ShootNodeLogging{
 							ShootPurposes: []gardencore.ShootPurpose{"evaluation", "development"},
 						},
@@ -447,7 +447,7 @@ metadata:
 										corev1.LocalObjectReference{Name: "managedresource-shoot-cloud-config-rbac-94106240"},
 									))
 									Expect(obj.Spec.InjectLabels).To(Equal(map[string]string{"shoot.gardener.cloud/no-cleanup": "true"}))
-									Expect(obj.Spec.KeepObjects).To(Equal(pointer.Bool(false)))
+									Expect(obj.Spec.KeepObjects).To(Equal(ptr.To(false)))
 									return nil
 								})
 
@@ -675,7 +675,7 @@ metadata:
 								{Name: expectedMRSecretRBAC.Name},
 							},
 							InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-							KeepObjects:  pointer.Bool(false),
+							KeepObjects:  ptr.To(false),
 						},
 					}
 					utilruntime.Must(references.InjectAnnotations(expectedManagedResource))

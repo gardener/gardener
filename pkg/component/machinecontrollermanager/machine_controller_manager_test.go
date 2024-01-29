@@ -33,6 +33,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -98,7 +99,7 @@ var _ = Describe("MachineControllerManager", func() {
 				Name:      "machine-controller-manager",
 				Namespace: namespace,
 			},
-			AutomountServiceAccountToken: pointer.Bool(false),
+			AutomountServiceAccountToken: ptr.To(false),
 		}
 
 		unsupportedClusterRoleBindingSeed = &rbacv1.ClusterRoleBinding{
@@ -113,8 +114,8 @@ var _ = Describe("MachineControllerManager", func() {
 					Kind:               "Namespace",
 					Name:               namespace,
 					UID:                namespaceUID,
-					Controller:         pointer.Bool(true),
-					BlockOwnerDeletion: pointer.Bool(true),
+					Controller:         ptr.To(true),
+					BlockOwnerDeletion: ptr.To(true),
 				}},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -141,8 +142,8 @@ var _ = Describe("MachineControllerManager", func() {
 					Kind:               "Namespace",
 					Name:               namespace,
 					UID:                namespaceUID,
-					Controller:         pointer.Bool(true),
-					BlockOwnerDeletion: pointer.Bool(true),
+					Controller:         ptr.To(true),
+					BlockOwnerDeletion: ptr.To(true),
 				}},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -499,7 +500,7 @@ subjects:
 				},
 			},
 			Type:      corev1.SecretTypeOpaque,
-			Immutable: pointer.Bool(true),
+			Immutable: ptr.To(true),
 			Data: map[string][]byte{
 				"clusterrole____gardener.cloud_target_machine-controller-manager.yaml":            []byte(clusterRoleYAML),
 				"clusterrolebinding____gardener.cloud_target_machine-controller-manager.yaml":     []byte(clusterRoleBindingYAML),
@@ -520,7 +521,7 @@ subjects:
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
 				SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}},
 				InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-				KeepObjects:  pointer.Bool(false),
+				KeepObjects:  ptr.To(false),
 			},
 		}
 	})

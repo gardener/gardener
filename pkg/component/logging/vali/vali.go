@@ -35,6 +35,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -632,7 +633,7 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 						Labels: getLabels(),
 					},
 					Spec: corev1.PodSpec{
-						AutomountServiceAccountToken: pointer.Bool(false),
+						AutomountServiceAccountToken: ptr.To(false),
 						SecurityContext: &corev1.PodSecurityContext{
 							FSGroup:             pointer.Int64(valiUserAndGroupId),
 							FSGroupChangePolicy: &fsGroupChangeOnRootMismatch,
@@ -648,9 +649,9 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 									valiMountPathInitScript + valiDataKeyInitScript + " || true",
 								},
 								SecurityContext: &corev1.SecurityContext{
-									Privileged:   pointer.Bool(true),
+									Privileged:   ptr.To(true),
 									RunAsUser:    pointer.Int64(0),
-									RunAsNonRoot: pointer.Bool(false),
+									RunAsNonRoot: ptr.To(false),
 									RunAsGroup:   pointer.Int64(0),
 								},
 								VolumeMounts: []corev1.VolumeMount{
@@ -718,8 +719,8 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 								SecurityContext: &corev1.SecurityContext{
 									RunAsUser:              pointer.Int64(valiUserAndGroupId),
 									RunAsGroup:             pointer.Int64(valiUserAndGroupId),
-									RunAsNonRoot:           pointer.Bool(true),
-									ReadOnlyRootFilesystem: pointer.Bool(true),
+									RunAsNonRoot:           ptr.To(true),
+									ReadOnlyRootFilesystem: ptr.To(true),
 								},
 							},
 							{
@@ -754,8 +755,8 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 								SecurityContext: &corev1.SecurityContext{
 									RunAsUser:              pointer.Int64(valiUserAndGroupId),
 									RunAsGroup:             pointer.Int64(valiUserAndGroupId),
-									RunAsNonRoot:           pointer.Bool(true),
-									ReadOnlyRootFilesystem: pointer.Bool(true),
+									RunAsNonRoot:           ptr.To(true),
+									ReadOnlyRootFilesystem: ptr.To(true),
 								},
 							},
 						},
@@ -826,8 +827,8 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 				SecurityContext: &corev1.SecurityContext{
 					RunAsUser:              pointer.Int64(65532),
 					RunAsGroup:             pointer.Int64(65534),
-					RunAsNonRoot:           pointer.Bool(true),
-					ReadOnlyRootFilesystem: pointer.Bool(true),
+					RunAsNonRoot:           ptr.To(true),
+					ReadOnlyRootFilesystem: ptr.To(true),
 				},
 			},
 			corev1.Container{
