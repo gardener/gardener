@@ -1,6 +1,6 @@
 ---
 title: Resource Manager
-description: Learn more about the component that creates, updates, and deletes Kubernetes resources in a target cluster
+description: Set of controllers with different responsibilities running once per seed and once per shoot
 ---
 
 # Gardener Resource Manager

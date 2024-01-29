@@ -1,6 +1,6 @@
 ---
 title: Scheduler
-description: Understand the the configuration and flow of the controller that assigns a seed cluster to newly created shoots
+description: Understand the configuration and flow of the controller that assigns a seed cluster to newly created shoots
 ---
 
 # Gardener Scheduler

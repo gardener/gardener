@@ -1,6 +1,6 @@
 ---
 title: gardenlet
-description: Understand how Gardener can manage seed clusters decentrally
+description: Understand how the gardenlet, the primary "agent" on every seed cluster, works and learn more about the different Gardener components
 ---
 
 # gardenlet

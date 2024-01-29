@@ -1,6 +1,6 @@
 ---
 title: Node Agent
-description: How Gardener bootstraps machines into worker nodes and how it installs and maintains gardener-managed node-specific components.
+description: How Gardener bootstraps machines into worker nodes and how it installs and maintains gardener-managed node-specific components
 ---
 
 # Gardener Node Agent
