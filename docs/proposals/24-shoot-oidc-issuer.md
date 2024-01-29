@@ -53,15 +53,17 @@ This proposal consists of three parts that together will achieve the mentioned g
 
 ### Static validation
 
-Static validation rule will be introduced enforcing that `shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.Issuer` is not set when the shoot is annotated with `gardener.cloud/managed-issuer: true`. The rule will also assure that once present the annotation cannot be removed from a shoot.
+Static validation rule will be introduced enforcing that `shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.Issuer` is not set when the shoot is annotated with `gardener.cloud/managed-issuer: true`. This annotation will be incompatible with workerless shoots, as they do not have nodes and they do not run any workloads. The rule will also assure that once present the annotation cannot be removed from a shoot.
 
 ```go
 if oldShoot.Annotations["gardener.cloud/managed-issuer"] == "true" {
     // ensure that the new shoot also has this annotation
     // ensure that newShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.Issuer is not set
+    // ensure that the shoot is not configured as workerless
     newShoot.Annotations["gardener.cloud/managed-issuer"] = "true"
 } else if newShoot.Annotations["gardener.cloud/managed-issuer"] == "true" {
     // ensure that newShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.Issuer is not set
+    // ensure that the shoot is not configured as workerless
 }
 ```
 
