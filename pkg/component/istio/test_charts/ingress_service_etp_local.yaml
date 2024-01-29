@@ -22,3 +22,4 @@ spec:
   - name: foo
     port: 999
     targetPort: 999
+  externalTrafficPolicy: Local

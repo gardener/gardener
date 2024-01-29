@@ -22,3 +22,7 @@ spec:
   - name: foo
     port: 999
     targetPort: 999
+  ipFamilies:
+  - IPv6
+  - IPv4
+  ipFamilyPolicy: PreferDualStack
