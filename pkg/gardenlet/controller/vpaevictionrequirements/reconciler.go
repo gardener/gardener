@@ -60,7 +60,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	log.Info("Reconciling")
 	if !metav1.HasLabel(vpa.ObjectMeta, constants.LabelVPAEvictionRequirementDownscaleRestriction) {
-		err := fmt.Errorf("label %q not found, although marker label %q is present", constants.LabelVPAEvictionRequirementDownscaleRestriction, constants.LabelVPAEvictionRequirementsController)
+		err := fmt.Errorf("label %s not found, although marker label %s is present", constants.LabelVPAEvictionRequirementDownscaleRestriction, constants.LabelVPAEvictionRequirementsController)
 		log.Error(err, "Error while parsing the label value:")
 		// No need to retry reconciling this VPA until it has been updated with the label, therefore not returning the error
 		return reconcile.Result{}, nil
@@ -74,7 +74,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	case constants.EvictionRequirementInMaintenanceWindowOnly:
 		return r.reconcileVPAForDownscaleInMaintenanceOnly(ctx, log, vpa)
 	default:
-		err := fmt.Errorf("unsupported label value found: %q, supported are only %q and %q", value, constants.EvictionRequirementNever, constants.EvictionRequirementInMaintenanceWindowOnly)
+		err := fmt.Errorf("unsupported label value found: %s, supported are only %s and %s", value, constants.EvictionRequirementNever, constants.EvictionRequirementInMaintenanceWindowOnly)
 		log.Error(err, "Error while parsing the label value")
 		// No need to retry reconciling this VPA until it has been updated with the label, therefore not returning the error
 		return reconcile.Result{}, nil
@@ -92,7 +92,7 @@ func (r *Reconciler) reconcileVPAForDownscaleInMaintenanceOnly(ctx context.Conte
 	windowAnnotation := vpa.GetAnnotations()[constants.AnnotationShootMaintenanceWindow]
 	splitWindowAnnotation := strings.Split(windowAnnotation, ",")
 	if len(splitWindowAnnotation) != 2 {
-		err := fmt.Errorf("error during parsing the maintenance window from annotation. Value is not in format '<begin>,<end>': %q", windowAnnotation)
+		err := fmt.Errorf("error during parsing the maintenance window from annotation. Value is not in format '<begin>,<end>': %s", windowAnnotation)
 		log.Error(err, "Error during reconciling for downscaling in maintenance only")
 		// No need to retry reconciling this VPA until it has been updated with a fixed annotation, therefore not returning the error
 		return reconcile.Result{}, nil
