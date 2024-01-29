@@ -1,6 +1,6 @@
 ---
 title: Backup and Restore
-description: Understand the backup and restore configuration of Gardener
+description: Understand the etcd backup and restore capabilities of Gardener
 categories:
   - Users
 ---

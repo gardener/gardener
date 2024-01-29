@@ -1,6 +1,6 @@
 ---
 title: APIServer Admission Plugins
-description: A list of all existing admission plugins together with their responsibilities
+description: A list of all gardener managed admission plugins together with their responsibilities
 ---
 
 # Admission Plugins
