@@ -36,6 +36,7 @@ import (
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	admissionpluginsvalidation "github.com/gardener/gardener/pkg/utils/validation/admissionplugins"
 )
 
@@ -171,10 +172,15 @@ func (shootStrategy) Validate(_ context.Context, obj runtime.Object) field.Error
 func (shootStrategy) Canonicalize(obj runtime.Object) {
 	shoot := obj.(*core.Shoot)
 
+	gardenerutils.MaintainSeedNameLabels(shoot, shoot.Spec.SeedName, shoot.Status.SeedName)
 	cleanupAdmissionPlugins(shoot)
 }
 
 func cleanupAdmissionPlugins(shoot *core.Shoot) {
+	if shoot.Spec.Kubernetes.KubeAPIServer == nil {
+		return
+	}
+
 	var (
 		admissionPlugins      []core.AdmissionPlugin
 		shootAdmissionPlugins = shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins

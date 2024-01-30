@@ -23,18 +23,23 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	shootregistry "github.com/gardener/gardener/pkg/registry/core/shoot"
+	. "github.com/gardener/gardener/pkg/registry/core/shoot"
 )
 
 var _ = Describe("Strategy", func() {
+	var strategy rest.RESTCreateUpdateStrategy
+
+	BeforeEach(func() {
+		strategy = NewStrategy(0)
+	})
+
 	Describe("#Validate", func() {
-		var (
-			shoot *core.Shoot
-		)
+		var shoot *core.Shoot
 
 		BeforeEach(func() {
 			shoot = &core.Shoot{
@@ -57,9 +62,7 @@ var _ = Describe("Strategy", func() {
 		})
 
 		It("should allow an empty worker list if WorkerlessShoots featuregate is enabled", func() {
-			errorList := shootregistry.NewStrategy(0).Validate(context.TODO(), shoot)
-
-			Expect(errorList).To(BeEmpty())
+			Expect(strategy.Validate(context.TODO(), shoot)).To(BeEmpty())
 		})
 	})
 
@@ -81,7 +84,7 @@ var _ = Describe("Strategy", func() {
 
 			It("should not allow change of seedName on shoot spec update", func() {
 				newShoot.Spec.SeedName = pointer.String("new-seed")
-				shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 
 				Expect(newShoot.Spec.SeedName).To(Equal(oldShoot.Spec.SeedName))
 			})
@@ -104,7 +107,7 @@ var _ = Describe("Strategy", func() {
 						mutateNewShoot(newShoot)
 					}
 
-					shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+					strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 
 					expectedGeneration := oldShoot.Generation
 					if shouldIncreaseGeneration {
@@ -158,7 +161,7 @@ var _ = Describe("Strategy", func() {
 							mutateNewShoot(newShoot)
 						}
 
-						shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+						strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 
 						expectedGeneration := oldShoot.Generation
 						if shouldIncreaseGeneration {
@@ -301,7 +304,7 @@ var _ = Describe("Strategy", func() {
 					newShoot := oldShoot.DeepCopy()
 					newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: operationAnnotation}
 
-					shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+					strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 
 					expectedGeneration := oldShoot.Generation
 					if shouldIncreaseGeneration {
@@ -425,32 +428,48 @@ var _ = Describe("Strategy", func() {
 		var shoot *core.Shoot
 
 		BeforeEach(func() {
-			shoot = &core.Shoot{
-				Spec: core.ShootSpec{
-					Kubernetes: core.Kubernetes{
-						Version: "1.24.0",
-						KubeAPIServer: &core.KubeAPIServerConfig{
-							AdmissionPlugins: []core.AdmissionPlugin{
-								{
-									Name:   "NodeRestriction",
-									Config: &runtime.RawExtension{Raw: []byte("bar")},
-								},
-								{
-									Name:     "PodSecurityPolicy",
-									Disabled: pointer.Bool(true),
-								},
-								{
-									Name:   "PodSecurity",
-									Config: &runtime.RawExtension{Raw: []byte("foo")},
-								},
-							},
-						},
-					},
-				},
-			}
+			shoot = &core.Shoot{}
+		})
+
+		Context("seed names", func() {
+			It("should correctly add the seed labels", func() {
+				metav1.SetMetaDataLabel(&shoot.ObjectMeta, "foo", "bar")
+				metav1.SetMetaDataLabel(&shoot.ObjectMeta, "seed.gardener.cloud/foo", "true")
+				shoot.Spec.SeedName = pointer.String("spec-seed")
+				shoot.Status.SeedName = pointer.String("status-seed")
+
+				strategy.Canonicalize(shoot)
+
+				Expect(shoot.Labels).To(Equal(map[string]string{
+					"foo":                             "bar",
+					"seed.gardener.cloud/spec-seed":   "true",
+					"seed.gardener.cloud/status-seed": "true",
+				}))
+			})
 		})
 
 		Context("PluginsInMigration", func() {
+			BeforeEach(func() {
+				shoot.Spec.Kubernetes = core.Kubernetes{
+					Version: "1.24.0",
+					KubeAPIServer: &core.KubeAPIServerConfig{
+						AdmissionPlugins: []core.AdmissionPlugin{
+							{
+								Name:   "NodeRestriction",
+								Config: &runtime.RawExtension{Raw: []byte("bar")},
+							},
+							{
+								Name:     "PodSecurityPolicy",
+								Disabled: pointer.Bool(true),
+							},
+							{
+								Name:   "PodSecurity",
+								Config: &runtime.RawExtension{Raw: []byte("foo")},
+							},
+						},
+					},
+				}
+			})
 
 			Context("k8s version >=1.25", func() {
 				BeforeEach(func() {
@@ -458,7 +477,7 @@ var _ = Describe("Strategy", func() {
 				})
 
 				It("should cleanup PodSecurityPolicy from the admission plugins list", func() {
-					shootregistry.NewStrategy(0).Canonicalize(shoot)
+					strategy.Canonicalize(shoot)
 
 					Expect(shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins).To(ConsistOf(
 						core.AdmissionPlugin{
@@ -479,7 +498,7 @@ var _ = Describe("Strategy", func() {
 				})
 
 				It("should not cleanup PodSecurityPolicy from the admission plugins list", func() {
-					shootregistry.NewStrategy(0).Canonicalize(shoot)
+					strategy.Canonicalize(shoot)
 
 					Expect(shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins).To(ConsistOf(
 						core.AdmissionPlugin{
@@ -503,7 +522,7 @@ var _ = Describe("Strategy", func() {
 
 var _ = Describe("ToSelectableFields", func() {
 	It("should return correct fields", func() {
-		result := shootregistry.ToSelectableFields(newShoot("foo"))
+		result := ToSelectableFields(newShoot("foo"))
 
 		Expect(result).To(HaveLen(5))
 		Expect(result.Has(core.ShootSeedName)).To(BeTrue())
@@ -517,12 +536,12 @@ var _ = Describe("ToSelectableFields", func() {
 
 var _ = Describe("GetAttrs", func() {
 	It("should return error when object is not Shoot", func() {
-		_, _, err := shootregistry.GetAttrs(&core.Seed{})
+		_, _, err := GetAttrs(&core.Seed{})
 		Expect(err).To(HaveOccurred())
 	})
 
 	It("should return correct result", func() {
-		ls, fs, err := shootregistry.GetAttrs(newShoot("foo"))
+		ls, fs, err := GetAttrs(newShoot("foo"))
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ls).To(HaveLen(1))
@@ -533,7 +552,7 @@ var _ = Describe("GetAttrs", func() {
 
 var _ = Describe("SeedNameTriggerFunc", func() {
 	It("should return spec.seedName", func() {
-		actual := shootregistry.SeedNameTriggerFunc(newShoot("foo"))
+		actual := SeedNameTriggerFunc(newShoot("foo"))
 		Expect(actual).To(Equal("foo"))
 	})
 })
@@ -543,7 +562,7 @@ var _ = Describe("MatchShoot", func() {
 		ls, _ := labels.Parse("app=test")
 		fs := fields.OneTermEqualSelector(core.ShootSeedName, "foo")
 
-		result := shootregistry.MatchShoot(ls, fs)
+		result := MatchShoot(ls, fs)
 
 		Expect(result.Label).To(Equal(ls))
 		Expect(result.Field).To(Equal(fs))

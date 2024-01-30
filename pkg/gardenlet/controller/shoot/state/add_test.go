@@ -38,46 +38,6 @@ var _ = Describe("Add", func() {
 		shoot = &gardencorev1beta1.Shoot{}
 	})
 
-	Describe("#SeedNamePredicate", func() {
-		var p predicate.Predicate
-
-		BeforeEach(func() {
-			p = reconciler.SeedNamePredicate()
-		})
-
-		It("should return false because new object is no shoot", func() {
-			Expect(p.Create(event.CreateEvent{})).To(BeFalse())
-			Expect(p.Update(event.UpdateEvent{})).To(BeFalse())
-			Expect(p.Delete(event.DeleteEvent{})).To(BeFalse())
-			Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
-		})
-
-		It("should return false because seed name is not set", func() {
-			Expect(p.Create(event.CreateEvent{Object: shoot})).To(BeFalse())
-			Expect(p.Update(event.UpdateEvent{ObjectNew: shoot})).To(BeFalse())
-			Expect(p.Delete(event.DeleteEvent{Object: shoot})).To(BeFalse())
-			Expect(p.Generic(event.GenericEvent{Object: shoot})).To(BeFalse())
-		})
-
-		It("should return false because seed name does not match", func() {
-			shoot.Spec.SeedName = pointer.String("some-seed")
-
-			Expect(p.Create(event.CreateEvent{Object: shoot})).To(BeFalse())
-			Expect(p.Update(event.UpdateEvent{ObjectNew: shoot})).To(BeFalse())
-			Expect(p.Delete(event.DeleteEvent{Object: shoot})).To(BeFalse())
-			Expect(p.Generic(event.GenericEvent{Object: shoot})).To(BeFalse())
-		})
-
-		It("should return true because seed name matches", func() {
-			shoot.Spec.SeedName = &seedName
-
-			Expect(p.Create(event.CreateEvent{Object: shoot})).To(BeTrue())
-			Expect(p.Update(event.UpdateEvent{ObjectNew: shoot})).To(BeTrue())
-			Expect(p.Delete(event.DeleteEvent{Object: shoot})).To(BeTrue())
-			Expect(p.Generic(event.GenericEvent{Object: shoot})).To(BeTrue())
-		})
-	})
-
 	Describe("#SeedNameChangedPredicate", func() {
 		var p predicate.Predicate
 
