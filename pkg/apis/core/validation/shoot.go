@@ -2031,7 +2031,7 @@ func ValidateSystemComponentWorkers(workers []core.Worker, kubernetesVersion str
 	}
 
 	if !atLeastOnePoolWithAllowedSystemComponents {
-		allErrs = append(allErrs, field.Forbidden(fldPath, "at least one active worker pool with allowSystemComponents=true needed"))
+		allErrs = append(allErrs, field.Forbidden(fldPath, "at least one active (workers[i].maximum > 0) worker pool with systemComponents.allow=true needed"))
 	}
 
 	return allErrs
