@@ -605,30 +605,21 @@ func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautos
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, vpa, func() error {
 		var scaleDownUpdateMode *string
 
-		vpaLabels := vpa.GetLabels()
-		if vpaLabels == nil {
-			vpaLabels = map[string]string{}
-		}
-		vpaAnnotations := vpa.GetAnnotations()
-		if vpaAnnotations == nil {
-			vpaAnnotations = map[string]string{}
-		}
-
-		vpaLabels[v1beta1constants.LabelRole] = "etcd-vpa-" + e.values.Role
+		metav1.SetMetaDataLabel(&vpa.ObjectMeta, v1beta1constants.LabelRole, "etcd-vpa-"+e.values.Role)
 		if e.values.HvpaConfig != nil {
 			scaleDownUpdateMode = e.values.HvpaConfig.ScaleDownUpdateMode
 		}
 		if pointer.StringDeref(scaleDownUpdateMode, "") == hvpav1alpha1.UpdateModeOff {
-			vpaLabels[v1beta1constants.LabelVPAEvictionRequirementsController] = v1beta1constants.EvictionRequirementManagedByController
-			vpaLabels[v1beta1constants.LabelVPAEvictionRequirementDownscaleRestriction] = v1beta1constants.EvictionRequirementNever
+			metav1.SetMetaDataLabel(&vpa.ObjectMeta, v1beta1constants.LabelVPAEvictionRequirementsController, v1beta1constants.EvictionRequirementManagedByController)
+			metav1.SetMetaDataLabel(&vpa.ObjectMeta, v1beta1constants.LabelVPAEvictionRequirementDownscaleRestriction, v1beta1constants.EvictionRequirementNever)
 		} else if pointer.StringDeref(scaleDownUpdateMode, "") == hvpav1alpha1.UpdateModeMaintenanceWindow {
-			vpaLabels[v1beta1constants.LabelVPAEvictionRequirementsController] = v1beta1constants.EvictionRequirementManagedByController
-			vpaLabels[v1beta1constants.LabelVPAEvictionRequirementDownscaleRestriction] = v1beta1constants.EvictionRequirementInMaintenanceWindowOnly
-			vpaAnnotations[v1beta1constants.AnnotationShootMaintenanceWindow] = e.values.HvpaConfig.MaintenanceTimeWindow.Begin + "," + e.values.HvpaConfig.MaintenanceTimeWindow.End
+			metav1.SetMetaDataLabel(&vpa.ObjectMeta, v1beta1constants.LabelVPAEvictionRequirementsController, v1beta1constants.EvictionRequirementManagedByController)
+			metav1.SetMetaDataLabel(&vpa.ObjectMeta, v1beta1constants.LabelVPAEvictionRequirementDownscaleRestriction, v1beta1constants.EvictionRequirementInMaintenanceWindowOnly)
+			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, v1beta1constants.AnnotationShootMaintenanceWindow, e.values.HvpaConfig.MaintenanceTimeWindow.Begin+","+e.values.HvpaConfig.MaintenanceTimeWindow.End)
 		} else {
-			delete(vpaLabels, v1beta1constants.LabelVPAEvictionRequirementDownscaleRestriction)
-			delete(vpaLabels, v1beta1constants.LabelVPAEvictionRequirementsController)
-			delete(vpaAnnotations, v1beta1constants.AnnotationShootMaintenanceWindow)
+			delete(vpa.GetLabels(), v1beta1constants.LabelVPAEvictionRequirementDownscaleRestriction)
+			delete(vpa.GetLabels(), v1beta1constants.LabelVPAEvictionRequirementsController)
+			delete(vpa.GetLabels(), v1beta1constants.AnnotationShootMaintenanceWindow)
 		}
 
 		vpa.Spec = vpaautoscalingv1.VerticalPodAutoscalerSpec{
@@ -657,9 +648,6 @@ func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautos
 				},
 			},
 		}
-
-		vpa.SetLabels(vpaLabels)
-		vpa.SetAnnotations(vpaAnnotations)
 
 		return nil
 	})

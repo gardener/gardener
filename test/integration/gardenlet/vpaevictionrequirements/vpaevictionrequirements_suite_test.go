@@ -39,9 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/vpaevictionrequirements"
 	"github.com/gardener/gardener/pkg/logger"
@@ -59,13 +57,10 @@ var (
 	ctx = context.Background()
 	log logr.Logger
 
-	restConfig *rest.Config
-	testEnv    *gardenerenvtest.GardenerTestEnvironment
-	testClient client.Client
-	mgrClient  client.Reader
-
+	restConfig    *rest.Config
+	testEnv       *envtest.Environment
+	testClient    client.Client
 	testNamespace *corev1.Namespace
-	project       *gardencorev1beta1.Project
 
 	fakeClock *testclock.FakeClock
 	testRunID string
@@ -76,16 +71,11 @@ var _ = BeforeSuite(func() {
 	log = logf.Log.WithName(testID)
 
 	By("Start test environment")
-	testEnv = &gardenerenvtest.GardenerTestEnvironment{
-		Environment: &envtest.Environment{
-			CRDInstallOptions: envtest.CRDInstallOptions{
-				Paths: []string{filepath.Join("..", "..", "..", "..", "pkg", "component", "vpa", "templates", "crd-autoscaling.k8s.io_verticalpodautoscalers.yaml")},
-			},
-			ErrorIfCRDPathMissing: true,
+	testEnv = &envtest.Environment{
+		CRDInstallOptions: envtest.CRDInstallOptions{
+			Paths: []string{filepath.Join("..", "..", "..", "..", "pkg", "component", "vpa", "templates", "crd-autoscaling.k8s.io_verticalpodautoscalers.yaml")},
 		},
-		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
-			Args: []string{"--disable-admission-plugins=DeletionConfirmation,Bastion,ResourceReferenceManager,ExtensionValidator,ShootDNS,ShootQuotaValidator,ShootTolerationRestriction,ShootValidator,SeedValidator"},
-		},
+		ErrorIfCRDPathMissing: true,
 	}
 
 	var err error
@@ -125,23 +115,6 @@ var _ = BeforeSuite(func() {
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	By("Create Project")
-	project = &gardencorev1beta1.Project{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "test-",
-		},
-		Spec: gardencorev1beta1.ProjectSpec{
-			Namespace: &testNamespace.Name,
-		},
-	}
-	Expect(testClient.Create(ctx, project)).To(Succeed())
-	log.Info("Created Project for test", "project", client.ObjectKeyFromObject(project))
-
-	DeferCleanup(func() {
-		By("Delete Project")
-		Expect(client.IgnoreNotFound(testClient.Delete(ctx, project))).To(Succeed())
-	})
-
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:  testScheme,
@@ -157,7 +130,6 @@ var _ = BeforeSuite(func() {
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
-	mgrClient = mgr.GetClient()
 
 	By("Register controller")
 	fakeClock = testclock.NewFakeClock(time.Now())
