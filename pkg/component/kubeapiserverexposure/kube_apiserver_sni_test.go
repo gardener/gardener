@@ -24,31 +24,30 @@ import (
 	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
 	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/version"
-	fakediscovery "k8s.io/client-go/discovery/fake"
-	"k8s.io/client-go/testing"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/test"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/kubeapiserverexposure"
 	comptest "github.com/gardener/gardener/pkg/component/test"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("#SNI", func() {
 	var (
-		ctx     context.Context
-		c       client.Client
-		applier kubernetes.Applier
+		ctx context.Context
+		c   client.Client
 
 		defaultDepWaiter component.DeployWaiter
 		namespace        = "test-namespace"
@@ -64,12 +63,15 @@ var _ = Describe("#SNI", func() {
 		expectedGateway               *istionetworkingv1beta1.Gateway
 		expectedVirtualService        *istionetworkingv1beta1.VirtualService
 		expectedEnvoyFilterObjectMeta metav1.ObjectMeta
+		expectedManagedResource       *resourcesv1alpha1.ManagedResource
 	)
 
 	BeforeEach(func() {
 		ctx = context.TODO()
 
 		s := runtime.NewScheme()
+		Expect(corev1.AddToScheme(s)).To(Succeed())
+		Expect(resourcesv1alpha1.AddToScheme(s)).To(Succeed())
 		Expect(istionetworkingv1beta1.AddToScheme(s)).To(Succeed())
 		Expect(istionetworkingv1alpha3.AddToScheme(s)).To(Succeed())
 		c = fake.NewClientBuilder().WithScheme(s).Build()
@@ -77,13 +79,6 @@ var _ = Describe("#SNI", func() {
 			APIServerClusterIP: "1.1.1.1",
 			NamespaceUID:       namespaceUID,
 		}
-
-		var err error
-		applier, err = test.NewTestApplier(c, &fakediscovery.FakeDiscovery{
-			Fake:               &testing.Fake{},
-			FakedServerVersion: &version.Info{GitVersion: "v1.25.0"},
-		})
-		Expect(err).NotTo(HaveOccurred())
 
 		expectedDestinationRule = &istionetworkingv1beta1.DestinationRule{
 			TypeMeta: metav1.TypeMeta{
@@ -138,7 +133,6 @@ var _ = Describe("#SNI", func() {
 				BlockOwnerDeletion: pointer.Bool(false),
 				Controller:         pointer.Bool(false),
 			}},
-			ResourceVersion: "1",
 		}
 		expectedGateway = &istionetworkingv1beta1.Gateway{
 			TypeMeta: metav1.TypeMeta{
@@ -201,10 +195,26 @@ var _ = Describe("#SNI", func() {
 				}},
 			},
 		}
+		expectedManagedResource = &resourcesv1alpha1.ManagedResource{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
+				Kind:       "ManagedResource",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "kube-apiserver-sni",
+				Namespace:       namespace,
+				ResourceVersion: "1",
+				Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
+			},
+			Spec: resourcesv1alpha1.ManagedResourceSpec{
+				Class:       pointer.String("seed"),
+				KeepObjects: pointer.Bool(false),
+			},
+		}
 	})
 
 	JustBeforeEach(func() {
-		defaultDepWaiter = NewSNI(c, applier, v1beta1constants.DeploymentNameKubeAPIServer, namespace, func() *SNIValues {
+		defaultDepWaiter = NewSNI(c, v1beta1constants.DeploymentNameKubeAPIServer, namespace, func() *SNIValues {
 			val := &SNIValues{
 				Hosts:          hosts,
 				APIServerProxy: apiServerProxyValues,
@@ -234,8 +244,23 @@ var _ = Describe("#SNI", func() {
 			Expect(actualVirtualService).To(BeComparableTo(expectedVirtualService, comptest.CmpOptsForVirtualService()))
 
 			if apiServerProxyValues != nil {
-				actualEnvoyFilter := &istionetworkingv1alpha3.EnvoyFilter{}
-				Expect(c.Get(ctx, kubernetesutils.Key(expectedEnvoyFilterObjectMeta.Namespace, expectedEnvoyFilterObjectMeta.Name), actualEnvoyFilter)).To(Succeed())
+				managedResource := &resourcesv1alpha1.ManagedResource{}
+				Expect(c.Get(ctx, kubernetesutils.Key(expectedManagedResource.Namespace, expectedManagedResource.Name), managedResource)).To(Succeed())
+				expectedManagedResource.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResource.Spec.SecretRefs[0].Name}}
+				utilruntime.Must(references.InjectAnnotations(expectedManagedResource))
+				Expect(managedResource).To(DeepEqual(expectedManagedResource))
+
+				managedResourceSecret := &corev1.Secret{}
+				Expect(c.Get(ctx, kubernetesutils.Key(expectedManagedResource.Namespace, expectedManagedResource.Spec.SecretRefs[0].Name), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecret.Data).To(HaveLen(1))
+				Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+
+				managedResourceEnvoyFilter, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["envoyfilter__istio-foo__test-namespace.yaml"], nil, &istionetworkingv1alpha3.EnvoyFilter{})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(managedResourceEnvoyFilter.GetObjectKind()).To(Equal(&metav1.TypeMeta{Kind: "EnvoyFilter", APIVersion: "networking.istio.io/v1alpha3"}))
+				actualEnvoyFilter := managedResourceEnvoyFilter.(*istionetworkingv1alpha3.EnvoyFilter)
 				// cannot validate the Spec as there is no meaningful way to unmarshal the data into the Golang structure
 				Expect(actualEnvoyFilter.ObjectMeta).To(DeepEqual(expectedEnvoyFilterObjectMeta))
 			}
@@ -264,14 +289,18 @@ var _ = Describe("#SNI", func() {
 		Expect(c.Get(ctx, kubernetesutils.Key(expectedDestinationRule.Namespace, expectedDestinationRule.Name), &istionetworkingv1beta1.DestinationRule{})).To(Succeed())
 		Expect(c.Get(ctx, kubernetesutils.Key(expectedGateway.Namespace, expectedGateway.Name), &istionetworkingv1beta1.Gateway{})).To(Succeed())
 		Expect(c.Get(ctx, kubernetesutils.Key(expectedVirtualService.Namespace, expectedVirtualService.Name), &istionetworkingv1beta1.VirtualService{})).To(Succeed())
-		Expect(c.Get(ctx, kubernetesutils.Key(expectedEnvoyFilterObjectMeta.Namespace, expectedEnvoyFilterObjectMeta.Name), &istionetworkingv1alpha3.EnvoyFilter{})).To(Succeed())
+		managedResource := &resourcesv1alpha1.ManagedResource{}
+		Expect(c.Get(ctx, kubernetesutils.Key(expectedManagedResource.Namespace, expectedManagedResource.Name), managedResource)).To(Succeed())
+		managedResourceSecretName := managedResource.Spec.SecretRefs[0].Name
+		Expect(c.Get(ctx, kubernetesutils.Key(expectedManagedResource.Namespace, managedResourceSecretName), &corev1.Secret{})).To(Succeed())
 
 		Expect(defaultDepWaiter.Destroy(ctx)).To(Succeed())
 
 		Expect(c.Get(ctx, kubernetesutils.Key(expectedDestinationRule.Namespace, expectedDestinationRule.Name), &istionetworkingv1beta1.DestinationRule{})).To(BeNotFoundError())
 		Expect(c.Get(ctx, kubernetesutils.Key(expectedGateway.Namespace, expectedGateway.Name), &istionetworkingv1beta1.Gateway{})).To(BeNotFoundError())
 		Expect(c.Get(ctx, kubernetesutils.Key(expectedVirtualService.Namespace, expectedVirtualService.Name), &istionetworkingv1beta1.VirtualService{})).To(BeNotFoundError())
-		Expect(c.Get(ctx, kubernetesutils.Key(expectedEnvoyFilterObjectMeta.Namespace, expectedEnvoyFilterObjectMeta.Name), &istionetworkingv1alpha3.EnvoyFilter{})).To(BeNotFoundError())
+		Expect(c.Get(ctx, kubernetesutils.Key(expectedManagedResource.Namespace, expectedManagedResource.Name), managedResource)).To(BeNotFoundError())
+		Expect(c.Get(ctx, kubernetesutils.Key(expectedManagedResource.Namespace, managedResourceSecretName), &corev1.Secret{})).To(BeNotFoundError())
 	})
 
 	Describe("#Wait", func() {
