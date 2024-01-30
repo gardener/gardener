@@ -891,7 +891,7 @@ func (v *vpnSeedServer) getEnvoyConfig() string {
 	var (
 		listenAddress   = "0.0.0.0"
 		listenAddressV6 = "::"
-		dnsLookupFamily = "V4_PREFERRED"
+		dnsLookupFamily = "ALL"
 	)
 
 	return `static_resources:
