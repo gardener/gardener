@@ -110,12 +110,17 @@ func (a *actuator) handleProvisionOSC(ctx context.Context, osc *extensionsv1alph
 	}
 	writeUnitsToDiskScript := operatingsystemconfig.UnitsToDiskScript(osc.Spec.Units)
 
-	return `#!/bin/bash
+	script := `#!/bin/bash
 ` + writeFilesToDiskScript + `
 ` + writeUnitsToDiskScript + `
 systemctl daemon-reload
-systemctl enable gardener-node-init && systemctl start gardener-node-init
-`, nil
+`
+	for _, unit := range osc.Spec.Units {
+		script += fmt.Sprintf(`systemctl enable '%s' && systemctl restart --no-block '%s'
+`, unit.Name, unit.Name)
+	}
+
+	return script, nil
 }
 
 func (a *actuator) handleReconcileOSC(_ *extensionsv1alpha1.OperatingSystemConfig) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
