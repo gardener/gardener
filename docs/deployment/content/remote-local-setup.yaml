@@ -24,7 +24,7 @@ spec:
           apk add bash bash-completion curl fzf g++ git jq less lsof make mandoc mc procps sed tmux tmux-doc yq vim go
           apk add --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing mount
           apk add --repository=http://dl-cdn.alpinelinux.org/alpine/edge/k9s k9s
-          echo golang            && curl -sLO "https://go.dev/dl/$(curl -sL https://golang.org/VERSION?m=text).linux-amd64.tar.gz" && tar -C /usr/local -xzf go1.*.linux-amd64.tar.gz
+          echo golang            && curl -sLO "https://go.dev/dl/$(curl -sL https://golang.org/VERSION?m=text | awk 'NR==1{print}').linux-amd64.tar.gz" && tar -C /usr/local -xzf go1.*.linux-amd64.tar.gz
           echo helm              && curl -sLO "https://get.helm.sh/helm-$(curl -sL https://api.github.com/repos/helm/helm/releases/latest | jq .tag_name -r)-linux-amd64.tar.gz" && tar -xzf helm-*-linux-amd64.tar.gz && mv linux-amd64/helm /usr/local/bin/helm
           echo kind              && curl -sL  "https://kind.sigs.k8s.io/dl/$(curl -sL https://api.github.com/repos/kubernetes-sigs/kind/releases/latest | jq .tag_name -r)/kind-linux-amd64" -o /usr/local/bin/kind && chmod +x /usr/local/bin/kind
           echo kns               && curl -sL  "https://raw.githubusercontent.com/blendle/kns/master/bin/kns" -o /usr/local/bin/kns && chmod +x /usr/local/bin/kns
@@ -37,7 +37,7 @@ spec:
                    | sed 's/ /\n/g' | sed 's/^/127.0.0.1 /' | sort >> /etc/hosts"
           echo 'source ~/.bashrc' > ~/.bash_profile
           cat > ~/.bashrc <<"EOF"
-            export PATH=$PATH:/usr/local/go/bin
+            export PATH=/usr/local/go/bin:$PATH
             export KUBECONFIG=~/gardener/example/gardener-local/kind/local/kubeconfig:/tmp/kubeconfig-shoot-local.yaml
             source <(kubectl completion bash)
             alias k=kubectl
@@ -64,7 +64,7 @@ spec:
           tmux split-window \; select-pane -T kind     ; sleep 1; tmux send "make kind-up # Set up KinD cluster (Garden and Seed)" \; select-layout even-vertical
           tmux split-window \; select-pane -T gardener ; sleep 1; tmux send "make gardener-up # Set up Gardener"\; select-layout even-vertical
           tmux split-window \; select-pane -T shoot    ; sleep 1; tmux send "kubectl apply -f example/provider-local/shoot.yaml # Create a new shoot cluster "\; select-layout even-vertical
-          tmux split-window \; select-pane -T config   ; sleep 1; tmux send "kubectl -n garden-local get secret local.kubeconfig -o jsonpath={.data.kubeconfig} | base64 -d > /tmp/kubeconfig-shoot-local.yaml" \; select-layout even-vertical
+          tmux split-window \; select-pane -T config   ; sleep 1; tmux send "./hack/usage/generate-admin-kubeconf.sh > /tmp/kubeconfig-shoot-local.yaml # Get Kubeconfig for Shoot" \; select-layout even-vertical
           tmux split-window \; select-pane -T config   ; sleep 1; tmux send "make test-e2e-local-simple" # Run simple e2e test (create and delete shoot) \; select-layout even-vertical
           touch /tmp/ready
           read
