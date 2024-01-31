@@ -1,11 +1,11 @@
 ---
-title: API Server
+title: Gardener API Server
 description: Understand the Gardener API server extension and the resources it exposes
 categories:
   - Users
 ---
 
-# Gardener API Server
+## Overview
 
 The Gardener API server is a Kubernetes-native extension based on its [aggregation layer](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/apiserver-aggregation/).
 It is registered via an `APIService` object and designed to run inside a Kubernetes cluster whose API it wants to extend.

@@ -3,7 +3,7 @@ title: APIServer Admission Plugins
 description: A list of all gardener managed admission plugins together with their responsibilities
 ---
 
-# Admission Plugins
+## Overview
 
 Similar to the kube-apiserver, the gardener-apiserver comes with a few in-tree managed admission plugins.
 If you want to get an overview of the what and why of admission plugins then [this document](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/) might be a good start.

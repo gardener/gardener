@@ -5,7 +5,7 @@ categories:
   - Users
 ---
 
-# Backup and Restore
+## Overview
 
 Kubernetes uses [etcd](https://etcd.io/) as the key-value store for its resource definitions. Gardener supports the backup and restore of etcd. It is the responsibility of the shoot owners to backup the workload data.
 

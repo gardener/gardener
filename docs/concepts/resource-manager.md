@@ -1,9 +1,9 @@
 ---
-title: Resource Manager
+title: Gardener Resource Manager
 description: Set of controllers with different responsibilities running once per seed and once per shoot
 ---
 
-# Gardener Resource Manager
+## Overview
 
 Initially, the `gardener-resource-manager` was a project similar to the [kube-addon-manager](https://github.com/kubernetes/kubernetes/tree/master/cluster/addons/addon-manager).
 It manages Kubernetes resources in a target cluster which means that it creates, updates, and deletes them.

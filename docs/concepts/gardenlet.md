@@ -3,7 +3,7 @@ title: gardenlet
 description: Understand how the gardenlet, the primary "agent" on every seed cluster, works and learn more about the different Gardener components
 ---
 
-# gardenlet
+## Overview
 
 Gardener is implemented using the [operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/):
 It uses custom controllers that act on our own custom resources,
