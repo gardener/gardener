@@ -183,7 +183,7 @@ type: Opaque
 Next, you can follow the same approach [described above](#additional-permissions).
 However, the `authorization.gardener.cloud/extensions-serviceaccount-selector` annotation should **not** contain `controllerregistration.core.gardener.cloud/name=<extension-name>` but rather custom labels, e.g. `foo=bar`.
 
-This way, the created `ServiceAccount` will only get the permissions of above `ClusterRole` and nothing else.
+This way, the created `ServiceAccount` will only get the permissions of [above `ClusterRole`](#additional-permissions) and nothing else.
 
 ## Renewing All Garden Access Secrets
 
