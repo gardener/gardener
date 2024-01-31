@@ -324,6 +324,12 @@ func (r *Reconciler) applyChangedUnits(ctx context.Context, log logr.Logger, uni
 			}
 		}
 
+		// TODO(rfranzke): Remove this when UseGardenerNodeAgent feature gate gets removed.
+		// Never enable `gardener-node-init.service` to avoid undesired restarts of `gardener-node-agent`
+		if unit.Name == nodeagentv1alpha1.InitUnitName {
+			unit.Enable = pointer.Bool(false)
+		}
+
 		if unit.Name == nodeagentv1alpha1.UnitName || pointer.BoolDeref(unit.Enable, true) {
 			if err := r.DBus.Enable(ctx, unit.Name); err != nil {
 				return fmt.Errorf("unable to enable unit %q: %w", unit.Name, err)
@@ -381,6 +387,12 @@ func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, n
 
 	for _, u := range units {
 		unit := u
+
+		// TODO(rfranzke): Remove this when UseGardenerNodeAgent feature gate gets removed.
+		// Never start `gardener-node-init.service` to avoid undesired restarts of `gardener-node-agent`
+		if unit.Name == nodeagentv1alpha1.InitUnitName {
+			unit.Enable = pointer.Bool(false)
+		}
 
 		if unit.Name == nodeagentv1alpha1.UnitName {
 			mustRestartGardenerNodeAgent = true
