@@ -97,9 +97,9 @@ var _ = Describe("Reconciler", func() {
 		}
 	})
 
-	Context("VPA is labeled with downscale-in-maintenance-window-only", func() {
+	Context("VPA is annotated with downscale-in-maintenance-window-only", func() {
 		BeforeEach(func() {
-			metav1.SetMetaDataLabel(&vpa.ObjectMeta, constants.LabelVPAEvictionRequirementDownscaleRestriction, constants.EvictionRequirementInMaintenanceWindowOnly)
+			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, constants.AnnotationVPAEvictionRequirementDownscaleRestriction, constants.EvictionRequirementInMaintenanceWindowOnly)
 		})
 		When("the Shoot is outside its maintenance window", func() {
 			BeforeEach(func() {
@@ -136,9 +136,9 @@ var _ = Describe("Reconciler", func() {
 		})
 	})
 
-	Context("the VPA is labeled with downscale-never", func() {
+	Context("the VPA is annotated with downscale-never", func() {
 		BeforeEach(func() {
-			metav1.SetMetaDataLabel(&vpa.ObjectMeta, constants.LabelVPAEvictionRequirementDownscaleRestriction, constants.EvictionRequirementNever)
+			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, constants.AnnotationVPAEvictionRequirementDownscaleRestriction, constants.EvictionRequirementNever)
 		})
 		It("should add an Evictionrequirement that prevents downscaling and not requeue", func() {
 			result, err := reconciler.Reconcile(ctx, request)
@@ -150,16 +150,16 @@ var _ = Describe("Reconciler", func() {
 		})
 	})
 
-	Context("VPA is not labeled with a downscale-restriction", func() {
+	Context("VPA is not annotated with a downscale-restriction", func() {
 		It("should log an error, but not return it, such that it doesn't retry", func() {
 			_, err := reconciler.Reconcile(ctx, request)
 			Expect(err).ToNot(HaveOccurred())
-			Eventually(logBuffer).Should(gbytes.Say(fmt.Sprintf("label %s not found, although marker label %s is present", constants.LabelVPAEvictionRequirementDownscaleRestriction, constants.LabelVPAEvictionRequirementsController)))
+			Eventually(logBuffer).Should(gbytes.Say(fmt.Sprintf("annotation %s not found, although marker label %s is present", constants.AnnotationVPAEvictionRequirementDownscaleRestriction, constants.LabelVPAEvictionRequirementsController)))
 		})
 	})
 	Context("VPA is not annotated with maintenance window, although downscale-restriction is set to in-maintenance-window-only", func() {
 		BeforeEach(func() {
-			metav1.SetMetaDataLabel(&vpa.ObjectMeta, constants.LabelVPAEvictionRequirementDownscaleRestriction, constants.EvictionRequirementInMaintenanceWindowOnly)
+			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, constants.AnnotationVPAEvictionRequirementDownscaleRestriction, constants.EvictionRequirementInMaintenanceWindowOnly)
 		})
 		It("should log an error, but not return it, such that it doesn't retry", func() {
 			_, err := reconciler.Reconcile(ctx, request)
@@ -169,7 +169,7 @@ var _ = Describe("Reconciler", func() {
 	})
 	Context("VPA is annotated incorrectly: maintenance window isn't splittable in <start>,<end>", func() {
 		BeforeEach(func() {
-			metav1.SetMetaDataLabel(&vpa.ObjectMeta, constants.LabelVPAEvictionRequirementDownscaleRestriction, constants.EvictionRequirementInMaintenanceWindowOnly)
+			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, constants.AnnotationVPAEvictionRequirementDownscaleRestriction, constants.EvictionRequirementInMaintenanceWindowOnly)
 			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, constants.AnnotationShootMaintenanceWindow, maintenanceWindowBegin+maintenanceWindowEnd)
 		})
 		It("should log an error, but not return it, such that it doesn't retry", func() {
@@ -180,7 +180,7 @@ var _ = Describe("Reconciler", func() {
 	})
 	Context("VPA is annotated with an un-parsable maintenance window time", func() {
 		BeforeEach(func() {
-			metav1.SetMetaDataLabel(&vpa.ObjectMeta, constants.LabelVPAEvictionRequirementDownscaleRestriction, constants.EvictionRequirementInMaintenanceWindowOnly)
+			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, constants.AnnotationVPAEvictionRequirementDownscaleRestriction, constants.EvictionRequirementInMaintenanceWindowOnly)
 			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, constants.AnnotationShootMaintenanceWindow, "unparseable start time"+","+maintenanceWindowEnd)
 		})
 		It("should log an error, but not return it, such that it doesn't retry", func() {

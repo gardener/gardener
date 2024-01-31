@@ -123,7 +123,7 @@ func AddToManager(
 	if err := shoot.AddToManager(ctx, mgr, gardenCluster, seedCluster, seedClientSet, shootClientMap, *cfg, identity, gardenClusterIdentity); err != nil {
 		return fmt.Errorf("failed adding Shoot controller: %w", err)
 	}
-	if err := (&vpaevictionrequirements.Reconciler{Config: *cfg.Controllers.VPAEvictionRequirements}).AddToManager(ctx, mgr, seedCluster); err != nil {
+	if err := (&vpaevictionrequirements.Reconciler{Config: *cfg.Controllers.VPAEvictionRequirements}).AddToManager(mgr, seedCluster); err != nil {
 		return fmt.Errorf("failed adding VPAEvictionRequirements controller: %w", err)
 	}
 

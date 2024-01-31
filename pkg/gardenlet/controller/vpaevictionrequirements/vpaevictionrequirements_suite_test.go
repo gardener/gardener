@@ -29,7 +29,7 @@ import (
 
 func TestVpaevictionrequirements(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Vpaevictionrequirements Suite")
+	RunSpecs(t, "VPAEvictionRequirements Suite")
 }
 
 var logBuffer *gbytes.Buffer

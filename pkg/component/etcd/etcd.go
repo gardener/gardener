@@ -553,7 +553,6 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}
 
 		vpa := e.emptyVerticalPodAutoscaler()
-
 		if err := e.reconcileVerticalPodAutoscaler(ctx, vpa, minAllowed, maxAllowed); err != nil {
 			return err
 		}
@@ -611,14 +610,14 @@ func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautos
 		}
 		if pointer.StringDeref(scaleDownUpdateMode, "") == hvpav1alpha1.UpdateModeOff {
 			metav1.SetMetaDataLabel(&vpa.ObjectMeta, v1beta1constants.LabelVPAEvictionRequirementsController, v1beta1constants.EvictionRequirementManagedByController)
-			metav1.SetMetaDataLabel(&vpa.ObjectMeta, v1beta1constants.LabelVPAEvictionRequirementDownscaleRestriction, v1beta1constants.EvictionRequirementNever)
+			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, v1beta1constants.AnnotationVPAEvictionRequirementDownscaleRestriction, v1beta1constants.EvictionRequirementNever)
 		} else if pointer.StringDeref(scaleDownUpdateMode, "") == hvpav1alpha1.UpdateModeMaintenanceWindow {
 			metav1.SetMetaDataLabel(&vpa.ObjectMeta, v1beta1constants.LabelVPAEvictionRequirementsController, v1beta1constants.EvictionRequirementManagedByController)
-			metav1.SetMetaDataLabel(&vpa.ObjectMeta, v1beta1constants.LabelVPAEvictionRequirementDownscaleRestriction, v1beta1constants.EvictionRequirementInMaintenanceWindowOnly)
+			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, v1beta1constants.AnnotationVPAEvictionRequirementDownscaleRestriction, v1beta1constants.EvictionRequirementInMaintenanceWindowOnly)
 			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, v1beta1constants.AnnotationShootMaintenanceWindow, e.values.HvpaConfig.MaintenanceTimeWindow.Begin+","+e.values.HvpaConfig.MaintenanceTimeWindow.End)
 		} else {
-			delete(vpa.GetLabels(), v1beta1constants.LabelVPAEvictionRequirementDownscaleRestriction)
 			delete(vpa.GetLabels(), v1beta1constants.LabelVPAEvictionRequirementsController)
+			delete(vpa.GetAnnotations(), v1beta1constants.AnnotationVPAEvictionRequirementDownscaleRestriction)
 			delete(vpa.GetLabels(), v1beta1constants.AnnotationShootMaintenanceWindow)
 		}
 

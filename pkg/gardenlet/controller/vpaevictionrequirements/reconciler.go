@@ -59,22 +59,22 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	log.Info("Reconciling")
-	if !metav1.HasLabel(vpa.ObjectMeta, constants.LabelVPAEvictionRequirementDownscaleRestriction) {
-		err := fmt.Errorf("label %s not found, although marker label %s is present", constants.LabelVPAEvictionRequirementDownscaleRestriction, constants.LabelVPAEvictionRequirementsController)
-		log.Error(err, "Error while parsing the label value:")
-		// No need to retry reconciling this VPA until it has been updated with the label, therefore not returning the error
+	if !metav1.HasAnnotation(vpa.ObjectMeta, constants.AnnotationVPAEvictionRequirementDownscaleRestriction) {
+		err := fmt.Errorf("annotation %s not found, although marker label %s is present", constants.AnnotationVPAEvictionRequirementDownscaleRestriction, constants.LabelVPAEvictionRequirementsController)
+		log.Error(err, "Error while getting the annotation value")
+		// No need to retry reconciling this VPA until it has been updated with the annotation, therefore not returning the error
 		return reconcile.Result{}, nil
 	}
 
-	value := vpa.GetLabels()[constants.LabelVPAEvictionRequirementDownscaleRestriction]
-	log.Info("Found the label "+constants.LabelVPAEvictionRequirementDownscaleRestriction, "value", value)
+	value := vpa.GetAnnotations()[constants.AnnotationVPAEvictionRequirementDownscaleRestriction]
+	log.Info("Found the annotation "+constants.AnnotationVPAEvictionRequirementDownscaleRestriction, "value", value)
 	switch value {
 	case constants.EvictionRequirementNever:
 		return r.reconcileVPAForDownscaleDisabled(ctx, log, vpa)
 	case constants.EvictionRequirementInMaintenanceWindowOnly:
 		return r.reconcileVPAForDownscaleInMaintenanceOnly(ctx, log, vpa)
 	default:
-		err := fmt.Errorf("unsupported label value found: %s, supported are only %s and %s", value, constants.EvictionRequirementNever, constants.EvictionRequirementInMaintenanceWindowOnly)
+		err := fmt.Errorf("unsupported label value found: %s, supported values are only %s and %s", value, constants.EvictionRequirementNever, constants.EvictionRequirementInMaintenanceWindowOnly)
 		log.Error(err, "Error while parsing the label value")
 		// No need to retry reconciling this VPA until it has been updated with the label, therefore not returning the error
 		return reconcile.Result{}, nil

@@ -19,7 +19,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -84,7 +83,7 @@ var _ = Describe("VPA EvictionRequirements controller tests", func() {
 			},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 				TargetRef:    &autoscalingv1.CrossVersionObjectReference{Name: targetDeployment.Name, APIVersion: "apps/v1", Kind: "Deployment"},
-				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{EvictionRequirements: []*vpaautoscalingv1.EvictionRequirement{}},
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{EvictionRequirements: nil},
 			},
 		}
 	})
@@ -107,9 +106,9 @@ var _ = Describe("VPA EvictionRequirements controller tests", func() {
 		})
 	})
 
-	Context("VPA is labeled with downscale-in-maintenance-window-only", func() {
+	Context("VPA is annotated with downscale-in-maintenance-window-only", func() {
 		BeforeEach(func() {
-			metav1.SetMetaDataLabel(&vpa.ObjectMeta, v1beta1constants.LabelVPAEvictionRequirementDownscaleRestriction, v1beta1constants.EvictionRequirementInMaintenanceWindowOnly)
+			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, v1beta1constants.AnnotationVPAEvictionRequirementDownscaleRestriction, v1beta1constants.EvictionRequirementInMaintenanceWindowOnly)
 		})
 
 		When("the Shoot is outside its maintenance window", func() {
@@ -120,11 +119,7 @@ var _ = Describe("VPA EvictionRequirements controller tests", func() {
 			It("should add an EvictionRequirement denying scaling down and requeue for the beginning of the next window", func() {
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(vpa), vpa)).To(Succeed())
-					g.Expect(vpa.Spec).To(MatchFields(IgnoreExtras, Fields{
-						"UpdatePolicy": PointTo(MatchFields(IgnoreExtras, Fields{
-							"EvictionRequirements": ConsistOf(upscaleOnlyRequirement),
-						})),
-					}))
+					g.Expect(vpa.Spec.UpdatePolicy.EvictionRequirements).To(ConsistOf(upscaleOnlyRequirement))
 				}).Should(Succeed())
 			})
 		})
@@ -138,11 +133,7 @@ var _ = Describe("VPA EvictionRequirements controller tests", func() {
 			It("should remove the EvictionRequirement and requeue for the end of the maintenance window", func() {
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(vpa), vpa)).To(Succeed())
-					g.Expect(vpa.Spec).To(MatchFields(IgnoreExtras, Fields{
-						"UpdatePolicy": PointTo(MatchFields(IgnoreExtras, Fields{
-							"EvictionRequirements": BeEmpty(),
-						})),
-					}))
+					g.Expect(vpa.Spec.UpdatePolicy.EvictionRequirements).To(BeEmpty())
 				}).Should(Succeed())
 			})
 		})
@@ -156,11 +147,7 @@ var _ = Describe("VPA EvictionRequirements controller tests", func() {
 			It("reconciles the VPA again", func() {
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(vpa), vpa)).To(Succeed())
-					g.Expect(vpa.Spec).To(MatchFields(IgnoreExtras, Fields{
-						"UpdatePolicy": PointTo(MatchFields(IgnoreExtras, Fields{
-							"EvictionRequirements": BeEmpty(),
-						})),
-					}))
+					g.Expect(vpa.Spec.UpdatePolicy.EvictionRequirements).To(BeEmpty())
 				}).Should(Succeed())
 
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(vpa), vpa)).To(Succeed())
@@ -169,40 +156,32 @@ var _ = Describe("VPA EvictionRequirements controller tests", func() {
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(vpa), vpa)).To(Succeed())
-					g.Expect(vpa.Spec).To(MatchFields(IgnoreExtras, Fields{
-						"UpdatePolicy": PointTo(MatchFields(IgnoreExtras, Fields{
-							"EvictionRequirements": ConsistOf(upscaleOnlyRequirement),
-						})),
-					}))
+					g.Expect(vpa.Spec.UpdatePolicy.EvictionRequirements).To(ConsistOf(upscaleOnlyRequirement))
 				}).Should(Succeed())
 			})
 		})
 	})
 
-	Context("VPA is labeled with downscale-never", func() {
+	Context("VPA is annotated with downscale-never", func() {
 		BeforeEach(func() {
-			metav1.SetMetaDataLabel(&vpa.ObjectMeta, v1beta1constants.LabelVPAEvictionRequirementDownscaleRestriction, v1beta1constants.EvictionRequirementNever)
+			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, v1beta1constants.AnnotationVPAEvictionRequirementDownscaleRestriction, v1beta1constants.EvictionRequirementNever)
 		})
 
 		It("should add an EvictionRequirement and not requeue, regardless of a Shoot's maintenance window", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(vpa), vpa)).To(Succeed())
-				g.Expect(vpa.Spec).To(MatchFields(IgnoreExtras, Fields{
-					"UpdatePolicy": PointTo(MatchFields(IgnoreExtras, Fields{
-						"EvictionRequirements": ConsistOf(upscaleOnlyRequirement),
-					})),
-				}))
+				g.Expect(vpa.Spec.UpdatePolicy.EvictionRequirements).To(ConsistOf(upscaleOnlyRequirement))
 			}).Should(Succeed())
 		})
 		When("VPA has an annotation indicating that the Shoot's maintenance window is now", func() {
+			BeforeEach(func() {
+				metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, v1beta1constants.AnnotationShootMaintenanceWindow, maintenanceWindowNow.Begin+","+maintenanceWindowNow.End)
+				vpa.Spec.UpdatePolicy.EvictionRequirements = upscaleOnlyRequirement
+			})
 			It("doesn't remove the EvictionRequirement", func() {
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(vpa), vpa)).To(Succeed())
-					g.Expect(vpa.Spec).To(MatchFields(IgnoreExtras, Fields{
-						"UpdatePolicy": PointTo(MatchFields(IgnoreExtras, Fields{
-							"EvictionRequirements": ConsistOf(upscaleOnlyRequirement),
-						})),
-					}))
+					g.Expect(vpa.Spec.UpdatePolicy.EvictionRequirements).To(ConsistOf(upscaleOnlyRequirement))
 				}).Should(Succeed())
 			})
 		})

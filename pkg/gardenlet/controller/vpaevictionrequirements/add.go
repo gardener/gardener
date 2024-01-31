@@ -15,7 +15,6 @@
 package vpaevictionrequirements
 
 import (
-	"context"
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,7 +37,7 @@ import (
 const ControllerName = "vpa-eviction-requirements"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(_ context.Context, mgr manager.Manager, seedCluster cluster.Cluster) error {
+func (r *Reconciler) AddToManager(mgr manager.Manager, seedCluster cluster.Cluster) error {
 	if r.SeedClient == nil {
 		r.SeedClient = seedCluster.GetClient()
 	}
