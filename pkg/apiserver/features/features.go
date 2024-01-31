@@ -26,6 +26,5 @@ func RegisterFeatureGates() {
 		features.IPv6SingleStack,
 		features.MutableShootSpecNetworkingNodes,
 		features.ShootForceDeletion,
-		features.WorkerlessShoots,
 	)))
 }

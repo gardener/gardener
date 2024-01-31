@@ -61,7 +61,7 @@ var _ = Describe("Strategy", func() {
 			}
 		})
 
-		It("should allow an empty worker list if WorkerlessShoots featuregate is enabled", func() {
+		It("should allow an empty worker list", func() {
 			Expect(strategy.Validate(context.TODO(), shoot)).To(BeEmpty())
 		})
 	})
