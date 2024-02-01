@@ -6,9 +6,6 @@ metadata:
 data:
   prometheus.yaml: |
 
-    global:
-      evaluation_interval: 1m
-      scrape_interval: 1m
     rule_files:
     - /etc/prometheus/rules/*.yaml
 

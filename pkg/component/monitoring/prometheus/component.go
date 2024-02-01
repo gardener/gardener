@@ -18,6 +18,7 @@ import (
 	"context"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -34,6 +35,14 @@ const (
 type Values struct {
 	// Name is the name of the prometheus. It will be used for the resource names of Prometheus and ManagedResource.
 	Name string
+	// Image defines the container image of prometheus.
+	Image string
+	// Version is the version of prometheus.
+	Version string
+	// PriorityClassName is the name of the priority class for the deployment.
+	PriorityClassName string
+	// StorageCapacity is the storage capacity of Prometheus.
+	StorageCapacity resource.Quantity
 }
 
 // New creates a new instance of DeployWaiter for the prometheus.
@@ -58,6 +67,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		p.serviceAccount(),
 		p.service(),
 		p.clusterRoleBinding(),
+		p.prometheus(),
 	)
 	if err != nil {
 		return err

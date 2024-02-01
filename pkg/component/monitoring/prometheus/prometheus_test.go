@@ -19,8 +19,10 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -49,6 +51,11 @@ var _ = Describe("Prometheus", func() {
 		namespace           = "some-namespace"
 		managedResourceName = "prometheus-" + name
 
+		image             = "some-image"
+		version           = "v1.2.3"
+		priorityClassName = "priority-class"
+		storageCapacity   = resource.MustParse("1337Gi")
+
 		fakeClient client.Client
 		deployer   component.DeployWaiter
 		values     Values
@@ -58,9 +65,12 @@ var _ = Describe("Prometheus", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
+		reloadStrategy = monitoringv1.HTTPReloadStrategyType
+
 		serviceAccount     *corev1.ServiceAccount
 		service            *corev1.Service
 		clusterRoleBinding *rbacv1.ClusterRoleBinding
+		prometheus         *monitoringv1.Prometheus
 	)
 
 	BeforeEach(func() {
@@ -69,7 +79,11 @@ var _ = Describe("Prometheus", func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
 		values = Values{
-			Name: name,
+			Name:              name,
+			Image:             image,
+			Version:           version,
+			PriorityClassName: priorityClassName,
+			StorageCapacity:   storageCapacity,
 		}
 
 		fakeOps = &retryfake.Ops{MaxAttempts: 2}
@@ -148,6 +162,71 @@ var _ = Describe("Prometheus", func() {
 				Namespace: namespace,
 			}},
 		}
+		prometheus = &monitoringv1.Prometheus{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "prometheus",
+					"role": "monitoring",
+					"name": name,
+				},
+			},
+			Spec: monitoringv1.PrometheusSpec{
+				Retention:          "1d",
+				RetentionSize:      "5GB",
+				EvaluationInterval: "1m",
+				CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
+					ScrapeInterval: "1m",
+					ReloadStrategy: &reloadStrategy,
+
+					PodMetadata: &monitoringv1.EmbeddedObjectMetadata{
+						Labels: map[string]string{
+							"networking.gardener.cloud/to-dns":                               "allowed",
+							"networking.gardener.cloud/to-runtime-apiserver":                 "allowed",
+							"networking.resources.gardener.cloud/to-all-seed-scrape-targets": "allowed",
+						},
+					},
+					PriorityClassName: priorityClassName,
+					Replicas:          ptr.To(int32(1)),
+					Image:             &image,
+					ImagePullPolicy:   corev1.PullIfNotPresent,
+					Version:           version,
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("10m"),
+							corev1.ResourceMemory: resource.MustParse("1000Mi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceMemory: resource.MustParse("2000Mi"),
+						},
+					},
+					ServiceAccountName: "prometheus-" + name,
+					SecurityContext:    &corev1.PodSecurityContext{RunAsUser: ptr.To(int64(0))},
+					Storage: &monitoringv1.StorageSpec{
+						VolumeClaimTemplate: monitoringv1.EmbeddedPersistentVolumeClaim{
+							EmbeddedObjectMetadata: monitoringv1.EmbeddedObjectMetadata{Name: "prometheus-db"},
+							Spec: corev1.PersistentVolumeClaimSpec{
+								AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+								Resources:   corev1.ResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceStorage: storageCapacity}},
+							},
+						},
+					},
+
+					ServiceMonitorSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"prometheus": name}},
+					PodMonitorSelector:     &metav1.LabelSelector{MatchLabels: map[string]string{"prometheus": name}},
+					ProbeSelector:          &metav1.LabelSelector{MatchLabels: map[string]string{"prometheus": name}},
+					ScrapeConfigSelector:   &metav1.LabelSelector{MatchLabels: map[string]string{"prometheus": name}},
+
+					ServiceMonitorNamespaceSelector: &metav1.LabelSelector{},
+					PodMonitorNamespaceSelector:     &metav1.LabelSelector{},
+					ProbeNamespaceSelector:          &metav1.LabelSelector{},
+					ScrapeConfigNamespaceSelector:   &metav1.LabelSelector{},
+				},
+				RuleSelector:          &metav1.LabelSelector{MatchLabels: map[string]string{"prometheus": name}},
+				RuleNamespaceSelector: &metav1.LabelSelector{},
+			},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -206,10 +285,11 @@ var _ = Describe("Prometheus", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(3))
+				Expect(managedResourceSecret.Data).To(HaveLen(4))
 				Expect(string(managedResourceSecret.Data["serviceaccount__some-namespace__prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(serviceAccount)))
 				Expect(string(managedResourceSecret.Data["service__some-namespace__prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
+				Expect(string(managedResourceSecret.Data["prometheus__some-namespace__"+name+".yaml"])).To(Equal(componenttest.Serialize(prometheus)))
 			})
 		})
 	})
