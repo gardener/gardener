@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controllerregistration_test
+package seed_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"

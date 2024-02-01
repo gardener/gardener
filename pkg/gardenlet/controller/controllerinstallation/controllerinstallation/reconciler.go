@@ -198,7 +198,7 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, fmt.Errorf("failed to reconcile generic garden kubeconfig: %w", err)
 	}
 
-	gardenAccessSecret, err := r.reconcileGardenAccessSecret(seedCtx, controllerInstallation.Name, namespace.Name)
+	gardenAccessSecret, err := r.reconcileGardenAccessSecret(seedCtx, controllerRegistration.Name, controllerInstallation.Name, namespace.Name)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to reconcile garden access secret: %w", err)
 	}
@@ -437,9 +437,10 @@ func (r *Reconciler) reconcileGenericGardenKubeconfig(ctx context.Context, names
 	return kubeconfigSecret.Name, client.IgnoreAlreadyExists(r.SeedClientSet.Client().Create(ctx, kubeconfigSecret))
 }
 
-func (r *Reconciler) reconcileGardenAccessSecret(ctx context.Context, controllerInstallationName string, namespace string) (*gardenerutils.AccessSecret, error) {
+func (r *Reconciler) reconcileGardenAccessSecret(ctx context.Context, controllerRegistrationName, controllerInstallationName string, namespace string) (*gardenerutils.AccessSecret, error) {
 	accessSecret := gardenerutils.NewGardenAccessSecret("extension", namespace).
-		WithServiceAccountName(v1beta1constants.ExtensionGardenServiceAccountPrefix + controllerInstallationName)
+		WithServiceAccountName(v1beta1constants.ExtensionGardenServiceAccountPrefix + controllerInstallationName).
+		WithServiceAccountLabels(map[string]string{v1beta1constants.LabelControllerRegistrationName: controllerRegistrationName})
 
 	return accessSecret, accessSecret.Reconcile(ctx, r.SeedClientSet.Client())
 }

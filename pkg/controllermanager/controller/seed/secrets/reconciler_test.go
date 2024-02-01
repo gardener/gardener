@@ -85,6 +85,7 @@ var _ = Describe("Reconciler", func() {
 					OwnerReferences: []metav1.OwnerReference{
 						*metav1.NewControllerRef(seed, gardencorev1beta1.SchemeGroupVersion.WithKind("Seed")),
 					},
+					Labels: map[string]string{"gardener.cloud/role": "seed"},
 				},
 			}
 		})

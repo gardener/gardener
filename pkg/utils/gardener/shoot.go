@@ -17,6 +17,7 @@ package gardener
 import (
 	"cmp"
 	"context"
+	"encoding/json"
 	"fmt"
 	"slices"
 	"strconv"
@@ -290,6 +291,7 @@ type AccessSecret struct {
 	kubeconfig              *clientcmdv1.Config
 	targetSecretName        string
 	targetSecretNamespace   string
+	serviceAccountLabels    map[string]string
 }
 
 // NewShootAccessSecret returns a new AccessSecret object and initializes it with an empty corev1.Secret object
@@ -330,6 +332,12 @@ func (s *AccessSecret) WithServiceAccountName(name string) *AccessSecret {
 	return s
 }
 
+// WithServiceAccountLabels sets the serviceAccountLabels field of the AccessSecret.
+func (s *AccessSecret) WithServiceAccountLabels(labels map[string]string) *AccessSecret {
+	s.serviceAccountLabels = labels
+	return s
+}
+
 // WithTokenExpirationDuration sets the tokenExpirationDuration field of the AccessSecret.
 func (s *AccessSecret) WithTokenExpirationDuration(duration string) *AccessSecret {
 	s.tokenExpirationDuration = duration
@@ -360,6 +368,14 @@ func (s *AccessSecret) Reconcile(ctx context.Context, c client.Client) error {
 
 		if s.Class == resourcesv1alpha1.ResourceManagerClassShoot {
 			metav1.SetMetaDataAnnotation(&s.Secret.ObjectMeta, resourcesv1alpha1.ServiceAccountNamespace, metav1.NamespaceSystem)
+		}
+
+		if s.serviceAccountLabels != nil {
+			labelsJSON, err := json.Marshal(s.serviceAccountLabels)
+			if err != nil {
+				return fmt.Errorf("failed marshaling the service account labels to JSON: %w", err)
+			}
+			metav1.SetMetaDataAnnotation(&s.Secret.ObjectMeta, resourcesv1alpha1.ServiceAccountLabels, string(labelsJSON))
 		}
 
 		if s.tokenExpirationDuration != "" {

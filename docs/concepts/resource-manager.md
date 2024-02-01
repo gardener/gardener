@@ -455,6 +455,9 @@ serviceaccount.resources.gardener.cloud/name: <sa-name>
 serviceaccount.resources.gardener.cloud/namespace: <sa-namespace>
 ```
 
+You can optionally annotate the `Secret` with `serviceaccount.resources.gardener.cloud/labels`, e.g. `serviceaccount.resources.gardener.cloud/labels={"some":"labels","foo":"bar"}`.
+This will make the `ServiceAccount` getting labelled accordingly.
+
 The requested tokens will act with the privileges which are assigned to this `ServiceAccount`.
 
 The controller will then request a token via the [`TokenRequest` API](https://kubernetes.io/docs/reference/kubernetes-api/authentication-resources/token-request-v1/) and populate it into the `.data.token` field to the `Secret` in the source cluster.
