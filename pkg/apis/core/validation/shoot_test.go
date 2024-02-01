@@ -5743,7 +5743,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			},
 
 			Entry("containerd is a valid CRI name", core.CRINameContainerD, BeEmpty()),
-			Entry("docker is NOT a valid CRI name", core.CRINameDocker, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("docker is NOT a valid CRI name", core.CRIName("docker"), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
 				"Field": Equal("cri.name"),
 			})))),
@@ -6040,7 +6040,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				kubeletConfig := core.KubeletConfig{
 					StreamingConnectionIdleTimeout: streamingConnectionIdleTimeout,
 				}
-				errList := ValidateKubeletConfig(kubeletConfig, "", false, nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
 				Expect(errList).To(matcher)
 			},
 
@@ -6077,7 +6077,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					kubeletConfig.FailSwapOn = ptr.To(false)
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, "1.26", false, nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "1.26", nil)
 				Expect(errList).To(matcher)
 			},
 
@@ -6118,7 +6118,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
 
 				Expect(errList).To(matcher)
 			},
@@ -6169,7 +6169,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					PodPIDsLimit: &podPIDsLimit,
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
 
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -6183,7 +6183,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					PodPIDsLimit: &podPIDsLimit,
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
 
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -6197,7 +6197,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					PodPIDsLimit: &podPIDsLimit,
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
 
 				Expect(errList).To(BeEmpty())
 			})
@@ -6213,7 +6213,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					kubeletConfig.FeatureGates["SeccompDefault"] = *SeccompDefaultFeatureGate
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, version, true, nil)
+				errList := ValidateKubeletConfig(kubeletConfig, version, nil)
 
 				Expect(errList).To(matcher)
 			},
@@ -6252,7 +6252,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
 
 				Expect(errList).To(matcher)
 			},
@@ -6278,7 +6278,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
 
 				Expect(errList).To(matcher)
 			},
@@ -6297,7 +6297,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					EvictionPressureTransitionPeriod: &evictionPressureTransitionPeriod,
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
 
 				Expect(errList).To(matcher)
 			},
@@ -6322,7 +6322,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							PID:              pid,
 						},
 					}
-					Expect(ValidateKubeletConfig(kubeletConfig, "", true, nil)).To(matcher)
+					Expect(ValidateKubeletConfig(kubeletConfig, "", nil)).To(matcher)
 				},
 
 				Entry("valid configuration (cpu)", &validResourceQuantity, nil, nil, nil, BeEmpty()),
@@ -6346,7 +6346,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							PID:              pid,
 						},
 					}
-					Expect(ValidateKubeletConfig(kubeletConfig, "", true, nil)).To(matcher)
+					Expect(ValidateKubeletConfig(kubeletConfig, "", nil)).To(matcher)
 				},
 
 				Entry("valid configuration (cpu)", &validResourceQuantity, nil, nil, nil, BeEmpty()),
@@ -6362,24 +6362,18 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		DescribeTable("ImagePullProgressDeadline",
-			func(imagePullProgressDeadline metav1.Duration, dockerConfigured bool, matcher gomegatypes.GomegaMatcher) {
+			func(imagePullProgressDeadline *metav1.Duration, matcher gomegatypes.GomegaMatcher) {
 				kubeletConfig := core.KubeletConfig{
-					ImagePullProgressDeadline: &imagePullProgressDeadline,
+					ImagePullProgressDeadline: imagePullProgressDeadline,
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, "", dockerConfigured, nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
 
 				Expect(errList).To(matcher)
 			},
 
-			Entry("valid configuration", validDuration, true, BeEmpty()),
-			Entry("only allow positive Duration", invalidDuration, true, ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(field.NewPath("imagePullProgressDeadline").String()),
-				})),
-			)),
-			Entry("not allowed to be configured when not using docker, as it has no effect on other runtimes", validDuration, false, ConsistOf(
+			Entry("valid configuration", nil, BeEmpty()),
+			Entry("not allowed to be configured when not using docker, as it has no effect on other runtimes", &validDuration, ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal(field.NewPath("imagePullProgressDeadline").String()),
@@ -6393,7 +6387,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					ImageGCHighThresholdPercent: ptr.To(int32(imageGCHighThresholdPercent)),
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
 
 				Expect(errList).To(matcher)
 			},
@@ -6419,7 +6413,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					ImageGCLowThresholdPercent: ptr.To(int32(imageGCLowThresholdPercent)),
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
 
 				Expect(errList).To(matcher)
 			},
@@ -6445,7 +6439,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				ImageGCHighThresholdPercent: ptr.To(int32(1)),
 			}
 
-			errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
+			errList := ValidateKubeletConfig(kubeletConfig, "", nil)
 
 			Expect(errList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
@@ -6461,7 +6455,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					EvictionMaxPodGracePeriod: &evictionMaxPodGracePeriod,
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
 
 				Expect(errList).To(matcher)
 			},
@@ -6481,7 +6475,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxPods: &maxPods,
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
 
 				Expect(errList).To(matcher)
 			},
@@ -6500,14 +6494,14 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(ValidateKubeletConfig(core.KubeletConfig{
 					RegistryPullQPS: ptr.To(int32(10)),
 					RegistryBurst:   ptr.To(int32(20)),
-				}, "", true, nil)).To(BeEmpty())
+				}, "", nil)).To(BeEmpty())
 			})
 
 			It("should not allow negative values", func() {
 				Expect(ValidateKubeletConfig(core.KubeletConfig{
 					RegistryPullQPS: ptr.To(int32(-10)),
 					RegistryBurst:   ptr.To(int32(-20)),
-				}, "", true, nil)).To(ConsistOf(
+				}, "", nil)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal(field.NewPath("registryPullQPS").String()),
@@ -6520,30 +6514,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 		})
 
-		Describe("#ContainerLog with docker configured", func() {
-			It("should not accept containerLogMaxSize or containerLogMaxFiles", func() {
-				maxSize := resource.MustParse("100Mi")
-				kubeletConfig := core.KubeletConfig{
-					ContainerLogMaxFiles: ptr.To(int32(5)),
-					ContainerLogMaxSize:  &maxSize,
-				}
-
-				errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
-
-				Expect(errList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal(field.NewPath("containerLogMaxFiles").String()),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal(field.NewPath("containerLogMaxSize").String()),
-					})),
-				))
-			})
-		})
-
-		Describe("#ContainerLog without docker configured", func() {
+		Describe("#ContainerLog", func() {
 			It("should not accept invalid  containerLogMaxFiles", func() {
 				maxSize := resource.MustParse("100Mi")
 				kubeletConfig := core.KubeletConfig{
@@ -6551,7 +6522,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					ContainerLogMaxSize:  &maxSize,
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, "", false, nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
 
 				Expect(errList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -6568,7 +6539,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					ContainerLogMaxSize:  &maxSize,
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, "", false, nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
 
 				Expect(errList).To(BeEmpty())
 			})

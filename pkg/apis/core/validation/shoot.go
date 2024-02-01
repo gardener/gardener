@@ -99,7 +99,7 @@ var (
 		string(core.ShootPurposeDevelopment),
 		string(core.ShootPurposeProduction),
 	)
-	availableWorkerCRINamesForShoot = sets.New(
+	availableWorkerCRINames = sets.New(
 		string(core.CRINameContainerD),
 	)
 	availableClusterAutoscalerExpanderModes = sets.New(
@@ -269,7 +269,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateExtensions(spec.Extensions, fldPath.Child("extensions"))...)
 	allErrs = append(allErrs, validateResources(spec.Resources, fldPath.Child("resources"))...)
-	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, spec.Networking, isDockerConfigured(spec.Provider.Workers), workerless, fldPath.Child("kubernetes"))...)
+	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, spec.Networking, workerless, fldPath.Child("kubernetes"))...)
 	allErrs = append(allErrs, validateNetworking(spec.Networking, workerless, fldPath.Child("networking"))...)
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"), workerless)...)
 	allErrs = append(allErrs, validateMonitoring(spec.Monitoring, fldPath.Child("monitoring"))...)
@@ -306,15 +306,6 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	allErrs = append(allErrs, ValidateSystemComponents(spec.SystemComponents, fldPath.Child("systemComponents"), workerless)...)
 
 	return allErrs
-}
-
-func isDockerConfigured(workers []core.Worker) bool {
-	for _, worker := range workers {
-		if worker.CRI == nil || worker.CRI.Name == core.CRINameDocker {
-			return true
-		}
-	}
-	return false
 }
 
 // ValidateShootSpecUpdate validates the specification of a Shoot object.
@@ -865,7 +856,7 @@ func validateResources(resources []core.NamedResourceReference, fldPath *field.P
 	return allErrs
 }
 
-func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking, dockerConfigured, workerless bool, fldPath *field.Path) field.ErrorList {
+func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking, workerless bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(kubernetes.Version) == 0 {
@@ -888,7 +879,7 @@ func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking,
 		allErrs = append(allErrs, validateKubeProxy(kubernetes.KubeProxy, kubernetes.Version, fldPath.Child("kubeProxy"))...)
 
 		if kubernetes.Kubelet != nil {
-			allErrs = append(allErrs, ValidateKubeletConfig(*kubernetes.Kubelet, kubernetes.Version, dockerConfigured, fldPath.Child("kubelet"))...)
+			allErrs = append(allErrs, ValidateKubeletConfig(*kubernetes.Kubelet, kubernetes.Version, fldPath.Child("kubelet"))...)
 		}
 
 		if clusterAutoscaler := kubernetes.ClusterAutoscaler; clusterAutoscaler != nil {
@@ -1648,9 +1639,9 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *fie
 		}
 
 		if worker.Kubernetes.Kubelet != nil {
-			allErrs = append(allErrs, ValidateKubeletConfig(*worker.Kubernetes.Kubelet, kubernetesVersion, isDockerConfigured([]core.Worker{worker}), fldPath.Child("kubernetes", "kubelet"))...)
+			allErrs = append(allErrs, ValidateKubeletConfig(*worker.Kubernetes.Kubelet, kubernetesVersion, fldPath.Child("kubernetes", "kubelet"))...)
 		} else if kubernetes.Kubelet != nil {
-			allErrs = append(allErrs, ValidateKubeletConfig(*kubernetes.Kubelet, kubernetesVersion, isDockerConfigured([]core.Worker{worker}), fldPath.Child("kubernetes", "kubelet"))...)
+			allErrs = append(allErrs, ValidateKubeletConfig(*kubernetes.Kubelet, kubernetesVersion, fldPath.Child("kubernetes", "kubelet"))...)
 		}
 	}
 
@@ -1720,7 +1711,7 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *fie
 const PodPIDsLimitMinimum int64 = 100
 
 // ValidateKubeletConfig validates the KubeletConfig object.
-func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, dockerConfigured bool, fldPath *field.Path) field.ErrorList {
+func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if kubeletConfig.MaxPods != nil {
@@ -1732,10 +1723,7 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, doc
 		}
 	}
 	if kubeletConfig.ImagePullProgressDeadline != nil {
-		if !dockerConfigured {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("imagePullProgressDeadline"), "can only be configured when a worker pool is configured with 'docker'. This setting has no effect for other container runtimes."))
-		}
-		allErrs = append(allErrs, ValidatePositiveDuration(kubeletConfig.ImagePullProgressDeadline, fldPath.Child("imagePullProgressDeadline"))...)
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("imagePullProgressDeadline"), "can only be configured when a worker pool is configured with 'docker'. This setting has no effect for other container runtimes. Gardener no longer supports docker CRI"))
 	}
 	if kubeletConfig.EvictionPressureTransitionPeriod != nil {
 		allErrs = append(allErrs, ValidatePositiveDuration(kubeletConfig.EvictionPressureTransitionPeriod, fldPath.Child("evictionPressureTransitionPeriod"))...)
@@ -1785,13 +1773,7 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, doc
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("seccompDefault"), "seccomp defaulting is not available when kubelet's 'SeccompDefault' feature gate is disabled"))
 		}
 	}
-	if v := kubeletConfig.ContainerLogMaxSize; v != nil && dockerConfigured {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("containerLogMaxSize"), "can only be configured with containerd runtime. This setting has no effect for docker container runtime."))
-	}
 	if v := kubeletConfig.ContainerLogMaxFiles; v != nil {
-		if dockerConfigured {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("containerLogMaxFiles"), "can only be configured with containerd runtime. This setting has no effect for docker container runtime."))
-		}
 		if *v < 2 {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("containerLogMaxFiles"), *v, "value must be >= 2."))
 		}
@@ -2196,8 +2178,8 @@ func IsNotMoreThan100Percent(intOrStringValue *intstr.IntOrString, fldPath *fiel
 func ValidateCRI(CRI *core.CRI, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if !availableWorkerCRINamesForShoot.Has(string(CRI.Name)) {
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("name"), CRI.Name, sets.List(availableWorkerCRINamesForShoot)))
+	if !availableWorkerCRINames.Has(string(CRI.Name)) {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("name"), CRI.Name, sets.List(availableWorkerCRINames)))
 	}
 
 	if CRI.ContainerRuntimes != nil {
