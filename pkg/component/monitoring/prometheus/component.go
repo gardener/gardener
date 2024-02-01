@@ -20,6 +20,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -49,7 +50,9 @@ type prometheus struct {
 func (p *prometheus) Deploy(ctx context.Context) error {
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
-	resources, err := registry.AddAllAndSerialize()
+	resources, err := registry.AddAllAndSerialize(
+		p.serviceAccount(),
+	)
 	if err != nil {
 		return err
 	}
@@ -81,4 +84,12 @@ func (p *prometheus) WaitCleanup(ctx context.Context) error {
 
 func (p *prometheus) name() string {
 	return "prometheus-" + p.values.Name
+}
+
+func (p *prometheus) getLabels() map[string]string {
+	return map[string]string{
+		v1beta1constants.LabelApp:  "prometheus",
+		v1beta1constants.LabelRole: v1beta1constants.LabelMonitoring,
+		"name":                     p.values.Name,
+	}
 }
