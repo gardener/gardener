@@ -65,12 +65,13 @@ var _ = Describe("PrometheusOperator", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
-		serviceAccount     *corev1.ServiceAccount
-		service            *corev1.Service
-		deployment         *appsv1.Deployment
-		vpa                *vpaautoscalingv1.VerticalPodAutoscaler
-		clusterRole        *rbacv1.ClusterRole
-		clusterRoleBinding *rbacv1.ClusterRoleBinding
+		serviceAccount        *corev1.ServiceAccount
+		service               *corev1.Service
+		deployment            *appsv1.Deployment
+		vpa                   *vpaautoscalingv1.VerticalPodAutoscaler
+		clusterRole           *rbacv1.ClusterRole
+		clusterRoleBinding    *rbacv1.ClusterRoleBinding
+		clusterRolePrometheus *rbacv1.ClusterRole
 	)
 
 	BeforeEach(func() {
@@ -314,6 +315,38 @@ var _ = Describe("PrometheusOperator", func() {
 				Namespace: namespace,
 			}},
 		}
+		clusterRolePrometheus = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "prometheus",
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{
+						"nodes",
+						"services",
+						"endpoints",
+						"pods",
+					},
+					Verbs: []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{
+						"nodes/metrics",
+						"nodes/proxy",
+					},
+					Verbs: []string{"get"},
+				},
+				{
+					NonResourceURLs: []string{
+						"/metrics",
+						"/metrics/*",
+					},
+					Verbs: []string{"get"},
+				},
+			},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -372,13 +405,14 @@ var _ = Describe("PrometheusOperator", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(6))
+				Expect(managedResourceSecret.Data).To(HaveLen(7))
 				Expect(string(managedResourceSecret.Data["serviceaccount__some-namespace__prometheus-operator.yaml"])).To(Equal(componenttest.Serialize(serviceAccount)))
 				Expect(string(managedResourceSecret.Data["service__some-namespace__prometheus-operator.yaml"])).To(Equal(componenttest.Serialize(service)))
 				Expect(string(managedResourceSecret.Data["deployment__some-namespace__prometheus-operator.yaml"])).To(Equal(componenttest.Serialize(deployment)))
 				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__prometheus-operator.yaml"])).To(Equal(componenttest.Serialize(vpa)))
 				Expect(string(managedResourceSecret.Data["clusterrole____prometheus-operator.yaml"])).To(Equal(componenttest.Serialize(clusterRole)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____prometheus-operator.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
+				Expect(string(managedResourceSecret.Data["clusterrole____prometheus.yaml"])).To(Equal(componenttest.Serialize(clusterRolePrometheus)))
 			})
 		})
 	})
