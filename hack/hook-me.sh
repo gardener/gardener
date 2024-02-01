@@ -111,21 +111,11 @@ waitForQuicLBToBeReady(){
     serviceName=${2:-}
     [[ -z $serviceName ]] && echo "Please specify the service name (gardener-extension-provider-{aws,gcp,azure},..etc.)!" && exit 1
 
-    # slightly different template for aws and everything else
-    local template=""
-    case $serviceName in
-    gardener-extension-provider-aws*)
-        template="{{ index (index .status.loadBalancer.ingress 0).hostname }}"
-        ;;
-    *)
-        template="{{ index (index .status.loadBalancer.ingress 0).ip }}"
-        ;;
-    esac
-    until host $(kubectl -n $namespace get svc quic-lb -o go-template="${template}") 2>&1 > /dev/null
+    until host $(kubectl -n $namespace get svc quic-lb -o yaml | yq '.status.loadBalancer.ingress[0] | .hostname // .ip') 2>&1 > /dev/null
     do
         sleep 2s
     done
-    echo $(kubectl -n $namespace get svc quic-lb -o go-template="${template}")
+    echo $(kubectl -n $namespace get svc quic-lb -o yaml | yq '.status.loadBalancer.ingress[0] | .hostname // .ip')
 }
 
 createServerDeploy(){
