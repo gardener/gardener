@@ -513,6 +513,27 @@ spec:
 `
 				return out
 			}
+			serviceMonitorYAML = `apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  creationTimestamp: null
+  labels:
+    prometheus: cache
+  name: cache-etcd-druid
+  namespace: ` + namespace + `
+spec:
+  endpoints:
+  - metricRelabelings:
+    - action: keep
+      regex: ^(etcddruid_compaction_jobs_total|etcddruid_compaction_jobs_current|etcddruid_compaction_job_duration_seconds_bucket|etcddruid_compaction_job_duration_seconds_sum|etcddruid_compaction_job_duration_seconds_count|etcddruid_compaction_num_delta_events)$
+      sourceLabels:
+      - __name__
+    port: metrics
+  namespaceSelector: {}
+  selector:
+    matchLabels:
+      gardener.cloud/role: etcd-druid
+`
 		)
 
 		JustBeforeEach(func() {
@@ -553,11 +574,12 @@ spec:
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_system_etcd-druid.yaml"])).To(Equal(clusterRoleBindingYAML))
 			Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__etcd-druid-vpa.yaml"])).To(Equal(vpaYAML))
 			Expect(string(managedResourceSecret.Data["service__"+namespace+"__etcd-druid.yaml"])).To(Equal(serviceYAML))
+			Expect(string(managedResourceSecret.Data["servicemonitor__"+namespace+"__cache-etcd-druid.yaml"])).To(Equal(serviceMonitorYAML))
 		})
 
 		Context("w/o image vector overwrite", func() {
 			JustBeforeEach(func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(7))
+				Expect(managedResourceSecret.Data).To(HaveLen(8))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__etcd-druid.yaml"])).To(Equal(deploymentWithoutImageVectorOverwriteYAMLFor(false)))
 			})
 
@@ -584,7 +606,7 @@ spec:
 			})
 
 			It("should successfully deploy all the resources (w/ image vector overwrite)", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(8))
+				Expect(managedResourceSecret.Data).To(HaveLen(9))
 				bootstrapper = NewBootstrapper(c, namespace, kubernetesVersion, etcdConfig, etcdDruidImage, imageVectorOverwriteFull, priorityClassName)
 
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__etcd-druid.yaml"])).To(Equal(deploymentWithImageVectorOverwriteYAML))
@@ -601,7 +623,7 @@ spec:
 			})
 
 			It("should successfully deploy all the resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(7))
+				Expect(managedResourceSecret.Data).To(HaveLen(8))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__etcd-druid.yaml"])).To(Equal(deploymentWithoutImageVectorOverwriteYAMLFor(true)))
 				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__etcd-druid.yaml"])).To(Equal(podDisruptionYAMLFor(false)))
 			})
