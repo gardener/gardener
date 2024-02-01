@@ -1,0 +1,322 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: recording-rules
+spec:
+  groups:
+  - name: recording-rules.rules
+    rules:
+
+    # detect an issue when the persistent volume is not mounted properly, and instead the local disk is used
+    - record: seed:persistentvolume:inconsistent_size
+      expr: abs(1 - kubelet_volume_stats_capacity_bytes / on(namespace, persistentvolumeclaim) kube_persistentvolumeclaim_resource_requests_storage_bytes) > 0.05
+
+    # Recording rules for the sum of the usage per container
+    - record: seed:container_cpu_usage_seconds_total:sum_by_container
+      expr: sum(rate(container_cpu_usage_seconds_total[5m])) by (container)
+
+    - record: seed:container_cpu_cfs_throttled_seconds_total:sum_by_container
+      expr: sum(rate(container_cpu_cfs_throttled_seconds_total[5m])) by (container)
+
+    - record: seed:container_cpu_cfs_throttled_periods_total:sum_by_container
+      expr: sum(rate(container_cpu_cfs_throttled_periods_total[5m])) by (container)
+
+    - record: seed:container_memory_working_set_bytes:sum_by_container
+      expr: sum(container_memory_working_set_bytes) by (container)
+
+    # Recording rules for the sum of the requests per container
+    - record: seed:kube_pod_container_resource_requests_cpu_cores:sum_by_container
+      expr: sum(kube_pod_container_resource_requests{resource="cpu", unit="core"}) by (container)
+
+    - record: seed:kube_pod_container_resource_requests_memory_bytes:sum_by_container
+      expr: sum(kube_pod_container_resource_requests{resource="memory", unit="byte"}) by (container)
+
+    # Recording rules for the sum of the limits per container
+    - record: seed:kube_pod_container_resource_limits_cpu_cores:sum_by_container
+      expr: sum(kube_pod_container_resource_limits{resource="cpu", unit="core"}) by (container)
+
+    - record: seed:kube_pod_container_resource_limits_memory_bytes:sum_by_container
+      expr: sum(kube_pod_container_resource_limits{resource="memory", unit="byte"}) by (container)
+
+    # Recording rules for the sum of hvpa applied recommendations per container
+    - record: seed:hvpa_status_applied_vpa_recommendation_target:sum_by_container
+      expr: sum(hvpa_status_applied_vpa_recommendation{recommendation="target"}) by (container, resource)
+
+    # Recording rules for the count of apiserver containers which have CPU usage at or above 80% of their request.
+    # 1. This helps evaluate if memory-based HPA should be re-introduced at 120%. And if it is re-opened what will be the impact on the avg number of replicas per active shoot in the seed clusters.
+    # 2. This helps evaluate the benefit in reducing HPA scale down stabilization period (currently, 24h) to gain better resource utilization.
+    - record: seed:apiserver_containers_over_cpu_scaling_threshold_total:count_by_container
+      expr: count(sum(rate(container_cpu_usage_seconds_total{container="kube-apiserver"}[5m])) by (namespace) / sum(kube_pod_container_resource_requests{resource="cpu", unit="core", container="kube-apiserver"}) by (namespace) >= 0.8)
+
+    # Recording rules for the count of apiserver containers which have memory usage at or above 120% of their request.
+    # 1. This helps evaluate if memory-based HPA should be re-introduced at 120%. And if it is re-opened what will be the impact on the avg number of replicas per active shoot in the seed clusters.
+    # 2. This helps evaluate the benefit in reducing HPA scale down stabilization period (currently, 24h) to gain better resource utilization.
+    - record: seed:apiserver_containers_over_memory_scaling_threshold_total:count_by_container
+      expr: count(sum(container_memory_working_set_bytes{container="kube-apiserver"}) by (namespace) / sum(kube_pod_container_resource_requests{resource="memory", unit="byte", container="kube-apiserver"}) by (namespace) >= 1.2)
+
+    # Recording rules for the count of containers which have CPU usage below 80% of their limits, aggregated by containers.
+    # How many shoots and components are not at risk of being affected (CPU-throttled or OOMKilled) if scaling (horizontally or vertically) is blocked due to any reason (bug, deliberate or wrong configuration).
+    - record: seed:containers_below_cpu_limiting_threshold_total:count_by_container
+      expr: count(max(rate(container_cpu_usage_seconds_total[5m])) by (container, namespace) / max(kube_pod_container_resource_limits{resource="cpu", unit="core"}) by (container, namespace) < 0.8) by (container)
+
+    # Recording rules for the count of containers which have memory usage below 80% of their limits, aggregated by containers.
+    # How many shoots and components are not at risk of being affected (CPU-throttled or OOMKilled) if scaling (horizontally or vertically) is blocked due to any reason (bug, deliberate or wrong configuration).
+    - record: seed:containers_below_memory_limiting_threshold_total:count_by_container
+      expr: count(max(container_memory_working_set_bytes) by (container, namespace) / max(kube_pod_container_resource_limits{resource="memory", unit="byte"}) by (container, namespace) < 0.8) by (container)
+
+    # Recording rules for the count of containers which have CPU usage at or above 80% of their limits, aggregated by containers.
+    # How many shoots and components are at risk of being affected (CPU-throttled or OOMKilled) if scaling (horizontally or vertically) is blocked due to any reason (bug, deliberate or wrong configuration).
+    - record: seed:containers_over_cpu_limiting_threshold_total:count_by_container
+      expr: count(max(rate(container_cpu_usage_seconds_total[5m])) by (container, namespace) / max(kube_pod_container_resource_limits{resource="cpu", unit="core"}) by (container, namespace) >= 0.8) by (container)
+
+    # Recording rules for the count of containers which have memory usage at or above 80% of their limits, aggregated by containers.
+    # How many shoots and components are at risk of being affected (CPU-throttled or OOMKilled) if scaling (horizontally or vertically) is blocked due to any reason (bug, deliberate or wrong configuration).
+    - record: seed:containers_over_memory_limiting_threshold_total:count_by_container
+      expr: count(max(container_memory_working_set_bytes) by (container, namespace) / max(kube_pod_container_resource_limits{resource="memory", unit="byte"}) by (container, namespace) >= 0.8) by (container)
+
+    # Recording rules for container count per container
+    - record: seed:kube_pod_container_info:count_by_container
+      expr: count(kube_pod_container_info) by (container)
+
+    # Recording rules for container restart count per container
+    - record: seed:kube_pod_container_status_restarts_total:sum_by_container
+      expr: sum(kube_pod_container_status_restarts_total) by (container)
+
+    # Recording rules for container restart count per gardener or extension namespace
+    - record: seed:kube_pod_container_status_restarts_total:max_by_namespace
+      expr: max by(namespace) (increase(kube_pod_container_status_restarts_total{namespace=~"garden|extension.+"}[1h]))
+
+    # Recording rules for deployment spec replicas per deployment
+    - record: seed:kube_deployment_spec_replicas:sum_by_deployment
+      expr: sum(kube_deployment_spec_replicas) by (deployment)
+
+    # Recording rules for deployment status replicas per deployment
+    - record: seed:kube_deployment_status_replicas:sum_by_deployment
+      expr: sum(kube_deployment_status_replicas) by (deployment)
+
+    # Recording rules for deployment status replicas available per deployment
+    - record: seed:kube_deployment_status_replicas_available:sum_by_deployment
+      expr: sum(kube_deployment_status_replicas_available) by (deployment)
+
+    # Recording rules for statefulset spec replicas per statefulset
+    - record: seed:kube_statefulset_replicas:sum_by_statefulset
+      expr: sum(kube_statefulset_replicas) by (statefulset)
+
+    # Recording rules for statefulset status replicas per statefulset
+    - record: seed:kube_statefulset_status_replicas:sum_by_statefulset
+      expr: sum(kube_statefulset_status_replicas) by (statefulset)
+
+    # Recording rules for statefulset status replicas available per statefulset
+    - record: seed:kube_statefulset_status_replicas_ready:sum_by_statefulset
+      expr: sum(kube_statefulset_status_replicas_ready) by (statefulset)
+
+    # Recording rules for the sum of the entire seed usage
+    - record: seed:container_cpu_usage_seconds_total:sum
+      expr: sum(rate(container_cpu_usage_seconds_total[5m]))
+
+    - record: seed:container_cpu_cfs_throttled_seconds_total:sum
+      expr: sum(rate(container_cpu_cfs_throttled_seconds_total[5m]))
+
+    - record: seed:container_cpu_cfs_throttled_periods_total:sum
+      expr: sum(rate(container_cpu_cfs_throttled_periods_total[5m]))
+
+    - record: seed:container_memory_working_set_bytes:sum
+      expr: sum(container_memory_working_set_bytes)
+
+    - record: seed:container_network_receive_bytes_total:sum
+      expr: sum(rate(container_network_receive_bytes_total[5m]))
+
+    - record: seed:container_network_transmit_bytes_total:sum
+      expr: sum(rate(container_network_transmit_bytes_total[5m]))
+
+    # Recording rules for the sum of the requests in the entire seed
+    - record: seed:kube_pod_container_resource_requests_cpu_cores:sum
+      expr: sum(kube_pod_container_resource_requests{resource="cpu", unit="core"})
+
+    - record: seed:kube_pod_container_resource_requests_memory_bytes:sum
+      expr: sum(kube_pod_container_resource_requests{resource="memory", unit="byte"})
+
+    # Recording rules for the sum of the limits in the entire seed
+    - record: seed:kube_pod_container_resource_limits_cpu_cores:sum
+      expr: sum(kube_pod_container_resource_limits{resource="cpu", unit="core"})
+
+    - record: seed:kube_pod_container_resource_limits_memory_bytes:sum
+      expr: sum(kube_pod_container_resource_limits{resource="memory", unit="byte"})
+
+    # Recording rules for the sum of hvpa applied recommendations for the entire seed
+    - record: seed:hvpa_status_applied_vpa_recommendation_target:sum
+      expr: sum(hvpa_status_applied_vpa_recommendation{recommendation="target"}) by (resource)
+
+    # Recording rules for pod count for the entire seed
+    - record: seed:kube_pod_info:count
+      expr: count(kube_pod_info)
+
+    # Recording rules for pod count by status for the entire seed
+    - record: seed:kube_pod_status_ready:sum_by_condition
+      expr: sum(kube_pod_status_ready) by (condition)
+
+    # Recording rules for pod count by phase for the entire seed
+    - record: seed:kube_pod_status_phase:sum_by_phase
+      expr: sum(kube_pod_status_phase) by (phase)
+
+    # Recording rules for reserve excess capacity pod count by phase for the entire seed
+    - record: seed:kube_pod_status_phase_reserve_excess_capacity:sum_by_phase
+      expr: sum(kube_pod_status_phase{pod=~"reserve-excess-capacity.*"}) by (phase)
+
+    # Recording rules for images running on seed
+    - record: seed:images:count
+      expr: count(kube_pod_container_info) by (image, image_id, container)
+
+    # Recording rules for container count for the entire seed
+    - record: seed:kube_pod_container_info:count
+      expr: count(kube_pod_container_info)
+
+    # Recording rules for container restart count for the entire seed
+    - record: seed:kube_pod_container_status_restarts_total:sum
+      expr: sum(kube_pod_container_status_restarts_total)
+
+    # Recording rules for deployment spec replicas for the entire seed
+    - record: seed:kube_deployment_spec_replicas:sum
+      expr: sum(kube_deployment_spec_replicas)
+
+    # Recording rules for deployment status replicas for the entire seed
+    - record: seed:kube_deployment_status_replicas:sum
+      expr: sum(kube_deployment_status_replicas)
+
+    # Recording rules for deployment status replicas available for the entire seed
+    - record: seed:kube_deployment_status_replicas_available:sum
+      expr: sum(kube_deployment_status_replicas_available)
+
+    # Recording rules for statefulset spec replicas for the entire seed
+    - record: seed:kube_statefulset_replicas:sum
+      expr: sum(kube_statefulset_replicas)
+
+    # Recording rules for statefulset status replicas for the entire seed
+    - record: seed:kube_statefulset_status_replicas:sum
+      expr: sum(kube_statefulset_status_replicas)
+
+    # Recording rules for statefulset status replicas available for the entire seed
+    - record: seed:kube_statefulset_status_replicas_ready:sum
+      expr: sum(kube_statefulset_status_replicas_ready)
+
+    # Recording rules for node metrics for the entire seed
+    - record: seed:kube_node_info:count
+      expr: count(kube_node_info)
+
+    - record: seed:kube_node_status_condition:sum_by_condition
+      expr: sum(kube_node_status_condition) by (condition, status)
+
+    - record: seed:node_cpu_seconds_total:sum
+      expr: sum(rate(node_cpu_seconds_total{mode!="idle"}[5m]))
+
+    - record: seed:node_memory_Active_bytes:sum
+      expr: sum(node_memory_Active_bytes)
+
+    - record: seed:kube_node_status_allocatable_cpu_cores:max
+      expr: max(kube_node_status_allocatable{resource="cpu",unit="core"})
+
+    - record: seed:kube_node_status_allocatable_cpu_cores:sum
+      expr: sum(kube_node_status_allocatable{resource="cpu",unit="core"})
+
+    - record: seed:kube_node_status_allocatable_memory_bytes:max
+      expr: max(kube_node_status_allocatable{resource="memory",unit="byte"})
+
+    - record: seed:kube_node_status_allocatable_memory_bytes:sum
+      expr: sum(kube_node_status_allocatable{resource="memory",unit="byte"})
+
+    - record: seed:kube_node_status_allocatable_pods:max
+      expr: max(kube_node_status_allocatable{resource="pods",unit="integer"})
+
+    - record: seed:kube_node_status_allocatable_pods:sum
+      expr: sum(kube_node_status_allocatable{resource="pods",unit="integer"})
+
+    # TODO(wyb1): Replace the following two recording rules with shoot namespaces (gardener.cloud/role=shoot label) to
+    # identify the number of all shoots in the entire seed, and <no. of pods> in such a shoot namespace for the number of
+    # active shoots in the entire seed.
+    # Recording rules for the active shoots in the entire seed
+    - record: seed:active_shoots_total:sum
+      expr: count(kube_pod_info{pod="etcd-main-0"})
+    # Recording rules for all the shoots in the entire seed
+    - record: seed:all_shoots_total:sum
+      expr: count(kube_statefulset_replicas{statefulset="etcd-main"})
+
+    # Recording rules for the sum of all control plane usage
+    - record: seed:container_cpu_usage_seconds_total:sum_cp
+      expr: sum(rate(container_cpu_usage_seconds_total{namespace=~"((shoot-|shoot--)(\\w.+))"}[5m]))
+
+    - record: seed:container_cpu_cfs_throttled_seconds_total:sum_cp
+      expr: sum(rate(container_cpu_cfs_throttled_seconds_total{namespace=~"((shoot-|shoot--)(\\w.+))"}[5m]))
+
+    - record: seed:container_cpu_cfs_throttled_periods_total:sum_cp
+      expr: sum(rate(container_cpu_cfs_throttled_periods_total{namespace=~"((shoot-|shoot--)(\\w.+))"}[5m]))
+
+    - record: seed:container_memory_working_set_bytes:sum_cp
+      expr: sum(container_memory_working_set_bytes{namespace=~"((shoot-|shoot--)(\\w.+))"})
+
+    - record: seed:container_network_receive_bytes_total:sum_cp
+      expr: sum(rate(container_network_receive_bytes_total{namespace=~"((shoot-|shoot--)(\\w.+))"}[5m]))
+
+    - record: seed:container_network_transmit_bytes_total:sum_cp
+      expr: sum(rate(container_network_transmit_bytes_total{namespace=~"((shoot-|shoot--)(\\w.+))"}[5m]))
+
+    # Recording rules for the sum of the requests for all the control planes
+    - record: seed:kube_pod_container_resource_requests_cpu_cores:sum_cp
+      expr: sum(kube_pod_container_resource_requests{resource="cpu", unit="core", namespace=~"((shoot-|shoot--)(\\w.+))"})
+
+    - record: seed:kube_pod_container_resource_requests_memory_bytes:sum_cp
+      expr: sum(kube_pod_container_resource_requests{resource="memory", unit="byte", namespace=~"((shoot-|shoot--)(\\w.+))"})
+
+    # Recording rules for the sum of the limits for all the control planes
+    - record: seed:kube_pod_container_resource_limits_cpu_cores:sum_cp
+      expr: sum(kube_pod_container_resource_limits{resource="cpu", unit="core", namespace=~"((shoot-|shoot--)(\\w.+))"})
+
+    - record: seed:kube_pod_container_resource_limits_memory_bytes:sum_cp
+      expr: sum(kube_pod_container_resource_limits{resource="memory", unit="byte", namespace=~"((shoot-|shoot--)(\\w.+))"})
+
+    # Recording rules for the sum of hvpa applied recommendations for all the control-planes
+    - record: seed:hvpa_status_applied_vpa_recommendation_target:sum_cp
+      expr: sum(hvpa_status_applied_vpa_recommendation{recommendation="target", namespace=~"((shoot-|shoot--)(\\w.+))"}) by (resource)
+
+    # Recording rules for pod count for all the control-planes
+    - record: seed:kube_pod_info:count_cp
+      expr: count(kube_pod_info{namespace=~"((shoot-|shoot--)(\\w.+))"})
+
+    # Recording rules for pod count by status for all the control-planes
+    - record: seed:kube_pod_status_ready:sum_cp_by_condition
+      expr: sum(kube_pod_status_ready{namespace=~"((shoot-|shoot--)(\\w.+))"}) by (condition)
+
+    # Recording rules for pod count by phase for all the control-planes
+    - record: seed:kube_pod_status_phase:sum_cp_by_phase
+      expr: sum(kube_pod_status_phase{namespace=~"((shoot-|shoot--)(\\w.+))"}) by (phase)
+
+    # Recording rules for container count for all the control-planes
+    - record: seed:kube_pod_container_info:count_cp
+      expr: count(kube_pod_container_info{namespace=~"((shoot-|shoot--)(\\w.+))"})
+
+    # Recording rules for container restart count for all the control-planes
+    - record: seed:kube_pod_container_status_restarts_total:sum_cp
+      expr: sum(kube_pod_container_status_restarts_total{namespace=~"((shoot-|shoot--)(\\w.+))"})
+
+    # Recording rules for deployment spec replicas for all the control-planes
+    - record: seed:kube_deployment_spec_replicas:sum_cp
+      expr: sum(kube_deployment_spec_replicas{namespace=~"((shoot-|shoot--)(\\w.+))"})
+
+    # Recording rules for deployment status replicas for all the control-planes
+    - record: seed:kube_deployment_status_replicas:sum_cp
+      expr: sum(kube_deployment_status_replicas{namespace=~"((shoot-|shoot--)(\\w.+))"})
+
+    # Recording rules for deployment status replicas available for all the control-planes
+    - record: seed:kube_deployment_status_replicas_available:sum_cp
+      expr: sum(kube_deployment_status_replicas_available{namespace=~"((shoot-|shoot--)(\\w.+))"})
+
+    # Recording rules for statefulset spec replicas for all the control-planes
+    - record: seed:kube_statefulset_replicas:sum_cp
+      expr: sum(kube_statefulset_replicas{namespace=~"((shoot-|shoot--)(\\w.+))"})
+
+    # Recording rules for statefulset status replicas for all the control-planes
+    - record: seed:kube_statefulset_status_replicas:sum_cp
+      expr: sum(kube_statefulset_status_replicas{namespace=~"((shoot-|shoot--)(\\w.+))"})
+
+    # Recording rules for statefulset status replicas available for all the control-planes
+    - record: seed:kube_statefulset_status_replicas_ready:sum_cp
+      expr: sum(kube_statefulset_status_replicas_ready{namespace=~"((shoot-|shoot--)(\\w.+))"})

@@ -74,6 +74,7 @@ var _ = Describe("Prometheus", func() {
 		clusterRoleBinding *rbacv1.ClusterRoleBinding
 		prometheus         *monitoringv1.Prometheus
 		vpa                *vpaautoscalingv1.VerticalPodAutoscaler
+		prometheusRule     *monitoringv1.PrometheusRule
 	)
 
 	BeforeEach(func() {
@@ -270,9 +271,20 @@ var _ = Describe("Prometheus", func() {
 				},
 			},
 		}
+		prometheusRule = &monitoringv1.PrometheusRule{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "rule",
+				Labels: map[string]string{"foo": "bar"},
+			},
+			Spec: monitoringv1.PrometheusRuleSpec{
+				Groups: []monitoringv1.RuleGroup{{Name: "foo"}},
+			},
+		}
 	})
 
 	JustBeforeEach(func() {
+		values.CentralConfigs.PrometheusRules = append(values.CentralConfigs.PrometheusRules, prometheusRule)
+
 		deployer = New(fakeClient, namespace, values)
 	})
 
@@ -328,12 +340,16 @@ var _ = Describe("Prometheus", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(5))
+				Expect(managedResourceSecret.Data).To(HaveLen(6))
 				Expect(string(managedResourceSecret.Data["serviceaccount__some-namespace__prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(serviceAccount)))
 				Expect(string(managedResourceSecret.Data["service__some-namespace__prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
 				Expect(string(managedResourceSecret.Data["prometheus__some-namespace__"+name+".yaml"])).To(Equal(componenttest.Serialize(prometheus)))
 				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(vpa)))
+
+				prometheusRule.Namespace = namespace
+				metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
+				Expect(string(managedResourceSecret.Data["prometheusrule__some-namespace__"+name+"-rule.yaml"])).To(Equal(componenttest.Serialize(prometheusRule)))
 			})
 		})
 	})

@@ -16,14 +16,19 @@ package prometheus
 
 import (
 	"context"
+	"strings"
 	"time"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	monitoringutils "github.com/gardener/gardener/pkg/component/monitoring/utils"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -43,6 +48,16 @@ type Values struct {
 	PriorityClassName string
 	// StorageCapacity is the storage capacity of Prometheus.
 	StorageCapacity resource.Quantity
+	// CentralConfigs contains configuration for this Prometheus instance that is created together with it. This should
+	// only contain configuration that cannot be directly assigned to another component package.
+	CentralConfigs CentralConfigs
+}
+
+// CentralConfigs contains configuration for this Prometheus instance that is created together with it. This should
+// only contain configuration that cannot be directly assigned to another component package.
+type CentralConfigs struct {
+	// PrometheusRules is a list of central PrometheusRule objects for this prometheus instance.
+	PrometheusRules []*monitoringv1.PrometheusRule
 }
 
 // New creates a new instance of DeployWaiter for the prometheus.
@@ -62,6 +77,10 @@ type prometheus struct {
 
 func (p *prometheus) Deploy(ctx context.Context) error {
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+
+	if err := p.addCentralConfigsToRegistry(registry); err != nil {
+		return err
+	}
 
 	resources, err := registry.AddAllAndSerialize(
 		p.serviceAccount(),
@@ -101,6 +120,32 @@ func (p *prometheus) WaitCleanup(ctx context.Context) error {
 
 func (p *prometheus) name() string {
 	return "prometheus-" + p.values.Name
+}
+
+func (p *prometheus) addCentralConfigsToRegistry(registry *managedresources.Registry) error {
+	var errs []error
+
+	add := func(obj client.Object) {
+		if !strings.HasPrefix(obj.GetName(), p.values.Name+"-") {
+			obj.SetName(p.values.Name + "-" + obj.GetName())
+		}
+
+		if obj.GetNamespace() == "" {
+			obj.SetNamespace(p.namespace)
+		}
+
+		obj.SetLabels(utils.MergeStringMaps(obj.GetLabels(), monitoringutils.Labels(p.values.Name)))
+
+		if err := registry.Add(obj); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	for _, obj := range p.values.CentralConfigs.PrometheusRules {
+		add(obj)
+	}
+
+	return utilerrors.NewAggregate(errs)
 }
 
 func (p *prometheus) getLabels() map[string]string {
