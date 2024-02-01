@@ -58,13 +58,6 @@ const (
 	// alpha: v1.64.0
 	MutableShootSpecNetworkingNodes featuregate.Feature = "MutableShootSpecNetworkingNodes"
 
-	// WorkerlessShoots allows creation of Shoot clusters with no worker pools.
-	// owner: @acumino @ary1992 @shafeeqes
-	// alpha: v1.70.0
-	// beta: v1.79.0
-	// GA: v1.86.0
-	WorkerlessShoots featuregate.Feature = "WorkerlessShoots"
-
 	// ShootForceDeletion allows force deletion of Shoots.
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/shoot_operations.md#shoot-force-deletion for more details.
 	// owner: @acumino @ary1992 @shafeeqes
@@ -126,7 +119,6 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	CoreDNSQueryRewriting:              {Default: false, PreRelease: featuregate.Alpha},
 	IPv6SingleStack:                    {Default: false, PreRelease: featuregate.Alpha},
 	MutableShootSpecNetworkingNodes:    {Default: false, PreRelease: featuregate.Alpha},
-	WorkerlessShoots:                   {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	ShootForceDeletion:                 {Default: false, PreRelease: featuregate.Alpha},
 	MachineControllerManagerDeployment: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	APIServerFastRollout:               {Default: true, PreRelease: featuregate.Beta},
