@@ -80,7 +80,7 @@ var _ = Describe("VpnSeedServer", func() {
 
 		listenAddress   = "0.0.0.0"
 		listenAddressV6 = "::"
-		dnsLookUpFamily = "V4_PREFERRED"
+		dnsLookUpFamily = "ALL"
 
 		expectedConfigMap *corev1.ConfigMap
 		expectedSecretDH  = &corev1.Secret{
@@ -793,7 +793,7 @@ var _ = Describe("VpnSeedServer", func() {
 					BeforeEach(func() {
 						listenAddress = "0.0.0.0"
 						listenAddressV6 = "::"
-						dnsLookUpFamily = "V4_PREFERRED"
+						dnsLookUpFamily = "ALL"
 						networkConfig := NetworkValues{
 							PodCIDR:     "2001:db8:1::/48",
 							ServiceCIDR: "2001:db8:3::/48",
