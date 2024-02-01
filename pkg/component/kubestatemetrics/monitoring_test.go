@@ -26,15 +26,6 @@ import (
 )
 
 var _ = Describe("Monitoring", func() {
-	Describe("#CentralMonitoringConfiguration", func() {
-		It("should return the expected scrape configs", func() {
-			monitoringConfig, err := CentralMonitoringConfiguration()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(monitoringConfig.ScrapeConfigs).To(ConsistOf(expectedCentralScrapeConfig))
-			Expect(monitoringConfig.CAdvisorScrapeConfigMetricRelabelConfigs).To(BeEmpty())
-		})
-	})
-
 	Context("Shoot Monitoring Configuration", func() {
 		var kubeStateMetrics component.MonitoringComponent
 
@@ -80,35 +71,6 @@ var _ = Describe("Monitoring", func() {
 })
 
 const (
-	expectedCentralScrapeConfig = `job_name: kube-state-metrics
-honor_labels: false
-# Service is used, because we only care about metric from one kube-state-metrics instance
-# and not multiple in HA setup
-kubernetes_sd_configs:
-- role: service
-  namespaces:
-    names: [ garden ]
-relabel_configs:
-- source_labels: [ __meta_kubernetes_service_label_component ]
-  action: keep
-  regex: kube-state-metrics
-- source_labels: [ __meta_kubernetes_service_port_name ]
-  action: keep
-- source_labels: [ __meta_kubernetes_service_label_type ]
-  regex: (.+)
-  target_label: type
-  replacement: ${1}
-- target_label: instance
-  replacement: kube-state-metrics
-metric_relabel_configs:
-- source_labels: [ pod ]
-  regex: ^.+\.tf-pod.+$
-  action: drop
-- source_labels: [ __name__ ]
-  action: keep
-  regex: ^(kube_daemonset_metadata_generation|kube_daemonset_status_current_number_scheduled|kube_daemonset_status_desired_number_scheduled|kube_daemonset_status_number_available|kube_daemonset_status_number_unavailable|kube_daemonset_status_updated_number_scheduled|kube_deployment_metadata_generation|kube_deployment_spec_replicas|kube_deployment_status_observed_generation|kube_deployment_status_replicas|kube_deployment_status_replicas_available|kube_deployment_status_replicas_unavailable|kube_deployment_status_replicas_updated|kube_horizontalpodautoscaler_spec_max_replicas|kube_horizontalpodautoscaler_spec_min_replicas|kube_horizontalpodautoscaler_status_current_replicas|kube_horizontalpodautoscaler_status_desired_replicas|kube_horizontalpodautoscaler_status_condition|kube_namespace_annotations|kube_node_info|kube_node_labels|kube_node_spec_taint|kube_node_spec_unschedulable|kube_node_status_allocatable|kube_node_status_capacity|kube_node_status_condition|kube_persistentvolumeclaim_resource_requests_storage_bytes|kube_pod_container_info|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_container_status_restarts_total|kube_pod_info|kube_pod_labels|kube_pod_owner|kube_pod_spec_volumes_persistentvolumeclaims_info|kube_pod_status_phase|kube_pod_status_ready|kube_replicaset_owner|kube_statefulset_metadata_generation|kube_statefulset_replicas|kube_statefulset_status_observed_generation|kube_statefulset_status_replicas|kube_statefulset_status_replicas_current|kube_statefulset_status_replicas_ready|kube_statefulset_status_replicas_updated|kube_verticalpodautoscaler_status_recommendation_containerrecommendations_target|kube_verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound|kube_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound|kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_minallowed|kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_maxallowed|kube_verticalpodautoscaler_spec_updatepolicy_updatemode)$
-`
-
 	expectedScrapeConfig = `job_name: kube-state-metrics
 honor_labels: false
 # Service is used, because we only care about metric from one kube-state-metrics instance

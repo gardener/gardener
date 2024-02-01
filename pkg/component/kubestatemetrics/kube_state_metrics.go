@@ -41,7 +41,8 @@ const (
 	labelKeyType        = "type"
 	labelValueComponent = "kube-state-metrics"
 
-	port = 8080
+	port            = 8080
+	portNameMetrics = "metrics"
 )
 
 // Interface contains functions for a kube-state-metrics deployer.

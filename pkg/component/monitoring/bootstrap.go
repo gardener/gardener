@@ -33,7 +33,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/istio"
-	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -121,7 +120,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		centralScrapeConfigs                            = strings.Builder{}
 		centralCAdvisorScrapeConfigMetricRelabelConfigs = strings.Builder{}
 		centralMonitoringComponentFunctions             = []component.CentralMonitoringConfiguration{
-			kubestatemetrics.CentralMonitoringConfiguration,
 		}
 	)
 

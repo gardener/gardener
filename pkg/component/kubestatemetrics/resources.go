@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strings"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -35,6 +36,8 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
+	"github.com/gardener/gardener/pkg/component/monitoring/prometheus/cache"
+	monitoringutils "github.com/gardener/gardener/pkg/component/monitoring/utils"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -48,6 +51,7 @@ func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName s
 		deployment         = k.emptyDeployment()
 		vpa                = k.emptyVerticalPodAutoscaler()
 		pdb                = k.emptyPodDisruptionBudget()
+		serviceMonitor     = k.emptyServiceMonitor()
 
 		configs = component.ResourceConfigs{
 			{Obj: clusterRole, Class: component.Application, MutateFn: func() { k.reconcileClusterRole(clusterRole) }},
@@ -64,6 +68,7 @@ func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName s
 			component.ResourceConfig{Obj: clusterRoleBinding, Class: component.Application, MutateFn: func() { k.reconcileClusterRoleBinding(clusterRoleBinding, clusterRole, serviceAccount) }},
 			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { k.reconcileDeployment(deployment, serviceAccount, "", nil) }},
 			component.ResourceConfig{Obj: pdb, Class: component.Runtime, MutateFn: func() { k.reconcilePodDisruptionBudget(pdb, deployment) }},
+			component.ResourceConfig{Obj: serviceMonitor, Class: component.Runtime, MutateFn: func() { k.reconcileServiceMonitor(serviceMonitor) }},
 		)
 	}
 
@@ -181,7 +186,7 @@ func (k *kubeStateMetrics) reconcileService(service *corev1.Service) {
 	service.Spec.Selector = k.getLabels()
 	service.Spec.Ports = kubernetesutils.ReconcileServicePorts(service.Spec.Ports, []corev1.ServicePort{
 		{
-			Name:       "metrics",
+			Name:       portNameMetrics,
 			Port:       80,
 			TargetPort: intstr.FromInt32(port),
 			Protocol:   corev1.ProtocolTCP,
@@ -221,7 +226,7 @@ func (k *kubeStateMetrics) reconcileDeployment(
 			"--resources=deployments,pods,statefulsets,nodes,verticalpodautoscalers,horizontalpodautoscalers,persistentvolumeclaims,replicasets,namespaces",
 			"--metric-labels-allowlist=nodes=[*]",
 			"--metric-annotations-allowlist=namespaces=[shoot.gardener.cloud/uid]",
-			fmt.Sprintf("--metric-allowlist=%s", strings.Join(centralMonitoringAllowedMetrics, ",")),
+			fmt.Sprintf("--metric-allowlist=%s", strings.Join(cachePrometheusAllowedMetrics, ",")),
 		)
 	}
 
@@ -349,6 +354,37 @@ func (k *kubeStateMetrics) reconcilePodDisruptionBudget(podDisruptionBudget *pol
 	}
 
 	kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, k.values.KubernetesVersion)
+}
+
+func (k *kubeStateMetrics) emptyServiceMonitor() *monitoringv1.ServiceMonitor {
+	return &monitoringv1.ServiceMonitor{ObjectMeta: monitoringutils.ConfigObjectMeta("kube-state-metrics", k.namespace, cache.Label)}
+}
+
+func (k *kubeStateMetrics) reconcileServiceMonitor(serviceMonitor *monitoringv1.ServiceMonitor) {
+	serviceMonitor.Labels = monitoringutils.Labels(cache.Label)
+	serviceMonitor.Spec = monitoringv1.ServiceMonitorSpec{
+		Selector: metav1.LabelSelector{MatchLabels: k.getLabels()},
+		Endpoints: []monitoringv1.Endpoint{{
+			Port: portNameMetrics,
+			RelabelConfigs: []*monitoringv1.RelabelConfig{
+				{
+					TargetLabel: "instance",
+					Replacement: "kube-state-metrics",
+				},
+				{
+					SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_type"},
+					Regex:        `(.+)`,
+					TargetLabel:  "type",
+					Replacement:  `${1}`,
+				},
+			},
+			MetricRelabelConfigs: append([]*monitoringv1.RelabelConfig{{
+				SourceLabels: []monitoringv1.LabelName{"pod"},
+				Regex:        `^.+\.tf-pod.+$`,
+				Action:       "drop",
+			}}, monitoringutils.StandardMetricRelabelConfig(cachePrometheusAllowedMetrics...)...),
+		}},
+	}
 }
 
 func (k *kubeStateMetrics) getLabels() map[string]string {
