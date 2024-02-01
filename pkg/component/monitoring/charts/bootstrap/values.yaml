@@ -134,24 +134,6 @@ allowedMetrics:
   - kubelet_volume_stats_capacity_bytes
   - kubelet_volume_stats_used_bytes
 
-  nodeExporter:
-  - node_boot_time_seconds
-  - node_cpu_seconds_total
-  - node_filesystem_avail_bytes
-  - node_filesystem_files
-  - node_filesystem_files_free
-  - node_filesystem_free_bytes
-  - node_filesystem_readonly
-  - node_filesystem_size_bytes
-  - node_load1
-  - node_load5
-  - node_load15
-  - node_memory_.+
-  - node_nf_conntrack_entries
-  - node_nf_conntrack_entries_limit
-  - process_max_fds
-  - process_open_fds
-
   fluentbit:
   - fluentbit_input_bytes_total
   - fluentbit_input_records_total

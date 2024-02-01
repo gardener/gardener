@@ -60,6 +60,8 @@ type Values struct {
 type CentralConfigs struct {
 	// PrometheusRules is a list of central PrometheusRule objects for this prometheus instance.
 	PrometheusRules []*monitoringv1.PrometheusRule
+	// ServiceMonitors is a list of central ServiceMonitor objects for this prometheus instance.
+	ServiceMonitors []*monitoringv1.ServiceMonitor
 }
 
 // New creates a new instance of DeployWaiter for the prometheus.
@@ -148,6 +150,9 @@ func (p *prometheus) addCentralConfigsToRegistry(registry *managedresources.Regi
 	}
 
 	for _, obj := range p.values.CentralConfigs.PrometheusRules {
+		add(obj)
+	}
+	for _, obj := range p.values.CentralConfigs.ServiceMonitors {
 		add(obj)
 	}
 
