@@ -26,6 +26,10 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
+const (
+	port = 9090
+)
+
 // Values contains configuration values for the prometheus resources.
 type Values struct {
 	// Name is the name of the prometheus. It will be used for the resource names of Prometheus and ManagedResource.
@@ -52,6 +56,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 
 	resources, err := registry.AddAllAndSerialize(
 		p.serviceAccount(),
+		p.service(),
 	)
 	if err != nil {
 		return err
