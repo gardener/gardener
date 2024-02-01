@@ -41,7 +41,13 @@ func (p *prometheus) prometheus() *monitoringv1.Prometheus {
 			CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
 				ScrapeInterval: "1m",
 				ReloadStrategy: &reloadStrategy,
-				
+				AdditionalScrapeConfigs: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: p.name() + "-additional-scrape-configs",
+					},
+					Key: dataKeyAdditionalScrapeConfigs,
+				},
+
 				PodMetadata: &monitoringv1.EmbeddedObjectMetadata{
 					Labels: map[string]string{
 						v1beta1constants.LabelNetworkPolicyToDNS:                                                         v1beta1constants.LabelNetworkPolicyAllowed,

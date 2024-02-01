@@ -33,7 +33,8 @@ import (
 )
 
 const (
-	port = 9090
+	dataKeyAdditionalScrapeConfigs = "prometheus.yaml"
+	port                           = 9090
 )
 
 // Values contains configuration values for the prometheus resources.
@@ -58,6 +59,9 @@ type Values struct {
 // CentralConfigs contains configuration for this Prometheus instance that is created together with it. This should
 // only contain configuration that cannot be directly assigned to another component package.
 type CentralConfigs struct {
+	// AdditionalScrapeConfigs are additional scrape configs which cannot be modelled with the CRDs of the Prometheus
+	// operator.
+	AdditionalScrapeConfigs []string
 	// PrometheusRules is a list of central PrometheusRule objects for this prometheus instance.
 	PrometheusRules []*monitoringv1.PrometheusRule
 	// ServiceMonitors is a list of central ServiceMonitor objects for this prometheus instance.
@@ -94,6 +98,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		p.serviceAccount(),
 		p.service(),
 		p.clusterRoleBinding(),
+		p.secretAdditionalScrapeConfigs(),
 		p.prometheus(),
 		p.vpa(),
 	)

@@ -58,6 +58,11 @@ var _ = Describe("Prometheus", func() {
 		priorityClassName = "priority-class"
 		storageCapacity   = resource.MustParse("1337Gi")
 
+		additionalScrapeConfig1 = `job_name: foo
+honor_labels: false`
+		additionalScrapeConfig2 = `job_name: bar
+honor_labels: true`
+
 		fakeClient client.Client
 		deployer   component.DeployWaiter
 		values     Values
@@ -69,14 +74,15 @@ var _ = Describe("Prometheus", func() {
 
 		reloadStrategy = monitoringv1.HTTPReloadStrategyType
 
-		serviceAccount      *corev1.ServiceAccount
-		service             *corev1.Service
-		clusterRoleBinding  *rbacv1.ClusterRoleBinding
-		prometheus          *monitoringv1.Prometheus
-		vpa                 *vpaautoscalingv1.VerticalPodAutoscaler
-		prometheusRule      *monitoringv1.PrometheusRule
-		serviceMonitor      *monitoringv1.ServiceMonitor
-		additionalConfigMap *corev1.ConfigMap
+		serviceAccount                *corev1.ServiceAccount
+		service                       *corev1.Service
+		clusterRoleBinding            *rbacv1.ClusterRoleBinding
+		prometheus                    *monitoringv1.Prometheus
+		vpa                           *vpaautoscalingv1.VerticalPodAutoscaler
+		prometheusRule                *monitoringv1.PrometheusRule
+		serviceMonitor                *monitoringv1.ServiceMonitor
+		additionalConfigMap           *corev1.ConfigMap
+		secretAdditionalScrapeConfigs *corev1.Secret
 	)
 
 	BeforeEach(func() {
@@ -185,6 +191,12 @@ var _ = Describe("Prometheus", func() {
 				CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
 					ScrapeInterval: "1m",
 					ReloadStrategy: &reloadStrategy,
+					AdditionalScrapeConfigs: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "prometheus-" + name + "-additional-scrape-configs",
+						},
+						Key: "prometheus.yaml",
+					},
 
 					PodMetadata: &monitoringv1.EmbeddedObjectMetadata{
 						Labels: map[string]string{
@@ -295,10 +307,28 @@ var _ = Describe("Prometheus", func() {
 		additionalConfigMap = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{Name: "configmap", Namespace: namespace},
 		}
+		secretAdditionalScrapeConfigs = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "prometheus-" + name + "-additional-scrape-configs",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "prometheus",
+					"role": "monitoring",
+					"name": name,
+				},
+			},
+			Type: corev1.SecretTypeOpaque,
+			Data: map[string][]byte{"prometheus.yaml": []byte(`- job_name: foo
+  honor_labels: false
+- job_name: bar
+  honor_labels: true
+`)},
+		}
 	})
 
 	JustBeforeEach(func() {
 		values.AdditionalResources = append(values.AdditionalResources, additionalConfigMap)
+		values.CentralConfigs.AdditionalScrapeConfigs = append(values.CentralConfigs.AdditionalScrapeConfigs, additionalScrapeConfig1, additionalScrapeConfig2)
 		values.CentralConfigs.PrometheusRules = append(values.CentralConfigs.PrometheusRules, prometheusRule)
 		values.CentralConfigs.ServiceMonitors = append(values.CentralConfigs.ServiceMonitors, serviceMonitor)
 
@@ -353,11 +383,10 @@ var _ = Describe("Prometheus", func() {
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(8))
+				Expect(managedResourceSecret.Data).To(HaveLen(9))
 				Expect(string(managedResourceSecret.Data["serviceaccount__some-namespace__prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(serviceAccount)))
 				Expect(string(managedResourceSecret.Data["service__some-namespace__prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
@@ -371,6 +400,7 @@ var _ = Describe("Prometheus", func() {
 				metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", name)
 				Expect(string(managedResourceSecret.Data["servicemonitor__default__"+name+"-monitor.yaml"])).To(Equal(componenttest.Serialize(serviceMonitor)))
 
+				Expect(string(managedResourceSecret.Data["secret__some-namespace__prometheus-"+name+"-additional-scrape-configs.yaml"])).To(Equal(componenttest.Serialize(secretAdditionalScrapeConfigs)))
 				Expect(string(managedResourceSecret.Data["configmap__some-namespace__configmap.yaml"])).To(Equal(componenttest.Serialize(additionalConfigMap)))
 			})
 		})
