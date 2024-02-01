@@ -57,6 +57,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 	resources, err := registry.AddAllAndSerialize(
 		p.serviceAccount(),
 		p.service(),
+		p.clusterRoleBinding(),
 	)
 	if err != nil {
 		return err
