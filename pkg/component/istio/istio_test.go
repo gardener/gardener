@@ -189,13 +189,29 @@ var _ = Describe("istiod", func() {
 			return string(data)
 		}
 
-		istioIngressService = func(externalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType) string {
-			policy := ""
-			if externalTrafficPolicy != nil {
-				policy = "  externalTrafficPolicy: " + string(*externalTrafficPolicy)
-			}
+		istioIngressService = func() string {
 			data, _ := os.ReadFile("./test_charts/ingress_service.yaml")
-			return strings.TrimSpace(strings.ReplaceAll(string(data), "<EXTERNAL_TRAFFIC_POLICY>", policy))
+			return string(data)
+		}
+
+		istioIngressServiceDualStack = func() string {
+			data, _ := os.ReadFile("./test_charts/ingress_service_dualstack.yaml")
+			return string(data)
+		}
+
+		istioIngressServiceDualStackETP = func() string {
+			data, _ := os.ReadFile("./test_charts/ingress_service_dualstack_etp.yaml")
+			return string(data)
+		}
+
+		istioIngressServiceETPCluster = func() string {
+			data, _ := os.ReadFile("./test_charts/ingress_service_etp_cluster.yaml")
+			return string(data)
+		}
+
+		istioIngressServiceETPLocal = func() string {
+			data, _ := os.ReadFile("./test_charts/ingress_service_etp_local.yaml")
+			return string(data)
 		}
 
 		istioIngressServiceAccount = func() string {
@@ -364,7 +380,7 @@ var _ = Describe("istiod", func() {
 			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_poddisruptionbudget_test-ingress.yaml"]), istioIngressPodDisruptionBudget())).To(BeEmpty())
 			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_role_test-ingress.yaml"]), istioIngressRole())).To(BeEmpty())
 			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_rolebindings_test-ingress.yaml"]), istioIngressRoleBinding())).To(BeEmpty())
-			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_service_test-ingress.yaml"]), istioIngressService(nil))).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_service_test-ingress.yaml"]), istioIngressService())).To(BeEmpty())
 			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_serviceaccount_test-ingress.yaml"]), istioIngressServiceAccount())).To(BeEmpty())
 			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_deployment_test-ingress.yaml"]), istioIngressDeployment(nil))).To(BeEmpty())
 
@@ -528,7 +544,7 @@ var _ = Describe("istiod", func() {
 
 			It("should successfully deploy correct external traffic policy", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
-				Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_service_test-ingress.yaml"]), istioIngressService(&externalTrafficPolicy))).To(BeEmpty())
+				Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_service_test-ingress.yaml"]), istioIngressServiceETPCluster())).To(BeEmpty())
 			})
 		})
 
@@ -554,7 +570,59 @@ var _ = Describe("istiod", func() {
 
 			It("should successfully deploy correct external traffic policy", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
-				Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_service_test-ingress.yaml"]), istioIngressService(&externalTrafficPolicy))).To(BeEmpty())
+				Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_service_test-ingress.yaml"]), istioIngressServiceETPLocal())).To(BeEmpty())
+			})
+		})
+
+		Context("dual stack istio service", func() {
+			BeforeEach(func() {
+				externalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
+				igw[0].ExternalTrafficPolicy = &externalTrafficPolicy
+				igw[0].DualStack = true
+				istiod = NewIstio(
+					c,
+					renderer,
+					Values{
+						Istiod: IstiodValues{
+							Enabled:     true,
+							Image:       "foo/bar",
+							Namespace:   deployNS,
+							TrustDomain: "foo.local",
+							Zones:       []string{"a", "b", "c"},
+						},
+						IngressGateway: igw,
+					},
+				)
+			})
+
+			It("should successfully deploy correct dualStack config and traffic policy local", func() {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
+				Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_service_test-ingress.yaml"]), istioIngressServiceDualStackETP())).To(BeEmpty())
+			})
+		})
+
+		Context("dual stack istio service with traffic policy local", func() {
+			BeforeEach(func() {
+				igw[0].DualStack = true
+				istiod = NewIstio(
+					c,
+					renderer,
+					Values{
+						Istiod: IstiodValues{
+							Enabled:     true,
+							Image:       "foo/bar",
+							Namespace:   deployNS,
+							TrustDomain: "foo.local",
+							Zones:       []string{"a", "b", "c"},
+						},
+						IngressGateway: igw,
+					},
+				)
+			})
+
+			It("should successfully deploy correct dualStack config", func() {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
+				Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_service_test-ingress.yaml"]), istioIngressServiceDualStack())).To(BeEmpty())
 			})
 		})
 

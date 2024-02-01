@@ -26,9 +26,9 @@ spec:
   loadBalancerIP: {{ .Values.loadBalancerIP }}
 {{- end }}
 {{- if .Values.externalTrafficPolicy }}
-  externalTrafficPolicy: {{ .Values.externalTrafficPolicy -}}
-{{- end -}}
-{{- if eq .Values.dualStack true -}}
+  externalTrafficPolicy: {{ .Values.externalTrafficPolicy }}
+{{- end }}
+{{- if eq .Values.dualStack true }}
   ipFamilies:
   - IPv6
   - IPv4
