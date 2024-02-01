@@ -17,20 +17,20 @@ package extensionclusterrole
 import (
 	"context"
 	"fmt"
+	"sort"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // Reconciler reconciles ClusterRoles for additional extension permissions and creates ClusterRoleBindings for binding
@@ -39,7 +39,9 @@ type Reconciler struct {
 	Client client.Client
 }
 
-// Reconcile reconciles ControllerRegistrations.
+// Reconcile reconciles ClusterRoles. It creates related ClusterRoleBindings or updates their subjects to match
+// ServiceAccounts selected by the ClusterRoles via 'authorization.gardener.cloud/extensions-serviceaccount-selector'
+// annotation.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
@@ -88,37 +90,30 @@ func (r *Reconciler) computeSubjects(ctx context.Context, clusterRole *metav1.Pa
 		return nil, fmt.Errorf("failed parsing label selector: %w", err)
 	}
 
-	seedNamespaceList := &metav1.PartialObjectMetadataList{}
-	seedNamespaceList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NamespaceList"))
-	if err := r.Client.List(ctx, seedNamespaceList, client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed}); err != nil {
-		return nil, fmt.Errorf("failed listing seed namespaces: %w", err)
+	serviceAccountList := &metav1.PartialObjectMetadataList{}
+	serviceAccountList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("ServiceAccountList"))
+	if err := r.Client.List(ctx, serviceAccountList, client.MatchingLabelsSelector{Selector: labelSelector}); err != nil {
+		return nil, fmt.Errorf("failed listing ServiceAccounts with label selector %s: %w", labelSelector.String(), err)
+	}
+
+	var subjects []rbacv1.Subject
+	for _, serviceAccount := range serviceAccountList.Items {
+		if strings.HasPrefix(serviceAccount.GetNamespace(), gardenerutils.SeedNamespaceNamePrefix) {
+			subjects = append(subjects, rbacv1.Subject{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      serviceAccount.Name,
+				Namespace: serviceAccount.Namespace,
+			})
+		}
 	}
 
 	// ensure stable order of subjects
-	kubernetesutils.ByName().Sort(seedNamespaceList)
-
-	var subjects []rbacv1.Subject
-
-	for _, namespace := range seedNamespaceList.Items {
-		serviceAccountList := &metav1.PartialObjectMetadataList{}
-		serviceAccountList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("ServiceAccountList"))
-		if err := r.Client.List(ctx, serviceAccountList, client.InNamespace(namespace.Name)); err != nil {
-			return nil, fmt.Errorf("failed listing ServiceAccounts in namespace %s: %w", namespace.Name, err)
+	sort.Slice(subjects, func(i, j int) bool {
+		if subjects[i].Namespace != subjects[j].Namespace {
+			return subjects[i].Namespace < subjects[j].Namespace
 		}
-
-		// ensure stable order of subjects
-		kubernetesutils.ByName().Sort(serviceAccountList)
-
-		for _, serviceAccount := range serviceAccountList.Items {
-			if labelSelector.Matches(labels.Set(serviceAccount.GetLabels())) {
-				subjects = append(subjects, rbacv1.Subject{
-					Kind:      rbacv1.ServiceAccountKind,
-					Name:      serviceAccount.Name,
-					Namespace: serviceAccount.Namespace,
-				})
-			}
-		}
-	}
+		return subjects[i].Name < subjects[j].Name
+	})
 
 	return subjects, nil
 }
