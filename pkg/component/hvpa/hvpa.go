@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -38,6 +39,8 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/monitoring/prometheus/cache"
+	monitoringutils "github.com/gardener/gardener/pkg/component/monitoring/utils"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -305,6 +308,28 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 				Selector:       deployment.Spec.Selector,
 			},
 		}
+
+		serviceMonitor = &monitoringv1.ServiceMonitor{
+			ObjectMeta: monitoringutils.ConfigObjectMeta(serviceName, h.namespace, cache.Label),
+			Spec: monitoringv1.ServiceMonitorSpec{
+				Selector: metav1.LabelSelector{MatchLabels: getDeploymentLabels()},
+				Endpoints: []monitoringv1.Endpoint{{
+					Port: portNameMetrics,
+					MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
+						"hvpa_aggregate_applied_scaling_total",
+						"hvpa_aggregate_blocked_scalings_total",
+						"hvpa_spec_replicas",
+						"hvpa_status_replicas",
+						"hvpa_status_applied_hpa_current_replicas",
+						"hvpa_status_applied_hpa_desired_replicas",
+						"hvpa_status_applied_vpa_recommendation",
+						"hvpa_status_blocked_hpa_current_replicas",
+						"hvpa_status_blocked_hpa_desired_replicas",
+						"hvpa_status_blocked_vpa_recommendation",
+					),
+				}},
+			},
+		}
 	)
 
 	kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, h.values.KubernetesVersion)
@@ -324,6 +349,7 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 		deployment,
 		podDisruptionBudget,
 		vpa,
+		serviceMonitor,
 	)
 	if err != nil {
 		return err
