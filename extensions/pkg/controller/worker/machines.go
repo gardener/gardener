@@ -26,7 +26,6 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/util"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
@@ -132,7 +131,7 @@ func WorkerPoolHash(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontr
 
 	for _, w := range cluster.Shoot.Spec.Provider.Workers {
 		if pool.Name == w.Name {
-			if w.CRI != nil && w.CRI.Name != gardencorev1beta1.CRINameDocker {
+			if w.CRI != nil {
 				data = append(data, string(w.CRI.Name))
 			}
 		}

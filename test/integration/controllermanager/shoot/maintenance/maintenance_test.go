@@ -111,9 +111,6 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 								},
 								CRI: []gardencorev1beta1.CRI{
 									{
-										Name: gardencorev1beta1.CRINameDocker,
-									},
-									{
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
@@ -126,9 +123,6 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 									Classification: &supportedClassification,
 								},
 								CRI: []gardencorev1beta1.CRI{
-									{
-										Name: gardencorev1beta1.CRINameDocker,
-									},
 									{
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
@@ -143,9 +137,6 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 								},
 								CRI: []gardencorev1beta1.CRI{
 									{
-										Name: gardencorev1beta1.CRINameDocker,
-									},
-									{
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
@@ -158,9 +149,6 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 									Classification: &supportedClassification,
 								},
 								CRI: []gardencorev1beta1.CRI{
-									{
-										Name: gardencorev1beta1.CRINameDocker,
-									},
 									{
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
@@ -175,9 +163,6 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 								},
 								CRI: []gardencorev1beta1.CRI{
 									{
-										Name: gardencorev1beta1.CRINameDocker,
-									},
-									{
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
@@ -191,9 +176,6 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 								},
 								CRI: []gardencorev1beta1.CRI{
 									{
-										Name: gardencorev1beta1.CRINameDocker,
-									},
-									{
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
@@ -206,9 +188,6 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 									Classification: &supportedClassification,
 								},
 								CRI: []gardencorev1beta1.CRI{
-									{
-										Name: gardencorev1beta1.CRINameDocker,
-									},
 									{
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
@@ -224,9 +203,6 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 								},
 								CRI: []gardencorev1beta1.CRI{
 									{
-										Name: gardencorev1beta1.CRINameDocker,
-									},
-									{
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
@@ -241,9 +217,6 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 								},
 								CRI: []gardencorev1beta1.CRI{
 									{
-										Name: gardencorev1beta1.CRINameDocker,
-									},
-									{
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
@@ -255,9 +228,6 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 									Classification: &deprecatedClassification,
 								},
 								CRI: []gardencorev1beta1.CRI{
-									{
-										Name: gardencorev1beta1.CRINameDocker,
-									},
 									{
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
@@ -272,9 +242,6 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 								},
 								CRI: []gardencorev1beta1.CRI{
 									{
-										Name: gardencorev1beta1.CRINameDocker,
-									},
-									{
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
@@ -288,9 +255,6 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 								},
 								CRI: []gardencorev1beta1.CRI{
 									{
-										Name: gardencorev1beta1.CRINameDocker,
-									},
-									{
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
@@ -303,9 +267,6 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 								},
 								CRI: []gardencorev1beta1.CRI{
 									{
-										Name: gardencorev1beta1.CRINameDocker,
-									},
-									{
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
 								},
@@ -317,9 +278,6 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 									Classification: &deprecatedClassification,
 								},
 								CRI: []gardencorev1beta1.CRI{
-									{
-										Name: gardencorev1beta1.CRINameDocker,
-									},
 									{
 										Name: gardencorev1beta1.CRINameContainerD,
 									},
