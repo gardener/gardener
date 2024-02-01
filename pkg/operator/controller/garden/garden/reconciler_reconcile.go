@@ -534,6 +534,7 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 			sniConfig,
 			gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0]),
 			gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0]),
+			nil,
 			shared.NormalizeResources(getKubernetesResourcesForEncryption(garden)),
 			utils.FilterEntriesByFilterFn(shared.NormalizeResources(garden.Status.EncryptedResources), gardenerutils.IsServedByKubeAPIServer),
 			helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials),

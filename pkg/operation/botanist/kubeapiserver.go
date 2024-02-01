@@ -41,7 +41,6 @@ import (
 func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Interface, error) {
 	var (
 		pods, services string
-		nodes          *string
 		vpnConfig      = kubeapiserver.VPNConfig{
 			Enabled: false,
 		}
@@ -56,14 +55,10 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		}
 	}
 
-	if b.Shoot.GetInfo().Spec.Networking != nil {
-		nodes = b.Shoot.GetInfo().Spec.Networking.Nodes
-	}
-
 	if !b.Shoot.IsWorkerless {
 		vpnConfig.Enabled = true
 		vpnConfig.PodNetworkCIDR = pods
-		vpnConfig.NodeNetworkCIDR = nodes
+		// NodeNetworkCIDR is set on deployment to handle dynamice node network CIDRs
 		vpnConfig.HighAvailabilityEnabled = b.Shoot.VPNHighAvailabilityEnabled
 		vpnConfig.HighAvailabilityNumberOfSeedServers = b.Shoot.VPNHighAvailabilityNumberOfSeedServers
 		vpnConfig.HighAvailabilityNumberOfShootClients = b.Shoot.VPNHighAvailabilityNumberOfShootClients
@@ -235,6 +230,11 @@ func (b *Botanist) computeKubeAPIServerSNIConfig() kubeapiserver.SNIConfig {
 func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	externalServer := b.Shoot.ComputeOutOfClusterAPIServerAddress(false)
 
+	var nodes *string
+	if network := b.Shoot.GetInfo().Spec.Networking; network != nil {
+		nodes = network.Nodes
+	}
+
 	if err := shared.DeployKubeAPIServer(
 		ctx,
 		b.SeedClientSet.Client(),
@@ -245,6 +245,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		b.computeKubeAPIServerSNIConfig(),
 		b.Shoot.ComputeOutOfClusterAPIServerAddress(true),
 		externalServer,
+		nodes,
 		b.Shoot.ResourcesToEncrypt,
 		b.Shoot.EncryptedResources,
 		v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials),
