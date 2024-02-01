@@ -19,6 +19,8 @@ import (
 )
 
 var (
+	//go:embed assets/scrapeconfigs/cadvisor.yaml
+	cAdvisor string
 	//go:embed assets/scrapeconfigs/kubelet.yaml
 	kubelet string
 )
@@ -26,6 +28,7 @@ var (
 // AdditionalScrapeConfigs returns the additional scrape configs for the cache prometheus.
 func AdditionalScrapeConfigs() []string {
 	return []string{
+		cAdvisor,
 		kubelet,
 	}
 }
