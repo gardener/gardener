@@ -219,7 +219,7 @@ func (h *Health) getAllExtensionConditions(ctx context.Context) ([]healthchecker
 		conditionsControlPlaneHealthy            []healthchecker.ExtensionCondition
 		conditionsEveryNodeReady                 []healthchecker.ExtensionCondition
 		conditionsSystemComponentsHealthy        []healthchecker.ExtensionCondition
-		conditionsobservabilityComponentsHealthy []healthchecker.ExtensionCondition
+		conditionsObservabilityComponentsHealthy []healthchecker.ExtensionCondition
 	)
 
 	for _, obj := range objs {
@@ -270,7 +270,7 @@ func (h *Health) getAllExtensionConditions(ctx context.Context) ([]healthchecker
 					LastHeartbeatTime:  lastHeartbeatTime,
 				})
 			case gardencorev1beta1.ShootObservabilityComponentsHealthy:
-				conditionsobservabilityComponentsHealthy = append(conditionsobservabilityComponentsHealthy, healthchecker.ExtensionCondition{
+				conditionsObservabilityComponentsHealthy = append(conditionsObservabilityComponentsHealthy, healthchecker.ExtensionCondition{
 					Condition:          condition,
 					ExtensionType:      kind,
 					ExtensionName:      name,
@@ -281,7 +281,7 @@ func (h *Health) getAllExtensionConditions(ctx context.Context) ([]healthchecker
 		}
 	}
 
-	return conditionsControlPlaneHealthy, conditionsEveryNodeReady, conditionsSystemComponentsHealthy, conditionsobservabilityComponentsHealthy, nil
+	return conditionsControlPlaneHealthy, conditionsEveryNodeReady, conditionsSystemComponentsHealthy, conditionsObservabilityComponentsHealthy, nil
 }
 
 func (h *Health) retrieveExtensions(ctx context.Context) ([]runtime.Object, error) {
@@ -447,15 +447,6 @@ func (h *Health) checkObservabilityComponents(
 		}
 	}
 
-	for _, extensionCondition := range extensionConditions {
-		if extensionCondition.ExtensionType == "shoot-networking-problemdetector" {
-			singleConditionSlice := []healthchecker.ExtensionCondition{extensionCondition}
-			if exitCondition := h.healthChecker.CheckExtensionCondition(condition, singleConditionSlice, healthCheckOutdatedThreshold); exitCondition != nil {
-				return exitCondition, nil
-			}
-		}
-	}
-
 	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "ObservabilityComponentsRunning", "All observability components are healthy.")
 	return &c, nil
 }
@@ -482,16 +473,6 @@ func (h *Health) checkSystemComponents(
 		}
 
 		if exitCondition := h.healthChecker.CheckManagedResource(condition, &mr, gardenlethelper.GetManagedResourceProgressingThreshold(h.gardenletConfiguration)); exitCondition != nil {
-			return exitCondition, nil
-		}
-	}
-
-	for _, extensionCondition := range extensionConditions {
-		if extensionCondition.ExtensionType == "shoot-networking-problemdetector" {
-			continue
-		}
-
-		if exitCondition := h.healthChecker.CheckExtensionCondition(condition, extensionConditions, healthCheckOutdatedThreshold); exitCondition != nil {
 			return exitCondition, nil
 		}
 	}
