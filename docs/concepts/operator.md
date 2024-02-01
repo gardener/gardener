@@ -1,4 +1,9 @@
-# Gardener Operator
+---
+title: Gardener Operator
+description: Understand the component responsible for the garden cluster environment and its various features
+---
+
+## Overview
 
 The `gardener-operator` is responsible for the garden cluster environment.
 Without this component, users must deploy ETCD, the Gardener control plane, etc., manually and with separate mechanisms (not maintained in this repository).

@@ -1,4 +1,9 @@
-# Gardener Scheduler
+---
+title: Gardener Scheduler
+description: Understand the configuration and flow of the controller that assigns a seed cluster to newly created shoots
+---
+
+## Overview
 
 The Gardener Scheduler is in essence a controller that watches newly created shoots and assigns a seed cluster to them.
 Conceptually, the task of the Gardener Scheduler is very similar to the task of the Kubernetes Scheduler: finding a seed for a shoot instead of a node for a pod.

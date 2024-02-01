@@ -1,8 +1,9 @@
 ---
 title: etcd
+description: How Gardener uses the etcd key-value store
 ---
 
-# etcd - Key-Value Store for Kubernetes
+## etcd - Key-Value Store for Kubernetes
 
 [etcd](https://etcd.io/) is a strongly consistent key-value store and the most prevalent choice for the Kubernetes
 persistence layer. All API cluster objects like `Pod`s, `Deployment`s, `Secret`s, etc., are stored in `etcd`, which

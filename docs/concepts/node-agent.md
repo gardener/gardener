@@ -1,4 +1,9 @@
-# Gardener Node Agent
+---
+title: Gardener Node Agent
+description: How Gardener bootstraps machines into worker nodes and how it installs and maintains gardener-managed node-specific components
+---
+
+## Overview
 
 The goal of the `gardener-node-agent` is to bootstrap a machine into a worker node and maintain node-specific components, which run on the node and are unmanaged by Kubernetes (e.g. the `kubelet` service, systemd units, ...).
 

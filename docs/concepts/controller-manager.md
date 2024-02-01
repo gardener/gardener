@@ -1,4 +1,9 @@
-# Gardener Controller Manager
+---
+title: Gardener Controller Manager
+description: Understand where the gardener-controller-manager runs and its functionalities
+---
+
+## Overview
 
 The `gardener-controller-manager` (often refered to as "GCM") is a component that runs next to the Gardener API server, similar to the Kubernetes Controller Manager.
 It runs several controllers that do not require talking to any seed or shoot cluster.
