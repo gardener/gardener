@@ -17,22 +17,19 @@ package kubelet
 import (
 	"fmt"
 	"slices"
-	"time"
 
 	"github.com/Masterminds/semver/v3"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/containerd"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // CLIFlags returns a list of kubelet CLI flags based on the provided parameters and for the provided Kubernetes version.
-func CLIFlags(kubernetesVersion *semver.Version, nodeLabels map[string]string, criName extensionsv1alpha1.CRIName, image *imagevector.Image, cliFlags components.ConfigurableKubeletCLIFlags, preferIPv6 bool) []string {
+func CLIFlags(kubernetesVersion *semver.Version, nodeLabels map[string]string, criName extensionsv1alpha1.CRIName, cliFlags components.ConfigurableKubeletCLIFlags, preferIPv6 bool) []string {
 	setCLIFlagsDefaults(&cliFlags)
 
 	var flags []string
@@ -53,15 +50,6 @@ func CLIFlags(kubernetesVersion *semver.Version, nodeLabels map[string]string, c
 		if versionutils.ConstraintK8sLess127.Check(kubernetesVersion) {
 			flags = append(flags, "--container-runtime=remote")
 		}
-	} else if criName == extensionsv1alpha1.CRINameDocker {
-		flags = append(flags,
-			"--network-plugin=cni",
-			"--cni-bin-dir=/opt/cni/bin/",
-			"--cni-conf-dir=/etc/cni/net.d/",
-			fmt.Sprintf("--image-pull-progress-deadline=%s", cliFlags.ImagePullProgressDeadline.Duration.String()))
-		if image != nil {
-			flags = append(flags, "--pod-infra-container-image="+image.String())
-		}
 	}
 
 	flags = append(flags, "--v=2")
@@ -73,10 +61,7 @@ func CLIFlags(kubernetesVersion *semver.Version, nodeLabels map[string]string, c
 	return flags
 }
 
-func setCLIFlagsDefaults(f *components.ConfigurableKubeletCLIFlags) {
-	if f.ImagePullProgressDeadline == nil {
-		f.ImagePullProgressDeadline = &metav1.Duration{Duration: time.Minute}
-	}
+func setCLIFlagsDefaults(_ *components.ConfigurableKubeletCLIFlags) {
 }
 
 func nodeLabelFlags(nodeLabels map[string]string) []string {

@@ -70,7 +70,7 @@ var _ = Describe("Component", func() {
 			}
 			ctx.PreferIPv6 = preferIPv6
 
-			cliFlags := CLIFlags(ctx.KubernetesVersion, ctx.NodeLabels, ctx.CRIName, ctx.Images["pause-container"], ctx.KubeletCLIFlags, ctx.PreferIPv6)
+			cliFlags := CLIFlags(ctx.KubernetesVersion, ctx.NodeLabels, ctx.CRIName, ctx.KubeletCLIFlags, ctx.PreferIPv6)
 			units, files, err := component.Config(ctx)
 
 			Expect(err).NotTo(HaveOccurred())

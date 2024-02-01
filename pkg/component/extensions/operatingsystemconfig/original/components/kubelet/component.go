@@ -113,7 +113,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		return nil, nil, err
 	}
 
-	cliFlags := CLIFlags(ctx.KubernetesVersion, ctx.NodeLabels, ctx.CRIName, ctx.Images[imagevector.ImageNamePauseContainer], ctx.KubeletCLIFlags, ctx.PreferIPv6)
+	cliFlags := CLIFlags(ctx.KubernetesVersion, ctx.NodeLabels, ctx.CRIName, ctx.KubeletCLIFlags, ctx.PreferIPv6)
 
 	if !features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
 		kubeletStartPre = `

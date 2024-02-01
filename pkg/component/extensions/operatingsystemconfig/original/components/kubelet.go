@@ -23,20 +23,12 @@ import (
 )
 
 // ConfigurableKubeletCLIFlags is the set of configurable kubelet command line parameters.
-type ConfigurableKubeletCLIFlags struct {
-	ImagePullProgressDeadline *metav1.Duration
-}
+type ConfigurableKubeletCLIFlags struct{}
 
 // KubeletCLIFlagsFromCoreV1beta1KubeletConfig computes the ConfigurableKubeletCLIFlags based on the provided
 // gardencorev1beta1.KubeletConfig.
-func KubeletCLIFlagsFromCoreV1beta1KubeletConfig(kubeletConfig *gardencorev1beta1.KubeletConfig) ConfigurableKubeletCLIFlags {
-	var out ConfigurableKubeletCLIFlags
-
-	if kubeletConfig != nil {
-		out.ImagePullProgressDeadline = kubeletConfig.ImagePullProgressDeadline
-	}
-
-	return out
+func KubeletCLIFlagsFromCoreV1beta1KubeletConfig(_ *gardencorev1beta1.KubeletConfig) ConfigurableKubeletCLIFlags {
+	return ConfigurableKubeletCLIFlags{}
 }
 
 // ConfigurableKubeletConfigParameters is the set of configurable kubelet config parameters.

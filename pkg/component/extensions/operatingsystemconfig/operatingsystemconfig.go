@@ -484,7 +484,7 @@ func (o *operatingSystemConfig) WorkerNameToOperatingSystemConfigsMap() map[stri
 }
 
 func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) (deployer, error) {
-	criName := extensionsv1alpha1.CRINameDocker
+	criName := extensionsv1alpha1.CRINameContainerD
 	if worker.CRI != nil {
 		criName = extensionsv1alpha1.CRIName(worker.CRI.Name)
 	}
@@ -827,7 +827,7 @@ func key(prefix string, workerName string, kubernetesVersion *semver.Version, cr
 		criName                     gardencorev1beta1.CRIName
 	)
 
-	if criConfig != nil && criConfig.Name != gardencorev1beta1.CRINameDocker {
+	if criConfig != nil {
 		criName = criConfig.Name
 	}
 
