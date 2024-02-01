@@ -69,12 +69,13 @@ var _ = Describe("Prometheus", func() {
 
 		reloadStrategy = monitoringv1.HTTPReloadStrategyType
 
-		serviceAccount     *corev1.ServiceAccount
-		service            *corev1.Service
-		clusterRoleBinding *rbacv1.ClusterRoleBinding
-		prometheus         *monitoringv1.Prometheus
-		vpa                *vpaautoscalingv1.VerticalPodAutoscaler
-		prometheusRule     *monitoringv1.PrometheusRule
+		serviceAccount      *corev1.ServiceAccount
+		service             *corev1.Service
+		clusterRoleBinding  *rbacv1.ClusterRoleBinding
+		prometheus          *monitoringv1.Prometheus
+		vpa                 *vpaautoscalingv1.VerticalPodAutoscaler
+		prometheusRule      *monitoringv1.PrometheusRule
+		additionalConfigMap *corev1.ConfigMap
 	)
 
 	BeforeEach(func() {
@@ -280,9 +281,13 @@ var _ = Describe("Prometheus", func() {
 				Groups: []monitoringv1.RuleGroup{{Name: "foo"}},
 			},
 		}
+		additionalConfigMap = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Name: "configmap", Namespace: namespace},
+		}
 	})
 
 	JustBeforeEach(func() {
+		values.AdditionalResources = append(values.AdditionalResources, additionalConfigMap)
 		values.CentralConfigs.PrometheusRules = append(values.CentralConfigs.PrometheusRules, prometheusRule)
 
 		deployer = New(fakeClient, namespace, values)
@@ -340,7 +345,7 @@ var _ = Describe("Prometheus", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(6))
+				Expect(managedResourceSecret.Data).To(HaveLen(7))
 				Expect(string(managedResourceSecret.Data["serviceaccount__some-namespace__prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(serviceAccount)))
 				Expect(string(managedResourceSecret.Data["service__some-namespace__prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
@@ -350,6 +355,8 @@ var _ = Describe("Prometheus", func() {
 				prometheusRule.Namespace = namespace
 				metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
 				Expect(string(managedResourceSecret.Data["prometheusrule__some-namespace__"+name+"-rule.yaml"])).To(Equal(componenttest.Serialize(prometheusRule)))
+
+				Expect(string(managedResourceSecret.Data["configmap__some-namespace__configmap.yaml"])).To(Equal(componenttest.Serialize(additionalConfigMap)))
 			})
 		})
 	})

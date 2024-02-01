@@ -51,6 +51,8 @@ type Values struct {
 	// CentralConfigs contains configuration for this Prometheus instance that is created together with it. This should
 	// only contain configuration that cannot be directly assigned to another component package.
 	CentralConfigs CentralConfigs
+	// AdditionalResources contains any additional resources which get added to the ManagedResource.
+	AdditionalResources []client.Object
 }
 
 // CentralConfigs contains configuration for this Prometheus instance that is created together with it. This should
@@ -79,6 +81,10 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
 	if err := p.addCentralConfigsToRegistry(registry); err != nil {
+		return err
+	}
+
+	if err := registry.Add(p.values.AdditionalResources...); err != nil {
 		return err
 	}
 
