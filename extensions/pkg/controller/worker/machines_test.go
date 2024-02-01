@@ -187,11 +187,6 @@ var _ = Describe("Machines", func() {
 				c.Shoot.Spec.Kubernetes.Version = "1.2.4"
 			})
 
-			It("when changing CRI configuration from `nil` to `docker`", func() {
-				c.Shoot.Spec.Provider = gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{
-					{Name: "test-worker", CRI: &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameDocker}}}}
-			})
-
 			It("when disabling node local dns via specification", func() {
 				c.Shoot.Spec.SystemComponents = &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: false}}
 			})
