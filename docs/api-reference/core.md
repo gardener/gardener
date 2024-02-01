@@ -5725,7 +5725,9 @@ Kubernetes meta/v1.Duration
 <td>
 <em>(Optional)</em>
 <p>ImagePullProgressDeadline describes the time limit under which if no pulling progress is made, the image pulling will be cancelled.
-Default: 1m</p>
+Default: 1m
+Only relevant for docker CRI.</p>
+<p>Deprecated: This field is deprecated and will be removed in Gardener release v1.89.</p>
 </td>
 </tr>
 <tr>
