@@ -86,7 +86,9 @@ build:
             - pkg/component/logging/fluentoperator
             - pkg/component/logging/fluentoperator/customresources
             - pkg/component/logging/vali
+            - pkg/component/monitoring/prometheus/cache
             - pkg/component/monitoring/prometheusoperator
+            - pkg/component/monitoring/utils
             - pkg/component/nginxingress
             - pkg/component/nodelocaldns/constants
             - pkg/component/plutono

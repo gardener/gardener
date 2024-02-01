@@ -83,6 +83,14 @@ func mergeImageSources(old, override *ImageSource) *ImageSource {
 		tag = old.Tag
 	}
 
+	version := override.Version
+	if version == nil {
+		version = old.Version
+	}
+	if version == nil && tag != nil {
+		version = old.Tag
+	}
+
 	runtimeVersion := override.RuntimeVersion
 	if runtimeVersion == nil {
 		runtimeVersion = old.RuntimeVersion
@@ -105,6 +113,7 @@ func mergeImageSources(old, override *ImageSource) *ImageSource {
 		Architectures:  architectures,
 		Repository:     override.Repository,
 		Tag:            tag,
+		Version:        version,
 	}
 }
 
@@ -369,10 +378,16 @@ func (i *ImageSource) ToImage(targetVersion *string) *Image {
 		tag = &version
 	}
 
+	version := i.Version
+	if version == nil && tag != nil {
+		version = tag
+	}
+
 	return &Image{
 		Name:       i.Name,
 		Repository: i.Repository,
 		Tag:        tag,
+		Version:    version,
 	}
 }
 

@@ -377,6 +377,10 @@ func (r *Reconciler) runReconcileSeedFlow(
 	if err != nil {
 		return err
 	}
+	cachePrometheus, err := defaultCachePrometheus(seedClient, r.GardenNamespace, seed)
+	if err != nil {
+		return err
+	}
 
 	var (
 		g           = flow.NewGraph("Seed cluster creation")
@@ -660,6 +664,13 @@ func (r *Reconciler) runReconcileSeedFlow(
 			})
 		)
 	}
+
+	var (
+		_ = g.Add(flow.Task{
+			Name: "Deploying cache Prometheus",
+			Fn:   cachePrometheus.Deploy,
+		})
+	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{
 		Log:              log,

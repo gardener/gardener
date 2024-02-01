@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -53,6 +54,8 @@ import (
 	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/metricsserver"
 	"github.com/gardener/gardener/pkg/component/monitoring"
+	"github.com/gardener/gardener/pkg/component/monitoring/prometheus"
+	cacheprometheus "github.com/gardener/gardener/pkg/component/monitoring/prometheus/cache"
 	"github.com/gardener/gardener/pkg/component/nodeexporter"
 	"github.com/gardener/gardener/pkg/component/nodeproblemdetector"
 	"github.com/gardener/gardener/pkg/component/plutono"
@@ -463,6 +466,34 @@ func defaultMonitoring(
 			WildcardCertName:                   wildcardCertName,
 		},
 	), nil
+}
+
+func defaultCachePrometheus(
+	c client.Client,
+	namespace string,
+	seed *seedpkg.Seed,
+) (
+	component.Deployer,
+	error,
+) {
+	imagePrometheus, err := imagevector.ImageVector().FindImage(imagevector.ImageNamePrometheus)
+	if err != nil {
+		return nil, err
+	}
+
+	return prometheus.New(c, namespace, prometheus.Values{
+		Name:              "cache",
+		Image:             imagePrometheus.String(),
+		Version:           ptr.Deref(imagePrometheus.Version, "v0.0.0"),
+		PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
+		StorageCapacity:   resource.MustParse(seed.GetValidVolumeSize("10Gi")),
+		CentralConfigs: prometheus.CentralConfigs{
+			AdditionalScrapeConfigs: cacheprometheus.AdditionalScrapeConfigs(),
+			ServiceMonitors:         cacheprometheus.CentralServiceMonitors(),
+			PrometheusRules:         cacheprometheus.CentralPrometheusRules(),
+		},
+		AdditionalResources: []client.Object{cacheprometheus.NetworkPolicyToNodeExporter(namespace)},
+	}), nil
 }
 
 // getFluentBitInputsFilterAndParsers returns all fluent-bit inputs, filters and parsers for the seed

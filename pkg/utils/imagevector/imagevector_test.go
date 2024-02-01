@@ -104,12 +104,14 @@ var _ = Describe("imagevector", func() {
 				Name:           image1Name,
 				Repository:     repo1,
 				Tag:            &tag1,
+				Version:        &tag1,
 				RuntimeVersion: &greaterEquals16Smaller18,
 			}
 			image1Src1Arm64 = &ImageSource{
 				Name:           image1Name,
 				Repository:     repo1,
 				Tag:            &tag1,
+				Version:        &tag1,
 				RuntimeVersion: &greaterEquals16Smaller18,
 				Architectures:  []string{arm64},
 			}
@@ -117,35 +119,41 @@ var _ = Describe("imagevector", func() {
 				Name:           image1Name,
 				Repository:     repo1,
 				Tag:            &tag1,
+				Version:        &tag1,
 				RuntimeVersion: &greaterEquals18,
 			}
 			image1Src3 = &ImageSource{
 				Name:           image1Name,
 				Repository:     repo2,
 				Tag:            &tag1,
+				Version:        &tag1,
 				RuntimeVersion: &greaterEquals16Smaller18,
 			}
 			image1Src4 = &ImageSource{
 				Name:           image1Name,
 				Repository:     repo1,
 				Tag:            &tag2,
+				Version:        &tag2,
 				RuntimeVersion: &greaterEquals16Smaller18,
 			}
 			image1Src5 = &ImageSource{
 				Name:       image1Name,
 				Repository: repo1,
 				Tag:        &tag1,
+				Version:    &tag1,
 			}
 			image1Src5Arm64 = &ImageSource{
 				Name:          image1Name,
 				Repository:    repo1,
 				Tag:           &tag1,
+				Version:       &tag1,
 				Architectures: []string{arm64},
 			}
 			image1Src5Wildcard = &ImageSource{
 				Name:          image1Name,
 				Repository:    repo1,
 				Tag:           &tag1,
+				Version:       &tag1,
 				Architectures: []string{arm64, amd64},
 			}
 			image1Src6 = &ImageSource{
@@ -159,6 +167,7 @@ var _ = Describe("imagevector", func() {
 				Name:           image2Name,
 				Repository:     repo2,
 				Tag:            &tag2,
+				Version:        &tag2,
 				RuntimeVersion: &greaterEquals16Smaller18,
 			}
 
@@ -173,12 +182,14 @@ var _ = Describe("imagevector", func() {
 				Name:          image4Name,
 				Repository:    repo4,
 				Tag:           &tag1,
+				Version:       &tag1,
 				TargetVersion: &greaterEquals16Smaller18,
 			}
 			image4Src1Arm64 = &ImageSource{
 				Name:          image4Name,
 				Repository:    repo4,
 				Tag:           &tag1,
+				Version:       &tag1,
 				TargetVersion: &greaterEquals16Smaller18,
 				Architectures: []string{arm64},
 			}
@@ -186,17 +197,20 @@ var _ = Describe("imagevector", func() {
 				Name:          image4Name,
 				Repository:    repo4,
 				Tag:           &tag2,
+				Version:       &tag2,
 				TargetVersion: &k8s113,
 			}
 			image4Src3 = &ImageSource{
 				Name:       image4Name,
 				Repository: repo4,
 				Tag:        &tag3,
+				Version:    &tag3,
 			}
 			image4Src4 = &ImageSource{
 				Name:           image4Name,
 				Repository:     repo4,
 				Tag:            &tag4,
+				Version:        &tag4,
 				RuntimeVersion: &greaterEquals16Smaller18,
 				TargetVersion:  &k8s113,
 			}
@@ -204,6 +218,7 @@ var _ = Describe("imagevector", func() {
 				Name:           image4Name,
 				Repository:     repo4,
 				Tag:            &tag4,
+				Version:        &tag4,
 				RuntimeVersion: &greaterEquals16Smaller18,
 				TargetVersion:  &k8s113,
 				Architectures:  []string{arm64},
@@ -212,12 +227,14 @@ var _ = Describe("imagevector", func() {
 				Name:          image4Name,
 				Repository:    repo4,
 				Tag:           &tag5,
+				Version:       &tag5,
 				TargetVersion: &equals117,
 			}
 			image4Src5Arm64 = &ImageSource{
 				Name:          image4Name,
 				Repository:    repo4,
 				Tag:           &tag5,
+				Version:       &tag5,
 				TargetVersion: &equals117,
 				Architectures: []string{arm64},
 			}
@@ -225,12 +242,14 @@ var _ = Describe("imagevector", func() {
 				Name:          image4Name,
 				Repository:    repo4,
 				Tag:           &tag6,
+				Version:       &tag6,
 				TargetVersion: &k8s114x,
 			}
 			image4Src6Arm64 = &ImageSource{
 				Name:          image4Name,
 				Repository:    repo4,
 				Tag:           &tag6,
+				Version:       &tag6,
 				TargetVersion: &k8s114x,
 				Architectures: []string{arm64},
 			}
@@ -238,12 +257,14 @@ var _ = Describe("imagevector", func() {
 				Name:          image4Name,
 				Repository:    repo4,
 				Tag:           &tag7,
+				Version:       &tag7,
 				TargetVersion: &k8s1142,
 			}
 			image4Src7Arm64 = &ImageSource{
 				Name:          image4Name,
 				Repository:    repo4,
 				Tag:           &tag7,
+				Version:       &tag7,
 				TargetVersion: &k8s1142,
 				Architectures: []string{arm64},
 			}
@@ -257,17 +278,19 @@ var _ = Describe("imagevector", func() {
 			"name": "%s",
 			"repository": "%s",
 			"tag": "%s",
+			"version": "%s",
 			"runtimeVersion": "%s"
 		}
 	]
-}`, image1Src1.Name, image1Src1.Repository, *image1Src1.Tag, *image1Src1.RuntimeVersion)
+}`, image1Src1.Name, image1Src1.Repository, *image1Src1.Tag, *image1Src1.Tag, *image1Src1.RuntimeVersion)
 
 			image1Src1VectorYAML = fmt.Sprintf(`
 images:
   - name: "%s"
     repository: "%s"
     tag: "%s"
-    runtimeVersion: "%s"`, image1Src1.Name, image1Src1.Repository, *image1Src1.Tag, *image1Src1.RuntimeVersion)
+    version: "%s"
+    runtimeVersion: "%s"`, image1Src1.Name, image1Src1.Repository, *image1Src1.Tag, *image1Src1.Tag, *image1Src1.RuntimeVersion)
 		}
 		resetValues()
 		BeforeEach(resetValues)
@@ -670,6 +693,7 @@ images:
 					Name:       name,
 					Repository: repository,
 					Tag:        &tag,
+					Version:    &tag,
 				}))
 			})
 
@@ -691,6 +715,7 @@ images:
 					Name:       name,
 					Repository: repository,
 					Tag:        ptr.To(fmt.Sprintf("v%s", version)),
+					Version:    ptr.To(fmt.Sprintf("v%s", version)),
 				}))
 			})
 		})

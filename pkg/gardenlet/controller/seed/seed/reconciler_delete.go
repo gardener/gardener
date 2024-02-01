@@ -195,6 +195,11 @@ func (r *Reconciler) runDeleteSeedFlow(
 		fluentOperatorCustomResources = fluentoperator.NewCustomResources(seedClient, r.GardenNamespace, fluentoperator.CustomResourcesValues{})
 	)
 
+	cachePrometheus, err := defaultCachePrometheus(log, seedClient, r.GardenNamespace, seed)
+	if err != nil {
+		return err
+	}
+
 	var (
 		g                = flow.NewGraph("Seed cluster deletion")
 		destroyDNSRecord = g.Add(flow.Task{
@@ -205,6 +210,10 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Name:         "Ensuring no ControllerInstallations are left",
 			Fn:           ensureNoControllerInstallations(r.GardenClient, seed.GetInfo().Name),
 			Dependencies: flow.NewTaskIDs(destroyDNSRecord),
+		})
+		destroyCachePrometheus = g.Add(flow.Task{
+			Name: "Destroying cache Prometheus",
+			Fn:   cachePrometheus.Destroy,
 		})
 		destroyClusterAutoscaler = g.Add(flow.Task{
 			Name: "Destroying cluster-autoscaler resources",
@@ -258,6 +267,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Fn:   component.OpDestroyAndWait(fluentOperatorCustomResources).Destroy,
 		})
 		syncPointCleanedUp = flow.NewTaskIDs(
+			destroyCachePrometheus,
 			destroyNginxIngress,
 			destroyClusterAutoscaler,
 			destroyMachineControllerManager,
