@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal_test
+package clientmap_test
 
 import (
 	"context"
@@ -27,8 +27,7 @@ import (
 	testclock "k8s.io/utils/clock/testing"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
+	. "github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	mockclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/mock"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
@@ -37,8 +36,8 @@ import (
 var _ = Describe("GenericClientMap", func() {
 	var (
 		ctx context.Context
-		cm  *internal.GenericClientMap
-		key clientmap.ClientSetKey
+		cm  *GenericClientMap
+		key ClientSetKey
 	)
 
 	BeforeEach(func() {
@@ -67,15 +66,15 @@ var _ = Describe("GenericClientMap", func() {
 			cs.EXPECT().Version().Return(csVersion.GitVersion).AnyTimes()
 
 			fakeClock = testclock.NewFakeClock(time.Now())
-			cm = internal.NewGenericClientMap(factory, logr.Discard(), fakeClock)
+			cm = NewGenericClientMap(factory, logr.Discard(), fakeClock)
 
-			origMaxRefreshInterval = internal.MaxRefreshInterval
-			internal.MaxRefreshInterval = 10 * time.Millisecond
+			origMaxRefreshInterval = MaxRefreshInterval
+			MaxRefreshInterval = 10 * time.Millisecond
 		})
 
 		AfterEach(func() {
 			ctrl.Finish()
-			internal.MaxRefreshInterval = origMaxRefreshInterval
+			MaxRefreshInterval = origMaxRefreshInterval
 		})
 
 		Context("#GetClient", func() {
@@ -131,7 +130,7 @@ var _ = Describe("GenericClientMap", func() {
 
 				By("Should refresh the ClientSet's server version")
 				// let the max refresh interval pass
-				fakeClock.Sleep(internal.MaxRefreshInterval)
+				fakeClock.Sleep(MaxRefreshInterval)
 				cs.EXPECT().DiscoverVersion().Return(&version.Info{GitVersion: "1.24.1"}, nil)
 				clientSet, err := cm.GetClient(ctx, key)
 				Expect(clientSet).To(BeIdenticalTo(cs))
@@ -149,7 +148,7 @@ var _ = Describe("GenericClientMap", func() {
 
 				By("Should fail to refresh the ClientSet's server version because DiscoverVersion fails")
 				// let the max refresh interval pass
-				fakeClock.Sleep(internal.MaxRefreshInterval)
+				fakeClock.Sleep(MaxRefreshInterval)
 				cs.EXPECT().DiscoverVersion().Return(nil, fmt.Errorf("fake"))
 				clientSet, err := cm.GetClient(ctx, key)
 				Expect(clientSet).To(BeNil())
@@ -166,14 +165,14 @@ var _ = Describe("GenericClientMap", func() {
 
 				By("Should not refresh the ClientSet as version and hash haven't changed")
 				// let the max refresh interval pass
-				fakeClock.Sleep(internal.MaxRefreshInterval)
+				fakeClock.Sleep(MaxRefreshInterval)
 				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("hash1", nil)
 				cs.EXPECT().DiscoverVersion().Return(csVersion, nil)
 				Expect(cm.GetClient(ctx, key)).To(BeIdenticalTo(cs))
 
 				By("Should refresh the ClientSet as the hash has changed")
 				// let the max refresh interval pass again
-				fakeClock.Sleep(internal.MaxRefreshInterval)
+				fakeClock.Sleep(MaxRefreshInterval)
 				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("hash2", nil)
 
 				cs2 := kubernetesmock.NewMockInterface(ctrl)
@@ -188,7 +187,7 @@ var _ = Describe("GenericClientMap", func() {
 
 				By("Should fail to get the ClientSet again because CalculateClientSetHash fails")
 				// let the max refresh interval pass again
-				fakeClock.Sleep(internal.MaxRefreshInterval)
+				fakeClock.Sleep(MaxRefreshInterval)
 				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("", fmt.Errorf("fake"))
 
 				clientSet, err := cm.GetClient(ctx, key)

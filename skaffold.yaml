@@ -816,7 +816,6 @@ build:
             - pkg/client/kubernetes/cache
             - pkg/client/kubernetes/clientmap
             - pkg/client/kubernetes/clientmap/builder
-            - pkg/client/kubernetes/clientmap/internal
             - pkg/client/kubernetes/clientmap/keys
             - pkg/component
             - pkg/component/apiserver

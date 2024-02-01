@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal
+package clientmap
 
 import (
 	"context"
@@ -25,10 +25,9 @@ import (
 	"k8s.io/utils/clock"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 )
 
-var _ clientmap.ClientMap = &GenericClientMap{}
+var _ ClientMap = &GenericClientMap{}
 
 const waitForCacheSyncTimeout = 5 * time.Minute
 
@@ -42,8 +41,8 @@ var MaxRefreshInterval = 5 * time.Second
 // implementations only need to provide a ClientSetFactory that can produce new ClientSets for the respective keys
 // if a corresponding entry is not found in the GenericClientMap.
 type GenericClientMap struct {
-	clientSets map[clientmap.ClientSetKey]*clientMapEntry
-	factory    clientmap.ClientSetFactory
+	clientSets map[ClientSetKey]*clientMapEntry
+	factory    ClientSetFactory
 
 	// lock guards concurrent access to clientSets
 	lock sync.RWMutex
@@ -69,9 +68,9 @@ type clientMapEntry struct {
 }
 
 // NewGenericClientMap creates a new GenericClientMap with the given factory and logger.
-func NewGenericClientMap(factory clientmap.ClientSetFactory, logger logr.Logger, clock clock.Clock) *GenericClientMap {
+func NewGenericClientMap(factory ClientSetFactory, logger logr.Logger, clock clock.Clock) *GenericClientMap {
 	return &GenericClientMap{
-		clientSets: make(map[clientmap.ClientSetKey]*clientMapEntry),
+		clientSets: make(map[ClientSetKey]*clientMapEntry),
 		factory:    factory,
 		log:        logger,
 		clock:      clock,
@@ -83,7 +82,7 @@ func NewGenericClientMap(factory clientmap.ClientSetFactory, logger logr.Logger,
 // New ClientSets are immediately started if the ClientMap has already been started before. Also GetClient will regularly
 // rediscover the server version of the targeted cluster and check if the config hash has changed and recreate the
 // ClientSet if a config hash change is detected.
-func (cm *GenericClientMap) GetClient(ctx context.Context, key clientmap.ClientSetKey) (kubernetes.Interface, error) {
+func (cm *GenericClientMap) GetClient(ctx context.Context, key ClientSetKey) (kubernetes.Interface, error) {
 	entry, found := func() (*clientMapEntry, bool) {
 		cm.lock.RLock()
 		defer cm.lock.RUnlock()
@@ -142,7 +141,7 @@ func (cm *GenericClientMap) GetClient(ctx context.Context, key clientmap.ClientS
 	return entry.clientSet, nil
 }
 
-func (cm *GenericClientMap) addClientSet(ctx context.Context, key clientmap.ClientSetKey) (*clientMapEntry, error) {
+func (cm *GenericClientMap) addClientSet(ctx context.Context, key ClientSetKey) (*clientMapEntry, error) {
 	cm.lock.Lock()
 	defer cm.lock.Unlock()
 
@@ -182,7 +181,7 @@ func (cm *GenericClientMap) addClientSet(ctx context.Context, key clientmap.Clie
 }
 
 // InvalidateClient removes the ClientSet identified by the given key from the ClientMap after stopping its cache.
-func (cm *GenericClientMap) InvalidateClient(key clientmap.ClientSetKey) error {
+func (cm *GenericClientMap) InvalidateClient(key ClientSetKey) error {
 	cm.lock.Lock()
 	defer cm.lock.Unlock()
 
@@ -198,7 +197,7 @@ func (cm *GenericClientMap) InvalidateClient(key clientmap.ClientSetKey) error {
 
 	delete(cm.clientSets, key)
 
-	if invalidate, ok := cm.factory.(clientmap.Invalidate); ok {
+	if invalidate, ok := cm.factory.(Invalidate); ok {
 		if err := invalidate.InvalidateClient(key); err != nil {
 			return err
 		}
@@ -233,7 +232,7 @@ func (cm *GenericClientMap) Start(ctx context.Context) error {
 	return nil
 }
 
-func (cm *GenericClientMap) startClientSet(key clientmap.ClientSetKey, entry *clientMapEntry) error {
+func (cm *GenericClientMap) startClientSet(key ClientSetKey, entry *clientMapEntry) error {
 	clientSetContext, clientSetCancel := context.WithCancel(context.Background())
 	go func() {
 		select {

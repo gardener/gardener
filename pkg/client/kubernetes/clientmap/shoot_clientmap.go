@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal
+package clientmap
 
 import (
 	"context"
@@ -27,7 +27,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
@@ -35,11 +34,11 @@ import (
 
 // shootClientMap is a ClientMap for requesting and storing clients for Shoot clusters.
 type shootClientMap struct {
-	clientmap.ClientMap
+	ClientMap
 }
 
 // NewShootClientMap creates a new shootClientMap with the given factory.
-func NewShootClientMap(log logr.Logger, factory *ShootClientSetFactory) clientmap.ClientMap {
+func NewShootClientMap(log logr.Logger, factory *ShootClientSetFactory) ClientMap {
 	logger := log.WithValues("clientmap", "ShootClientMap")
 	factory.clientKeyToSeedNamespace = make(map[ShootClientSetKey]string)
 	factory.log = logger
@@ -64,7 +63,7 @@ type ShootClientSetFactory struct {
 }
 
 // CalculateClientSetHash calculates a SHA256 hash of the kubeconfig in the 'gardener' secret in the Shoot's Seed namespace.
-func (f *ShootClientSetFactory) CalculateClientSetHash(ctx context.Context, k clientmap.ClientSetKey) (string, error) {
+func (f *ShootClientSetFactory) CalculateClientSetHash(ctx context.Context, k ClientSetKey) (string, error) {
 	_, hash, err := f.getSecretAndComputeHash(ctx, k)
 	if err != nil {
 		return "", err
@@ -74,7 +73,7 @@ func (f *ShootClientSetFactory) CalculateClientSetHash(ctx context.Context, k cl
 }
 
 // NewClientSet creates a new ClientSet for a Shoot cluster.
-func (f *ShootClientSetFactory) NewClientSet(ctx context.Context, k clientmap.ClientSetKey) (kubernetes.Interface, string, error) {
+func (f *ShootClientSetFactory) NewClientSet(ctx context.Context, k ClientSetKey) (kubernetes.Interface, string, error) {
 	kubeconfigSecret, hash, err := f.getSecretAndComputeHash(ctx, k)
 	if err != nil {
 		return nil, "", err
@@ -102,7 +101,7 @@ func (f *ShootClientSetFactory) NewClientSet(ctx context.Context, k clientmap.Cl
 	return clientSet, hash, nil
 }
 
-func (f *ShootClientSetFactory) getSecretAndComputeHash(ctx context.Context, k clientmap.ClientSetKey) (*corev1.Secret, string, error) {
+func (f *ShootClientSetFactory) getSecretAndComputeHash(ctx context.Context, k ClientSetKey) (*corev1.Secret, string, error) {
 	key, ok := k.(ShootClientSetKey)
 	if !ok {
 		return nil, "", fmt.Errorf("unsupported ClientSetKey: expected %T got %T", ShootClientSetKey{}, k)
@@ -137,10 +136,10 @@ func (f *ShootClientSetFactory) secretName(seedNamespace string) string {
 	return secretName
 }
 
-var _ clientmap.Invalidate = &ShootClientSetFactory{}
+var _ Invalidate = &ShootClientSetFactory{}
 
 // InvalidateClient invalidates information cached for the given ClientSetKey in the factory.
-func (f *ShootClientSetFactory) InvalidateClient(k clientmap.ClientSetKey) error {
+func (f *ShootClientSetFactory) InvalidateClient(k ClientSetKey) error {
 	key, ok := k.(ShootClientSetKey)
 	if !ok {
 		return fmt.Errorf("unsupported ClientSetKey: expected %T got %T", ShootClientSetKey{}, k)

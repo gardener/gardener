@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal
+package clientmap
 
 import (
 	"context"
@@ -26,7 +26,6 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
@@ -34,11 +33,11 @@ import (
 
 // gardenClientMap is a ClientMap for requesting and storing clients for virtual gardens.
 type gardenClientMap struct {
-	clientmap.ClientMap
+	ClientMap
 }
 
 // NewGardenClientMap creates a new gardenClientMap with the given factory.
-func NewGardenClientMap(log logr.Logger, factory *GardenClientSetFactory) clientmap.ClientMap {
+func NewGardenClientMap(log logr.Logger, factory *GardenClientSetFactory) ClientMap {
 	logger := log.WithValues("clientmap", "GardenClientMap")
 	factory.log = logger
 	return &gardenClientMap{
@@ -60,7 +59,7 @@ type GardenClientSetFactory struct {
 }
 
 // CalculateClientSetHash calculates a SHA256 hash of the kubeconfig in the 'gardener' secret in the Garden's Garden namespace.
-func (f *GardenClientSetFactory) CalculateClientSetHash(ctx context.Context, k clientmap.ClientSetKey) (string, error) {
+func (f *GardenClientSetFactory) CalculateClientSetHash(ctx context.Context, k ClientSetKey) (string, error) {
 	_, hash, err := f.getSecretAndComputeHash(ctx, k)
 	if err != nil {
 		return "", err
@@ -70,7 +69,7 @@ func (f *GardenClientSetFactory) CalculateClientSetHash(ctx context.Context, k c
 }
 
 // NewClientSet creates a new ClientSet for a Garden cluster.
-func (f *GardenClientSetFactory) NewClientSet(ctx context.Context, k clientmap.ClientSetKey) (kubernetes.Interface, string, error) {
+func (f *GardenClientSetFactory) NewClientSet(ctx context.Context, k ClientSetKey) (kubernetes.Interface, string, error) {
 	kubeconfigSecret, hash, err := f.getSecretAndComputeHash(ctx, k)
 	if err != nil {
 		return nil, "", err
@@ -98,7 +97,7 @@ func (f *GardenClientSetFactory) NewClientSet(ctx context.Context, k clientmap.C
 	return clientSet, hash, nil
 }
 
-func (f *GardenClientSetFactory) getSecretAndComputeHash(ctx context.Context, k clientmap.ClientSetKey) (*corev1.Secret, string, error) {
+func (f *GardenClientSetFactory) getSecretAndComputeHash(ctx context.Context, k ClientSetKey) (*corev1.Secret, string, error) {
 	_, ok := k.(GardenClientSetKey)
 	if !ok {
 		return nil, "", fmt.Errorf("unsupported ClientSetKey: expected %T got %T", GardenClientSetKey{}, k)
@@ -128,10 +127,10 @@ func (f *GardenClientSetFactory) secretName(gardenNamespace string) string {
 	return secretName
 }
 
-var _ clientmap.Invalidate = &GardenClientSetFactory{}
+var _ Invalidate = &GardenClientSetFactory{}
 
 // InvalidateClient invalidates information cached for the given ClientSetKey in the factory.
-func (f *GardenClientSetFactory) InvalidateClient(k clientmap.ClientSetKey) error {
+func (f *GardenClientSetFactory) InvalidateClient(k ClientSetKey) error {
 	_, ok := k.(GardenClientSetKey)
 	if !ok {
 		return fmt.Errorf("unsupported ClientSetKey: expected %T got %T", GardenClientSetKey{}, k)
