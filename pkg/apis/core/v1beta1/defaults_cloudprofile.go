@@ -33,7 +33,7 @@ func SetDefaults_MachineImageVersion(obj *MachineImageVersion) {
 	if len(obj.CRI) == 0 {
 		obj.CRI = []CRI{
 			{
-				Name: CRINameDocker,
+				Name: CRINameContainerD,
 			},
 		}
 	}
