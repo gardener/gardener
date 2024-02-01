@@ -434,7 +434,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		})
 		_ = g.Add(flow.Task{
 			Name: "Renewing garden access secrets",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
+			Fn: func(ctx context.Context) error {
 				// renew access secrets in all namespaces with the resources.gardener.cloud/class=garden label
 				if err := tokenrequest.RenewAccessSecrets(ctx, seedClient, client.MatchingLabels{resourcesv1alpha1.ResourceManagerClass: resourcesv1alpha1.ResourceManagerClassGarden}); err != nil {
 					return err
@@ -442,7 +442,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 				// remove operation annotation from seed after successful operation
 				return removeSeedOperationAnnotation(ctx, r.GardenClient, seed)
-			}),
+			},
 			SkipIf: seed.GetInfo().Annotations[v1beta1constants.GardenerOperation] != v1beta1constants.SeedOperationRenewGardenAccessSecrets,
 		})
 
