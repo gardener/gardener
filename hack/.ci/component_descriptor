@@ -55,7 +55,7 @@ fi
 if [[ ! -z "$image_vector_path" ]]; then
   # default environment variables
   if [[ -z "${COMPONENT_PREFIXES}" ]]; then
-    COMPONENT_PREFIXES="europe-docker.pkg.dev/gardener-project/releases/gardener"
+    COMPONENT_PREFIXES="europe-docker.pkg.dev/gardener-project/releases/gardener,europe-docker.pkg.dev/gardener-project/snapshots/gardener"
   fi
 
   if [[ -z "${COMPONENT_CLI_ARGS}" ]]; then
