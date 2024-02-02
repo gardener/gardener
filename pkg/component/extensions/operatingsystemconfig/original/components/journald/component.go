@@ -15,9 +15,10 @@
 package journald
 
 import (
+	"k8s.io/utils/ptr"
+
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
-	"k8s.io/utils/ptr"
 )
 
 type component struct{}

@@ -15,11 +15,12 @@
 package botanist
 
 import (
+	"k8s.io/utils/ptr"
+
 	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/nodeproblemdetector"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
-	"k8s.io/utils/ptr"
 )
 
 // DefaultNodeProblemDetector returns a deployer for the NodeProblemDetector.

@@ -16,7 +16,9 @@ limitations under the License.
 
 package v1alpha1
 
-import "k8s.io/utils/ptr"
+import (
+	"k8s.io/utils/ptr"
+)
 
 // SetDefaults_ViewerKubeconfigRequestSpec sets default values for ViewerKubeconfigRequestSpec objects.
 func SetDefaults_ViewerKubeconfigRequestSpec(obj *ViewerKubeconfigRequestSpec) {

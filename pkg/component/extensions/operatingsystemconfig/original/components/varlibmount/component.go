@@ -15,10 +15,11 @@
 package varlibmount
 
 import (
+	"k8s.io/utils/ptr"
+
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
-	"k8s.io/utils/ptr"
 )
 
 // UnitName is the name of the var-lib-mount unit.

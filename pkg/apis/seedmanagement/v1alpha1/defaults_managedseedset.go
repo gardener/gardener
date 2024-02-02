@@ -14,7 +14,9 @@
 
 package v1alpha1
 
-import "k8s.io/utils/ptr"
+import (
+	"k8s.io/utils/ptr"
+)
 
 // SetDefaults_ManagedSeedSet sets default values for ManagedSeed objects.
 func SetDefaults_ManagedSeedSet(obj *ManagedSeedSet) {
