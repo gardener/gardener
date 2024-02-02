@@ -58,6 +58,8 @@ type ControllerConfiguration struct {
 	GardenCare GardenCareControllerConfiguration
 	// NetworkPolicy is the configuration for the NetworkPolicy controller.
 	NetworkPolicy NetworkPolicyControllerConfiguration
+	// VPAEvictionRequirements is the configuration for the VPAEvictionrequirements controller.
+	VPAEvictionRequirements VPAEvictionRequirementsControllerConfiguration
 }
 
 // GardenCareControllerConfiguration defines the configuration of the GardenCare controller.
@@ -87,6 +89,12 @@ type NetworkPolicyControllerConfiguration struct {
 	// AdditionalNamespaceSelectors is a list of label selectors for additional namespaces that should be considered by
 	// the controller.
 	AdditionalNamespaceSelectors []metav1.LabelSelector
+}
+
+// VPAEvictionRequirementsControllerConfiguration defines the configuration of the VPAEvictionRequirements controller.
+type VPAEvictionRequirementsControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on events.
+	ConcurrentSyncs *int
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

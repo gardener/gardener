@@ -30,8 +30,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/vpaevictionrequirements"
+	"github.com/gardener/gardener/pkg/controller/vpaevictionrequirements"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -125,10 +124,8 @@ var _ = BeforeSuite(func() {
 	fakeClock = testclock.NewFakeClock(time.Now())
 
 	Expect((&vpaevictionrequirements.Reconciler{
-		Config: config.VPAEvictionRequirementsControllerConfiguration{
-			ConcurrentSyncs: ptr.To(5),
-		},
-		Clock: fakeClock,
+		ConcurrentSyncs: ptr.To(5),
+		Clock:           fakeClock,
 	}).AddToManager(mgr, mgr)).To(Succeed())
 
 	By("Start manager")

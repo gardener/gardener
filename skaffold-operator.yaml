@@ -129,6 +129,7 @@ build:
             - pkg/controller/networkpolicy/hostnameresolver
             - pkg/controller/reference
             - pkg/controller/service
+            - pkg/controller/vpaevictionrequirements
             - pkg/controllermanager/apis/config
             - pkg/controllermanager/apis/config/v1alpha1
             - pkg/controllerutils
@@ -147,11 +148,11 @@ build:
             - pkg/operator/apis/config/validation
             - pkg/operator/client
             - pkg/operator/controller
+            - pkg/operator/controller/controllerregistrar
             - pkg/operator/controller/garden
             - pkg/operator/controller/garden/care
             - pkg/operator/controller/garden/garden
             - pkg/operator/controller/garden/reference
-            - pkg/operator/controller/networkpolicyregistrar
             - pkg/operator/features
             - pkg/operator/webhook
             - pkg/operator/webhook/defaulting

@@ -5,56 +5,65 @@
 package vpaevictionrequirements
 
 import (
+	"context"
 	"fmt"
+	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
+	"github.com/gardener/gardener/pkg/controller/vpaevictionrequirements"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 )
 
-// ControllerName is the name of this controller
-const ControllerName = "vpa-eviction-requirements"
+// SeedIsGardenCheckInterval is the interval how often it should be checked whether the seed cluster has been registered
+// as garden cluster.
+var SeedIsGardenCheckInterval = time.Minute
 
-// AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager, seedCluster cluster.Cluster) error {
-	if r.SeedClient == nil {
-		r.SeedClient = seedCluster.GetClient()
-	}
-	if r.Clock == nil {
-		r.Clock = clock.RealClock{}
-	}
-
-	vpaEvictionRequirementsManagedByControllerPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
-		MatchLabels: map[string]string{constants.LabelVPAEvictionRequirementsController: constants.EvictionRequirementManagedByController},
-	})
+// AddToManager adds the controller to the given manager.
+func AddToManager(
+	ctx context.Context,
+	mgr manager.Manager,
+	gardenletCancel context.CancelFunc,
+	cfg config.VPAEvictionRequirementsControllerConfiguration,
+	seedCluster cluster.Cluster,
+) error {
+	seedIsGarden, err := gardenletutils.SeedIsGarden(ctx, seedCluster.GetAPIReader())
 	if err != nil {
-		return fmt.Errorf("failed computing label selector predicate for eviction requirements managed by controller: %w", err)
+		return fmt.Errorf("failed checking whether the seed is the garden cluster: %w", err)
+	}
+	if seedIsGarden {
+		return nil // When the seed is the garden cluster at the same time, the gardener-operator runs this controller.
 	}
 
-	return builder.
-		ControllerManagedBy(mgr).
-		Named(ControllerName).
-		WithOptions(controller.Options{
-			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
-		}).
-		WatchesRawSource(
-			source.Kind(seedCluster.GetCache(), &vpaautoscalingv1.VerticalPodAutoscaler{}),
-			&handler.EnqueueRequestForObject{}, builder.WithPredicates(
-				vpaEvictionRequirementsManagedByControllerPredicate,
-				predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
-				predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}),
-			),
-		).
-		Complete(r)
+	reconciler := &vpaevictionrequirements.Reconciler{ConcurrentSyncs: cfg.ConcurrentSyncs}
+
+	if err := reconciler.AddToManager(mgr, seedCluster); err != nil {
+		return err
+	}
+
+	// At this point, the seed is not the garden cluster at the same time. However, this could change during the runtime
+	// of gardenlet. If so, gardener-operator will take over responsibility of the VPA eviction requirements and will run
+	// this controller. Since there is no way to stop a controller after it started, we cancel the manager context in
+	// case the seed is registered as garden during runtime. This way, gardenlet will restart and not add the controller
+	// again.
+	return mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
+		wait.Until(func() {
+			seedIsGarden, err = gardenletutils.SeedIsGarden(ctx, seedCluster.GetClient())
+			if err != nil {
+				mgr.GetLogger().Error(err, "Failed checking whether the seed cluster is the garden cluster at the same time")
+				return
+			}
+			if !seedIsGarden {
+				return
+			}
+
+			mgr.GetLogger().Info("Terminating gardenlet since seed cluster has been registered as garden cluster. " +
+				"This effectively stops the VPAEvictionRequirements controller (gardener-operator takes over now).")
+			gardenletCancel()
+		}, SeedIsGardenCheckInterval, ctx.Done())
+		return nil
+	}))
 }

@@ -943,6 +943,7 @@ build:
             - pkg/controller/networkpolicy/helper
             - pkg/controller/networkpolicy/hostnameresolver
             - pkg/controller/tokenrequestor
+            - pkg/controller/vpaevictionrequirements
             - pkg/controllerutils
             - pkg/controllerutils/mapper
             - pkg/controllerutils/predicate

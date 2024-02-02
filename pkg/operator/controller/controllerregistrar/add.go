@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package networkpolicyregistrar
+package controllerregistrar
 
 import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -14,7 +14,7 @@ import (
 )
 
 // ControllerName is the name of this controller.
-const ControllerName = "networkpolicy-controller-registrar"
+const ControllerName = "controller-registrar"
 
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(mgr manager.Manager) error {

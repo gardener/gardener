@@ -25,8 +25,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/vpaevictionrequirements"
+	"github.com/gardener/gardener/pkg/controller/vpaevictionrequirements"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
 
@@ -57,9 +56,9 @@ var _ = Describe("Reconciler", func() {
 
 		seedClient = fakeclient.NewClientBuilder().WithScheme(testScheme).Build()
 		reconciler = &vpaevictionrequirements.Reconciler{
-			Config:     config.VPAEvictionRequirementsControllerConfiguration{ConcurrentSyncs: ptr.To(5)},
-			Clock:      fakeClock,
-			SeedClient: seedClient,
+			ConcurrentSyncs: ptr.To(5),
+			Clock:           fakeClock,
+			SeedClient:      seedClient,
 		}
 
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{

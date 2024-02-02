@@ -439,9 +439,13 @@ This reconciler inspects the following references:
 
 Further checks might be added in the future.
 
-### [`NetworkPolicy` Controller Registrar](../../pkg/controller/networkpolicy)
+### [`Controller Registrar` controller](../../pkg/operator/controller/controllerregistrar)
 
-This controller registers the same `NetworkPolicy` controller which is also used in `gardenlet`, please read it up [here](gardenlet.md#networkpolicy-controllerpkggardenletcontrollernetworkpolicy) for more details.
+This controller registers controllers, which need to be installed in two contexts. If the Garden cluster is at the same time used as a Seed cluster, the `gardener-operator` will start these controllers. If the Garden cluster is separate from the Seed cluster, the controllers will be started by gardenlet.
+
+Currently, this applies to two controllers:
+* [`NetworkPolicy` controller](gardenlet.md#networkpolicy-controller)
+* [`VPA EvictionRequirements` controller](gardenlet.md#vpaevictionrequirements-controller)
 
 The registration happens as soon as the `Garden` resource is created.
 It contains the networking information of the garden runtime cluster which is required configuration for the `NetworkPolicy` controller.
