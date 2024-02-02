@@ -34,7 +34,7 @@ func SkipVerification(operation admission.Operation, metadata metav1.ObjectMeta)
 }
 
 // IsSeedUsedByShoot checks whether there is a shoot cluster referencing the provided seed name
-func IsSeedUsedByShoot(seedName string, shoots []*gardencorev1beta1.Shoot) bool {
+func IsSeedUsedByShoot(seedName string, shoots []*core.Shoot) bool {
 	for _, shoot := range shoots {
 		if shoot.Spec.SeedName != nil && *shoot.Spec.SeedName == seedName {
 			return true
@@ -47,13 +47,19 @@ func IsSeedUsedByShoot(seedName string, shoots []*gardencorev1beta1.Shoot) bool 
 }
 
 // GetFilteredShootList returns shoots returned by the shootLister filtered via the predicateFn.
-func GetFilteredShootList(shootLister gardencorev1beta1listers.ShootLister, predicateFn func(*gardencorev1beta1.Shoot) bool) ([]*gardencorev1beta1.Shoot, error) {
-	var matchingShoots []*gardencorev1beta1.Shoot
+func GetFilteredShootList(shootLister gardencorev1beta1listers.ShootLister, predicateFn func(*core.Shoot) bool) ([]*core.Shoot, error) {
+	var matchingShoots []*core.Shoot
 	shoots, err := shootLister.List(labels.Everything())
 	if err != nil {
 		return nil, apierrors.NewInternalError(fmt.Errorf("failed to list shoots: %w", err))
 	}
-	for _, shoot := range shoots {
+
+	coreShoots, err2 := ConvertShootList(shoots)
+	if err2 != nil {
+		return nil, apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 shoot: %w", err2))
+	}
+
+	for _, shoot := range coreShoots {
 		if predicateFn(shoot) {
 			matchingShoots = append(matchingShoots, shoot)
 		}
@@ -85,7 +91,12 @@ func ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec *core.SeedSpec, seedN
 			return err
 		}
 
-		if IsSeedUsedByShoot(seedName, shoots) {
+		coreShoots, err2 := ConvertShootList(shoots)
+		if err2 != nil {
+			return apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 shoot: %w", err2))
+		}
+
+		if IsSeedUsedByShoot(seedName, coreShoots) {
 			return apierrors.NewForbidden(core.Resource(kind), seedName, fmt.Errorf("cannot remove zones %v from %s %s as there are Shoots scheduled to this Seed", sets.List(removedZones), kind, seedName))
 		}
 	}
@@ -105,4 +116,15 @@ func ConvertList[T, U any](list []T, f func(T) (U, error)) ([]U, error) {
 		result[i] = converted
 	}
 	return result, nil
+}
+
+// ConvertShootList converts a list of v1beta1 Shoots to core Shoots.
+func ConvertShootList(shoots []*gardencorev1beta1.Shoot) ([]*core.Shoot, error) {
+	return ConvertList(shoots, func(shoot *gardencorev1beta1.Shoot) (*core.Shoot, error) {
+		coreShoot := &core.Shoot{}
+		if err := gardencorev1beta1.Convert_v1beta1_Shoot_To_core_Shoot(shoot, coreShoot, nil); err != nil {
+			return nil, err
+		}
+		return coreShoot, nil
+	})
 }

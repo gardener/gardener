@@ -71,27 +71,35 @@ var _ = Describe("Miscellaneous", func() {
 	}
 	now := metav1.Now()
 
-	Describe("#ConvertList", func() {
-		v1beta1ShootList := []*gardencorev1beta1.Shoot{&shoot1, &shoot2}
-		coreShoot1 := core.Shoot{}
-		err := gardencorev1beta1.Convert_v1beta1_Shoot_To_core_Shoot(&shoot1, &coreShoot1, nil)
-		Expect(err).NotTo(HaveOccurred())
-		coreShoot2 := core.Shoot{}
-		err = gardencorev1beta1.Convert_v1beta1_Shoot_To_core_Shoot(&shoot2, &coreShoot2, nil)
-		Expect(err).NotTo(HaveOccurred())
-		coreShootList := []*core.Shoot{&coreShoot1, &coreShoot2}
+	coreShoot1 := core.Shoot{}
+	err := gardencorev1beta1.Convert_v1beta1_Shoot_To_core_Shoot(&shoot1, &coreShoot1, nil)
+	Expect(err).NotTo(HaveOccurred())
+	coreShoot2 := core.Shoot{}
+	err = gardencorev1beta1.Convert_v1beta1_Shoot_To_core_Shoot(&shoot2, &coreShoot2, nil)
+	Expect(err).NotTo(HaveOccurred())
+	coreShoot3 := core.Shoot{}
+	err = gardencorev1beta1.Convert_v1beta1_Shoot_To_core_Shoot(&shoot3, &coreShoot3, nil)
+	Expect(err).NotTo(HaveOccurred())
+	coreShoots := []*core.Shoot{&coreShoot1, &coreShoot2, &coreShoot3}
 
-		It("should convert a list of shoots", func() {
-			expected, err := ConvertList(v1beta1ShootList, func(cr *gardencorev1beta1.Shoot) (*core.Shoot, error) {
-				coreShoot := &core.Shoot{}
-				if err := gardencorev1beta1.Convert_v1beta1_Shoot_To_core_Shoot(cr, coreShoot, nil); err != nil {
-					return nil, err
-				}
-				return coreShoot, nil
+	Describe("#ConvertList", func() {
+		It("should convert a list from pointer to non-pointer", func() {
+			expected, _ := ConvertList(shoots, func(cr *gardencorev1beta1.Shoot) (gardencorev1beta1.Shoot, error) {
+				return *cr, nil
 			})
 
+			sl := []gardencorev1beta1.Shoot{shoot1, shoot2, shoot3}
+
+			Expect(expected).To(Equal(sl))
+		})
+	})
+
+	Describe("#ConvertShootList", func() {
+		It("should convert a list of v1beta1 Shoots to core Shoots", func() {
+			expected, err := ConvertShootList(shoots)
+
 			Expect(err).NotTo(HaveOccurred())
-			Expect(expected).To(Equal(coreShootList))
+			Expect(expected).To(Equal(coreShoots))
 		})
 	})
 
@@ -109,7 +117,7 @@ var _ = Describe("Miscellaneous", func() {
 
 	DescribeTable("#IsSeedUsedByShoot",
 		func(seedName string, expected bool) {
-			Expect(IsSeedUsedByShoot(seedName, shoots)).To(Equal(expected))
+			Expect(IsSeedUsedByShoot(seedName, coreShoots)).To(Equal(expected))
 		},
 		Entry("is used by shoot", "seed1", true),
 		Entry("is used by shoot in migration", "seed2", true),

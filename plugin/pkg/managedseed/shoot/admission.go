@@ -25,7 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/core"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
@@ -182,11 +182,16 @@ func (v *Shoot) getManagedSeeds(ctx context.Context, selector labels.Selector) (
 	return managedSeedList.Items, nil
 }
 
-func (v *Shoot) getShoots(selector labels.Selector) ([]*gardencorev1beta1.Shoot, error) {
+func (v *Shoot) getShoots(selector labels.Selector) ([]*core.Shoot, error) {
 	shoots, err := v.shootLister.List(selector)
 	if err != nil {
 		return nil, apierrors.NewInternalError(err)
 	}
 
-	return shoots, nil
+	coreShoots, err2 := admissionutils.ConvertShootList(shoots)
+	if err2 != nil {
+		return nil, apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 shoot: %w", err2))
+	}
+
+	return coreShoots, nil
 }

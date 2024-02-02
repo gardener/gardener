@@ -308,14 +308,12 @@ func applyStrategy(log logr.Logger, shoot *gardencorev1beta1.Shoot, seedList []g
 	return candidates, nil
 }
 
-func filterCandidates(shoot *gardencorev1beta1.Shoot, versionedShootList []gardencorev1beta1.Shoot, seedList []gardencorev1beta1.Seed) ([]gardencorev1beta1.Seed, error) {
+func filterCandidates(shoot *gardencorev1beta1.Shoot, shootList []gardencorev1beta1.Shoot, seedList []gardencorev1beta1.Seed) ([]gardencorev1beta1.Seed, error) {
 	var (
 		candidates      []gardencorev1beta1.Seed
 		candidateErrors = make(map[string]error)
-		seedUsage       map[string]int
-		shootList       = convertList(versionedShootList)
+		seedUsage       = v1beta1helper.CalculateSeedUsage(shootList)
 	)
-	seedUsage = v1beta1helper.CalculateSeedUsage(shootList)
 
 	for _, seed := range seedList {
 		if shoot.Spec.Networking != nil {
@@ -345,14 +343,12 @@ func filterCandidates(shoot *gardencorev1beta1.Shoot, versionedShootList []garde
 }
 
 // getSeedWithLeastShootsDeployed finds the best candidate (i.e. the one managing the smallest number of shoots right now).
-func getSeedWithLeastShootsDeployed(seedList []gardencorev1beta1.Seed, versionedShootList []gardencorev1beta1.Shoot) (*gardencorev1beta1.Seed, error) {
+func getSeedWithLeastShootsDeployed(seedList []gardencorev1beta1.Seed, shootList []gardencorev1beta1.Shoot) (*gardencorev1beta1.Seed, error) {
 	var (
 		bestCandidate gardencorev1beta1.Seed
 		min           *int
-		seedUsage     map[string]int
-		shootList     = convertList(versionedShootList)
+		seedUsage     = v1beta1helper.CalculateSeedUsage(shootList)
 	)
-	seedUsage = v1beta1helper.CalculateSeedUsage(shootList)
 
 	for _, seed := range seedList {
 		if numberOfManagedShoots := seedUsage[seed.Name]; min == nil || numberOfManagedShoots < *min {
@@ -362,16 +358,6 @@ func getSeedWithLeastShootsDeployed(seedList []gardencorev1beta1.Seed, versioned
 	}
 
 	return &bestCandidate, nil
-}
-
-func convertList(shootList []gardencorev1beta1.Shoot) []*gardencorev1beta1.Shoot {
-	var res []*gardencorev1beta1.Shoot
-
-	for i := 0; i < len(shootList); i++ {
-		res = append(res, &shootList[i])
-	}
-
-	return res
 }
 
 func matchProvider(seedProviderType, shootProviderType string, enabledProviderTypes []string) bool {

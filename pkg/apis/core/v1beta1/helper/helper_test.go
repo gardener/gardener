@@ -2560,10 +2560,10 @@ var _ = Describe("Helper", func() {
 		}
 
 		test := func(shoots []shootCase, expectedUsage map[string]int) {
-			var shootList []*gardencorev1beta1.Shoot
+			var shootList []gardencorev1beta1.Shoot
 
 			for i, shoot := range shoots {
-				s := &gardencorev1beta1.Shoot{}
+				s := gardencorev1beta1.Shoot{}
 				s.Name = fmt.Sprintf("shoot-%d", i)
 				if shoot.specSeedName != "" {
 					s.Spec.SeedName = ptr.To(shoot.specSeedName)

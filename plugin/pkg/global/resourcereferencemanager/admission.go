@@ -453,30 +453,19 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 					return apierrors.NewInternalError(fmt.Errorf("could not list shoots to verify that Kubernetes and/or Machine image version can be removed: %v", err1))
 				}
 
-				coreShootList, err2 := utils.ConvertList(shootList, func(shoot *gardencorev1beta1.Shoot) (*core.Shoot, error) {
-					coreShoot := &core.Shoot{}
-					if err3 := gardencorev1beta1.Convert_v1beta1_Shoot_To_core_Shoot(shoot, coreShoot, nil); err3 != nil {
-						return nil, err3
-					}
-					return coreShoot, nil
-				})
-				if err2 != nil {
-					return apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 shoot: %w", err2))
-				}
-
 				var (
 					channel = make(chan error)
 					wg      sync.WaitGroup
 				)
 				wg.Add(len(shootList))
 
-				for _, s := range coreShootList {
+				for _, s := range shootList {
 					if s.Spec.CloudProfileName != cloudProfile.Name || s.DeletionTimestamp != nil {
 						wg.Done()
 						continue
 					}
 
-					go func(shoot *core.Shoot) {
+					go func(shoot *gardencorev1beta1.Shoot) {
 						defer wg.Done()
 
 						if removedKubernetesVersions.Has(shoot.Spec.Kubernetes.Version) {
@@ -491,8 +480,8 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 								continue
 							}
 
-							if removedMachineImageVersions[worker.Machine.Image.Name].Has(worker.Machine.Image.Version) {
-								channel <- fmt.Errorf("unable to delete Machine image version '%s/%s' from CloudProfile %q - version is still in use by shoot '%s/%s' by worker %q", worker.Machine.Image.Name, worker.Machine.Image.Version, shoot.Spec.CloudProfileName, shoot.Namespace, shoot.Name, worker.Name)
+							if removedMachineImageVersions[worker.Machine.Image.Name].Has(*worker.Machine.Image.Version) {
+								channel <- fmt.Errorf("unable to delete Machine image version '%s/%s' from CloudProfile %q - version is still in use by shoot '%s/%s' by worker %q", worker.Machine.Image.Name, *worker.Machine.Image.Version, shoot.Spec.CloudProfileName, shoot.Namespace, shoot.Name, worker.Name)
 							}
 						}
 					}(s)

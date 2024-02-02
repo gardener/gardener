@@ -46,7 +46,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
@@ -527,7 +526,12 @@ func getNumberOfShootsOnSeed(shootLister gardencorev1beta1listers.ShootLister, s
 		return 0, fmt.Errorf("could not list all shoots: %w", err)
 	}
 
-	seedUsage := v1beta1helper.CalculateSeedUsage(allShoots)
+	coreShoots, err2 := admissionutils.ConvertShootList(allShoots)
+	if err2 != nil {
+		return 0, apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 shoot: %w", err2))
+	}
+
+	seedUsage := helper.CalculateSeedUsage(coreShoots)
 	return int64(seedUsage[seedName]), nil
 }
 

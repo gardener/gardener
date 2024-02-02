@@ -1134,7 +1134,7 @@ func AnonymousAuthenticationEnabled(kubeAPIServerConfig *gardencorev1beta1.KubeA
 
 // CalculateSeedUsage returns a map representing the number of shoots per seed from the given list of shoots.
 // It takes both spec.seedName and status.seedName into account.
-func CalculateSeedUsage(shootList []*gardencorev1beta1.Shoot) map[string]int {
+func CalculateSeedUsage(shootList []gardencorev1beta1.Shoot) map[string]int {
 	m := map[string]int{}
 
 	for _, shoot := range shootList {
