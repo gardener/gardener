@@ -15,8 +15,6 @@
 package seed
 
 import (
-	"time"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -147,21 +145,6 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 				g.Expect(accessSecret.Data).To(HaveKeyWithValue(resourcesv1alpha1.DataKeyToken, Not(Equal(accessSecretBefore.Data[resourcesv1alpha1.DataKeyToken]))))
 				g.Expect(accessSecret.Annotations).To(HaveKeyWithValue(resourcesv1alpha1.ServiceAccountTokenRenewTimestamp, Not(Equal(accessSecretBefore.Annotations[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp]))))
 			}).Should(Succeed())
-		})
-
-		Describe("usage in provider-local", func() {
-			It("should be allowed via seed authorizer to annotate its own seed", func() {
-				const testAnnotation = "provider-local-e2e-test-garden-access"
-
-				Eventually(func(g Gomega) {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-
-					g.Expect(seed.Annotations).To(HaveKey(testAnnotation))
-					g.Expect(time.Parse(time.RFC3339, seed.Annotations[testAnnotation])).
-						Should(BeTemporally(">", seed.CreationTimestamp.UTC()),
-							"Timestamp in %s annotation on seed %s should be after creationTimestamp of seed", testAnnotation, seed.Name)
-				}).Should(Succeed())
-			})
 		})
 	})
 })

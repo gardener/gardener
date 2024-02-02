@@ -23,7 +23,6 @@ import (
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
-	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -46,7 +45,6 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/heartbeat"
 	extensionsheartbeatcmd "github.com/gardener/gardener/extensions/pkg/controller/heartbeat/cmd"
 	extensionscmdwebhook "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	localinstall "github.com/gardener/gardener/pkg/provider-local/apis/local/install"
@@ -190,8 +188,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 		Use: fmt.Sprintf("%s-controller-manager", local.Name),
 
 		RunE: func(cmd *cobra.Command, args []string) error {
-			seedName := os.Getenv("SEED_NAME")
-
 			if err := aggOption.Complete(); err != nil {
 				return fmt.Errorf("error completing options: %w", err)
 			}
@@ -296,12 +292,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("could not add controllers to manager: %w", err)
 			}
 
-			if err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
-				return verifyGardenAccess(ctx, log, gardenCluster.GetClient(), seedName)
-			})); err != nil {
-				return fmt.Errorf("could not add garden runnable to manager: %w", err)
-			}
-
 			log.Info("Started with", "hostIP", serviceCtrlOpts.HostIP)
 
 			if err := mgr.Start(ctx); err != nil {
@@ -315,30 +305,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 	aggOption.AddFlags(cmd.Flags())
 
 	return cmd
-}
-
-// verifyGardenAccess uses the extension's access to the garden cluster to request objects related to the seed it is
-// running on, but doesn't do anything useful with the objects. We do this for verifying the extension's garden access
-// in e2e tests. If something fails in this runnable, the extension will crash loop.
-func verifyGardenAccess(ctx context.Context, log logr.Logger, c client.Client, seedName string) error {
-	log = log.WithName("garden-access").WithValues("seedName", seedName)
-
-	log.Info("Reading Seed")
-	// NB: reading seeds is allowed by gardener.cloud:system:read-global-resources (bound to all authenticated users)
-	seed := &gardencorev1beta1.Seed{}
-	if err := c.Get(ctx, client.ObjectKey{Name: seedName}, seed); err != nil {
-		return fmt.Errorf("failed reading seed %s: %w", seedName, err)
-	}
-
-	log.Info("Annotating Seed")
-	patch := client.MergeFrom(seed.DeepCopy())
-	metav1.SetMetaDataAnnotation(&seed.ObjectMeta, "provider-local-e2e-test-garden-access", time.Now().UTC().Format(time.RFC3339))
-	if err := c.Patch(ctx, seed, patch); err != nil {
-		return fmt.Errorf("failed annotating seed %s: %w", seedName, err)
-	}
-
-	log.Info("Garden access successfully verified")
-	return nil
 }
 
 type webhookTriggerer struct {

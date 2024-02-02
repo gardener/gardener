@@ -267,4 +267,4 @@ global:
   # General system configuration
   rbac:
     seedAuthorizer:
-      enabled: true
+      enabled: false
