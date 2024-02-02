@@ -26,8 +26,8 @@ import (
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controller/service"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
+	"github.com/gardener/gardener/pkg/operator/controller/controllerregistrar"
 	"github.com/gardener/gardener/pkg/operator/controller/garden"
-	"github.com/gardener/gardener/pkg/operator/controller/networkpolicyregistrar"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -42,8 +42,8 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 		return err
 	}
 
-	if err := (&networkpolicyregistrar.Reconciler{
-		Config: cfg.Controllers.NetworkPolicy,
+	if err := (&controllerregistrar.Reconciler{
+		NetworkPolicyControllerConfiguration: cfg.Controllers.NetworkPolicy,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding NetworkPolicy Registrar controller: %w", err)
 	}

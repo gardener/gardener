@@ -31,7 +31,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
 
@@ -42,9 +41,9 @@ var upscaleOnlyRequirement = []*vpaautoscalingv1.EvictionRequirement{{
 
 // Reconciler implements the reconciliation logic for adding/removing EvictionRequirements to VPA objects.
 type Reconciler struct {
-	Config     config.VPAEvictionRequirementsControllerConfiguration
-	SeedClient client.Client
-	Clock      clock.Clock
+	ConcurrentSyncs *int
+	SeedClient      client.Client
+	Clock           clock.Clock
 }
 
 // Reconcile implements the reconciliation logic for adding/removing EvictionRequirements to VPA objects.

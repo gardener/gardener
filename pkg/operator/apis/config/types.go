@@ -99,6 +99,12 @@ type NetworkPolicyControllerConfiguration struct {
 	AdditionalNamespaceSelectors []metav1.LabelSelector
 }
 
+// VPAEvictionRequirementsControllerConfiguration defines the configuration of the VPAEvictionRequirements controller.
+type VPAEvictionRequirementsControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on events.
+	ConcurrentSyncs *int
+}
+
 // ServerConfiguration contains details for the HTTP(S) servers.
 type ServerConfiguration struct {
 	// Webhooks is the configuration for the HTTPS webhook server.

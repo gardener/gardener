@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package networkpolicyregistrar_test
+package controllerregistrar_test
 
 import (
 	"testing"
