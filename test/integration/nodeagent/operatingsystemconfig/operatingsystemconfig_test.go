@@ -311,10 +311,14 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			updatedNode := &corev1.Node{}
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
 			return updatedNode.Annotations
-		}).Should(And(
-			HaveKeyWithValue("checksum/cloud-config-data", utils.ComputeSHA256Hex(oscRaw)),
-			HaveKeyWithValue("worker.gardener.cloud/kubernetes-version", kubernetesVersion.String()),
-		))
+		}).Should(HaveKeyWithValue("checksum/cloud-config-data", utils.ComputeSHA256Hex(oscRaw)))
+
+		By("Wait for node labels to be updated")
+		Eventually(func(g Gomega) map[string]string {
+			updatedNode := &corev1.Node{}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
+			return updatedNode.Labels
+		}).Should(HaveKeyWithValue("worker.gardener.cloud/kubernetes-version", kubernetesVersion.String()))
 
 		By("Assert that files and units have been created")
 		test.AssertFileOnDisk(fakeFS, file1.Path, "file1", 0777)
@@ -376,10 +380,14 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			updatedNode := &corev1.Node{}
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
 			return updatedNode.Annotations
-		}).Should(And(
-			HaveKeyWithValue("checksum/cloud-config-data", utils.ComputeSHA256Hex(oscRaw)),
-			HaveKeyWithValue("worker.gardener.cloud/kubernetes-version", kubernetesVersion.String()),
-		))
+		}).Should(HaveKeyWithValue("checksum/cloud-config-data", utils.ComputeSHA256Hex(oscRaw)))
+
+		By("Wait for node labels to be updated")
+		Eventually(func(g Gomega) map[string]string {
+			updatedNode := &corev1.Node{}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
+			return updatedNode.Labels
+		}).Should(HaveKeyWithValue("worker.gardener.cloud/kubernetes-version", kubernetesVersion.String()))
 
 		fakeDBus.Actions = nil // reset actions on dbus to not repeat assertions from above for update scenario
 
@@ -427,10 +435,14 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			updatedNode := &corev1.Node{}
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
 			return updatedNode.Annotations
-		}).Should(And(
-			HaveKeyWithValue("checksum/cloud-config-data", utils.ComputeSHA256Hex(oscRaw)),
-			HaveKeyWithValue("worker.gardener.cloud/kubernetes-version", kubernetesVersion.String()),
-		))
+		}).Should(HaveKeyWithValue("checksum/cloud-config-data", utils.ComputeSHA256Hex(oscRaw)))
+
+		By("Wait for node labels to be updated")
+		Eventually(func(g Gomega) map[string]string {
+			updatedNode := &corev1.Node{}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
+			return updatedNode.Labels
+		}).Should(HaveKeyWithValue("worker.gardener.cloud/kubernetes-version", kubernetesVersion.String()))
 
 		By("Assert that files and units have been created")
 		test.AssertFileOnDisk(fakeFS, file1.Path, "file1", 0777)
