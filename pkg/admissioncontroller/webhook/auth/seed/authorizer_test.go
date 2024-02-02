@@ -272,7 +272,7 @@ var _ = Describe("Seed", func() {
 					},
 
 					Entry("create", "create"),
-					Entry("update", "update"),
+					Entry("patch", "patch"),
 					Entry("update", "update"),
 					Entry("delete", "delete"),
 					Entry("deletecollection", "deletecollection"),
@@ -358,7 +358,7 @@ var _ = Describe("Seed", func() {
 					},
 
 					Entry("create", "create"),
-					Entry("update", "update"),
+					Entry("patch", "patch"),
 					Entry("update", "update"),
 					Entry("delete", "delete"),
 					Entry("deletecollection", "deletecollection"),
@@ -544,7 +544,7 @@ var _ = Describe("Seed", func() {
 					},
 
 					Entry("create", "create"),
-					Entry("update", "update"),
+					Entry("patch", "patch"),
 					Entry("update", "update"),
 					Entry("delete", "delete"),
 					Entry("deletecollection", "deletecollection"),
@@ -629,7 +629,7 @@ var _ = Describe("Seed", func() {
 					},
 
 					Entry("create", "create"),
-					Entry("update", "update"),
+					Entry("patch", "patch"),
 					Entry("update", "update"),
 					Entry("delete", "delete"),
 					Entry("deletecollection", "deletecollection"),
@@ -903,7 +903,7 @@ var _ = Describe("Seed", func() {
 					},
 
 					Entry("create", "create"),
-					Entry("update", "update"),
+					Entry("patch", "patch"),
 					Entry("update", "update"),
 					Entry("delete", "delete"),
 					Entry("deletecollection", "deletecollection"),
