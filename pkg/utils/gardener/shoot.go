@@ -236,13 +236,13 @@ func GetShootProjectInternalSecretSuffixes() []string {
 	}
 }
 
-func shootProjectSecretSuffix(suffix string) string {
+func shootProjectResourceSuffix(suffix string) string {
 	return "." + suffix
 }
 
-// ComputeShootProjectSecretName computes the name of a shoot-related project secret.
-func ComputeShootProjectSecretName(shootName, suffix string) string {
-	return shootName + shootProjectSecretSuffix(suffix)
+// ComputeShootProjectResourceName computes the name of a shoot-related project resource.
+func ComputeShootProjectResourceName(shootName, suffix string) string {
+	return shootName + shootProjectResourceSuffix(suffix)
 }
 
 // IsShootProjectSecret checks if the given name matches the name of a shoot-related project secret. If no, it returns
