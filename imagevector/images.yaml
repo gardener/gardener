@@ -372,7 +372,7 @@ images:
   tag: v1.0.7
   labels: *optionalAddonLabels
 
-# Miscellaenous
+# Miscellaneous
 - name: alpine
   repository: europe-docker.pkg.dev/gardener-project/releases/3rd/alpine
   tag: "3.18.4"

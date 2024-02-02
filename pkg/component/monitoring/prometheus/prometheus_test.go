@@ -17,6 +17,7 @@ package prometheus_test
 import (
 	"context"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -332,7 +333,7 @@ honor_labels: true`
 		values.CentralConfigs.PrometheusRules = append(values.CentralConfigs.PrometheusRules, prometheusRule)
 		values.CentralConfigs.ServiceMonitors = append(values.CentralConfigs.ServiceMonitors, serviceMonitor)
 
-		deployer = New(fakeClient, namespace, values)
+		deployer = New(logr.Discard(), fakeClient, namespace, values)
 	})
 
 	Describe("#Deploy", func() {

@@ -25,10 +25,10 @@ import (
 	monitoringutils "github.com/gardener/gardener/pkg/component/monitoring/utils"
 )
 
-func (p *prometheus) prometheus() *monitoringv1.Prometheus {
+func (p *prometheus) prometheus(takeOverOldPV bool) *monitoringv1.Prometheus {
 	reloadStrategy := monitoringv1.HTTPReloadStrategyType
 
-	return &monitoringv1.Prometheus{
+	obj := &monitoringv1.Prometheus{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      p.values.Name,
 			Namespace: p.namespace,
@@ -95,4 +95,17 @@ func (p *prometheus) prometheus() *monitoringv1.Prometheus {
 			RuleNamespaceSelector: &metav1.LabelSelector{},
 		},
 	}
+
+	if takeOverOldPV {
+		obj.Spec.InitContainers = append(obj.Spec.InitContainers, corev1.Container{
+			Name:            "take-over-old-pv",
+			Image:           p.values.DataMigration.ImageAlpine,
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			VolumeMounts:    []corev1.VolumeMount{{Name: "prometheus-db", MountPath: "/prometheus"}},
+			Command:         []string{"/bin/sh", "-c"},
+			Args:            []string{`if [[ -d /prometheus/prometheus- ]]; then mv /prometheus/prometheus- /prometheus/prometheus-db; else echo "rename already done"; fi`},
+		})
+	}
+
+	return obj
 }

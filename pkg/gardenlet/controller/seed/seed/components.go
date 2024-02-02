@@ -21,6 +21,7 @@ import (
 	proberapi "github.com/gardener/dependency-watchdog/api/prober"
 	weederapi "github.com/gardener/dependency-watchdog/api/weeder"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -469,19 +470,24 @@ func defaultMonitoring(
 }
 
 func defaultCachePrometheus(
+	log logr.Logger,
 	c client.Client,
 	namespace string,
 	seed *seedpkg.Seed,
 ) (
-	component.Deployer,
+	component.DeployWaiter,
 	error,
 ) {
 	imagePrometheus, err := imagevector.ImageVector().FindImage(imagevector.ImageNamePrometheus)
 	if err != nil {
 		return nil, err
 	}
+	imageAlpine, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlpine)
+	if err != nil {
+		return nil, err
+	}
 
-	return prometheus.New(c, namespace, prometheus.Values{
+	return prometheus.New(log, c, namespace, prometheus.Values{
 		Name:              "cache",
 		Image:             imagePrometheus.String(),
 		Version:           ptr.Deref(imagePrometheus.Version, "v0.0.0"),
@@ -493,6 +499,12 @@ func defaultCachePrometheus(
 			PrometheusRules:         cacheprometheus.CentralPrometheusRules(),
 		},
 		AdditionalResources: []client.Object{cacheprometheus.NetworkPolicyToNodeExporter(namespace)},
+		// TODO(rfranzke): Remove this after v1.92 has been released.
+		DataMigration: prometheus.DataMigration{
+			ImageAlpine:     imageAlpine.String(),
+			StatefulSetName: "prometheus",
+			PVCName:         "prometheus-db-prometheus-0",
+		},
 	}), nil
 }
 

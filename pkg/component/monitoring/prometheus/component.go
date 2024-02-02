@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -54,6 +55,10 @@ type Values struct {
 	CentralConfigs CentralConfigs
 	// AdditionalResources contains any additional resources which get added to the ManagedResource.
 	AdditionalResources []client.Object
+
+	// DataMigration is a struct for migrating data from existing disks.
+	// TODO(rfranzke): Remove this as soon as the PV migration code is removed.
+	DataMigration DataMigration
 }
 
 // CentralConfigs contains configuration for this Prometheus instance that is created together with it. This should
@@ -69,8 +74,9 @@ type CentralConfigs struct {
 }
 
 // New creates a new instance of DeployWaiter for the prometheus.
-func New(client client.Client, namespace string, values Values) component.DeployWaiter {
+func New(log logr.Logger, client client.Client, namespace string, values Values) component.DeployWaiter {
 	return &prometheus{
+		log:       log,
 		client:    client,
 		namespace: namespace,
 		values:    values,
@@ -78,13 +84,23 @@ func New(client client.Client, namespace string, values Values) component.Deploy
 }
 
 type prometheus struct {
+	log       logr.Logger
 	client    client.Client
 	namespace string
 	values    Values
 }
 
 func (p *prometheus) Deploy(ctx context.Context) error {
-	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+	var (
+		log      = p.log.WithName("prometheus-deployer").WithValues("name", p.values.Name)
+		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+	)
+
+	// TODO(rfranzke): Remove this migration code after all Prometheis have been migrated.
+	takeOverExistingPV, pv, oldPVC, err := p.existingPVOvertakePrerequisites(ctx, log)
+	if err != nil {
+		return err
+	}
 
 	if err := p.addCentralConfigsToRegistry(registry); err != nil {
 		return err
@@ -99,14 +115,35 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		p.service(),
 		p.clusterRoleBinding(),
 		p.secretAdditionalScrapeConfigs(),
-		p.prometheus(),
+		p.prometheus(takeOverExistingPV),
 		p.vpa(),
 	)
 	if err != nil {
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, p.client, p.namespace, p.name(), false, resources)
+	if takeOverExistingPV {
+		if err := p.prepareExistingPVOvertake(ctx, log, pv, oldPVC); err != nil {
+			return err
+		}
+
+		log.Info("Deploy new Prometheus (with init container for renaming the data directory)")
+	}
+
+	if err := managedresources.CreateForSeed(ctx, p.client, p.namespace, p.name(), false, resources); err != nil {
+		return err
+	}
+
+	if takeOverExistingPV {
+		if err := p.finalizeExistingPVOvertake(ctx, log, pv); err != nil {
+			return err
+		}
+
+		log.Info("Deploy new Prometheus again (to remove the migration init container)")
+		return p.Deploy(ctx)
+	}
+
+	return nil
 }
 
 func (p *prometheus) Destroy(ctx context.Context) error {
