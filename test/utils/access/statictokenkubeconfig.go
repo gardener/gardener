@@ -24,7 +24,7 @@ import (
 
 // CreateShootClientFromStaticTokenKubeconfig retrieves the static token kubeconfig secret and creates a shoot client.
 func CreateShootClientFromStaticTokenKubeconfig(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) (kubernetes.Interface, error) {
-	return kubernetes.NewClientFromSecret(ctx, gardenClient.Client(), shoot.Namespace, gardenerutils.ComputeShootProjectSecretName(shoot.Name, "kubeconfig"),
+	return kubernetes.NewClientFromSecret(ctx, gardenClient.Client(), shoot.Namespace, gardenerutils.ComputeShootProjectResourceName(shoot.Name, "kubeconfig"),
 		kubernetes.WithDisabledCachedClient(),
 	)
 }

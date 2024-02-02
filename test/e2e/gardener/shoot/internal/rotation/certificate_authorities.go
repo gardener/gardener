@@ -90,7 +90,7 @@ func (v *CAVerifier) Before(ctx context.Context) {
 	By("Verify old CA secret in garden cluster")
 	Eventually(func(g Gomega) {
 		secret := &corev1.Secret{}
-		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(v.Shoot.Name, "ca-cluster")}, secret)).To(Succeed())
+		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(v.Shoot.Name, "ca-cluster")}, secret)).To(Succeed())
 		g.Expect(secret.Data["ca.crt"]).To(And(
 			Not(BeEmpty()),
 			Equal(v.gardenletSecretsBefore[caCluster+"-bundle"][0].Data["bundle.crt"]),
@@ -152,7 +152,7 @@ func (v *CAVerifier) AfterPrepared(ctx context.Context) {
 	By("Verify CA bundle secret in garden cluster")
 	Eventually(func(g Gomega) {
 		secret := &corev1.Secret{}
-		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(v.Shoot.Name, "ca-cluster")}, secret)).To(Succeed())
+		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(v.Shoot.Name, "ca-cluster")}, secret)).To(Succeed())
 		g.Expect(secret.Data["ca.crt"]).To(And(
 			Not(BeEmpty()),
 			Equal(v.gardenletSecretsPrepared[caCluster+"-bundle"][0].Data["bundle.crt"]),
@@ -226,7 +226,7 @@ func (v *CAVerifier) AfterCompleted(ctx context.Context) {
 	By("Verify new CA secret in garden cluster")
 	Eventually(func(g Gomega) {
 		secret := &corev1.Secret{}
-		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(v.Shoot.Name, "ca-cluster")}, secret)).To(Succeed())
+		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(v.Shoot.Name, "ca-cluster")}, secret)).To(Succeed())
 		g.Expect(secret.Data["ca.crt"]).To(And(
 			Not(BeEmpty()),
 			Equal(v.gardenletSecretsCompleted[caCluster+"-bundle"][0].Data["bundle.crt"]),
@@ -262,7 +262,7 @@ func (v *CAVerifier) AfterCompleted(ctx context.Context) {
 // KubeconfigVerifier takes care of asserting that the kubeconfig actually contains the same CA bundle as .data[ca.crt].
 func verifyCABundleInKubeconfigSecret(ctx context.Context, g Gomega, c client.Reader, shootKey client.ObjectKey, expectedBundle []byte) {
 	secret := &corev1.Secret{}
-	shootKey.Name = gardenerutils.ComputeShootProjectSecretName(shootKey.Name, "kubeconfig")
+	shootKey.Name = gardenerutils.ComputeShootProjectResourceName(shootKey.Name, "kubeconfig")
 	g.Expect(c.Get(ctx, shootKey, secret)).To(Succeed())
 	g.Expect(secret.Data).To(HaveKeyWithValue("ca.crt", expectedBundle))
 }

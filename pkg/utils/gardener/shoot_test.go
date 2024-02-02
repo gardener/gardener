@@ -366,9 +366,9 @@ var _ = Describe("Shoot", func() {
 		})
 	})
 
-	Describe("#ComputeShootProjectSecretName", func() {
+	Describe("#ComputeShootProjectResourceName", func() {
 		It("should compute the expected name", func() {
-			Expect(ComputeShootProjectSecretName("foo", "bar")).To(Equal("foo.bar"))
+			Expect(ComputeShootProjectResourceName("foo", "bar")).To(Equal("foo.bar"))
 		})
 	})
 

@@ -174,7 +174,7 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 
 	f.Beta().Serial().CIt("should rotate the ssh keypair for a shoot cluster", func(ctx context.Context) {
 		secret := &corev1.Secret{}
-		gomega.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(f.Shoot.Name, gardenerutils.ShootProjectSecretSuffixSSHKeypair)}, secret)).To(gomega.Succeed())
+		gomega.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(f.Shoot.Name, gardenerutils.ShootProjectSecretSuffixSSHKeypair)}, secret)).To(gomega.Succeed())
 		preRotationPrivateKey := getKeyAndValidate(secret, secrets.DataKeyRSAPrivateKey)
 		preRotationPublicKey := getKeyAndValidate(secret, secrets.DataKeySSHAuthorizedKeys)
 		err := f.UpdateShoot(ctx, func(s *gardencorev1beta1.Shoot) error {
@@ -189,11 +189,11 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 			gomega.Expect(v).NotTo(gomega.Equal(v1beta1constants.ShootOperationRotateSSHKeypair))
 		}
 
-		gomega.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(f.Shoot.Name, gardenerutils.ShootProjectSecretSuffixSSHKeypair)}, secret)).To(gomega.Succeed())
+		gomega.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(f.Shoot.Name, gardenerutils.ShootProjectSecretSuffixSSHKeypair)}, secret)).To(gomega.Succeed())
 		postRotationPrivateKey := getKeyAndValidate(secret, secrets.DataKeyRSAPrivateKey)
 		postRotationPublicKey := getKeyAndValidate(secret, secrets.DataKeySSHAuthorizedKeys)
 
-		gomega.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(f.Shoot.Name, gardenerutils.ShootProjectSecretSuffixOldSSHKeypair)}, secret)).To(gomega.Succeed())
+		gomega.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(f.Shoot.Name, gardenerutils.ShootProjectSecretSuffixOldSSHKeypair)}, secret)).To(gomega.Succeed())
 		postRotationOldPrivateKey := getKeyAndValidate(secret, secrets.DataKeyRSAPrivateKey)
 		postRotationOldPublicKey := getKeyAndValidate(secret, secrets.DataKeySSHAuthorizedKeys)
 

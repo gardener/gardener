@@ -110,7 +110,7 @@ func (r *KubeconfigREST) Create(ctx context.Context, name string, obj runtime.Ob
 	}
 
 	// prepare: get cluster and client CA
-	caClientSecret, err := r.internalSecretLister.InternalSecrets(shoot.Namespace).Get(gardenerutils.ComputeShootProjectSecretName(shoot.Name, gardenerutils.ShootProjectSecretSuffixCAClient))
+	caClientSecret, err := r.internalSecretLister.InternalSecrets(shoot.Namespace).Get(gardenerutils.ComputeShootProjectResourceName(shoot.Name, gardenerutils.ShootProjectSecretSuffixCAClient))
 	if err != nil {
 		return nil, apierrors.NewInternalError(fmt.Errorf("could not get client CA secret: %w", err))
 	}
@@ -120,7 +120,7 @@ func (r *KubeconfigREST) Create(ctx context.Context, name string, obj runtime.Ob
 		return nil, apierrors.NewInternalError(fmt.Errorf("could not load client CA certificate from secret: %w", err))
 	}
 
-	caClusterSecret, err := r.secretLister.Secrets(shoot.Namespace).Get(gardenerutils.ComputeShootProjectSecretName(shoot.Name, gardenerutils.ShootProjectSecretSuffixCACluster))
+	caClusterSecret, err := r.secretLister.Secrets(shoot.Namespace).Get(gardenerutils.ComputeShootProjectResourceName(shoot.Name, gardenerutils.ShootProjectSecretSuffixCACluster))
 	if err != nil {
 		return nil, apierrors.NewInternalError(fmt.Errorf("could not get cluster CA secret: %w", err))
 	}

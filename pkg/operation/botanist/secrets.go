@@ -296,7 +296,7 @@ func (b *Botanist) syncShootCredentialToGarden(
 ) error {
 	gardenSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      gardenerutils.ComputeShootProjectSecretName(b.Shoot.GetInfo().Name, nameSuffix),
+			Name:      gardenerutils.ComputeShootProjectResourceName(b.Shoot.GetInfo().Name, nameSuffix),
 			Namespace: b.Shoot.GetInfo().Namespace,
 		},
 	}
@@ -327,7 +327,7 @@ func (b *Botanist) syncInternalSecretToGarden(
 ) error {
 	gardenSecret := &gardencorev1beta1.InternalSecret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      gardenerutils.ComputeShootProjectSecretName(b.Shoot.GetInfo().Name, nameSuffix),
+			Name:      gardenerutils.ComputeShootProjectResourceName(b.Shoot.GetInfo().Name, nameSuffix),
 			Namespace: b.Shoot.GetInfo().Namespace,
 		},
 	}
@@ -355,7 +355,7 @@ func (b *Botanist) deleteShootCredentialFromGarden(ctx context.Context, nameSuff
 	for _, nameSuffix := range nameSuffixes {
 		secretsToDelete = append(secretsToDelete, &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      gardenerutils.ComputeShootProjectSecretName(b.Shoot.GetInfo().Name, nameSuffix),
+				Name:      gardenerutils.ComputeShootProjectResourceName(b.Shoot.GetInfo().Name, nameSuffix),
 				Namespace: b.Shoot.GetInfo().Namespace,
 			},
 		})

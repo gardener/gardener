@@ -44,7 +44,7 @@ func (v *SSHKeypairVerifier) Before(ctx context.Context) {
 	By("Verify old ssh-keypair secret")
 	Eventually(func(g Gomega) {
 		secret := &corev1.Secret{}
-		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(v.Shoot.Name, "ssh-keypair")}, secret)).To(Succeed())
+		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(v.Shoot.Name, "ssh-keypair")}, secret)).To(Succeed())
 		g.Expect(secret.Data).To(And(
 			HaveKeyWithValue("id_rsa", Not(BeEmpty())),
 			HaveKeyWithValue("id_rsa.pub", Not(BeEmpty())),
@@ -54,7 +54,7 @@ func (v *SSHKeypairVerifier) Before(ctx context.Context) {
 
 	Eventually(func(g Gomega) {
 		secret := &corev1.Secret{}
-		err := v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(v.Shoot.Name, "ssh-keypair.old")}, secret)
+		err := v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(v.Shoot.Name, "ssh-keypair.old")}, secret)
 		if apierrors.IsNotFound(err) {
 			return
 		}
@@ -91,13 +91,13 @@ func (v *SSHKeypairVerifier) AfterPrepared(ctx context.Context) {
 	By("Verify new ssh-keypair secret")
 	secret := &corev1.Secret{}
 	Eventually(func(g Gomega) {
-		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(v.Shoot.Name, "ssh-keypair")}, secret)).To(Succeed())
+		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(v.Shoot.Name, "ssh-keypair")}, secret)).To(Succeed())
 		g.Expect(secret.Data).To(And(
 			HaveKeyWithValue("id_rsa", Not(Equal(v.oldKeypairData["id_rsa"]))),
 			HaveKeyWithValue("id_rsa.pub", Not(Equal(v.oldKeypairData["id_rsa.pub"]))),
 		))
 
-		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(v.Shoot.Name, "ssh-keypair.old")}, secret)).To(Succeed())
+		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(v.Shoot.Name, "ssh-keypair.old")}, secret)).To(Succeed())
 		g.Expect(secret.Data).To(Equal(v.oldKeypairData))
 	}).Should(Succeed(), "ssh-keypair secret should have been rotated")
 
