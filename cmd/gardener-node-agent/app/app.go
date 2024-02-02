@@ -159,6 +159,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		return fmt.Errorf("failed fetching hostname: %w", err)
 	}
 	hostName = strings.ToLower(hostName)
+	log.Info("Fetched hostname", "hostname", hostName)
 
 	log.Info("Fetching name of node (if already registered)")
 	nodeName, err := fetchNodeName(ctx, restConfig, hostName)
