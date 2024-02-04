@@ -135,7 +135,7 @@ func (h *Health) Check(
 	}
 
 	// Get extensions' conditions that are examined by health checks.
-	extensionConditionsControlPlaneHealthy, extensionConditionsEveryNodeReady, extensionConditionsSystemComponentsHealthy, extensionConditionObservabilityComponentsHealthy, err := h.getAllExtensionConditions(ctx)
+	extensionConditionsControlPlaneHealthy, extensionConditionsEveryNodeReady, extensionConditionsSystemComponentsHealthy, extensionConditionsObservabilityComponentsHealthy, err := h.getAllExtensionConditions(ctx)
 	if err != nil {
 		h.log.Error(err, "Error getting extension conditions")
 	}
@@ -147,7 +147,7 @@ func (h *Health) Check(
 			conditions.controlPlaneHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.controlPlaneHealthy, newControlPlane, err)
 			return nil
 		}, func(ctx context.Context) error {
-			newObservabilityComponents, err := h.checkObservabilityComponents(ctx, conditions.observabilityComponentsHealthy)
+			newObservabilityComponents, err := h.checkObservabilityComponents(ctx, conditions.observabilityComponentsHealthy, extensionConditionsObservabilityComponentsHealthy, healthCheckOutdatedThreshold)
 			conditions.observabilityComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.observabilityComponentsHealthy, newObservabilityComponents, err)
 			return nil
 		},
@@ -419,6 +419,8 @@ var monitoringSelector = labels.SelectorFromSet(map[string]string{v1beta1constan
 func (h *Health) checkObservabilityComponents(
 	ctx context.Context,
 	condition gardencorev1beta1.Condition,
+	extensionConditions []healthchecker.ExtensionCondition,
+	healthCheckOutdatedThreshold *metav1.Duration,
 ) (*gardencorev1beta1.Condition, error) {
 	if h.shoot.Purpose != gardencorev1beta1.ShootPurposeTesting && gardenlethelper.IsMonitoringEnabled(h.gardenletConfiguration) {
 		if exitCondition, err := h.healthChecker.CheckMonitoringControlPlane(
@@ -443,6 +445,9 @@ func (h *Health) checkObservabilityComponents(
 		); err != nil || exitCondition != nil {
 			return exitCondition, err
 		}
+	}
+	if exitCondition := h.healthChecker.CheckExtensionCondition(condition, extensionConditions, healthCheckOutdatedThreshold); exitCondition != nil {
+		return exitCondition, nil
 	}
 
 	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "ObservabilityComponentsRunning", "All observability components are healthy.")
@@ -473,6 +478,10 @@ func (h *Health) checkSystemComponents(
 		if exitCondition := h.healthChecker.CheckManagedResource(condition, &mr, gardenlethelper.GetManagedResourceProgressingThreshold(h.gardenletConfiguration)); exitCondition != nil {
 			return exitCondition, nil
 		}
+	}
+
+	if exitCondition := h.healthChecker.CheckExtensionCondition(condition, extensionConditions, healthCheckOutdatedThreshold); exitCondition != nil {
+		return exitCondition, nil
 	}
 
 	if !h.shoot.IsWorkerless {
