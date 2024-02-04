@@ -147,7 +147,7 @@ func (h *Health) Check(
 			conditions.controlPlaneHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.controlPlaneHealthy, newControlPlane, err)
 			return nil
 		}, func(ctx context.Context) error {
-			newObservabilityComponents, err := h.checkObservabilityComponents(ctx, conditions.observabilityComponentsHealthy, extensionConditionObservabilityComponentsHealthy, healthCheckOutdatedThreshold)
+			newObservabilityComponents, err := h.checkObservabilityComponents(ctx, conditions.observabilityComponentsHealthy)
 			conditions.observabilityComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.observabilityComponentsHealthy, newObservabilityComponents, err)
 			return nil
 		},
@@ -162,7 +162,7 @@ func (h *Health) Check(
 				return nil
 			},
 			func(ctx context.Context) error {
-				newSystemComponents, err := h.checkSystemComponents(ctx, shootClient, conditions.systemComponentsHealthy)
+				newSystemComponents, err := h.checkSystemComponents(ctx, shootClient, conditions.systemComponentsHealthy, extensionConditionsSystemComponentsHealthy, healthCheckOutdatedThreshold)
 				conditions.systemComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.systemComponentsHealthy, newSystemComponents, err)
 				return nil
 			},
@@ -419,8 +419,6 @@ var monitoringSelector = labels.SelectorFromSet(map[string]string{v1beta1constan
 func (h *Health) checkObservabilityComponents(
 	ctx context.Context,
 	condition gardencorev1beta1.Condition,
-	extensionConditions []healthchecker.ExtensionCondition,
-	healthCheckOutdatedThreshold *metav1.Duration,
 ) (*gardencorev1beta1.Condition, error) {
 	if h.shoot.Purpose != gardencorev1beta1.ShootPurposeTesting && gardenlethelper.IsMonitoringEnabled(h.gardenletConfiguration) {
 		if exitCondition, err := h.healthChecker.CheckMonitoringControlPlane(
@@ -456,6 +454,8 @@ func (h *Health) checkSystemComponents(
 	ctx context.Context,
 	shootClient kubernetes.Interface,
 	condition gardencorev1beta1.Condition,
+	extensionConditions []healthchecker.ExtensionCondition,
+	healthCheckOutdatedThreshold *metav1.Duration,
 ) (
 	*gardencorev1beta1.Condition,
 	error,
