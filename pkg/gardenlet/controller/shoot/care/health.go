@@ -162,7 +162,7 @@ func (h *Health) Check(
 				return nil
 			},
 			func(ctx context.Context) error {
-				newSystemComponents, err := h.checkSystemComponents(ctx, shootClient, conditions.systemComponentsHealthy, extensionConditionsSystemComponentsHealthy, healthCheckOutdatedThreshold)
+				newSystemComponents, err := h.checkSystemComponents(ctx, shootClient, conditions.systemComponentsHealthy)
 				conditions.systemComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.systemComponentsHealthy, newSystemComponents, err)
 				return nil
 			},
@@ -456,8 +456,6 @@ func (h *Health) checkSystemComponents(
 	ctx context.Context,
 	shootClient kubernetes.Interface,
 	condition gardencorev1beta1.Condition,
-	extensionConditions []healthchecker.ExtensionCondition,
-	healthCheckOutdatedThreshold *metav1.Duration,
 ) (
 	*gardencorev1beta1.Condition,
 	error,
