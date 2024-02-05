@@ -239,6 +239,13 @@ func GetShootProjectInternalSecretSuffixes() []string {
 	}
 }
 
+// GetShootProjectConfigMapSuffixes returns the list of shoot-related project config map suffixes.
+func GetShootProjectConfigMapSuffixes() []string {
+	return []string{
+		ShootProjectConfigMapSuffixCACluster,
+	}
+}
+
 func shootProjectResourceSuffix(suffix string) string {
 	return "." + suffix
 }
@@ -266,6 +273,18 @@ func IsShootProjectInternalSecret(secretName string) (string, bool) {
 	for _, v := range GetShootProjectInternalSecretSuffixes() {
 		if suffix := shootProjectResourceSuffix(v); strings.HasSuffix(secretName, suffix) {
 			return strings.TrimSuffix(secretName, suffix), true
+		}
+	}
+
+	return "", false
+}
+
+// IsShootProjectConfigMap checks if the given name matches the name of a shoot-related project config map. If no, it returns
+// an empty string and <false>. Otherwise, it returns the shoot name and <true>.
+func IsShootProjectConfigMap(configMapName string) (string, bool) {
+	for _, v := range GetShootProjectConfigMapSuffixes() {
+		if suffix := shootProjectResourceSuffix(v); strings.HasSuffix(configMapName, suffix) {
+			return strings.TrimSuffix(configMapName, suffix), true
 		}
 	}
 

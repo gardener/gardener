@@ -143,7 +143,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 
 			return a.authorizeClusterRoleBinding(requestLog, seedName, attrs)
 		case configMapResource:
-			return a.authorizeRead(requestLog, seedName, graph.VertexTypeConfigMap, attrs)
+			return a.authorizeConfigMap(requestLog, seedName, attrs)
 		case controllerDeploymentResource:
 			return a.authorizeRead(requestLog, seedName, graph.VertexTypeControllerDeployment, attrs)
 		case controllerInstallationResource:
@@ -303,6 +303,14 @@ func (a *authorizer) authorizeSecret(log logr.Logger, seedName string, attrs aut
 
 	return a.authorize(log, seedName, graph.VertexTypeSecret, attrs,
 		[]string{"get", "patch", "update", "delete"},
+		[]string{"create"},
+		nil,
+	)
+}
+
+func (a *authorizer) authorizeConfigMap(log logr.Logger, seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
+	return a.authorize(log, seedName, graph.VertexTypeConfigMap, attrs,
+		[]string{"get", "patch", "update", "delete", "list", "watch"},
 		[]string{"create"},
 		nil,
 	)

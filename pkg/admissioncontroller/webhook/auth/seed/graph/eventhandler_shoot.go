@@ -164,6 +164,13 @@ func (g *graph) handleShootCreateOrUpdate(shoot *gardencorev1beta1.Shoot) {
 		g.addEdge(secretVertex, shootVertex)
 	}
 
+	// Those config maps are not directly referenced in the shoot spec, however, they will be created/updated as part of the
+	// gardenlet reconciliation and are bound to the lifetime of the shoot, so let's add them here.
+	for _, suffix := range gardenerutils.GetShootProjectConfigMapSuffixes() {
+		configMapVertex := g.getOrCreateVertex(VertexTypeConfigMap, shoot.Namespace, gardenerutils.ComputeShootProjectResourceName(shoot.Name, suffix))
+		g.addEdge(configMapVertex, shootVertex)
+	}
+
 	// Similarly, ShootStates are not directly referenced in the shoot spec, however, they will be created/updated/
 	// deleted as part of the gardenlet reconciliation and are bound to the lifetime of the shoot as well.
 	shootStateVertex := g.getOrCreateVertex(VertexTypeShootState, shoot.Namespace, shoot.Name)
