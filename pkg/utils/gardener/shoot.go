@@ -207,6 +207,7 @@ const (
 	// ShootProjectSecretSuffixKubeconfig is a constant for a shoot project secret with suffix 'kubeconfig'.
 	ShootProjectSecretSuffixKubeconfig = "kubeconfig"
 	// ShootProjectSecretSuffixCACluster is a constant for a shoot project secret with suffix 'ca-cluster'.
+	// Deprecated: This constant is deprecated in favor of ShootProjectConfigMapSuffixCACluster
 	ShootProjectSecretSuffixCACluster = "ca-cluster"
 	// ShootProjectSecretSuffixCAClient is a constant for a shoot project secret with suffix 'ca-client'.
 	ShootProjectSecretSuffixCAClient = "ca-client"
@@ -216,6 +217,8 @@ const (
 	ShootProjectSecretSuffixOldSSHKeypair = v1beta1constants.SecretNameSSHKeyPair + ".old"
 	// ShootProjectSecretSuffixMonitoring is a constant for a shoot project secret with suffix 'monitoring'.
 	ShootProjectSecretSuffixMonitoring = "monitoring"
+	// ShootProjectConfigMapSuffixCACluster is a constant for a shoot project secret with suffix 'ca-cluster'.
+	ShootProjectConfigMapSuffixCACluster = "ca-cluster"
 )
 
 // GetShootProjectSecretSuffixes returns the list of shoot-related project secret suffixes.

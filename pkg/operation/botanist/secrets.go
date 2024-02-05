@@ -216,12 +216,25 @@ func (b *Botanist) generateCertificateAuthorities(ctx context.Context) error {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
 	}
 
+	caBundle := caBundleSecret.Data[secretsutils.DataKeyCertificateBundle]
+
+	if err := b.syncShootConfigMapToGarden(
+		ctx,
+		gardenerutils.ShootProjectConfigMapSuffixCACluster,
+		map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleCACluster},
+		nil,
+		map[string]string{secretsutils.DataKeyCertificateCA: string(caBundle)},
+	); err != nil {
+		return err
+	}
+
+	// TODO(petersutter): Remove this code and cleanup Secret in a future release. The caBundle is now being stored in a <shootname>.ca-cluster ConfigMap.
 	if err := b.syncShootCredentialToGarden(
 		ctx,
 		gardenerutils.ShootProjectSecretSuffixCACluster,
 		map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleCACluster},
 		nil,
-		map[string][]byte{secretsutils.DataKeyCertificateCA: caBundleSecret.Data[secretsutils.DataKeyCertificateBundle]},
+		map[string][]byte{secretsutils.DataKeyCertificateCA: caBundle},
 	); err != nil {
 		return err
 	}
@@ -343,6 +356,36 @@ func (b *Botanist) syncInternalSecretToGarden(
 		return nil
 	})
 
+	return err
+}
+
+func (b *Botanist) syncShootConfigMapToGarden(
+	ctx context.Context,
+	nameSuffix string,
+	labels map[string]string,
+	annotations map[string]string,
+	data map[string]string,
+) error {
+	gardenConfigMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      gardenerutils.ComputeShootProjectResourceName(b.Shoot.GetInfo().Name, nameSuffix),
+			Namespace: b.Shoot.GetInfo().Namespace,
+		},
+	}
+
+	_, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, b.GardenClient, gardenConfigMap, func() error {
+		gardenConfigMap.OwnerReferences = []metav1.OwnerReference{
+			*metav1.NewControllerRef(b.Shoot.GetInfo(), gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot")),
+		}
+		gardenConfigMap.Annotations = annotations
+		gardenConfigMap.Labels = labels
+		gardenConfigMap.Data = data
+		return nil
+	})
+
+	if err != nil && quotaExceededRegex.MatchString(err.Error()) {
+		return v1beta1helper.NewErrorWithCodes(err, gardencorev1beta1.ErrorInfraQuotaExceeded)
+	}
 	return err
 }
 
