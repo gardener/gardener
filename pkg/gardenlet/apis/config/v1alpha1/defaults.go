@@ -425,7 +425,7 @@ func SetDefaults_TokenRequestorControllerConfiguration(obj *TokenRequestorContro
 // SetDefaults_VPAEvictionRequirementsControllerConfiguration sets defaults for the VPAEvictionRequirements controller.
 func SetDefaults_VPAEvictionRequirementsControllerConfiguration(obj *VPAEvictionRequirementsControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = pointer.Int(5)
+		obj.ConcurrentSyncs = ptr.To(5)
 	}
 }
 

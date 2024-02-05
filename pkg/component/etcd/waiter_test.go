@@ -92,9 +92,7 @@ var _ = Describe("#Wait", func() {
 			Role:            testRole,
 			Class:           ClassNormal,
 			StorageCapacity: "20Gi",
-		})
-		etcd.SetHVPAConfig(&HVPAConfig{
-			Enabled: true,
+			HVPAenabled:     true,
 			MaintenanceTimeWindow: gardencorev1beta1.MaintenanceTimeWindow{
 				Begin: "1234",
 				End:   "5678",

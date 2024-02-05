@@ -39,6 +39,7 @@ import (
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	testclock "k8s.io/utils/clock/testing"
+	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -78,7 +79,7 @@ var _ = Describe("Etcd", func() {
 		ctx                     = context.TODO()
 		fakeErr                 = fmt.Errorf("fake err")
 		class                   = ClassNormal
-		replicas                = ptr.To(int32(1))
+		replicas                *int32
 		storageCapacity         = "12Gi"
 		storageCapacityQuantity = resource.MustParse(storageCapacity)
 		storageClassName        = "my-storage-class"
@@ -91,16 +92,23 @@ var _ = Describe("Etcd", func() {
 		secretNameServerPeer = "etcd-peer-server-" + testRole
 		secretNameClient     = "etcd-client"
 
+		hvpaEnabled           bool
 		maintenanceTimeWindow = gardencorev1beta1.MaintenanceTimeWindow{
 			Begin: "1234",
 			End:   "5678",
 		}
-		now                     = time.Time{}
-		quota                   = resource.MustParse("8Gi")
-		garbageCollectionPolicy = druidv1alpha1.GarbageCollectionPolicy(druidv1alpha1.GarbageCollectionPolicyExponential)
-		garbageCollectionPeriod = metav1.Duration{Duration: 12 * time.Hour}
-		compressionPolicy       = druidv1alpha1.GzipCompression
-		compressionSpec         = druidv1alpha1.CompressionSpec{
+		scaleDownUpdateMode         *string
+		updateModeMaintenanceWindow = hvpav1alpha1.UpdateModeMaintenanceWindow
+		vpaEnabled                  bool
+		highAvailabilityEnabled     bool
+		caRotationPhase             gardencorev1beta1.CredentialsRotationPhase
+		backupConfig                *BackupConfig
+		now                         = time.Time{}
+		quota                       = resource.MustParse("8Gi")
+		garbageCollectionPolicy     = druidv1alpha1.GarbageCollectionPolicy(druidv1alpha1.GarbageCollectionPolicyExponential)
+		garbageCollectionPeriod     = metav1.Duration{Duration: 12 * time.Hour}
+		compressionPolicy           = druidv1alpha1.GzipCompression
+		compressionSpec             = druidv1alpha1.CompressionSpec{
 			Enabled: ptr.To(true),
 			Policy:  &compressionPolicy,
 		}
@@ -532,10 +540,17 @@ var _ = Describe("Etcd", func() {
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-		c = mockclient.NewMockClient(ctrl)
+		hvpaEnabled = true
+		caRotationPhase = ""
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
 		sm = fakesecretsmanager.New(fakeClient, testNamespace)
+		backupConfig = nil
+		replicas = pointer.Int32(1)
+	})
+
+	JustBeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		c = mockclient.NewMockClient(ctrl)
 		log = logr.Discard()
 
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
@@ -547,8 +562,14 @@ var _ = Describe("Etcd", func() {
 			StorageCapacity:         storageCapacity,
 			StorageClassName:        &storageClassName,
 			DefragmentationSchedule: &defragmentationSchedule,
-			CARotationPhase:         "",
+			CARotationPhase:         caRotationPhase,
 			PriorityClassName:       priorityClassName,
+			HVPAenabled:             hvpaEnabled,
+			MaintenanceTimeWindow:   maintenanceTimeWindow,
+			ScaleDownUpdateMode:     scaleDownUpdateMode,
+			VPAenabled:              vpaEnabled,
+			HighAvailabilityEnabled: highAvailabilityEnabled,
+			BackupConfig:            backupConfig,
 		})
 	})
 
@@ -557,20 +578,6 @@ var _ = Describe("Etcd", func() {
 	})
 
 	Describe("#Deploy", func() {
-		var scaleDownUpdateMode = hvpav1alpha1.UpdateModeMaintenanceWindow
-		newSetHVPAConfigFunc := func(updateMode string) func() {
-			return func() {
-				etcd.SetHVPAConfig(&HVPAConfig{
-					Enabled:               true,
-					MaintenanceTimeWindow: maintenanceTimeWindow,
-					ScaleDownUpdateMode:   ptr.To(updateMode),
-				})
-			}
-		}
-		setHVPAConfig := newSetHVPAConfigFunc(scaleDownUpdateMode)
-
-		BeforeEach(setHVPAConfig)
-
 		It("should fail because the etcd object retrieval fails", func() {
 			c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(fakeErr)
 
@@ -629,7 +636,20 @@ var _ = Describe("Etcd", func() {
 		})
 
 		It("should fail because the hvpa cannot be deleted", func() {
-			etcd.SetHVPAConfig(&HVPAConfig{})
+			// update HVPA enablement to 'false', such that the component tries to remove the HVPA object
+			etcd = New(log, c, testNamespace, sm, Values{
+				Role:                    testRole,
+				Class:                   class,
+				Replicas:                replicas,
+				StorageCapacity:         storageCapacity,
+				StorageClassName:        &storageClassName,
+				DefragmentationSchedule: &defragmentationSchedule,
+				CARotationPhase:         "",
+				PriorityClassName:       priorityClassName,
+				HVPAenabled:             false,
+				MaintenanceTimeWindow:   maintenanceTimeWindow,
+				ScaleDownUpdateMode:     scaleDownUpdateMode,
+			})
 
 			gomock.InOrder(
 				c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
@@ -669,7 +689,7 @@ var _ = Describe("Etcd", func() {
 				}),
 				c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, hvpaName), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-					Expect(obj).To(DeepEqual(hvpaFor(class, 1, scaleDownUpdateMode)))
+					Expect(obj).To(DeepEqual(hvpaFor(class, 1, updateModeMaintenanceWindow)))
 				}),
 			)
 
@@ -694,8 +714,9 @@ var _ = Describe("Etcd", func() {
 				DefragmentationSchedule: &defragmentationSchedule,
 				CARotationPhase:         "",
 				PriorityClassName:       priorityClassName,
+				HVPAenabled:             true,
+				MaintenanceTimeWindow:   maintenanceTimeWindow,
 			})
-			setHVPAConfig()
 
 			gomock.InOrder(
 				c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
@@ -733,7 +754,7 @@ var _ = Describe("Etcd", func() {
 				}),
 				c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, hvpaName), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-					Expect(obj).To(DeepEqual(hvpaFor(class, existingReplicas, scaleDownUpdateMode)))
+					Expect(obj).To(DeepEqual(hvpaFor(class, existingReplicas, updateModeMaintenanceWindow)))
 				}),
 			)
 
@@ -757,9 +778,10 @@ var _ = Describe("Etcd", func() {
 				StorageClassName:        &storageClassName,
 				DefragmentationSchedule: &defragmentationSchedule,
 				CARotationPhase:         "",
+				HVPAenabled:             true,
+				MaintenanceTimeWindow:   maintenanceTimeWindow,
 				PriorityClassName:       priorityClassName,
 			})
-			setHVPAConfig()
 
 			gomock.InOrder(
 				c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
@@ -802,7 +824,7 @@ var _ = Describe("Etcd", func() {
 				}),
 				c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, hvpaName), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-					Expect(obj).To(DeepEqual(hvpaFor(class, existingReplicas, scaleDownUpdateMode)))
+					Expect(obj).To(DeepEqual(hvpaFor(class, existingReplicas, updateModeMaintenanceWindow)))
 				}),
 			)
 
@@ -861,7 +883,7 @@ var _ = Describe("Etcd", func() {
 
 				c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, hvpaName), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-					Expect(obj).To(DeepEqual(hvpaFor(class, 1, scaleDownUpdateMode)))
+					Expect(obj).To(DeepEqual(hvpaFor(class, 1, updateModeMaintenanceWindow)))
 				}),
 			)
 
@@ -918,7 +940,7 @@ var _ = Describe("Etcd", func() {
 				}),
 				c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, hvpaName), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-					Expect(obj).To(DeepEqual(hvpaFor(class, 1, scaleDownUpdateMode)))
+					Expect(obj).To(DeepEqual(hvpaFor(class, 1, updateModeMaintenanceWindow)))
 				}),
 			)
 
@@ -1006,7 +1028,7 @@ var _ = Describe("Etcd", func() {
 				}),
 				c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, hvpaName), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-					Expect(obj).To(DeepEqual(hvpaFor(class, 1, scaleDownUpdateMode)))
+					Expect(obj).To(DeepEqual(hvpaFor(class, 1, updateModeMaintenanceWindow)))
 				}),
 			)
 
@@ -1035,9 +1057,11 @@ var _ = Describe("Etcd", func() {
 					StorageClassName:        &storageClassName,
 					DefragmentationSchedule: &defragmentationSchedule,
 					CARotationPhase:         "",
+					HVPAenabled:             true,
+					MaintenanceTimeWindow:   maintenanceTimeWindow,
 					PriorityClassName:       priorityClassName,
+					ScaleDownUpdateMode:     pointer.String(updateMode),
 				})
-				newSetHVPAConfigFunc(updateMode)()
 
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
@@ -1079,7 +1103,7 @@ var _ = Describe("Etcd", func() {
 				DeltaSnapshotRetentionPeriod: &metav1.Duration{Duration: 15 * 24 * time.Hour},
 			}
 
-			BeforeEach(func() {
+			JustBeforeEach(func() {
 				etcd.SetBackupConfig(backupConfig)
 			})
 
@@ -1110,7 +1134,7 @@ var _ = Describe("Etcd", func() {
 					}),
 					c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, hvpaName), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-						Expect(obj).To(DeepEqual(hvpaFor(class, 1, scaleDownUpdateMode)))
+						Expect(obj).To(DeepEqual(hvpaFor(class, 1, updateModeMaintenanceWindow)))
 					}),
 				)
 
@@ -1167,7 +1191,7 @@ var _ = Describe("Etcd", func() {
 					}),
 					c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, hvpaName), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-						Expect(obj).To(DeepEqual(hvpaFor(class, 1, scaleDownUpdateMode)))
+						Expect(obj).To(DeepEqual(hvpaFor(class, 1, updateModeMaintenanceWindow)))
 					}),
 				)
 
@@ -1176,9 +1200,13 @@ var _ = Describe("Etcd", func() {
 		})
 
 		Context("when HA setup is configured", func() {
-			var (
-				rotationPhase gardencorev1beta1.CredentialsRotationPhase
-			)
+			BeforeEach(func() {
+				hvpaEnabled = false
+				vpaEnabled = true
+				highAvailabilityEnabled = true
+				replicas = pointer.Int32(3)
+				Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd-peer", Namespace: testNamespace}})).To(Succeed())
+			})
 
 			createExpectations := func(caSecretName, clientSecretName, serverSecretName, peerCASecretName, peerServerSecretName string) {
 				gomock.InOrder(
@@ -1221,25 +1249,6 @@ var _ = Describe("Etcd", func() {
 				)
 			}
 
-			BeforeEach(func() {
-				Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd-peer", Namespace: testNamespace}})).To(Succeed())
-			})
-
-			JustBeforeEach(func() {
-				replicas = ptr.To(int32(3))
-				etcd = New(log, c, testNamespace, sm, Values{
-					Role:                    testRole,
-					Class:                   class,
-					Replicas:                replicas,
-					StorageCapacity:         storageCapacity,
-					StorageClassName:        &storageClassName,
-					DefragmentationSchedule: &defragmentationSchedule,
-					CARotationPhase:         rotationPhase,
-					PriorityClassName:       priorityClassName,
-					HighAvailabilityEnabled: true,
-				})
-			})
-
 			Context("when CA rotation phase is in `Preparing` state", func() {
 				var (
 					clientCASecret *corev1.Secret
@@ -1247,7 +1256,7 @@ var _ = Describe("Etcd", func() {
 				)
 
 				BeforeEach(func() {
-					rotationPhase = gardencorev1beta1.RotationPreparing
+					caRotationPhase = gardencorev1beta1.RotationPreparing
 
 					secretNamesToTimes := map[string]time.Time{}
 
@@ -1293,7 +1302,7 @@ var _ = Describe("Etcd", func() {
 					Expect(ok).To(BeTrue())
 
 					DeferCleanup(func() {
-						rotationPhase = ""
+						caRotationPhase = ""
 					})
 				})
 
@@ -1357,6 +1366,8 @@ var _ = Describe("Etcd", func() {
 		Context("when etcd cluster is hibernated", func() {
 			BeforeEach(func() {
 				secretNamesToTimes := map[string]time.Time{}
+				replicas = pointer.Int32(0)
+				caRotationPhase = gardencorev1beta1.RotationCompleted
 
 				var err error
 				sm, err = secretsmanager.New(
@@ -1380,20 +1391,6 @@ var _ = Describe("Etcd", func() {
 				_, err = sm.Generate(ctx,
 					&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCDPeer, CommonName: "etcd-peer", CertType: secretsutils.CACert})
 				Expect(err).ToNot(HaveOccurred())
-			})
-
-			JustBeforeEach(func() {
-				etcd = New(log, c, testNamespace, sm, Values{
-					Role:                    testRole,
-					Class:                   class,
-					Replicas:                ptr.To(int32(0)),
-					StorageCapacity:         storageCapacity,
-					StorageClassName:        &storageClassName,
-					DefragmentationSchedule: &defragmentationSchedule,
-					CARotationPhase:         gardencorev1beta1.RotationCompleted,
-					PriorityClassName:       priorityClassName,
-					HighAvailabilityEnabled: true,
-				})
 			})
 
 			Context("when peer url secrets are present in etcd CR", func() {
@@ -1505,9 +1502,10 @@ var _ = Describe("Etcd", func() {
 					CARotationPhase:             "",
 					RuntimeKubernetesVersion:    semver.MustParse("1.26.1"),
 					PriorityClassName:           priorityClassName,
+					HVPAenabled:                 hvpaEnabled,
+					MaintenanceTimeWindow:       maintenanceTimeWindow,
 					TopologyAwareRoutingEnabled: true,
 				})
-				newSetHVPAConfigFunc(updateMode)()
 
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
@@ -1617,7 +1615,7 @@ var _ = Describe("Etcd", func() {
 
 			BeforeEach(func() {
 				mockHttpClient = rest.NewMockHTTPClient(ctrl)
-				etcd.SetBackupConfig(&BackupConfig{})
+				backupConfig = &BackupConfig{}
 			})
 
 			It("should successfully execute the full snapshot command", func() {
@@ -1646,6 +1644,7 @@ var _ = Describe("Etcd", func() {
 		var etcdObj *druidv1alpha1.Etcd
 
 		BeforeEach(func() {
+			hvpaEnabled = false
 			etcdObj = &druidv1alpha1.Etcd{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "etcd-" + testRole,
@@ -1749,34 +1748,37 @@ var _ = Describe("Etcd", func() {
 			Expect(etcd.Scale(ctx, 1)).Should(MatchError(`etcd object still has operation annotation set`))
 		})
 
-		It("should update HVPA with the new replica count if it is enabled", func() {
-			etcd.SetHVPAConfig(&HVPAConfig{
-				Enabled: true,
+		Context("When HVPA is enabled", func() {
+			BeforeEach(func() {
+				hvpaEnabled = true
 			})
-			etcdObj.Spec.Replicas = 1
 
-			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdObj), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd, _ ...client.GetOption) error {
-					*etcd = *etcdObj
-					return nil
-				},
-			)
-			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any())
+			It("should update HVPA with the new replica count if it is enabled", func() {
+				etcdObj.Spec.Replicas = 1
 
-			hvpaObj := hvpaFor(ClassImportant, 1, hvpav1alpha1.UpdateModeDefault)
-			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(hvpaObj), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, hvpa *hvpav1alpha1.Hvpa, _ ...client.GetOptions) error {
-					*hvpa = *hvpaObj
-					return nil
-				},
-			)
+				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdObj), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
+					func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd, _ ...client.GetOption) error {
+						*etcd = *etcdObj
+						return nil
+					},
+				)
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any())
 
-			expectedHvpa := hvpaObj.DeepCopy()
-			expectedHvpa.Spec.Hpa.Template.Spec.MaxReplicas = 3
-			expectedHvpa.Spec.Hpa.Template.Spec.MinReplicas = ptr.To(int32(3))
-			test.EXPECTPatch(ctx, c, expectedHvpa, hvpaObj, types.MergePatchType)
+				hvpaObj := hvpaFor(ClassImportant, 1, hvpav1alpha1.UpdateModeDefault)
+				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(hvpaObj), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})).DoAndReturn(
+					func(_ context.Context, _ client.ObjectKey, hvpa *hvpav1alpha1.Hvpa, _ ...client.GetOptions) error {
+						*hvpa = *hvpaObj
+						return nil
+					},
+				)
 
-			Expect(etcd.Scale(ctx, 3)).To(Succeed())
+				expectedHvpa := hvpaObj.DeepCopy()
+				expectedHvpa.Spec.Hpa.Template.Spec.MaxReplicas = 3
+				expectedHvpa.Spec.Hpa.Template.Spec.MinReplicas = ptr.To(int32(3))
+				test.EXPECTPatch(ctx, c, expectedHvpa, hvpaObj, types.MergePatchType)
+
+				Expect(etcd.Scale(ctx, 3)).To(Succeed())
+			})
 		})
 	})
 
