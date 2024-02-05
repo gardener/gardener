@@ -53,7 +53,7 @@ var _ = Describe("Initializer", func() {
 			Expect(units).To(ConsistOf(
 				extensionsv1alpha1.Unit{
 					Name:    "containerd-initializer.service",
-					Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+					Command: ptr.To(extensionsv1alpha1.CommandStart),
 					Enable:  ptr.To(true),
 					Content: ptr.To(`[Unit]
 Description=Containerd initializer

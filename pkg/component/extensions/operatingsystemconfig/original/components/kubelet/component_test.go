@@ -405,7 +405,7 @@ ExecStartPre=` + PathScriptCopyKubernetesBinary + ` kubelet`
 
 	unit := extensionsv1alpha1.Unit{
 		Name:    "kubelet.service",
-		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+		Command: ptr.To(extensionsv1alpha1.CommandStart),
 		Enable:  ptr.To(true),
 		Content: ptr.To(`[Unit]
 Description=kubelet daemon
@@ -473,7 +473,7 @@ func kubeletFiles(ctx components.Context, kubeletConfig, kubeletCABundleBase64 s
 func kubeletMonitorUnit() extensionsv1alpha1.Unit {
 	unit := extensionsv1alpha1.Unit{
 		Name:    "kubelet-monitor.service",
-		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+		Command: ptr.To(extensionsv1alpha1.CommandStart),
 		Enable:  ptr.To(true),
 		Content: ptr.To(`[Unit]
 Description=Kubelet-monitor daemon

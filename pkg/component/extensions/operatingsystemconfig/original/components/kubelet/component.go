@@ -157,7 +157,7 @@ ExecStartPre=` + PathScriptCopyKubernetesBinary + ` kubectl`
 
 	kubeletUnit := extensionsv1alpha1.Unit{
 		Name:    UnitName,
-		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+		Command: ptr.To(extensionsv1alpha1.CommandStart),
 		Enable:  ptr.To(true),
 		Content: ptr.To(`[Unit]
 Description=kubelet daemon
@@ -176,7 +176,7 @@ ExecStart=` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `/kubelet
 
 	healthMonitorUnit := extensionsv1alpha1.Unit{
 		Name:    "kubelet-monitor.service",
-		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+		Command: ptr.To(extensionsv1alpha1.CommandStart),
 		Enable:  ptr.To(true),
 		Content: ptr.To(`[Unit]
 Description=Kubelet-monitor daemon

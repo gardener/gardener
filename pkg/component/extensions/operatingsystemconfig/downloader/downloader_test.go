@@ -36,7 +36,7 @@ var _ = Describe("Downloader", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(units).To(ConsistOf(extensionsv1alpha1.Unit{
 				Name:    "cloud-config-downloader.service",
-				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+				Command: ptr.To(extensionsv1alpha1.CommandStart),
 				Enable:  ptr.To(true),
 				Content: ptr.To(unitContent),
 			}))

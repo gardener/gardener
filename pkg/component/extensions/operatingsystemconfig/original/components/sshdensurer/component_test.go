@@ -45,7 +45,7 @@ var _ = Describe("Component", func() {
 			sshdEnsurerUnit := extensionsv1alpha1.Unit{
 
 				Name:    "sshd-ensurer.service",
-				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+				Command: ptr.To(extensionsv1alpha1.CommandStart),
 				Content: ptr.To(`[Unit]
 Description=Ensure SSHD service is enabled or disabled
 DefaultDependencies=no
@@ -82,7 +82,7 @@ WantedBy=multi-user.target`),
 
 			sshdEnsurerUnit := extensionsv1alpha1.Unit{
 				Name:    "sshd-ensurer.service",
-				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+				Command: ptr.To(extensionsv1alpha1.CommandStart),
 				Content: ptr.To(`[Unit]
 Description=Ensure SSHD service is enabled or disabled
 DefaultDependencies=no

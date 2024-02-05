@@ -40,7 +40,7 @@ var _ = Describe("Component", func() {
 
 			monitorUnit := extensionsv1alpha1.Unit{
 				Name:    "containerd-monitor.service",
-				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+				Command: ptr.To(extensionsv1alpha1.CommandStart),
 				Enable:  ptr.To(true),
 				Content: ptr.To(`[Unit]
 Description=Containerd-monitor daemon
@@ -68,7 +68,7 @@ WantedBy=multi-user.target`),
 
 			logrotateTimerUnit := extensionsv1alpha1.Unit{
 				Name:    "containerd-logrotate.timer",
-				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+				Command: ptr.To(extensionsv1alpha1.CommandStart),
 				Enable:  ptr.To(true),
 				Content: ptr.To(`[Unit]
 Description=Log Rotation at each 10 minutes

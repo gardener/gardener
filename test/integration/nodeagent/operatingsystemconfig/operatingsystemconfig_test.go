@@ -177,7 +177,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		unit1 = extensionsv1alpha1.Unit{
 			Name:    "unit1",
 			Enable:  ptr.To(true),
-			Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+			Command: ptr.To(extensionsv1alpha1.CommandStart),
 			Content: ptr.To("#unit1"),
 			DropIns: []extensionsv1alpha1.DropIn{{
 				Name:    "drop",
@@ -187,7 +187,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		unit2 = extensionsv1alpha1.Unit{
 			Name:    "unit2",
 			Enable:  ptr.To(false),
-			Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStop),
+			Command: ptr.To(extensionsv1alpha1.CommandStop),
 			Content: ptr.To("#unit2"),
 		}
 		unit3 = extensionsv1alpha1.Unit{
@@ -201,7 +201,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		unit4 = extensionsv1alpha1.Unit{
 			Name:    "unit4",
 			Enable:  ptr.To(true),
-			Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+			Command: ptr.To(extensionsv1alpha1.CommandStart),
 			Content: ptr.To("#unit4"),
 			DropIns: []extensionsv1alpha1.DropIn{{
 				Name:    "drop",
@@ -211,7 +211,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		unit5 = extensionsv1alpha1.Unit{
 			Name:    "unit5",
 			Enable:  ptr.To(true),
-			Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+			Command: ptr.To(extensionsv1alpha1.CommandStart),
 			Content: ptr.To("#unit5"),
 			DropIns: []extensionsv1alpha1.DropIn{
 				{
@@ -246,7 +246,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		unit8 = extensionsv1alpha1.Unit{
 			Name:      "unit8",
 			Enable:    ptr.To(true),
-			Command:   extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
+			Command:   ptr.To(extensionsv1alpha1.CommandStart),
 			Content:   ptr.To("#unit8"),
 			FilePaths: []string{file6.Path},
 		}
@@ -399,7 +399,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		// the content of file7 (belonging to unit9) is changed, so unit9 is restarting
 		// file1, unit3, and gardener-node-agent unit are unchanged, so unit3 is not restarting and cancel func is not called
 		unit2.Enable = ptr.To(true)
-		unit2.Command = extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart)
+		unit2.Command = ptr.To(extensionsv1alpha1.CommandStart)
 		unit2.DropIns = []extensionsv1alpha1.DropIn{{Name: "dropdropdrop", Content: "#unit2drop"}}
 		unit4.Enable = ptr.To(false)
 		unit4.DropIns = nil
