@@ -497,6 +497,7 @@ func (r *Reconciler) newEtcd(
 			PriorityClassName:           v1beta1constants.PriorityClassNameGardenSystem500,
 			HighAvailabilityEnabled:     highAvailabilityEnabled,
 			TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
+			VPAenabled:                  features.DefaultFeatureGate.Enabled(features.VPAForETCD),
 		},
 	), nil
 }
