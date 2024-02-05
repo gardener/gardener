@@ -50,6 +50,7 @@ func NewStorage(
 	optsGetter generic.RESTOptionsGetter,
 	internalSecretLister gardencorelisters.InternalSecretLister,
 	secretLister kubecorev1listers.SecretLister,
+	configMapLister kubecorev1listers.ConfigMapLister,
 	adminKubeconfigMaxExpiration time.Duration,
 	viewerKubeconfigMaxExpiration time.Duration,
 	credentialsRotationInterval time.Duration,
@@ -60,8 +61,8 @@ func NewStorage(
 		Shoot:            shootRest,
 		Status:           shootStatusRest,
 		Binding:          bindingREST,
-		AdminKubeconfig:  NewAdminKubeconfigREST(shootRest, secretLister, internalSecretLister, adminKubeconfigMaxExpiration),
-		ViewerKubeconfig: NewViewerKubeconfigREST(shootRest, secretLister, internalSecretLister, viewerKubeconfigMaxExpiration),
+		AdminKubeconfig:  NewAdminKubeconfigREST(shootRest, secretLister, internalSecretLister, configMapLister, adminKubeconfigMaxExpiration),
+		ViewerKubeconfig: NewViewerKubeconfigREST(shootRest, secretLister, internalSecretLister, configMapLister, viewerKubeconfigMaxExpiration),
 	}
 }
 

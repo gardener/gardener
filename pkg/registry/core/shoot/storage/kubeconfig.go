@@ -44,6 +44,7 @@ import (
 type KubeconfigREST struct {
 	secretLister         kubecorev1listers.SecretLister
 	internalSecretLister gardencorelisters.InternalSecretLister
+	configMapLister      kubecorev1listers.ConfigMapLister
 	shootStorage         getter
 	maxExpirationSeconds int64
 
@@ -120,14 +121,23 @@ func (r *KubeconfigREST) Create(ctx context.Context, name string, obj runtime.Ob
 		return nil, apierrors.NewInternalError(fmt.Errorf("could not load client CA certificate from secret: %w", err))
 	}
 
-	caClusterSecret, err := r.secretLister.Secrets(shoot.Namespace).Get(gardenerutils.ComputeShootProjectResourceName(shoot.Name, gardenerutils.ShootProjectSecretSuffixCACluster))
-	if err != nil {
-		return nil, apierrors.NewInternalError(fmt.Errorf("could not get cluster CA secret: %w", err))
+	var clusterCABundle []byte
+	caClusterConfigMap, err := r.configMapLister.ConfigMaps(shoot.Namespace).Get(gardenerutils.ComputeShootProjectResourceName(shoot.Name, gardenerutils.ShootProjectConfigMapSuffixCACluster))
+	// TODO(petersutter): remove this fallback of reading the <shoot-name>.ca-cluster Secret in a future release
+	if apierrors.IsNotFound(err) {
+		caClusterSecret, err := r.secretLister.Secrets(shoot.Namespace).Get(gardenerutils.ComputeShootProjectResourceName(shoot.Name, gardenerutils.ShootProjectSecretSuffixCACluster))
+		if err != nil {
+			return nil, apierrors.NewInternalError(fmt.Errorf("could not get cluster CA secret: %w", err))
+		}
+		clusterCABundle = caClusterSecret.Data[secrets.DataKeyCertificateCA]
+	} else if err != nil {
+		return nil, apierrors.NewInternalError(fmt.Errorf("could not get cluster CA config map: %w", err))
+	} else {
+		clusterCABundle = []byte(caClusterConfigMap.Data[secrets.DataKeyCertificateCA])
 	}
-	clusterCABundle := caClusterSecret.Data[secrets.DataKeyCertificateCA]
 
 	if len(clusterCABundle) == 0 {
-		return nil, apierrors.NewInternalError(fmt.Errorf("could not load cluster CA bundle from secret"))
+		return nil, apierrors.NewInternalError(fmt.Errorf("could not load cluster CA bundle"))
 	}
 
 	// generate kubeconfig with client certificate

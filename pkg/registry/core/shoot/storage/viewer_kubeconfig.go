@@ -33,11 +33,13 @@ func NewViewerKubeconfigREST(
 	shootGetter getter,
 	secretLister kubecorev1listers.SecretLister,
 	internalSecretLister gardencorelisters.InternalSecretLister,
+	configMapLister kubecorev1listers.ConfigMapLister,
 	maxExpiration time.Duration,
 ) *KubeconfigREST {
 	return &KubeconfigREST{
 		secretLister:         secretLister,
 		internalSecretLister: internalSecretLister,
+		configMapLister:      configMapLister,
 		shootStorage:         shootGetter,
 		maxExpirationSeconds: int64(maxExpiration.Seconds()),
 
