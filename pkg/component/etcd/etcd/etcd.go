@@ -89,8 +89,6 @@ type Interface interface {
 	Snapshot(context.Context, rest.HTTPClient) error
 	// SetBackupConfig sets the backup configuration.
 	SetBackupConfig(config *BackupConfig)
-	// SetHVPAConfig sets the HVPA configuration.
-	SetHVPAConfig(config *HVPAConfig)
 	// Get retrieves the Etcd resource
 	Get(context.Context) (*druidv1alpha1.Etcd, error)
 	// Scale scales the etcd resource to the given replica count.
@@ -153,11 +151,13 @@ type Values struct {
 	CARotationPhase             gardencorev1beta1.CredentialsRotationPhase
 	RuntimeKubernetesVersion    *semver.Version
 	BackupConfig                *BackupConfig
-	HvpaConfig                  *HVPAConfig
+	HVPAEnabled                 bool
+	MaintenanceTimeWindow       gardencorev1beta1.MaintenanceTimeWindow
+	ScaleDownUpdateMode         *string
 	PriorityClassName           string
 	HighAvailabilityEnabled     bool
 	TopologyAwareRoutingEnabled bool
-	VPAenabled                  bool
+	VPAEnabled                  bool
 }
 
 func (e *etcd) Deploy(ctx context.Context) error {
@@ -415,14 +415,14 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if e.values.VPAenabled {
+	if e.values.VPAEnabled {
 		if err := kubernetesutils.DeleteObjects(ctx, e.client, hvpa); err != nil {
 			return err
 		}
 		if err := e.reconcileVerticalPodAutoscaler(ctx, vpa, minAllowed, maxAllowed); err != nil {
 			return err
 		}
-	} else if e.values.HvpaConfig != nil && e.values.HvpaConfig.Enabled {
+	} else if e.values.HVPAEnabled {
 		if err := kubernetesutils.DeleteObjects(ctx, e.client, vpa); err != nil {
 			return err
 		}
@@ -434,7 +434,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			controlledValues   = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		)
 
-		scaleDownUpdateMode := e.values.HvpaConfig.ScaleDownUpdateMode
+		scaleDownUpdateMode := e.values.ScaleDownUpdateMode
 		if scaleDownUpdateMode == nil {
 			scaleDownUpdateMode = ptr.To(hvpav1alpha1.UpdateModeMaintenanceWindow)
 		}
@@ -445,8 +445,8 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			})
 			hvpa.Spec.Replicas = ptr.To[int32](1)
 			hvpa.Spec.MaintenanceTimeWindow = &hvpav1alpha1.MaintenanceTimeWindow{
-				Begin: e.values.HvpaConfig.MaintenanceTimeWindow.Begin,
-				End:   e.values.HvpaConfig.MaintenanceTimeWindow.End,
+				Begin: e.values.MaintenanceTimeWindow.Begin,
+				End:   e.values.MaintenanceTimeWindow.End,
 			}
 			hvpa.Spec.Hpa = hvpav1alpha1.HpaSpec{
 				Selector: &metav1.LabelSelector{MatchLabels: hpaLabels},
@@ -724,16 +724,14 @@ func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautos
 		var scaleDownUpdateMode *string
 
 		metav1.SetMetaDataLabel(&vpa.ObjectMeta, v1beta1constants.LabelRole, "etcd-vpa-"+e.values.Role)
-		if e.values.HvpaConfig != nil {
-			scaleDownUpdateMode = e.values.HvpaConfig.ScaleDownUpdateMode
-		}
+		scaleDownUpdateMode = e.values.ScaleDownUpdateMode
 		if ptr.Deref(scaleDownUpdateMode, "") == hvpav1alpha1.UpdateModeOff {
 			metav1.SetMetaDataLabel(&vpa.ObjectMeta, v1beta1constants.LabelVPAEvictionRequirementsController, v1beta1constants.EvictionRequirementManagedByController)
 			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, v1beta1constants.AnnotationVPAEvictionRequirementDownscaleRestriction, v1beta1constants.EvictionRequirementNever)
 		} else if ptr.Deref(scaleDownUpdateMode, "") == hvpav1alpha1.UpdateModeMaintenanceWindow {
 			metav1.SetMetaDataLabel(&vpa.ObjectMeta, v1beta1constants.LabelVPAEvictionRequirementsController, v1beta1constants.EvictionRequirementManagedByController)
 			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, v1beta1constants.AnnotationVPAEvictionRequirementDownscaleRestriction, v1beta1constants.EvictionRequirementInMaintenanceWindowOnly)
-			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, v1beta1constants.AnnotationShootMaintenanceWindow, e.values.HvpaConfig.MaintenanceTimeWindow.Begin+","+e.values.HvpaConfig.MaintenanceTimeWindow.End)
+			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, v1beta1constants.AnnotationShootMaintenanceWindow, e.values.MaintenanceTimeWindow.Begin+","+e.values.MaintenanceTimeWindow.End)
 		} else {
 			delete(vpa.GetLabels(), v1beta1constants.LabelVPAEvictionRequirementsController)
 			delete(vpa.GetAnnotations(), v1beta1constants.AnnotationVPAEvictionRequirementDownscaleRestriction)
@@ -822,7 +820,6 @@ func (e *etcd) Get(ctx context.Context) (*druidv1alpha1.Etcd, error) {
 }
 
 func (e *etcd) SetBackupConfig(backupConfig *BackupConfig) { e.values.BackupConfig = backupConfig }
-func (e *etcd) SetHVPAConfig(hvpaConfig *HVPAConfig)       { e.values.HvpaConfig = hvpaConfig }
 
 func (e *etcd) Scale(ctx context.Context, replicas int32) error {
 	etcdObj := &druidv1alpha1.Etcd{}
@@ -855,7 +852,7 @@ func (e *etcd) Scale(ctx context.Context, replicas int32) error {
 		return err
 	}
 
-	if e.values.HvpaConfig != nil && e.values.HvpaConfig.Enabled {
+	if e.values.HVPAEnabled {
 		// Keep the `hvpa.Spec.Hpa.Template.Spec.MaxReplicas` and `hvpa.Spec.Hpa.Template.Spec.MinReplicas`
 		// values consistent with the replica count of the etcd.
 		hvpa := e.emptyHVPA()
@@ -934,7 +931,7 @@ func (e *etcd) computeContainerResources(existingSts *appsv1.StatefulSet) (*core
 		}
 	)
 
-	if existingSts != nil && e.values.HvpaConfig != nil && e.values.HvpaConfig.Enabled {
+	if existingSts != nil && e.values.HVPAEnabled {
 		for k := range existingSts.Spec.Template.Spec.Containers {
 			v := existingSts.Spec.Template.Spec.Containers[k]
 			switch v.Name {
@@ -1026,15 +1023,4 @@ type BackupConfig struct {
 	LeaderElection *gardenletconfig.ETCDBackupLeaderElection
 	// DeltaSnapshotRetentionPeriod defines the duration for which delta snapshots will be retained, excluding the latest snapshot set.
 	DeltaSnapshotRetentionPeriod *metav1.Duration
-}
-
-// HVPAConfig contains information for configuring the HVPA object for the etcd.
-type HVPAConfig struct {
-	// Enabled states whether an HVPA object shall be deployed.
-	Enabled bool
-	// MaintenanceTimeWindow contains begin and end of a time window that allows down-scaling the etcd in case its
-	// resource requests/limits are unnecessarily high.
-	MaintenanceTimeWindow gardencorev1beta1.MaintenanceTimeWindow
-	// The update mode to use for scale down.
-	ScaleDownUpdateMode *string
 }

@@ -42,6 +42,11 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 		replicas = ptr.To(getEtcdReplicas(b.Shoot.GetInfo()))
 	}
 
+	hvpaEnabled := features.DefaultFeatureGate.Enabled(features.HVPA)
+	if b.ManagedSeed != nil {
+		hvpaEnabled = features.DefaultFeatureGate.Enabled(features.HVPAForShootedSeed)
+	}
+
 	e := NewEtcd(
 		b.Logger,
 		b.SeedClientSet.Client(),
@@ -55,23 +60,15 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 			DefragmentationSchedule:     &defragmentationSchedule,
 			CARotationPhase:             v1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials),
 			RuntimeKubernetesVersion:    b.Seed.KubernetesVersion,
+			HVPAEnabled:                 hvpaEnabled,
+			MaintenanceTimeWindow:       *b.Shoot.GetInfo().Spec.Maintenance.TimeWindow,
+			ScaleDownUpdateMode:         getScaleDownUpdateMode(class, b.Shoot),
 			PriorityClassName:           v1beta1constants.PriorityClassNameShootControlPlane500,
 			HighAvailabilityEnabled:     v1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()),
 			TopologyAwareRoutingEnabled: b.Shoot.TopologyAwareRoutingEnabled,
-			VPAenabled:                  features.DefaultFeatureGate.Enabled(features.VPAForETCD),
+			VPAEnabled:                  features.DefaultFeatureGate.Enabled(features.VPAForETCD),
 		},
 	)
-
-	hvpaEnabled := features.DefaultFeatureGate.Enabled(features.HVPA)
-	if b.ManagedSeed != nil {
-		hvpaEnabled = features.DefaultFeatureGate.Enabled(features.HVPAForShootedSeed)
-	}
-
-	e.SetHVPAConfig(&etcd.HVPAConfig{
-		Enabled:               hvpaEnabled,
-		MaintenanceTimeWindow: *b.Shoot.GetInfo().Spec.Maintenance.TimeWindow,
-		ScaleDownUpdateMode:   getScaleDownUpdateMode(class, b.Shoot),
-	})
 
 	return e, nil
 }
