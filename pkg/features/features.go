@@ -27,6 +27,11 @@ const (
 	// alpha: v0.32.0
 	HVPAForShootedSeed featuregate.Feature = "HVPAForShootedSeed"
 
+	// VPAForETCD enables using plain VPA for etcd-main and etcd-events, even if HVPA is enabled for the other components.
+	// owner @voelzmo
+	// alpha: v1.94.0
+	VPAForETCD featuregate.Feature = "VPAForETCD"
+
 	// DefaultSeccompProfile defaults the seccomp profile for Gardener managed workload in the seed to RuntimeDefault.
 	// owner: @dimityrmirchev
 	// alpha: v1.54.0
@@ -93,15 +98,16 @@ var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 
 // AllFeatureGates is the list of all feature gates.
 var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-	HVPA:                            {Default: false, PreRelease: featuregate.Alpha},
-	HVPAForShootedSeed:              {Default: false, PreRelease: featuregate.Alpha},
-	DefaultSeccompProfile:           {Default: false, PreRelease: featuregate.Alpha},
-	CoreDNSQueryRewriting:           {Default: false, PreRelease: featuregate.Alpha},
-	IPv6SingleStack:                 {Default: false, PreRelease: featuregate.Alpha},
-	MutableShootSpecNetworkingNodes: {Default: false, PreRelease: featuregate.Alpha},
-	ShootManagedIssuer:              {Default: false, PreRelease: featuregate.Alpha},
-	ShootForceDeletion:              {Default: true, PreRelease: featuregate.Beta},
-	UseNamespacedCloudProfile:       {Default: false, PreRelease: featuregate.Alpha},
+	HVPA:                               {Default: false, PreRelease: featuregate.Alpha},
+	HVPAForShootedSeed:                 {Default: false, PreRelease: featuregate.Alpha},
+	VPAForETCD:                         {Default: false, PreRelease: featuregate.Alpha},
+	DefaultSeccompProfile:              {Default: false, PreRelease: featuregate.Alpha},
+	CoreDNSQueryRewriting:              {Default: false, PreRelease: featuregate.Alpha},
+	IPv6SingleStack:                    {Default: false, PreRelease: featuregate.Alpha},
+	MutableShootSpecNetworkingNodes:    {Default: false, PreRelease: featuregate.Alpha},
+	ShootManagedIssuer:                 {Default: false, PreRelease: featuregate.Alpha},
+	ShootForceDeletion:                 {Default: true, PreRelease: featuregate.Beta},
+	UseNamespacedCloudProfile:          {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

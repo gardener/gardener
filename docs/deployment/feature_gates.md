@@ -30,6 +30,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | ShootForceDeletion                 | `true`  | `Beta`  | `1.91` |        |
 | UseNamespacedCloudProfile          | `false` | `Alpha` | `1.92` |        |
 | ShootManagedIssuer                 | `false` | `Alpha` | `1.93` |        |
+| VPAForETCD                         | `false` | `Alpha` | `1.94` |        |
 
 ## Feature Gates for Graduated or Deprecated Features
 
@@ -200,3 +201,4 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | ShootForceDeletion                 | `gardener-apiserver`              | Allows forceful deletion of Shoots by annotating them with the `confirmation.gardener.cloud/force-deletion` annotation.                                                                                                                                                                                                                                                            |
 | UseNamespacedCloudProfile          | `gardener-apiserver`              | Enables usage of `NamespacedCloudProfile`s in `Shoot`s.                                                                                                                                                                                                                                                                                                                            |
 | ShootManagedIssuer                 | `gardenlet`                       | Enables the shoot managed issuer functionality described in GEP 24.                                                                                                                                                                                                                                                                                                                |
+| VPAForETCD                         | `gardenlet`, `gardener-operator`  | Enables VPA for `etcd-main` and `etcd-events`, regardless of HVPA enablement.                                                                                                                                                                                                                                                                                                      |
