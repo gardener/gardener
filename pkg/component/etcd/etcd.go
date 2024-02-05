@@ -197,6 +197,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 	var (
 		hvpa = e.emptyHVPA()
+		vpa  = e.emptyVerticalPodAutoscaler()
 
 		replicas = e.computeReplicas(existingEtcd)
 
@@ -417,11 +418,13 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		if err := kubernetesutils.DeleteObjects(ctx, e.client, hvpa); err != nil {
 			return err
 		}
-		vpa := e.emptyVerticalPodAutoscaler()
 		if err := e.reconcileVerticalPodAutoscaler(ctx, vpa, minAllowed, maxAllowed); err != nil {
 			return err
 		}
 	} else if e.values.HVPAenabled {
+		if err := kubernetesutils.DeleteObjects(ctx, e.client, vpa); err != nil {
+			return err
+		}
 		var (
 			hpaLabels          = map[string]string{v1beta1constants.LabelRole: "etcd-hpa-" + e.values.Role}
 			vpaLabels          = map[string]string{v1beta1constants.LabelRole: "etcd-vpa-" + e.values.Role}
@@ -560,6 +563,9 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	} else {
 		// Neither VPA nor HVPA is enabled for etcd, delete the remaining objects
 		if err := kubernetesutils.DeleteObjects(ctx, e.client, hvpa); err != nil {
+			return err
+		}
+		if err = kubernetesutils.DeleteObjects(ctx, e.client, vpa); err != nil {
 			return err
 		}
 	}
