@@ -163,6 +163,7 @@ type Values struct {
 	PriorityClassName           string
 	HighAvailabilityEnabled     bool
 	TopologyAwareRoutingEnabled bool
+	VPAenabled                  bool
 }
 
 func (e *etcd) Deploy(ctx context.Context) error {
@@ -411,7 +412,15 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if e.values.HvpaConfig != nil && e.values.HvpaConfig.Enabled {
+	if e.values.VPAenabled {
+		if err := kubernetesutils.DeleteObjects(ctx, e.client, hvpa); err != nil {
+			return err
+		}
+		vpa := e.emptyVerticalPodAutoscaler()
+		if err := e.reconcileVerticalPodAutoscaler(ctx, vpa, minAllowed, maxAllowed); err != nil {
+			return err
+		}
+	} else if e.values.HvpaConfig != nil && e.values.HvpaConfig.Enabled {
 		var (
 			hpaLabels          = map[string]string{v1beta1constants.LabelRole: "etcd-hpa-" + e.values.Role}
 			vpaLabels          = map[string]string{v1beta1constants.LabelRole: "etcd-vpa-" + e.values.Role}
@@ -547,15 +556,11 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}); err != nil {
 			return err
 		}
-	} else {
-		if err := kubernetesutils.DeleteObjects(ctx, e.client, hvpa); err != nil {
-			return err
-		}
+	}
 
-		vpa := e.emptyVerticalPodAutoscaler()
-		if err := e.reconcileVerticalPodAutoscaler(ctx, vpa, minAllowed, maxAllowed); err != nil {
-			return err
-		}
+	// Neither VPA nor HVPA is enabled for etcd, delete the remaining objects
+	if err := kubernetesutils.DeleteObjects(ctx, e.client, hvpa); err != nil {
+		return err
 	}
 
 	return nil
