@@ -84,8 +84,36 @@ func ValidateGarden(garden *operatorv1alpha1.Garden) field.ErrorList {
 func ValidateGardenUpdate(oldGarden, newGarden *operatorv1alpha1.Garden) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	allErrs = append(allErrs, validateRuntimeClusterUpdate(oldGarden, newGarden)...)
 	allErrs = append(allErrs, validateVirtualClusterUpdate(oldGarden, newGarden)...)
 	allErrs = append(allErrs, ValidateGarden(newGarden)...)
+
+	return allErrs
+}
+
+func validateRuntimeClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden) field.ErrorList {
+	var (
+		allErrs           = field.ErrorList{}
+		oldRuntimeCluster = oldGarden.Spec.RuntimeCluster
+		newRuntimeCluster = newGarden.Spec.RuntimeCluster
+		fldPath           = field.NewPath("spec", "runtimeCluster")
+	)
+
+	// Check if old Domain field was properly transferred to Domains field.
+	if oldRuntimeCluster.Ingress.Domain != nil && len(newRuntimeCluster.Ingress.Domains) > 0 && *oldRuntimeCluster.Ingress.Domain != newRuntimeCluster.Ingress.Domains[0] {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("ingress", "domains").Index(0), newRuntimeCluster.Ingress.Domains[0], "first entry must be the same as previously used in .spec.runtimeCluster.ingress.domain"))
+	}
+
+	// Disallow changing from 'domains' to 'domain'.
+	if len(oldRuntimeCluster.Ingress.Domains) > 0 && oldRuntimeCluster.Ingress.Domain == nil && newRuntimeCluster.Ingress.Domain != nil {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("ingress", "domain"), "switching from .spec.runtimeCluster.ingress.domains to .spec.runtimeCluster.ingress.domain is not allowed"))
+	}
+
+	// First domain is immutable.
+	// Note: We can consider supporting this scenario in the future.
+	if len(oldRuntimeCluster.Ingress.Domains) > 0 && len(newRuntimeCluster.Ingress.Domains) > 0 {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldRuntimeCluster.Ingress.Domains[0], newRuntimeCluster.Ingress.Domains[0], fldPath.Child("ingress", "domains").Index(0))...)
+	}
 
 	return allErrs
 }

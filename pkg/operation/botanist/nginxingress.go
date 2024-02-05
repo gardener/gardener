@@ -63,7 +63,7 @@ func (b *Botanist) DefaultNginxIngress() (component.DeployWaiter, error) {
 		component.ClusterTypeShoot,
 		externalTrafficPolicy,
 		v1beta1constants.ShootNginxIngressClass,
-		[]string{b.Shoot.GetIngressFQDN("*")},
+		nil,
 		nil,
 	)
 }

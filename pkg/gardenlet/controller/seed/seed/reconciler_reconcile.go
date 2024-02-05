@@ -379,8 +379,8 @@ func (r *Reconciler) runReconcileSeedFlow(
 	}
 
 	var (
-		g             = flow.NewGraph("Seed cluster creation")
-		istioDeployed = g.Add(flow.Task{
+		g           = flow.NewGraph("Seed cluster creation")
+		deployIstio = g.Add(flow.Task{
 			Name: "Deploying Istio",
 			Fn:   istio.Deploy,
 		})
@@ -401,7 +401,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 				)
 				return err
 			},
-			Dependencies: flow.NewTaskIDs(istioDeployed),
+			Dependencies: flow.NewTaskIDs(deployIstio),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying managed ingress DNS record",

@@ -875,7 +875,7 @@ func (n *nginxIngress) getName(kind string, backend bool) string {
 	return ""
 }
 
-// GetServiceName provides the name of the service resource of the controller in the seed scenario.
+// GetServiceName provides the name of the service resource of the controller for cluster type Seed.
 func GetServiceName() string {
 	n := &nginxIngress{values: Values{ClusterType: component.ClusterTypeSeed}}
 	return n.getName("Service", false)
