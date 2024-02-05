@@ -17,11 +17,10 @@ package machinecontrollermanager
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/gardener/gardener/pkg/utils"
 )
 
 type mutator struct{}
@@ -37,9 +36,9 @@ func (m *mutator) Mutate(_ context.Context, newObj, _ client.Object) error {
 	}
 
 	for _, rule := range clusterRole.Rules {
-		if utils.ValueExists("", rule.APIGroups) &&
-			utils.ValueExists("services", rule.Resources) &&
-			utils.ValueExists("*", rule.Verbs) {
+		if slices.Contains(rule.APIGroups, "") &&
+			slices.Contains(rule.Resources, "services") &&
+			slices.Contains(rule.Verbs, "*") {
 			return nil
 		}
 	}

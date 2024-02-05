@@ -38,7 +38,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/utils"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/test/utils/access"
 )
@@ -352,12 +351,12 @@ func (t *ShootMigrationTest) CheckObjectsTimestamp(ctx context.Context, mrExclud
 
 	for _, mr := range mrList.Items {
 		if mr.Spec.Class == nil || *mr.Spec.Class != "seed" {
-			if !utils.ValueExists(mr.GetName(), mrExcludeList) {
+			if !slices.Contains(mrExcludeList, mr.GetName()) {
 				log := t.GardenerFramework.Logger.WithValues("managedResource", client.ObjectKeyFromObject(&mr))
 				log.Info("Found ManagedResource")
 
 				for _, r := range mr.Status.Resources {
-					if len(r.Name) > 9 && utils.ValueExists(r.Name[:len(r.Name)-9], resourcesWithGeneratedName) {
+					if len(r.Name) > 9 && slices.Contains(resourcesWithGeneratedName, r.Name[:len(r.Name)-9]) {
 						continue
 					}
 

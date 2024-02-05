@@ -17,6 +17,7 @@ package validation
 import (
 	"fmt"
 	"net"
+	"slices"
 	"strings"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -215,7 +216,7 @@ func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerC
 			return allErrs
 		}
 
-		if !utils.ValueExists(admissionPlugin.Name, plugin.AllPluginNames()) {
+		if !slices.Contains(plugin.AllPluginNames(), admissionPlugin.Name) {
 			allErrs = append(allErrs, field.NotSupported(idxPath.Child("name"), admissionPlugin.Name, plugin.AllPluginNames()))
 		}
 	}

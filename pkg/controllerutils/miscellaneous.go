@@ -16,12 +16,12 @@ package controllerutils
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/utils"
 )
 
 // DefaultReconciliationTimeout is the default timeout for the context of reconciliation functions.
@@ -44,7 +44,7 @@ func HasTask(annotations map[string]string, task string) bool {
 	if len(tasks) == 0 {
 		return false
 	}
-	return utils.ValueExists(task, tasks)
+	return slices.Contains(tasks, task)
 }
 
 // AddTasks adds tasks to the ShootTasks annotation of the passed map.
@@ -52,7 +52,7 @@ func AddTasks(annotations map[string]string, tasksToAdd ...string) {
 	tasks := GetTasks(annotations)
 
 	for _, taskToAdd := range tasksToAdd {
-		if !utils.ValueExists(taskToAdd, tasks) {
+		if !slices.Contains(tasks, taskToAdd) {
 			tasks = append(tasks, taskToAdd)
 		}
 	}
@@ -65,7 +65,7 @@ func RemoveTasks(annotations map[string]string, tasksToRemove ...string) {
 	tasks := GetTasks(annotations)
 
 	for i := len(tasks) - 1; i >= 0; i-- {
-		if utils.ValueExists(tasks[i], tasksToRemove) {
+		if slices.Contains(tasksToRemove, tasks[i]) {
 			tasks = append((tasks)[:i], (tasks)[i+1:]...)
 		}
 	}

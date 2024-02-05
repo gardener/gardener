@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -35,7 +36,6 @@ import (
 	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	seedmanagementinstall "github.com/gardener/gardener/pkg/apis/seedmanagement/install"
 	settingsinstall "github.com/gardener/gardener/pkg/apis/settings/install"
-	"github.com/gardener/gardener/pkg/utils"
 )
 
 const (
@@ -228,17 +228,17 @@ func ValidateConfigWithAllowList(config clientcmdapi.Config, allowedFields []str
 
 	for user, authInfo := range config.AuthInfos {
 		switch {
-		case authInfo.ClientCertificate != "" && !utils.ValueExists(AuthClientCertificate, validFields):
+		case authInfo.ClientCertificate != "" && !slices.Contains(validFields, AuthClientCertificate):
 			return fmt.Errorf("client certificate files are not supported (user %q), these are the valid fields: %+v", user, validFields)
-		case authInfo.ClientKey != "" && !utils.ValueExists(AuthClientKey, validFields):
+		case authInfo.ClientKey != "" && !slices.Contains(validFields, AuthClientKey):
 			return fmt.Errorf("client key files are not supported (user %q), these are the valid fields: %+v", user, validFields)
-		case authInfo.TokenFile != "" && !utils.ValueExists(AuthTokenFile, validFields):
+		case authInfo.TokenFile != "" && !slices.Contains(validFields, AuthTokenFile):
 			return fmt.Errorf("token files are not supported (user %q), these are the valid fields: %+v", user, validFields)
-		case (authInfo.Impersonate != "" || len(authInfo.ImpersonateGroups) > 0) && !utils.ValueExists(AuthImpersonate, validFields):
+		case (authInfo.Impersonate != "" || len(authInfo.ImpersonateGroups) > 0) && !slices.Contains(validFields, AuthImpersonate):
 			return fmt.Errorf("impersonation is not supported, these are the valid fields: %+v", validFields)
-		case (authInfo.AuthProvider != nil && len(authInfo.AuthProvider.Config) > 0) && !utils.ValueExists(AuthProvider, validFields):
+		case (authInfo.AuthProvider != nil && len(authInfo.AuthProvider.Config) > 0) && !slices.Contains(validFields, AuthProvider):
 			return fmt.Errorf("auth provider configurations are not supported (user %q), these are the valid fields: %+v", user, validFields)
-		case authInfo.Exec != nil && !utils.ValueExists(AuthExec, validFields):
+		case authInfo.Exec != nil && !slices.Contains(validFields, AuthExec):
 			return fmt.Errorf("exec configurations are not supported (user %q), these are the valid fields: %+v", user, validFields)
 		}
 	}

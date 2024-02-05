@@ -16,6 +16,7 @@ package validation
 
 import (
 	"fmt"
+	"slices"
 
 	corev1 "k8s.io/api/core/v1"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
@@ -29,7 +30,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	gardenletvalidation "github.com/gardener/gardener/pkg/gardenlet/apis/config/validation"
-	"github.com/gardener/gardener/pkg/utils"
 )
 
 var availableManagedSeedOperations = sets.New(
@@ -170,7 +170,7 @@ func validateGardenlet(gardenlet *seedmanagement.Gardenlet, fldPath *field.Path,
 
 	if gardenlet.Bootstrap != nil {
 		validValues := []string{string(seedmanagement.BootstrapServiceAccount), string(seedmanagement.BootstrapToken), string(seedmanagement.BootstrapNone)}
-		if !utils.ValueExists(string(*gardenlet.Bootstrap), validValues) {
+		if !slices.Contains(validValues, string(*gardenlet.Bootstrap)) {
 			allErrs = append(allErrs, field.NotSupported(fldPath.Child("bootstrap"), *gardenlet.Bootstrap, validValues))
 		}
 	}
@@ -248,7 +248,7 @@ func validateImage(image *seedmanagement.Image, fldPath *field.Path) field.Error
 	}
 	if image.PullPolicy != nil {
 		validValues := []string{string(corev1.PullAlways), string(corev1.PullIfNotPresent), string(corev1.PullNever)}
-		if !utils.ValueExists(string(*image.PullPolicy), validValues) {
+		if !slices.Contains(validValues, string(*image.PullPolicy)) {
 			allErrs = append(allErrs, field.NotSupported(fldPath.Child("pullPolicy"), *image.PullPolicy, validValues))
 		}
 	}

@@ -43,7 +43,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
-	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -137,7 +136,7 @@ func NewKubeAPIServer(
 
 		if apiServerConfig.APIAudiences != nil {
 			apiAudiences = apiServerConfig.APIAudiences
-			if !utils.ValueExists(v1beta1constants.GardenerAudience, apiAudiences) {
+			if !slices.Contains(apiAudiences, v1beta1constants.GardenerAudience) {
 				apiAudiences = append(apiAudiences, v1beta1constants.GardenerAudience)
 			}
 		}
@@ -423,7 +422,7 @@ func computeKubeAPIServerServiceAccountConfig(
 		out.Issuer = *config.ServiceAccountConfig.Issuer
 	}
 	out.AcceptedIssuers = config.ServiceAccountConfig.AcceptedIssuers
-	if out.Issuer != defaultIssuer && !utils.ValueExists(defaultIssuer, out.AcceptedIssuers) {
+	if out.Issuer != defaultIssuer && !slices.Contains(out.AcceptedIssuers, defaultIssuer) {
 		out.AcceptedIssuers = append(out.AcceptedIssuers, defaultIssuer)
 	}
 	if config.ServiceAccountConfig.Issuer == nil {

@@ -17,6 +17,7 @@ package validation
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strconv"
 
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
@@ -31,7 +32,6 @@ import (
 	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	"github.com/gardener/gardener/pkg/utils"
 )
 
 // ValidateManagedSeedSet validates a ManagedSeedSet object.
@@ -281,7 +281,7 @@ func validatePendingReplica(pendingReplica *seedmanagement.PendingReplica, name 
 		string(seedmanagement.SeedNotReadyReason),
 		string(seedmanagement.ShootNotHealthyReason),
 	}
-	if !utils.ValueExists(string(pendingReplica.Reason), validValues) {
+	if !slices.Contains(validValues, string(pendingReplica.Reason)) {
 		allErrs = append(allErrs, field.NotSupported(fldPath.Child("reason"), pendingReplica.Reason, validValues))
 	}
 

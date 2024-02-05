@@ -15,6 +15,7 @@
 package validation
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/go-test/deep"
@@ -24,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils"
 )
 
 // ValidateDNSRecord validates a DNSRecord object.
@@ -71,7 +71,7 @@ func ValidateDNSRecordSpec(spec *extensionsv1alpha1.DNSRecordSpec, fldPath *fiel
 	allErrs = append(allErrs, validation.IsFullyQualifiedDomainName(fldPath.Child("name"), strings.TrimPrefix(spec.Name, "*."))...)
 
 	validRecordTypes := []string{string(extensionsv1alpha1.DNSRecordTypeA), string(extensionsv1alpha1.DNSRecordTypeAAAA), string(extensionsv1alpha1.DNSRecordTypeCNAME), string(extensionsv1alpha1.DNSRecordTypeTXT)}
-	if !utils.ValueExists(string(spec.RecordType), validRecordTypes) {
+	if !slices.Contains(validRecordTypes, string(spec.RecordType)) {
 		allErrs = append(allErrs, field.NotSupported(fldPath.Child("recordType"), spec.RecordType, validRecordTypes))
 	}
 
