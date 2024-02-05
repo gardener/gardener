@@ -275,7 +275,18 @@ func EnsureFileWithPath(items []extensionsv1alpha1.File, item extensionsv1alpha1
 	if i := fileWithPathIndex(items, item.Path); i < 0 {
 		items = append(items, item)
 	} else if !reflect.DeepEqual(items[i], item) {
-		items = append(append(items[:i], item), items[i+1:]...)
+		items[i] = item
+	}
+	return items
+}
+
+// EnsureUnitWithName ensures that an unit with a name equal to the name of the given unit exists in the given slice
+// and is equal to the given unit.
+func EnsureUnitWithName(items []extensionsv1alpha1.Unit, item extensionsv1alpha1.Unit) []extensionsv1alpha1.Unit {
+	if i := unitWithNameIndex(items, item.Name); i < 0 {
+		items = append(items, item)
+	} else if !reflect.DeepEqual(items[i], item) {
+		items[i] = item
 	}
 	return items
 }
