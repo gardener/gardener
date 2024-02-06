@@ -8,6 +8,7 @@ authors:
 reviewers:
 - "@vpnachev"
 - "@timuthy"
+- "@rfranzke"
 ---
 
 # GEP-24: Shoot OIDC Issuer
