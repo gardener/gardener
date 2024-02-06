@@ -20,9 +20,14 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+)
+
+const (
+	port = 9093
 )
 
 // Values contains configuration values for the AlertManager resources.
@@ -49,7 +54,9 @@ type alertManager struct {
 func (a *alertManager) Deploy(ctx context.Context) error {
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
-	resources, err := registry.AddAllAndSerialize()
+	resources, err := registry.AddAllAndSerialize(
+		a.service(),
+	)
 	if err != nil {
 		return err
 	}
@@ -81,4 +88,11 @@ func (a *alertManager) WaitCleanup(ctx context.Context) error {
 
 func (a *alertManager) name() string {
 	return "alertmanager-" + a.values.Name
+}
+
+func (a *alertManager) getLabels() map[string]string {
+	return map[string]string{
+		"component":                "alertmanager",
+		v1beta1constants.LabelRole: v1beta1constants.LabelMonitoring,
+	}
 }

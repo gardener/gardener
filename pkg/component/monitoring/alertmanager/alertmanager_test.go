@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/monitoring/alertmanager"
+	componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -54,6 +55,8 @@ var _ = Describe("Prometheus", func() {
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
+
+		service *corev1.Service
 	)
 
 	BeforeEach(func() {
@@ -81,6 +84,32 @@ var _ = Describe("Prometheus", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "managedresource-" + managedResource.Name,
 				Namespace: namespace,
+			},
+		}
+
+		service = &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "alertmanager-" + name,
+				Namespace: namespace,
+				Labels: map[string]string{
+					"component": "alertmanager",
+					"role":      "monitoring",
+				},
+				Annotations: map[string]string{
+					"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":9093}]`,
+					"networking.resources.gardener.cloud/namespace-selectors":                        `[{"matchLabels":{"gardener.cloud/role":"shoot"}}]`,
+				},
+			},
+			Spec: corev1.ServiceSpec{
+				Type: corev1.ServiceTypeClusterIP,
+				Selector: map[string]string{
+					"component": "alertmanager",
+					"role":      "monitoring",
+				},
+				Ports: []corev1.ServicePort{{
+					Name: "metrics",
+					Port: 9093,
+				}},
 			},
 		}
 	})
@@ -141,7 +170,8 @@ var _ = Describe("Prometheus", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(0))
+				Expect(managedResourceSecret.Data).To(HaveLen(1))
+				Expect(string(managedResourceSecret.Data["service__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
 			})
 		})
 	})
