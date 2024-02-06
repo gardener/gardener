@@ -14,3 +14,16 @@ groups:
       description: >
         Pod {{$labels.pod}} in namespace {{$labels.namespace}} was stuck
         in Pending state for more than 10 minutes.
+
+  - alert: NodeNotHealthy
+    expr: |
+      count_over_time((sum by (node) (kube_node_spec_taint{effect="NoSchedule", key!="ToBeDeletedByClusterAutoscaler", key!="node.gardener.cloud/critical-components-not-ready"}))[30m:]) > 5
+    for: 10m
+    labels:
+      severity: warning
+      type: seed
+      visibility: operator
+    annotations:
+      summary: A node is not healthy.
+      description: >
+        Node {{$labels.node}} in seed {{$labels.name}} in landscape {{$externalLabels.landscape}} is not healthy for over 10 min.
