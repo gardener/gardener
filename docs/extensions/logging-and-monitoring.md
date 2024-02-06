@@ -2,7 +2,7 @@
 
 Gardener provides an integrated logging and monitoring stack for alerting, monitoring, and troubleshooting of its managed components by operators or end users. For further information how to make use of it in these roles, refer to the corresponding guides for [exploring logs](https://github.com/gardener/logging/tree/master/docs/usage/README.md) and for [monitoring with Plutono](https://github.com/credativ/plutono).
 
-The components that constitute the logging and monitoring stack are managed by Gardener. By default, it deploys [Prometheus](https://prometheus.io/), [Alertmanager](https://prometheus.io/docs/alerting/latest/alertmanager/), and [Plutono](https://github.com/credativ/plutono) into the `garden` namespace of all seed clusters. If the logging is enabled in the `gardenlet` configuration (`logging.enabled`), it will deploy [fluent-operator](https://github.com/fluent/fluent-operator) and [Vali](https://github.com/credativ/plutono) in the `garden` namespace too.
+The components that constitute the logging and monitoring stack are managed by Gardener. By default, it deploys [Prometheus](https://prometheus.io/) and [Alertmanager](https://prometheus.io/docs/alerting/latest/alertmanager/) (managed via [`prometheus-operator`](https://github.com/prometheus-operator/prometheus-operator), and [Plutono](https://github.com/credativ/plutono) into the `garden` namespace of all seed clusters. If the logging is enabled in the `gardenlet` configuration (`logging.enabled`), it will deploy [fluent-operator](https://github.com/fluent/fluent-operator) and [Vali](https://github.com/credativ/plutono) in the `garden` namespace too.
 
 Each shoot namespace hosts managed logging and monitoring components. As part of the shoot reconciliation flow, Gardener deploys a shoot-specific Prometheus, Plutono and, if configured, an Alertmanager into the shoot namespace, next to the other control plane components. If the logging is enabled in the `gardenlet` configuration (`logging.enabled`) and the [shoot purpose](../usage/shoot_purposes.md#behavioral-differences) is not `testing`, it deploys a shoot-specific Vali in the shoot namespace too.
 
@@ -14,16 +14,43 @@ This guide is about the roles and extensibility options of the logging and monit
 
 ## Monitoring
 
-The central Prometheus instance in the `garden` namespace fetches metrics and data from all seed cluster nodes and all seed cluster pods.
+### Cache Prometheus
+
+The central Prometheus instance in the `garden` namespace (called "cache Prometheus") fetches metrics and data from all seed cluster nodes and all seed cluster pods.
 It uses the [federation](https://prometheus.io/docs/prometheus/latest/federation/) concept to allow the shoot-specific instances to scrape only the metrics for the pods of the control plane they are responsible for.
 This mechanism allows to scrape the metrics for the nodes/pods once for the whole cluster, and to have them distributed afterwards.
+
+Typically, this is not necessary, but in case an extension wants to extend the configuration for this cache Prometheus, they can create the [`prometheus-operator`'s custom resources](https://github.com/prometheus-operator/prometheus-operator?tab=readme-ov-file#customresourcedefinitions) and label them with `prometheus=cache`, for example:
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    prometheus: cache
+  name: cache-my-component
+  namespace: garden
+spec:
+  selector:
+    matchLabels:
+      app: my-component
+  endpoints:
+  - metricRelabelings:
+    - action: keep
+      regex: ^(metric1|metric2|...)$
+      sourceLabels:
+      - __name__
+    port: metrics
+```
+
+### Shoot Cluster Prometheus
 
 The shoot-specific metrics are then made available to operators and users in the shoot Plutono, using the shoot Prometheus as data source.
 
 Extension controllers might deploy components as part of their reconciliation next to the shoot's control plane.
 Examples for this would be a cloud-controller-manager or CSI controller deployments. Extensions that want to have their managed control plane components integrated with monitoring can contribute their per-shoot configuration for scraping Prometheus metrics, Alertmanager alerts or Plutono dashboards.
 
-### Extensions Monitoring Integration
+#### Extensions Monitoring Integration
 
 Before deploying the shoot-specific Prometheus instance, Gardener will read all `ConfigMap`s in the shoot namespace, which are labeled with `extensions.gardener.cloud/configuration=monitoring`.
 Such `ConfigMap`s may contain four fields in their `data`:
