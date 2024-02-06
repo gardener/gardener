@@ -33,7 +33,7 @@ This GEP proposes a mechanism that will allow users to expose such information t
 ## Motivation
 
 By default Gardener creates clusters which expose such documents directly through the `kube-apiserver`. This has several drawbacks:
-- The `kube-apiserver` is protected and unless `--annonymous-auth` is enabled then the endpoint requires authn.
+- The `kube-apiserver` is protected and unless `--anonymous-auth` is enabled then the endpoint requires authn.
 - The certificate used to serve the documents is not signed by a trusted CA.
 
 Gardener provides means for users to tweak configuration and overcome these drawbacks by using the following [shoot configurations](https://github.com/gardener/gardener/blob/580324da9af4ec47955d9e216569d09053c5d008/example/90-shoot.yaml#L201-L204) which directly interact with the [--service-account-issuer](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/) flag of the `kube-apiserver`. Once the issuer of a shoot is changed the user can take over that domain and expose the OIDC metadata documents to the public. This poses another challenge since it requires additional involvement. Some users use istio/nginx igress to do so, others make use of projects like [service-account-issuer-discovery](https://github.com/gardener/service-account-issuer-discovery), or combination of both.
@@ -53,15 +53,15 @@ This proposal consists of three parts that together will achieve the mentioned g
 
 ### Static validation
 
-Static validation rule will be introduced enforcing that `shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.Issuer` is not set when the shoot is annotated with `gardener.cloud/managed-issuer: true`. This annotation will be incompatible with workerless shoots, as they do not have nodes and they do not run any workloads. The rule will also assure that once present the annotation cannot be removed from a shoot.
+Static validation rule will be introduced enforcing that `shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.Issuer` is not set when the shoot is annotated with `authentication.gardener.cloud/issuer: managed`. This annotation will be incompatible with workerless shoots, as they do not have nodes and they do not run any workloads. The rule will also assure that once present the annotation cannot be removed from a shoot.
 
 ```go
-if oldShoot.Annotations["gardener.cloud/managed-issuer"] == "true" {
+if oldShoot.Annotations["authentication.gardener.cloud/issuer"] == "managed" {
     // ensure that the new shoot also has this annotation
     // ensure that newShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.Issuer is not set
     // ensure that the shoot is not configured as workerless
-    newShoot.Annotations["gardener.cloud/managed-issuer"] = "true"
-} else if newShoot.Annotations["gardener.cloud/managed-issuer"] == "true" {
+    newShoot.Annotations["authentication.gardener.cloud/issuer"] = "managed"
+} else if newShoot.Annotations["authentication.gardener.cloud/issuer"] == "managed" {
     // ensure that newShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.Issuer is not set
     // ensure that the shoot is not configured as workerless
 }
@@ -69,7 +69,7 @@ if oldShoot.Annotations["gardener.cloud/managed-issuer"] == "true" {
 
 ### Gardenlet
 
-Once annotated shoots will be easily identifiable by the `gardenlet`. If a shoot requires a managed issuer then the `gardenlet` will configure the `--service-account-issuer` and `--service-account-jwks-uri` flags for the shoot's [kube-apiserver](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/) deployment during reconciliation and set their values to `https://<central.domain.name>/projects/<project-name>/shoots/<shoot-uid>/issuer` and `https://<central.domain.name>/projects/<project-name>/shoots/<shoot-uid>/issuer/jwks` respectively (the central domain name should be configurable via the gardenlet's configuration). At the end of a shoot reconciliation flow, the `gardenlet` will fetch the OIDC metadata discovery documents from a shoot's `kube-apiserver` and sync them back to the Garden cluster in the form of a configmap following the naming convention `projectname--shootuid` in a special purposed namespace called `gardener-shoot-issuer`(name should be configurable). The [Seed Authorizer](https://github.com/gardener/gardener/blob/master/docs/deployment/gardenlet_api_access.md#scoped-api-access-for-gardenlets-and-extensions) will be enhanced so that Gardenlet is only permitted to perform actions on related configmaps. An additional advertised address will be added to the shoot status so that the issuer of the cluster is easily discoverable.
+Once annotated shoots will be easily identifiable by the `gardenlet`. If a shoot requires a managed issuer then the `gardenlet` will configure the `--service-account-issuer` and `--service-account-jwks-uri` flags for the shoot's [kube-apiserver](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/) deployment during reconciliation and set their values to `https://<central.domain.name>/projects/<project-name>/shoots/<shoot-uid>/issuer` and `https://<central.domain.name>/projects/<project-name>/shoots/<shoot-uid>/issuer/jwks` respectively (the central domain name should be configurable via the gardenlet's configuration). After a successful rollout of the `kube-apiserver` deployment, the `gardenlet` will fetch the OIDC metadata discovery documents from a shoot's `kube-apiserver` and sync them back to the Garden cluster in the form of a configmap following the naming convention `projectname--shootuid` in a special purposed namespace called `gardener-shoot-issuer`(name should be configurable). The [Seed Authorizer](https://github.com/gardener/gardener/blob/master/docs/deployment/gardenlet_api_access.md#scoped-api-access-for-gardenlets-and-extensions) will be enhanced so that Gardenlet is only permitted to perform actions on related configmaps. An additional advertised address will be added to the shoot status so that the issuer of the cluster is easily discoverable.
 
 ```yaml
 status:
@@ -90,8 +90,8 @@ metadata:
   name: myproj--f924a208-1034-4aeb-84d9-b0184894a0cf
   namespace: gardener-shoot-issuer
   labels:
-    gardener.cloud/project: myproj
-    gardener.cloud/shootName: myshoot
+    project.gardener.cloud/name: myproj
+    shoot.gardener.cloud/name: myshoot
 data:
   openid-config: |
     {
@@ -124,7 +124,7 @@ data:
 
 ### Metadata Server
 
-A new component called `gardener-metadata-server` will be introduced. This component will be maintained in a separate repository in order to decouple its development and release schedule from that of Gardener. It is natural that this component is deployed in the Garden cluster alongside with the the Gardener controlplane components. It may be managed by the `gardener-operator` or installed separately. The server will have minimal permissions and restricted access to the Garden cluster, i.e. it will only require read access for configmaps in the `gardener-shoot-issuer` namespace. The server will be publicly accessible and will serve the metadata information for different shoot clusters, i.e. when a `GET` request hits `https://<central.domain.name>/projects/myproj/shoots/f924a208-1034-4aeb-84d9-b0184894a0cf/issuer/.well-known/openid-configuration` the server should return the contents of `.data.openid-config` from the corresponding configmap. Since this server will be part of authentication flows it needs to be highly available and implemented with security and observability in mind.
+A new component called `gardener-metadata-server` will be introduced. This component will be maintained in a separate repository in order to decouple its development and release schedule from that of Gardener. It is natural that this component is deployed in the Garden cluster alongside with the the Gardener controlplane components. It will be managed by `gardener-operator`, or can be installed manually when not making use of it for managing the Gardener control plane. The server will have minimal permissions and restricted access to the Garden cluster, i.e. it will only require read access for configmaps in the `gardener-shoot-issuer` namespace. The server will be publicly accessible and will serve the metadata information for different shoot clusters, i.e. when a `GET` request hits `https://<central.domain.name>/projects/myproj/shoots/f924a208-1034-4aeb-84d9-b0184894a0cf/issuer/.well-known/openid-configuration` the server should return the contents of `.data.openid-config` from the corresponding configmap. Since this server will be part of authentication flows it needs to be highly available and implemented with security and observability in mind.
 
 ## Alternatives
 There were no previous discussions of alternatives.
