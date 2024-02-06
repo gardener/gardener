@@ -2179,7 +2179,7 @@ func ValidateCRI(CRI *core.CRI, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if !availableWorkerCRINames.Has(string(CRI.Name)) {
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("name"), CRI.Name, sets.List(availableWorkerCRINames)))
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("name"), string(CRI.Name), sets.List(availableWorkerCRINames)))
 	}
 
 	if CRI.ContainerRuntimes != nil {

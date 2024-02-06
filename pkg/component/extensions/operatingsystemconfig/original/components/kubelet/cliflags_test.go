@@ -19,23 +19,15 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
-	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 var _ = Describe("CLIFlags", func() {
-	image := &imagevector.Image{
-		Name:       "hyperkube",
-		Repository: "foo.io/hyperkube",
-		Tag:        ptr.To("version"),
-	}
-
 	DescribeTable("#CLIFlags",
-		func(kubernetesVersion string, criName extensionsv1alpha1.CRIName, image *imagevector.Image, cliFlags components.ConfigurableKubeletCLIFlags, preferIPv6 bool, matcher gomegatypes.GomegaMatcher) {
+		func(kubernetesVersion string, criName extensionsv1alpha1.CRIName, cliFlags components.ConfigurableKubeletCLIFlags, preferIPv6 bool, matcher gomegatypes.GomegaMatcher) {
 			v := semver.MustParse(kubernetesVersion)
 			nodeLabels := map[string]string{
 				"test":  "foo",
@@ -55,7 +47,6 @@ var _ = Describe("CLIFlags", func() {
 			"kubernetes 1.26 w/ containerd",
 			"1.26.6",
 			extensionsv1alpha1.CRINameContainerD,
-			image,
 			components.ConfigurableKubeletCLIFlags{},
 			false,
 			ConsistOf(
@@ -78,7 +69,6 @@ var _ = Describe("CLIFlags", func() {
 			"kubernetes 1.27 w/ containerd",
 			"1.27.0",
 			extensionsv1alpha1.CRINameContainerD,
-			image,
 			components.ConfigurableKubeletCLIFlags{},
 			false,
 			ConsistOf(
@@ -97,10 +87,9 @@ var _ = Describe("CLIFlags", func() {
 			),
 		),
 		Entry(
-			"kubernetes 1.27 w/ containerd",
+			"kubernetes 1.27 w/ containerd w/ preferIPv6",
 			"1.27.0",
 			extensionsv1alpha1.CRINameContainerD,
-			image,
 			components.ConfigurableKubeletCLIFlags{},
 			true,
 			ConsistOf(
