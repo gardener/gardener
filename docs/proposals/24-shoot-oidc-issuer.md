@@ -20,10 +20,10 @@ reviewers:
     - [Goals](#goals)
     - [Non-Goals](#non-goals)
 - [Proposal](#proposal)
-    - [Admission plugin](#admission-plugin)
+    - [Static validation](#static-validation)
     - [Gardenlet](#gardenlet)
     - [Metadata server](#metadata-server)
-- [Alternatives](#alternatives)
+- [Clarifications](#clarifications)
 
 ## Summary
 
