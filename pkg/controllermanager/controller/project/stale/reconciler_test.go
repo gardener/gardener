@@ -25,7 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -94,7 +94,7 @@ var _ = Describe("Reconciler", func() {
 		}
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: partialObjectMetadata.ObjectMeta,
-			Spec:       gardencorev1beta1.ShootSpec{SecretBindingName: pointer.String(secretBindingName)},
+			Spec:       gardencorev1beta1.ShootSpec{SecretBindingName: ptr.To(secretBindingName)},
 		}
 		quotaMeta = &metav1.PartialObjectMetadata{
 			ObjectMeta: metav1.ObjectMeta{Namespace: namespaceName, Name: quotaName},

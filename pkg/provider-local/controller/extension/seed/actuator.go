@@ -21,7 +21,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -112,7 +112,7 @@ func getSeedResources(namespace string) (map[string][]byte, error) {
 				Namespace: namespace,
 				Labels:    getLabels(),
 			},
-			AutomountServiceAccountToken: pointer.Bool(false),
+			AutomountServiceAccountToken: ptr.To(false),
 		},
 	)
 }

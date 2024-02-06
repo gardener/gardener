@@ -18,7 +18,7 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -82,13 +82,13 @@ func (b *Botanist) DefaultMonitoring() (monitoring.Interface, error) {
 
 	if b.Shoot.Networks != nil {
 		if services := b.Shoot.Networks.Services; services != nil {
-			values.ServiceNetworkCIDR = pointer.String(services.String())
+			values.ServiceNetworkCIDR = ptr.To(services.String())
 		}
 		if pods := b.Shoot.Networks.Pods; pods != nil {
-			values.PodNetworkCIDR = pointer.String(pods.String())
+			values.PodNetworkCIDR = ptr.To(pods.String())
 		}
 		if apiServer := b.Shoot.Networks.APIServer; apiServer != nil {
-			values.APIServerServiceIP = pointer.String(apiServer.String())
+			values.APIServerServiceIP = ptr.To(apiServer.String())
 		}
 	}
 
@@ -113,7 +113,7 @@ func (b *Botanist) DeployMonitoring(ctx context.Context) error {
 	}
 
 	if b.ControlPlaneWildcardCert != nil {
-		b.Operation.Shoot.Components.Monitoring.Monitoring.SetWildcardCertName(pointer.String(b.ControlPlaneWildcardCert.GetName()))
+		b.Operation.Shoot.Components.Monitoring.Monitoring.SetWildcardCertName(ptr.To(b.ControlPlaneWildcardCert.GetName()))
 	}
 	b.Shoot.Components.Monitoring.Monitoring.SetNamespaceUID(b.SeedNamespaceObject.UID)
 	b.Shoot.Components.Monitoring.Monitoring.SetComponents(b.getMonitoringComponents())

@@ -26,7 +26,7 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -278,78 +278,78 @@ var _ = Describe("Helper", func() {
 			false,
 		),
 		Entry("taints with keys+values only, tolerations with keys+values only (tolerated)",
-			[]gardencorev1beta1.SeedTaint{{Key: "foo", Value: pointer.String("bar")}},
-			[]gardencorev1beta1.Toleration{{Key: "foo", Value: pointer.String("bar")}},
+			[]gardencorev1beta1.SeedTaint{{Key: "foo", Value: ptr.To("bar")}},
+			[]gardencorev1beta1.Toleration{{Key: "foo", Value: ptr.To("bar")}},
 			true,
 		),
 		Entry("taints with keys+values only, tolerations with keys+values only (non-tolerated)",
-			[]gardencorev1beta1.SeedTaint{{Key: "foo", Value: pointer.String("bar")}},
-			[]gardencorev1beta1.Toleration{{Key: "bar", Value: pointer.String("foo")}},
+			[]gardencorev1beta1.SeedTaint{{Key: "foo", Value: ptr.To("bar")}},
+			[]gardencorev1beta1.Toleration{{Key: "bar", Value: ptr.To("foo")}},
 			false,
 		),
 		Entry("taints with mixed key(+values), tolerations with mixed key(+values) (tolerated)",
 			[]gardencorev1beta1.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
 			},
 			[]gardencorev1beta1.Toleration{
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
 			},
 			true,
 		),
 		Entry("taints with mixed key(+values), tolerations with mixed key(+values) (non-tolerated)",
 			[]gardencorev1beta1.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
 			},
 			[]gardencorev1beta1.Toleration{
 				{Key: "bar"},
-				{Key: "foo", Value: pointer.String("baz")},
+				{Key: "foo", Value: ptr.To("baz")},
 			},
 			false,
 		),
 		Entry("taints with mixed key(+values), tolerations with key+values only (tolerated)",
 			[]gardencorev1beta1.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
 			},
 			[]gardencorev1beta1.Toleration{
-				{Key: "foo", Value: pointer.String("bar")},
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "foo", Value: ptr.To("bar")},
+				{Key: "bar", Value: ptr.To("baz")},
 			},
 			true,
 		),
 		Entry("taints with mixed key(+values), tolerations with key+values only (untolerated)",
 			[]gardencorev1beta1.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
 			},
 			[]gardencorev1beta1.Toleration{
-				{Key: "foo", Value: pointer.String("bar")},
-				{Key: "bar", Value: pointer.String("foo")},
+				{Key: "foo", Value: ptr.To("bar")},
+				{Key: "bar", Value: ptr.To("foo")},
 			},
 			false,
 		),
 		Entry("taints > tolerations",
 			[]gardencorev1beta1.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
 			},
 			[]gardencorev1beta1.Toleration{
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
 			},
 			false,
 		),
 		Entry("tolerations > taints",
 			[]gardencorev1beta1.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
 			},
 			[]gardencorev1beta1.Toleration{
-				{Key: "foo", Value: pointer.String("bar")},
-				{Key: "bar", Value: pointer.String("baz")},
-				{Key: "baz", Value: pointer.String("foo")},
+				{Key: "foo", Value: ptr.To("bar")},
+				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "baz", Value: ptr.To("foo")},
 			},
 			true,
 		),
@@ -469,9 +469,9 @@ var _ = Describe("Helper", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(settings).To(Equal(&ManagedSeedAPIServer{
-				Replicas: pointer.Int32(3),
+				Replicas: ptr.To(int32(3)),
 				Autoscaler: &ManagedSeedAPIServerAutoscaler{
-					MinReplicas: pointer.Int32(3),
+					MinReplicas: ptr.To(int32(3)),
 					MaxReplicas: 3,
 				},
 			}))
@@ -486,9 +486,9 @@ var _ = Describe("Helper", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(settings).To(Equal(&ManagedSeedAPIServer{
-				Replicas: pointer.Int32(3),
+				Replicas: ptr.To(int32(3)),
 				Autoscaler: &ManagedSeedAPIServerAutoscaler{
-					MinReplicas: pointer.Int32(3),
+					MinReplicas: ptr.To(int32(3)),
 					MaxReplicas: 6,
 				},
 			}))
@@ -656,8 +656,8 @@ var _ = Describe("Helper", func() {
 		Entry("setting is nil", nil, true),
 		Entry("excess capacity reservation is nil", &gardencorev1beta1.SeedSettings{}, true),
 		Entry("excess capacity reservation 'enabled' is nil", &gardencorev1beta1.SeedSettings{ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{Enabled: nil}}, true),
-		Entry("excess capacity reservation 'enabled' is false", &gardencorev1beta1.SeedSettings{ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{Enabled: pointer.Bool(false)}}, false),
-		Entry("excess capacity reservation 'enabled' is true", &gardencorev1beta1.SeedSettings{ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{Enabled: pointer.Bool(true)}}, true),
+		Entry("excess capacity reservation 'enabled' is false", &gardencorev1beta1.SeedSettings{ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{Enabled: ptr.To(false)}}, false),
+		Entry("excess capacity reservation 'enabled' is true", &gardencorev1beta1.SeedSettings{ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{Enabled: ptr.To(true)}}, true),
 	)
 
 	DescribeTable("#SeedSettingDependencyWatchdogWeederEnabled",
@@ -750,35 +750,35 @@ var _ = Describe("Helper", func() {
 
 		Entry("no providers", nil, BeNil()),
 		Entry("one non primary provider", []gardencorev1beta1.DNSProvider{
-			{Type: pointer.String("provider")},
+			{Type: ptr.To("provider")},
 		}, BeNil()),
-		Entry("one primary provider", []gardencorev1beta1.DNSProvider{{Type: pointer.String("provider"),
-			Primary: pointer.Bool(true)}}, Equal(&gardencorev1beta1.DNSProvider{Type: pointer.String("provider"), Primary: pointer.Bool(true)})),
+		Entry("one primary provider", []gardencorev1beta1.DNSProvider{{Type: ptr.To("provider"),
+			Primary: ptr.To(true)}}, Equal(&gardencorev1beta1.DNSProvider{Type: ptr.To("provider"), Primary: ptr.To(true)})),
 		Entry("multiple w/ one primary provider", []gardencorev1beta1.DNSProvider{
 			{
-				Type: pointer.String("provider2"),
+				Type: ptr.To("provider2"),
 			},
 			{
-				Type:    pointer.String("provider1"),
-				Primary: pointer.Bool(true),
+				Type:    ptr.To("provider1"),
+				Primary: ptr.To(true),
 			},
 			{
-				Type: pointer.String("provider3"),
+				Type: ptr.To("provider3"),
 			},
-		}, Equal(&gardencorev1beta1.DNSProvider{Type: pointer.String("provider1"), Primary: pointer.Bool(true)})),
+		}, Equal(&gardencorev1beta1.DNSProvider{Type: ptr.To("provider1"), Primary: ptr.To(true)})),
 		Entry("multiple w/ multiple primary providers", []gardencorev1beta1.DNSProvider{
 			{
-				Type:    pointer.String("provider1"),
-				Primary: pointer.Bool(true),
+				Type:    ptr.To("provider1"),
+				Primary: ptr.To(true),
 			},
 			{
-				Type:    pointer.String("provider2"),
-				Primary: pointer.Bool(true),
+				Type:    ptr.To("provider2"),
+				Primary: ptr.To(true),
 			},
 			{
-				Type: pointer.String("provider3"),
+				Type: ptr.To("provider3"),
 			},
-		}, Equal(&gardencorev1beta1.DNSProvider{Type: pointer.String("provider1"), Primary: pointer.Bool(true)})),
+		}, Equal(&gardencorev1beta1.DNSProvider{Type: ptr.To("provider1"), Primary: ptr.To(true)})),
 	)
 
 	Describe("#ShootMachineImageVersionExists", func() {
@@ -806,7 +806,7 @@ var _ = Describe("Helper", func() {
 
 			shootMachineImage = gardencorev1beta1.ShootMachineImage{
 				Name:    "coreos",
-				Version: pointer.String("0.0.2"),
+				Version: ptr.To("0.0.2"),
 			}
 		})
 
@@ -823,7 +823,7 @@ var _ = Describe("Helper", func() {
 		})
 
 		It("should determine that the version does not exist", func() {
-			shootMachineImage.Version = pointer.String("0.0.4")
+			shootMachineImage.Version = ptr.To("0.0.4")
 			exists, _ := ShootMachineImageVersionExists(constraint, shootMachineImage)
 			Expect(exists).To(BeFalse())
 		})
@@ -1141,7 +1141,7 @@ var _ = Describe("Helper", func() {
 				"1.1.0",
 				true, // target minor
 				true,
-				pointer.String("1.3.2"),
+				ptr.To("1.3.2"),
 				int64(3), // next minor version to be found
 				false,
 			),
@@ -1169,7 +1169,7 @@ var _ = Describe("Helper", func() {
 				"1.1.0",
 				false, // target major
 				true,
-				pointer.String("4.3.2"),
+				ptr.To("4.3.2"),
 				int64(4), // next major version to be found
 				false,
 			),
@@ -1192,7 +1192,7 @@ var _ = Describe("Helper", func() {
 				"1.1.0",
 				true, // target minor
 				true,
-				pointer.String("1.4.2"),
+				ptr.To("1.4.2"),
 				int64(3), // next minor version to be found
 				false,
 			),
@@ -1215,7 +1215,7 @@ var _ = Describe("Helper", func() {
 				"1.1.0",
 				false, // target major
 				true,
-				pointer.String("4.4.2"),
+				ptr.To("4.4.2"),
 				int64(3), // next major version to be found
 				false,
 			),
@@ -2153,27 +2153,27 @@ var _ = Describe("Helper", func() {
 				"insert",
 				[]gardencorev1beta1.LastError{
 					{},
-					{TaskID: pointer.String("bar")},
+					{TaskID: ptr.To("bar")},
 				},
-				gardencorev1beta1.LastError{TaskID: pointer.String("foo"), Description: "error"},
+				gardencorev1beta1.LastError{TaskID: ptr.To("foo"), Description: "error"},
 				[]gardencorev1beta1.LastError{
 					{},
-					{TaskID: pointer.String("bar")},
-					{TaskID: pointer.String("foo"), Description: "error"},
+					{TaskID: ptr.To("bar")},
+					{TaskID: ptr.To("foo"), Description: "error"},
 				},
 			),
 			Entry(
 				"update",
 				[]gardencorev1beta1.LastError{
 					{},
-					{TaskID: pointer.String("foo"), Description: "error"},
-					{TaskID: pointer.String("bar")},
+					{TaskID: ptr.To("foo"), Description: "error"},
+					{TaskID: ptr.To("bar")},
 				},
-				gardencorev1beta1.LastError{TaskID: pointer.String("foo"), Description: "new-error"},
+				gardencorev1beta1.LastError{TaskID: ptr.To("foo"), Description: "new-error"},
 				[]gardencorev1beta1.LastError{
 					{},
-					{TaskID: pointer.String("foo"), Description: "new-error"},
-					{TaskID: pointer.String("bar")},
+					{TaskID: ptr.To("foo"), Description: "new-error"},
+					{TaskID: ptr.To("bar")},
 				},
 			),
 		)
@@ -2187,25 +2187,25 @@ var _ = Describe("Helper", func() {
 				"task id not found",
 				[]gardencorev1beta1.LastError{
 					{},
-					{TaskID: pointer.String("bar")},
+					{TaskID: ptr.To("bar")},
 				},
 				"foo",
 				[]gardencorev1beta1.LastError{
 					{},
-					{TaskID: pointer.String("bar")},
+					{TaskID: ptr.To("bar")},
 				},
 			),
 			Entry(
 				"task id found",
 				[]gardencorev1beta1.LastError{
 					{},
-					{TaskID: pointer.String("foo")},
-					{TaskID: pointer.String("bar")},
+					{TaskID: ptr.To("foo")},
+					{TaskID: ptr.To("bar")},
 				},
 				"foo",
 				[]gardencorev1beta1.LastError{
 					{},
-					{TaskID: pointer.String("bar")},
+					{TaskID: ptr.To("bar")},
 				},
 			),
 		)
@@ -2427,8 +2427,8 @@ var _ = Describe("Helper", func() {
 
 		Entry("kubeProxy nil", nil, BeFalse()),
 		Entry("kubeProxy empty", &gardencorev1beta1.KubeProxyConfig{}, BeFalse()),
-		Entry("kubeProxy disabled", &gardencorev1beta1.KubeProxyConfig{Enabled: pointer.Bool(false)}, BeFalse()),
-		Entry("kubeProxy enabled", &gardencorev1beta1.KubeProxyConfig{Enabled: pointer.Bool(true)}, BeTrue()),
+		Entry("kubeProxy disabled", &gardencorev1beta1.KubeProxyConfig{Enabled: ptr.To(false)}, BeFalse()),
+		Entry("kubeProxy enabled", &gardencorev1beta1.KubeProxyConfig{Enabled: ptr.To(true)}, BeTrue()),
 	)
 
 	DescribeTable("#BackupBucketIsErroneous",
@@ -2468,9 +2468,9 @@ var _ = Describe("Helper", func() {
 		Entry("both nil", nil, nil, BeTrue()),
 		Entry("old nil, new w/o secret names", nil, &gardencorev1beta1.DNS{}, BeTrue()),
 		Entry("old w/o secret names, new nil", &gardencorev1beta1.DNS{}, nil, BeTrue()),
-		Entry("difference due to old", &gardencorev1beta1.DNS{}, &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: pointer.String("foo")}}}, BeFalse()),
-		Entry("difference due to new", &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: pointer.String("foo")}}}, &gardencorev1beta1.DNS{}, BeFalse()),
-		Entry("equality", &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: pointer.String("foo")}}}, &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: pointer.String("foo")}}}, BeTrue()),
+		Entry("difference due to old", &gardencorev1beta1.DNS{}, &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: ptr.To("foo")}}}, BeFalse()),
+		Entry("difference due to new", &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: ptr.To("foo")}}}, &gardencorev1beta1.DNS{}, BeFalse()),
+		Entry("equality", &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: ptr.To("foo")}}}, &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: ptr.To("foo")}}}, BeTrue()),
 	)
 
 	DescribeTable("#ShootResourceReferencesEqual",
@@ -2566,10 +2566,10 @@ var _ = Describe("Helper", func() {
 				s := gardencorev1beta1.Shoot{}
 				s.Name = fmt.Sprintf("shoot-%d", i)
 				if shoot.specSeedName != "" {
-					s.Spec.SeedName = pointer.String(shoot.specSeedName)
+					s.Spec.SeedName = ptr.To(shoot.specSeedName)
 				}
 				if shoot.statusSeedName != "" {
-					s.Status.SeedName = pointer.String(shoot.statusSeedName)
+					s.Status.SeedName = ptr.To(shoot.statusSeedName)
 				}
 				shootList = append(shootList, s)
 			}
@@ -2615,7 +2615,7 @@ var _ = Describe("Helper", func() {
 
 		Entry("workerKubernetes = nil", semver.MustParse("1.2.3"), nil, semver.MustParse("1.2.3")),
 		Entry("workerKubernetes.version = nil", semver.MustParse("1.2.3"), &gardencorev1beta1.WorkerKubernetes{}, semver.MustParse("1.2.3")),
-		Entry("workerKubernetes.version != nil", semver.MustParse("1.2.3"), &gardencorev1beta1.WorkerKubernetes{Version: pointer.String("4.5.6")}, semver.MustParse("4.5.6")),
+		Entry("workerKubernetes.version != nil", semver.MustParse("1.2.3"), &gardencorev1beta1.WorkerKubernetes{Version: ptr.To("4.5.6")}, semver.MustParse("4.5.6")),
 	)
 
 	DescribeTable("#GetSecretBindingTypes",
@@ -2711,7 +2711,7 @@ var _ = Describe("Helper", func() {
 		},
 		Entry("with nil", nil, nil),
 		Entry("with system components and nil", nil, nil),
-		Entry("with system components and node local DNS spec", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true, ForceTCPToClusterDNS: pointer.Bool(true), ForceTCPToUpstreamDNS: pointer.Bool(true), DisableForwardToUpstreamDNS: pointer.Bool(true)}}, &gardencorev1beta1.NodeLocalDNS{Enabled: true, ForceTCPToClusterDNS: pointer.Bool(true), ForceTCPToUpstreamDNS: pointer.Bool(true), DisableForwardToUpstreamDNS: pointer.Bool(true)}),
+		Entry("with system components and node local DNS spec", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true, ForceTCPToClusterDNS: ptr.To(true), ForceTCPToUpstreamDNS: ptr.To(true), DisableForwardToUpstreamDNS: ptr.To(true)}}, &gardencorev1beta1.NodeLocalDNS{Enabled: true, ForceTCPToClusterDNS: ptr.To(true), ForceTCPToUpstreamDNS: ptr.To(true), DisableForwardToUpstreamDNS: ptr.To(true)}),
 	)
 
 	DescribeTable("#GetShootCARotationPhase",
@@ -2958,7 +2958,7 @@ var _ = Describe("Helper", func() {
 			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
 				{
 					Name:     "PodSecurityPolicy",
-					Disabled: pointer.Bool(true),
+					Disabled: ptr.To(true),
 				},
 			}
 

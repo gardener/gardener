@@ -29,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -154,7 +154,7 @@ var _ = BeforeSuite(func() {
 			Networks: gardencorev1beta1.SeedNetworks{
 				Pods:     "10.0.0.0/16",
 				Services: "10.1.0.0/16",
-				Nodes:    pointer.String("10.2.0.0/16"),
+				Nodes:    ptr.To("10.2.0.0/16"),
 			},
 		},
 	}
@@ -162,7 +162,7 @@ var _ = BeforeSuite(func() {
 	log.Info("Created Seed for test", "seed", seed.Name)
 
 	patch := client.MergeFrom(seed.DeepCopy())
-	seed.Status.ClusterIdentity = pointer.String(seedClusterIdentity)
+	seed.Status.ClusterIdentity = ptr.To(seedClusterIdentity)
 	Expect(testClient.Status().Patch(ctx, seed, patch)).To(Succeed())
 
 	DeferCleanup(func() {
@@ -244,7 +244,7 @@ var _ = BeforeSuite(func() {
 		Config: config.GardenletConfiguration{
 			Controllers: &config.GardenletControllerConfiguration{
 				ControllerInstallation: &config.ControllerInstallationControllerConfiguration{
-					ConcurrentSyncs: pointer.Int(5),
+					ConcurrentSyncs: ptr.To(5),
 				},
 			},
 		},

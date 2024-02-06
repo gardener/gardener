@@ -21,7 +21,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -138,10 +138,10 @@ func (k *kubeProxy) Deploy(ctx context.Context) error {
 			return err
 		}
 
-		if err := k.reconcileManagedResource(ctx, data, &pool, pointer.Bool(false)); err != nil {
+		if err := k.reconcileManagedResource(ctx, data, &pool, ptr.To(false)); err != nil {
 			return err
 		}
-		return k.reconcileManagedResource(ctx, dataForMajorMinorVersionOnly, &pool, pointer.Bool(true))
+		return k.reconcileManagedResource(ctx, dataForMajorMinorVersionOnly, &pool, ptr.To(true))
 	})
 }
 
@@ -187,10 +187,10 @@ func (k *kubeProxy) Wait(ctx context.Context) error {
 	}
 
 	return k.forEachWorkerPool(ctx, true, func(ctx context.Context, pool WorkerPool) error {
-		if err := managedresources.WaitUntilHealthy(ctx, k.client, k.namespace, managedResourceName(&pool, pointer.Bool(false))); err != nil {
+		if err := managedresources.WaitUntilHealthy(ctx, k.client, k.namespace, managedResourceName(&pool, ptr.To(false))); err != nil {
 			return err
 		}
-		return managedresources.WaitUntilHealthy(ctx, k.client, k.namespace, managedResourceName(&pool, pointer.Bool(true)))
+		return managedresources.WaitUntilHealthy(ctx, k.client, k.namespace, managedResourceName(&pool, ptr.To(true)))
 	})
 }
 
@@ -264,7 +264,7 @@ func runParallelFunctions(ctx context.Context, withTimeout bool, fns []flow.Task
 func (k *kubeProxy) isExistingManagedResourceStillDesired(labels map[string]string) bool {
 	for _, pool := range k.values.WorkerPools {
 		if pool.Name == labels[labelKeyPoolName] &&
-			(pool.KubernetesVersion.String() == labels[labelKeyKubernetesVersion] || version(pool, pointer.Bool(true)) == labels[labelKeyKubernetesVersion]) {
+			(pool.KubernetesVersion.String() == labels[labelKeyKubernetesVersion] || version(pool, ptr.To(true)) == labels[labelKeyKubernetesVersion]) {
 			return true
 		}
 	}
@@ -299,7 +299,7 @@ func name(pool WorkerPool, useMajorMinorVersionOnly *bool) string {
 }
 
 func version(pool WorkerPool, useMajorMinorVersionOnly *bool) string {
-	if pointer.BoolDeref(useMajorMinorVersionOnly, false) {
+	if ptr.Deref(useMajorMinorVersionOnly, false) {
 		return fmt.Sprintf("%d.%d", pool.KubernetesVersion.Major(), pool.KubernetesVersion.Minor())
 	}
 	return pool.KubernetesVersion.String()

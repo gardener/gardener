@@ -21,7 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/component-base/version"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -82,7 +82,7 @@ func NewGardenerAPIServer(
 	}
 
 	logLevel := logger.InfoLevel
-	if logging != nil && pointer.Int32Deref(logging.Verbosity, 0) > 2 {
+	if logging != nil && ptr.Deref(logging.Verbosity, 0) > 2 {
 		logLevel = logger.DebugLevel
 	}
 

@@ -34,7 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -61,17 +61,17 @@ const (
 	ManagedResourceNameRuntime = "vali"
 	managedResourceNameTarget  = "vali-target"
 
-	valiName                = "vali"
-	valiServiceName         = "logging"
-	valiMetricsPortName     = "metrics"
-	valiUserAndGroupId      = 10001
-	valiConfigMapVolumeName = "config"
-	valiPVCName             = "vali"
-	valiDataKeyConfig       = "vali.yaml"
-	valiDataKeyInitScript   = "vali-init.sh"
-	valiMountPathData       = "/data"
-	valiMountPathConfig     = "/etc/vali"
-	valiMountPathInitScript = "/"
+	valiName                      = "vali"
+	valiServiceName               = "logging"
+	valiMetricsPortName           = "metrics"
+	valiUserAndGroupId      int64 = 10001
+	valiConfigMapVolumeName       = "config"
+	valiPVCName                   = "vali"
+	valiDataKeyConfig             = "vali.yaml"
+	valiDataKeyInitScript         = "vali-init.sh"
+	valiMountPathData             = "/data"
+	valiMountPathConfig           = "/etc/vali"
+	valiMountPathInitScript       = "/"
 
 	valitailName            = "gardener-valitail"
 	valitailClusterRoleName = "gardener.cloud:logging:valitail"
@@ -204,7 +204,7 @@ func (v *vali) Deploy(ctx context.Context) error {
 			Organization:                []string{"gardener.cloud:monitoring:ingress"},
 			DNSNames:                    []string{v.values.IngressHost},
 			CertType:                    secrets.ServerCert,
-			Validity:                    pointer.Duration(v1beta1constants.IngressTLSCertificateValidity),
+			Validity:                    ptr.To(v1beta1constants.IngressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
 		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
 		if err != nil {
@@ -311,7 +311,7 @@ func (v *vali) getHVPA() *hvpav1alpha1.Hvpa {
 				Labels:    getLabels(),
 			},
 			Spec: hvpav1alpha1.HvpaSpec{
-				Replicas: pointer.Int32(v.values.Replicas),
+				Replicas: ptr.To(v.values.Replicas),
 				Hpa: hvpav1alpha1.HpaSpec{
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
@@ -326,21 +326,21 @@ func (v *vali) getHVPA() *hvpav1alpha1.Hvpa {
 							},
 						},
 						Spec: hvpav1alpha1.HpaTemplateSpec{
-							MinReplicas: pointer.Int32(v.values.Replicas),
+							MinReplicas: ptr.To(v.values.Replicas),
 							MaxReplicas: v.values.Replicas,
 							Metrics: []autoscalingv2beta1.MetricSpec{
 								{
 									Type: autoscalingv2beta1.ResourceMetricSourceType,
 									Resource: &autoscalingv2beta1.ResourceMetricSource{
 										Name:                     corev1.ResourceCPU,
-										TargetAverageUtilization: pointer.Int32(80),
+										TargetAverageUtilization: ptr.To(int32(80)),
 									},
 								},
 								{
 									Type: autoscalingv2beta1.ResourceMetricSourceType,
 									Resource: &autoscalingv2beta1.ResourceMetricSource{
 										Name:                     corev1.ResourceMemory,
-										TargetAverageUtilization: pointer.Int32(80),
+										TargetAverageUtilization: ptr.To(int32(80)),
 									},
 								},
 							},
@@ -356,44 +356,44 @@ func (v *vali) getHVPA() *hvpav1alpha1.Hvpa {
 					Deploy: true,
 					ScaleUp: hvpav1alpha1.ScaleType{
 						UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-							UpdateMode: pointer.String(hvpav1alpha1.UpdateModeAuto),
+							UpdateMode: ptr.To(hvpav1alpha1.UpdateModeAuto),
 						},
-						StabilizationDuration: pointer.String("5m"),
+						StabilizationDuration: ptr.To("5m"),
 						MinChange: hvpav1alpha1.ScaleParams{
 							CPU: hvpav1alpha1.ChangeParams{
-								Value:      pointer.String("100m"),
-								Percentage: pointer.Int32(80),
+								Value:      ptr.To("100m"),
+								Percentage: ptr.To(int32(80)),
 							},
 							Memory: hvpav1alpha1.ChangeParams{
-								Value:      pointer.String("300M"),
-								Percentage: pointer.Int32(80),
+								Value:      ptr.To("300M"),
+								Percentage: ptr.To(int32(80)),
 							},
 						},
 					},
 					ScaleDown: hvpav1alpha1.ScaleType{
 						UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-							UpdateMode: pointer.String(hvpav1alpha1.UpdateModeAuto),
+							UpdateMode: ptr.To(hvpav1alpha1.UpdateModeAuto),
 						},
-						StabilizationDuration: pointer.String("168h"),
+						StabilizationDuration: ptr.To("168h"),
 						MinChange: hvpav1alpha1.ScaleParams{
 							CPU: hvpav1alpha1.ChangeParams{
-								Value:      pointer.String("200m"),
-								Percentage: pointer.Int32(80),
+								Value:      ptr.To("200m"),
+								Percentage: ptr.To(int32(80)),
 							},
 							Memory: hvpav1alpha1.ChangeParams{
-								Value:      pointer.String("500M"),
-								Percentage: pointer.Int32(80),
+								Value:      ptr.To("500M"),
+								Percentage: ptr.To(int32(80)),
 							},
 						},
 					},
 					LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
 						CPU: hvpav1alpha1.ChangeParams{
-							Value:      pointer.String("300m"),
-							Percentage: pointer.Int32(40),
+							Value:      ptr.To("300m"),
+							Percentage: ptr.To(int32(40)),
 						},
 						Memory: hvpav1alpha1.ChangeParams{
-							Value:      pointer.String("1G"),
-							Percentage: pointer.Int32(40),
+							Value:      ptr.To("1G"),
+							Percentage: ptr.To(int32(40)),
 						},
 					},
 					Template: hvpav1alpha1.VpaTemplate{
@@ -447,7 +447,7 @@ func (v *vali) getHVPA() *hvpav1alpha1.Hvpa {
 
 	if v.values.MaintenanceTimeWindow != nil {
 		hvpa.Spec.MaintenanceTimeWindow = v.values.MaintenanceTimeWindow
-		hvpa.Spec.Vpa.ScaleDown.UpdatePolicy.UpdateMode = pointer.String(hvpav1alpha1.UpdateModeMaintenanceWindow)
+		hvpa.Spec.Vpa.ScaleDown.UpdatePolicy.UpdateMode = ptr.To(hvpav1alpha1.UpdateModeMaintenanceWindow)
 	}
 
 	if v.values.ShootNodeLoggingEnabled {
@@ -478,7 +478,7 @@ func (v *vali) getIngress(secretName string) *networkingv1.Ingress {
 			Labels:    getLabels(),
 		},
 		Spec: networkingv1.IngressSpec{
-			IngressClassName: pointer.String(v1beta1constants.SeedNginxIngressClass),
+			IngressClassName: ptr.To(v1beta1constants.SeedNginxIngressClass),
 			TLS: []networkingv1.IngressTLS{{
 				SecretName: secretName,
 				Hosts:      []string{v.values.IngressHost},
@@ -529,7 +529,7 @@ func (v *vali) getService() *corev1.Service {
 
 		networkPolicyPorts = []networkingv1.NetworkPolicyPort{{
 			Port:     utils.IntStrPtrFromInt32(ValiPort),
-			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+			Protocol: ptr.To(corev1.ProtocolTCP),
 		}}
 	)
 
@@ -551,7 +551,7 @@ func (v *vali) getService() *corev1.Service {
 
 		networkPolicyPorts = append(networkPolicyPorts, networkingv1.NetworkPolicyPort{
 			Port:     utils.IntStrPtrFromInt32(telegrafServicePort),
-			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+			Protocol: ptr.To(corev1.ProtocolTCP),
 		})
 	}
 
@@ -623,7 +623,7 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 				Labels:    getLabels(),
 			},
 			Spec: appsv1.StatefulSetSpec{
-				Replicas: pointer.Int32(v.values.Replicas),
+				Replicas: ptr.To(v.values.Replicas),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: getLabels(),
 				},
@@ -632,9 +632,9 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 						Labels: getLabels(),
 					},
 					Spec: corev1.PodSpec{
-						AutomountServiceAccountToken: pointer.Bool(false),
+						AutomountServiceAccountToken: ptr.To(false),
 						SecurityContext: &corev1.PodSecurityContext{
-							FSGroup:             pointer.Int64(valiUserAndGroupId),
+							FSGroup:             ptr.To(valiUserAndGroupId),
 							FSGroupChangePolicy: &fsGroupChangeOnRootMismatch,
 						},
 						PriorityClassName: v.values.PriorityClassName,
@@ -648,10 +648,10 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 									valiMountPathInitScript + valiDataKeyInitScript + " || true",
 								},
 								SecurityContext: &corev1.SecurityContext{
-									Privileged:   pointer.Bool(true),
-									RunAsUser:    pointer.Int64(0),
-									RunAsNonRoot: pointer.Bool(false),
-									RunAsGroup:   pointer.Int64(0),
+									Privileged:   ptr.To(true),
+									RunAsUser:    ptr.To(int64(0)),
+									RunAsNonRoot: ptr.To(false),
+									RunAsGroup:   ptr.To(int64(0)),
 								},
 								VolumeMounts: []corev1.VolumeMount{
 									{
@@ -716,10 +716,10 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
-									RunAsUser:              pointer.Int64(valiUserAndGroupId),
-									RunAsGroup:             pointer.Int64(valiUserAndGroupId),
-									RunAsNonRoot:           pointer.Bool(true),
-									ReadOnlyRootFilesystem: pointer.Bool(true),
+									RunAsUser:              ptr.To(valiUserAndGroupId),
+									RunAsGroup:             ptr.To(valiUserAndGroupId),
+									RunAsNonRoot:           ptr.To(true),
+									ReadOnlyRootFilesystem: ptr.To(true),
 								},
 							},
 							{
@@ -752,10 +752,10 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
-									RunAsUser:              pointer.Int64(valiUserAndGroupId),
-									RunAsGroup:             pointer.Int64(valiUserAndGroupId),
-									RunAsNonRoot:           pointer.Bool(true),
-									ReadOnlyRootFilesystem: pointer.Bool(true),
+									RunAsUser:              ptr.To(valiUserAndGroupId),
+									RunAsGroup:             ptr.To(valiUserAndGroupId),
+									RunAsNonRoot:           ptr.To(true),
+									ReadOnlyRootFilesystem: ptr.To(true),
 								},
 							},
 						},
@@ -766,7 +766,7 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: valiConfigMapName,
 									},
-									DefaultMode: pointer.Int32(0520),
+									DefaultMode: ptr.To(int32(0520)),
 								},
 							},
 						}},
@@ -824,10 +824,10 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 					Protocol:      corev1.ProtocolTCP,
 				}},
 				SecurityContext: &corev1.SecurityContext{
-					RunAsUser:              pointer.Int64(65532),
-					RunAsGroup:             pointer.Int64(65534),
-					RunAsNonRoot:           pointer.Bool(true),
-					ReadOnlyRootFilesystem: pointer.Bool(true),
+					RunAsUser:              ptr.To(int64(65532)),
+					RunAsGroup:             ptr.To(int64(65534)),
+					RunAsNonRoot:           ptr.To(true),
+					ReadOnlyRootFilesystem: ptr.To(true),
 				},
 			},
 			corev1.Container{

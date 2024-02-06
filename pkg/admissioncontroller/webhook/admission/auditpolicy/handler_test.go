@@ -30,7 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -249,7 +249,7 @@ rules:
 
 			It("referenced auditPolicy name was not changed (UPDATE)", func() {
 				newShoot := shootv1beta1.DeepCopy()
-				newShoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(false)
+				newShoot.Spec.Kubernetes.AllowPrivilegedContainers = ptr.To(false)
 				test(admissionv1.Update, shootv1beta1, newShoot, true, statusCodeAllowed, "audit policy configmap was not changed", "")
 			})
 

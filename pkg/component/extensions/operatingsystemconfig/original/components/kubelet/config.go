@@ -21,7 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -35,13 +35,13 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 	config := &kubeletconfigv1beta1.KubeletConfiguration{
 		Authentication: kubeletconfigv1beta1.KubeletAuthentication{
 			Anonymous: kubeletconfigv1beta1.KubeletAnonymousAuthentication{
-				Enabled: pointer.Bool(false),
+				Enabled: ptr.To(false),
 			},
 			X509: kubeletconfigv1beta1.KubeletX509Authentication{
 				ClientCAFile: PathKubeletCACert,
 			},
 			Webhook: kubeletconfigv1beta1.KubeletWebhookAuthentication{
-				Enabled:  pointer.Bool(true),
+				Enabled:  ptr.To(true),
 				CacheTTL: metav1.Duration{Duration: 2 * time.Minute},
 			},
 		},
@@ -54,7 +54,7 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 		},
 		CgroupDriver:                     getCgroupDriver(params),
 		CgroupRoot:                       "/",
-		CgroupsPerQOS:                    pointer.Bool(true),
+		CgroupsPerQOS:                    ptr.To(true),
 		ClusterDNS:                       []string{clusterDNSAddress},
 		ClusterDomain:                    clusterDomain,
 		ContainerLogMaxSize:              *params.ContainerLogMaxSize,
@@ -62,12 +62,12 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 		CPUCFSQuota:                      params.CpuCFSQuota,
 		CPUManagerPolicy:                 *params.CpuManagerPolicy,
 		CPUManagerReconcilePeriod:        metav1.Duration{Duration: 10 * time.Second},
-		EnableControllerAttachDetach:     pointer.Bool(true),
-		EnableDebuggingHandlers:          pointer.Bool(true),
-		EnableServer:                     pointer.Bool(true),
+		EnableControllerAttachDetach:     ptr.To(true),
+		EnableDebuggingHandlers:          ptr.To(true),
+		EnableServer:                     ptr.To(true),
 		EnforceNodeAllocatable:           []string{"pods"},
 		EventBurst:                       50,
-		EventRecordQPS:                   pointer.Int32(50),
+		EventRecordQPS:                   ptr.To(int32(50)),
 		EvictionHard:                     params.EvictionHard,
 		EvictionMinimumReclaim:           params.EvictionMinimumReclaim,
 		EvictionSoft:                     params.EvictionSoft,
@@ -83,7 +83,7 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 		ImageGCLowThresholdPercent:       params.ImageGCLowThresholdPercent,
 		ImageMinimumGCAge:                metav1.Duration{Duration: 2 * time.Minute},
 		KubeAPIBurst:                     50,
-		KubeAPIQPS:                       pointer.Int32(50),
+		KubeAPIQPS:                       ptr.To(int32(50)),
 		KubeReserved:                     params.KubeReserved,
 		MaxOpenFiles:                     1000000,
 		MaxPods:                          *params.MaxPods,
@@ -91,7 +91,7 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 		PodPidsLimit:                     params.PodPidsLimit,
 		ProtectKernelDefaults:            *params.ProtectKernelDefaults,
 		ReadOnlyPort:                     0,
-		ResolverConfig:                   pointer.String("/etc/resolv.conf"),
+		ResolverConfig:                   ptr.To("/etc/resolv.conf"),
 		RotateCertificates:               true,
 		RuntimeRequestTimeout:            metav1.Duration{Duration: 2 * time.Minute},
 		SeccompDefault:                   params.SeccompDefault,
@@ -103,7 +103,7 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 			Effect: corev1.TaintEffectNoSchedule,
 		}},
 		RegistryPullQPS:      params.RegistryPullQPS,
-		RegistryBurst:        pointer.Int32Deref(params.RegistryBurst, 0),
+		RegistryBurst:        ptr.Deref(params.RegistryBurst, 0),
 		SyncFrequency:        metav1.Duration{Duration: time.Minute},
 		SystemReserved:       params.SystemReserved,
 		VolumeStatsAggPeriod: metav1.Duration{Duration: time.Minute},
@@ -173,11 +173,11 @@ func getCgroupDriver(kubeletConfigParameters components.ConfigurableKubeletConfi
 
 func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters, kubernetesVersion *semver.Version) {
 	if c.CpuCFSQuota == nil {
-		c.CpuCFSQuota = pointer.Bool(true)
+		c.CpuCFSQuota = ptr.To(true)
 	}
 
 	if c.CpuManagerPolicy == nil {
-		c.CpuManagerPolicy = pointer.String(kubeletconfigv1beta1.NoneTopologyManagerPolicy)
+		c.CpuManagerPolicy = ptr.To(kubeletconfigv1beta1.NoneTopologyManagerPolicy)
 	}
 
 	if c.EvictionHard == nil {
@@ -221,23 +221,23 @@ func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters, kubern
 	}
 
 	if c.EvictionMaxPodGracePeriod == nil {
-		c.EvictionMaxPodGracePeriod = pointer.Int32(90)
+		c.EvictionMaxPodGracePeriod = ptr.To(int32(90))
 	}
 
 	if c.FailSwapOn == nil {
-		c.FailSwapOn = pointer.Bool(true)
+		c.FailSwapOn = ptr.To(true)
 	}
 
 	if c.ImageGCHighThresholdPercent == nil {
-		c.ImageGCHighThresholdPercent = pointer.Int32(50)
+		c.ImageGCHighThresholdPercent = ptr.To(int32(50))
 	}
 
 	if c.ImageGCLowThresholdPercent == nil {
-		c.ImageGCLowThresholdPercent = pointer.Int32(40)
+		c.ImageGCLowThresholdPercent = ptr.To(int32(40))
 	}
 
 	if c.SerializeImagePulls == nil {
-		c.SerializeImagePulls = pointer.Bool(true)
+		c.SerializeImagePulls = ptr.To(true)
 	}
 
 	if c.KubeReserved == nil {
@@ -250,14 +250,14 @@ func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters, kubern
 	}
 
 	if c.MaxPods == nil {
-		c.MaxPods = pointer.Int32(110)
+		c.MaxPods = ptr.To(int32(110))
 	}
 
 	if c.ContainerLogMaxSize == nil {
-		c.ContainerLogMaxSize = pointer.String("100Mi")
+		c.ContainerLogMaxSize = ptr.To("100Mi")
 	}
 
-	c.ProtectKernelDefaults = pointer.Bool(ShouldProtectKernelDefaultsBeEnabled(c, kubernetesVersion))
+	c.ProtectKernelDefaults = ptr.To(ShouldProtectKernelDefaultsBeEnabled(c, kubernetesVersion))
 
 	if c.StreamingConnectionIdleTimeout == nil {
 		if version.ConstraintK8sGreaterEqual126.Check(kubernetesVersion) {

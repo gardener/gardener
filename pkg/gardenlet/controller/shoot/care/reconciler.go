@@ -23,7 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -93,7 +93,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	// if shoot is no longer managed by this gardenlet (e.g., due to migration to another seed) then don't requeue.
-	if pointer.StringDeref(shoot.Spec.SeedName, "") != r.SeedName {
+	if ptr.Deref(shoot.Spec.SeedName, "") != r.SeedName {
 		return reconcile.Result{}, nil
 	}
 
@@ -181,7 +181,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		},
 		// Trigger webhook remediation
 		func(ctx context.Context) error {
-			if pointer.BoolDeref(r.Config.Controllers.ShootCare.WebhookRemediatorEnabled, false) {
+			if ptr.Deref(r.Config.Controllers.ShootCare.WebhookRemediatorEnabled, false) {
 				_ = NewWebhookRemediator(log, shoot, initializeShootClients).Remediate(ctx)
 				// errors during webhook remediation are only being logged and do not cause the care operation to fail
 			}

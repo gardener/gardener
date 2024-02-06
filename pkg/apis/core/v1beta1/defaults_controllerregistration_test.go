@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
@@ -60,8 +60,8 @@ var _ = Describe("ControllerRegistration defaulting", func() {
 		})
 
 		It("should not overwrite the primary field", func() {
-			obj.Spec.Resources[0].Primary = pointer.Bool(false)
-			obj.Spec.Resources[1].Primary = pointer.Bool(false)
+			obj.Spec.Resources[0].Primary = ptr.To(false)
+			obj.Spec.Resources[1].Primary = ptr.To(false)
 
 			SetObjectDefaults_ControllerRegistration(obj)
 
@@ -100,15 +100,15 @@ var _ = Describe("ControllerRegistration defaulting", func() {
 			It("should default the globallyEnabled field", func() {
 				SetObjectDefaults_ControllerRegistration(obj)
 
-				Expect(obj.Spec.Resources[1].GloballyEnabled).To(Equal(pointer.Bool(false)))
+				Expect(obj.Spec.Resources[1].GloballyEnabled).To(Equal(ptr.To(false)))
 			})
 
 			It("should not overwrite the globallyEnabled field", func() {
-				obj.Spec.Resources[1].GloballyEnabled = pointer.Bool(true)
+				obj.Spec.Resources[1].GloballyEnabled = ptr.To(true)
 
 				SetObjectDefaults_ControllerRegistration(obj)
 
-				Expect(obj.Spec.Resources[1].GloballyEnabled).To(Equal(pointer.Bool(true)))
+				Expect(obj.Spec.Resources[1].GloballyEnabled).To(Equal(ptr.To(true)))
 			})
 
 			It("should default the reconcileTimeout field", func() {

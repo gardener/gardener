@@ -26,7 +26,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/gardener/gardener/pkg/component/etcdcopybackupstask"
@@ -123,7 +123,7 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 				Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(expected)).
 				DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidv1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
 					etcdCopyBackupsTask.Generation = 1
-					etcdCopyBackupsTask.Status.ObservedGeneration = pointer.Int64(0)
+					etcdCopyBackupsTask.Status.ObservedGeneration = ptr.To(int64(0))
 					return nil
 				}).AnyTimes()
 			Expect(etcdCopyBackupsTask.Wait(ctx)).To(MatchError(ContainSubstring("observed generation outdated (0/1)")))
@@ -194,21 +194,21 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 					Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(&druidv1alpha1.EtcdCopyBackupsTask{})).
 					DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidv1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
 						etcdCopyBackupsTask.Generation = 1
-						etcdCopyBackupsTask.Status.ObservedGeneration = pointer.Int64(0)
+						etcdCopyBackupsTask.Status.ObservedGeneration = ptr.To(int64(0))
 						return nil
 					}),
 				c.EXPECT().
 					Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(&druidv1alpha1.EtcdCopyBackupsTask{})).
 					DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidv1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
 						etcdCopyBackupsTask.Generation = 1
-						etcdCopyBackupsTask.Status.ObservedGeneration = pointer.Int64(1)
+						etcdCopyBackupsTask.Status.ObservedGeneration = ptr.To(int64(1))
 						return nil
 					}),
 				c.EXPECT().
 					Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(&druidv1alpha1.EtcdCopyBackupsTask{})).
 					DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidv1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
 						etcdCopyBackupsTask.Generation = 1
-						etcdCopyBackupsTask.Status.ObservedGeneration = pointer.Int64(1)
+						etcdCopyBackupsTask.Status.ObservedGeneration = ptr.To(int64(1))
 						etcdCopyBackupsTask.Status.Conditions = []druidv1alpha1.Condition{
 							{
 								Type:    druidv1alpha1.EtcdCopyBackupsTaskSucceeded,

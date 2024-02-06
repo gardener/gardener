@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -111,7 +111,7 @@ func (v *vpa) recommenderResourceConfigs() component.ResourceConfigs {
 
 func (v *vpa) reconcileRecommenderServiceAccount(serviceAccount *corev1.ServiceAccount) {
 	serviceAccount.Labels = getRoleLabel()
-	serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
+	serviceAccount.AutomountServiceAccountToken = ptr.To(false)
 }
 
 func (v *vpa) reconcileRecommenderClusterRoleMetricsReader(clusterRole *rbacv1.ClusterRole) {
@@ -185,8 +185,8 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 	// consequence, don't need a PDB).
 	deployment.Labels = v.getDeploymentLabels(recommender)
 	deployment.Spec = appsv1.DeploymentSpec{
-		Replicas:             pointer.Int32(pointer.Int32Deref(v.values.Recommender.Replicas, 1)),
-		RevisionHistoryLimit: pointer.Int32(2),
+		Replicas:             ptr.To(ptr.Deref(v.values.Recommender.Replicas, 1)),
+		RevisionHistoryLimit: ptr.To(int32(2)),
 		Selector:             &metav1.LabelSelector{MatchLabels: getAppLabel(recommender)},
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
@@ -206,7 +206,7 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 						"--stderrthreshold=info",
 						"--pod-recommendation-min-cpu-millicores=5",
 						"--pod-recommendation-min-memory-mb=10",
-						fmt.Sprintf("--recommendation-margin-fraction=%f", pointer.Float64Deref(v.values.Recommender.RecommendationMarginFraction, gardencorev1beta1.DefaultRecommendationMarginFraction)),
+						fmt.Sprintf("--recommendation-margin-fraction=%f", ptr.Deref(v.values.Recommender.RecommendationMarginFraction, gardencorev1beta1.DefaultRecommendationMarginFraction)),
 						fmt.Sprintf("--recommender-interval=%s", durationDeref(v.values.Recommender.Interval, gardencorev1beta1.DefaultRecommenderInterval).Duration),
 						"--kube-api-qps=100",
 						"--kube-api-burst=120",
@@ -291,7 +291,7 @@ func (v *vpa) reconcileRecommenderService(service *corev1.Service) {
 	case component.ClusterTypeSeed:
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, networkingv1.NetworkPolicyPort{
 			Port:     utils.IntStrPtrFromInt32(recommenderPortMetrics),
-			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+			Protocol: ptr.To(corev1.ProtocolTCP),
 		}))
 
 	// TODO: For whatever reasons, the seed-prometheus also scrapes vpa-recommenders in all shoot namespaces.

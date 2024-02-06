@@ -16,7 +16,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 // SetDefaults_OpenIDConnectPresetSpec sets default values for OpenIDConnectPresetSpec objects.
@@ -33,6 +33,6 @@ func SetDefaults_KubeAPIServerOpenIDConnect(obj *KubeAPIServerOpenIDConnect) {
 	}
 
 	if obj.UsernameClaim == nil {
-		obj.UsernameClaim = pointer.String(DefaultUsernameClaim)
+		obj.UsernameClaim = ptr.To(DefaultUsernameClaim)
 	}
 }

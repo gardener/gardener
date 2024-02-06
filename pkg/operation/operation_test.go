@@ -19,7 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/operation"
@@ -98,7 +98,7 @@ var _ = Describe("operation", func() {
 			Expect(operation.ToAdvertisedAddresses()).To(BeNil())
 		})
 		It("returns external address", func() {
-			operation.Shoot.ExternalClusterDomain = pointer.String("foo.bar")
+			operation.Shoot.ExternalClusterDomain = ptr.To("foo.bar")
 
 			addresses := operation.ToAdvertisedAddresses()
 
@@ -134,7 +134,7 @@ var _ = Describe("operation", func() {
 		})
 
 		It("returns external and internal addresses in correct order", func() {
-			operation.Shoot.ExternalClusterDomain = pointer.String("foo.bar")
+			operation.Shoot.ExternalClusterDomain = ptr.To("foo.bar")
 			operation.Shoot.InternalClusterDomain = "baz.foo"
 			operation.APIServerAddress = "bar.foo"
 

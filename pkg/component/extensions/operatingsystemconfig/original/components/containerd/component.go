@@ -20,7 +20,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -86,7 +86,7 @@ func (containerd) Config(_ components.Context) ([]extensionsv1alpha1.Unit, []ext
 
 	monitorFile := extensionsv1alpha1.File{
 		Path:        pathHealthMonitor,
-		Permissions: pointer.Int32(0755),
+		Permissions: ptr.To(int32(0755)),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",
@@ -97,9 +97,9 @@ func (containerd) Config(_ components.Context) ([]extensionsv1alpha1.Unit, []ext
 
 	monitorUnit := extensionsv1alpha1.Unit{
 		Name:    UnitNameMonitor,
-		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-		Enable:  pointer.Bool(true),
-		Content: pointer.String(`[Unit]
+		Command: ptr.To(extensionsv1alpha1.CommandStart),
+		Enable:  ptr.To(true),
+		Content: ptr.To(`[Unit]
 Description=Containerd-monitor daemon
 After=` + UnitName + `
 [Install]

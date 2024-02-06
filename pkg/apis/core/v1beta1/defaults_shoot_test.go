@@ -24,7 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -92,7 +92,7 @@ var _ = Describe("Shoot defaulting", func() {
 			mode := ProxyModeIPVS
 			obj.Spec.Kubernetes.KubeProxy = &KubeProxyConfig{
 				Mode:    &mode,
-				Enabled: pointer.Bool(false),
+				Enabled: ptr.To(false),
 			}
 			SetObjectDefaults_Shoot(obj)
 
@@ -136,7 +136,7 @@ var _ = Describe("Shoot defaulting", func() {
 
 			It("should not overwrite already set values for failSwapOn field", func() {
 				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-				obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(false)
+				obj.Spec.Kubernetes.Kubelet.FailSwapOn = ptr.To(false)
 
 				SetObjectDefaults_Shoot(obj)
 
@@ -145,7 +145,7 @@ var _ = Describe("Shoot defaulting", func() {
 
 			It("should default the swap behaviour", func() {
 				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-				obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(false)
+				obj.Spec.Kubernetes.Kubelet.FailSwapOn = ptr.To(false)
 				obj.Spec.Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
 				SetObjectDefaults_Shoot(obj)
 
@@ -156,7 +156,7 @@ var _ = Describe("Shoot defaulting", func() {
 			It("should not overwrite already set values for swap behaviour", func() {
 				unlimitedSwap := UnlimitedSwap
 				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-				obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(false)
+				obj.Spec.Kubernetes.Kubelet.FailSwapOn = ptr.To(false)
 				obj.Spec.Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
 				obj.Spec.Kubernetes.Kubelet.MemorySwap = &MemorySwapConfiguration{SwapBehavior: &unlimitedSwap}
 				SetObjectDefaults_Shoot(obj)
@@ -167,7 +167,7 @@ var _ = Describe("Shoot defaulting", func() {
 
 			It("should not default the swap behaviour because failSwapOn=true", func() {
 				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-				obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(true)
+				obj.Spec.Kubernetes.Kubelet.FailSwapOn = ptr.To(true)
 				obj.Spec.Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
 				SetObjectDefaults_Shoot(obj)
 
@@ -176,7 +176,7 @@ var _ = Describe("Shoot defaulting", func() {
 
 			It("should not default the swap behaviour because kubelet NodeSwap feature gate is false", func() {
 				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-				obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(false)
+				obj.Spec.Kubernetes.Kubelet.FailSwapOn = ptr.To(false)
 				SetObjectDefaults_Shoot(obj)
 
 				Expect(obj.Spec.Kubernetes.Kubelet.MemorySwap).To(BeNil())
@@ -213,7 +213,7 @@ var _ = Describe("Shoot defaulting", func() {
 
 			It("should not overwrite already set values for serializeImagePulls field", func() {
 				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-				obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = pointer.Bool(false)
+				obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = ptr.To(false)
 
 				SetObjectDefaults_Shoot(obj)
 
@@ -258,7 +258,7 @@ var _ = Describe("Shoot defaulting", func() {
 					},
 				},
 			}
-			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FailSwapOn = pointer.Bool(false)
+			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FailSwapOn = ptr.To(false)
 			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
 			SetObjectDefaults_Shoot(obj)
 
@@ -279,7 +279,7 @@ var _ = Describe("Shoot defaulting", func() {
 					},
 				},
 			}
-			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FailSwapOn = pointer.Bool(false)
+			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FailSwapOn = ptr.To(false)
 			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
 			SetObjectDefaults_Shoot(obj)
 
@@ -308,7 +308,7 @@ var _ = Describe("Shoot defaulting", func() {
 					},
 				},
 			}
-			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FailSwapOn = pointer.Bool(false)
+			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FailSwapOn = ptr.To(false)
 			SetObjectDefaults_Shoot(obj)
 
 			Expect(obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.MemorySwap).To(BeNil())
@@ -367,7 +367,7 @@ var _ = Describe("Shoot defaulting", func() {
 		})
 
 		It("should not overwrite the already set values for schedulerName field", func() {
-			obj.Spec.SchedulerName = pointer.String("foo-scheduler")
+			obj.Spec.SchedulerName = ptr.To("foo-scheduler")
 
 			SetObjectDefaults_Shoot(obj)
 
@@ -391,37 +391,37 @@ var _ = Describe("Shoot defaulting", func() {
 				It("should make nodeCIDRMaskSize big enough for 2*maxPods", func() {
 					obj.Spec.Provider.Workers = []Worker{{}}
 					obj.Spec.Kubernetes.Kubelet = &KubeletConfig{
-						MaxPods: pointer.Int32(250),
+						MaxPods: ptr.To(int32(250)),
 					}
 
 					SetObjectDefaults_Shoot(obj)
 
-					Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(pointer.Int32(23)))
+					Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(ptr.To(int32(23))))
 				})
 
 				It("should make nodeCIDRMaskSize big enough for 2*maxPods (consider worker pool settings)", func() {
 					obj.Spec.Kubernetes.Kubelet = &KubeletConfig{
-						MaxPods: pointer.Int32(64),
+						MaxPods: ptr.To(int32(64)),
 					}
 					obj.Spec.Provider.Workers = []Worker{{
 						Name: "1",
 						Kubernetes: &WorkerKubernetes{
 							Kubelet: &KubeletConfig{
-								MaxPods: pointer.Int32(100),
+								MaxPods: ptr.To(int32(100)),
 							},
 						},
 					}, {
 						Name: "2",
 						Kubernetes: &WorkerKubernetes{
 							Kubelet: &KubeletConfig{
-								MaxPods: pointer.Int32(260),
+								MaxPods: ptr.To(int32(260)),
 							},
 						},
 					}}
 
 					SetObjectDefaults_Shoot(obj)
 
-					Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(pointer.Int32(22)))
+					Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(ptr.To(int32(22))))
 				})
 			})
 
@@ -435,7 +435,7 @@ var _ = Describe("Shoot defaulting", func() {
 				It("should default nodeCIDRMaskSize to 64", func() {
 					SetObjectDefaults_Shoot(obj)
 
-					Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(pointer.Int32(64)))
+					Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(PointTo(Equal(int32(64))))
 				})
 			})
 		})
@@ -492,7 +492,7 @@ var _ = Describe("Shoot defaulting", func() {
 		It("should not overwrite the already set values for kubernetesDashboard field", func() {
 			obj.Spec.Addons = &Addons{
 				KubernetesDashboard: &KubernetesDashboard{
-					AuthenticationMode: pointer.String("foo"),
+					AuthenticationMode: ptr.To("foo"),
 				},
 			}
 
@@ -573,7 +573,7 @@ var _ = Describe("Shoot defaulting", func() {
 			obj.Spec.Maintenance = &Maintenance{
 				AutoUpdate: &MaintenanceAutoUpdate{
 					KubernetesVersion:   false,
-					MachineImageVersion: pointer.Bool(false),
+					MachineImageVersion: ptr.To(false),
 				},
 			}
 
@@ -595,8 +595,8 @@ var _ = Describe("Shoot defaulting", func() {
 			SetObjectDefaults_Shoot(obj)
 
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.Requests).NotTo(BeNil())
-			Expect(obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxNonMutatingInflight).To(Equal(pointer.Int32(400)))
-			Expect(obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxMutatingInflight).To(Equal(pointer.Int32(200)))
+			Expect(obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxNonMutatingInflight).To(PointTo(Equal(int32(400))))
+			Expect(obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxMutatingInflight).To(PointTo(Equal(int32(200))))
 		})
 
 		It("should not overwrite the already set values for API server requests fields", func() {
@@ -622,7 +622,7 @@ var _ = Describe("Shoot defaulting", func() {
 		})
 
 		It("should not overwrite the already set values for anonymous authentication field", func() {
-			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{EnableAnonymousAuthentication: pointer.Bool(true)}
+			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{EnableAnonymousAuthentication: ptr.To(true)}
 
 			SetObjectDefaults_Shoot(obj)
 
@@ -651,7 +651,7 @@ var _ = Describe("Shoot defaulting", func() {
 		})
 
 		It("should not overwrite the already set values for log verbosity level", func() {
-			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{Logging: &APIServerLogging{Verbosity: pointer.Int32(3)}}
+			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{Logging: &APIServerLogging{Verbosity: ptr.To(int32(3))}}
 
 			SetObjectDefaults_Shoot(obj)
 
@@ -666,7 +666,7 @@ var _ = Describe("Shoot defaulting", func() {
 
 		It("should not overwrite the already set values for defaultNotReadyTolerationSeconds field", func() {
 			var tolerationSeconds int64 = 120
-			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{DefaultNotReadyTolerationSeconds: pointer.Int64(tolerationSeconds)}
+			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{DefaultNotReadyTolerationSeconds: ptr.To(tolerationSeconds)}
 
 			SetObjectDefaults_Shoot(obj)
 
@@ -689,7 +689,7 @@ var _ = Describe("Shoot defaulting", func() {
 
 		It("should not overwrite the already set values for defaultUnreachableTolerationSeconds field", func() {
 			var tolerationSeconds int64 = 120
-			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{DefaultUnreachableTolerationSeconds: pointer.Int64(tolerationSeconds)}
+			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{DefaultUnreachableTolerationSeconds: ptr.To(tolerationSeconds)}
 
 			SetObjectDefaults_Shoot(obj)
 
@@ -739,7 +739,7 @@ var _ = Describe("Shoot defaulting", func() {
 		obj.Spec.Provider.Workers = []Worker{
 			{Name: "Default Worker"},
 			{Name: "Worker with machine architecture type",
-				Machine: Machine{Architecture: pointer.String("test")}},
+				Machine: Machine{Architecture: ptr.To("test")}},
 		}
 
 		SetObjectDefaults_Shoot(obj)
@@ -891,15 +891,15 @@ var _ = Describe("Shoot defaulting", func() {
 				ScaleDownDelayAfterDelete:     &metav1.Duration{Duration: 2 * time.Hour},
 				ScaleDownDelayAfterFailure:    &metav1.Duration{Duration: 3 * time.Hour},
 				ScaleDownUnneededTime:         &metav1.Duration{Duration: 4 * time.Hour},
-				ScaleDownUtilizationThreshold: pointer.Float64(0.8),
+				ScaleDownUtilizationThreshold: ptr.To(float64(0.8)),
 				ScanInterval:                  &metav1.Duration{Duration: 5 * time.Hour},
 				Expander:                      &expanderRandom,
 				MaxNodeProvisionTime:          &metav1.Duration{Duration: 6 * time.Hour},
-				MaxGracefulTerminationSeconds: pointer.Int32(60 * 60 * 24),
-				IgnoreDaemonsetsUtilization:   pointer.Bool(true),
-				Verbosity:                     pointer.Int32(4),
+				MaxGracefulTerminationSeconds: ptr.To(int32(60 * 60 * 24)),
+				IgnoreDaemonsetsUtilization:   ptr.To(true),
+				Verbosity:                     ptr.To(int32(4)),
 				NewPodScaleUpDelay:            &metav1.Duration{Duration: 1},
-				MaxEmptyBulkDelete:            pointer.Int32(20),
+				MaxEmptyBulkDelete:            ptr.To(int32(20)),
 			}
 
 			SetObjectDefaults_Shoot(obj)
@@ -944,8 +944,8 @@ var _ = Describe("Shoot defaulting", func() {
 		It("should not overwrite the already set values for VerticalPodAutoscaler field", func() {
 			obj.Spec.Kubernetes.VerticalPodAutoscaler = &VerticalPodAutoscaler{
 				EvictAfterOOMThreshold:       &metav1.Duration{Duration: 5 * time.Minute},
-				EvictionRateBurst:            pointer.Int32(2),
-				EvictionRateLimit:            pointer.Float64(1),
+				EvictionRateBurst:            ptr.To(int32(2)),
+				EvictionRateLimit:            ptr.To(float64(1)),
 				EvictionTolerance:            &evictionTolerance,
 				RecommendationMarginFraction: &recommendationMarginFraction,
 				UpdaterInterval:              &metav1.Duration{Duration: 2 * time.Minute},

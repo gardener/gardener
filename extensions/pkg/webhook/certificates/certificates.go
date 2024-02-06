@@ -21,7 +21,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/extensions/pkg/webhook"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -32,7 +32,7 @@ import (
 func GenerateUnmanagedCertificates(providerName, certDir, mode, url string) ([]byte, error) {
 	caConfig := getWebhookCAConfig(providerName)
 	// we want to use a long validity here, because we don't auto-renew certificates
-	caConfig.Validity = pointer.Duration(10 * 365 * 24 * time.Hour) // 10y
+	caConfig.Validity = ptr.To(10 * 365 * 24 * time.Hour) // 10y
 
 	caCert, err := caConfig.GenerateCertificate()
 	if err != nil {

@@ -21,7 +21,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -143,7 +143,7 @@ func (h *health) checkSystemComponents(
 		if sets.New(istio.ManagedResourceNames(true, "")...).Has(name) {
 			namespace = v1beta1constants.IstioSystemNamespace
 		}
-		namespace = pointer.StringDeref(h.namespace, namespace)
+		namespace = ptr.Deref(h.namespace, namespace)
 
 		mr := &resourcesv1alpha1.ManagedResource{}
 		if err := h.seedClient.Get(ctx, kubernetesutils.Key(namespace, name), mr); err != nil {

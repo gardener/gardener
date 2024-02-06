@@ -17,7 +17,7 @@ package v1beta1
 import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 // SetDefaults_Seed sets default values for Seed objects.
@@ -34,7 +34,7 @@ func SetDefaults_SeedSettings(obj *SeedSettings) {
 		setDefaults_ExcessCapacityReservationConfig(obj.ExcessCapacityReservation)
 	}
 
-	if pointer.BoolDeref(obj.ExcessCapacityReservation.Enabled, true) && len(obj.ExcessCapacityReservation.Configs) == 0 {
+	if ptr.Deref(obj.ExcessCapacityReservation.Enabled, true) && len(obj.ExcessCapacityReservation.Configs) == 0 {
 		setDefaults_ExcessCapacityReservationConfig(obj.ExcessCapacityReservation)
 	}
 

@@ -24,7 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	. "github.com/gardener/gardener/extensions/pkg/controller/worker"
@@ -180,7 +180,7 @@ var _ = Describe("Machines", func() {
 			})
 
 			It("when changing the kubernetes patch version of the worker pool version", func() {
-				p.KubernetesVersion = pointer.String("1.2.4")
+				p.KubernetesVersion = ptr.To("1.2.4")
 			})
 
 			It("when changing the kubernetes patch version of the control plane version", func() {
@@ -230,7 +230,7 @@ var _ = Describe("Machines", func() {
 			})
 
 			It("when changing the kubernetes major/minor version of the worker pool version", func() {
-				p.KubernetesVersion = pointer.String("1.3.3")
+				p.KubernetesVersion = ptr.To("1.3.3")
 			})
 
 			It("when changing the kubernetes major/minor version of the control plane version", func() {

@@ -38,7 +38,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -115,7 +115,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				Namespace: b.namespace,
 				Labels:    labels(),
 			},
-			AutomountServiceAccountToken: pointer.Bool(false),
+			AutomountServiceAccountToken: ptr.To(false),
 		}
 
 		clusterRole = &rbacv1.ClusterRole{
@@ -277,8 +277,8 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				}, labels()),
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas:             pointer.Int32(1),
-				RevisionHistoryLimit: pointer.Int32(1),
+				Replicas:             ptr.To(int32(1)),
+				RevisionHistoryLimit: ptr.To(int32(1)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: labels(),
 				},
@@ -343,7 +343,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 
 	portMetrics := networkingv1.NetworkPolicyPort{
 		Port:     utils.IntStrPtrFromInt32(metricsPort),
-		Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+		Protocol: ptr.To(corev1.ProtocolTCP),
 	}
 
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, portMetrics))

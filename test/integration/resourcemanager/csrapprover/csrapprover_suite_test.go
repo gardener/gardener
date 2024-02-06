@@ -29,7 +29,7 @@ import (
 	userpkg "k8s.io/apiserver/pkg/authentication/user"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -146,7 +146,7 @@ var _ = BeforeSuite(func() {
 	Expect((&csrapprover.Reconciler{
 		CertificatesClient: kubernetesClient.CertificatesV1().CertificateSigningRequests(),
 		Config: config.KubeletCSRApproverControllerConfig{
-			ConcurrentSyncs:  pointer.Int(5),
+			ConcurrentSyncs:  ptr.To(5),
 			MachineNamespace: testNamespace.Name,
 		},
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())

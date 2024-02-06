@@ -19,7 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/utils"
@@ -199,14 +199,14 @@ var _ = Describe("SystemComponentsConfig tests", func() {
 							Operator:          corev1.TolerationOpEqual,
 							Value:             "existingValue",
 							Effect:            corev1.TaintEffectNoExecute,
-							TolerationSeconds: pointer.Int64(10),
+							TolerationSeconds: ptr.To(int64(10)),
 						},
 						{
 							Key:               "existingKey",
 							Operator:          corev1.TolerationOpEqual,
 							Value:             "existingValue",
 							Effect:            corev1.TaintEffectNoExecute,
-							TolerationSeconds: pointer.Int64(10),
+							TolerationSeconds: ptr.To(int64(10)),
 						},
 					}
 
@@ -310,14 +310,14 @@ func addKubernetesDefaultTolerations(tolerations []corev1.Toleration) []corev1.T
 		Operator:          "Exists",
 		Value:             "",
 		Effect:            "NoExecute",
-		TolerationSeconds: pointer.Int64(300),
+		TolerationSeconds: ptr.To(int64(300)),
 	},
 		corev1.Toleration{
 			Key:               "node.kubernetes.io/unreachable",
 			Operator:          "Exists",
 			Value:             "",
 			Effect:            "NoExecute",
-			TolerationSeconds: pointer.Int64(300),
+			TolerationSeconds: ptr.To(int64(300)),
 		})
 
 	return t

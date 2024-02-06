@@ -25,7 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
@@ -150,8 +150,8 @@ var _ = Describe("Defaults", func() {
 						},
 					}),
 				},
-				Bootstrap:       bootstrapPtr(BootstrapServiceAccount),
-				MergeWithParent: pointer.Bool(false),
+				Bootstrap:       ptr.To(BootstrapServiceAccount),
+				MergeWithParent: ptr.To(false),
 			}
 
 			SetObjectDefaults_ManagedSeed(obj)
@@ -193,26 +193,26 @@ var _ = Describe("Defaults", func() {
 			obj.Spec.Gardenlet = &Gardenlet{}
 			SetObjectDefaults_ManagedSeed(obj)
 
-			Expect(obj.Spec.Gardenlet.Deployment.ReplicaCount).To(Equal(pointer.Int32(2)))
-			Expect(obj.Spec.Gardenlet.Deployment.RevisionHistoryLimit).To(Equal(pointer.Int32(2)))
+			Expect(obj.Spec.Gardenlet.Deployment.ReplicaCount).To(Equal(ptr.To(int32(2))))
+			Expect(obj.Spec.Gardenlet.Deployment.RevisionHistoryLimit).To(Equal(ptr.To(int32(2))))
 			Expect(obj.Spec.Gardenlet.Deployment.Image).NotTo(BeNil())
-			Expect(obj.Spec.Gardenlet.Deployment.VPA).To(Equal(pointer.Bool(true)))
+			Expect(obj.Spec.Gardenlet.Deployment.VPA).To(Equal(ptr.To(true)))
 		})
 
 		It("should not overwrite the already set values for GardenletDeployment field", func() {
 			obj.Spec.Gardenlet = &Gardenlet{
 				Deployment: &GardenletDeployment{
-					ReplicaCount:         pointer.Int32(3),
-					RevisionHistoryLimit: pointer.Int32(3),
-					VPA:                  pointer.Bool(false),
+					ReplicaCount:         ptr.To(int32(3)),
+					RevisionHistoryLimit: ptr.To(int32(3)),
+					VPA:                  ptr.To(false),
 				},
 			}
 			SetObjectDefaults_ManagedSeed(obj)
 
-			Expect(obj.Spec.Gardenlet.Deployment.ReplicaCount).To(Equal(pointer.Int32(3)))
-			Expect(obj.Spec.Gardenlet.Deployment.RevisionHistoryLimit).To(Equal(pointer.Int32(3)))
+			Expect(obj.Spec.Gardenlet.Deployment.ReplicaCount).To(Equal(ptr.To(int32(3))))
+			Expect(obj.Spec.Gardenlet.Deployment.RevisionHistoryLimit).To(Equal(ptr.To(int32(3))))
 			Expect(obj.Spec.Gardenlet.Deployment.Image).NotTo(BeNil())
-			Expect(obj.Spec.Gardenlet.Deployment.VPA).To(Equal(pointer.Bool(false)))
+			Expect(obj.Spec.Gardenlet.Deployment.VPA).To(Equal(ptr.To(false)))
 		})
 	})
 
@@ -222,21 +222,21 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_ManagedSeed(obj)
 
 			Expect(obj.Spec.Gardenlet.Deployment.Image).To(Equal(&Image{
-				PullPolicy: pullPolicyPtr(corev1.PullIfNotPresent),
+				PullPolicy: ptr.To(corev1.PullIfNotPresent),
 			}))
 		})
 
 		It("should default pull policy to Always if tag is latest", func() {
 			obj.Spec.Gardenlet = &Gardenlet{
 				Deployment: &GardenletDeployment{
-					Image: &Image{Tag: pointer.String("latest")},
+					Image: &Image{Tag: ptr.To("latest")},
 				}}
 
 			SetObjectDefaults_ManagedSeed(obj)
 
 			Expect(obj.Spec.Gardenlet.Deployment.Image).To(Equal(&Image{
-				Tag:        pointer.String("latest"),
-				PullPolicy: pullPolicyPtr(corev1.PullAlways),
+				Tag:        ptr.To("latest"),
+				PullPolicy: ptr.To(corev1.PullAlways),
 			}))
 		})
 
@@ -244,16 +244,16 @@ var _ = Describe("Defaults", func() {
 			obj.Spec.Gardenlet = &Gardenlet{
 				Deployment: &GardenletDeployment{
 					Image: &Image{
-						Tag:        pointer.String("foo"),
-						PullPolicy: pullPolicyPtr(corev1.PullNever),
+						Tag:        ptr.To("foo"),
+						PullPolicy: ptr.To(corev1.PullNever),
 					},
 				}}
 
 			SetObjectDefaults_ManagedSeed(obj)
 
 			Expect(obj.Spec.Gardenlet.Deployment.Image).To(Equal(&Image{
-				Tag:        pointer.String("foo"),
-				PullPolicy: pullPolicyPtr(corev1.PullNever),
+				Tag:        ptr.To("foo"),
+				PullPolicy: ptr.To(corev1.PullNever),
 			}))
 		})
 	})
@@ -263,7 +263,3 @@ func encode(obj runtime.Object) []byte {
 	data, _ := json.Marshal(obj)
 	return data
 }
-
-func pullPolicyPtr(v corev1.PullPolicy) *corev1.PullPolicy { return &v }
-
-func bootstrapPtr(v Bootstrap) *Bootstrap { return &v }

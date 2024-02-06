@@ -39,7 +39,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
@@ -184,7 +184,7 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 		newEncryptionConfig = newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig
 	}
 	if newShoot.Spec.Hibernation != nil {
-		hibernationEnabled = pointer.BoolDeref(newShoot.Spec.Hibernation.Enabled, false)
+		hibernationEnabled = ptr.Deref(newShoot.Spec.Hibernation.Enabled, false)
 	}
 
 	allErrs = append(allErrs, ValidateEncryptionConfigUpdate(newEncryptionConfig, oldEncryptionConfig, sets.New(newShoot.Status.EncryptedResources...), etcdEncryptionKeyRotation, hibernationEnabled, field.NewPath("spec", "kubernetes", "kubeAPIServer", "encryptionConfig"))...)
@@ -283,7 +283,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	}
 	if spec.SecretBindingName != nil && workerless {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretBindingName"), workerlessErrorMsg))
-	} else if len(pointer.StringDeref(spec.SecretBindingName, "")) == 0 && !workerless {
+	} else if len(ptr.Deref(spec.SecretBindingName, "")) == 0 && !workerless {
 		allErrs = append(allErrs, field.Required(fldPath.Child("secretBindingName"), "must specify a name"))
 	}
 	if spec.SeedName != nil && len(*spec.SeedName) == 0 {
@@ -372,7 +372,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 
 	if !reflect.DeepEqual(oldSpec.SchedulerName, newSpec.SchedulerName) {
 		// only allow to set an empty scheduler name to the default scheduler
-		if oldSpec.SchedulerName != nil || pointer.StringDeref(newSpec.SchedulerName, "") != v1beta1constants.DefaultSchedulerName {
+		if oldSpec.SchedulerName != nil || ptr.Deref(newSpec.SchedulerName, "") != v1beta1constants.DefaultSchedulerName {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("schedulerName"), newSpec.SchedulerName, "field is immutable"))
 		}
 	}
@@ -874,7 +874,7 @@ func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking,
 	}
 
 	k8sGreaterEqual127, _ := versionutils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.27")
-	if k8sGreaterEqual127 && pointer.BoolDeref(kubernetes.EnableStaticTokenKubeconfig, false) {
+	if k8sGreaterEqual127 && ptr.Deref(kubernetes.EnableStaticTokenKubeconfig, false) {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("enableStaticTokenKubeconfig"), kubernetes.EnableStaticTokenKubeconfig, "for Kubernetes versions >= 1.27, enableStaticTokenKubeconfig field cannot not be set to true, please see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_access.md#static-token-kubeconfig"))
 	}
 
@@ -969,7 +969,7 @@ func validateNetworking(networking *core.Networking, workerless bool, fldPath *f
 			return allErrs
 		}
 
-		if len(pointer.StringDeref(networking.Type, "")) == 0 {
+		if len(ptr.Deref(networking.Type, "")) == 0 {
 			allErrs = append(allErrs, field.Required(fldPath.Child("type"), "networking type must be provided"))
 		}
 	}
@@ -1206,7 +1206,7 @@ func validateKubernetesVersionUpdate125(new, old *core.Shoot) field.ErrorList {
 func isPSPDisabled(kubeAPIServerConfig *core.KubeAPIServerConfig) bool {
 	if kubeAPIServerConfig != nil {
 		for _, plugin := range kubeAPIServerConfig.AdmissionPlugins {
-			if plugin.Name == "PodSecurityPolicy" && pointer.BoolDeref(plugin.Disabled, false) {
+			if plugin.Name == "PodSecurityPolicy" && ptr.Deref(plugin.Disabled, false) {
 				return true
 			}
 		}
@@ -1218,8 +1218,8 @@ func validateHibernationUpdate(new, old *core.Shoot) field.ErrorList {
 	var (
 		allErrs                     = field.ErrorList{}
 		fldPath                     = field.NewPath("spec", "hibernation", "enabled")
-		hibernationEnabledInOld     = old.Spec.Hibernation != nil && pointer.BoolDeref(old.Spec.Hibernation.Enabled, false)
-		hibernationEnabledInNew     = new.Spec.Hibernation != nil && pointer.BoolDeref(new.Spec.Hibernation.Enabled, false)
+		hibernationEnabledInOld     = old.Spec.Hibernation != nil && ptr.Deref(old.Spec.Hibernation.Enabled, false)
+		hibernationEnabledInNew     = new.Spec.Hibernation != nil && ptr.Deref(new.Spec.Hibernation.Enabled, false)
 		encryptedResourcesInOldSpec = sets.Set[string]{}
 		encryptedResourcesInNewSpec = sets.Set[string]{}
 	)
@@ -1803,7 +1803,7 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, doc
 	}
 
 	if v := kubeletConfig.MemorySwap; v != nil {
-		if pointer.BoolDeref(kubeletConfig.FailSwapOn, false) {
+		if ptr.Deref(kubeletConfig.FailSwapOn, false) {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("memorySwap"), "configuring swap behaviour is not available when the kubelet is configured with 'FailSwapOn=true'"))
 		}
 
@@ -2045,7 +2045,7 @@ func ValidateHibernation(annotations map[string]string, hibernation *core.Hibern
 		return allErrs
 	}
 
-	if maintenanceOp := annotations[v1beta1constants.GardenerMaintenanceOperation]; forbiddenShootOperationsWhenHibernated.Has(maintenanceOp) && pointer.BoolDeref(hibernation.Enabled, false) {
+	if maintenanceOp := annotations[v1beta1constants.GardenerMaintenanceOperation]; forbiddenShootOperationsWhenHibernated.Has(maintenanceOp) && ptr.Deref(hibernation.Enabled, false) {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("enabled"), fmt.Sprintf("shoot cannot be hibernated when %s=%s annotation is set", v1beta1constants.GardenerMaintenanceOperation, maintenanceOp)))
 	}
 

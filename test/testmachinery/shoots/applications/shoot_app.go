@@ -39,7 +39,7 @@ import (
 	"github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/test/framework"
@@ -95,7 +95,7 @@ var _ = ginkgo.Describe("Shoot application testing", func() {
 				Namespace: metav1.NamespaceSystem,
 			},
 		}
-		token, err := framework.CreateTokenForServiceAccount(ctx, f.ShootClient, serviceAccount, pointer.Int64(3600))
+		token, err := framework.CreateTokenForServiceAccount(ctx, f.ShootClient, serviceAccount, ptr.To(int64(3600)))
 		framework.ExpectNoError(err)
 
 		err = framework.TestHTTPEndpointWithToken(ctx, url, token)

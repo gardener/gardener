@@ -26,7 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -232,9 +232,9 @@ var _ = Describe("GardenerMetricsExporter", func() {
 						Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						Class:       pointer.String("seed"),
+						Class:       ptr.To("seed"),
 						SecretRefs:  []corev1.LocalObjectReference{{Name: managedResourceRuntime.Spec.SecretRefs[0].Name}},
-						KeepObjects: pointer.Bool(false),
+						KeepObjects: ptr.To(false),
 					},
 					Status: healthyManagedResourceStatus,
 				}
@@ -260,7 +260,7 @@ var _ = Describe("GardenerMetricsExporter", func() {
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 						SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceVirtual.Spec.SecretRefs[0].Name}},
-						KeepObjects:  pointer.Bool(false),
+						KeepObjects:  ptr.To(false),
 					},
 					Status: healthyManagedResourceStatus,
 				}
@@ -274,14 +274,14 @@ var _ = Describe("GardenerMetricsExporter", func() {
 				Expect(managedResourceSecretRuntime.Data).To(HaveLen(2))
 				Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-metrics-exporter.yaml"])).To(Equal(componenttest.Serialize(serviceRuntime)))
 				Expect(string(managedResourceSecretRuntime.Data["deployment__some-namespace__gardener-metrics-exporter.yaml"])).To(Equal(deployment(namespace, values)))
-				Expect(managedResourceSecretRuntime.Immutable).To(Equal(pointer.Bool(true)))
+				Expect(managedResourceSecretRuntime.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecretVirtual.Data).To(HaveLen(2))
 				Expect(string(managedResourceSecretVirtual.Data["clusterrole____gardener.cloud_metrics-exporter.yaml"])).To(Equal(componenttest.Serialize(clusterRole)))
 				Expect(string(managedResourceSecretVirtual.Data["clusterrolebinding____gardener.cloud_metrics-exporter.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
-				Expect(managedResourceSecretVirtual.Immutable).To(Equal(pointer.Bool(true)))
+				Expect(managedResourceSecretVirtual.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecretVirtual.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 			})
 		})
@@ -612,8 +612,8 @@ func deployment(namespace string, testValues Values) string {
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas:             pointer.Int32(1),
-			RevisionHistoryLimit: pointer.Int32(2),
+			Replicas:             ptr.To(int32(1)),
+			RevisionHistoryLimit: ptr.To(int32(2)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app":  "gardener",
@@ -631,7 +631,7 @@ func deployment(namespace string, testValues Values) string {
 				},
 				Spec: corev1.PodSpec{
 					PriorityClassName:            "gardener-garden-system-100",
-					AutomountServiceAccountToken: pointer.Bool(false),
+					AutomountServiceAccountToken: ptr.To(false),
 					Containers: []corev1.Container{
 						{
 							Name:            "gardener-metrics-exporter",
@@ -644,7 +644,7 @@ func deployment(namespace string, testValues Values) string {
 								"--port=2718",
 							},
 							SecurityContext: &corev1.SecurityContext{
-								ReadOnlyRootFilesystem: pointer.Bool(true),
+								ReadOnlyRootFilesystem: ptr.To(true),
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: map[corev1.ResourceName]resource.Quantity{
@@ -693,7 +693,7 @@ func deployment(namespace string, testValues Values) string {
 							Name: "kubeconfig",
 							VolumeSource: corev1.VolumeSource{
 								Projected: &corev1.ProjectedVolumeSource{
-									DefaultMode: pointer.Int32(420),
+									DefaultMode: ptr.To(int32(420)),
 									Sources: []corev1.VolumeProjection{
 										{
 											Secret: &corev1.SecretProjection{
@@ -704,7 +704,7 @@ func deployment(namespace string, testValues Values) string {
 													Key:  "kubeconfig",
 													Path: "kubeconfig",
 												}},
-												Optional: pointer.Bool(false),
+												Optional: ptr.To(false),
 											},
 										},
 										{
@@ -716,7 +716,7 @@ func deployment(namespace string, testValues Values) string {
 													Key:  "token",
 													Path: "token",
 												}},
-												Optional: pointer.Bool(false),
+												Optional: ptr.To(false),
 											},
 										},
 									},

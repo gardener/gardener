@@ -22,7 +22,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 )
@@ -136,7 +136,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 				LeaseDuration:     metav1.Duration{Duration: 1 * time.Second},
 				RenewDeadline:     metav1.Duration{Duration: 2 * time.Second},
 				RetryPeriod:       metav1.Duration{Duration: 3 * time.Second},
-				LeaderElect:       pointer.Bool(false),
+				LeaderElect:       ptr.To(false),
 			}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
@@ -200,8 +200,8 @@ var _ = Describe("ResourceManager defaulting", func() {
 
 		It("should not overwrite already set values for ResourceManagerControllerConfiguration", func() {
 			obj.Controllers = ResourceManagerControllerConfiguration{
-				ClusterID:     pointer.String("foo"),
-				ResourceClass: pointer.String("bar"),
+				ClusterID:     ptr.To("foo"),
+				ResourceClass: ptr.To("bar"),
 			}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
@@ -233,7 +233,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 		It("should not overwrite already set values for KubeletCSRApproverControllerConfig", func() {
 			obj.Controllers.KubeletCSRApprover = KubeletCSRApproverControllerConfig{
 				Enabled:         true,
-				ConcurrentSyncs: pointer.Int(2),
+				ConcurrentSyncs: ptr.To(2),
 			}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
@@ -295,7 +295,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 		It("should not overwrite already set values for NetworkPolicyConfig", func() {
 			obj.Controllers.NetworkPolicy = NetworkPolicyControllerConfig{
 				Enabled:         true,
-				ConcurrentSyncs: pointer.Int(6),
+				ConcurrentSyncs: ptr.To(6),
 			}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
@@ -316,7 +316,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 
 		It("should not overwrite already set values for HealthControllerConfig", func() {
 			obj.Controllers.Health = HealthControllerConfig{
-				ConcurrentSyncs: pointer.Int(1),
+				ConcurrentSyncs: ptr.To(1),
 				SyncPeriod:      &metav1.Duration{Duration: time.Second},
 			}
 
@@ -341,10 +341,10 @@ var _ = Describe("ResourceManager defaulting", func() {
 
 		It("should not overwrite already set values for ManagedResourceControllerConfig", func() {
 			obj.Controllers.ManagedResource = ManagedResourceControllerConfig{
-				ConcurrentSyncs:     pointer.Int(1),
+				ConcurrentSyncs:     ptr.To(1),
 				SyncPeriod:          &metav1.Duration{Duration: time.Second},
-				AlwaysUpdate:        pointer.Bool(true),
-				ManagedByLabelValue: pointer.String("foo"),
+				AlwaysUpdate:        ptr.To(true),
+				ManagedByLabelValue: ptr.To("foo"),
 			}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
@@ -367,7 +367,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 
 		It("should not overwrite already set values for SecretControllerConfig", func() {
 			obj.Controllers.Secret = SecretControllerConfig{
-				ConcurrentSyncs: pointer.Int(1),
+				ConcurrentSyncs: ptr.To(1),
 			}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
@@ -398,7 +398,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 		It("should not overwrite already set values for TokenInvalidatorControllerConfig", func() {
 			obj.Controllers.TokenInvalidator = TokenInvalidatorControllerConfig{
 				Enabled:         true,
-				ConcurrentSyncs: pointer.Int(2),
+				ConcurrentSyncs: ptr.To(2),
 			}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
@@ -429,7 +429,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 		It("should not overwrite already set values for TokenRequestorControllerConfig", func() {
 			obj.Controllers.TokenRequestor = TokenRequestorControllerConfig{
 				Enabled:         true,
-				ConcurrentSyncs: pointer.Int(2),
+				ConcurrentSyncs: ptr.To(2),
 			}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
@@ -461,7 +461,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 		It("should not overwrite already set values for NodeControllerConfig", func() {
 			obj.Controllers.Node = NodeControllerConfig{
 				Enabled:         true,
-				ConcurrentSyncs: pointer.Int(2),
+				ConcurrentSyncs: ptr.To(2),
 				Backoff:         &metav1.Duration{Duration: time.Minute},
 			}
 
@@ -494,7 +494,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 		It("should not overwrite already set values for PodSchedulerNameWebhookConfig", func() {
 			obj.Webhooks.PodSchedulerName = PodSchedulerNameWebhookConfig{
 				Enabled:       true,
-				SchedulerName: pointer.String("foo"),
+				SchedulerName: ptr.To("foo"),
 			}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
@@ -525,7 +525,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 		It("should not overwrite already set values for ProjectedTokenMountWebhookConfig", func() {
 			obj.Webhooks.ProjectedTokenMount = ProjectedTokenMountWebhookConfig{
 				Enabled:           true,
-				ExpirationSeconds: pointer.Int64(1234),
+				ExpirationSeconds: ptr.To(int64(1234)),
 			}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)

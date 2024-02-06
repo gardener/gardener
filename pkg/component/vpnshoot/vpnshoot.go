@@ -34,7 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -276,7 +276,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 				Namespace: metav1.NamespaceSystem,
 				Labels:    getLabels(),
 			},
-			AutomountServiceAccountToken: pointer.Bool(false),
+			AutomountServiceAccountToken: ptr.To(false),
 		}
 
 		networkPolicy = &networkingv1.NetworkPolicy{
@@ -521,7 +521,7 @@ func (v *vpnShoot) podTemplate(serviceAccount *corev1.ServiceAccount, secrets []
 			},
 		},
 		Spec: corev1.PodSpec{
-			AutomountServiceAccountToken: pointer.Bool(false),
+			AutomountServiceAccountToken: ptr.To(false),
 			ServiceAccountName:           serviceAccount.Name,
 			PriorityClassName:            "system-cluster-critical",
 			DNSPolicy:                    corev1.DNSDefault,
@@ -557,7 +557,7 @@ func (v *vpnShoot) container(secrets []vpnSecret, index *int) *corev1.Container 
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Env:             v.getEnvVars(index),
 		SecurityContext: &corev1.SecurityContext{
-			Privileged: pointer.Bool(false),
+			Privileged: ptr.To(false),
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{"NET_ADMIN"},
 			},
@@ -587,8 +587,8 @@ func (v *vpnShoot) deployment(labels map[string]string, template *corev1.PodTemp
 			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpec{
-			RevisionHistoryLimit: pointer.Int32(2),
-			Replicas:             pointer.Int32(int32(replicas)),
+			RevisionHistoryLimit: ptr.To(int32(2)),
+			Replicas:             ptr.To(int32(replicas)),
 			Strategy: appsv1.DeploymentStrategy{
 				Type: appsv1.RollingUpdateDeploymentStrategyType,
 				RollingUpdate: &appsv1.RollingUpdateDeployment{
@@ -614,8 +614,8 @@ func (v *vpnShoot) statefulSet(labels map[string]string, template *corev1.PodTem
 		},
 		Spec: appsv1.StatefulSetSpec{
 			PodManagementPolicy:  appsv1.ParallelPodManagement,
-			RevisionHistoryLimit: pointer.Int32(2),
-			Replicas:             pointer.Int32(int32(replicas)),
+			RevisionHistoryLimit: ptr.To(int32(2)),
+			Replicas:             ptr.To(int32(replicas)),
 			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
 				Type: appsv1.RollingUpdateStatefulSetStrategyType,
 			},
@@ -743,7 +743,7 @@ func (v *vpnShoot) getVolumes(secret []vpnSecret, secretCA, secretTLSAuth *corev
 			Name: item.volumeName,
 			VolumeSource: corev1.VolumeSource{
 				Projected: &corev1.ProjectedVolumeSource{
-					DefaultMode: pointer.Int32(0400),
+					DefaultMode: ptr.To(int32(0400)),
 					Sources: []corev1.VolumeProjection{
 						{
 							Secret: &corev1.SecretProjection{
@@ -783,7 +783,7 @@ func (v *vpnShoot) getVolumes(secret []vpnSecret, secretCA, secretTLSAuth *corev
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
 				SecretName:  secretTLSAuth.Name,
-				DefaultMode: pointer.Int32(0400),
+				DefaultMode: ptr.To(int32(0400)),
 			},
 		},
 	})
@@ -824,7 +824,7 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 			},
 		},
 		SecurityContext: &corev1.SecurityContext{
-			Privileged: pointer.Bool(true),
+			Privileged: ptr.To(true),
 		},
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{

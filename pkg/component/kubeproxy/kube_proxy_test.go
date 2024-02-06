@@ -26,7 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -777,7 +777,7 @@ status: {}
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-						KeepObjects:  pointer.Bool(false),
+						KeepObjects:  ptr.To(false),
 					},
 				}
 
@@ -789,7 +789,7 @@ status: {}
 					"component": "kube-proxy",
 					"origin":    "gardener",
 				}))
-				Expect(managedResourceSecretCentral.Immutable).To(Equal(pointer.Bool(true)))
+				Expect(managedResourceSecretCentral.Immutable).To(Equal(ptr.To(true)))
 				Expect(string(managedResourceSecretCentral.Data["serviceaccount__kube-system__kube-proxy.yaml"])).To(Equal(serviceAccountYAML))
 				Expect(string(managedResourceSecretCentral.Data["clusterrolebinding____gardener.cloud_target_node-proxier.yaml"])).To(Equal(clusterRoleBindingYAML))
 				Expect(string(managedResourceSecretCentral.Data["service__kube-system__kube-proxy.yaml"])).To(Equal(serviceYAML))
@@ -827,7 +827,7 @@ status: {}
 						},
 						Spec: resourcesv1alpha1.ManagedResourceSpec{
 							InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-							KeepObjects:  pointer.Bool(false),
+							KeepObjects:  ptr.To(false),
 						},
 					}
 
@@ -835,7 +835,7 @@ status: {}
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 					Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 					Expect(managedResourceSecret.Data).To(HaveLen(1))
-					Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+					Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 					Expect(managedResourceSecret.Labels).To(Equal(map[string]string{
 						"resources.gardener.cloud/garbage-collectable-reference": "true",
 						"component":          "kube-proxy",
@@ -902,7 +902,7 @@ status: {}
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-					KeepObjects:  pointer.Bool(false),
+					KeepObjects:  ptr.To(false),
 				},
 			}
 
@@ -913,7 +913,7 @@ status: {}
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretCentral), managedResourceSecretCentral)).To(Succeed())
 			Expect(managedResourceSecretCentral.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecretCentral.Immutable).To(Equal(pointer.Bool(true)))
+			Expect(managedResourceSecretCentral.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecretCentral.Labels).To(Equal(map[string]string{
 				"resources.gardener.cloud/garbage-collectable-reference": "true",
 				"component": "kube-proxy",
@@ -950,7 +950,7 @@ status: {}
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-						KeepObjects:  pointer.Bool(false),
+						KeepObjects:  ptr.To(false),
 					},
 				}
 
@@ -970,7 +970,7 @@ status: {}
 					"resources.gardener.cloud/garbage-collectable-reference": "true",
 					"role": "pool",
 				}))
-				Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 				Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled, versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion))))
 				poolExpectedMr.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}}
 				utilruntime.Must(references.InjectAnnotations(poolExpectedMr))
@@ -998,7 +998,7 @@ status: {}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecret.Data).To(HaveLen(1))
-				Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecret.Labels).To(Equal(map[string]string{
 					"resources.gardener.cloud/garbage-collectable-reference": "true",
 					"component":          "kube-proxy",
@@ -1029,14 +1029,14 @@ status: {}
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 						SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}},
-						KeepObjects:  pointer.Bool(false),
+						KeepObjects:  ptr.To(false),
 					},
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedMr))
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 				Expect(managedResourceSecret.Data).To(HaveLen(1))
 				Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled, versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion))))
@@ -1068,7 +1068,7 @@ status: {}
 						SecretRefs: []corev1.LocalObjectReference{{
 							Name: managedResourceForMajorMinorVersionOnly.Spec.SecretRefs[0].Name,
 						}},
-						KeepObjects: pointer.Bool(false),
+						KeepObjects: ptr.To(false),
 					},
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedMrForMajorMinorVersionOnly))
@@ -1077,7 +1077,7 @@ status: {}
 				managedResourceSecretForMajorMinorVersionOnly.Name = managedResourceForMajorMinorVersionOnly.Spec.SecretRefs[0].Name
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretForMajorMinorVersionOnly), managedResourceSecretForMajorMinorVersionOnly)).To(Succeed())
 				Expect(managedResourceSecretForMajorMinorVersionOnly.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretForMajorMinorVersionOnly.Immutable).To(Equal(pointer.Bool(true)))
+				Expect(managedResourceSecretForMajorMinorVersionOnly.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecretForMajorMinorVersionOnly.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 				Expect(managedResourceSecretForMajorMinorVersionOnly.Data).To(HaveLen(1))
 				Expect(string(managedResourceSecretForMajorMinorVersionOnly.Data["verticalpodautoscaler__kube-system__"+vpaNameFor(pool)+".yaml"])).To(Equal(vpaYAMLFor(pool)))

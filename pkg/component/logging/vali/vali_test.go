@@ -34,7 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -174,11 +174,11 @@ var _ = Describe("Vali", func() {
 					ResourceVersion: "1",
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: pointer.String("seed"),
+					Class: ptr.To("seed"),
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: pointer.Bool(false),
+					KeepObjects: ptr.To(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -188,7 +188,7 @@ var _ = Describe("Vali", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Data).To(HaveLen(6))
-			Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__"+telegrafConfigMapName+".yaml"])).To(Equal(test.Serialize(getTelegrafConfigMap())))
@@ -215,7 +215,7 @@ var _ = Describe("Vali", func() {
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResourceTarget.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: pointer.Bool(false),
+					KeepObjects: ptr.To(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedTargetMr))
@@ -225,7 +225,7 @@ var _ = Describe("Vali", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretTarget), managedResourceSecretTarget)).To(Succeed())
 			Expect(managedResourceSecretTarget.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecretTarget.Data).To(HaveLen(3))
-			Expect(managedResourceSecretTarget.Immutable).To(Equal(pointer.Bool(true)))
+			Expect(managedResourceSecretTarget.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecretTarget.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			Expect(string(managedResourceSecretTarget.Data["clusterrolebinding____gardener.cloud_logging_kube-rbac-proxy.yaml"])).To(Equal(test.Serialize(getKubeRBACProxyClusterRoleBinding())))
@@ -281,11 +281,11 @@ var _ = Describe("Vali", func() {
 					ResourceVersion: "1",
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: pointer.String("seed"),
+					Class: ptr.To("seed"),
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: pointer.Bool(false),
+					KeepObjects: ptr.To(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -295,7 +295,7 @@ var _ = Describe("Vali", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Data).To(HaveLen(4))
-			Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__"+valiConfigMapName+".yaml"])).To(Equal(test.Serialize(getValiConfigMap())))
@@ -337,11 +337,11 @@ var _ = Describe("Vali", func() {
 					ResourceVersion: "1",
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: pointer.String("seed"),
+					Class: ptr.To("seed"),
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: pointer.Bool(false),
+					KeepObjects: ptr.To(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -351,7 +351,7 @@ var _ = Describe("Vali", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Data).To(HaveLen(3))
-			Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__"+valiConfigMapName+".yaml"])).To(Equal(test.Serialize(getValiConfigMap())))
@@ -400,7 +400,7 @@ var _ = Describe("Vali", func() {
 					Generation: 2,
 				},
 				Spec: appsv1.StatefulSetSpec{
-					Replicas: pointer.Int32(0),
+					Replicas: ptr.To(int32(0)),
 				},
 				Status: appsv1.StatefulSetStatus{
 					ObservedGeneration: 2,
@@ -990,7 +990,7 @@ func getHVPA(isRBACProxyEnabled bool) *hvpav1alpha1.Hvpa {
 			Labels:    getLabels(),
 		},
 		Spec: hvpav1alpha1.HvpaSpec{
-			Replicas: pointer.Int32(1),
+			Replicas: ptr.To(int32(1)),
 			MaintenanceTimeWindow: &hvpav1alpha1.MaintenanceTimeWindow{
 				Begin: maintenanceBegin,
 				End:   maintenanceEnd,
@@ -1009,21 +1009,21 @@ func getHVPA(isRBACProxyEnabled bool) *hvpav1alpha1.Hvpa {
 						},
 					},
 					Spec: hvpav1alpha1.HpaTemplateSpec{
-						MinReplicas: pointer.Int32(1),
+						MinReplicas: ptr.To(int32(1)),
 						MaxReplicas: 1,
 						Metrics: []autoscalingv2beta1.MetricSpec{
 							{
 								Type: "Resource",
 								Resource: &autoscalingv2beta1.ResourceMetricSource{
 									Name:                     "cpu",
-									TargetAverageUtilization: pointer.Int32(80),
+									TargetAverageUtilization: ptr.To(int32(80)),
 								},
 							},
 							{
 								Type: "Resource",
 								Resource: &autoscalingv2beta1.ResourceMetricSource{
 									Name:                     "memory",
-									TargetAverageUtilization: pointer.Int32(80),
+									TargetAverageUtilization: ptr.To(int32(80)),
 								},
 							},
 						},
@@ -1039,44 +1039,44 @@ func getHVPA(isRBACProxyEnabled bool) *hvpav1alpha1.Hvpa {
 				Deploy: true,
 				ScaleUp: hvpav1alpha1.ScaleType{
 					UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-						UpdateMode: pointer.String("Auto"),
+						UpdateMode: ptr.To("Auto"),
 					},
-					StabilizationDuration: pointer.String("5m"),
+					StabilizationDuration: ptr.To("5m"),
 					MinChange: hvpav1alpha1.ScaleParams{
 						CPU: hvpav1alpha1.ChangeParams{
-							Value:      pointer.String("100m"),
-							Percentage: pointer.Int32(80),
+							Value:      ptr.To("100m"),
+							Percentage: ptr.To(int32(80)),
 						},
 						Memory: hvpav1alpha1.ChangeParams{
-							Value:      pointer.String("300M"),
-							Percentage: pointer.Int32(80),
+							Value:      ptr.To("300M"),
+							Percentage: ptr.To(int32(80)),
 						},
 					},
 				},
 				ScaleDown: hvpav1alpha1.ScaleType{
 					UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-						UpdateMode: pointer.String("MaintenanceWindow"),
+						UpdateMode: ptr.To("MaintenanceWindow"),
 					},
-					StabilizationDuration: pointer.String("168h"),
+					StabilizationDuration: ptr.To("168h"),
 					MinChange: hvpav1alpha1.ScaleParams{
 						CPU: hvpav1alpha1.ChangeParams{
-							Value:      pointer.String("200m"),
-							Percentage: pointer.Int32(80),
+							Value:      ptr.To("200m"),
+							Percentage: ptr.To(int32(80)),
 						},
 						Memory: hvpav1alpha1.ChangeParams{
-							Value:      pointer.String("500M"),
-							Percentage: pointer.Int32(80),
+							Value:      ptr.To("500M"),
+							Percentage: ptr.To(int32(80)),
 						},
 					},
 				},
 				LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
 					CPU: hvpav1alpha1.ChangeParams{
-						Value:      pointer.String("300m"),
-						Percentage: pointer.Int32(40),
+						Value:      ptr.To("300m"),
+						Percentage: ptr.To(int32(40)),
 					},
 					Memory: hvpav1alpha1.ChangeParams{
-						Value:      pointer.String("1G"),
-						Percentage: pointer.Int32(40),
+						Value:      ptr.To("1G"),
+						Percentage: ptr.To(int32(40)),
 					},
 				},
 				Template: hvpav1alpha1.VpaTemplate{
@@ -1156,7 +1156,7 @@ func getIngress() *networkingv1.Ingress {
 			Labels:    getLabels(),
 		},
 		Spec: networkingv1.IngressSpec{
-			IngressClassName: pointer.String("nginx-ingress-gardener"),
+			IngressClassName: ptr.To("nginx-ingress-gardener"),
 			TLS: []networkingv1.IngressTLS{
 				{
 					SecretName: "vali-tls",
@@ -1199,7 +1199,7 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 			Labels:    getLabels(),
 		},
 		Spec: appsv1.StatefulSetSpec{
-			Replicas: pointer.Int32(1),
+			Replicas: ptr.To(int32(1)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: getLabels(),
 			},
@@ -1209,9 +1209,9 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 				},
 				Spec: corev1.PodSpec{
 					PriorityClassName:            priorityClassName,
-					AutomountServiceAccountToken: pointer.Bool(false),
+					AutomountServiceAccountToken: ptr.To(false),
 					SecurityContext: &corev1.PodSecurityContext{
-						FSGroup:             pointer.Int64(10001),
+						FSGroup:             ptr.To(int64(10001)),
 						FSGroupChangePolicy: &fsGroupChangeOnRootMismatch,
 					},
 					InitContainers: []corev1.Container{
@@ -1224,10 +1224,10 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 								"/vali-init.sh || true",
 							},
 							SecurityContext: &corev1.SecurityContext{
-								Privileged:   pointer.Bool(true),
-								RunAsUser:    pointer.Int64(0),
-								RunAsNonRoot: pointer.Bool(false),
-								RunAsGroup:   pointer.Int64(0),
+								Privileged:   ptr.To(true),
+								RunAsUser:    ptr.To(int64(0)),
+								RunAsNonRoot: ptr.To(false),
+								RunAsGroup:   ptr.To(int64(0)),
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -1296,10 +1296,10 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								RunAsUser:              pointer.Int64(10001),
-								RunAsGroup:             pointer.Int64(10001),
-								RunAsNonRoot:           pointer.Bool(true),
-								ReadOnlyRootFilesystem: pointer.Bool(true),
+								RunAsUser:              ptr.To(int64(10001)),
+								RunAsGroup:             ptr.To(int64(10001)),
+								RunAsNonRoot:           ptr.To(true),
+								ReadOnlyRootFilesystem: ptr.To(true),
 							},
 						},
 						{
@@ -1336,10 +1336,10 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								RunAsUser:              pointer.Int64(10001),
-								RunAsGroup:             pointer.Int64(10001),
-								RunAsNonRoot:           pointer.Bool(true),
-								ReadOnlyRootFilesystem: pointer.Bool(true),
+								RunAsUser:              ptr.To(int64(10001)),
+								RunAsGroup:             ptr.To(int64(10001)),
+								RunAsNonRoot:           ptr.To(true),
+								ReadOnlyRootFilesystem: ptr.To(true),
 							},
 						},
 					},
@@ -1351,7 +1351,7 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: valiConfigMapName,
 									},
-									DefaultMode: pointer.Int32(0520),
+									DefaultMode: ptr.To(int32(0520)),
 								},
 							},
 						},
@@ -1417,10 +1417,10 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 					},
 				},
 				SecurityContext: &corev1.SecurityContext{
-					RunAsUser:              pointer.Int64(65532),
-					RunAsGroup:             pointer.Int64(65534),
-					RunAsNonRoot:           pointer.Bool(true),
-					ReadOnlyRootFilesystem: pointer.Bool(true),
+					RunAsUser:              ptr.To(int64(65532)),
+					RunAsGroup:             ptr.To(int64(65534)),
+					RunAsNonRoot:           ptr.To(true),
+					ReadOnlyRootFilesystem: ptr.To(true),
 				},
 			},
 			{
@@ -1490,7 +1490,7 @@ wait
 				Name: "kubeconfig",
 				VolumeSource: corev1.VolumeSource{
 					Projected: &corev1.ProjectedVolumeSource{
-						DefaultMode: pointer.Int32(420),
+						DefaultMode: ptr.To(int32(420)),
 						Sources: []corev1.VolumeProjection{
 							{
 								Secret: &corev1.SecretProjection{
@@ -1503,7 +1503,7 @@ wait
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: "generic-token-kubeconfig",
 									},
-									Optional: pointer.Bool(false),
+									Optional: ptr.To(false),
 								},
 							},
 							{
@@ -1517,7 +1517,7 @@ wait
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: "shoot-access-kube-rbac-proxy",
 									},
-									Optional: pointer.Bool(false),
+									Optional: ptr.To(false),
 								},
 							},
 						},

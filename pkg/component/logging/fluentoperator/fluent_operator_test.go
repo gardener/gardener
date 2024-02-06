@@ -29,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -94,7 +94,7 @@ var _ = Describe("Fluent Operator", func() {
 					v1beta1constants.GardenRole: v1beta1constants.GardenRoleLogging,
 				},
 			},
-			AutomountServiceAccountToken: pointer.Bool(false),
+			AutomountServiceAccountToken: ptr.To(false),
 		}
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
@@ -216,8 +216,8 @@ var _ = Describe("Fluent Operator", func() {
 				},
 			},
 			Spec: appsv1.DeploymentSpec{
-				RevisionHistoryLimit: pointer.Int32(2),
-				Replicas:             pointer.Int32(1),
+				RevisionHistoryLimit: ptr.To(int32(2)),
+				Replicas:             ptr.To(int32(1)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						v1beta1constants.LabelApp:   name,
@@ -346,11 +346,11 @@ var _ = Describe("Fluent Operator", func() {
 					ResourceVersion: "1",
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: pointer.String("seed"),
+					Class: ptr.To("seed"),
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: operatorManagedResource.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: pointer.Bool(false),
+					KeepObjects: ptr.To(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -360,7 +360,7 @@ var _ = Describe("Fluent Operator", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(operatorManagedResourceSecret), operatorManagedResourceSecret)).To(Succeed())
 			Expect(operatorManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(operatorManagedResourceSecret.Data).To(HaveLen(7))
-			Expect(operatorManagedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+			Expect(operatorManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(operatorManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			Expect(string(operatorManagedResourceSecret.Data["serviceaccount__"+namespace+"__fluent-operator.yaml"])).To(Equal(componenttest.Serialize(serviceAccount)))

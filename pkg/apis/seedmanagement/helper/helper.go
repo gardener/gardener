@@ -22,14 +22,6 @@ import (
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 )
 
-// GetBootstrap returns the value of the given Bootstrap, or None if nil.
-func GetBootstrap(bootstrap *seedmanagement.Bootstrap) seedmanagement.Bootstrap {
-	if bootstrap != nil {
-		return *bootstrap
-	}
-	return seedmanagement.BootstrapNone
-}
-
 // ExtractSeedSpec extracts the seed spec from the ManagedSeed.
 func ExtractSeedSpec(managedSeed *seedmanagement.ManagedSeed) (*gardencore.SeedSpec, error) {
 	gardenlet := managedSeed.Spec.Gardenlet

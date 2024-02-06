@@ -20,10 +20,11 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -90,11 +91,11 @@ var _ = Describe("WebhookRemediation", func() {
 		It("should succeed when there are only excluded webhooks", func() {
 			validatingWebhookConfiguration.Webhooks = []admissionregistrationv1.ValidatingWebhook{{
 				Name:           "some-webhook.example.com",
-				TimeoutSeconds: pointer.Int32(30),
+				TimeoutSeconds: ptr.To(int32(30)),
 			}}
 			mutatingWebhookConfiguration.Webhooks = []admissionregistrationv1.MutatingWebhook{{
 				Name:           "some-webhook.example.com",
-				TimeoutSeconds: pointer.Int32(30),
+				TimeoutSeconds: ptr.To(int32(30)),
 			}}
 
 			metav1.SetMetaDataLabel(&validatingWebhookConfiguration.ObjectMeta, "remediation.webhook.shoot.gardener.cloud/exclude", "true")
@@ -115,11 +116,11 @@ var _ = Describe("WebhookRemediation", func() {
 		It("should succeed when there are only Gardener-managed webhooks", func() {
 			validatingWebhookConfiguration.Webhooks = []admissionregistrationv1.ValidatingWebhook{{
 				Name:           "some-webhook.example.com",
-				TimeoutSeconds: pointer.Int32(30),
+				TimeoutSeconds: ptr.To(int32(30)),
 			}}
 			mutatingWebhookConfiguration.Webhooks = []admissionregistrationv1.MutatingWebhook{{
 				Name:           "some-webhook.example.com",
-				TimeoutSeconds: pointer.Int32(30),
+				TimeoutSeconds: ptr.To(int32(30)),
 			}}
 
 			metav1.SetMetaDataLabel(&validatingWebhookConfiguration.ObjectMeta, "resources.gardener.cloud/managed-by", "gardener")
@@ -141,7 +142,7 @@ var _ = Describe("WebhookRemediation", func() {
 			validatingWebhookConfiguration.Webhooks = []admissionregistrationv1.ValidatingWebhook{{
 				Name:           "some-webhook.example.com",
 				FailurePolicy:  &fail,
-				TimeoutSeconds: pointer.Int32(10),
+				TimeoutSeconds: ptr.To(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
 						Rule: admissionregistrationv1.Rule{
@@ -180,7 +181,7 @@ var _ = Describe("WebhookRemediation", func() {
 				It("timeoutSeconds", func() {
 					validatingWebhookConfiguration.Webhooks = []admissionregistrationv1.ValidatingWebhook{{
 						Name:           "some-webhook.example.com",
-						TimeoutSeconds: pointer.Int32(30),
+						TimeoutSeconds: ptr.To(int32(30)),
 					}}
 					Expect(fakeClient.Create(ctx, validatingWebhookConfiguration)).To(Succeed())
 
@@ -188,13 +189,13 @@ var _ = Describe("WebhookRemediation", func() {
 
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(validatingWebhookConfiguration), validatingWebhookConfiguration)).To(Succeed())
 					Expect(validatingWebhookConfiguration.Annotations).To(HaveKey("gardener.cloud/warning"))
-					Expect(validatingWebhookConfiguration.Webhooks[0].TimeoutSeconds).To(Equal(pointer.Int32(15)))
+					Expect(validatingWebhookConfiguration.Webhooks[0].TimeoutSeconds).To(PointTo(Equal(int32(15))))
 				})
 
 				It("timeoutSeconds when failurePolicy=Ignore", func() {
 					validatingWebhookConfiguration.Webhooks = []admissionregistrationv1.ValidatingWebhook{{
 						Name:           "some-webhook.example.com",
-						TimeoutSeconds: pointer.Int32(30),
+						TimeoutSeconds: ptr.To(int32(30)),
 						FailurePolicy:  &ignore,
 					}}
 					Expect(fakeClient.Create(ctx, validatingWebhookConfiguration)).To(Succeed())
@@ -203,7 +204,7 @@ var _ = Describe("WebhookRemediation", func() {
 
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(validatingWebhookConfiguration), validatingWebhookConfiguration)).To(Succeed())
 					Expect(validatingWebhookConfiguration.Annotations).To(HaveKey("gardener.cloud/warning"))
-					Expect(validatingWebhookConfiguration.Webhooks[0].TimeoutSeconds).To(Equal(pointer.Int32(15)))
+					Expect(validatingWebhookConfiguration.Webhooks[0].TimeoutSeconds).To(PointTo(Equal(int32(15))))
 				})
 
 				It("failurePolicy", func() {
@@ -348,7 +349,7 @@ var _ = Describe("WebhookRemediation", func() {
 				It("timeoutSeconds", func() {
 					mutatingWebhookConfiguration.Webhooks = []admissionregistrationv1.MutatingWebhook{{
 						Name:           "some-webhook.example.com",
-						TimeoutSeconds: pointer.Int32(30),
+						TimeoutSeconds: ptr.To(int32(30)),
 					}}
 					Expect(fakeClient.Create(ctx, mutatingWebhookConfiguration)).To(Succeed())
 
@@ -356,14 +357,14 @@ var _ = Describe("WebhookRemediation", func() {
 
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mutatingWebhookConfiguration), mutatingWebhookConfiguration)).To(Succeed())
 					Expect(mutatingWebhookConfiguration.Annotations).To(HaveKey("gardener.cloud/warning"))
-					Expect(mutatingWebhookConfiguration.Webhooks[0].TimeoutSeconds).To(Equal(pointer.Int32(15)))
+					Expect(mutatingWebhookConfiguration.Webhooks[0].TimeoutSeconds).To(PointTo(Equal(int32(15))))
 				})
 
 				It("timeoutSeconds when failurePolicy=Ignore", func() {
 					mutatingWebhookConfiguration.Webhooks = []admissionregistrationv1.MutatingWebhook{
 						{
 							Name:           "some-webhook1.example.com",
-							TimeoutSeconds: pointer.Int32(30),
+							TimeoutSeconds: ptr.To(int32(30)),
 							FailurePolicy:  &ignore,
 						},
 					}
@@ -373,14 +374,14 @@ var _ = Describe("WebhookRemediation", func() {
 
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mutatingWebhookConfiguration), mutatingWebhookConfiguration)).To(Succeed())
 					Expect(mutatingWebhookConfiguration.Annotations).To(HaveKey("gardener.cloud/warning"))
-					Expect(mutatingWebhookConfiguration.Webhooks[0].TimeoutSeconds).To(Equal(pointer.Int32(15)))
+					Expect(mutatingWebhookConfiguration.Webhooks[0].TimeoutSeconds).To(PointTo(Equal(int32(15))))
 				})
 
 				It("timeoutSeconds when failurePolicy=Ignore for lease resource", func() {
 					mutatingWebhookConfiguration.Webhooks = []admissionregistrationv1.MutatingWebhook{
 						{
 							Name:           "some-webhook1.example.com",
-							TimeoutSeconds: pointer.Int32(10),
+							TimeoutSeconds: ptr.To(int32(10)),
 							FailurePolicy:  &ignore,
 							ObjectSelector: &metav1.LabelSelector{
 								MatchLabels: map[string]string{
@@ -402,7 +403,7 @@ var _ = Describe("WebhookRemediation", func() {
 						},
 						{
 							Name:           "some-webhook2.example.com",
-							TimeoutSeconds: pointer.Int32(10),
+							TimeoutSeconds: ptr.To(int32(10)),
 							FailurePolicy:  &ignore,
 							Rules: []admissionregistrationv1.RuleWithOperations{
 								{
@@ -419,7 +420,7 @@ var _ = Describe("WebhookRemediation", func() {
 						},
 						{
 							Name:           "some-webhook3.example.com",
-							TimeoutSeconds: pointer.Int32(1),
+							TimeoutSeconds: ptr.To(int32(1)),
 							FailurePolicy:  &ignore,
 							Rules: []admissionregistrationv1.RuleWithOperations{
 								{
@@ -441,9 +442,9 @@ var _ = Describe("WebhookRemediation", func() {
 
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mutatingWebhookConfiguration), mutatingWebhookConfiguration)).To(Succeed())
 					Expect(mutatingWebhookConfiguration.Annotations).To(HaveKey("gardener.cloud/warning"))
-					Expect(mutatingWebhookConfiguration.Webhooks[0].TimeoutSeconds).To(Equal(pointer.Int32(10)))
-					Expect(mutatingWebhookConfiguration.Webhooks[1].TimeoutSeconds).To(Equal(pointer.Int32(3)))
-					Expect(mutatingWebhookConfiguration.Webhooks[2].TimeoutSeconds).To(Equal(pointer.Int32(1)))
+					Expect(mutatingWebhookConfiguration.Webhooks[0].TimeoutSeconds).To(PointTo(Equal(int32(10))))
+					Expect(mutatingWebhookConfiguration.Webhooks[1].TimeoutSeconds).To(PointTo(Equal(int32(3))))
+					Expect(mutatingWebhookConfiguration.Webhooks[2].TimeoutSeconds).To(PointTo(Equal(int32(1))))
 				})
 
 				It("failurePolicy", func() {

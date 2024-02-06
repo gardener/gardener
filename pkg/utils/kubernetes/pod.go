@@ -17,6 +17,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	appsv1 "k8s.io/api/apps/v1"
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
@@ -28,8 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/gardener/gardener/pkg/utils"
 )
 
 // VisitPodSpec calls the given visitor for the PodSpec contained in the given object. The visitor may mutate the
@@ -84,7 +83,7 @@ func VisitPodSpec(obj runtime.Object, visit func(*corev1.PodSpec)) error {
 func VisitContainers(podSpec *corev1.PodSpec, visit func(*corev1.Container), containerNames ...string) {
 	for i, c := range podSpec.InitContainers {
 		container := c
-		if len(containerNames) == 0 || utils.ValueExists(container.Name, containerNames) {
+		if len(containerNames) == 0 || slices.Contains(containerNames, container.Name) {
 			visit(&container)
 			podSpec.InitContainers[i] = container
 		}
@@ -92,7 +91,7 @@ func VisitContainers(podSpec *corev1.PodSpec, visit func(*corev1.Container), con
 
 	for i, c := range podSpec.Containers {
 		container := c
-		if len(containerNames) == 0 || utils.ValueExists(container.Name, containerNames) {
+		if len(containerNames) == 0 || slices.Contains(containerNames, container.Name) {
 			visit(&container)
 			podSpec.Containers[i] = container
 		}

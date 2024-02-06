@@ -18,15 +18,12 @@ import (
 	"fmt"
 	"net"
 	"strings"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gstruct"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -90,7 +87,7 @@ var _ = Describe("utils", func() {
 			Expect(IDForKeyWithOptionalValue(key, value)).To(Equal(expectation))
 		},
 		Entry("only key", "foo", nil, "foo"),
-		Entry("key and value", "foo", pointer.String("bar"), "foo=bar"),
+		Entry("key and value", "foo", ptr.To("bar"), "foo=bar"),
 	)
 
 	Describe("#Indent", func() {
@@ -133,18 +130,6 @@ baz`, spaces)).To(Equal(`foo
 		Entry("condition is false", false, "false"),
 	)
 
-	Describe("#QuantityPtr", func() {
-		It("should return a pointer", func() {
-			Expect(QuantityPtr(resource.MustParse("64Gi"))).Should(Equal(resource.NewQuantity(68719476736, resource.BinarySI)))
-		})
-	})
-
-	Describe("#ProtocolPtr", func() {
-		It("should return a pointer", func() {
-			Expect(ProtocolPtr(corev1.ProtocolTCP)).Should(gstruct.PointTo(Equal(corev1.ProtocolTCP)))
-		})
-	})
-
 	Describe("#IntStrPtrFromInt32", func() {
 		It("should return a pointer", func() {
 			Expect(IntStrPtrFromInt32(1234)).Should(gstruct.PointTo(Equal(intstr.FromInt32(1234))))
@@ -154,26 +139,6 @@ baz`, spaces)).To(Equal(`foo
 	Describe("#IntStrPtrFromString", func() {
 		It("should return a pointer", func() {
 			Expect(IntStrPtrFromString("foo")).Should(gstruct.PointTo(Equal(intstr.FromString("foo"))))
-		})
-	})
-
-	Describe("#TimePtr", func() {
-		It("should return a pointer", func() {
-			now := time.Now()
-			Expect(TimePtr(now)).Should(gstruct.PointTo(Equal(now)))
-		})
-	})
-
-	Describe("#TimePtrDeref", func() {
-		now := time.Now()
-		def := now.Add(-time.Second)
-
-		It("should return the pointer", func() {
-			Expect(TimePtrDeref(&now, def)).Should(Equal(now))
-		})
-
-		It("should return the default", func() {
-			Expect(TimePtrDeref(nil, def)).Should(Equal(def))
 		})
 	})
 

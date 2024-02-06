@@ -25,7 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -98,7 +98,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	Expect((&networkpolicy.Reconciler{
 		Config: config.NetworkPolicyControllerConfig{
-			ConcurrentSyncs:    pointer.Int(5),
+			ConcurrentSyncs:    ptr.To(5),
 			NamespaceSelectors: []metav1.LabelSelector{{MatchLabels: map[string]string{testID: testRunID}}},
 			IngressControllerSelector: &config.IngressControllerSelector{
 				Namespace:   ingressControllerNamespace,

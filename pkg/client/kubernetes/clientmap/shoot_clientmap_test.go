@@ -29,7 +29,7 @@ import (
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	componentbaseconfig "k8s.io/component-base/config"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -70,7 +70,7 @@ var _ = Describe("ShootClientMap", func() {
 				Name:      "forbidden-fruit",
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SeedName: pointer.String("apple-seed"),
+				SeedName: ptr.To("apple-seed"),
 			},
 			Status: gardencorev1beta1.ShootStatus{
 				TechnicalID: "shoot--eden--forbidden-fruit",
@@ -83,7 +83,7 @@ var _ = Describe("ShootClientMap", func() {
 					Name: "eden",
 				},
 				Spec: gardencorev1beta1.ProjectSpec{
-					Namespace: pointer.String("garden-eden"),
+					Namespace: ptr.To("garden-eden"),
 				}}, nil
 		}
 		LookupHost = func(host string) ([]string, error) {

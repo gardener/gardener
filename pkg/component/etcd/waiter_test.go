@@ -29,7 +29,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -99,7 +99,7 @@ var _ = Describe("#Wait", func() {
 				Begin: "1234",
 				End:   "5678",
 			},
-			ScaleDownUpdateMode: pointer.String(hvpav1alpha1.UpdateModeMaintenanceWindow),
+			ScaleDownUpdateMode: ptr.To(hvpav1alpha1.UpdateModeMaintenanceWindow),
 		})
 
 		expected = &druidv1alpha1.Etcd{
@@ -133,7 +133,7 @@ var _ = Describe("#Wait", func() {
 			&TimeNow, mockNow.Do,
 		)()
 		mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
-		expected.Status.LastError = pointer.String("some error")
+		expected.Status.LastError = ptr.To("some error")
 
 		Expect(c.Create(ctx, expected)).To(Succeed(), "creating etcd succeeds")
 		Expect(etcd.Wait(ctx)).To(MatchError(ContainSubstring("some error")))
@@ -156,7 +156,7 @@ var _ = Describe("#Wait", func() {
 		expected.ObjectMeta.Annotations = map[string]string{
 			v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
 		}
-		expected.Status.Ready = pointer.Bool(true)
+		expected.Status.Ready = ptr.To(true)
 		Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching etcd succeeds")
 
 		By("Wait")
@@ -176,13 +176,13 @@ var _ = Describe("#Wait", func() {
 		By("Patch object")
 		delete(expected.Annotations, v1beta1constants.GardenerTimestamp)
 		patch := client.MergeFrom(expected.DeepCopy())
-		expected.Status.ObservedGeneration = pointer.Int64(0)
+		expected.Status.ObservedGeneration = ptr.To(int64(0))
 		expected.Status.LastError = nil
 		// remove operation annotation, add up-to-date timestamp annotation
 		expected.ObjectMeta.Annotations = map[string]string{
 			v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 		}
-		expected.Status.Ready = pointer.Bool(true)
+		expected.Status.Ready = ptr.To(true)
 		Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching etcd succeeds")
 
 		By("Wait")
@@ -204,7 +204,7 @@ var _ = Describe("#CheckEtcdObject", func() {
 	})
 
 	It("should return error if reconciliation failed", func() {
-		obj.Status.LastError = pointer.String("foo")
+		obj.Status.LastError = ptr.To("foo")
 		err := CheckEtcdObject(obj)
 		Expect(err).To(MatchError("foo"))
 		Expect(retry.IsRetriable(err)).To(BeTrue())
@@ -222,34 +222,34 @@ var _ = Describe("#CheckEtcdObject", func() {
 
 	It("should return error if observedGeneration is outdated", func() {
 		obj.SetGeneration(1)
-		obj.Status.ObservedGeneration = pointer.Int64(0)
+		obj.Status.ObservedGeneration = ptr.To(int64(0))
 		Expect(CheckEtcdObject(obj)).To(MatchError("observed generation outdated (0/1)"))
 	})
 
 	It("should return error if operation annotation is not removed yet", func() {
 		obj.SetGeneration(1)
-		obj.Status.ObservedGeneration = pointer.Int64(1)
+		obj.Status.ObservedGeneration = ptr.To(int64(1))
 		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, v1beta1constants.GardenerOperation, "reconcile")
 		Expect(CheckEtcdObject(obj)).To(MatchError("gardener operation \"reconcile\" is not yet picked up by etcd-druid"))
 	})
 
 	It("should return error if status.ready==nil", func() {
 		obj.SetGeneration(1)
-		obj.Status.ObservedGeneration = pointer.Int64(1)
+		obj.Status.ObservedGeneration = ptr.To(int64(1))
 		Expect(CheckEtcdObject(obj)).To(MatchError("is not ready yet"))
 	})
 
 	It("should return error if status.ready==false", func() {
 		obj.SetGeneration(1)
-		obj.Status.ObservedGeneration = pointer.Int64(1)
-		obj.Status.Ready = pointer.Bool(false)
+		obj.Status.ObservedGeneration = ptr.To(int64(1))
+		obj.Status.Ready = ptr.To(false)
 		Expect(CheckEtcdObject(obj)).To(MatchError("is not ready yet"))
 	})
 
 	It("should not return error if object is ready", func() {
 		obj.SetGeneration(1)
-		obj.Status.ObservedGeneration = pointer.Int64(1)
-		obj.Status.Ready = pointer.Bool(true)
+		obj.Status.ObservedGeneration = ptr.To(int64(1))
+		obj.Status.Ready = ptr.To(true)
 		obj.Status.Replicas = 3
 		obj.Status.UpdatedReplicas = 3
 		Expect(CheckEtcdObject(obj)).To(Succeed())

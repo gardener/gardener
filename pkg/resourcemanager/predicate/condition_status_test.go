@@ -19,7 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -40,7 +40,7 @@ var _ = Describe("#ConditionStatusChanged", func() {
 	BeforeEach(func() {
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				Class: pointer.String("shoot"),
+				Class: ptr.To("shoot"),
 			},
 		}
 		createEvent = event.CreateEvent{

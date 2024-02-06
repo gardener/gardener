@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	oscutils "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/utils"
@@ -44,11 +44,11 @@ var _ = Describe("ConfigCodec", func() {
 					ClientCAFile: "/var/lib/kubelet/ca.crt",
 				},
 				Webhook: kubeletconfigv1beta1.KubeletWebhookAuthentication{
-					Enabled:  pointer.Bool(true),
+					Enabled:  ptr.To(true),
 					CacheTTL: metav1.Duration{Duration: 2 * time.Minute},
 				},
 				Anonymous: kubeletconfigv1beta1.KubeletAnonymousAuthentication{
-					Enabled: pointer.Bool(false),
+					Enabled: ptr.To(false),
 				},
 			},
 			Authorization: kubeletconfigv1beta1.KubeletAuthorization{
@@ -58,36 +58,36 @@ var _ = Describe("ConfigCodec", func() {
 					CacheUnauthorizedTTL: metav1.Duration{Duration: 30 * time.Second},
 				},
 			},
-			RegistryPullQPS:         pointer.Int32(5),
+			RegistryPullQPS:         ptr.To(int32(5)),
 			RegistryBurst:           10,
-			EventRecordQPS:          pointer.Int32(50),
+			EventRecordQPS:          ptr.To(int32(50)),
 			EventBurst:              50,
-			EnableDebuggingHandlers: pointer.Bool(true),
+			EnableDebuggingHandlers: ptr.To(true),
 			ContainerLogMaxSize:     "100Mi",
-			ContainerLogMaxFiles:    pointer.Int32(10),
+			ContainerLogMaxFiles:    ptr.To(int32(10)),
 			ClusterDomain:           "cluster.local",
 			ClusterDNS: []string{
 				"100.64.0.10",
 			},
 			NodeStatusUpdateFrequency:   metav1.Duration{Duration: 10 * time.Second},
 			ImageMinimumGCAge:           metav1.Duration{Duration: 2 * time.Minute},
-			ImageGCHighThresholdPercent: pointer.Int32(50),
-			ImageGCLowThresholdPercent:  pointer.Int32(40),
+			ImageGCHighThresholdPercent: ptr.To(int32(50)),
+			ImageGCLowThresholdPercent:  ptr.To(int32(40)),
 			VolumeStatsAggPeriod:        metav1.Duration{Duration: 1 * time.Minute},
 			CgroupRoot:                  "/",
-			CgroupsPerQOS:               pointer.Bool(true),
+			CgroupsPerQOS:               ptr.To(true),
 			CgroupDriver:                "cgroupfs",
 			CPUManagerPolicy:            "none",
 			CPUManagerReconcilePeriod:   metav1.Duration{Duration: 10 * time.Second},
 			RuntimeRequestTimeout:       metav1.Duration{Duration: 2 * time.Minute},
 			HairpinMode:                 "promiscuous-bridge",
 			MaxPods:                     110,
-			ResolverConfig:              pointer.String("/etc/resolv.conf"),
-			CPUCFSQuota:                 pointer.Bool(true),
+			ResolverConfig:              ptr.To("/etc/resolv.conf"),
+			CPUCFSQuota:                 ptr.To(true),
 			MaxOpenFiles:                1000000,
-			KubeAPIQPS:                  pointer.Int32(50),
+			KubeAPIQPS:                  ptr.To(int32(50)),
 			KubeAPIBurst:                50,
-			SerializeImagePulls:         pointer.Bool(true),
+			SerializeImagePulls:         ptr.To(true),
 			EvictionHard: map[string]string{
 				"imagefs.available":  "5%",
 				"imagefs.inodesFree": "5%",
@@ -111,8 +111,8 @@ var _ = Describe("ConfigCodec", func() {
 			},
 			EvictionPressureTransitionPeriod: metav1.Duration{Duration: 4 * time.Minute},
 			EvictionMaxPodGracePeriod:        90,
-			EnableControllerAttachDetach:     pointer.Bool(true),
-			FailSwapOn:                       pointer.Bool(true),
+			EnableControllerAttachDetach:     ptr.To(true),
+			FailSwapOn:                       ptr.To(true),
 			KubeReserved: map[string]string{
 				"cpu":    "80m",
 				"memory": "1Gi",

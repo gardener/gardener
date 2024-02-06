@@ -22,7 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -38,7 +38,7 @@ type IdentityDeterminer struct {
 
 // Start determines the identity.
 func (i *IdentityDeterminer) Start(ctx context.Context) error {
-	if clusterID := pointer.StringDeref(i.Config.Controllers.ClusterID, ""); clusterID == "<cluster>" || clusterID == "<default>" {
+	if clusterID := ptr.Deref(i.Config.Controllers.ClusterID, ""); clusterID == "<cluster>" || clusterID == "<default>" {
 		i.Logger.Info("Trying to get cluster id from cluster")
 
 		id, err := i.determineClusterIdentity(ctx, clusterID == "<cluster>")

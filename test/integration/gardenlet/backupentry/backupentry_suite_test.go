@@ -31,7 +31,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/workqueue"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -202,7 +202,7 @@ var _ = BeforeSuite(func() {
 			Networks: gardencorev1beta1.SeedNetworks{
 				Pods:     "10.0.0.0/16",
 				Services: "10.1.0.0/16",
-				Nodes:    pointer.String("10.2.0.0/16"),
+				Nodes:    ptr.To("10.2.0.0/16"),
 			},
 		},
 	}
@@ -244,8 +244,8 @@ var _ = BeforeSuite(func() {
 	Expect((&backupentry.Reconciler{
 		Clock: fakeClock,
 		Config: config.BackupEntryControllerConfiguration{
-			ConcurrentSyncs:                  pointer.Int(5),
-			DeletionGracePeriodHours:         pointer.Int(deletionGracePeriodHours),
+			ConcurrentSyncs:                  ptr.To(5),
+			DeletionGracePeriodHours:         ptr.To(deletionGracePeriodHours),
 			DeletionGracePeriodShootPurposes: []gardencore.ShootPurpose{gardencore.ShootPurposeProduction},
 		},
 		SeedName:        seed.Name,

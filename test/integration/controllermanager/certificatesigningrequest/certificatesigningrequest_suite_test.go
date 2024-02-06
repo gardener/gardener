@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -122,7 +122,7 @@ var _ = BeforeSuite(func() {
 	Expect((&certificatesigningrequestcontroller.Reconciler{
 		CertificatesClient: kubernetesClient.CertificatesV1().CertificateSigningRequests(),
 		Config: config.CertificateSigningRequestControllerConfiguration{
-			ConcurrentSyncs: pointer.Int(5),
+			ConcurrentSyncs: ptr.To(5),
 		},
 	}).AddToManager(mgr)).To(Succeed())
 

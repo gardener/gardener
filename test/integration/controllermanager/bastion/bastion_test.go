@@ -24,7 +24,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -58,7 +58,7 @@ var _ = Describe("Bastion controller tests", func() {
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: kubernetesutils.ObjectMetaFromKey(objectKey),
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: pointer.String("my-provider-account"),
+				SecretBindingName: ptr.To("my-provider-account"),
 				CloudProfileName:  "test-cloudprofile",
 				Region:            "foo-region",
 				Provider: gardencorev1beta1.Provider{
@@ -78,7 +78,7 @@ var _ = Describe("Bastion controller tests", func() {
 					Version: "1.25.1",
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: pointer.String("foo-networking"),
+					Type: ptr.To("foo-networking"),
 				},
 				SeedName: &seedName,
 			},
@@ -178,7 +178,7 @@ var _ = Describe("Bastion controller tests", func() {
 			var err error
 
 			By("Change Shoot's .spec.seedName")
-			shoot.Spec.SeedName = pointer.String("another-seed")
+			shoot.Spec.SeedName = ptr.To("another-seed")
 			err = testClient.SubResource("binding").Update(ctx, shoot)
 			Expect(err).NotTo(HaveOccurred())
 		})

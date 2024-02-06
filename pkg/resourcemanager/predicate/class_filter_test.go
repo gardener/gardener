@@ -23,7 +23,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -65,7 +65,7 @@ var _ = Describe("ClassFilter", func() {
 		mrWithoutFinalizerSameClass = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				Class: pointer.String(""),
+				Class: ptr.To(""),
 			},
 		}
 
@@ -74,7 +74,7 @@ var _ = Describe("ClassFilter", func() {
 				Finalizers: []string{differentFinalizer},
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				Class: pointer.String(""),
+				Class: ptr.To(""),
 			},
 		}
 
@@ -83,7 +83,7 @@ var _ = Describe("ClassFilter", func() {
 				Finalizers: []string{FinalizerName},
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				Class: pointer.String(""),
+				Class: ptr.To(""),
 			},
 		}
 	)

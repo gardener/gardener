@@ -17,7 +17,7 @@ package access
 import (
 	"context"
 
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
@@ -44,7 +44,7 @@ func createShootClientFromDynamicKubeconfig(
 	kubernetes.Interface,
 	error,
 ) {
-	kubeconfig, err := requestFn(ctx, gardenClient, shoot, pointer.Int64(7200))
+	kubeconfig, err := requestFn(ctx, gardenClient, shoot, ptr.To(int64(7200)))
 	if err != nil {
 		return nil, err
 	}

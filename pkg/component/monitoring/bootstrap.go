@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -224,7 +224,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			Organization:                []string{"gardener.cloud:monitoring:ingress"},
 			DNSNames:                    []string{b.values.IngressHost},
 			CertType:                    secretsutils.ServerCert,
-			Validity:                    pointer.Duration(v1beta1constants.IngressTLSCertificateValidity),
+			Validity:                    ptr.To(v1beta1constants.IngressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
 		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCASeed))
 		if err != nil {

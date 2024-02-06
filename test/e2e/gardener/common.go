@@ -21,7 +21,7 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -73,20 +73,20 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 		Spec: gardencorev1beta1.ShootSpec{
 			ControlPlane:      getShootControlPlane(),
 			Region:            "local",
-			SecretBindingName: pointer.String("local"),
+			SecretBindingName: ptr.To("local"),
 			CloudProfileName:  "local",
 			Kubernetes: gardencorev1beta1.Kubernetes{
 				Version:                     "1.29.0",
-				EnableStaticTokenKubeconfig: pointer.Bool(false),
+				EnableStaticTokenKubeconfig: ptr.To(false),
 				Kubelet: &gardencorev1beta1.KubeletConfig{
-					SerializeImagePulls: pointer.Bool(false),
-					RegistryPullQPS:     pointer.Int32(10),
-					RegistryBurst:       pointer.Int32(20),
+					SerializeImagePulls: ptr.To(false),
+					RegistryPullQPS:     ptr.To(int32(10)),
+					RegistryBurst:       ptr.To(int32(20)),
 				},
 				KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
 			},
 			Networking: &gardencorev1beta1.Networking{
-				Type: pointer.String("calico"),
+				Type: ptr.To("calico"),
 			},
 			Provider: gardencorev1beta1.Provider{
 				Type: "local",
@@ -129,7 +129,7 @@ func DefaultWorkerlessShoot(name string) *gardencorev1beta1.Shoot {
 			CloudProfileName: "local",
 			Kubernetes: gardencorev1beta1.Kubernetes{
 				Version:                     "1.29.0",
-				EnableStaticTokenKubeconfig: pointer.Bool(false),
+				EnableStaticTokenKubeconfig: ptr.To(false),
 				KubeAPIServer:               &gardencorev1beta1.KubeAPIServerConfig{},
 			},
 			Provider: gardencorev1beta1.Provider{

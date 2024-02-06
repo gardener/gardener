@@ -21,7 +21,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -244,7 +244,7 @@ func (h *health) checkObservabilityComponents(ctx context.Context, condition gar
 func (h *health) isVPAEnabled() bool {
 	return h.garden.Spec.RuntimeCluster.Settings != nil &&
 		h.garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler != nil &&
-		pointer.BoolDeref(h.garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler.Enabled, false)
+		ptr.Deref(h.garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler.Enabled, false)
 }
 
 // GardenConditions contains all conditions of the garden status subresource.

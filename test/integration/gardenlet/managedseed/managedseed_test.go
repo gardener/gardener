@@ -23,7 +23,7 @@ import (
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -124,7 +124,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 					Spec: gardencorev1beta1.SeedSpec{
 						Backup: &gardencorev1beta1.SeedBackup{
 							Provider: "test",
-							Region:   pointer.String("bar"),
+							Region:   ptr.To("bar"),
 							SecretRef: corev1.SecretReference{
 								Name:      backupSecret.Name,
 								Namespace: backupSecret.Namespace,
@@ -145,15 +145,15 @@ var _ = Describe("ManagedSeed controller test", func() {
 			Spec: seedmanagementv1alpha1.ManagedSeedSpec{
 				Gardenlet: &seedmanagementv1alpha1.Gardenlet{
 					Deployment: &seedmanagementv1alpha1.GardenletDeployment{
-						ReplicaCount:         pointer.Int32(1),
-						RevisionHistoryLimit: pointer.Int32(1),
+						ReplicaCount:         ptr.To(int32(1)),
+						RevisionHistoryLimit: ptr.To(int32(1)),
 						Image: &seedmanagementv1alpha1.Image{
-							PullPolicy: pullPolicyPtr(corev1.PullIfNotPresent),
+							PullPolicy: ptr.To(corev1.PullIfNotPresent),
 						},
-						VPA: pointer.Bool(false),
+						VPA: ptr.To(false),
 					},
 					Config:    *gardenletConfig,
-					Bootstrap: bootstrapPtr(seedmanagementv1alpha1.BootstrapToken),
+					Bootstrap: ptr.To(seedmanagementv1alpha1.BootstrapToken),
 				},
 			},
 		}
@@ -169,13 +169,13 @@ var _ = Describe("ManagedSeed controller test", func() {
 				CloudProfileName: "foo",
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					Version:                     "1.25.1",
-					EnableStaticTokenKubeconfig: pointer.Bool(true),
+					EnableStaticTokenKubeconfig: ptr.To(true),
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: pointer.String("foo"),
+					Type: ptr.To("foo"),
 				},
 				DNS: &gardencorev1beta1.DNS{
-					Domain: pointer.String("replica-name.example.com"),
+					Domain: ptr.To("replica-name.example.com"),
 				},
 				Provider: gardencorev1beta1.Provider{
 					Type: "foo",
@@ -184,7 +184,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 							Name: "some-worker",
 							Machine: gardencorev1beta1.Machine{
 								Type:         "some-machine-type",
-								Architecture: pointer.String("amd64"),
+								Architecture: ptr.To("amd64"),
 							},
 							Maximum: 2,
 							Minimum: 1,
@@ -274,7 +274,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 		})
 
 		By("Create Shoot")
-		shoot.Spec.SecretBindingName = pointer.String(shootSecretBinding.Name)
+		shoot.Spec.SecretBindingName = ptr.To(shootSecretBinding.Name)
 		Expect(testClient.Create(ctx, shoot)).To(Succeed())
 		log.Info("Created Shoot for test", "shoot", client.ObjectKeyFromObject(shoot))
 
@@ -366,7 +366,3 @@ var _ = Describe("ManagedSeed controller test", func() {
 		})
 	})
 })
-
-func bootstrapPtr(v seedmanagementv1alpha1.Bootstrap) *seedmanagementv1alpha1.Bootstrap { return &v }
-
-func pullPolicyPtr(v corev1.PullPolicy) *corev1.PullPolicy { return &v }

@@ -24,7 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfig "k8s.io/component-base/config"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -97,7 +97,7 @@ func defaultGarden(backupSecret *corev1.Secret) *operatorv1alpha1.Garden {
 				},
 				Settings: &operatorv1alpha1.Settings{
 					VerticalPodAutoscaler: &operatorv1alpha1.SettingVerticalPodAutoscaler{
-						Enabled: pointer.Bool(true),
+						Enabled: ptr.To(true),
 					},
 					TopologyAwareRouting: &operatorv1alpha1.SettingTopologyAwareRouting{
 						Enabled: true,

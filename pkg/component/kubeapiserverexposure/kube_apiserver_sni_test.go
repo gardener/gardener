@@ -29,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -130,8 +130,8 @@ var _ = Describe("#SNI", func() {
 				Kind:               "Namespace",
 				Name:               namespace,
 				UID:                namespaceUID,
-				BlockOwnerDeletion: pointer.Bool(false),
-				Controller:         pointer.Bool(false),
+				BlockOwnerDeletion: ptr.To(false),
+				Controller:         ptr.To(false),
 			}},
 		}
 		expectedGateway = &istionetworkingv1beta1.Gateway{
@@ -207,8 +207,8 @@ var _ = Describe("#SNI", func() {
 				Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				Class:       pointer.String("seed"),
-				KeepObjects: pointer.Bool(false),
+				Class:       ptr.To("seed"),
+				KeepObjects: ptr.To(false),
 			},
 		}
 	})
@@ -254,7 +254,7 @@ var _ = Describe("#SNI", func() {
 				Expect(c.Get(ctx, kubernetesutils.Key(expectedManagedResource.Namespace, expectedManagedResource.Spec.SecretRefs[0].Name), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecret.Data).To(HaveLen(1))
-				Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				managedResourceEnvoyFilter, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["envoyfilter__istio-foo__test-namespace.yaml"], nil, &istionetworkingv1alpha3.EnvoyFilter{})

@@ -20,7 +20,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
@@ -30,7 +30,7 @@ var _ = Describe("ExposureClass Validation Tests ", func() {
 	var (
 		exposureClass          *core.ExposureClass
 		defaultTestTolerations = []core.Toleration{
-			{Key: "test", Value: pointer.String("foo")},
+			{Key: "test", Value: ptr.To("foo")},
 		}
 	)
 
@@ -97,8 +97,8 @@ var _ = Describe("ExposureClass Validation Tests ", func() {
 				{},
 				{Key: "foo"},
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.String("baz")},
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
 			}
 			errorList := ValidateExposureClass(exposureClass)
 

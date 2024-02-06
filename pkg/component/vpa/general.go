@@ -24,7 +24,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -200,14 +200,14 @@ func (v *vpa) reconcileGeneralMutatingWebhookConfiguration(mutatingWebhookConfig
 		clientConfig.Service = &admissionregistrationv1.ServiceReference{
 			Name:      vpaconstants.AdmissionControllerServiceName,
 			Namespace: v.namespace,
-			Port:      pointer.Int32(admissionControllerServicePort),
+			Port:      ptr.To(admissionControllerServicePort),
 		}
 	} else if v.values.ClusterType == component.ClusterTypeShoot {
 		// the port is only respected if register-by-url is true, that's why it's in this if-block
 		// if it's false it will not set the port during registration, i.e., it will be defaulted to 443,
 		// so the servicePort has to be 443 in this case
 		// see https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/pkg/admission-controller/config.go#L70-L74
-		clientConfig.URL = pointer.String(fmt.Sprintf("https://%s.%s:%d", vpaconstants.AdmissionControllerServiceName, v.namespace, admissionControllerServicePort))
+		clientConfig.URL = ptr.To(fmt.Sprintf("https://%s.%s:%d", vpaconstants.AdmissionControllerServiceName, v.namespace, admissionControllerServicePort))
 	}
 
 	metav1.SetMetaDataLabel(&mutatingWebhookConfiguration.ObjectMeta, v1beta1constants.LabelExcludeWebhookFromRemediation, "true")
@@ -219,7 +219,7 @@ func (v *vpa) reconcileGeneralMutatingWebhookConfiguration(mutatingWebhookConfig
 		MatchPolicy:             &matchPolicy,
 		ReinvocationPolicy:      &reinvocationPolicy,
 		SideEffects:             &sideEffects,
-		TimeoutSeconds:          pointer.Int32(10),
+		TimeoutSeconds:          ptr.To(int32(10)),
 		Rules: []admissionregistrationv1.RuleWithOperations{
 			{
 				Rule: admissionregistrationv1.Rule{

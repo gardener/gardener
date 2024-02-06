@@ -22,7 +22,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -589,7 +589,7 @@ images:
 	Describe("> Image", func() {
 		Describe("#WithOptionalTag", func() {
 			It("should do nothing because tag is already set", func() {
-				image := Image{Repository: "some-repo", Tag: pointer.String("some-tag")}
+				image := Image{Repository: "some-repo", Tag: ptr.To("some-tag")}
 				image.WithOptionalTag("foo")
 
 				Expect(image.Repository).To(Equal("some-repo"))
@@ -664,7 +664,7 @@ images:
 					}
 				)
 
-				image := source.ToImage(pointer.String("1.8.0"))
+				image := source.ToImage(ptr.To("1.8.0"))
 
 				Expect(image).To(Equal(&Image{
 					Name:       name,
@@ -690,7 +690,7 @@ images:
 				Expect(image).To(Equal(&Image{
 					Name:       name,
 					Repository: repository,
-					Tag:        pointer.String(fmt.Sprintf("v%s", version)),
+					Tag:        ptr.To(fmt.Sprintf("v%s", version)),
 				}))
 			})
 		})

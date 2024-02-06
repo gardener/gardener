@@ -47,7 +47,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -516,7 +516,7 @@ func (r *resourceManager) emptyClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1.ConfigMap) error {
 	config := &resourcemanagerv1alpha1.ResourceManagerConfiguration{
 		LeaderElection: componentbaseconfigv1alpha1.LeaderElectionConfiguration{
-			LeaderElect:       pointer.Bool(true),
+			LeaderElect:       ptr.To(true),
 			ResourceName:      r.values.NamePrefix + v1beta1constants.DeploymentNameGardenerResourceManager,
 			ResourceNamespace: r.namespace,
 		},
@@ -626,7 +626,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 
 	if r.values.SchedulingProfile != nil && *r.values.SchedulingProfile != gardencorev1beta1.SchedulingProfileBalanced {
 		config.Webhooks.PodSchedulerName.Enabled = true
-		config.Webhooks.PodSchedulerName.SchedulerName = pointer.String(kubescheduler.BinPackingSchedulerName)
+		config.Webhooks.PodSchedulerName.SchedulerName = ptr.To(kubescheduler.BinPackingSchedulerName)
 	}
 
 	if r.values.KubernetesServiceHost != nil {
@@ -720,7 +720,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 
 		portMetrics := networkingv1.NetworkPolicyPort{
 			Port:     utils.IntStrPtrFromInt32(metricsPort),
-			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+			Protocol: ptr.To(corev1.ProtocolTCP),
 		}
 
 		if !r.values.TargetDiffersFromSourceCluster {
@@ -730,7 +730,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, portMetrics))
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForWebhookTargets(service, networkingv1.NetworkPolicyPort{
 				Port:     utils.IntStrPtrFromInt32(resourcemanagerconstants.ServerPort),
-				Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+				Protocol: ptr.To(corev1.ProtocolTCP),
 			}))
 		}
 
@@ -803,7 +803,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 		deployment.Labels = r.getLabels()
 
 		deployment.Spec.Replicas = r.values.Replicas
-		deployment.Spec.RevisionHistoryLimit = pointer.Int32(2)
+		deployment.Spec.RevisionHistoryLimit = ptr.To(int32(2))
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: r.appLabel()}
 
 		deployment.Spec.Template = corev1.PodTemplateSpec{
@@ -893,11 +893,11 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 						Name: volumeNameAPIServerAccess,
 						VolumeSource: corev1.VolumeSource{
 							Projected: &corev1.ProjectedVolumeSource{
-								DefaultMode: pointer.Int32(420),
+								DefaultMode: ptr.To(int32(420)),
 								Sources: []corev1.VolumeProjection{
 									{
 										ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
-											ExpirationSeconds: pointer.Int64(60 * 60 * 12),
+											ExpirationSeconds: ptr.To(int64(60 * 60 * 12)),
 											Path:              "token",
 										},
 									},
@@ -932,7 +932,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
 								SecretName:  secretServer.Name,
-								DefaultMode: pointer.Int32(420),
+								DefaultMode: ptr.To(int32(420)),
 							},
 						},
 					},
@@ -961,7 +961,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
 						SecretName:  clusterCASecret.Name,
-						DefaultMode: pointer.Int32(420),
+						DefaultMode: ptr.To(int32(420)),
 					},
 				},
 			})
@@ -977,7 +977,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  r.secrets.BootstrapKubeconfig.Name,
-							DefaultMode: pointer.Int32(420),
+							DefaultMode: ptr.To(int32(420)),
 						},
 					},
 				})
@@ -1007,7 +1007,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 				resourcesv1alpha1.HighAvailabilityConfigSkip: "true",
 			})
 
-			deployment.Spec.Template.Spec.TopologySpreadConstraints = kubernetesutils.GetTopologySpreadConstraints(pointer.Int32Deref(r.values.Replicas, 0), pointer.Int32Deref(r.values.Replicas, 0), metav1.LabelSelector{MatchLabels: r.getDeploymentTemplateLabels()}, int32(len(r.values.Zones)), nil, false)
+			deployment.Spec.Template.Spec.TopologySpreadConstraints = kubernetesutils.GetTopologySpreadConstraints(ptr.Deref(r.values.Replicas, 0), ptr.Deref(r.values.Replicas, 0), metav1.LabelSelector{MatchLabels: r.getDeploymentTemplateLabels()}, int32(len(r.values.Zones)), nil, false)
 
 			// ATTENTION: THIS MUST BE THE LAST THING HAPPENING IN THIS FUNCTION TO MAKE SURE THE COMPUTED CHECKSUM IS
 			// ACCURATE!
@@ -1041,7 +1041,7 @@ func (r *resourceManager) ensureServiceAccount(ctx context.Context) error {
 	serviceAccount := r.emptyServiceAccount()
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, serviceAccount, func() error {
 		serviceAccount.Labels = r.getLabels()
-		serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
+		serviceAccount.AutomountServiceAccountToken = ptr.To(false)
 		return nil
 	})
 	return err
@@ -1312,7 +1312,7 @@ func GetTokenInvalidatorMutatingWebhook(namespaceSelector *metav1.LabelSelector,
 		FailurePolicy:           &failurePolicy,
 		MatchPolicy:             &matchPolicy,
 		SideEffects:             &sideEffect,
-		TimeoutSeconds:          pointer.Int32(10),
+		TimeoutSeconds:          ptr.To(int32(10)),
 	}
 }
 
@@ -1343,7 +1343,7 @@ func GetCRDDeletionProtectionValidatingWebhooks(secretServerCA *corev1.Secret, b
 			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 			MatchPolicy:             &matchPolicy,
 			SideEffects:             &sideEffect,
-			TimeoutSeconds:          pointer.Int32(10),
+			TimeoutSeconds:          ptr.To(int32(10)),
 		},
 		{
 			Name: "cr-deletion-protection.resources.gardener.cloud",
@@ -1385,7 +1385,7 @@ func GetCRDDeletionProtectionValidatingWebhooks(secretServerCA *corev1.Secret, b
 			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 			MatchPolicy:             &matchPolicy,
 			SideEffects:             &sideEffect,
-			TimeoutSeconds:          pointer.Int32(10),
+			TimeoutSeconds:          ptr.To(int32(10)),
 		},
 	}
 }
@@ -1528,7 +1528,7 @@ func GetExtensionValidationValidatingWebhooks(secretServerCA *corev1.Secret, bui
 			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 			MatchPolicy:             &matchPolicy,
 			SideEffects:             &sideEffect,
-			TimeoutSeconds:          pointer.Int32(10),
+			TimeoutSeconds:          ptr.To(int32(10)),
 		})
 	}
 
@@ -1571,7 +1571,7 @@ func (r *resourceManager) getProjectedTokenMountMutatingWebhook(namespaceSelecto
 		FailurePolicy:           &failurePolicy,
 		MatchPolicy:             &matchPolicy,
 		SideEffects:             &sideEffect,
-		TimeoutSeconds:          pointer.Int32(10),
+		TimeoutSeconds:          ptr.To(int32(10)),
 	}
 }
 
@@ -1601,7 +1601,7 @@ func GetPodSchedulerNameMutatingWebhook(namespaceSelector *metav1.LabelSelector,
 		FailurePolicy:           &failurePolicy,
 		MatchPolicy:             &matchPolicy,
 		SideEffects:             &sideEffect,
-		TimeoutSeconds:          pointer.Int32(10),
+		TimeoutSeconds:          ptr.To(int32(10)),
 	}
 }
 
@@ -1655,7 +1655,7 @@ func GetPodTopologySpreadConstraintsMutatingWebhook(
 		FailurePolicy:           &failurePolicy,
 		MatchPolicy:             &matchPolicy,
 		SideEffects:             &sideEffect,
-		TimeoutSeconds:          pointer.Int32(10),
+		TimeoutSeconds:          ptr.To(int32(10)),
 	}
 }
 
@@ -1702,7 +1702,7 @@ func GetSeccompProfileMutatingWebhook(
 		FailurePolicy:           &failurePolicy,
 		MatchPolicy:             &matchPolicy,
 		SideEffects:             &sideEffect,
-		TimeoutSeconds:          pointer.Int32(10),
+		TimeoutSeconds:          ptr.To(int32(10)),
 	}
 }
 
@@ -1758,7 +1758,7 @@ func GetKubernetesServiceHostMutatingWebhook(
 		FailurePolicy:           &failurePolicy,
 		MatchPolicy:             &matchPolicy,
 		SideEffects:             &sideEffect,
-		TimeoutSeconds:          pointer.Int32(2),
+		TimeoutSeconds:          ptr.To(int32(2)),
 	}
 }
 
@@ -1801,7 +1801,7 @@ func GetSystemComponentsConfigMutatingWebhook(namespaceSelector, objectSelector 
 		FailurePolicy:           &failurePolicy,
 		MatchPolicy:             &matchPolicy,
 		SideEffects:             &sideEffect,
-		TimeoutSeconds:          pointer.Int32(10),
+		TimeoutSeconds:          ptr.To(int32(10)),
 	}
 }
 
@@ -1876,7 +1876,7 @@ func GetHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector 
 		FailurePolicy:           &failurePolicy,
 		MatchPolicy:             &matchPolicy,
 		SideEffects:             &sideEffect,
-		TimeoutSeconds:          pointer.Int32(10),
+		TimeoutSeconds:          ptr.To(int32(10)),
 	}
 }
 
@@ -1917,7 +1917,7 @@ func GetEndpointSliceHintsMutatingWebhook(
 		FailurePolicy:           &failurePolicy,
 		MatchPolicy:             &matchPolicy,
 		SideEffects:             &sideEffect,
-		TimeoutSeconds:          pointer.Int32(10),
+		TimeoutSeconds:          ptr.To(int32(10)),
 	}
 }
 
@@ -1940,7 +1940,7 @@ func (r *resourceManager) buildWebhookClientConfig(secretServerCA *corev1.Secret
 	clientConfig := admissionregistrationv1.WebhookClientConfig{CABundle: secretServerCA.Data[secrets.DataKeyCertificateBundle]}
 
 	if r.values.TargetDiffersFromSourceCluster {
-		clientConfig.URL = pointer.String(fmt.Sprintf("https://%s.%s:%d%s", r.values.NamePrefix+resourcemanagerconstants.ServiceName, r.namespace, serverServicePort, path))
+		clientConfig.URL = ptr.To(fmt.Sprintf("https://%s.%s:%d%s", r.values.NamePrefix+resourcemanagerconstants.ServiceName, r.namespace, serverServicePort, path))
 	} else {
 		clientConfig.Service = &admissionregistrationv1.ServiceReference{
 			Name:      r.values.NamePrefix + resourcemanagerconstants.ServiceName,

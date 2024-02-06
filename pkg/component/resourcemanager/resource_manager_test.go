@@ -43,7 +43,7 @@ import (
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -211,8 +211,8 @@ var _ = Describe("ResourceManager", func() {
 			v1beta1constants.LabelApp:   "gardener-resource-manager",
 		}
 
-		defaultNotReadyTolerationSeconds = pointer.Int64(60)
-		defaultUnreachableTolerationSeconds = pointer.Int64(120)
+		defaultNotReadyTolerationSeconds = ptr.To(int64(60))
+		defaultUnreachableTolerationSeconds = ptr.To(int64(120))
 
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
@@ -362,7 +362,7 @@ var _ = Describe("ResourceManager", func() {
 				Namespace: deployNamespace,
 				Labels:    defaultLabels,
 			},
-			AutomountServiceAccountToken: pointer.Bool(false),
+			AutomountServiceAccountToken: ptr.To(false),
 		}
 
 		configMapFor = func(watchedNamespace *string, targetKubeconfig *string, isWorkerless bool) *corev1.ConfigMap {
@@ -375,7 +375,7 @@ var _ = Describe("ResourceManager", func() {
 
 			config := &resourcemanagerv1alpha1.ResourceManagerConfiguration{
 				LeaderElection: componentbaseconfigv1alpha1.LeaderElectionConfiguration{
-					LeaderElect:       pointer.Bool(true),
+					LeaderElect:       ptr.To(true),
 					ResourceName:      "gardener-resource-manager",
 					ResourceNamespace: deployNamespace,
 				},
@@ -473,7 +473,7 @@ var _ = Describe("ResourceManager", func() {
 				config.Controllers.Node.Enabled = !isWorkerless
 				config.Webhooks.PodSchedulerName = resourcemanagerv1alpha1.PodSchedulerNameWebhookConfig{
 					Enabled:       !isWorkerless,
-					SchedulerName: pointer.String("bin-packing-scheduler"),
+					SchedulerName: ptr.To("bin-packing-scheduler"),
 				}
 				config.Webhooks.SystemComponentsConfig = resourcemanagerv1alpha1.SystemComponentsConfigWebhookConfig{
 					Enabled: !isWorkerless,
@@ -535,7 +535,7 @@ var _ = Describe("ResourceManager", func() {
 				},
 				Spec: appsv1.DeploymentSpec{
 					Replicas:             &replicas,
-					RevisionHistoryLimit: pointer.Int32(2),
+					RevisionHistoryLimit: ptr.To(int32(2)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"app": "gardener-resource-manager",
@@ -651,11 +651,11 @@ var _ = Describe("ResourceManager", func() {
 									Name: "kube-api-access-gardener",
 									VolumeSource: corev1.VolumeSource{
 										Projected: &corev1.ProjectedVolumeSource{
-											DefaultMode: pointer.Int32(420),
+											DefaultMode: ptr.To(int32(420)),
 											Sources: []corev1.VolumeProjection{
 												{
 													ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
-														ExpirationSeconds: pointer.Int64(43200),
+														ExpirationSeconds: ptr.To(int64(43200)),
 														Path:              "token",
 													},
 												},
@@ -690,7 +690,7 @@ var _ = Describe("ResourceManager", func() {
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  secretNameServer,
-											DefaultMode: pointer.Int32(420),
+											DefaultMode: ptr.To(int32(420)),
 										},
 									},
 								},
@@ -709,7 +709,7 @@ var _ = Describe("ResourceManager", func() {
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  "ca",
-											DefaultMode: pointer.Int32(420),
+											DefaultMode: ptr.To(int32(420)),
 										},
 									},
 								},
@@ -730,7 +730,7 @@ var _ = Describe("ResourceManager", func() {
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  *secretNameBootstrapKubeconfig,
-							DefaultMode: pointer.Int32(420),
+							DefaultMode: ptr.To(int32(420)),
 						},
 					},
 				})
@@ -744,7 +744,7 @@ var _ = Describe("ResourceManager", func() {
 					Name: "kubeconfig",
 					VolumeSource: corev1.VolumeSource{
 						Projected: &corev1.ProjectedVolumeSource{
-							DefaultMode: pointer.Int32(420),
+							DefaultMode: ptr.To(int32(420)),
 							Sources: []corev1.VolumeProjection{
 								{
 									Secret: &corev1.SecretProjection{
@@ -755,7 +755,7 @@ var _ = Describe("ResourceManager", func() {
 											Key:  "kubeconfig",
 											Path: "kubeconfig",
 										}},
-										Optional: pointer.Bool(false),
+										Optional: ptr.To(false),
 									},
 								},
 								{
@@ -767,7 +767,7 @@ var _ = Describe("ResourceManager", func() {
 											Key:  resourcesv1alpha1.DataKeyToken,
 											Path: resourcesv1alpha1.DataKeyToken,
 										}},
-										Optional: pointer.Bool(false),
+										Optional: ptr.To(false),
 									},
 								},
 							},
@@ -801,7 +801,7 @@ var _ = Describe("ResourceManager", func() {
 					},
 					{
 						MaxSkew:           1,
-						MinDomains:        pointer.Int32(2),
+						MinDomains:        ptr.To(int32(2)),
 						TopologyKey:       "topology.kubernetes.io/zone",
 						WhenUnsatisfiable: "DoNotSchedule",
 						LabelSelector: &metav1.LabelSelector{
@@ -900,14 +900,14 @@ var _ = Describe("ResourceManager", func() {
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "gardener-resource-manager",
 							Namespace: deployNamespace,
-							Path:      pointer.String("/webhooks/invalidate-service-account-token-secret"),
+							Path:      ptr.To("/webhooks/invalidate-service-account-token-secret"),
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					FailurePolicy:           &failurePolicyFail,
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "projected-token-mount.resources.gardener.cloud",
@@ -943,14 +943,14 @@ var _ = Describe("ResourceManager", func() {
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "gardener-resource-manager",
 							Namespace: deployNamespace,
-							Path:      pointer.String("/webhooks/mount-projected-service-account-token"),
+							Path:      ptr.To("/webhooks/mount-projected-service-account-token"),
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					FailurePolicy:           &failurePolicyFail,
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "high-availability-config.resources.gardener.cloud",
@@ -1002,14 +1002,14 @@ var _ = Describe("ResourceManager", func() {
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "gardener-resource-manager",
 							Namespace: deployNamespace,
-							Path:      pointer.String("/webhooks/high-availability-config"),
+							Path:      ptr.To("/webhooks/high-availability-config"),
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					FailurePolicy:           &failurePolicyFail,
 					MatchPolicy:             &matchPolicyEquivalent,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "seccomp-profile.resources.gardener.cloud",
@@ -1045,14 +1045,14 @@ var _ = Describe("ResourceManager", func() {
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "gardener-resource-manager",
 							Namespace: deployNamespace,
-							Path:      pointer.String("/webhooks/seccomp-profile"),
+							Path:      ptr.To("/webhooks/seccomp-profile"),
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					FailurePolicy:           &failurePolicyFail,
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "kubernetes-service-host.resources.gardener.cloud",
@@ -1084,7 +1084,7 @@ var _ = Describe("ResourceManager", func() {
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "gardener-resource-manager",
 							Namespace: deployNamespace,
-							Path:      pointer.String("/webhooks/kubernetes-service-host"),
+							Path:      ptr.To("/webhooks/kubernetes-service-host"),
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
@@ -1092,7 +1092,7 @@ var _ = Describe("ResourceManager", func() {
 					FailurePolicy:           &failurePolicyIgnore,
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(2),
+					TimeoutSeconds:          ptr.To(int32(2)),
 				},
 				{
 					Name: "endpoint-slice-hints.resources.gardener.cloud",
@@ -1120,14 +1120,14 @@ var _ = Describe("ResourceManager", func() {
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "gardener-resource-manager",
 							Namespace: deployNamespace,
-							Path:      pointer.String("/webhooks/endpoint-slice-hints"),
+							Path:      ptr.To("/webhooks/endpoint-slice-hints"),
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					FailurePolicy:           &failurePolicyFail,
 					MatchPolicy:             &matchPolicyEquivalent,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "pod-topology-spread-constraints.resources.gardener.cloud",
@@ -1163,14 +1163,14 @@ var _ = Describe("ResourceManager", func() {
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "gardener-resource-manager",
 							Namespace: deployNamespace,
-							Path:      pointer.String("/webhooks/pod-topology-spread-constraints"),
+							Path:      ptr.To("/webhooks/pod-topology-spread-constraints"),
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					FailurePolicy:           &failurePolicyFail,
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 			},
 		}
@@ -1468,13 +1468,13 @@ subjects:
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "gardener-resource-manager",
 							Namespace: deployNamespace,
-							Path:      pointer.String("/webhooks/validate-crd-deletion"),
+							Path:      ptr.To("/webhooks/validate-crd-deletion"),
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "cr-deletion-protection.resources.gardener.cloud",
@@ -1516,13 +1516,13 @@ subjects:
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "gardener-resource-manager",
 							Namespace: deployNamespace,
-							Path:      pointer.String("/webhooks/validate-crd-deletion"),
+							Path:      ptr.To("/webhooks/validate-crd-deletion"),
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "validation.extensions.backupbuckets.resources.gardener.cloud",
@@ -1542,13 +1542,13 @@ subjects:
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "gardener-resource-manager",
 							Namespace: deployNamespace,
-							Path:      pointer.String("/validate-extensions-gardener-cloud-v1alpha1-backupbucket"),
+							Path:      ptr.To("/validate-extensions-gardener-cloud-v1alpha1-backupbucket"),
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "validation.extensions.backupentries.resources.gardener.cloud",
@@ -1568,13 +1568,13 @@ subjects:
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "gardener-resource-manager",
 							Namespace: deployNamespace,
-							Path:      pointer.String("/validate-extensions-gardener-cloud-v1alpha1-backupentry"),
+							Path:      ptr.To("/validate-extensions-gardener-cloud-v1alpha1-backupentry"),
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "validation.extensions.bastions.resources.gardener.cloud",
@@ -1594,13 +1594,13 @@ subjects:
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "gardener-resource-manager",
 							Namespace: deployNamespace,
-							Path:      pointer.String("/validate-extensions-gardener-cloud-v1alpha1-bastion"),
+							Path:      ptr.To("/validate-extensions-gardener-cloud-v1alpha1-bastion"),
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "validation.extensions.containerruntimes.resources.gardener.cloud",
@@ -1620,13 +1620,13 @@ subjects:
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "gardener-resource-manager",
 							Namespace: deployNamespace,
-							Path:      pointer.String("/validate-extensions-gardener-cloud-v1alpha1-containerruntime"),
+							Path:      ptr.To("/validate-extensions-gardener-cloud-v1alpha1-containerruntime"),
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "validation.extensions.controlplanes.resources.gardener.cloud",
@@ -1646,13 +1646,13 @@ subjects:
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "gardener-resource-manager",
 							Namespace: deployNamespace,
-							Path:      pointer.String("/validate-extensions-gardener-cloud-v1alpha1-controlplane"),
+							Path:      ptr.To("/validate-extensions-gardener-cloud-v1alpha1-controlplane"),
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "validation.extensions.dnsrecords.resources.gardener.cloud",
@@ -1672,13 +1672,13 @@ subjects:
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "gardener-resource-manager",
 							Namespace: deployNamespace,
-							Path:      pointer.String("/validate-extensions-gardener-cloud-v1alpha1-dnsrecord"),
+							Path:      ptr.To("/validate-extensions-gardener-cloud-v1alpha1-dnsrecord"),
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "validation.extensions.etcds.resources.gardener.cloud",
@@ -1698,13 +1698,13 @@ subjects:
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "gardener-resource-manager",
 							Namespace: deployNamespace,
-							Path:      pointer.String("/validate-druid-gardener-cloud-v1alpha1-etcd"),
+							Path:      ptr.To("/validate-druid-gardener-cloud-v1alpha1-etcd"),
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "validation.extensions.extensions.resources.gardener.cloud",
@@ -1724,13 +1724,13 @@ subjects:
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "gardener-resource-manager",
 							Namespace: deployNamespace,
-							Path:      pointer.String("/validate-extensions-gardener-cloud-v1alpha1-extension"),
+							Path:      ptr.To("/validate-extensions-gardener-cloud-v1alpha1-extension"),
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "validation.extensions.infrastructures.resources.gardener.cloud",
@@ -1750,13 +1750,13 @@ subjects:
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "gardener-resource-manager",
 							Namespace: deployNamespace,
-							Path:      pointer.String("/validate-extensions-gardener-cloud-v1alpha1-infrastructure"),
+							Path:      ptr.To("/validate-extensions-gardener-cloud-v1alpha1-infrastructure"),
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "validation.extensions.networks.resources.gardener.cloud",
@@ -1776,13 +1776,13 @@ subjects:
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "gardener-resource-manager",
 							Namespace: deployNamespace,
-							Path:      pointer.String("/validate-extensions-gardener-cloud-v1alpha1-network"),
+							Path:      ptr.To("/validate-extensions-gardener-cloud-v1alpha1-network"),
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "validation.extensions.operatingsystemconfigs.resources.gardener.cloud",
@@ -1802,13 +1802,13 @@ subjects:
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "gardener-resource-manager",
 							Namespace: deployNamespace,
-							Path:      pointer.String("/validate-extensions-gardener-cloud-v1alpha1-operatingsystemconfig"),
+							Path:      ptr.To("/validate-extensions-gardener-cloud-v1alpha1-operatingsystemconfig"),
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "validation.extensions.workers.resources.gardener.cloud",
@@ -1828,13 +1828,13 @@ subjects:
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "gardener-resource-manager",
 							Namespace: deployNamespace,
-							Path:      pointer.String("/validate-extensions-gardener-cloud-v1alpha1-worker"),
+							Path:      ptr.To("/validate-extensions-gardener-cloud-v1alpha1-worker"),
 						},
 					},
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 			},
 		}
@@ -1863,7 +1863,7 @@ subjects:
 					{Name: managedResourceSecret.Name},
 				},
 				InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-				KeepObjects:  pointer.Bool(false),
+				KeepObjects:  ptr.To(false),
 			},
 		}
 		utilruntime.Must(references.InjectAnnotations(managedResource))
@@ -1877,8 +1877,8 @@ subjects:
 		Context("target cluster != source cluster; watched namespace is set", func() {
 			JustBeforeEach(func() {
 				role.Namespace = watchedNamespace
-				configMap = configMapFor(&watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), false)
-				deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, &watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), true, nil)
+				configMap = configMapFor(&watchedNamespace, ptr.To(gardenerutils.PathGenericKubeconfig), false)
+				deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, &watchedNamespace, ptr.To(gardenerutils.PathGenericKubeconfig), true, nil)
 				cfg.TargetNamespaces = targetNamespaces
 				resourceManager = New(c, deployNamespace, sm, cfg)
 				resourceManager.SetSecrets(secrets)
@@ -1982,7 +1982,7 @@ subjects:
 					resourceManager = New(c, deployNamespace, sm, cfg)
 					resourceManager.SetSecrets(secrets)
 
-					deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, &watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), true, &secretNameBootstrapKubeconfig)
+					deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, &watchedNamespace, ptr.To(gardenerutils.PathGenericKubeconfig), true, &secretNameBootstrapKubeconfig)
 
 					gomock.InOrder(
 						c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).
@@ -2056,8 +2056,8 @@ subjects:
 				cfg.TargetDiffersFromSourceCluster = true
 				cfg.TargetNamespaces = targetNamespaces
 				cfg.WatchedNamespace = nil
-				configMap = configMapFor(nil, pointer.String(gardenerutils.PathGenericKubeconfig), false)
-				deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, nil, pointer.String(gardenerutils.PathGenericKubeconfig), true, nil)
+				configMap = configMapFor(nil, ptr.To(gardenerutils.PathGenericKubeconfig), false)
+				deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, nil, ptr.To(gardenerutils.PathGenericKubeconfig), true, nil)
 
 				resourceManager = New(c, deployNamespace, sm, cfg)
 				resourceManager.SetSecrets(secrets)
@@ -2168,8 +2168,8 @@ subjects:
 				cfg.TargetNamespaces = targetNamespaces
 				cfg.WatchedNamespace = nil
 				cfg.IsWorkerless = true
-				configMap = configMapFor(nil, pointer.String(gardenerutils.PathGenericKubeconfig), true)
-				deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, nil, pointer.String(gardenerutils.PathGenericKubeconfig), true, nil)
+				configMap = configMapFor(nil, ptr.To(gardenerutils.PathGenericKubeconfig), true)
+				deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, nil, ptr.To(gardenerutils.PathGenericKubeconfig), true, nil)
 
 				resourceManager = New(c, deployNamespace, sm, cfg)
 				resourceManager.SetSecrets(secrets)
@@ -2537,8 +2537,8 @@ subjects:
 
 	Describe("#Wait", func() {
 		BeforeEach(func() {
-			configMap = configMapFor(&watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), false)
-			deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, &watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), false, nil)
+			configMap = configMapFor(&watchedNamespace, ptr.To(gardenerutils.PathGenericKubeconfig), false)
+			deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, &watchedNamespace, ptr.To(gardenerutils.PathGenericKubeconfig), false, nil)
 			resourceManager = New(fakeClient, deployNamespace, nil, cfg)
 		})
 

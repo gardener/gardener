@@ -30,7 +30,7 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	kubeinformers "k8s.io/client-go/informers"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
@@ -194,7 +194,7 @@ func (d *DNS) Admit(_ context.Context, a admission.Attributes, _ admission.Objec
 				// Since it was possible to apply shoots w/o a primary provider before, we have to re-add it here.
 				for i, provider := range shoot.Spec.DNS.Providers {
 					if reflect.DeepEqual(provider.Type, oldPrimaryProvider.Type) && reflect.DeepEqual(provider.SecretName, oldPrimaryProvider.SecretName) {
-						shoot.Spec.DNS.Providers[i].Primary = pointer.Bool(true)
+						shoot.Spec.DNS.Providers[i].Primary = ptr.To(true)
 						break
 					}
 				}
@@ -239,7 +239,7 @@ func (d *DNS) Admit(_ context.Context, a admission.Attributes, _ admission.Objec
 func checkFunctionlessDNSProviders(a admission.Attributes, shoot *core.Shoot) error {
 	dns := shoot.Spec.DNS
 	for _, provider := range dns.Providers {
-		if !pointer.BoolDeref(provider.Primary, false) && (provider.Type == nil || provider.SecretName == nil) {
+		if !ptr.Deref(provider.Primary, false) && (provider.Type == nil || provider.SecretName == nil) {
 			fieldErr := field.Required(field.NewPath("spec", "dns", "providers"), "non-primary DNS providers in .spec.dns.providers must specify a `type` and `secretName`")
 			return apierrors.NewInvalid(a.GetKind().GroupKind(), shoot.Name, field.ErrorList{fieldErr})
 		}
@@ -294,7 +294,7 @@ func setPrimaryDNSProvider(a admission.Attributes, shoot *core.Shoot, defaultDom
 
 	primary := helper.FindPrimaryDNSProvider(dns.Providers)
 	if primary == nil && len(dns.Providers) > 0 {
-		dns.Providers[0].Primary = pointer.Bool(true)
+		dns.Providers[0].Primary = ptr.To(true)
 	}
 	return nil
 }

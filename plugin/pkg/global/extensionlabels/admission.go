@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
@@ -248,8 +248,8 @@ func getEnabledExtensionsForShoot(shoot *core.Shoot, controllerRegistrations []*
 	// add globally enabled extensions
 	for _, reg := range controllerRegistrations {
 		for _, resource := range reg.Spec.Resources {
-			if resource.Kind == extensionsv1alpha1.ExtensionResource && pointer.BoolDeref(resource.GloballyEnabled, false) {
-				if gardencorehelper.IsWorkerless(shoot) && !pointer.BoolDeref(resource.WorkerlessSupported, false) {
+			if resource.Kind == extensionsv1alpha1.ExtensionResource && ptr.Deref(resource.GloballyEnabled, false) {
+				if gardencorehelper.IsWorkerless(shoot) && !ptr.Deref(resource.WorkerlessSupported, false) {
 					continue
 				}
 				enabledExtensions.Insert(resource.Type)
@@ -258,7 +258,7 @@ func getEnabledExtensionsForShoot(shoot *core.Shoot, controllerRegistrations []*
 	}
 
 	for _, extension := range shoot.Spec.Extensions {
-		if pointer.BoolDeref(extension.Disabled, false) {
+		if ptr.Deref(extension.Disabled, false) {
 			// remove explicitly disabled extensions
 			enabledExtensions.Delete(extension.Type)
 			continue

@@ -25,7 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -246,7 +246,7 @@ var _ = Describe("Garden", func() {
 				Name: "garden-kubeconfig",
 				VolumeSource: corev1.VolumeSource{
 					Projected: &corev1.ProjectedVolumeSource{
-						DefaultMode: pointer.Int32(420),
+						DefaultMode: ptr.To(int32(420)),
 						Sources: []corev1.VolumeProjection{
 							{
 								Secret: &corev1.SecretProjection{
@@ -257,7 +257,7 @@ var _ = Describe("Garden", func() {
 										Key:  "kubeconfig",
 										Path: "kubeconfig",
 									}},
-									Optional: pointer.Bool(false),
+									Optional: ptr.To(false),
 								},
 							},
 							{
@@ -269,7 +269,7 @@ var _ = Describe("Garden", func() {
 										Key:  "token",
 										Path: "token",
 									}},
-									Optional: pointer.Bool(false),
+									Optional: ptr.To(false),
 								},
 							},
 						},
@@ -312,7 +312,7 @@ var _ = Describe("Garden", func() {
 		})
 
 		It("should use the overwrites but copy overthing else", func() {
-			config := PrepareGardenClientRestConfig(baseConfig, pointer.String("other"), []byte("ca2"))
+			config := PrepareGardenClientRestConfig(baseConfig, ptr.To("other"), []byte("ca2"))
 			Expect(config).NotTo(BeIdenticalTo(baseConfig))
 			Expect(config.Host).To(Equal("other"))
 			Expect(config.TLSClientConfig.CAData).To(BeEquivalentTo("ca2"))

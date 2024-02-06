@@ -22,22 +22,9 @@ import (
 	"strings"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
-
-// ValueExists returns true or false, depending on whether the given string <value>
-// is part of the given []string list <list>.
-func ValueExists(value string, list []string) bool {
-	for _, v := range list {
-		if v == value {
-			return true
-		}
-	}
-	return false
-}
 
 // MergeMaps takes two maps <a>, <b> and merges them. If <b> defines a value with a key
 // already existing in the <a> map, the <a> value for that key will be overwritten.
@@ -133,30 +120,6 @@ func IDForKeyWithOptionalValue(key string, value *string) string {
 		v = "=" + *value
 	}
 	return key + v
-}
-
-// QuantityPtr returns a Quantity pointer to its argument.
-func QuantityPtr(q resource.Quantity) *resource.Quantity {
-	return &q
-}
-
-// ProtocolPtr returns a corev1.Protocol pointer to its argument.
-func ProtocolPtr(protocol corev1.Protocol) *corev1.Protocol {
-	return &protocol
-}
-
-// TimePtr returns a time.Time pointer to its argument.
-func TimePtr(t time.Time) *time.Time {
-	return &t
-}
-
-// TimePtrDeref dereferences the time.Time ptr and returns it if not nil, or else
-// returns def.
-func TimePtrDeref(ptr *time.Time, def time.Time) time.Time {
-	if ptr != nil {
-		return *ptr
-	}
-	return def
 }
 
 // IntStrPtrFromInt32 returns an intstr.IntOrString pointer to its argument.

@@ -17,6 +17,7 @@ package seed
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -37,7 +38,6 @@ import (
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
-	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -275,7 +275,7 @@ func (a *authorizer) authorizeLease(log logr.Logger, seedName string, userType s
 
 	// This is needed if the seed cluster is a garden cluster at the same time.
 	if attrs.GetName() == "gardenlet-leader-election" &&
-		utils.ValueExists(attrs.GetVerb(), []string{"create", "get", "list", "watch", "update"}) {
+		slices.Contains([]string{"create", "get", "list", "watch", "update"}, attrs.GetVerb()) {
 		return auth.DecisionAllow, "", nil
 	}
 
@@ -288,7 +288,7 @@ func (a *authorizer) authorizeLease(log logr.Logger, seedName string, userType s
 
 func (a *authorizer) authorizeSecret(log logr.Logger, seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
 	// Allow gardenlets to get/list/watch secrets in their seed-<name> namespaces.
-	if utils.ValueExists(attrs.GetVerb(), []string{"get", "list", "watch"}) && attrs.GetNamespace() == gardenerutils.ComputeGardenNamespace(seedName) {
+	if slices.Contains([]string{"get", "list", "watch"}, attrs.GetVerb()) && attrs.GetNamespace() == gardenerutils.ComputeGardenNamespace(seedName) {
 		return auth.DecisionAllow, "", nil
 	}
 
@@ -358,7 +358,7 @@ func (a *authorizer) authorize(
 	// When a new object is created then it doesn't yet exist in the graph, so usually such requests are always allowed
 	// as the 'create case' is typically handled in the SeedRestriction admission handler. Similarly, resources for
 	// which the gardenlet has a controller need to be listed/watched, so those verbs would also be allowed here.
-	if utils.ValueExists(attrs.GetVerb(), alwaysAllowedVerbs) {
+	if slices.Contains(alwaysAllowedVerbs, attrs.GetVerb()) {
 		return auth.DecisionAllow, "", nil
 	}
 
@@ -397,7 +397,7 @@ func (a *authorizer) hasPathFrom(log logr.Logger, seedName string, fromType grap
 }
 
 func (a *authorizer) checkVerb(log logr.Logger, attrs auth.Attributes, allowedVerbs ...string) (bool, string) {
-	if !utils.ValueExists(attrs.GetVerb(), allowedVerbs) {
+	if !slices.Contains(allowedVerbs, attrs.GetVerb()) {
 		log.Info("Denying authorization because verb is not allowed for this resource type", "allowedVerbs", allowedVerbs)
 		return false, fmt.Sprintf("only the following verbs are allowed for this resource type: %+v", allowedVerbs)
 	}
@@ -406,7 +406,7 @@ func (a *authorizer) checkVerb(log logr.Logger, attrs auth.Attributes, allowedVe
 }
 
 func (a *authorizer) checkSubresource(log logr.Logger, attrs auth.Attributes, allowedSubresources ...string) (bool, string) {
-	if subresource := attrs.GetSubresource(); len(subresource) > 0 && !utils.ValueExists(attrs.GetSubresource(), allowedSubresources) {
+	if subresource := attrs.GetSubresource(); len(subresource) > 0 && !slices.Contains(allowedSubresources, attrs.GetSubresource()) {
 		log.Info("Denying authorization because subresource is not allowed for this resource type", "allowedSubresources", allowedSubresources)
 		return false, fmt.Sprintf("only the following subresources are allowed for this resource type: %+v", allowedSubresources)
 	}

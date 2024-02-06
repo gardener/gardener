@@ -24,7 +24,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -49,7 +49,7 @@ func CreateTargetClientFromDynamicServiceAccountToken(ctx context.Context, targe
 		tokenRequest := &authenticationv1.TokenRequest{
 			Spec: authenticationv1.TokenRequestSpec{
 				Audiences:         []string{v1beta1constants.GardenerAudience},
-				ExpirationSeconds: pointer.Int64(3600),
+				ExpirationSeconds: ptr.To(int64(3600)),
 			},
 		}
 

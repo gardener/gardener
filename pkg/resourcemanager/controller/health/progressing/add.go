@@ -24,7 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -72,7 +72,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 			r.ClassFilter,
 		)).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 		}).
 		Build(r)
 	if err != nil {

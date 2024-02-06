@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -110,7 +110,7 @@ var _ = BeforeSuite(func() {
 
 	Expect((&activity.Reconciler{
 		Config: config.ProjectControllerConfiguration{
-			ConcurrentSyncs: pointer.Int(5),
+			ConcurrentSyncs: ptr.To(5),
 		},
 		Clock: fakeClock,
 	}).AddToManager(ctx, mgr)).To(Succeed())

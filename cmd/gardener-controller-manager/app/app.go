@@ -28,7 +28,7 @@ import (
 	"github.com/spf13/cobra"
 	"go.uber.org/automaxprocs/maxprocs"
 	"k8s.io/component-base/version/verflag"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -107,7 +107,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 	mgr, err := manager.New(restConfig, manager.Options{
 		Logger:                  log,
 		Scheme:                  kubernetes.GardenScheme,
-		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
+		GracefulShutdownTimeout: ptr.To(5 * time.Second),
 
 		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(cfg.Server.HealthProbes.Port)),
 		Metrics: metricsserver.Options{
@@ -124,7 +124,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 		RenewDeadline:                 &cfg.LeaderElection.RenewDeadline.Duration,
 		RetryPeriod:                   &cfg.LeaderElection.RetryPeriod.Duration,
 		Controller: controllerconfig.Controller{
-			RecoverPanic: pointer.Bool(true),
+			RecoverPanic: ptr.To(true),
 		},
 	})
 	if err != nil {

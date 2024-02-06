@@ -34,7 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -151,11 +151,11 @@ var _ = Describe("Etcd", func() {
 							expectedClass:                   Equal(class),
 							expectedReplicas:                PointTo(Equal(int32(1))),
 							expectedStorageCapacity:         Equal("10Gi"),
-							expectedDefragmentationSchedule: Equal(pointer.String("34 12 */3 * *")),
+							expectedDefragmentationSchedule: Equal(ptr.To("34 12 */3 * *")),
 							expectedHVPAConfig: Equal(&etcd.HVPAConfig{
 								Enabled:               hvpaEnabled,
 								MaintenanceTimeWindow: maintenanceTimeWindow,
-								ScaleDownUpdateMode:   pointer.String(computeUpdateMode(class, purpose)),
+								ScaleDownUpdateMode:   ptr.To(computeUpdateMode(class, purpose)),
 							}),
 							expectedHighAvailabilityEnabled: Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
 						}
@@ -191,11 +191,11 @@ var _ = Describe("Etcd", func() {
 					expectedClass:                   Equal(class),
 					expectedReplicas:                PointTo(Equal(int32(1))),
 					expectedStorageCapacity:         Equal("10Gi"),
-					expectedDefragmentationSchedule: Equal(pointer.String("34 12 * * *")),
+					expectedDefragmentationSchedule: Equal(ptr.To("34 12 * * *")),
 					expectedHVPAConfig: Equal(&etcd.HVPAConfig{
 						Enabled:               hvpaForShootedSeedEnabled,
 						MaintenanceTimeWindow: maintenanceTimeWindow,
-						ScaleDownUpdateMode:   pointer.String(hvpav1alpha1.UpdateModeMaintenanceWindow),
+						ScaleDownUpdateMode:   ptr.To(hvpav1alpha1.UpdateModeMaintenanceWindow),
 					}),
 					expectedHighAvailabilityEnabled: Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
 				}
@@ -223,11 +223,11 @@ var _ = Describe("Etcd", func() {
 					expectedClass:                   Equal(class),
 					expectedReplicas:                PointTo(Equal(int32(1))),
 					expectedStorageCapacity:         Equal("10Gi"),
-					expectedDefragmentationSchedule: Equal(pointer.String("34 12 * * *")),
+					expectedDefragmentationSchedule: Equal(ptr.To("34 12 * * *")),
 					expectedHVPAConfig: Equal(&etcd.HVPAConfig{
 						Enabled:               hvpaForShootedSeedEnabled,
 						MaintenanceTimeWindow: maintenanceTimeWindow,
-						ScaleDownUpdateMode:   pointer.String(hvpav1alpha1.UpdateModeMaintenanceWindow),
+						ScaleDownUpdateMode:   ptr.To(hvpav1alpha1.UpdateModeMaintenanceWindow),
 					}),
 					expectedHighAvailabilityEnabled: Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
 				}
@@ -279,7 +279,7 @@ var _ = Describe("Etcd", func() {
 			}
 			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
 				Status: gardencorev1beta1.SeedStatus{
-					ClusterIdentity: pointer.String("seed-identity"),
+					ClusterIdentity: ptr.To("seed-identity"),
 				},
 			})
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
@@ -425,12 +425,12 @@ var _ = Describe("Etcd", func() {
 				It("should properly restore multi-node main etcd from backup if etcd does not exist", func() {
 					gomock.InOrder(
 						etcdMain.EXPECT().Get(ctx).Return(nil, apierrors.NewNotFound(schema.GroupResource{}, "")),
-						etcdMain.EXPECT().GetReplicas().Return(pointer.Int32(3)),
-						etcdMain.EXPECT().SetReplicas(pointer.Int32(1)),
+						etcdMain.EXPECT().GetReplicas().Return(ptr.To(int32(3))),
+						etcdMain.EXPECT().SetReplicas(ptr.To(int32(1))),
 						etcdMain.EXPECT().Deploy(ctx),
 						etcdMain.EXPECT().Wait(ctx),
 						etcdMain.EXPECT().Scale(ctx, int32(3)),
-						etcdMain.EXPECT().SetReplicas(pointer.Int32(3)),
+						etcdMain.EXPECT().SetReplicas(ptr.To(int32(3))),
 					)
 
 					etcdEvents.EXPECT().Deploy(ctx)
@@ -446,12 +446,12 @@ var _ = Describe("Etcd", func() {
 						}, nil
 					})
 					gomock.InOrder(
-						etcdMain.EXPECT().GetReplicas().Return(pointer.Int32(3)),
-						etcdMain.EXPECT().SetReplicas(pointer.Int32(1)),
+						etcdMain.EXPECT().GetReplicas().Return(ptr.To(int32(3))),
+						etcdMain.EXPECT().SetReplicas(ptr.To(int32(1))),
 						etcdMain.EXPECT().Deploy(ctx),
 						etcdMain.EXPECT().Wait(ctx),
 						etcdMain.EXPECT().Scale(ctx, int32(3)),
-						etcdMain.EXPECT().SetReplicas(pointer.Int32(3)),
+						etcdMain.EXPECT().SetReplicas(ptr.To(int32(3))),
 					)
 
 					etcdEvents.EXPECT().Deploy(ctx)

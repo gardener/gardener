@@ -35,7 +35,7 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -181,7 +181,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Spec: core.ShootSpec{
 					CloudProfileName:  cloudProfileName,
 					SeedName:          &seedName,
-					SecretBindingName: pointer.String(bindingName),
+					SecretBindingName: ptr.To(bindingName),
 					Kubernetes: core.Kubernetes{
 						KubeAPIServer: &core.KubeAPIServerConfig{
 							AuditConfig: &core.AuditConfig{
@@ -621,7 +621,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
 				oldShoot := shoot.DeepCopy()
-				oldShoot.Spec.SecretBindingName = pointer.String("")
+				oldShoot.Spec.SecretBindingName = ptr.To("")
 
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
@@ -757,7 +757,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				shoot.Spec.DNS = &core.DNS{
 					Providers: []core.DNSProvider{
-						{SecretName: pointer.String("foo")},
+						{SecretName: ptr.To("foo")},
 					},
 				}
 
@@ -783,7 +783,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				shoot.Spec.DNS = &core.DNS{
 					Providers: []core.DNSProvider{
-						{SecretName: pointer.String("foo")},
+						{SecretName: ptr.To("foo")},
 					},
 				}
 
@@ -809,7 +809,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				shoot.Spec.DNS = &core.DNS{
 					Providers: []core.DNSProvider{
-						{SecretName: pointer.String("foo")},
+						{SecretName: ptr.To("foo")},
 					},
 				}
 
@@ -836,7 +836,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				shoot.Spec.DNS = &core.DNS{
 					Providers: []core.DNSProvider{
-						{SecretName: pointer.String("foo")},
+						{SecretName: ptr.To("foo")},
 					},
 				}
 
@@ -1128,10 +1128,10 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should allow specifying a namespace which is not in use (create)", func() {
-				project.Spec.Namespace = pointer.String("garden-foo")
+				project.Spec.Namespace = ptr.To("garden-foo")
 				projectCopy := project.DeepCopy()
 				projectCopy.Name = "project-2"
-				projectCopy.Spec.Namespace = pointer.String("garden-bar")
+				projectCopy.Spec.Namespace = ptr.To("garden-bar")
 				Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(projectCopy)).To(Succeed())
 
 				attrs := admission.NewAttributesRecord(&project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
@@ -1144,9 +1144,9 @@ var _ = Describe("resourcereferencemanager", func() {
 			It("should allow specifying a namespace which is not in use (update)", func() {
 				projectOld := project.DeepCopy()
 				projectCopy := project.DeepCopy()
-				project.Spec.Namespace = pointer.String("garden-foo")
+				project.Spec.Namespace = ptr.To("garden-foo")
 				projectCopy.Name = "project-2"
-				projectCopy.Spec.Namespace = pointer.String("garden-bar")
+				projectCopy.Spec.Namespace = ptr.To("garden-bar")
 				Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(projectOld)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(projectCopy)).To(Succeed())
 
@@ -1170,7 +1170,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should forbid specifying a namespace which is already used by another project (create)", func() {
-				project.Spec.Namespace = pointer.String("garden-foo")
+				project.Spec.Namespace = ptr.To("garden-foo")
 				projectCopy := project.DeepCopy()
 				projectCopy.Name = "project-2"
 				Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(projectCopy)).To(Succeed())
@@ -1189,7 +1189,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should forbid specifying a namespace which is already used by another project (update)", func() {
 				projectOld := project.DeepCopy()
-				project.Spec.Namespace = pointer.String("garden-foo")
+				project.Spec.Namespace = ptr.To("garden-foo")
 				projectCopy := project.DeepCopy()
 				projectCopy.Name = "project-2"
 				Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(projectOld)).To(Succeed())

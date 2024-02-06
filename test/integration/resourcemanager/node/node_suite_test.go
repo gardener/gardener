@@ -26,7 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -121,7 +121,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	Expect((&node.Reconciler{
 		Config: config.NodeControllerConfig{
-			ConcurrentSyncs: pointer.Int(5),
+			ConcurrentSyncs: ptr.To(5),
 			Backoff:         &metav1.Duration{Duration: 100 * time.Millisecond},
 		},
 	}).AddToManager(mgr, mgr)).To(Succeed())

@@ -19,7 +19,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/downloader"
@@ -36,14 +36,14 @@ var _ = Describe("Downloader", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(units).To(ConsistOf(extensionsv1alpha1.Unit{
 				Name:    "cloud-config-downloader.service",
-				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-				Enable:  pointer.Bool(true),
-				Content: pointer.String(unitContent),
+				Command: ptr.To(extensionsv1alpha1.CommandStart),
+				Enable:  ptr.To(true),
+				Content: ptr.To(unitContent),
 			}))
 			Expect(files).To(ConsistOf(
 				extensionsv1alpha1.File{
 					Path:        "/var/lib/cloud-config-downloader/credentials/server",
-					Permissions: pointer.Int32(0644),
+					Permissions: ptr.To(int32(0644)),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
@@ -53,7 +53,7 @@ var _ = Describe("Downloader", func() {
 				},
 				extensionsv1alpha1.File{
 					Path:        "/var/lib/cloud-config-downloader/credentials/ca.crt",
-					Permissions: pointer.Int32(0644),
+					Permissions: ptr.To(int32(0644)),
 					Content: extensionsv1alpha1.FileContent{
 						SecretRef: &extensionsv1alpha1.FileContentSecretRef{
 							Name:    clusterCASecretName,
@@ -63,7 +63,7 @@ var _ = Describe("Downloader", func() {
 				},
 				extensionsv1alpha1.File{
 					Path:        "/var/lib/cloud-config-downloader/download-cloud-config.sh",
-					Permissions: pointer.Int32(0744),
+					Permissions: ptr.To(int32(0744)),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
@@ -73,12 +73,12 @@ var _ = Describe("Downloader", func() {
 				},
 				extensionsv1alpha1.File{
 					Path:        "/var/lib/cloud-config-downloader/credentials/bootstrap-token",
-					Permissions: pointer.Int32(0644),
+					Permissions: ptr.To(int32(0644)),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Data: "<<BOOTSTRAP_TOKEN>>",
 						},
-						TransmitUnencoded: pointer.Bool(true),
+						TransmitUnencoded: ptr.To(true),
 					},
 				}))
 		})

@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -61,14 +61,14 @@ var _ = Describe("Component", func() {
 				Key:                 key,
 				KubernetesVersion:   kubernetesVersion,
 				APIServerURL:        apiServerURL,
-				CABundle:            pointer.String(string(caBundle)),
-				Images:              map[string]*imagevectorutils.Image{"gardener-node-agent": {Repository: "gardener-node-agent", Tag: pointer.String("v1")}},
+				CABundle:            ptr.To(string(caBundle)),
+				Images:              map[string]*imagevectorutils.Image{"gardener-node-agent": {Repository: "gardener-node-agent", Tag: ptr.To("v1")}},
 				OSCSyncJitterPeriod: syncJitterPeriod,
 			})
 
 			expectedFiles = append(expectedFiles, extensionsv1alpha1.File{
 				Path:        "/opt/bin/gardener-node-agent",
-				Permissions: pointer.Int32(0755),
+				Permissions: ptr.To(int32(0755)),
 				Content: extensionsv1alpha1.FileContent{
 					ImageRef: &extensionsv1alpha1.FileContentImageRef{
 						Image:           "gardener-node-agent:v1",
@@ -81,8 +81,8 @@ var _ = Describe("Component", func() {
 			Expect(units).To(ConsistOf(
 				extensionsv1alpha1.Unit{
 					Name:   "gardener-node-agent.service",
-					Enable: pointer.Bool(true),
-					Content: pointer.String(`[Unit]
+					Enable: ptr.To(true),
+					Content: ptr.To(`[Unit]
 Description=Gardener Node Agent
 After=network-online.target
 
@@ -155,7 +155,7 @@ WantedBy=multi-user.target`))
 
 			Expect(Files(config)).To(ConsistOf(extensionsv1alpha1.File{
 				Path:        "/var/lib/gardener-node-agent/config.yaml",
-				Permissions: pointer.Int32(0600),
+				Permissions: ptr.To(int32(0600)),
 				Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiServer:
   caBundle: ` + utils.EncodeBase64(caBundle) + `
   server: ` + apiServerURL + `

@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/component/nodeproblemdetector"
 )
@@ -46,7 +46,7 @@ var _ = Describe("Logging", func() {
 									Parser: &fluentbitv1alpha2filter.Parser{
 										KeyName:     "log",
 										Parser:      "node-problem-detector-parser",
-										ReserveData: pointer.Bool(true),
+										ReserveData: ptr.To(true),
 									},
 								},
 							},

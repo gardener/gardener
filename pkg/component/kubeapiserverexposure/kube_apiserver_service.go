@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -143,7 +144,7 @@ func (s *service) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, obj, func() error {
 		obj.Annotations = utils.MergeStringMaps(obj.Annotations, s.values.annotationsFunc())
 		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.istio.io/exportTo", "*")
-		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(obj, networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt32(kubeapiserverconstants.Port), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)}))
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(obj, networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt32(kubeapiserverconstants.Port), Protocol: ptr.To(corev1.ProtocolTCP)}))
 
 		namespaceSelectors := []metav1.LabelSelector{
 			{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},

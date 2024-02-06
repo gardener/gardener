@@ -20,7 +20,7 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/generator"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -50,7 +50,7 @@ var DescribeTest = func(g generator.Generator, files embed.FS) func() {
 					{
 						Path:              "/foo2",
 						Content:           []byte("bar"),
-						TransmitUnencoded: pointer.Bool(true),
+						TransmitUnencoded: ptr.To(true),
 					},
 				},
 

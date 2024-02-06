@@ -25,7 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -155,12 +155,12 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 				deployment := &appsv1.Deployment{}
 				g.Expect(shootClient.Client().Get(ctx, client.ObjectKey{Name: "gardenlet", Namespace: "garden"}, deployment)).To(Succeed())
 
-				if pointer.Int32Deref(deployment.Spec.Replicas, 0) != 0 {
+				if ptr.Deref(deployment.Spec.Replicas, 0) != 0 {
 					By("Scale down gardenlet deployment to prevent interference of old pods with old validity settings")
 					// See https://github.com/gardener/gardener/issues/6766 for details
 
 					patch := client.MergeFrom(deployment.DeepCopy())
-					deployment.Spec.Replicas = pointer.Int32(0)
+					deployment.Spec.Replicas = ptr.To(int32(0))
 					g.Expect(shootClient.Client().Patch(ctx, deployment, patch)).To(Succeed())
 				}
 
@@ -179,8 +179,8 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 				// valid and then renews it.
 				return patchGardenletKubeconfigValiditySettingsAndTriggerRotation(ctx, f.GardenClient.Client(), managedSeed, &gardenletv1alpha1.KubeconfigValidity{
 					Validity:                        &metav1.Duration{Duration: 10 * time.Minute},
-					AutoRotationJitterPercentageMin: pointer.Int32(40),
-					AutoRotationJitterPercentageMax: pointer.Int32(41),
+					AutoRotationJitterPercentageMin: ptr.To(int32(40)),
+					AutoRotationJitterPercentageMax: ptr.To(int32(41)),
 				})
 			}).Should(Succeed())
 			verifier.After(ctx, true)
@@ -273,7 +273,7 @@ func buildManagedSeed(shoot *gardencorev1beta1.Shoot) (*seedmanagementv1alpha1.M
 				Spec: gardencorev1beta1.SeedSpec{
 					Settings: &gardencorev1beta1.SeedSettings{
 						ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{
-							Enabled: pointer.Bool(false),
+							Enabled: ptr.To(false),
 						},
 						Scheduling: &gardencorev1beta1.SeedSettingScheduling{
 							Visible: false,
@@ -302,7 +302,7 @@ func buildManagedSeed(shoot *gardencorev1beta1.Shoot) (*seedmanagementv1alpha1.M
 			Gardenlet: &seedmanagementv1alpha1.Gardenlet{
 				Config: *gardenletConfig,
 				Deployment: &seedmanagementv1alpha1.GardenletDeployment{
-					ReplicaCount: pointer.Int32(1), // the default replicaCount is 2, however in this e2e test we don't need 2 replicas
+					ReplicaCount: ptr.To(int32(1)), // the default replicaCount is 2, however in this e2e test we don't need 2 replicas
 				},
 			},
 		},

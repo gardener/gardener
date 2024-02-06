@@ -28,7 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -410,7 +410,7 @@ var _ = Describe("Extension", func() {
 			extensions := make([]gardencorev1beta1.ExtensionResourceState, 0, len(requiredExtensions))
 			for _, ext := range requiredExtensions {
 				extensions = append(extensions, gardencorev1beta1.ExtensionResourceState{
-					Name:  pointer.String(ext.Name),
+					Name:  ptr.To(ext.Name),
 					Kind:  extensionsv1alpha1.ExtensionResource,
 					State: &runtime.RawExtension{Raw: state},
 				})

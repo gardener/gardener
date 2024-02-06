@@ -24,7 +24,7 @@ import (
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -86,9 +86,9 @@ var _ = Describe("Logging", func() {
 				SeedClientSet:  k8sSeedClient,
 				Config: &config.GardenletConfiguration{
 					Logging: &config.Logging{
-						Enabled: pointer.Bool(true),
+						Enabled: ptr.To(true),
 						Vali: &config.Vali{
-							Enabled: pointer.Bool(true),
+							Enabled: ptr.To(true),
 						},
 						ShootNodeLogging: &config.ShootNodeLogging{
 							ShootPurposes: []gardencore.ShootPurpose{
@@ -96,7 +96,7 @@ var _ = Describe("Logging", func() {
 							},
 						},
 						ShootEventLogging: &config.ShootEventLogging{
-							Enabled: pointer.Bool(true),
+							Enabled: ptr.To(true),
 						},
 					},
 				},
@@ -117,7 +117,7 @@ var _ = Describe("Logging", func() {
 
 		botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
 			Status: gardencorev1beta1.SeedStatus{
-				KubernetesVersion: pointer.String("1.2.3"),
+				KubernetesVersion: ptr.To("1.2.3"),
 			},
 		})
 

@@ -33,7 +33,7 @@ import (
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/component-base/version"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -438,7 +438,7 @@ func injectGenericKubeconfig(obj runtime.Object, genericKubeconfigName, accessSe
 			Name: volumeName,
 			VolumeSource: corev1.VolumeSource{
 				Projected: &corev1.ProjectedVolumeSource{
-					DefaultMode: pointer.Int32(420),
+					DefaultMode: ptr.To(int32(420)),
 					Sources: []corev1.VolumeProjection{
 						{
 							Secret: &corev1.SecretProjection{
@@ -449,7 +449,7 @@ func injectGenericKubeconfig(obj runtime.Object, genericKubeconfigName, accessSe
 									Key:  secrets.DataKeyKubeconfig,
 									Path: secrets.DataKeyKubeconfig,
 								}},
-								Optional: pointer.Bool(false),
+								Optional: ptr.To(false),
 							},
 						},
 						{
@@ -461,7 +461,7 @@ func injectGenericKubeconfig(obj runtime.Object, genericKubeconfigName, accessSe
 									Key:  resourcesv1alpha1.DataKeyToken,
 									Path: resourcesv1alpha1.DataKeyToken,
 								}},
-								Optional: pointer.Bool(false),
+								Optional: ptr.To(false),
 							},
 						},
 					},
@@ -637,7 +637,7 @@ func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gar
 	for _, extension := range shoot.Spec.Extensions {
 		id := ExtensionsID(extensionsv1alpha1.ExtensionResource, extension.Type)
 
-		if pointer.BoolDeref(extension.Disabled, false) {
+		if ptr.Deref(extension.Disabled, false) {
 			disabledExtensions.Insert(id)
 		} else {
 			requiredExtensions.Insert(id)
@@ -676,8 +676,8 @@ func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gar
 	for _, controllerRegistration := range controllerRegistrationList.Items {
 		for _, resource := range controllerRegistration.Spec.Resources {
 			id := ExtensionsID(extensionsv1alpha1.ExtensionResource, resource.Type)
-			if resource.Kind == extensionsv1alpha1.ExtensionResource && pointer.BoolDeref(resource.GloballyEnabled, false) && !disabledExtensions.Has(id) {
-				if v1beta1helper.IsWorkerless(shoot) && !pointer.BoolDeref(resource.WorkerlessSupported, false) {
+			if resource.Kind == extensionsv1alpha1.ExtensionResource && ptr.Deref(resource.GloballyEnabled, false) && !disabledExtensions.Has(id) {
+				if v1beta1helper.IsWorkerless(shoot) && !ptr.Deref(resource.WorkerlessSupported, false) {
 					continue
 				}
 				requiredExtensions.Insert(id)

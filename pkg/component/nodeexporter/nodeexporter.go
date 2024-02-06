@@ -28,7 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -135,7 +135,7 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 				Namespace: metav1.NamespaceSystem,
 				Labels:    getLabels(),
 			},
-			AutomountServiceAccountToken: pointer.Bool(false),
+			AutomountServiceAccountToken: ptr.To(false),
 		}
 
 		service = &corev1.Service{
@@ -198,10 +198,10 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 						HostPID:                      true,
 						PriorityClassName:            "system-cluster-critical",
 						ServiceAccountName:           serviceAccount.Name,
-						AutomountServiceAccountToken: pointer.Bool(false),
+						AutomountServiceAccountToken: ptr.To(false),
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsNonRoot: pointer.Bool(true),
-							RunAsUser:    pointer.Int64(65534),
+							RunAsNonRoot: ptr.To(true),
+							RunAsUser:    ptr.To(int64(65534)),
 							SeccompProfile: &corev1.SeccompProfile{
 								Type: corev1.SeccompProfileTypeRuntimeDefault,
 							},

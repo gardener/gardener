@@ -22,7 +22,7 @@ import (
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/core/shoot"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -41,7 +41,7 @@ var _ = Describe("Warnings", func() {
 				Spec: core.ShootSpec{
 					Kubernetes: core.Kubernetes{
 						Version:                     "1.26.5",
-						EnableStaticTokenKubeconfig: pointer.Bool(false),
+						EnableStaticTokenKubeconfig: ptr.To(false),
 					},
 					Provider: core.Provider{
 						Workers: []core.Worker{{Name: "test"}},
@@ -64,7 +64,7 @@ var _ = Describe("Warnings", func() {
 		})
 
 		It("should return a warning when static token kubeconfig is explicitly enabled", func() {
-			shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
+			shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
 			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(ContainSubstring("you should consider disabling the static token kubeconfig")))
 		})
 
@@ -172,7 +172,7 @@ var _ = Describe("Warnings", func() {
 
 				Entry("kubeconfig nil", ContainElement(ContainSubstring("you should consider rotating the static token kubeconfig")),
 					func(shoot *core.Shoot) {
-						shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
+						shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
 					},
 					func(rotation *core.ShootCredentialsRotation) {
 						rotation.Kubeconfig = nil
@@ -180,7 +180,7 @@ var _ = Describe("Warnings", func() {
 				),
 				Entry("kubeconfig last initiated too long ago", ContainElement(ContainSubstring("you should consider rotating the static token kubeconfig")),
 					func(shoot *core.Shoot) {
-						shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
+						shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
 					},
 					func(rotation *core.ShootCredentialsRotation) {
 						rotation.Kubeconfig.LastInitiationTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval * 2)}
@@ -188,7 +188,7 @@ var _ = Describe("Warnings", func() {
 				),
 				Entry("kubeconfig last initiated too long ago but disabled", Not(ContainElement(ContainSubstring("you should consider rotating the static token kubeconfig"))),
 					func(shoot *core.Shoot) {
-						shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(false)
+						shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(false)
 					},
 					func(rotation *core.ShootCredentialsRotation) {
 						rotation.Kubeconfig.LastInitiationTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval * 2)}
@@ -313,7 +313,7 @@ var _ = Describe("Warnings", func() {
 					AdmissionPlugins: []core.AdmissionPlugin{
 						{
 							Name:     "PodSecurityPolicy",
-							Disabled: pointer.Bool(true),
+							Disabled: ptr.To(true),
 						},
 					},
 				}

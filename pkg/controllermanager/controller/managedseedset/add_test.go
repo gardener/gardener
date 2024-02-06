@@ -23,7 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -91,7 +91,7 @@ var _ = Describe("Add", func() {
 						{
 							Kind:       "ManagedSeedSet",
 							Name:       name,
-							Controller: pointer.Bool(true),
+							Controller: ptr.To(true),
 						},
 					},
 				},
@@ -105,7 +105,7 @@ var _ = Describe("Add", func() {
 						{
 							Kind:       "ManagedSeedSet",
 							Name:       name,
-							Controller: pointer.Bool(true),
+							Controller: ptr.To(true),
 						},
 					},
 				},
@@ -326,7 +326,7 @@ var _ = Describe("Add", func() {
 						{
 							Kind:       "ManagedSeedSet",
 							Name:       name,
-							Controller: pointer.Bool(true),
+							Controller: ptr.To(true),
 						},
 					},
 				},
@@ -340,7 +340,7 @@ var _ = Describe("Add", func() {
 						{
 							Kind:       "ManagedSeedSet",
 							Name:       name,
-							Controller: pointer.Bool(true),
+							Controller: ptr.To(true),
 						},
 					},
 				},
@@ -460,7 +460,7 @@ var _ = Describe("Add", func() {
 						{
 							Kind:       "ManagedSeedSet",
 							Name:       name,
-							Controller: pointer.Bool(true),
+							Controller: ptr.To(true),
 						},
 					},
 				},
@@ -594,7 +594,7 @@ var _ = Describe("Add", func() {
 						{
 							Kind:       "ManagedSeedSet",
 							Name:       name,
-							Controller: pointer.Bool(true),
+							Controller: ptr.To(true),
 						},
 					},
 				},

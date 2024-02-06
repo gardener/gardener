@@ -26,7 +26,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -122,8 +122,8 @@ var _ = Describe("ResourceManager", func() {
 				BeforeEach(func() {
 					gomock.InOrder(
 						resourceManager.EXPECT().GetReplicas(),
-						resourceManager.EXPECT().SetReplicas(pointer.Int32(2)),
-						resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(2)),
+						resourceManager.EXPECT().SetReplicas(ptr.To(int32(2))),
+						resourceManager.EXPECT().GetReplicas().Return(ptr.To(int32(2))),
 
 						// ensure bootstrapping prerequisites are not met
 						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
@@ -255,8 +255,8 @@ var _ = Describe("ResourceManager", func() {
 					BeforeEach(func() {
 						gomock.InOrder(
 							resourceManager.EXPECT().GetReplicas(),
-							resourceManager.EXPECT().SetReplicas(pointer.Int32(2)),
-							resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(2)),
+							resourceManager.EXPECT().SetReplicas(ptr.To(int32(2))),
+							resourceManager.EXPECT().GetReplicas().Return(ptr.To(int32(2))),
 						)
 					})
 
@@ -267,7 +267,7 @@ var _ = Describe("ResourceManager", func() {
 			Context("with failure", func() {
 				BeforeEach(func() {
 					// ensure bootstrapping preconditions are met
-					resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(3)).Times(2)
+					resourceManager.EXPECT().GetReplicas().Return(ptr.To(int32(3))).Times(2)
 					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 				})
 

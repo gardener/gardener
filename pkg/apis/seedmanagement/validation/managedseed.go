@@ -16,21 +16,20 @@ package validation
 
 import (
 	"fmt"
+	"slices"
 
 	corev1 "k8s.io/api/core/v1"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
-	"github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	gardenletvalidation "github.com/gardener/gardener/pkg/gardenlet/apis/config/validation"
-	"github.com/gardener/gardener/pkg/utils"
 )
 
 var availableManagedSeedOperations = sets.New(
@@ -166,12 +165,12 @@ func validateGardenlet(gardenlet *seedmanagement.Gardenlet, fldPath *field.Path,
 		}
 
 		// Validate gardenlet config
-		allErrs = append(allErrs, validateGardenletConfiguration(gardenletConfig, helper.GetBootstrap(gardenlet.Bootstrap), pointer.BoolDeref(gardenlet.MergeWithParent, false), configPath, inTemplate)...)
+		allErrs = append(allErrs, validateGardenletConfiguration(gardenletConfig, ptr.Deref(gardenlet.Bootstrap, seedmanagement.BootstrapNone), ptr.Deref(gardenlet.MergeWithParent, false), configPath, inTemplate)...)
 	}
 
 	if gardenlet.Bootstrap != nil {
 		validValues := []string{string(seedmanagement.BootstrapServiceAccount), string(seedmanagement.BootstrapToken), string(seedmanagement.BootstrapNone)}
-		if !utils.ValueExists(string(*gardenlet.Bootstrap), validValues) {
+		if !slices.Contains(validValues, string(*gardenlet.Bootstrap)) {
 			allErrs = append(allErrs, field.NotSupported(fldPath.Child("bootstrap"), *gardenlet.Bootstrap, validValues))
 		}
 	}
@@ -249,7 +248,7 @@ func validateImage(image *seedmanagement.Image, fldPath *field.Path) field.Error
 	}
 	if image.PullPolicy != nil {
 		validValues := []string{string(corev1.PullAlways), string(corev1.PullIfNotPresent), string(corev1.PullNever)}
-		if !utils.ValueExists(string(*image.PullPolicy), validValues) {
+		if !slices.Contains(validValues, string(*image.PullPolicy)) {
 			allErrs = append(allErrs, field.NotSupported(fldPath.Child("pullPolicy"), *image.PullPolicy, validValues))
 		}
 	}

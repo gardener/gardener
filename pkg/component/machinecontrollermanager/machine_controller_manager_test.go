@@ -32,7 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -98,7 +98,7 @@ var _ = Describe("MachineControllerManager", func() {
 				Name:      "machine-controller-manager",
 				Namespace: namespace,
 			},
-			AutomountServiceAccountToken: pointer.Bool(false),
+			AutomountServiceAccountToken: ptr.To(false),
 		}
 
 		unsupportedClusterRoleBindingSeed = &rbacv1.ClusterRoleBinding{
@@ -113,8 +113,8 @@ var _ = Describe("MachineControllerManager", func() {
 					Kind:               "Namespace",
 					Name:               namespace,
 					UID:                namespaceUID,
-					Controller:         pointer.Bool(true),
-					BlockOwnerDeletion: pointer.Bool(true),
+					Controller:         ptr.To(true),
+					BlockOwnerDeletion: ptr.To(true),
 				}},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -141,8 +141,8 @@ var _ = Describe("MachineControllerManager", func() {
 					Kind:               "Namespace",
 					Name:               namespace,
 					UID:                namespaceUID,
-					Controller:         pointer.Bool(true),
-					BlockOwnerDeletion: pointer.Bool(true),
+					Controller:         ptr.To(true),
+					BlockOwnerDeletion: ptr.To(true),
 				}},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -225,7 +225,7 @@ var _ = Describe("MachineControllerManager", func() {
 			},
 			Spec: appsv1.DeploymentSpec{
 				Replicas:             &replicas,
-				RevisionHistoryLimit: pointer.Int32(2),
+				RevisionHistoryLimit: ptr.To(int32(2)),
 				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 					"app":  "kubernetes",
 					"role": "machine-controller-manager",
@@ -291,7 +291,7 @@ var _ = Describe("MachineControllerManager", func() {
 						}},
 						PriorityClassName:             "gardener-system-300",
 						ServiceAccountName:            "machine-controller-manager",
-						TerminationGracePeriodSeconds: pointer.Int64(5),
+						TerminationGracePeriodSeconds: ptr.To(int64(5)),
 					},
 				},
 			},
@@ -499,7 +499,7 @@ subjects:
 				},
 			},
 			Type:      corev1.SecretTypeOpaque,
-			Immutable: pointer.Bool(true),
+			Immutable: ptr.To(true),
 			Data: map[string][]byte{
 				"clusterrole____gardener.cloud_target_machine-controller-manager.yaml":            []byte(clusterRoleYAML),
 				"clusterrolebinding____gardener.cloud_target_machine-controller-manager.yaml":     []byte(clusterRoleBindingYAML),
@@ -520,7 +520,7 @@ subjects:
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
 				SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}},
 				InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-				KeepObjects:  pointer.Bool(false),
+				KeepObjects:  ptr.To(false),
 			},
 		}
 	})
@@ -675,7 +675,7 @@ subjects:
 
 			timer := time.AfterFunc(10*time.Millisecond, func() {
 				deploy.Generation = 24
-				deploy.Spec.Replicas = pointer.Int32(1)
+				deploy.Spec.Replicas = ptr.To(int32(1))
 				deploy.Status.Conditions = []appsv1.DeploymentCondition{
 					{Type: appsv1.DeploymentProgressing, Status: "True", Reason: "NewReplicaSetAvailable"},
 					{Type: appsv1.DeploymentAvailable, Status: "True"},

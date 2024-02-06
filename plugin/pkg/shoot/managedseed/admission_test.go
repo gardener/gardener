@@ -25,7 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/client-go/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -78,8 +78,8 @@ var _ = Describe("ManagedSeed", func() {
 						},
 					},
 					Networking: &core.Networking{
-						Type:  pointer.String("foo"),
-						Nodes: pointer.String("10.181.0.0/18"),
+						Type:  ptr.To("foo"),
+						Nodes: ptr.To("10.181.0.0/18"),
 					},
 					Provider: core.Provider{
 						Workers: []core.Worker{
@@ -193,7 +193,7 @@ var _ = Describe("ManagedSeed", func() {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
 				})
 				oldShoot := shoot.DeepCopy()
-				shoot.Spec.Networking.Nodes = pointer.String("10.181.0.0/16")
+				shoot.Spec.Networking.Nodes = ptr.To("10.181.0.0/16")
 				attrs := getShootAttributes(shoot, oldShoot, admission.Update, &metav1.UpdateOptions{})
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 				Expect(err).To(HaveOccurred())

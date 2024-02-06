@@ -33,7 +33,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -526,7 +526,7 @@ var _ = Describe("health check", func() {
 						Maximum: 10,
 						Minimum: 1,
 						Kubernetes: &gardencorev1beta1.WorkerKubernetes{
-							Version: pointer.String(getVersionPointer(kubernetesVersion.IncPatch()).String()),
+							Version: ptr.To(getVersionPointer(kubernetesVersion.IncPatch()).String()),
 						},
 					},
 				},
@@ -545,7 +545,7 @@ var _ = Describe("health check", func() {
 						Maximum: 10,
 						Minimum: 1,
 						Kubernetes: &gardencorev1beta1.WorkerKubernetes{
-							Version: pointer.String(kubernetesVersion.Original()),
+							Version: ptr.To(kubernetesVersion.Original()),
 						},
 					},
 				},
@@ -727,7 +727,7 @@ var _ = Describe("health check", func() {
 				},
 				Spec: coordinationv1.LeaseSpec{
 					RenewTime:            &metav1.MicroTime{Time: fakeClock.Now()},
-					LeaseDurationSeconds: pointer.Int32(40),
+					LeaseDurationSeconds: ptr.To(int32(40)),
 				},
 			}
 
@@ -737,7 +737,7 @@ var _ = Describe("health check", func() {
 				},
 				Spec: coordinationv1.LeaseSpec{
 					RenewTime:            &metav1.MicroTime{Time: fakeClock.Now()},
-					LeaseDurationSeconds: pointer.Int32(-40),
+					LeaseDurationSeconds: ptr.To(int32(-40)),
 				},
 			}
 
@@ -747,7 +747,7 @@ var _ = Describe("health check", func() {
 				},
 				Spec: coordinationv1.LeaseSpec{
 					RenewTime:            &metav1.MicroTime{Time: fakeClock.Now()},
-					LeaseDurationSeconds: pointer.Int32(40),
+					LeaseDurationSeconds: ptr.To(int32(40)),
 				},
 			}
 

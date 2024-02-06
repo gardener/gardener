@@ -20,7 +20,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
@@ -32,7 +32,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		f.Shoot = shoot
 
 		f.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
-			Enabled: pointer.Bool(true),
+			Enabled: ptr.To(true),
 		}
 
 		It("Create and Delete Hibernated Shoot", Offset(1), Label("hibernated"), func() {

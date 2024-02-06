@@ -26,7 +26,7 @@ import (
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -110,7 +110,7 @@ var _ = Describe("Extensions", func() {
 						{
 							Kind:            extensionKind,
 							Type:            barExtensionType,
-							GloballyEnabled: pointer.Bool(true),
+							GloballyEnabled: ptr.To(true),
 						},
 					},
 				},
@@ -121,8 +121,8 @@ var _ = Describe("Extensions", func() {
 						{
 							Kind:                extensionKind,
 							Type:                barExtensionType,
-							GloballyEnabled:     pointer.Bool(true),
-							WorkerlessSupported: pointer.Bool(true),
+							GloballyEnabled:     ptr.To(true),
+							WorkerlessSupported: ptr.To(true),
 						},
 					},
 				},
@@ -134,7 +134,7 @@ var _ = Describe("Extensions", func() {
 			barExtensionDisabled = gardencorev1beta1.Extension{
 				Type:           barExtensionType,
 				ProviderConfig: &providerConfig,
-				Disabled:       pointer.Bool(true),
+				Disabled:       ptr.To(true),
 			}
 		)
 

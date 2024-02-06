@@ -20,7 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/component/etcd"
@@ -34,10 +34,10 @@ var _ = Describe("ShouldPrepareShootForMigration", func() {
 	BeforeEach(func() {
 		shoot = &gardencorev1beta1.Shoot{
 			Spec: gardencorev1beta1.ShootSpec{
-				SeedName: pointer.String("seed"),
+				SeedName: ptr.To("seed"),
 			},
 			Status: gardencorev1beta1.ShootStatus{
-				SeedName: pointer.String("seed"),
+				SeedName: ptr.To("seed"),
 			},
 		}
 	})
@@ -60,7 +60,7 @@ var _ = Describe("ShouldPrepareShootForMigration", func() {
 	})
 
 	It("should return true if spec.seedName and status.seedName differ", func() {
-		shoot.Spec.SeedName = pointer.String("other")
+		shoot.Spec.SeedName = ptr.To("other")
 		Expect(ShouldPrepareShootForMigration(shoot)).To(BeTrue())
 	})
 })
@@ -71,10 +71,10 @@ var _ = Describe("ComputeOperationType", func() {
 	BeforeEach(func() {
 		shoot = &gardencorev1beta1.Shoot{
 			Spec: gardencorev1beta1.ShootSpec{
-				SeedName: pointer.String("seed"),
+				SeedName: ptr.To("seed"),
 			},
 			Status: gardencorev1beta1.ShootStatus{
-				SeedName:      pointer.String("seed"),
+				SeedName:      ptr.To("seed"),
 				LastOperation: &gardencorev1beta1.LastOperation{},
 			},
 		}
@@ -122,7 +122,7 @@ var _ = Describe("ComputeOperationType", func() {
 	})
 
 	It("should return Migrate if spec.seedName and status.seedName differ", func() {
-		shoot.Spec.SeedName = pointer.String("other")
+		shoot.Spec.SeedName = ptr.To("other")
 		Expect(ComputeOperationType(shoot)).To(Equal(gardencorev1beta1.LastOperationTypeMigrate))
 	})
 

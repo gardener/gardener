@@ -31,7 +31,7 @@ import (
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	kubeproxyconfigv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -107,7 +107,7 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 				Name:      "kube-proxy",
 				Namespace: metav1.NamespaceSystem,
 			},
-			AutomountServiceAccountToken: pointer.Bool(false),
+			AutomountServiceAccountToken: ptr.To(false),
 		}
 
 		// This ClusterRoleBinding is similar to 'system:node-proxier' with the difference that it binds the kube-proxy's
@@ -303,7 +303,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 
 		daemonSet = &appsv1.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name(pool, pointer.Bool(false)),
+				Name:      name(pool, ptr.To(false)),
 				Namespace: metav1.NamespaceSystem,
 				Labels: utils.MergeStringMaps(
 					getSystemComponentLabels(),
@@ -423,7 +423,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 										LocalObjectReference: corev1.LocalObjectReference{
 											Name: k.configMapCleanupScript.Name,
 										},
-										DefaultMode: pointer.Int32(0777),
+										DefaultMode: ptr.To(int32(0777)),
 									},
 								},
 							},
@@ -490,14 +490,14 @@ func (k *kubeProxy) computePoolResourcesDataForMajorMinorVersionOnly(pool Worker
 		controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name(pool, pointer.Bool(true)),
+				Name:      name(pool, ptr.To(true)),
 				Namespace: metav1.NamespaceSystem,
 			},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
 					APIVersion: appsv1.SchemeGroupVersion.String(),
 					Kind:       "DaemonSet",
-					Name:       name(pool, pointer.Bool(false)),
+					Name:       name(pool, ptr.To(false)),
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 					UpdateMode: &vpaUpdateMode,
@@ -548,7 +548,7 @@ func (k *kubeProxy) getRawComponentConfig() (string, error) {
 		MetricsBindAddress: fmt.Sprintf("0.0.0.0:%d", portMetrics),
 		Mode:               k.getMode(),
 		Conntrack: kubeproxyconfigv1alpha1.KubeProxyConntrackConfiguration{
-			MaxPerCore: pointer.Int32(524288),
+			MaxPerCore: ptr.To(int32(524288)),
 		},
 		FeatureGates: k.values.FeatureGates,
 	}
@@ -589,7 +589,7 @@ func (k *kubeProxy) getInitContainers(kubernetesVersion *semver.Version, image s
 				},
 			},
 			SecurityContext: &corev1.SecurityContext{
-				Privileged: pointer.Bool(true),
+				Privileged: ptr.To(true),
 			},
 			VolumeMounts: []corev1.VolumeMount{
 				{
@@ -676,7 +676,7 @@ func (k *kubeProxy) getKubeProxyContainer(k8sGreaterEqual129 bool, image string,
 
 	if !k8sGreaterEqual129 || init {
 		container.SecurityContext = &corev1.SecurityContext{
-			Privileged: pointer.Bool(true),
+			Privileged: ptr.To(true),
 		}
 	}
 	if init {

@@ -15,7 +15,7 @@
 package shoot
 
 import (
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -61,7 +61,7 @@ func (r *Reconciler) ShootPredicate() predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		if shoot, ok := obj.(*gardencorev1beta1.Shoot); ok {
 			return shoot.Spec.SeedName == nil &&
-				pointer.StringDeref(shoot.Spec.SchedulerName, v1beta1constants.DefaultSchedulerName) == v1beta1constants.DefaultSchedulerName
+				ptr.Deref(shoot.Spec.SchedulerName, v1beta1constants.DefaultSchedulerName) == v1beta1constants.DefaultSchedulerName
 		}
 		return false
 	})

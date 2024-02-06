@@ -23,7 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -355,7 +355,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{GenerateName: "test-", Namespace: testNamespace.Name},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: pointer.String("my-provider-account"),
+				SecretBindingName: ptr.To("my-provider-account"),
 				CloudProfileName:  cloudProfile.Name,
 				Region:            "foo-region",
 				Provider: gardencorev1beta1.Provider{
@@ -377,7 +377,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 							Machine: gardencorev1beta1.Machine{
 								Image:        &testMachineImage,
 								Type:         "large",
-								Architecture: pointer.String("arm64"),
+								Architecture: ptr.To("arm64"),
 							},
 						},
 					},
@@ -386,12 +386,12 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 					Version: "1.25.1",
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: pointer.String("foo-networking"),
+					Type: ptr.To("foo-networking"),
 				},
 				Maintenance: &gardencorev1beta1.Maintenance{
 					AutoUpdate: &gardencorev1beta1.MaintenanceAutoUpdate{
 						KubernetesVersion:   false,
-						MachineImageVersion: pointer.Bool(false),
+						MachineImageVersion: ptr.To(false),
 					},
 					TimeWindow: &gardencorev1beta1.MaintenanceTimeWindow{
 						Begin: timewindow.NewMaintenanceTime(time.Now().Add(2*time.Hour).Hour(), 0, 0).Formatted(),
@@ -565,7 +565,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 
 				cloneShoot.Spec.Provider.Workers[0].Machine.Image.Version = &highestPatchSameMinorAMD64
 				cloneShoot.Spec.Provider.Workers[1].Machine.Image.Version = &highestPatchSameMinorARM
-				cloneShoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = pointer.Bool(true)
+				cloneShoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = ptr.To(true)
 				Expect(testClient.Patch(ctx, cloneShoot, patch)).ToNot(HaveOccurred())
 
 				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
@@ -694,15 +694,15 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			It("auto update to latest patch version in minor (update strategy: patch)", func() {
 				// set test specific shoot settings
 				patch := client.MergeFrom(shoot.DeepCopy())
-				shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = pointer.Bool(true)
+				shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = ptr.To(true)
 				Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
 
 				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
-					g.Expect(*shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: machineImageName, Version: pointer.String(highestPatchSameMinorAMD64)}))
-					g.Expect(*shoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: machineImageName, Version: pointer.String(highestPatchSameMinorARM)}))
+					g.Expect(*shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: machineImageName, Version: ptr.To(highestPatchSameMinorAMD64)}))
+					g.Expect(*shoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: machineImageName, Version: ptr.To(highestPatchSameMinorARM)}))
 					g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
 					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker1\": Updated machine image \"foo-image\" from \"%s\" to \"%s\". Reason: Automatic update of the machine image version is configured (image update strategy: patch)", testMachineImageVersion, highestPatchSameMinorAMD64)))
 					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker2\": Updated machine image \"foo-image\" from \"%s\" to \"%s\". Reason: Automatic update of the machine image version is configured (image update strategy: patch)", testMachineImageVersion, highestPatchSameMinorARM)))
@@ -817,7 +817,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), cloneShoot)).ToNot(HaveOccurred())
 				patch := client.StrategicMergeFrom(cloneShoot.DeepCopy())
 
-				cloneShoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = pointer.Bool(true)
+				cloneShoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = ptr.To(true)
 				cloneShoot.Spec.Provider.Workers[0].Machine.Image.Version = &highestPatchNextMinorAMD64
 				cloneShoot.Spec.Provider.Workers[1].Machine.Image.Version = &highestPatchNextMinorARM
 				Expect(testClient.Patch(ctx, cloneShoot, patch)).ToNot(HaveOccurred())
@@ -826,8 +826,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
-					g.Expect(*shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: machineImageName, Version: pointer.String(highestVersionForCurrentMajorAMD64)}))
-					g.Expect(*shoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: machineImageName, Version: pointer.String(highestVersionForCurrentMajorARM)}))
+					g.Expect(*shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: machineImageName, Version: ptr.To(highestVersionForCurrentMajorAMD64)}))
+					g.Expect(*shoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: machineImageName, Version: ptr.To(highestVersionForCurrentMajorARM)}))
 					g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
 					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker1\": Updated machine image \"foo-image\" from \"%s\" to \"%s\". Reason: Automatic update of the machine image version is configured (image update strategy: minor)", highestPatchNextMinorAMD64, highestVersionForCurrentMajorAMD64)))
 					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker2\": Updated machine image \"foo-image\" from \"%s\" to \"%s\". Reason: Automatic update of the machine image version is configured (image update strategy: minor)", highestPatchNextMinorARM, highestVersionForCurrentMajorARM)))
@@ -947,7 +947,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 	Describe("Kubernetes version maintenance tests", func() {
 		BeforeEach(func() {
 			shoot126.Spec.Kubernetes.Version = "1.26.0"
-			shoot126.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
+			shoot126.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
 
 			By("Create k8s v1.26 Shoot")
 			Expect(testClient.Create(ctx, shoot126)).To(Succeed())
@@ -1020,7 +1020,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 					g.Expect(shoot126.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"1.26.0\" to \"1.27.0\". Reason: Kubernetes version expired - force update required, EnableStaticTokenKubeconfig is set to false. Reason: The static token kubeconfig can no longer be enabled for Shoot clusters using Kubernetes version 1.27 and higher"))
 					g.Expect(shoot126.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
 					g.Expect(shoot126.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
-					g.Expect(shoot126.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(Equal(pointer.Bool(false)))
+					g.Expect(shoot126.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(Equal(ptr.To(false)))
 					return shoot126.Spec.Kubernetes.Version
 				}).Should(Equal("1.27.0"))
 			})
@@ -1065,7 +1065,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				// set test specific shoot settings
 				patch := client.MergeFrom(shoot.DeepCopy())
 				shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = true
-				shoot.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: pointer.String(testKubernetesVersionLowPatchLowMinor.Version)}
+				shoot.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: ptr.To(testKubernetesVersionLowPatchLowMinor.Version)}
 				Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
 
 				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
@@ -1083,7 +1083,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			It("Kubernetes version should be updated: force update patch version", func() {
 				// expire the Shoot's Kubernetes version because autoupdate is set to false
 				patch := client.MergeFrom(shoot.DeepCopy())
-				shoot.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: pointer.String(testKubernetesVersionLowPatchLowMinor.Version)}
+				shoot.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: ptr.To(testKubernetesVersionLowPatchLowMinor.Version)}
 				Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
 
 				By("Expire Shoot's kubernetes version in the CloudProfile")
@@ -1108,7 +1108,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				// set the shoots Kubernetes version to be the highest patch version of the minor version
 				patch := client.MergeFrom(shoot.DeepCopy())
 				shoot.Spec.Kubernetes.Version = testKubernetesVersionHighestPatchLowMinor.Version
-				shoot.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: pointer.String(testKubernetesVersionHighestPatchLowMinor.Version)}
+				shoot.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: ptr.To(testKubernetesVersionHighestPatchLowMinor.Version)}
 
 				Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
 
@@ -1135,7 +1135,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				// set the shoots Kubernetes version to be the highest patch version of the minor version
 				patch := client.MergeFrom(shoot.DeepCopy())
 				shoot.Spec.Kubernetes.Version = testKubernetesVersionLowPatchConsecutiveMinor.Version
-				shoot.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: pointer.String(testKubernetesVersionHighestPatchLowMinor.Version)}
+				shoot.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: ptr.To(testKubernetesVersionHighestPatchLowMinor.Version)}
 
 				Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
 
@@ -1256,7 +1256,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 					g.Expect(shoot126.Status.LastMaintenance.Description).To(ContainSubstring("EnableStaticTokenKubeconfig is set to false. Reason: The static token kubeconfig can no longer be enabled for Shoot clusters using Kubernetes version 1.27 and higher"))
 					g.Expect(shoot126.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
 					g.Expect(shoot126.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
-					g.Expect(shoot126.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(Equal(pointer.Bool(false)))
+					g.Expect(shoot126.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(Equal(ptr.To(false)))
 					return shoot126.Spec.Kubernetes.Version
 				}).Should(Equal("1.27.0"))
 			})

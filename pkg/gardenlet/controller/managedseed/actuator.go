@@ -28,7 +28,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/charts"
@@ -398,7 +398,7 @@ func (a *actuator) deployGardenlet(
 		seed,
 		gardenletConfig,
 		helper.GetBootstrap(managedSeed.Spec.Gardenlet.Bootstrap),
-		pointer.BoolDeref(managedSeed.Spec.Gardenlet.MergeWithParent, false),
+		ptr.Deref(managedSeed.Spec.Gardenlet.MergeWithParent, false),
 		shoot,
 	)
 	if err != nil {
@@ -440,7 +440,7 @@ func (a *actuator) deleteGardenlet(
 		seed,
 		gardenletConfig,
 		helper.GetBootstrap(managedSeed.Spec.Gardenlet.Bootstrap),
-		pointer.BoolDeref(managedSeed.Spec.Gardenlet.MergeWithParent, false),
+		ptr.Deref(managedSeed.Spec.Gardenlet.MergeWithParent, false),
 		shoot,
 	)
 	if err != nil {

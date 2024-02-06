@@ -17,7 +17,7 @@ package kubernetes
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -32,10 +32,10 @@ func GetReplicaCount(failureToleranceType *gardencorev1beta1.FailureToleranceTyp
 	if failureToleranceType != nil &&
 		*failureToleranceType == "" &&
 		componentType == resourcesv1alpha1.HighAvailabilityConfigTypeController {
-		return pointer.Int32(1)
+		return ptr.To(int32(1))
 	}
 
-	return pointer.Int32(2)
+	return ptr.To(int32(2))
 }
 
 // GetNodeSelectorRequirementForZones returns a node selector requirement to ensure all pods are scheduled only on
@@ -109,8 +109,8 @@ func minDomains(numberOfZones, maxReplicas int32) *int32 {
 	// the number of replicas because there is no benefit of enforcing a further zone spread for additional replicas,
 	// e.g. when a rolling update is performed.
 	if maxReplicas < numberOfZones {
-		return pointer.Int32(maxReplicas)
+		return ptr.To(maxReplicas)
 	}
 	// Return the number of zones otherwise because it's not possible to spread pods over more zones than there are available.
-	return pointer.Int32(numberOfZones)
+	return ptr.To(numberOfZones)
 }

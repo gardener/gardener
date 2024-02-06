@@ -19,7 +19,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
@@ -87,7 +87,7 @@ func SetDefaults_ServerConfiguration(obj *ServerConfiguration) {
 // SetDefaults_GardenControllerConfig sets defaults for the GardenControllerConfig object.
 func SetDefaults_GardenControllerConfig(obj *GardenControllerConfig) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = pointer.Int(1)
+		obj.ConcurrentSyncs = ptr.To(1)
 	}
 	if obj.SyncPeriod == nil {
 		obj.SyncPeriod = &metav1.Duration{Duration: time.Hour}

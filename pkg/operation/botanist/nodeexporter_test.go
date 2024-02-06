@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
@@ -44,7 +44,7 @@ var _ = Describe("NodeExporter", func() {
 			Config: &config.GardenletConfiguration{
 				Monitoring: &config.MonitoringConfig{
 					Shoot: &config.ShootMonitoringConfig{
-						Enabled: pointer.Bool(true),
+						Enabled: ptr.To(true),
 					},
 				},
 			},
@@ -116,7 +116,7 @@ var _ = Describe("NodeExporter", func() {
 
 		Context("Shoot monitoring disabled", func() {
 			BeforeEach(func() {
-				botanist.Operation.Config.Monitoring.Shoot.Enabled = pointer.Bool(false)
+				botanist.Operation.Config.Monitoring.Shoot.Enabled = ptr.To(false)
 			})
 
 			It("should fail when the destroy function fails", func() {

@@ -15,7 +15,7 @@
 package botanist
 
 import (
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
@@ -32,7 +32,7 @@ func (b *Botanist) DefaultMetricsServer() (component.DeployWaiter, error) {
 
 	var kubeAPIServerHost *string
 	if b.ShootUsesDNS() {
-		kubeAPIServerHost = pointer.String(b.outOfClusterAPIServerFQDN())
+		kubeAPIServerHost = ptr.To(b.outOfClusterAPIServerFQDN())
 	}
 
 	values := metricsserver.Values{

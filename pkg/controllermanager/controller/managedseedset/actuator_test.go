@@ -24,7 +24,7 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -42,7 +42,7 @@ const (
 	name      = "test"
 	namespace = "garden"
 
-	maxShootRetries = 3
+	maxShootRetries int32 = 3
 )
 
 var _ = Describe("Actuator", func() {
@@ -76,7 +76,7 @@ var _ = Describe("Actuator", func() {
 		r0 = mockmanagedseedset.NewMockReplica(ctrl)
 		recorder = mockrecord.NewMockEventRecorder(ctrl)
 
-		v := maxShootRetries
+		v := int(maxShootRetries)
 		cfg = &config.ManagedSeedSetControllerConfiguration{
 			MaxShootRetries: &v,
 		}
@@ -117,7 +117,7 @@ var _ = Describe("Actuator", func() {
 					Generation: 1,
 				},
 				Spec: seedmanagementv1alpha1.ManagedSeedSetSpec{
-					Replicas: pointer.Int32(replicas),
+					Replicas: ptr.To(replicas),
 				},
 				Status: seedmanagementv1alpha1.ManagedSeedSetStatus{
 					Replicas:          1,
@@ -185,15 +185,15 @@ var _ = Describe("Actuator", func() {
 					expectReplica(r0, 0, StatusShootReconcileFailed, false, gardenerutils.ShootStatusUnhealthy, true)
 					r0.EXPECT().RetryShoot(ctx, gc).Return(nil)
 				},
-				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, now, pointer.Int32(1)),
+				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, now, ptr.To(int32(1))),
 				EventRetryingShootReconciliation, "Retrying Shoot %s reconciliation", getReplicaFullName(0),
 			),
 			Entry("should return correct status if a replica has status ShootReconcileFailed and max retries reached",
-				managedSeedSet(1, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, pointer.Int32(maxShootRetries)),
+				managedSeedSet(1, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, ptr.To(maxShootRetries)),
 				func() {
 					expectReplica(r0, 0, StatusShootReconcileFailed, false, gardenerutils.ShootStatusUnhealthy, true)
 				},
-				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcileFailedReason, now, pointer.Int32(maxShootRetries)),
+				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcileFailedReason, now, ptr.To(maxShootRetries)),
 				EventNotRetryingShootReconciliation, "Not retrying Shoot %s reconciliation since max retries have been reached", getReplicaFullName(0),
 			),
 			Entry("should retry the shoot and return correct status if a replica has status ShootDeleteFailed and max retries not yet reached",
@@ -202,15 +202,15 @@ var _ = Describe("Actuator", func() {
 					expectReplica(r0, 0, StatusShootDeleteFailed, false, gardenerutils.ShootStatusUnhealthy, true)
 					r0.EXPECT().RetryShoot(ctx, gc).Return(nil)
 				},
-				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, now, pointer.Int32(1)),
+				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, now, ptr.To(int32(1))),
 				EventRetryingShootDeletion, "Retrying Shoot %s deletion", getReplicaFullName(0),
 			),
 			Entry("should return correct status if a replica has status ShootReconcileFailed and max retries reached",
-				managedSeedSet(1, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, pointer.Int32(maxShootRetries)),
+				managedSeedSet(1, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, ptr.To(maxShootRetries)),
 				func() {
 					expectReplica(r0, 0, StatusShootDeleteFailed, false, gardenerutils.ShootStatusUnhealthy, true)
 				},
-				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeleteFailedReason, now, pointer.Int32(maxShootRetries)),
+				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeleteFailedReason, now, ptr.To(maxShootRetries)),
 				EventNotRetryingShootDeletion, "Not retrying Shoot %s deletion since max retries have been reached", getReplicaFullName(0),
 			),
 			Entry("should return correct status if a replica has status ShootReconciling",
@@ -300,15 +300,15 @@ var _ = Describe("Actuator", func() {
 					expectReplica(r0, 0, StatusShootReconcileFailed, false, gardenerutils.ShootStatusUnhealthy, true)
 					r0.EXPECT().RetryShoot(ctx, gc).Return(nil)
 				},
-				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, now, pointer.Int32(1)),
+				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, now, ptr.To(int32(1))),
 				EventRetryingShootReconciliation, "Retrying Shoot %s reconciliation", getReplicaFullName(0),
 			),
 			Entry("should return correct status if a replica has status ShootReconcileFailed and max retries reached",
-				managedSeedSet(2, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, pointer.Int32(maxShootRetries)),
+				managedSeedSet(2, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, ptr.To(maxShootRetries)),
 				func() {
 					expectReplica(r0, 0, StatusShootReconcileFailed, false, gardenerutils.ShootStatusUnhealthy, true)
 				},
-				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcileFailedReason, now, pointer.Int32(maxShootRetries)),
+				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcileFailedReason, now, ptr.To(maxShootRetries)),
 				EventNotRetryingShootReconciliation, "Not retrying Shoot %s reconciliation since max retries have been reached", getReplicaFullName(0),
 			),
 			Entry("should retry the shoot and return correct status if a replica has status ShootDeleteFailed and max retries not yet reached",
@@ -317,15 +317,15 @@ var _ = Describe("Actuator", func() {
 					expectReplica(r0, 0, StatusShootDeleteFailed, false, gardenerutils.ShootStatusUnhealthy, true)
 					r0.EXPECT().RetryShoot(ctx, gc).Return(nil)
 				},
-				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, now, pointer.Int32(1)),
+				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, now, ptr.To(int32(1))),
 				EventRetryingShootDeletion, "Retrying Shoot %s deletion", getReplicaFullName(0),
 			),
 			Entry("should return correct status if a replica has status ShootReconcileFailed and max retries reached",
-				managedSeedSet(2, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, pointer.Int32(maxShootRetries)),
+				managedSeedSet(2, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, ptr.To(maxShootRetries)),
 				func() {
 					expectReplica(r0, 0, StatusShootDeleteFailed, false, gardenerutils.ShootStatusUnhealthy, true)
 				},
-				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeleteFailedReason, now, pointer.Int32(maxShootRetries)),
+				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeleteFailedReason, now, ptr.To(maxShootRetries)),
 				EventNotRetryingShootDeletion, "Not retrying Shoot %s deletion since max retries have been reached", getReplicaFullName(0),
 			),
 			Entry("should return correct status if a replica has status ShootReconciling",
@@ -448,15 +448,15 @@ var _ = Describe("Actuator", func() {
 					expectReplica(r0, 0, StatusShootDeleteFailed, false, gardenerutils.ShootStatusUnhealthy, true)
 					r0.EXPECT().RetryShoot(ctx, gc).Return(nil)
 				},
-				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, now, pointer.Int32(1)), true,
+				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, now, ptr.To(int32(1))), true,
 				EventRetryingShootDeletion, "Retrying Shoot %s deletion", getReplicaFullName(0),
 			),
 			Entry("should return correct status if a replica has status ShootReconcileFailed and max retries reached",
-				managedSeedSet(0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, pointer.Int32(maxShootRetries)),
+				managedSeedSet(0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, ptr.To(maxShootRetries)),
 				func() {
 					expectReplica(r0, 0, StatusShootDeleteFailed, false, gardenerutils.ShootStatusUnhealthy, true)
 				},
-				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeleteFailedReason, now, pointer.Int32(maxShootRetries)), true,
+				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeleteFailedReason, now, ptr.To(maxShootRetries)), true,
 				EventNotRetryingShootDeletion, "Not retrying Shoot %s deletion since max retries have been reached", getReplicaFullName(0),
 			),
 			Entry("should delete the shoot and return correct status if a replica has status ShootReconciling",

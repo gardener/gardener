@@ -27,7 +27,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -87,8 +87,8 @@ var _ = Describe("ResourceManager", func() {
 		})
 
 		It("should consider node toleration configuration", func() {
-			notReadyTolerationSeconds := pointer.Int64(60)
-			unreachableTolerationSeconds := pointer.Int64(120)
+			notReadyTolerationSeconds := ptr.To(int64(60))
+			unreachableTolerationSeconds := ptr.To(int64(120))
 
 			botanist.Config = &gardenletconfig.GardenletConfiguration{
 				NodeToleration: &gardenletconfig.NodeToleration{
@@ -184,7 +184,7 @@ var _ = Describe("ResourceManager", func() {
 				AfterEach(func() {
 					gomock.InOrder(
 						// replicas are set to 0, i.e., GRM should not be scaled up
-						resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(0)),
+						resourceManager.EXPECT().GetReplicas().Return(ptr.To(int32(0))),
 
 						// set secrets
 						resourceManager.EXPECT().SetSecrets(secrets),
@@ -199,7 +199,7 @@ var _ = Describe("ResourceManager", func() {
 					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 						Spec: gardencorev1beta1.ShootSpec{
 							Hibernation: &gardencorev1beta1.Hibernation{
-								Enabled: pointer.Bool(true),
+								Enabled: ptr.To(true),
 							},
 						},
 						Status: gardencorev1beta1.ShootStatus{
@@ -213,7 +213,7 @@ var _ = Describe("ResourceManager", func() {
 					gomock.InOrder(
 						resourceManager.EXPECT().GetReplicas(),
 						c.EXPECT().Get(ctx, kubernetesutils.Key(seedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-						resourceManager.EXPECT().SetReplicas(pointer.Int32(0)),
+						resourceManager.EXPECT().SetReplicas(ptr.To(int32(0))),
 					)
 				})
 
@@ -228,8 +228,8 @@ var _ = Describe("ResourceManager", func() {
 
 					gomock.InOrder(
 						resourceManager.EXPECT().GetReplicas(),
-						kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(pointer.Int32(0)),
-						resourceManager.EXPECT().SetReplicas(pointer.Int32(0)),
+						kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(ptr.To(int32(0))),
+						resourceManager.EXPECT().SetReplicas(ptr.To(int32(0))),
 					)
 				})
 
@@ -238,7 +238,7 @@ var _ = Describe("ResourceManager", func() {
 					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 						Spec: gardencorev1beta1.ShootSpec{
 							Hibernation: &gardencorev1beta1.Hibernation{
-								Enabled: pointer.Bool(true),
+								Enabled: ptr.To(true),
 							},
 						},
 						Status: gardencorev1beta1.ShootStatus{
@@ -252,7 +252,7 @@ var _ = Describe("ResourceManager", func() {
 					gomock.InOrder(
 						resourceManager.EXPECT().GetReplicas(),
 						c.EXPECT().Get(ctx, kubernetesutils.Key(seedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-						resourceManager.EXPECT().SetReplicas(pointer.Int32(0)),
+						resourceManager.EXPECT().SetReplicas(ptr.To(int32(0))),
 					)
 				})
 
@@ -261,7 +261,7 @@ var _ = Describe("ResourceManager", func() {
 					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 						Spec: gardencorev1beta1.ShootSpec{
 							Hibernation: &gardencorev1beta1.Hibernation{
-								Enabled: pointer.Bool(true),
+								Enabled: ptr.To(true),
 							},
 						},
 						Status: gardencorev1beta1.ShootStatus{
@@ -275,7 +275,7 @@ var _ = Describe("ResourceManager", func() {
 					gomock.InOrder(
 						resourceManager.EXPECT().GetReplicas(),
 						c.EXPECT().Get(ctx, kubernetesutils.Key(seedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-						resourceManager.EXPECT().SetReplicas(pointer.Int32(0)),
+						resourceManager.EXPECT().SetReplicas(ptr.To(int32(0))),
 					)
 				})
 			})
@@ -284,9 +284,9 @@ var _ = Describe("ResourceManager", func() {
 				BeforeEach(func() {
 					gomock.InOrder(
 						resourceManager.EXPECT().GetReplicas(),
-						kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(pointer.Int32(1)),
-						resourceManager.EXPECT().SetReplicas(pointer.Int32(2)),
-						resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(2)),
+						kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(ptr.To(int32(1))),
+						resourceManager.EXPECT().SetReplicas(ptr.To(int32(2))),
+						resourceManager.EXPECT().GetReplicas().Return(ptr.To(int32(2))),
 
 						// ensure bootstrapping prerequisites are not met
 						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
@@ -420,9 +420,9 @@ var _ = Describe("ResourceManager", func() {
 
 						gomock.InOrder(
 							resourceManager.EXPECT().GetReplicas(),
-							kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(pointer.Int32(1)),
-							resourceManager.EXPECT().SetReplicas(pointer.Int32(2)),
-							resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(2)),
+							kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(ptr.To(int32(1))),
+							resourceManager.EXPECT().SetReplicas(ptr.To(int32(2))),
+							resourceManager.EXPECT().GetReplicas().Return(ptr.To(int32(2))),
 						)
 					})
 
@@ -436,9 +436,9 @@ var _ = Describe("ResourceManager", func() {
 
 						gomock.InOrder(
 							resourceManager.EXPECT().GetReplicas(),
-							kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(pointer.Int32(1)),
-							resourceManager.EXPECT().SetReplicas(pointer.Int32(2)),
-							resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(2)),
+							kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(ptr.To(int32(1))),
+							resourceManager.EXPECT().SetReplicas(ptr.To(int32(2))),
+							resourceManager.EXPECT().GetReplicas().Return(ptr.To(int32(2))),
 						)
 					})
 
@@ -449,7 +449,7 @@ var _ = Describe("ResourceManager", func() {
 					BeforeEach(func() {
 						botanist.Shoot.HibernationEnabled = true
 						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{IsHibernated: true}})
-						resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(2)).Times(2)
+						resourceManager.EXPECT().GetReplicas().Return(ptr.To(int32(2))).Times(2)
 					})
 
 					tests()
@@ -459,7 +459,7 @@ var _ = Describe("ResourceManager", func() {
 			Context("with failure", func() {
 				BeforeEach(func() {
 					// ensure bootstrapping preconditions are met
-					resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(3)).Times(2)
+					resourceManager.EXPECT().GetReplicas().Return(ptr.To(int32(3))).Times(2)
 					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 				})
 

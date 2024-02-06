@@ -21,7 +21,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -97,7 +97,7 @@ func injectDNSConfig(podSpec *corev1.PodSpec, namespace string, coreDNSClusterIP
 		},
 		Options: []corev1.PodDNSConfigOption{{
 			Name:  "ndots",
-			Value: pointer.String("5"),
+			Value: ptr.To("5"),
 		}},
 	}
 }

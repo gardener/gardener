@@ -24,7 +24,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -58,7 +58,7 @@ func (b *Botanist) determineControllerReplicas(ctx context.Context, deploymentNa
 
 	// If kube-apiserver is set to 0 replicas then we also want to return 0 here
 	// since the controller is most likely not able to run w/o communicating to the Apiserver.
-	if pointer.Int32Deref(b.Shoot.Components.ControlPlane.KubeAPIServer.GetAutoscalingReplicas(), 0) == 0 {
+	if ptr.Deref(b.Shoot.Components.ControlPlane.KubeAPIServer.GetAutoscalingReplicas(), 0) == 0 {
 		return 0, nil
 	}
 

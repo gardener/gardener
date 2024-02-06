@@ -30,7 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -124,7 +124,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 	}
 
 	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, c.client, serviceAccount, func() error {
-		serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
+		serviceAccount.AutomountServiceAccountToken = ptr.To(false)
 		return nil
 	}); err != nil {
 		return err
@@ -136,8 +136,8 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 			Kind:               "Namespace",
 			Name:               c.namespace,
 			UID:                c.namespaceUID,
-			Controller:         pointer.Bool(true),
-			BlockOwnerDeletion: pointer.Bool(true),
+			Controller:         ptr.To(true),
+			BlockOwnerDeletion: ptr.To(true),
 		}}
 		clusterRoleBinding.RoleRef = rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
@@ -159,7 +159,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
 			Port:     utils.IntStrPtrFromInt32(portMetrics),
-			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+			Protocol: ptr.To(corev1.ProtocolTCP),
 		}))
 
 		service.Spec.Selector = getLabels()
@@ -188,7 +188,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 			resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
 		})
 		deployment.Spec.Replicas = &c.replicas
-		deployment.Spec.RevisionHistoryLimit = pointer.Int32(1)
+		deployment.Spec.RevisionHistoryLimit = ptr.To(int32(1))
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: getLabels()}
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
@@ -234,7 +234,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 				},
 				PriorityClassName:             v1beta1constants.PriorityClassNameShootControlPlane300,
 				ServiceAccountName:            serviceAccount.Name,
-				TerminationGracePeriodSeconds: pointer.Int64(5),
+				TerminationGracePeriodSeconds: ptr.To(int64(5)),
 			},
 		}
 

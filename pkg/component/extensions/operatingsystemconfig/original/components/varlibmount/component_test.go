@@ -17,7 +17,7 @@ package varlibmount_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -41,13 +41,13 @@ var _ = Describe("Component", func() {
 		})
 
 		It("should return the expected units and files", func() {
-			units, files, err := component.Config(components.Context{KubeletDataVolumeName: pointer.String("foo")})
+			units, files, err := component.Config(components.Context{KubeletDataVolumeName: ptr.To("foo")})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(units).To(ConsistOf(
 				extensionsv1alpha1.Unit{
 					Name: "var-lib.mount",
-					Content: pointer.String(`[Unit]
+					Content: ptr.To(`[Unit]
 Description=mount /var/lib on kubelet data device
 Before=kubelet.service
 [Mount]

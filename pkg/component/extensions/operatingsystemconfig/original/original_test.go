@@ -19,7 +19,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original"
@@ -49,13 +49,13 @@ var _ = Describe("Original", func() {
 
 	Describe("#Config", func() {
 		var (
-			caBundle                = pointer.String("cabundle")
+			caBundle                = ptr.To("cabundle")
 			criName                 = extensionsv1alpha1.CRIName("foo")
 			images                  = map[string]*imagevector.Image{}
 			kubeletCABundle         = []byte("kubelet-ca-bundle")
 			kubeletCLIFlags         = components.ConfigurableKubeletCLIFlags{}
 			kubeletConfigParameters = components.ConfigurableKubeletConfigParameters{}
-			kubeletDataVolumeName   = pointer.String("datavolname")
+			kubeletDataVolumeName   = ptr.To("datavolname")
 			kubernetesVersion       = semver.MustParse("1.2.3")
 			sshPublicKeys           = []string{"ssh-public-key-a", "ssh-public-key-b"}
 

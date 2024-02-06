@@ -17,13 +17,13 @@ package v1alpha1
 
 import (
 	"k8s.io/apimachinery/pkg/conversion"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/authentication"
 )
 
 func Convert_v1alpha1_AdminKubeconfigRequest_To_authentication_KubeconfigRequest(in *AdminKubeconfigRequest, out *authentication.KubeconfigRequest, _ conversion.Scope) error {
-	out.Spec.ExpirationSeconds = pointer.Int64Deref(in.Spec.ExpirationSeconds, 0)
+	out.Spec.ExpirationSeconds = ptr.Deref(in.Spec.ExpirationSeconds, 0)
 	out.Status.Kubeconfig = in.Status.Kubeconfig
 	out.Status.ExpirationTimestamp = in.Status.ExpirationTimestamp
 	return nil
@@ -37,7 +37,7 @@ func Convert_authentication_KubeconfigRequest_To_v1alpha1_AdminKubeconfigRequest
 }
 
 func Convert_v1alpha1_ViewerKubeconfigRequest_To_authentication_KubeconfigRequest(in *ViewerKubeconfigRequest, out *authentication.KubeconfigRequest, _ conversion.Scope) error {
-	out.Spec.ExpirationSeconds = pointer.Int64Deref(in.Spec.ExpirationSeconds, 0)
+	out.Spec.ExpirationSeconds = ptr.Deref(in.Spec.ExpirationSeconds, 0)
 	out.Status.Kubeconfig = in.Status.Kubeconfig
 	out.Status.ExpirationTimestamp = in.Status.ExpirationTimestamp
 	return nil

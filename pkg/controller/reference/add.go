@@ -15,7 +15,7 @@
 package reference
 
 import (
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -40,7 +40,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		Named(ControllerName).
 		For(r.NewObjectFunc(), builder.WithPredicates(r.Predicate())).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: pointer.IntDeref(r.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: ptr.Deref(r.ConcurrentSyncs, 0),
 		}).
 		Complete(r)
 }

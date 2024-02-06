@@ -19,7 +19,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -107,16 +107,16 @@ ExecStart=/opt/bin/valitail -config.file=` + PathConfig
 
 					valitailDaemonUnit := extensionsv1alpha1.Unit{
 						Name:    UnitName,
-						Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-						Enable:  pointer.Bool(true),
-						Content: pointer.String(unitContent),
+						Command: ptr.To(extensionsv1alpha1.CommandStart),
+						Enable:  ptr.To(true),
+						Content: ptr.To(unitContent),
 					}
 
 					valitailTokenFetchUnit := extensionsv1alpha1.Unit{
 						Name:    "valitail-fetch-token.service",
-						Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-						Enable:  pointer.Bool(true),
-						Content: pointer.String(`[Unit]
+						Command: ptr.To(extensionsv1alpha1.CommandStart),
+						Enable:  ptr.To(true),
+						Content: ptr.To(`[Unit]
 Description=valitail token fetcher
 After=` + afterUnit + `
 [Install]
@@ -132,7 +132,7 @@ ExecStart=/var/lib/valitail/scripts/fetch-token.sh`),
 
 					valitailConfigFile := extensionsv1alpha1.File{
 						Path:        "/var/lib/valitail/config/config",
-						Permissions: pointer.Int32(0644),
+						Permissions: ptr.To(int32(0644)),
 						Content: extensionsv1alpha1.FileContent{
 							Inline: &extensionsv1alpha1.FileContentInline{
 								Encoding: "b64",
@@ -278,7 +278,7 @@ scrape_configs:
 
 					valitailBinaryFile := extensionsv1alpha1.File{
 						Path:        "/opt/bin/valitail",
-						Permissions: pointer.Int32(0755),
+						Permissions: ptr.To(int32(0755)),
 						Content: extensionsv1alpha1.FileContent{
 							ImageRef: &extensionsv1alpha1.FileContentImageRef{
 								Image:           ctx.Images["valitail"].String(),
@@ -289,7 +289,7 @@ scrape_configs:
 
 					valitailFetchTokenScriptFile := extensionsv1alpha1.File{
 						Path:        "/var/lib/valitail/scripts/fetch-token.sh",
-						Permissions: pointer.Int32(0744),
+						Permissions: ptr.To(int32(0744)),
 						Content: extensionsv1alpha1.FileContent{
 							Inline: &extensionsv1alpha1.FileContentInline{
 								Encoding: "b64",
@@ -322,7 +322,7 @@ exit $?
 
 					caBundleFile := extensionsv1alpha1.File{
 						Path:        "/var/lib/valitail/ca.crt",
-						Permissions: pointer.Int32(0644),
+						Permissions: ptr.To(int32(0644)),
 						Content: extensionsv1alpha1.FileContent{
 							Inline: &extensionsv1alpha1.FileContentInline{
 								Encoding: "b64",
@@ -416,15 +416,15 @@ ExecStart=/bin/sh -c "echo service valitail.service is removed!; while true; do 
 					Expect(units).To(ConsistOf([]extensionsv1alpha1.Unit{
 						{
 							Name:    "valitail.service",
-							Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-							Enable:  pointer.Bool(true),
-							Content: pointer.String(unitContent),
+							Command: ptr.To(extensionsv1alpha1.CommandStart),
+							Enable:  ptr.To(true),
+							Content: ptr.To(unitContent),
 						},
 						{
 							Name:    "valitail-fetch-token.service",
-							Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-							Enable:  pointer.Bool(true),
-							Content: pointer.String(`[Unit]
+							Command: ptr.To(extensionsv1alpha1.CommandStart),
+							Enable:  ptr.To(true),
+							Content: ptr.To(`[Unit]
 Description=valitail token fetcher
 After=` + afterUnit + `
 [Install]

@@ -36,7 +36,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -185,7 +185,7 @@ var _ = Describe("VPA", func() {
 					"gardener.cloud/role": "vpa",
 				},
 			},
-			AutomountServiceAccountToken: pointer.Bool(false),
+			AutomountServiceAccountToken: ptr.To(false),
 		}
 		clusterRoleUpdater = &rbacv1.ClusterRole{
 			TypeMeta: metav1.TypeMeta{
@@ -302,8 +302,8 @@ var _ = Describe("VPA", func() {
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas:             pointer.Int32(1),
-					RevisionHistoryLimit: pointer.Int32(2),
+					Replicas:             ptr.To(int32(1)),
+					RevisionHistoryLimit: ptr.To(int32(2)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"app": "vpa-updater",
@@ -375,7 +375,7 @@ var _ = Describe("VPA", func() {
 				})
 			} else {
 				obj.Labels["gardener.cloud/role"] = "controlplane"
-				obj.Spec.Template.Spec.AutomountServiceAccountToken = pointer.Bool(false)
+				obj.Spec.Template.Spec.AutomountServiceAccountToken = ptr.To(false)
 				obj.Spec.Template.Spec.Containers[0].Command = append(obj.Spec.Template.Spec.Containers[0].Command, "--kubeconfig="+pathGenericKubeconfig)
 
 				Expect(gardenerutils.InjectGenericKubeconfig(obj, genericTokenKubeconfigSecretName, shootAccessSecretUpdater.Name)).To(Succeed())
@@ -425,7 +425,7 @@ var _ = Describe("VPA", func() {
 					"gardener.cloud/role": "vpa",
 				},
 			},
-			AutomountServiceAccountToken: pointer.Bool(false),
+			AutomountServiceAccountToken: ptr.To(false),
 		}
 		clusterRoleRecommenderMetricsReader = &rbacv1.ClusterRole{
 			TypeMeta: metav1.TypeMeta{
@@ -659,8 +659,8 @@ var _ = Describe("VPA", func() {
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas:             pointer.Int32(1),
-					RevisionHistoryLimit: pointer.Int32(2),
+					Replicas:             ptr.To(int32(1)),
+					RevisionHistoryLimit: ptr.To(int32(2)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"app": "vpa-recommender",
@@ -723,7 +723,7 @@ var _ = Describe("VPA", func() {
 				obj.Spec.Template.Spec.ServiceAccountName = serviceAccountRecommender.Name
 			} else {
 				obj.Labels["gardener.cloud/role"] = "controlplane"
-				obj.Spec.Template.Spec.AutomountServiceAccountToken = pointer.Bool(false)
+				obj.Spec.Template.Spec.AutomountServiceAccountToken = ptr.To(false)
 				obj.Spec.Template.Spec.Containers[0].Command = append(obj.Spec.Template.Spec.Containers[0].Command, "--kubeconfig="+pathGenericKubeconfig)
 
 				Expect(gardenerutils.InjectGenericKubeconfig(obj, genericTokenKubeconfigSecretName, shootAccessSecretRecommender.Name)).To(Succeed())
@@ -773,7 +773,7 @@ var _ = Describe("VPA", func() {
 					"gardener.cloud/role": "vpa",
 				},
 			},
-			AutomountServiceAccountToken: pointer.Bool(false),
+			AutomountServiceAccountToken: ptr.To(false),
 		}
 		clusterRoleAdmissionController = &rbacv1.ClusterRole{
 			TypeMeta: metav1.TypeMeta{
@@ -902,8 +902,8 @@ var _ = Describe("VPA", func() {
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas:             pointer.Int32(1),
-					RevisionHistoryLimit: pointer.Int32(2),
+					Replicas:             ptr.To(int32(1)),
+					RevisionHistoryLimit: ptr.To(int32(2)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"app": "vpa-admission-controller",
@@ -964,7 +964,7 @@ var _ = Describe("VPA", func() {
 								Name: "vpa-tls-certs",
 								VolumeSource: corev1.VolumeSource{
 									Projected: &corev1.ProjectedVolumeSource{
-										DefaultMode: pointer.Int32(420),
+										DefaultMode: ptr.To(int32(420)),
 										Sources: []corev1.VolumeProjection{
 											{
 												Secret: &corev1.SecretProjection{
@@ -1015,7 +1015,7 @@ var _ = Describe("VPA", func() {
 				})
 			} else {
 				obj.Labels["gardener.cloud/role"] = "controlplane"
-				obj.Spec.Template.Spec.AutomountServiceAccountToken = pointer.Bool(false)
+				obj.Spec.Template.Spec.AutomountServiceAccountToken = ptr.To(false)
 				obj.Spec.Template.Spec.Containers[0].Command = append(obj.Spec.Template.Spec.Containers[0].Command, "--kubeconfig="+pathGenericKubeconfig)
 
 				Expect(gardenerutils.InjectGenericKubeconfig(obj, genericTokenKubeconfigSecretName, shootAccessSecretAdmissionController.Name)).To(Succeed())
@@ -1227,13 +1227,13 @@ var _ = Describe("VPA", func() {
 				Name:                    "vpa.k8s.io",
 				AdmissionReviewVersions: []string{"v1"},
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
-					URL: pointer.String(fmt.Sprintf("https://vpa-webhook.%s:443", namespace)),
+					URL: ptr.To(fmt.Sprintf("https://vpa-webhook.%s:443", namespace)),
 				},
 				FailurePolicy:      &webhookFailurePolicy,
 				MatchPolicy:        &webhookMatchPolicy,
 				ReinvocationPolicy: &webhookReinvocationPolicy,
 				SideEffects:        &webhookSideEffects,
-				TimeoutSeconds:     pointer.Int32(10),
+				TimeoutSeconds:     ptr.To(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
 						Rule: admissionregistrationv1.Rule{
@@ -1308,11 +1308,11 @@ var _ = Describe("VPA", func() {
 							ResourceVersion: "1",
 						},
 						Spec: resourcesv1alpha1.ManagedResourceSpec{
-							Class: pointer.String("seed"),
+							Class: ptr.To("seed"),
 							SecretRefs: []corev1.LocalObjectReference{{
 								Name: managedResource.Spec.SecretRefs[0].Name,
 							}},
-							KeepObjects: pointer.Bool(false),
+							KeepObjects: ptr.To(false),
 						},
 					}
 					utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -1320,7 +1320,7 @@ var _ = Describe("VPA", func() {
 
 					managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
-					Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+					Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 					Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 					Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 					Expect(managedResourceSecret.Data).To(HaveLen(26))
@@ -1391,7 +1391,7 @@ var _ = Describe("VPA", func() {
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "vpa-webhook",
 							Namespace: namespace,
-							Port:      pointer.Int32(443),
+							Port:      ptr.To(int32(443)),
 						},
 					}
 
@@ -1431,13 +1431,13 @@ var _ = Describe("VPA", func() {
 
 			It("should successfully deploy with special configuration", func() {
 				valuesRecommender.Interval = &metav1.Duration{Duration: 3 * time.Hour}
-				valuesRecommender.RecommendationMarginFraction = pointer.Float64(8.91)
+				valuesRecommender.RecommendationMarginFraction = ptr.To(float64(8.91))
 
 				valuesUpdater.Interval = &metav1.Duration{Duration: 4 * time.Hour}
 				valuesUpdater.EvictAfterOOMThreshold = &metav1.Duration{Duration: 5 * time.Hour}
-				valuesUpdater.EvictionRateBurst = pointer.Int32(1)
-				valuesUpdater.EvictionRateLimit = pointer.Float64(2.34)
-				valuesUpdater.EvictionTolerance = pointer.Float64(5.67)
+				valuesUpdater.EvictionRateBurst = ptr.To(int32(1))
+				valuesUpdater.EvictionRateLimit = ptr.To(float64(2.34))
+				valuesUpdater.EvictionTolerance = ptr.To(float64(5.67))
 
 				vpa = New(c, namespace, sm, Values{
 					ClusterType:              component.ClusterTypeSeed,
@@ -1464,11 +1464,11 @@ var _ = Describe("VPA", func() {
 						ResourceVersion: "1",
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						Class: pointer.String("seed"),
+						Class: ptr.To("seed"),
 						SecretRefs: []corev1.LocalObjectReference{{
 							Name: managedResource.Spec.SecretRefs[0].Name,
 						}},
-						KeepObjects: pointer.Bool(false),
+						KeepObjects: ptr.To(false),
 					},
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -1498,7 +1498,7 @@ var _ = Describe("VPA", func() {
 
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-updater.yaml"])).To(Equal(componenttest.Serialize(deploymentUpdater)))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-recommender.yaml"])).To(Equal(componenttest.Serialize(deploymentRecommender)))
-				Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 			})
 		})
@@ -1541,7 +1541,7 @@ var _ = Describe("VPA", func() {
 							SecretRefs: []corev1.LocalObjectReference{{
 								Name: managedResource.Spec.SecretRefs[0].Name,
 							}},
-							KeepObjects: pointer.Bool(false),
+							KeepObjects: ptr.To(false),
 						},
 					}
 					utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -1557,7 +1557,7 @@ var _ = Describe("VPA", func() {
 
 					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_target_evictioner.yaml"])).To(Equal(componenttest.Serialize(clusterRoleUpdater)))
 					Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_target_evictioner.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingUpdater)))
-					Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+					Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 					Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 					By("Verify vpa-updater runtime resources")

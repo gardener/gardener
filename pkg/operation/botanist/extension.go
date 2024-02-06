@@ -19,7 +19,7 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -104,7 +104,7 @@ func mergeExtensions(registrations []gardencorev1beta1.ControllerRegistration, e
 			}
 
 			if res.GloballyEnabled != nil && *res.GloballyEnabled {
-				if workerlessShoot && !pointer.BoolDeref(res.WorkerlessSupported, false) {
+				if workerlessShoot && !ptr.Deref(res.WorkerlessSupported, false) {
 					continue
 				}
 				requiredExtensions[res.Type] = typeToExtension[res.Type]
@@ -115,7 +115,7 @@ func mergeExtensions(registrations []gardencorev1beta1.ControllerRegistration, e
 	// Extensions defined in Shoot resource.
 	for _, extension := range extensions {
 		if obj, ok := typeToExtension[extension.Type]; ok {
-			if pointer.BoolDeref(extension.Disabled, false) {
+			if ptr.Deref(extension.Disabled, false) {
 				delete(requiredExtensions, extension.Type)
 				continue
 			}

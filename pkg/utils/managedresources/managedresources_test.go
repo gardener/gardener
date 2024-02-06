@@ -25,7 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -147,7 +147,7 @@ var _ = Describe("managedresources", func() {
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-					KeepObjects:  pointer.Bool(keepObjects),
+					KeepObjects:  ptr.To(keepObjects),
 				},
 			}))
 		})
@@ -179,7 +179,7 @@ var _ = Describe("managedresources", func() {
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					SecretRefs:   []corev1.LocalObjectReference{{Name: secretName}},
-					KeepObjects:  pointer.Bool(keepObjects),
+					KeepObjects:  ptr.To(keepObjects),
 					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 				},
 			}
@@ -204,7 +204,7 @@ var _ = Describe("managedresources", func() {
 					Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 				},
 				Data:      data,
-				Immutable: pointer.Bool(true),
+				Immutable: ptr.To(true),
 				Type:      corev1.SecretTypeOpaque,
 			}))
 		})
@@ -262,8 +262,8 @@ var _ = Describe("managedresources", func() {
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					SecretRefs:  []corev1.LocalObjectReference{{Name: secretName}},
-					KeepObjects: pointer.Bool(keepObjects),
-					Class:       pointer.String("seed"),
+					KeepObjects: ptr.To(keepObjects),
+					Class:       ptr.To("seed"),
 				},
 			}
 		})
@@ -299,7 +299,7 @@ var _ = Describe("managedresources", func() {
 					Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 				},
 				Data:      data,
-				Immutable: pointer.Bool(true),
+				Immutable: ptr.To(true),
 				Type:      corev1.SecretTypeOpaque,
 			}))
 		})
@@ -333,7 +333,7 @@ var _ = Describe("managedresources", func() {
 					Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 				},
 				Data:      data,
-				Immutable: pointer.Bool(true),
+				Immutable: ptr.To(true),
 				Type:      corev1.SecretTypeOpaque,
 			}))
 		})
@@ -737,7 +737,7 @@ var _ = Describe("managedresources", func() {
 
 			It("should return false because existing resources have another class", func() {
 				obj := managedResource(false)
-				obj.Spec.Class = pointer.String("bar")
+				obj.Spec.Class = ptr.To("bar")
 				Expect(fakeClient.Create(ctx, obj)).To(Succeed())
 
 				resourcesExist, err := CheckIfManagedResourcesExist(ctx, fakeClient, &class)

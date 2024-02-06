@@ -21,7 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
@@ -60,7 +60,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 
 	for i, worker := range obj.Spec.Provider.Workers {
 		if worker.Machine.Architecture == nil {
-			obj.Spec.Provider.Workers[i].Machine.Architecture = pointer.String(v1beta1constants.ArchitectureAMD64)
+			obj.Spec.Provider.Workers[i].Machine.Architecture = ptr.To(v1beta1constants.ArchitectureAMD64)
 		}
 
 		if worker.CRI == nil {
@@ -69,7 +69,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 
 		if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil {
 			if worker.Kubernetes.Kubelet.FailSwapOn == nil {
-				obj.Spec.Provider.Workers[i].Kubernetes.Kubelet.FailSwapOn = pointer.Bool(true)
+				obj.Spec.Provider.Workers[i].Kubernetes.Kubelet.FailSwapOn = ptr.To(true)
 			}
 
 			if nodeSwapFeatureGateEnabled, ok := worker.Kubernetes.Kubelet.FeatureGates["NodeSwap"]; ok && nodeSwapFeatureGateEnabled && !*worker.Kubernetes.Kubelet.FailSwapOn {
@@ -88,10 +88,10 @@ func SetDefaults_Shoot(obj *Shoot) {
 	// these fields are relevant only for shoot with workers
 	if len(obj.Spec.Provider.Workers) > 0 {
 		if obj.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds == nil {
-			obj.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds = pointer.Int64(300)
+			obj.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds = ptr.To(int64(300))
 		}
 		if obj.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds == nil {
-			obj.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds = pointer.Int64(300)
+			obj.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds = ptr.To(int64(300))
 		}
 
 		if obj.Spec.Kubernetes.KubeControllerManager == nil {
@@ -118,7 +118,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 			obj.Spec.Kubernetes.KubeProxy.Mode = &defaultProxyMode
 		}
 		if obj.Spec.Kubernetes.KubeProxy.Enabled == nil {
-			obj.Spec.Kubernetes.KubeProxy.Enabled = pointer.Bool(true)
+			obj.Spec.Kubernetes.KubeProxy.Enabled = ptr.To(true)
 		}
 
 		if obj.Spec.Addons == nil {
@@ -136,7 +136,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 			obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
 		}
 		if obj.Spec.Kubernetes.Kubelet.FailSwapOn == nil {
-			obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(true)
+			obj.Spec.Kubernetes.Kubelet.FailSwapOn = ptr.To(true)
 		}
 
 		if nodeSwapFeatureGateEnabled, ok := obj.Spec.Kubernetes.Kubelet.FeatureGates["NodeSwap"]; ok && nodeSwapFeatureGateEnabled && !*obj.Spec.Kubernetes.Kubelet.FailSwapOn {
@@ -149,13 +149,13 @@ func SetDefaults_Shoot(obj *Shoot) {
 			}
 		}
 		if obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent == nil {
-			obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent = pointer.Int32(50)
+			obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent = ptr.To(int32(50))
 		}
 		if obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent == nil {
-			obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent = pointer.Int32(40)
+			obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent = ptr.To(int32(40))
 		}
 		if obj.Spec.Kubernetes.Kubelet.SerializeImagePulls == nil {
-			obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = pointer.Bool(true)
+			obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = ptr.To(true)
 		}
 
 		var (
@@ -180,7 +180,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 		}
 
 		if obj.Spec.Maintenance.AutoUpdate.MachineImageVersion == nil {
-			obj.Spec.Maintenance.AutoUpdate.MachineImageVersion = pointer.Bool(true)
+			obj.Spec.Maintenance.AutoUpdate.MachineImageVersion = ptr.To(true)
 		}
 
 		if obj.Spec.Provider.WorkersSettings == nil {
@@ -205,7 +205,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 	}
 
 	if obj.Spec.SchedulerName == nil {
-		obj.Spec.SchedulerName = pointer.String(v1beta1constants.DefaultSchedulerName)
+		obj.Spec.SchedulerName = ptr.To(v1beta1constants.DefaultSchedulerName)
 	}
 }
 
@@ -215,13 +215,13 @@ func SetDefaults_KubeAPIServerConfig(obj *KubeAPIServerConfig) {
 		obj.Requests = &APIServerRequests{}
 	}
 	if obj.Requests.MaxNonMutatingInflight == nil {
-		obj.Requests.MaxNonMutatingInflight = pointer.Int32(400)
+		obj.Requests.MaxNonMutatingInflight = ptr.To(int32(400))
 	}
 	if obj.Requests.MaxMutatingInflight == nil {
-		obj.Requests.MaxMutatingInflight = pointer.Int32(200)
+		obj.Requests.MaxMutatingInflight = ptr.To(int32(200))
 	}
 	if obj.EnableAnonymousAuthentication == nil {
-		obj.EnableAnonymousAuthentication = pointer.Bool(false)
+		obj.EnableAnonymousAuthentication = ptr.To(false)
 	}
 	if obj.EventTTL == nil {
 		obj.EventTTL = &metav1.Duration{Duration: time.Hour}
@@ -230,7 +230,7 @@ func SetDefaults_KubeAPIServerConfig(obj *KubeAPIServerConfig) {
 		obj.Logging = &APIServerLogging{}
 	}
 	if obj.Logging.Verbosity == nil {
-		obj.Logging.Verbosity = pointer.Int32(2)
+		obj.Logging.Verbosity = ptr.To(int32(2))
 	}
 }
 
@@ -314,7 +314,7 @@ func SetDefaults_ClusterAutoscaler(obj *ClusterAutoscaler) {
 		obj.ScaleDownUnneededTime = &metav1.Duration{Duration: 30 * time.Minute}
 	}
 	if obj.ScaleDownUtilizationThreshold == nil {
-		obj.ScaleDownUtilizationThreshold = pointer.Float64(0.5)
+		obj.ScaleDownUtilizationThreshold = ptr.To(float64(0.5))
 	}
 	if obj.ScanInterval == nil {
 		obj.ScanInterval = &metav1.Duration{Duration: 10 * time.Second}
@@ -327,19 +327,19 @@ func SetDefaults_ClusterAutoscaler(obj *ClusterAutoscaler) {
 		obj.MaxNodeProvisionTime = &metav1.Duration{Duration: 20 * time.Minute}
 	}
 	if obj.MaxGracefulTerminationSeconds == nil {
-		obj.MaxGracefulTerminationSeconds = pointer.Int32(600)
+		obj.MaxGracefulTerminationSeconds = ptr.To(int32(600))
 	}
 	if obj.IgnoreDaemonsetsUtilization == nil {
-		obj.IgnoreDaemonsetsUtilization = pointer.Bool(false)
+		obj.IgnoreDaemonsetsUtilization = ptr.To(false)
 	}
 	if obj.Verbosity == nil {
-		obj.Verbosity = pointer.Int32(2)
+		obj.Verbosity = ptr.To(int32(2))
 	}
 	if obj.NewPodScaleUpDelay == nil {
 		obj.NewPodScaleUpDelay = &metav1.Duration{Duration: 0}
 	}
 	if obj.MaxEmptyBulkDelete == nil {
-		obj.MaxEmptyBulkDelete = pointer.Int32(10)
+		obj.MaxEmptyBulkDelete = ptr.To(int32(10))
 	}
 }
 
@@ -358,7 +358,7 @@ func calculateDefaultNodeCIDRMaskSize(shoot *ShootSpec) *int32 {
 		// If shoot is using IPv6 single-stack, don't be stingy and allocate larger pod CIDRs per node.
 		// We don't calculate a nodeCIDRMaskSize matching the maxPods settings in this case, and simply apply
 		// kube-controller-manager's default value for the --node-cidr-mask-size flag.
-		return pointer.Int32(64)
+		return ptr.To(int32(64))
 	}
 
 	var maxPods int32 = 110 // default maxPods setting on kubelet

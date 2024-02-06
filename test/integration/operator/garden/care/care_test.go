@@ -22,7 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -125,7 +125,7 @@ var _ = Describe("Garden Care controller tests", func() {
 					},
 					Settings: &operatorv1alpha1.Settings{
 						VerticalPodAutoscaler: &operatorv1alpha1.SettingVerticalPodAutoscaler{
-							Enabled: pointer.Bool(true),
+							Enabled: ptr.To(true),
 						},
 					},
 				},
@@ -598,7 +598,7 @@ func createDeployments(names []string, roleLabel, role string) {
 			},
 			Spec: appsv1.DeploymentSpec{
 				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}},
-				Replicas: pointer.Int32(1),
+				Replicas: ptr.To(int32(1)),
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"foo": "bar"}},
 					Spec: corev1.PodSpec{
@@ -698,7 +698,7 @@ func updateETCDStatusToHealthy(name string) {
 	ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(etcd), etcd)).To(Succeed())
 
 	etcd.Status.ObservedGeneration = &etcd.Generation
-	etcd.Status.Ready = pointer.Bool(true)
+	etcd.Status.Ready = ptr.To(true)
 	etcd.Status.Conditions = []druidv1alpha1.Condition{
 		{Type: druidv1alpha1.ConditionTypeBackupReady, Status: druidv1alpha1.ConditionTrue, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
 	}

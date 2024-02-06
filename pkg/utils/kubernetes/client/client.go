@@ -24,7 +24,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -226,7 +226,7 @@ func gracePeriodIsPassed(obj client.Object, ops *CleanOptions, t timeutils.Ops) 
 		op.ApplyToDelete(deleteOp)
 	}
 
-	gracePeriod := time.Second * time.Duration(pointer.Int64Deref(deleteOp.GracePeriodSeconds, 0))
+	gracePeriod := time.Second * time.Duration(ptr.Deref(deleteOp.GracePeriodSeconds, 0))
 	return obj.GetDeletionTimestamp().Time.Add(gracePeriod).Before(t.Now())
 }
 

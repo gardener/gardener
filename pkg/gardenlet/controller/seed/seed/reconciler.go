@@ -25,7 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -160,7 +160,7 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, seed *garde
 	seed.Status.Gardener = r.Identity
 	seed.Status.ObservedGeneration = seed.Generation
 	seed.Status.ClientCertificateExpirationTimestamp = r.ClientCertificateExpirationTimestamp
-	seed.Status.KubernetesVersion = pointer.String(r.SeedClientSet.Version())
+	seed.Status.KubernetesVersion = ptr.To(r.SeedClientSet.Version())
 
 	// Initialize capacity and allocatable
 	var capacity, allocatable corev1.ResourceList

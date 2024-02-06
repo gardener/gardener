@@ -34,7 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -85,11 +85,11 @@ var _ = Describe("ClusterAutoscaler", func() {
 		configScaleDownDelayAfterDelete           = &metav1.Duration{Duration: time.Second}
 		configScaleDownDelayAfterFailure          = &metav1.Duration{Duration: time.Second}
 		configScaleDownUnneededTime               = &metav1.Duration{Duration: time.Second}
-		configScaleDownUtilizationThreshold       = pointer.Float64(1.2345)
+		configScaleDownUtilizationThreshold       = ptr.To(float64(1.2345))
 		configScanInterval                        = &metav1.Duration{Duration: time.Second}
 		configIgnoreDaemonsetsUtilization   bool  = true
 		configVerbosity                     int32 = 4
-		configMaxEmptyBulkDelete                  = pointer.Int32(20)
+		configMaxEmptyBulkDelete                  = ptr.To(int32(20))
 		configNewPodScaleUpDelay                  = &metav1.Duration{Duration: time.Second}
 		configIgnoreTaints                        = []string{"taint-1", "taint-2"}
 		configFull                                = &gardencorev1beta1.ClusterAutoscaler{
@@ -187,8 +187,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 					Kind:               "Namespace",
 					Name:               namespace,
 					UID:                namespaceUID,
-					Controller:         pointer.Bool(true),
-					BlockOwnerDeletion: pointer.Bool(true),
+					Controller:         ptr.To(true),
+					BlockOwnerDeletion: ptr.To(true),
 				}},
 				ResourceVersion: "1",
 			},
@@ -213,7 +213,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Namespace:       namespace,
 				ResourceVersion: "1",
 			},
-			AutomountServiceAccountToken: pointer.Bool(false),
+			AutomountServiceAccountToken: ptr.To(false),
 		}
 		service = &corev1.Service{
 			TypeMeta: metav1.TypeMeta{
@@ -341,7 +341,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				},
 				Spec: appsv1.DeploymentSpec{
 					Replicas:             &replicas,
-					RevisionHistoryLimit: pointer.Int32(1),
+					RevisionHistoryLimit: ptr.To(int32(1)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"app":  "kubernetes",
@@ -394,7 +394,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 							},
 							PriorityClassName:             v1beta1constants.PriorityClassNameShootControlPlane300,
 							ServiceAccountName:            serviceAccountName,
-							TerminationGracePeriodSeconds: pointer.Int64(5),
+							TerminationGracePeriodSeconds: ptr.To(int64(5)),
 						},
 					},
 				},
@@ -601,7 +601,7 @@ subjects:
 				"role__kube-system__gardener.cloud_target_cluster-autoscaler.yaml":        []byte(roleYAML),
 				"rolebinding__kube-system__gardener.cloud_target_cluster-autoscaler.yaml": []byte(roleBindingYAML),
 			},
-			Immutable: pointer.Bool(true),
+			Immutable: ptr.To(true),
 		}
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			TypeMeta: metav1.TypeMeta{
@@ -617,7 +617,7 @@ subjects:
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
 				SecretRefs:   []corev1.LocalObjectReference{},
 				InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-				KeepObjects:  pointer.Bool(false),
+				KeepObjects:  ptr.To(false),
 			},
 		}
 	)

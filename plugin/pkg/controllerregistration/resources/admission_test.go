@@ -23,7 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/client-go/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
@@ -61,7 +61,7 @@ var _ = Describe("resources", func() {
 						{
 							Kind:    resourceKind,
 							Type:    resourceType,
-							Primary: pointer.Bool(true),
+							Primary: ptr.To(true),
 						},
 					},
 				},
@@ -120,7 +120,7 @@ var _ = Describe("resources", func() {
 
 			controllerRegistration2 := controllerRegistration.DeepCopy()
 			controllerRegistration2.Name = "another-name"
-			controllerRegistration2.Spec.Resources[0].Primary = pointer.Bool(false)
+			controllerRegistration2.Spec.Resources[0].Primary = ptr.To(false)
 
 			coreClient.AddReactor("list", "controllerregistrations", func(action testing.Action) (bool, runtime.Object, error) {
 				return true, &core.ControllerRegistrationList{

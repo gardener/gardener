@@ -18,7 +18,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
@@ -102,13 +102,13 @@ var _ = Describe("Add", func() {
 
 		It("should return true because the kube-apiserver admission plugin secret fields changed", func() {
 			oldShoot := garden.DeepCopy()
-			garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{{KubeconfigSecretName: pointer.String("foo")}}
+			garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{{KubeconfigSecretName: ptr.To("foo")}}
 			Expect(Predicate(oldShoot, garden)).To(BeTrue())
 		})
 
 		It("should return true because the gardener-apiserver admission plugin secret fields changed", func() {
 			oldShoot := garden.DeepCopy()
-			garden.Spec.VirtualCluster.Gardener.APIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{{KubeconfigSecretName: pointer.String("foo")}}
+			garden.Spec.VirtualCluster.Gardener.APIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{{KubeconfigSecretName: ptr.To("foo")}}
 			Expect(Predicate(oldShoot, garden)).To(BeTrue())
 		})
 	})

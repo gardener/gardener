@@ -26,7 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -478,11 +478,11 @@ spec:
 							ResourceVersion: "1",
 						},
 						Spec: resourcesv1alpha1.ManagedResourceSpec{
-							Class: pointer.String("seed"),
+							Class: ptr.To("seed"),
 							SecretRefs: []corev1.LocalObjectReference{{
 								Name: managedResource.Spec.SecretRefs[0].Name,
 							}},
-							KeepObjects: pointer.Bool(false),
+							KeepObjects: ptr.To(false),
 						},
 					}
 					utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -491,7 +491,7 @@ spec:
 					managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 					Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-					Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+					Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 					Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 					Expect(managedResourceSecret.Data).To(HaveLen(9))
 					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_"+dwdName+".yaml"])).To(DeepEqual(clusterRoleYAMLFor(values.Role)))

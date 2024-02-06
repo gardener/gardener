@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
+	"slices"
 	"strings"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -123,7 +124,7 @@ func (r *Reconciler) mustApprove(ctx context.Context, csr *certificatesv1.Certif
 		return "common name in CSR does not match username", false, nil
 	}
 
-	if len(x509cr.Subject.Organization) != 1 || !utils.ValueExists(user.NodesGroup, x509cr.Subject.Organization) {
+	if len(x509cr.Subject.Organization) != 1 || !slices.Contains(x509cr.Subject.Organization, user.NodesGroup) {
 		return "organization in CSR does not match nodes group", false, nil
 	}
 

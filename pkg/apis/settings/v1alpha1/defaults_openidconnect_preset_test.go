@@ -18,7 +18,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 )
@@ -31,7 +31,7 @@ var _ = Describe("OpenIDConnectPreset defaulting", func() {
 				Server: KubeAPIServerOpenIDConnect{
 					// string literal are used to be sure that the test fails
 					// if the constant values are changed.
-					UsernameClaim: pointer.String("sub"),
+					UsernameClaim: ptr.To("sub"),
 					SigningAlgs:   []string{"RS256"},
 				},
 				ShootSelector: &metav1.LabelSelector{},
@@ -48,7 +48,7 @@ var _ = Describe("OpenIDConnectPreset defaulting", func() {
 				Server: KubeAPIServerOpenIDConnect{
 					// string literal are used to be sure that the test fails
 					// if the constant values are changed.
-					UsernameClaim: pointer.String("usr"),
+					UsernameClaim: ptr.To("usr"),
 					SigningAlgs:   []string{"alg1", "alg2"},
 				},
 				ShootSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}},

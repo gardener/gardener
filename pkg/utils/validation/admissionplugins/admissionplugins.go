@@ -28,7 +28,7 @@ import (
 	admissionapiv1 "k8s.io/pod-security-admission/admission/api/v1"
 	admissionapiv1alpha1 "k8s.io/pod-security-admission/admission/api/v1alpha1"
 	admissionapiv1beta1 "k8s.io/pod-security-admission/admission/api/v1beta1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
@@ -168,7 +168,7 @@ func ValidateAdmissionPlugins(admissionPlugins []core.AdmissionPlugin, version s
 			allErrs = append(allErrs, field.Invalid(idxPath.Child("name"), plugin.Name, err.Error()))
 		} else if !supported {
 			// If the plugin is not supported, but it's disabled and it's a plugin in migration, then skip it.
-			if constraint, ok := PluginsInMigration[plugin.Name]; ok && constraint.Check(kubernetesVersion) && pointer.BoolDeref(plugin.Disabled, false) {
+			if constraint, ok := PluginsInMigration[plugin.Name]; ok && constraint.Check(kubernetesVersion) && ptr.Deref(plugin.Disabled, false) {
 				continue
 			}
 			allErrs = append(allErrs, field.Forbidden(idxPath.Child("name"), fmt.Sprintf("admission plugin %q is not supported in Kubernetes version %s", plugin.Name, version)))
@@ -176,7 +176,7 @@ func ValidateAdmissionPlugins(admissionPlugins []core.AdmissionPlugin, version s
 			if admissionPluginsVersionRanges[plugin.Name].Forbidden {
 				allErrs = append(allErrs, field.Forbidden(idxPath.Child("name"), fmt.Sprintf("forbidden admission plugin was specified - do not use plugins from the following list: %+v", getAllForbiddenPlugins())))
 			}
-			if pointer.BoolDeref(plugin.Disabled, false) && admissionPluginsVersionRanges[plugin.Name].Required {
+			if ptr.Deref(plugin.Disabled, false) && admissionPluginsVersionRanges[plugin.Name].Required {
 				allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("admission plugin %q cannot be disabled", plugin.Name)))
 			}
 			if plugin.KubeconfigSecretName != nil && !admissionPluginsSupportingExternalKubeconfig.Has(plugin.Name) {

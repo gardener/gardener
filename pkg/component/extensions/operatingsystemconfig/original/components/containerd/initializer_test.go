@@ -17,7 +17,7 @@ package containerd_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -36,7 +36,7 @@ var _ = Describe("Initializer", func() {
 				"pause-container": {
 					Name:       "pause-container",
 					Repository: pauseContainerImageRepo,
-					Tag:        pointer.String(pauseContainerImageTag),
+					Tag:        ptr.To(pauseContainerImageTag),
 				},
 			}
 		)
@@ -53,9 +53,9 @@ var _ = Describe("Initializer", func() {
 			Expect(units).To(ConsistOf(
 				extensionsv1alpha1.Unit{
 					Name:    "containerd-initializer.service",
-					Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-					Enable:  pointer.Bool(true),
-					Content: pointer.String(`[Unit]
+					Command: ptr.To(extensionsv1alpha1.CommandStart),
+					Enable:  ptr.To(true),
+					Content: ptr.To(`[Unit]
 Description=Containerd initializer
 [Install]
 WantedBy=multi-user.target
@@ -68,7 +68,7 @@ ExecStart=/opt/bin/init-containerd`),
 			Expect(files).To(ConsistOf(
 				extensionsv1alpha1.File{
 					Path:        "/opt/bin/init-containerd",
-					Permissions: pointer.Int32(744),
+					Permissions: ptr.To(int32(744)),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
@@ -78,7 +78,7 @@ ExecStart=/opt/bin/init-containerd`),
 				},
 				extensionsv1alpha1.File{
 					Path:        "/etc/systemd/system/containerd.service.d/10-require-containerd-initializer.conf",
-					Permissions: pointer.Int32(0644),
+					Permissions: ptr.To(int32(0644)),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Data: `[Unit]

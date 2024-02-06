@@ -36,7 +36,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -77,7 +77,7 @@ var _ = Describe("KubeControllerManager", func() {
 		image                         = "registry.k8s.io/kube-controller-manager:v1.25.3"
 		hvpaConfigDisabled            = &HVPAConfig{Enabled: false}
 		hvpaConfigEnabled             = &HVPAConfig{Enabled: true}
-		hvpaConfigEnabledScaleDownOff = &HVPAConfig{Enabled: true, ScaleDownUpdateMode: pointer.String(hvpav1alpha1.UpdateModeOff)}
+		hvpaConfigEnabledScaleDownOff = &HVPAConfig{Enabled: true, ScaleDownUpdateMode: ptr.To(hvpav1alpha1.UpdateModeOff)}
 		isWorkerless                  = false
 		priorityClassName             = v1beta1constants.PriorityClassNameShootControlPlane300
 
@@ -86,7 +86,7 @@ var _ = Describe("KubeControllerManager", func() {
 			DownscaleStabilization:  &metav1.Duration{Duration: 5 * time.Minute},
 			InitialReadinessDelay:   &metav1.Duration{Duration: 30 * time.Second},
 			SyncPeriod:              &metav1.Duration{Duration: 30 * time.Second},
-			Tolerance:               pointer.Float64(0.1),
+			Tolerance:               ptr.To(float64(0.1)),
 		}
 
 		nodeCIDRMask           int32 = 24
@@ -99,31 +99,31 @@ var _ = Describe("KubeControllerManager", func() {
 			PodEvictionTimeout:            &podEvictionTimeout,
 			NodeMonitorGracePeriod:        &nodeMonitorGracePeriod,
 		}
-		clusterSigningDuration = pointer.Duration(time.Hour)
+		clusterSigningDuration = ptr.To(time.Hour)
 		controllerWorkers      = ControllerWorkers{
-			StatefulSet:         pointer.Int(1),
-			Deployment:          pointer.Int(2),
-			ReplicaSet:          pointer.Int(3),
-			Endpoint:            pointer.Int(4),
-			GarbageCollector:    pointer.Int(5),
-			Namespace:           pointer.Int(6),
-			ResourceQuota:       pointer.Int(7),
-			ServiceEndpoint:     pointer.Int(8),
-			ServiceAccountToken: pointer.Int(9),
+			StatefulSet:         ptr.To(1),
+			Deployment:          ptr.To(2),
+			ReplicaSet:          ptr.To(3),
+			Endpoint:            ptr.To(4),
+			GarbageCollector:    ptr.To(5),
+			Namespace:           ptr.To(6),
+			ResourceQuota:       ptr.To(7),
+			ServiceEndpoint:     ptr.To(8),
+			ServiceAccountToken: ptr.To(9),
 		}
 		controllerWorkersWithDisabledControllers = ControllerWorkers{
-			StatefulSet:         pointer.Int(1),
-			Deployment:          pointer.Int(2),
-			ReplicaSet:          pointer.Int(3),
-			Endpoint:            pointer.Int(4),
-			GarbageCollector:    pointer.Int(5),
-			Namespace:           pointer.Int(0),
-			ResourceQuota:       pointer.Int(0),
-			ServiceEndpoint:     pointer.Int(8),
-			ServiceAccountToken: pointer.Int(0),
+			StatefulSet:         ptr.To(1),
+			Deployment:          ptr.To(2),
+			ReplicaSet:          ptr.To(3),
+			Endpoint:            ptr.To(4),
+			GarbageCollector:    ptr.To(5),
+			Namespace:           ptr.To(0),
+			ResourceQuota:       ptr.To(0),
+			ServiceEndpoint:     ptr.To(8),
+			ServiceAccountToken: ptr.To(0),
 		}
 		controllerSyncPeriods = ControllerSyncPeriods{
-			ResourceQuota: pointer.Duration(time.Minute),
+			ResourceQuota: ptr.To(time.Minute),
 		}
 
 		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"
@@ -228,7 +228,7 @@ var _ = Describe("KubeControllerManager", func() {
 		hvpaFor            = func(config *HVPAConfig) *hvpav1alpha1.Hvpa {
 			scaleDownUpdateMode := config.ScaleDownUpdateMode
 			if scaleDownUpdateMode == nil {
-				scaleDownUpdateMode = pointer.String(hvpav1alpha1.UpdateModeAuto)
+				scaleDownUpdateMode = ptr.To(hvpav1alpha1.UpdateModeAuto)
 			}
 
 			return &hvpav1alpha1.Hvpa{
@@ -247,7 +247,7 @@ var _ = Describe("KubeControllerManager", func() {
 					ResourceVersion: "1",
 				},
 				Spec: hvpav1alpha1.HvpaSpec{
-					Replicas: pointer.Int32(1),
+					Replicas: ptr.To(int32(1)),
 					Hpa: hvpav1alpha1.HpaSpec{
 						Deploy: false,
 						Selector: &metav1.LabelSelector{
@@ -264,7 +264,7 @@ var _ = Describe("KubeControllerManager", func() {
 								},
 							},
 							Spec: hvpav1alpha1.HpaTemplateSpec{
-								MinReplicas: pointer.Int32(int32(1)),
+								MinReplicas: ptr.To(int32(1)),
 								MaxReplicas: int32(1),
 							},
 						},
@@ -378,7 +378,7 @@ var _ = Describe("KubeControllerManager", func() {
 					ResourceVersion: "1",
 				},
 				Spec: appsv1.DeploymentSpec{
-					RevisionHistoryLimit: pointer.Int32(1),
+					RevisionHistoryLimit: ptr.To(int32(1)),
 					Replicas:             &replicas,
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
@@ -398,13 +398,13 @@ var _ = Describe("KubeControllerManager", func() {
 							},
 						},
 						Spec: corev1.PodSpec{
-							AutomountServiceAccountToken: pointer.Bool(false),
+							AutomountServiceAccountToken: ptr.To(false),
 							PriorityClassName:            priorityClassName,
 							SecurityContext: &corev1.PodSecurityContext{
-								RunAsNonRoot: pointer.Bool(true),
-								RunAsUser:    pointer.Int64(65532),
-								RunAsGroup:   pointer.Int64(65532),
-								FSGroup:      pointer.Int64(65532),
+								RunAsNonRoot: ptr.To(true),
+								RunAsUser:    ptr.To(int64(65532)),
+								RunAsGroup:   ptr.To(int64(65532)),
+								FSGroup:      ptr.To(int64(65532)),
 							},
 							Containers: []corev1.Container{
 								{
@@ -487,7 +487,7 @@ var _ = Describe("KubeControllerManager", func() {
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  "ca-client-current",
-											DefaultMode: pointer.Int32(0640),
+											DefaultMode: ptr.To(int32(0640)),
 										},
 									},
 								},
@@ -496,7 +496,7 @@ var _ = Describe("KubeControllerManager", func() {
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  "service-account-key-current",
-											DefaultMode: pointer.Int32(0640),
+											DefaultMode: ptr.To(int32(0640)),
 										},
 									},
 								},
@@ -505,7 +505,7 @@ var _ = Describe("KubeControllerManager", func() {
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  "kube-controller-manager-server",
-											DefaultMode: pointer.Int32(0640),
+											DefaultMode: ptr.To(int32(0640)),
 										},
 									},
 								},
@@ -526,7 +526,7 @@ var _ = Describe("KubeControllerManager", func() {
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  "ca-kubelet-current",
-							DefaultMode: pointer.Int32(0640),
+							DefaultMode: ptr.To(int32(0640)),
 						},
 					},
 				})
@@ -561,12 +561,12 @@ namespace: kube-system
 				DownscaleStabilization:  &metav1.Duration{Duration: 10 * time.Minute},
 				InitialReadinessDelay:   &metav1.Duration{Duration: 20 * time.Second},
 				SyncPeriod:              &metav1.Duration{Duration: 20 * time.Second},
-				Tolerance:               pointer.Float64(0.3),
+				Tolerance:               ptr.To(float64(0.3)),
 			},
 			NodeCIDRMaskSize: nil,
 		}
 		configWithFeatureFlags           = &gardencorev1beta1.KubeControllerManagerConfig{KubernetesConfig: gardencorev1beta1.KubernetesConfig{FeatureGates: map[string]bool{"Foo": true, "Bar": false, "Baz": false}}}
-		configWithNodeCIDRMaskSize       = &gardencorev1beta1.KubeControllerManagerConfig{NodeCIDRMaskSize: pointer.Int32(26)}
+		configWithNodeCIDRMaskSize       = &gardencorev1beta1.KubeControllerManagerConfig{NodeCIDRMaskSize: ptr.To(int32(26))}
 		configWithPodEvictionTimeout     = &gardencorev1beta1.KubeControllerManagerConfig{PodEvictionTimeout: &podEvictionTimeout}
 		configWithNodeMonitorGracePeriod = &gardencorev1beta1.KubeControllerManagerConfig{NodeMonitorGracePeriod: &nodeMonitorGracePeriod}
 	)
@@ -626,7 +626,7 @@ namespace: kube-system
 					{Name: managedResourceSecretName},
 				},
 				InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-				KeepObjects:  pointer.Bool(true),
+				KeepObjects:  ptr.To(true),
 			},
 		}
 
@@ -657,7 +657,7 @@ namespace: kube-system
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: pointer.Bool(true),
+					KeepObjects: ptr.To(true),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -666,7 +666,7 @@ namespace: kube-system
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			actualDeployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: namespace}}
@@ -817,7 +817,7 @@ namespace: kube-system
 						SecretRefs: []corev1.LocalObjectReference{{
 							Name: managedResource.Spec.SecretRefs[0].Name,
 						}},
-						KeepObjects: pointer.Bool(true),
+						KeepObjects: ptr.To(true),
 					},
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -826,7 +826,7 @@ namespace: kube-system
 				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				actualDeployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: namespace}}
@@ -942,7 +942,7 @@ namespace: kube-system
 					Namespace: namespace,
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas: pointer.Int32(1),
+					Replicas: ptr.To(int32(1)),
 					Selector: &metav1.LabelSelector{MatchLabels: labels},
 				},
 			}
@@ -973,7 +973,7 @@ namespace: kube-system
 
 			timer := time.AfterFunc(10*time.Millisecond, func() {
 				deploy.Generation = 24
-				deploy.Spec.Replicas = pointer.Int32(1)
+				deploy.Spec.Replicas = ptr.To(int32(1))
 				deploy.Status.Conditions = []appsv1.DeploymentCondition{
 					{Type: appsv1.DeploymentProgressing, Status: "True", Reason: "NewReplicaSetAvailable"},
 					{Type: appsv1.DeploymentAvailable, Status: "True"},

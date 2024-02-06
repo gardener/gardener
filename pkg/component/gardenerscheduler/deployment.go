@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -48,8 +48,8 @@ func (g *gardenerScheduler) deployment(secretGenericTokenKubeconfig, secretVirtu
 			}),
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas:             pointer.Int32(1),
-			RevisionHistoryLimit: pointer.Int32(2),
+			Replicas:             ptr.To(int32(1)),
+			RevisionHistoryLimit: ptr.To(int32(2)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: GetLabels(),
 			},
@@ -62,12 +62,12 @@ func (g *gardenerScheduler) deployment(secretGenericTokenKubeconfig, secretVirtu
 				},
 				Spec: corev1.PodSpec{
 					PriorityClassName:            v1beta1constants.PriorityClassNameGardenSystem200,
-					AutomountServiceAccountToken: pointer.Bool(false),
+					AutomountServiceAccountToken: ptr.To(false),
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: pointer.Bool(true),
-						RunAsUser:    pointer.Int64(65532),
-						RunAsGroup:   pointer.Int64(65532),
-						FSGroup:      pointer.Int64(65532),
+						RunAsNonRoot: ptr.To(true),
+						RunAsUser:    ptr.To(int64(65532)),
+						RunAsGroup:   ptr.To(int64(65532)),
+						FSGroup:      ptr.To(int64(65532)),
 					},
 					Containers: []corev1.Container{
 						{

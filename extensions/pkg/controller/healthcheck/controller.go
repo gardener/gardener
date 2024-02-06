@@ -21,7 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -98,7 +98,7 @@ type RegisteredExtension struct {
 // register returns a runtime representation of the extension resource to register it with the controller-runtime
 func DefaultRegistration(ctx context.Context, extensionType string, kind schema.GroupVersionKind, getExtensionObjListFunc GetExtensionObjectListFunc, getExtensionObjFunc GetExtensionObjectFunc, mgr manager.Manager, opts DefaultAddArgs, customPredicates []predicate.Predicate, healthChecks []ConditionTypeToHealthCheck, conditionTypesToRemove sets.Set[gardencorev1beta1.ConditionType]) error {
 	predicates := append(DefaultPredicates(), customPredicates...)
-	opts.Controller.RecoverPanic = pointer.Bool(true)
+	opts.Controller.RecoverPanic = ptr.To(true)
 
 	args := AddArgs{
 		ControllerOptions:       opts.Controller,

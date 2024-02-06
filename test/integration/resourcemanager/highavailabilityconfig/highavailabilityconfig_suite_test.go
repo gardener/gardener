@@ -27,7 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -50,9 +50,9 @@ func TestHighAvailabilityConfig(t *testing.T) {
 }
 
 const (
-	testIDPrefix                        = "high-availability-config-webhook-test"
-	defaultNotReadyTolerationSeconds    = 60
-	defaultUnreachableTolerationSeconds = 120
+	testIDPrefix                              = "high-availability-config-webhook-test"
+	defaultNotReadyTolerationSeconds    int64 = 60
+	defaultUnreachableTolerationSeconds int64 = 120
 )
 
 var (
@@ -120,8 +120,8 @@ var _ = BeforeSuite(func() {
 		Logger:       log,
 		TargetClient: testClient,
 		Config: config.HighAvailabilityConfigWebhookConfig{
-			DefaultNotReadyTolerationSeconds:    pointer.Int64(defaultNotReadyTolerationSeconds),
-			DefaultUnreachableTolerationSeconds: pointer.Int64(defaultUnreachableTolerationSeconds),
+			DefaultNotReadyTolerationSeconds:    ptr.To(defaultNotReadyTolerationSeconds),
+			DefaultUnreachableTolerationSeconds: ptr.To(defaultUnreachableTolerationSeconds),
 		},
 		Decoder: admission.NewDecoder(mgr.GetScheme()),
 	}).AddToManager(mgr)).To(Succeed())

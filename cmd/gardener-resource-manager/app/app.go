@@ -34,7 +34,7 @@ import (
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/component-base/version/verflag"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -127,7 +127,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 	mgr, err := manager.New(sourceRESTConfig, manager.Options{
 		Logger:                  log,
 		Scheme:                  managerScheme,
-		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
+		GracefulShutdownTimeout: ptr.To(5 * time.Second),
 		Cache: cache.Options{
 			DefaultNamespaces: getCacheConfig(cfg.SourceClientConnection.Namespaces),
 			SyncPeriod:        &cfg.SourceClientConnection.CacheResyncPeriod.Duration,
@@ -147,7 +147,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 		RenewDeadline:                 &cfg.LeaderElection.RenewDeadline.Duration,
 		RetryPeriod:                   &cfg.LeaderElection.RetryPeriod.Duration,
 		Controller: controllerconfig.Controller{
-			RecoverPanic: pointer.Bool(true),
+			RecoverPanic: ptr.To(true),
 		},
 
 		WebhookServer: controllerwebhook.NewServer(controllerwebhook.Options{

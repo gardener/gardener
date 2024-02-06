@@ -28,7 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -82,7 +82,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 				ObjectMeta: objectMeta,
 				Spec: appsv1.DeploymentSpec{
 					Selector: &metav1.LabelSelector{MatchLabels: labels},
-					Replicas: pointer.Int32(1),
+					Replicas: ptr.To(int32(1)),
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: labels,
@@ -101,7 +101,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 				ObjectMeta: objectMeta,
 				Spec: appsv1.StatefulSetSpec{
 					Selector: &metav1.LabelSelector{MatchLabels: labels},
-					Replicas: pointer.Int32(1),
+					Replicas: ptr.To(int32(1)),
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: labels,
@@ -211,7 +211,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 
 							Context("current replicas are higher than the computed replicas", func() {
 								BeforeEach(func() {
-									setReplicas(pointer.Int32(5))
+									setReplicas(ptr.To(int32(5)))
 								})
 
 								It("should not mutate the replicas", func() {
@@ -233,7 +233,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 
 							Context("current replicas are higher than the computed replicas", func() {
 								BeforeEach(func() {
-									setReplicas(pointer.Int32(5))
+									setReplicas(ptr.To(int32(5)))
 								})
 
 								It("should not mutate the replicas", func() {
@@ -250,11 +250,11 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 
 						Context("when replicas are 0", func() {
 							BeforeEach(func() {
-								setReplicas(pointer.Int32(0))
+								setReplicas(ptr.To(int32(0)))
 							})
 
 							It("should not mutate the replicas", func() {
-								Expect(getReplicas()).To(Equal(pointer.Int32(0)))
+								Expect(getReplicas()).To(PointTo(Equal(int32(0))))
 							})
 						})
 
@@ -280,7 +280,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 
 						Context("when failure tolerance type is nil", func() {
 							It("should mutate the replicas", func() {
-								Expect(getReplicas()).To(Equal(pointer.Int32(2)))
+								Expect(getReplicas()).To(PointTo(Equal(int32(2))))
 							})
 						})
 
@@ -290,7 +290,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 							})
 
 							It("should mutate the replicas", func() {
-								Expect(getReplicas()).To(Equal(pointer.Int32(1)))
+								Expect(getReplicas()).To(PointTo(Equal(int32(1))))
 							})
 						})
 
@@ -300,7 +300,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 							})
 
 							It("should mutate the replicas", func() {
-								Expect(getReplicas()).To(Equal(pointer.Int32(2)))
+								Expect(getReplicas()).To(PointTo(Equal(int32(2))))
 							})
 						})
 
@@ -318,7 +318,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 
 						Context("when failure tolerance type is nil", func() {
 							It("should mutate the replicas", func() {
-								Expect(getReplicas()).To(Equal(pointer.Int32(2)))
+								Expect(getReplicas()).To(PointTo(Equal(int32(2))))
 							})
 						})
 
@@ -328,7 +328,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 							})
 
 							It("should mutate the replicas", func() {
-								Expect(getReplicas()).To(Equal(pointer.Int32(2)))
+								Expect(getReplicas()).To(PointTo(Equal(int32(2))))
 							})
 						})
 
@@ -338,7 +338,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 							})
 
 							It("should mutate the replicas", func() {
-								Expect(getReplicas()).To(Equal(pointer.Int32(2)))
+								Expect(getReplicas()).To(PointTo(Equal(int32(2))))
 							})
 						})
 
@@ -566,7 +566,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 
 					Context("when replicas are >= 2", func() {
 						BeforeEach(func() {
-							setReplicas(pointer.Int32(2))
+							setReplicas(ptr.To(int32(2)))
 						})
 
 						Context("when failure-tolerance-type is empty", func() {
@@ -598,7 +598,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 											corev1.TopologySpreadConstraint{
 												TopologyKey:       corev1.LabelTopologyZone,
 												MaxSkew:           1,
-												MinDomains:        pointer.Int32(2),
+												MinDomains:        ptr.To(int32(2)),
 												WhenUnsatisfiable: corev1.DoNotSchedule,
 												LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
 											},
@@ -649,7 +649,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 											corev1.TopologySpreadConstraint{
 												TopologyKey:       corev1.LabelTopologyZone,
 												MaxSkew:           1,
-												MinDomains:        pointer.Int32(2),
+												MinDomains:        ptr.To(int32(2)),
 												WhenUnsatisfiable: corev1.DoNotSchedule,
 												LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
 											},
@@ -708,8 +708,8 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 										maxReplicas = &hvpa.Spec.Hpa.Template.Spec.MaxReplicas
 									}
 
-									minDomains := pointer.Int32(int32(len(zones)))
-									if pointer.Int32Deref(maxReplicas, *minDomains) < *minDomains {
+									minDomains := ptr.To(int32(len(zones)))
+									if ptr.Deref(maxReplicas, *minDomains) < *minDomains {
 										minDomains = maxReplicas
 									}
 
@@ -760,13 +760,13 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 									Key:               "node.kubernetes.io/not-ready",
 									Operator:          "Exists",
 									Effect:            "NoExecute",
-									TolerationSeconds: pointer.Int64(defaultNotReadyTolerationSeconds),
+									TolerationSeconds: ptr.To(int64(defaultNotReadyTolerationSeconds)),
 								},
 								corev1.Toleration{
 									Key:               "node.kubernetes.io/unreachable",
 									Operator:          "Exists",
 									Effect:            "NoExecute",
-									TolerationSeconds: pointer.Int64(defaultUnreachableTolerationSeconds),
+									TolerationSeconds: ptr.To(int64(defaultUnreachableTolerationSeconds)),
 								},
 							))
 						})
@@ -784,7 +784,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 								Key:               "foo",
 								Operator:          "Exists",
 								Effect:            "NoExecute",
-								TolerationSeconds: pointer.Int64(15),
+								TolerationSeconds: ptr.To(int64(15)),
 							},
 							{
 								Key:      "node.kubernetes.io/not-ready",
@@ -810,13 +810,13 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 									Key:               "node.kubernetes.io/not-ready",
 									Operator:          "Exists",
 									Effect:            "NoExecute",
-									TolerationSeconds: pointer.Int64(defaultNotReadyTolerationSeconds),
+									TolerationSeconds: ptr.To(int64(defaultNotReadyTolerationSeconds)),
 								},
 								corev1.Toleration{
 									Key:               "node.kubernetes.io/unreachable",
 									Operator:          "Exists",
 									Effect:            "NoExecute",
-									TolerationSeconds: pointer.Int64(defaultUnreachableTolerationSeconds),
+									TolerationSeconds: ptr.To(int64(defaultUnreachableTolerationSeconds)),
 								},
 							)
 
@@ -829,7 +829,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 							Key:               "node.kubernetes.io/not-ready",
 							Operator:          "Exists",
 							Effect:            "NoExecute",
-							TolerationSeconds: pointer.Int64(300),
+							TolerationSeconds: ptr.To(int64(300)),
 						}}
 
 						BeforeEach(func() {
@@ -844,13 +844,13 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 									Key:               "node.kubernetes.io/not-ready",
 									Operator:          "Exists",
 									Effect:            "NoExecute",
-									TolerationSeconds: pointer.Int64(300),
+									TolerationSeconds: ptr.To(int64(300)),
 								},
 								corev1.Toleration{
 									Key:               "node.kubernetes.io/unreachable",
 									Operator:          "Exists",
 									Effect:            "NoExecute",
-									TolerationSeconds: pointer.Int64(defaultUnreachableTolerationSeconds),
+									TolerationSeconds: ptr.To(int64(defaultUnreachableTolerationSeconds)),
 								},
 							))
 						})
@@ -861,7 +861,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 							Key:               "node.kubernetes.io/unreachable",
 							Operator:          "Exists",
 							Effect:            "NoExecute",
-							TolerationSeconds: pointer.Int64(300),
+							TolerationSeconds: ptr.To(int64(300)),
 						}}
 
 						BeforeEach(func() {
@@ -877,14 +877,14 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 									Operator:          "Exists",
 									Effect:            "NoExecute",
 									Value:             "",
-									TolerationSeconds: pointer.Int64(defaultNotReadyTolerationSeconds),
+									TolerationSeconds: ptr.To(int64(defaultNotReadyTolerationSeconds)),
 								},
 								corev1.Toleration{
 									Key:               "node.kubernetes.io/unreachable",
 									Operator:          "Exists",
 									Effect:            "NoExecute",
 									Value:             "",
-									TolerationSeconds: pointer.Int64(300),
+									TolerationSeconds: ptr.To(int64(300)),
 								},
 							))
 						})

@@ -18,7 +18,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -33,7 +33,7 @@ var _ = Describe("Project defaulting", func() {
 
 	Describe("toleration defaulting", func() {
 		It("should not add the 'protected' toleration if the namespace is not 'garden' (w/o existing project tolerations)", func() {
-			obj.Spec.Namespace = pointer.String("foo")
+			obj.Spec.Namespace = ptr.To("foo")
 
 			SetObjectDefaults_Project(obj)
 
@@ -41,7 +41,7 @@ var _ = Describe("Project defaulting", func() {
 		})
 
 		It("should not add the 'protected' toleration if the namespace is not 'garden' (w/ existing project tolerations)", func() {
-			obj.Spec.Namespace = pointer.String("foo")
+			obj.Spec.Namespace = ptr.To("foo")
 			obj.Spec.Tolerations = &ProjectTolerations{
 				Defaults:  []Toleration{{Key: "foo"}},
 				Whitelist: []Toleration{{Key: "bar"}},
@@ -54,7 +54,7 @@ var _ = Describe("Project defaulting", func() {
 		})
 
 		It("should add the 'protected' toleration if the namespace is 'garden' (w/o existing project tolerations)", func() {
-			obj.Spec.Namespace = pointer.String(v1beta1constants.GardenNamespace)
+			obj.Spec.Namespace = ptr.To(v1beta1constants.GardenNamespace)
 			obj.Spec.Tolerations = nil
 
 			SetObjectDefaults_Project(obj)
@@ -64,7 +64,7 @@ var _ = Describe("Project defaulting", func() {
 		})
 
 		It("should add the 'protected' toleration if the namespace is 'garden' (w/ existing project tolerations)", func() {
-			obj.Spec.Namespace = pointer.String(v1beta1constants.GardenNamespace)
+			obj.Spec.Namespace = ptr.To(v1beta1constants.GardenNamespace)
 			obj.Spec.Tolerations = &ProjectTolerations{
 				Defaults:  []Toleration{{Key: "foo"}},
 				Whitelist: []Toleration{{Key: "bar"}},

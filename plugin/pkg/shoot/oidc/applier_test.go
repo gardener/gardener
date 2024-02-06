@@ -17,7 +17,7 @@ package oidc_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
@@ -55,21 +55,21 @@ var _ = Describe("Applier", func() {
 
 	It("full preset, empty shoot", func() {
 		spec.Server = v1alpha1.KubeAPIServerOpenIDConnect{
-			CABundle:     pointer.String("cert"),
+			CABundle:     ptr.To("cert"),
 			ClientID:     "client-id",
 			IssuerURL:    "https://foo.bar",
-			GroupsClaim:  pointer.String("groupz"),
-			GroupsPrefix: pointer.String("group-prefix"),
+			GroupsClaim:  ptr.To("groupz"),
+			GroupsPrefix: ptr.To("group-prefix"),
 			RequiredClaims: map[string]string{
 				"claim-1": "value-1",
 				"claim-2": "value-2",
 			},
 			SigningAlgs:    []string{"alg-1", "alg-2"},
-			UsernameClaim:  pointer.String("user"),
-			UsernamePrefix: pointer.String("user-prefix"),
+			UsernameClaim:  ptr.To("user"),
+			UsernamePrefix: ptr.To("user-prefix"),
 		}
 		spec.Client = &v1alpha1.OpenIDConnectClientAuthentication{
-			Secret:      pointer.String("secret"),
+			Secret:      ptr.To("secret"),
 			ExtraConfig: map[string]string{"foo": "bar", "baz": "dap"},
 		}
 
@@ -78,21 +78,21 @@ var _ = Describe("Applier", func() {
 		expectedShoot := shoot.DeepCopy()
 		expectedShoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
 			OIDCConfig: &core.OIDCConfig{
-				CABundle:     pointer.String("cert"),
-				ClientID:     pointer.String("client-id"),
-				IssuerURL:    pointer.String("https://foo.bar"),
-				GroupsClaim:  pointer.String("groupz"),
-				GroupsPrefix: pointer.String("group-prefix"),
+				CABundle:     ptr.To("cert"),
+				ClientID:     ptr.To("client-id"),
+				IssuerURL:    ptr.To("https://foo.bar"),
+				GroupsClaim:  ptr.To("groupz"),
+				GroupsPrefix: ptr.To("group-prefix"),
 				RequiredClaims: map[string]string{
 					"claim-1": "value-1",
 					"claim-2": "value-2",
 				},
 				SigningAlgs:    []string{"alg-1", "alg-2"},
-				UsernameClaim:  pointer.String("user"),
-				UsernamePrefix: pointer.String("user-prefix"),
+				UsernameClaim:  ptr.To("user"),
+				UsernamePrefix: ptr.To("user-prefix"),
 
 				ClientAuthentication: &core.OpenIDConnectClientAuthentication{
-					Secret:      pointer.String("secret"),
+					Secret:      ptr.To("secret"),
 					ExtraConfig: map[string]string{"foo": "bar", "baz": "dap"},
 				},
 			},

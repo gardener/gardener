@@ -41,7 +41,7 @@ import (
 	"k8s.io/client-go/rest"
 	fakerestclient "k8s.io/client-go/rest/fake"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -1367,7 +1367,7 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 					Operator:          corev1.TolerationOpEqual,
 					Value:             "someValue",
 					Effect:            corev1.TaintEffectNoExecute,
-					TolerationSeconds: pointer.Int64(300),
+					TolerationSeconds: ptr.To(int64(300)),
 				}
 
 				toleration2 := corev1.Toleration{
@@ -1375,7 +1375,7 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 					Operator:          corev1.TolerationOpEqual,
 					Value:             "someValue",
 					Effect:            corev1.TaintEffectNoExecute,
-					TolerationSeconds: pointer.Int64(300),
+					TolerationSeconds: ptr.To(int64(300)),
 				}
 
 				Expect(toleration1).ToNot(BeIdenticalTo(toleration2))
@@ -1392,7 +1392,7 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 					Operator:          corev1.TolerationOpEqual,
 					Value:             "someValue",
 					Effect:            corev1.TaintEffectNoExecute,
-					TolerationSeconds: pointer.Int64(299),
+					TolerationSeconds: ptr.To(int64(299)),
 				}
 
 				toleration2 := corev1.Toleration{
@@ -1400,7 +1400,7 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 					Operator:          corev1.TolerationOpEqual,
 					Value:             "someValue",
 					Effect:            corev1.TaintEffectNoExecute,
-					TolerationSeconds: pointer.Int64(300),
+					TolerationSeconds: ptr.To(int64(300)),
 				}
 
 				toleration1 = comparabelTolerations.Transform(toleration1)

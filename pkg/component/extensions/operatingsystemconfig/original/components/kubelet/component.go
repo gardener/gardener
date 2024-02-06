@@ -22,7 +22,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/Masterminds/sprig/v3"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -125,7 +125,7 @@ ExecStartPre=` + PathScriptCopyKubernetesBinary + ` kubectl`
 	kubeletFiles := []extensionsv1alpha1.File{
 		{
 			Path:        PathKubeletCACert,
-			Permissions: pointer.Int32(0644),
+			Permissions: ptr.To(int32(0644)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Encoding: "b64",
@@ -135,7 +135,7 @@ ExecStartPre=` + PathScriptCopyKubernetesBinary + ` kubectl`
 		},
 		{
 			Path:        PathKubeletConfig,
-			Permissions: pointer.Int32(0644),
+			Permissions: ptr.To(int32(0644)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: fileContentKubeletConfig,
 			},
@@ -145,7 +145,7 @@ ExecStartPre=` + PathScriptCopyKubernetesBinary + ` kubectl`
 	healthMonitorFiles := []extensionsv1alpha1.File{
 		{
 			Path:        pathHealthMonitor,
-			Permissions: pointer.Int32(0755),
+			Permissions: ptr.To(int32(0755)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Encoding: "b64",
@@ -157,9 +157,9 @@ ExecStartPre=` + PathScriptCopyKubernetesBinary + ` kubectl`
 
 	kubeletUnit := extensionsv1alpha1.Unit{
 		Name:    UnitName,
-		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-		Enable:  pointer.Bool(true),
-		Content: pointer.String(`[Unit]
+		Command: ptr.To(extensionsv1alpha1.CommandStart),
+		Enable:  ptr.To(true),
+		Content: ptr.To(`[Unit]
 Description=kubelet daemon
 Documentation=https://kubernetes.io/docs/admin/kubelet
 After=` + containerd.UnitName + `
@@ -176,9 +176,9 @@ ExecStart=` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `/kubelet
 
 	healthMonitorUnit := extensionsv1alpha1.Unit{
 		Name:    "kubelet-monitor.service",
-		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-		Enable:  pointer.Bool(true),
-		Content: pointer.String(`[Unit]
+		Command: ptr.To(extensionsv1alpha1.CommandStart),
+		Enable:  ptr.To(true),
+		Content: ptr.To(`[Unit]
 Description=Kubelet-monitor daemon
 After=` + UnitName + `
 [Install]
@@ -192,7 +192,7 @@ ExecStart=` + pathHealthMonitor),
 	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
 		kubeletBinaryFile := extensionsv1alpha1.File{
 			Path:        v1beta1constants.OperatingSystemConfigFilePathBinaries + "/kubelet",
-			Permissions: pointer.Int32(0755),
+			Permissions: ptr.To(int32(0755)),
 			Content: extensionsv1alpha1.FileContent{
 				ImageRef: &extensionsv1alpha1.FileContentImageRef{
 					Image:           ctx.Images[imagevector.ImageNameHyperkube].String(),

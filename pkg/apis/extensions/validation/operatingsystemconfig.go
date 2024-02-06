@@ -15,6 +15,7 @@
 package validation
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/go-test/deep"
@@ -24,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils"
 )
 
 // ValidateOperatingSystemConfig validates a OperatingSystemConfig object.
@@ -177,7 +177,7 @@ func ValidateFiles(files []extensionsv1alpha1.File, fldPath *field.Path) field.E
 			}
 		case file.Content.Inline != nil:
 			encodings := []string{string(extensionsv1alpha1.PlainFileCodecID), string(extensionsv1alpha1.B64FileCodecID)}
-			if !utils.ValueExists(file.Content.Inline.Encoding, encodings) {
+			if !slices.Contains(encodings, file.Content.Inline.Encoding) {
 				allErrs = append(allErrs, field.NotSupported(idxPath.Child("content", "inline", "encoding"), file.Content.Inline.Encoding, encodings))
 			}
 

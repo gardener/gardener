@@ -35,7 +35,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -202,7 +202,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		garbageCollectionPeriod               = metav1.Duration{Duration: 12 * time.Hour}
 		compressionPolicy                     = druidv1alpha1.GzipCompression
 		compressionSpec                       = druidv1alpha1.CompressionSpec{
-			Enabled: pointer.Bool(true),
+			Enabled: ptr.To(true),
 			Policy:  &compressionPolicy,
 		}
 
@@ -261,8 +261,8 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 	clientService := &corev1.Service{}
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(clientService,
-		networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt32(etcdconstants.PortEtcdClient), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)},
-		networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt32(etcdconstants.PortBackupRestore), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)},
+		networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt32(etcdconstants.PortEtcdClient), Protocol: ptr.To(corev1.ProtocolTCP)},
+		networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt32(etcdconstants.PortBackupRestore), Protocol: ptr.To(corev1.ProtocolTCP)},
 	))
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(clientService, metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}}))
 	metav1.SetMetaDataAnnotation(&clientService.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
@@ -309,7 +309,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 						Name:      etcdCASecret.Name,
 						Namespace: etcdCASecret.Namespace,
 					},
-					DataKey: pointer.String(secretsutils.DataKeyCertificateBundle),
+					DataKey: ptr.To(secretsutils.DataKeyCertificateBundle),
 				},
 				ServerTLSSecretRef: corev1.SecretReference{
 					Name:      serverSecret.Name,
@@ -320,11 +320,11 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					Namespace: clientSecret.Namespace,
 				},
 			},
-			ServerPort:              pointer.Int32(int32(etcdconstants.PortEtcdPeer)),
-			ClientPort:              pointer.Int32(int32(etcdconstants.PortEtcdClient)),
+			ServerPort:              ptr.To(etcdconstants.PortEtcdPeer),
+			ClientPort:              ptr.To(etcdconstants.PortEtcdClient),
 			Metrics:                 &metrics,
 			DefragmentationSchedule: e.computeDefragmentationSchedule(existingEtcd),
-			Quota:                   utils.QuantityPtr(resource.MustParse("8Gi")),
+			Quota:                   ptr.To(resource.MustParse("8Gi")),
 			ClientService: &druidv1alpha1.ClientService{
 				Annotations: clientService.Annotations,
 				Labels:      clientService.Labels,
@@ -339,7 +339,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 						Name:      etcdPeerCASecretName,
 						Namespace: e.namespace,
 					},
-					DataKey: pointer.String(secretsutils.DataKeyCertificateBundle),
+					DataKey: ptr.To(secretsutils.DataKeyCertificateBundle),
 				},
 				ServerTLSSecretRef: corev1.SecretReference{
 					Name:      peerServerSecretName,
@@ -355,7 +355,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 						Name:      etcdCASecret.Name,
 						Namespace: etcdCASecret.Namespace,
 					},
-					DataKey: pointer.String(secretsutils.DataKeyCertificateBundle),
+					DataKey: ptr.To(secretsutils.DataKeyCertificateBundle),
 				},
 				ServerTLSSecretRef: corev1.SecretReference{
 					Name:      serverSecret.Name,
@@ -366,7 +366,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					Namespace: clientSecret.Namespace,
 				},
 			},
-			Port:                    pointer.Int32(int32(etcdconstants.PortBackupRestore)),
+			Port:                    ptr.To(etcdconstants.PortBackupRestore),
 			Resources:               resourcesBackupRestore,
 			GarbageCollectionPolicy: &garbageCollectionPolicy,
 			GarbageCollectionPeriod: &garbageCollectionPeriod,
@@ -387,7 +387,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			}
 			e.etcd.Spec.Backup.FullSnapshotSchedule = e.computeFullSnapshotSchedule(existingEtcd)
 			e.etcd.Spec.Backup.DeltaSnapshotPeriod = &deltaSnapshotPeriod
-			e.etcd.Spec.Backup.DeltaSnapshotMemoryLimit = utils.QuantityPtr(resource.MustParse("100Mi"))
+			e.etcd.Spec.Backup.DeltaSnapshotMemoryLimit = ptr.To(resource.MustParse("100Mi"))
 			e.etcd.Spec.Backup.DeltaSnapshotRetentionPeriod = e.values.BackupConfig.DeltaSnapshotRetentionPeriod
 
 			if e.values.BackupConfig.LeaderElection != nil {
@@ -398,7 +398,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			}
 		}
 
-		e.etcd.Spec.StorageCapacity = utils.QuantityPtr(resource.MustParse(e.values.StorageCapacity))
+		e.etcd.Spec.StorageCapacity = ptr.To(resource.MustParse(e.values.StorageCapacity))
 		e.etcd.Spec.StorageClass = e.values.StorageClassName
 		e.etcd.Spec.VolumeClaimTemplate = &volumeClaimTemplate
 		return nil
@@ -417,14 +417,14 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 		scaleDownUpdateMode := e.values.HvpaConfig.ScaleDownUpdateMode
 		if scaleDownUpdateMode == nil {
-			scaleDownUpdateMode = pointer.String(hvpav1alpha1.UpdateModeMaintenanceWindow)
+			scaleDownUpdateMode = ptr.To(hvpav1alpha1.UpdateModeMaintenanceWindow)
 		}
 
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, hvpa, func() error {
 			hvpa.Labels = utils.MergeStringMaps(e.getRoleLabels(), map[string]string{
 				v1beta1constants.LabelApp: LabelAppValue,
 			})
-			hvpa.Spec.Replicas = pointer.Int32(1)
+			hvpa.Spec.Replicas = ptr.To(int32(1))
 			hvpa.Spec.MaintenanceTimeWindow = &hvpav1alpha1.MaintenanceTimeWindow{
 				Begin: e.values.HvpaConfig.MaintenanceTimeWindow.Begin,
 				End:   e.values.HvpaConfig.MaintenanceTimeWindow.End,
@@ -437,21 +437,21 @@ func (e *etcd) Deploy(ctx context.Context) error {
 						Labels: hpaLabels,
 					},
 					Spec: hvpav1alpha1.HpaTemplateSpec{
-						MinReplicas: pointer.Int32(replicas),
+						MinReplicas: ptr.To(replicas),
 						MaxReplicas: replicas,
 						Metrics: []autoscalingv2beta1.MetricSpec{
 							{
 								Type: autoscalingv2beta1.ResourceMetricSourceType,
 								Resource: &autoscalingv2beta1.ResourceMetricSource{
 									Name:                     corev1.ResourceCPU,
-									TargetAverageUtilization: pointer.Int32(80),
+									TargetAverageUtilization: ptr.To(int32(80)),
 								},
 							},
 							{
 								Type: autoscalingv2beta1.ResourceMetricSourceType,
 								Resource: &autoscalingv2beta1.ResourceMetricSource{
 									Name:                     corev1.ResourceMemory,
-									TargetAverageUtilization: pointer.Int32(80),
+									TargetAverageUtilization: ptr.To(int32(80)),
 								},
 							},
 						},
@@ -465,15 +465,15 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					UpdatePolicy: hvpav1alpha1.UpdatePolicy{
 						UpdateMode: &updateModeAuto,
 					},
-					StabilizationDuration: pointer.String("5m"),
+					StabilizationDuration: ptr.To("5m"),
 					MinChange: hvpav1alpha1.ScaleParams{
 						CPU: hvpav1alpha1.ChangeParams{
-							Value:      pointer.String("1"),
-							Percentage: pointer.Int32(80),
+							Value:      ptr.To("1"),
+							Percentage: ptr.To(int32(80)),
 						},
 						Memory: hvpav1alpha1.ChangeParams{
-							Value:      pointer.String("2G"),
-							Percentage: pointer.Int32(80),
+							Value:      ptr.To("2G"),
+							Percentage: ptr.To(int32(80)),
 						},
 					},
 				},
@@ -481,26 +481,26 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					UpdatePolicy: hvpav1alpha1.UpdatePolicy{
 						UpdateMode: scaleDownUpdateMode,
 					},
-					StabilizationDuration: pointer.String("15m"),
+					StabilizationDuration: ptr.To("15m"),
 					MinChange: hvpav1alpha1.ScaleParams{
 						CPU: hvpav1alpha1.ChangeParams{
-							Value:      pointer.String("1"),
-							Percentage: pointer.Int32(80),
+							Value:      ptr.To("1"),
+							Percentage: ptr.To(int32(80)),
 						},
 						Memory: hvpav1alpha1.ChangeParams{
-							Value:      pointer.String("2G"),
-							Percentage: pointer.Int32(80),
+							Value:      ptr.To("2G"),
+							Percentage: ptr.To(int32(80)),
 						},
 					},
 				},
 				LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
 					CPU: hvpav1alpha1.ChangeParams{
-						Value:      pointer.String("2"),
-						Percentage: pointer.Int32(40),
+						Value:      ptr.To("2"),
+						Percentage: ptr.To(int32(40)),
 					},
 					Memory: hvpav1alpha1.ChangeParams{
-						Value:      pointer.String("5G"),
-						Percentage: pointer.Int32(40),
+						Value:      ptr.To("5G"),
+						Percentage: ptr.To(int32(40)),
 					},
 				},
 				Template: hvpav1alpha1.VpaTemplate{
@@ -676,7 +676,7 @@ func (e *etcd) Scale(ctx context.Context, replicas int32) error {
 
 		patch := client.MergeFrom(hvpa.DeepCopy())
 		hvpa.Spec.Hpa.Template.Spec.MaxReplicas = replicas
-		hvpa.Spec.Hpa.Template.Spec.MinReplicas = pointer.Int32(replicas)
+		hvpa.Spec.Hpa.Template.Spec.MinReplicas = ptr.To(replicas)
 		return e.client.Patch(ctx, hvpa, patch)
 	}
 

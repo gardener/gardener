@@ -21,7 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -92,7 +92,7 @@ func (r *Reconciler) AddToManager(
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: pointer.IntDeref(r.Config.Controllers.ManagedSeed.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: ptr.Deref(r.Config.Controllers.ManagedSeed.ConcurrentSyncs, 0),
 		}).
 		WatchesRawSource(
 			source.Kind(gardenCluster.GetCache(), &seedmanagementv1alpha1.ManagedSeed{}),
@@ -281,7 +281,7 @@ func (r *Reconciler) EnqueueWithJitterDelay() handler.EventHandler {
 				return
 			}
 
-			if pointer.BoolDeref(r.Config.Controllers.ManagedSeed.JitterUpdates, false) {
+			if ptr.Deref(r.Config.Controllers.ManagedSeed.JitterUpdates, false) {
 				q.AddAfter(reconcileRequest(evt.ObjectNew), RandomDurationWithMetaDuration(r.Config.Controllers.ManagedSeed.SyncJitterPeriod))
 			} else {
 				q.Add(reconcileRequest(evt.ObjectNew))

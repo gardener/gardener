@@ -22,7 +22,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
@@ -181,7 +181,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should not overwrite already set values for leader election settings", func() {
 			expectedLeaderElection := componentbaseconfigv1alpha1.LeaderElectionConfiguration{
-				LeaderElect:       pointer.Bool(true),
+				LeaderElect:       ptr.To(true),
 				ResourceLock:      "foo",
 				RetryPeriod:       metav1.Duration{Duration: 40 * time.Second},
 				RenewDeadline:     metav1.Duration{Duration: 41 * time.Second},
@@ -220,15 +220,15 @@ var _ = Describe("Defaults", func() {
 				obj = &OperatorConfiguration{
 					Controllers: ControllerConfiguration{
 						Garden: GardenControllerConfig{
-							ConcurrentSyncs: pointer.Int(5),
+							ConcurrentSyncs: ptr.To(5),
 							SyncPeriod:      &metav1.Duration{Duration: time.Second},
 							ETCDConfig: &v1alpha1.ETCDConfig{
-								ETCDController:      &v1alpha1.ETCDController{Workers: pointer.Int64(5)},
-								CustodianController: &v1alpha1.CustodianController{Workers: pointer.Int64(5)},
+								ETCDController:      &v1alpha1.ETCDController{Workers: ptr.To(int64(5))},
+								CustodianController: &v1alpha1.CustodianController{Workers: ptr.To(int64(5))},
 								BackupCompactionController: &v1alpha1.BackupCompactionController{
-									Workers:                   pointer.Int64(4),
-									EnableBackupCompaction:    pointer.Bool(true),
-									EventsThreshold:           pointer.Int64(900000),
+									Workers:                   ptr.To(int64(4)),
+									EnableBackupCompaction:    ptr.To(true),
+									EventsThreshold:           ptr.To(int64(900000)),
 									MetricsScrapeWaitDuration: &metav1.Duration{Duration: 30 * time.Second},
 								},
 							},

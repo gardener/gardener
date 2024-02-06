@@ -16,6 +16,7 @@ package seedidentity
 
 import (
 	"crypto/x509"
+	"slices"
 	"strings"
 
 	authenticationv1 "k8s.io/api/authentication/v1"
@@ -23,7 +24,6 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -45,11 +45,11 @@ func FromUserInfoInterface(u user.Info) (string, bool, UserType) {
 		return "", false, ""
 	}
 
-	if utils.ValueExists(v1beta1constants.SeedsGroup, u.GetGroups()) {
+	if slices.Contains(u.GetGroups(), v1beta1constants.SeedsGroup) {
 		return getIdentityForSeedsGroup(u)
 	}
 
-	if utils.ValueExists(serviceaccount.AllServiceAccountsGroup, u.GetGroups()) {
+	if slices.Contains(u.GetGroups(), serviceaccount.AllServiceAccountsGroup) {
 		return getIdentityForServiceAccountsGroup(u)
 	}
 

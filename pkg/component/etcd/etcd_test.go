@@ -38,7 +38,7 @@ import (
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -77,7 +77,7 @@ var _ = Describe("Etcd", func() {
 		ctx                     = context.TODO()
 		fakeErr                 = fmt.Errorf("fake err")
 		class                   = ClassNormal
-		replicas                = pointer.Int32(1)
+		replicas                = ptr.To(int32(1))
 		storageCapacity         = "12Gi"
 		storageCapacityQuantity = resource.MustParse(storageCapacity)
 		storageClassName        = "my-storage-class"
@@ -100,7 +100,7 @@ var _ = Describe("Etcd", func() {
 		garbageCollectionPeriod = metav1.Duration{Duration: 12 * time.Hour}
 		compressionPolicy       = druidv1alpha1.GzipCompression
 		compressionSpec         = druidv1alpha1.CompressionSpec{
-			Enabled: pointer.Bool(true),
+			Enabled: ptr.To(true),
 			Policy:  &compressionPolicy,
 		}
 		backupLeaderElectionEtcdConnectionTimeout = &metav1.Duration{Duration: 10 * time.Second}
@@ -209,7 +209,7 @@ var _ = Describe("Etcd", func() {
 									Name:      caSecretName,
 									Namespace: testNamespace,
 								},
-								DataKey: pointer.String("bundle.crt"),
+								DataKey: ptr.To("bundle.crt"),
 							},
 							ServerTLSSecretRef: corev1.SecretReference{
 								Name:      serverSecretName,
@@ -220,8 +220,8 @@ var _ = Describe("Etcd", func() {
 								Namespace: testNamespace,
 							},
 						},
-						ServerPort:              pointer.Int32(int32(2380)),
-						ClientPort:              pointer.Int32(int32(2379)),
+						ServerPort:              ptr.To(int32(2380)),
+						ClientPort:              ptr.To(int32(2379)),
 						Metrics:                 &metricsBasic,
 						DefragmentationSchedule: &defragSchedule,
 						Quota:                   &quota,
@@ -237,7 +237,7 @@ var _ = Describe("Etcd", func() {
 									Name:      caSecretName,
 									Namespace: testNamespace,
 								},
-								DataKey: pointer.String("bundle.crt"),
+								DataKey: ptr.To("bundle.crt"),
 							},
 							ServerTLSSecretRef: corev1.SecretReference{
 								Name:      serverSecretName,
@@ -248,7 +248,7 @@ var _ = Describe("Etcd", func() {
 								Namespace: testNamespace,
 							},
 						},
-						Port:                    pointer.Int32(int32(8080)),
+						Port:                    ptr.To(int32(8080)),
 						Resources:               resourcesContainerBackupRestore,
 						GarbageCollectionPolicy: &garbageCollectionPolicy,
 						GarbageCollectionPeriod: &garbageCollectionPeriod,
@@ -256,14 +256,14 @@ var _ = Describe("Etcd", func() {
 					},
 					StorageCapacity:     &storageCapacityQuantity,
 					StorageClass:        &storageClassName,
-					VolumeClaimTemplate: pointer.String(etcdName),
+					VolumeClaimTemplate: ptr.To(etcdName),
 				},
 			}
 
 			if class == ClassImportant {
 				obj.Spec.Annotations = map[string]string{"cluster-autoscaler.kubernetes.io/safe-to-evict": "false"}
 				obj.Spec.Etcd.Metrics = &metricsExtensive
-				obj.Spec.VolumeClaimTemplate = pointer.String(testRole + "-etcd")
+				obj.Spec.VolumeClaimTemplate = ptr.To(testRole + "-etcd")
 			}
 
 			if replicas == 3 {
@@ -282,25 +282,25 @@ var _ = Describe("Etcd", func() {
 							Name:      secretNamePeerCA,
 							Namespace: testNamespace,
 						},
-						DataKey: pointer.String(secretsutils.DataKeyCertificateBundle),
+						DataKey: ptr.To(secretsutils.DataKeyCertificateBundle),
 					},
 				}
 			}
 
-			if pointer.StringDeref(peerServerSecretName, "") != "" {
+			if ptr.Deref(peerServerSecretName, "") != "" {
 				obj.Spec.Etcd.PeerUrlTLS.ServerTLSSecretRef = corev1.SecretReference{
 					Name:      *peerServerSecretName,
 					Namespace: testNamespace,
 				}
 			}
 
-			if pointer.StringDeref(peerCASecretName, "") != "" {
+			if ptr.Deref(peerCASecretName, "") != "" {
 				obj.Spec.Etcd.PeerUrlTLS.TLSCASecretRef = druidv1alpha1.SecretReference{
 					SecretReference: corev1.SecretReference{
 						Name:      *peerCASecretName,
 						Namespace: testNamespace,
 					},
-					DataKey: pointer.String(secretsutils.DataKeyCertificateBundle),
+					DataKey: ptr.To(secretsutils.DataKeyCertificateBundle),
 				}
 			}
 
@@ -347,7 +347,7 @@ var _ = Describe("Etcd", func() {
 					},
 				},
 				Spec: hvpav1alpha1.HvpaSpec{
-					Replicas: pointer.Int32(1),
+					Replicas: ptr.To(int32(1)),
 					MaintenanceTimeWindow: &hvpav1alpha1.MaintenanceTimeWindow{
 						Begin: maintenanceTimeWindow.Begin,
 						End:   maintenanceTimeWindow.End,
@@ -373,14 +373,14 @@ var _ = Describe("Etcd", func() {
 										Type: autoscalingv2beta1.ResourceMetricSourceType,
 										Resource: &autoscalingv2beta1.ResourceMetricSource{
 											Name:                     corev1.ResourceCPU,
-											TargetAverageUtilization: pointer.Int32(80),
+											TargetAverageUtilization: ptr.To(int32(80)),
 										},
 									},
 									{
 										Type: autoscalingv2beta1.ResourceMetricSourceType,
 										Resource: &autoscalingv2beta1.ResourceMetricSource{
 											Name:                     corev1.ResourceMemory,
-											TargetAverageUtilization: pointer.Int32(80),
+											TargetAverageUtilization: ptr.To(int32(80)),
 										},
 									},
 								},
@@ -398,15 +398,15 @@ var _ = Describe("Etcd", func() {
 							UpdatePolicy: hvpav1alpha1.UpdatePolicy{
 								UpdateMode: &updateModeAuto,
 							},
-							StabilizationDuration: pointer.String("5m"),
+							StabilizationDuration: ptr.To("5m"),
 							MinChange: hvpav1alpha1.ScaleParams{
 								CPU: hvpav1alpha1.ChangeParams{
-									Value:      pointer.String("1"),
-									Percentage: pointer.Int32(80),
+									Value:      ptr.To("1"),
+									Percentage: ptr.To(int32(80)),
 								},
 								Memory: hvpav1alpha1.ChangeParams{
-									Value:      pointer.String("2G"),
-									Percentage: pointer.Int32(80),
+									Value:      ptr.To("2G"),
+									Percentage: ptr.To(int32(80)),
 								},
 							},
 						},
@@ -414,26 +414,26 @@ var _ = Describe("Etcd", func() {
 							UpdatePolicy: hvpav1alpha1.UpdatePolicy{
 								UpdateMode: &scaleDownUpdateMode,
 							},
-							StabilizationDuration: pointer.String("15m"),
+							StabilizationDuration: ptr.To("15m"),
 							MinChange: hvpav1alpha1.ScaleParams{
 								CPU: hvpav1alpha1.ChangeParams{
-									Value:      pointer.String("1"),
-									Percentage: pointer.Int32(80),
+									Value:      ptr.To("1"),
+									Percentage: ptr.To(int32(80)),
 								},
 								Memory: hvpav1alpha1.ChangeParams{
-									Value:      pointer.String("2G"),
-									Percentage: pointer.Int32(80),
+									Value:      ptr.To("2G"),
+									Percentage: ptr.To(int32(80)),
 								},
 							},
 						},
 						LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
 							CPU: hvpav1alpha1.ChangeParams{
-								Value:      pointer.String("2"),
-								Percentage: pointer.Int32(40),
+								Value:      ptr.To("2"),
+								Percentage: ptr.To(int32(40)),
 							},
 							Memory: hvpav1alpha1.ChangeParams{
-								Value:      pointer.String("5G"),
-								Percentage: pointer.Int32(40),
+								Value:      ptr.To("5G"),
+								Percentage: ptr.To(int32(40)),
 							},
 						},
 						Template: hvpav1alpha1.VpaTemplate{
@@ -523,7 +523,7 @@ var _ = Describe("Etcd", func() {
 				etcd.SetHVPAConfig(&HVPAConfig{
 					Enabled:               true,
 					MaintenanceTimeWindow: maintenanceTimeWindow,
-					ScaleDownUpdateMode:   pointer.String(updateMode),
+					ScaleDownUpdateMode:   ptr.To(updateMode),
 				})
 			}
 		}
@@ -1182,7 +1182,7 @@ var _ = Describe("Etcd", func() {
 			})
 
 			JustBeforeEach(func() {
-				replicas = pointer.Int32(3)
+				replicas = ptr.To(int32(3))
 				etcd = New(log, c, testNamespace, sm, Values{
 					Role:                    testRole,
 					Class:                   class,
@@ -1342,7 +1342,7 @@ var _ = Describe("Etcd", func() {
 				etcd = New(log, c, testNamespace, sm, Values{
 					Role:                    testRole,
 					Class:                   class,
-					Replicas:                pointer.Int32(0),
+					Replicas:                ptr.To(int32(0)),
 					StorageCapacity:         storageCapacity,
 					StorageClassName:        &storageClassName,
 					DefragmentationSchedule: &defragmentationSchedule,
@@ -1441,7 +1441,7 @@ var _ = Describe("Etcd", func() {
 				class := ClassImportant
 				updateMode := hvpav1alpha1.UpdateModeMaintenanceWindow
 
-				replicas = pointer.Int32(1)
+				replicas = ptr.To(int32(1))
 
 				etcd = New(log, c, testNamespace, sm, Values{
 					Role:                        testRole,
@@ -1498,7 +1498,7 @@ var _ = Describe("Etcd", func() {
 			etcd = New(log, c, testNamespace, sm, Values{
 				Role:                    testRole,
 				Class:                   class,
-				Replicas:                pointer.Int32(1),
+				Replicas:                ptr.To(int32(1)),
 				StorageCapacity:         storageCapacity,
 				StorageClassName:        &storageClassName,
 				DefragmentationSchedule: &defragmentationSchedule,
@@ -1721,7 +1721,7 @@ var _ = Describe("Etcd", func() {
 
 			expectedHvpa := hvpaObj.DeepCopy()
 			expectedHvpa.Spec.Hpa.Template.Spec.MaxReplicas = 3
-			expectedHvpa.Spec.Hpa.Template.Spec.MinReplicas = pointer.Int32(3)
+			expectedHvpa.Spec.Hpa.Template.Spec.MinReplicas = ptr.To(int32(3))
 			test.EXPECTPatch(ctx, c, expectedHvpa, hvpaObj, types.MergePatchType)
 
 			Expect(etcd.Scale(ctx, 3)).To(Succeed())
@@ -1747,7 +1747,7 @@ var _ = Describe("Etcd", func() {
 
 		Context("when HA control-plane is not requested", func() {
 			BeforeEach(func() {
-				replicas = pointer.Int32(1)
+				replicas = ptr.To(int32(1))
 			})
 
 			It("should do nothing and succeed without expectations", func() {
@@ -1775,20 +1775,20 @@ var _ = Describe("Etcd", func() {
 										Name:      caName,
 										Namespace: testNamespace,
 									},
-									DataKey: pointer.String(secretsutils.DataKeyCertificateBundle),
+									DataKey: ptr.To(secretsutils.DataKeyCertificateBundle),
 								},
 							},
 						},
 					},
 					Status: druidv1alpha1.EtcdStatus{
-						ObservedGeneration: pointer.Int64(1),
-						Ready:              pointer.Bool(true),
+						ObservedGeneration: ptr.To(int64(1)),
+						Ready:              ptr.To(true),
 					},
 				}
 			}
 
 			BeforeEach(func() {
-				replicas = pointer.Int32(3)
+				replicas = ptr.To(int32(3))
 				DeferCleanup(test.WithVar(&TimeNow, func() time.Time { return now }))
 			})
 

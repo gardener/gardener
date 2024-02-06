@@ -28,7 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -398,7 +398,7 @@ var _ = Describe("ControlPlane", func() {
 						{
 							Name:    &name,
 							Kind:    extensionsv1alpha1.ControlPlaneResource,
-							Purpose: pointer.String(string(purpose)),
+							Purpose: ptr.To(string(purpose)),
 							State:   state,
 						},
 					},
@@ -477,7 +477,7 @@ var _ = Describe("ControlPlane", func() {
 
 			// restore state
 			shootState.Spec.Extensions[0].Name = &obj.Name
-			shootState.Spec.Extensions[0].Purpose = pointer.String(string(values.Purpose))
+			shootState.Spec.Extensions[0].Purpose = ptr.To(string(values.Purpose))
 			expectedWithState := obj.DeepCopy()
 			expectedWithState.Status.State = state
 			test.EXPECTStatusPatch(ctx, mockStatusWriter, expectedWithState, obj, types.MergePatchType)

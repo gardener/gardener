@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -111,30 +111,30 @@ var _ = Describe("dns", func() {
 		})
 
 		It("should be false when Shoot ExternalClusterDomain is nil", func() {
-			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
+			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To("foo")}
 			b.Shoot.ExternalClusterDomain = nil
 			Expect(b.NeedsExternalDNS()).To(BeFalse())
 		})
 
 		It("should be false when Shoot ExternalDomain is nil", func() {
-			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
-			b.Shoot.ExternalClusterDomain = pointer.String("baz")
+			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To("foo")}
+			b.Shoot.ExternalClusterDomain = ptr.To("baz")
 			b.Shoot.ExternalDomain = nil
 
 			Expect(b.NeedsExternalDNS()).To(BeFalse())
 		})
 
 		It("should be false when Shoot ExternalDomain provider is unamanaged", func() {
-			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
-			b.Shoot.ExternalClusterDomain = pointer.String("baz")
+			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To("foo")}
+			b.Shoot.ExternalClusterDomain = ptr.To("baz")
 			b.Shoot.ExternalDomain = &gardenerutils.Domain{Provider: "unmanaged"}
 
 			Expect(b.NeedsExternalDNS()).To(BeFalse())
 		})
 
 		It("should be true when Shoot ExternalDomain provider is valid", func() {
-			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
-			b.Shoot.ExternalClusterDomain = pointer.String("baz")
+			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To("foo")}
+			b.Shoot.ExternalClusterDomain = ptr.To("baz")
 			b.Shoot.ExternalDomain = &gardenerutils.Domain{Provider: "valid-provider"}
 
 			Expect(b.NeedsExternalDNS()).To(BeTrue())
@@ -165,8 +165,8 @@ var _ = Describe("dns", func() {
 
 		It("returns true when DNS is used", func() {
 			b.Garden.InternalDomain = &gardenerutils.Domain{Provider: "some-provider"}
-			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
-			b.Shoot.ExternalClusterDomain = pointer.String("baz")
+			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To("foo")}
+			b.Shoot.ExternalClusterDomain = ptr.To("baz")
 			b.Shoot.ExternalDomain = &gardenerutils.Domain{Provider: "valid-provider"}
 
 			Expect(b.ShootUsesDNS()).To(BeTrue())
@@ -195,10 +195,10 @@ var _ = Describe("dns", func() {
 		})
 
 		It("sets internal and external DNSRecords", func() {
-			b.Shoot.GetInfo().Status.ClusterIdentity = pointer.String("shoot-cluster-identity")
-			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
+			b.Shoot.GetInfo().Status.ClusterIdentity = ptr.To("shoot-cluster-identity")
+			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To("foo")}
 			b.Shoot.InternalClusterDomain = "bar"
-			b.Shoot.ExternalClusterDomain = pointer.String("baz")
+			b.Shoot.ExternalClusterDomain = ptr.To("baz")
 			b.Shoot.ExternalDomain = &gardenerutils.Domain{Provider: "valid-provider"}
 			b.Garden.InternalDomain = &gardenerutils.Domain{Provider: "valid-provider"}
 

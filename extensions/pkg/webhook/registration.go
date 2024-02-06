@@ -24,7 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
@@ -176,7 +176,7 @@ func ReconcileSeedWebhookConfig(ctx context.Context, c client.Client, webhookCon
 			return err
 		}
 		ownerReference = metav1.NewControllerRef(ns, corev1.SchemeGroupVersion.WithKind("Namespace"))
-		ownerReference.BlockOwnerDeletion = pointer.Bool(false)
+		ownerReference.BlockOwnerDeletion = ptr.To(false)
 	}
 
 	desiredWebhookConfig := webhookConfig.DeepCopyObject().(client.Object)
@@ -354,9 +354,9 @@ func BuildClientConfigFor(webhookPath string, namespace, componentName string, s
 
 	switch mode {
 	case ModeURL:
-		clientConfig.URL = pointer.String(fmt.Sprintf("https://%s%s", url, path))
+		clientConfig.URL = ptr.To(fmt.Sprintf("https://%s%s", url, path))
 	case ModeURLWithServiceName:
-		clientConfig.URL = pointer.String(fmt.Sprintf("https://%s.%s:%d%s", PrefixedName(componentName), namespace, servicePort, path))
+		clientConfig.URL = ptr.To(fmt.Sprintf("https://%s.%s:%d%s", PrefixedName(componentName), namespace, servicePort, path))
 	case ModeService:
 		clientConfig.Service = &admissionregistrationv1.ServiceReference{
 			Namespace: namespace,
@@ -400,7 +400,7 @@ func createAndAddToWebhookConfig(
 			ObjectSelector:          webhook.ObjectSelector,
 			Rules:                   rules,
 			SideEffects:             sideEffects,
-			TimeoutSeconds:          pointer.Int32(10),
+			TimeoutSeconds:          ptr.To(int32(10)),
 		}
 
 		if webhook.TimeoutSeconds != nil {
@@ -425,7 +425,7 @@ func createAndAddToWebhookConfig(
 			ObjectSelector:          webhook.ObjectSelector,
 			Rules:                   rules,
 			SideEffects:             sideEffects,
-			TimeoutSeconds:          pointer.Int32(10),
+			TimeoutSeconds:          ptr.To(int32(10)),
 		}
 
 		if webhook.TimeoutSeconds != nil {

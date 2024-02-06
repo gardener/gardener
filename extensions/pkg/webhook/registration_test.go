@@ -27,7 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -121,12 +121,12 @@ var _ = Describe("Registration", func() {
 					Action:            "mutating",
 					Name:              "webhook3",
 					Provider:          "provider3",
-					Types:             []Type{{Obj: &corev1.ServiceAccount{}, Subresource: pointer.String("token")}},
+					Types:             []Type{{Obj: &corev1.ServiceAccount{}, Subresource: ptr.To("token")}},
 					Target:            TargetShoot,
 					Path:              "path3",
 					NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"baz": "foo"}},
 					ObjectSelector:    &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "baz"}},
-					TimeoutSeconds:    pointer.Int32(1337),
+					TimeoutSeconds:    ptr.To(int32(1337)),
 				},
 				{
 					Name:          "webhook4",
@@ -161,12 +161,12 @@ var _ = Describe("Registration", func() {
 					Action:            "validating",
 					Name:              "webhook3",
 					Provider:          "provider3",
-					Types:             []Type{{Obj: &corev1.ServiceAccount{}, Subresource: pointer.String("token")}},
+					Types:             []Type{{Obj: &corev1.ServiceAccount{}, Subresource: ptr.To("token")}},
 					Target:            TargetShoot,
 					Path:              "path3",
 					NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"baz": "foo"}},
 					ObjectSelector:    &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "baz"}},
-					TimeoutSeconds:    pointer.Int32(1337),
+					TimeoutSeconds:    ptr.To(int32(1337)),
 				},
 				{
 					Action:        "validating",
@@ -206,16 +206,16 @@ var _ = Describe("Registration", func() {
 							out.Service = &admissionregistrationv1.ServiceReference{
 								Name:      "gardener-extension-" + providerName,
 								Namespace: namespace,
-								Path:      pointer.String("/" + path),
+								Path:      ptr.To("/" + path),
 							}
 						}
 
 						if mode == ModeURL {
-							out.URL = pointer.String("https://" + url + "/" + path)
+							out.URL = ptr.To("https://" + url + "/" + path)
 						}
 
 						if mode == ModeURLWithServiceName {
-							out.URL = pointer.String(fmt.Sprintf("https://gardener-extension-%s.%s:%d/%s", providerName, namespace, servicePort, path))
+							out.URL = ptr.To(fmt.Sprintf("https://gardener-extension-%s.%s:%d/%s", providerName, namespace, servicePort, path))
 						}
 
 						return out
@@ -223,11 +223,11 @@ var _ = Describe("Registration", func() {
 
 					buildShootClientConfig = func(path string) admissionregistrationv1.WebhookClientConfig {
 						out := admissionregistrationv1.WebhookClientConfig{
-							URL: pointer.String(fmt.Sprintf("https://gardener-extension-%s.%s:%d/%s", providerName, namespace, servicePort, path)),
+							URL: ptr.To(fmt.Sprintf("https://gardener-extension-%s.%s:%d/%s", providerName, namespace, servicePort, path)),
 						}
 
 						if url != "" {
-							out.URL = pointer.String("https://" + url + "/" + path)
+							out.URL = ptr.To("https://" + url + "/" + path)
 						}
 
 						return out
@@ -468,8 +468,8 @@ var _ = Describe("Registration", func() {
 				APIVersion:         "v1",
 				Kind:               "Namespace",
 				Name:               ownerNamespaceName,
-				Controller:         pointer.Bool(true),
-				BlockOwnerDeletion: pointer.Bool(false),
+				Controller:         ptr.To(true),
+				BlockOwnerDeletion: ptr.To(false),
 			}))
 			Expect(webhookConfig.Webhooks[0].ClientConfig.CABundle).To(Equal(caBundle))
 		})
@@ -501,8 +501,8 @@ var _ = Describe("Registration", func() {
 				APIVersion:         "v1",
 				Kind:               "Namespace",
 				Name:               ownerNamespaceName,
-				Controller:         pointer.Bool(true),
-				BlockOwnerDeletion: pointer.Bool(false),
+				Controller:         ptr.To(true),
+				BlockOwnerDeletion: ptr.To(false),
 			}))
 			Expect(webhookConfig.Webhooks[0].ClientConfig.CABundle).To(Equal(caBundle))
 		})
@@ -523,8 +523,8 @@ var _ = Describe("Registration", func() {
 				APIVersion:         "v1",
 				Kind:               "Namespace",
 				Name:               ownerNamespaceName,
-				Controller:         pointer.Bool(true),
-				BlockOwnerDeletion: pointer.Bool(false),
+				Controller:         ptr.To(true),
+				BlockOwnerDeletion: ptr.To(false),
 			}))
 			Expect(webhookConfig.Webhooks[0].ClientConfig.CABundle).To(Equal(caBundle))
 		})

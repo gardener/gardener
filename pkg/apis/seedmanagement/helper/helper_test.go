@@ -28,15 +28,6 @@ import (
 )
 
 var _ = Describe("Helper", func() {
-	Describe("#GetBootstrap", func() {
-		It("should return the correct Bootstrap value", func() {
-			Expect(GetBootstrap(bootstrapPtr(seedmanagement.BootstrapToken))).To(Equal(seedmanagement.BootstrapToken))
-			Expect(GetBootstrap(bootstrapPtr(seedmanagement.BootstrapServiceAccount))).To(Equal(seedmanagement.BootstrapServiceAccount))
-			Expect(GetBootstrap(bootstrapPtr(seedmanagement.BootstrapNone))).To(Equal(seedmanagement.BootstrapNone))
-			Expect(GetBootstrap(nil)).To(Equal(seedmanagement.BootstrapNone))
-		})
-	})
-
 	Describe("#ExtractSeedSpec", func() {
 		var (
 			seedName  = "test-seed"
@@ -117,5 +108,3 @@ var _ = Describe("Helper", func() {
 		})
 	})
 })
-
-func bootstrapPtr(v seedmanagement.Bootstrap) *seedmanagement.Bootstrap { return &v }

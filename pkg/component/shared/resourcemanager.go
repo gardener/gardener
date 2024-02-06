@@ -27,7 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/component-base/version"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -73,12 +73,12 @@ func NewRuntimeGardenerResourceManager(
 	image.WithOptionalTag(version.Get().GitVersion)
 
 	return resourcemanager.New(c, gardenNamespaceName, secretsManager, resourcemanager.Values{
-		ConcurrentSyncs:                           pointer.Int(20),
+		ConcurrentSyncs:                           ptr.To(20),
 		DefaultSeccompProfileEnabled:              defaultSeccompProfileEnabled,
 		DefaultNotReadyToleration:                 defaultNotReadyToleration,
 		DefaultUnreachableToleration:              defaultUnreachableToleration,
 		EndpointSliceHintsEnabled:                 endpointSliceHintsEnabled,
-		MaxConcurrentNetworkPolicyWorkers:         pointer.Int(20),
+		MaxConcurrentNetworkPolicyWorkers:         ptr.To(20),
 		NetworkPolicyAdditionalNamespaceSelectors: additionalNetworkPolicyNamespaceSelectors,
 		NetworkPolicyControllerIngressControllerSelector: &resourcemanagerv1alpha1.IngressControllerSelector{
 			Namespace: v1beta1constants.GardenNamespace,
@@ -91,13 +91,13 @@ func NewRuntimeGardenerResourceManager(
 		Image:                                image.String(),
 		LogLevel:                             logLevel,
 		LogFormat:                            logFormat,
-		MaxConcurrentTokenInvalidatorWorkers: pointer.Int(5),
+		MaxConcurrentTokenInvalidatorWorkers: ptr.To(5),
 		// TODO(timuthy): Remove PodTopologySpreadConstraints webhook once for all seeds the
 		//  MatchLabelKeysInPodTopologySpread feature gate is beta and enabled by default (probably 1.26+).
 		PodTopologySpreadConstraintsEnabled: true,
 		PriorityClassName:                   priorityClassName,
-		Replicas:                            pointer.Int32(2),
-		ResourceClass:                       pointer.String(v1beta1constants.SeedResourceManagerClass),
+		Replicas:                            ptr.To(int32(2)),
+		ResourceClass:                       ptr.To(v1beta1constants.SeedResourceManagerClass),
 		SecretNameServerCA:                  secretNameServerCA,
 		SyncPeriod:                          &metav1.Duration{Duration: time.Hour},
 		RuntimeKubernetesVersion:            runtimeVersion,
@@ -142,9 +142,9 @@ func NewTargetGardenerResourceManager(
 	image.WithOptionalTag(version.Get().GitVersion)
 
 	cfg := resourcemanager.Values{
-		AlwaysUpdate:                         pointer.Bool(true),
+		AlwaysUpdate:                         ptr.To(true),
 		ClusterIdentity:                      clusterIdentity,
-		ConcurrentSyncs:                      pointer.Int(20),
+		ConcurrentSyncs:                      ptr.To(20),
 		DefaultNotReadyToleration:            defaultNotReadyTolerationSeconds,
 		DefaultUnreachableToleration:         defaultUnreachableTolerationSeconds,
 		HealthSyncPeriod:                     &metav1.Duration{Duration: time.Minute},
@@ -152,10 +152,10 @@ func NewTargetGardenerResourceManager(
 		KubernetesServiceHost:                kubernetesServiceHost,
 		LogLevel:                             logLevel,
 		LogFormat:                            logFormat,
-		MaxConcurrentHealthWorkers:           pointer.Int(10),
-		MaxConcurrentTokenInvalidatorWorkers: pointer.Int(5),
-		MaxConcurrentTokenRequestorWorkers:   pointer.Int(5),
-		MaxConcurrentCSRApproverWorkers:      pointer.Int(5),
+		MaxConcurrentHealthWorkers:           ptr.To(10),
+		MaxConcurrentTokenInvalidatorWorkers: ptr.To(5),
+		MaxConcurrentTokenRequestorWorkers:   ptr.To(5),
+		MaxConcurrentCSRApproverWorkers:      ptr.To(5),
 		NamePrefix:                           namePrefix,
 		PodTopologySpreadConstraintsEnabled:  podTopologySpreadConstraintsEnabled,
 		PriorityClassName:                    priorityClassName,
@@ -257,7 +257,7 @@ func DeployGardenerResourceManager(
 }
 
 func mustBootstrapGardenerResourceManager(ctx context.Context, c client.Client, gardenerResourceManager resourcemanager.Interface, namespace string) (bool, error) {
-	if pointer.Int32Deref(gardenerResourceManager.GetReplicas(), 0) == 0 {
+	if ptr.Deref(gardenerResourceManager.GetReplicas(), 0) == 0 {
 		return false, nil // GRM should not be scaled up, hence no need to bootstrap.
 	}
 
@@ -318,7 +318,7 @@ func reconcileGardenerResourceManagerBootstrapKubeconfigSecret(ctx context.Conte
 			CommonName:                  "gardener.cloud:system:gardener-resource-manager",
 			Organization:                []string{user.SystemPrivilegedGroup},
 			CertType:                    secretsutils.ClientCert,
-			Validity:                    pointer.Duration(10 * time.Minute),
+			Validity:                    ptr.To(10 * time.Minute),
 			SkipPublishingCACertificate: true,
 		},
 		KubeConfigRequests: []secretsutils.KubeConfigRequest{{

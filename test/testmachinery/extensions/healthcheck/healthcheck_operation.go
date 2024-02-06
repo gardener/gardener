@@ -24,7 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/healthcheck"
@@ -112,7 +112,7 @@ func TestHealthCheckWithManagedResource(ctx context.Context, timeout time.Durati
 	ctx, cancel = context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	resourceManagerDeploymentReplicasBeforeScaledown, err = operation.ScaleGardenerResourceManager(ctx, f.ShootSeedNamespace(), f.SeedClient.Client(), pointer.Int32(0))
+	resourceManagerDeploymentReplicasBeforeScaledown, err = operation.ScaleGardenerResourceManager(ctx, f.ShootSeedNamespace(), f.SeedClient.Client(), ptr.To(int32(0)))
 	if err != nil {
 		return err
 	}

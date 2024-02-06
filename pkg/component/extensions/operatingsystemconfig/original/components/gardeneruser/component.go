@@ -21,7 +21,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -82,8 +82,8 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	return []extensionsv1alpha1.Unit{
 			{
 				Name:   "gardener-user.service",
-				Enable: pointer.Bool(true),
-				Content: pointer.String(`[Unit]
+				Enable: ptr.To(true),
+				Content: ptr.To(`[Unit]
 Description=Configure gardener user
 After=sshd.service
 [Service]
@@ -96,7 +96,7 @@ ExecStart=` + pathScript + `
 		[]extensionsv1alpha1.File{
 			{
 				Path:        pathAuthorizedSSHKeys,
-				Permissions: pointer.Int32(0644),
+				Permissions: ptr.To(int32(0644)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
@@ -106,7 +106,7 @@ ExecStart=` + pathScript + `
 			},
 			{
 				Path:        pathScript,
-				Permissions: pointer.Int32(0755),
+				Permissions: ptr.To(int32(0755)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",

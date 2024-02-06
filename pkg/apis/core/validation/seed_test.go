@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
@@ -345,11 +345,11 @@ var _ = Describe("Seed Validation Tests", func() {
 
 			Context("IPv4", func() {
 				It("should allow valid networking configuration", func() {
-					seed.Spec.Networks.Nodes = pointer.String("10.1.0.0/16")
+					seed.Spec.Networks.Nodes = ptr.To("10.1.0.0/16")
 					seed.Spec.Networks.Pods = "10.2.0.0/16"
 					seed.Spec.Networks.Services = "10.3.0.0/16"
-					seed.Spec.Networks.ShootDefaults.Pods = pointer.String("10.4.0.0/16")
-					seed.Spec.Networks.ShootDefaults.Services = pointer.String("10.5.0.0/16")
+					seed.Spec.Networks.ShootDefaults.Pods = ptr.To("10.4.0.0/16")
+					seed.Spec.Networks.ShootDefaults.Services = ptr.To("10.5.0.0/16")
 
 					errorList := ValidateSeed(seed)
 					Expect(errorList).To(BeEmpty())
@@ -389,11 +389,11 @@ var _ = Describe("Seed Validation Tests", func() {
 				})
 
 				It("should forbid IPv6 CIDRs with IPv4 IP family", func() {
-					seed.Spec.Networks.Nodes = pointer.String("2001:db8:11::/48")
+					seed.Spec.Networks.Nodes = ptr.To("2001:db8:11::/48")
 					seed.Spec.Networks.Pods = "2001:db8:12::/48"
 					seed.Spec.Networks.Services = "2001:db8:13::/48"
-					seed.Spec.Networks.ShootDefaults.Pods = pointer.String("2001:db8:1::/48")
-					seed.Spec.Networks.ShootDefaults.Services = pointer.String("2001:db8:3::/48")
+					seed.Spec.Networks.ShootDefaults.Pods = ptr.To("2001:db8:1::/48")
+					seed.Spec.Networks.ShootDefaults.Services = ptr.To("2001:db8:3::/48")
 
 					errorList := ValidateSeed(seed)
 					Expect(errorList).To(ConsistOfFields(Fields{
@@ -552,11 +552,11 @@ var _ = Describe("Seed Validation Tests", func() {
 				})
 
 				It("should allow valid networking configuration", func() {
-					seed.Spec.Networks.Nodes = pointer.String("2001:db8:11::/48")
+					seed.Spec.Networks.Nodes = ptr.To("2001:db8:11::/48")
 					seed.Spec.Networks.Pods = "2001:db8:12::/48"
 					seed.Spec.Networks.Services = "2001:db8:13::/48"
-					seed.Spec.Networks.ShootDefaults.Pods = pointer.String("2001:db8:1::/48")
-					seed.Spec.Networks.ShootDefaults.Services = pointer.String("2001:db8:3::/48")
+					seed.Spec.Networks.ShootDefaults.Pods = ptr.To("2001:db8:1::/48")
+					seed.Spec.Networks.ShootDefaults.Services = ptr.To("2001:db8:3::/48")
 
 					errorList := ValidateSeed(seed)
 					Expect(errorList).To(BeEmpty())
@@ -596,11 +596,11 @@ var _ = Describe("Seed Validation Tests", func() {
 				})
 
 				It("should forbid IPv4 CIDRs with IPv6 IP family", func() {
-					seed.Spec.Networks.Nodes = pointer.String("10.1.0.0/16")
+					seed.Spec.Networks.Nodes = ptr.To("10.1.0.0/16")
 					seed.Spec.Networks.Pods = "10.2.0.0/16"
 					seed.Spec.Networks.Services = "10.3.0.0/16"
-					seed.Spec.Networks.ShootDefaults.Pods = pointer.String("10.4.0.0/16")
-					seed.Spec.Networks.ShootDefaults.Services = pointer.String("10.5.0.0/16")
+					seed.Spec.Networks.ShootDefaults.Pods = ptr.To("10.4.0.0/16")
+					seed.Spec.Networks.ShootDefaults.Services = ptr.To("10.5.0.0/16")
 
 					errorList := ValidateSeed(seed)
 					Expect(errorList).To(ConsistOfFields(Fields{
@@ -1227,13 +1227,13 @@ var _ = Describe("Seed Validation Tests", func() {
 		Context("validate .status.clusterIdentity updates", func() {
 			newSeed := &core.Seed{
 				Status: core.SeedStatus{
-					ClusterIdentity: pointer.String("newClusterIdentity"),
+					ClusterIdentity: ptr.To("newClusterIdentity"),
 				},
 			}
 
 			It("should fail to update seed status cluster identity if it already exists", func() {
 				oldSeed := &core.Seed{Status: core.SeedStatus{
-					ClusterIdentity: pointer.String("clusterIdentityExists"),
+					ClusterIdentity: ptr.To("clusterIdentityExists"),
 				}}
 				allErrs := ValidateSeedStatusUpdate(newSeed, oldSeed)
 				Expect(allErrs).To(ConsistOfFields(Fields{
@@ -1261,7 +1261,7 @@ var _ = Describe("Seed Validation Tests", func() {
 		It("should forbid invalid metadata or spec fields", func() {
 			seedTemplate.Labels = map[string]string{"foo!": "bar"}
 			seedTemplate.Annotations = map[string]string{"foo!": "bar"}
-			seedTemplate.Spec.Networks.Nodes = pointer.String("")
+			seedTemplate.Spec.Networks.Nodes = ptr.To("")
 
 			errorList := ValidateSeedTemplate(seedTemplate, nil)
 

@@ -24,7 +24,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/gardener/gardener/pkg/client/kubernetes"
@@ -54,7 +54,7 @@ var _ = Describe("scale", func() {
 				Generation: 2,
 			},
 			Spec: appsv1.StatefulSetSpec{
-				Replicas: pointer.Int32(2),
+				Replicas: ptr.To(int32(2)),
 			},
 			Status: appsv1.StatefulSetStatus{
 				ObservedGeneration: 2,
@@ -99,7 +99,7 @@ var _ = Describe("scale", func() {
 							Generation: 2,
 						},
 						Spec: appsv1.DeploymentSpec{
-							Replicas: pointer.Int32(2),
+							Replicas: ptr.To(int32(2)),
 						},
 						Status: appsv1.DeploymentStatus{
 							ObservedGeneration: 2,

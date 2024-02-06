@@ -34,7 +34,7 @@ import (
 	admissionapiv1 "k8s.io/pod-security-admission/admission/api/v1"
 	admissionapiv1alpha1 "k8s.io/pod-security-admission/admission/api/v1alpha1"
 	admissionapiv1beta1 "k8s.io/pod-security-admission/admission/api/v1beta1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -103,8 +103,8 @@ var _ = Describe("KubeAPIServer", func() {
 			isWorkerless = false
 			staticTokenKubeconfigEnabled = nil
 			auditWebhookConfig = nil
-			authenticationWebhookConfig = &kubeapiserver.AuthenticationWebhook{Version: pointer.String("authn-version")}
-			authorizationWebhookConfig = &kubeapiserver.AuthorizationWebhook{Version: pointer.String("authnz-version")}
+			authenticationWebhookConfig = &kubeapiserver.AuthenticationWebhook{Version: ptr.To("authn-version")}
+			authorizationWebhookConfig = &kubeapiserver.AuthorizationWebhook{Version: ptr.To("authnz-version")}
 			resourcesToStoreInETCDEvents = []schema.GroupResource{{Resource: "foo", Group: "bar"}}
 			fastRollout = false
 
@@ -129,7 +129,7 @@ var _ = Describe("KubeAPIServer", func() {
 			})
 
 			It("should set the field to true if explicitly enabled", func() {
-				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{EnableAnonymousAuthentication: pointer.Bool(true)}
+				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{EnableAnonymousAuthentication: ptr.To(true)}
 
 				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents, fastRollout)
 				Expect(err).NotTo(HaveOccurred())
@@ -217,11 +217,11 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("default plugins with overrides",
 					[]gardencorev1beta1.AdmissionPlugin{
-						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, KubeconfigSecretName: pointer.String("secret-1")},
+						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, KubeconfigSecretName: ptr.To("secret-1")},
 					},
 					[]apiserver.AdmissionPluginConfig{
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Priority"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, KubeconfigSecretName: pointer.String("secret-1")}, Kubeconfig: []byte("kubeconfig-data")},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, KubeconfigSecretName: ptr.To("secret-1")}, Kubeconfig: []byte("kubeconfig-data")},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "LimitRanger"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "PodSecurityPolicy"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "PodSecurity"}},
@@ -267,8 +267,8 @@ var _ = Describe("KubeAPIServer", func() {
 					[]gardencorev1beta1.AdmissionPlugin{
 						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}},
 						{Name: "Foo"},
-						{Name: "Bar", Disabled: pointer.Bool(true)},
-						{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("baz-config")}, Disabled: pointer.Bool(true)},
+						{Name: "Bar", Disabled: ptr.To(true)},
+						{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("baz-config")}, Disabled: ptr.To(true)},
 					},
 					[]apiserver.AdmissionPluginConfig{
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Priority"}},
@@ -291,19 +291,19 @@ var _ = Describe("KubeAPIServer", func() {
 				Entry("default plugins with overrides and skipping default plugins if disabled",
 					[]gardencorev1beta1.AdmissionPlugin{
 						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}},
-						{Name: "PodSecurityPolicy", Disabled: pointer.Bool(true)},
-						{Name: "ResourceQuota", Disabled: pointer.Bool(true)},
+						{Name: "PodSecurityPolicy", Disabled: ptr.To(true)},
+						{Name: "ResourceQuota", Disabled: ptr.To(true)},
 						{Name: "Foo"},
 						{Name: "Bar"},
 						{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("baz-config")}},
-						{Name: "ServiceAccount", Disabled: pointer.Bool(false)},
+						{Name: "ServiceAccount", Disabled: ptr.To(false)},
 					},
 					[]apiserver.AdmissionPluginConfig{
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Priority"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "LimitRanger"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "PodSecurity"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ServiceAccount", Disabled: pointer.Bool(false)}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ServiceAccount", Disabled: ptr.To(false)}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NodeRestriction"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "DefaultStorageClass"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "DefaultTolerationSeconds"}},
@@ -319,19 +319,19 @@ var _ = Describe("KubeAPIServer", func() {
 				Entry("default plugins with overrides and skipping disabled plugins for Workerless even if enabled in the config",
 					[]gardencorev1beta1.AdmissionPlugin{
 						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}},
-						{Name: "PodSecurityPolicy", Disabled: pointer.Bool(true)},
-						{Name: "ResourceQuota", Disabled: pointer.Bool(true)},
+						{Name: "PodSecurityPolicy", Disabled: ptr.To(true)},
+						{Name: "ResourceQuota", Disabled: ptr.To(true)},
 						{Name: "Foo"},
 						{Name: "Bar"},
 						{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("baz-config")}},
-						{Name: "ServiceAccount", Disabled: pointer.Bool(false)},
+						{Name: "ServiceAccount", Disabled: ptr.To(false)},
 					},
 					[]apiserver.AdmissionPluginConfig{
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Priority"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "LimitRanger"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "PodSecurity"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ServiceAccount", Disabled: pointer.Bool(false)}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ServiceAccount", Disabled: ptr.To(false)}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NodeRestriction"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "DefaultStorageClass"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "DefaultTolerationSeconds"}},
@@ -360,38 +360,38 @@ var _ = Describe("KubeAPIServer", func() {
 						{Name: "Priority"},
 						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}},
 						{Name: "LimitRanger"},
-						{Name: "PodSecurityPolicy", Disabled: pointer.Bool(true)},
+						{Name: "PodSecurityPolicy", Disabled: ptr.To(true)},
 						{Name: "ServiceAccount"},
 						{Name: "NodeRestriction"},
 						{Name: "DefaultStorageClass"},
-						{Name: "DefaultTolerationSeconds", Disabled: pointer.Bool(true)},
+						{Name: "DefaultTolerationSeconds", Disabled: ptr.To(true)},
 						{Name: "ResourceQuota"},
 					}
 
 					expectedDisabledPlugins = []gardencorev1beta1.AdmissionPlugin{
-						{Name: "PodSecurityPolicy", Disabled: pointer.Bool(true)},
-						{Name: "DefaultTolerationSeconds", Disabled: pointer.Bool(true)},
+						{Name: "PodSecurityPolicy", Disabled: ptr.To(true)},
+						{Name: "DefaultTolerationSeconds", Disabled: ptr.To(true)},
 					}
 				})
 
 				It("should return the correct list of disabled admission plugins", func() {
 					apiServerConfig.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
 						{Name: "Priority"},
-						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, Disabled: pointer.Bool(true)},
+						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, Disabled: ptr.To(true)},
 						{Name: "LimitRanger"},
 						{Name: "PodSecurityPolicy"},
 						{Name: "ServiceAccount"},
 						{Name: "NodeRestriction"},
-						{Name: "DefaultStorageClass", Disabled: pointer.Bool(true)},
+						{Name: "DefaultStorageClass", Disabled: ptr.To(true)},
 						{Name: "DefaultTolerationSeconds"},
 						{Name: "ResourceQuota"},
-						{Name: "foo", Config: &runtime.RawExtension{Raw: []byte("foo-config")}, Disabled: pointer.Bool(true)},
+						{Name: "foo", Config: &runtime.RawExtension{Raw: []byte("foo-config")}, Disabled: ptr.To(true)},
 					}
 
 					expectedDisabledPlugins = []gardencorev1beta1.AdmissionPlugin{
-						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, Disabled: pointer.Bool(true)},
-						{Name: "DefaultStorageClass", Disabled: pointer.Bool(true)},
-						{Name: "foo", Config: &runtime.RawExtension{Raw: []byte("foo-config")}, Disabled: pointer.Bool(true)},
+						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, Disabled: ptr.To(true)},
+						{Name: "DefaultStorageClass", Disabled: ptr.To(true)},
+						{Name: "foo", Config: &runtime.RawExtension{Raw: []byte("foo-config")}, Disabled: ptr.To(true)},
 					}
 				})
 			})
@@ -737,11 +737,11 @@ exemptions:
 								},
 							},
 						}
-						auditWebhookConfig = &apiserver.AuditWebhook{Version: pointer.String("audit-version")}
+						auditWebhookConfig = &apiserver.AuditWebhook{Version: ptr.To("audit-version")}
 					},
 					&apiserver.AuditConfig{
 						Policy:  &policy,
-						Webhook: &apiserver.AuditWebhook{Version: pointer.String("audit-version")},
+						Webhook: &apiserver.AuditWebhook{Version: ptr.To("audit-version")},
 					},
 					Not(HaveOccurred()),
 				),
@@ -758,8 +758,8 @@ exemptions:
 
 			It("should set the fields to the configured values", func() {
 				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
-					DefaultNotReadyTolerationSeconds:    pointer.Int64(120),
-					DefaultUnreachableTolerationSeconds: pointer.Int64(130),
+					DefaultNotReadyTolerationSeconds:    ptr.To(int64(120)),
+					DefaultUnreachableTolerationSeconds: ptr.To(int64(130)),
 				}
 
 				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents, fastRollout)
@@ -851,8 +851,8 @@ exemptions:
 
 			It("should set the field to the configured values", func() {
 				requests := &gardencorev1beta1.APIServerRequests{
-					MaxMutatingInflight:    pointer.Int32(1),
-					MaxNonMutatingInflight: pointer.Int32(2),
+					MaxMutatingInflight:    ptr.To(int32(1)),
+					MaxNonMutatingInflight: ptr.To(int32(2)),
 				}
 				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{Requests: requests}
 
@@ -898,7 +898,7 @@ exemptions:
 
 			It("should set the field to the configured values", func() {
 				watchCacheSizes := &gardencorev1beta1.WatchCacheSizes{
-					Default:   pointer.Int32(1),
+					Default:   ptr.To(int32(1)),
 					Resources: []gardencorev1beta1.ResourceWatchCacheSize{{Resource: "foo"}},
 				}
 				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{WatchCacheSizes: watchCacheSizes}
@@ -1092,7 +1092,7 @@ exemptions:
 
 			Entry("no change due to already set",
 				nil,
-				apiserver.AutoscalingConfig{Replicas: pointer.Int32(1)},
+				apiserver.AutoscalingConfig{Replicas: ptr.To(int32(1))},
 				int32(1),
 			),
 			Entry("use minReplicas because deployment does not exist",
@@ -1115,7 +1115,7 @@ exemptions:
 							Namespace: namespace,
 						},
 						Spec: appsv1.DeploymentSpec{
-							Replicas: pointer.Int32(3),
+							Replicas: ptr.To(int32(3)),
 						},
 					})).To(Succeed())
 				},
@@ -1131,7 +1131,7 @@ exemptions:
 							Namespace: namespace,
 						},
 						Spec: appsv1.DeploymentSpec{
-							Replicas: pointer.Int32(0),
+							Replicas: ptr.To(int32(0)),
 						},
 					})).To(Succeed())
 				},
@@ -1421,7 +1421,7 @@ exemptions:
 					func() {
 						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
 							ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
-								Issuer: pointer.String("issuer"),
+								Issuer: ptr.To("issuer"),
 							},
 						}
 					},
@@ -1451,7 +1451,7 @@ exemptions:
 					func() {
 						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
 							ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
-								Issuer:          pointer.String("issuer"),
+								Issuer:          ptr.To("issuer"),
 								AcceptedIssuers: []string{"issuer1", "issuer2"},
 							},
 						}
@@ -1467,7 +1467,7 @@ exemptions:
 					func() {
 						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
 							ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
-								Issuer:          pointer.String("issuer"),
+								Issuer:          ptr.To("issuer"),
 								AcceptedIssuers: []string{"https://" + externalHostname},
 							},
 						}

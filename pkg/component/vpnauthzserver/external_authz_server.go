@@ -32,7 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -93,8 +93,8 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 			resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
 		})
 		deployment.Spec = appsv1.DeploymentSpec{
-			Replicas:             pointer.Int32(1),
-			RevisionHistoryLimit: pointer.Int32(2),
+			Replicas:             ptr.To(int32(1)),
+			RevisionHistoryLimit: ptr.To(int32(2)),
 			Selector:             &metav1.LabelSelector{MatchLabels: getLabels()},
 			Strategy: appsv1.DeploymentStrategy{
 				RollingUpdate: &appsv1.RollingUpdateDeployment{
@@ -108,7 +108,7 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 					Labels: getLabels(),
 				},
 				Spec: corev1.PodSpec{
-					AutomountServiceAccountToken: pointer.Bool(false),
+					AutomountServiceAccountToken: ptr.To(false),
 					PriorityClassName:            v1beta1constants.PriorityClassNameSeedSystem900,
 					DNSPolicy:                    corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
 					Containers: []corev1.Container{

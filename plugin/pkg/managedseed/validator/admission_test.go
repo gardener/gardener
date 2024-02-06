@@ -28,7 +28,7 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
@@ -90,19 +90,19 @@ var _ = Describe("ManagedSeed", func() {
 				},
 				Spec: core.ShootSpec{
 					DNS: &core.DNS{
-						Domain: pointer.String(domain),
+						Domain: ptr.To(domain),
 					},
 					Kubernetes: core.Kubernetes{
-						EnableStaticTokenKubeconfig: pointer.Bool(true),
+						EnableStaticTokenKubeconfig: ptr.To(true),
 						Version:                     "1.27.5",
 						VerticalPodAutoscaler: &core.VerticalPodAutoscaler{
 							Enabled: true,
 						},
 					},
 					Networking: &core.Networking{
-						Pods:     pointer.String("100.96.0.0/11"),
-						Nodes:    pointer.String("10.250.0.0/16"),
-						Services: pointer.String("100.64.0.0/13"),
+						Pods:     ptr.To("100.96.0.0/11"),
+						Nodes:    ptr.To("10.250.0.0/16"),
+						Services: ptr.To("100.64.0.0/13"),
 					},
 					Provider: core.Provider{
 						Type: provider,
@@ -143,7 +143,7 @@ var _ = Describe("ManagedSeed", func() {
 						},
 					},
 					Networks: core.SeedNetworks{
-						Nodes:    pointer.String("10.250.0.0/16"),
+						Nodes:    ptr.To("10.250.0.0/16"),
 						Pods:     "100.96.0.0/11",
 						Services: "100.64.0.0/13",
 					},
@@ -387,7 +387,7 @@ var _ = Describe("ManagedSeed", func() {
 						},
 					},
 					Networks: gardencorev1beta1.SeedNetworks{
-						Nodes:    pointer.String("10.251.0.0/16"),
+						Nodes:    ptr.To("10.251.0.0/16"),
 						Pods:     "100.97.0.0/11",
 						Services: "100.65.0.0/13",
 					},

@@ -32,7 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -172,7 +172,7 @@ var _ = Describe("Garden controller tests", func() {
 							Annotations: loadBalancerServiceAnnotations,
 						},
 						VerticalPodAutoscaler: &operatorv1alpha1.SettingVerticalPodAutoscaler{
-							Enabled: pointer.Bool(true),
+							Enabled: ptr.To(true),
 						},
 					},
 				},
@@ -205,15 +205,15 @@ var _ = Describe("Garden controller tests", func() {
 			Config: config.OperatorConfiguration{
 				Controllers: config.ControllerConfiguration{
 					Garden: config.GardenControllerConfig{
-						ConcurrentSyncs: pointer.Int(5),
+						ConcurrentSyncs: ptr.To(5),
 						SyncPeriod:      &metav1.Duration{Duration: time.Minute},
 						ETCDConfig: &gardenletconfig.ETCDConfig{
-							ETCDController:      &gardenletconfig.ETCDController{Workers: pointer.Int64(5)},
-							CustodianController: &gardenletconfig.CustodianController{Workers: pointer.Int64(5)},
+							ETCDController:      &gardenletconfig.ETCDController{Workers: ptr.To(int64(5))},
+							CustodianController: &gardenletconfig.CustodianController{Workers: ptr.To(int64(5))},
 							BackupCompactionController: &gardenletconfig.BackupCompactionController{
-								EnableBackupCompaction: pointer.Bool(false),
-								Workers:                pointer.Int64(5),
-								EventsThreshold:        pointer.Int64(100),
+								EnableBackupCompaction: ptr.To(false),
+								Workers:                ptr.To(int64(5)),
+								EventsThreshold:        ptr.To(int64(100)),
 							},
 						},
 					},
@@ -433,7 +433,7 @@ var _ = Describe("Garden controller tests", func() {
 
 				patch := client.MergeFrom(etcd.DeepCopy())
 				etcd.Status.ObservedGeneration = &etcd.Generation
-				etcd.Status.Ready = pointer.Bool(true)
+				etcd.Status.Ready = ptr.To(true)
 				g.Expect(testClient.Status().Patch(ctx, etcd, patch)).To(Succeed(), "for "+etcd.Name)
 			}
 		}).Should(Succeed())
@@ -477,7 +477,7 @@ var _ = Describe("Garden controller tests", func() {
 			podList := &corev1.PodList{}
 			g.Expect(testClient.List(ctx, podList, client.InNamespace(testNamespace.Name), client.MatchingLabels(kubeapiserver.GetLabels()))).To(Succeed())
 
-			if desiredReplicas := int(pointer.Int32Deref(deployment.Spec.Replicas, 1)); len(podList.Items) != desiredReplicas {
+			if desiredReplicas := int(ptr.Deref(deployment.Spec.Replicas, 1)); len(podList.Items) != desiredReplicas {
 				g.Expect(testClient.DeleteAllOf(ctx, &corev1.Pod{}, client.InNamespace(testNamespace.Name), client.MatchingLabels(kubeapiserver.GetLabels()))).To(Succeed())
 				for i := 0; i < desiredReplicas; i++ {
 					g.Expect(testClient.Create(ctx, &corev1.Pod{
@@ -634,7 +634,7 @@ var _ = Describe("Garden controller tests", func() {
 			podList := &corev1.PodList{}
 			g.Expect(testClient.List(ctx, podList, client.InNamespace(testNamespace.Name), client.MatchingLabels(map[string]string{"app": "kubernetes", "role": "controller-manager"}))).To(Succeed())
 
-			if desiredReplicas := int(pointer.Int32Deref(deployment.Spec.Replicas, 1)); len(podList.Items) != desiredReplicas {
+			if desiredReplicas := int(ptr.Deref(deployment.Spec.Replicas, 1)); len(podList.Items) != desiredReplicas {
 				g.Expect(testClient.DeleteAllOf(ctx, &corev1.Pod{}, client.InNamespace(testNamespace.Name), client.MatchingLabels(map[string]string{"app": "kubernetes", "role": "controller-manager"}))).To(Succeed())
 				for i := 0; i < desiredReplicas; i++ {
 					g.Expect(testClient.Create(ctx, &corev1.Pod{
@@ -865,7 +865,7 @@ func newDeployment(name, namespace string) *appsv1.Deployment {
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}},
-			Replicas: pointer.Int32(1),
+			Replicas: ptr.To(int32(1)),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"foo": "bar"}},
 				Spec: corev1.PodSpec{

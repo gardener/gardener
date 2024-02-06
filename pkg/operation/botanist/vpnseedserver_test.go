@@ -26,7 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -76,7 +76,7 @@ var _ = Describe("VPNSeedServer", func() {
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Networking: &gardencorev1beta1.Networking{
-						Nodes: pointer.String("10.0.0.0/24"),
+						Nodes: ptr.To("10.0.0.0/24"),
 					},
 				},
 			})
@@ -86,7 +86,7 @@ var _ = Describe("VPNSeedServer", func() {
 			botanist.Config = &config.GardenletConfiguration{
 				SNI: &config.SNI{
 					Ingress: &config.SNIIngress{
-						Namespace: pointer.String("test-ns"),
+						Namespace: ptr.To("test-ns"),
 						Labels: map[string]string{
 							"istio": "foo-bar",
 						},
@@ -162,7 +162,7 @@ var _ = Describe("VPNSeedServer", func() {
 			botanist.Config = &config.GardenletConfiguration{
 				SNI: &config.SNI{
 					Ingress: &config.SNIIngress{
-						Namespace: pointer.String("test-ns"),
+						Namespace: ptr.To("test-ns"),
 						Labels: map[string]string{
 							"istio": "foo-bar",
 						},

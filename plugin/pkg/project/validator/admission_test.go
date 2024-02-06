@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -67,7 +67,7 @@ var _ = Describe("Admission", func() {
 		})
 
 		It("should allow creating the project (namespace is 'garden')", func() {
-			project.Spec.Namespace = pointer.String(v1beta1constants.GardenNamespace)
+			project.Spec.Namespace = ptr.To(v1beta1constants.GardenNamespace)
 
 			attrs := admission.NewAttributesRecord(&project, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
@@ -75,7 +75,7 @@ var _ = Describe("Admission", func() {
 		})
 
 		It("should prevent creating the project because namespace prefix is missing", func() {
-			project.Spec.Namespace = pointer.String("foo")
+			project.Spec.Namespace = ptr.To("foo")
 
 			attrs := admission.NewAttributesRecord(&project, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 

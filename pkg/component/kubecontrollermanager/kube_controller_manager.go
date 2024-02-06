@@ -37,7 +37,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -295,7 +295,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
 			Port:     utils.IntStrPtrFromInt32(port),
-			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+			Protocol: ptr.To(corev1.ProtocolTCP),
 		}))
 
 		service.Spec.Selector = getLabels()
@@ -324,7 +324,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
 		})
 		deployment.Spec.Replicas = &k.values.Replicas
-		deployment.Spec.RevisionHistoryLimit = pointer.Int32(1)
+		deployment.Spec.RevisionHistoryLimit = ptr.To(int32(1))
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: getLabels()}
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
@@ -336,15 +336,15 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 				}),
 			},
 			Spec: corev1.PodSpec{
-				AutomountServiceAccountToken: pointer.Bool(false),
+				AutomountServiceAccountToken: ptr.To(false),
 				PriorityClassName:            k.values.PriorityClassName,
 				SecurityContext: &corev1.PodSecurityContext{
 					// use the nonroot user from a distroless container
 					// https://github.com/GoogleContainerTools/distroless/blob/1a8918fcaa7313fd02ae08089a57a701faea999c/base/base.bzl#L8
-					RunAsNonRoot: pointer.Bool(true),
-					RunAsUser:    pointer.Int64(65532),
-					RunAsGroup:   pointer.Int64(65532),
-					FSGroup:      pointer.Int64(65532),
+					RunAsNonRoot: ptr.To(true),
+					RunAsUser:    ptr.To(int64(65532)),
+					RunAsGroup:   ptr.To(int64(65532)),
+					FSGroup:      ptr.To(int64(65532)),
 				},
 				Containers: []corev1.Container{
 					{
@@ -408,7 +408,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
 								SecretName:  secretCAClient.Name,
-								DefaultMode: pointer.Int32(0640),
+								DefaultMode: ptr.To(int32(0640)),
 							},
 						},
 					},
@@ -417,7 +417,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
 								SecretName:  serviceAccountKeySecret.Name,
-								DefaultMode: pointer.Int32(0640),
+								DefaultMode: ptr.To(int32(0640)),
 							},
 						},
 					},
@@ -426,7 +426,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
 								SecretName:  serverSecret.Name,
-								DefaultMode: pointer.Int32(0640),
+								DefaultMode: ptr.To(int32(0640)),
 							},
 						},
 					},
@@ -445,7 +445,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
 						SecretName:  secretCAKubelet.Name,
-						DefaultMode: pointer.Int32(0640),
+						DefaultMode: ptr.To(int32(0640)),
 					},
 				},
 			})
@@ -483,7 +483,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 
 		scaleDownUpdateMode := k.values.HVPAConfig.ScaleDownUpdateMode
 		if scaleDownUpdateMode == nil {
-			scaleDownUpdateMode = pointer.String(hvpav1alpha1.UpdateModeAuto)
+			scaleDownUpdateMode = ptr.To(hvpav1alpha1.UpdateModeAuto)
 		}
 
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient.Client(), hvpa, func() error {
@@ -494,7 +494,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 					resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
 				},
 			)
-			hvpa.Spec.Replicas = pointer.Int32(1)
+			hvpa.Spec.Replicas = ptr.To(int32(1))
 			hvpa.Spec.Hpa = hvpav1alpha1.HpaSpec{
 				Deploy:   false,
 				Selector: &metav1.LabelSelector{MatchLabels: getLabels()},
@@ -503,7 +503,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						Labels: getLabels(),
 					},
 					Spec: hvpav1alpha1.HpaTemplateSpec{
-						MinReplicas: pointer.Int32(int32(1)),
+						MinReplicas: ptr.To(int32(1)),
 						MaxReplicas: int32(1),
 					},
 				},
@@ -685,20 +685,20 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		}
 
 		command = append(command,
-			fmt.Sprintf("--concurrent-deployment-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.Deployment, defaultControllerWorkersDeployment)),
-			fmt.Sprintf("--concurrent-replicaset-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.ReplicaSet, defaultControllerWorkersReplicaSet)),
-			fmt.Sprintf("--concurrent-statefulset-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.StatefulSet, defaultControllerWorkersStatefulSet)),
+			fmt.Sprintf("--concurrent-deployment-syncs=%d", ptr.Deref(k.values.ControllerWorkers.Deployment, defaultControllerWorkersDeployment)),
+			fmt.Sprintf("--concurrent-replicaset-syncs=%d", ptr.Deref(k.values.ControllerWorkers.ReplicaSet, defaultControllerWorkersReplicaSet)),
+			fmt.Sprintf("--concurrent-statefulset-syncs=%d", ptr.Deref(k.values.ControllerWorkers.StatefulSet, defaultControllerWorkersStatefulSet)),
 		)
 	} else {
-		if v := pointer.IntDeref(k.values.ControllerWorkers.Namespace, defaultControllerWorkersNamespace); v == 0 {
+		if v := ptr.Deref(k.values.ControllerWorkers.Namespace, defaultControllerWorkersNamespace); v == 0 {
 			controllersToDisable.Insert("namespace")
 		}
 
-		if v := pointer.IntDeref(k.values.ControllerWorkers.ServiceAccountToken, defaultControllerWorkersServiceAccountToken); v == 0 {
+		if v := ptr.Deref(k.values.ControllerWorkers.ServiceAccountToken, defaultControllerWorkersServiceAccountToken); v == 0 {
 			controllersToDisable.Insert("serviceaccount-token")
 		}
 
-		if v := pointer.IntDeref(k.values.ControllerWorkers.ResourceQuota, defaultControllerWorkersResourceQuota); v == 0 {
+		if v := ptr.Deref(k.values.ControllerWorkers.ResourceQuota, defaultControllerWorkersResourceQuota); v == 0 {
 			controllersToDisable.Insert("resourcequota")
 		}
 
@@ -719,10 +719,10 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		fmt.Sprintf("--cluster-signing-kube-apiserver-client-key-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyPrivateKeyCA),
 		fmt.Sprintf("--cluster-signing-legacy-unknown-cert-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyCertificateCA),
 		fmt.Sprintf("--cluster-signing-legacy-unknown-key-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyPrivateKeyCA),
-		"--cluster-signing-duration="+pointer.DurationDeref(k.values.ClusterSigningDuration, 720*time.Hour).String(),
-		fmt.Sprintf("--concurrent-endpoint-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.Endpoint, defaultControllerWorkersEndpoint)),
-		fmt.Sprintf("--concurrent-gc-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.GarbageCollector, defaultControllerWorkersGarbageCollector)),
-		fmt.Sprintf("--concurrent-service-endpoint-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.ServiceEndpoint, defaultControllerWorkersServiceEndpoint)),
+		"--cluster-signing-duration="+ptr.Deref(k.values.ClusterSigningDuration, 720*time.Hour).String(),
+		fmt.Sprintf("--concurrent-endpoint-syncs=%d", ptr.Deref(k.values.ControllerWorkers.Endpoint, defaultControllerWorkersEndpoint)),
+		fmt.Sprintf("--concurrent-gc-syncs=%d", ptr.Deref(k.values.ControllerWorkers.GarbageCollector, defaultControllerWorkersGarbageCollector)),
+		fmt.Sprintf("--concurrent-service-endpoint-syncs=%d", ptr.Deref(k.values.ControllerWorkers.ServiceEndpoint, defaultControllerWorkersServiceEndpoint)),
 	)
 
 	for api, enabled := range k.values.RuntimeConfig {
@@ -745,18 +745,18 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 	}
 	command = append(command, cmdControllers)
 
-	if v := pointer.IntDeref(k.values.ControllerWorkers.Namespace, defaultControllerWorkersNamespace); v != 0 {
+	if v := ptr.Deref(k.values.ControllerWorkers.Namespace, defaultControllerWorkersNamespace); v != 0 {
 		command = append(command, fmt.Sprintf("--concurrent-namespace-syncs=%d", v))
 	}
 
-	if v := pointer.IntDeref(k.values.ControllerWorkers.ResourceQuota, defaultControllerWorkersResourceQuota); v != 0 {
+	if v := ptr.Deref(k.values.ControllerWorkers.ResourceQuota, defaultControllerWorkersResourceQuota); v != 0 {
 		command = append(command, fmt.Sprintf("--concurrent-resource-quota-syncs=%d", v))
 		if k.values.ControllerSyncPeriods.ResourceQuota != nil {
 			command = append(command, "--resource-quota-sync-period="+k.values.ControllerSyncPeriods.ResourceQuota.String())
 		}
 	}
 
-	if v := pointer.IntDeref(k.values.ControllerWorkers.ServiceAccountToken, defaultControllerWorkersServiceAccountToken); v != 0 {
+	if v := ptr.Deref(k.values.ControllerWorkers.ServiceAccountToken, defaultControllerWorkersServiceAccountToken); v != 0 {
 		command = append(command, fmt.Sprintf("--concurrent-serviceaccount-token-syncs=%d", v))
 	}
 

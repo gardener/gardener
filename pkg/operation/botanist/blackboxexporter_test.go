@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
@@ -133,7 +133,7 @@ var _ = Describe("BlackboxExporter", func() {
 				botanist.Config = &config.GardenletConfiguration{
 					Monitoring: &config.MonitoringConfig{
 						Shoot: &config.ShootMonitoringConfig{
-							Enabled: pointer.Bool(false),
+							Enabled: ptr.To(false),
 						},
 					},
 				}

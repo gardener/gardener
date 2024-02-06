@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/apimachinery/pkg/util/sets"
 	podsecurityadmissionapi "k8s.io/pod-security-admission/api"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -253,14 +253,14 @@ func (b *Botanist) getShootRequiredExtensionTypes(ctx context.Context) (sets.Set
 	types := sets.Set[string]{}
 	for _, reg := range controllerRegistrationList.Items {
 		for _, res := range reg.Spec.Resources {
-			if res.Kind == extensionsv1alpha1.ExtensionResource && pointer.BoolDeref(res.GloballyEnabled, false) {
+			if res.Kind == extensionsv1alpha1.ExtensionResource && ptr.Deref(res.GloballyEnabled, false) {
 				types.Insert(res.Type)
 			}
 		}
 	}
 
 	for _, extension := range b.Shoot.GetInfo().Spec.Extensions {
-		if pointer.BoolDeref(extension.Disabled, false) {
+		if ptr.Deref(extension.Disabled, false) {
 			types.Delete(extension.Type)
 		} else {
 			types.Insert(extension.Type)

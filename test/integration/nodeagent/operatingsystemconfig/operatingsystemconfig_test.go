@@ -28,7 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -136,7 +136,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		file1 = extensionsv1alpha1.File{
 			Path:        "/example/file",
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file1"}},
-			Permissions: pointer.Int32(0777),
+			Permissions: ptr.To(int32(0777)),
 		}
 		file2 = extensionsv1alpha1.File{
 			Path:    "/another/file",
@@ -145,40 +145,40 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		file3 = extensionsv1alpha1.File{
 			Path:        "/third/file",
 			Content:     extensionsv1alpha1.FileContent{ImageRef: &extensionsv1alpha1.FileContentImageRef{Image: "foo-image", FilePathInImage: "/foo-file"}},
-			Permissions: pointer.Int32(0750),
+			Permissions: ptr.To(int32(0750)),
 		}
 		Expect(fakeFS.WriteFile(path.Join(imageMountDirectory, file3.Content.ImageRef.FilePathInImage), []byte("file3"), 0755)).To(Succeed())
 		file4 = extensionsv1alpha1.File{
 			Path:        "/unchanged/file",
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file4"}},
-			Permissions: pointer.Int32(0750),
+			Permissions: ptr.To(int32(0750)),
 		}
 		file5 = extensionsv1alpha1.File{
 			Path:        "/changed/file",
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file5"}},
-			Permissions: pointer.Int32(0750),
+			Permissions: ptr.To(int32(0750)),
 		}
 		file6 = extensionsv1alpha1.File{
 			Path:        "/sixth/file",
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file6"}},
-			Permissions: pointer.Int32(0750),
+			Permissions: ptr.To(int32(0750)),
 		}
 		file7 = extensionsv1alpha1.File{
 			Path:        "/seventh/file",
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file7"}},
-			Permissions: pointer.Int32(0750),
+			Permissions: ptr.To(int32(0750)),
 		}
 
 		gnaUnit = extensionsv1alpha1.Unit{
 			Name:    "gardener-node-agent.service",
-			Enable:  pointer.Bool(false),
-			Content: pointer.String("#gna"),
+			Enable:  ptr.To(false),
+			Content: ptr.To("#gna"),
 		}
 		unit1 = extensionsv1alpha1.Unit{
 			Name:    "unit1",
-			Enable:  pointer.Bool(true),
-			Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-			Content: pointer.String("#unit1"),
+			Enable:  ptr.To(true),
+			Command: ptr.To(extensionsv1alpha1.CommandStart),
+			Content: ptr.To("#unit1"),
 			DropIns: []extensionsv1alpha1.DropIn{{
 				Name:    "drop",
 				Content: "#unit1drop",
@@ -186,9 +186,9 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		}
 		unit2 = extensionsv1alpha1.Unit{
 			Name:    "unit2",
-			Enable:  pointer.Bool(false),
-			Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStop),
-			Content: pointer.String("#unit2"),
+			Enable:  ptr.To(false),
+			Command: ptr.To(extensionsv1alpha1.CommandStop),
+			Content: ptr.To("#unit2"),
 		}
 		unit3 = extensionsv1alpha1.Unit{
 			Name: "unit3",
@@ -200,9 +200,9 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		}
 		unit4 = extensionsv1alpha1.Unit{
 			Name:    "unit4",
-			Enable:  pointer.Bool(true),
-			Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-			Content: pointer.String("#unit4"),
+			Enable:  ptr.To(true),
+			Command: ptr.To(extensionsv1alpha1.CommandStart),
+			Content: ptr.To("#unit4"),
 			DropIns: []extensionsv1alpha1.DropIn{{
 				Name:    "drop",
 				Content: "#unit4drop",
@@ -210,9 +210,9 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		}
 		unit5 = extensionsv1alpha1.Unit{
 			Name:    "unit5",
-			Enable:  pointer.Bool(true),
-			Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-			Content: pointer.String("#unit5"),
+			Enable:  ptr.To(true),
+			Command: ptr.To(extensionsv1alpha1.CommandStart),
+			Content: ptr.To("#unit5"),
 			DropIns: []extensionsv1alpha1.DropIn{
 				{
 					Name:    "drop1",
@@ -233,21 +233,21 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		}
 		unit6 = extensionsv1alpha1.Unit{
 			Name:      "unit6",
-			Enable:    pointer.Bool(true),
-			Content:   pointer.String("#unit6"),
+			Enable:    ptr.To(true),
+			Content:   ptr.To("#unit6"),
 			FilePaths: []string{file3.Path},
 		}
 		unit7 = extensionsv1alpha1.Unit{
 			Name:      "unit7",
-			Enable:    pointer.Bool(true),
-			Content:   pointer.String("#unit7"),
+			Enable:    ptr.To(true),
+			Content:   ptr.To("#unit7"),
 			FilePaths: []string{file5.Path},
 		}
 		unit8 = extensionsv1alpha1.Unit{
 			Name:      "unit8",
-			Enable:    pointer.Bool(true),
-			Command:   extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-			Content:   pointer.String("#unit8"),
+			Enable:    ptr.To(true),
+			Command:   ptr.To(extensionsv1alpha1.CommandStart),
+			Content:   ptr.To("#unit8"),
 			FilePaths: []string{file6.Path},
 		}
 		unit9 = extensionsv1alpha1.Unit{
@@ -406,10 +406,10 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		// the content of file6 (belonging to unit8) is changed, so unit8 is restarting
 		// the content of file7 (belonging to unit9) is changed, so unit9 is restarting
 		// file1, unit3, and gardener-node-agent unit are unchanged, so unit3 is not restarting and cancel func is not called
-		unit2.Enable = pointer.Bool(true)
-		unit2.Command = extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart)
+		unit2.Enable = ptr.To(true)
+		unit2.Command = ptr.To(extensionsv1alpha1.CommandStart)
 		unit2.DropIns = []extensionsv1alpha1.DropIn{{Name: "dropdropdrop", Content: "#unit2drop"}}
-		unit4.Enable = pointer.Bool(false)
+		unit4.Enable = ptr.To(false)
 		unit4.DropIns = nil
 		unit5.DropIns = unit5.DropIns[1:]
 		unit6.FilePaths = nil

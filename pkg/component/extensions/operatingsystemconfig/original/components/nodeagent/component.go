@@ -25,7 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -85,7 +85,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 
 	files = append(files, extensionsv1alpha1.File{
 		Path:        PathBinary,
-		Permissions: pointer.Int32(0755),
+		Permissions: ptr.To(int32(0755)),
 		Content: extensionsv1alpha1.FileContent{
 			ImageRef: &extensionsv1alpha1.FileContentImageRef{
 				Image:           ctx.Images[imagevector.ImageNameGardenerNodeAgent].String(),
@@ -96,8 +96,8 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 
 	units := []extensionsv1alpha1.Unit{{
 		Name:      nodeagentv1alpha1.UnitName,
-		Enable:    pointer.Bool(true),
-		Content:   pointer.String(UnitContent()),
+		Enable:    ptr.To(true),
+		Content:   ptr.To(UnitContent()),
 		FilePaths: extensionsv1alpha1helper.FilePathsFrom(files),
 	}}
 
@@ -163,7 +163,7 @@ func Files(config *nodeagentv1alpha1.NodeAgentConfiguration) ([]extensionsv1alph
 
 	return []extensionsv1alpha1.File{{
 		Path:        nodeagentv1alpha1.ConfigFilePath,
-		Permissions: pointer.Int32(0600),
+		Permissions: ptr.To(int32(0600)),
 		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(configRaw)}},
 	}}, nil
 }

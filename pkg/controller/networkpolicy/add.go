@@ -25,7 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -79,7 +79,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, runt
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: pointer.IntDeref(r.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: ptr.Deref(r.ConcurrentSyncs, 0),
 		}).
 		WatchesRawSource(
 			source.Kind(runtimeCluster.GetCache(), &corev1.Namespace{}),

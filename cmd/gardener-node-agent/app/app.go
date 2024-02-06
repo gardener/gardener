@@ -36,7 +36,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/rest"
 	"k8s.io/component-base/version/verflag"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
@@ -177,7 +177,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	mgr, err := manager.New(restConfig, manager.Options{
 		Logger:                  log,
 		Scheme:                  kubernetes.SeedScheme,
-		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
+		GracefulShutdownTimeout: ptr.To(5 * time.Second),
 
 		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(cfg.Server.HealthProbes.Port)),
 		Metrics: metricsserver.Options{
@@ -194,7 +194,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		}},
 		LeaderElection: false,
 		Controller: controllerconfig.Controller{
-			RecoverPanic: pointer.Bool(true),
+			RecoverPanic: ptr.To(true),
 		},
 	})
 	if err != nil {

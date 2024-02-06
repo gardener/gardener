@@ -20,7 +20,7 @@ import (
 	"path"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -41,7 +41,7 @@ func FilesToDiskScript(ctx context.Context, reader client.Reader, namespace stri
 
 		out += `
 mkdir -p "` + path.Dir(file.Path) + `"
-` + catDataIntoFile(file.Path, data, pointer.BoolDeref(file.Content.TransmitUnencoded, false))
+` + catDataIntoFile(file.Path, data, ptr.Deref(file.Content.TransmitUnencoded, false))
 
 		if file.Permissions != nil {
 			out += `

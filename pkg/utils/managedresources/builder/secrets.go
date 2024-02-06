@@ -20,7 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -61,7 +61,7 @@ func (s *Secret) WithLabels(labels map[string]string) *Secret {
 		return s
 	}
 	_, ok := s.secret.Labels[references.LabelKeyGarbageCollectable]
-	if ok && pointer.BoolDeref(s.secret.Immutable, false) {
+	if ok && ptr.Deref(s.secret.Immutable, false) {
 		s.secret.Labels = map[string]string{
 			references.LabelKeyGarbageCollectable: references.LabelValueGarbageCollectable,
 		}

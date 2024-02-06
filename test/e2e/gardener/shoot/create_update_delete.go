@@ -25,7 +25,7 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -58,7 +58,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			pool2.Name += "2"
 			pool2.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: &f.Shoot.Spec.Kubernetes.Version}
 			pool3.Name += "3"
-			pool3.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: pointer.String("1.27.1")}
+			pool3.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: ptr.To("1.27.1")}
 			f.Shoot.Spec.Provider.Workers = append(f.Shoot.Spec.Provider.Workers, *pool2, *pool3)
 		}
 

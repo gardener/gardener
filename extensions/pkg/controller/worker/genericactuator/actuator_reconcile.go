@@ -27,7 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -155,7 +155,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 	if err := a.seedClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment); client.IgnoreNotFound(err) != nil {
 		return fmt.Errorf("failed reading deployment %s: %w", client.ObjectKeyFromObject(deployment), err)
 	}
-	if pointer.Int32Deref(deployment.Spec.Replicas, 0) > 0 {
+	if ptr.Deref(deployment.Spec.Replicas, 0) > 0 {
 		// Wait until all unwanted machine deployments are deleted from the system.
 		if err := a.waitUntilUnwantedMachineDeploymentsDeleted(ctx, log, worker, wantedMachineDeployments); err != nil {
 			return fmt.Errorf("error while waiting for all undesired machine deployments to be deleted: %w", err)

@@ -21,7 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfig "k8s.io/component-base/config"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -106,7 +106,7 @@ var _ = Describe("ValuesHelper", func() {
 				string("BarFeature"): true,
 			},
 			Logging: &config.Logging{
-				Enabled: pointer.Bool(true),
+				Enabled: ptr.To(true),
 			},
 			SeedConfig: &config.SeedConfig{
 				SeedTemplate: gardencore.SeedTemplate{
@@ -120,15 +120,15 @@ var _ = Describe("ValuesHelper", func() {
 		vh = NewValuesHelper(parentConfig)
 
 		deployment = &seedmanagementv1alpha1.GardenletDeployment{
-			ReplicaCount:         pointer.Int32(1),
-			RevisionHistoryLimit: pointer.Int32(1),
+			ReplicaCount:         ptr.To(int32(1)),
+			RevisionHistoryLimit: ptr.To(int32(1)),
 			Image: &seedmanagementv1alpha1.Image{
-				PullPolicy: pullPolicyPtr(corev1.PullIfNotPresent),
+				PullPolicy: ptr.To(corev1.PullIfNotPresent),
 			},
 			PodAnnotations: map[string]string{
 				"foo": "bar",
 			},
-			VPA: pointer.Bool(true),
+			VPA: ptr.To(true),
 		}
 		gardenletConfig = &gardenletv1alpha1.GardenletConfiguration{
 			TypeMeta: metav1.TypeMeta{
@@ -152,17 +152,17 @@ var _ = Describe("ValuesHelper", func() {
 		}
 
 		mergedDeployment = &seedmanagementv1alpha1.GardenletDeployment{
-			ReplicaCount:         pointer.Int32(1),
-			RevisionHistoryLimit: pointer.Int32(1),
+			ReplicaCount:         ptr.To(int32(1)),
+			RevisionHistoryLimit: ptr.To(int32(1)),
 			Image: &seedmanagementv1alpha1.Image{
-				Repository: pointer.String("europe-docker.pkg.dev/gardener-project/releases/gardener/gardenlet"),
-				Tag:        pointer.String("v0.0.0-master+$Format:%H$"),
-				PullPolicy: pullPolicyPtr(corev1.PullIfNotPresent),
+				Repository: ptr.To("europe-docker.pkg.dev/gardener-project/releases/gardener/gardenlet"),
+				Tag:        ptr.To("v0.0.0-master+$Format:%H$"),
+				PullPolicy: ptr.To(corev1.PullIfNotPresent),
 			},
 			PodAnnotations: map[string]string{
 				"foo": "bar",
 			},
-			VPA: pointer.Bool(true),
+			VPA: ptr.To(true),
 		}
 		mergedGardenletConfig = func(withBootstrap bool) *gardenletv1alpha1.GardenletConfiguration {
 			var kubeconfigPath string
@@ -218,7 +218,7 @@ var _ = Describe("ValuesHelper", func() {
 					string("BarFeature"): true,
 				},
 				Logging: &gardenletv1alpha1.Logging{
-					Enabled: pointer.Bool(true),
+					Enabled: ptr.To(true),
 				},
 			}
 		}

@@ -28,7 +28,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -83,7 +83,7 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 				Namespace: metav1.NamespaceSystem,
 			},
 		}
-		token, err := framework.CreateTokenForServiceAccount(ctx, f.ShootClient, serviceAccount, pointer.Int64(3600))
+		token, err := framework.CreateTokenForServiceAccount(ctx, f.ShootClient, serviceAccount, ptr.To(int64(3600)))
 		framework.ExpectNoError(err)
 
 		ginkgo.By("Get the pods matching the logging-pod label")
@@ -141,7 +141,7 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 
 	f.Beta().CIt("should copy data to pod", func(ctx context.Context) {
 		ginkgo.By("Request kubeconfig with cluster-admin privileges")
-		kubeconfig, err := access.RequestAdminKubeconfigForShoot(ctx, f.GardenClient, f.Shoot, pointer.Int64(3600))
+		kubeconfig, err := access.RequestAdminKubeconfigForShoot(ctx, f.GardenClient, f.Shoot, ptr.To(int64(3600)))
 		framework.ExpectNoError(err)
 
 		testSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: copyDeployment, Namespace: namespace}}

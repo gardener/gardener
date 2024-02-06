@@ -31,14 +31,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/utils"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/test/utils/access"
 )
@@ -154,7 +153,7 @@ func (t *ShootMigrationTest) MigrateShoot(ctx context.Context) error {
 			shoot.Spec.Tolerations = appendToleration(shoot.Spec.Tolerations, gardencorev1beta1.SeedTaintProtected, nil)
 		}
 		if applyTestRunTaint, err := strconv.ParseBool(t.Config.AddTestRunTaint); applyTestRunTaint && err == nil {
-			shoot.Spec.Tolerations = appendToleration(shoot.Spec.Tolerations, SeedTaintTestRun, pointer.String(GetTestRunID()))
+			shoot.Spec.Tolerations = appendToleration(shoot.Spec.Tolerations, SeedTaintTestRun, ptr.To(GetTestRunID()))
 		}
 		return nil
 	})
@@ -352,12 +351,12 @@ func (t *ShootMigrationTest) CheckObjectsTimestamp(ctx context.Context, mrExclud
 
 	for _, mr := range mrList.Items {
 		if mr.Spec.Class == nil || *mr.Spec.Class != "seed" {
-			if !utils.ValueExists(mr.GetName(), mrExcludeList) {
+			if !slices.Contains(mrExcludeList, mr.GetName()) {
 				log := t.GardenerFramework.Logger.WithValues("managedResource", client.ObjectKeyFromObject(&mr))
 				log.Info("Found ManagedResource")
 
 				for _, r := range mr.Status.Resources {
-					if len(r.Name) > 9 && utils.ValueExists(r.Name[:len(r.Name)-9], resourcesWithGeneratedName) {
+					if len(r.Name) > 9 && slices.Contains(resourcesWithGeneratedName, r.Name[:len(r.Name)-9]) {
 						continue
 					}
 

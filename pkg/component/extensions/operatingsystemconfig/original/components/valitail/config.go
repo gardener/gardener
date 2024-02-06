@@ -22,7 +22,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -93,7 +93,7 @@ func getValitailConfigurationFile(ctx components.Context) (extensionsv1alpha1.Fi
 
 	return extensionsv1alpha1.File{
 		Path:        PathConfig,
-		Permissions: pointer.Int32(0644),
+		Permissions: ptr.To(int32(0644)),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",
@@ -110,7 +110,7 @@ func getValitailCAFile(ctx components.Context) extensionsv1alpha1.File {
 	}
 	return extensionsv1alpha1.File{
 		Path:        PathCACert,
-		Permissions: pointer.Int32(0644),
+		Permissions: ptr.To(int32(0644)),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",
@@ -179,8 +179,8 @@ ExecStart=` + execStart
 
 	unit := extensionsv1alpha1.Unit{
 		Name:    UnitName,
-		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-		Enable:  pointer.Bool(true),
+		Command: ptr.To(extensionsv1alpha1.CommandStart),
+		Enable:  ptr.To(true),
 		Content: &unitContent,
 	}
 
@@ -210,7 +210,7 @@ func getFetchTokenScriptFile() (extensionsv1alpha1.File, error) {
 
 	return extensionsv1alpha1.File{
 		Path:        PathFetchTokenScript,
-		Permissions: pointer.Int32(0744),
+		Permissions: ptr.To(int32(0744)),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",
@@ -257,8 +257,8 @@ ExecStart=` + execStart
 
 	unit := extensionsv1alpha1.Unit{
 		Name:    unitNameFetchToken,
-		Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-		Enable:  pointer.Bool(true),
+		Command: ptr.To(extensionsv1alpha1.CommandStart),
+		Enable:  ptr.To(true),
 		Content: &unitContent,
 	}
 

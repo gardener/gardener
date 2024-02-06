@@ -17,7 +17,7 @@ package containerd_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -40,9 +40,9 @@ var _ = Describe("Component", func() {
 
 			monitorUnit := extensionsv1alpha1.Unit{
 				Name:    "containerd-monitor.service",
-				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-				Enable:  pointer.Bool(true),
-				Content: pointer.String(`[Unit]
+				Command: ptr.To(extensionsv1alpha1.CommandStart),
+				Enable:  ptr.To(true),
+				Content: ptr.To(`[Unit]
 Description=Containerd-monitor daemon
 After=containerd.service
 [Install]
@@ -56,8 +56,8 @@ ExecStart=/opt/bin/health-monitor-containerd`),
 
 			logrotateUnit := extensionsv1alpha1.Unit{
 				Name:   "containerd-logrotate.service",
-				Enable: pointer.Bool(true),
-				Content: pointer.String(`[Unit]
+				Enable: ptr.To(true),
+				Content: ptr.To(`[Unit]
 Description=Rotate and Compress System Logs
 [Service]
 ExecStart=/usr/sbin/logrotate -s /var/lib/containerd-logrotate.status /etc/systemd/containerd.conf
@@ -68,9 +68,9 @@ WantedBy=multi-user.target`),
 
 			logrotateTimerUnit := extensionsv1alpha1.Unit{
 				Name:    "containerd-logrotate.timer",
-				Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStart),
-				Enable:  pointer.Bool(true),
-				Content: pointer.String(`[Unit]
+				Command: ptr.To(extensionsv1alpha1.CommandStart),
+				Enable:  ptr.To(true),
+				Content: ptr.To(`[Unit]
 Description=Log Rotation at each 10 minutes
 [Timer]
 OnCalendar=*:0/10
@@ -82,7 +82,7 @@ WantedBy=multi-user.target`),
 
 			monitorFile := extensionsv1alpha1.File{
 				Path:        "/opt/bin/health-monitor-containerd",
-				Permissions: pointer.Int32(0755),
+				Permissions: ptr.To(int32(0755)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
@@ -93,7 +93,7 @@ WantedBy=multi-user.target`),
 
 			logrotateConfigFile := extensionsv1alpha1.File{
 				Path:        "/etc/systemd/containerd.conf",
-				Permissions: pointer.Int32(0644),
+				Permissions: ptr.To(int32(0644)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Data: logRotateData,

@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/downloader"
@@ -42,13 +42,13 @@ var _ = Describe("Executor", func() {
 			units                               []string
 
 			defaultKubeletDataVolume     = &gardencorev1beta1.DataVolume{VolumeSize: "64Gi"}
-			defaultKubeletDataVolumeSize = pointer.String("68719476736")
+			defaultKubeletDataVolumeSize = ptr.To("68719476736")
 		)
 
 		BeforeEach(func() {
 			cloudConfigUserData = []byte("user-data")
 			cloudConfigExecutionMaxDelaySeconds = 300
-			hyperkubeImage = &imagevector.Image{Repository: "bar", Tag: pointer.String("v1.0")}
+			hyperkubeImage = &imagevector.Image{Repository: "bar", Tag: ptr.To("v1.0")}
 			reloadConfigCommand = "/var/bin/reload"
 			files = []string{
 				"f1",

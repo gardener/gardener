@@ -24,7 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -106,7 +106,7 @@ rules:
 				Data: map[string][]byte{
 					"clusterrole____system_cluster-autoscaler-seed.yaml": []byte(clusterRoleYAML),
 				},
-				Immutable: pointer.Bool(true),
+				Immutable: ptr.To(true),
 			}
 			expectedMr = &resourcesv1alpha1.ManagedResource{
 				TypeMeta: metav1.TypeMeta{
@@ -120,8 +120,8 @@ rules:
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					SecretRefs:  []corev1.LocalObjectReference{},
-					Class:       pointer.String("seed"),
-					KeepObjects: pointer.Bool(false),
+					Class:       ptr.To("seed"),
+					KeepObjects: ptr.To(false),
 				},
 			}
 		)

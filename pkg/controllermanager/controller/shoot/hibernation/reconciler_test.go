@@ -26,7 +26,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/component-base/version"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -231,7 +231,7 @@ var _ = Describe("Shoot Hibernation", func() {
 					timeNow: timeWithOffset(weekDayAt2, 0),
 					shootSettings: func(shoot *gardencorev1beta1.Shoot) {
 						shoot.CreationTimestamp = metav1.Time{Time: timeWithOffset(weekDayAt2, 0)()}
-						shoot.Spec.Hibernation.Schedules = []gardencorev1beta1.HibernationSchedule{{Start: pointer.String("")}}
+						shoot.Spec.Hibernation.Schedules = []gardencorev1beta1.HibernationSchedule{{Start: ptr.To("")}}
 					},
 				}),
 				Entry("when shoot has never been hibernated and reconciliation is executed 30 seconds before wakeup schedule", testEntry{

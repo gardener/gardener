@@ -28,7 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -94,7 +94,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 				Namespace: testNamespace.Name,
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				Class:      pointer.String(filter.ResourceClass()),
+				Class:      ptr.To(filter.ResourceClass()),
 				SecretRefs: []corev1.LocalObjectReference{{Name: secretForManagedResource.Name}},
 			},
 		}
@@ -403,7 +403,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 
 	Describe("Resource class", func() {
 		BeforeEach(func() {
-			managedResource.Spec.Class = pointer.String("test")
+			managedResource.Spec.Class = ptr.To("test")
 		})
 
 		It("should not reconcile ManagedResource of any other class except the default class", func() {
@@ -445,7 +445,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 			BeforeEach(func() {
 				configMap.SetAnnotations(map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"})
 				// provoke invalid update by trying to update an immutable configmap's data
-				configMap.Immutable = pointer.Bool(true)
+				configMap.Immutable = ptr.To(true)
 				secretForManagedResource.Data = secretDataForObject(configMap, dataKey)
 			})
 
@@ -757,7 +757,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 						Selector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{"foo": "bar"},
 						},
-						Replicas: pointer.Int32(1),
+						Replicas: ptr.To(int32(1)),
 						Template: *defaultPodTemplateSpec,
 					},
 				}
@@ -887,7 +887,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 						Selector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{"foo": "bar"},
 						},
-						Replicas: pointer.Int32(1),
+						Replicas: ptr.To(int32(1)),
 						Template: *defaultPodTemplateSpec,
 					},
 				}
@@ -926,7 +926,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 						)
 
 						patch := client.MergeFrom(deployment.DeepCopy())
-						deployment.Spec.Replicas = pointer.Int32(5)
+						deployment.Spec.Replicas = ptr.To(int32(5))
 						Expect(testClient.Patch(ctx, deployment, patch)).To(Succeed())
 
 						patch = client.MergeFrom(managedResource.DeepCopy())
@@ -955,7 +955,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 						)
 
 						patch := client.MergeFrom(deployment.DeepCopy())
-						deployment.Spec.Replicas = pointer.Int32(5)
+						deployment.Spec.Replicas = ptr.To(int32(5))
 						Expect(testClient.Patch(ctx, deployment, patch)).To(Succeed())
 
 						Consistently(func(g Gomega) int32 {
@@ -1037,7 +1037,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 
 	Describe("Immutable resources", func() {
 		BeforeEach(func() {
-			configMap.Immutable = pointer.Bool(true)
+			configMap.Immutable = ptr.To(true)
 			secretForManagedResource = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resourceName,

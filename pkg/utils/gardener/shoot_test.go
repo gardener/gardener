@@ -32,7 +32,7 @@ import (
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/component-base/version"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -288,7 +288,7 @@ var _ = Describe("Shoot", func() {
 			workerPool = gardencorev1beta1.Worker{
 				Name: "worker",
 				Machine: gardencorev1beta1.Machine{
-					Architecture: pointer.String("arm64"),
+					Architecture: ptr.To("arm64"),
 				},
 				SystemComponents: &gardencorev1beta1.WorkerSystemComponents{
 					Allow: true,
@@ -630,7 +630,7 @@ var _ = Describe("Shoot", func() {
 				Name: "kubeconfig",
 				VolumeSource: corev1.VolumeSource{
 					Projected: &corev1.ProjectedVolumeSource{
-						DefaultMode: pointer.Int32(420),
+						DefaultMode: ptr.To(int32(420)),
 						Sources: []corev1.VolumeProjection{
 							{
 								Secret: &corev1.SecretProjection{
@@ -641,7 +641,7 @@ var _ = Describe("Shoot", func() {
 										Key:  "kubeconfig",
 										Path: "kubeconfig",
 									}},
-									Optional: pointer.Bool(false),
+									Optional: ptr.To(false),
 								},
 							},
 							{
@@ -653,7 +653,7 @@ var _ = Describe("Shoot", func() {
 										Key:  "token",
 										Path: "token",
 									}},
-									Optional: pointer.Bool(false),
+									Optional: ptr.To(false),
 								},
 							},
 						},
@@ -681,14 +681,14 @@ var _ = Describe("Shoot", func() {
 		It("returns the correct seed names of a Shoot", func() {
 			specSeedName, statusSeedName := GetShootSeedNames(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
-					SeedName: pointer.String("spec"),
+					SeedName: ptr.To("spec"),
 				},
 				Status: gardencorev1beta1.ShootStatus{
-					SeedName: pointer.String("status"),
+					SeedName: ptr.To("status"),
 				},
 			})
-			Expect(specSeedName).To(Equal(pointer.String("spec")))
-			Expect(statusSeedName).To(Equal(pointer.String("status")))
+			Expect(specSeedName).To(Equal(ptr.To("spec")))
+			Expect(statusSeedName).To(Equal(ptr.To("status")))
 		})
 	})
 
@@ -935,7 +935,7 @@ var _ = Describe("Shoot", func() {
 								{
 									Type:       &provider,
 									SecretName: &dnsSecretName,
-									Primary:    pointer.Bool(true),
+									Primary:    ptr.To(true),
 								},
 							},
 						},
@@ -999,7 +999,7 @@ var _ = Describe("Shoot", func() {
 							Providers: []gardencorev1beta1.DNSProvider{
 								{
 									Type:    &provider,
-									Primary: pointer.Bool(true),
+									Primary: ptr.To(true),
 								},
 							},
 						},
@@ -1071,7 +1071,7 @@ var _ = Describe("Shoot", func() {
 								{
 									Kind:            extensionsv1alpha1.ExtensionResource,
 									Type:            extensionType2,
-									GloballyEnabled: pointer.Bool(true),
+									GloballyEnabled: ptr.To(true),
 								},
 							},
 						},
@@ -1110,14 +1110,14 @@ var _ = Describe("Shoot", func() {
 						},
 					},
 					Networking: &gardencorev1beta1.Networking{
-						Type: pointer.String(networkingType),
+						Type: ptr.To(networkingType),
 					},
 					Extensions: []gardencorev1beta1.Extension{
 						{Type: extensionType1},
 					},
 					DNS: &gardencorev1beta1.DNS{
 						Providers: []gardencorev1beta1.DNSProvider{
-							{Type: pointer.String(dnsProviderType3)},
+							{Type: ptr.To(dnsProviderType3)},
 						},
 					},
 				},
@@ -1167,7 +1167,7 @@ var _ = Describe("Shoot", func() {
 		It("should compute the correct list of required extensions (shoot explicitly disables globally enabled extension)", func() {
 			shoot.Spec.Extensions = append(shoot.Spec.Extensions, gardencorev1beta1.Extension{
 				Type:     extensionType2,
-				Disabled: pointer.Bool(true),
+				Disabled: ptr.To(true),
 			})
 
 			result := ComputeRequiredExtensionsForShoot(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
@@ -1214,8 +1214,8 @@ var _ = Describe("Shoot", func() {
 								{
 									Kind:                extensionsv1alpha1.ExtensionResource,
 									Type:                extensionType1,
-									GloballyEnabled:     pointer.Bool(true),
-									WorkerlessSupported: pointer.Bool(false),
+									GloballyEnabled:     ptr.To(true),
+									WorkerlessSupported: ptr.To(false),
 								},
 							},
 						},
@@ -1226,8 +1226,8 @@ var _ = Describe("Shoot", func() {
 								{
 									Kind:                extensionsv1alpha1.ExtensionResource,
 									Type:                extensionType2,
-									GloballyEnabled:     pointer.Bool(true),
-									WorkerlessSupported: pointer.Bool(true),
+									GloballyEnabled:     ptr.To(true),
+									WorkerlessSupported: ptr.To(true),
 								},
 							},
 						},
@@ -1238,7 +1238,7 @@ var _ = Describe("Shoot", func() {
 								{
 									Kind:            extensionsv1alpha1.ExtensionResource,
 									Type:            extensionType3,
-									GloballyEnabled: pointer.Bool(true),
+									GloballyEnabled: ptr.To(true),
 								},
 							},
 						},

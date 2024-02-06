@@ -23,7 +23,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -363,11 +363,11 @@ var _ = Describe("CheckHealth", func() {
 	Context("ReplicaSet", func() {
 		BeforeEach(func() {
 			healthy = &appsv1.ReplicaSet{
-				Spec:   appsv1.ReplicaSetSpec{Replicas: pointer.Int32(2)},
+				Spec:   appsv1.ReplicaSetSpec{Replicas: ptr.To(int32(2))},
 				Status: appsv1.ReplicaSetStatus{ReadyReplicas: 2},
 			}
 			unhealthy = &appsv1.ReplicaSet{
-				Spec:   appsv1.ReplicaSetSpec{Replicas: pointer.Int32(2)},
+				Spec:   appsv1.ReplicaSetSpec{Replicas: ptr.To(int32(2))},
 				Status: appsv1.ReplicaSetStatus{ReadyReplicas: 1},
 			}
 			unhealthyWithSkipHealthCheckAnnotation = &appsv1.ReplicaSet{
@@ -376,7 +376,7 @@ var _ = Describe("CheckHealth", func() {
 						resourcesv1alpha1.SkipHealthCheck: "true",
 					},
 				},
-				Spec:   appsv1.ReplicaSetSpec{Replicas: pointer.Int32(2)},
+				Spec:   appsv1.ReplicaSetSpec{Replicas: ptr.To(int32(2))},
 				Status: appsv1.ReplicaSetStatus{ReadyReplicas: 1},
 			}
 		})
@@ -387,11 +387,11 @@ var _ = Describe("CheckHealth", func() {
 	Context("ReplicationController", func() {
 		BeforeEach(func() {
 			healthy = &corev1.ReplicationController{
-				Spec:   corev1.ReplicationControllerSpec{Replicas: pointer.Int32(2)},
+				Spec:   corev1.ReplicationControllerSpec{Replicas: ptr.To(int32(2))},
 				Status: corev1.ReplicationControllerStatus{ReadyReplicas: 2},
 			}
 			unhealthy = &corev1.ReplicationController{
-				Spec:   corev1.ReplicationControllerSpec{Replicas: pointer.Int32(2)},
+				Spec:   corev1.ReplicationControllerSpec{Replicas: ptr.To(int32(2))},
 				Status: corev1.ReplicationControllerStatus{ReadyReplicas: 1},
 			}
 			unhealthyWithSkipHealthCheckAnnotation = &corev1.ReplicationController{
@@ -400,7 +400,7 @@ var _ = Describe("CheckHealth", func() {
 						resourcesv1alpha1.SkipHealthCheck: "true",
 					},
 				},
-				Spec:   corev1.ReplicationControllerSpec{Replicas: pointer.Int32(2)},
+				Spec:   corev1.ReplicationControllerSpec{Replicas: ptr.To(int32(2))},
 				Status: corev1.ReplicationControllerStatus{ReadyReplicas: 1},
 			}
 		})
@@ -441,11 +441,11 @@ var _ = Describe("CheckHealth", func() {
 	Context("StatefulSet", func() {
 		BeforeEach(func() {
 			healthy = &appsv1.StatefulSet{
-				Spec:   appsv1.StatefulSetSpec{Replicas: pointer.Int32(1)},
+				Spec:   appsv1.StatefulSetSpec{Replicas: ptr.To(int32(1))},
 				Status: appsv1.StatefulSetStatus{CurrentReplicas: 1, ReadyReplicas: 1},
 			}
 			unhealthy = &appsv1.StatefulSet{
-				Spec:   appsv1.StatefulSetSpec{Replicas: pointer.Int32(2)},
+				Spec:   appsv1.StatefulSetSpec{Replicas: ptr.To(int32(2))},
 				Status: appsv1.StatefulSetStatus{ReadyReplicas: 1},
 			}
 			unhealthyWithSkipHealthCheckAnnotation = &appsv1.StatefulSet{
@@ -454,7 +454,7 @@ var _ = Describe("CheckHealth", func() {
 						resourcesv1alpha1.SkipHealthCheck: "true",
 					},
 				},
-				Spec:   appsv1.StatefulSetSpec{Replicas: pointer.Int32(2)},
+				Spec:   appsv1.StatefulSetSpec{Replicas: ptr.To(int32(2))},
 				Status: appsv1.StatefulSetStatus{ReadyReplicas: 1},
 			}
 		})

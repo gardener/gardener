@@ -19,7 +19,7 @@ import (
 	"reflect"
 
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -53,7 +53,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: pointer.IntDeref(r.Config.Controllers.ControllerInstallation.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: ptr.Deref(r.Config.Controllers.ControllerInstallation.ConcurrentSyncs, 0),
 		}).
 		WatchesRawSource(
 			source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.ControllerInstallation{}),

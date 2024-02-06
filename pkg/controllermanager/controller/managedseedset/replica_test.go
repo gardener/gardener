@@ -22,7 +22,7 @@ import (
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -94,7 +94,7 @@ var _ = Describe("Replica", func() {
 					},
 					Spec: gardencorev1beta1.ShootSpec{
 						DNS: &gardencorev1beta1.DNS{
-							Domain: pointer.String("replica-name.example.com"),
+							Domain: ptr.To("replica-name.example.com"),
 						},
 					},
 				},
@@ -326,7 +326,7 @@ var _ = Describe("Replica", func() {
 						},
 						Spec: gardencorev1beta1.ShootSpec{
 							DNS: &gardencorev1beta1.DNS{
-								Domain: pointer.String(replicaName + ".example.com"),
+								Domain: ptr.To(replicaName + ".example.com"),
 							},
 						},
 					}))

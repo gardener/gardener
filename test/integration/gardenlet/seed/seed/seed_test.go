@@ -28,7 +28,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -139,26 +139,26 @@ var _ = Describe("Seed controller tests", func() {
 				},
 				SNI: &config.SNI{
 					Ingress: &config.SNIIngress{
-						Namespace: pointer.String(testNamespace.Name + "-istio"),
+						Namespace: ptr.To(testNamespace.Name + "-istio"),
 					},
 				},
 				Logging: &config.Logging{
-					Enabled: pointer.Bool(true),
+					Enabled: ptr.To(true),
 					Vali: &config.Vali{
-						Enabled: pointer.Bool(true),
+						Enabled: ptr.To(true),
 					},
 				},
 				ETCDConfig: &config.ETCDConfig{
 					BackupCompactionController: &config.BackupCompactionController{
-						EnableBackupCompaction: pointer.Bool(false),
-						EventsThreshold:        pointer.Int64(1),
-						Workers:                pointer.Int64(1),
+						EnableBackupCompaction: ptr.To(false),
+						EventsThreshold:        ptr.To(int64(1)),
+						Workers:                ptr.To(int64(1)),
 					},
 					CustodianController: &config.CustodianController{
-						Workers: pointer.Int64(1),
+						Workers: ptr.To(int64(1)),
 					},
 					ETCDController: &config.ETCDController{
-						Workers: pointer.Int64(1),
+						Workers: ptr.To(int64(1)),
 					},
 				},
 				SeedConfig: &config.SeedConfig{
@@ -225,7 +225,7 @@ var _ = Describe("Seed controller tests", func() {
 				Networks: gardencorev1beta1.SeedNetworks{
 					Pods:     "10.0.0.0/16",
 					Services: "10.1.0.0/16",
-					Nodes:    pointer.String("10.2.0.0/16"),
+					Nodes:    ptr.To("10.2.0.0/16"),
 				},
 				Ingress: &gardencorev1beta1.Ingress{
 					Domain: "someingress.example.com",

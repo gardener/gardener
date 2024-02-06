@@ -22,7 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -102,7 +102,7 @@ func (c *clusterIdentity) Deploy(ctx context.Context) error {
 			Name:      v1beta1constants.ClusterIdentity,
 			Namespace: metav1.NamespaceSystem,
 		},
-		Immutable: pointer.Bool(true),
+		Immutable: ptr.To(true),
 		Data: map[string]string{
 			v1beta1constants.ClusterIdentity:       c.identity,
 			v1beta1constants.ClusterIdentityOrigin: c.identityType,

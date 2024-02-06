@@ -30,7 +30,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/charts"
@@ -136,10 +136,10 @@ var _ = Describe("Actuator", func() {
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				Kubernetes: gardencorev1beta1.Kubernetes{
-					EnableStaticTokenKubeconfig: pointer.Bool(true),
+					EnableStaticTokenKubeconfig: ptr.To(true),
 				},
-				SecretBindingName: pointer.String(secretBindingName),
-				SeedName:          pointer.String(seedName),
+				SecretBindingName: ptr.To(secretBindingName),
+				SeedName:          ptr.To(seedName),
 			},
 			Status: gardencorev1beta1.ShootStatus{
 				LastOperation: &gardencorev1beta1.LastOperation{
@@ -195,12 +195,12 @@ var _ = Describe("Actuator", func() {
 		}
 		gardenlet = &seedmanagementv1alpha1.Gardenlet{
 			Deployment: &seedmanagementv1alpha1.GardenletDeployment{
-				ReplicaCount:         pointer.Int32(1),
-				RevisionHistoryLimit: pointer.Int32(1),
+				ReplicaCount:         ptr.To(int32(1)),
+				RevisionHistoryLimit: ptr.To(int32(1)),
 				Image: &seedmanagementv1alpha1.Image{
-					PullPolicy: pullPolicyPtr(corev1.PullIfNotPresent),
+					PullPolicy: ptr.To(corev1.PullIfNotPresent),
 				},
-				VPA: pointer.Bool(true),
+				VPA: ptr.To(true),
 			},
 			Config: runtime.RawExtension{
 				Object: &gardenletv1alpha1.GardenletConfiguration{
@@ -213,8 +213,8 @@ var _ = Describe("Actuator", func() {
 					},
 				},
 			},
-			Bootstrap:       bootstrapPtr(seedmanagementv1alpha1.BootstrapToken),
-			MergeWithParent: pointer.Bool(true),
+			Bootstrap:       ptr.To(seedmanagementv1alpha1.BootstrapToken),
+			MergeWithParent: ptr.To(true),
 		}
 
 		gardenNamespace = &corev1.Namespace{
@@ -395,9 +395,9 @@ var _ = Describe("Actuator", func() {
 		expectMergeWithParent = func() {
 			mergedDeployment = managedSeed.Spec.Gardenlet.Deployment.DeepCopy()
 			mergedDeployment.Image = &seedmanagementv1alpha1.Image{
-				Repository: pointer.String("repository"),
-				Tag:        pointer.String("tag"),
-				PullPolicy: pullPolicyPtr(corev1.PullIfNotPresent),
+				Repository: ptr.To("repository"),
+				Tag:        ptr.To("tag"),
+				PullPolicy: ptr.To(corev1.PullIfNotPresent),
 			}
 
 			mergedGardenletConfig = managedSeed.Spec.Gardenlet.Config.Object.(*gardenletv1alpha1.GardenletConfiguration).DeepCopy()
@@ -667,7 +667,7 @@ var _ = Describe("Actuator", func() {
 			})
 
 			It("should create the garden namespace and seed secrets, and deploy gardenlet (without bootstrap)", func() {
-				managedSeed.Spec.Gardenlet.Bootstrap = bootstrapPtr(seedmanagementv1alpha1.BootstrapNone)
+				managedSeed.Spec.Gardenlet.Bootstrap = ptr.To(seedmanagementv1alpha1.BootstrapNone)
 
 				expectGetShoot()
 				expectGetSeed(false)
@@ -828,7 +828,7 @@ var _ = Describe("Utils", func() {
 			}
 
 			dnsWithDomain = &gardencorev1beta1.DNS{
-				Domain: pointer.String("my-shoot.example.com"),
+				Domain: ptr.To("my-shoot.example.com"),
 			}
 			dnsWithoutDomain = &gardencorev1beta1.DNS{
 				Domain: nil,
@@ -865,7 +865,3 @@ var _ = Describe("Utils", func() {
 		})
 	})
 })
-
-func pullPolicyPtr(v corev1.PullPolicy) *corev1.PullPolicy { return &v }
-
-func bootstrapPtr(v seedmanagementv1alpha1.Bootstrap) *seedmanagementv1alpha1.Bootstrap { return &v }

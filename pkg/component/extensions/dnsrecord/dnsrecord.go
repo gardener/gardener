@@ -23,7 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -305,9 +305,9 @@ func (d *dnsRecord) SetValues(values []string) {
 
 func (d *dnsRecord) valuesDontMatchDNSRecord() bool {
 	return d.values.SecretName != d.dnsRecord.Spec.SecretRef.Name ||
-		!pointer.StringEqual(d.values.Zone, d.dnsRecord.Spec.Zone) ||
+		!ptr.Equal(d.values.Zone, d.dnsRecord.Spec.Zone) ||
 		!reflect.DeepEqual(d.values.Values, d.dnsRecord.Spec.Values) ||
-		!pointer.Int64Equal(d.values.TTL, d.dnsRecord.Spec.TTL)
+		!ptr.Equal(d.values.TTL, d.dnsRecord.Spec.TTL)
 }
 
 func (d *dnsRecord) lastOperationNotSuccessful() bool {

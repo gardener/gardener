@@ -20,7 +20,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
@@ -54,7 +54,7 @@ func (b *Botanist) DefaultPlutono() (plutono.Interface, error) {
 // DeployPlutono deploys the plutono in the Seed cluster.
 func (b *Botanist) DeployPlutono(ctx context.Context) error {
 	if b.ControlPlaneWildcardCert != nil {
-		b.Operation.Shoot.Components.ControlPlane.Plutono.SetWildcardCertName(pointer.String(b.ControlPlaneWildcardCert.GetName()))
+		b.Operation.Shoot.Components.ControlPlane.Plutono.SetWildcardCertName(ptr.To(b.ControlPlaneWildcardCert.GetName()))
 	}
 	// disable monitoring if shoot has purpose testing or monitoring and vali is disabled
 	if !b.Operation.WantsPlutono() {

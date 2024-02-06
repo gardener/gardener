@@ -19,7 +19,7 @@ import (
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/extensions/pkg/webhook"
@@ -79,7 +79,7 @@ func GetValidatingWebhookConfiguration(mode, url string) *admissionregistrationv
 				SideEffects:    &sideEffects,
 				FailurePolicy:  &failurePolicy,
 				MatchPolicy:    &matchPolicy,
-				TimeoutSeconds: pointer.Int32(10),
+				TimeoutSeconds: ptr.To(int32(10)),
 			},
 		},
 	}
@@ -117,7 +117,7 @@ func GetMutatingWebhookConfiguration(mode, url string) *admissionregistrationv1.
 				SideEffects:    &sideEffects,
 				FailurePolicy:  &failurePolicy,
 				MatchPolicy:    &matchPolicy,
-				TimeoutSeconds: pointer.Int32(10),
+				TimeoutSeconds: ptr.To(int32(10)),
 			},
 		},
 	}

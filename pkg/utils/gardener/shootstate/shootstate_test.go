@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/clock"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -87,9 +87,9 @@ var _ = Describe("ShootState", func() {
 		Context("with data to backup", func() {
 			var (
 				existingGardenerData   = []gardencorev1beta1.GardenerResourceData{{Name: "some-data"}}
-				existingExtensionsData = []gardencorev1beta1.ExtensionResourceState{{Name: pointer.String("some-data")}}
+				existingExtensionsData = []gardencorev1beta1.ExtensionResourceState{{Name: ptr.To("some-data")}}
 				// TODO(rfranzke): Remove this `existingWorkerState` after Gardener v1.86 has been released.
-				existingWorkerState   = []gardencorev1beta1.ExtensionResourceState{{Kind: "Worker", Name: pointer.String("my-shoot")}}
+				existingWorkerState   = []gardencorev1beta1.ExtensionResourceState{{Kind: "Worker", Name: ptr.To("my-shoot")}}
 				existingResourcesData = []gardencorev1beta1.ResourceData{{Data: runtime.RawExtension{Raw: []byte("{}")}}}
 				expectedSpec          gardencorev1beta1.ShootStateSpec
 			)
@@ -149,34 +149,34 @@ var _ = Describe("ShootState", func() {
 					Extensions: []gardencorev1beta1.ExtensionResourceState{
 						{
 							Kind:  "BackupEntry",
-							Name:  pointer.String("backupentry"),
+							Name:  ptr.To("backupentry"),
 							State: &runtime.RawExtension{Raw: []byte(`{"name":"backupentry"}`)},
 						},
 						{
 							Kind:  "ContainerRuntime",
-							Name:  pointer.String("containerruntime"),
+							Name:  ptr.To("containerruntime"),
 							State: &runtime.RawExtension{Raw: []byte(`{"name":"containerruntime"}`)},
 						},
 						{
 							Kind:    "ControlPlane",
-							Name:    pointer.String("controlplane"),
-							Purpose: pointer.String("normal"),
+							Name:    ptr.To("controlplane"),
+							Purpose: ptr.To("normal"),
 							State:   &runtime.RawExtension{Raw: []byte(`{"name":"controlplane"}`)},
 						},
 						{
 							Kind:    "ControlPlane",
-							Name:    pointer.String("controlplane-exposure"),
-							Purpose: pointer.String("exposure"),
+							Name:    ptr.To("controlplane-exposure"),
+							Purpose: ptr.To("exposure"),
 							State:   &runtime.RawExtension{Raw: []byte(`{"name":"controlplane-exposure"}`)},
 						},
 						{
 							Kind:  "DNSRecord",
-							Name:  pointer.String("dnsrecord"),
+							Name:  ptr.To("dnsrecord"),
 							State: &runtime.RawExtension{Raw: []byte(`{"name":"dnsrecord"}`)},
 						},
 						{
 							Kind:  "Extension",
-							Name:  pointer.String("extension"),
+							Name:  ptr.To("extension"),
 							State: &runtime.RawExtension{Raw: []byte(`{"name":"extension"}`)},
 							Resources: []gardencorev1beta1.NamedResourceReference{{
 								Name: "resource-ref1",
@@ -189,24 +189,24 @@ var _ = Describe("ShootState", func() {
 						},
 						{
 							Kind:  "Infrastructure",
-							Name:  pointer.String("infrastructure"),
+							Name:  ptr.To("infrastructure"),
 							State: &runtime.RawExtension{Raw: []byte(`{"name":"infrastructure"}`)},
 						},
 						{
 							Kind:  "Network",
-							Name:  pointer.String("network"),
+							Name:  ptr.To("network"),
 							State: &runtime.RawExtension{Raw: []byte(`{"name":"network"}`)},
 						},
 						{
 							Kind:    "OperatingSystemConfig",
-							Name:    pointer.String("osc"),
-							Purpose: pointer.String(""),
+							Name:    ptr.To("osc"),
+							Purpose: ptr.To(""),
 							State:   &runtime.RawExtension{Raw: []byte(`{"name":"osc"}`)},
 						},
 						// TODO(rfranzke): Uncomment next lines after Gardener v1.86 has been released.
 						// {
 						// 	Kind:  "Worker",
-						// 	Name:  pointer.String("worker"),
+						// 	Name:  ptr.To("worker"),
 						// 	State: &runtime.RawExtension{Raw: []byte(`{"name":"worker"}`)},
 						// },
 					},

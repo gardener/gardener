@@ -29,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -95,7 +95,7 @@ var _ = Describe("#Interface", func() {
 		sshPublicKey = []byte("secure")
 		providerConfig = &runtime.RawExtension{Raw: []byte(`{"very":"provider-specific"}`)}
 		providerStatus = &runtime.RawExtension{Raw: []byte(`{"very":"provider-specific-status"}`)}
-		nodesCIDR = pointer.String("1.2.3.4/5")
+		nodesCIDR = ptr.To("1.2.3.4/5")
 		egressCIDRs = []string{"1.2.3.4/5", "5.6.7.8/9"}
 
 		values = &infrastructure.Values{
@@ -420,7 +420,7 @@ var _ = Describe("#Interface", func() {
 				Spec: gardencorev1beta1.ShootStateSpec{
 					Extensions: []gardencorev1beta1.ExtensionResourceState{
 						{
-							Name:  pointer.String(name),
+							Name:  ptr.To(name),
 							Kind:  extensionsv1alpha1.InfrastructureResource,
 							State: state,
 						},
@@ -542,7 +542,7 @@ var _ = Describe("#Interface", func() {
 
 			var (
 				providerStatus = &runtime.RawExtension{Raw: []byte(`{"some":"status"}`)}
-				nodesCIDR      = pointer.String("1.2.3.4")
+				nodesCIDR      = ptr.To("1.2.3.4")
 			)
 
 			infra := empty.DeepCopy()

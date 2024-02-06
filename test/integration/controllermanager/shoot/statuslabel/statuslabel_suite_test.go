@@ -24,7 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -113,7 +113,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	Expect((&statuslabel.Reconciler{
 		Config: config.ShootStatusLabelControllerConfiguration{
-			ConcurrentSyncs: pointer.Int(5),
+			ConcurrentSyncs: ptr.To(5),
 		},
 	}).AddToManager(mgr)).To(Succeed())
 

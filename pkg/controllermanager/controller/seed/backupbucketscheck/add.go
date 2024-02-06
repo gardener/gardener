@@ -21,7 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -53,7 +53,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		mgr,
 		controller.Options{
 			Reconciler:              r,
-			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 			// if going into exponential backoff, wait at most the configured sync period
 			RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.Config.SyncPeriod.Duration),
 		},

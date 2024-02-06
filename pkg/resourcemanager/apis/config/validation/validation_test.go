@@ -22,7 +22,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	. "github.com/gardener/gardener/pkg/resourcemanager/apis/config/validation"
@@ -45,19 +45,19 @@ var _ = Describe("Validation", func() {
 					},
 				},
 				Controllers: config.ResourceManagerControllerConfiguration{
-					ClusterID:     pointer.String(""),
-					ResourceClass: pointer.String("foo"),
+					ClusterID:     ptr.To(""),
+					ResourceClass: ptr.To("foo"),
 					Health: config.HealthControllerConfig{
-						ConcurrentSyncs: pointer.Int(5),
+						ConcurrentSyncs: ptr.To(5),
 						SyncPeriod:      &metav1.Duration{Duration: time.Minute},
 					},
 					ManagedResource: config.ManagedResourceControllerConfig{
-						ConcurrentSyncs:     pointer.Int(5),
+						ConcurrentSyncs:     ptr.To(5),
 						SyncPeriod:          &metav1.Duration{Duration: time.Minute},
-						ManagedByLabelValue: pointer.String("foo"),
+						ManagedByLabelValue: ptr.To("foo"),
 					},
 					Secret: config.SecretControllerConfig{
-						ConcurrentSyncs: pointer.Int(5),
+						ConcurrentSyncs: ptr.To(5),
 					},
 				},
 			}
@@ -188,7 +188,7 @@ var _ = Describe("Validation", func() {
 			Context("kubelet csr approver", func() {
 				It("should return errors because concurrent syncs are <= 0", func() {
 					conf.Controllers.KubeletCSRApprover.Enabled = true
-					conf.Controllers.KubeletCSRApprover.ConcurrentSyncs = pointer.Int(0)
+					conf.Controllers.KubeletCSRApprover.ConcurrentSyncs = ptr.To(0)
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
@@ -226,7 +226,7 @@ var _ = Describe("Validation", func() {
 
 			Context("health", func() {
 				It("should return errors because concurrent syncs are <= 0", func() {
-					conf.Controllers.Health.ConcurrentSyncs = pointer.Int(0)
+					conf.Controllers.Health.ConcurrentSyncs = ptr.To(0)
 					conf.Controllers.Health.SyncPeriod = &metav1.Duration{Duration: time.Hour}
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
@@ -238,7 +238,7 @@ var _ = Describe("Validation", func() {
 				})
 
 				It("should return errors because sync period is nil", func() {
-					conf.Controllers.Health.ConcurrentSyncs = pointer.Int(5)
+					conf.Controllers.Health.ConcurrentSyncs = ptr.To(5)
 					conf.Controllers.Health.SyncPeriod = nil
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
@@ -250,7 +250,7 @@ var _ = Describe("Validation", func() {
 				})
 
 				It("should return errors because sync period is < 15s", func() {
-					conf.Controllers.Health.ConcurrentSyncs = pointer.Int(5)
+					conf.Controllers.Health.ConcurrentSyncs = ptr.To(5)
 					conf.Controllers.Health.SyncPeriod = &metav1.Duration{Duration: time.Second}
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
@@ -264,7 +264,7 @@ var _ = Describe("Validation", func() {
 
 			Context("managed resources", func() {
 				It("should return errors because concurrent syncs are <= 0", func() {
-					conf.Controllers.ManagedResource.ConcurrentSyncs = pointer.Int(0)
+					conf.Controllers.ManagedResource.ConcurrentSyncs = ptr.To(0)
 					conf.Controllers.ManagedResource.SyncPeriod = &metav1.Duration{Duration: time.Hour}
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
@@ -276,7 +276,7 @@ var _ = Describe("Validation", func() {
 				})
 
 				It("should return errors because sync period is nil", func() {
-					conf.Controllers.ManagedResource.ConcurrentSyncs = pointer.Int(5)
+					conf.Controllers.ManagedResource.ConcurrentSyncs = ptr.To(5)
 					conf.Controllers.ManagedResource.SyncPeriod = nil
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
@@ -288,7 +288,7 @@ var _ = Describe("Validation", func() {
 				})
 
 				It("should return errors because sync period is < 15s", func() {
-					conf.Controllers.ManagedResource.ConcurrentSyncs = pointer.Int(5)
+					conf.Controllers.ManagedResource.ConcurrentSyncs = ptr.To(5)
 					conf.Controllers.ManagedResource.SyncPeriod = &metav1.Duration{Duration: time.Second}
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
@@ -311,7 +311,7 @@ var _ = Describe("Validation", func() {
 				})
 
 				It("should return errors because managed by label value is empty", func() {
-					conf.Controllers.ManagedResource.ManagedByLabelValue = pointer.String("")
+					conf.Controllers.ManagedResource.ManagedByLabelValue = ptr.To("")
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
@@ -338,7 +338,7 @@ var _ = Describe("Validation", func() {
 
 				It("should return errors when scheduler name is empty", func() {
 					conf.Webhooks.PodSchedulerName.Enabled = true
-					conf.Webhooks.PodSchedulerName.SchedulerName = pointer.String("")
+					conf.Webhooks.PodSchedulerName.SchedulerName = ptr.To("")
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
@@ -363,7 +363,7 @@ var _ = Describe("Validation", func() {
 
 				It("should return errors when expiration seconds is lower than 600", func() {
 					conf.Webhooks.ProjectedTokenMount.Enabled = true
-					conf.Webhooks.ProjectedTokenMount.ExpirationSeconds = pointer.Int64(123)
+					conf.Webhooks.ProjectedTokenMount.ExpirationSeconds = ptr.To(int64(123))
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
@@ -376,15 +376,15 @@ var _ = Describe("Validation", func() {
 
 			Context("high availability config", func() {
 				It("should succeed with valid toleration options", func() {
-					conf.Webhooks.HighAvailabilityConfig.DefaultNotReadyTolerationSeconds = pointer.Int64(60)
-					conf.Webhooks.HighAvailabilityConfig.DefaultUnreachableTolerationSeconds = pointer.Int64(120)
+					conf.Webhooks.HighAvailabilityConfig.DefaultNotReadyTolerationSeconds = ptr.To(int64(60))
+					conf.Webhooks.HighAvailabilityConfig.DefaultUnreachableTolerationSeconds = ptr.To(int64(120))
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(BeEmpty())
 				})
 
 				It("should fail with invalid toleration options", func() {
-					conf.Webhooks.HighAvailabilityConfig.DefaultNotReadyTolerationSeconds = pointer.Int64(-1)
-					conf.Webhooks.HighAvailabilityConfig.DefaultUnreachableTolerationSeconds = pointer.Int64(-2)
+					conf.Webhooks.HighAvailabilityConfig.DefaultNotReadyTolerationSeconds = ptr.To(int64(-1))
+					conf.Webhooks.HighAvailabilityConfig.DefaultUnreachableTolerationSeconds = ptr.To(int64(-2))
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{

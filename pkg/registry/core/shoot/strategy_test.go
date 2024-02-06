@@ -24,7 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/rest"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -76,14 +76,14 @@ var _ = Describe("Strategy", func() {
 			BeforeEach(func() {
 				oldShoot = &core.Shoot{
 					Spec: core.ShootSpec{
-						SeedName: pointer.String("seed"),
+						SeedName: ptr.To("seed"),
 					},
 				}
 				newShoot = oldShoot.DeepCopy()
 			})
 
 			It("should not allow change of seedName on shoot spec update", func() {
-				newShoot.Spec.SeedName = pointer.String("new-seed")
+				newShoot.Spec.SeedName = ptr.To("new-seed")
 				strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 
 				Expect(newShoot.Spec.SeedName).To(Equal(oldShoot.Spec.SeedName))
@@ -172,108 +172,108 @@ var _ = Describe("Strategy", func() {
 					},
 
 					Entry("confineSpecUpdateRollout true->false",
-						pointer.Bool(true), pointer.Bool(false),
+						ptr.To(true), ptr.To(false),
 						nil, nil,
 						true,
 					),
 					Entry("confineSpecUpdateRollout false->true",
-						pointer.Bool(false), pointer.Bool(true),
+						ptr.To(false), ptr.To(true),
 						nil, nil,
 						false,
 					),
 					Entry("confineSpecUpdateRollout nil->false w/ additional spec change",
-						nil, pointer.Bool(false),
+						nil, ptr.To(false),
 						nil, func(s *core.Shoot) { s.Spec.Region = "foo" },
 						true,
 					),
 					Entry("confineSpecUpdateRollout true->true w/ additional spec change",
-						pointer.Bool(true), pointer.Bool(true),
+						ptr.To(true), ptr.To(true),
 						nil, func(s *core.Shoot) { s.Spec.Region = "foo" },
 						false,
 					),
 
 					// exceptional cases: spec.hibernation.enabled changes even if confineSpecUpdateRollout is true
 					Entry("hibernation nil -> nil",
-						pointer.Bool(true), pointer.Bool(true),
+						ptr.To(true), ptr.To(true),
 						nil, nil,
 						false,
 					),
 					Entry("hibernation nil -> false",
-						pointer.Bool(true), pointer.Bool(true),
-						nil, func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)} },
+						ptr.To(true), ptr.To(true),
+						nil, func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)} },
 						false,
 					),
 					Entry("hibernation nil -> true",
-						pointer.Bool(true), pointer.Bool(true),
-						nil, func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)} },
+						ptr.To(true), ptr.To(true),
+						nil, func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)} },
 						true,
 					),
 
 					Entry("hibernation enabled nil -> false",
-						pointer.Bool(true), pointer.Bool(true),
+						ptr.To(true), ptr.To(true),
 						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{} },
-						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)} },
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)} },
 						false,
 					),
 					Entry("hibernation enabled nil -> true",
-						pointer.Bool(true), pointer.Bool(true),
+						ptr.To(true), ptr.To(true),
 						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{} },
-						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)} },
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)} },
 						true,
 					),
 					Entry("hibernation enabled nil -> hibernation nil",
-						pointer.Bool(true), pointer.Bool(true),
+						ptr.To(true), ptr.To(true),
 						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{} },
 						nil,
 						false,
 					),
 
 					Entry("hibernation enabled true -> true",
-						pointer.Bool(true), pointer.Bool(true),
-						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)} },
-						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)} },
+						ptr.To(true), ptr.To(true),
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)} },
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)} },
 						false,
 					),
 					Entry("hibernation enabled true -> false",
-						pointer.Bool(true), pointer.Bool(true),
-						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)} },
-						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)} },
+						ptr.To(true), ptr.To(true),
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)} },
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)} },
 						true,
 					),
 					Entry("hibernation enabled true -> nil",
-						pointer.Bool(true), pointer.Bool(true),
-						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)} },
+						ptr.To(true), ptr.To(true),
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)} },
 						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{} },
 						true,
 					),
 					Entry("hibernation enabled true -> hibernation nil",
-						pointer.Bool(true), pointer.Bool(true),
-						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)} },
+						ptr.To(true), ptr.To(true),
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)} },
 						nil,
 						true,
 					),
 
 					Entry("hibernation enabled false -> true",
-						pointer.Bool(true), pointer.Bool(true),
-						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)} },
-						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)} },
+						ptr.To(true), ptr.To(true),
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)} },
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)} },
 						true,
 					),
 					Entry("hibernation enabled false -> false",
-						pointer.Bool(true), pointer.Bool(true),
-						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)} },
-						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)} },
+						ptr.To(true), ptr.To(true),
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)} },
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)} },
 						false,
 					),
 					Entry("hibernation enabled false -> nil",
-						pointer.Bool(true), pointer.Bool(true),
-						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)} },
+						ptr.To(true), ptr.To(true),
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)} },
 						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{} },
 						false,
 					),
 					Entry("hibernation enabled false -> hibernation nil",
-						pointer.Bool(true), pointer.Bool(true),
-						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)} },
+						ptr.To(true), ptr.To(true),
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)} },
 						nil,
 						false,
 					),
@@ -435,8 +435,8 @@ var _ = Describe("Strategy", func() {
 			It("should correctly add the seed labels", func() {
 				metav1.SetMetaDataLabel(&shoot.ObjectMeta, "foo", "bar")
 				metav1.SetMetaDataLabel(&shoot.ObjectMeta, "seed.gardener.cloud/foo", "true")
-				shoot.Spec.SeedName = pointer.String("spec-seed")
-				shoot.Status.SeedName = pointer.String("status-seed")
+				shoot.Spec.SeedName = ptr.To("spec-seed")
+				shoot.Status.SeedName = ptr.To("status-seed")
 
 				strategy.Canonicalize(shoot)
 
@@ -460,7 +460,7 @@ var _ = Describe("Strategy", func() {
 							},
 							{
 								Name:     "PodSecurityPolicy",
-								Disabled: pointer.Bool(true),
+								Disabled: ptr.To(true),
 							},
 							{
 								Name:   "PodSecurity",
@@ -511,7 +511,7 @@ var _ = Describe("Strategy", func() {
 						},
 						core.AdmissionPlugin{
 							Name:     "PodSecurityPolicy",
-							Disabled: pointer.Bool(true),
+							Disabled: ptr.To(true),
 						},
 					))
 				})

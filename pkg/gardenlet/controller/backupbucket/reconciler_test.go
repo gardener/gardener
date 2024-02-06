@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -90,7 +90,7 @@ var _ = Describe("Controller", func() {
 					Name:      gardenSecret.Name,
 					Namespace: gardenSecret.Namespace,
 				},
-				SeedName: pointer.String(seedName),
+				SeedName: ptr.To(seedName),
 			},
 			Status: gardencorev1beta1.BackupBucketStatus{
 				ObservedGeneration: 1,
@@ -120,7 +120,7 @@ var _ = Describe("Controller", func() {
 			SeedClient:   seedClient,
 			Recorder:     &record.FakeRecorder{},
 			Config: config.BackupBucketControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(5),
+				ConcurrentSyncs: ptr.To(5),
 			},
 			Clock:           fakeClock,
 			GardenNamespace: gardenNamespaceName,

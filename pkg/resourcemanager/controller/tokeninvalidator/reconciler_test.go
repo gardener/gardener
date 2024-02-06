@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -128,18 +128,18 @@ var _ = Describe("TokenInvalidator", func() {
 			})
 
 			It("AutomountServiceAccountToken=true", func() {
-				serviceAccount.AutomountServiceAccountToken = pointer.Bool(true)
+				serviceAccount.AutomountServiceAccountToken = ptr.To(true)
 				Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
 			})
 
 			It("AutomountServiceAccountToken=true and skip label", func() {
-				serviceAccount.AutomountServiceAccountToken = pointer.Bool(true)
+				serviceAccount.AutomountServiceAccountToken = ptr.To(true)
 				serviceAccount.Labels = map[string]string{"token-invalidator.resources.gardener.cloud/skip": "true"}
 				Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
 			})
 
 			It("AutomountServiceAccountToken=false but skip label", func() {
-				serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
+				serviceAccount.AutomountServiceAccountToken = ptr.To(false)
 				serviceAccount.Labels = map[string]string{"token-invalidator.resources.gardener.cloud/skip": "true"}
 				Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
 			})
@@ -149,7 +149,7 @@ var _ = Describe("TokenInvalidator", func() {
 			secretPartialObjectMeta.Labels = map[string]string{"token-invalidator.resources.gardener.cloud/consider": "true"}
 			Expect(fakeClient.Create(ctx, secretPartialObjectMeta)).To(Succeed())
 
-			serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
+			serviceAccount.AutomountServiceAccountToken = ptr.To(false)
 			Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
 
 			result, err := ctrl.Reconcile(ctx, request)
@@ -165,7 +165,7 @@ var _ = Describe("TokenInvalidator", func() {
 
 			Context("no requeue", func() {
 				It("AutomountServiceAccountToken=false", func() {
-					serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
+					serviceAccount.AutomountServiceAccountToken = ptr.To(false)
 					Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
 
 					result, err := ctrl.Reconcile(ctx, request)
@@ -196,7 +196,7 @@ var _ = Describe("TokenInvalidator", func() {
 					}
 					Expect(fakeClient.Create(ctx, pod)).To(Succeed())
 
-					serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
+					serviceAccount.AutomountServiceAccountToken = ptr.To(false)
 					Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
 
 					result, err := ctrl.Reconcile(ctx, request)

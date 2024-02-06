@@ -24,7 +24,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apiserver/pkg/authentication/user"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -98,7 +98,7 @@ func (k *kubeAPIServer) reconcileSecretStaticToken(ctx context.Context) (*corev1
 		},
 	}
 
-	if pointer.BoolDeref(k.values.StaticTokenKubeconfigEnabled, true) {
+	if ptr.Deref(k.values.StaticTokenKubeconfigEnabled, true) {
 		staticTokenSecretConfig.Tokens[userNameClusterAdmin] = secretsutils.TokenConfig{
 			Username: userNameClusterAdmin,
 			UserID:   userNameClusterAdmin,

@@ -36,7 +36,7 @@ import (
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/component-base/version"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -394,7 +394,7 @@ func (r *Reconciler) newEtcd(
 
 	switch role {
 	case v1beta1constants.ETCDRoleMain:
-		hvpaScaleDownUpdateMode = pointer.String(hvpav1alpha1.UpdateModeOff)
+		hvpaScaleDownUpdateMode = ptr.To(hvpav1alpha1.UpdateModeOff)
 		defragmentationScheduleFormat = "%d %d * * *" // defrag main etcd daily in the maintenance window
 		storageCapacity = "25Gi"
 		if etcd := garden.Spec.VirtualCluster.ETCD; etcd != nil && etcd.Main != nil && etcd.Main.Storage != nil {
@@ -405,7 +405,7 @@ func (r *Reconciler) newEtcd(
 		}
 
 	case v1beta1constants.ETCDRoleEvents:
-		hvpaScaleDownUpdateMode = pointer.String(hvpav1alpha1.UpdateModeMaintenanceWindow)
+		hvpaScaleDownUpdateMode = ptr.To(hvpav1alpha1.UpdateModeMaintenanceWindow)
 		defragmentationScheduleFormat = "%d %d */3 * *"
 		storageCapacity = "10Gi"
 		if etcd := garden.Spec.VirtualCluster.ETCD; etcd != nil && etcd.Events != nil && etcd.Events.Storage != nil {
@@ -430,9 +430,9 @@ func (r *Reconciler) newEtcd(
 
 	highAvailabilityEnabled := helper.HighAvailabilityEnabled(garden)
 
-	replicas := pointer.Int32(1)
+	replicas := ptr.To(int32(1))
 	if highAvailabilityEnabled {
-		replicas = pointer.Int32(3)
+		replicas = ptr.To(int32(3))
 	}
 
 	return etcd.New(
@@ -554,8 +554,8 @@ func (r *Reconciler) newKubeAPIServer(
 
 		authorizationWebhookConfig = &kubeapiserver.AuthorizationWebhook{
 			Kubeconfig:           kubeconfig,
-			CacheAuthorizedTTL:   pointer.Duration(0),
-			CacheUnauthorizedTTL: pointer.Duration(0),
+			CacheAuthorizedTTL:   ptr.To(time.Duration(0)),
+			CacheUnauthorizedTTL: ptr.To(time.Duration(0)),
 		}
 	}
 
@@ -575,7 +575,7 @@ func (r *Reconciler) newKubeAPIServer(
 		kubeapiserver.VPNConfig{Enabled: false},
 		v1beta1constants.PriorityClassNameGardenSystem500,
 		true,
-		pointer.Bool(false),
+		ptr.To(false),
 		auditWebhookConfig,
 		authenticationWebhookConfig,
 		authorizationWebhookConfig,
@@ -662,7 +662,7 @@ func (r *Reconciler) newKubeControllerManager(
 
 	if controllerManager := garden.Spec.VirtualCluster.Kubernetes.KubeControllerManager; controllerManager != nil {
 		config = controllerManager.KubeControllerManagerConfig
-		certificateSigningDuration = pointer.Duration(controllerManager.CertificateSigningDuration.Duration)
+		certificateSigningDuration = ptr.To(controllerManager.CertificateSigningDuration.Duration)
 	}
 
 	_, services, err := net.ParseCIDR(garden.Spec.VirtualCluster.Networking.Services)
@@ -686,13 +686,13 @@ func (r *Reconciler) newKubeControllerManager(
 		services,
 		certificateSigningDuration,
 		kubecontrollermanager.ControllerWorkers{
-			GarbageCollector:    pointer.Int(250),
-			Namespace:           pointer.Int(100),
-			ResourceQuota:       pointer.Int(100),
-			ServiceAccountToken: pointer.Int(0),
+			GarbageCollector:    ptr.To(250),
+			Namespace:           ptr.To(100),
+			ResourceQuota:       ptr.To(100),
+			ServiceAccountToken: ptr.To(0),
 		},
 		kubecontrollermanager.ControllerSyncPeriods{
-			ResourceQuota: pointer.Duration(time.Minute),
+			ResourceQuota: ptr.To(time.Minute),
 		},
 	)
 }
@@ -812,7 +812,7 @@ func (r *Reconciler) newGardenerMetricsExporter(secretsManager secretsmanager.In
 func (r *Reconciler) newPlutono(secretsManager secretsmanager.Interface, ingressDomain string, wildcardCert *corev1.Secret) (plutono.Interface, error) {
 	var wildcardCertName *string
 	if wildcardCert != nil {
-		wildcardCertName = pointer.String(wildcardCert.GetName())
+		wildcardCertName = ptr.To(wildcardCert.GetName())
 	}
 
 	return sharedcomponent.NewPlutono(

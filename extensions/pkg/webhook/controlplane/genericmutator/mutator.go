@@ -27,7 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -481,7 +481,7 @@ func (m *mutator) ensureKubeletCloudProviderConfig(ctx context.Context, gctx ext
 	// Ensure the cloud provider config file is part of the OperatingSystemConfig
 	osc.Spec.Files = extensionswebhook.EnsureFileWithPath(osc.Spec.Files, extensionsv1alpha1.File{
 		Path:        CloudProviderConfigPath,
-		Permissions: pointer.Int32(0644),
+		Permissions: ptr.To(int32(0644)),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: fci,
 		},

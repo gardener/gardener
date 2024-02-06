@@ -22,7 +22,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
@@ -64,7 +64,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 					Name: projectName,
 				},
 				Spec: core.ProjectSpec{
-					Namespace: pointer.String(namespace),
+					Namespace: ptr.To(namespace),
 				},
 				Status: core.ProjectStatus{
 					Phase: core.ProjectReady,
@@ -83,21 +83,21 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 						ShootSelector: &metav1.LabelSelector{},
 						Weight:        0,
 						Server: settingsv1alpha1.KubeAPIServerOpenIDConnect{
-							CABundle:     pointer.String("cert"),
+							CABundle:     ptr.To("cert"),
 							ClientID:     "client-id",
 							IssuerURL:    "https://foo.bar",
-							GroupsClaim:  pointer.String("groupz"),
-							GroupsPrefix: pointer.String("group-prefix"),
+							GroupsClaim:  ptr.To("groupz"),
+							GroupsPrefix: ptr.To("group-prefix"),
 							RequiredClaims: map[string]string{
 								"claim-1": "value-1",
 								"claim-2": "value-2",
 							},
 							SigningAlgs:    []string{"alg-1", "alg-2"},
-							UsernameClaim:  pointer.String("user"),
-							UsernamePrefix: pointer.String("user-prefix"),
+							UsernameClaim:  ptr.To("user"),
+							UsernamePrefix: ptr.To("user-prefix"),
 						},
 						Client: &settingsv1alpha1.OpenIDConnectClientAuthentication{
-							Secret:      pointer.String("secret"),
+							Secret:      ptr.To("secret"),
 							ExtraConfig: map[string]string{"foo": "bar", "baz": "dap"},
 						},
 					},
@@ -209,21 +209,21 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 				expected = shoot.DeepCopy()
 				expected.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
 					OIDCConfig: &core.OIDCConfig{
-						CABundle:     pointer.String("cert"),
-						ClientID:     pointer.String("client-id"),
-						IssuerURL:    pointer.String("https://foo.bar"),
-						GroupsClaim:  pointer.String("groupz"),
-						GroupsPrefix: pointer.String("group-prefix"),
+						CABundle:     ptr.To("cert"),
+						ClientID:     ptr.To("client-id"),
+						IssuerURL:    ptr.To("https://foo.bar"),
+						GroupsClaim:  ptr.To("groupz"),
+						GroupsPrefix: ptr.To("group-prefix"),
 						RequiredClaims: map[string]string{
 							"claim-1": "value-1",
 							"claim-2": "value-2",
 						},
 						SigningAlgs:    []string{"alg-1", "alg-2"},
-						UsernameClaim:  pointer.String("user"),
-						UsernamePrefix: pointer.String("user-prefix"),
+						UsernameClaim:  ptr.To("user"),
+						UsernamePrefix: ptr.To("user-prefix"),
 
 						ClientAuthentication: &core.OpenIDConnectClientAuthentication{
-							Secret:      pointer.String("secret"),
+							Secret:      ptr.To("secret"),
 							ExtraConfig: map[string]string{"foo": "bar", "baz": "dap"},
 						},
 					},
@@ -260,7 +260,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 				preset2.ObjectMeta.Name = "preset-2"
 				preset2.Spec.OpenIDConnectPresetSpec.Server.ClientID = "client-id-2"
 
-				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.String("client-id-2")
+				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = ptr.To("client-id-2")
 
 				Expect(settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset2)).To(Succeed())
 			})
@@ -271,7 +271,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 				preset2.Spec.OpenIDConnectPresetSpec.Weight = 100
 				preset2.Spec.OpenIDConnectPresetSpec.Server.ClientID = "client-id-2"
 
-				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.String("client-id-2")
+				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = ptr.To("client-id-2")
 
 				Expect(settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset2)).To(Succeed())
 			})
@@ -282,7 +282,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 				preset2.ObjectMeta.Name = "02preset"
 				preset2.Spec.OpenIDConnectPresetSpec.Server.ClientID = "client-id-2"
 
-				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.String("client-id-2")
+				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = ptr.To("client-id-2")
 
 				Expect(settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset2)).To(Succeed())
 			})

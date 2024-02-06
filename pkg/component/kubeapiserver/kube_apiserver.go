@@ -26,7 +26,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -420,7 +420,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if pointer.BoolDeref(k.values.StaticTokenKubeconfigEnabled, true) {
+	if ptr.Deref(k.values.StaticTokenKubeconfigEnabled, true) {
 		if err := k.reconcileSecretUserKubeconfig(ctx, secretStaticToken); err != nil {
 			return err
 		}
@@ -474,7 +474,7 @@ func (k *kubeAPIServer) Wait(ctx context.Context) error {
 		var (
 			retryError *retry.Error
 			headBytes  *int64
-			tailLines  = pointer.Int64(10)
+			tailLines  = ptr.To(int64(10))
 		)
 
 		if !errors.As(err, &retryError) {

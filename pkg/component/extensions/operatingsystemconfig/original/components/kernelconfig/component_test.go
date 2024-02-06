@@ -24,7 +24,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/component-helpers/node/util/sysctl"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -88,14 +88,14 @@ var _ = Describe("Component", func() {
 
 		systemdSysctlUnit := extensionsv1alpha1.Unit{
 			Name:      "systemd-sysctl.service",
-			Command:   extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandRestart),
-			Enable:    pointer.Bool(true),
+			Command:   ptr.To(extensionsv1alpha1.CommandRestart),
+			Enable:    ptr.To(true),
 			FilePaths: []string{"/etc/sysctl.d/99-k8s-general.conf"},
 		}
 
 		kernelSettingsFile := extensionsv1alpha1.File{
 			Path:        "/etc/sysctl.d/99-k8s-general.conf",
-			Permissions: pointer.Int32(0644),
+			Permissions: ptr.To(int32(0644)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Data: modifiedData,
@@ -107,9 +107,9 @@ var _ = Describe("Component", func() {
 		Expect(files).To(ConsistOf(kernelSettingsFile))
 	},
 		Entry("should return the expected units and files", "1.24.0", "", nil, nil),
-		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set", "1.24.0", kubeletSysctlConfig, pointer.Bool(true), nil),
+		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set", "1.24.0", kubeletSysctlConfig, ptr.To(true), nil),
 		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set by default", "1.26.0", kubeletSysctlConfig, nil, nil),
-		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set to false", "1.26.0", "", pointer.Bool(false), nil),
+		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set to false", "1.26.0", "", ptr.To(false), nil),
 		// This test prevents from unknowingly upgrading to a newer k8s version which may have different sysctl settings.
 		Entry("should return the expected units and files if k8s version has not been upgraded", "1.26.0", hardCodedKubeletSysctlConfig, nil, nil),
 		Entry("should return the expected units and files if configured to add kernel settings", "1.25.0", dummySettingConfig, nil, dummySettingMap),

@@ -33,7 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -543,8 +543,8 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap, dashboar
 			Labels:    getLabels(),
 		},
 		Spec: appsv1.DeploymentSpec{
-			RevisionHistoryLimit: pointer.Int32(2),
-			Replicas:             pointer.Int32(p.values.Replicas),
+			RevisionHistoryLimit: ptr.To(int32(2)),
+			Replicas:             ptr.To(p.values.Replicas),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: getLabels(),
 			},
@@ -553,7 +553,7 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap, dashboar
 					Labels: utils.MergeStringMaps(getLabels(), p.getPodLabels()),
 				},
 				Spec: corev1.PodSpec{
-					AutomountServiceAccountToken: pointer.Bool(false),
+					AutomountServiceAccountToken: ptr.To(false),
 					PriorityClassName:            p.values.PriorityClassName,
 					Containers: []corev1.Container{
 						{
@@ -626,7 +626,7 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap, dashboar
 							Name: "plutono-storage",
 							VolumeSource: corev1.VolumeSource{
 								EmptyDir: &corev1.EmptyDirVolumeSource{
-									SizeLimit: utils.QuantityPtr(resource.MustParse("100Mi")),
+									SizeLimit: ptr.To(resource.MustParse("100Mi")),
 								},
 							},
 						},
@@ -748,7 +748,7 @@ func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error)
 			Organization:                []string{"gardener.cloud:monitoring:ingress"},
 			DNSNames:                    []string{p.values.IngressHost},
 			CertType:                    secrets.ServerCert,
-			Validity:                    pointer.Duration(ingressTLSCertificateValidity),
+			Validity:                    ptr.To(ingressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
 		}, secretsmanager.SignedByCA(caName))
 		if err != nil {
@@ -768,7 +768,7 @@ func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error)
 			},
 		},
 		Spec: networkingv1.IngressSpec{
-			IngressClassName: pointer.String(v1beta1constants.SeedNginxIngressClass),
+			IngressClassName: ptr.To(v1beta1constants.SeedNginxIngressClass),
 			TLS: []networkingv1.IngressTLS{{
 				SecretName: ingressTLSSecretName,
 				Hosts:      []string{p.values.IngressHost},

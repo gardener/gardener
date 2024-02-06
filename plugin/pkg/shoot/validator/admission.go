@@ -40,7 +40,7 @@ import (
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	kubeinformers "k8s.io/client-go/informers"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
@@ -630,7 +630,7 @@ func (c *validationContext) addMetadataAnnotations(a admission.Attributes) {
 	}
 
 	if c.shoot.Spec.Maintenance != nil &&
-		pointer.BoolDeref(c.shoot.Spec.Maintenance.ConfineSpecUpdateRollout, false) &&
+		ptr.Deref(c.shoot.Spec.Maintenance.ConfineSpecUpdateRollout, false) &&
 		!apiequality.Semantic.DeepEqual(c.oldShoot.Spec, c.shoot.Spec) &&
 		c.shoot.Status.LastOperation != nil &&
 		c.shoot.Status.LastOperation.State == core.LastOperationStateFailed {
@@ -778,9 +778,9 @@ func performKubernetesDefaulting(newShoot, oldShoot *core.Shoot) {
 	if newShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig == nil {
 		// Error is ignored here because we cannot do anything meaningful with it - variable will default to "false".
 		if k8sLessThan126, _ := versionutils.CheckVersionMeetsConstraint(newShoot.Spec.Kubernetes.Version, "< 1.26"); k8sLessThan126 {
-			newShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
+			newShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
 		} else {
-			newShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(false)
+			newShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(false)
 		}
 	}
 
@@ -788,7 +788,7 @@ func performKubernetesDefaulting(newShoot, oldShoot *core.Shoot) {
 		// Error is ignored here because we cannot do anything meaningful with them - variables will default to `false`.
 		k8sLess125, _ := versionutils.CheckVersionMeetsConstraint(newShoot.Spec.Kubernetes.Version, "< 1.25")
 		if newShoot.Spec.Kubernetes.AllowPrivilegedContainers == nil && k8sLess125 && !isPSPDisabled(newShoot) {
-			newShoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(true)
+			newShoot.Spec.Kubernetes.AllowPrivilegedContainers = ptr.To(true)
 		}
 
 		k8sLess127, _ := versionutils.CheckVersionMeetsConstraint(newShoot.Spec.Kubernetes.Version, "< 1.27")
@@ -919,7 +919,7 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 		}
 		isVolumePresentInCloudprofile, availableInAllZones, isUsableVolume, supportedVolumeTypes := validateVolumeTypes(c.cloudProfile.Spec.VolumeTypes, worker.Volume, oldWorker.Volume, c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, worker.Zones)
 		if !isVolumePresentInCloudprofile {
-			allErrs = append(allErrs, field.NotSupported(idxPath.Child("volume", "type"), pointer.StringDeref(worker.Volume.Type, ""), supportedVolumeTypes))
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("volume", "type"), ptr.Deref(worker.Volume.Type, ""), supportedVolumeTypes))
 		} else if !availableInAllZones || !isUsableVolume {
 			detail := fmt.Sprintf("volume type %q ", *worker.Volume.Type)
 			if !isUsableVolume {
@@ -968,7 +968,7 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 func isPSPDisabled(shoot *core.Shoot) bool {
 	if shoot.Spec.Kubernetes.KubeAPIServer != nil {
 		for _, plugin := range shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins {
-			if plugin.Name == "PodSecurityPolicy" && pointer.BoolDeref(plugin.Disabled, false) {
+			if plugin.Name == "PodSecurityPolicy" && ptr.Deref(plugin.Disabled, false) {
 				return true
 			}
 		}
@@ -1154,7 +1154,7 @@ func defaultKubernetesVersion(constraints []core.ExpirableVersion, shootVersion 
 			allErrs = append(allErrs, field.Invalid(fldPath, versionParts[1], "must be a semantic version"))
 			return nil, allErrs
 		}
-		shootVersionMinor = pointer.Uint64(uint64(v))
+		shootVersionMinor = ptr.To(uint64(v))
 	}
 	if len(versionParts) >= 1 && len(versionParts[0]) > 0 {
 		v, err := strconv.Atoi(versionParts[0])
@@ -1162,11 +1162,11 @@ func defaultKubernetesVersion(constraints []core.ExpirableVersion, shootVersion 
 			allErrs = append(allErrs, field.Invalid(fldPath, versionParts[0], "must be a semantic version"))
 			return nil, allErrs
 		}
-		shootVersionMajor = pointer.Uint64(uint64(v))
+		shootVersionMajor = ptr.To(uint64(v))
 	}
 
 	if latestVersion := findLatestVersion(constraints, shootVersionMajor, shootVersionMinor); latestVersion != nil {
-		return pointer.String(latestVersion.String()), nil
+		return ptr.To(latestVersion.String()), nil
 	}
 
 	allErrs = append(allErrs, field.Invalid(fldPath, shootVersion, fmt.Sprintf("couldn't find a suitable version for %s. Suitable versions have a non-expired expiration date and are no 'preview' versions. 'Preview'-classified versions have to be selected explicitly", shootVersion)))
@@ -1240,7 +1240,7 @@ func validateKubernetesVersionConstraints(a admission.Attributes, constraints []
 }
 
 func validateMachineTypes(constraints []core.MachineType, machine, oldMachine core.Machine, regions []core.Region, region string, zones []string) (bool, bool, bool, bool, []string) {
-	if machine.Type == oldMachine.Type && pointer.StringEqual(machine.Architecture, oldMachine.Architecture) {
+	if machine.Type == oldMachine.Type && ptr.Equal(machine.Architecture, oldMachine.Architecture) {
 		return true, true, true, true, nil
 	}
 
@@ -1252,10 +1252,10 @@ func validateMachineTypes(constraints []core.MachineType, machine, oldMachine co
 	)
 
 	for _, t := range constraints {
-		if pointer.StringEqual(t.Architecture, machine.Architecture) {
+		if ptr.Equal(t.Architecture, machine.Architecture) {
 			machinesWithSupportedArchitecture.Insert(t.Name)
 		}
-		if pointer.BoolDeref(t.Usable, false) {
+		if ptr.Deref(t.Usable, false) {
 			usableMachines.Insert(t.Name)
 		}
 		if !isUnavailableInAtleastOneZone(regions, region, zones, t.Name, func(zone core.AvailabilityZone) []string { return zone.UnavailableMachineTypes }) {
@@ -1359,7 +1359,7 @@ func validateVolumeTypes(constraints []core.VolumeType, volume, oldVolume *core.
 	)
 
 	for _, v := range constraints {
-		if pointer.BoolDeref(v.Usable, false) {
+		if ptr.Deref(v.Usable, false) {
 			usableVolumes.Insert(v.Name)
 		}
 		if !isUnavailableInAtleastOneZone(regions, region, zones, v.Name, func(zone core.AvailabilityZone) []string { return zone.UnavailableVolumeTypes }) {
@@ -1495,7 +1495,7 @@ func getDefaultMachineImage(machineImages []core.MachineImage, imageName string,
 }
 
 func validateMachineImagesConstraints(a admission.Attributes, constraints []core.MachineImage, isNewWorkerPool bool, machine, oldMachine core.Machine) (bool, bool, bool, []string) {
-	if apiequality.Semantic.DeepEqual(machine.Image, oldMachine.Image) && pointer.StringEqual(machine.Architecture, oldMachine.Architecture) {
+	if apiequality.Semantic.DeepEqual(machine.Image, oldMachine.Image) && ptr.Equal(machine.Architecture, oldMachine.Architecture) {
 		return true, true, true, nil
 	}
 

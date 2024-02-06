@@ -22,7 +22,7 @@ import (
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -34,7 +34,7 @@ var _ = Describe("CLIFlags", func() {
 	image := &imagevector.Image{
 		Name:       "hyperkube",
 		Repository: "foo.io/hyperkube",
-		Tag:        pointer.String("version"),
+		Tag:        ptr.To("version"),
 	}
 
 	DescribeTable("#CLIFlags",

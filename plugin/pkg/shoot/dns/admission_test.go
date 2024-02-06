@@ -27,7 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
 	kubeinformers "k8s.io/client-go/informers"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -190,7 +190,7 @@ var _ = Describe("dns", func() {
 
 		It("should set the 'unmanaged' dns provider as the primary one", func() {
 			shootBefore := shoot.DeepCopy()
-			shootBefore.Spec.DNS.Providers[0].Primary = pointer.Bool(true)
+			shootBefore.Spec.DNS.Providers[0].Primary = ptr.To(true)
 
 			Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 			attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
@@ -233,8 +233,8 @@ var _ = Describe("dns", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
 				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(MatchFields(IgnoreExtras, Fields{
-					"Type":    Equal(pointer.String(providerType)),
-					"Primary": Equal(pointer.Bool(true)),
+					"Type":    Equal(ptr.To(providerType)),
+					"Primary": Equal(ptr.To(true)),
 				})))
 			})
 
@@ -263,13 +263,13 @@ var _ = Describe("dns", func() {
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
 				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
-						"Type":    Equal(pointer.String(providerType)),
-						"Primary": Equal(pointer.Bool(true)),
+						"Type":    Equal(ptr.To(providerType)),
+						"Primary": Equal(ptr.To(true)),
 					}),
 					MatchFields(IgnoreExtras, Fields{
-						"Type":       Equal(pointer.String(providerType)),
+						"Type":       Equal(ptr.To(providerType)),
 						"Primary":    BeNil(),
-						"SecretName": Equal(pointer.String(secretName)),
+						"SecretName": Equal(ptr.To(secretName)),
 					}),
 				))
 			})
@@ -292,7 +292,7 @@ var _ = Describe("dns", func() {
 				}
 
 				oldShoot := shoot.DeepCopy()
-				oldShoot.Spec.DNS.Providers[1].Primary = pointer.Bool(true)
+				oldShoot.Spec.DNS.Providers[1].Primary = ptr.To(true)
 
 				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
@@ -304,12 +304,12 @@ var _ = Describe("dns", func() {
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
 				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
-						"Type": Equal(pointer.String(providerType)),
+						"Type": Equal(ptr.To(providerType)),
 					}),
 					MatchFields(IgnoreExtras, Fields{
-						"Type":       Equal(pointer.String(providerType)),
-						"Primary":    Equal(pointer.Bool(true)),
-						"SecretName": Equal(pointer.String(secretName)),
+						"Type":       Equal(ptr.To(providerType)),
+						"Primary":    Equal(ptr.To(true)),
+						"SecretName": Equal(ptr.To(secretName)),
 					}),
 				))
 			})
@@ -374,16 +374,16 @@ var _ = Describe("dns", func() {
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
 				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
-						"Type":    Equal(pointer.String(providerType)),
+						"Type":    Equal(ptr.To(providerType)),
 						"Primary": BeNil(),
 					}),
 					MatchFields(IgnoreExtras, Fields{
-						"Type":       Equal(pointer.String(providerType)),
+						"Type":       Equal(ptr.To(providerType)),
 						"Primary":    BeNil(),
-						"SecretName": Equal(pointer.String(secretName)),
+						"SecretName": Equal(ptr.To(secretName)),
 					}),
 					MatchFields(IgnoreExtras, Fields{
-						"Type":    Equal(pointer.String(providerType)),
+						"Type":    Equal(ptr.To(providerType)),
 						"Primary": BeNil(),
 					}),
 				))
@@ -402,7 +402,7 @@ var _ = Describe("dns", func() {
 					},
 					{
 						Type:    &providerType,
-						Primary: pointer.Bool(true),
+						Primary: ptr.To(true),
 					},
 					{
 						Type: &providerType,
@@ -439,7 +439,7 @@ var _ = Describe("dns", func() {
 					},
 					{
 						Type:    &providerType,
-						Primary: pointer.Bool(true),
+						Primary: ptr.To(true),
 					},
 					{
 						Type: &providerType,
@@ -459,14 +459,14 @@ var _ = Describe("dns", func() {
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
 				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
-						"Type": Equal(pointer.String(providerType)),
+						"Type": Equal(ptr.To(providerType)),
 					}),
 					MatchFields(IgnoreExtras, Fields{
-						"Type":    Equal(pointer.String(providerType)),
-						"Primary": Equal(pointer.Bool(true)),
+						"Type":    Equal(ptr.To(providerType)),
+						"Primary": Equal(ptr.To(true)),
 					}),
 					MatchFields(IgnoreExtras, Fields{
-						"Type": Equal(pointer.String(providerType)),
+						"Type": Equal(ptr.To(providerType)),
 					}),
 				))
 			})
@@ -531,9 +531,9 @@ var _ = Describe("dns", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(fmt.Sprintf("%s.%s.%s", shootName, projectName, domain)))
 				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(MatchFields(IgnoreExtras, Fields{
-					"Type":       Equal(pointer.String(providerType)),
+					"Type":       Equal(ptr.To(providerType)),
 					"Primary":    BeNil(),
-					"SecretName": Equal(pointer.String(secretName)),
+					"SecretName": Equal(ptr.To(secretName)),
 				})))
 			})
 
@@ -542,7 +542,7 @@ var _ = Describe("dns", func() {
 					{
 						Type:       &providerType,
 						SecretName: &secretName,
-						Primary:    pointer.Bool(true),
+						Primary:    ptr.To(true),
 					},
 				}
 
@@ -567,7 +567,7 @@ var _ = Describe("dns", func() {
 					{
 						Type:       &providerType,
 						SecretName: &secretName,
-						Primary:    pointer.Bool(true),
+						Primary:    ptr.To(true),
 					},
 				}
 

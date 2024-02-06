@@ -21,13 +21,14 @@ import (
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/component-base/featuregate"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -269,10 +270,10 @@ var _ = Describe("KubeAPIServer", func() {
 						botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
 						botanist.ManagedSeedAPIServer = &helper.ManagedSeedAPIServer{
 							Autoscaler: &helper.ManagedSeedAPIServerAutoscaler{
-								MinReplicas: pointer.Int32(16),
+								MinReplicas: ptr.To(int32(16)),
 								MaxReplicas: 32,
 							},
-							Replicas: pointer.Int32(24),
+							Replicas: ptr.To(int32(24)),
 						}
 					},
 					map[featuregate.Feature]bool{
@@ -297,10 +298,10 @@ var _ = Describe("KubeAPIServer", func() {
 						botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
 						botanist.ManagedSeedAPIServer = &helper.ManagedSeedAPIServer{
 							Autoscaler: &helper.ManagedSeedAPIServerAutoscaler{
-								MinReplicas: pointer.Int32(16),
+								MinReplicas: ptr.To(int32(16)),
 								MaxReplicas: 32,
 							},
-							Replicas: pointer.Int32(24),
+							Replicas: ptr.To(int32(24)),
 						}
 					},
 					map[featuregate.Feature]bool{features.HVPAForShootedSeed: false},
@@ -314,7 +315,7 @@ var _ = Describe("KubeAPIServer", func() {
 						HVPAEnabled:               false,
 						MinReplicas:               16,
 						MaxReplicas:               32,
-						Replicas:                  pointer.Int32(24),
+						Replicas:                  ptr.To(int32(24)),
 						UseMemoryMetricForHvpaHPA: true,
 						ScaleDownDisabledForHvpa:  false,
 					},
@@ -324,10 +325,10 @@ var _ = Describe("KubeAPIServer", func() {
 						botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
 						botanist.ManagedSeedAPIServer = &helper.ManagedSeedAPIServer{
 							Autoscaler: &helper.ManagedSeedAPIServerAutoscaler{
-								MinReplicas: pointer.Int32(16),
+								MinReplicas: ptr.To(int32(16)),
 								MaxReplicas: 32,
 							},
-							Replicas: pointer.Int32(24),
+							Replicas: ptr.To(int32(24)),
 						}
 					},
 					map[featuregate.Feature]bool{
@@ -343,7 +344,7 @@ var _ = Describe("KubeAPIServer", func() {
 						HVPAEnabled:               false,
 						MinReplicas:               16,
 						MaxReplicas:               32,
-						Replicas:                  pointer.Int32(24),
+						Replicas:                  ptr.To(int32(24)),
 						UseMemoryMetricForHvpaHPA: true,
 						ScaleDownDisabledForHvpa:  false,
 					},
@@ -428,7 +429,7 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("no need for external DNS",
 					func() {
-						botanist.Shoot.GetInfo().Spec.DNS.Providers = []gardencorev1beta1.DNSProvider{{Type: pointer.String("unmanaged")}}
+						botanist.Shoot.GetInfo().Spec.DNS.Providers = []gardencorev1beta1.DNSProvider{{Type: ptr.To("unmanaged")}}
 						botanist.Shoot.ExternalClusterDomain = nil
 						botanist.Garden.InternalDomain = &gardenerutils.Domain{}
 					},
@@ -440,9 +441,9 @@ var _ = Describe("KubeAPIServer", func() {
 					func() {
 						botanist.Garden.InternalDomain = &gardenerutils.Domain{}
 						botanist.Shoot.ExternalDomain = &gardenerutils.Domain{}
-						botanist.Shoot.ExternalClusterDomain = pointer.String("some-domain")
+						botanist.Shoot.ExternalClusterDomain = ptr.To("some-domain")
 						botanist.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{
-							Domain:    pointer.String("some-domain"),
+							Domain:    ptr.To("some-domain"),
 							Providers: []gardencorev1beta1.DNSProvider{{}},
 						}
 					},
@@ -520,11 +521,11 @@ var _ = Describe("KubeAPIServer", func() {
 			shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
 				KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
 					ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
-						Issuer:          pointer.String("issuer"),
+						Issuer:          ptr.To("issuer"),
 						AcceptedIssuers: []string{"issuer1", "issuer2"},
 					},
 				},
-				EnableStaticTokenKubeconfig: pointer.Bool(false),
+				EnableStaticTokenKubeconfig: ptr.To(false),
 			}
 			botanist.Shoot.SetInfo(shootCopy)
 
@@ -567,7 +568,7 @@ var _ = Describe("KubeAPIServer", func() {
 			Expect(botanist.ScaleKubeAPIServerToOne(ctx)).To(Succeed())
 
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-			Expect(deployment.Spec.Replicas).To(Equal(pointer.Int32(1)))
+			Expect(deployment.Spec.Replicas).To(PointTo(Equal(int32(1))))
 		})
 	})
 })
