@@ -64,7 +64,7 @@ func SerializeCommandLine(command []string, n int, sep string) string {
 	return strings.Join(command[0:n], " ") + " " + strings.Join(command[n:], sep)
 }
 
-// ContainerWithName returns the first occurrence of a container with the given name if it exists in the given slice, nil otherwise.
+// ContainerWithName returns the first container with the specified name from the slice, or nil if not found.
 func ContainerWithName(containers []corev1.Container, name string) *corev1.Container {
 	for i, container := range containers {
 		if container.Name == name {
@@ -74,7 +74,7 @@ func ContainerWithName(containers []corev1.Container, name string) *corev1.Conta
 	return nil
 }
 
-// PVCWithName returns the first occurrence of a PersistentVolumeClaim with the given name if it exists in the given slice, nil otherwise.
+// PVCWithName returns the first PersistentVolumeClaim with the specified name from the slice, or nil if not found.
 func PVCWithName(pvcs []corev1.PersistentVolumeClaim, name string) *corev1.PersistentVolumeClaim {
 	for i, pvc := range pvcs {
 		if pvc.Name == name {
@@ -84,7 +84,7 @@ func PVCWithName(pvcs []corev1.PersistentVolumeClaim, name string) *corev1.Persi
 	return nil
 }
 
-// UnitWithName returns the first occurrence of a unit with the given name if it exists in the given slice, nil otherwise.
+// UnitWithName returns the first unit with the specified name from the slice, or nil if not found.
 func UnitWithName(units []extensionsv1alpha1.Unit, name string) *extensionsv1alpha1.Unit {
 	for i, unit := range units {
 		if unit.Name == name {
@@ -94,7 +94,7 @@ func UnitWithName(units []extensionsv1alpha1.Unit, name string) *extensionsv1alp
 	return nil
 }
 
-// FileWithPath returns the first occurrence of a file with the given path if it exists in the given slice, nil otherwise.
+// FileWithPath returns the first file with the specified path from the slice, or nil if not found.
 func FileWithPath(files []extensionsv1alpha1.File, path string) *extensionsv1alpha1.File {
 	for i, file := range files {
 		if file.Path == path {
@@ -104,7 +104,7 @@ func FileWithPath(files []extensionsv1alpha1.File, path string) *extensionsv1alp
 	return nil
 }
 
-// UnitOptionWithSectionAndName returns the first occurrence of a unit option with the given section and name if it exists in the given slice, nil otherwise.
+// UnitOptionWithSectionAndName returns the first unit option with the specified section and name from the slice, or nil if not found.
 func UnitOptionWithSectionAndName(opts []*unit.UnitOption, section, name string) *unit.UnitOption {
 	for i, opt := range opts {
 		if opt.Section == section && opt.Name == name {
@@ -159,7 +159,6 @@ func EnsureStringWithPrefixContains(items []string, prefix, value, sep string) [
 // EnsureNoStringWithPrefixContains ensures that either a string having the given prefix does not exist in the given slice,
 // or it doesn't contain the given value in a list separated by sep.
 func EnsureNoStringWithPrefixContains(items []string, prefix, value, sep string) []string {
-
 	for i, item := range items {
 		if !strings.HasPrefix(item, prefix) {
 			continue
