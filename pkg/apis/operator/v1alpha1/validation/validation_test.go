@@ -1216,12 +1216,12 @@ var _ = Describe("Validation Tests", func() {
 								HTTPAccessVerbosity: ptr.To(int32(3)),
 							}, BeEmpty()),
 							Entry("invalid (verbosity<0)", &gardencorev1beta1.APIServerLogging{
-								Verbosity: ptr.To(int32(negativeSize)),
+								Verbosity: ptr.To(negativeSize),
 							}, ConsistOf(
 								field.Invalid(field.NewPath("spec.virtualCluster.gardener.gardenerAPIServer.logging.verbosity"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
 							)),
 							Entry("invalid (httpAccessVerbosity<0)", &gardencorev1beta1.APIServerLogging{
-								HTTPAccessVerbosity: ptr.To(int32(negativeSize)),
+								HTTPAccessVerbosity: ptr.To(negativeSize),
 							}, ConsistOf(
 								field.Invalid(field.NewPath("spec.virtualCluster.gardener.gardenerAPIServer.logging.httpAccessVerbosity"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
 							)),
