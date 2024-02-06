@@ -19,7 +19,9 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
@@ -47,6 +49,11 @@ var _ = Describe("Prometheus", func() {
 		namespace           = "some-namespace"
 		managedResourceName = "alertmanager-" + name
 
+		image             = "some-image"
+		version           = "v1.2.3"
+		priorityClassName = "priority-class"
+		storageCapacity   = resource.MustParse("1337Gi")
+
 		fakeClient client.Client
 		deployer   component.DeployWaiter
 		values     Values
@@ -56,7 +63,8 @@ var _ = Describe("Prometheus", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
-		service *corev1.Service
+		service      *corev1.Service
+		alertManager *monitoringv1.Alertmanager
 	)
 
 	BeforeEach(func() {
@@ -65,7 +73,11 @@ var _ = Describe("Prometheus", func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
 		values = Values{
-			Name: name,
+			Name:              name,
+			Image:             image,
+			Version:           version,
+			PriorityClassName: priorityClassName,
+			StorageCapacity:   storageCapacity,
 		}
 
 		fakeOps = &retryfake.Ops{MaxAttempts: 2}
@@ -110,6 +122,55 @@ var _ = Describe("Prometheus", func() {
 					Name: "metrics",
 					Port: 9093,
 				}},
+			},
+		}
+		alertManager = &monitoringv1.Alertmanager{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+				Labels: map[string]string{
+					"component": "alertmanager",
+					"role":      "monitoring",
+				},
+			},
+			Spec: monitoringv1.AlertmanagerSpec{
+				PodMetadata: &monitoringv1.EmbeddedObjectMetadata{
+					Labels: map[string]string{
+						"component":                        "alertmanager",
+						"role":                             "monitoring",
+						"networking.gardener.cloud/to-dns": "allowed",
+						"networking.gardener.cloud/to-public-networks":  "allowed",
+						"networking.gardener.cloud/to-private-networks": "allowed",
+					},
+				},
+				PriorityClassName: priorityClassName,
+				Replicas:          ptr.To(int32(1)),
+				Image:             &image,
+				ImagePullPolicy:   corev1.PullIfNotPresent,
+				Version:           version,
+				Resources: corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("5m"),
+						corev1.ResourceMemory: resource.MustParse("20Mi"),
+					},
+					Limits: corev1.ResourceList{
+						corev1.ResourceMemory: resource.MustParse("200Mi"),
+					},
+				},
+				SecurityContext: &corev1.PodSecurityContext{RunAsUser: ptr.To(int64(0))},
+				Storage: &monitoringv1.StorageSpec{
+					VolumeClaimTemplate: monitoringv1.EmbeddedPersistentVolumeClaim{
+						EmbeddedObjectMetadata: monitoringv1.EmbeddedObjectMetadata{Name: "alertmanager-db"},
+						Spec: corev1.PersistentVolumeClaimSpec{
+							AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+							Resources:   corev1.ResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceStorage: storageCapacity}},
+						},
+					},
+				},
+				AlertmanagerConfigSelector:          &metav1.LabelSelector{MatchLabels: map[string]string{"alertmanager": name}},
+				AlertmanagerConfigNamespaceSelector: &metav1.LabelSelector{},
+				LogLevel:                            "info",
+				ForceEnableClusterMode:              true,
 			},
 		}
 	})
@@ -170,8 +231,9 @@ var _ = Describe("Prometheus", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(1))
+				Expect(managedResourceSecret.Data).To(HaveLen(2))
 				Expect(string(managedResourceSecret.Data["service__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
+				Expect(string(managedResourceSecret.Data["alertmanager__some-namespace__"+name+".yaml"])).To(Equal(componenttest.Serialize(alertManager)))
 			})
 		})
 	})

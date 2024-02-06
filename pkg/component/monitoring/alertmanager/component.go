@@ -18,6 +18,7 @@ import (
 	"context"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -34,6 +35,14 @@ const (
 type Values struct {
 	// Name is the name of the AlertManager. It will be used for the resource names of AlertManager and ManagedResource.
 	Name string
+	// Image defines the container image of AlertManager.
+	Image string
+	// Version is the version of AlertManager.
+	Version string
+	// PriorityClassName is the name of the priority class for the StatefulSet.
+	PriorityClassName string
+	// StorageCapacity is the storage capacity of AlertManager.
+	StorageCapacity resource.Quantity
 }
 
 // New creates a new instance of DeployWaiter for the AlertManager.
@@ -56,6 +65,7 @@ func (a *alertManager) Deploy(ctx context.Context) error {
 
 	resources, err := registry.AddAllAndSerialize(
 		a.service(),
+		a.alertManager(),
 	)
 	if err != nil {
 		return err
