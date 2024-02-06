@@ -43,6 +43,8 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/gardeneruser"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/sshdensurer"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/features"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -183,7 +185,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			expected []*extensionsv1alpha1.OperatingSystemConfig
 		)
 
-		computeExpectedOperatingSystemConfigs := func(useGardenerNodeAgent bool) []*extensionsv1alpha1.OperatingSystemConfig {
+		computeExpectedOperatingSystemConfigs := func(useGardenerNodeAgent, sshAccessEnabled bool) []*extensionsv1alpha1.OperatingSystemConfig {
 			expected := make([]*extensionsv1alpha1.OperatingSystemConfig, 0, 2*len(workers))
 			for _, worker := range workers {
 				var (
@@ -225,7 +227,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						CABundle: []byte(*caBundle),
 					}},
 				)
-				originalUnits, originalFiles, _ := originalConfigFn(components.Context{
+				componentsContext := components.Context{
 					Key:               key,
 					CABundle:          caBundle,
 					ClusterDNSAddress: clusterDNSAddress,
@@ -239,9 +241,11 @@ var _ = Describe("OperatingSystemConfig", func() {
 					},
 					KubeletDataVolumeName: &kubeletDataVolumeName,
 					KubernetesVersion:     k8sVersion,
+					SSHAccessEnabled:      true,
 					SSHPublicKeys:         sshPublicKeys,
 					ValitailEnabled:       valitailEnabled,
-				})
+				}
+				originalUnits, originalFiles, _ := originalConfigFn(componentsContext)
 
 				initSuffix := "-downloader"
 				if useGardenerNodeAgent {
@@ -273,6 +277,16 @@ var _ = Describe("OperatingSystemConfig", func() {
 				if useGardenerNodeAgent {
 					oscInit.Spec.Units = initUnits
 					oscInit.Spec.Files = initFiles
+					if sshAccessEnabled {
+						gUnits, gFiles, err := gardeneruser.New().Config(componentsContext)
+						Expect(err).ToNot(HaveOccurred())
+						oscInit.Spec.Units = append(oscInit.Spec.Units, gUnits...)
+						oscInit.Spec.Files = append(oscInit.Spec.Files, gFiles...)
+						sUnits, sFiles, err := sshdensurer.New().Config(componentsContext)
+						Expect(err).ToNot(HaveOccurred())
+						oscInit.Spec.Units = append(oscInit.Spec.Units, sUnits...)
+						oscInit.Spec.Files = append(oscInit.Spec.Files, sFiles...)
+					}
 				} else {
 					oscInit.Spec.Units = downloaderUnits
 					oscInit.Spec.Files = downloaderFiles
@@ -369,7 +383,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				},
 			}
 
-			expected = computeExpectedOperatingSystemConfigs(false)
+			expected = computeExpectedOperatingSystemConfigs(false, false)
 			defaultDepWaiter = New(log, c, sm, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 		})
 
@@ -437,7 +451,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
-				for _, e := range computeExpectedOperatingSystemConfigs(false) {
+				for _, e := range computeExpectedOperatingSystemConfigs(false, false) {
 					actual := &extensionsv1alpha1.OperatingSystemConfig{}
 					Expect(c.Get(ctx, client.ObjectKey{Name: e.Name, Namespace: e.Namespace}, actual)).To(Succeed())
 
@@ -462,7 +476,33 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
-				for _, e := range computeExpectedOperatingSystemConfigs(true) {
+				for _, e := range computeExpectedOperatingSystemConfigs(true, false) {
+					actual := &extensionsv1alpha1.OperatingSystemConfig{}
+					Expect(c.Get(ctx, client.ObjectKey{Name: e.Name, Namespace: e.Namespace}, actual)).To(Succeed())
+
+					obj := e.DeepCopy()
+					obj.TypeMeta.APIVersion = extensionsv1alpha1.SchemeGroupVersion.String()
+					obj.TypeMeta.Kind = extensionsv1alpha1.OperatingSystemConfigResource
+					obj.ResourceVersion = "1"
+
+					Expect(actual).To(Equal(obj))
+				}
+			})
+
+			It("should successfully deploy all extensions resources when UseGardenerNodeAgent feature gate is on and SSH access is enabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, true))
+				DeferCleanup(test.WithVars(
+					&TimeNow, mockNow.Do,
+					&InitConfigFn, initConfigFn,
+					&OriginalConfigFn, originalConfigFn,
+					&values.SSHAccessEnabled, true,
+				))
+
+				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+				for _, e := range computeExpectedOperatingSystemConfigs(true, true) {
 					actual := &extensionsv1alpha1.OperatingSystemConfig{}
 					Expect(c.Get(ctx, client.ObjectKey{Name: e.Name, Namespace: e.Namespace}, actual)).To(Succeed())
 

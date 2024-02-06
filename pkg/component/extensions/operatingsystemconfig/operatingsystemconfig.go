@@ -39,7 +39,9 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/nodeinit"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/gardeneruser"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/sshdensurer"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/features"
@@ -643,6 +645,29 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		err       error
 	)
 
+	componentsContext := components.Context{
+		Key:                     d.key,
+		CABundle:                d.caBundle,
+		ClusterDNSAddress:       d.clusterDNSAddress,
+		ClusterDomain:           d.clusterDomain,
+		CRIName:                 d.criName,
+		Images:                  d.images,
+		NodeLabels:              gardenerutils.NodeLabelsForWorkerPool(d.worker, d.nodeLocalDNSEnabled),
+		KubeletCABundle:         d.kubeletCABundle,
+		KubeletConfigParameters: d.kubeletConfigParameters,
+		KubeletCLIFlags:         d.kubeletCLIFlags,
+		KubeletDataVolumeName:   d.kubeletDataVolumeName,
+		KubernetesVersion:       d.kubernetesVersion,
+		SSHPublicKeys:           d.sshPublicKeys,
+		SSHAccessEnabled:        d.sshAccessEnabled,
+		ValitailEnabled:         d.valitailEnabled,
+		ValiIngress:             d.valiIngressHostName,
+		APIServerURL:            d.apiServerURL,
+		Sysctls:                 d.worker.Sysctls,
+		OSCSyncJitterPeriod:     d.oscSyncJitterPeriod,
+		PreferIPv6:              d.primaryIPFamily == gardencorev1beta1.IPFamilyIPv6,
+	}
+
 	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
 		initUnits, initFiles, err = InitConfigFn(
 			d.worker,
@@ -669,33 +694,24 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 	case extensionsv1alpha1.OperatingSystemConfigPurposeProvision:
 		if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
 			units, files = initUnits, initFiles
+
+			// Add gardener-user and sshd-ensurer when SSH access for the node is enabled
+			if d.sshAccessEnabled {
+				for _, c := range []components.Component{gardeneruser.New(), sshdensurer.New()} {
+					cUnits, cFiles, err := c.Config(componentsContext)
+					if err != nil {
+						return nil, err
+					}
+					units = append(units, cUnits...)
+					files = append(files, cFiles...)
+				}
+			}
 		} else {
 			units, files = downloaderUnits, downloaderFiles
 		}
 
 	case extensionsv1alpha1.OperatingSystemConfigPurposeReconcile:
-		units, files, err = OriginalConfigFn(components.Context{
-			Key:                     d.key,
-			CABundle:                d.caBundle,
-			ClusterDNSAddress:       d.clusterDNSAddress,
-			ClusterDomain:           d.clusterDomain,
-			CRIName:                 d.criName,
-			Images:                  d.images,
-			NodeLabels:              gardenerutils.NodeLabelsForWorkerPool(d.worker, d.nodeLocalDNSEnabled),
-			KubeletCABundle:         d.kubeletCABundle,
-			KubeletConfigParameters: d.kubeletConfigParameters,
-			KubeletCLIFlags:         d.kubeletCLIFlags,
-			KubeletDataVolumeName:   d.kubeletDataVolumeName,
-			KubernetesVersion:       d.kubernetesVersion,
-			SSHPublicKeys:           d.sshPublicKeys,
-			SSHAccessEnabled:        d.sshAccessEnabled,
-			ValitailEnabled:         d.valitailEnabled,
-			ValiIngress:             d.valiIngressHostName,
-			APIServerURL:            d.apiServerURL,
-			Sysctls:                 d.worker.Sysctls,
-			OSCSyncJitterPeriod:     d.oscSyncJitterPeriod,
-			PreferIPv6:              d.primaryIPFamily == gardencorev1beta1.IPFamilyIPv6,
-		})
+		units, files, err = OriginalConfigFn(componentsContext)
 		if err != nil {
 			return nil, err
 		}
