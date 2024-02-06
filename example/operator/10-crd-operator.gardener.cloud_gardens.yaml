@@ -101,7 +101,7 @@ spec:
                       domain:
                         description: 'Deprecated: This field is deprecated and will
                           be removed soon. Please use `Domains` instead. TODO(scheererj):
-                          Drop this after v1.88 has been released.'
+                          Drop this after v1.90 has been released.'
                         type: string
                       domains:
                         description: Domains specify the ingress domains of the cluster

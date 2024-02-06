@@ -1164,7 +1164,7 @@ string
 <td>
 <em>(Optional)</em>
 <p>Deprecated: This field is deprecated and will be removed soon. Please use <code>Domains</code> instead.
-TODO(scheererj): Drop this after v1.88 has been released.</p>
+TODO(scheererj): Drop this after v1.90 has been released.</p>
 </td>
 </tr>
 <tr>
