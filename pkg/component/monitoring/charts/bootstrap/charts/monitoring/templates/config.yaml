@@ -88,7 +88,7 @@ data:
         - '{job="cadvisor",namespace="kube-system"}'
       static_configs:
       - targets:
-        - prometheus-web.garden.svc
+        - prometheus-cache.garden.svc
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.cadvisor | indent 6 }}
 

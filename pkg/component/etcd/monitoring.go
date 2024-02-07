@@ -382,7 +382,7 @@ params:
   - '{job="` + monitoringPrometheusJobDruidName + `",etcd_namespace="{{ .namespace }}"}'
 static_configs:
 - targets:
-  - prometheus-web.garden.svc`
+  - prometheus-cache.garden.svc`
 )
 
 var (

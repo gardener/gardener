@@ -77,7 +77,7 @@ data:
       - source_labels:
         - __meta_kubernetes_service_name
         - __meta_kubernetes_service_port_name
-        regex: prometheus-web;web
+        regex: prometheus-cache;web
         action: keep
 
     - job_name: alertmanager

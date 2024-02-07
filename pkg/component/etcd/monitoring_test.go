@@ -228,7 +228,7 @@ params:
   - '{job="etcd-druid",etcd_namespace="` + testNamespace + `"}'
 static_configs:
 - targets:
-  - prometheus-web.garden.svc`
+  - prometheus-cache.garden.svc`
 
 	alertingRulesNormalSingleNode = `groups:
 - name: kube-etcd3-` + testRole + `.rules

@@ -29,6 +29,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 	"golang.org/x/time/rate"
+	appsv1 "k8s.io/api/apps/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -396,6 +397,11 @@ func (g *garden) Start(ctx context.Context) error {
 		return err
 	}
 
+	log.Info("Updating shoot Prometheus config for connection to cache Prometheus")
+	if err := updateShootPrometheusConfigForConnectionToCachePrometheus(ctx, g.mgr.GetClient()); err != nil {
+		return err
+	}
+
 	log.Info("Setting up shoot client map")
 	shootClientMap, err := clientmapbuilder.
 		NewShootClientMapBuilder().
@@ -692,6 +698,50 @@ func getSecretsToRecreate(ctx context.Context, c client.Client, namespacesInDele
 		return namespacesInDeletion.Has(s.Namespace) || !slices.Contains(s.Finalizers, grmFinalizer) || s.DeletionTimestamp == nil
 	})
 	return secretsToRecreate, nil
+}
+
+// TODO(rfranzke): Remove this code after v1.90 has been released.
+func updateShootPrometheusConfigForConnectionToCachePrometheus(ctx context.Context, seedClient client.Client) error {
+	statefulSetList := &appsv1.StatefulSetList{}
+	if err := seedClient.List(ctx, statefulSetList, client.MatchingLabels{"app": "prometheus", "role": "monitoring", "gardener.cloud/role": "monitoring"}); err != nil {
+		return err
+	}
+
+	var taskFns []flow.TaskFn
+	for _, obj := range statefulSetList.Items {
+		if !strings.HasPrefix(obj.Namespace, v1beta1constants.TechnicalIDPrefix) {
+			continue
+		}
+
+		statefulSet := obj.DeepCopy()
+
+		taskFns = append(taskFns,
+			func(ctx context.Context) error {
+				patch := client.MergeFrom(statefulSet.DeepCopy())
+				metav1.SetMetaDataLabel(&statefulSet.Spec.Template.ObjectMeta, "networking.resources.gardener.cloud/to-garden-prometheus-cache-tcp-9090", "allowed")
+				return seedClient.Patch(ctx, statefulSet, patch)
+			},
+			func(ctx context.Context) error {
+				configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-config", Namespace: statefulSet.Namespace}}
+				if err := seedClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
+					if apierrors.IsNotFound(err) {
+						return nil
+					}
+					return err
+				}
+
+				if configMap.Data == nil || configMap.Data["prometheus.yaml"] == "" {
+					return nil
+				}
+
+				patch := client.MergeFrom(configMap.DeepCopy())
+				configMap.Data["prometheus.yaml"] = strings.ReplaceAll(configMap.Data["prometheus.yaml"], "prometheus-web.garden.svc", "prometheus-cache.garden.svc")
+				return seedClient.Patch(ctx, configMap, patch)
+			},
+		)
+	}
+
+	return flow.Parallel(taskFns...)(ctx)
 }
 
 func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) error {

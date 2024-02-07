@@ -66,8 +66,10 @@ spec:
         # needed for blackbox-exporter sidecar container to talk to shoot API server via istio-ingressgateway
         networking.gardener.cloud/to-public-networks: allowed
         networking.resources.gardener.cloud/to-all-istio-ingresses-istio-ingressgateway-tcp-9443: allowed
-        networking.resources.gardener.cloud/to-garden-prometheus-web-tcp-9090: allowed
+        networking.resources.gardener.cloud/to-garden-prometheus-cache-tcp-9090: allowed
         networking.resources.gardener.cloud/to-garden-alertmanager-client-tcp-9093: allowed
+        # TODO(rfranzke): Remove this label after v1.90 has been released.
+        networking.resources.gardener.cloud/to-garden-prometheus-web-tcp-9090: allowed
     spec:
       # used to talk to Seed's API server.
       serviceAccountName: prometheus
