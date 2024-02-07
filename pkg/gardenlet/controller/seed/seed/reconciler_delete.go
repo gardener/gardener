@@ -153,6 +153,10 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Name: "Destroying cache Prometheus",
 			Fn:   c.cachePrometheus.Destroy,
 		})
+		destroyAlertManager = g.Add(flow.Task{
+			Name: "Destroying AlertManager",
+			Fn:   c.alertManager.Destroy,
+		})
 		destroyClusterAutoscaler = g.Add(flow.Task{
 			Name: "Destroying cluster-autoscaler resources",
 			Fn:   component.OpDestroyAndWait(c.clusterAutoscaler).Destroy,
@@ -273,6 +277,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 		syncPointCleanedUp = flow.NewTaskIDs(
 			destroyClusterIdentity,
 			destroyCachePrometheus,
+			destroyAlertManager,
 			destroyNginxIngress,
 			destroyClusterAutoscaler,
 			destroyMachineControllerManager,

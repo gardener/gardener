@@ -490,6 +490,24 @@ func (r *Reconciler) runReconcileSeedFlow(
 			},
 			Dependencies: flow.NewTaskIDs(deployCachePrometheus),
 		})
+		deployAlertmanager = g.Add(flow.Task{
+			Name: "Deploying Alertmanager",
+			Fn:   c.alertManager.Deploy,
+		})
+		// TODO(rfranzke): Remove this after v1.92 has been released.
+		_ = g.Add(flow.Task{
+			Name: "Cleaning up legacy Alertmanager resources",
+			Fn: func(ctx context.Context) error {
+				return kubernetesutils.DeleteObjects(ctx, r.SeedClientSet.Client(),
+					&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager-client", Namespace: r.GardenNamespace}},
+					&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager", Namespace: r.GardenNamespace}},
+					&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager", Namespace: r.GardenNamespace}},
+					&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager-config", Namespace: r.GardenNamespace}},
+					&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager-db-alertmanager-0", Namespace: r.GardenNamespace}},
+				)
+			},
+			Dependencies: flow.NewTaskIDs(deployAlertmanager),
+		})
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{
