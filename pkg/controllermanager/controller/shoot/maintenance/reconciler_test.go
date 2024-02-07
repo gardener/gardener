@@ -863,6 +863,14 @@ var _ = Describe("Shoot Maintenance", func() {
 			})
 		})
 
+		It("should treat workers with `cri: nil` like `cri.name: containerd` and not update if `containerd` is not explicitly supported by the machine image", func() {
+			cloudProfile.Spec.MachineImages[0].Versions[1].CRI = []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRIName("other")}}
+
+			_, err := maintainMachineImages(log, shoot, cloudProfile)
+			Expect(err).NotTo(HaveOccurred())
+			assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", "1.0.0")
+		})
+
 		It("should determine that the shoot worker machine images must NOT to be maintained - ForceUpdate not required & MaintenanceAutoUpdate set to false", func() {
 			shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = ptr.To(false)
 
