@@ -870,7 +870,7 @@ var _ = Describe("Validation Tests", func() {
 				})
 
 				It("should complain about invalid ingress domain names", func() {
-					garden.Spec.RuntimeCluster.Ingress.Domain = pointer.String(",,,")
+					garden.Spec.RuntimeCluster.Ingress.Domain = ptr.To(",,,")
 					garden.Spec.RuntimeCluster.Ingress.Domains = []string{",,,"}
 
 					Expect(ValidateGarden(garden)).To(ContainElements(
@@ -901,7 +901,7 @@ var _ = Describe("Validation Tests", func() {
 				})
 
 				It("should complain about duplicate domain names in 'domain'", func() {
-					garden.Spec.RuntimeCluster.Ingress.Domain = pointer.String("example.com")
+					garden.Spec.RuntimeCluster.Ingress.Domain = ptr.To("example.com")
 					garden.Spec.RuntimeCluster.Ingress.Domains = []string{
 						"example.com",
 						"foo.bar",
@@ -1731,7 +1731,7 @@ var _ = Describe("Validation Tests", func() {
 				})
 
 				It("should allow migrating from domain to domains", func() {
-					oldGarden.Spec.RuntimeCluster.Ingress.Domain = pointer.String("example.com")
+					oldGarden.Spec.RuntimeCluster.Ingress.Domain = ptr.To("example.com")
 					oldGarden.Spec.RuntimeCluster.Ingress.Domains = []string{}
 					newGarden.Spec.RuntimeCluster.Ingress.Domains = []string{"example.com"}
 
@@ -1742,7 +1742,7 @@ var _ = Describe("Validation Tests", func() {
 
 				It("should forbid migrating from domains to domain", func() {
 					oldGarden.Spec.RuntimeCluster.Ingress.Domains = []string{"example.com"}
-					newGarden.Spec.RuntimeCluster.Ingress.Domain = pointer.String("example.com")
+					newGarden.Spec.RuntimeCluster.Ingress.Domain = ptr.To("example.com")
 					newGarden.Spec.RuntimeCluster.Ingress.Domains = []string{}
 
 					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -1752,7 +1752,7 @@ var _ = Describe("Validation Tests", func() {
 				})
 
 				It("should forbid changing the entry while migrating from domain to domains", func() {
-					oldGarden.Spec.RuntimeCluster.Ingress.Domain = pointer.String("example.com")
+					oldGarden.Spec.RuntimeCluster.Ingress.Domain = ptr.To("example.com")
 					newGarden.Spec.RuntimeCluster.Ingress.Domains = []string{"example2.com"}
 
 					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
