@@ -3204,7 +3204,7 @@ func schema_pkg_apis_core_v1beta1_Gardener(ref common.ReferenceCallback) common.
 				Properties: map[string]spec.Schema{
 					"id": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ID is the Docker container id of the Gardener which last acted on a resource.",
+							Description: "ID is the container id of the Gardener which last acted on a resource.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -4003,7 +4003,7 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 					},
 					"imagePullProgressDeadline": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ImagePullProgressDeadline describes the time limit under which if no pulling progress is made, the image pulling will be cancelled. Default: 1m",
+							Description: "ImagePullProgressDeadline describes the time limit under which if no pulling progress is made, the image pulling will be cancelled. Default: 1m Only relevant for docker CRI.\n\nDeprecated: This field is deprecated and will be removed in Gardener release v1.89.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},

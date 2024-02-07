@@ -244,9 +244,6 @@ var _ = BeforeSuite(func() {
 							ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.1.1"},
 							CRI: []gardencorev1beta1.CRI{
 								{
-									Name: gardencorev1beta1.CRINameDocker,
-								},
-								{
 									Name: gardencorev1beta1.CRINameContainerD,
 								},
 							},

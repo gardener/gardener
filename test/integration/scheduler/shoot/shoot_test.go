@@ -647,9 +647,6 @@ func createCloudProfile(providerType, region string) *gardencorev1beta1.CloudPro
 								{
 									Name: gardencorev1beta1.CRINameContainerD,
 								},
-								{
-									Name: gardencorev1beta1.CRINameDocker,
-								},
 							},
 						},
 					},

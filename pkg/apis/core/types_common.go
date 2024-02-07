@@ -117,7 +117,7 @@ type LastOperation struct {
 
 // Gardener holds the information about the Gardener.
 type Gardener struct {
-	// ID is the Docker container id of the Gardener which last acted on a Shoot cluster.
+	// ID is the container id of the Gardener which last acted on a Shoot cluster.
 	ID string
 	// Name is the hostname (pod name) of the Gardener which last acted on a Shoot cluster.
 	Name string

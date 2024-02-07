@@ -620,7 +620,7 @@ func filterForArchitecture(machineImageFromCloudProfile *gardencorev1beta1.Machi
 
 func filterForCRI(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, workerCRI *gardencorev1beta1.CRI) *gardencorev1beta1.MachineImage {
 	if workerCRI == nil {
-		return filterForCRI(machineImageFromCloudProfile, &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameDocker})
+		return filterForCRI(machineImageFromCloudProfile, &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD})
 	}
 
 	filteredMachineImages := gardencorev1beta1.MachineImage{

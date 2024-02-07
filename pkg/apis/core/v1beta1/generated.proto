@@ -877,7 +877,7 @@ message FailureTolerance {
 
 // Gardener holds the information about the Gardener version that operated a resource.
 message Gardener {
-  // ID is the Docker container id of the Gardener which last acted on a resource.
+  // ID is the container id of the Gardener which last acted on a resource.
   optional string id = 1;
 
   // Name is the hostname (pod name) of the Gardener which last acted on a resource.
@@ -1247,6 +1247,9 @@ message KubeletConfig {
   // ImagePullProgressDeadline describes the time limit under which if no pulling progress is made, the image pulling will be cancelled.
   // +optional
   // Default: 1m
+  // Only relevant for docker CRI.
+  //
+  // Deprecated: This field is deprecated and will be removed in Gardener release v1.89.
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration imagePullProgressDeadline = 12;
 
   // FailSwapOn makes the Kubelet fail to start if swap is enabled on the node. (default true).

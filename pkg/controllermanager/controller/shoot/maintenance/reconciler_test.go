@@ -88,7 +88,7 @@ var _ = Describe("Shoot Maintenance", func() {
 									ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 										Version: shootCurrentImageVersion,
 									},
-									CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+									CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 									Architectures: []string{"amd64"},
 								},
 								{
@@ -96,7 +96,7 @@ var _ = Describe("Shoot Maintenance", func() {
 										Version:        overallLatestVersion,
 										ExpirationDate: &expirationDateInTheFuture,
 									},
-									CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+									CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 									Architectures: []string{"amd64"},
 								},
 							},
@@ -159,7 +159,7 @@ var _ = Describe("Shoot Maintenance", func() {
 						Version:        expectedVersion,
 						ExpirationDate: &expirationDateInTheFuture,
 					},
-					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 					Architectures: []string{"arm64"},
 				})
 
@@ -169,7 +169,7 @@ var _ = Describe("Shoot Maintenance", func() {
 						Version:        "1.7.1",
 						ExpirationDate: &expirationDateInTheFuture,
 					},
-					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 					Architectures: []string{"amd64"},
 				})
 
@@ -193,14 +193,14 @@ var _ = Describe("Shoot Maintenance", func() {
 							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 								Version: "1.0.0",
 							},
-							CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+							CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 							Architectures: []string{"amd64"},
 						},
 						{
 							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 								Version: expectedVersionGLWorker,
 							},
-							CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+							CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 							Architectures: []string{"amd64"},
 						},
 					},
@@ -233,7 +233,7 @@ var _ = Describe("Shoot Maintenance", func() {
 						Version: expectedVersion,
 					},
 					Architectures: []string{"amd64"},
-					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 				}
 
 				cloudProfile.Spec.MachineImages[0].Versions = append(cloudProfile.Spec.MachineImages[0].Versions, highestForMinor)
@@ -268,7 +268,7 @@ var _ = Describe("Shoot Maintenance", func() {
 									Version:        "1.1.1",
 									ExpirationDate: &expirationDateInTheFuture,
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 								Architectures: []string{"amd64"},
 							},
 							{
@@ -276,7 +276,7 @@ var _ = Describe("Shoot Maintenance", func() {
 									Version:        expectedVersion,
 									ExpirationDate: &expirationDateInTheFuture,
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 								Architectures: []string{"amd64"},
 							},
 						},
@@ -333,7 +333,7 @@ var _ = Describe("Shoot Maintenance", func() {
 						Version: expectedVersion,
 					},
 					Architectures: []string{"amd64"},
-					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 				}
 
 				versions := []gardencorev1beta1.MachineImageVersion{cloudProfile.Spec.MachineImages[0].Versions[0]}
@@ -366,7 +366,7 @@ var _ = Describe("Shoot Maintenance", func() {
 									Version:        "2.1.0",
 									ExpirationDate: &expirationDateInTheFuture,
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 								Architectures: []string{"amd64"},
 							},
 							{
@@ -374,7 +374,7 @@ var _ = Describe("Shoot Maintenance", func() {
 									Version:        expectedVersion,
 									ExpirationDate: &expirationDateInTheFuture,
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 								Architectures: []string{"amd64"},
 							},
 							{
@@ -382,7 +382,7 @@ var _ = Describe("Shoot Maintenance", func() {
 									Version:        "1.2.0",
 									ExpirationDate: &expirationDateInTheFuture,
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 								Architectures: []string{"amd64"},
 							},
 							{
@@ -390,7 +390,7 @@ var _ = Describe("Shoot Maintenance", func() {
 									Version:        shootCurrentImageVersion,
 									ExpirationDate: &expirationDateInThePast,
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 								Architectures: []string{"amd64"},
 							},
 						},
@@ -417,7 +417,7 @@ var _ = Describe("Shoot Maintenance", func() {
 									Version:        "1.3.1",
 									ExpirationDate: &expirationDateInTheFuture,
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 								Architectures: []string{"amd64"},
 							},
 							{
@@ -426,7 +426,7 @@ var _ = Describe("Shoot Maintenance", func() {
 									Version:        highestPatchNextMinor,
 									ExpirationDate: &expirationDateInTheFuture,
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 								Architectures: []string{"amd64"},
 							},
 							{
@@ -434,7 +434,7 @@ var _ = Describe("Shoot Maintenance", func() {
 									Version:        lowerPatchNextMinor,
 									ExpirationDate: &expirationDateInTheFuture,
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 								Architectures: []string{"amd64"},
 							},
 						},
@@ -458,7 +458,7 @@ var _ = Describe("Shoot Maintenance", func() {
 						Classification: &previewClassification,
 					},
 					Architectures: []string{"amd64"},
-					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 				}
 
 				// update to the latest patch version of the minor after the next minor (skip next minor)
@@ -467,7 +467,7 @@ var _ = Describe("Shoot Maintenance", func() {
 						Version: "1.4.1",
 					},
 					Architectures: []string{"amd64"},
-					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 				}
 
 				versions := []gardencorev1beta1.MachineImageVersion{cloudProfile.Spec.MachineImages[0].Versions[0]}
@@ -494,7 +494,7 @@ var _ = Describe("Shoot Maintenance", func() {
 						Classification: &previewClassification,
 					},
 					Architectures: []string{"amd64"},
-					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 				}
 				expiredPatchVersionNextMinor := gardencorev1beta1.MachineImageVersion{
 					ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -502,7 +502,7 @@ var _ = Describe("Shoot Maintenance", func() {
 						ExpirationDate: &expirationDateInThePast,
 					},
 					Architectures: []string{"amd64"},
-					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 				}
 
 				// do not update to the latest patch version of the minor after the next minor (no not skip next minor)
@@ -511,7 +511,7 @@ var _ = Describe("Shoot Maintenance", func() {
 						Version: "1.4.1",
 					},
 					Architectures: []string{"amd64"},
-					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 				}
 
 				versions := []gardencorev1beta1.MachineImageVersion{cloudProfile.Spec.MachineImages[0].Versions[0]}
@@ -540,7 +540,7 @@ var _ = Describe("Shoot Maintenance", func() {
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 									Version: highestVersionForMinor,
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 								Architectures: []string{"amd64"},
 							},
 							{
@@ -548,7 +548,7 @@ var _ = Describe("Shoot Maintenance", func() {
 									// highest version of next minor, but Shoot should not update, as current version is not expired.
 									Version: "1.2.0",
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 								Architectures: []string{"amd64"},
 							},
 						},
@@ -593,7 +593,7 @@ var _ = Describe("Shoot Maintenance", func() {
 									// Shoot's current version
 									Version: shootCurrentImageVersion,
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 								Architectures: []string{"amd64"},
 							},
 							{
@@ -601,14 +601,14 @@ var _ = Describe("Shoot Maintenance", func() {
 									// highest patch for Shoot's current minor
 									Version: highestPatchCurrentMinor,
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 								Architectures: []string{"amd64"},
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 									Version: highestVersionForCurrentMajor,
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 								Architectures: []string{"amd64"},
 							},
 							{
@@ -616,7 +616,7 @@ var _ = Describe("Shoot Maintenance", func() {
 									// highest version for next major. Don't update to this next major as need to update to latest version in major.
 									Version: "3.2.5",
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 								Architectures: []string{"amd64"},
 							},
 						},
@@ -642,7 +642,7 @@ var _ = Describe("Shoot Maintenance", func() {
 									// Shoot's current version
 									Version: shootCurrentImageVersion,
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 								Architectures: []string{"amd64"},
 							},
 							{
@@ -650,14 +650,14 @@ var _ = Describe("Shoot Maintenance", func() {
 									// intermediate minor (we skip over)
 									Version: "1.3.0",
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 								Architectures: []string{"amd64"},
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 									Version: highestVersionForCurrentMajor,
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 								Architectures: []string{"amd64"},
 							},
 							{
@@ -665,7 +665,7 @@ var _ = Describe("Shoot Maintenance", func() {
 									// highest version for next major. Don't update to this next major as need to update to latest version in major.
 									Version: "3.2.5",
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 								Architectures: []string{"amd64"},
 							},
 						},
@@ -692,7 +692,7 @@ var _ = Describe("Shoot Maintenance", func() {
 									Version:        shootCurrentImageVersion,
 									ExpirationDate: &expirationDateInThePast,
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 								Architectures: []string{"amd64"},
 							},
 							{
@@ -700,14 +700,14 @@ var _ = Describe("Shoot Maintenance", func() {
 									// intermediate minor (we skip over)
 									Version: "1.3.0",
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 								Architectures: []string{"amd64"},
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 									Version: highestVersionForCurrentMajor,
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 								Architectures: []string{"amd64"},
 							},
 							{
@@ -715,7 +715,7 @@ var _ = Describe("Shoot Maintenance", func() {
 									// highest version for next major. Don't update to this next major as need to update to latest version in major.
 									Version: "3.2.5",
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 								Architectures: []string{"amd64"},
 							},
 						},
@@ -744,21 +744,21 @@ var _ = Describe("Shoot Maintenance", func() {
 									Version:        latestVersionForCurrentMajor,
 									ExpirationDate: &expirationDateInThePast,
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 								Architectures: []string{"amd64"},
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 									Version: intermediateVersionNextMajor,
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 								Architectures: []string{"amd64"},
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 									Version: latestVersionNextMajor,
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 								Architectures: []string{"amd64"},
 							},
 						},
@@ -785,7 +785,7 @@ var _ = Describe("Shoot Maintenance", func() {
 						Classification: &previewClassification,
 					},
 					Architectures: []string{"amd64"},
-					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 				}
 
 				// update to the latest patch version of the major after the next major (skip next minor)
@@ -794,7 +794,7 @@ var _ = Describe("Shoot Maintenance", func() {
 						Version: "3.4.1",
 					},
 					Architectures: []string{"amd64"},
-					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+					CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 				}
 
 				versions := []gardencorev1beta1.MachineImageVersion{cloudProfile.Spec.MachineImages[0].Versions[0]}
@@ -840,7 +840,7 @@ var _ = Describe("Shoot Maintenance", func() {
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 									Version: highestVersionForMajor,
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 								Architectures: []string{"amd64"},
 							},
 							{
@@ -848,7 +848,7 @@ var _ = Describe("Shoot Maintenance", func() {
 									// highest version for next major. Don't update to this next major.
 									Version: "2.2.5",
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}},
 								Architectures: []string{"amd64"},
 							},
 						},
@@ -863,8 +863,8 @@ var _ = Describe("Shoot Maintenance", func() {
 			})
 		})
 
-		It("should treat workers with `cri: nil` like `cri.name: docker` and not update if `docker` is not explicitly supported by the machine image", func() {
-			cloudProfile.Spec.MachineImages[0].Versions[1].CRI = []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}}
+		It("should treat workers with `cri: nil` like `cri.name: containerd` and not update if `containerd` is not explicitly supported by the machine image", func() {
+			cloudProfile.Spec.MachineImages[0].Versions[1].CRI = []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRIName("other")}}
 
 			_, err := maintainMachineImages(log, shoot, cloudProfile)
 			Expect(err).NotTo(HaveOccurred())
@@ -882,7 +882,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should determine that the shoot worker machine images must NOT be maintained - found no machineImageVersion with matching CRI", func() {
-			cloudProfile.Spec.MachineImages[0].Versions[0].CRI = []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}}
+			cloudProfile.Spec.MachineImages[0].Versions[1].CRI = []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRIName("other")}}
 			shoot.Spec.Provider.Workers[0].CRI = &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD}
 
 			expected := shoot.Spec.Provider.Workers[0].Machine.Image.DeepCopy()
@@ -892,9 +892,9 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should determine that some shoot worker machine images must be not be maintained - MachineImageVersion doesn't support certain CRIs", func() {
-			// only the shoots current os image contains the containerd CRI (none of the other versions do) -> this worker pool must not be updated
-			cloudProfile.Spec.MachineImages[0].Versions[0].CRI = []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}}
-			shoot.Spec.Provider.Workers[0].CRI = &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD}
+			// only the shoots current os image contains the "other" CRI (none of the other versions do) -> this worker pool must not be updated
+			cloudProfile.Spec.MachineImages[0].Versions[0].CRI = []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRIName("other")}}
+			shoot.Spec.Provider.Workers[0].CRI = &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRIName("other")}
 
 			// add another pool without CRI constraints -> should be updated via auto-update
 			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{Name: "worker-without-cri-config", Machine: gardencorev1beta1.Machine{Image: shootCurrentImage.DeepCopy(), Architecture: ptr.To("amd64")}})
