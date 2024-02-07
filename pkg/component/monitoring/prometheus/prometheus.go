@@ -62,7 +62,7 @@ func (p *prometheus) prometheus(takeOverOldPV bool) *monitoringv1.Prometheus {
 				Version:           p.values.Version,
 				Resources: corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("10m"),
+						corev1.ResourceCPU:    resource.MustParse("300m"),
 						corev1.ResourceMemory: resource.MustParse("1000Mi"),
 					},
 					Limits: corev1.ResourceList{
@@ -103,7 +103,7 @@ func (p *prometheus) prometheus(takeOverOldPV bool) *monitoringv1.Prometheus {
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			VolumeMounts:    []corev1.VolumeMount{{Name: "prometheus-db", MountPath: "/prometheus"}},
 			Command:         []string{"/bin/sh", "-c"},
-			Args:            []string{`if [[ -d /prometheus/prometheus- ]]; then mv /prometheus/prometheus- /prometheus/prometheus-db; else echo "rename already done"; fi`},
+			Args:            []string{`if [[ -d /prometheus/prometheus- ]]; then mv /prometheus/prometheus- /prometheus/prometheus-db && echo "rename done"; else echo "rename already done"; fi`},
 		})
 	}
 
