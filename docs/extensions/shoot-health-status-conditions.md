@@ -6,7 +6,7 @@ It categorizes its checks into five different types:
 * `APIServerAvailable`: This type indicates whether the shoot's kube-apiserver is available or not.
 * `ControlPlaneHealthy`: This type indicates whether the core components of the Shoot controlplane (ETCD, KAPI, KCM..) are healthy.
 * `EveryNodeReady`: This type indicates whether all `Node`s and all `Machine` objects report healthiness.
-* `ObservabilityComponentsHealthy`: This type indicates whether the  observability components of the Shoot control plane (Prometheus, Vali, Plutono..) are healthy.
+* `ObservabilityComponentsHealthy`: This type indicates whether the  observability components of the Shoot control plane (Prometheus, Vali, Plutono..) and extension network-problem-detector are healthy.
 * `SystemComponentsHealthy`: This type indicates whether all system components deployed to the `kube-system` namespace in the shoot do exist and are running fine.
 
 In case of workerless `Shoot`, `EveryNodeReady` condition is not present in the `Shoot`'s conditions since there are no nodes in the cluster.
@@ -21,7 +21,7 @@ Now that the extensions deploy resources into the cluster, especially resources 
 
 Every extension resource in Gardener's `extensions.gardener.cloud/v1alpha1` API group also has a `status.conditions[]` list (like the `Shoot`).
 Extension controllers can write conditions to the resource they are acting on and use a type that also exists in the shoot's conditions.
-One exception is that `APIServerAvailable` and `ObservabilityComponentsHealthy` can't be used, as Gardener clearly can identify the status of this condition and it doesn't make sense for extensions to try to contribute/modify it.
+One exception is that `APIServerAvailable` can't be used, as Gardener clearly can identify the status of this condition and it doesn't make sense for extensions to try to contribute/modify it.
 
 As an example for the `ControlPlane` controller, let's take a look at the following resource:
 
