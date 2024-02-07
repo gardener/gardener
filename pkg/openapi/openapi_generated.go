@@ -3204,7 +3204,7 @@ func schema_pkg_apis_core_v1beta1_Gardener(ref common.ReferenceCallback) common.
 				Properties: map[string]spec.Schema{
 					"id": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ID is the Docker container id of the Gardener which last acted on a resource.",
+							Description: "ID is the container id of the Gardener which last acted on a resource.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",

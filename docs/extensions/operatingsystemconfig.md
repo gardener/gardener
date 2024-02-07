@@ -369,7 +369,7 @@ status:
 Once the `.status` indicates that the extension controller finished reconciling Gardener will continue with the next step of the shoot reconciliation flow.
 
 ## CRI Support
-Gardener supports specifying a Container Runtime Interface (CRI) configuration in the `OperatingSystemConfig` resource. If the `.spec.cri` section exists, then the `name` property is mandatory. The only supported values for `cri.name` at the moment are: `containerd` and `docker`, which uses the in-tree dockershim.
+Gardener supports specifying a Container Runtime Interface (CRI) configuration in the `OperatingSystemConfig` resource. If the `.spec.cri` section exists, then the `name` property is mandatory. The only supported value for `cri.name` at the moment is: `containerd`.
 For example:
 ```yaml
 ---

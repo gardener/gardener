@@ -119,7 +119,7 @@ type LastOperation struct {
 
 // Gardener holds the information about the Gardener version that operated a resource.
 type Gardener struct {
-	// ID is the Docker container id of the Gardener which last acted on a resource.
+	// ID is the container id of the Gardener which last acted on a resource.
 	ID string `json:"id" protobuf:"bytes,1,opt,name=id"`
 	// Name is the hostname (pod name) of the Gardener which last acted on a resource.
 	Name string `json:"name" protobuf:"bytes,2,opt,name=name"`

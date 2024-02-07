@@ -41,10 +41,10 @@ Please consult [Credentials Rotation for Shoot Clusters](shoot_credentials_rotat
 
 It is possible to make Gardener restart particular systemd services on your shoot worker nodes if needed.
 The annotation is not set on the `Shoot` resource but directly on the `Node` object you want to target.
-For example, the following will restart both the `kubelet` and the `docker` services:
+For example, the following will restart both the `kubelet` and the `containerd` services:
 
 ```bash
-kubectl annotate node <node-name> worker.gardener.cloud/restart-systemd-services=kubelet,docker
+kubectl annotate node <node-name> worker.gardener.cloud/restart-systemd-services=kubelet,containerd
 ```
 
 It may take up to a minute until the service is restarted.

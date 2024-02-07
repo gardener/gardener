@@ -4653,7 +4653,7 @@ string
 </em>
 </td>
 <td>
-<p>ID is the Docker container id of the Gardener which last acted on a resource.</p>
+<p>ID is the container id of the Gardener which last acted on a resource.</p>
 </td>
 </tr>
 <tr>
