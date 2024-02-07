@@ -15,30 +15,19 @@
 package kubelet_test
 
 import (
-	"time"
-
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 var _ = Describe("CLIFlags", func() {
-	image := &imagevector.Image{
-		Name:       "hyperkube",
-		Repository: "foo.io/hyperkube",
-		Tag:        ptr.To("version"),
-	}
-
 	DescribeTable("#CLIFlags",
-		func(kubernetesVersion string, criName extensionsv1alpha1.CRIName, image *imagevector.Image, cliFlags components.ConfigurableKubeletCLIFlags, preferIPv6 bool, matcher gomegatypes.GomegaMatcher) {
+		func(kubernetesVersion string, criName extensionsv1alpha1.CRIName, cliFlags components.ConfigurableKubeletCLIFlags, preferIPv6 bool, matcher gomegatypes.GomegaMatcher) {
 			v := semver.MustParse(kubernetesVersion)
 			nodeLabels := map[string]string{
 				"test":  "foo",
@@ -51,39 +40,13 @@ var _ = Describe("CLIFlags", func() {
 				"worker.gardener.cloud/pool":                    "worker", // allowed
 				"containerruntime.worker.gardener.cloud/gvisor": "true",   // allowed
 			}
-			Expect(kubelet.CLIFlags(v, nodeLabels, criName, image, cliFlags, preferIPv6)).To(matcher)
+			Expect(kubelet.CLIFlags(v, nodeLabels, criName, cliFlags, preferIPv6)).To(matcher)
 		},
 
 		Entry(
-			"kubernetes 1.26 w/ docker, w/ imagePullProgressDeadline",
-			"1.26.6",
-			extensionsv1alpha1.CRINameDocker,
-			image,
-			components.ConfigurableKubeletCLIFlags{ImagePullProgressDeadline: &metav1.Duration{Duration: 2 * time.Minute}},
-			false,
-			ConsistOf(
-				"--bootstrap-kubeconfig=/var/lib/kubelet/kubeconfig-bootstrap",
-				"--config=/var/lib/kubelet/config/kubelet",
-				"--cni-bin-dir=/opt/cni/bin/",
-				"--cni-conf-dir=/etc/cni/net.d/",
-				"--image-pull-progress-deadline=2m0s",
-				"--kubeconfig=/var/lib/kubelet/kubeconfig-real",
-				"--node-labels=worker.gardener.cloud/kubernetes-version=1.26.6",
-				"--node-labels=containerruntime.worker.gardener.cloud/gvisor=true",
-				"--node-labels=kubernetes.io/arch=amd64",
-				"--node-labels=test=foo",
-				"--node-labels=test2=bar",
-				"--node-labels=worker.gardener.cloud/pool=worker",
-				"--network-plugin=cni",
-				"--pod-infra-container-image=foo.io/hyperkube:version",
-				"--v=2",
-			),
-		),
-		Entry(
-			"kubernetes 1.26 w/ containerd, w/o imagePullProgressDeadline",
+			"kubernetes 1.26 w/ containerd",
 			"1.26.6",
 			extensionsv1alpha1.CRINameContainerD,
-			image,
 			components.ConfigurableKubeletCLIFlags{},
 			false,
 			ConsistOf(
@@ -103,10 +66,9 @@ var _ = Describe("CLIFlags", func() {
 			),
 		),
 		Entry(
-			"kubernetes 1.27 w/ containerd, w/o imagePullProgressDeadline",
+			"kubernetes 1.27 w/ containerd",
 			"1.27.0",
 			extensionsv1alpha1.CRINameContainerD,
-			image,
 			components.ConfigurableKubeletCLIFlags{},
 			false,
 			ConsistOf(
@@ -125,10 +87,9 @@ var _ = Describe("CLIFlags", func() {
 			),
 		),
 		Entry(
-			"kubernetes 1.27 w/ containerd, w/o imagePullProgressDeadline",
+			"kubernetes 1.27 w/ containerd w/ preferIPv6",
 			"1.27.0",
 			extensionsv1alpha1.CRINameContainerD,
-			image,
 			components.ConfigurableKubeletCLIFlags{},
 			true,
 			ConsistOf(

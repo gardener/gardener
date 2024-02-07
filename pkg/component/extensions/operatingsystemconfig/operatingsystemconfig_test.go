@@ -189,7 +189,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			expected := make([]*extensionsv1alpha1.OperatingSystemConfig, 0, 2*len(workers))
 			for _, worker := range workers {
 				var (
-					criName   = extensionsv1alpha1.CRINameDocker
+					criName   = extensionsv1alpha1.CRINameContainerD
 					criConfig *extensionsv1alpha1.CRIConfig
 				)
 
@@ -1081,14 +1081,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 		It("is different for different worker.cri configurations", func() {
 			containerDKey := Key(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD})
-			dockerKey := Key(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameDocker})
-			Expect(containerDKey).NotTo(Equal(dockerKey))
-		})
-
-		It("is the same for `cri=nil` and `cri.name=docker`", func() {
-			dockerKey := Key(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameDocker})
-			nilKey := Key(workerName, semver.MustParse("1.2.3"), nil)
-			Expect(dockerKey).To(Equal(nilKey))
+			otherKey := Key(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRIName("other")})
+			Expect(containerDKey).NotTo(Equal(otherKey))
 		})
 	})
 
@@ -1108,14 +1102,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 		It("is different for different worker.cri configurations", func() {
 			containerDKey := Key(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD})
-			dockerKey := Key(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameDocker})
-			Expect(containerDKey).NotTo(Equal(dockerKey))
-		})
-
-		It("is the same for `cri=nil` and `cri.name=docker`", func() {
-			dockerKey := Key(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameDocker})
-			nilKey := Key(workerName, semver.MustParse("1.2.3"), nil)
-			Expect(dockerKey).To(Equal(nilKey))
+			otherKey := Key(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRIName("other")})
+			Expect(containerDKey).NotTo(Equal(otherKey))
 		})
 	})
 })

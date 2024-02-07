@@ -33,11 +33,6 @@ import (
 )
 
 var (
-	availableWorkerCRINamesForCloudProfile = sets.New(
-		string(core.CRINameDocker),
-		string(core.CRINameContainerD),
-	)
-
 	availableUpdateStrategiesForMachineImage = sets.New(
 		string(core.UpdateStrategyPatch),
 		string(core.UpdateStrategyMinor),
@@ -293,9 +288,10 @@ func validateMachineImages(machineImages []core.MachineImage, fldPath *field.Pat
 }
 
 func validateContainerRuntimesInterfaces(cris []core.CRI, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-	duplicateCRI := sets.Set[string]{}
-	hasDocker := false
+	var (
+		allErrs      = field.ErrorList{}
+		duplicateCRI = sets.Set[string]{}
+	)
 
 	if len(cris) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one supported container runtime"))
@@ -309,19 +305,10 @@ func validateContainerRuntimesInterfaces(cris []core.CRI, fldPath *field.Path) f
 		}
 		duplicateCRI.Insert(string(cri.Name))
 
-		if cri.Name == core.CRINameDocker {
-			hasDocker = true
-		}
-
-		if !availableWorkerCRINamesForCloudProfile.Has(string(cri.Name)) {
-			allErrs = append(allErrs, field.NotSupported(criPath, cri, sets.List(availableWorkerCRINamesForCloudProfile)))
+		if !availableWorkerCRINames.Has(string(cri.Name)) {
+			allErrs = append(allErrs, field.NotSupported(criPath.Child("name"), string(cri.Name), sets.List(availableWorkerCRINames)))
 		}
 		allErrs = append(allErrs, validateContainerRuntimes(cri.ContainerRuntimes, criPath.Child("containerRuntimes"))...)
-	}
-
-	// TODO(shafeeqes): Remove this once https://github.com/gardener/gardener/issues/4673 is resolved.
-	if !hasDocker {
-		allErrs = append(allErrs, field.Invalid(fldPath, cris, "must provide docker as supported container runtime"))
 	}
 
 	return allErrs
