@@ -27,9 +27,9 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 )
 
-func TestVpaevictionrequirements(t *testing.T) {
+func TestVPAEvictionRequirements(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "VPAEvictionRequirements Suite")
+	RunSpecs(t, "Controller VPAEvictionRequirements Suite")
 }
 
 var logBuffer *gbytes.Buffer

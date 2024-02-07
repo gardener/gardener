@@ -197,7 +197,7 @@ Further checks might be added in the future.
 
 ### [`Controller Registrar` controller](../../pkg/operator/controller/controllerregistrar)
 
-This controller registers controllers, which need to be installed in two contexts. If the Garden cluster is separate from the Seed cluster, the `gardener-operator` will start these controllers. If the Garden cluster is a Seed cluster, the controllers will be started by gardenlet.
+This controller registers controllers, which need to be installed in two contexts. If the Garden cluster is at the same time used as a Seed cluster, the `gardener-operator` will start these controllers. If the Garden cluster is separate from the Seed cluster, the controllers will be started by gardenlet.
 
 Currently, this applies to two controllers:
 * [`NetworkPolicy` controller](gardenlet.md#networkpolicy-controller)

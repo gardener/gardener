@@ -1,4 +1,4 @@
-// Copyright 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2024 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 )
 
-// Reconciler adds the NetworkPolicy and VPAEvictionRequirements controller to the manager.
+// Reconciler adds the NetworkPolicy and VPAEvictionRequirements controllers to the manager.
 type Reconciler struct {
 	Manager                              manager.Manager
 	NetworkPolicyControllerConfiguration config.NetworkPolicyControllerConfiguration
@@ -44,16 +44,20 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
-	if !r.networkPolicyControllerAdded {
-		garden := &operatorv1alpha1.Garden{}
-		if err := r.Manager.GetClient().Get(ctx, request.NamespacedName, garden); err != nil {
-			if apierrors.IsNotFound(err) {
-				log.V(1).Info("Object is gone, stop reconciling")
-				return reconcile.Result{}, nil
-			}
-			return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
-		}
+	if r.networkPolicyControllerAdded && r.vpaEvictionRequirementsControllerAdded {
+		return reconcile.Result{}, nil
+	}
 
+	garden := &operatorv1alpha1.Garden{}
+	if err := r.Manager.GetClient().Get(ctx, request.NamespacedName, garden); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.V(1).Info("Object is gone, stop reconciling")
+			return reconcile.Result{}, nil
+		}
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
+	}
+
+	if !r.networkPolicyControllerAdded {
 		if err := (&networkpolicy.Reconciler{
 			ConcurrentSyncs:              r.NetworkPolicyControllerConfiguration.ConcurrentSyncs,
 			AdditionalNamespaceSelectors: r.NetworkPolicyControllerConfiguration.AdditionalNamespaceSelectors,
@@ -71,16 +75,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 		r.networkPolicyControllerAdded = true
 	}
-	if !r.vpaEvictionRequirementsControllerAdded {
-		garden := &operatorv1alpha1.Garden{}
-		if err := r.Manager.GetClient().Get(ctx, request.NamespacedName, garden); err != nil {
-			if apierrors.IsNotFound(err) {
-				log.V(1).Info("Object is gone, stop reconciling")
-				return reconcile.Result{}, nil
-			}
-			return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
-		}
 
+	if !r.vpaEvictionRequirementsControllerAdded {
 		if err := (&vpaevictionrequirements.Reconciler{
 			ConcurrentSyncs: r.VPAEvictionControllerConfiguration.ConcurrentSyncs,
 		}).AddToManager(r.Manager, r.Manager); err != nil {
@@ -89,5 +85,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 		r.vpaEvictionRequirementsControllerAdded = true
 	}
+
 	return reconcile.Result{}, nil
 }

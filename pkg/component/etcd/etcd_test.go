@@ -564,10 +564,10 @@ var _ = Describe("Etcd", func() {
 			DefragmentationSchedule: &defragmentationSchedule,
 			CARotationPhase:         caRotationPhase,
 			PriorityClassName:       priorityClassName,
-			HVPAenabled:             hvpaEnabled,
+			HVPAEnabled:             hvpaEnabled,
 			MaintenanceTimeWindow:   maintenanceTimeWindow,
 			ScaleDownUpdateMode:     scaleDownUpdateMode,
-			VPAenabled:              vpaEnabled,
+			VPAEnabled:              vpaEnabled,
 			HighAvailabilityEnabled: highAvailabilityEnabled,
 			BackupConfig:            backupConfig,
 		})
@@ -647,7 +647,7 @@ var _ = Describe("Etcd", func() {
 				DefragmentationSchedule: &defragmentationSchedule,
 				CARotationPhase:         "",
 				PriorityClassName:       priorityClassName,
-				HVPAenabled:             false,
+				HVPAEnabled:             false,
 				MaintenanceTimeWindow:   maintenanceTimeWindow,
 				ScaleDownUpdateMode:     scaleDownUpdateMode,
 			})
@@ -716,7 +716,7 @@ var _ = Describe("Etcd", func() {
 				DefragmentationSchedule: &defragmentationSchedule,
 				CARotationPhase:         "",
 				PriorityClassName:       priorityClassName,
-				HVPAenabled:             true,
+				HVPAEnabled:             true,
 				MaintenanceTimeWindow:   maintenanceTimeWindow,
 			})
 
@@ -781,7 +781,7 @@ var _ = Describe("Etcd", func() {
 				StorageClassName:        &storageClassName,
 				DefragmentationSchedule: &defragmentationSchedule,
 				CARotationPhase:         "",
-				HVPAenabled:             true,
+				HVPAEnabled:             true,
 				MaintenanceTimeWindow:   maintenanceTimeWindow,
 				PriorityClassName:       priorityClassName,
 			})
@@ -1063,7 +1063,7 @@ var _ = Describe("Etcd", func() {
 					StorageClassName:        &storageClassName,
 					DefragmentationSchedule: &defragmentationSchedule,
 					CARotationPhase:         "",
-					HVPAenabled:             true,
+					HVPAEnabled:             true,
 					MaintenanceTimeWindow:   maintenanceTimeWindow,
 					PriorityClassName:       priorityClassName,
 					ScaleDownUpdateMode:     pointer.String(updateMode),
@@ -1511,7 +1511,7 @@ var _ = Describe("Etcd", func() {
 					CARotationPhase:             "",
 					RuntimeKubernetesVersion:    semver.MustParse("1.26.1"),
 					PriorityClassName:           priorityClassName,
-					HVPAenabled:                 hvpaEnabled,
+					HVPAEnabled:                 hvpaEnabled,
 					MaintenanceTimeWindow:       maintenanceTimeWindow,
 					TopologyAwareRoutingEnabled: true,
 				})

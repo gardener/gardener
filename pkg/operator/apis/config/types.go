@@ -68,6 +68,8 @@ type ControllerConfiguration struct {
 	GardenCare GardenCareControllerConfiguration
 	// NetworkPolicy is the configuration for the NetworkPolicy controller.
 	NetworkPolicy NetworkPolicyControllerConfiguration
+	// VPAEvictionRequirements is the configuration for the VPAEvictionrequirements controller.
+	VPAEvictionRequirements VPAEvictionRequirementsControllerConfiguration
 }
 
 // GardenCareControllerConfiguration defines the configuration of the GardenCare controller.

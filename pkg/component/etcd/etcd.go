@@ -158,13 +158,13 @@ type Values struct {
 	CARotationPhase             gardencorev1beta1.CredentialsRotationPhase
 	RuntimeKubernetesVersion    *semver.Version
 	BackupConfig                *BackupConfig
-	HVPAenabled                 bool
+	HVPAEnabled                 bool
 	MaintenanceTimeWindow       gardencorev1beta1.MaintenanceTimeWindow
 	ScaleDownUpdateMode         *string
 	PriorityClassName           string
 	HighAvailabilityEnabled     bool
 	TopologyAwareRoutingEnabled bool
-	VPAenabled                  bool
+	VPAEnabled                  bool
 }
 
 func (e *etcd) Deploy(ctx context.Context) error {
@@ -414,14 +414,14 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if e.values.VPAenabled {
+	if e.values.VPAEnabled {
 		if err := kubernetesutils.DeleteObjects(ctx, e.client, hvpa); err != nil {
 			return err
 		}
 		if err := e.reconcileVerticalPodAutoscaler(ctx, vpa, minAllowed, maxAllowed); err != nil {
 			return err
 		}
-	} else if e.values.HVPAenabled {
+	} else if e.values.HVPAEnabled {
 		if err := kubernetesutils.DeleteObjects(ctx, e.client, vpa); err != nil {
 			return err
 		}
@@ -745,7 +745,7 @@ func (e *etcd) Scale(ctx context.Context, replicas int32) error {
 		return err
 	}
 
-	if e.values.HVPAenabled {
+	if e.values.HVPAEnabled {
 		// Keep the `hvpa.Spec.Hpa.Template.Spec.MaxReplicas` and `hvpa.Spec.Hpa.Template.Spec.MinReplicas`
 		// values consistent with the replica count of the etcd.
 		hvpa := e.emptyHVPA()
@@ -824,7 +824,7 @@ func (e *etcd) computeContainerResources(existingSts *appsv1.StatefulSet) (*core
 		}
 	)
 
-	if existingSts != nil && e.values.HVPAenabled {
+	if existingSts != nil && e.values.HVPAEnabled {
 		for k := range existingSts.Spec.Template.Spec.Containers {
 			v := existingSts.Spec.Template.Spec.Containers[k]
 			switch v.Name {

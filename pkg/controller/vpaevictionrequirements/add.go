@@ -33,7 +33,7 @@ import (
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
-// ControllerName is the name of this controller
+// ControllerName is the name of this controller.
 const ControllerName = "vpa-eviction-requirements"
 
 // AddToManager adds Reconciler to the given manager.

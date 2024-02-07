@@ -173,11 +173,13 @@ var _ = Describe("VPA EvictionRequirements controller tests", func() {
 				g.Expect(vpa.Spec.UpdatePolicy.EvictionRequirements).To(ConsistOf(upscaleOnlyRequirement))
 			}).Should(Succeed())
 		})
+
 		When("VPA has an annotation indicating that the Shoot's maintenance window is now", func() {
 			BeforeEach(func() {
 				metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, v1beta1constants.AnnotationShootMaintenanceWindow, maintenanceWindowNow.Begin+","+maintenanceWindowNow.End)
 				vpa.Spec.UpdatePolicy.EvictionRequirements = upscaleOnlyRequirement
 			})
+
 			It("doesn't remove the EvictionRequirement", func() {
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(vpa), vpa)).To(Succeed())
@@ -186,5 +188,4 @@ var _ = Describe("VPA EvictionRequirements controller tests", func() {
 			})
 		})
 	})
-
 })

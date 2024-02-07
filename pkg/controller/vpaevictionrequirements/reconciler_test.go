@@ -100,6 +100,7 @@ var _ = Describe("Reconciler", func() {
 		BeforeEach(func() {
 			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, constants.AnnotationVPAEvictionRequirementDownscaleRestriction, constants.EvictionRequirementInMaintenanceWindowOnly)
 		})
+
 		When("the Shoot is outside its maintenance window", func() {
 			BeforeEach(func() {
 				maintenanceWindowBegin = fakeClock.Now().Add(5 * time.Hour).Format("150405-0700")
@@ -107,6 +108,7 @@ var _ = Describe("Reconciler", func() {
 				maintenanceTimeWindow, _ = timewindow.ParseMaintenanceTimeWindow(maintenanceWindowBegin, maintenanceWindowEnd)
 				metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, constants.AnnotationShootMaintenanceWindow, maintenanceWindowBegin+","+maintenanceWindowEnd)
 			})
+
 			It("should add an EvictionRequirement that prevents downscaling and requeue at the beginning of the next Shoot maintenance window", func() {
 				result, err := reconciler.Reconcile(ctx, request)
 				Expect(err).ToNot(HaveOccurred())
@@ -116,6 +118,7 @@ var _ = Describe("Reconciler", func() {
 				Expect(vpa.Spec.UpdatePolicy.EvictionRequirements).To(ConsistOf(upscaleOnlyRequirement))
 			})
 		})
+
 		When("the Shoot is inside its maintenance window", func() {
 			BeforeEach(func() {
 				maintenanceWindowBegin = fakeClock.Now().Format("150405-0700")
@@ -124,6 +127,7 @@ var _ = Describe("Reconciler", func() {
 				metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, constants.AnnotationShootMaintenanceWindow, maintenanceWindowBegin+","+maintenanceWindowEnd)
 				vpa.Spec.UpdatePolicy.EvictionRequirements = upscaleOnlyRequirement
 			})
+
 			It("should remove the EvictionRequirement to allow downscaling and requeue for the end of the maintenance window", func() {
 				result, err := reconciler.Reconcile(ctx, request)
 				Expect(err).ToNot(HaveOccurred())
@@ -139,6 +143,7 @@ var _ = Describe("Reconciler", func() {
 		BeforeEach(func() {
 			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, constants.AnnotationVPAEvictionRequirementDownscaleRestriction, constants.EvictionRequirementNever)
 		})
+
 		It("should add an Evictionrequirement that prevents downscaling and not requeue", func() {
 			result, err := reconciler.Reconcile(ctx, request)
 			Expect(err).ToNot(HaveOccurred())
@@ -156,32 +161,38 @@ var _ = Describe("Reconciler", func() {
 			Eventually(logBuffer).Should(gbytes.Say(fmt.Sprintf("annotation %s not found, although marker label %s is present", constants.AnnotationVPAEvictionRequirementDownscaleRestriction, constants.LabelVPAEvictionRequirementsController)))
 		})
 	})
+
 	Context("VPA is not annotated with maintenance window, although downscale-restriction is set to in-maintenance-window-only", func() {
 		BeforeEach(func() {
 			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, constants.AnnotationVPAEvictionRequirementDownscaleRestriction, constants.EvictionRequirementInMaintenanceWindowOnly)
 		})
+
 		It("should log an error, but not return it, such that it doesn't retry", func() {
 			_, err := reconciler.Reconcile(ctx, request)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(logBuffer).Should(gbytes.Say("didn't find maintenance window annotation, but VPA had label to be downscaled in maintenance only"))
 		})
 	})
+
 	Context("VPA is annotated incorrectly: maintenance window isn't splittable in <start>,<end>", func() {
 		BeforeEach(func() {
 			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, constants.AnnotationVPAEvictionRequirementDownscaleRestriction, constants.EvictionRequirementInMaintenanceWindowOnly)
 			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, constants.AnnotationShootMaintenanceWindow, maintenanceWindowBegin+maintenanceWindowEnd)
 		})
+
 		It("should log an error, but not return it, such that it doesn't retry", func() {
 			_, err := reconciler.Reconcile(ctx, request)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(logBuffer).Should(gbytes.Say("error during parsing the maintenance window from annotation. Value is not in format '<begin>,<end>"))
 		})
 	})
+
 	Context("VPA is annotated with an un-parsable maintenance window time", func() {
 		BeforeEach(func() {
 			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, constants.AnnotationVPAEvictionRequirementDownscaleRestriction, constants.EvictionRequirementInMaintenanceWindowOnly)
 			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, constants.AnnotationShootMaintenanceWindow, "unparseable start time"+","+maintenanceWindowEnd)
 		})
+
 		It("should log an error, but not return it, such that it doesn't retry", func() {
 			_, err := reconciler.Reconcile(ctx, request)
 			Expect(err).ToNot(HaveOccurred())

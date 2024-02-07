@@ -450,13 +450,13 @@ func (r *Reconciler) newEtcd(
 			DefragmentationSchedule:     &defragmentationSchedule,
 			CARotationPhase:             helper.GetCARotationPhase(garden.Status.Credentials),
 			RuntimeKubernetesVersion:    r.RuntimeVersion,
-			HVPAenabled:                 hvpaEnabled(),
+			HVPAEnabled:                 hvpaEnabled(),
 			MaintenanceTimeWindow:       garden.Spec.VirtualCluster.Maintenance.TimeWindow,
 			ScaleDownUpdateMode:         hvpaScaleDownUpdateMode,
 			PriorityClassName:           v1beta1constants.PriorityClassNameGardenSystem500,
 			HighAvailabilityEnabled:     highAvailabilityEnabled,
 			TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
-			VPAenabled:                  features.DefaultFeatureGate.Enabled(features.VPAForETCD),
+			VPAEnabled:                  features.DefaultFeatureGate.Enabled(features.VPAForETCD),
 		},
 	), nil
 }

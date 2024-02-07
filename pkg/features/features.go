@@ -37,9 +37,9 @@ const (
 	// alpha: v0.32.0
 	HVPAForShootedSeed featuregate.Feature = "HVPAForShootedSeed"
 
-	// VPAForETCD enables using plain VPA for etcd and etcd-events, even if HVPA is enabled for the other components
+	// VPAForETCD enables using plain VPA for etcd-main and etcd-events, even if HVPA is enabled for the other components.
 	// owner @voelzmo
-	// alpha: v1.88.0
+	// alpha: v1.89.0
 	VPAForETCD featuregate.Feature = "VPAForETCD"
 
 	// DefaultSeccompProfile defaults the seccomp profile for Gardener managed workload in the seed to RuntimeDefault.

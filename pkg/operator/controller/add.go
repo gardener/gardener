@@ -44,6 +44,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 
 	if err := (&controllerregistrar.Reconciler{
 		NetworkPolicyControllerConfiguration: cfg.Controllers.NetworkPolicy,
+		VPAEvictionControllerConfiguration:   cfg.Controllers.VPAEvictionRequirements,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding NetworkPolicy Registrar controller: %w", err)
 	}

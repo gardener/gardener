@@ -24,7 +24,7 @@ import (
 )
 
 // ControllerName is the name of this controller.
-const ControllerName = "networkpolicy-controller-registrar"
+const ControllerName = "controller-registrar"
 
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(mgr manager.Manager) error {

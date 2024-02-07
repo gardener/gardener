@@ -18,21 +18,22 @@ The following tables are a summary of the feature gates that you can set on diff
 
 ## Feature Gates for Alpha or Beta Features
 
-| Feature                             | Default | Stage   | Since  | Until  |
-|-------------------------------------|---------|---------|--------|--------|
-| HVPA                                | `false` | `Alpha` | `0.31` |        |
-| HVPAForShootedSeed                  | `false` | `Alpha` | `0.32` |        |
-| DefaultSeccompProfile               | `false` | `Alpha` | `1.54` |        |
-| CoreDNSQueryRewriting               | `false` | `Alpha` | `1.55` |        |
-| IPv6SingleStack                     | `false` | `Alpha` | `1.63` |        |
-| MutableShootSpecNetworkingNodes     | `false` | `Alpha` | `1.64` |        |
-| MachineControllerManagerDeployment  | `false` | `Alpha` | `1.73` |        |
-| MachineControllerManagerDeployment  | `true`  | `Beta`  | `1.81` | `1.81` |
-| MachineControllerManagerDeployment  | `true`  | `GA`    | `1.82` |        |
-| ShootForceDeletion                  | `false` | `Alpha` | `1.81` |        |
-| APIServerFastRollout                | `true`  | `Beta`  | `1.82` |        |
-| UseGardenerNodeAgent                | `false` | `Alpha` | `1.82` | `1.88` |
-| UseGardenerNodeAgent                | `true`  | `Beta`  | `1.89` |        |
+| Feature                            | Default | Stage   | Since  | Until  |
+|------------------------------------|---------|---------|--------|--------|
+| HVPA                               | `false` | `Alpha` | `0.31` |        |
+| HVPAForShootedSeed                 | `false` | `Alpha` | `0.32` |        |
+| DefaultSeccompProfile              | `false` | `Alpha` | `1.54` |        |
+| CoreDNSQueryRewriting              | `false` | `Alpha` | `1.55` |        |
+| IPv6SingleStack                    | `false` | `Alpha` | `1.63` |        |
+| MutableShootSpecNetworkingNodes    | `false` | `Alpha` | `1.64` |        |
+| MachineControllerManagerDeployment | `false` | `Alpha` | `1.73` |        |
+| MachineControllerManagerDeployment | `true`  | `Beta`  | `1.81` | `1.81` |
+| MachineControllerManagerDeployment | `true`  | `GA`    | `1.82` |        |
+| ShootForceDeletion                 | `false` | `Alpha` | `1.81` |        |
+| APIServerFastRollout               | `true`  | `Beta`  | `1.82` |        |
+| UseGardenerNodeAgent               | `false` | `Alpha` | `1.82` | `1.88` |
+| UseGardenerNodeAgent               | `true`  | `Beta`  | `1.89` |        |
+| VPAForETCD                         | `false` | `Alpha` | `1.89` |        |
 
 ## Feature Gates for Graduated or Deprecated Features
 
@@ -193,3 +194,4 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | ShootForceDeletion                 | `gardener-apiserver`              | Allows forceful deletion of Shoots by annotating them with the `confirmation.gardener.cloud/force-deletion` annotation.                                                                                                                                                                                                                                                            |
 | APIServerFastRollout               | `gardenlet`                       | Enables fast rollouts for Shoot kube-apiservers on the given Seed. When enabled, `maxSurge` for Shoot kube-apiserver deployments is set to 100%.                                                                                                                                                                                                                                   |
 | UseGardenerNodeAgent               | `gardenlet`                       | Enables the `gardener-node-agent` instead of the `cloud-config-downloader` for shoot worker nodes.                                                                                                                                                                                                                                                                                 |
+| VPAForETCD                         | `gardenlet`, `gardener-operator`  | Enables VPA for `etcd-main` and `etcd-events`, regardless of HVPA enablement.                                                                                                                                                                                                                                                                                                      |
