@@ -49,6 +49,9 @@ var _ = Describe("Validation Tests", func() {
 				},
 				Spec: operatorv1alpha1.GardenSpec{
 					RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+						Ingress: operatorv1alpha1.Ingress{
+							Domains: []string{"ingress.bar.com"},
+						},
 						Networking: operatorv1alpha1.RuntimeNetworking{
 							Pods:     "10.1.0.0/16",
 							Services: "10.2.0.0/16",
@@ -852,6 +855,66 @@ var _ = Describe("Validation Tests", func() {
 					Expect(ValidateGarden(garden)).To(BeEmpty())
 				})
 			})
+
+			Context("Ingress", func() {
+				It("should complain about that no ingress domain is configured", func() {
+					garden.Spec.RuntimeCluster.Ingress.Domain = nil
+					garden.Spec.RuntimeCluster.Ingress.Domains = nil
+
+					Expect(ValidateGarden(garden)).To(ContainElements(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeRequired),
+							"Field": Equal("spec.runtimeCluster.ingress.domains"),
+						})),
+					))
+				})
+
+				It("should complain about invalid ingress domain names", func() {
+					garden.Spec.RuntimeCluster.Ingress.Domain = ptr.To(",,,")
+					garden.Spec.RuntimeCluster.Ingress.Domains = []string{",,,"}
+
+					Expect(ValidateGarden(garden)).To(ContainElements(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.runtimeCluster.ingress.domain"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.runtimeCluster.ingress.domains[0]"),
+						})),
+					))
+				})
+
+				It("should complain about duplicate ingress domain names in 'domains'", func() {
+					garden.Spec.RuntimeCluster.Ingress.Domains = []string{
+						"example.com",
+						"foo.bar",
+						"example.com",
+					}
+
+					Expect(ValidateGarden(garden)).To(ContainElements(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal("spec.runtimeCluster.ingress.domains[2]"),
+						})),
+					))
+				})
+
+				It("should complain about duplicate domain names in 'domain'", func() {
+					garden.Spec.RuntimeCluster.Ingress.Domain = ptr.To("example.com")
+					garden.Spec.RuntimeCluster.Ingress.Domains = []string{
+						"example.com",
+						"foo.bar",
+					}
+
+					Expect(ValidateGarden(garden)).To(ContainElements(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal("spec.runtimeCluster.ingress.domain"),
+						})),
+					))
+				})
+			})
 		})
 
 		Context("virtual cluster", func() {
@@ -1591,6 +1654,9 @@ var _ = Describe("Validation Tests", func() {
 				},
 				Spec: operatorv1alpha1.GardenSpec{
 					RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+						Ingress: operatorv1alpha1.Ingress{
+							Domains: []string{"ingress.bar.com"},
+						},
 						Networking: operatorv1alpha1.RuntimeNetworking{
 							Pods:     "10.1.0.0/16",
 							Services: "10.2.0.0/16",
@@ -1613,6 +1679,88 @@ var _ = Describe("Validation Tests", func() {
 			}
 
 			newGarden = oldGarden.DeepCopy()
+		})
+
+		Context("runtime cluster", func() {
+			Context("ingress", func() {
+				It("should allow update if nothing changes", func() {
+					oldGarden.Spec.RuntimeCluster.Ingress.Domains = []string{"example.com"}
+					newGarden.Spec.RuntimeCluster.Ingress.Domains = []string{"example.com"}
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Field": ContainSubstring("domain"),
+					}))))
+				})
+
+				It("should allow adding a domain", func() {
+					oldGarden.Spec.RuntimeCluster.Ingress.Domains = []string{"example.com"}
+					newGarden.Spec.RuntimeCluster.Ingress.Domains = []string{"example.com", "foo.bar"}
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Field": ContainSubstring("domain"),
+					}))))
+				})
+
+				It("should allow removing any domain but first entry", func() {
+					oldGarden.Spec.RuntimeCluster.Ingress.Domains = []string{"example.com", "foo.bar", "bar.foo"}
+					newGarden.Spec.RuntimeCluster.Ingress.Domains = []string{"example.com", "bar.foo"}
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Field": ContainSubstring("domain"),
+					}))))
+				})
+
+				It("should forbid removing the first entry", func() {
+					oldGarden.Spec.RuntimeCluster.Ingress.Domains = []string{"example.com", "foo.bar", "bar.foo"}
+					newGarden.Spec.RuntimeCluster.Ingress.Domains = []string{"bar.foo"}
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.runtimeCluster.ingress.domains[0]"),
+					}))))
+				})
+
+				It("should forbid changing the first entry", func() {
+					oldGarden.Spec.RuntimeCluster.Ingress.Domains = []string{"example.com", "foo.bar", "bar.foo"}
+					newGarden.Spec.RuntimeCluster.Ingress.Domains = []string{"example2.com", "foo.bar", "bar.foo"}
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.runtimeCluster.ingress.domains[0]"),
+					}))))
+				})
+
+				It("should allow migrating from domain to domains", func() {
+					oldGarden.Spec.RuntimeCluster.Ingress.Domain = ptr.To("example.com")
+					oldGarden.Spec.RuntimeCluster.Ingress.Domains = []string{}
+					newGarden.Spec.RuntimeCluster.Ingress.Domains = []string{"example.com"}
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Field": ContainSubstring("domain"),
+					}))))
+				})
+
+				It("should forbid migrating from domains to domain", func() {
+					oldGarden.Spec.RuntimeCluster.Ingress.Domains = []string{"example.com"}
+					newGarden.Spec.RuntimeCluster.Ingress.Domain = ptr.To("example.com")
+					newGarden.Spec.RuntimeCluster.Ingress.Domains = []string{}
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.runtimeCluster.ingress.domain"),
+					}))))
+				})
+
+				It("should forbid changing the entry while migrating from domain to domains", func() {
+					oldGarden.Spec.RuntimeCluster.Ingress.Domain = ptr.To("example.com")
+					newGarden.Spec.RuntimeCluster.Ingress.Domains = []string{"example2.com"}
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.runtimeCluster.ingress.domains[0]"),
+					}))))
+				})
+			})
 		})
 
 		Context("virtual cluster", func() {

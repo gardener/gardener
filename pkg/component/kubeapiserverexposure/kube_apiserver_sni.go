@@ -22,12 +22,8 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	"google.golang.org/protobuf/types/known/durationpb"
-	"google.golang.org/protobuf/types/known/wrapperspb"
-	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
 	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/utils/istio"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	netutils "github.com/gardener/gardener/pkg/utils/net"
@@ -153,83 +150,15 @@ func (s *sni) Deploy(ctx context.Context) error {
 		}
 	}
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, destinationRule, func() error {
-		destinationRule.Labels = getLabels()
-		destinationRule.Spec = istioapinetworkingv1beta1.DestinationRule{
-			ExportTo: []string{"*"},
-			Host:     hostName,
-			TrafficPolicy: &istioapinetworkingv1beta1.TrafficPolicy{
-				ConnectionPool: &istioapinetworkingv1beta1.ConnectionPoolSettings{
-					Tcp: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings{
-						MaxConnections: 5000,
-						TcpKeepalive: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
-							Time:     &durationpb.Duration{Seconds: 7200},
-							Interval: &durationpb.Duration{Seconds: 75},
-						},
-					},
-				},
-				LoadBalancer: &istioapinetworkingv1beta1.LoadBalancerSettings{
-					LocalityLbSetting: &istioapinetworkingv1beta1.LocalityLoadBalancerSetting{
-						Enabled:          &wrapperspb.BoolValue{Value: true},
-						FailoverPriority: []string{corev1.LabelTopologyZone},
-					},
-				},
-				// OutlierDetection is required for locality settings to take effect
-				OutlierDetection: &istioapinetworkingv1beta1.OutlierDetection{
-					MinHealthPercent: 0,
-				},
-				Tls: &istioapinetworkingv1beta1.ClientTLSSettings{
-					Mode: istioapinetworkingv1beta1.ClientTLSSettings_DISABLE,
-				},
-			},
-		}
-		return nil
-	}); err != nil {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, destinationRule, istio.DestinationRuleWithLocalityPreference(destinationRule, getLabels(), hostName)); err != nil {
 		return err
 	}
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, gateway, func() error {
-		gateway.Labels = getLabels()
-		gateway.Spec = istioapinetworkingv1beta1.Gateway{
-			Selector: values.IstioIngressGateway.Labels,
-			Servers: []*istioapinetworkingv1beta1.Server{{
-				Hosts: values.Hosts,
-				Port: &istioapinetworkingv1beta1.Port{
-					Number:   kubeapiserverconstants.Port,
-					Name:     "tls",
-					Protocol: "TLS",
-				},
-				Tls: &istioapinetworkingv1beta1.ServerTLSSettings{
-					Mode: istioapinetworkingv1beta1.ServerTLSSettings_PASSTHROUGH,
-				},
-			}},
-		}
-		return nil
-	}); err != nil {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, gateway, istio.GatewayWithTLSPassthrough(gateway, getLabels(), s.valuesFunc().IstioIngressGateway.Labels, s.valuesFunc().Hosts, kubeapiserverconstants.Port)); err != nil {
 		return err
 	}
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, virtualService, func() error {
-		virtualService.Labels = getLabels()
-		virtualService.Spec = istioapinetworkingv1beta1.VirtualService{
-			ExportTo: []string{"*"},
-			Hosts:    values.Hosts,
-			Gateways: []string{gateway.Name},
-			Tls: []*istioapinetworkingv1beta1.TLSRoute{{
-				Match: []*istioapinetworkingv1beta1.TLSMatchAttributes{{
-					Port:     kubeapiserverconstants.Port,
-					SniHosts: values.Hosts,
-				}},
-				Route: []*istioapinetworkingv1beta1.RouteDestination{{
-					Destination: &istioapinetworkingv1beta1.Destination{
-						Host: hostName,
-						Port: &istioapinetworkingv1beta1.PortSelector{Number: kubeapiserverconstants.Port},
-					},
-				}},
-			}},
-		}
-		return nil
-	}); err != nil {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, virtualService, istio.VirtualServiceWithSNIMatch(virtualService, getLabels(), s.valuesFunc().Hosts, gateway.Name, kubeapiserverconstants.Port, hostName)); err != nil {
 		return err
 	}
 

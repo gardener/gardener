@@ -48,6 +48,9 @@ var _ = Describe("Handler", func() {
 		garden = &operatorv1alpha1.Garden{
 			Spec: operatorv1alpha1.GardenSpec{
 				RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+					Ingress: operatorv1alpha1.Ingress{
+						Domains: []string{"ingress.bar.com"},
+					},
 					Networking: operatorv1alpha1.RuntimeNetworking{
 						Pods:     "10.1.0.0/16",
 						Services: "10.2.0.0/16",

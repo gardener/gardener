@@ -107,6 +107,7 @@ func checkIstio(istioDeploy istio.Interface, testValues istioTestValues) {
 		networkPolicyLabels["networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-tcp-1194"] = "allowed"
 		networkPolicyLabels["networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-0-tcp-1194"] = "allowed"
 		networkPolicyLabels["networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-1-tcp-1194"] = "allowed"
+		networkPolicyLabels["networking.resources.gardener.cloud/to-garden-nginx-ingress-controller-tcp-443"] = "allowed"
 	}
 
 	Expect(istioDeploy.GetValues()).To(Equal(istio.Values{

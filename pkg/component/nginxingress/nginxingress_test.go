@@ -49,6 +49,9 @@ var _ = Describe("NginxIngress", func() {
 		namespace           = "some-namespace"
 		imageController     = "some-image:some-tag"
 		imageDefaultBackend = "some-image2:some-tag2"
+		wildcardIngress     = "*.ingress.seed.world"
+		istioLabelKey       = "my"
+		istioLabelValue     = "istio"
 
 		c            client.Client
 		nginxIngress component.DeployWaiter
@@ -95,17 +98,19 @@ var _ = Describe("NginxIngress", func() {
 			configMapName = "nginx-ingress-controller-" + utils.ComputeConfigMapChecksum(configMapData)[:8]
 
 			values = Values{
-				ClusterType:             component.ClusterTypeSeed,
-				KubernetesVersion:       semver.MustParse("1.26"),
-				TargetNamespace:         namespace,
-				IngressClass:            v1beta1constants.SeedNginxIngressClass,
-				PriorityClassName:       v1beta1constants.PriorityClassNameSeedSystem600,
-				ImageController:         imageController,
-				ImageDefaultBackend:     imageDefaultBackend,
-				ConfigData:              configMapData,
-				LoadBalancerAnnotations: loadBalancerAnnotations,
-				PSPDisabled:             true,
-				VPAEnabled:              true,
+				ClusterType:               component.ClusterTypeSeed,
+				KubernetesVersion:         semver.MustParse("1.26"),
+				TargetNamespace:           namespace,
+				IngressClass:              v1beta1constants.SeedNginxIngressClass,
+				PriorityClassName:         v1beta1constants.PriorityClassNameSeedSystem600,
+				ImageController:           imageController,
+				ImageDefaultBackend:       imageDefaultBackend,
+				ConfigData:                configMapData,
+				LoadBalancerAnnotations:   loadBalancerAnnotations,
+				PSPDisabled:               true,
+				VPAEnabled:                true,
+				WildcardIngressDomains:    []string{wildcardIngress},
+				IstioIngressGatewayLabels: map[string]string{istioLabelKey: istioLabelValue},
 			}
 		})
 
@@ -297,7 +302,8 @@ subjects:
 kind: Service
 metadata:
   annotations:
-    networking.resources.gardener.cloud/from-world-to-ports: '[{"protocol":"TCP","port":80},{"protocol":"TCP","port":443}]'
+    networking.istio.io/exportTo: '*'
+    networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}}]'
     some: value
   creationTimestamp: null
   labels:
@@ -318,7 +324,7 @@ spec:
   selector:
     app: nginx-ingress
     component: controller
-  type: LoadBalancer
+  type: ClusterIP
 status:
   loadBalancer: {}
 `
@@ -578,6 +584,88 @@ status: {}
 `
 					return out
 				}
+
+				destinationRuleYAML = `apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  creationTimestamp: null
+  labels:
+    app: nginx-ingress
+    component: controller
+  name: nginx-ingress-controller
+  namespace: ` + namespace + `
+spec:
+  exportTo:
+  - '*'
+  host: nginx-ingress-controller.` + namespace + `.svc.cluster.local
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 5000
+        tcpKeepalive:
+          interval: 75s
+          time: 7200s
+    loadBalancer:
+      localityLbSetting:
+        enabled: true
+        failoverPriority:
+        - topology.kubernetes.io/zone
+    outlierDetection: {}
+    tls: {}
+status: {}
+`
+
+				gatewayYAML = `apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  creationTimestamp: null
+  labels:
+    app: nginx-ingress
+    component: controller
+  name: nginx-ingress-controller
+  namespace: ` + namespace + `
+spec:
+  selector:
+    ` + istioLabelKey + `: ` + istioLabelValue + `
+  servers:
+  - hosts:
+    - '` + wildcardIngress + `'
+    port:
+      name: tls
+      number: 443
+      protocol: TLS
+    tls: {}
+status: {}
+`
+
+				virtualServiceYAML = `apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  creationTimestamp: null
+  labels:
+    app: nginx-ingress
+    component: controller
+  name: nginx-ingress-controller
+  namespace: ` + namespace + `
+spec:
+  exportTo:
+  - '*'
+  gateways:
+  - nginx-ingress-controller
+  hosts:
+  - '` + wildcardIngress + `'
+  tls:
+  - match:
+    - port: 443
+      sniHosts:
+      - '` + wildcardIngress + `'
+    route:
+    - destination:
+        host: nginx-ingress-controller.` + namespace + `.svc.cluster.local
+        port:
+          number: 443
+status: {}
+`
 			)
 
 			JustBeforeEach(func() {
@@ -615,6 +703,7 @@ status: {}
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+				Expect(managedResourceSecret.Data).To(HaveLen(16))
 
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_seed_nginx-ingress.yaml"])).To(Equal(clusterRoleYAML))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_seed_nginx-ingress.yaml"])).To(Equal(clusterRoleBindingYAML))
@@ -628,6 +717,9 @@ status: {}
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-k8s-backend.yaml"])).To(Equal(deploymentBackendYAML))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(configMapName)))
 				Expect(string(managedResourceSecret.Data["ingressclass____"+v1beta1constants.SeedNginxIngressClass+".yaml"])).To(Equal(ingressClassYAML))
+				Expect(string(managedResourceSecret.Data["destinationrule__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(destinationRuleYAML))
+				Expect(string(managedResourceSecret.Data["gateway__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(gatewayYAML))
+				Expect(string(managedResourceSecret.Data["virtualservice__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(virtualServiceYAML))
 			})
 
 			Context("Kubernetes version < 1.26", func() {

@@ -65,14 +65,6 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddO
 		istioIngressGatewayPredicates = append(istioIngressGatewayPredicates, predicate)
 	}
 
-	nginxIngressPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{MatchLabels: map[string]string{
-		"app":       "nginx-ingress",
-		"component": "controller",
-	}})
-	if err != nil {
-		return err
-	}
-
 	isMultiZone, err := HasNodesInMultipleZones(ctx, mgr.GetAPIReader())
 	if err != nil {
 		return err
@@ -84,7 +76,7 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddO
 		Zone1IP:     opts.Zone1IP,
 		Zone2IP:     opts.Zone2IP,
 		IsMultiZone: isMultiZone,
-	}).AddToManager(mgr, predicate.Or(nginxIngressPredicate, predicate.Or(istioIngressGatewayPredicates...)))
+	}).AddToManager(mgr, predicate.Or(istioIngressGatewayPredicates...))
 }
 
 // AddToManager adds a controller with the default Options.

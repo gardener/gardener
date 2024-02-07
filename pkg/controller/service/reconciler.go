@@ -33,7 +33,6 @@ var (
 	keyIstioIngressGatewayZone0         = client.ObjectKey{Namespace: "istio-ingress--0", Name: "istio-ingressgateway"}
 	keyIstioIngressGatewayZone1         = client.ObjectKey{Namespace: "istio-ingress--1", Name: "istio-ingressgateway"}
 	keyIstioIngressGatewayZone2         = client.ObjectKey{Namespace: "istio-ingress--2", Name: "istio-ingressgateway"}
-	keyNginxIngress                     = client.ObjectKey{Namespace: "garden", Name: "nginx-ingress-controller"}
 	keyVirtualGardenIstioIngressGateway = client.ObjectKey{Namespace: "virtual-garden-istio-ingress", Name: "istio-ingressgateway"}
 )
 
@@ -42,7 +41,6 @@ const (
 	nodePortIstioIngressGatewayZone0 int32 = 30444
 	nodePortIstioIngressGatewayZone1 int32 = 30445
 	nodePortIstioIngressGatewayZone2 int32 = 30446
-	nodePortIngress                  int32 = 30448
 )
 
 // Reconciler is a reconciler for Service resources.
@@ -98,9 +96,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		case key == keyIstioIngressGatewayZone2 && servicePort.Name == "tcp":
 			service.Spec.Ports[i].NodePort = nodePortIstioIngressGatewayZone2
 			ip = r.Zone2IP
-		case key == keyNginxIngress && servicePort.Name == "https":
-			service.Spec.Ports[i].NodePort = nodePortIngress
-			ip = r.HostIP
 		}
 	}
 
@@ -115,17 +110,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	patch = client.MergeFrom(service.DeepCopy())
 	service.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{}
 
-	if key != keyNginxIngress {
-		nodes := &corev1.NodeList{}
-		if err := r.Client.List(ctx, nodes); err != nil {
-			return reconcile.Result{}, err
-		}
+	nodes := &corev1.NodeList{}
+	if err := r.Client.List(ctx, nodes); err != nil {
+		return reconcile.Result{}, err
+	}
 
-		for _, node := range nodes.Items {
-			for _, address := range node.Status.Addresses {
-				if address.Type == corev1.NodeInternalIP {
-					service.Status.LoadBalancer.Ingress = append(service.Status.LoadBalancer.Ingress, corev1.LoadBalancerIngress{IP: address.Address})
-				}
+	for _, node := range nodes.Items {
+		for _, address := range node.Status.Addresses {
+			if address.Type == corev1.NodeInternalIP {
+				service.Status.LoadBalancer.Ingress = append(service.Status.LoadBalancer.Ingress, corev1.LoadBalancerIngress{IP: address.Address})
 			}
 		}
 	}
@@ -151,7 +144,6 @@ func (r *Reconciler) remediateAllocatedNodePorts(ctx context.Context, log logr.L
 
 		for i, port := range service.Spec.Ports {
 			if port.NodePort == nodePortIstioIngressGateway ||
-				port.NodePort == nodePortIngress ||
 				port.NodePort == nodePortIstioIngressGatewayZone0 ||
 				port.NodePort == nodePortIstioIngressGatewayZone1 ||
 				port.NodePort == nodePortIstioIngressGatewayZone2 {

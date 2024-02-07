@@ -16,10 +16,10 @@ package nginxingress
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -41,6 +41,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/istio"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
@@ -74,9 +75,10 @@ const (
 
 	roleBindingPSPName = "gardener.cloud:psp:addons-nginx-ingress"
 
-	servicePortControllerHttp    int32 = 80
-	containerPortControllerHttp  int32 = 80
-	servicePortControllerHttps   int32 = 443
+	servicePortControllerHttp   int32 = 80
+	containerPortControllerHttp int32 = 80
+	// ServicePortControllerHttps is the service port used by the controller.
+	ServicePortControllerHttps   int32 = 443
 	containerPortControllerHttps int32 = 443
 
 	servicePortBackend   int32 = 80
@@ -112,6 +114,10 @@ type Values struct {
 	VPAEnabled bool
 	// PSPDisabled marks whether the PodSecurityPolicy admission plugin is disabled.
 	PSPDisabled bool
+	// WildcardIngressDomains are the wildcard domains used by all ingress resources exposed by nginx-ingress.
+	WildcardIngressDomains []string
+	// IstioIngressGatewayLabels are the labels for identifying the used istio ingress gateway.
+	IstioIngressGatewayLabels map[string]string
 }
 
 // New creates a new instance of DeployWaiter for nginx-ingress
@@ -275,7 +281,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 					},
 					{
 						Name:       "https",
-						Port:       servicePortControllerHttps,
+						Port:       ServicePortControllerHttps,
 						Protocol:   corev1.ProtocolTCP,
 						TargetPort: intstr.FromInt32(containerPortControllerHttps),
 					},
@@ -609,10 +615,13 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		roleBindingPSP      *rbacv1.RoleBinding
 		podDisruptionBudget *policyv1.PodDisruptionBudget
 		networkPolicy       *networkingv1.NetworkPolicy
+
+		destinationRule *istionetworkingv1beta1.DestinationRule
+		gateway         *istionetworkingv1beta1.Gateway
+		virtualService  *istionetworkingv1beta1.VirtualService
 	)
 
 	if n.values.ClusterType == component.ClusterTypeSeed {
-		metav1.SetMetaDataAnnotation(&serviceController.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d},{"protocol":"TCP","port":%d}]`, containerPortControllerHttp, containerPortControllerHttps))
 		metav1.SetMetaDataAnnotation(&deploymentController.ObjectMeta, references.AnnotationKey(references.KindConfigMap, configMap.Name), configMap.Name)
 
 		deploymentController.Spec.Template.Annotations = map[string]string{
@@ -645,6 +654,29 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		}
 
 		kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, n.values.KubernetesVersion)
+
+		destinationHost := kubernetesutils.FQDNForService(serviceController.Name, serviceController.Namespace)
+		destinationRule = &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: controllerName, Namespace: n.values.TargetNamespace}}
+		if err := istio.DestinationRuleWithLocalityPreference(destinationRule, n.getLabels(LabelValueController, false), destinationHost)(); err != nil {
+			return nil, err
+		}
+
+		port := uint32(ServicePortControllerHttps)
+		gateway = &istionetworkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: controllerName, Namespace: n.values.TargetNamespace}}
+		if err := istio.GatewayWithTLSPassthrough(gateway, n.getLabels(LabelValueController, false), n.values.IstioIngressGatewayLabels, n.values.WildcardIngressDomains, port)(); err != nil {
+			return nil, err
+		}
+
+		virtualService = &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: controllerName, Namespace: n.values.TargetNamespace}}
+		if err := istio.VirtualServiceWithSNIMatch(virtualService, n.getLabels(LabelValueController, false), n.values.WildcardIngressDomains, gateway.Name, port, destinationHost)(); err != nil {
+			return nil, err
+		}
+
+		serviceController.Spec.Type = corev1.ServiceTypeClusterIP
+		metav1.SetMetaDataAnnotation(&serviceController.ObjectMeta, "networking.istio.io/exportTo", "*")
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(serviceController, []metav1.LabelSelector{
+			{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
+		}...))
 	}
 
 	if n.values.ClusterType == component.ClusterTypeShoot {
@@ -749,6 +781,9 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		ingressClass,
 		roleBindingPSP,
 		networkPolicy,
+		destinationRule,
+		gateway,
+		virtualService,
 	)
 }
 
@@ -836,4 +871,10 @@ func (n *nginxIngress) getName(kind string, backend bool) string {
 	}
 
 	return ""
+}
+
+// GetServiceName provides the name of the service resource of the controller for cluster type Seed.
+func GetServiceName() string {
+	n := &nginxIngress{values: Values{ClusterType: component.ClusterTypeSeed}}
+	return n.getName("Service", false)
 }

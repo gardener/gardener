@@ -85,7 +85,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 					return &secretList.Items[0], nil
 				},
 				GetObservabilityEndpoint: func(_ *corev1.Secret) string {
-					return "https://plutono-garden." + garden.Spec.RuntimeCluster.Ingress.Domain
+					return "https://plutono-garden." + garden.Spec.RuntimeCluster.Ingress.Domains[0]
 				},
 				GetObservabilityRotation: func() *gardencorev1beta1.ObservabilityRotation {
 					return garden.Status.Credentials.Rotation.Observability

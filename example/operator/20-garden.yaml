@@ -15,7 +15,8 @@ metadata:
 spec:
   runtimeCluster:
     ingress:
-      domain: ingress.runtime-garden.local.gardener.cloud
+      domains:
+      - ingress.runtime-garden.local.gardener.cloud
       controller:
         kind: nginx
       # providerConfig:

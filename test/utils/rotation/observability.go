@@ -118,7 +118,7 @@ func accessEndpoint(ctx context.Context, url string, username, password []byte) 
 		},
 	}
 
-	request, err := http.NewRequestWithContext(ctx, "GET", url+":8448", nil)
+	request, err := http.NewRequestWithContext(ctx, "GET", url+":443", nil)
 	if err != nil {
 		return nil, err
 	}
