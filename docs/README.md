@@ -129,6 +129,7 @@
 * [`PriorityClasses` in Gardener Clusters](development/priority-classes.md)
 * [High Availability Of Deployed Components](development/high-availability.md)
 * [Checklist For Adding New Components](development/component-checklist.md)
+* [Defaulting Strategy and Developer Guideline](development/defaulting.md)
 
 ## Extensions
 
