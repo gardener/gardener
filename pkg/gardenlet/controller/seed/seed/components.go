@@ -219,7 +219,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.monitoring, err = r.newMonitoring(secretsManager, seed, alertingSMTPSecret, globalMonitoringSecretSeed, seed.GetIngressFQDN("p-seed"), wildCardCertSecret)
+	c.monitoring, err = r.newMonitoring(secretsManager, seed, globalMonitoringSecretSeed, seed.GetIngressFQDN("p-seed"), wildCardCertSecret)
 	if err != nil {
 		return
 	}
@@ -563,11 +563,7 @@ func (r *Reconciler) newPlutono(seed *seedpkg.Seed, secretsManager secretsmanage
 	)
 }
 
-func (r *Reconciler) newMonitoring(secretsManager secretsmanager.Interface, seed *seedpkg.Seed, alertingSMTPSecret *corev1.Secret, globalMonitoringSecret *corev1.Secret, ingressHost string, wildcardCertSecret *corev1.Secret) (component.Deployer, error) {
-	imageAlertmanager, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlertmanager)
-	if err != nil {
-		return nil, err
-	}
+func (r *Reconciler) newMonitoring(secretsManager secretsmanager.Interface, seed *seedpkg.Seed, globalMonitoringSecret *corev1.Secret, ingressHost string, wildcardCertSecret *corev1.Secret) (component.Deployer, error) {
 	imageAlpine, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlpine)
 	if err != nil {
 		return nil, err
@@ -592,16 +588,13 @@ func (r *Reconciler) newMonitoring(secretsManager secretsmanager.Interface, seed
 		secretsManager,
 		r.GardenNamespace,
 		monitoring.ValuesBootstrap{
-			AlertingSMTPSecret:                 alertingSMTPSecret,
 			GlobalMonitoringSecret:             globalMonitoringSecret,
 			HVPAEnabled:                        hvpaEnabled(),
-			ImageAlertmanager:                  imageAlertmanager.String(),
 			ImageAlpine:                        imageAlpine.String(),
 			ImageConfigmapReloader:             imageConfigmapReloader.String(),
 			ImagePrometheus:                    imagePrometheus.String(),
 			IngressHost:                        ingressHost,
 			SeedName:                           seed.GetInfo().Name,
-			StorageCapacityAlertmanager:        seed.GetValidVolumeSize("1Gi"),
 			StorageCapacityPrometheus:          seed.GetValidVolumeSize("10Gi"),
 			StorageCapacityAggregatePrometheus: seed.GetValidVolumeSize("20Gi"),
 			WildcardCertName:                   wildcardCertName,

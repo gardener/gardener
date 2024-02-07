@@ -47,14 +47,10 @@ var (
 
 // ValuesBootstrap is a set of configuration values for the monitoring components.
 type ValuesBootstrap struct {
-	// AlertingSMTPSecret is the alerting SMTP secret..
-	AlertingSMTPSecret *corev1.Secret
 	// GlobalMonitoringSecret is the global monitoring secret for the garden cluster.
 	GlobalMonitoringSecret *corev1.Secret
 	// HVPAEnabled states whether HVPA is enabled or not.
 	HVPAEnabled bool
-	// ImageAlertmanager is the image of Alertmanager.
-	ImageAlertmanager string
 	// ImageAlpine is the image of Alpine.
 	ImageAlpine string
 	// ImageConfigmapReloader is the image of ConfigmapReloader.
@@ -65,8 +61,6 @@ type ValuesBootstrap struct {
 	IngressHost string
 	// SeedName is the name of the seed.
 	SeedName string
-	// StorageCapacityAlertmanager is the storage capacity of Alertmanager.
-	StorageCapacityAlertmanager string
 	// StorageCapacityPrometheus is the storage capacity of Prometheus.
 	StorageCapacityPrometheus string
 	// StorageCapacityAggregatePrometheus is the storage capacity of AggregatePrometheus.
@@ -149,29 +143,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		}
 	}
 
-	// AlertManager configuration
-	alertManagerConfig := map[string]interface{}{
-		"storage": b.values.StorageCapacityAlertmanager,
-	}
-
-	if b.values.AlertingSMTPSecret != nil {
-		emailConfig := map[string]interface{}{
-			"to":            string(b.values.AlertingSMTPSecret.Data["to"]),
-			"from":          string(b.values.AlertingSMTPSecret.Data["from"]),
-			"smarthost":     string(b.values.AlertingSMTPSecret.Data["smarthost"]),
-			"auth_username": string(b.values.AlertingSMTPSecret.Data["auth_username"]),
-			"auth_identity": string(b.values.AlertingSMTPSecret.Data["auth_identity"]),
-			"auth_password": string(b.values.AlertingSMTPSecret.Data["auth_password"]),
-		}
-		alertManagerConfig["enabled"] = true
-		alertManagerConfig["emailConfigs"] = []map[string]interface{}{emailConfig}
-	} else {
-		alertManagerConfig["enabled"] = false
-		if err := deleteAlertmanager(ctx, b.client, b.namespace); err != nil {
-			return err
-		}
-	}
-
 	var (
 		vpaGK    = schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}
 		hvpaGK   = schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "Hvpa"}
@@ -211,7 +182,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		"global": map[string]interface{}{
 			"ingressClass": v1beta1constants.SeedNginxIngressClass,
 			"images": map[string]string{
-				"alertmanager":       b.values.ImageAlertmanager,
 				"alpine":             b.values.ImageAlpine,
 				"configmap-reloader": b.values.ImageConfigmapReloader,
 				"prometheus":         b.values.ImagePrometheus,
@@ -229,7 +199,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			"secretName":              ingressTLSSecretName,
 			"additionalScrapeConfigs": aggregateScrapeConfigs.String(),
 		},
-		"alertmanager": alertManagerConfig,
 		"hvpa": map[string]interface{}{
 			"enabled": b.values.HVPAEnabled,
 		},

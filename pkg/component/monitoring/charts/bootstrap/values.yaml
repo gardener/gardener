@@ -107,8 +107,6 @@ aggregatePrometheus:
         percentage: 80
 
 allowedMetrics:
-  alertmanager: []
-
   fluentbit:
   - fluentbit_input_bytes_total
   - fluentbit_input_records_total
@@ -162,15 +160,9 @@ ingress:
 
 global:
   images:
-    alertmanager: image-repository:image-tag
     alpine: image-repository:image-tag
     configmap-reloader: image-repository:image-tag
     prometheus: image-repository:image-tag
-
-alertmanager:
-  emailConfigs: []
-  enabled: true
-  storage: 1Gi
 
 hvpa:
   enabled: false

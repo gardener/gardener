@@ -80,23 +80,6 @@ data:
         regex: prometheus-cache;web
         action: keep
 
-    - job_name: alertmanager
-      kubernetes_sd_configs:
-      - role: endpoints
-        namespaces:
-          names: [{{ .Release.Namespace }}]
-      relabel_configs:
-      - source_labels:
-        - __meta_kubernetes_endpoints_name
-        - __meta_kubernetes_endpoint_port_name
-        regex: alertmanager;cluster
-        action: keep
-      metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.alertmanager | indent 6 }}
-      - source_labels: [ namespace ]
-        action: keep
-        regex: ^{{ .Release.Namespace }}$
-
     - job_name: vali
       honor_labels: false
       kubernetes_sd_configs:
