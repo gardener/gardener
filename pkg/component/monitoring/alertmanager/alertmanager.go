@@ -68,6 +68,7 @@ func (a *alertManager) alertManager() *monitoringv1.Alertmanager {
 			AlertmanagerConfigNamespaceSelector: &metav1.LabelSelector{},
 			LogLevel:                            "info",
 			ForceEnableClusterMode:              true,
+			AlertmanagerConfiguration:           &monitoringv1.AlertmanagerConfiguration{Name: a.name()},
 		},
 	}
 }

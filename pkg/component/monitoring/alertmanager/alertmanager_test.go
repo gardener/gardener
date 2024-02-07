@@ -20,8 +20,10 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -51,10 +53,21 @@ var _ = Describe("Prometheus", func() {
 		namespace           = "some-namespace"
 		managedResourceName = "alertmanager-" + name
 
-		image             = "some-image"
-		version           = "v1.2.3"
-		priorityClassName = "priority-class"
-		storageCapacity   = resource.MustParse("1337Gi")
+		image              = "some-image"
+		version            = "v1.2.3"
+		priorityClassName  = "priority-class"
+		storageCapacity    = resource.MustParse("1337Gi")
+		alertingSMTPSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: "smtp-secret"},
+			Data: map[string][]byte{
+				"to":            []byte("secret-data1"),
+				"from":          []byte("secret-data2"),
+				"smarthost":     []byte("secret-data3"),
+				"auth_username": []byte("secret-data4"),
+				"auth_identity": []byte("secret-data5"),
+				"auth_password": []byte("secret-data6"),
+			},
+		}
 
 		fakeClient client.Client
 		deployer   component.DeployWaiter
@@ -68,6 +81,7 @@ var _ = Describe("Prometheus", func() {
 		service      *corev1.Service
 		alertManager *monitoringv1.Alertmanager
 		vpa          *vpaautoscalingv1.VerticalPodAutoscaler
+		config       *monitoringv1alpha1.AlertmanagerConfig
 	)
 
 	BeforeEach(func() {
@@ -76,11 +90,12 @@ var _ = Describe("Prometheus", func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
 		values = Values{
-			Name:              name,
-			Image:             image,
-			Version:           version,
-			PriorityClassName: priorityClassName,
-			StorageCapacity:   storageCapacity,
+			Name:               name,
+			Image:              image,
+			Version:            version,
+			PriorityClassName:  priorityClassName,
+			StorageCapacity:    storageCapacity,
+			AlertingSMTPSecret: alertingSMTPSecret,
 		}
 
 		fakeOps = &retryfake.Ops{MaxAttempts: 2}
@@ -174,6 +189,7 @@ var _ = Describe("Prometheus", func() {
 				AlertmanagerConfigNamespaceSelector: &metav1.LabelSelector{},
 				LogLevel:                            "info",
 				ForceEnableClusterMode:              true,
+				AlertmanagerConfiguration:           &monitoringv1.AlertmanagerConfiguration{Name: "alertmanager-" + name},
 			},
 		}
 		vpaUpdateMode, vpaContainerScalingModeOff := vpaautoscalingv1.UpdateModeAuto, vpaautoscalingv1.ContainerScalingModeOff
@@ -211,6 +227,71 @@ var _ = Describe("Prometheus", func() {
 							ContainerName: "config-reloader",
 							Mode:          &vpaContainerScalingModeOff,
 						},
+					},
+				},
+			},
+		}
+		config = &monitoringv1alpha1.AlertmanagerConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "alertmanager-" + name,
+				Namespace: namespace,
+			},
+			Spec: monitoringv1alpha1.AlertmanagerConfigSpec{
+				Route: &monitoringv1alpha1.Route{
+					GroupBy:        []string{"service"},
+					GroupWait:      "5m",
+					GroupInterval:  "5m",
+					RepeatInterval: "72h",
+					Receiver:       "dev-null",
+					Routes:         []apiextensionsv1.JSON{{Raw: []byte(`{"match_re":{"visibility":"^(all|operator)$"},"receiver":"email-kubernetes-ops"}`)}},
+				},
+				InhibitRules: []monitoringv1alpha1.InhibitRule{
+					{
+						SourceMatch: []monitoringv1alpha1.Matcher{{Name: "severity", Value: "critical", MatchType: monitoringv1alpha1.MatchEqual}},
+						TargetMatch: []monitoringv1alpha1.Matcher{{Name: "severity", Value: "warning", MatchType: monitoringv1alpha1.MatchEqual}},
+						Equal:       []string{"alertname", "service", "cluster"},
+					},
+					{
+						SourceMatch: []monitoringv1alpha1.Matcher{{Name: "service", Value: "vpn", MatchType: monitoringv1alpha1.MatchEqual}},
+						TargetMatch: []monitoringv1alpha1.Matcher{{Name: "type", Value: "shoot", MatchType: monitoringv1alpha1.MatchRegexp}},
+						Equal:       []string{"type", "cluster"},
+					},
+					{
+						SourceMatch: []monitoringv1alpha1.Matcher{{Name: "severity", Value: "blocker", MatchType: monitoringv1alpha1.MatchEqual}},
+						TargetMatch: []monitoringv1alpha1.Matcher{{Name: "severity", Value: "^(critical|warning)$", MatchType: monitoringv1alpha1.MatchRegexp}},
+						Equal:       []string{"cluster"},
+					},
+					{
+						SourceMatch: []monitoringv1alpha1.Matcher{{Name: "service", Value: "kube-apiserver", MatchType: monitoringv1alpha1.MatchEqual}},
+						TargetMatch: []monitoringv1alpha1.Matcher{{Name: "service", Value: "nodes", MatchType: monitoringv1alpha1.MatchRegexp}},
+						Equal:       []string{"cluster"},
+					},
+					{
+						SourceMatch: []monitoringv1alpha1.Matcher{{Name: "service", Value: "kube-apiserver", MatchType: monitoringv1alpha1.MatchEqual}},
+						TargetMatch: []monitoringv1alpha1.Matcher{{Name: "severity", Value: "info", MatchType: monitoringv1alpha1.MatchRegexp}},
+						Equal:       []string{"cluster"},
+					},
+					{
+						SourceMatch: []monitoringv1alpha1.Matcher{{Name: "service", Value: "kube-state-metrics-shoot", MatchType: monitoringv1alpha1.MatchEqual}},
+						TargetMatch: []monitoringv1alpha1.Matcher{{Name: "service", Value: "nodes", MatchType: monitoringv1alpha1.MatchRegexp}},
+						Equal:       []string{"cluster"},
+					},
+				},
+				Receivers: []monitoringv1alpha1.Receiver{
+					{Name: "dev-null"},
+					{
+						Name: "email-kubernetes-ops",
+						EmailConfigs: []monitoringv1alpha1.EmailConfig{{
+							To:           string(alertingSMTPSecret.Data["to"]),
+							From:         string(alertingSMTPSecret.Data["from"]),
+							Smarthost:    string(alertingSMTPSecret.Data["smarthost"]),
+							AuthUsername: string(alertingSMTPSecret.Data["auth_username"]),
+							AuthIdentity: string(alertingSMTPSecret.Data["auth_identity"]),
+							AuthPassword: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{Name: alertingSMTPSecret.Name},
+								Key:                  "auth_password",
+							},
+						}},
 					},
 				},
 			},
@@ -273,10 +354,11 @@ var _ = Describe("Prometheus", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(3))
+				Expect(managedResourceSecret.Data).To(HaveLen(4))
 				Expect(string(managedResourceSecret.Data["service__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
 				Expect(string(managedResourceSecret.Data["alertmanager__some-namespace__"+name+".yaml"])).To(Equal(componenttest.Serialize(alertManager)))
 				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(vpa)))
+				Expect(string(managedResourceSecret.Data["alertmanagerconfig__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(config)))
 			})
 		})
 	})

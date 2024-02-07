@@ -18,6 +18,7 @@ import (
 	"context"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -43,6 +44,8 @@ type Values struct {
 	PriorityClassName string
 	// StorageCapacity is the storage capacity of AlertManager.
 	StorageCapacity resource.Quantity
+	// AlertingSMTPSecret is the alerting SMTP secret.
+	AlertingSMTPSecret *corev1.Secret
 }
 
 // New creates a new instance of DeployWaiter for the AlertManager.
@@ -67,6 +70,7 @@ func (a *alertManager) Deploy(ctx context.Context) error {
 		a.service(),
 		a.alertManager(),
 		a.vpa(),
+		a.config(),
 	)
 	if err != nil {
 		return err
