@@ -333,13 +333,13 @@ var _ = Describe("handler", func() {
 
 func expectAllowed(response admission.Response, reason gomegatypes.GomegaMatcher, optionalDescription ...interface{}) {
 	Expect(response.Allowed).To(BeTrue(), optionalDescription...)
-	Expect(string(response.Result.Message)).To(reason, optionalDescription...)
+	Expect(response.Result.Message).To(reason, optionalDescription...)
 }
 
 func expectDenied(response admission.Response, reason gomegatypes.GomegaMatcher, optionalDescription ...interface{}) {
 	Expect(response.Allowed).To(BeFalse(), optionalDescription...)
 	Expect(response.Result.Code).To(BeEquivalentTo(http.StatusForbidden), optionalDescription...)
-	Expect(string(response.Result.Message)).To(reason, optionalDescription...)
+	Expect(response.Result.Message).To(reason, optionalDescription...)
 }
 
 func expectErrored(response admission.Response, code, err gomegatypes.GomegaMatcher, optionalDescription ...interface{}) {

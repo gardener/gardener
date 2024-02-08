@@ -56,7 +56,7 @@ func ValidateQuotaSpec(quotaSpec *core.QuotaSpec, fldPath *field.Path) field.Err
 	metricsFldPath := fldPath.Child("metrics")
 	for k, v := range quotaSpec.Metrics {
 		keyPath := metricsFldPath.Key(string(k))
-		if !isValidQuotaMetric(corev1.ResourceName(k)) {
+		if !isValidQuotaMetric(k) {
 			allErrs = append(allErrs, field.Invalid(keyPath, v.String(), fmt.Sprintf("%s is no supported quota metric", string(k))))
 		}
 		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue(k.String(), v, keyPath)...)

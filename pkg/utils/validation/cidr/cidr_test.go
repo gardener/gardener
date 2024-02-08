@@ -402,7 +402,7 @@ var _ = Describe("cidr", func() {
 
 			It("should return an error if CIDRs overlap", func() {
 				cdr := NewCIDR("2001:0db8::/16", path)
-				badCIDR := string(validGardenCIDR)
+				badCIDR := validGardenCIDR
 				badPath := field.NewPath("bad")
 				other := NewCIDR(badCIDR, badPath)
 
@@ -520,13 +520,13 @@ var _ = Describe("cidr", func() {
 
 			It("should return no errors if cidr is subset", func() {
 				cdr := NewCIDR("2001:0db8::/32", path)
-				other := NewCIDR(string(validGardenCIDR), field.NewPath("other"))
+				other := NewCIDR(validGardenCIDR, field.NewPath("other"))
 				Expect(cdr.ValidateOverlap(other)).To(BeEmpty())
 			})
 
 			It("should return no errors if cidr is superset", func() {
 				cdr := NewCIDR(validGardenCIDR, path)
-				other := NewCIDR(string("2001:0db8::/32"), field.NewPath("other"))
+				other := NewCIDR("2001:0db8::/32", field.NewPath("other"))
 				Expect(cdr.ValidateOverlap(other)).To(BeEmpty())
 			})
 		})

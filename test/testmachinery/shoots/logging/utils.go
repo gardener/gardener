@@ -179,7 +179,7 @@ func getLoggingShootService(number int) *corev1.Service {
 			Namespace: fmt.Sprintf("%s%v", simulatedShootNamespacePrefix, number),
 		},
 		Spec: corev1.ServiceSpec{
-			Type:         corev1.ServiceType(corev1.ServiceTypeExternalName),
+			Type:         corev1.ServiceTypeExternalName,
 			ExternalName: "logging-shoot.garden.svc.cluster.local",
 		},
 	}

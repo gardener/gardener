@@ -2020,7 +2020,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Default: ptr.To(int32(42)),
 					}, BeEmpty()),
 					Entry("invalid (default<0)", &core.WatchCacheSizes{
-						Default: ptr.To(int32(negativeSize)),
+						Default: ptr.To(negativeSize),
 					}, ConsistOf(
 						field.Invalid(field.NewPath("default"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
 					)),
@@ -2785,9 +2785,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 			expanderMostPods                    = core.ClusterAutoscalerExpanderMostPods
 			expanderPriority                    = core.ClusterAutoscalerExpanderPriority
 			expanderRandom                      = core.ClusterAutoscalerExpanderRandom
-			expanderPriorityAndLeastWaste       = core.ExpanderMode(core.ClusterAutoscalerExpanderPriority + "," + core.ClusterAutoscalerExpanderLeastWaste)
-			invalidExpander                     = core.ExpanderMode(core.ClusterAutoscalerExpanderPriority + ", test-expander")
-			invalidMultipleExpanderString       = core.ExpanderMode(core.ClusterAutoscalerExpanderPriority + ", " + core.ClusterAutoscalerExpanderLeastWaste)
+			expanderPriorityAndLeastWaste       = core.ClusterAutoscalerExpanderPriority + "," + core.ClusterAutoscalerExpanderLeastWaste
+			invalidExpander                     = core.ClusterAutoscalerExpanderPriority + ", test-expander"
+			invalidMultipleExpanderString       = core.ClusterAutoscalerExpanderPriority + ", " + core.ClusterAutoscalerExpanderLeastWaste
 			ignoreTaintsUnique                  = []string{"taint-1", "taint-2"}
 			ignoreTaintsDuplicate               = []string{"taint-1", "taint-1"}
 			ignoreTaintsInvalid                 = []string{"taint 1", "taint-1"}

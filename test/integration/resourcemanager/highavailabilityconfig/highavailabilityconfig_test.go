@@ -760,13 +760,13 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 									Key:               "node.kubernetes.io/not-ready",
 									Operator:          "Exists",
 									Effect:            "NoExecute",
-									TolerationSeconds: ptr.To(int64(defaultNotReadyTolerationSeconds)),
+									TolerationSeconds: ptr.To(defaultNotReadyTolerationSeconds),
 								},
 								corev1.Toleration{
 									Key:               "node.kubernetes.io/unreachable",
 									Operator:          "Exists",
 									Effect:            "NoExecute",
-									TolerationSeconds: ptr.To(int64(defaultUnreachableTolerationSeconds)),
+									TolerationSeconds: ptr.To(defaultUnreachableTolerationSeconds),
 								},
 							))
 						})
@@ -810,13 +810,13 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 									Key:               "node.kubernetes.io/not-ready",
 									Operator:          "Exists",
 									Effect:            "NoExecute",
-									TolerationSeconds: ptr.To(int64(defaultNotReadyTolerationSeconds)),
+									TolerationSeconds: ptr.To(defaultNotReadyTolerationSeconds),
 								},
 								corev1.Toleration{
 									Key:               "node.kubernetes.io/unreachable",
 									Operator:          "Exists",
 									Effect:            "NoExecute",
-									TolerationSeconds: ptr.To(int64(defaultUnreachableTolerationSeconds)),
+									TolerationSeconds: ptr.To(defaultUnreachableTolerationSeconds),
 								},
 							)
 
@@ -850,7 +850,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 									Key:               "node.kubernetes.io/unreachable",
 									Operator:          "Exists",
 									Effect:            "NoExecute",
-									TolerationSeconds: ptr.To(int64(defaultUnreachableTolerationSeconds)),
+									TolerationSeconds: ptr.To(defaultUnreachableTolerationSeconds),
 								},
 							))
 						})
@@ -877,7 +877,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 									Operator:          "Exists",
 									Effect:            "NoExecute",
 									Value:             "",
-									TolerationSeconds: ptr.To(int64(defaultNotReadyTolerationSeconds)),
+									TolerationSeconds: ptr.To(defaultNotReadyTolerationSeconds),
 								},
 								corev1.Toleration{
 									Key:               "node.kubernetes.io/unreachable",
