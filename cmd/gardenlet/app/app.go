@@ -384,8 +384,8 @@ func (g *garden) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to clean up GRM secret finalizers: %w", err)
 	}
 
-	log.Info("Updating shoot Prometheus config for connection to cache Prometheus")
-	if err := updateShootPrometheusConfigForConnectionToCachePrometheus(ctx, g.mgr.GetClient()); err != nil {
+	log.Info("Updating shoot Prometheus config for connection to cache Prometheus and seed Alertmanager")
+	if err := updateShootPrometheusConfigForConnectionToCachePrometheusAndSeedAlertManager(ctx, g.mgr.GetClient()); err != nil {
 		return err
 	}
 
@@ -492,8 +492,8 @@ func cleanupGRMSecretFinalizers(ctx context.Context, seedClient client.Client, l
 	})
 }
 
-// TODO(rfranzke): Remove this code after v1.90 has been released.
-func updateShootPrometheusConfigForConnectionToCachePrometheus(ctx context.Context, seedClient client.Client) error {
+// TODO(rfranzke): Remove this code after v1.92 has been released.
+func updateShootPrometheusConfigForConnectionToCachePrometheusAndSeedAlertManager(ctx context.Context, seedClient client.Client) error {
 	statefulSetList := &appsv1.StatefulSetList{}
 	if err := seedClient.List(ctx, statefulSetList, client.MatchingLabels{"app": "prometheus", "role": "monitoring", "gardener.cloud/role": "monitoring"}); err != nil {
 		return err
@@ -511,6 +511,7 @@ func updateShootPrometheusConfigForConnectionToCachePrometheus(ctx context.Conte
 			func(ctx context.Context) error {
 				patch := client.MergeFrom(statefulSet.DeepCopy())
 				metav1.SetMetaDataLabel(&statefulSet.Spec.Template.ObjectMeta, "networking.resources.gardener.cloud/to-garden-prometheus-cache-tcp-9090", "allowed")
+				metav1.SetMetaDataLabel(&statefulSet.Spec.Template.ObjectMeta, "networking.resources.gardener.cloud/to-garden-alertmanager-seed-tcp-9093", "allowed")
 				return seedClient.Patch(ctx, statefulSet, patch)
 			},
 			func(ctx context.Context) error {
