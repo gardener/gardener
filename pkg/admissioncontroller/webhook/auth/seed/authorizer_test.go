@@ -242,6 +242,26 @@ var _ = Describe("Seed", func() {
 					Expect(reason).To(BeEmpty())
 				})
 
+				It("should allow without consulting the graph because verb is create", func() {
+					attrs.Verb = "create"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				})
+
+				It("should allow when verb is delete and resource does not exist", func() {
+					attrs.Verb = "delete"
+
+					graph.EXPECT().HasVertex(graphpkg.VertexTypeConfigMap, namespace, name).Return(false)
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				})
+
 				DescribeTable("should return correct result if path exists",
 					func(verb string) {
 						attrs.Verb = verb
@@ -255,6 +275,8 @@ var _ = Describe("Seed", func() {
 						Expect(reason).To(BeEmpty())
 					},
 
+					Entry("patch", "patch"),
+					Entry("update", "update"),
 					Entry("get", "get"),
 					Entry("list", "list"),
 					Entry("watch", "watch"),
@@ -268,13 +290,9 @@ var _ = Describe("Seed", func() {
 
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionNoOpinion))
-						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list watch]"))
+						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create get patch update delete list watch]"))
 					},
 
-					Entry("create", "create"),
-					Entry("update", "update"),
-					Entry("update", "update"),
-					Entry("delete", "delete"),
 					Entry("deletecollection", "deletecollection"),
 				)
 
@@ -358,7 +376,7 @@ var _ = Describe("Seed", func() {
 					},
 
 					Entry("create", "create"),
-					Entry("update", "update"),
+					Entry("patch", "patch"),
 					Entry("update", "update"),
 					Entry("delete", "delete"),
 					Entry("deletecollection", "deletecollection"),
@@ -544,7 +562,7 @@ var _ = Describe("Seed", func() {
 					},
 
 					Entry("create", "create"),
-					Entry("update", "update"),
+					Entry("patch", "patch"),
 					Entry("update", "update"),
 					Entry("delete", "delete"),
 					Entry("deletecollection", "deletecollection"),
@@ -629,7 +647,7 @@ var _ = Describe("Seed", func() {
 					},
 
 					Entry("create", "create"),
-					Entry("update", "update"),
+					Entry("patch", "patch"),
 					Entry("update", "update"),
 					Entry("delete", "delete"),
 					Entry("deletecollection", "deletecollection"),
@@ -903,7 +921,7 @@ var _ = Describe("Seed", func() {
 					},
 
 					Entry("create", "create"),
-					Entry("update", "update"),
+					Entry("patch", "patch"),
 					Entry("update", "update"),
 					Entry("delete", "delete"),
 					Entry("deletecollection", "deletecollection"),

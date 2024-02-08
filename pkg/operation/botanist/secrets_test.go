@@ -119,6 +119,10 @@ var _ = Describe("Secrets", func() {
 					verifyCASecret(name, secret, And(HaveKey("ca.crt"), HaveKey("ca.key")))
 				}
 
+				gardenConfigMap := &corev1.ConfigMap{}
+				Expect(gardenClient.Get(ctx, kubernetesutils.Key(gardenNamespace, shootName+".ca-cluster"), gardenConfigMap)).To(Succeed())
+				Expect(gardenConfigMap.Labels).To(HaveKeyWithValue("gardener.cloud/role", "ca-cluster"))
+
 				gardenSecret := &corev1.Secret{}
 				Expect(gardenClient.Get(ctx, kubernetesutils.Key(gardenNamespace, shootName+".ca-cluster"), gardenSecret)).To(Succeed())
 				Expect(gardenSecret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "ca-cluster"))

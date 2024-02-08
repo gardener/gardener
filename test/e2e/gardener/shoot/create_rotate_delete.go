@@ -63,7 +63,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				&rotationutils.ObservabilityVerifier{
 					GetObservabilitySecretFunc: func(ctx context.Context) (*corev1.Secret, error) {
 						secret := &corev1.Secret{}
-						return secret, f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(f.Shoot.Name, "monitoring")}, secret)
+						return secret, f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(f.Shoot.Name, "monitoring")}, secret)
 					},
 					GetObservabilityEndpoint: func(secret *corev1.Secret) string {
 						return secret.Annotations["url"]

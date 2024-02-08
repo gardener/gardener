@@ -153,15 +153,22 @@ func (g *graph) handleShootCreateOrUpdate(shoot *gardencorev1beta1.Shoot) {
 	// Those secrets are not directly referenced in the shoot spec, however, they will be created/updated as part of the
 	// gardenlet reconciliation and are bound to the lifetime of the shoot, so let's add them here.
 	for _, suffix := range gardenerutils.GetShootProjectSecretSuffixes() {
-		secretVertex := g.getOrCreateVertex(VertexTypeSecret, shoot.Namespace, gardenerutils.ComputeShootProjectSecretName(shoot.Name, suffix))
+		secretVertex := g.getOrCreateVertex(VertexTypeSecret, shoot.Namespace, gardenerutils.ComputeShootProjectResourceName(shoot.Name, suffix))
 		g.addEdge(secretVertex, shootVertex)
 	}
 
 	// Those internal secrets are not directly referenced in the shoot spec, however, they will be created/updated as part of the
 	// gardenlet reconciliation and are bound to the lifetime of the shoot, so let's add them here.
 	for _, suffix := range gardenerutils.GetShootProjectInternalSecretSuffixes() {
-		secretVertex := g.getOrCreateVertex(VertexTypeInternalSecret, shoot.Namespace, gardenerutils.ComputeShootProjectSecretName(shoot.Name, suffix))
+		secretVertex := g.getOrCreateVertex(VertexTypeInternalSecret, shoot.Namespace, gardenerutils.ComputeShootProjectResourceName(shoot.Name, suffix))
 		g.addEdge(secretVertex, shootVertex)
+	}
+
+	// Those config maps are not directly referenced in the shoot spec, however, they will be created/updated as part of the
+	// gardenlet reconciliation and are bound to the lifetime of the shoot, so let's add them here.
+	for _, suffix := range gardenerutils.GetShootProjectConfigMapSuffixes() {
+		configMapVertex := g.getOrCreateVertex(VertexTypeConfigMap, shoot.Namespace, gardenerutils.ComputeShootProjectResourceName(shoot.Name, suffix))
+		g.addEdge(configMapVertex, shootVertex)
 	}
 
 	// Similarly, ShootStates are not directly referenced in the shoot spec, however, they will be created/updated/

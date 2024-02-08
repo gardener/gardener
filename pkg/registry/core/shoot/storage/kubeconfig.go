@@ -42,8 +42,10 @@ import (
 
 // KubeconfigREST implements a RESTStorage for a kubeconfig request.
 type KubeconfigREST struct {
+	// TODO(petersutter): Remove secretLister field from struct after v1.96 has been released, as the cluster CA should then only be read from the ConfigMap.
 	secretLister         kubecorev1listers.SecretLister
 	internalSecretLister gardencorelisters.InternalSecretLister
+	configMapLister      kubecorev1listers.ConfigMapLister
 	shootStorage         getter
 	maxExpirationSeconds int64
 
@@ -110,7 +112,7 @@ func (r *KubeconfigREST) Create(ctx context.Context, name string, obj runtime.Ob
 	}
 
 	// prepare: get cluster and client CA
-	caClientSecret, err := r.internalSecretLister.InternalSecrets(shoot.Namespace).Get(gardenerutils.ComputeShootProjectSecretName(shoot.Name, gardenerutils.ShootProjectSecretSuffixCAClient))
+	caClientSecret, err := r.internalSecretLister.InternalSecrets(shoot.Namespace).Get(gardenerutils.ComputeShootProjectResourceName(shoot.Name, gardenerutils.ShootProjectSecretSuffixCAClient))
 	if err != nil {
 		return nil, apierrors.NewInternalError(fmt.Errorf("could not get client CA secret: %w", err))
 	}
@@ -120,14 +122,23 @@ func (r *KubeconfigREST) Create(ctx context.Context, name string, obj runtime.Ob
 		return nil, apierrors.NewInternalError(fmt.Errorf("could not load client CA certificate from secret: %w", err))
 	}
 
-	caClusterSecret, err := r.secretLister.Secrets(shoot.Namespace).Get(gardenerutils.ComputeShootProjectSecretName(shoot.Name, gardenerutils.ShootProjectSecretSuffixCACluster))
-	if err != nil {
-		return nil, apierrors.NewInternalError(fmt.Errorf("could not get cluster CA secret: %w", err))
+	var clusterCABundle []byte
+	caClusterConfigMap, err := r.configMapLister.ConfigMaps(shoot.Namespace).Get(gardenerutils.ComputeShootProjectResourceName(shoot.Name, gardenerutils.ShootProjectConfigMapSuffixCACluster))
+	// TODO(petersutter): Remove this fallback of reading the <shoot-name>.ca-cluster Secret after v1.96 has been released
+	if apierrors.IsNotFound(err) {
+		caClusterSecret, err := r.secretLister.Secrets(shoot.Namespace).Get(gardenerutils.ComputeShootProjectResourceName(shoot.Name, gardenerutils.ShootProjectSecretSuffixCACluster))
+		if err != nil {
+			return nil, apierrors.NewInternalError(fmt.Errorf("could not get cluster CA secret: %w", err))
+		}
+		clusterCABundle = caClusterSecret.Data[secrets.DataKeyCertificateCA]
+	} else if err != nil {
+		return nil, apierrors.NewInternalError(fmt.Errorf("could not get cluster CA config map: %w", err))
+	} else {
+		clusterCABundle = []byte(caClusterConfigMap.Data[secrets.DataKeyCertificateCA])
 	}
-	clusterCABundle := caClusterSecret.Data[secrets.DataKeyCertificateCA]
 
 	if len(clusterCABundle) == 0 {
-		return nil, apierrors.NewInternalError(fmt.Errorf("could not load cluster CA bundle from secret"))
+		return nil, apierrors.NewInternalError(fmt.Errorf("could not load cluster CA bundle"))
 	}
 
 	// generate kubeconfig with client certificate

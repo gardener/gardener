@@ -45,7 +45,7 @@ const (
 	DataKeyCertificate = "tls.crt"
 	// DataKeyPrivateKey is the key in a secret data holding the private key.
 	DataKeyPrivateKey = "tls.key"
-	// DataKeyCertificateCA is the key in a secret data holding the CA certificate.
+	// DataKeyCertificateCA is the key in a secret data or config map data holding the CA certificate.
 	DataKeyCertificateCA = "ca.crt"
 	// DataKeyPrivateKeyCA is the key in a secret data holding the CA private key.
 	DataKeyPrivateKeyCA = "ca.key"

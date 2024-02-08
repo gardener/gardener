@@ -207,6 +207,7 @@ const (
 	// ShootProjectSecretSuffixKubeconfig is a constant for a shoot project secret with suffix 'kubeconfig'.
 	ShootProjectSecretSuffixKubeconfig = "kubeconfig"
 	// ShootProjectSecretSuffixCACluster is a constant for a shoot project secret with suffix 'ca-cluster'.
+	// Deprecated: This constant is deprecated in favor of ShootProjectConfigMapSuffixCACluster
 	ShootProjectSecretSuffixCACluster = "ca-cluster"
 	// ShootProjectSecretSuffixCAClient is a constant for a shoot project secret with suffix 'ca-client'.
 	ShootProjectSecretSuffixCAClient = "ca-client"
@@ -216,6 +217,8 @@ const (
 	ShootProjectSecretSuffixOldSSHKeypair = v1beta1constants.SecretNameSSHKeyPair + ".old"
 	// ShootProjectSecretSuffixMonitoring is a constant for a shoot project secret with suffix 'monitoring'.
 	ShootProjectSecretSuffixMonitoring = "monitoring"
+	// ShootProjectConfigMapSuffixCACluster is a constant for a shoot project secret with suffix 'ca-cluster'.
+	ShootProjectConfigMapSuffixCACluster = "ca-cluster"
 )
 
 // GetShootProjectSecretSuffixes returns the list of shoot-related project secret suffixes.
@@ -236,20 +239,27 @@ func GetShootProjectInternalSecretSuffixes() []string {
 	}
 }
 
-func shootProjectSecretSuffix(suffix string) string {
+// GetShootProjectConfigMapSuffixes returns the list of shoot-related project config map suffixes.
+func GetShootProjectConfigMapSuffixes() []string {
+	return []string{
+		ShootProjectConfigMapSuffixCACluster,
+	}
+}
+
+func shootProjectResourceSuffix(suffix string) string {
 	return "." + suffix
 }
 
-// ComputeShootProjectSecretName computes the name of a shoot-related project secret.
-func ComputeShootProjectSecretName(shootName, suffix string) string {
-	return shootName + shootProjectSecretSuffix(suffix)
+// ComputeShootProjectResourceName computes the name of a shoot-related project resource.
+func ComputeShootProjectResourceName(shootName, suffix string) string {
+	return shootName + shootProjectResourceSuffix(suffix)
 }
 
 // IsShootProjectSecret checks if the given name matches the name of a shoot-related project secret. If no, it returns
 // an empty string and <false>. Otherwise, it returns the shoot name and <true>.
 func IsShootProjectSecret(secretName string) (string, bool) {
 	for _, v := range GetShootProjectSecretSuffixes() {
-		if suffix := shootProjectSecretSuffix(v); strings.HasSuffix(secretName, suffix) {
+		if suffix := shootProjectResourceSuffix(v); strings.HasSuffix(secretName, suffix) {
 			return strings.TrimSuffix(secretName, suffix), true
 		}
 	}
@@ -261,8 +271,20 @@ func IsShootProjectSecret(secretName string) (string, bool) {
 // If no, it returns an empty string and <false>. Otherwise, it returns the shoot name and <true>.
 func IsShootProjectInternalSecret(secretName string) (string, bool) {
 	for _, v := range GetShootProjectInternalSecretSuffixes() {
-		if suffix := shootProjectSecretSuffix(v); strings.HasSuffix(secretName, suffix) {
+		if suffix := shootProjectResourceSuffix(v); strings.HasSuffix(secretName, suffix) {
 			return strings.TrimSuffix(secretName, suffix), true
+		}
+	}
+
+	return "", false
+}
+
+// IsShootProjectConfigMap checks if the given name matches the name of a shoot-related project config map. If no, it returns
+// an empty string and <false>. Otherwise, it returns the shoot name and <true>.
+func IsShootProjectConfigMap(configMapName string) (string, bool) {
+	for _, v := range GetShootProjectConfigMapSuffixes() {
+		if suffix := shootProjectResourceSuffix(v); strings.HasSuffix(configMapName, suffix) {
+			return strings.TrimSuffix(configMapName, suffix), true
 		}
 	}
 

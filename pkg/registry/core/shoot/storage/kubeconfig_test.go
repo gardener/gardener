@@ -46,7 +46,7 @@ import (
 )
 
 func kubeconfigTests(
-	newKubeconfigREST func(getter, kubecorev1listers.SecretLister, gardencorelisters.InternalSecretLister, time.Duration) *KubeconfigREST,
+	newKubeconfigREST func(getter, kubecorev1listers.SecretLister, gardencorelisters.InternalSecretLister, kubecorev1listers.ConfigMapLister, time.Duration) *KubeconfigREST,
 	newObjectFunc func() runtime.Object,
 	setExpirationSeconds func(runtime.Object, *int64),
 	getExpirationTimestamp func(runtime.Object) metav1.Time,
@@ -57,9 +57,10 @@ func kubeconfigTests(
 		ctx context.Context
 		obj runtime.Object
 
-		shoot           *gardencore.Shoot
-		caClusterSecret *corev1.Secret
-		caClientSecret  *gardencore.InternalSecret
+		shoot              *gardencore.Shoot
+		caClusterSecret    *corev1.Secret
+		caClusterConfigMap *corev1.ConfigMap
+		caClientSecret     *gardencore.InternalSecret
 
 		kcREST           *KubeconfigREST
 		createValidation registryrest.ValidateObjectFunc
@@ -67,6 +68,7 @@ func kubeconfigTests(
 		shootGetter          *fakeGetter
 		secretLister         *fakeSecretLister
 		internalSecretLister *fakeInternalSecretLister
+		configMapLister      *fakeConfigMapLister
 
 		clusterCACert = []byte("cluster-ca-cert1")
 
@@ -132,6 +134,12 @@ lIwEl8tStnO9u1JUK4w1e+lC37zI2v5k4WMQmJcolUEMwmZjnCR/
 				"ca.crt": clusterCACert,
 			},
 		}
+		caClusterConfigMap = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Name: name + ".ca-cluster", Namespace: namespace},
+			Data: map[string]string{
+				"ca.crt": string(clusterCACert),
+			},
+		}
 		caClientSecret = &gardencore.InternalSecret{
 			ObjectMeta: metav1.ObjectMeta{Name: name + ".ca-client", Namespace: namespace},
 			Data: map[string][]byte{
@@ -161,10 +169,11 @@ lIwEl8tStnO9u1JUK4w1e+lC37zI2v5k4WMQmJcolUEMwmZjnCR/
 
 		secretLister = &fakeSecretLister{obj: caClusterSecret}
 		internalSecretLister = &fakeInternalSecretLister{obj: caClientSecret}
+		configMapLister = &fakeConfigMapLister{obj: caClusterConfigMap}
 
 		obj = newObjectFunc()
 
-		kcREST = newKubeconfigREST(shootGetter, secretLister, internalSecretLister, time.Hour)
+		kcREST = newKubeconfigREST(shootGetter, secretLister, internalSecretLister, configMapLister, time.Hour)
 
 		ctx = request.WithUser(context.Background(), &user.DefaultInfo{
 			Name: userName,
@@ -216,15 +225,22 @@ lIwEl8tStnO9u1JUK4w1e+lC37zI2v5k4WMQmJcolUEMwmZjnCR/
 			delete(caClientSecret.Data, "ca.key")
 		})
 
-		It("returns an error if it cannot get the ca-cluster secret", func() {
+		It("returns an error if it cannot get the ca-cluster config map and secret", func() {
+			configMapLister.err = errors.New("fake")
 			secretLister.err = errors.New("fake")
 		})
 
-		It("returns an error if the ca-cluster secret doesn't exist", func() {
+		It("returns an error if the ca-cluster config map and secret doesn't exist", func() {
+			configMapLister.err = apierrors.NewNotFound(gardencore.Resource("configmaps"), caClusterConfigMap.Name)
 			secretLister.err = apierrors.NewNotFound(gardencore.Resource("secrets"), caClusterSecret.Name)
 		})
 
+		It("returns an error if the ca-cluster config map is missing the public key", func() {
+			delete(caClusterConfigMap.Data, "ca.crt")
+		})
+
 		It("returns an error if the ca-cluster secret is missing the public key", func() {
+			configMapLister.err = apierrors.NewNotFound(gardencore.Resource("configmaps"), caClusterConfigMap.Name)
 			delete(caClusterSecret.Data, "ca.crt")
 		})
 
@@ -341,5 +357,19 @@ func (f fakeInternalSecretLister) InternalSecrets(string) gardencorelisters.Inte
 }
 
 func (f fakeInternalSecretLister) Get(_ string) (*gardencore.InternalSecret, error) {
+	return f.obj, f.err
+}
+
+type fakeConfigMapLister struct {
+	kubecorev1listers.ConfigMapLister
+	obj *corev1.ConfigMap
+	err error
+}
+
+func (f fakeConfigMapLister) ConfigMaps(string) kubecorev1listers.ConfigMapNamespaceLister {
+	return f
+}
+
+func (f fakeConfigMapLister) Get(_ string) (*corev1.ConfigMap, error) {
 	return f.obj, f.err
 }

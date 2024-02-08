@@ -366,9 +366,9 @@ var _ = Describe("Shoot", func() {
 		})
 	})
 
-	Describe("#ComputeShootProjectSecretName", func() {
+	Describe("#ComputeShootProjectResourceName", func() {
 		It("should compute the expected name", func() {
-			Expect(ComputeShootProjectSecretName("foo", "bar")).To(Equal("foo.bar"))
+			Expect(ComputeShootProjectResourceName("foo", "bar")).To(Equal("foo.bar"))
 		})
 	})
 
@@ -398,6 +398,18 @@ var _ = Describe("Shoot", func() {
 		Entry("unrelated suffix", "foo.bar", "", false),
 		Entry("wrong suffix delimiter", "foo:kubeconfig", "", false),
 		Entry("ca-client suffix", "baz.ca-client", "baz", true),
+	)
+
+	DescribeTable("#IsShootProjectConfigMap",
+		func(name, expectedShootName string, expectedOK bool) {
+			shootName, ok := IsShootProjectConfigMap(name)
+			Expect(shootName).To(Equal(expectedShootName))
+			Expect(ok).To(Equal(expectedOK))
+		},
+		Entry("no suffix", "foo", "", false),
+		Entry("unrelated suffix", "foo.bar", "", false),
+		Entry("wrong suffix delimiter", "foo:kubeconfig", "", false),
+		Entry("ca-cluster suffix", "baz.ca-cluster", "baz", true),
 	)
 
 	Describe("#NewShootAccessSecret", func() {
