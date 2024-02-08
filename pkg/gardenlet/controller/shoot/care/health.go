@@ -136,7 +136,7 @@ func (h *Health) Check(
 	}
 
 	// Get extensions' conditions that are examined by health checks.
-	extensionConditionsControlPlaneHealthy, extensionConditionsEveryNodeReady, extensionConditionsSystemComponentsHealthy, err := h.getAllExtensionConditions(ctx)
+	extensionConditionsControlPlaneHealthy, extensionConditionsEveryNodeReady, extensionConditionsSystemComponentsHealthy, extensionConditionsObservabilityComponentsHealthy, err := h.getAllExtensionConditions(ctx)
 	if err != nil {
 		h.log.Error(err, "Error getting extension conditions")
 	}
@@ -148,7 +148,7 @@ func (h *Health) Check(
 			conditions.controlPlaneHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.controlPlaneHealthy, newControlPlane, err)
 			return nil
 		}, func(ctx context.Context) error {
-			newObservabilityComponents, err := h.checkObservabilityComponents(ctx, conditions.observabilityComponentsHealthy)
+			newObservabilityComponents, err := h.checkObservabilityComponents(ctx, conditions.observabilityComponentsHealthy, extensionConditionsObservabilityComponentsHealthy, healthCheckOutdatedThreshold)
 			conditions.observabilityComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.observabilityComponentsHealthy, newObservabilityComponents, err)
 			return nil
 		},
@@ -200,37 +200,38 @@ func (h *Health) Check(
 	return PardonConditions(h.clock, conditions.ConvertToSlice(), lastOp, lastErrors)
 }
 
-func (h *Health) getAllExtensionConditions(ctx context.Context) ([]healthchecker.ExtensionCondition, []healthchecker.ExtensionCondition, []healthchecker.ExtensionCondition, error) {
+func (h *Health) getAllExtensionConditions(ctx context.Context) ([]healthchecker.ExtensionCondition, []healthchecker.ExtensionCondition, []healthchecker.ExtensionCondition, []healthchecker.ExtensionCondition, error) {
 	objs, err := h.retrieveExtensions(ctx)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	controllerInstallations := &gardencorev1beta1.ControllerInstallationList{}
 	if err := h.gardenClient.List(ctx, controllerInstallations, client.MatchingFields{core.SeedRefName: h.gardenletConfiguration.SeedConfig.Name}); err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	controllerRegistrations := &gardencorev1beta1.ControllerRegistrationList{}
 	if err := h.gardenClient.List(ctx, controllerRegistrations); err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	var (
-		conditionsControlPlaneHealthy     []healthchecker.ExtensionCondition
-		conditionsEveryNodeReady          []healthchecker.ExtensionCondition
-		conditionsSystemComponentsHealthy []healthchecker.ExtensionCondition
+		conditionsControlPlaneHealthy            []healthchecker.ExtensionCondition
+		conditionsEveryNodeReady                 []healthchecker.ExtensionCondition
+		conditionsSystemComponentsHealthy        []healthchecker.ExtensionCondition
+		conditionsObservabilityComponentsHealthy []healthchecker.ExtensionCondition
 	)
 
 	for _, obj := range objs {
 		acc, err := apiextensions.Accessor(obj)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, nil, nil, err
 		}
 
 		gvk, err := apiutil.GVKForObject(obj, kubernetes.SeedScheme)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to identify GVK for object: %w", err)
+			return nil, nil, nil, nil, fmt.Errorf("failed to identify GVK for object: %w", err)
 		}
 
 		kind := gvk.Kind
@@ -240,7 +241,7 @@ func (h *Health) getAllExtensionConditions(ctx context.Context) ([]healthchecker
 
 		lastHeartbeatTime, err := h.getLastHeartbeatTimeForExtension(ctx, controllerInstallations, controllerRegistrations, kind, extensionType)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, nil, nil, err
 		}
 
 		for _, condition := range acc.GetExtensionStatus().GetConditions() {
@@ -269,11 +270,19 @@ func (h *Health) getAllExtensionConditions(ctx context.Context) ([]healthchecker
 					ExtensionNamespace: namespace,
 					LastHeartbeatTime:  lastHeartbeatTime,
 				})
+			case gardencorev1beta1.ShootObservabilityComponentsHealthy:
+				conditionsObservabilityComponentsHealthy = append(conditionsObservabilityComponentsHealthy, healthchecker.ExtensionCondition{
+					Condition:          condition,
+					ExtensionType:      kind,
+					ExtensionName:      name,
+					ExtensionNamespace: namespace,
+					LastHeartbeatTime:  lastHeartbeatTime,
+				})
 			}
 		}
 	}
 
-	return conditionsControlPlaneHealthy, conditionsEveryNodeReady, conditionsSystemComponentsHealthy, nil
+	return conditionsControlPlaneHealthy, conditionsEveryNodeReady, conditionsSystemComponentsHealthy, conditionsObservabilityComponentsHealthy, nil
 }
 
 func (h *Health) retrieveExtensions(ctx context.Context) ([]runtime.Object, error) {
@@ -411,6 +420,8 @@ var monitoringSelector = labels.SelectorFromSet(map[string]string{v1beta1constan
 func (h *Health) checkObservabilityComponents(
 	ctx context.Context,
 	condition gardencorev1beta1.Condition,
+	extensionConditions []healthchecker.ExtensionCondition,
+	healthCheckOutdatedThreshold *metav1.Duration,
 ) (*gardencorev1beta1.Condition, error) {
 	if h.shoot.Purpose != gardencorev1beta1.ShootPurposeTesting && gardenlethelper.IsMonitoringEnabled(h.gardenletConfiguration) {
 		if exitCondition, err := h.healthChecker.CheckMonitoringControlPlane(
@@ -435,6 +446,9 @@ func (h *Health) checkObservabilityComponents(
 		); err != nil || exitCondition != nil {
 			return exitCondition, err
 		}
+	}
+	if exitCondition := h.healthChecker.CheckExtensionCondition(condition, extensionConditions, healthCheckOutdatedThreshold); exitCondition != nil {
+		return exitCondition, nil
 	}
 
 	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "ObservabilityComponentsRunning", "All observability components are healthy.")

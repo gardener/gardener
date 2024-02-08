@@ -39,7 +39,7 @@ health.DefaultRegisterExtensionForHealthCheck(
 This creates a health check controller that reconciles the `extensions.gardener.cloud/v1alpha1.Worker` resource with the spec.type 'aws'.
 Three health check functions are registered that are executed during reconciliation.
 Each health check is mapped to a single `HealthConditionType` that results in conditions with the same `condition.type` (see below).
-To contribute to the Shoot's health, the following conditions can be used: `SystemComponentsHealthy`, `EveryNodeReady`, `ControlPlaneHealthy`. In case of workerless `Shoot` the `EveryNodeReady` condition is not present, so it can't be used.
+To contribute to the Shoot's health, the following conditions can be used: `SystemComponentsHealthy`, `EveryNodeReady`, `ControlPlaneHealthy`, `ObservabilityComponentsHealthy`. In case of workerless `Shoot` the `EveryNodeReady` condition is not present, so it can't be used.
 
 The Gardener/Gardenlet checks each extension for conditions matching these types.
 However, extensions are free to choose any `HealthConditionType`.

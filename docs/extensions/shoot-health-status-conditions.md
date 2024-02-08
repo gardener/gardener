@@ -21,7 +21,7 @@ Now that the extensions deploy resources into the cluster, especially resources 
 
 Every extension resource in Gardener's `extensions.gardener.cloud/v1alpha1` API group also has a `status.conditions[]` list (like the `Shoot`).
 Extension controllers can write conditions to the resource they are acting on and use a type that also exists in the shoot's conditions.
-One exception is that `APIServerAvailable` and `ObservabilityComponentsHealthy` can't be used, as Gardener clearly can identify the status of this condition and it doesn't make sense for extensions to try to contribute/modify it.
+One exception is that `APIServerAvailable` can't be used, as Gardener clearly can identify the status of this condition and it doesn't make sense for extensions to try to contribute/modify it.
 
 As an example for the `ControlPlane` controller, let's take a look at the following resource:
 
