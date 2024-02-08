@@ -20,7 +20,6 @@ const (
 
 	// AnnotationKeyResourcesLabeled is an annotation indicating the completion of labeling the resources with the credentials.gardener.cloud/key-name label
 	AnnotationKeyResourcesLabeled = "credentials.gardener.cloud/resources-labeled"
-
 	// AnnotationKeyEtcdSnapshotted is an annotation indicating that ETCD snapshot was completed
 	AnnotationKeyEtcdSnapshotted = "credentials.gardener.cloud/etcd-snapshotted"
 
