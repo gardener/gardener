@@ -236,31 +236,31 @@ var _ = Describe("Secrets", func() {
 								Name:   "ca",
 								Type:   "secret",
 								Labels: map[string]string{"managed-by": "secrets-manager", "manager-identity": fakesecretsmanager.ManagerIdentity},
-								Data:   runtime.RawExtension{Raw: rawData("data-for", "ca")},
+								Data:   runtime.RawExtension{Raw: rawData("ca")},
 							},
 							{
 								Name:   "ca-client",
 								Type:   "secret",
 								Labels: map[string]string{"managed-by": "secrets-manager", "manager-identity": fakesecretsmanager.ManagerIdentity},
-								Data:   runtime.RawExtension{Raw: rawData("data-for", "ca-client")},
+								Data:   runtime.RawExtension{Raw: rawData("ca-client")},
 							},
 							{
 								Name:   "ca-etcd",
 								Type:   "secret",
 								Labels: map[string]string{"managed-by": "secrets-manager", "manager-identity": fakesecretsmanager.ManagerIdentity},
-								Data:   runtime.RawExtension{Raw: rawData("data-for", "ca-etcd")},
+								Data:   runtime.RawExtension{Raw: rawData("ca-etcd")},
 							},
 							{
 								Name:   "non-ca-secret",
 								Type:   "secret",
 								Labels: map[string]string{"managed-by": "secrets-manager", "manager-identity": fakesecretsmanager.ManagerIdentity},
-								Data:   runtime.RawExtension{Raw: rawData("data-for", "non-ca-secret")},
+								Data:   runtime.RawExtension{Raw: rawData("non-ca-secret")},
 							},
 							{
 								Name:   "extension-foo-secret",
 								Type:   "secret",
 								Labels: map[string]string{"managed-by": "secrets-manager", "manager-identity": "extension-foo"},
-								Data:   runtime.RawExtension{Raw: rawData("data-for", "extension-foo-secret")},
+								Data:   runtime.RawExtension{Raw: rawData("extension-foo-secret")},
 							},
 							{
 								Name: "secret-without-labels",
@@ -326,6 +326,6 @@ func verifyCASecret(name string, secret *corev1.Secret, dataMatcher gomegatypes.
 	}
 }
 
-func rawData(key, value string) []byte {
-	return []byte(`{"` + key + `":"` + utils.EncodeBase64([]byte(value)) + `"}`)
+func rawData(value string) []byte {
+	return []byte(`{"data-for":"` + utils.EncodeBase64([]byte(value)) + `"}`)
 }

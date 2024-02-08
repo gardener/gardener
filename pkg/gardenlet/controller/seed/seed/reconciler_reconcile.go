@@ -35,7 +35,6 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -75,37 +74,34 @@ func (r *Reconciler) reconcile(
 	log logr.Logger,
 	seedObj *seedpkg.Seed,
 	seedIsGarden bool,
-) (
-	reconcile.Result,
-	error,
-) {
+) error {
 	seed := seedObj.GetInfo()
 
 	if !controllerutil.ContainsFinalizer(seed, gardencorev1beta1.GardenerName) {
 		log.Info("Adding finalizer")
 		if err := controllerutils.AddFinalizers(ctx, r.GardenClient, seed, gardencorev1beta1.GardenerName); err != nil {
-			return reconcile.Result{}, err
+			return err
 		}
 	}
 
 	// Check whether the Kubernetes version of the Seed cluster fulfills the minimal requirements.
 	if err := r.checkMinimumK8SVersion(r.SeedClientSet.Version()); err != nil {
-		return reconcile.Result{}, err
+		return err
 	}
 
 	if err := r.runReconcileSeedFlow(ctx, log, seedObj, seedIsGarden); err != nil {
-		return reconcile.Result{}, err
+		return err
 	}
 
 	if seed.Spec.Backup != nil {
 		// This should be post updating the seed is available. Since, scheduler will then mostly use
 		// same seed for deploying the backupBucket extension.
 		if err := deployBackupBucketInGarden(ctx, r.GardenClient, seed); err != nil {
-			return reconcile.Result{}, err
+			return err
 		}
 	}
 
-	return reconcile.Result{}, nil
+	return nil
 }
 
 func (r *Reconciler) checkMinimumK8SVersion(version string) error {

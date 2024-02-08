@@ -188,10 +188,10 @@ var _ = Describe("Garden health", func() {
 					Expect(runtimeClient.Create(ctx, healthyManagedResource(name))).To(Succeed())
 				}
 				for _, name := range virtualGardenDeployments {
-					Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, "controlplane", true))).To(Succeed())
+					Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, true))).To(Succeed())
 				}
 				for _, name := range virtualGardenETCDs {
-					Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, "controlplane", true, nil))).To(Succeed())
+					Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, true))).To(Succeed())
 				}
 			})
 
@@ -227,10 +227,10 @@ var _ = Describe("Garden health", func() {
 					Expect(runtimeClient.Create(ctx, healthyManagedResource(name))).To(Succeed())
 				}
 				for _, name := range virtualGardenDeployments {
-					Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, "controlplane", true))).To(Succeed())
+					Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, true))).To(Succeed())
 				}
 				for _, name := range virtualGardenETCDs {
-					Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, "controlplane", true, nil))).To(Succeed())
+					Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, true))).To(Succeed())
 				}
 			})
 
@@ -265,10 +265,10 @@ var _ = Describe("Garden health", func() {
 					Expect(runtimeClient.Create(ctx, healthyManagedResource(name))).To(Succeed())
 				}
 				for _, name := range virtualGardenDeployments {
-					Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, "controlplane", true))).To(Succeed())
+					Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, true))).To(Succeed())
 				}
 				for _, name := range virtualGardenETCDs {
-					Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, "controlplane", true, nil))).To(Succeed())
+					Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, true))).To(Succeed())
 				}
 			})
 
@@ -426,10 +426,10 @@ var _ = Describe("Garden health", func() {
 			Context("when managed resources are not deployed", func() {
 				JustBeforeEach(func() {
 					for _, name := range virtualGardenDeployments {
-						Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, "controlplane", true))).To(Succeed())
+						Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, true))).To(Succeed())
 					}
 					for _, name := range virtualGardenETCDs {
-						Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, "controlplane", true, nil))).To(Succeed())
+						Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, true))).To(Succeed())
 					}
 				})
 
@@ -442,10 +442,10 @@ var _ = Describe("Garden health", func() {
 						Expect(runtimeClient.Create(ctx, notHealthyManagedResource(name))).To(Succeed())
 					}
 					for _, name := range virtualGardenDeployments {
-						Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, "controlplane", true))).To(Succeed())
+						Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, true))).To(Succeed())
 					}
 					for _, name := range virtualGardenETCDs {
-						Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, "controlplane", true, nil))).To(Succeed())
+						Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, true))).To(Succeed())
 					}
 				})
 
@@ -458,10 +458,10 @@ var _ = Describe("Garden health", func() {
 						Expect(runtimeClient.Create(ctx, notAppliedManagedResource(name))).To(Succeed())
 					}
 					for _, name := range virtualGardenDeployments {
-						Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, "controlplane", true))).To(Succeed())
+						Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, true))).To(Succeed())
 					}
 					for _, name := range virtualGardenETCDs {
-						Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, "controlplane", true, nil))).To(Succeed())
+						Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, true))).To(Succeed())
 					}
 				})
 
@@ -474,10 +474,10 @@ var _ = Describe("Garden health", func() {
 						Expect(runtimeClient.Create(ctx, progressingManagedResource(name))).To(Succeed())
 					}
 					for _, name := range virtualGardenDeployments {
-						Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, "controlplane", true))).To(Succeed())
+						Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, true))).To(Succeed())
 					}
 					for _, name := range virtualGardenETCDs {
-						Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, "controlplane", true, nil))).To(Succeed())
+						Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, true))).To(Succeed())
 					}
 				})
 
@@ -493,10 +493,10 @@ var _ = Describe("Garden health", func() {
 						))).To(Succeed())
 					}
 					for _, name := range virtualGardenDeployments {
-						Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, "controlplane", true))).To(Succeed())
+						Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, true))).To(Succeed())
 					}
 					for _, name := range virtualGardenETCDs {
-						Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, "controlplane", true, nil))).To(Succeed())
+						Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, true))).To(Succeed())
 					}
 				})
 
@@ -523,7 +523,7 @@ var _ = Describe("Garden health", func() {
 
 			It("should set VirtualComponentsHealthy conditions to false when the deployments are existing but unhealthy", func() {
 				for _, name := range virtualGardenDeployments {
-					Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, "controlplane", false))).To(Succeed())
+					Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, false))).To(Succeed())
 				}
 
 				updatedConditions := NewHealth(
@@ -545,7 +545,7 @@ var _ = Describe("Garden health", func() {
 		Context("when there are issues with ETCDs for virtual garden", func() {
 			JustBeforeEach(func() {
 				for _, name := range virtualGardenDeployments {
-					Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, "controlplane", true))).To(Succeed())
+					Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, true))).To(Succeed())
 				}
 			})
 
@@ -567,7 +567,7 @@ var _ = Describe("Garden health", func() {
 
 			It("should set VirtualComponentsHealthy conditions to false when the ETCDs are existing but unhealthy", func() {
 				for _, name := range virtualGardenETCDs {
-					Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, "controlplane", false, nil))).To(Succeed())
+					Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, false))).To(Succeed())
 				}
 
 				updatedConditions := NewHealth(
@@ -843,12 +843,12 @@ func roleLabels(role string) map[string]string {
 	return map[string]string{v1beta1constants.GardenRole: role}
 }
 
-func newDeployment(namespace, name, role string, healthy bool) *appsv1.Deployment {
+func newDeployment(namespace, name string, healthy bool) *appsv1.Deployment {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      name,
-			Labels:    roleLabels(role),
+			Labels:    roleLabels("controlplane"),
 		},
 	}
 	if healthy {
@@ -860,20 +860,15 @@ func newDeployment(namespace, name, role string, healthy bool) *appsv1.Deploymen
 	return deployment
 }
 
-func newEtcd(namespace, name, role string, healthy bool, lastError *string) *druidv1alpha1.Etcd {
-	etcd := &druidv1alpha1.Etcd{
+func newEtcd(namespace, name string, healthy bool) *druidv1alpha1.Etcd {
+	return &druidv1alpha1.Etcd{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      name,
-			Labels:    roleLabels(role),
+			Labels:    roleLabels("controlplane"),
+		},
+		Status: druidv1alpha1.EtcdStatus{
+			Ready: ptr.To(healthy),
 		},
 	}
-	if healthy {
-		etcd.Status.Ready = ptr.To(true)
-	} else {
-		etcd.Status.Ready = ptr.To(false)
-		etcd.Status.LastError = lastError
-	}
-
-	return etcd
 }

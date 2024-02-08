@@ -52,6 +52,7 @@ var _ = Describe("WebhookRemediation", func() {
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
 		fakeKubernetesInterface = kubernetesfake.NewClientSetBuilder().WithClient(fakeClient).Build()
+		//nolint:unparam
 		shootClientInit = func() (kubernetes.Interface, bool, error) {
 			return fakeKubernetesInterface, true, nil
 		}

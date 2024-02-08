@@ -248,14 +248,14 @@ var _ = Describe("Collector", func() {
 				*labeledConfigMap4, *labeledConfigMap5, *labeledConfigMap6, *labeledConfigMap7, *labeledConfigMap8, *labeledConfigMap9,
 			))
 
-			Expect(c.Create(ctx, &appsv1.Deployment{ObjectMeta: objectMetaFor("deploy1", metav1.NamespaceDefault, labeledSecret1, labeledConfigMap1)})).To(Succeed())
-			Expect(c.Create(ctx, &appsv1.StatefulSet{ObjectMeta: objectMetaFor("sts1", metav1.NamespaceDefault, labeledSecret2, labeledConfigMap2)})).To(Succeed())
-			Expect(c.Create(ctx, &appsv1.DaemonSet{ObjectMeta: objectMetaFor("ds1", metav1.NamespaceDefault, labeledSecret3, labeledConfigMap3)})).To(Succeed())
-			Expect(c.Create(ctx, &batchv1.Job{ObjectMeta: objectMetaFor("job1", metav1.NamespaceDefault, labeledSecret4, labeledConfigMap4)})).To(Succeed())
-			Expect(c.Create(ctx, &batchv1beta1.CronJob{ObjectMeta: objectMetaFor("cronjob2", metav1.NamespaceDefault, labeledSecret5, labeledConfigMap5)})).To(Succeed())
-			Expect(c.Create(ctx, &corev1.Pod{ObjectMeta: objectMetaFor("pod1", metav1.NamespaceDefault, labeledSecret6, labeledConfigMap6)})).To(Succeed())
-			Expect(c.Create(ctx, &batchv1.CronJob{ObjectMeta: objectMetaFor("cronjob2", metav1.NamespaceDefault, labeledSecret7, labeledConfigMap7)})).To(Succeed())
-			Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: objectMetaFor("mr1", metav1.NamespaceDefault, labeledSecret10)})).To(Succeed())
+			Expect(c.Create(ctx, &appsv1.Deployment{ObjectMeta: objectMetaFor("deploy1", labeledSecret1, labeledConfigMap1)})).To(Succeed())
+			Expect(c.Create(ctx, &appsv1.StatefulSet{ObjectMeta: objectMetaFor("sts1", labeledSecret2, labeledConfigMap2)})).To(Succeed())
+			Expect(c.Create(ctx, &appsv1.DaemonSet{ObjectMeta: objectMetaFor("ds1", labeledSecret3, labeledConfigMap3)})).To(Succeed())
+			Expect(c.Create(ctx, &batchv1.Job{ObjectMeta: objectMetaFor("job1", labeledSecret4, labeledConfigMap4)})).To(Succeed())
+			Expect(c.Create(ctx, &batchv1beta1.CronJob{ObjectMeta: objectMetaFor("cronjob2", labeledSecret5, labeledConfigMap5)})).To(Succeed())
+			Expect(c.Create(ctx, &corev1.Pod{ObjectMeta: objectMetaFor("pod1", labeledSecret6, labeledConfigMap6)})).To(Succeed())
+			Expect(c.Create(ctx, &batchv1.CronJob{ObjectMeta: objectMetaFor("cronjob2", labeledSecret7, labeledConfigMap7)})).To(Succeed())
+			Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: objectMetaFor("mr1", labeledSecret10)})).To(Succeed())
 
 			_, err := gc.Reconcile(ctx, reconcile.Request{})
 			Expect(err).NotTo(HaveOccurred())
@@ -279,7 +279,7 @@ var _ = Describe("Collector", func() {
 	})
 })
 
-func objectMetaFor(name, namespace string, objs ...runtime.Object) metav1.ObjectMeta {
+func objectMetaFor(name string, objs ...runtime.Object) metav1.ObjectMeta {
 	annotations := make(map[string]string)
 
 	for _, obj := range objs {
@@ -297,7 +297,7 @@ func objectMetaFor(name, namespace string, objs ...runtime.Object) metav1.Object
 
 	return metav1.ObjectMeta{
 		Name:        name,
-		Namespace:   namespace,
+		Namespace:   metav1.NamespaceDefault,
 		Annotations: annotations,
 	}
 }

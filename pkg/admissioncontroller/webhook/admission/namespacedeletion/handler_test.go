@@ -81,7 +81,7 @@ var _ = Describe("handler", func() {
 		ctrl.Finish()
 	})
 
-	test := func(op admissionv1.Operation, matcher gomegatypes.GomegaMatcher) {
+	test := func(matcher gomegatypes.GomegaMatcher) {
 		ctx = admission.NewContextWithRequest(ctx, admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{Name: namespaceName}})
 		warning, err := handler.ValidateDelete(ctx, nil)
 		Expect(warning).To(BeNil())
@@ -95,7 +95,7 @@ var _ = Describe("handler", func() {
 		})
 		mockClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(projectName), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 
-		test(admissionv1.Delete, Succeed())
+		test(Succeed())
 	})
 
 	It("should pass because namespace is not project related", func() {
@@ -104,13 +104,13 @@ var _ = Describe("handler", func() {
 			return nil
 		})
 
-		test(admissionv1.Delete, Succeed())
+		test(Succeed())
 	})
 
 	It("should fail because get namespace fails", func() {
 		mockClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(fmt.Errorf("fake"))
 
-		test(admissionv1.Delete, MatchError(ContainSubstring("fake")))
+		test(MatchError(ContainSubstring("fake")))
 	})
 
 	It("should fail because getting the projects fails", func() {
@@ -120,13 +120,13 @@ var _ = Describe("handler", func() {
 		})
 		mockClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(projectName), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).Return(fmt.Errorf("fake"))
 
-		test(admissionv1.Delete, MatchError(ContainSubstring("fake")))
+		test(MatchError(ContainSubstring("fake")))
 	})
 
 	It("should pass because namespace is already gone", func() {
 		mockClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 
-		test(admissionv1.Delete, Succeed())
+		test(Succeed())
 	})
 
 	Context("related project available", func() {
@@ -141,7 +141,7 @@ var _ = Describe("handler", func() {
 			})
 			mockClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(projectName), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}))
 
-			test(admissionv1.Delete, Succeed())
+			test(Succeed())
 		})
 
 		It("should forbid namespace deletion because project is not marked for deletion", func() {
@@ -151,7 +151,7 @@ var _ = Describe("handler", func() {
 			})
 			mockClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(projectName), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}))
 
-			test(admissionv1.Delete, MatchError(ContainSubstring("direct deletion of namespace")))
+			test(MatchError(ContainSubstring("direct deletion of namespace")))
 		})
 
 		Context("related project marked for deletion ", func() {
@@ -175,7 +175,7 @@ var _ = Describe("handler", func() {
 					return fmt.Errorf("fake")
 				})
 
-				test(admissionv1.Delete, MatchError(ContainSubstring("fake")))
+				test(MatchError(ContainSubstring("fake")))
 			})
 
 			It("should pass because namespace is does not contain any shoots", func() {
@@ -183,7 +183,7 @@ var _ = Describe("handler", func() {
 					return nil
 				})
 
-				test(admissionv1.Delete, Succeed())
+				test(Succeed())
 			})
 
 			It("should forbid namespace deletion because it still contain shoots", func() {
@@ -192,7 +192,7 @@ var _ = Describe("handler", func() {
 					return nil
 				})
 
-				test(admissionv1.Delete, MatchError(ContainSubstring("still contains Shoots")))
+				test(MatchError(ContainSubstring("still contains Shoots")))
 			})
 		})
 	})

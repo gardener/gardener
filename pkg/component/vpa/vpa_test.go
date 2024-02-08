@@ -118,7 +118,7 @@ var _ = Describe("VPA", func() {
 		clusterRoleUpdater        *rbacv1.ClusterRole
 		clusterRoleBindingUpdater *rbacv1.ClusterRoleBinding
 		shootAccessSecretUpdater  *corev1.Secret
-		deploymentUpdaterFor      func(bool, *metav1.Duration, *metav1.Duration, *int32, *float64, *float64, component.ClusterType) *appsv1.Deployment
+		deploymentUpdaterFor      func(bool, *metav1.Duration, *metav1.Duration, *int32, *float64, *float64) *appsv1.Deployment
 		vpaUpdater                *vpaautoscalingv1.VerticalPodAutoscaler
 
 		serviceAccountRecommender                    *corev1.ServiceAccount
@@ -138,7 +138,7 @@ var _ = Describe("VPA", func() {
 		clusterRoleBindingAdmissionController  *rbacv1.ClusterRoleBinding
 		shootAccessSecretAdmissionController   *corev1.Secret
 		serviceAdmissionControllerFor          func(component.ClusterType, bool) *corev1.Service
-		deploymentAdmissionControllerFor       func(bool, component.ClusterType) *appsv1.Deployment
+		deploymentAdmissionControllerFor       func(bool) *appsv1.Deployment
 		podDisruptionBudgetAdmissionController *policyv1.PodDisruptionBudget
 		vpaAdmissionController                 *vpaautoscalingv1.VerticalPodAutoscaler
 
@@ -262,7 +262,6 @@ var _ = Describe("VPA", func() {
 			evictionRateBurst *int32,
 			evictionRateLimit *float64,
 			evictionTolerance *float64,
-			clusterType component.ClusterType,
 		) *appsv1.Deployment {
 			var (
 				flagEvictionToleranceValue      = "0.500000"
@@ -886,7 +885,7 @@ var _ = Describe("VPA", func() {
 
 			return obj
 		}
-		deploymentAdmissionControllerFor = func(withServiceAccount bool, clusterType component.ClusterType) *appsv1.Deployment {
+		deploymentAdmissionControllerFor = func(withServiceAccount bool) *appsv1.Deployment {
 			obj := &appsv1.Deployment{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "apps/v1",
@@ -1330,7 +1329,7 @@ var _ = Describe("VPA", func() {
 					clusterRoleBindingUpdater.Name = replaceTargetSubstrings(clusterRoleBindingUpdater.Name)
 					clusterRoleBindingUpdater.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingUpdater.RoleRef.Name)
 
-					deploymentUpdater := deploymentUpdaterFor(true, nil, nil, nil, nil, nil, component.ClusterTypeSeed)
+					deploymentUpdater := deploymentUpdaterFor(true, nil, nil, nil, nil, nil)
 					adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentUpdater.Spec.Template.Labels)
 
 					Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-updater.yaml"])).To(Equal(componenttest.Serialize(serviceAccountUpdater)))
@@ -1369,7 +1368,7 @@ var _ = Describe("VPA", func() {
 					clusterRoleBindingAdmissionController.Name = replaceTargetSubstrings(clusterRoleBindingAdmissionController.Name)
 					clusterRoleBindingAdmissionController.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingAdmissionController.RoleRef.Name)
 
-					deploymentAdmissionController := deploymentAdmissionControllerFor(true, component.ClusterTypeSeed)
+					deploymentAdmissionController := deploymentAdmissionControllerFor(true)
 					adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentAdmissionController.Spec.Template.Labels)
 
 					Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-admission-controller.yaml"])).To(Equal(componenttest.Serialize(serviceAccountAdmissionController)))
@@ -1484,7 +1483,6 @@ var _ = Describe("VPA", func() {
 					valuesUpdater.EvictionRateBurst,
 					valuesUpdater.EvictionRateLimit,
 					valuesUpdater.EvictionTolerance,
-					component.ClusterTypeSeed,
 				)
 				adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentUpdater.Spec.Template.Labels)
 
@@ -1568,7 +1566,7 @@ var _ = Describe("VPA", func() {
 
 					deployment := &appsv1.Deployment{}
 					Expect(c.Get(ctx, kubernetesutils.Key(namespace, "vpa-updater"), deployment)).To(Succeed())
-					deploymentUpdater := deploymentUpdaterFor(false, nil, nil, nil, nil, nil, component.ClusterTypeShoot)
+					deploymentUpdater := deploymentUpdaterFor(false, nil, nil, nil, nil, nil)
 					deploymentUpdater.ResourceVersion = "1"
 					Expect(deployment).To(Equal(deploymentUpdater))
 
@@ -1629,7 +1627,7 @@ var _ = Describe("VPA", func() {
 
 					deployment = &appsv1.Deployment{}
 					Expect(c.Get(ctx, kubernetesutils.Key(namespace, "vpa-admission-controller"), deployment)).To(Succeed())
-					deploymentAdmissionController := deploymentAdmissionControllerFor(false, component.ClusterTypeShoot)
+					deploymentAdmissionController := deploymentAdmissionControllerFor(false)
 					deploymentAdmissionController.ResourceVersion = "1"
 					Expect(deployment).To(Equal(deploymentAdmissionController))
 
@@ -1741,7 +1739,7 @@ var _ = Describe("VPA", func() {
 				Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
 
 				By("Create vpa-updater runtime resources")
-				Expect(c.Create(ctx, deploymentUpdaterFor(true, nil, nil, nil, nil, nil, component.ClusterTypeShoot))).To(Succeed())
+				Expect(c.Create(ctx, deploymentUpdaterFor(true, nil, nil, nil, nil, nil))).To(Succeed())
 				Expect(c.Create(ctx, vpaUpdater)).To(Succeed())
 
 				By("Create vpa-recommender runtime resources")
@@ -1751,7 +1749,7 @@ var _ = Describe("VPA", func() {
 
 				By("Create vpa-admission-controller runtime resources")
 				Expect(c.Create(ctx, serviceAdmissionControllerFor(component.ClusterTypeSeed, false))).To(Succeed())
-				Expect(c.Create(ctx, deploymentAdmissionControllerFor(true, component.ClusterTypeShoot))).To(Succeed())
+				Expect(c.Create(ctx, deploymentAdmissionControllerFor(true))).To(Succeed())
 				Expect(c.Create(ctx, podDisruptionBudgetAdmissionController)).To(Succeed())
 				Expect(c.Create(ctx, vpaAdmissionController)).To(Succeed())
 
@@ -1761,7 +1759,7 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
 
 				By("Verify vpa-updater runtime resources")
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentUpdaterFor(true, nil, nil, nil, nil, nil, component.ClusterTypeShoot)), &appsv1.Deployment{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentUpdaterFor(true, nil, nil, nil, nil, nil)), &appsv1.Deployment{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaUpdater), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 
 				By("Verify vpa-recommender runtime resources")
@@ -1771,7 +1769,7 @@ var _ = Describe("VPA", func() {
 
 				By("Verify vpa-admission-controller runtime resources")
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceAdmissionControllerFor(component.ClusterTypeSeed, false)), &corev1.Service{})).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentAdmissionControllerFor(true, component.ClusterTypeShoot)), &appsv1.Deployment{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentAdmissionControllerFor(true)), &appsv1.Deployment{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudgetAdmissionController), &policyv1.PodDisruptionBudget{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaAdmissionController), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 			})

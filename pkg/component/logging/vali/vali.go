@@ -255,10 +255,7 @@ func (v *vali) Deploy(ctx context.Context) error {
 		}
 	}
 
-	valiConfigMap, err := v.getValiConfigMap()
-	if err != nil {
-		return err
-	}
+	valiConfigMap := v.getValiConfigMap()
 
 	resources = append(resources,
 		valiConfigMap,
@@ -567,7 +564,7 @@ func (v *vali) getService() *corev1.Service {
 	return service
 }
 
-func (v *vali) getValiConfigMap() (*corev1.ConfigMap, error) {
+func (v *vali) getValiConfigMap() *corev1.ConfigMap {
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "vali-config",
@@ -582,7 +579,7 @@ func (v *vali) getValiConfigMap() (*corev1.ConfigMap, error) {
 	}
 
 	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
-	return configMap, nil
+	return configMap
 }
 
 func (v *vali) getTelegrafConfigMap() (*corev1.ConfigMap, error) {

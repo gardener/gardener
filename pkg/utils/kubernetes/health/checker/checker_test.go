@@ -85,7 +85,7 @@ var _ = Describe("HealthChecker", func() {
 				nil,
 				true,
 				false,
-				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, gardencorev1beta1.ManagedResourceMissingConditionError, ""))),
+				PointTo(beConditionWithFalseStatusReasonAndMsg(gardencorev1beta1.ManagedResourceMissingConditionError, ""))),
 			Entry("one true condition, one missing",
 				[]gardencorev1beta1.Condition{
 					{
@@ -95,7 +95,7 @@ var _ = Describe("HealthChecker", func() {
 				},
 				true,
 				false,
-				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, gardencorev1beta1.ManagedResourceMissingConditionError, string(resourcesv1alpha1.ResourcesHealthy)))),
+				PointTo(beConditionWithFalseStatusReasonAndMsg(gardencorev1beta1.ManagedResourceMissingConditionError, string(resourcesv1alpha1.ResourcesHealthy)))),
 			Entry("multiple true conditions",
 				[]gardencorev1beta1.Condition{
 					{
@@ -154,7 +154,7 @@ var _ = Describe("HealthChecker", func() {
 				},
 				true,
 				true,
-				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, gardencorev1beta1.ManagedResourceProgressingRolloutStuck, "ManagedResource  is progressing for more than 5m0s"))),
+				PointTo(beConditionWithFalseStatusReasonAndMsg(gardencorev1beta1.ManagedResourceProgressingRolloutStuck, "ManagedResource  is progressing for more than 5m0s"))),
 			Entry("one false condition ResourcesApplied",
 				[]gardencorev1beta1.Condition{
 					{
@@ -200,7 +200,7 @@ var _ = Describe("HealthChecker", func() {
 				},
 				true,
 				false,
-				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "barFailed", "bar is unhealthy"))),
+				PointTo(beConditionWithFalseStatusReasonAndMsg("barFailed", "bar is unhealthy"))),
 			Entry("multiple false conditions with reason & message & ResourcesApplied condition is false",
 				[]gardencorev1beta1.Condition{
 					{
@@ -218,7 +218,7 @@ var _ = Describe("HealthChecker", func() {
 				},
 				true,
 				false,
-				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "fooFailed", "foo is unhealthy"))),
+				PointTo(beConditionWithFalseStatusReasonAndMsg("fooFailed", "foo is unhealthy"))),
 			Entry("outdated managed resource",
 				[]gardencorev1beta1.Condition{
 					{
@@ -236,7 +236,7 @@ var _ = Describe("HealthChecker", func() {
 				},
 				false,
 				false,
-				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, gardencorev1beta1.OutdatedStatusError, "outdated"))),
+				PointTo(beConditionWithFalseStatusReasonAndMsg(gardencorev1beta1.OutdatedStatusError, "outdated"))),
 			Entry("unknown condition status with reason and message",
 				[]gardencorev1beta1.Condition{
 					{
@@ -252,7 +252,7 @@ var _ = Describe("HealthChecker", func() {
 				},
 				true,
 				false,
-				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "Unknown", "bar is unknown"))),
+				PointTo(beConditionWithFalseStatusReasonAndMsg("Unknown", "bar is unknown"))),
 		)
 
 		var (
@@ -564,8 +564,8 @@ func beConditionWithStatus(status gardencorev1beta1.ConditionStatus) types.Gomeg
 	return WithStatus(status)
 }
 
-func beConditionWithStatusAndMsg(status gardencorev1beta1.ConditionStatus, reason, message string) types.GomegaMatcher {
-	return And(WithStatus(status), WithReason(reason), WithMessage(message))
+func beConditionWithFalseStatusReasonAndMsg(reason, message string) types.GomegaMatcher {
+	return And(WithStatus(gardencorev1beta1.ConditionFalse), WithReason(reason), WithMessage(message))
 }
 
 func beConditionWithMissingRequiredDeployment(deployments []*appsv1.Deployment) types.GomegaMatcher {

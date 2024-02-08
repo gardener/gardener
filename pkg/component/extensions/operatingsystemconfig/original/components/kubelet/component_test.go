@@ -94,35 +94,35 @@ var _ = Describe("Component", func() {
 		Entry(
 			"kubernetes 1.25",
 			"1.25.1",
-			kubeletConfig(true, true, false),
+			kubeletConfig(false),
 			false,
 			false,
 		),
 		Entry(
 			"kubernetes 1.25 w/ node-agent",
 			"1.25.1",
-			kubeletConfig(true, true, false),
+			kubeletConfig(false),
 			true,
 			false,
 		),
 		Entry(
 			"kubernetes 1.26",
 			"1.26.1",
-			kubeletConfig(true, true, true),
+			kubeletConfig(true),
 			false,
 			false,
 		),
 		Entry(
 			"kubernetes 1.26 w/ node-agent",
 			"1.26.1",
-			kubeletConfig(true, true, true),
+			kubeletConfig(true),
 			true,
 			false,
 		),
 		Entry(
 			"kubernetes 1.26 w/ node-agent and preferIPv6",
 			"1.26.1",
-			kubeletConfig(true, true, true),
+			kubeletConfig(true),
 			true,
 			true,
 		),
@@ -268,8 +268,6 @@ kubelet_monitoring
 )
 
 func kubeletConfig(
-	rotateCertificates bool,
-	volumePluginDir bool,
 	k8sGreaterEqual126 bool,
 ) string {
 	streamingConnectionIdleTimeout := "4h0m0s"
@@ -368,28 +366,16 @@ protectKernelDefaults: true`
 registerWithTaints:
 - effect: NoSchedule
   key: node.gardener.cloud/critical-components-not-ready
-resolvConf: /etc/resolv.conf`
-
-	if rotateCertificates {
-		out += `
-rotateCertificates: true`
-	}
-
-	out += `
+resolvConf: /etc/resolv.conf
+rotateCertificates: true
 runtimeRequestTimeout: 2m0s
 serializeImagePulls: true
 serverTLSBootstrap: true
 shutdownGracePeriod: 0s
 shutdownGracePeriodCriticalPods: 0s
 streamingConnectionIdleTimeout: ` + streamingConnectionIdleTimeout + `
-syncFrequency: 1m0s`
-
-	if volumePluginDir {
-		out += `
-volumePluginDir: /var/lib/kubelet/volumeplugins`
-	}
-
-	out += `
+syncFrequency: 1m0s
+volumePluginDir: /var/lib/kubelet/volumeplugins
 volumeStatsAggPeriod: 1m0s
 `
 

@@ -53,12 +53,6 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 		return nil, err
 	}
 
-	// Build namespace selector from the webhook kind and provider
-	namespaceSelector, err := buildSelector(args.NetworkProvider, args.CloudProvider)
-	if err != nil {
-		return nil, err
-	}
-
 	// Create webhook
 	var (
 		name = WebhookName
@@ -73,17 +67,17 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 		Target:            extensionswebhook.TargetSeed,
 		Path:              path,
 		Webhook:           &admission.Webhook{Handler: handler, RecoverPanic: true},
-		NamespaceSelector: namespaceSelector,
+		NamespaceSelector: buildSelector(args.NetworkProvider, args.CloudProvider),
 	}, nil
 }
 
 // buildSelector creates and returns a LabelSelector for the given webhook kind and provider.
-func buildSelector(networkProvider, cloudProvider string) (*metav1.LabelSelector, error) {
+func buildSelector(networkProvider, cloudProvider string) *metav1.LabelSelector {
 	// Create and return LabelSelector
 	return &metav1.LabelSelector{
 		MatchExpressions: []metav1.LabelSelectorRequirement{
 			{Key: v1beta1constants.LabelShootProvider, Operator: metav1.LabelSelectorOpIn, Values: []string{cloudProvider}},
 			{Key: v1beta1constants.LabelNetworkingProvider, Operator: metav1.LabelSelectorOpIn, Values: []string{networkProvider}},
 		},
-	}, nil
+	}
 }

@@ -64,7 +64,7 @@ var _ = Describe("Health controller tests", func() {
 		JustBeforeEach(func() {
 			By("Set ManagedResource to be applied successfully")
 			patch := client.MergeFrom(managedResource.DeepCopy())
-			setCondition(managedResource, resourcesv1alpha1.ResourcesApplied, gardencorev1beta1.ConditionTrue)
+			setCondition(managedResource, gardencorev1beta1.ConditionTrue)
 			Expect(testClient.Status().Patch(ctx, managedResource, patch)).To(Succeed())
 		})
 
@@ -102,7 +102,7 @@ var _ = Describe("Health controller tests", func() {
 		JustBeforeEach(func() {
 			By("Set ManagedResource to be applied successfully")
 			patch := client.MergeFrom(managedResource.DeepCopy())
-			setCondition(managedResource, resourcesv1alpha1.ResourcesApplied, gardencorev1beta1.ConditionTrue)
+			setCondition(managedResource, gardencorev1beta1.ConditionTrue)
 			Expect(testClient.Status().Patch(ctx, managedResource, patch)).To(Succeed())
 		})
 
@@ -145,7 +145,7 @@ var _ = Describe("Health controller tests", func() {
 
 		It("does not touch ManagedResource if it is still being applied", func() {
 			patch := client.MergeFrom(managedResource.DeepCopy())
-			setCondition(managedResource, resourcesv1alpha1.ResourcesApplied, gardencorev1beta1.ConditionProgressing)
+			setCondition(managedResource, gardencorev1beta1.ConditionProgressing)
 			Expect(testClient.Status().Patch(ctx, managedResource, patch)).To(Succeed())
 
 			Consistently(func(g Gomega) []gardencorev1beta1.Condition {
@@ -159,7 +159,7 @@ var _ = Describe("Health controller tests", func() {
 
 		It("does not touch ManagedResource if it failed to be applied", func() {
 			patch := client.MergeFrom(managedResource.DeepCopy())
-			setCondition(managedResource, resourcesv1alpha1.ResourcesApplied, gardencorev1beta1.ConditionFalse)
+			setCondition(managedResource, gardencorev1beta1.ConditionFalse)
 			Expect(testClient.Status().Patch(ctx, managedResource, patch)).To(Succeed())
 
 			Consistently(func(g Gomega) []gardencorev1beta1.Condition {
@@ -176,7 +176,7 @@ var _ = Describe("Health controller tests", func() {
 		JustBeforeEach(func() {
 			By("Set ManagedResource to be applied successfully")
 			patch := client.MergeFrom(managedResource.DeepCopy())
-			setCondition(managedResource, resourcesv1alpha1.ResourcesApplied, gardencorev1beta1.ConditionTrue)
+			setCondition(managedResource, gardencorev1beta1.ConditionTrue)
 			Expect(testClient.Status().Patch(ctx, managedResource, patch)).To(Succeed())
 		})
 
@@ -320,7 +320,7 @@ var _ = Describe("Health controller tests", func() {
 		JustBeforeEach(func() {
 			By("Set ManagedResource to be applied successfully")
 			patch := client.MergeFrom(managedResource.DeepCopy())
-			setCondition(managedResource, resourcesv1alpha1.ResourcesApplied, gardencorev1beta1.ConditionTrue)
+			setCondition(managedResource, gardencorev1beta1.ConditionTrue)
 			Expect(testClient.Status().Patch(ctx, managedResource, patch)).To(Succeed())
 		})
 
@@ -557,9 +557,9 @@ var _ = Describe("Health controller tests", func() {
 	})
 })
 
-func setCondition(managedResource *resourcesv1alpha1.ManagedResource, conditionType gardencorev1beta1.ConditionType, status gardencorev1beta1.ConditionStatus) {
+func setCondition(managedResource *resourcesv1alpha1.ManagedResource, status gardencorev1beta1.ConditionStatus) {
 	managedResource.Status.Conditions = v1beta1helper.MergeConditions(managedResource.Status.Conditions, gardencorev1beta1.Condition{
-		Type:               conditionType,
+		Type:               resourcesv1alpha1.ResourcesApplied,
 		Status:             status,
 		LastUpdateTime:     metav1.Now(),
 		LastTransitionTime: metav1.Now(),

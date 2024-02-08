@@ -181,41 +181,39 @@ var _ = Describe("KubeScheduler", func() {
 				},
 			},
 		}
-		serviceFor = func(version string) *corev1.Service {
-			return &corev1.Service{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: corev1.SchemeGroupVersion.String(),
-					Kind:       "Service",
+		service = &corev1.Service{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: corev1.SchemeGroupVersion.String(),
+				Kind:       "Service",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      serviceName,
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "kubernetes",
+					"role": "scheduler",
 				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      serviceName,
-					Namespace: namespace,
-					Labels: map[string]string{
-						"app":  "kubernetes",
-						"role": "scheduler",
-					},
-					Annotations: map[string]string{
-						"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":10259}]`,
-					},
-					ResourceVersion: "1",
+				Annotations: map[string]string{
+					"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":10259}]`,
 				},
-				Spec: corev1.ServiceSpec{
-					Selector: map[string]string{
-						"app":  "kubernetes",
-						"role": "scheduler",
-					},
-					Type: corev1.ServiceTypeClusterIP,
-					Ports: []corev1.ServicePort{
-						{
-							Name:     "metrics",
-							Protocol: corev1.ProtocolTCP,
-							Port:     10259,
-						},
+				ResourceVersion: "1",
+			},
+			Spec: corev1.ServiceSpec{
+				Selector: map[string]string{
+					"app":  "kubernetes",
+					"role": "scheduler",
+				},
+				Type: corev1.ServiceTypeClusterIP,
+				Ports: []corev1.ServicePort{
+					{
+						Name:     "metrics",
+						Protocol: corev1.ProtocolTCP,
+						Port:     10259,
 					},
 				},
-			}
+			},
 		}
-		deploymentFor = func(version string, config *gardencorev1beta1.KubeSchedulerConfig, componentConfigFilePath string) *appsv1.Deployment {
+		deploymentFor = func(config *gardencorev1beta1.KubeSchedulerConfig, componentConfigFilePath string) *appsv1.Deployment {
 			var env []corev1.EnvVar
 			if config != nil && config.KubeMaxPDVols != nil {
 				env = append(env, corev1.EnvVar{
@@ -493,7 +491,7 @@ subjects:
 					},
 				}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(actualDeployment), actualDeployment)).To(Succeed())
-				Expect(actualDeployment).To(DeepEqual(deploymentFor(targetVersion, config, expectedComponentConfigFilePath)))
+				Expect(actualDeployment).To(DeepEqual(deploymentFor(config, expectedComponentConfigFilePath)))
 
 				actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{
 					ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace},
@@ -508,7 +506,7 @@ subjects:
 					},
 				}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(actualService), actualService)).To(Succeed())
-				Expect(actualService).To(DeepEqual(serviceFor(targetVersion)))
+				Expect(actualService).To(DeepEqual(service))
 
 				actualPDB := &policyv1.PodDisruptionBudget{
 					ObjectMeta: metav1.ObjectMeta{
