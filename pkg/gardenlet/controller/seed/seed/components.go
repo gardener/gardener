@@ -667,6 +667,7 @@ func (r *Reconciler) newFluentCustomResources(seedIsGarden bool) (deployer compo
 		// seed system components
 		extensions.CentralLoggingConfiguration,
 		dependencywatchdog.CentralLoggingConfiguration,
+		alertmanager.CentralLoggingConfiguration,
 		monitoring.CentralLoggingConfiguration,
 		plutono.CentralLoggingConfiguration,
 		// shoot control plane components
