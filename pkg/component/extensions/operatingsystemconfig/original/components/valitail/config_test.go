@@ -82,9 +82,6 @@ Documentation=https://github.com/credativ/plutono`
 					if !useGardenerNodeAgentEnabled {
 						unitContent += `
 After=valitail-fetch-token.service`
-					} else {
-						unitContent += `
-ConditionPathExists=/var/lib/valitail/auth-token`
 					}
 
 					unitContent += `
@@ -389,9 +386,6 @@ Documentation=https://github.com/credativ/plutono`
 					if !useGardenerNodeAgentEnabled {
 						unitContent += `
 After=valitail-fetch-token.service`
-					} else {
-						unitContent += `
-ConditionPathExists=/var/lib/valitail/auth-token`
 					}
 
 					unitContent += `
