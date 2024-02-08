@@ -1722,9 +1722,6 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, fld
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("podPIDsLimit"), *value, fmt.Sprintf("podPIDsLimit value must be at least %d", PodPIDsLimitMinimum)))
 		}
 	}
-	if kubeletConfig.ImagePullProgressDeadline != nil {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("imagePullProgressDeadline"), "can only be configured when a worker pool is configured with 'docker'. This setting has no effect for other container runtimes. Gardener no longer supports docker CRI"))
-	}
 	if kubeletConfig.EvictionPressureTransitionPeriod != nil {
 		allErrs = append(allErrs, ValidatePositiveDuration(kubeletConfig.EvictionPressureTransitionPeriod, fldPath.Child("evictionPressureTransitionPeriod"))...)
 	}

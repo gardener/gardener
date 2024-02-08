@@ -6361,26 +6361,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 			)
 		})
 
-		DescribeTable("ImagePullProgressDeadline",
-			func(imagePullProgressDeadline *metav1.Duration, matcher gomegatypes.GomegaMatcher) {
-				kubeletConfig := core.KubeletConfig{
-					ImagePullProgressDeadline: imagePullProgressDeadline,
-				}
-
-				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
-
-				Expect(errList).To(matcher)
-			},
-
-			Entry("valid configuration", nil, BeEmpty()),
-			Entry("not allowed to be configured when not using docker, as it has no effect on other runtimes", &validDuration, ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal(field.NewPath("imagePullProgressDeadline").String()),
-				})),
-			)),
-		)
-
 		DescribeTable("ImageGCHighThresholdPercent",
 			func(imageGCHighThresholdPercent int, matcher gomegatypes.GomegaMatcher) {
 				kubeletConfig := core.KubeletConfig{
