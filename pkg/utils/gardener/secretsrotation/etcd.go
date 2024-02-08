@@ -156,6 +156,8 @@ func rewriteEncryptedData(
 	)
 
 	for _, gvk := range gvks {
+		var fns []flow.TaskFn
+
 		objList := &metav1.PartialObjectMetadataList{}
 		objList.SetGroupVersionKind(gvk)
 
@@ -168,7 +170,7 @@ func rewriteEncryptedData(
 		for _, o := range objList.Items {
 			obj := o
 
-			taskFns = append(taskFns, func(ctx context.Context) error {
+			fns = append(fns, func(ctx context.Context) error {
 				// client.StrategicMergeFrom is not used here because CRDs don't support strategic-merge-patch.
 				// See https://github.com/kubernetes-sigs/controller-runtime/blob/a550f29c8781d1f7f9f19ab435ffac337b35a313/pkg/client/patch.go#L164-L173
 				// This should be okay since we don't modify any lists here.
@@ -183,9 +185,13 @@ func rewriteEncryptedData(
 				return c.Patch(ctx, &obj, patch)
 			})
 		}
+
+		// Execute the tasks for the current GVK in parallel.
+		taskFns = append(taskFns, flow.Parallel(fns...))
 	}
 
-	return flow.Parallel(taskFns...)(ctx)
+	// Execute the sets of tasks for different GVKs in sequence.
+	return flow.Sequential(taskFns...)(ctx)
 }
 
 // SnapshotETCDAfterRewritingEncryptedData performs a full snapshot on ETCD after the encrypted data (like secrets) have
