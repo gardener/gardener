@@ -4001,12 +4001,6 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 							Format:      "int64",
 						},
 					},
-					"imagePullProgressDeadline": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ImagePullProgressDeadline describes the time limit under which if no pulling progress is made, the image pulling will be cancelled. Default: 1m Only relevant for docker CRI.\n\nDeprecated: This field is deprecated and will be removed in Gardener release v1.89.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
-						},
-					},
 					"failSwapOn": {
 						SchemaProps: spec.SchemaProps{
 							Description: "FailSwapOn makes the Kubelet fail to start if swap is enabled on the node. (default true).",

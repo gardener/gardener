@@ -5715,23 +5715,6 @@ int64
 </tr>
 <tr>
 <td>
-<code>imagePullProgressDeadline</code></br>
-<em>
-<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
-Kubernetes meta/v1.Duration
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ImagePullProgressDeadline describes the time limit under which if no pulling progress is made, the image pulling will be cancelled.
-Default: 1m
-Only relevant for docker CRI.</p>
-<p>Deprecated: This field is deprecated and will be removed in Gardener release v1.89.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>failSwapOn</code></br>
 <em>
 bool
