@@ -27,6 +27,8 @@ spec:
     - version: 1.0.0
       cri:
       - name: containerd
+      # TODO(shafeeqes): Remove this in gardener v1.89
+      - name: docker
   providerConfig:
     apiVersion: local.provider.extensions.gardener.cloud/v1alpha1
     kind: CloudProfileConfig

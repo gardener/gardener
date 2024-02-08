@@ -754,9 +754,6 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 									{
 										Name: "invalid-cri-name",
 									},
-									{
-										Name: "docker",
-									},
 								},
 							},
 						},
@@ -772,6 +769,9 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 									{
 										Name: core.CRINameContainerD,
 									},
+									{
+										Name: "docker",
+									},
 								},
 							},
 						},
@@ -783,10 +783,6 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeNotSupported),
 					"Field":  Equal("spec.machineImages[0].versions[0].cri[0].name"),
-					"Detail": Equal("supported values: \"containerd\""),
-				})), PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeNotSupported),
-					"Field":  Equal("spec.machineImages[0].versions[0].cri[1].name"),
 					"Detail": Equal("supported values: \"containerd\""),
 				})),
 				))

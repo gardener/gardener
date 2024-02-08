@@ -306,6 +306,13 @@ func validateContainerRuntimesInterfaces(cris []core.CRI, fldPath *field.Path) f
 		duplicateCRI.Insert(string(cri.Name))
 
 		if !availableWorkerCRINames.Has(string(cri.Name)) {
+			// TODO(shafeeqes): Remove this in gardener v1.89
+			{
+				if cri.Name == "docker" {
+					continue
+				}
+			}
+
 			allErrs = append(allErrs, field.NotSupported(criPath.Child("name"), string(cri.Name), sets.List(availableWorkerCRINames)))
 		}
 		allErrs = append(allErrs, validateContainerRuntimes(cri.ContainerRuntimes, criPath.Child("containerRuntimes"))...)
