@@ -382,11 +382,6 @@ func (g *garden) Start(ctx context.Context) error {
 		return err
 	}
 
-	log.Info("Cleaning up orphaned ServiceAccounts related to garden access secrets for extensions")
-	if err := g.cleanupOrphanedExtensionsServiceAccounts(ctx, gardenCluster.GetClient()); err != nil {
-		return err
-	}
-
 	log.Info("Cleaning up GRM secret finalizers")
 	if err := cleanupGRMSecretFinalizers(ctx, g.mgr.GetClient(), log); err != nil {
 		return fmt.Errorf("failed to clean up GRM secret finalizers: %w", err)
@@ -449,31 +444,6 @@ func (g *garden) Start(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-// TODO(rfranzke): Remove this code after v1.86 has been released.
-func (g *garden) cleanupOrphanedExtensionsServiceAccounts(ctx context.Context, gardenClient client.Client) error {
-	serviceAccountList := &corev1.ServiceAccountList{}
-	if err := gardenClient.List(ctx, serviceAccountList, client.InNamespace(gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.Name))); err != nil {
-		return err
-	}
-
-	var taskFns []flow.TaskFn
-	for _, serviceAccount := range serviceAccountList.Items {
-		controllerInstallation := &gardencorev1beta1.ControllerInstallation{ObjectMeta: metav1.ObjectMeta{Name: strings.TrimPrefix(serviceAccount.Name, v1beta1constants.ExtensionGardenServiceAccountPrefix)}}
-		if err := gardenClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return err
-			}
-
-			sa := serviceAccount
-			taskFns = append(taskFns, func(ctx context.Context) error {
-				return gardenClient.Delete(ctx, &sa)
-			})
-		}
-	}
-
-	return flow.Parallel(taskFns...)(ctx)
 }
 
 // TODO(Kostov6): Remove this code after v1.91 has been released.
