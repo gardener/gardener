@@ -24,6 +24,8 @@ spec:
   machineImages:
   - name: local
     versions:
+    # TODO(shafeeqes): Remove this in gardener v1.89
+    - name: docker
     - version: 1.0.0
       cri:
       - name: containerd
