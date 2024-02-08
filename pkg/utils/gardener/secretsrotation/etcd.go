@@ -49,12 +49,26 @@ import (
 func RewriteEncryptedDataAddLabel(
 	ctx context.Context,
 	log logr.Logger,
+	runtimeClient client.Client,
 	clientSet kubernetes.Interface,
 	secretsManager secretsmanager.Interface,
+	namespace string,
+	name string,
 	resourcesToEncrypt []string,
 	encryptedResources []string,
 	defaultGVKs []schema.GroupVersionKind,
 ) error {
+	// Check if we have to label the resources to rewrite the data.
+	meta := &metav1.PartialObjectMetadata{}
+	meta.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
+	if err := runtimeClient.Get(ctx, kubernetesutils.Key(namespace, name), meta); err != nil {
+		return err
+	}
+
+	if metav1.HasAnnotation(meta.ObjectMeta, AnnotationKeyResourcesLabeled) {
+		return nil
+	}
+
 	encryptedGVKs, message, err := GetResourcesForRewrite(clientSet.Kubernetes().Discovery(), resourcesToEncrypt, encryptedResources, defaultGVKs)
 	if err != nil {
 		return err
@@ -65,7 +79,7 @@ func RewriteEncryptedDataAddLabel(
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameETCDEncryptionKey)
 	}
 
-	return rewriteEncryptedData(
+	if err := rewriteEncryptedData(
 		ctx,
 		log,
 		clientSet.Client(),
@@ -75,7 +89,16 @@ func RewriteEncryptedDataAddLabel(
 		},
 		message+" (Add label)",
 		encryptedGVKs...,
-	)
+	); err != nil {
+		return err
+	}
+
+	// If we have hit this point then we have labeled all the resources successfully. Now we can mark this step as "completed"
+	// (via an annotation) so that we do not start labeling the resources in a future reconciliation in case the flow fails in
+	// "Removing the label" and labels were only partially removed.
+	return PatchAPIServerDeploymentMeta(ctx, runtimeClient, namespace, name, func(meta *metav1.PartialObjectMetadata) {
+		metav1.SetMetaDataAnnotation(&meta.ObjectMeta, AnnotationKeyResourcesLabeled, "true")
+	})
 }
 
 // RewriteEncryptedDataRemoveLabel patches all encrypted data in all namespaces in the target clusters and removes the
@@ -114,6 +137,7 @@ func RewriteEncryptedDataRemoveLabel(
 
 	return PatchAPIServerDeploymentMeta(ctx, runtimeClient, namespace, name, func(meta *metav1.PartialObjectMetadata) {
 		delete(meta.Annotations, AnnotationKeyEtcdSnapshotted)
+		delete(meta.Annotations, AnnotationKeyResourcesLabeled)
 	})
 }
 
