@@ -17,6 +17,7 @@ package botanist_test
 import (
 	"net"
 
+	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
@@ -25,6 +26,7 @@ import (
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
+	"github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 )
 
@@ -62,6 +64,14 @@ var _ = Describe("VPNShoot", func() {
 					Networking: &gardencorev1beta1.Networking{
 						IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
 					},
+				},
+			})
+			botanist.Seed = &seed.Seed{
+				KubernetesVersion: semver.MustParse("1.26.1"),
+			}
+			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
+				Spec: gardencorev1beta1.SeedSpec{
+					Networks: gardencorev1beta1.SeedNetworks{},
 				},
 			})
 		})

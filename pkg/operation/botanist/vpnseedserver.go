@@ -20,6 +20,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/imagevector"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/vpnseedserver"
@@ -86,6 +87,12 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 		HighAvailabilityEnabled:              b.Shoot.VPNHighAvailabilityEnabled,
 		HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,
 		HighAvailabilityNumberOfShootClients: b.Shoot.VPNHighAvailabilityNumberOfShootClients,
+	}
+
+	if gardencorev1beta1.IsIPv6SingleStack(b.Shoot.GetInfo().Spec.Networking.IPFamilies) {
+		values.Network.VPNCIDR = pointer.StringDeref(b.Seed.GetInfo().Spec.Networks.VPN, v1beta1constants.DefaultVPNRangeV6)
+	} else {
+		values.Network.VPNCIDR = pointer.StringDeref(b.Seed.GetInfo().Spec.Networks.VPN, v1beta1constants.DefaultVPNRange)
 	}
 
 	if b.ShootUsesDNS() {

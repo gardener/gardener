@@ -6535,6 +6535,13 @@ func schema_pkg_apis_core_v1beta1_SeedNetworks(ref common.ReferenceCallback) com
 							},
 						},
 					},
+					"vpn": {
+						SchemaProps: spec.SchemaProps{
+							Description: "VPN is the CIDR of the VPN network. This field is immutable.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"pods", "services"},
 			},

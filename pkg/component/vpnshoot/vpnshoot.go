@@ -86,6 +86,8 @@ type ReversedVPNValues struct {
 	OpenVPNPort int32
 	// IPFamilies are the IPFamilies of the shoot.
 	IPFamilies []gardencorev1beta1.IPFamily
+	// Network is the network CIDR for the ReversedVPN.
+	Network string
 }
 
 // Values is a set of configuration values for the VPNShoot component.

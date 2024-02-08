@@ -15,7 +15,11 @@
 package botanist
 
 import (
+	"k8s.io/utils/pointer"
+
 	"github.com/gardener/gardener/imagevector"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/component/vpnshoot"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
@@ -42,6 +46,12 @@ func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 		HighAvailabilityNumberOfShootClients: b.Shoot.VPNHighAvailabilityNumberOfShootClients,
 		PSPDisabled:                          b.Shoot.PSPDisabled,
 		KubernetesVersion:                    b.Shoot.KubernetesVersion,
+	}
+
+	if gardencorev1beta1.IsIPv6SingleStack(b.Shoot.GetInfo().Spec.Networking.IPFamilies) {
+		values.ReversedVPN.Network = pointer.StringDeref(b.Seed.GetInfo().Spec.Networks.VPN, v1beta1constants.DefaultVPNRangeV6)
+	} else {
+		values.ReversedVPN.Network = pointer.StringDeref(b.Seed.GetInfo().Spec.Networks.VPN, v1beta1constants.DefaultVPNRange)
 	}
 
 	return vpnshoot.New(

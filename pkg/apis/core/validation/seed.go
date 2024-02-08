@@ -258,6 +258,7 @@ func validateSeedNetworks(seedNetworks core.SeedNetworks, fldPath *field.Path, i
 
 	var (
 		primaryIPFamily = helper.DeterminePrimaryIPFamily(seedNetworks.IPFamilies)
+		vpnNetwork      string
 		networks        []cidrvalidation.CIDR
 	)
 
@@ -270,6 +271,17 @@ func validateSeedNetworks(seedNetworks core.SeedNetworks, fldPath *field.Path, i
 	if seedNetworks.Nodes != nil {
 		networks = append(networks, cidrvalidation.NewCIDR(*seedNetworks.Nodes, fldPath.Child("nodes")))
 	}
+	if seedNetworks.VPN != nil {
+		vpnNetwork = *seedNetworks.VPN
+	} else {
+		if core.IsIPv6SingleStack(seedNetworks.IPFamilies) {
+			vpnNetwork = v1beta1constants.DefaultVPNRangeV6
+		} else {
+			vpnNetwork = v1beta1constants.DefaultVPNRange
+		}
+	}
+	vpnCIDR := cidrvalidation.NewCIDR(vpnNetwork, fldPath.Child("vpn"))
+	networks = append(networks, vpnCIDR)
 	if shootDefaults := seedNetworks.ShootDefaults; shootDefaults != nil {
 		if shootDefaults.Pods != nil {
 			networks = append(networks, cidrvalidation.NewCIDR(*shootDefaults.Pods, fldPath.Child("shootDefaults", "pods")))
@@ -279,6 +291,7 @@ func validateSeedNetworks(seedNetworks core.SeedNetworks, fldPath *field.Path, i
 		}
 	}
 
+	allErrs = append(allErrs, ValidateSeedVPNSize(vpnCIDR, primaryIPFamily)...)
 	allErrs = append(allErrs, cidrvalidation.ValidateCIDRParse(networks...)...)
 	// Don't check IP family in dualstack case.
 	if len(seedNetworks.IPFamilies) != 2 {
@@ -286,12 +299,21 @@ func validateSeedNetworks(seedNetworks core.SeedNetworks, fldPath *field.Path, i
 	}
 	allErrs = append(allErrs, cidrvalidation.ValidateCIDROverlap(networks, false)...)
 
-	vpnRange := cidrvalidation.NewCIDR(v1beta1constants.DefaultVPNRange, field.NewPath(""))
-	allErrs = append(allErrs, vpnRange.ValidateNotOverlap(networks...)...)
-	vpnRangeV6 := cidrvalidation.NewCIDR(v1beta1constants.DefaultVPNRangeV6, field.NewPath(""))
-	allErrs = append(allErrs, vpnRangeV6.ValidateNotOverlap(networks...)...)
-
 	return allErrs
+}
+
+func ValidateSeedVPNSize(vpn cidrvalidation.CIDR, primaryIPFamily core.IPFamily) field.ErrorList {
+	prefixSize, _ := vpn.GetIPNet().Mask.Size()
+
+	if primaryIPFamily == core.IPFamilyIPv6 && prefixSize != 120 {
+		return field.ErrorList{field.Invalid(vpn.GetFieldPath(), vpn.GetCIDR(), "IPv6 VPN CIDR must have size /120")}
+	}
+
+	if primaryIPFamily == core.IPFamilyIPv4 && prefixSize != 24 {
+		return field.ErrorList{field.Invalid(vpn.GetFieldPath(), vpn.GetCIDR(), "IPv4 VPN CIDR must have size /24")}
+	}
+
+	return nil
 }
 
 // ValidateSeedSpecUpdate validates the specification updates of a Seed object.

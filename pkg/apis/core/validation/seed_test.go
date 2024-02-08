@@ -419,10 +419,27 @@ var _ = Describe("Seed Validation Tests", func() {
 					}))
 				})
 
+				It("should forbid VPN CIDRs with incorrect size", func() {
+					seed.Spec.Networks.Nodes = pointer.String("10.1.0.0/16")
+					seed.Spec.Networks.Pods = "10.2.0.0/16"
+					seed.Spec.Networks.Services = "10.3.0.0/16"
+					seed.Spec.Networks.VPN = pointer.String("192.168.123.0/25")
+					seed.Spec.Networks.ShootDefaults.Pods = pointer.String("10.4.0.0/16")
+					seed.Spec.Networks.ShootDefaults.Services = pointer.String("10.5.0.0/16")
+
+					errorList := ValidateSeed(seed)
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networks.vpn"),
+						"Detail": ContainSubstring("must have size /24"),
+					}))
+				})
+
 				It("should forbid Seed with overlapping networks", func() {
 					shootDefaultPodCIDR := "10.0.1.128/28"     // 10.0.1.128 -> 10.0.1.13
 					shootDefaultServiceCIDR := "10.0.1.144/30" // 10.0.1.144 -> 10.0.1.17
 
+					vpnCIDR := "10.0.1.0/24"  // 10.0.1.0 -> 10.0.1.255
 					nodesCIDR := "10.0.0.0/8" // 10.0.0.0 -> 10.255.255.25
 					// Pods CIDR overlaps with Nodes network
 					// Services CIDR overlaps with Nodes and Pods
@@ -430,8 +447,9 @@ var _ = Describe("Seed Validation Tests", func() {
 					// Shoot default pod CIDR overlaps with shoot default pod CIDR
 					seed.Spec.Networks = core.SeedNetworks{
 						Nodes:    &nodesCIDR,     // 10.0.0.0 -> 10.255.255.25
-						Pods:     "10.0.1.0/24",  // 10.0.1.0 -> 10.0.1.25
+						Pods:     "10.0.1.0/24",  // 10.0.1.0 -> 10.0.1.255
 						Services: "10.0.1.64/26", // 10.0.1.64 -> 10.0.1.17
+						VPN:      &vpnCIDR,
 						ShootDefaults: &core.ShootNetworks{
 							Pods:     &shootDefaultPodCIDR,
 							Services: &shootDefaultServiceCIDR,
@@ -470,77 +488,26 @@ var _ = Describe("Seed Validation Tests", func() {
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.networks.shootDefaults.services"),
 						"Detail": Equal(`must not overlap with "spec.networks.pods" ("10.0.1.0/24")`),
-					}))
-				})
-
-				It("should forbid Seed with overlap to default vpn range (subset)", func() {
-					shootDefaultPodCIDR := "192.168.123.128/28"     // 192.168.123.128 -> 192.168.123.143
-					shootDefaultServiceCIDR := "192.168.123.200/32" // 192.168.123.200 -> 192.168.123.200
-
-					nodesCIDR := "192.168.123.0/27" // 192.168.123.0 -> 192.168.123.31
-					// Nodes network overlaps with default vpn range
-					// Pods CIDR overlaps with default vpn range
-					// Services CIDR overlaps with default vpn range
-					// Shoot default pod CIDR overlaps with default vpn range
-					// Shoot default service CIDR overlaps with default vpn range
-					seed.Spec.Networks = core.SeedNetworks{
-						Nodes:    &nodesCIDR,          // 192.168.123.0  -> 192.168.123.31
-						Pods:     "192.168.123.32/30", // 192.168.123.32 -> 192.168.123.35
-						Services: "192.168.123.64/26", // 192.168.123.64 -> 192.168.123.127
-						ShootDefaults: &core.ShootNetworks{
-							Pods:     &shootDefaultPodCIDR,     // 192.168.123.128 -> 192.168.123.143
-							Services: &shootDefaultServiceCIDR, // 192.168.123.200 -> 192.168.123.200
-						},
-					}
-
-					errorList := ValidateSeed(seed)
-
-					Expect(errorList).To(ConsistOfFields(Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.networks.pods"),
-						"Detail": Equal(`must not overlap with "[]" ("192.168.123.0/24")`),
 					}, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.networks.services"),
-						"Detail": Equal(`must not overlap with "[]" ("192.168.123.0/24")`),
+						"Field":  Equal("spec.networks.vpn"),
+						"Detail": Equal(`must not overlap with "spec.networks.pods" ("10.0.1.0/24")`),
 					}, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.networks.nodes"),
-						"Detail": Equal(`must not overlap with "[]" ("192.168.123.0/24")`),
+						"Field":  Equal("spec.networks.vpn"),
+						"Detail": Equal(`must not overlap with "spec.networks.services" ("10.0.1.64/26")`),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networks.vpn"),
+						"Detail": Equal(`must not overlap with "spec.networks.nodes" ("10.0.0.0/8")`),
 					}, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.networks.shootDefaults.pods"),
-						"Detail": Equal(`must not overlap with "[]" ("192.168.123.0/24")`),
+						"Detail": Equal(`must not overlap with "spec.networks.vpn" ("10.0.1.0/24")`),
 					}, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.networks.shootDefaults.services"),
-						"Detail": Equal(`must not overlap with "[]" ("192.168.123.0/24")`),
-					}))
-				})
-
-				It("should forbid Seed with overlap to default vpn range (equality)", func() {
-					// Services CIDR overlaps with default vpn range
-					seed.Spec.Networks.Services = "192.168.123.0/24" // 192.168.123.0 -> 192.168.123.255
-
-					errorList := ValidateSeed(seed)
-
-					Expect(errorList).To(ConsistOfFields(Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.networks.services"),
-						"Detail": Equal(`must not overlap with "[]" ("192.168.123.0/24")`),
-					}))
-				})
-
-				It("should forbid Seed with overlap to default vpn range (superset)", func() {
-					// Pods CIDR overlaps with default vpn range
-					seed.Spec.Networks.Pods = "192.168.0.0/16" // 192.168.0.0 -> 192.168.255.255
-
-					errorList := ValidateSeed(seed)
-
-					Expect(errorList).To(ConsistOfFields(Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.networks.pods"),
-						"Detail": Equal(`must not overlap with "[]" ("192.168.123.0/24")`),
+						"Detail": Equal(`must not overlap with "spec.networks.vpn" ("10.0.1.0/24")`),
 					}))
 				})
 			})
@@ -623,6 +590,22 @@ var _ = Describe("Seed Validation Tests", func() {
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.networks.shootDefaults.pods"),
 						"Detail": ContainSubstring("must be a valid IPv6 address"),
+					}))
+				})
+
+				It("should forbid VPN CIDRs with incorrect size", func() {
+					seed.Spec.Networks.Nodes = pointer.String("2001:db8:11::/48")
+					seed.Spec.Networks.Pods = "2001:db8:12::/48"
+					seed.Spec.Networks.Services = "2001:db8:13::/48"
+					seed.Spec.Networks.VPN = pointer.String("fd8f:6d53:b97a:1::/119")
+					seed.Spec.Networks.ShootDefaults.Pods = pointer.String("2001:db8:1::/48")
+					seed.Spec.Networks.ShootDefaults.Services = pointer.String("2001:db8:3::/48")
+
+					errorList := ValidateSeed(seed)
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networks.vpn"),
+						"Detail": ContainSubstring("must have size /120"),
 					}))
 				})
 			})
