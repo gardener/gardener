@@ -105,7 +105,7 @@ gardener:
   garden:
     identifier: <uuid-of-gardener-installation>
   seed:
-    identifier: <seed-name>
+    name: <seed-name>
     region: europe
     spec: <complete-seed-spec>
 ```
