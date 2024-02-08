@@ -147,9 +147,6 @@ Documentation=https://github.com/credativ/plutono`
 	if !features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
 		unitContent += `
 After=` + unitNameFetchToken
-	} else {
-		unitContent += `
-ConditionPathExists=` + PathAuthToken
 	}
 
 	unitContent += `
