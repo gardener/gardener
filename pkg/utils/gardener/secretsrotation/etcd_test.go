@@ -180,7 +180,7 @@ var _ = Describe("ETCD", func() {
 
 				defaultGVKs := []schema.GroupVersionKind{corev1.SchemeGroupVersion.WithKind("Secret")}
 
-				Expect(RewriteEncryptedDataAddLabel(ctx, logger, fakeTargetInterface, fakeSecretsManager, resources, resources, defaultGVKs)).To(Succeed())
+				Expect(RewriteEncryptedDataAddLabel(ctx, logger, runtimeClient, fakeTargetInterface, fakeSecretsManager, kubeAPIServerNamespace, kubeAPIServerDeploymentName, resources, resources, defaultGVKs)).To(Succeed())
 
 				for _, obj := range []client.Object{
 					secret1, secret2, secret3,
@@ -206,6 +206,40 @@ var _ = Describe("ETCD", func() {
 				Expect(endpointSlice1.ResourceVersion).NotTo(Equal(endpointSlice1ResourceVersion))
 				Expect(endpointSlice2.ResourceVersion).To(Equal(endpointSlice2ResourceVersion))
 
+				Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(kubeAPIServerDeployment), kubeAPIServerDeployment)).To(Succeed())
+				Expect(kubeAPIServerDeployment.Annotations).To(HaveKeyWithValue("credentials.gardener.cloud/resources-labeled", "true"))
+			})
+
+			It("should not label the resources if the kube-apiserver deployment has the resources-labeled annotation", func() {
+				Expect(runtimeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-etcd-encryption-key-current", Namespace: kubeAPIServerNamespace}})).To(Succeed())
+
+				resources := []string{
+					corev1.Resource("secrets").String(),
+					corev1.Resource("configmaps").String(),
+					appsv1.Resource("deployments").String(),
+					discoveryv1.Resource("endpointslices").String(),
+				}
+
+				defaultGVKs := []schema.GroupVersionKind{corev1.SchemeGroupVersion.WithKind("Secret")}
+
+				metav1.SetMetaDataAnnotation(&kubeAPIServerDeployment.ObjectMeta, "credentials.gardener.cloud/resources-labeled", "true")
+				Expect(runtimeClient.Update(ctx, kubeAPIServerDeployment)).To(Succeed())
+
+				Expect(RewriteEncryptedDataAddLabel(ctx, logger, runtimeClient, fakeTargetInterface, fakeSecretsManager, kubeAPIServerNamespace, kubeAPIServerDeploymentName, resources, resources, defaultGVKs)).To(Succeed())
+
+				Expect(secret1.ResourceVersion).To(Equal(secret1ResourceVersion))
+				Expect(secret2.ResourceVersion).To(Equal(secret2ResourceVersion))
+				Expect(secret3.ResourceVersion).To(Equal(secret3ResourceVersion))
+
+				Expect(configMap1.ResourceVersion).To(Equal(configMap1ResourceVersion))
+				Expect(configMap2.ResourceVersion).To(Equal(configMap2ResourceVersion))
+
+				Expect(deployment1.ResourceVersion).To(Equal(deployment1ResourceVersion))
+				Expect(deployment2.ResourceVersion).To(Equal(deployment2ResourceVersion))
+				Expect(deployment3.ResourceVersion).To(Equal(deployment3ResourceVersion))
+
+				Expect(endpointSlice1.ResourceVersion).To(Equal(endpointSlice1ResourceVersion))
+				Expect(endpointSlice2.ResourceVersion).To(Equal(endpointSlice2ResourceVersion))
 			})
 		})
 
@@ -237,6 +271,7 @@ var _ = Describe("ETCD", func() {
 		Describe("#RewriteEncryptedDataRemoveLabel", func() {
 			It("should patch all resources and remove the label if not already done", func() {
 				metav1.SetMetaDataAnnotation(&kubeAPIServerDeployment.ObjectMeta, "credentials.gardener.cloud/etcd-snapshotted", "true")
+				metav1.SetMetaDataAnnotation(&kubeAPIServerDeployment.ObjectMeta, "credentials.gardener.cloud/resources-labeled", "true")
 				Expect(runtimeClient.Update(ctx, kubeAPIServerDeployment)).To(Succeed())
 
 				resources := []string{
@@ -276,6 +311,7 @@ var _ = Describe("ETCD", func() {
 
 				Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(kubeAPIServerDeployment), kubeAPIServerDeployment)).To(Succeed())
 				Expect(kubeAPIServerDeployment.Annotations).NotTo(HaveKey("credentials.gardener.cloud/etcd-snapshotted"))
+				Expect(kubeAPIServerDeployment.Annotations).NotTo(HaveKey("credentials.gardener.cloud/resources-labeled"))
 			})
 		})
 	})
