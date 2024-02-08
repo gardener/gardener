@@ -619,11 +619,6 @@ func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *garden
 		if primaryProvider.Type != nil {
 			externalDomain.Provider = *primaryProvider.Type
 		}
-		if zones := primaryProvider.Zones; zones != nil {
-			if len(zones.Include) == 1 {
-				externalDomain.Zone = zones.Include[0]
-			}
-		}
 
 	default:
 		return nil, &IncompleteDNSConfigError{}

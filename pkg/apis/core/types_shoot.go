@@ -355,11 +355,6 @@ type DNS struct {
 
 // DNSProvider contains information about a DNS provider.
 type DNSProvider struct {
-	// TODO(timuthy): Remove this field with release v1.87.
-
-	// Domains contains information about which domains shall be included/excluded for this provider.
-	// Deprecated: This field is deprecated and will be removed in Gardener release v1.87.
-	Domains *DNSIncludeExclude
 	// Primary indicates that this DNSProvider is used for shoot related domains.
 	Primary *bool
 	// SecretName is a name of a secret containing credentials for the stated domain and the
@@ -370,19 +365,6 @@ type DNSProvider struct {
 	// Type is the DNS provider type for the Shoot. Only relevant if not the default domain is used for
 	// this shoot.
 	Type *string
-	// TODO(timuthy): Remove this field with release v1.87.
-
-	// Zones contains information about which hosted zones shall be included/excluded for this provider.
-	// Deprecated: This field is deprecated and will be removed in Gardener release v1.87.
-	Zones *DNSIncludeExclude
-}
-
-// DNSIncludeExclude contains information about which domains shall be included/excluded.
-type DNSIncludeExclude struct {
-	// Include is a list of domains that shall be included.
-	Include []string
-	// Exclude is a list of domains that shall be excluded.
-	Exclude []string
 }
 
 // DefaultDomain is the default value in the Shoot's '.spec.dns.domain' when '.spec.dns.provider' is 'unmanaged'
