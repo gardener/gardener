@@ -49,7 +49,6 @@ import (
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -275,6 +274,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			deployFluentCRD,
 			deployPrometheusCRD,
 		)
+
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying and waiting for gardener-resource-manager to be healthy",
 			Fn:           component.OpWait(c.gardenerResourceManager).Deploy,
@@ -318,6 +318,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			deployClusterIdentity,
 			cleanupOrphanedExposureClassHandlers,
 		)
+
 		deployIstio = g.Add(flow.Task{
 			Name:         "Deploying Istio",
 			Fn:           c.istio.Deploy,
@@ -404,6 +405,69 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 			SkipIf:       seed.GetInfo().Annotations[v1beta1constants.GardenerOperation] != v1beta1constants.GardenerOperationRenewKubeconfig,
 		})
+
+		// When the seed is the garden cluster then the following components are reconciled by the gardener-operator.
+		_ = g.Add(flow.Task{
+			Name:         "Deploying Kubernetes vertical pod autoscaler",
+			Fn:           c.verticalPodAutoscaler.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
+			SkipIf:       seedIsGarden,
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying HVPA controller",
+			Fn:           c.hvpaController.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
+			SkipIf:       seedIsGarden,
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying ETCD Druid",
+			Fn:           c.etcdDruid.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
+			SkipIf:       seedIsGarden,
+		})
+
+		_ = g.Add(flow.Task{
+			Name:         "Deploying kube-state-metrics",
+			Fn:           c.kubeStateMetrics.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
+			SkipIf:       seedIsGarden,
+		})
+		deployFluentOperator = g.Add(flow.Task{
+			Name:         "Deploying Fluent Operator",
+			Fn:           c.fluentOperator.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
+			SkipIf:       seedIsGarden,
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying Fluent Bit",
+			Fn:           c.fluentBit.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents, deployFluentOperator),
+			SkipIf:       seedIsGarden,
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying Fluent Operator custom resources",
+			Fn:           c.fluentOperatorCustomResources.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents, deployFluentOperator),
+			SkipIf:       seedIsGarden,
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying Plutono",
+			Fn:           c.plutono.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
+			SkipIf:       seedIsGarden,
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying Vali",
+			Fn:           c.vali.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
+			SkipIf:       seedIsGarden,
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying Prometheus Operator",
+			Fn:           c.prometheusOperator.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
+			SkipIf:       seedIsGarden,
+		})
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{
@@ -415,173 +479,13 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 	return secretsManager.Cleanup(ctx)
 
-	// When the seed is the garden cluster then the following components are reconciled by the gardener-operator.
-	if !seedIsGarden {
-		vpa, err := sharedcomponent.NewVerticalPodAutoscaler(
-			seedClient,
-			r.GardenNamespace,
-			kubernetesVersion,
-			secretsManager,
-			vpaEnabled,
-			v1beta1constants.SecretNameCASeed,
-			v1beta1constants.PriorityClassNameSeedSystem800,
-			v1beta1constants.PriorityClassNameSeedSystem700,
-			v1beta1constants.PriorityClassNameSeedSystem700,
-		)
-		if err != nil {
-			return err
-		}
-
-		hvpa, err := sharedcomponent.NewHVPA(
-			seedClient,
-			r.GardenNamespace,
-			hvpaEnabled,
-			kubernetesVersion,
-			v1beta1constants.PriorityClassNameSeedSystem700,
-		)
-		if err != nil {
-			return err
-		}
-
-		etcdDruid, err := sharedcomponent.NewEtcdDruid(
-			seedClient,
-			r.GardenNamespace,
-			kubernetesVersion,
-			r.ComponentImageVectors,
-			r.Config.ETCDConfig,
-			v1beta1constants.PriorityClassNameSeedSystem800,
-		)
-		if err != nil {
-			return err
-		}
-
-		fluentOperator, err := sharedcomponent.NewFluentOperator(
-			seedClient,
-			r.GardenNamespace,
-			loggingEnabled,
-			v1beta1constants.PriorityClassNameSeedSystem600,
-		)
-		if err != nil {
-			return err
-		}
-
-		fluentBit, err := sharedcomponent.NewFluentBit(
-			seedClient,
-			r.GardenNamespace,
-			loggingEnabled,
-			v1beta1constants.PriorityClassNameSeedSystem600,
-		)
-		if err != nil {
-			return err
-		}
-
-		fluentOperatorCustomResources, err := getFluentOperatorCustomResources(
-			seedClient,
-			r.GardenNamespace,
-			loggingEnabled,
-			seedIsGarden,
-			gardenlethelper.IsEventLoggingEnabled(&r.Config),
-		)
-		if err != nil {
-			return err
-		}
-
-		plutono, err := defaultPlutono(
-			seedClient,
-			r.GardenNamespace,
-			secretsManager,
-			seed.GetIngressFQDN("g-seed"),
-			globalMonitoringSecretSeed.Name,
-			wildCardSecretName,
-		)
-		if err != nil {
-			return err
-		}
-
-		vali, err := defaultVali(
-			ctx,
-			seedClient,
-			r.Config.Logging,
-			r.GardenNamespace,
-			loggingEnabled && gardenlethelper.IsValiEnabled(&r.Config),
-			hvpaEnabled,
-		)
-		if err != nil {
-			return err
-		}
-
-		kubeStateMetrics, err := sharedcomponent.NewKubeStateMetrics(
-			seedClient,
-			r.GardenNamespace,
-			kubernetesVersion,
-			v1beta1constants.PriorityClassNameSeedSystem600,
-		)
-		if err != nil {
-			return err
-		}
-
-		prometheusOperator, err := sharedcomponent.NewPrometheusOperator(
-			seedClient,
-			r.GardenNamespace,
-			v1beta1constants.PriorityClassNameSeedSystem600,
-		)
-		if err != nil {
-			return err
-		}
-
-		var (
-			_ = g.Add(flow.Task{
-				Name: "Deploying Kubernetes vertical pod autoscaler",
-				Fn:   vpa.Deploy,
-			})
-			_ = g.Add(flow.Task{
-				Name: "Deploying HVPA controller",
-				Fn:   hvpa.Deploy,
-			})
-			_ = g.Add(flow.Task{
-				Name: "Deploying ETCD Druid",
-				Fn:   etcdDruid.Deploy,
-			})
-			_ = g.Add(flow.Task{
-				Name: "Deploying kube-state-metrics",
-				Fn:   kubeStateMetrics.Deploy,
-			})
-			deployFluentOperator = g.Add(flow.Task{
-				Name: "Deploying Fluent Operator",
-				Fn:   fluentOperator.Deploy,
-			})
-			_ = g.Add(flow.Task{
-				Name:         "Deploying Fluent Bit",
-				Fn:           fluentBit.Deploy,
-				Dependencies: flow.NewTaskIDs(deployFluentOperator),
-			})
-			_ = g.Add(flow.Task{
-				Name:         "Deploying Fluent Operator custom resources",
-				Fn:           fluentOperatorCustomResources.Deploy,
-				Dependencies: flow.NewTaskIDs(deployFluentOperator),
-			})
-			_ = g.Add(flow.Task{
-				Name: "Deploying Plutono",
-				Fn:   plutono.Deploy,
-			})
-			_ = g.Add(flow.Task{
-				Name: "Deploying Vali",
-				Fn:   vali.Deploy,
-			})
-			_ = g.Add(flow.Task{
-				Name: "Deploying Prometheus Operator",
-				Fn:   prometheusOperator.Deploy,
-			})
-		)
-	}
-
 	kubeAPIServerService := kubeapiserverexposure.NewInternalNameService(seedClient, r.GardenNamespace)
-	if wildcardCert != nil {
+	if wildcardCertSecret != nil {
 		kubeAPIServerIngress := kubeapiserverexposure.NewIngress(seedClient, r.GardenNamespace, kubeapiserverexposure.IngressValues{
 			Host:             seed.GetIngressFQDN("api-seed"),
 			IngressClassName: ptr.To(v1beta1constants.SeedNginxIngressClass),
 			ServiceName:      v1beta1constants.DeploymentNameKubeAPIServer,
-			TLSSecretName:    &wildcardCert.Name,
+			TLSSecretName:    &wildcardCertSecret.Name,
 		})
 		var (
 			_ = g.Add(flow.Task{
