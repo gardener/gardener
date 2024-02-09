@@ -164,11 +164,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return err
 	}
 
-	kubernetesVersion, err := semver.NewVersion(r.SeedClientSet.Version())
-	if err != nil {
-		return err
-	}
-
 	var (
 		vpaEnabled     = seed.GetInfo().Spec.Settings == nil || seed.GetInfo().Spec.Settings.VerticalPodAutoscaler == nil || seed.GetInfo().Spec.Settings.VerticalPodAutoscaler.Enabled
 		hvpaEnabled    = features.DefaultFeatureGate.Enabled(features.HVPA)

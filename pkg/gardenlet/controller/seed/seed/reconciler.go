@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -34,6 +35,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -47,6 +49,7 @@ import (
 type Reconciler struct {
 	GardenClient                         client.Client
 	SeedClientSet                        kubernetes.Interface
+	SeedVersion                          *semver.Version
 	Config                               config.GardenletConfiguration
 	Clock                                clock.Clock
 	Recorder                             record.EventRecorder
@@ -299,4 +302,12 @@ func destroyDNSResources(ctx context.Context, dnsRecord component.DeployMigrateW
 		return err
 	}
 	return dnsRecord.WaitCleanup(ctx)
+}
+
+func vpaEnabled(settings *gardencorev1beta1.SeedSettings) bool {
+	return settings == nil || settings.VerticalPodAutoscaler == nil || settings.VerticalPodAutoscaler.Enabled
+}
+
+func hvpaEnabled() bool {
+	return features.DefaultFeatureGate.Enabled(features.HVPA)
 }
