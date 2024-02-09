@@ -45,7 +45,6 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/clusteridentity"
 	"github.com/gardener/gardener/pkg/component/istio"
-	"github.com/gardener/gardener/pkg/component/kubeapiserverexposure"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -405,6 +404,16 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 			SkipIf:       seed.GetInfo().Annotations[v1beta1constants.GardenerOperation] != v1beta1constants.GardenerOperationRenewKubeconfig,
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Reconciling kube-apiserver service",
+			Fn:           c.kubeAPIServerService.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Reconciling kube-apiserver ingress",
+			Fn:           c.kubeAPIServerIngress.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
+		})
 
 		// When the seed is the garden cluster then the following components are reconciled by the gardener-operator.
 		_ = g.Add(flow.Task{
@@ -468,59 +477,17 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 			SkipIf:       seedIsGarden,
 		})
-	)
 
-	if err := g.Compile().Run(ctx, flow.Opts{
-		Log:              log,
-		ProgressReporter: r.reportProgress(log, seed.GetInfo()),
-	}); err != nil {
-		return flow.Errors(err)
-	}
-
-	return secretsManager.Cleanup(ctx)
-
-	kubeAPIServerService := kubeapiserverexposure.NewInternalNameService(seedClient, r.GardenNamespace)
-	if wildcardCertSecret != nil {
-		kubeAPIServerIngress := kubeapiserverexposure.NewIngress(seedClient, r.GardenNamespace, kubeapiserverexposure.IngressValues{
-			Host:             seed.GetIngressFQDN("api-seed"),
-			IngressClassName: ptr.To(v1beta1constants.SeedNginxIngressClass),
-			ServiceName:      v1beta1constants.DeploymentNameKubeAPIServer,
-			TLSSecretName:    &wildcardCertSecret.Name,
-		})
-		var (
-			_ = g.Add(flow.Task{
-				Name: "Deploying kube-apiserver service",
-				Fn:   kubeAPIServerService.Deploy,
-			})
-			_ = g.Add(flow.Task{
-				Name: "Deploying kube-apiserver ingress",
-				Fn:   kubeAPIServerIngress.Deploy,
-			})
-		)
-	} else {
-		kubeAPIServerIngress := kubeapiserverexposure.NewIngress(seedClient, r.GardenNamespace, kubeapiserverexposure.IngressValues{})
-		var (
-			_ = g.Add(flow.Task{
-				Name: "Destroying kube-apiserver service",
-				Fn:   kubeAPIServerService.Destroy,
-			})
-			_ = g.Add(flow.Task{
-				Name: "Destroying kube-apiserver ingress",
-				Fn:   kubeAPIServerIngress.Destroy,
-			})
-		)
-	}
-
-	var (
 		deployCachePrometheus = g.Add(flow.Task{
-			Name: "Deploying cache Prometheus",
-			Fn:   cachePrometheus.Deploy,
+			Name:         "Deploying cache Prometheus",
+			Fn:           c.cachePrometheus.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 		})
 		// TODO(rfranzke): Remove this after v1.92 has been released.
 		_ = g.Add(flow.Task{
 			Name: "Cleaning up legacy cache Prometheus resources",
 			Fn: func(ctx context.Context) error {
-				return kubernetesutils.DeleteObjects(ctx, seedClient,
+				return kubernetesutils.DeleteObjects(ctx, r.SeedClientSet.Client(),
 					&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-rules", Namespace: r.GardenNamespace}},
 					&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-config", Namespace: r.GardenNamespace}},
 					&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-web", Namespace: r.GardenNamespace}},

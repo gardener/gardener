@@ -188,7 +188,7 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 
-	c.kubeAPIServerService = r.newKubeAPIServerService()
+	c.kubeAPIServerService = r.newKubeAPIServerService(wildCardCertSecret)
 	c.kubeAPIServerIngress = r.newKubeAPIServerIngress(seed, wildCardCertSecret)
 
 	// observability components
@@ -774,8 +774,13 @@ func (r *Reconciler) newNginxIngressController(seed *seedpkg.Seed, istioDefaultL
 	)
 }
 
-func (r *Reconciler) newKubeAPIServerService() component.Deployer {
-	return kubeapiserverexposure.NewInternalNameService(r.SeedClientSet.Client(), r.GardenNamespace)
+func (r *Reconciler) newKubeAPIServerService(wildCardCertSecret *corev1.Secret) component.Deployer {
+	c := kubeapiserverexposure.NewInternalNameService(r.SeedClientSet.Client(), r.GardenNamespace)
+	if wildCardCertSecret == nil {
+		c = component.OpDestroy(c)
+	}
+
+	return c
 }
 
 func (r *Reconciler) newKubeAPIServerIngress(seed *seedpkg.Seed, wildCardCertSecret *corev1.Secret) component.Deployer {
@@ -789,5 +794,10 @@ func (r *Reconciler) newKubeAPIServerIngress(seed *seedpkg.Seed, wildCardCertSec
 		}
 	}
 
-	return kubeapiserverexposure.NewIngress(r.SeedClientSet.Client(), r.GardenNamespace, values)
+	c := kubeapiserverexposure.NewIngress(r.SeedClientSet.Client(), r.GardenNamespace, values)
+	if wildCardCertSecret == nil {
+		c = component.OpDestroy(c)
+	}
+
+	return c
 }
