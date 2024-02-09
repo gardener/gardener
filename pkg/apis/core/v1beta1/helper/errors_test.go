@@ -61,7 +61,7 @@ var _ = Describe("errors", func() {
 		)
 
 		JustBeforeEach(func() {
-			formatFn = func(err []error) string {
+			formatFn = func([]error) string {
 				return strconv.Itoa(len(errs))
 			}
 			multiError = NewMultiErrorWithCodes(formatFn)

@@ -323,40 +323,38 @@ var _ = Describe("KubeControllerManager", func() {
 			}
 		}
 
-		serviceFor = func(version string) *corev1.Service {
-			return &corev1.Service{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: corev1.SchemeGroupVersion.String(),
-					Kind:       "Service",
+		service = &corev1.Service{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: corev1.SchemeGroupVersion.String(),
+				Kind:       "Service",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      serviceName,
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "kubernetes",
+					"role": "controller-manager",
 				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      serviceName,
-					Namespace: namespace,
-					Labels: map[string]string{
-						"app":  "kubernetes",
-						"role": "controller-manager",
-					},
-					Annotations: map[string]string{
-						"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":10257}]`,
-					},
-					ResourceVersion: "1",
+				Annotations: map[string]string{
+					"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":10257}]`,
 				},
-				Spec: corev1.ServiceSpec{
-					Selector: map[string]string{
-						"app":  "kubernetes",
-						"role": "controller-manager",
-					},
-					Type:      corev1.ServiceTypeClusterIP,
-					ClusterIP: corev1.ClusterIPNone,
-					Ports: []corev1.ServicePort{
-						{
-							Name:     "metrics",
-							Protocol: corev1.ProtocolTCP,
-							Port:     10257,
-						},
+				ResourceVersion: "1",
+			},
+			Spec: corev1.ServiceSpec{
+				Selector: map[string]string{
+					"app":  "kubernetes",
+					"role": "controller-manager",
+				},
+				Type:      corev1.ServiceTypeClusterIP,
+				ClusterIP: corev1.ClusterIPNone,
+				Ports: []corev1.ServicePort{
+					{
+						Name:     "metrics",
+						Protocol: corev1.ProtocolTCP,
+						Port:     10257,
 					},
 				},
-			}
+			},
 		}
 
 		replicas      int32 = 1
@@ -639,7 +637,7 @@ namespace: kube-system
 	})
 
 	Describe("#Deploy", func() {
-		verifyDeployment := func(config *gardencorev1beta1.KubeControllerManagerConfig, isWorkless bool, hvpaConfig *HVPAConfig, controllerWorkers ControllerWorkers, runtimeVersionGreaterEqual126 bool) {
+		verifyDeployment := func(config *gardencorev1beta1.KubeControllerManagerConfig, hvpaConfig *HVPAConfig, controllerWorkers ControllerWorkers, runtimeVersionGreaterEqual126 bool) {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 			expectedMr := &resourcesv1alpha1.ManagedResource{
 				TypeMeta: metav1.TypeMeta{
@@ -675,7 +673,7 @@ namespace: kube-system
 
 			actualService := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: serviceName, Namespace: namespace}}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(actualService), actualService)).To(Succeed())
-			Expect(actualService).To(DeepEqual(serviceFor(version)))
+			Expect(actualService).To(DeepEqual(service))
 
 			actualHVPA := &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: hvpaName, Namespace: namespace}}
 			actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace}}
@@ -723,7 +721,7 @@ namespace: kube-system
 
 				Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
 
-				verifyDeployment(config, isWorkerless, hvpaConfig, controllerWorkers, versionutils.ConstraintK8sGreaterEqual126.Check(runtimeKubernetesVersion))
+				verifyDeployment(config, hvpaConfig, controllerWorkers, versionutils.ConstraintK8sGreaterEqual126.Check(runtimeKubernetesVersion))
 			},
 
 			Entry("w/o config k8s >=1.26", emptyConfig, hvpaConfigDisabled, runtimeKubernetesVersion),
@@ -762,7 +760,7 @@ namespace: kube-system
 
 				Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
 
-				verifyDeployment(config, isWorkerless, hvpaConfig, controllerWorkers, true)
+				verifyDeployment(config, hvpaConfig, controllerWorkers, true)
 			},
 
 			Entry("w/o config", emptyConfig, hvpaConfigDisabled, controllerWorkers),

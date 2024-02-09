@@ -32,12 +32,14 @@ var _ = Describe("FactoryAggregator", func() {
 		wh1 = &extensionswebhook.Webhook{
 			Name: "webhook-1",
 		}
+		//nolint:unparam
 		whFactory1 = func(manager.Manager) (*extensionswebhook.Webhook, error) {
 			return wh1, nil
 		}
 		wh2 = &extensionswebhook.Webhook{
 			Name: "webhook-2",
 		}
+		//nolint:unparam
 		whFactory2 = func(manager.Manager) (*extensionswebhook.Webhook, error) {
 			return wh2, nil
 		}

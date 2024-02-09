@@ -378,7 +378,7 @@ var _ = Describe("health check", func() {
 				false,
 				kubernetesVersion,
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, map[string]string{"checksum/cloud-config-data": cloudConfigSecretChecksum1}, kubernetesVersion.Original()),
+					newNode(true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, map[string]string{"checksum/cloud-config-data": cloudConfigSecretChecksum1}, kubernetesVersion.Original()),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -394,7 +394,7 @@ var _ = Describe("health check", func() {
 				false,
 				kubernetesVersion,
 				[]corev1.Node{
-					newNode(nodeName, false, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, nil, kubernetesVersion.Original()),
+					newNode(false, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, nil, kubernetesVersion.Original()),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -444,7 +444,7 @@ var _ = Describe("health check", func() {
 				false,
 				kubernetesVersion,
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, nil, kubernetesVersion.Original()),
+					newNode(true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, nil, kubernetesVersion.Original()),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -465,7 +465,7 @@ var _ = Describe("health check", func() {
 				false,
 				kubernetesVersion,
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName2, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, nil, kubernetesVersion.Original()),
+					newNode(true, labels.Set{"worker.gardener.cloud/pool": workerPoolName2, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, nil, kubernetesVersion.Original()),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -486,7 +486,7 @@ var _ = Describe("health check", func() {
 				false,
 				getVersionPointer(kubernetesVersion.IncPatch()),
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, nil, kubernetesVersion.String()),
+					newNode(true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, nil, kubernetesVersion.String()),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -502,7 +502,7 @@ var _ = Describe("health check", func() {
 				false,
 				kubernetesVersion,
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, map[string]string{"checksum/cloud-config-data": cloudConfigSecretChecksum1}, kubernetesVersion.Original()),
+					newNode(true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, map[string]string{"checksum/cloud-config-data": cloudConfigSecretChecksum1}, kubernetesVersion.Original()),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -518,7 +518,7 @@ var _ = Describe("health check", func() {
 				false,
 				getVersionPointer(kubernetesVersion.IncMinor()),
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, nil, kubernetesVersion.Original()),
+					newNode(true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, nil, kubernetesVersion.Original()),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -537,7 +537,7 @@ var _ = Describe("health check", func() {
 				false,
 				getVersionPointer(kubernetesVersion.IncMinor()),
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, map[string]string{"checksum/cloud-config-data": cloudConfigSecretChecksum1}, kubernetesVersion.Original()),
+					newNode(true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, map[string]string{"checksum/cloud-config-data": cloudConfigSecretChecksum1}, kubernetesVersion.Original()),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -557,7 +557,7 @@ var _ = Describe("health check", func() {
 				false,
 				kubernetesVersion,
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, nil, kubernetesVersion.Original()),
+					newNode(true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, nil, kubernetesVersion.Original()),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -573,7 +573,7 @@ var _ = Describe("health check", func() {
 				false,
 				kubernetesVersion,
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, nil, kubernetesVersion.Original()),
+					newNode(true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, nil, kubernetesVersion.Original()),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -589,7 +589,7 @@ var _ = Describe("health check", func() {
 				false,
 				kubernetesVersion,
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, map[string]string{nodeagentv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig: "outdated"}, kubernetesVersion.Original()),
+					newNode(true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, map[string]string{nodeagentv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig: "outdated"}, kubernetesVersion.Original()),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -612,7 +612,7 @@ var _ = Describe("health check", func() {
 				true,
 				kubernetesVersion,
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, nil, kubernetesVersion.Original()),
+					newNode(true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, nil, kubernetesVersion.Original()),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -628,7 +628,7 @@ var _ = Describe("health check", func() {
 				true,
 				kubernetesVersion,
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, nil, kubernetesVersion.Original()),
+					newNode(true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, nil, kubernetesVersion.Original()),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -644,7 +644,7 @@ var _ = Describe("health check", func() {
 				true,
 				kubernetesVersion,
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, nil, kubernetesVersion.Original()),
+					newNode(true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, nil, kubernetesVersion.Original()),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -660,7 +660,7 @@ var _ = Describe("health check", func() {
 				true,
 				kubernetesVersion,
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, nil, kubernetesVersion.Original()),
+					newNode(true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, nil, kubernetesVersion.Original()),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -676,7 +676,7 @@ var _ = Describe("health check", func() {
 				true,
 				kubernetesVersion,
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, map[string]string{nodeagentv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig: "outdated"}, kubernetesVersion.Original()),
+					newNode(true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, map[string]string{nodeagentv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig: "outdated"}, kubernetesVersion.Original()),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -698,7 +698,7 @@ var _ = Describe("health check", func() {
 				true,
 				kubernetesVersion,
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, map[string]string{nodeagentv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig: "outdated"}, kubernetesVersion.Original()),
+					newNode(true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, map[string]string{nodeagentv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig: "outdated"}, kubernetesVersion.Original()),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -1027,10 +1027,10 @@ var _ = Describe("health check", func() {
 	})
 })
 
-func newNode(name string, healthy bool, labels labels.Set, annotations map[string]string, kubeletVersion string) corev1.Node {
+func newNode(healthy bool, labels labels.Set, annotations map[string]string, kubeletVersion string) corev1.Node {
 	node := corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        name,
+			Name:        "node1",
 			Labels:      labels,
 			Annotations: annotations,
 		},

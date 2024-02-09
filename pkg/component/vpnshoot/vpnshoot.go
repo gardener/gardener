@@ -466,11 +466,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 	}
 
 	if v.values.HighAvailabilityEnabled {
-		pdb, err := v.podDisruptionBudget()
-		if err != nil {
-			return nil, err
-		}
-		objects = append(objects, pdb)
+		objects = append(objects, v.podDisruptionBudget())
 	}
 
 	objects = append(objects,
@@ -492,7 +488,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 	return registry.AddAllAndSerialize(objects...)
 }
 
-func (v *vpnShoot) podDisruptionBudget() (client.Object, error) {
+func (v *vpnShoot) podDisruptionBudget() client.Object {
 	pdb := &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      deploymentName,
@@ -507,7 +503,7 @@ func (v *vpnShoot) podDisruptionBudget() (client.Object, error) {
 
 	kubernetesutils.SetAlwaysAllowEviction(pdb, v.values.KubernetesVersion)
 
-	return pdb, nil
+	return pdb
 }
 
 func (v *vpnShoot) podTemplate(serviceAccount *corev1.ServiceAccount, secrets []vpnSecret, secretCA, secretTLSAuth *corev1.Secret) *corev1.PodTemplateSpec {

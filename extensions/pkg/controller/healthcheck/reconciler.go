@@ -212,7 +212,7 @@ func extensionConditionCheckError(conditionBuilder v1beta1helper.ConditionBuilde
 	conditionBuilder.
 		WithStatus(gardencorev1beta1.ConditionUnknown).
 		WithReason(gardencorev1beta1.ConditionCheckError).
-		WithMessage(fmt.Sprintf("failed to execute %d health %s: %v", healthCheckResult.FailedChecks, getSingularOrPlural("check", healthCheckResult.FailedChecks), healthCheckResult.GetDetails()))
+		WithMessage(fmt.Sprintf("failed to execute %d health %s: %v", healthCheckResult.FailedChecks, getSingularOrPlural(healthCheckResult.FailedChecks), healthCheckResult.GetDetails()))
 	return condition{
 		builder:             conditionBuilder,
 		healthConditionType: healthConditionType,

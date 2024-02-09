@@ -100,6 +100,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			ccdUnitContent = "ccd-unit-content"
 
+			//nolint:unparam
 			initConfigFn = func(worker gardencorev1beta1.Worker, nodeAgentImage string, config *nodeagentv1alpha1.NodeAgentConfiguration) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 				return []extensionsv1alpha1.Unit{
 						{Name: worker.Name},
@@ -115,6 +116,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					},
 					nil
 			}
+			//nolint:unparam
 			downloaderConfigFn = func(cloudConfigUserDataSecretName, apiServerURL, clusterCASecretName string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 				return []extensionsv1alpha1.Unit{
 						{Name: cloudConfigUserDataSecretName},
@@ -129,6 +131,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					},
 					nil
 			}
+			//nolint:unparam
 			originalConfigFn = func(cctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 				return []extensionsv1alpha1.Unit{
 						{Name: cctx.Key},

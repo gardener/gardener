@@ -173,7 +173,7 @@ var _ = Describe("chart applier", func() {
 				}
 				Expect(c.Create(ctx, existingCM)).To(Succeed(), "dummy configmap creation should succeed")
 
-				Expect(ca.DeleteFromEmbeddedFS(ctx, embeddedFS, chartPathV1, namespace, name)).To(Succeed())
+				Expect(ca.DeleteFromEmbeddedFS(ctx, embeddedFS, chartPath, namespace, name)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKey{Name: configMapName, Namespace: namespace}, &corev1.ConfigMap{})).To(BeNotFoundError())
 			})

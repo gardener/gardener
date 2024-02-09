@@ -416,10 +416,12 @@ var _ = Describe("Vali", func() {
 			new80GiStorageQuantity  = resource.MustParse("80Gi")
 			valiPVCKey              = kubernetesutils.Key("garden", "vali-vali-0")
 			valiStatefulSetKey      = kubernetesutils.Key("garden", "vali")
-			funcGetValiPVC          = func(_ context.Context, _ types.NamespacedName, pvc *corev1.PersistentVolumeClaim, _ ...client.GetOption) error {
+			//nolint:unparam
+			funcGetValiPVC = func(_ context.Context, _ types.NamespacedName, pvc *corev1.PersistentVolumeClaim, _ ...client.GetOption) error {
 				*pvc = *valiPVC
 				return nil
 			}
+			//nolint:unparam
 			funcGetScaledToZeroValiStatefulset = func(_ context.Context, _ types.NamespacedName, sts *appsv1.StatefulSet, _ ...client.GetOption) error {
 				*sts = scaledToZeroValiStatefulset
 				return nil

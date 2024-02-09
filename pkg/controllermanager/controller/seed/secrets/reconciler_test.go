@@ -132,9 +132,9 @@ var _ = Describe("Reconciler", func() {
 				corev1If.EXPECT().Secrets(gomock.Any()).Return(secretIf).AnyTimes()
 				corev1If.EXPECT().Namespaces().Return(namespaceIf).AnyTimes()
 
-				oldSecret = createSecret("existing", namespace.Name, "old", "role", []byte("data"))
-				addedSecret = createSecret("new", v1beta1constants.GardenNamespace, "foo", "role", []byte("bar"))
-				deletedSecret = createSecret("stale", namespace.Name, "foo", "role", []byte("bar"))
+				oldSecret = createSecret("existing", namespace.Name, "old", []byte("data"))
+				addedSecret = createSecret("new", v1beta1constants.GardenNamespace, "foo", []byte("bar"))
+				deletedSecret = createSecret("stale", namespace.Name, "foo", []byte("bar"))
 
 				cl.EXPECT().Get(gomock.Any(), kubernetesutils.Key(seed.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed, _ ...client.GetOption) error {
 					*obj = *seed
@@ -221,8 +221,8 @@ var _ = Describe("Reconciler", func() {
 				})
 
 				var (
-					secret1 = createSecret("1", v1beta1constants.GardenNamespace, "foo", "role", []byte("bar"))
-					secret2 = createSecret("2", v1beta1constants.GardenNamespace, "foo", "role", []byte("bar"))
+					secret1 = createSecret("1", v1beta1constants.GardenNamespace, "foo", []byte("bar"))
+					secret2 = createSecret("2", v1beta1constants.GardenNamespace, "foo", []byte("bar"))
 				)
 
 				cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(v1beta1constants.GardenNamespace), labelSelector).DoAndReturn(func(ctx context.Context, list *corev1.SecretList, opts ...client.ListOption) error {
@@ -264,11 +264,11 @@ func copySecretWithNamespace(secret *corev1.Secret, namespace string) *corev1.Se
 	return s
 }
 
-func createSecret(name, namespace, key, role string, data []byte) *corev1.Secret {
+func createSecret(name, namespace, key string, data []byte) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
-				v1beta1constants.GardenRole: role,
+				v1beta1constants.GardenRole: "role",
 			},
 			Name:      name,
 			Namespace: namespace,

@@ -52,18 +52,12 @@ type Args struct {
 func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 	logger.Info("Creating webhook", "name", WebhookName)
 
-	// Build namespace selector from the webhook kind and provider
-	namespaceSelector, err := buildSelector()
-	if err != nil {
-		return nil, err
-	}
-
 	wh := &extensionswebhook.Webhook{
 		Name:              WebhookName,
 		Types:             args.Types,
 		Path:              WebhookName,
 		Target:            extensionswebhook.TargetShoot,
-		NamespaceSelector: namespaceSelector,
+		NamespaceSelector: buildSelector(),
 		FailurePolicy:     args.FailurePolicy,
 	}
 
@@ -91,11 +85,11 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 }
 
 // buildSelector creates and returns a LabelSelector for the given webhook kind and provider.
-func buildSelector() (*metav1.LabelSelector, error) {
+func buildSelector() *metav1.LabelSelector {
 	// Create and return LabelSelector
 	return &metav1.LabelSelector{
 		MatchExpressions: []metav1.LabelSelectorRequirement{
 			{Key: v1beta1constants.GardenerPurpose, Operator: metav1.LabelSelectorOpIn, Values: []string{metav1.NamespaceSystem}},
 		},
-	}, nil
+	}
 }

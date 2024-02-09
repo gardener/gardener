@@ -172,11 +172,7 @@ func (v *ManagedSeed) validateUpdate(ctx context.Context, a admission.Attributes
 		return apierrors.NewInternalError(fmt.Errorf("cannot extract the seed template: %w", err))
 	}
 
-	zoneValidationErrs, err := v.validateZoneRemovalFromShoot(field.NewPath("spec", "providers", "workers"), oldShoot, shoot, seedTemplate)
-	if err != nil {
-		return apierrors.NewInternalError(err)
-	}
-	allErrs = append(allErrs, zoneValidationErrs...)
+	allErrs = append(allErrs, v.validateZoneRemovalFromShoot(field.NewPath("spec", "providers", "workers"), oldShoot, shoot, seedTemplate)...)
 
 	if len(allErrs) > 0 {
 		return apierrors.NewInvalid(a.GetKind().GroupKind(), shoot.Name, allErrs)
@@ -187,7 +183,7 @@ func (v *ManagedSeed) validateUpdate(ctx context.Context, a admission.Attributes
 
 // validateZoneRemovalFromShoot returns an error if worker zones for the given shoot were changed
 // while they are still registered in the ManagedSeed.
-func (v *ManagedSeed) validateZoneRemovalFromShoot(fldPath *field.Path, oldShoot, newShoot *core.Shoot, seedTemplate *gardencorev1beta1.SeedTemplate) (field.ErrorList, error) {
+func (v *ManagedSeed) validateZoneRemovalFromShoot(fldPath *field.Path, oldShoot, newShoot *core.Shoot, seedTemplate *gardencorev1beta1.SeedTemplate) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	removedZones := gardencorehelper.GetAllZonesFromShoot(oldShoot).Difference(gardencorehelper.GetAllZonesFromShoot(newShoot))
@@ -199,7 +195,7 @@ func (v *ManagedSeed) validateZoneRemovalFromShoot(fldPath *field.Path, oldShoot
 		allErrs = append(allErrs, field.Forbidden(fldPath, "shoot worker zone(s) must not be removed as long as registered in managedseed"))
 	}
 
-	return allErrs, nil
+	return allErrs
 }
 
 func (v *ManagedSeed) validateDeleteCollection(ctx context.Context, a admission.Attributes) error {

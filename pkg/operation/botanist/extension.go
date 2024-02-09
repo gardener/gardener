@@ -16,7 +16,6 @@ package botanist
 
 import (
 	"context"
-	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -33,17 +32,12 @@ func (b *Botanist) DefaultExtension(ctx context.Context) (extension.Interface, e
 		return nil, err
 	}
 
-	extensions, err := mergeExtensions(controllerRegistrations.Items, b.Shoot.GetInfo().Spec.Extensions, b.Shoot.SeedNamespace, b.Shoot.IsWorkerless)
-	if err != nil {
-		return nil, fmt.Errorf("cannot calculate required extensions for shoot %s: %w", b.Shoot.GetInfo().Name, err)
-	}
-
 	return extension.New(
 		b.Logger,
 		b.SeedClientSet.Client(),
 		&extension.Values{
 			Namespace:  b.Shoot.SeedNamespace,
-			Extensions: extensions,
+			Extensions: mergeExtensions(controllerRegistrations.Items, b.Shoot.GetInfo().Spec.Extensions, b.Shoot.SeedNamespace, b.Shoot.IsWorkerless),
 		},
 		extension.DefaultInterval,
 		extension.DefaultSevereThreshold,
@@ -69,7 +63,7 @@ func (b *Botanist) DeployExtensionsBeforeKubeAPIServer(ctx context.Context) erro
 	return b.Shoot.Components.Extensions.Extension.DeployBeforeKubeAPIServer(ctx)
 }
 
-func mergeExtensions(registrations []gardencorev1beta1.ControllerRegistration, extensions []gardencorev1beta1.Extension, namespace string, workerlessShoot bool) (map[string]extension.Extension, error) {
+func mergeExtensions(registrations []gardencorev1beta1.ControllerRegistration, extensions []gardencorev1beta1.Extension, namespace string, workerlessShoot bool) map[string]extension.Extension {
 	var (
 		typeToExtension    = make(map[string]extension.Extension)
 		requiredExtensions = make(map[string]extension.Extension)
@@ -126,5 +120,5 @@ func mergeExtensions(registrations []gardencorev1beta1.ControllerRegistration, e
 		}
 	}
 
-	return requiredExtensions, nil
+	return requiredExtensions
 }

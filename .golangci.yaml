@@ -17,6 +17,8 @@ linters:
   enable:
   - revive
   - unused
+  - unconvert
+  - unparam
   - importas
   - logcheck
   - ginkgolinter
