@@ -228,28 +228,29 @@ func (p *prometheus) removeClaimRefFromPVAndWaitUntilAvailable(ctx context.Conte
 		if err := p.client.Patch(ctx, pv, patch); err != nil {
 			return fmt.Errorf("failed removing claimRef of PV %s: %w", client.ObjectKeyFromObject(pv), err)
 		}
-	}
 
-	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-	defer cancel()
+		timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+		defer cancel()
 
-	log.Info("Wait until PV is available", "persistentVolume", client.ObjectKeyFromObject(pv))
-	if err := retry.Until(timeoutCtx, time.Second, func(ctx context.Context) (bool, error) {
-		if err := p.client.Get(ctx, client.ObjectKeyFromObject(pv), pv); err != nil {
-			return retry.SevereError(err)
+		log.Info("Wait until PV is available", "persistentVolume", client.ObjectKeyFromObject(pv))
+		if err := retry.Until(timeoutCtx, time.Second, func(ctx context.Context) (bool, error) {
+			if err := p.client.Get(ctx, client.ObjectKeyFromObject(pv), pv); err != nil {
+				return retry.SevereError(err)
+			}
+
+			if pv.Status.Phase != corev1.VolumeAvailable {
+				log.Info("PV is not yet in 'Available' phase", "phase", pv.Status.Phase, "persistentVolume", client.ObjectKeyFromObject(pv))
+				return retry.MinorError(fmt.Errorf("phase is %s instead of %s", pv.Status.Phase, corev1.VolumeAvailable))
+			}
+
+			return retry.Ok()
+		}); err != nil {
+			return err
 		}
 
-		if pv.Status.Phase != corev1.VolumeAvailable {
-			log.Info("PV is not yet in 'Available' phase", "phase", pv.Status.Phase, "persistentVolume", client.ObjectKeyFromObject(pv))
-			return retry.MinorError(fmt.Errorf("phase is %s instead of %s", pv.Status.Phase, corev1.VolumeAvailable))
-		}
-
-		return retry.Ok()
-	}); err != nil {
-		return err
+		log.Info("PV is available to get bound by new PVC", "persistentVolume", client.ObjectKeyFromObject(pv))
 	}
 
-	log.Info("PV is available to get bound by new PVC", "persistentVolume", client.ObjectKeyFromObject(pv))
 	return nil
 }
 
