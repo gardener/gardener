@@ -18,6 +18,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -25,6 +26,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/monitoring"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -46,11 +48,16 @@ type Values struct {
 	StorageCapacity resource.Quantity
 	// AlertingSMTPSecret is the alerting SMTP secret.
 	AlertingSMTPSecret *corev1.Secret
+
+	// DataMigration is a struct for migrating data from existing disks.
+	// TODO(rfranzke): Remove this as soon as the PV migration code is removed.
+	DataMigration monitoring.DataMigration
 }
 
 // New creates a new instance of DeployWaiter for the AlertManager.
-func New(client client.Client, namespace string, values Values) component.DeployWaiter {
+func New(log logr.Logger, client client.Client, namespace string, values Values) component.DeployWaiter {
 	return &alertManager{
+		log:       log,
 		client:    client,
 		namespace: namespace,
 		values:    values,
@@ -58,17 +65,27 @@ func New(client client.Client, namespace string, values Values) component.Deploy
 }
 
 type alertManager struct {
+	log       logr.Logger
 	client    client.Client
 	namespace string
 	values    Values
 }
 
 func (a *alertManager) Deploy(ctx context.Context) error {
-	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+	var (
+		log      = a.log.WithName("alertmanager-deployer").WithValues("name", a.values.Name)
+		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+	)
+
+	// TODO(rfranzke): Remove this migration code after all AlertManagers have been migrated.
+	takeOverExistingPV, pv, oldPVC, err := a.values.DataMigration.ExistingPVTakeOverPrerequisites(ctx, log)
+	if err != nil {
+		return err
+	}
 
 	resources, err := registry.AddAllAndSerialize(
 		a.service(),
-		a.alertManager(),
+		a.alertManager(takeOverExistingPV),
 		a.vpa(),
 		a.config(),
 	)
@@ -76,7 +93,28 @@ func (a *alertManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, a.client, a.namespace, a.name(), false, resources)
+	if takeOverExistingPV {
+		if err := a.values.DataMigration.PrepareExistingPVTakeOver(ctx, log, pv, oldPVC); err != nil {
+			return err
+		}
+
+		log.Info("Deploy new AlertManager (with init container for renaming the data directory)")
+	}
+
+	if err := managedresources.CreateForSeed(ctx, a.client, a.namespace, a.name(), false, resources); err != nil {
+		return err
+	}
+
+	if takeOverExistingPV {
+		if err := a.values.DataMigration.FinalizeExistingPVTakeOver(ctx, log, pv); err != nil {
+			return err
+		}
+
+		log.Info("Deploy new AlertManager again (to remove the migration init container)")
+		return a.Deploy(ctx)
+	}
+
+	return nil
 }
 
 func (a *alertManager) Destroy(ctx context.Context) error {

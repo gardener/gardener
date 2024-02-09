@@ -25,8 +25,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-func (a *alertManager) alertManager() *monitoringv1.Alertmanager {
-	return &monitoringv1.Alertmanager{
+func (a *alertManager) alertManager(takeOverOldPV bool) *monitoringv1.Alertmanager {
+	obj := &monitoringv1.Alertmanager{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      a.values.Name,
 			Namespace: a.namespace,
@@ -71,4 +71,17 @@ func (a *alertManager) alertManager() *monitoringv1.Alertmanager {
 			AlertmanagerConfiguration:           &monitoringv1.AlertmanagerConfiguration{Name: a.name()},
 		},
 	}
+
+	if takeOverOldPV {
+		obj.Spec.InitContainers = append(obj.Spec.InitContainers, corev1.Container{
+			Name:            "take-over-old-pv",
+			Image:           a.values.DataMigration.ImageAlpine,
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			VolumeMounts:    []corev1.VolumeMount{{Name: "alertmanager-db", MountPath: "/alertmanager"}},
+			Command:         []string{"/bin/sh", "-c"},
+			Args:            []string{`if [[ -d /alertmanager/alertmanager- ]]; then mv /alertmanager/alertmanager- /alertmanager/alertmanager-db; else echo "rename already done"; fi`},
+		})
+	}
+
+	return obj
 }

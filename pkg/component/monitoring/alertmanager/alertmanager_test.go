@@ -17,6 +17,7 @@ package alertmanager_test
 import (
 	"context"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -299,7 +300,7 @@ var _ = Describe("Prometheus", func() {
 	})
 
 	JustBeforeEach(func() {
-		deployer = New(fakeClient, namespace, values)
+		deployer = New(logr.Discard(), fakeClient, namespace, values)
 	})
 
 	Describe("#Deploy", func() {

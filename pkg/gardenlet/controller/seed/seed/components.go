@@ -235,7 +235,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.alertManager, err = r.newAlertmanager(seed, alertingSMTPSecret)
+	c.alertManager, err = r.newAlertmanager(log, seed, alertingSMTPSecret)
 	if err != nil {
 		return
 	}
@@ -631,28 +631,43 @@ func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed) (co
 			Client:          r.SeedClientSet.Client(),
 			Namespace:       r.GardenNamespace,
 			StorageCapacity: storageCapacity,
-			FullName:        "prometheus-cache",
-
 			ImageAlpine:     imageAlpine.String(),
 			StatefulSetName: "prometheus",
+			FullName:        "prometheus-cache",
 			PVCName:         "prometheus-db-prometheus-0",
 		},
 	}), nil
 }
 
-func (r *Reconciler) newAlertmanager(seed *seedpkg.Seed, alertingSMTPSecret *corev1.Secret) (component.DeployWaiter, error) {
+func (r *Reconciler) newAlertmanager(log logr.Logger, seed *seedpkg.Seed, alertingSMTPSecret *corev1.Secret) (component.DeployWaiter, error) {
 	imageAlertmanager, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlertmanager)
 	if err != nil {
 		return nil, err
 	}
+	imageAlpine, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlpine)
+	if err != nil {
+		return nil, err
+	}
 
-	alertManager := alertmanager.New(r.SeedClientSet.Client(), r.GardenNamespace, alertmanager.Values{
+	storageCapacity := resource.MustParse(seed.GetValidVolumeSize("1Gi"))
+
+	alertManager := alertmanager.New(log, r.SeedClientSet.Client(), r.GardenNamespace, alertmanager.Values{
 		Name:               "seed",
 		Image:              imageAlertmanager.String(),
 		Version:            ptr.Deref(imageAlertmanager.Version, "v0.0.0"),
 		PriorityClassName:  v1beta1constants.PriorityClassNameSeedSystem600,
-		StorageCapacity:    resource.MustParse(seed.GetValidVolumeSize("1Gi")),
+		StorageCapacity:    storageCapacity,
 		AlertingSMTPSecret: alertingSMTPSecret,
+		// TODO(rfranzke): Remove this after v1.92 has been released.
+		DataMigration: monitoring.DataMigration{
+			Client:          r.SeedClientSet.Client(),
+			Namespace:       r.GardenNamespace,
+			StorageCapacity: storageCapacity,
+			ImageAlpine:     imageAlpine.String(),
+			StatefulSetName: "alertmanager",
+			FullName:        "alertmanager-seed",
+			PVCName:         "alertmanager-db-alertmanager-0",
+		},
 	})
 
 	if alertingSMTPSecret == nil {
