@@ -80,7 +80,7 @@ func (r *Reconciler) reconcile(
 		}
 	}
 
-	// create + label namespace
+	// create + label garden namespace
 	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: r.GardenNamespace}}
 	log.Info("Labeling and annotating namespace", "namespaceName", namespace.Name)
 	if _, err := controllerutils.CreateOrGetAndMergePatch(ctx, r.RuntimeClientSet.Client(), namespace, func() error {

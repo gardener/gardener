@@ -128,51 +128,10 @@ func (r *Reconciler) runReconcileSeedFlow(
 	seed *seedpkg.Seed,
 	seedIsGarden bool,
 ) error {
-	var (
-		applier       = r.SeedClientSet.Applier()
-		seedClient    = r.SeedClientSet.Client()
-		chartApplier  = r.SeedClientSet.ChartApplier()
-		chartRenderer = r.SeedClientSet.ChartRenderer()
-	)
-
-	secrets, err := gardenerutils.ReadGardenSecrets(ctx, log, r.GardenClient, gardenerutils.ComputeGardenNamespace(seed.GetInfo().Name), true)
-	if err != nil {
-		return err
-	}
-
-	secretsManager, err := secretsmanager.New(
-		ctx,
-		log.WithName("secretsmanager"),
-		clock.RealClock{},
-		seedClient,
-		r.GardenNamespace,
-		v1beta1constants.SecretManagerIdentityGardenlet,
-		secretsmanager.Config{CASecretAutoRotation: true},
-	)
-	if err != nil {
-		return err
-	}
-
-	// Deploy dedicated CA certificate for seed cluster, auto-rotate it roughly once a month and drop the old CA 24 hours
-	// after rotation.
-	if _, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-		Name:       v1beta1constants.SecretNameCASeed,
-		CommonName: "kubernetes",
-		CertType:   secretsutils.CACert,
-		Validity:   ptr.To(30 * 24 * time.Hour),
-	}, secretsmanager.Rotate(secretsmanager.KeepOld), secretsmanager.IgnoreOldSecretsAfter(24*time.Hour)); err != nil {
-		return err
-	}
-
-	var (
-		vpaEnabled     = seed.GetInfo().Spec.Settings == nil || seed.GetInfo().Spec.Settings.VerticalPodAutoscaler == nil || seed.GetInfo().Spec.Settings.VerticalPodAutoscaler.Enabled
-		hvpaEnabled    = features.DefaultFeatureGate.Enabled(features.HVPA)
-		loggingEnabled = gardenlethelper.IsLoggingEnabled(&r.Config)
-	)
-
-	if !vpaEnabled {
-		// VPA is a prerequisite. If it's not enabled via the seed spec it must be provided through some other mechanism.
-		if _, err := seedClient.RESTMapper().RESTMapping(schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}); err != nil {
+	// VPA is a prerequisite. If it's enabled then we deploy the CRD (and later also the related components) as part of
+	// the flow. However, when it's disabled then we check whether it is indeed available (and fail, otherwise).
+	if !vpaEnabled(seed.GetInfo().Spec.Settings) {
+		if _, err := r.SeedClientSet.Client().RESTMapper().RESTMapping(schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}); err != nil {
 			return fmt.Errorf("VPA is required for seed cluster: %s", err)
 		}
 	}
@@ -180,7 +139,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	// create + label garden namespace
 	gardenNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: r.GardenNamespace}}
 	log.Info("Labeling and annotating namespace", "namespaceName", gardenNamespace.Name)
-	if _, err := controllerutils.CreateOrGetAndMergePatch(ctx, seedClient, gardenNamespace, func() error {
+	if _, err := controllerutils.CreateOrGetAndMergePatch(ctx, r.SeedClientSet.Client(), gardenNamespace, func() error {
 		metav1.SetMetaDataLabel(&gardenNamespace.ObjectMeta, "role", v1beta1constants.GardenNamespace)
 
 		// When the seed is the garden cluster then this information is managed by gardener-operator.
@@ -199,7 +158,37 @@ func (r *Reconciler) runReconcileSeedFlow(
 	log.Info("Labeling namespace", "namespaceName", namespaceKubeSystem.Name)
 	patch := client.MergeFrom(namespaceKubeSystem.DeepCopy())
 	metav1.SetMetaDataLabel(&namespaceKubeSystem.ObjectMeta, "role", metav1.NamespaceSystem)
-	if err := seedClient.Patch(ctx, namespaceKubeSystem, patch); err != nil {
+	if err := r.SeedClientSet.Client().Patch(ctx, namespaceKubeSystem, patch); err != nil {
+		return err
+	}
+
+	secretsManager, err := secretsmanager.New(
+		ctx,
+		log.WithName("secretsmanager"),
+		clock.RealClock{},
+		r.SeedClientSet.Client(),
+		r.GardenNamespace,
+		v1beta1constants.SecretManagerIdentityGardenlet,
+		secretsmanager.Config{CASecretAutoRotation: true},
+	)
+	if err != nil {
+		return err
+	}
+
+	// Deploy dedicated CA certificate for seed cluster, auto-rotate it roughly once a month and drop the old CA 24 hours
+	// after rotation.
+	log.Info("Generating CA certificates for seed cluster")
+	if _, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
+		Name:       v1beta1constants.SecretNameCASeed,
+		CommonName: "kubernetes",
+		CertType:   secretsutils.CACert,
+		Validity:   ptr.To(30 * 24 * time.Hour),
+	}, secretsmanager.Rotate(secretsmanager.KeepOld), secretsmanager.IgnoreOldSecretsAfter(24*time.Hour)); err != nil {
+		return err
+	}
+
+	secrets, err := gardenerutils.ReadGardenSecrets(ctx, log, r.GardenClient, gardenerutils.ComputeGardenNamespace(seed.GetInfo().Name), true)
+	if err != nil {
 		return err
 	}
 
@@ -211,7 +200,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 	log.Info("Replicating global monitoring secret to garden namespace in seed", "secret", client.ObjectKeyFromObject(globalMonitoringSecretGarden))
 	globalMonitoringSecretSeed := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "seed-" + globalMonitoringSecretGarden.Name, Namespace: r.GardenNamespace}}
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, seedClient, globalMonitoringSecretSeed, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.SeedClientSet.Client(), globalMonitoringSecretSeed, func() error {
 		globalMonitoringSecretSeed.Type = globalMonitoringSecretGarden.Type
 		globalMonitoringSecretSeed.Data = globalMonitoringSecretGarden.Data
 		globalMonitoringSecretSeed.Immutable = globalMonitoringSecretGarden.Immutable
@@ -228,6 +217,17 @@ func (r *Reconciler) runReconcileSeedFlow(
 	var alertingSMTPSecret *corev1.Secret
 	if secret, ok := secrets[v1beta1constants.GardenRoleAlerting]; ok && string(secret.Data["auth_type"]) == "smtp" {
 		alertingSMTPSecret = secret
+	}
+
+	wildcardCertSecret, err := gardenerutils.GetWildcardCertificate(ctx, r.SeedClientSet.Client())
+	if err != nil {
+		return err
+	}
+
+	log.Info("Instantiating component deployers")
+	c, err := r.instantiateComponents(ctx, log, seed, secretsManager, seedIsGarden, globalMonitoringSecretSeed, alertingSMTPSecret, wildcardCertSecret)
+	if err != nil {
+		return err
 	}
 
 	// Deploy the CRDs in the seed cluster.
@@ -321,16 +321,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 	// Wait until required extensions are ready because they might be needed by following deployments
 	if err := WaitUntilRequiredExtensionsReady(ctx, r.GardenClient, seed.GetInfo(), 5*time.Second, 1*time.Minute); err != nil {
 		return err
-	}
-
-	wildcardCert, err := gardenerutils.GetWildcardCertificate(ctx, seedClient)
-	if err != nil {
-		return err
-	}
-
-	var wildCardSecretName *string
-	if wildcardCert != nil {
-		wildCardSecretName = ptr.To(wildcardCert.GetName())
 	}
 
 	seedIsOriginOfClusterIdentity, err := clusteridentity.IsClusterIdentityEmptyOrFromOrigin(ctx, seedClient, v1beta1constants.ClusterIdentityOriginSeed)
