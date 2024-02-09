@@ -30,7 +30,7 @@ reviewers:
     - [Custom RBAC verb](#custom-rbac-verb)
     - [Automated removal of outdated Kubernetes versions and machine image versions](#automated-removal-of-outdated-kubernetes-versions-and-machine-image-versions)
     - [Cross-project sharing](#cross-project-sharing)
-    - [Multi-Level-Inheritance](#multi-level-inheritance)
+    - [Multi-Level inheritance](#multi-level-inheritance)
   - [Alternatives](#alternatives)
     - [Arbitrary Value Fields](#arbitrary-value-fields)
     - [Private Cloud Profiles by Selection](#private-cloud-profiles-by-selection)
@@ -279,14 +279,14 @@ However, a problem arises as the Kubernetes/machine image versions are reference
 
 A use case could be defined where a private cloud profile might want to be shared across multiple projects and not just be used within the project it was created id. However, this use case seems to be very slim so this functionality will not be implemented as of now. However, when taking a broader view of Private Seeds and Cloud in Country, this feature is going to be necessary at some point. Still, it is not planned to be implemented as of this GEP.
 
-### Multi-Level-Inheritance
+### Multi-Level inheritance
 
 Theoretically, a private cloud profile could inherit from a cloud profile that already inherits from a cloud profile. However, this should probably not be allowed since it presents some major challenges.
 
-1. The rendering process now has to merge multiple instead of two objects
-2. The parent field becomes more complex because it could point to a cloud profile or to a private cloud profile.
+1. The rendering process would need to be recursive
+2. The `parent` field becomes more complex because it could point to a cloud profile or a private cloud profile
 
-Because of this, multi-inheritance will not be supported as of this GEP.
+Because of this, multi-level inheritance will not be implemented as of this GEP.
 
 ## Alternatives
 
