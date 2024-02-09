@@ -1,0 +1,28 @@
+job_name: kubelet
+honor_labels: false
+scheme: https
+
+tls_config:
+  ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+
+kubernetes_sd_configs:
+- role: node
+relabel_configs:
+- source_labels: [__meta_kubernetes_node_address_InternalIP]
+  target_label: instance
+- action: labelmap
+  regex: __meta_kubernetes_node_label_(.+)
+- target_label: __address__
+  replacement: kubernetes.default.svc
+- source_labels: [__meta_kubernetes_node_name]
+  regex: (.+)
+  target_label: __metrics_path__
+  replacement: /api/v1/nodes/${1}/proxy/metrics
+- target_label: type
+  replacement: seed
+
+metric_relabel_configs:
+- source_labels: [__name__]
+  action: keep
+  regex: ^(kubelet_volume_stats_available_bytes|kubelet_volume_stats_capacity_bytes|kubelet_volume_stats_used_bytes)$

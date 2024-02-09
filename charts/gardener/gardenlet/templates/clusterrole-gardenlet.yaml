@@ -29,6 +29,7 @@ rules:
   - get
   - list
   - watch
+  - patch # TODO(rfranzke): Remove this as soon as the Prometheus migration code is getting deleted.
 - apiGroups:
   - ""
   resources:
@@ -84,6 +85,7 @@ rules:
   - watch
   - patch
   - update
+  - create # TODO(rfranzke): Remove this as soon as the Prometheus migration code is getting deleted.
 - apiGroups:
   - ""
   resources:

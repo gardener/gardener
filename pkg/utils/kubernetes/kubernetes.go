@@ -143,8 +143,8 @@ func ObjectKeyFromSecretRef(ref corev1.SecretReference) client.ObjectKey {
 	}
 }
 
-// WaitUntilResourceDeleted deletes the given resource and then waits until it has been deleted. It respects the
-// given interval and timeout.
+// WaitUntilResourceDeleted waits until it has been deleted. It respects the given interval. Timeout must be provided
+// via the context.
 func WaitUntilResourceDeleted(ctx context.Context, c client.Client, obj client.Object, interval time.Duration) error {
 	key := client.ObjectKeyFromObject(obj)
 	return retry.Until(ctx, interval, func(ctx context.Context) (done bool, err error) {

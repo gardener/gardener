@@ -21,11 +21,13 @@ import (
 	proberapi "github.com/gardener/dependency-watchdog/api/prober"
 	weederapi "github.com/gardener/dependency-watchdog/api/weeder"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -53,6 +55,8 @@ import (
 	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/metricsserver"
 	"github.com/gardener/gardener/pkg/component/monitoring"
+	"github.com/gardener/gardener/pkg/component/monitoring/prometheus"
+	cacheprometheus "github.com/gardener/gardener/pkg/component/monitoring/prometheus/cache"
 	"github.com/gardener/gardener/pkg/component/nodeexporter"
 	"github.com/gardener/gardener/pkg/component/nodeproblemdetector"
 	"github.com/gardener/gardener/pkg/component/plutono"
@@ -463,6 +467,45 @@ func defaultMonitoring(
 			WildcardCertName:                   wildcardCertName,
 		},
 	), nil
+}
+
+func defaultCachePrometheus(
+	log logr.Logger,
+	c client.Client,
+	namespace string,
+	seed *seedpkg.Seed,
+) (
+	component.DeployWaiter,
+	error,
+) {
+	imagePrometheus, err := imagevector.ImageVector().FindImage(imagevector.ImageNamePrometheus)
+	if err != nil {
+		return nil, err
+	}
+	imageAlpine, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlpine)
+	if err != nil {
+		return nil, err
+	}
+
+	return prometheus.New(log, c, namespace, prometheus.Values{
+		Name:              "cache",
+		Image:             imagePrometheus.String(),
+		Version:           ptr.Deref(imagePrometheus.Version, "v0.0.0"),
+		PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
+		StorageCapacity:   resource.MustParse(seed.GetValidVolumeSize("10Gi")),
+		CentralConfigs: prometheus.CentralConfigs{
+			AdditionalScrapeConfigs: cacheprometheus.AdditionalScrapeConfigs(),
+			ServiceMonitors:         cacheprometheus.CentralServiceMonitors(),
+			PrometheusRules:         cacheprometheus.CentralPrometheusRules(),
+		},
+		AdditionalResources: []client.Object{cacheprometheus.NetworkPolicyToNodeExporter(namespace)},
+		// TODO(rfranzke): Remove this after v1.92 has been released.
+		DataMigration: prometheus.DataMigration{
+			ImageAlpine:     imageAlpine.String(),
+			StatefulSetName: "prometheus",
+			PVCName:         "prometheus-db-prometheus-0",
+		},
+	}), nil
 }
 
 // getFluentBitInputsFilterAndParsers returns all fluent-bit inputs, filters and parsers for the seed

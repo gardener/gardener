@@ -20,6 +20,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -78,6 +79,7 @@ var _ = Describe("HVPA", func() {
 		roleBinding            *rbacv1.RoleBinding
 		vpa                    *vpaautoscalingv1.VerticalPodAutoscaler
 		podDisruptionBudgetFor func(bool) *policyv1.PodDisruptionBudget
+		serviceMonitor         *monitoringv1.ServiceMonitor
 	)
 
 	BeforeEach(func() {
@@ -335,6 +337,25 @@ var _ = Describe("HVPA", func() {
 				},
 			},
 		}
+
+		serviceMonitor = &monitoringv1.ServiceMonitor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "cache-hvpa-controller",
+				Namespace: namespace,
+				Labels:    map[string]string{"prometheus": "cache"},
+			},
+			Spec: monitoringv1.ServiceMonitorSpec{
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{"app": "hvpa-controller"}},
+				Endpoints: []monitoringv1.Endpoint{{
+					Port: "metrics",
+					MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+						SourceLabels: []monitoringv1.LabelName{"__name__"},
+						Action:       "keep",
+						Regex:        `^(hvpa_aggregate_applied_scaling_total|hvpa_aggregate_blocked_scalings_total|hvpa_spec_replicas|hvpa_status_replicas|hvpa_status_applied_hpa_current_replicas|hvpa_status_applied_hpa_desired_replicas|hvpa_status_applied_vpa_recommendation|hvpa_status_blocked_hpa_current_replicas|hvpa_status_blocked_hpa_desired_replicas|hvpa_status_blocked_vpa_recommendation)$`,
+					}},
+				}},
+			},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -386,7 +407,7 @@ var _ = Describe("HVPA", func() {
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-			Expect(managedResourceSecret.Data).To(HaveLen(9))
+			Expect(managedResourceSecret.Data).To(HaveLen(10))
 			Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(serviceAccount)))
 			Expect(string(managedResourceSecret.Data["clusterrole____system_hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(clusterRole)))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____hvpa-controller-rolebinding.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
@@ -395,6 +416,7 @@ var _ = Describe("HVPA", func() {
 			Expect(string(managedResourceSecret.Data["role__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(role)))
 			Expect(string(managedResourceSecret.Data["rolebinding__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(roleBinding)))
 			Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__hvpa-controller-vpa.yaml"])).To(Equal(componenttest.Serialize(vpa)))
+			Expect(string(managedResourceSecret.Data["servicemonitor__"+namespace+"__cache-hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(serviceMonitor)))
 		})
 
 		Context("Kubernetes versions < 1.26", func() {

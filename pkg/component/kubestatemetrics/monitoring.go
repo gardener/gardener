@@ -20,9 +20,6 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/component"
 )
 
 const (
@@ -87,7 +84,7 @@ const (
 )
 
 var (
-	centralMonitoringAllowedMetrics = []string{
+	cachePrometheusAllowedMetrics = []string{
 		monitoringMetricKubeDaemonSetMetadataGeneration,
 		monitoringMetricKubeDaemonSetStatusCurrentNumberScheduled,
 		monitoringMetricKubeDaemonSetStatusDesiredNumberScheduled,
@@ -316,21 +313,6 @@ func init() {
 		Funcs(sprig.TxtFuncMap()).
 		Parse(monitoringScrapeConfigTmpl)
 	utilruntime.Must(err)
-}
-
-// CentralMonitoringConfiguration returns scrape configs for the central Prometheus.
-func CentralMonitoringConfiguration() (component.CentralMonitoringConfig, error) {
-	var scrapeConfig bytes.Buffer
-
-	if err := monitoringScrapeConfigTemplate.Execute(&scrapeConfig, map[string]interface{}{
-		"jobName":          monitoringPrometheusJobName,
-		"serviceNamespace": v1beta1constants.GardenNamespace,
-		"allowedMetrics":   centralMonitoringAllowedMetrics,
-	}); err != nil {
-		return component.CentralMonitoringConfig{}, err
-	}
-
-	return component.CentralMonitoringConfig{ScrapeConfigs: []string{scrapeConfig.String()}}, nil
 }
 
 // ScrapeConfigs returns the scrape configurations for Prometheus.

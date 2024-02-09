@@ -29,6 +29,7 @@ type ImageSource struct {
 
 	Repository string  `json:"repository" yaml:"repository"`
 	Tag        *string `json:"tag,omitempty" yaml:"tag,omitempty"`
+	Version    *string `json:"version,omitempty" yaml:"version,omitempty"`
 }
 
 // Image is a concrete, pullable image with a nonempty tag.
@@ -36,6 +37,7 @@ type Image struct {
 	Name       string
 	Repository string
 	Tag        *string
+	Version    *string
 }
 
 // ImageVector is a list of image sources.

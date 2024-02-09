@@ -130,3 +130,38 @@ func (p *prometheusOperator) clusterRoleBinding() *rbacv1.ClusterRoleBinding {
 		}},
 	}
 }
+
+func (p *prometheusOperator) clusterRolePrometheus() *rbacv1.ClusterRole {
+	return &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "prometheus",
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{corev1.GroupName},
+				Resources: []string{
+					"nodes",
+					"services",
+					"endpoints",
+					"pods",
+				},
+				Verbs: []string{"get", "list", "watch"},
+			},
+			{
+				APIGroups: []string{corev1.GroupName},
+				Resources: []string{
+					"nodes/metrics",
+					"nodes/proxy", // TODO: Remove once legacy Prometheis are gone (ones using proxy to scrape kubelets)
+				},
+				Verbs: []string{"get"},
+			},
+			{
+				NonResourceURLs: []string{
+					"/metrics",
+					"/metrics/*", // TODO: Remove once legacy Prometheis are gone (ones using proxy to scrape kubelets)
+				},
+				Verbs: []string{"get"},
+			},
+		},
+	}
+}

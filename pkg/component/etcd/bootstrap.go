@@ -22,6 +22,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -45,6 +46,8 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/monitoring/prometheus/cache"
+	monitoringutils "github.com/gardener/gardener/pkg/component/monitoring/utils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
@@ -66,7 +69,8 @@ const (
 	druidDeploymentName                          = Druid
 	managedResourceControlName                   = Druid
 
-	metricsPort = 8080
+	metricsPortName = "metrics"
+	metricsPort     = 8080
 
 	druidConfigMapImageVectorOverwriteDataKey          = "images_overwrite.yaml"
 	druidDeploymentVolumeMountPathImageVectorOverwrite = "/charts_overwrite"
@@ -259,7 +263,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				Selector: labels(),
 				Ports: []corev1.ServicePort{
 					{
-						Name:       "metrics",
+						Name:       metricsPortName,
 						Protocol:   corev1.ProtocolTCP,
 						Port:       metricsPort,
 						TargetPort: intstr.FromInt32(metricsPort),
@@ -329,11 +333,30 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			},
 		}
 
+		serviceMonitor = &monitoringv1.ServiceMonitor{
+			ObjectMeta: monitoringutils.ConfigObjectMeta(druidServiceName, b.namespace, cache.Label),
+			Spec: monitoringv1.ServiceMonitorSpec{
+				Selector: metav1.LabelSelector{MatchLabels: labels()},
+				Endpoints: []monitoringv1.Endpoint{{
+					Port: metricsPortName,
+					MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
+						"etcddruid_compaction_jobs_total",
+						"etcddruid_compaction_jobs_current",
+						"etcddruid_compaction_job_duration_seconds_bucket",
+						"etcddruid_compaction_job_duration_seconds_sum",
+						"etcddruid_compaction_job_duration_seconds_count",
+						"etcddruid_compaction_num_delta_events",
+					),
+				}},
+			},
+		}
+
 		resourcesToAdd = []client.Object{
 			serviceAccount,
 			clusterRole,
 			clusterRoleBinding,
 			vpa,
+			serviceMonitor,
 		}
 	)
 

@@ -32,10 +32,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/etcd"
-	"github.com/gardener/gardener/pkg/component/hvpa"
 	"github.com/gardener/gardener/pkg/component/istio"
-	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -119,14 +116,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		aggregateMonitoringComponentFunctions = []component.AggregateMonitoringConfiguration{
 			istio.AggregateMonitoringConfiguration,
 		}
-
-		centralScrapeConfigs                            = strings.Builder{}
-		centralCAdvisorScrapeConfigMetricRelabelConfigs = strings.Builder{}
-		centralMonitoringComponentFunctions             = []component.CentralMonitoringConfiguration{
-			etcd.CentralMonitoringConfiguration,
-			hvpa.CentralMonitoringConfiguration,
-			kubestatemetrics.CentralMonitoringConfiguration,
-		}
 	)
 
 	for _, componentFn := range aggregateMonitoringComponentFunctions {
@@ -137,21 +126,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 
 		for _, config := range aggregateMonitoringConfig.ScrapeConfigs {
 			aggregateScrapeConfigs.WriteString(fmt.Sprintf("- %s\n", utils.Indent(config, 2)))
-		}
-	}
-
-	for _, componentFn := range centralMonitoringComponentFunctions {
-		centralMonitoringConfig, err := componentFn()
-		if err != nil {
-			return err
-		}
-
-		for _, config := range centralMonitoringConfig.ScrapeConfigs {
-			centralScrapeConfigs.WriteString(fmt.Sprintf("- %s\n", utils.Indent(config, 2)))
-		}
-
-		for _, config := range centralMonitoringConfig.CAdvisorScrapeConfigMetricRelabelConfigs {
-			centralCAdvisorScrapeConfigMetricRelabelConfigs.WriteString(fmt.Sprintf("- %s\n", utils.Indent(config, 2)))
 		}
 	}
 
@@ -244,10 +218,8 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			},
 		},
 		"prometheus": map[string]interface{}{
-			"resources":               monitoringResources["prometheus"],
-			"storage":                 b.values.StorageCapacityPrometheus,
-			"additionalScrapeConfigs": centralScrapeConfigs.String(),
-			"additionalCAdvisorScrapeConfigMetricRelabelConfigs": centralCAdvisorScrapeConfigMetricRelabelConfigs.String(),
+			"resources": monitoringResources["prometheus"],
+			"storage":   b.values.StorageCapacityPrometheus,
 		},
 		"aggregatePrometheus": map[string]interface{}{
 			"resources":               monitoringResources["aggregate-prometheus"],

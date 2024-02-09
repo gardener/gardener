@@ -22,14 +22,18 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
 	istiov1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	podsecurityadmissionapi "k8s.io/pod-security-admission/api"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
@@ -373,6 +377,10 @@ func (r *Reconciler) runReconcileSeedFlow(
 	if err != nil {
 		return err
 	}
+	cachePrometheus, err := defaultCachePrometheus(log, seedClient, r.GardenNamespace, seed)
+	if err != nil {
+		return err
+	}
 
 	var (
 		g           = flow.NewGraph("Seed cluster creation")
@@ -430,7 +438,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		})
 		_ = g.Add(flow.Task{
 			Name: "Renewing garden access secrets",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
+			Fn: func(ctx context.Context) error {
 				// renew access secrets in all namespaces with the resources.gardener.cloud/class=garden label
 				if err := tokenrequest.RenewAccessSecrets(ctx, seedClient, client.MatchingLabels{resourcesv1alpha1.ResourceManagerClass: resourcesv1alpha1.ResourceManagerClassGarden}); err != nil {
 					return err
@@ -438,7 +446,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 				// remove operation annotation from seed after successful operation
 				return removeSeedOperationAnnotation(ctx, r.GardenClient, seed)
-			}),
+			},
 			SkipIf: seed.GetInfo().Annotations[v1beta1constants.GardenerOperation] != v1beta1constants.SeedOperationRenewGardenAccessSecrets,
 		})
 
@@ -656,6 +664,30 @@ func (r *Reconciler) runReconcileSeedFlow(
 			})
 		)
 	}
+
+	var (
+		deployCachePrometheus = g.Add(flow.Task{
+			Name: "Deploying cache Prometheus",
+			Fn:   cachePrometheus.Deploy,
+		})
+		// TODO(rfranzke): Remove this after v1.92 has been released.
+		_ = g.Add(flow.Task{
+			Name: "Cleaning up legacy cache Prometheus resources",
+			Fn: func(ctx context.Context) error {
+				return kubernetesutils.DeleteObjects(ctx, seedClient,
+					&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-rules", Namespace: r.GardenNamespace}},
+					&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-config", Namespace: r.GardenNamespace}},
+					&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-web", Namespace: r.GardenNamespace}},
+					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "prometheus", Namespace: r.GardenNamespace}},
+					&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "prometheus", Namespace: r.GardenNamespace}},
+					&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-seed"}},
+					&hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "prometheus", Namespace: r.GardenNamespace}},
+					&vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-vpa", Namespace: r.GardenNamespace}},
+				)
+			},
+			Dependencies: flow.NewTaskIDs(deployCachePrometheus),
+		})
+	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{
 		Log:              log,
