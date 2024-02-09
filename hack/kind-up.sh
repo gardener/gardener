@@ -195,7 +195,7 @@ fi
 # For details check https://github.com/gardener/gardener/issues/8871
 kind create cluster \
   --name "$CLUSTER_NAME" \
-  --image "kindest/node:v1.28.0" \
+  --image "kindest/node:v1.29.0" \
   --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" $ADDITIONAL_ARGS --set "gardener.repositoryRoot"=$(dirname "$0")/..)
 
 # adjust Kind's CRI default OCI runtime spec for new containers to include the cgroup namespace
@@ -234,6 +234,17 @@ fi
 kubectl get nodes -o name |\
   cut -d/ -f2 |\
   xargs -I {} docker exec {} sh -c "sysctl fs.inotify.max_user_instances=8192"
+
+value=$(kubectl get cm -n kube-system kubeadm-config -oyaml | yq e '.data.ClusterConfiguration' | yq e '.apiServer.extraVolumes[0].hostPath')
+if [[ -n "$value" && "$value" != "null" ]]; then
+  kubectl get cm -n kube-system kubeadm-config -o yaml | \
+    sed -e "s#authorization-mode: RBAC,Node#authorization-mode: RBAC,Node,Webhook\n        authorization-webhook-config-file: $value#" | \
+    kubectl apply -f -
+
+  kubectl get nodes -o name |\
+    cut -d/ -f2 |\
+    xargs -I {} docker exec {} bash -c "kubeadm upgrade node"
+fi
 
 if [[ "$KUBECONFIG" != "$PATH_KUBECONFIG" ]]; then
   cp "$KUBECONFIG" "$PATH_KUBECONFIG"

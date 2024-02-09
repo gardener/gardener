@@ -12,8 +12,7 @@
 {{- if not .Values.gardener.controlPlane.deployed }}
       authorization-mode: RBAC,Node
 {{- else }}
-      authorization-mode: RBAC,Node,Webhook
-      authorization-webhook-config-file: /etc/gardener/controlplane/auth-webhook-kubeconfig-{{ if eq .Values.networking.ipFamily "dual" }}ipv4{{ else }}{{ .Values.networking.ipFamily }}{{ end }}.yaml
+      authorization-mode: RBAC,Node
       authorization-webhook-cache-authorized-ttl: "0"
       authorization-webhook-cache-unauthorized-ttl: "0"
     extraVolumes:
