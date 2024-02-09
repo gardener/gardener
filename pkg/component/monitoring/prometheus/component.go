@@ -28,6 +28,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/monitoring"
 	monitoringutils "github.com/gardener/gardener/pkg/component/monitoring/utils"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -58,7 +59,7 @@ type Values struct {
 
 	// DataMigration is a struct for migrating data from existing disks.
 	// TODO(rfranzke): Remove this as soon as the PV migration code is removed.
-	DataMigration DataMigration
+	DataMigration monitoring.DataMigration
 }
 
 // CentralConfigs contains configuration for this Prometheus instance that is created together with it. This should
@@ -97,7 +98,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 	)
 
 	// TODO(rfranzke): Remove this migration code after all Prometheis have been migrated.
-	takeOverExistingPV, pv, oldPVC, err := p.existingPVTakeOverPrerequisites(ctx, log)
+	takeOverExistingPV, pv, oldPVC, err := p.values.DataMigration.ExistingPVTakeOverPrerequisites(ctx, log)
 	if err != nil {
 		return err
 	}
@@ -123,7 +124,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 	}
 
 	if takeOverExistingPV {
-		if err := p.prepareExistingPVTakeOver(ctx, log, pv, oldPVC); err != nil {
+		if err := p.values.DataMigration.PrepareExistingPVTakeOver(ctx, log, pv, oldPVC); err != nil {
 			return err
 		}
 
@@ -135,7 +136,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 	}
 
 	if takeOverExistingPV {
-		if err := p.finalizeExistingPVTakeOver(ctx, log, pv); err != nil {
+		if err := p.values.DataMigration.FinalizeExistingPVTakeOver(ctx, log, pv); err != nil {
 			return err
 		}
 

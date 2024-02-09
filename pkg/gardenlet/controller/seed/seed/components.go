@@ -612,12 +612,14 @@ func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed) (co
 		return nil, err
 	}
 
+	storageCapacity := resource.MustParse(seed.GetValidVolumeSize("10Gi"))
+
 	return prometheus.New(log, r.SeedClientSet.Client(), r.GardenNamespace, prometheus.Values{
 		Name:              "cache",
 		Image:             imagePrometheus.String(),
 		Version:           ptr.Deref(imagePrometheus.Version, "v0.0.0"),
 		PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
-		StorageCapacity:   resource.MustParse(seed.GetValidVolumeSize("10Gi")),
+		StorageCapacity:   storageCapacity,
 		CentralConfigs: prometheus.CentralConfigs{
 			AdditionalScrapeConfigs: cacheprometheus.AdditionalScrapeConfigs(),
 			ServiceMonitors:         cacheprometheus.CentralServiceMonitors(),
@@ -625,7 +627,12 @@ func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed) (co
 		},
 		AdditionalResources: []client.Object{cacheprometheus.NetworkPolicyToNodeExporter(r.GardenNamespace)},
 		// TODO(rfranzke): Remove this after v1.92 has been released.
-		DataMigration: prometheus.DataMigration{
+		DataMigration: monitoring.DataMigration{
+			Client:          r.SeedClientSet.Client(),
+			Namespace:       r.GardenNamespace,
+			StorageCapacity: storageCapacity,
+			FullName:        "prometheus-cache",
+
 			ImageAlpine:     imageAlpine.String(),
 			StatefulSetName: "prometheus",
 			PVCName:         "prometheus-db-prometheus-0",
