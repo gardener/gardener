@@ -208,7 +208,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.plutono, err = r.newPlutono(seed, secretsManager, globalMonitoringSecretSeed.Name, wildCardCertSecret)
+	c.plutono, err = r.newPlutono(seed, secretsManager, globalMonitoringSecretSeed, wildCardCertSecret)
 	if err != nil {
 		return
 	}
@@ -522,10 +522,15 @@ func (r *Reconciler) newVali(ctx context.Context) (component.Deployer, error) {
 	return deployer, err
 }
 
-func (r *Reconciler) newPlutono(seed *seedpkg.Seed, secretsManager secretsmanager.Interface, authSecretName string, wildcardCertSecret *corev1.Secret) (plutono.Interface, error) {
+func (r *Reconciler) newPlutono(seed *seedpkg.Seed, secretsManager secretsmanager.Interface, authSecret, wildcardCertSecret *corev1.Secret) (plutono.Interface, error) {
 	var wildcardCertName *string
 	if wildcardCertSecret != nil {
 		wildcardCertName = ptr.To(wildcardCertSecret.GetName())
+	}
+
+	var authSecretName string
+	if authSecret != nil {
+		authSecretName = authSecret.Name
 	}
 
 	return sharedcomponent.NewPlutono(

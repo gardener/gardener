@@ -223,6 +223,73 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Name: "Destroy Fluent Operator Custom Resources",
 			Fn:   component.OpDestroyAndWait(c.fluentOperatorCustomResources).Destroy,
 		})
+
+		// When the seed is the garden cluster then these components are reconciled by the gardener-operator.
+		destroyPlutono = g.Add(flow.Task{
+			Name: "Destroying plutono",
+			Fn:   component.OpDestroyAndWait(c.plutono).Destroy,
+			SkipIf: seedIsGarden,
+		})
+		destroyEtcdDruid = g.Add(flow.Task{
+			Name: "Destroying etcd druid",
+			Fn:   component.OpDestroyAndWait(c.etcdDruid).Destroy,
+			// only destroy Etcd CRD once all extension controllers are gone, otherwise they might not be able to start
+			// up again (e.g. after being evicted by VPA)
+			// see https://github.com/gardener/gardener/issues/6487#issuecomment-1220597217
+			Dependencies: flow.NewTaskIDs(noControllerInstallations),
+			SkipIf: seedIsGarden,
+		})
+		destroyVPA = g.Add(flow.Task{
+			Name: "Destroy Kubernetes vertical pod autoscaler",
+			Fn:   component.OpDestroyAndWait(c.verticalPodAutoscaler).Destroy,
+			SkipIf: seedIsGarden,
+		})
+		destroyHVPA = g.Add(flow.Task{
+			Name: "Destroy HVPA controller",
+			Fn:   component.OpDestroyAndWait(c.hvpaController).Destroy,
+			SkipIf: seedIsGarden,
+		})
+		destroyKubeStateMetrics = g.Add(flow.Task{
+			Name: "Destroy kube-state-metrics",
+			Fn:   component.OpDestroyAndWait(c.kubeStateMetrics).Destroy,
+			SkipIf: seedIsGarden,
+		})
+		destroyPrometheusOperator = g.Add(flow.Task{
+			Name: "Destroy Prometheus Operator",
+			Fn:   component.OpDestroyAndWait(c.prometheusOperator).Destroy,
+			SkipIf: seedIsGarden,
+		})
+		destroyFluentBit = g.Add(flow.Task{
+			Name: "Destroy Fluent Bit",
+			Fn:   component.OpDestroyAndWait(c.fluentBit).Destroy,
+			SkipIf: seedIsGarden,
+		})
+		destroyFluentOperator = g.Add(flow.Task{
+			Name:         "Destroy Fluent Operator",
+			Fn:           component.OpDestroyAndWait(c.fluentOperator).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyFluentOperatorResources, destroyFluentBit),
+			SkipIf: seedIsGarden,
+		})
+		destroyVali = g.Add(flow.Task{
+			Name:         "Destroy Vali",
+			Fn:           component.OpDestroyAndWait(c.vali).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyFluentOperatorResources),
+			SkipIf: seedIsGarden,
+		})
+		destroyEtcdCRD = g.Add(flow.Task{
+			Name:         "Destroy ETCD-related custom resource definitions",
+			Fn:           component.OpDestroyAndWait(c.etcdCRD).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyEtcdDruid),
+			SkipIf: seedIsGarden,
+		})
+		destroyFluentOperatorCRDs = g.Add(flow.Task{
+			Name:         "Destroy Fluent Operator CRDs",
+			Fn:           component.OpDestroyAndWait(c.fluentCRD).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyFluentOperatorResources, noControllerInstallations),
+			SkipIf: seedIsGarden,
+		})
+
+
 		syncPointCleanedUp = flow.NewTaskIDs(
 			destroyClusterIdentity,
 			destroyCachePrometheus,
@@ -239,85 +306,6 @@ func (r *Reconciler) runDeleteSeedFlow(
 			destroyMachineControllerManagerCRDs,
 			destroyFluentOperatorResources,
 			noControllerInstallations,
-		)
-		destroySystemResources = g.Add(flow.Task{
-			Name:         "Destroy system resources",
-			Fn:           component.OpDestroyAndWait(c.system).Destroy,
-			Dependencies: flow.NewTaskIDs(syncPointCleanedUp),
-		})
-	)
-
-	// When the seed is the garden cluster then these components are reconciled by the gardener-operator.
-	if !seedIsGarden {
-		var (
-			plutono               = plutono.New(seedClient, r.GardenNamespace, nil, plutono.Values{})
-			kubeStateMetrics      = kubestatemetrics.New(seedClient, r.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed, KubernetesVersion: kubernetesVersion})
-			etcdCRD               = etcd.NewCRD(seedClient, r.SeedClientSet.Applier())
-			etcdDruid             = etcd.NewBootstrapper(seedClient, r.GardenNamespace, nil, r.Config.ETCDConfig, "", nil, "")
-			hvpa                  = hvpa.New(seedClient, r.GardenNamespace, hvpa.Values{})
-			verticalPodAutoscaler = vpa.New(seedClient, r.GardenNamespace, nil, vpa.Values{ClusterType: component.ClusterTypeSeed, RuntimeKubernetesVersion: kubernetesVersion})
-			resourceManager       = resourcemanager.New(seedClient, r.GardenNamespace, nil, resourcemanager.Values{RuntimeKubernetesVersion: kubernetesVersion})
-			fluentOperatorCRDs    = fluentoperator.NewCRDs(r.SeedClientSet.Applier())
-			fluentOperator        = fluentoperator.NewFluentOperator(seedClient, r.GardenNamespace, fluentoperator.Values{})
-			fluentBit             = fluentoperator.NewFluentBit(seedClient, r.GardenNamespace, fluentoperator.FluentBitValues{})
-			vali                  = vali.New(seedClient, r.GardenNamespace, nil, vali.Values{})
-			prometheusOperator    = prometheusoperator.New(seedClient, r.GardenNamespace, prometheusoperator.Values{})
-
-			destroyPlutono = g.Add(flow.Task{
-				Name: "Destroying plutono",
-				Fn:   component.OpDestroyAndWait(plutono).Destroy,
-			})
-			destroyKubeStateMetrics = g.Add(flow.Task{
-				Name: "Destroy kube-state-metrics",
-				Fn:   component.OpDestroyAndWait(kubeStateMetrics).Destroy,
-			})
-			destroyEtcdDruid = g.Add(flow.Task{
-				Name: "Destroying etcd druid",
-				Fn:   component.OpDestroyAndWait(etcdDruid).Destroy,
-				// only destroy Etcd CRD once all extension controllers are gone, otherwise they might not be able to start up
-				// again (e.g. after being evicted by VPA)
-				// see https://github.com/gardener/gardener/issues/6487#issuecomment-1220597217
-				Dependencies: flow.NewTaskIDs(noControllerInstallations),
-			})
-			destroyVPA = g.Add(flow.Task{
-				Name: "Destroy Kubernetes vertical pod autoscaler",
-				Fn:   component.OpDestroyAndWait(verticalPodAutoscaler).Destroy,
-			})
-			destroyHVPA = g.Add(flow.Task{
-				Name: "Destroy HVPA controller",
-				Fn:   component.OpDestroyAndWait(hvpa).Destroy,
-			})
-			destroyPrometheusOperator = g.Add(flow.Task{
-				Name: "Destroy Prometheus Operator",
-				Fn:   component.OpDestroyAndWait(prometheusOperator).Destroy,
-			})
-			destroyFluentBit = g.Add(flow.Task{
-				Name: "Destroy Fluent Bit",
-				Fn:   component.OpDestroyAndWait(fluentBit).Destroy,
-			})
-			destroyFluentOperator = g.Add(flow.Task{
-				Name:         "Destroy Fluent Operator",
-				Fn:           component.OpDestroyAndWait(fluentOperator).Destroy,
-				Dependencies: flow.NewTaskIDs(destroyFluentOperatorResources, destroyFluentBit),
-			})
-			destroyVali = g.Add(flow.Task{
-				Name:         "Destroy Vali",
-				Fn:           component.OpDestroyAndWait(vali).Destroy,
-				Dependencies: flow.NewTaskIDs(destroyFluentOperatorResources),
-			})
-			destroyEtcdCRD = g.Add(flow.Task{
-				Name:         "Destroy ETCD-related custom resource definitions",
-				Fn:           component.OpDestroyAndWait(etcdCRD).Destroy,
-				Dependencies: flow.NewTaskIDs(destroyEtcdDruid),
-			})
-			destroyFluentOperatorCRDs = g.Add(flow.Task{
-				Name:         "Destroy Fluent Operator CRDs",
-				Fn:           component.OpDestroyAndWait(fluentOperatorCRDs).Destroy,
-				Dependencies: flow.NewTaskIDs(destroyFluentOperatorResources, noControllerInstallations),
-			})
-		)
-
-		syncPointCleanedUp.Insert(
 			destroyPrometheusOperator,
 			destroyPlutono,
 			destroyKubeStateMetrics,
@@ -330,6 +318,13 @@ func (r *Reconciler) runDeleteSeedFlow(
 			destroyEtcdCRD,
 			destroyFluentOperatorCRDs,
 		)
+
+		destroySystemResources = g.Add(flow.Task{
+			Name:         "Destroy system resources",
+			Fn:           component.OpDestroyAndWait(c.system).Destroy,
+			Dependencies: flow.NewTaskIDs(syncPointCleanedUp),
+		})
+	)
 
 		var (
 			ensureNoManagedResourcesExist = g.Add(flow.Task{
