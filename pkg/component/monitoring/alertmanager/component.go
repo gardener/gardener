@@ -66,6 +66,7 @@ func (a *alertManager) Deploy(ctx context.Context) error {
 	resources, err := registry.AddAllAndSerialize(
 		a.service(),
 		a.alertManager(),
+		a.vpa(),
 	)
 	if err != nil {
 		return err
