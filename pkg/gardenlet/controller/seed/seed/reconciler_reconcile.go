@@ -42,7 +42,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/clusterautoscaler"
@@ -52,7 +51,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
@@ -275,6 +273,30 @@ func (r *Reconciler) runReconcileSeedFlow(
 			deployFluentCRD,
 			deployPrometheusCRD,
 		)
+		deployGardenerResourceManager = g.Add(flow.Task{
+			Name:         "Deploying and waiting for gardener-resource-manager to be healthy",
+			Fn:           component.OpWait(c.gardenerResourceManager).Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointCRDs),
+			SkipIf:       seedIsGarden,
+		})
+		deploySystemResources = g.Add(flow.Task{
+			Name:         "Deploying system resources",
+			Fn:           c.system.Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+		})
+		waitUntilRequiredExtensionsReady = g.Add(flow.Task{
+			Name: "Waiting until required extensions are ready",
+			Fn: func(ctx context.Context) error {
+				return retry.UntilTimeout(ctx, 5*time.Second, time.Minute, func(ctx context.Context) (done bool, err error) {
+					if err := gardenerutils.RequiredExtensionsReady(ctx, r.GardenClient, seed.GetInfo().Name, gardenerutils.ComputeRequiredExtensionsForSeed(seed.GetInfo())); err != nil {
+						return retry.MinorError(err)
+					}
+
+					return retry.Ok()
+				})
+			},
+			Dependencies: flow.NewTaskIDs(deploySystemResources),
+		})
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{
@@ -285,61 +307,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 	}
 
 	return secretsManager.Cleanup(ctx)
-
-	if !seedIsGarden {
-		// When the seed is the garden cluster then gardener-resource-manager is reconciled by the gardener-operator.
-		var defaultNotReadyTolerationSeconds, defaultUnreachableTolerationSeconds *int64
-		if nodeToleration := r.Config.NodeToleration; nodeToleration != nil {
-			defaultNotReadyTolerationSeconds = nodeToleration.DefaultNotReadyTolerationSeconds
-			defaultUnreachableTolerationSeconds = nodeToleration.DefaultUnreachableTolerationSeconds
-		}
-
-		var additionalNetworkPolicyNamespaceSelectors []metav1.LabelSelector
-		if config := r.Config.Controllers.NetworkPolicy; config != nil {
-			additionalNetworkPolicyNamespaceSelectors = config.AdditionalNamespaceSelectors
-		}
-
-		// Deploy gardener-resource-manager first since it serves central functionality (e.g., projected token mount
-		// webhook) which is required for all other components to start-up.
-		gardenerResourceManager, err := sharedcomponent.NewRuntimeGardenerResourceManager(
-			seedClient,
-			r.GardenNamespace,
-			kubernetesVersion,
-			secretsManager,
-			r.Config.LogLevel, r.Config.LogFormat,
-			v1beta1constants.SecretNameCASeed,
-			v1beta1constants.PriorityClassNameSeedSystemCritical,
-			defaultNotReadyTolerationSeconds,
-			defaultUnreachableTolerationSeconds,
-			features.DefaultFeatureGate.Enabled(features.DefaultSeccompProfile),
-			v1beta1helper.SeedSettingTopologyAwareRoutingEnabled(seed.GetInfo().Spec.Settings),
-			additionalNetworkPolicyNamespaceSelectors,
-			seed.GetInfo().Spec.Provider.Zones,
-		)
-		if err != nil {
-			return err
-		}
-
-		log.Info("Deploying and waiting for gardener-resource-manager to be healthy")
-		if err := component.OpWait(gardenerResourceManager).Deploy(ctx); err != nil {
-			return err
-		}
-	}
-
-	// Deploy System Resources
-	systemResources, err := defaultSystem(seedClient, seed, r.GardenNamespace)
-	if err != nil {
-		return err
-	}
-
-	if err := systemResources.Deploy(ctx); err != nil {
-		return err
-	}
-
-	// Wait until required extensions are ready because they might be needed by following deployments
-	if err := WaitUntilRequiredExtensionsReady(ctx, r.GardenClient, seed.GetInfo(), 5*time.Second, 1*time.Minute); err != nil {
-		return err
-	}
 
 	seedIsOriginOfClusterIdentity, err := clusteridentity.IsClusterIdentityEmptyOrFromOrigin(ctx, seedClient, v1beta1constants.ClusterIdentityOriginSeed)
 	if err != nil {
@@ -958,15 +925,4 @@ func deployNginxIngressAndWaitForIstioServiceAndGetDNSComponent(
 		return nil, err
 	}
 	return getManagedIngressDNSRecord(log, seedClient, gardenNamespaceName, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), ingressLoadBalancerAddress), nil
-}
-
-// WaitUntilRequiredExtensionsReady checks and waits until all required extensions for a seed exist and are ready.
-func WaitUntilRequiredExtensionsReady(ctx context.Context, gardenClient client.Client, seed *gardencorev1beta1.Seed, interval, timeout time.Duration) error {
-	return retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (done bool, err error) {
-		if err := gardenerutils.RequiredExtensionsReady(ctx, gardenClient, seed.Name, gardenerutils.ComputeRequiredExtensionsForSeed(seed)); err != nil {
-			return retry.MinorError(err)
-		}
-
-		return retry.Ok()
-	})
 }
