@@ -46,7 +46,7 @@ type DataMigration struct {
 	PVCName string
 }
 
-func (p *prometheus) existingPVOvertakePrerequisites(ctx context.Context, log logr.Logger) (bool, *corev1.PersistentVolume, *corev1.PersistentVolumeClaim, error) {
+func (p *prometheus) existingPVTakeOverPrerequisites(ctx context.Context, log logr.Logger) (bool, *corev1.PersistentVolume, *corev1.PersistentVolumeClaim, error) {
 	if p.values.DataMigration.StatefulSetName == "" || p.values.DataMigration.PVCName == "" {
 		return false, nil, nil, nil
 	}
@@ -109,7 +109,7 @@ func (p *prometheus) findPersistentVolumeByLabel(ctx context.Context, log logr.L
 	}
 }
 
-func (p *prometheus) prepareExistingPVOvertake(ctx context.Context, log logr.Logger, pv *corev1.PersistentVolume, oldPVC *corev1.PersistentVolumeClaim) error {
+func (p *prometheus) prepareExistingPVTakeOver(ctx context.Context, log logr.Logger, pv *corev1.PersistentVolume, oldPVC *corev1.PersistentVolumeClaim) error {
 	log.Info("Must take over old Prometheus disk")
 
 	if err := p.deleteOldStatefulSetAndWaitUntilPodsDeleted(ctx, log); err != nil {
@@ -138,7 +138,7 @@ func (p *prometheus) prepareExistingPVOvertake(ctx context.Context, log logr.Log
 	return nil
 }
 
-func (p *prometheus) finalizeExistingPVOvertake(ctx context.Context, log logr.Logger, pv *corev1.PersistentVolume) error {
+func (p *prometheus) finalizeExistingPVTakeOver(ctx context.Context, log logr.Logger, pv *corev1.PersistentVolume) error {
 	if err := p.waitForNewStatefulSetToBeRolledOut(ctx, log); err != nil {
 		return err
 	}

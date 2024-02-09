@@ -45,6 +45,8 @@ func NetworkPolicyToNodeExporter(namespace string) *networkingv1.NetworkPolicy {
 				// A pod selector to select the node-exporter pods in the kube-system namespace does not work here
 				// because the node-exporter uses the host network. Network policies are currently not supported with
 				// pods in the host network.
+				// TODO: Is it possible to restrict the traffic to the nodes network CIDR of the seed?
+				//  Ref https://github.com/gardener/gardener/pull/9128#discussion_r1483236610
 				To:    []networkingv1.NetworkPolicyPeer{},
 				Ports: []networkingv1.NetworkPolicyPort{{Port: utils.IntStrPtrFromInt32(16909), Protocol: ptr.To(corev1.ProtocolTCP)}},
 			}},
