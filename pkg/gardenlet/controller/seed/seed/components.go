@@ -109,6 +109,7 @@ type components struct {
 
 	kubeAPIServerService component.Deployer
 	kubeAPIServerIngress component.Deployer
+	ingressDNSRecord     component.DeployWaiter
 
 	monitoring                    component.Deployer
 	fluentOperator                component.DeployWaiter
@@ -190,6 +191,10 @@ func (r *Reconciler) instantiateComponents(
 
 	c.kubeAPIServerService = r.newKubeAPIServerService(wildCardCertSecret)
 	c.kubeAPIServerIngress = r.newKubeAPIServerIngress(seed, wildCardCertSecret)
+	c.ingressDNSRecord, err = r.newIngressDNSRecord(ctx, log, seed, "")
+	if err != nil {
+		return
+	}
 
 	// observability components
 	c.fluentOperator, err = r.newFluentOperator()

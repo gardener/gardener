@@ -120,16 +120,6 @@ func (r *Reconciler) runDeleteSeedFlow(
 		return err
 	}
 
-	secretData, err := getDNSProviderSecretData(ctx, r.GardenClient, seed.GetInfo())
-	if err != nil {
-		return err
-	}
-
-	// setup for flow graph
-	var (
-		dnsRecord = getManagedIngressDNSRecord(log, r.SeedClientSet.Client(), r.GardenNamespace, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), "")
-	)
-
 	var (
 		g = flow.NewGraph("Seed deletion")
 
@@ -152,7 +142,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 
 		destroyDNSRecord = g.Add(flow.Task{
 			Name: "Destroying managed ingress DNS record (if existing)",
-			Fn:   func(ctx context.Context) error { return destroyDNSResources(ctx, dnsRecord) },
+			Fn:   component.OpDestroyAndWait(c.ingressDNSRecord).Destroy,
 		})
 		noControllerInstallations = g.Add(flow.Task{
 			Name:         "Ensuring no ControllerInstallations are left",

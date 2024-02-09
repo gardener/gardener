@@ -34,7 +34,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
@@ -277,31 +276,6 @@ func determineClusterIdentity(ctx context.Context, c client.Client) (string, err
 		return string(gardenNamespace.UID), nil
 	}
 	return clusterIdentity.Data[v1beta1constants.ClusterIdentity], nil
-}
-
-func getDNSProviderSecretData(ctx context.Context, gardenClient client.Client, seed *gardencorev1beta1.Seed) (map[string][]byte, error) {
-	if dnsConfig := seed.Spec.DNS; dnsConfig.Provider != nil {
-		secret, err := kubernetesutils.GetSecretByReference(ctx, gardenClient, &dnsConfig.Provider.SecretRef)
-		if err != nil {
-			return nil, err
-		}
-		return secret.Data, nil
-	}
-	return nil, nil
-}
-
-func deployDNSResources(ctx context.Context, dnsRecord component.DeployMigrateWaiter) error {
-	if err := dnsRecord.Deploy(ctx); err != nil {
-		return err
-	}
-	return dnsRecord.Wait(ctx)
-}
-
-func destroyDNSResources(ctx context.Context, dnsRecord component.DeployMigrateWaiter) error {
-	if err := dnsRecord.Destroy(ctx); err != nil {
-		return err
-	}
-	return dnsRecord.WaitCleanup(ctx)
 }
 
 func vpaEnabled(settings *gardencorev1beta1.SeedSettings) bool {

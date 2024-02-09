@@ -15,6 +15,7 @@
 package seed
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/go-logr/logr"
@@ -24,30 +25,29 @@ import (
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
+	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-func getManagedIngressDNSRecord(
-	log logr.Logger,
-	seedClient client.Client,
-	gardenNamespaceName string,
-	dnsConfig gardencorev1beta1.SeedDNS,
-	secretData map[string][]byte,
-	seedFQDN string,
-	loadBalancerAddress string,
-) component.DeployMigrateWaiter {
+func (r *Reconciler) newIngressDNSRecord(ctx context.Context, log logr.Logger, seed *seedpkg.Seed, loadBalancerAddress string) (component.DeployMigrateWaiter, error) {
+	secretData, err := getDNSProviderSecretData(ctx, r.GardenClient, seed.GetInfo())
+	if err != nil {
+		return nil, err
+	}
+
 	values := &dnsrecord.Values{
 		Name:                         "seed-ingress",
 		SecretName:                   "seed-ingress",
-		Namespace:                    gardenNamespaceName,
+		Namespace:                    r.GardenNamespace,
 		SecretData:                   secretData,
-		DNSName:                      seedFQDN,
+		DNSName:                      seed.GetIngressFQDN("*"),
 		RecordType:                   extensionsv1alpha1helper.GetDNSRecordType(loadBalancerAddress),
 		ReconcileOnlyOnChangeOrError: true,
 	}
 
-	if dnsConfig.Provider != nil {
-		values.Type = dnsConfig.Provider.Type
+	if provider := seed.GetInfo().Spec.DNS.Provider; provider != nil {
+		values.Type = provider.Type
 	}
 
 	if loadBalancerAddress != "" {
@@ -56,12 +56,23 @@ func getManagedIngressDNSRecord(
 
 	return dnsrecord.New(
 		log,
-		seedClient,
+		r.SeedClientSet.Client(),
 		values,
 		dnsrecord.DefaultInterval,
 		dnsrecord.DefaultSevereThreshold,
 		dnsrecord.DefaultTimeout,
-	)
+	), nil
+}
+
+func getDNSProviderSecretData(ctx context.Context, gardenClient client.Client, seed *gardencorev1beta1.Seed) (map[string][]byte, error) {
+	if dnsConfig := seed.Spec.DNS; dnsConfig.Provider != nil {
+		secret, err := kubernetesutils.GetSecretByReference(ctx, gardenClient, &dnsConfig.Provider.SecretRef)
+		if err != nil {
+			return nil, err
+		}
+		return secret.Data, nil
+	}
+	return nil, nil
 }
 
 func getConfig(seed *gardencorev1beta1.Seed) (map[string]string, error) {

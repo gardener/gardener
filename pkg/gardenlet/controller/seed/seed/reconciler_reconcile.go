@@ -323,28 +323,18 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Fn:           c.istio.Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 		})
-		dnsRecord    component.DeployMigrateWaiter
-		istioLBReady = g.Add(flow.Task{
+		ingressDNSRecord component.DeployWaiter
+		istioLBReady     = g.Add(flow.Task{
 			Name: "Waiting until istio LoadBalancer is ready",
 			Fn: func(ctx context.Context) error {
-				dnsRecord, err = deployNginxIngressAndWaitForIstioServiceAndGetDNSComponent(
-					ctx,
-					log,
-					seed,
-					r.GardenClient,
-					r.SeedClientSet.Client(),
-					c.nginxIngressController,
-					r.GardenNamespace,
-					seedIsGarden,
-					c.istioDefaultNamespace,
-				)
+				ingressDNSRecord, err = r.deployNginxIngressAndWaitForIstioServiceAndGetDNSComponent(ctx, log, seed, c.nginxIngressController, seedIsGarden, c.istioDefaultNamespace)
 				return err
 			},
 			Dependencies: flow.NewTaskIDs(deployIstio),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying managed ingress DNS record",
-			Fn:           func(ctx context.Context) error { return deployDNSResources(ctx, dnsRecord) },
+			Fn:           component.OpWait(ingressDNSRecord).Deploy,
 			Dependencies: flow.NewTaskIDs(istioLBReady),
 		})
 		_ = g.Add(flow.Task{
@@ -704,35 +694,27 @@ func renewGardenKubeconfig(ctx context.Context, seedClient client.Client, garden
 // WaitUntilLoadBalancerIsReady is an alias for kubernetesutils.WaitUntilLoadBalancerIsReady. Exposed for tests.
 var WaitUntilLoadBalancerIsReady = kubernetesutils.WaitUntilLoadBalancerIsReady
 
-func deployNginxIngressAndWaitForIstioServiceAndGetDNSComponent(
+func (r *Reconciler) deployNginxIngressAndWaitForIstioServiceAndGetDNSComponent(
 	ctx context.Context,
 	log logr.Logger,
 	seed *seedpkg.Seed,
-	gardenClient, seedClient client.Client,
 	nginxIngress component.DeployWaiter,
-	gardenNamespaceName string,
 	seedIsGarden bool,
 	istioDefaultNamespace string,
 ) (
-	component.DeployMigrateWaiter,
+	component.DeployWaiter,
 	error,
 ) {
-	secretData, err := getDNSProviderSecretData(ctx, gardenClient, seed.GetInfo())
-	if err != nil {
-		return nil, err
-	}
-
-	var ingressLoadBalancerAddress string
 	if !seedIsGarden {
-		if err = component.OpWait(nginxIngress).Deploy(ctx); err != nil {
+		if err := component.OpWait(nginxIngress).Deploy(ctx); err != nil {
 			return nil, err
 		}
 	}
 
-	ingressLoadBalancerAddress, err = WaitUntilLoadBalancerIsReady(
+	ingressLoadBalancerAddress, err := WaitUntilLoadBalancerIsReady(
 		ctx,
 		log,
-		seedClient,
+		r.SeedClientSet.Client(),
 		istioDefaultNamespace,
 		v1beta1constants.DefaultSNIIngressServiceName,
 		time.Minute,
@@ -741,5 +723,5 @@ func deployNginxIngressAndWaitForIstioServiceAndGetDNSComponent(
 		return nil, err
 	}
 
-	return getManagedIngressDNSRecord(log, seedClient, gardenNamespaceName, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), ingressLoadBalancerAddress), nil
+	return r.newIngressDNSRecord(ctx, log, seed, ingressLoadBalancerAddress)
 }
