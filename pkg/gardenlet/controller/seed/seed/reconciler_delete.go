@@ -32,15 +32,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/clusteridentity"
-	"github.com/gardener/gardener/pkg/component/etcd"
-	"github.com/gardener/gardener/pkg/component/hvpa"
-	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
-	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
-	"github.com/gardener/gardener/pkg/component/logging/vali"
-	"github.com/gardener/gardener/pkg/component/monitoring/prometheusoperator"
-	"github.com/gardener/gardener/pkg/component/plutono"
-	"github.com/gardener/gardener/pkg/component/resourcemanager"
-	"github.com/gardener/gardener/pkg/component/vpa"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -226,8 +217,8 @@ func (r *Reconciler) runDeleteSeedFlow(
 
 		// When the seed is the garden cluster then these components are reconciled by the gardener-operator.
 		destroyPlutono = g.Add(flow.Task{
-			Name: "Destroying plutono",
-			Fn:   component.OpDestroyAndWait(c.plutono).Destroy,
+			Name:   "Destroying plutono",
+			Fn:     component.OpDestroyAndWait(c.plutono).Destroy,
 			SkipIf: seedIsGarden,
 		})
 		destroyEtcdDruid = g.Add(flow.Task{
@@ -237,58 +228,57 @@ func (r *Reconciler) runDeleteSeedFlow(
 			// up again (e.g. after being evicted by VPA)
 			// see https://github.com/gardener/gardener/issues/6487#issuecomment-1220597217
 			Dependencies: flow.NewTaskIDs(noControllerInstallations),
-			SkipIf: seedIsGarden,
+			SkipIf:       seedIsGarden,
 		})
 		destroyVPA = g.Add(flow.Task{
-			Name: "Destroy Kubernetes vertical pod autoscaler",
-			Fn:   component.OpDestroyAndWait(c.verticalPodAutoscaler).Destroy,
+			Name:   "Destroy Kubernetes vertical pod autoscaler",
+			Fn:     component.OpDestroyAndWait(c.verticalPodAutoscaler).Destroy,
 			SkipIf: seedIsGarden,
 		})
 		destroyHVPA = g.Add(flow.Task{
-			Name: "Destroy HVPA controller",
-			Fn:   component.OpDestroyAndWait(c.hvpaController).Destroy,
+			Name:   "Destroy HVPA controller",
+			Fn:     component.OpDestroyAndWait(c.hvpaController).Destroy,
 			SkipIf: seedIsGarden,
 		})
 		destroyKubeStateMetrics = g.Add(flow.Task{
-			Name: "Destroy kube-state-metrics",
-			Fn:   component.OpDestroyAndWait(c.kubeStateMetrics).Destroy,
+			Name:   "Destroy kube-state-metrics",
+			Fn:     component.OpDestroyAndWait(c.kubeStateMetrics).Destroy,
 			SkipIf: seedIsGarden,
 		})
 		destroyPrometheusOperator = g.Add(flow.Task{
-			Name: "Destroy Prometheus Operator",
-			Fn:   component.OpDestroyAndWait(c.prometheusOperator).Destroy,
+			Name:   "Destroy Prometheus Operator",
+			Fn:     component.OpDestroyAndWait(c.prometheusOperator).Destroy,
 			SkipIf: seedIsGarden,
 		})
 		destroyFluentBit = g.Add(flow.Task{
-			Name: "Destroy Fluent Bit",
-			Fn:   component.OpDestroyAndWait(c.fluentBit).Destroy,
+			Name:   "Destroy Fluent Bit",
+			Fn:     component.OpDestroyAndWait(c.fluentBit).Destroy,
 			SkipIf: seedIsGarden,
 		})
 		destroyFluentOperator = g.Add(flow.Task{
 			Name:         "Destroy Fluent Operator",
 			Fn:           component.OpDestroyAndWait(c.fluentOperator).Destroy,
 			Dependencies: flow.NewTaskIDs(destroyFluentOperatorResources, destroyFluentBit),
-			SkipIf: seedIsGarden,
+			SkipIf:       seedIsGarden,
 		})
 		destroyVali = g.Add(flow.Task{
 			Name:         "Destroy Vali",
 			Fn:           component.OpDestroyAndWait(c.vali).Destroy,
 			Dependencies: flow.NewTaskIDs(destroyFluentOperatorResources),
-			SkipIf: seedIsGarden,
+			SkipIf:       seedIsGarden,
 		})
 		destroyEtcdCRD = g.Add(flow.Task{
 			Name:         "Destroy ETCD-related custom resource definitions",
 			Fn:           component.OpDestroyAndWait(c.etcdCRD).Destroy,
 			Dependencies: flow.NewTaskIDs(destroyEtcdDruid),
-			SkipIf: seedIsGarden,
+			SkipIf:       seedIsGarden,
 		})
 		destroyFluentOperatorCRDs = g.Add(flow.Task{
 			Name:         "Destroy Fluent Operator CRDs",
 			Fn:           component.OpDestroyAndWait(c.fluentCRD).Destroy,
 			Dependencies: flow.NewTaskIDs(destroyFluentOperatorResources, noControllerInstallations),
-			SkipIf: seedIsGarden,
+			SkipIf:       seedIsGarden,
 		})
-
 
 		syncPointCleanedUp = flow.NewTaskIDs(
 			destroyClusterIdentity,
@@ -324,30 +314,19 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Fn:           component.OpDestroyAndWait(c.system).Destroy,
 			Dependencies: flow.NewTaskIDs(syncPointCleanedUp),
 		})
+		ensureNoManagedResourcesExist = g.Add(flow.Task{
+			Name:         "Ensuring all ManagedResources are gone",
+			Fn:           ensureNoManagedResources(r.SeedClientSet.Client()),
+			Dependencies: flow.NewTaskIDs(destroySystemResources),
+			SkipIf:       seedIsGarden,
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Destroying gardener-resource-manager",
+			Fn:           c.gardenerResourceManager.Destroy,
+			Dependencies: flow.NewTaskIDs(ensureNoManagedResourcesExist),
+			SkipIf:       seedIsGarden,
+		})
 	)
-
-		var (
-			ensureNoManagedResourcesExist = g.Add(flow.Task{
-				Name: "Ensuring all ManagedResources are gone",
-				Fn: func(ctx context.Context) error {
-					managedResourcesStillExist, err := managedresources.CheckIfManagedResourcesExist(ctx, r.SeedClientSet.Client(), ptr.To(v1beta1constants.SeedResourceManagerClass))
-					if err != nil {
-						return err
-					}
-					if managedResourcesStillExist {
-						return fmt.Errorf("at least one ManagedResource still exists, cannot delete gardener-resource-manager")
-					}
-					return nil
-				},
-				Dependencies: flow.NewTaskIDs(destroySystemResources),
-			})
-			_ = g.Add(flow.Task{
-				Name:         "Destroying gardener-resource-manager",
-				Fn:           resourceManager.Destroy,
-				Dependencies: flow.NewTaskIDs(ensureNoManagedResourcesExist),
-			})
-		)
-	}
 
 	if err := g.Compile().Run(ctx, flow.Opts{
 		Log:              log,
@@ -370,6 +349,19 @@ func ensureNoControllerInstallations(c client.Client, seedName string) func(ctx 
 			return fmt.Errorf("can't continue with Seed deletion, because the following objects are still referencing it: ControllerInstallations=%v", associatedControllerInstallations)
 		}
 
+		return nil
+	}
+}
+
+func ensureNoManagedResources(c client.Client) func(ctx context.Context) error {
+	return func(ctx context.Context) error {
+		managedResourcesStillExist, err := managedresources.CheckIfManagedResourcesExist(ctx, c, ptr.To(v1beta1constants.SeedResourceManagerClass))
+		if err != nil {
+			return err
+		}
+		if managedResourcesStillExist {
+			return fmt.Errorf("at least one ManagedResource still exists, cannot delete gardener-resource-manager")
+		}
 		return nil
 	}
 }
