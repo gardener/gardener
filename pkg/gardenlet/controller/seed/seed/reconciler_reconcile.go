@@ -47,16 +47,10 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/component/clusteridentity"
-	"github.com/gardener/gardener/pkg/component/etcd"
-	extensioncrds "github.com/gardener/gardener/pkg/component/extensions/crds"
-	"github.com/gardener/gardener/pkg/component/hvpa"
 	"github.com/gardener/gardener/pkg/component/istio"
 	"github.com/gardener/gardener/pkg/component/kubeapiserverexposure"
-	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
-	"github.com/gardener/gardener/pkg/component/monitoring/prometheusoperator"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
-	"github.com/gardener/gardener/pkg/component/vpa"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -230,45 +224,69 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return err
 	}
 
-	// Deploy the CRDs in the seed cluster.
-	log.Info("Deploying custom resource definitions")
-	if err := machinecontrollermanager.NewCRD(seedClient, applier).Deploy(ctx); err != nil {
-		return err
+	var (
+		g = flow.NewGraph("Seed reconciliation")
+
+		deployMachineCRD = g.Add(flow.Task{
+			Name: "Deploying machine-related custom resource definitions",
+			Fn:   c.machineCRD.Deploy,
+		})
+		deployExtensionCRD = g.Add(flow.Task{
+			Name: "Deploying extensions-related custom resource definitions",
+			Fn:   c.extensionCRD.Deploy,
+		})
+		deployEtcdCRD = g.Add(flow.Task{
+			Name:   "Deploying ETCD-related custom resource definitions",
+			Fn:     c.etcdCRD.Deploy,
+			SkipIf: seedIsGarden,
+		})
+		deployIstioCRD = g.Add(flow.Task{
+			Name:   "Deploying Istio-related custom resource definitions",
+			Fn:     c.istioCRD.Deploy,
+			SkipIf: seedIsGarden,
+		})
+		deployVPACRD = g.Add(flow.Task{
+			Name:   "Deploying VPA-related custom resource definitions",
+			Fn:     c.vpaCRD.Deploy,
+			SkipIf: seedIsGarden || !vpaEnabled(seed.GetInfo().Spec.Settings),
+		})
+		reconcileHVPACRD = g.Add(flow.Task{
+			Name:   "Reconciling HVPA-related custom resource definitions",
+			Fn:     c.hvpaCRD.Deploy,
+			SkipIf: seedIsGarden,
+		})
+		deployFluentCRD = g.Add(flow.Task{
+			Name:   "Deploying logging-related custom resource definitions",
+			Fn:     c.fluentCRD.Deploy,
+			SkipIf: seedIsGarden,
+		})
+		deployPrometheusCRD = g.Add(flow.Task{
+			Name:   "Deploying monitoring-related custom resource definitions",
+			Fn:     c.prometheusCRD.Deploy,
+			SkipIf: seedIsGarden,
+		})
+		syncPointCRDs = flow.NewTaskIDs(
+			deployMachineCRD,
+			deployExtensionCRD,
+			deployEtcdCRD,
+			deployIstioCRD,
+			deployVPACRD,
+			reconcileHVPACRD,
+			deployFluentCRD,
+			deployPrometheusCRD,
+		)
+	)
+
+	if err := g.Compile().Run(ctx, flow.Opts{
+		Log:              log,
+		ProgressReporter: r.reportProgress(log, seed.GetInfo()),
+	}); err != nil {
+		return flow.Errors(err)
 	}
 
-	if err := extensioncrds.NewCRD(applier).Deploy(ctx); err != nil {
-		return err
-	}
+	return secretsManager.Cleanup(ctx)
 
 	if !seedIsGarden {
-		if err := etcd.NewCRD(seedClient, applier).Deploy(ctx); err != nil {
-			return err
-		}
-
-		if err := istio.NewCRD(chartApplier).Deploy(ctx); err != nil {
-			return err
-		}
-
-		if vpaEnabled {
-			if err := vpa.NewCRD(applier, nil).Deploy(ctx); err != nil {
-				return err
-			}
-		}
-
-		if hvpaEnabled {
-			if err := hvpa.NewCRD(applier).Deploy(ctx); err != nil {
-				return err
-			}
-		}
-
-		if err := fluentoperator.NewCRDs(applier).Deploy(ctx); err != nil {
-			return err
-		}
-
-		if err := prometheusoperator.NewCRDs(applier).Deploy(ctx); err != nil {
-			return err
-		}
-
 		// When the seed is the garden cluster then gardener-resource-manager is reconciled by the gardener-operator.
 		var defaultNotReadyTolerationSeconds, defaultUnreachableTolerationSeconds *int64
 		if nodeToleration := r.Config.NodeToleration; nodeToleration != nil {
