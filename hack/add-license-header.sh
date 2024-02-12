@@ -17,10 +17,16 @@ set -e
 
 echo "> Adding Apache License header to all go files where it is not present"
 
+# addlicence with a license file (parameter -f) expects no comments in the file.
+# LICENSE_BOILERPLATE.txt is however also used also when generating go code.
+# Therefore we remove '//' from LICENSE_BOILERPLATE.txt here before passing it to addlicense.
+
+temp_file=$(mktemp)
+trap "rm -f $temp_file" EXIT
+sed 's|^//||' hack/LICENSE_BOILERPLATE.txt > $temp_file
+
 addlicense \
-  -c "SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file." \
-  -y "$(date +"%Y")" \
-  -l apache \
+  -f $temp_file \
   -ignore ".idea/**" \
   -ignore ".vscode/**" \
   -ignore "dev/**" \
@@ -28,6 +34,6 @@ addlicense \
   -ignore "**/*.html" \
   -ignore "**/*.yaml" \
   -ignore "**/Dockerfile" \
-  -ignore "pkg/component/**/*.sh" \
+  -ignore "pkg/**/*.sh" \
   -ignore "third_party/gopkg.in/yaml.v2/**" \
   .
