@@ -19,9 +19,12 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -102,8 +105,8 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 	conditionResourcesProgressing := v1beta1helper.GetOrInitConditionWithClock(r.Clock, mr.Status.Conditions, resourcesv1alpha1.ResourcesProgressing)
 
 	for _, ref := range mr.Status.Resources {
-		// only Deployment, StatefulSet and DaemonSet are considered for Progressing condition
-		if ref.GroupVersionKind().Group != appsv1.GroupName {
+		// only resources in the apps/v1 and monitoring.coreos.com/v1 API groups are considered for Progressing condition
+		if !sets.New[string](appsv1.GroupName, monitoring.GroupName).Has(ref.GroupVersionKind().Group) {
 			continue
 		}
 
@@ -115,6 +118,10 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 			obj = &appsv1.StatefulSet{}
 		case "DaemonSet":
 			obj = &appsv1.DaemonSet{}
+		case "Prometheus":
+			obj = &monitoringv1.Prometheus{}
+		case "Alertmanager":
+			obj = &monitoringv1.Alertmanager{}
 		default:
 			continue
 		}
@@ -208,6 +215,12 @@ func (r *Reconciler) checkProgressing(ctx context.Context, obj client.Object) (b
 
 	case *appsv1.DaemonSet:
 		progressing, reason = health.IsDaemonSetProgressing(o)
+
+	case *monitoringv1.Prometheus:
+		progressing, reason = health.IsPrometheusProgressing(o)
+
+	case *monitoringv1.Alertmanager:
+		progressing, reason = health.IsAlertmanagerProgressing(o)
 	}
 
 	return progressing, reason, nil
