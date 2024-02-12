@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -44,10 +45,18 @@ const (
 	DefaultWatchDuration = 5 * time.Minute
 	// KubeConfigSecretName is the name of the kubecfg secret with internal DNS for external access.
 	KubeConfigSecretName = gardenerutils.SecretNamePrefixShootAccess + "dependency-watchdog-probe"
-	// managedResourceTargetName is th name of the managed resource created for DWD
+	// managedResourceTargetName is the name of the managed resource created for DWD.
 	managedResourceTargetName = "shoot-core-dependency-watchdog"
-	// DefaultKCMNodeMonitorGraceDuration is the default value for the NodeMonitorGraceDuration parameter of KCM
+	// DefaultKCMNodeMonitorGraceDuration is the default value for the NodeMonitorGraceDuration parameter of KCM.
 	DefaultKCMNodeMonitorGraceDuration = 40 * time.Second
+
+	// TODO: (@aaronfern) remove the following 3 variables with g/g 1.91
+	// ExternalProbeSecretName is the name of the kubecfg secret with internal DNS for external access.
+	ExternalProbeSecretName = gardenerutils.SecretNamePrefixShootAccess + "dependency-watchdog-external-probe"
+	// InternalProbeSecretName is the name of the kubecfg secret with cluster IP access.
+	InternalProbeSecretName = gardenerutils.SecretNamePrefixShootAccess + "dependency-watchdog-internal-probe"
+	// TempGRMConfigMapName is the name is the configMap that is temporarily deployed for DWD prober
+	TempGRMConfigMapName = "gardener-resource-manager-dwd"
 )
 
 // NewAccess creates a new instance of the deployer for shoot cluster access for the dependency-watchdog.
@@ -57,6 +66,22 @@ func NewAccess(
 	secretsManager secretsmanager.Interface,
 	values AccessValues,
 ) component.Deployer {
+	return &dependencyWatchdogAccess{
+		client:         client,
+		namespace:      namespace,
+		secretsManager: secretsManager,
+		values:         values,
+	}
+}
+
+// TODO(aaronfern): remove this when g/g v1.91 is released
+// NewAccess creates a new instance of dependencyWatchdogAccess for shoot cluster access for the dependency-watchdog.
+func NewDWDAccess(
+	client client.Client,
+	namespace string,
+	secretsManager secretsmanager.Interface,
+	values AccessValues,
+) *dependencyWatchdogAccess {
 	return &dependencyWatchdogAccess{
 		client:         client,
 		namespace:      namespace,
@@ -98,26 +123,97 @@ func (d *dependencyWatchdogAccess) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	// Create MR
-	var registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+	// Delete old Secrets and CM with shoot reconcile
+	err := kubernetesutils.DeleteObjects(ctx, d.client,
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: InternalProbeSecretName, Namespace: d.namespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: ExternalProbeSecretName, Namespace: d.namespace}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: TempGRMConfigMapName, Namespace: d.namespace}},
+	)
+
+	var registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
 	role := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "gardener.cloud:target:" + prefixDependencyWatchdog, //"gardener.cloud:target:dependency-watchdog",
-			Namespace: v1beta1constants.KubeNodeLease,
+			Name:      "gardener.cloud:target:" + prefixDependencyWatchdog,
+			Namespace: corev1.NamespaceNodeLease,
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
 				APIGroups: []string{"coordination.k8s.io"},
 				Resources: []string{"leases"},
-				Verbs:     []string{"create", "get", "update", "patch", "list"},
+				Verbs:     []string{"get", "list"},
 			},
 		},
 	}
 	roleBinding := &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "gardener.cloud:target:" + prefixDependencyWatchdog, //"gardener.cloud:target:dependency-watchdog",
-			Namespace: v1beta1constants.KubeNodeLease,
+			Name:      "gardener.cloud:target:" + prefixDependencyWatchdog,
+			Namespace: corev1.NamespaceNodeLease,
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "Role",
+			Name:     role.Name,
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      strings.TrimPrefix(KubeConfigSecretName, gardenerutils.SecretNamePrefixShootAccess),
+			Namespace: metav1.NamespaceSystem,
+		}},
+	}
+
+	resources, err := registry.AddAllAndSerialize(
+		role,
+		roleBinding,
+	)
+	if err != nil {
+		return err
+	}
+
+	return managedresources.CreateForShoot(ctx, d.client, d.namespace, managedResourceTargetName, managedresources.LabelValueGardener, false, resources)
+}
+
+// TODO(aaronfern): remove this when g/g v1.91 is released
+func (d *dependencyWatchdogAccess) DeployMigrate(ctx context.Context) error {
+	// Create shoot access secret
+	caSecret := corev1.Secret{}
+	err := d.client.Get(ctx, types.NamespacedName{Namespace: d.namespace, Name: v1beta1constants.SecretNameCACluster}, &caSecret)
+	if err != nil {
+		return fmt.Errorf("error in fetching secret %s. err: %v", v1beta1constants.SecretNameCACluster, err)
+	}
+
+	var (
+		shootAccessSecret = gardenerutils.NewShootAccessSecret(KubeConfigSecretName, d.namespace).WithNameOverride(KubeConfigSecretName)
+		kubeconfig        = kubernetesutils.NewKubeconfig(
+			d.namespace,
+			clientcmdv1.Cluster{Server: d.values.ServerInCluster, CertificateAuthorityData: caSecret.Data[secretsutils.DataKeyCertificateBundle]},
+			clientcmdv1.AuthInfo{Token: ""},
+		)
+	)
+
+	if err := shootAccessSecret.WithKubeconfig(kubeconfig).Reconcile(ctx, d.client); err != nil {
+		return err
+	}
+
+	var registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+
+	role := &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "gardener.cloud:target:" + prefixDependencyWatchdog,
+			Namespace: corev1.NamespaceNodeLease,
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{"coordination.k8s.io"},
+				Resources: []string{"leases"},
+				Verbs:     []string{"get", "list"},
+			},
+		},
+	}
+	roleBinding := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "gardener.cloud:target:" + prefixDependencyWatchdog,
+			Namespace: corev1.NamespaceNodeLease,
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,

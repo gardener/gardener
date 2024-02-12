@@ -9,7 +9,7 @@ require (
 	github.com/containerd/containerd v1.7.13
 	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/fluent/fluent-operator/v2 v2.7.0
-	github.com/gardener/dependency-watchdog v1.1.2
+	github.com/gardener/dependency-watchdog v1.2.0
 	github.com/gardener/etcd-druid v0.22.0
 	github.com/gardener/hvpa-controller/api v0.5.0
 	github.com/gardener/machine-controller-manager v0.50.0
@@ -206,5 +206,3 @@ require (
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.1.2 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 )
-
-replace github.com/gardener/dependency-watchdog v1.1.2 => github.com/rishabh-11/dependency-watchdog v0.0.0-20240112142313-1002b1a1f5f0 // indirect

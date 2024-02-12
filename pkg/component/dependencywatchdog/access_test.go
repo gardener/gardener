@@ -63,10 +63,7 @@ rules:
   resources:
   - leases
   verbs:
-  - create
   - get
-  - update
-  - patch
   - list
 `
 
@@ -95,7 +92,6 @@ subjects:
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
 
 		access = NewAccess(fakeClient, namespace, sm, AccessValues{
-			//ServerOutOfCluster: serverOutOfCluster,
 			ServerInCluster: serverInCluster,
 		})
 
@@ -136,6 +132,7 @@ users:
   user: {}
 `)},
 		}
+
 		expectedManagedResource = &resourcesv1alpha1.ManagedResource{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
@@ -145,13 +142,13 @@ users:
 				Name:            "shoot-core-dependency-watchdog",
 				Namespace:       namespace,
 				Labels:          map[string]string{"origin": "gardener"},
-				Annotations:     map[string]string{"reference.resources.gardener.cloud/secret-45a06c25": "managedresource-shoot-core-dependency-watchdog-966f0b26"},
+				Annotations:     map[string]string{"reference.resources.gardener.cloud/secret-2c6a3fae": "managedresource-shoot-core-dependency-watchdog-967328e8"},
 				ResourceVersion: "1",
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
 				SecretRefs: []corev1.LocalObjectReference{
 					{
-						Name: "managedresource-shoot-core-dependency-watchdog-966f0b26",
+						Name: "managedresource-shoot-core-dependency-watchdog-967328e8",
 					},
 				},
 				InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
@@ -164,7 +161,7 @@ users:
 				Kind:       "Secret",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            "managedresource-shoot-core-dependency-watchdog-966f0b26",
+				Name:            "managedresource-shoot-core-dependency-watchdog-967328e8",
 				Namespace:       namespace,
 				ResourceVersion: "1",
 				Labels: map[string]string{
@@ -182,6 +179,8 @@ users:
 
 	AfterEach(func() {
 		Expect(fakeClient.Delete(ctx, expectedProbeSecret)).To(Or(Succeed(), BeNotFoundError()))
+		Expect(fakeClient.Delete(ctx, expectedManagedResourceSecret)).To(Or(Succeed(), BeNotFoundError()))
+		Expect(fakeClient.Delete(ctx, expectedManagedResource)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
 	Describe("#Deploy", func() {
@@ -196,7 +195,7 @@ users:
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledManagedResource), reconciledManagedResource)).To(Succeed())
 			Expect(reconciledManagedResource).To(DeepEqual(expectedManagedResource))
 
-			reconciledManagedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-shoot-core-dependency-watchdog-966f0b26", Namespace: namespace}}
+			reconciledManagedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-shoot-core-dependency-watchdog-967328e8", Namespace: namespace}}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledManagedResourceSecret), reconciledManagedResourceSecret)).To(Succeed())
 			Expect(reconciledManagedResourceSecret).To(DeepEqual(expectedManagedResourceSecret))
 		})
@@ -208,11 +207,14 @@ users:
 			Expect(fakeClient.Create(ctx, reconciledInternalProbeSecret)).To(Succeed())
 			reconciledManagedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "shoot-core-dependency-watchdog", Namespace: namespace}}
 			Expect(fakeClient.Create(ctx, reconciledManagedResource)).To(Succeed())
+			reconciledManagedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-shoot-core-dependency-watchdog-967328e8", Namespace: namespace}}
+			Expect(fakeClient.Create(ctx, reconciledManagedResourceSecret)).To(Succeed())
 
 			Expect(access.Destroy(ctx)).To(Succeed())
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledInternalProbeSecret), &corev1.Secret{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledManagedResource), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledManagedResourceSecret), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
 		})
 	})
 })

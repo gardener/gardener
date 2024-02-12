@@ -37,7 +37,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/types"
+
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
@@ -54,6 +58,7 @@ import (
 
 	"github.com/gardener/gardener/cmd/gardenlet/app/bootstrappers"
 	cmdutils "github.com/gardener/gardener/cmd/utils"
+
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -63,6 +68,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
+	dwd "github.com/gardener/gardener/pkg/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	"github.com/gardener/gardener/pkg/features"
@@ -72,12 +78,17 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap/certificate"
 	"github.com/gardener/gardener/pkg/gardenlet/controller"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
+	resourcemanagerv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	thirdpartyapiutil "github.com/gardener/gardener/third_party/controller-runtime/pkg/apiutil"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 )
 
 // Name is a const for the name of this component.
@@ -389,6 +400,11 @@ func (g *garden) Start(ctx context.Context) error {
 		return err
 	}
 
+	log.Info("Creating new secret and managed resource required by DWD")
+	if err := g.createNewDWDResources(ctx, g.mgr.GetClient(), log); err != nil {
+		return err
+	}
+
 	log.Info("Setting up shoot client map")
 	shootClientMap, err := clientmapbuilder.
 		NewShootClientMapBuilder().
@@ -436,6 +452,134 @@ func (g *garden) Start(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// TODO(aaronfern): Remove this code after v1.91 has been released.
+func (g *garden) createNewDWDResources(ctx context.Context, seedClient client.Client, log logr.Logger) error {
+	// Fetch all namespaces
+	namespaceList := &corev1.NamespaceList{}
+	if err := seedClient.List(ctx, namespaceList); err != nil {
+		return err
+	}
+
+	// Filter out all namespaces that are in deletion
+	namespacesNotInDeletion := []corev1.Namespace{}
+	for _, namespace := range namespaceList.Items {
+		if namespace.DeletionTimestamp == nil && namespace.Status.Phase != corev1.NamespaceTerminating {
+			namespacesNotInDeletion = append(namespacesNotInDeletion, namespace)
+		}
+	}
+
+	tasks := []flow.TaskFn{}
+	for _, namespace := range namespacesNotInDeletion {
+		ns := namespace
+		tasks = append(tasks, func(ctx context.Context) error {
+			var dwdOldSecret corev1.Secret
+			if err := seedClient.Get(ctx, types.NamespacedName{Namespace: ns.Name, Name: dwd.InternalProbeSecretName}, &dwdOldSecret); err != nil {
+				// If ns does not contain old DWD secret, do not procees.
+				if apierrors.IsNotFound(err) {
+					return nil
+				}
+				return err
+			}
+
+			// Fetch GRM deployment
+			grmDeploy := appsv1.Deployment{}
+			if err := seedClient.Get(ctx, types.NamespacedName{Namespace: ns.Name, Name: "gardener-resource-manager"}, &grmDeploy); err != nil {
+				if apierrors.IsNotFound(err) {
+					// Do not proceed if GRM deployment is not present
+					return nil
+				}
+				return err
+			}
+
+			// Create a DWDAccess object
+			InClusterServerURL := fmt.Sprintf("%s.%s.svc", v1beta1constants.DeploymentNameKubeAPIServer, ns.Name)
+			dwdAccess := dwd.NewDWDAccess(seedClient, ns.Name, nil, dwd.AccessValues{ServerInCluster: InClusterServerURL})
+
+			err := dwdAccess.DeployMigrate(ctx)
+			if err != nil {
+				return err
+			}
+
+			// Fetch and update the GRM configmap
+			grmCM := corev1.ConfigMap{}
+			volumeNameConfig := "config"
+			grmCMName := ""
+			for _, vol := range grmDeploy.Spec.Template.Spec.Volumes {
+				if vol.Name == volumeNameConfig {
+					grmCMName = vol.ConfigMap.Name
+				}
+			}
+			if len(grmCMName) == 0 {
+				return nil
+			}
+			if err := seedClient.Get(ctx, types.NamespacedName{Namespace: ns.Name, Name: grmCMName}, &grmCM); err != nil {
+				if apierrors.IsNotFound(err) {
+					return nil
+				}
+				return err
+			}
+
+			cmData := grmCM.Data["config.yaml"]
+			rmConfig := resourcemanagerv1alpha1.ResourceManagerConfiguration{}
+
+			// create codec
+			var codec runtime.Codec
+			configScheme := runtime.NewScheme()
+			utilruntime.Must(resourcemanagerv1alpha1.AddToScheme(configScheme))
+			utilruntime.Must(apiextensionsv1.AddToScheme(configScheme))
+			ser := json.NewSerializerWithOptions(json.DefaultMetaFactory, configScheme, configScheme, json.SerializerOptions{
+				Yaml:   true,
+				Pretty: false,
+				Strict: false,
+			})
+			versions := schema.GroupVersions([]schema.GroupVersion{
+				resourcemanagerv1alpha1.SchemeGroupVersion,
+				apiextensionsv1.SchemeGroupVersion,
+			})
+			codec = serializer.NewCodecFactory(configScheme).CodecForVersions(ser, ser, versions, versions)
+
+			obj, err := runtime.Decode(codec, []byte(cmData))
+			if err != nil {
+				return err
+			}
+			rmConfig = *(obj.(*resourcemanagerv1alpha1.ResourceManagerConfiguration))
+
+			rmConfig.TargetClientConnection.Namespaces = append(rmConfig.TargetClientConnection.Namespaces, corev1.NamespaceNodeLease)
+
+			data, err := runtime.Encode(codec, &rmConfig)
+			if err != nil {
+				return err
+			}
+
+			err = seedClient.Delete(ctx, &grmCM)
+			if err != nil {
+				return err
+			}
+
+			grmCM.Data = map[string]string{"config.yaml": string(data)}
+			grmCM.ObjectMeta.Name = dwd.TempGRMConfigMapName
+			grmCM.ObjectMeta.ResourceVersion = ""
+
+			err = seedClient.Create(ctx, &grmCM)
+			if err != nil {
+				return err
+			}
+
+			// Update GRM delpoy to reference the newly created cm
+			grmDeployCopy := grmDeploy.DeepCopy()
+			for n, vol := range grmDeploy.Spec.Template.Spec.Volumes {
+				if vol.Name == "config" {
+					grmCMName = vol.ConfigMap.Name
+					grmDeploy.Spec.Template.Spec.Volumes[n].ConfigMap.Name = dwd.TempGRMConfigMapName
+				}
+			}
+
+			return seedClient.Patch(ctx, &grmDeploy, client.MergeFrom(grmDeployCopy))
+		})
+	}
+	return flow.Parallel(tasks...)(ctx)
 }
 
 // TODO(Kostov6): Remove this code after v1.91 has been released.
