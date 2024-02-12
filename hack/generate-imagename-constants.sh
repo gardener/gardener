@@ -34,7 +34,7 @@ package $package_name
 
 const ("
 
-for image_name in $(yaml2json < "$images_yaml" | jq -r '[.images[].name] | unique | .[]'); do
+for image_name in $(yq -r '[.images[].name] | sort | unique | .[]' $images_yaml); do
   variable_name="$(camelCase "$image_name")"
 
   out="

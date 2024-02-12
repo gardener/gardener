@@ -41,6 +41,7 @@ groups:
       service: kube-kubelet
       severity: warning
       visibility: operator
+      type: seed
     annotations:
       description: Pod {{ $labels.pod }} is not ready for more than 30 minutes.
       summary: Control plane pod is in a not ready state
