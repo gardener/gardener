@@ -71,4 +71,8 @@ This allows Shoot owners to use the [hosts directory pattern](https://github.com
 
 ### The registry-cache Extension
 
-[Configuring `containerd` registries for a Shoot](#configuring-containerd-registries-for-a-shoot) is not the recommended approach for configuring a pull through cache for a Shoot. There is a Gardener-native extension named [registry-cache](https://github.com/gardener/gardener-extension-registry-cache) that manages a pull through cache for a Shoot using the upstream [distribution/distribution](https://github.com/distribution/distribution) project.
+There is a Gardener-native extension named [registry-cache](https://github.com/gardener/gardener-extension-registry-cache) that supports:
+- Configuring containerd registry mirrors based on the above-described contract. The feature is added in [registry-cache@v0.6.0](https://github.com/gardener/gardener-extension-registry-cache/releases/tag/v0.6.0).
+- Running pull through cache(s) in the Shoot.
+
+For more details, see the [registry-cache documentation](https://github.com/gardener/gardener-extension-registry-cache/blob/main/README.md).
