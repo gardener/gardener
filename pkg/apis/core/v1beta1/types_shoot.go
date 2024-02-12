@@ -437,7 +437,7 @@ type DNS struct {
 
 // DNSProvider contains information about a DNS provider.
 type DNSProvider struct {
-	// TODO(timuthy): Remove this field with release v1.87.
+	// TODO(timuthy): Remove this field after v1.96 has been released.
 
 	// Domains contains information about which domains shall be included/excluded for this provider.
 	// Deprecated: This field is deprecated and will be removed in Gardener release v1.87.
@@ -455,7 +455,7 @@ type DNSProvider struct {
 	// Type is the DNS provider type.
 	// +optional
 	Type *string `json:"type,omitempty" protobuf:"bytes,4,opt,name=type"`
-	// TODO(timuthy): Remove this field with release v1.87.
+	// TODO(timuthy): Remove this field after v1.96 has been released.
 
 	// Zones contains information about which hosted zones shall be included/excluded for this provider.
 	// Deprecated: This field is deprecated and will be removed in Gardener release v1.87.

@@ -355,7 +355,7 @@ type DNS struct {
 
 // DNSProvider contains information about a DNS provider.
 type DNSProvider struct {
-	// TODO(timuthy): Remove this field with release v1.87.
+	// TODO(timuthy): Remove this field after v1.96 has been released.
 
 	// Domains contains information about which domains shall be included/excluded for this provider.
 	// Deprecated: This field is deprecated and will be removed in Gardener release v1.87.
@@ -370,7 +370,7 @@ type DNSProvider struct {
 	// Type is the DNS provider type for the Shoot. Only relevant if not the default domain is used for
 	// this shoot.
 	Type *string
-	// TODO(timuthy): Remove this field with release v1.87.
+	// TODO(timuthy): Remove this field after v1.96 has been released.
 
 	// Zones contains information about which hosted zones shall be included/excluded for this provider.
 	// Deprecated: This field is deprecated and will be removed in Gardener release v1.87.
