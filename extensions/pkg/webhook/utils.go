@@ -299,21 +299,24 @@ func EnsureUnitOption(items []*unit.UnitOption, item *unit.UnitOption) []*unit.U
 // EnsureFileWithPath ensures that a file with a path equal to the path of the given file exists in the given slice
 // and is equal to the given file.
 func EnsureFileWithPath(items []extensionsv1alpha1.File, item extensionsv1alpha1.File) []extensionsv1alpha1.File {
-	if i := fileWithPathIndex(items, item.Path); i < 0 {
-		items = append(items, item)
-	} else if !reflect.DeepEqual(items[i], item) {
-		items[i] = item
+	i := slices.IndexFunc(items, func(f extensionsv1alpha1.File) bool {
+		return f.Path == item.Path
+	})
+	if i < 0 {
+		return append(items, item)
 	}
+	items[i] = item
 	return items
 }
 
 // EnsureUnitWithName ensures that an unit with a name equal to the name of the given unit exists in the given slice
 // and is equal to the given unit.
 func EnsureUnitWithName(items []extensionsv1alpha1.Unit, item extensionsv1alpha1.Unit) []extensionsv1alpha1.Unit {
-	if i := unitWithNameIndex(items, item.Name); i < 0 {
-		items = append(items, item)
-	} else if !reflect.DeepEqual(items[i], item) {
-		items[i] = item
+	i := slices.IndexFunc(items, func(u extensionsv1alpha1.Unit) bool {
+		return u.Name == item.Name
+	})
+	if i < 0 {
+		return append(items, item)
 	}
 	items[i] = item
 	return items
