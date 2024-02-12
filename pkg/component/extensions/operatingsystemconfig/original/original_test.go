@@ -125,6 +125,7 @@ var _ = Describe("Original", func() {
 				"kubelet",
 				"sshd-ensurer",
 				"gardener-user",
+				"gardener-node-agent",
 			}))
 		})
 
@@ -144,6 +145,7 @@ var _ = Describe("Original", func() {
 				"kernel-config",
 				"kubelet",
 				"sshd-ensurer",
+				"gardener-node-agent",
 			}))
 		})
 
