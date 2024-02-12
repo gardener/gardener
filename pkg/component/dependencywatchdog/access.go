@@ -50,7 +50,6 @@ const (
 	// DefaultKCMNodeMonitorGraceDuration is the default value for the NodeMonitorGraceDuration parameter of KCM.
 	DefaultKCMNodeMonitorGraceDuration = 40 * time.Second
 
-	// TODO: (@aaronfern) remove the following 3 variables with g/g 1.91
 	// ExternalProbeSecretName is the name of the kubecfg secret with internal DNS for external access.
 	ExternalProbeSecretName = gardenerutils.SecretNamePrefixShootAccess + "dependency-watchdog-external-probe"
 	// InternalProbeSecretName is the name of the kubecfg secret with cluster IP access.
@@ -74,8 +73,8 @@ func NewAccess(
 	}
 }
 
+// NewDWDAccess creates a new instance of dependencyWatchdogAccess for shoot cluster access for the dependency-watchdog.
 // TODO(aaronfern): remove this when g/g v1.91 is released
-// NewAccess creates a new instance of dependencyWatchdogAccess for shoot cluster access for the dependency-watchdog.
 func NewDWDAccess(
 	client client.Client,
 	namespace string,
@@ -124,11 +123,13 @@ func (d *dependencyWatchdogAccess) Deploy(ctx context.Context) error {
 	}
 
 	// Delete old Secrets and CM with shoot reconcile
-	err := kubernetesutils.DeleteObjects(ctx, d.client,
+	if err := kubernetesutils.DeleteObjects(ctx, d.client,
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: InternalProbeSecretName, Namespace: d.namespace}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: ExternalProbeSecretName, Namespace: d.namespace}},
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: TempGRMConfigMapName, Namespace: d.namespace}},
-	)
+	); err != nil {
+		return err
+	}
 
 	var registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 

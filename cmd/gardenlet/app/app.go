@@ -399,7 +399,7 @@ func (g *garden) Start(ctx context.Context) error {
 	}
 
 	log.Info("Creating new secret and managed resource required by DWD")
-	if err := g.createNewDWDResources(ctx, g.mgr.GetClient(), log); err != nil {
+	if err := g.createNewDWDResources(ctx, g.mgr.GetClient()); err != nil {
 		return err
 	}
 
@@ -453,7 +453,7 @@ func (g *garden) Start(ctx context.Context) error {
 }
 
 // TODO(aaronfern): Remove this code after v1.91 has been released.
-func (g *garden) createNewDWDResources(ctx context.Context, seedClient client.Client, log logr.Logger) error {
+func (g *garden) createNewDWDResources(ctx context.Context, seedClient client.Client) error {
 	// Fetch all namespaces
 	namespaceList := &corev1.NamespaceList{}
 	if err := seedClient.List(ctx, namespaceList); err != nil {
@@ -569,7 +569,6 @@ func (g *garden) createNewDWDResources(ctx context.Context, seedClient client.Cl
 			grmDeployCopy := grmDeploy.DeepCopy()
 			for n, vol := range grmDeploy.Spec.Template.Spec.Volumes {
 				if vol.Name == "config" {
-					grmCMName = vol.ConfigMap.Name
 					grmDeploy.Spec.Template.Spec.Volumes[n].ConfigMap.Name = dwd.TempGRMConfigMapName
 				}
 			}
