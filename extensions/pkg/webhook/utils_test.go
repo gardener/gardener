@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/extensions/pkg/webhook"
@@ -737,11 +736,11 @@ var _ = Describe("Utils", func() {
 					files = []extensionsv1alpha1.File{
 						{
 							Path:        "path1",
-							Permissions: pointer.Int32(0644),
+							Permissions: ptr.To(int32(0644)),
 						},
 						{
 							Path:        "path2",
-							Permissions: pointer.Int32(0644),
+							Permissions: ptr.To(int32(0644)),
 						},
 					}
 				})
@@ -749,7 +748,7 @@ var _ = Describe("Utils", func() {
 				It("should add a new File if not present", func() {
 					newFile := extensionsv1alpha1.File{
 						Path:        "path3",
-						Permissions: pointer.Int32(0644),
+						Permissions: ptr.To(int32(0644)),
 					}
 					result := webhook.EnsureFileWithPath(files, newFile)
 					Expect(result).To(Equal(append(files, newFile)))
@@ -758,17 +757,17 @@ var _ = Describe("Utils", func() {
 				It("should replace the existing File if it's not identical", func() {
 					existingFile := extensionsv1alpha1.File{
 						Path:        "path1",
-						Permissions: pointer.Int32(0400),
+						Permissions: ptr.To(int32(0400)),
 					}
 					result := webhook.EnsureFileWithPath(files, existingFile)
 					Expect(result).To(Equal([]extensionsv1alpha1.File{
 						{
 							Path:        "path1",
-							Permissions: pointer.Int32(0400),
+							Permissions: ptr.To(int32(0400)),
 						},
 						{
 							Path:        "path2",
-							Permissions: pointer.Int32(0644),
+							Permissions: ptr.To(int32(0644)),
 						},
 					}))
 				})
