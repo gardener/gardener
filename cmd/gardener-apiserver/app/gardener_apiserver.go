@@ -312,21 +312,29 @@ func (o *Options) Run(ctx context.Context) error {
 		return err
 	}
 
-	if err := server.GenericAPIServer.AddPostStartHook("bootstrap-garden-cluster", func(_ genericapiserver.PostStartHookContext) error {
-		if _, err := kubeClient.CoreV1().Namespaces().Get(ctx, gardencorev1beta1.GardenerSeedLeaseNamespace, metav1.GetOptions{}); client.IgnoreNotFound(err) != nil {
-			return err
-		} else if err == nil {
-			// Namespace already exists
-			return nil
-		}
+	ensureNamespace := func(namespace string) func(_ genericapiserver.PostStartHookContext) error {
+		return func(context genericapiserver.PostStartHookContext) error {
+			if _, err := kubeClient.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{}); client.IgnoreNotFound(err) != nil {
+				return err
+			} else if err == nil {
+				// Namespace already exists
+				return nil
+			}
 
-		_, err := kubeClient.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: gardencorev1beta1.GardenerSeedLeaseNamespace,
-			},
-		}, kubernetesclient.DefaultCreateOptions())
+			_, err := kubeClient.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespace,
+				},
+			}, kubernetesclient.DefaultCreateOptions())
+			return err
+		}
+	}
+
+	if err := server.GenericAPIServer.AddPostStartHook("bootstrap-garden-cluster", ensureNamespace(gardencorev1beta1.GardenerSeedLeaseNamespace)); err != nil {
 		return err
-	}); err != nil {
+	}
+
+	if err := server.GenericAPIServer.AddPostStartHook("bootstrap-shoot-issuer-namespace", ensureNamespace(gardencorev1beta1.GardenerShootIssuerNamespace)); err != nil {
 		return err
 	}
 
