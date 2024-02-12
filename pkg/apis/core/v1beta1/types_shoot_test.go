@@ -24,23 +24,6 @@ import (
 )
 
 var _ = Describe("Shoot", func() {
-	Describe("DNSProvider", func() {
-		It("should not allow to reuse protobuf numbers of already removed fields", func() {
-			obj := reflect.ValueOf(DNSProvider{}).Type()
-			for i := 0; i < obj.NumField(); i++ {
-				f := obj.Field(i)
-
-				protobufNum := strings.Split(f.Tag.Get("protobuf"), ",")[1]
-				if protobufNum == "1" {
-					Fail("protobuf 1 in DNSProvider is reserved for removed Domains field")
-				}
-				if protobufNum == "5" {
-					Fail("protobuf 5 in DNSProvider is reserved for removed Zones field")
-				}
-			}
-		})
-	})
-
 	Describe("ServiceAccountConfig", func() {
 		It("should not allow to reuse protobuf numbers of already removed fields", func() {
 			obj := reflect.ValueOf(ServiceAccountConfig{}).Type()

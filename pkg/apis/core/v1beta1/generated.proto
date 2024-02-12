@@ -670,8 +670,24 @@ message DNS {
   repeated DNSProvider providers = 2;
 }
 
+// DNSIncludeExclude contains information about which domains shall be included/excluded.
+message DNSIncludeExclude {
+  // Include is a list of domains that shall be included.
+  // +optional
+  repeated string include = 1;
+
+  // Exclude is a list of domains that shall be excluded.
+  // +optional
+  repeated string exclude = 2;
+}
+
 // DNSProvider contains information about a DNS provider.
 message DNSProvider {
+  // Domains contains information about which domains shall be included/excluded for this provider.
+  // Deprecated: This field is deprecated and will be removed in Gardener release v1.87.
+  // +optional
+  optional DNSIncludeExclude domains = 1;
+
   // Primary indicates that this DNSProvider is used for shoot related domains.
   // +optional
   optional bool primary = 2;
@@ -686,6 +702,11 @@ message DNSProvider {
   // Type is the DNS provider type.
   // +optional
   optional string type = 4;
+
+  // Zones contains information about which hosted zones shall be included/excluded for this provider.
+  // Deprecated: This field is deprecated and will be removed in Gardener release v1.87.
+  // +optional
+  optional DNSIncludeExclude zones = 5;
 }
 
 // DataVolume contains information about a data volume.

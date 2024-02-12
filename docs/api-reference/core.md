@@ -3970,6 +3970,49 @@ not a default domain is used.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.DNSIncludeExclude">DNSIncludeExclude
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.DNSProvider">DNSProvider</a>)
+</p>
+<p>
+<p>DNSIncludeExclude contains information about which domains shall be included/excluded.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>include</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Include is a list of domains that shall be included.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>exclude</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Exclude is a list of domains that shall be excluded.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.DNSProvider">DNSProvider
 </h3>
 <p>
@@ -3987,6 +4030,21 @@ not a default domain is used.</p>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+<code>domains</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.DNSIncludeExclude">
+DNSIncludeExclude
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Domains contains information about which domains shall be included/excluded for this provider.
+Deprecated: This field is deprecated and will be removed in Gardener release v1.87.</p>
+</td>
+</tr>
 <tr>
 <td>
 <code>primary</code></br>
@@ -4024,6 +4082,21 @@ string
 <td>
 <em>(Optional)</em>
 <p>Type is the DNS provider type.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>zones</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.DNSIncludeExclude">
+DNSIncludeExclude
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Zones contains information about which hosted zones shall be included/excluded for this provider.
+Deprecated: This field is deprecated and will be removed in Gardener release v1.87.</p>
 </td>
 </tr>
 </tbody>

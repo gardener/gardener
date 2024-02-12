@@ -70,6 +70,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNSAutoscaling":                         schema_pkg_apis_core_v1beta1_CoreDNSAutoscaling(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNSRewriting":                           schema_pkg_apis_core_v1beta1_CoreDNSRewriting(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNS":                                        schema_pkg_apis_core_v1beta1_DNS(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude":                          schema_pkg_apis_core_v1beta1_DNSIncludeExclude(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSProvider":                                schema_pkg_apis_core_v1beta1_DNSProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DataVolume":                                 schema_pkg_apis_core_v1beta1_DataVolume(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DeploymentRef":                              schema_pkg_apis_core_v1beta1_DeploymentRef(ref),
@@ -2651,6 +2652,49 @@ func schema_pkg_apis_core_v1beta1_DNS(ref common.ReferenceCallback) common.OpenA
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_DNSIncludeExclude(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "DNSIncludeExclude contains information about which domains shall be included/excluded.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"include": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Include is a list of domains that shall be included.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+					"exclude": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Exclude is a list of domains that shall be excluded.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_DNSProvider(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -2658,6 +2702,12 @@ func schema_pkg_apis_core_v1beta1_DNSProvider(ref common.ReferenceCallback) comm
 				Description: "DNSProvider contains information about a DNS provider.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
+					"domains": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Domains contains information about which domains shall be included/excluded for this provider. Deprecated: This field is deprecated and will be removed in Gardener release v1.87.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude"),
+						},
+					},
 					"primary": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Primary indicates that this DNSProvider is used for shoot related domains.",
@@ -2679,9 +2729,17 @@ func schema_pkg_apis_core_v1beta1_DNSProvider(ref common.ReferenceCallback) comm
 							Format:      "",
 						},
 					},
+					"zones": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Zones contains information about which hosted zones shall be included/excluded for this provider. Deprecated: This field is deprecated and will be removed in Gardener release v1.87.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude"),
+						},
+					},
 				},
 			},
 		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude"},
 	}
 }
 
