@@ -625,6 +625,13 @@ const (
 	// AnnotationCoreDNSRewritingDisabled disables core dns query rewriting even if the corresponding feature gate is enabled.
 	AnnotationCoreDNSRewritingDisabled = "alpha.featuregates.shoot.gardener.cloud/core-dns-rewriting-disabled"
 
+	// AnnotationAuthenticationIssuer is the key for an annotation applied to a Shoot which specifies
+	// if the shoot's issuer is managed by Gardener.
+	AnnotationAuthenticationIssuer = "authentication.gardener.cloud/issuer"
+	// AnnotationAuthenticationIssuerManaged is the value for [AnnotationAuthenticationIssuer] annotation that indicates that
+	// a shoot's issuer should be managed by Gardener.
+	AnnotationAuthenticationIssuerManaged = "managed"
+
 	// AnnotationPodSecurityEnforce is a constant for an annotation on `ControllerRegistration`s and `ControllerInstallation`s. When set the
 	// `extension` namespace is created with "pod-security.kubernetes.io/enforce" label set to AnnotationPodSecurityEnforce's value.
 	AnnotationPodSecurityEnforce = "security.gardener.cloud/pod-security-enforce"
