@@ -9,32 +9,3 @@ data:
     global:
       evaluation_interval: 1m
       scrape_interval: 1m
-
-    scrape_configs:
-    - job_name: extensions
-      kubernetes_sd_configs:
-      - role: pod
-      relabel_configs:
-      - source_labels:
-        - __meta_kubernetes_namespace
-        - __meta_kubernetes_pod_annotation_prometheus_io_scrape
-        - __meta_kubernetes_pod_annotation_prometheus_io_port
-        regex: extension-(.+);true;(.+)
-        action: keep
-      - source_labels:
-        - __address__
-        - __meta_kubernetes_pod_annotation_prometheus_io_port
-        action: replace
-        regex: ([^:]+)(?::\d+)?;(\d+)
-        replacement: $1:$2
-        target_label: __address__
-      - action: labelmap
-        regex: __meta_kubernetes_pod_label_(.+)
-      - source_labels: [ __meta_kubernetes_pod_annotation_prometheus_io_name ]
-        regex: (.+)
-        action: replace
-        target_label: job
-      - source_labels: [ __meta_kubernetes_namespace ]
-        target_label: namespace
-      - source_labels: [ __meta_kubernetes_pod_name ]
-        target_label: pod
