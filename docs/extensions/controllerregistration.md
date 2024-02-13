@@ -102,18 +102,32 @@ In order to allow extensions to get information about the garden and the seed cl
 
 ```yaml
 gardener:
+  version: <gardener-version>
   garden:
-    identifier: <uuid-of-gardener-installation>
+    clusterIdentity: <uuid-of-gardener-installation>
+    genericKubeconfigSecretName: <generic-garden-kubeconfig-secret-name>
   seed:
-    identifier: <seed-name>
-    region: europe
-    spec: <complete-seed-spec>
+    name:             <seed-name>
+    clusterIdentity:  <seed-cluster-identity>
+    annotations:      <seed-annotations>
+    labels:           <seed-labels>
+    provider:         <seed-provider-type>
+    region:           <seed-region>
+    volumeProvider:   <seed-first-volume-provider>
+    volumeProviders:  <seed-volume-providers>
+    ingressDomain:    <seed-ingress-domain>
+    protected:        <seed-protected-taint>
+    visible:          <seed-visible-setting>
+    taints:           <seed-taints>
+    networks:         <seed-networks>
+    blockCIDRs:       <seed-networks-blockCIDRs>
+    spec:             <seed-spec>
+  gardenlet:
+    featureGates: <gardenlet-feature-gates>
 ```
 
 Extensions can use this information in their Helm chart in case they require knowledge about the garden and the seed environment.
 The list might be extended in the future.
-
-:information_source: Gardener uses the UUID of the `garden` `Namespace` object in the `.gardener.garden.identifier` property.
 
 ### Scenario 2: Deployed by a (Non-Human) Kubernetes Operator
 
