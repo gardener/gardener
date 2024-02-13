@@ -490,6 +490,26 @@ func (r *Reconciler) runReconcileSeedFlow(
 			},
 			Dependencies: flow.NewTaskIDs(deployCachePrometheus),
 		})
+		deploySeedPrometheus = g.Add(flow.Task{
+			Name: "Deploying seed Prometheus",
+			Fn:   c.seedPrometheus.Deploy,
+		})
+		// TODO(rfranzke): Remove this after v1.92 has been released.
+		_ = g.Add(flow.Task{
+			Name: "Cleaning up legacy seed Prometheus resources",
+			Fn: func(ctx context.Context) error {
+				return kubernetesutils.DeleteObjects(ctx, r.SeedClientSet.Client(),
+					&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "seed-prometheus-rules", Namespace: r.GardenNamespace}},
+					&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "seed-prometheus-config", Namespace: r.GardenNamespace}},
+					&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "seed-prometheus-web", Namespace: r.GardenNamespace}},
+					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "seed-prometheus", Namespace: r.GardenNamespace}},
+					&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "seed-prometheus", Namespace: r.GardenNamespace}},
+					&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "seed-prometheus"}},
+					&vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "seed-prometheus-vpa", Namespace: r.GardenNamespace}},
+				)
+			},
+			Dependencies: flow.NewTaskIDs(deploySeedPrometheus),
+		})
 		deployAlertmanager = g.Add(flow.Task{
 			Name: "Deploying Alertmanager",
 			Fn:   c.alertManager.Deploy,

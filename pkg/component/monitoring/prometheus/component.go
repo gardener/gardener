@@ -22,6 +22,7 @@ import (
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -52,6 +53,12 @@ type Values struct {
 	PriorityClassName string
 	// StorageCapacity is the storage capacity of Prometheus.
 	StorageCapacity resource.Quantity
+	// RetentionSize is the size for the data retention.
+	RetentionSize monitoringv1.ByteSize
+	// VPAMinAllowed defines the resource list for the minAllowed field for the prometheus container resource policy.
+	VPAMinAllowed *corev1.ResourceList
+	// AdditionalPodLabels is a map containing additional labels for the created pods.
+	AdditionalPodLabels map[string]string
 	// CentralConfigs contains configuration for this Prometheus instance that is created together with it. This should
 	// only contain configuration that cannot be directly assigned to another component package.
 	CentralConfigs CentralConfigs

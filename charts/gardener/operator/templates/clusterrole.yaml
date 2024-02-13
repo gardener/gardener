@@ -207,3 +207,15 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - list
+  - watch
+  - get
+  - create
+  - patch
+  - update
+  - delete

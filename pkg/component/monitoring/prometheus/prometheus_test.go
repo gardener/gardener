@@ -59,6 +59,8 @@ var _ = Describe("Prometheus", func() {
 		version           = "v1.2.3"
 		priorityClassName = "priority-class"
 		storageCapacity   = resource.MustParse("1337Gi")
+		retentionSize     = monitoringv1.ByteSize("5GB")
+		additionalLabels  = map[string]string{"foo": "bar"}
 
 		additionalScrapeConfig1 = `job_name: foo
 honor_labels: false`
@@ -95,11 +97,13 @@ honor_labels: true`
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
 		values = Values{
-			Name:              name,
-			Image:             image,
-			Version:           version,
-			PriorityClassName: priorityClassName,
-			StorageCapacity:   storageCapacity,
+			Name:                name,
+			Image:               image,
+			Version:             version,
+			PriorityClassName:   priorityClassName,
+			StorageCapacity:     storageCapacity,
+			RetentionSize:       retentionSize,
+			AdditionalPodLabels: additionalLabels,
 		}
 
 		fakeOps = &retryfake.Ops{MaxAttempts: 2}
@@ -190,7 +194,7 @@ honor_labels: true`
 			},
 			Spec: monitoringv1.PrometheusSpec{
 				Retention:          "1d",
-				RetentionSize:      "5GB",
+				RetentionSize:      retentionSize,
 				EvaluationInterval: "1m",
 				CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
 					ScrapeInterval: "1m",
@@ -204,7 +208,8 @@ honor_labels: true`
 
 					PodMetadata: &monitoringv1.EmbeddedObjectMetadata{
 						Labels: map[string]string{
-							"networking.gardener.cloud/to-dns":                               "allowed",
+							"foo":                              "bar",
+							"networking.gardener.cloud/to-dns": "allowed",
 							"networking.gardener.cloud/to-runtime-apiserver":                 "allowed",
 							"networking.resources.gardener.cloud/to-all-seed-scrape-targets": "allowed",
 						},
@@ -250,7 +255,7 @@ honor_labels: true`
 				RuleNamespaceSelector: &metav1.LabelSelector{},
 			},
 		}
-		vpaUpdateMode, vpaContainerScalingModeOff := vpaautoscalingv1.UpdateModeAuto, vpaautoscalingv1.ContainerScalingModeOff
+		vpaUpdateMode, vpaControlledValuesRequestsOnly, vpaContainerScalingModeOff := vpaautoscalingv1.UpdateModeAuto, vpaautoscalingv1.ContainerControlledValuesRequestsOnly, vpaautoscalingv1.ContainerScalingModeOff
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "prometheus-" + name,
@@ -272,6 +277,10 @@ honor_labels: true`
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+						{
+							ContainerName:    "*",
+							ControlledValues: &vpaControlledValuesRequestsOnly,
+						},
 						{
 							ContainerName: "prometheus",
 							MinAllowed: corev1.ResourceList{
