@@ -147,9 +147,9 @@ func (v *ValidateSeed) validateSeedDeletion(a admission.Attributes) error {
 		return apierrors.NewInternalError(err)
 	}
 
-	coreShoots, err2 := admissionutils.ConvertShootList(shoots)
-	if err2 != nil {
-		return apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 shoot: %w", err2))
+	coreShoots, err := admissionutils.ConvertShootList(shoots)
+	if err != nil {
+		return apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 shoot: %w", err))
 	}
 
 	if admissionutils.IsSeedUsedByShoot(seedName, coreShoots) {

@@ -158,15 +158,15 @@ func (e *ExtensionLabels) Admit(_ context.Context, a admission.Attributes, _ adm
 			return apierrors.NewInternalError(err)
 		}
 
-		coreControllerRegistrations, err1 := admissionutils.ConvertList(controllerRegistrations, func(cr *gardencorev1beta1.ControllerRegistration) (*core.ControllerRegistration, error) {
+		coreControllerRegistrations, err := admissionutils.ConvertList(controllerRegistrations, func(cr *gardencorev1beta1.ControllerRegistration) (*core.ControllerRegistration, error) {
 			coreControllerRegistration := &core.ControllerRegistration{}
 			if err2 := gardencorev1beta1.Convert_v1beta1_ControllerRegistration_To_core_ControllerRegistration(cr, coreControllerRegistration, nil); err2 != nil {
 				return nil, err2
 			}
 			return coreControllerRegistration, nil
 		})
-		if err1 != nil {
-			return apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 controllerregistration: %w", err1))
+		if err != nil {
+			return apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 controllerregistration: %w", err))
 		}
 
 		removeLabels(&shoot.ObjectMeta)

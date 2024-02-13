@@ -526,9 +526,9 @@ func getNumberOfShootsOnSeed(shootLister gardencorev1beta1listers.ShootLister, s
 		return 0, fmt.Errorf("could not list all shoots: %w", err)
 	}
 
-	coreShoots, err2 := admissionutils.ConvertShootList(allShoots)
-	if err2 != nil {
-		return 0, apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 shoot: %w", err2))
+	coreShoots, err := admissionutils.ConvertShootList(allShoots)
+	if err != nil {
+		return 0, apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 shoot: %w", err))
 	}
 
 	seedUsage := helper.CalculateSeedUsage(coreShoots)

@@ -188,9 +188,9 @@ func (v *Shoot) getShoots(selector labels.Selector) ([]*core.Shoot, error) {
 		return nil, apierrors.NewInternalError(err)
 	}
 
-	coreShoots, err2 := admissionutils.ConvertShootList(shoots)
-	if err2 != nil {
-		return nil, apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 shoot: %w", err2))
+	coreShoots, err := admissionutils.ConvertShootList(shoots)
+	if err != nil {
+		return nil, apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 shoot: %w", err))
 	}
 
 	return coreShoots, nil

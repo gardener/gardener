@@ -54,9 +54,9 @@ func GetFilteredShootList(shootLister gardencorev1beta1listers.ShootLister, pred
 		return nil, apierrors.NewInternalError(fmt.Errorf("failed to list shoots: %w", err))
 	}
 
-	coreShoots, err2 := ConvertShootList(shoots)
-	if err2 != nil {
-		return nil, apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 shoot: %w", err2))
+	coreShoots, err := ConvertShootList(shoots)
+	if err != nil {
+		return nil, apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 shoot: %w", err))
 	}
 
 	for _, shoot := range coreShoots {
@@ -91,9 +91,9 @@ func ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec *core.SeedSpec, seedN
 			return err
 		}
 
-		coreShoots, err2 := ConvertShootList(shoots)
-		if err2 != nil {
-			return apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 shoot: %w", err2))
+		coreShoots, err := ConvertShootList(shoots)
+		if err != nil {
+			return apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 shoot: %w", err))
 		}
 
 		if IsSeedUsedByShoot(seedName, coreShoots) {
