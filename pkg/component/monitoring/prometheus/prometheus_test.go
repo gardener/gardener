@@ -83,6 +83,7 @@ honor_labels: true`
 		vpa                           *vpaautoscalingv1.VerticalPodAutoscaler
 		prometheusRule                *monitoringv1.PrometheusRule
 		serviceMonitor                *monitoringv1.ServiceMonitor
+		podMonitor                    *monitoringv1.PodMonitor
 		scrapeConfig                  *monitoringv1alpha1.ScrapeConfig
 		additionalConfigMap           *corev1.ConfigMap
 		secretAdditionalScrapeConfigs *corev1.Secret
@@ -308,6 +309,16 @@ honor_labels: true`
 				JobLabel: "foo",
 			},
 		}
+		podMonitor = &monitoringv1.PodMonitor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "monitor",
+				Namespace: "default",
+				Labels:    map[string]string{"foo": "bar"},
+			},
+			Spec: monitoringv1.PodMonitorSpec{
+				JobLabel: "foo",
+			},
+		}
 		scrapeConfig = &monitoringv1alpha1.ScrapeConfig{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "scrape",
@@ -346,6 +357,7 @@ honor_labels: true`
 		values.CentralConfigs.PrometheusRules = append(values.CentralConfigs.PrometheusRules, prometheusRule)
 		values.CentralConfigs.ScrapeConfigs = append(values.CentralConfigs.ScrapeConfigs, scrapeConfig)
 		values.CentralConfigs.ServiceMonitors = append(values.CentralConfigs.ServiceMonitors, serviceMonitor)
+		values.CentralConfigs.PodMonitors = append(values.CentralConfigs.PodMonitors, podMonitor)
 
 		deployer = New(logr.Discard(), fakeClient, namespace, values)
 	})
@@ -401,7 +413,7 @@ honor_labels: true`
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(10))
+				Expect(managedResourceSecret.Data).To(HaveLen(11))
 				Expect(string(managedResourceSecret.Data["serviceaccount__some-namespace__prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(serviceAccount)))
 				Expect(string(managedResourceSecret.Data["service__some-namespace__prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
@@ -417,6 +429,9 @@ honor_labels: true`
 
 				metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", name)
 				Expect(string(managedResourceSecret.Data["servicemonitor__default__"+name+"-monitor.yaml"])).To(Equal(componenttest.Serialize(serviceMonitor)))
+
+				metav1.SetMetaDataLabel(&podMonitor.ObjectMeta, "prometheus", name)
+				Expect(string(managedResourceSecret.Data["podmonitor__default__"+name+"-monitor.yaml"])).To(Equal(componenttest.Serialize(podMonitor)))
 
 				Expect(string(managedResourceSecret.Data["secret__some-namespace__prometheus-"+name+"-additional-scrape-configs.yaml"])).To(Equal(componenttest.Serialize(secretAdditionalScrapeConfigs)))
 				Expect(string(managedResourceSecret.Data["configmap__some-namespace__configmap.yaml"])).To(Equal(componenttest.Serialize(additionalConfigMap)))

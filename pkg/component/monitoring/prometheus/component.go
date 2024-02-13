@@ -75,6 +75,8 @@ type CentralConfigs struct {
 	ScrapeConfigs []*monitoringv1alpha1.ScrapeConfig
 	// ServiceMonitors is a list of central ServiceMonitor objects for this prometheus instance.
 	ServiceMonitors []*monitoringv1.ServiceMonitor
+	// PodMonitors is a list of central PodMonitor objects for this prometheus instance.
+	PodMonitors []*monitoringv1.PodMonitor
 }
 
 // New creates a new instance of DeployWaiter for the prometheus.
@@ -202,6 +204,9 @@ func (p *prometheus) addCentralConfigsToRegistry(registry *managedresources.Regi
 		add(obj)
 	}
 	for _, obj := range p.values.CentralConfigs.ServiceMonitors {
+		add(obj)
+	}
+	for _, obj := range p.values.CentralConfigs.PodMonitors {
 		add(obj)
 	}
 
