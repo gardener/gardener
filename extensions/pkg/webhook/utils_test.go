@@ -452,6 +452,51 @@ var _ = Describe("Utils", func() {
 			})
 		})
 
+		Describe("#EnsureUnitOption", func() {
+			var unitOptions []*unit.UnitOption
+
+			BeforeEach(func() {
+				unitOptions = []*unit.UnitOption{
+					{
+						Section: "Unit",
+						Name:    "Description",
+						Value:   "Test Unit 1",
+					},
+					{
+						Section: "Service",
+						Name:    "ExecStart",
+						Value:   "/usr/bin/test1",
+					},
+				}
+			})
+
+			It("should add a new UnitOption if not present", func() {
+				newOption := &unit.UnitOption{
+					Section: "Install",
+					Name:    "WantedBy",
+					Value:   "multi-user.target",
+				}
+				result := webhook.EnsureUnitOption(unitOptions, newOption)
+				Expect(result).To(Equal(append(unitOptions, newOption)))
+			})
+
+			It("should not replace the existing UnitOption if it's not identical but add it", func() {
+				existingOption := &unit.UnitOption{
+					Section: "Unit",
+					Name:    "Description",
+					Value:   "Test Unit 2",
+				}
+				result := webhook.EnsureUnitOption(unitOptions, existingOption)
+				Expect(result).To(Equal(append(unitOptions, existingOption)))
+			})
+
+			It("should do nothing to the existing UnitOption if it's identical", func() {
+				identicalOption := unitOptions[0]
+				result := webhook.EnsureUnitOption(unitOptions, identicalOption)
+				Expect(result).To(Equal(unitOptions))
+			})
+		})
+
 		Describe("#EnsureFileWithPath", func() {
 			var files []extensionsv1alpha1.File
 
@@ -581,396 +626,199 @@ var _ = Describe("Utils", func() {
 				Expect(actual).To(Equal(units))
 
 			})
+		})
 
-			Describe("EnsureVolumeMountWithName", func() {
-				var volumeMounts []corev1.VolumeMount
+		Describe("#EnsureAnnotationOrLabel", func() {
+			var annotations map[string]string
 
-				BeforeEach(func() {
-					volumeMounts = []corev1.VolumeMount{
-						{
-							Name:     "volumeMount1",
-							ReadOnly: true,
-						},
-						{
-							Name:     "volumeMount2",
-							ReadOnly: false,
-						},
-					}
-				})
-
-				It("should add a new VolumeMount if not present", func() {
-					newVolumeMount := corev1.VolumeMount{
-						Name:     "volumeMount3",
-						ReadOnly: true,
-					}
-					result := webhook.EnsureVolumeMountWithName(volumeMounts, newVolumeMount)
-					Expect(result).To(Equal(append(volumeMounts, newVolumeMount)))
-				})
-
-				It("should replace the existing VolumeMount if it's not identical", func() {
-					existingVolumeMount := corev1.VolumeMount{
-						Name:     "volumeMount1",
-						ReadOnly: false,
-					}
-					result := webhook.EnsureVolumeMountWithName(volumeMounts, existingVolumeMount)
-					Expect(result).To(Equal([]corev1.VolumeMount{
-						{
-							Name:     "volumeMount1",
-							ReadOnly: false,
-						},
-						{
-							Name:     "volumeMount2",
-							ReadOnly: false,
-						},
-					}))
-				})
-
-				It("should do nothing to the existing VolumeMount if it's identical", func() {
-					identicalVolumeMount := volumeMounts[0]
-					result := webhook.EnsureVolumeMountWithName(volumeMounts, identicalVolumeMount)
-					Expect(result).To(Equal(volumeMounts))
-				})
+			BeforeEach(func() {
+				annotations = map[string]string{
+					"annotation1": "value1",
+					"annotation2": "value2",
+				}
 			})
 
-			Describe("EnsureEnvVarWithName", func() {
-				var envVars []corev1.EnvVar
-
-				BeforeEach(func() {
-					envVars = []corev1.EnvVar{
-						{
-							Name:  "envVar1",
-							Value: "value1",
-						},
-						{
-							Name:  "envVar2",
-							Value: "value2",
-						},
-					}
-				})
-
-				It("should add a new EnvVar if not present", func() {
-					newEnvVar := corev1.EnvVar{
-						Name:  "envVar3",
-						Value: "value3",
-					}
-					result := webhook.EnsureEnvVarWithName(envVars, newEnvVar)
-					Expect(result).To(Equal(append(envVars, newEnvVar)))
-				})
-
-				It("should replace the existing EnvVar if it's not identical", func() {
-					existingEnvVar := corev1.EnvVar{
-						Name:  "envVar1",
-						Value: "value3",
-					}
-					result := webhook.EnsureEnvVarWithName(envVars, existingEnvVar)
-					Expect(result).To(Equal([]corev1.EnvVar{
-						{
-							Name:  "envVar1",
-							Value: "value3",
-						},
-						{
-							Name:  "envVar2",
-							Value: "value2",
-						},
-					}))
-				})
-
-				It("should do nothing to the existing EnvVar if it's identical", func() {
-					identicalEnvVar := envVars[0]
-					result := webhook.EnsureEnvVarWithName(envVars, identicalEnvVar)
-					Expect(result).To(Equal(envVars))
-				})
+			It("should ensure the specified annotation or label exists", func() {
+				result := webhook.EnsureAnnotationOrLabel(annotations, "annotation3", "value3")
+				Expect(result).To(Equal(map[string]string{
+					"annotation1": "value1",
+					"annotation2": "value2",
+					"annotation3": "value3",
+				}))
 			})
 
-			Describe("EnsureUnitOption", func() {
-				var unitOptions []*unit.UnitOption
-
-				BeforeEach(func() {
-					unitOptions = []*unit.UnitOption{
-						{
-							Section: "Unit",
-							Name:    "Description",
-							Value:   "Test Unit 1",
-						},
-						{
-							Section: "Service",
-							Name:    "ExecStart",
-							Value:   "/usr/bin/test1",
-						},
-					}
-				})
-
-				It("should add a new UnitOption if not present", func() {
-					newOption := &unit.UnitOption{
-						Section: "Install",
-						Name:    "WantedBy",
-						Value:   "multi-user.target",
-					}
-					result := webhook.EnsureUnitOption(unitOptions, newOption)
-					Expect(result).To(Equal(append(unitOptions, newOption)))
-				})
-
-				It("should not replace the existing UnitOption if it's not identical but add it", func() {
-					existingOption := &unit.UnitOption{
-						Section: "Unit",
-						Name:    "Description",
-						Value:   "Test Unit 2",
-					}
-					result := webhook.EnsureUnitOption(unitOptions, existingOption)
-					Expect(result).To(Equal(append(unitOptions, existingOption)))
-				})
-
-				It("should do nothing to the existing UnitOption if it's identical", func() {
-					identicalOption := unitOptions[0]
-					result := webhook.EnsureUnitOption(unitOptions, identicalOption)
-					Expect(result).To(Equal(unitOptions))
-				})
+			It("should overwrite the value of an existing annotation or label", func() {
+				result := webhook.EnsureAnnotationOrLabel(annotations, "annotation1", "newvalue1")
+				Expect(result).To(Equal(map[string]string{
+					"annotation1": "newvalue1",
+					"annotation2": "value2",
+				}))
 			})
 
-			Describe("#EnsureFileWithPath", func() {
-				var (
-					files []extensionsv1alpha1.File
-				)
+			It("should create a new map if the input map is nil", func() {
+				result := webhook.EnsureAnnotationOrLabel(nil, "annotation1", "value1")
+				Expect(result).To(Equal(map[string]string{
+					"annotation1": "value1",
+				}))
+			})
+		})
+	})
 
-				BeforeEach(func() {
-					files = []extensionsv1alpha1.File{
-						{
-							Path:        "path1",
-							Permissions: ptr.To(int32(0644)),
-						},
-						{
-							Path:        "path2",
-							Permissions: ptr.To(int32(0644)),
-						},
-					}
-				})
+	Describe("#EnsureNo*", func() {
+		Describe("#EnsureNoStringWithPrefix", func() {
+			var flags []string
 
-				It("should add a new File if not present", func() {
-					newFile := extensionsv1alpha1.File{
-						Path:        "path3",
-						Permissions: ptr.To(int32(0644)),
-					}
-					result := webhook.EnsureFileWithPath(files, newFile)
-					Expect(result).To(Equal(append(files, newFile)))
-				})
-
-				It("should replace the existing File if it's not identical", func() {
-					existingFile := extensionsv1alpha1.File{
-						Path:        "path1",
-						Permissions: ptr.To(int32(0400)),
-					}
-					result := webhook.EnsureFileWithPath(files, existingFile)
-					Expect(result).To(Equal([]extensionsv1alpha1.File{
-						{
-							Path:        "path1",
-							Permissions: ptr.To(int32(0400)),
-						},
-						{
-							Path:        "path2",
-							Permissions: ptr.To(int32(0644)),
-						},
-					}))
-				})
-
-				It("should do nothing to the existing File if it's identical", func() {
-					identicalFile := files[0]
-					result := webhook.EnsureFileWithPath(files, identicalFile)
-					Expect(result).To(Equal(files))
-				})
+			BeforeEach(func() {
+				flags = []string{
+					"--prefix1-flag1=value1",
+					"--flag2=value2",
+					"--prefix1-flag3=value3",
+				}
 			})
 
-			Describe("#EnsureAnnotationOrLabel", func() {
-				var annotations map[string]string
-
-				BeforeEach(func() {
-					annotations = map[string]string{
-						"annotation1": "value1",
-						"annotation2": "value2",
-					}
-				})
-
-				It("should ensure the specified annotation or label exists", func() {
-					result := webhook.EnsureAnnotationOrLabel(annotations, "annotation3", "value3")
-					Expect(result).To(Equal(map[string]string{
-						"annotation1": "value1",
-						"annotation2": "value2",
-						"annotation3": "value3",
-					}))
-				})
-
-				It("should overwrite the value of an existing annotation or label", func() {
-					result := webhook.EnsureAnnotationOrLabel(annotations, "annotation1", "newvalue1")
-					Expect(result).To(Equal(map[string]string{
-						"annotation1": "newvalue1",
-						"annotation2": "value2",
-					}))
-				})
-
-				It("should create a new map if the input map is nil", func() {
-					result := webhook.EnsureAnnotationOrLabel(nil, "annotation1", "value1")
-					Expect(result).To(Equal(map[string]string{
-						"annotation1": "value1",
-					}))
-				})
+			It("should delete all strings with a given prefix", func() {
+				result := webhook.EnsureNoStringWithPrefix(flags, "--prefix1")
+				Expect(result).To(Equal([]string{"--flag2=value2"}))
 			})
 		})
 
-		Describe("#EnsureNo*", func() {
-			Describe("#EnsureNoStringWithPrefix", func() {
-				var flags []string
+		Describe("#EnsureNoStringWithPrefixContains", func() {
+			var flags []string
 
-				BeforeEach(func() {
-					flags = []string{
-						"--prefix1-flag1=value1",
-						"--flag2=value2",
-						"--prefix1-flag3=value3",
-					}
-				})
-
-				It("should delete all strings with a given prefix", func() {
-					result := webhook.EnsureNoStringWithPrefix(flags, "--prefix1")
-					Expect(result).To(Equal([]string{"--flag2=value2"}))
-				})
+			BeforeEach(func() {
+				flags = []string{
+					"--flag1=key2=value2,key3=value3",
+					"--flag2=value1",
+					"--flag3=value3,value1",
+					"--flag1=key3=value3,key1=value1",
+				}
 			})
 
-			Describe("#EnsureNoStringWithPrefixContains", func() {
-				var flags []string
+			It("should delete the specified value from all strings with a given prefix", func() {
+				result := webhook.EnsureNoStringWithPrefixContains(flags, "--flag1=", "key3=value3", ",")
+				Expect(result).To(Equal([]string{
+					"--flag1=key2=value2",
+					"--flag2=value1",
+					"--flag3=value3,value1",
+					"--flag1=key1=value1",
+				}))
+			})
+		})
 
-				BeforeEach(func() {
-					flags = []string{
-						"--flag1=key2=value2,key3=value3",
-						"--flag2=value1",
-						"--flag3=value3,value1",
-						"--flag1=key3=value3,key1=value1",
-					}
-				})
+		Describe("#EnsureNoEnvVarWithName", func() {
+			var envVars []corev1.EnvVar
 
-				It("should delete the specified value from all strings with a given prefix", func() {
-					result := webhook.EnsureNoStringWithPrefixContains(flags, "--flag1=", "key3=value3", ",")
-					Expect(result).To(Equal([]string{
-						"--flag1=key2=value2",
-						"--flag2=value1",
-						"--flag3=value3,value1",
-						"--flag1=key1=value1",
-					}))
-				})
+			BeforeEach(func() {
+				envVars = []corev1.EnvVar{
+					{Name: "envVar1"},
+					{Name: "envVar2"},
+					{Name: "envVar1"},
+				}
 			})
 
-			Describe("#EnsureNoEnvVarWithName", func() {
-				var envVars []corev1.EnvVar
+			It("should delete all environment variables with a given name", func() {
+				result := webhook.EnsureNoEnvVarWithName(envVars, "envVar1")
+				Expect(result).To(Equal([]corev1.EnvVar{{Name: "envVar2"}}))
+			})
+		})
 
-				BeforeEach(func() {
-					envVars = []corev1.EnvVar{
-						{Name: "envVar1"},
-						{Name: "envVar2"},
-						{Name: "envVar1"},
-					}
-				})
+		Describe("#EnsureNoVolumeMountWithName", func() {
+			var volumeMounts []corev1.VolumeMount
 
-				It("should delete all environment variables with a given name", func() {
-					result := webhook.EnsureNoEnvVarWithName(envVars, "envVar1")
-					Expect(result).To(Equal([]corev1.EnvVar{{Name: "envVar2"}}))
-				})
+			BeforeEach(func() {
+				volumeMounts = []corev1.VolumeMount{
+					{Name: "mount1"},
+					{Name: "mount2"},
+					{Name: "mount1"},
+				}
 			})
 
-			Describe("#EnsureNoVolumeMountWithName", func() {
-				var volumeMounts []corev1.VolumeMount
-
-				BeforeEach(func() {
-					volumeMounts = []corev1.VolumeMount{
-						{Name: "mount1"},
-						{Name: "mount2"},
-						{Name: "mount1"},
-					}
-				})
-
-				It("should delete all volume mounts with a given name", func() {
-					result := webhook.EnsureNoVolumeMountWithName(volumeMounts, "mount1")
-					Expect(result).To(Equal([]corev1.VolumeMount{{Name: "mount2"}}))
-				})
+			It("should delete all volume mounts with a given name", func() {
+				result := webhook.EnsureNoVolumeMountWithName(volumeMounts, "mount1")
+				Expect(result).To(Equal([]corev1.VolumeMount{{Name: "mount2"}}))
 			})
+		})
 
-			Describe("#EnsureNoVolumeWithName", func() {
-				var volumes []corev1.Volume
+		Describe("#EnsureNoVolumeWithName", func() {
+			var volumes []corev1.Volume
 
-				BeforeEach(func() {
-					volumes = []corev1.Volume{
-						{
-							Name: "volume1",
-							VolumeSource: corev1.VolumeSource{
-								EmptyDir: &corev1.EmptyDirVolumeSource{},
-							},
+			BeforeEach(func() {
+				volumes = []corev1.Volume{
+					{
+						Name: "volume1",
+						VolumeSource: corev1.VolumeSource{
+							EmptyDir: &corev1.EmptyDirVolumeSource{},
 						},
-						{
-							Name: "volume2",
-							VolumeSource: corev1.VolumeSource{
-								EmptyDir: &corev1.EmptyDirVolumeSource{},
-							},
-						},
-						{
-							Name: "volume1",
-							VolumeSource: corev1.VolumeSource{
-								EmptyDir: &corev1.EmptyDirVolumeSource{},
-							},
-						},
-					}
-				})
-
-				It("should delete all volumes with a given name", func() {
-					result := webhook.EnsureNoVolumeWithName(volumes, "volume1")
-					Expect(result).To(Equal([]corev1.Volume{{
+					},
+					{
 						Name: "volume2",
 						VolumeSource: corev1.VolumeSource{
 							EmptyDir: &corev1.EmptyDirVolumeSource{},
 						},
-					}}))
-				})
+					},
+					{
+						Name: "volume1",
+						VolumeSource: corev1.VolumeSource{
+							EmptyDir: &corev1.EmptyDirVolumeSource{},
+						},
+					},
+				}
 			})
 
-			Describe("#EnsureNoContainerWithName", func() {
-				var containers []corev1.Container
+			It("should delete all volumes with a given name", func() {
+				result := webhook.EnsureNoVolumeWithName(volumes, "volume1")
+				Expect(result).To(Equal([]corev1.Volume{{
+					Name: "volume2",
+					VolumeSource: corev1.VolumeSource{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+				}}))
+			})
+		})
 
-				BeforeEach(func() {
-					containers = []corev1.Container{
-						{Name: "container1"},
-						{Name: "container2"},
-						{Name: "container1"},
-					}
-				})
+		Describe("#EnsureNoContainerWithName", func() {
+			var containers []corev1.Container
 
-				It("should delete all containers with a given name", func() {
-					result := webhook.EnsureNoContainerWithName(containers, "container1")
-					Expect(result).To(Equal([]corev1.Container{{Name: "container2"}}))
-				})
+			BeforeEach(func() {
+				containers = []corev1.Container{
+					{Name: "container1"},
+					{Name: "container2"},
+					{Name: "container1"},
+				}
 			})
 
-			Describe("#EnsureNoPVCWithName", func() {
-				var pvcs []corev1.PersistentVolumeClaim
+			It("should delete all containers with a given name", func() {
+				result := webhook.EnsureNoContainerWithName(containers, "container1")
+				Expect(result).To(Equal([]corev1.Container{{Name: "container2"}}))
+			})
+		})
 
-				BeforeEach(func() {
-					pvcs = []corev1.PersistentVolumeClaim{
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "pvc1",
-							},
-						},
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "pvc2",
-							},
-						},
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "pvc1",
-							},
-						},
-					}
-				})
+		Describe("#EnsureNoPVCWithName", func() {
+			var pvcs []corev1.PersistentVolumeClaim
 
-				It("should delete all Persistent Volume Claims with a given name", func() {
-					result := webhook.EnsureNoPVCWithName(pvcs, "pvc1")
-					Expect(result).To(Equal([]corev1.PersistentVolumeClaim{{ObjectMeta: metav1.ObjectMeta{Name: "pvc2"}}}))
-				})
+			BeforeEach(func() {
+				pvcs = []corev1.PersistentVolumeClaim{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "pvc1",
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "pvc2",
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "pvc1",
+						},
+					},
+				}
+			})
+
+			It("should delete all Persistent Volume Claims with a given name", func() {
+				result := webhook.EnsureNoPVCWithName(pvcs, "pvc1")
+				Expect(result).To(Equal([]corev1.PersistentVolumeClaim{{ObjectMeta: metav1.ObjectMeta{Name: "pvc2"}}}))
 			})
 		})
 	})
