@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -82,6 +83,7 @@ honor_labels: true`
 		vpa                           *vpaautoscalingv1.VerticalPodAutoscaler
 		prometheusRule                *monitoringv1.PrometheusRule
 		serviceMonitor                *monitoringv1.ServiceMonitor
+		scrapeConfig                  *monitoringv1alpha1.ScrapeConfig
 		additionalConfigMap           *corev1.ConfigMap
 		secretAdditionalScrapeConfigs *corev1.Secret
 	)
@@ -306,6 +308,16 @@ honor_labels: true`
 				JobLabel: "foo",
 			},
 		}
+		scrapeConfig = &monitoringv1alpha1.ScrapeConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "scrape",
+				Namespace: "default",
+				Labels:    map[string]string{"foo": "bar"},
+			},
+			Spec: monitoringv1alpha1.ScrapeConfigSpec{
+				Scheme: ptr.To("baz"),
+			},
+		}
 		additionalConfigMap = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{Name: "configmap", Namespace: namespace},
 		}
@@ -332,6 +344,7 @@ honor_labels: true`
 		values.AdditionalResources = append(values.AdditionalResources, additionalConfigMap)
 		values.CentralConfigs.AdditionalScrapeConfigs = append(values.CentralConfigs.AdditionalScrapeConfigs, additionalScrapeConfig1, additionalScrapeConfig2)
 		values.CentralConfigs.PrometheusRules = append(values.CentralConfigs.PrometheusRules, prometheusRule)
+		values.CentralConfigs.ScrapeConfigs = append(values.CentralConfigs.ScrapeConfigs, scrapeConfig)
 		values.CentralConfigs.ServiceMonitors = append(values.CentralConfigs.ServiceMonitors, serviceMonitor)
 
 		deployer = New(logr.Discard(), fakeClient, namespace, values)
@@ -388,7 +401,7 @@ honor_labels: true`
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(9))
+				Expect(managedResourceSecret.Data).To(HaveLen(10))
 				Expect(string(managedResourceSecret.Data["serviceaccount__some-namespace__prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(serviceAccount)))
 				Expect(string(managedResourceSecret.Data["service__some-namespace__prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
@@ -398,6 +411,9 @@ honor_labels: true`
 				prometheusRule.Namespace = namespace
 				metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
 				Expect(string(managedResourceSecret.Data["prometheusrule__some-namespace__"+name+"-rule.yaml"])).To(Equal(componenttest.Serialize(prometheusRule)))
+
+				metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", name)
+				Expect(string(managedResourceSecret.Data["scrapeconfig__default__"+name+"-scrape.yaml"])).To(Equal(componenttest.Serialize(scrapeConfig)))
 
 				metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", name)
 				Expect(string(managedResourceSecret.Data["servicemonitor__default__"+name+"-monitor.yaml"])).To(Equal(componenttest.Serialize(serviceMonitor)))

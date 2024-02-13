@@ -21,6 +21,7 @@ import (
 
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -70,6 +71,8 @@ type CentralConfigs struct {
 	AdditionalScrapeConfigs []string
 	// PrometheusRules is a list of central PrometheusRule objects for this prometheus instance.
 	PrometheusRules []*monitoringv1.PrometheusRule
+	// ScrapeConfigs is a list of central ScrapeConfig objects for this prometheus instance.
+	ScrapeConfigs []*monitoringv1alpha1.ScrapeConfig
 	// ServiceMonitors is a list of central ServiceMonitor objects for this prometheus instance.
 	ServiceMonitors []*monitoringv1.ServiceMonitor
 }
@@ -193,6 +196,9 @@ func (p *prometheus) addCentralConfigsToRegistry(registry *managedresources.Regi
 	}
 
 	for _, obj := range p.values.CentralConfigs.PrometheusRules {
+		add(obj)
+	}
+	for _, obj := range p.values.CentralConfigs.ScrapeConfigs {
 		add(obj)
 	}
 	for _, obj := range p.values.CentralConfigs.ServiceMonitors {
