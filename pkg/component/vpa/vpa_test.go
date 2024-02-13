@@ -23,6 +23,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -132,6 +133,7 @@ var _ = Describe("VPA", func() {
 		shootAccessSecretRecommender                 *corev1.Secret
 		deploymentRecommenderFor                     func(bool, *metav1.Duration, *float64, component.ClusterType) *appsv1.Deployment
 		vpaRecommender                               *vpaautoscalingv1.VerticalPodAutoscaler
+		podMonitorRecommender                        *monitoringv1.PodMonitor
 
 		serviceAccountAdmissionController      *corev1.ServiceAccount
 		clusterRoleAdmissionController         *rbacv1.ClusterRole
@@ -759,6 +761,40 @@ var _ = Describe("VPA", func() {
 				},
 			},
 		}
+		podMonitorRecommender = &monitoringv1.PodMonitor{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "monitoring.coreos.com/v1",
+				Kind:       "PodMonitor",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "seed-vpa-recommender",
+				Namespace: namespace,
+				Labels:    map[string]string{"prometheus": "seed"},
+			},
+			Spec: monitoringv1.PodMonitorSpec{
+				Selector:          metav1.LabelSelector{MatchLabels: map[string]string{"app": "vpa-recommender"}},
+				NamespaceSelector: monitoringv1.NamespaceSelector{Any: true},
+				PodMetricsEndpoints: []monitoringv1.PodMetricsEndpoint{{
+					Port: "metrics",
+					RelabelConfigs: []*monitoringv1.RelabelConfig{
+						{
+							Action:      "replace",
+							Replacement: "vpa-recommender",
+							TargetLabel: "job",
+						},
+						{
+							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_container_port_name"},
+							Regex:        "metrics",
+							Action:       "keep",
+						},
+						{
+							Action: "labelmap",
+							Regex:  `__meta_kubernetes_pod_label_(.+)`,
+						},
+					},
+				}},
+			},
+		}
 
 		serviceAccountAdmissionController = &corev1.ServiceAccount{
 			TypeMeta: metav1.TypeMeta{
@@ -1322,7 +1358,7 @@ var _ = Describe("VPA", func() {
 					Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 					Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 					Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-					Expect(managedResourceSecret.Data).To(HaveLen(26))
+					Expect(managedResourceSecret.Data).To(HaveLen(27))
 
 					By("Verify vpa-updater resources")
 					clusterRoleUpdater.Name = replaceTargetSubstrings(clusterRoleUpdater.Name)
@@ -1361,6 +1397,7 @@ var _ = Describe("VPA", func() {
 					Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_status-actor.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingRecommenderStatusActor)))
 					Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-recommender.yaml"])).To(Equal(componenttest.Serialize(deploymentRecommender)))
 					Expect(string(managedResourceSecret.Data["service__"+namespace+"__vpa-recommender.yaml"])).To(Equal(componenttest.Serialize(serviceRecommenderFor(component.ClusterTypeSeed))))
+					Expect(string(managedResourceSecret.Data["podmonitor__"+namespace+"__seed-vpa-recommender.yaml"])).To(Equal(componenttest.Serialize(podMonitorRecommender)))
 					Expect(managedResourceSecret.Data).NotTo(HaveKey("verticalpodautoscaler__" + namespace + "__vpa-recommender.yaml"))
 
 					By("Verify vpa-admission-controller resources")

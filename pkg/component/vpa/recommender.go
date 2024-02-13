@@ -17,6 +17,7 @@ package vpa
 import (
 	"fmt"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -34,6 +35,8 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
+	"github.com/gardener/gardener/pkg/component/monitoring/prometheus/seed"
+	monitoringutils "github.com/gardener/gardener/pkg/component/monitoring/utils"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -69,6 +72,7 @@ func (v *vpa) recommenderResourceConfigs() component.ResourceConfigs {
 		clusterRoleBindingStatusActor     = v.emptyClusterRoleBinding("status-actor")
 		service                           = v.emptyService(recommender)
 		deployment                        = v.emptyDeployment(recommender)
+		podMonitor                        = v.emptyPodMonitor(recommender)
 	)
 
 	configs := component.ResourceConfigs{
@@ -97,6 +101,7 @@ func (v *vpa) recommenderResourceConfigs() component.ResourceConfigs {
 		configs = append(configs,
 			component.ResourceConfig{Obj: serviceAccount, Class: component.Application, MutateFn: func() { v.reconcileRecommenderServiceAccount(serviceAccount) }},
 			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { v.reconcileRecommenderDeployment(deployment, &serviceAccount.Name) }},
+			component.ResourceConfig{Obj: podMonitor, Class: component.Runtime, MutateFn: func() { v.reconcileRecommenderPodMonitor(podMonitor) }},
 		)
 	} else {
 		vpa := v.emptyVerticalPodAutoscaler(recommender)
@@ -308,4 +313,34 @@ func (v *vpa) reconcileRecommenderService(service *corev1.Service) {
 		TargetPort: intstr.FromInt32(recommenderPortMetrics),
 	}}
 	service.Spec.Ports = kubernetesutils.ReconcileServicePorts(service.Spec.Ports, desiredPorts, "")
+}
+
+func (v *vpa) reconcileRecommenderPodMonitor(podMonitor *monitoringv1.PodMonitor) {
+	// TODO: For whatever reasons, the seed-prometheus also scrapes vpa-recommenders in all shoot namespaces.
+	//  Conceptually, this is wrong and should be improved (seed-prometheus should only scrape vpa-recommenders in
+	//  garden namespace, and prometheis in shoot namespaces should scrape their vpa-recommenders, respectively).
+	podMonitor.Labels = monitoringutils.Labels(seed.Label)
+	podMonitor.Spec = monitoringv1.PodMonitorSpec{
+		Selector:          metav1.LabelSelector{MatchLabels: getAppLabel(recommender)},
+		NamespaceSelector: monitoringv1.NamespaceSelector{Any: true},
+		PodMetricsEndpoints: []monitoringv1.PodMetricsEndpoint{{
+			Port: metricsPortName,
+			RelabelConfigs: []*monitoringv1.RelabelConfig{
+				{
+					Action:      "replace",
+					Replacement: recommender,
+					TargetLabel: "job",
+				},
+				{
+					SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_container_port_name"},
+					Regex:        metricsPortName,
+					Action:       "keep",
+				},
+				{
+					Action: "labelmap",
+					Regex:  `__meta_kubernetes_pod_label_(.+)`,
+				},
+			},
+		}},
+	}
 }

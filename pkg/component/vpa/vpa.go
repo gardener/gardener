@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -34,6 +35,8 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/monitoring/prometheus/seed"
+	monitoringutils "github.com/gardener/gardener/pkg/component/monitoring/utils"
 	vpaconstants "github.com/gardener/gardener/pkg/component/vpa/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -232,6 +235,10 @@ func (v *vpa) emptyDeployment(name string) *appsv1.Deployment {
 
 func (v *vpa) emptyPodDisruptionBudget(name string) *policyv1.PodDisruptionBudget {
 	return &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: v.namespace}}
+}
+
+func (v *vpa) emptyPodMonitor(name string) *monitoringv1.PodMonitor {
+	return &monitoringv1.PodMonitor{ObjectMeta: monitoringutils.ConfigObjectMeta(name, v.namespace, seed.Label)}
 }
 
 func (v *vpa) emptyVerticalPodAutoscaler(name string) *vpaautoscalingv1.VerticalPodAutoscaler {
