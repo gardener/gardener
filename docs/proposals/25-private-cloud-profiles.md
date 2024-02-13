@@ -48,7 +48,7 @@ This GEP proposes a mechanism that will allow project administrators to create p
 Cloud profiles are an integral component of Gardener for managing shoot resources. They are currently managed centrally by Gardener and can be consumed by any Gardener user. However, some teams require frequent changes to a cloud profile. There are a few reasons why:
 
 1. Testing with different machine types than the ones present in the cloud profile.
-2. Needing to use different volume types than the ones present in the cloud profile.
+2. Need to use different volume types than the ones present in the cloud profile.
 3. Extending the expiration date of Kubernetes versions. Teams might need to hang on to an older version of Kubernetes as they might not be ready for an upgrade as of the set expiration date. Given that the cloud profile is a cluster-scoped resource, it is currently not possible to extend the expiration date for shoots in one project but only centrally for all projects.
 4. Extending the expiration date for machine images. For the same reasons as extending the expiration date of the Kubernetes versions.
 5. Some gardener users might have access to custom cloud provider regions that others do not have access to, they currently have no way of using custom cloud provider regions.
@@ -271,13 +271,13 @@ rules:
 
 ### Automated removal of outdated Kubernetes versions and machine image versions
 
-Expired Kubernetes versions in cloud profiles are currently being removed manually. This is not an issue since there is a very limited amount of cloud profiles. However, if any project administrator is allowed to create a private cloud profile that can then have its Kubernetes versions expiration dates extended, it cloud become a very cumbersome process to manually remove all the expired Kubernetes versions. It is therefore proposed to implement a custom controller managed by `gardener-controller-manager`, that reconciles private cloud profiles (and possibly even regular cloud profiles) and removes any Kubernetes versions that are past their expiration date. The same could be done for machine image versions.
+Expired Kubernetes versions in cloud profiles are currently being removed manually. This is not an issue since there is a very limited amount of cloud profiles. However, if any project administrator is allowed to create a private cloud profile that can then have its Kubernetes versions expiration dates extended, it could become a very cumbersome process to manually remove all the expired Kubernetes versions. It is therefore proposed to implement a custom controller managed by `gardener-controller-manager`, that reconciles private cloud profiles (and possibly even regular cloud profiles) and removes any Kubernetes versions that are past their expiration date. The same could be done for machine image versions.
 
 However, a problem arises as the Kubernetes/machine image versions are referenced in the `providerConfig` and would therefore need to be removed manually anyway.
 
 ### Cross-project sharing
 
-A use case could be defined where a private cloud profile might want to be shared across multiple projects and not just be used within the project it was created id. However, this use case seems to be very slim so this functionality will not be implemented as of now. However, when taking a broader view of Private Seeds and Cloud in Country, this feature is going to be necessary at some point. Still, it is not planned to be implemented as of this GEP.
+A use case could be defined where a private cloud profile might want to be shared across multiple projects and not just be used within the project it was created in. However, this use case seems to be very slim so this functionality will not be implemented as of now. However, when taking a broader view of Private Seeds and Cloud in Country, this feature is going to be necessary at some point. Still, it is not planned to be implemented as part of this GEP.
 
 ### Multi-Level inheritance
 
