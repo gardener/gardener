@@ -53,11 +53,8 @@ for p in $(yq '. | select(.kind == "ControllerDeployment") | select(.metadata.na
     ADMISSION_FILE=$(mktemp)
     curl --fail -L -o "$ADMISSION_FILE" "https://github.com/gardener/gardener-extension-$p/archive/refs/tags/$LATEST_RELEASE.tar.gz"
     tar xfz "$ADMISSION_FILE" -C "$ADMISSION_GIT_ROOT" --strip-components 1
-    CA_BUNDLE=$(yq ".webhooks[0].clientConfig.caBundle" "$ADMISSION_GIT_ROOT/example/"*"-mutatingwebhookconfiguration.yaml" | base64 -d)
-    TLS_CRT=$(cat "$ADMISSION_GIT_ROOT/example/$ADMISSION_NAME-certs/tls.crt")
-    TLS_KEY=$(cat "$ADMISSION_GIT_ROOT/example/$ADMISSION_NAME-certs/tls.key")
-    helm template --namespace garden --set global.image.tag="$LATEST_RELEASE" --set global.webhookConfig.caBundle="$CA_BUNDLE" --set global.webhookConfig.tls.crt="$TLS_CRT" --set global.webhookConfig.tls.key="$TLS_KEY" gardener-extension-"$ADMISSION_NAME" "$ADMISSION_GIT_ROOT"/charts/gardener-extension-"$ADMISSION_NAME"/charts/application > "$ADMISSION_GIT_ROOT"/virtual-resources.yaml
-    helm template --namespace garden --set global.image.tag="$LATEST_RELEASE" --set global.webhookConfig.caBundle="$CA_BUNDLE" --set global.webhookConfig.tls.crt="$TLS_CRT" --set global.webhookConfig.tls.key="$TLS_KEY" --set global.kubeconfig="$(cat "$garden_kubeconfig" | sed 's/127.0.0.1:.*$/kubernetes.default.svc.cluster.local/g')" --set global.vpa.enabled="false" gardener-extension-"$ADMISSION_NAME" "$ADMISSION_GIT_ROOT"/charts/gardener-extension-"$ADMISSION_NAME"/charts/runtime > "$ADMISSION_GIT_ROOT"/runtime-resources.yaml
+    helm template --namespace garden --set global.image.tag="$LATEST_RELEASE" gardener-extension-"$ADMISSION_NAME" "$ADMISSION_GIT_ROOT"/charts/gardener-extension-"$ADMISSION_NAME"/charts/application > "$ADMISSION_GIT_ROOT"/virtual-resources.yaml
+    helm template --namespace garden --set global.image.tag="$LATEST_RELEASE" --set global.kubeconfig="$(cat "$garden_kubeconfig" | sed 's/127.0.0.1:.*$/kubernetes.default.svc.cluster.local/g')" --set global.vpa.enabled="false" gardener-extension-"$ADMISSION_NAME" "$ADMISSION_GIT_ROOT"/charts/gardener-extension-"$ADMISSION_NAME"/charts/runtime > "$ADMISSION_GIT_ROOT"/runtime-resources.yaml
     kubectl --kubeconfig "$garden_kubeconfig" "$command" "$@" -f "$ADMISSION_GIT_ROOT/virtual-resources.yaml"
     kubectl --kubeconfig "$garden_kubeconfig" "$command" "$@" -f "$ADMISSION_GIT_ROOT/runtime-resources.yaml"
     if [ "$command" == "apply" ]; then
