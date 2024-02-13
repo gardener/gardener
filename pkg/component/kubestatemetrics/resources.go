@@ -38,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
 	"github.com/gardener/gardener/pkg/component/monitoring/prometheus/cache"
+	"github.com/gardener/gardener/pkg/component/monitoring/prometheus/seed"
 	monitoringutils "github.com/gardener/gardener/pkg/component/monitoring/utils"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -53,6 +54,7 @@ func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName s
 		vpa                = k.emptyVerticalPodAutoscaler()
 		pdb                = k.emptyPodDisruptionBudget()
 		scrapeConfigCache  = k.emptyScrapeConfigCache()
+		scrapeConfigSeed   = k.emptyScrapeConfigSeed()
 
 		configs = component.ResourceConfigs{
 			{Obj: clusterRole, Class: component.Application, MutateFn: func() { k.reconcileClusterRole(clusterRole) }},
@@ -70,6 +72,7 @@ func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName s
 			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { k.reconcileDeployment(deployment, serviceAccount, "", nil) }},
 			component.ResourceConfig{Obj: pdb, Class: component.Runtime, MutateFn: func() { k.reconcilePodDisruptionBudget(pdb, deployment) }},
 			component.ResourceConfig{Obj: scrapeConfigCache, Class: component.Runtime, MutateFn: func() { k.reconcileScrapeConfigCache(scrapeConfigCache) }},
+			component.ResourceConfig{Obj: scrapeConfigSeed, Class: component.Runtime, MutateFn: func() { k.reconcileScrapeConfigSeed(scrapeConfigSeed) }},
 		)
 	}
 
@@ -398,6 +401,44 @@ func (k *kubeStateMetrics) reconcileScrapeConfigCache(scrapeConfig *monitoringv1
 			Regex:        `^.+\.tf-pod.+$`,
 			Action:       "drop",
 		}}, monitoringutils.StandardMetricRelabelConfig(cachePrometheusAllowedMetrics...)...),
+	}
+}
+
+func (k *kubeStateMetrics) emptyScrapeConfigSeed() *monitoringv1alpha1.ScrapeConfig {
+	return &monitoringv1alpha1.ScrapeConfig{ObjectMeta: monitoringutils.ConfigObjectMeta("kube-state-metrics", k.namespace, seed.Label)}
+}
+
+func (k *kubeStateMetrics) reconcileScrapeConfigSeed(scrapeConfig *monitoringv1alpha1.ScrapeConfig) {
+	scrapeConfig.Labels = monitoringutils.Labels(seed.Label)
+	scrapeConfig.Spec = monitoringv1alpha1.ScrapeConfigSpec{
+		KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
+			Role:       "service",
+			Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{k.namespace}},
+		}},
+		RelabelConfigs: []*monitoringv1.RelabelConfig{
+			{
+				SourceLabels: []monitoringv1.LabelName{
+					"__meta_kubernetes_service_label_component",
+					"__meta_kubernetes_service_port_name",
+				},
+				Regex:  "kube-state-metrics;" + portNameMetrics,
+				Action: "keep",
+			},
+			{
+				Action:      "replace",
+				Replacement: "kube-state-metrics",
+				TargetLabel: "job",
+			},
+			{
+				TargetLabel: "instance",
+				Replacement: "kube-state-metrics",
+			},
+		},
+		MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+			SourceLabels: []monitoringv1.LabelName{"namespace"},
+			Regex:        `shoot-.+`,
+			Action:       "drop",
+		}},
 	}
 }
 
