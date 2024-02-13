@@ -601,7 +601,6 @@ func (r *Reconciler) newMonitoring(secretsManager secretsmanager.Interface, seed
 			ImagePrometheus:                    imagePrometheus.String(),
 			IngressHost:                        ingressHost,
 			SeedName:                           seed.GetInfo().Name,
-			StorageCapacityPrometheus:          seed.GetValidVolumeSize("10Gi"),
 			StorageCapacityAggregatePrometheus: seed.GetValidVolumeSize("20Gi"),
 			WildcardCertName:                   wildcardCertName,
 		},
