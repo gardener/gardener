@@ -23,6 +23,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -58,6 +59,8 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
 	"github.com/gardener/gardener/pkg/component/kubescheduler"
+	"github.com/gardener/gardener/pkg/component/monitoring/prometheus/seed"
+	monitoringutils "github.com/gardener/gardener/pkg/component/monitoring/utils"
 	resourcemanagerconstants "github.com/gardener/gardener/pkg/component/resourcemanager/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	resourcemanagerv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
@@ -365,6 +368,7 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 	} else {
 		fns = append(fns, r.ensureMutatingWebhookConfiguration)
 		fns = append(fns, r.ensureValidatingWebhookConfiguration)
+		fns = append(fns, r.ensureServiceMonitor)
 	}
 
 	return flow.Sequential(fns...)(ctx)
@@ -377,6 +381,7 @@ func (r *resourceManager) Destroy(ctx context.Context) error {
 		r.emptyDeployment(),
 		r.emptyService(),
 		r.emptyServiceAccount(),
+		r.emptyServiceMonitor(),
 	}
 
 	if r.values.TargetDiffersFromSourceCluster {
@@ -1115,6 +1120,42 @@ func (r *resourceManager) emptyPodDisruptionBudget() *policyv1.PodDisruptionBudg
 			Namespace: r.namespace,
 		},
 	}
+}
+
+func (r *resourceManager) ensureServiceMonitor(ctx context.Context) error {
+	serviceMonitor := r.emptyServiceMonitor()
+
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, serviceMonitor, func() error {
+		serviceMonitor.Labels = monitoringutils.Labels(seed.Label)
+		serviceMonitor.Spec = monitoringv1.ServiceMonitorSpec{
+			Selector: metav1.LabelSelector{MatchLabels: r.appLabel()},
+			Endpoints: []monitoringv1.Endpoint{{
+				Port: metricsPortName,
+				RelabelConfigs: []*monitoringv1.RelabelConfig{
+					{
+						Action: "labelmap",
+						Regex:  `__meta_kubernetes_service_label_(.+)`,
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_node_name"},
+						TargetLabel:  "node",
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_namespace"},
+						TargetLabel:  "namespace",
+					},
+				},
+			}},
+		}
+
+		return nil
+	})
+
+	return err
+}
+
+func (r *resourceManager) emptyServiceMonitor() *monitoringv1.ServiceMonitor {
+	return &monitoringv1.ServiceMonitor{ObjectMeta: monitoringutils.ConfigObjectMeta(r.values.NamePrefix+"gardener-resource-manager", r.namespace, seed.Label)}
 }
 
 func (r *resourceManager) ensureMutatingWebhookConfiguration(ctx context.Context) error {
