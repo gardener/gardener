@@ -386,7 +386,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				},
 			}
 
-			expected = computeExpectedOperatingSystemConfigs(false, false)
+			expected = computeExpectedOperatingSystemConfigs(true, false)
 			defaultDepWaiter = New(log, c, sm, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 		})
 
@@ -519,15 +519,15 @@ var _ = Describe("OperatingSystemConfig", func() {
 			})
 
 			It("should exclude the bootstrap token file if purpose is not provision", func() {
-				bootstrapTokenFile := extensionsv1alpha1.File{Path: "/var/lib/cloud-config-downloader/credentials/bootstrap-token"}
-				downloaderConfigFnWithBootstrapToken := func(cloudConfigUserDataSecretName, apiServerURL, clusterCASecretName string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
-					units, files, err := downloaderConfigFn(cloudConfigUserDataSecretName, apiServerURL, clusterCASecretName)
+				bootstrapTokenFile := extensionsv1alpha1.File{Path: "/var/lib/gardener-node-agent/credentials/bootstrap-token"}
+				initConfigFnWithBootstrapToken := func(worker gardencorev1beta1.Worker, nodeAgentImage string, config *nodeagentv1alpha1.NodeAgentConfiguration) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
+					units, files, err := initConfigFn(worker, nodeAgentImage, config)
 					return units, append(files, bootstrapTokenFile), err
 				}
 
 				defer test.WithVars(
 					&TimeNow, mockNow.Do,
-					&DownloaderConfigFn, downloaderConfigFnWithBootstrapToken,
+					&InitConfigFn, initConfigFnWithBootstrapToken,
 					&OriginalConfigFn, originalConfigFn,
 				)()
 
@@ -556,9 +556,9 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 		Describe("#Restore", func() {
 			var (
-				stateDownloader = []byte(`{"dummy":"state downloader"}`)
-				stateOriginal   = []byte(`{"dummy":"state original"}`)
-				shootState      *gardencorev1beta1.ShootState
+				stateInit     = []byte(`{"dummy":"state init"}`)
+				stateOriginal = []byte(`{"dummy":"state original"}`)
+				shootState    *gardencorev1beta1.ShootState
 			)
 
 			BeforeEach(func() {
@@ -572,10 +572,10 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 					extensions = append(extensions,
 						gardencorev1beta1.ExtensionResourceState{
-							Name:    ptr.To(key + "-" + worker.Machine.Image.Name + "-downloader"),
+							Name:    ptr.To(key + "-" + worker.Machine.Image.Name + "-init"),
 							Kind:    extensionsv1alpha1.OperatingSystemConfigResource,
 							Purpose: ptr.To(string(extensionsv1alpha1.OperatingSystemConfigPurposeProvision)),
-							State:   &runtime.RawExtension{Raw: stateDownloader},
+							State:   &runtime.RawExtension{Raw: stateInit},
 						},
 						gardencorev1beta1.ExtensionResourceState{
 							Name:    ptr.To(key + "-" + worker.Machine.Image.Name + "-original"),
@@ -594,7 +594,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			It("should properly restore the extensions state if it exists", func() {
 				defer test.WithVars(
-					&DownloaderConfigFn, downloaderConfigFn,
+					&InitConfigFn, initConfigFn,
 					&OriginalConfigFn, originalConfigFn,
 					&TimeNow, mockNow.Do,
 					&extensions.TimeNow, mockNow.Do,
@@ -626,10 +626,30 @@ var _ = Describe("OperatingSystemConfig", func() {
 					Type: corev1.SecretTypeOpaque,
 				})
 
+				mc.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "shoot-access-gardener-node-agent"), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+				mc.EXPECT().Create(ctx, &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "shoot-access-gardener-node-agent",
+						Namespace: namespace,
+						Annotations: map[string]string{
+							"serviceaccount.resources.gardener.cloud/name":                      "gardener-node-agent",
+							"serviceaccount.resources.gardener.cloud/namespace":                 "kube-system",
+							"serviceaccount.resources.gardener.cloud/token-expiration-duration": "720h",
+							"token-requestor.resources.gardener.cloud/target-secret-name":       "gardener-node-agent",
+							"token-requestor.resources.gardener.cloud/target-secret-namespace":  "kube-system",
+						},
+						Labels: map[string]string{
+							"resources.gardener.cloud/purpose": "token-requestor",
+							"resources.gardener.cloud/class":   "shoot",
+						},
+					},
+					Type: corev1.SecretTypeOpaque,
+				})
+
 				for i := range expected {
 					var state []byte
-					if strings.HasSuffix(expected[i].Name, "downloader") {
-						state = stateDownloader
+					if strings.HasSuffix(expected[i].Name, "init") {
+						state = stateInit
 					} else {
 						state = stateOriginal
 					}
@@ -858,40 +878,40 @@ var _ = Describe("OperatingSystemConfig", func() {
 				Expect(defaultDepWaiter.WorkerNameToOperatingSystemConfigsMap()).To(Equal(map[string]*OperatingSystemConfigs{
 					worker1Name: {
 						Downloader: Data{
-							Content: "foobar-cloud-config-" + worker1Name + "-77ac3-type1-downloader",
-							Command: ptr.To("foo-cloud-config-" + worker1Name + "-77ac3-type1-downloader"),
+							Content: "foobar-gardener-node-agent-" + worker1Name + "-77ac3-type1-init",
+							Command: ptr.To("foo-gardener-node-agent-" + worker1Name + "-77ac3-type1-init"),
 							Units: []string{
-								"bar-cloud-config-" + worker1Name + "-77ac3-type1-downloader",
-								"baz-cloud-config-" + worker1Name + "-77ac3-type1-downloader",
+								"bar-gardener-node-agent-" + worker1Name + "-77ac3-type1-init",
+								"baz-gardener-node-agent-" + worker1Name + "-77ac3-type1-init",
 							},
 							Object: worker1OSCDownloader,
 						},
 						Original: Data{
-							Content: "foobar-cloud-config-" + worker1Name + "-77ac3-type1-original",
-							Command: ptr.To("foo-cloud-config-" + worker1Name + "-77ac3-type1-original"),
+							Content: "foobar-gardener-node-agent-" + worker1Name + "-77ac3-type1-original",
+							Command: ptr.To("foo-gardener-node-agent-" + worker1Name + "-77ac3-type1-original"),
 							Units: []string{
-								"bar-cloud-config-" + worker1Name + "-77ac3-type1-original",
-								"baz-cloud-config-" + worker1Name + "-77ac3-type1-original",
+								"bar-gardener-node-agent-" + worker1Name + "-77ac3-type1-original",
+								"baz-gardener-node-agent-" + worker1Name + "-77ac3-type1-original",
 							},
 							Object: worker1OSCOriginal,
 						},
 					},
 					worker2Name: {
 						Downloader: Data{
-							Content: "foobar-cloud-config-" + worker2Name + "-d9e53-type2-downloader",
-							Command: ptr.To("foo-cloud-config-" + worker2Name + "-d9e53-type2-downloader"),
+							Content: "foobar-gardener-node-agent-" + worker2Name + "-d9e53-type2-init",
+							Command: ptr.To("foo-gardener-node-agent-" + worker2Name + "-d9e53-type2-init"),
 							Units: []string{
-								"bar-cloud-config-" + worker2Name + "-d9e53-type2-downloader",
-								"baz-cloud-config-" + worker2Name + "-d9e53-type2-downloader",
+								"bar-gardener-node-agent-" + worker2Name + "-d9e53-type2-init",
+								"baz-gardener-node-agent-" + worker2Name + "-d9e53-type2-init",
 							},
 							Object: worker2OSCDownloader,
 						},
 						Original: Data{
-							Content: "foobar-cloud-config-" + worker2Name + "-d9e53-type2-original",
-							Command: ptr.To("foo-cloud-config-" + worker2Name + "-d9e53-type2-original"),
+							Content: "foobar-gardener-node-agent-" + worker2Name + "-d9e53-type2-original",
+							Command: ptr.To("foo-gardener-node-agent-" + worker2Name + "-d9e53-type2-original"),
 							Units: []string{
-								"bar-cloud-config-" + worker2Name + "-d9e53-type2-original",
-								"baz-cloud-config-" + worker2Name + "-d9e53-type2-original",
+								"bar-gardener-node-agent-" + worker2Name + "-d9e53-type2-original",
+								"baz-gardener-node-agent-" + worker2Name + "-d9e53-type2-original",
 							},
 							Object: worker2OSCOriginal,
 						},
@@ -947,7 +967,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			It("should return error if resources still exist", func() {
 				Expect(c.Create(ctx, expected[0])).To(Succeed())
-				Expect(defaultDepWaiter.WaitCleanup(ctx)).To(MatchError(ContainSubstring("OperatingSystemConfig test-namespace/cloud-config-worker1-77ac3-type1-downloader is still present")))
+				Expect(defaultDepWaiter.WaitCleanup(ctx)).To(MatchError(ContainSubstring("OperatingSystemConfig test-namespace/gardener-node-agent-worker1-77ac3-type1-init is still present")))
 			})
 		})
 
@@ -1096,16 +1116,16 @@ var _ = Describe("OperatingSystemConfig", func() {
 		)
 
 		It("should return an empty string", func() {
-			Expect(Key(workerName, nil, nil)).To(BeEmpty())
+			Expect(LegacyKey(workerName, nil, nil)).To(BeEmpty())
 		})
 
 		It("should return the expected key", func() {
-			Expect(Key(workerName, semver.MustParse(kubernetesVersion), nil)).To(Equal("cloud-config-" + workerName + "-77ac3"))
+			Expect(LegacyKey(workerName, semver.MustParse(kubernetesVersion), nil)).To(Equal("cloud-config-" + workerName + "-77ac3"))
 		})
 
 		It("is different for different worker.cri configurations", func() {
-			containerDKey := Key(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD})
-			otherKey := Key(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRIName("other")})
+			containerDKey := LegacyKey(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD})
+			otherKey := LegacyKey(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRIName("other")})
 			Expect(containerDKey).NotTo(Equal(otherKey))
 		})
 	})

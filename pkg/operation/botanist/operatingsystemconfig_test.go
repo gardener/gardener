@@ -314,6 +314,8 @@ var _ = Describe("operatingsystemconfig", func() {
 
 				kubernetesInterfaceShoot.EXPECT().Client().Return(kubernetesClientShoot).AnyTimes()
 				kubernetesInterfaceSeed.EXPECT().Client().Return(kubernetesClientSeed).AnyTimes()
+
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, false))
 			})
 
 			type tableTestParams struct {

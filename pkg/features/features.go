@@ -85,6 +85,7 @@ const (
 	// nodes.
 	// owner: @rfranzke @oliver-goetz
 	// alpha: v1.82.0
+	// beta: v1.89.0
 	UseGardenerNodeAgent featuregate.Feature = "UseGardenerNodeAgent"
 )
 
@@ -122,7 +123,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	ShootForceDeletion:                 {Default: false, PreRelease: featuregate.Alpha},
 	MachineControllerManagerDeployment: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	APIServerFastRollout:               {Default: true, PreRelease: featuregate.Beta},
-	UseGardenerNodeAgent:               {Default: false, PreRelease: featuregate.Alpha},
+	UseGardenerNodeAgent:               {Default: true, PreRelease: featuregate.Beta},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

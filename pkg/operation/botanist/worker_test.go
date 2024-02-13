@@ -304,7 +304,7 @@ var _ = Describe("Worker", func() {
 				Labels: map[string]string{"worker.gardener.cloud/kubernetes-version": "1.24.0"},
 			}}}},
 			map[string]metav1.ObjectMeta{"pool1": {
-				Name:        "cloud-config--c63c0",
+				Name:        "gardener-node-agent--c63c0",
 				Annotations: map[string]string{"checksum/data-script": "foo"},
 			}},
 			MatchError(ContainSubstring("hasn't been reported yet")),
@@ -316,7 +316,7 @@ var _ = Describe("Worker", func() {
 				Labels:      map[string]string{"worker.gardener.cloud/kubernetes-version": "1.24.0"},
 			}}}},
 			map[string]metav1.ObjectMeta{"pool1": {
-				Name:        "cloud-config--c63c0",
+				Name:        "gardener-node-agent--c63c0",
 				Annotations: map[string]string{"checksum/data-script": "foo"},
 			}},
 			MatchError(ContainSubstring("is outdated")),
@@ -331,7 +331,7 @@ var _ = Describe("Worker", func() {
 				Spec: corev1.NodeSpec{Taints: []corev1.Taint{{Key: "deployment.machine.sapcloud.io/prefer-no-schedule", Effect: corev1.TaintEffectPreferNoSchedule}}},
 			}}},
 			map[string]metav1.ObjectMeta{"pool1": {
-				Name:        "cloud-config--c63c0",
+				Name:        "gardener-node-agent--c63c0",
 				Annotations: map[string]string{"checksum/data-script": "foo"},
 			}},
 			BeNil(),
@@ -343,7 +343,7 @@ var _ = Describe("Worker", func() {
 				Labels:      map[string]string{"worker.gardener.cloud/kubernetes-version": "1.24.0"},
 			}}}},
 			map[string]metav1.ObjectMeta{"pool1": {
-				Name:        "cloud-config--c63c1",
+				Name:        "gardener-node-agent--c63c1",
 				Annotations: map[string]string{"checksum/data-script": "foo"},
 			}},
 			BeNil(),
@@ -362,11 +362,11 @@ var _ = Describe("Worker", func() {
 			},
 			map[string]metav1.ObjectMeta{
 				"pool1": {
-					Name:        "cloud-config--c63c0",
+					Name:        "gardener-node-agent--c63c0",
 					Annotations: map[string]string{"checksum/data-script": "uptodate1"},
 				},
 				"pool2": {
-					Name:        "cloud-config--5dcdf",
+					Name:        "gardener-node-agent--5dcdf",
 					Annotations: map[string]string{"checksum/data-script": "uptodate2"},
 				},
 			},
