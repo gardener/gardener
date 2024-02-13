@@ -106,7 +106,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 
 	for _, ref := range mr.Status.Resources {
 		// only resources in the apps/v1 and monitoring.coreos.com/v1 API groups are considered for Progressing condition
-		if !sets.New[string](appsv1.GroupName, monitoring.GroupName).Has(ref.GroupVersionKind().Group) {
+		if !sets.New(appsv1.GroupName, monitoring.GroupName).Has(ref.GroupVersionKind().Group) {
 			continue
 		}
 
