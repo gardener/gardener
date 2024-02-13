@@ -155,7 +155,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 
 	log.Info("Fetching hostname")
 	hostName, err := os.Hostname()
-	if err != nil {
+	if err != nil || hostName == "" {
 		return fmt.Errorf("failed fetching hostname: %w", err)
 	}
 	hostName = strings.ToLower(hostName)
