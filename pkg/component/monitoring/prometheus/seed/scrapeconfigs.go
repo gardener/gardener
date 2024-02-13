@@ -20,6 +20,9 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
+
+	monitoringutils "github.com/gardener/gardener/pkg/component/monitoring/utils"
 )
 
 // CentralScrapeConfigs returns the central ScrapeConfig resources for the seed prometheus.
@@ -38,6 +41,46 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 				StaticConfigs: []monitoringv1alpha1.StaticConfig{{
 					Targets: []monitoringv1alpha1.Target{"localhost:9090"},
 				}},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "cadvisor",
+			},
+			Spec: monitoringv1alpha1.ScrapeConfigSpec{
+				HonorLabels:     ptr.To(true),
+				HonorTimestamps: ptr.To(false),
+				MetricsPath:     ptr.To("/federate"),
+				Params: map[string][]string{
+					"match[]": {
+						`{job="cadvisor",namespace=~"extension-(.+)"}`,
+						`{job="cadvisor",namespace="garden"}`,
+						`{job="cadvisor",namespace=~"istio-(.+)"}`,
+						`{job="cadvisor",namespace="kube-system"}`,
+					},
+				},
+				StaticConfigs: []monitoringv1alpha1.StaticConfig{{
+					Targets: []monitoringv1alpha1.Target{"prometheus-cache.garden.svc"},
+				}},
+				RelabelConfigs: []*monitoringv1.RelabelConfig{{
+					Action:      "replace",
+					Replacement: "cadvisor",
+					TargetLabel: "job",
+				}},
+				MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
+					"container_cpu_cfs_periods_total",
+					"container_cpu_cfs_throttled_periods_total",
+					"container_cpu_cfs_throttled_seconds_total",
+					"container_cpu_usage_seconds_total",
+					"container_fs_inodes_total",
+					"container_fs_limit_bytes",
+					"container_fs_usage_bytes",
+					"container_last_seen",
+					"container_memory_working_set_bytes",
+					"container_network_receive_bytes_total",
+					"container_network_transmit_bytes_total",
+					"container_oom_events_total",
+				),
 			},
 		},
 	}

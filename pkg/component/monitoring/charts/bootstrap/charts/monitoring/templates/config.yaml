@@ -75,19 +75,3 @@ data:
         target_label: namespace
       - source_labels: [ __meta_kubernetes_pod_name ]
         target_label: pod
-
-    - job_name: cadvisor
-      honor_timestamps: false
-      metrics_path: /federate
-      honor_labels: true
-      params:
-        'match[]':
-        - '{job="cadvisor",namespace=~"extension-(.+)"}'
-        - '{job="cadvisor",namespace="garden"}'
-        - '{job="cadvisor",namespace=~"istio-(.+)"}'
-        - '{job="cadvisor",namespace="kube-system"}'
-      static_configs:
-      - targets:
-        - prometheus-cache.garden.svc
-      metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.cadvisor | indent 6 }}
