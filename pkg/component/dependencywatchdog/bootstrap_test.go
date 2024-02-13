@@ -540,7 +540,6 @@ spec:
 		})
 
 		Describe("RoleProber", func() {
-			// testSuite(BootstrapperValues{Role: RoleProber, Image: image}, "bad3c18c")
 			testSuite(BootstrapperValues{Role: RoleProber, Image: image}, "c78cc28d")
 		})
 	})

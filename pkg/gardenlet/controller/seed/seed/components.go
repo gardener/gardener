@@ -48,6 +48,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
 	"github.com/gardener/gardener/pkg/component/kubeapiserverexposure"
+	"github.com/gardener/gardener/pkg/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/kubeproxy"
 	"github.com/gardener/gardener/pkg/component/kubernetesdashboard"
 	"github.com/gardener/gardener/pkg/component/kubescheduler"
@@ -424,7 +425,7 @@ func (r *Reconciler) newDependencyWatchdogs(seedSettings *gardencorev1beta1.Seed
 				KubeConfigSecretName:        dependencywatchdog.KubeConfigSecretName,
 				ProbeInterval:               &metav1.Duration{Duration: dependencywatchdog.DefaultProbeInterval},
 				DependentResourceInfos:      make([]proberapi.DependentResourceInfo, 0, len(dependencyWatchdogProberConfigurationFuncs)),
-				KCMNodeMonitorGraceDuration: metav1.Duration{Duration: dependencywatchdog.DefaultKCMNodeMonitorGraceDuration},
+				KCMNodeMonitorGraceDuration: metav1.Duration{Duration: kubecontrollermanager.NodeMonitorGraceDurationK8sGreaterEqual127},
 			}
 		)
 

@@ -456,24 +456,19 @@ func (g *garden) Start(ctx context.Context) error {
 func (g *garden) createNewDWDResources(ctx context.Context, seedClient client.Client) error {
 	// Fetch all namespaces
 	namespaceList := &corev1.NamespaceList{}
-	if err := seedClient.List(ctx, namespaceList); err != nil {
+	if err := seedClient.List(ctx, namespaceList, client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot})); err != nil {
 		return err
 	}
 
-	// Filter out all namespaces that are in deletion
-	namespacesNotInDeletion := []corev1.Namespace{}
-	for _, namespace := range namespaceList.Items {
-		if namespace.DeletionTimestamp == nil && namespace.Status.Phase != corev1.NamespaceTerminating {
-			namespacesNotInDeletion = append(namespacesNotInDeletion, namespace)
+	var tasks []flow.TaskFn
+	for _, ns := range namespaceList.Items {
+		if ns.DeletionTimestamp != nil || ns.Status.Phase == corev1.NamespaceTerminating {
+			continue
 		}
-	}
-
-	tasks := []flow.TaskFn{}
-	for _, namespace := range namespacesNotInDeletion {
-		ns := namespace
+		namespace := ns
 		tasks = append(tasks, func(ctx context.Context) error {
-			var dwdOldSecret corev1.Secret
-			if err := seedClient.Get(ctx, types.NamespacedName{Namespace: ns.Name, Name: dwd.InternalProbeSecretName}, &dwdOldSecret); err != nil {
+			dwdOldSecret := &corev1.Secret{}
+			if err := seedClient.Get(ctx, types.NamespacedName{Namespace: namespace.Name, Name: dwd.InternalProbeSecretName}, dwdOldSecret); err != nil {
 				// If ns does not contain old DWD secret, do not procees.
 				if apierrors.IsNotFound(err) {
 					return nil
@@ -482,8 +477,8 @@ func (g *garden) createNewDWDResources(ctx context.Context, seedClient client.Cl
 			}
 
 			// Fetch GRM deployment
-			grmDeploy := appsv1.Deployment{}
-			if err := seedClient.Get(ctx, types.NamespacedName{Namespace: ns.Name, Name: "gardener-resource-manager"}, &grmDeploy); err != nil {
+			grmDeploy := &appsv1.Deployment{}
+			if err := seedClient.Get(ctx, types.NamespacedName{Namespace: namespace.Name, Name: "gardener-resource-manager"}, grmDeploy); err != nil {
 				if apierrors.IsNotFound(err) {
 					// Do not proceed if GRM deployment is not present
 					return nil
@@ -492,34 +487,47 @@ func (g *garden) createNewDWDResources(ctx context.Context, seedClient client.Cl
 			}
 
 			// Create a DWDAccess object
-			InClusterServerURL := fmt.Sprintf("%s.%s.svc", v1beta1constants.DeploymentNameKubeAPIServer, ns.Name)
-			dwdAccess := dwd.NewDWDAccess(seedClient, ns.Name, nil, dwd.AccessValues{ServerInCluster: InClusterServerURL})
+			inClusterServerURL := fmt.Sprintf("%s.%s.svc", v1beta1constants.DeploymentNameKubeAPIServer, namespace.Name)
+			dwdAccess := dwd.NewAccess(seedClient, namespace.Name, nil, dwd.AccessValues{ServerInCluster: inClusterServerURL})
 
-			err := dwdAccess.DeployMigrate(ctx)
-			if err != nil {
+			if err := dwdAccess.DeployMigrate(ctx); err != nil {
 				return err
 			}
 
+			//Delete old DWD secrets
+			if err := seedClient.Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: dwd.InternalProbeSecretName, Namespace: namespace.Name}}); err != nil {
+				if !apierrors.IsNotFound(err) {
+					return err
+				}
+			}
+			if err := seedClient.Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: dwd.ExternalProbeSecretName, Namespace: namespace.Name}}); err != nil {
+				if !apierrors.IsNotFound(err) {
+					return err
+				}
+			}
+
 			// Fetch and update the GRM configmap
-			grmCM := corev1.ConfigMap{}
-			volumeNameConfig := "config"
-			grmCMName := ""
-			for _, vol := range grmDeploy.Spec.Template.Spec.Volumes {
-				if vol.Name == volumeNameConfig {
+			grmConfigMap := &corev1.ConfigMap{}
+			var grmCMName string
+			var grmCMVolumeIndex int
+			for n, vol := range grmDeploy.Spec.Template.Spec.Volumes {
+				if vol.Name == "config" {
 					grmCMName = vol.ConfigMap.Name
+					grmCMVolumeIndex = n
+					break
 				}
 			}
 			if len(grmCMName) == 0 {
 				return nil
 			}
-			if err := seedClient.Get(ctx, types.NamespacedName{Namespace: ns.Name, Name: grmCMName}, &grmCM); err != nil {
+			if err := seedClient.Get(ctx, types.NamespacedName{Namespace: namespace.Name, Name: grmCMName}, grmConfigMap); err != nil {
 				if apierrors.IsNotFound(err) {
 					return nil
 				}
 				return err
 			}
 
-			cmData := grmCM.Data["config.yaml"]
+			cmData := grmConfigMap.Data["config.yaml"]
 			rmConfig := resourcemanagerv1alpha1.ResourceManagerConfiguration{}
 
 			// create codec
@@ -551,29 +559,27 @@ func (g *garden) createNewDWDResources(ctx context.Context, seedClient client.Cl
 				return err
 			}
 
-			err = seedClient.Delete(ctx, &grmCM)
-			if err != nil {
+			if err = seedClient.Delete(ctx, grmConfigMap); err != nil {
 				return err
 			}
 
-			grmCM.Data = map[string]string{"config.yaml": string(data)}
-			grmCM.ObjectMeta.Name = dwd.TempGRMConfigMapName
-			grmCM.ObjectMeta.ResourceVersion = ""
+			newGRMConfigMap := &corev1.ConfigMap{}
+			newGRMConfigMap.Data = map[string]string{"config.yaml": string(data)}
+			newGRMConfigMap.Immutable = ptr.To[bool](true)
+			newGRMConfigMap.ObjectMeta.Name = dwd.TempGRMConfigMapName
+			newGRMConfigMap.ObjectMeta.Namespace = namespace.Name
+			newGRMConfigMap.ObjectMeta.Labels = grmConfigMap.ObjectMeta.Labels
 
-			err = seedClient.Create(ctx, &grmCM)
-			if err != nil {
-				return err
-			}
-
-			// Update GRM delpoy to reference the newly created cm
-			grmDeployCopy := grmDeploy.DeepCopy()
-			for n, vol := range grmDeploy.Spec.Template.Spec.Volumes {
-				if vol.Name == "config" {
-					grmDeploy.Spec.Template.Spec.Volumes[n].ConfigMap.Name = dwd.TempGRMConfigMapName
+			if err = seedClient.Create(ctx, newGRMConfigMap); err != nil {
+				if !apierrors.IsAlreadyExists(err) {
+					return err
 				}
 			}
 
-			return seedClient.Patch(ctx, &grmDeploy, client.MergeFrom(grmDeployCopy))
+			patch := client.MergeFrom(grmDeploy.DeepCopy())
+			grmDeploy.Spec.Template.Spec.Volumes[grmCMVolumeIndex].ConfigMap.Name = dwd.TempGRMConfigMapName
+
+			return seedClient.Patch(ctx, grmDeploy, patch)
 		})
 	}
 	return flow.Parallel(tasks...)(ctx)
