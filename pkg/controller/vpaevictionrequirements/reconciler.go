@@ -141,7 +141,7 @@ func (r *Reconciler) reconcileVPAForDownscaleInMaintenanceOnly(ctx context.Conte
 }
 
 func (r *Reconciler) reconcileVPAForDownscaleDisabled(ctx context.Context, log logr.Logger, vpa *vpaautoscalingv1.VerticalPodAutoscaler) (reconcile.Result, error) {
-	log.Info("Adding EvictionRequirement for vpa to deny downscaling")
+	log.Info("Adding EvictionRequirement to deny downscaling")
 
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.SeedClient, vpa, func() error {
 		vpa.Spec.UpdatePolicy.EvictionRequirements = upscaleOnlyRequirement

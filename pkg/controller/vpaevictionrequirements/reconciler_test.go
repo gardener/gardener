@@ -28,7 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -66,7 +66,7 @@ var _ = Describe("Reconciler", func() {
 
 		seedClient = fakeclient.NewClientBuilder().WithScheme(testScheme).Build()
 		reconciler = &vpaevictionrequirements.Reconciler{
-			ConcurrentSyncs: pointer.Int(5),
+			ConcurrentSyncs: ptr.To(5),
 			Clock:           fakeClock,
 			SeedClient:      seedClient,
 		}
