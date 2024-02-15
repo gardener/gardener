@@ -252,7 +252,7 @@ status:
             - name: europe-custom-1c
 ```
 
-The rendering is done by a new custom controller registered to the `gardener-controller-manager`. If a merge conflict is to appear during the rendering process, it should be noted somewhere in the status and the parent cloud profile should be preferred.
+The rendering is done by a new custom controller registered to the `gardener-controller-manager`. Merge conflicts can not arise during the merge process as they are caught by static validation and an admission plugin for validating the private cloud profile.
 
 ### Custom RBAC verb
 
@@ -292,7 +292,7 @@ Because of this, multi-level inheritance will not be implemented as of this GEP.
 
 ### Arbitrary Value Fields
 
-Instead of specifying a private cloud profile resource, an end user could be allowed to enter arbitrary names in fields such as `machineTypes`. The entry would then, if the user enters a wrong value, throw an error when provisioning the resource at the cloud provider. However, this approach does not seem feasible as the metadata that is specified in a cloud profile like the number of CPUs and amount of RAM is used in the trial clusters to validate quotas. Therefore, an exception would need to be developed for this specific, and possibly other, use cases.
+Instead of specifying a private cloud profile resource, an end user could be allowed to enter arbitrary names in fields such as `machineTypes`. The entry would then, if the user enters a wrong value, throw an error when provisioning the resource at the cloud provider. However, this approach does not seem feasible as the metadata that is specified in a cloud profile like the number of CPUs and amount of RAM is used in the trial clusters to validate quotas and to enable the scale-from-zero feature. Therefore, an exception would need to be developed for this specific, and possibly other, use cases.
 
 ### Private Cloud Profiles by Selection
 
