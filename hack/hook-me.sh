@@ -295,6 +295,26 @@ loadCerts() {
     )
 }
 
+tunnelConsent() {
+    local red='\033[0;31m'
+    local no_color='\033[0m'
+    echo -e "${red}> WARNING: A network tunnel from the seed cluster toward this host is about to be opened via https://github.com/mvladev/quic-reverse-http-tunnel.${no_color}"
+
+    read -p "Do you agree the tunnel to be opened? [Yes|No]: " yn
+    case $yn in
+        [Yy]* )
+            echo "Tunnel will be opened!"
+            ;;
+        [Nn]* )
+            echo "Tunnel will not be opened, exiting ..."
+            exit
+            ;;
+        * )
+            echo "Invalid answer, please answer with 'Yes' or 'No'."
+            exit 1
+            ;;
+    esac
+}
 
 cleanUP() {
     namespace=${1:-}
@@ -370,7 +390,7 @@ if [[ "${BASH_SOURCE[0]}" = "$0" ]]; then
     quicTunnelPort=${5:-}
     [[ -z $quicTunnelPort ]] && echo "quic-tunnel port not specified, using default port of 9444" && quicTunnelPort=9444
 
-
+    tunnelConsent
     trap 'cleanUP $namespace' EXIT
 
     while true; do
