@@ -72,7 +72,11 @@ var _ = BeforeSuite(func() {
 	By("Start test environment")
 	testEnv = &envtest.Environment{
 		CRDInstallOptions: envtest.CRDInstallOptions{
-			Paths: []string{filepath.Join("..", "..", "..", "..", "example", "resource-manager", "10-crd-resources.gardener.cloud_managedresources.yaml")},
+			Paths: []string{
+				filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-resources.gardener.cloud_managedresources.yaml"),
+				filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-monitoring.coreos.com_alertmanagers.yaml"),
+				filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-monitoring.coreos.com_prometheuses.yaml"),
+			},
 		},
 		ErrorIfCRDPathMissing: true,
 	}

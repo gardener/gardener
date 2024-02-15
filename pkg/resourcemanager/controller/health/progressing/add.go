@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -80,9 +81,11 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 	}
 
 	for resource, obj := range map[string]client.Object{
-		"deployments":  &appsv1.Deployment{},
-		"statefulsets": &appsv1.StatefulSet{},
-		"daemonsets":   &appsv1.DaemonSet{},
+		"deployments":   &appsv1.Deployment{},
+		"statefulsets":  &appsv1.StatefulSet{},
+		"daemonsets":    &appsv1.DaemonSet{},
+		"prometheuses":  &monitoringv1.Prometheus{},
+		"alertmanagers": &monitoringv1.Alertmanager{},
 	} {
 		gvr := schema.GroupVersionResource{Group: appsv1.SchemeGroupVersion.Group, Version: appsv1.SchemeGroupVersion.Version, Resource: resource}
 

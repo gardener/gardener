@@ -17,6 +17,7 @@ package utils_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -456,6 +457,54 @@ var _ = Describe("CheckHealth", func() {
 				},
 				Spec:   appsv1.StatefulSetSpec{Replicas: ptr.To(int32(2))},
 				Status: appsv1.StatefulSetStatus{ReadyReplicas: 1},
+			}
+		})
+
+		testSuite()
+	})
+
+	Context("Prometheus", func() {
+		BeforeEach(func() {
+			healthy = &monitoringv1.Prometheus{
+				Spec:   monitoringv1.PrometheusSpec{CommonPrometheusFields: monitoringv1.CommonPrometheusFields{Replicas: ptr.To(int32(1))}},
+				Status: monitoringv1.PrometheusStatus{Replicas: 1, AvailableReplicas: 1, Conditions: []monitoringv1.Condition{{Type: monitoringv1.Available, Status: monitoringv1.ConditionTrue}}},
+			}
+			unhealthy = &monitoringv1.Prometheus{
+				Spec:   monitoringv1.PrometheusSpec{CommonPrometheusFields: monitoringv1.CommonPrometheusFields{Replicas: ptr.To(int32(2))}},
+				Status: monitoringv1.PrometheusStatus{AvailableReplicas: 1},
+			}
+			unhealthyWithSkipHealthCheckAnnotation = &monitoringv1.Prometheus{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						resourcesv1alpha1.SkipHealthCheck: "true",
+					},
+				},
+				Spec:   monitoringv1.PrometheusSpec{CommonPrometheusFields: monitoringv1.CommonPrometheusFields{Replicas: ptr.To(int32(2))}},
+				Status: monitoringv1.PrometheusStatus{AvailableReplicas: 1},
+			}
+		})
+
+		testSuite()
+	})
+
+	Context("Alertmanager", func() {
+		BeforeEach(func() {
+			healthy = &monitoringv1.Alertmanager{
+				Spec:   monitoringv1.AlertmanagerSpec{Replicas: ptr.To(int32(1))},
+				Status: monitoringv1.AlertmanagerStatus{Replicas: 1, AvailableReplicas: 1, Conditions: []monitoringv1.Condition{{Type: monitoringv1.Available, Status: monitoringv1.ConditionTrue}}},
+			}
+			unhealthy = &monitoringv1.Alertmanager{
+				Spec:   monitoringv1.AlertmanagerSpec{Replicas: ptr.To(int32(2))},
+				Status: monitoringv1.AlertmanagerStatus{AvailableReplicas: 1},
+			}
+			unhealthyWithSkipHealthCheckAnnotation = &monitoringv1.Alertmanager{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						resourcesv1alpha1.SkipHealthCheck: "true",
+					},
+				},
+				Spec:   monitoringv1.AlertmanagerSpec{Replicas: ptr.To(int32(2))},
+				Status: monitoringv1.AlertmanagerStatus{AvailableReplicas: 1},
 			}
 		})
 

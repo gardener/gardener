@@ -17,6 +17,7 @@ package utils
 import (
 	"context"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -87,6 +88,10 @@ func CheckHealth(obj client.Object) (bool, error) {
 		return true, health.CheckService(o)
 	case *appsv1.StatefulSet:
 		return true, health.CheckStatefulSet(o)
+	case *monitoringv1.Prometheus:
+		return true, health.CheckPrometheus(o)
+	case *monitoringv1.Alertmanager:
+		return true, health.CheckAlertmanager(o)
 	}
 
 	return false, nil
