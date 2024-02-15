@@ -54,9 +54,10 @@ const (
 	secretNameHAVPNSeedClient        = "vpn-seed-client"
 
 	// ContainerNameKubeAPIServer is the name of the kube-apiserver container.
-	ContainerNameKubeAPIServer = "kube-apiserver"
-	containerNameVPNSeedClient = "vpn-client"
-	containerNameWatchdog      = "watchdog"
+	ContainerNameKubeAPIServer     = "kube-apiserver"
+	containerNameVPNPathController = "vpn-path-controller"
+	containerNameVPNSeedClient     = "vpn-client"
+	containerNameWatchdog          = "watchdog"
 
 	volumeNameAuthenticationWebhookKubeconfig = "authentication-webhook-kubeconfig"
 	volumeNameAuthorizationWebhookKubeconfig  = "authorization-webhook-kubeconfig"
@@ -869,7 +870,7 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 
 func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 	container := &corev1.Container{
-		Name:            "vpn-path-controller",
+		Name:            containerNameVPNPathController,
 		Image:           k.values.Images.VPNClient,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         []string{"/path-controller.sh"},

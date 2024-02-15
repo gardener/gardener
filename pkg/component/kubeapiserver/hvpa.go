@@ -16,6 +16,7 @@ package kubeapiserver
 
 import (
 	"context"
+	"fmt"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -99,6 +100,25 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 			VpaWeight:         hvpav1alpha1.HpaOnly,
 			StartReplicaCount: k.values.Autoscaling.MinReplicas,
 			LastReplicaCount:  k.values.Autoscaling.MaxReplicas - 1,
+		})
+	}
+
+	if k.values.VPN.HighAvailabilityEnabled {
+		for i := 0; i < k.values.VPN.HighAvailabilityNumberOfSeedServers; i++ {
+			vpaContainerResourcePolicies = append(vpaContainerResourcePolicies, vpaautoscalingv1.ContainerResourcePolicy{
+				ContainerName: fmt.Sprintf("%s-%d", containerNameVPNSeedClient, i),
+				MinAllowed: corev1.ResourceList{
+					corev1.ResourceMemory: resource.MustParse("20Mi"),
+				},
+				ControlledValues: &controlledValues,
+			})
+		}
+		vpaContainerResourcePolicies = append(vpaContainerResourcePolicies, vpaautoscalingv1.ContainerResourcePolicy{
+			ContainerName: containerNameVPNPathController,
+			MinAllowed: corev1.ResourceList{
+				corev1.ResourceMemory: resource.MustParse("20Mi"),
+			},
+			ControlledValues: &controlledValues,
 		})
 	}
 
