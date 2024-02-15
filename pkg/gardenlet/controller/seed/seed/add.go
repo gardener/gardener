@@ -17,6 +17,7 @@ package seed
 import (
 	"fmt"
 
+	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -40,6 +41,13 @@ const ControllerName = "seed"
 func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Cluster) error {
 	if r.GardenClient == nil {
 		r.GardenClient = gardenCluster.GetClient()
+	}
+	if r.SeedVersion == nil {
+		var err error
+		r.SeedVersion, err = semver.NewVersion(r.SeedClientSet.Version())
+		if err != nil {
+			return err
+		}
 	}
 	if r.Clock == nil {
 		r.Clock = clock.RealClock{}

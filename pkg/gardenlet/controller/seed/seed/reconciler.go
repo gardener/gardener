@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -33,7 +34,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -47,6 +48,7 @@ import (
 type Reconciler struct {
 	GardenClient                         client.Client
 	SeedClientSet                        kubernetes.Interface
+	SeedVersion                          *semver.Version
 	Config                               config.GardenletConfiguration
 	Clock                                clock.Clock
 	Recorder                             record.EventRecorder
@@ -276,27 +278,10 @@ func determineClusterIdentity(ctx context.Context, c client.Client) (string, err
 	return clusterIdentity.Data[v1beta1constants.ClusterIdentity], nil
 }
 
-func getDNSProviderSecretData(ctx context.Context, gardenClient client.Client, seed *gardencorev1beta1.Seed) (map[string][]byte, error) {
-	if dnsConfig := seed.Spec.DNS; dnsConfig.Provider != nil {
-		secret, err := kubernetesutils.GetSecretByReference(ctx, gardenClient, &dnsConfig.Provider.SecretRef)
-		if err != nil {
-			return nil, err
-		}
-		return secret.Data, nil
-	}
-	return nil, nil
+func vpaEnabled(settings *gardencorev1beta1.SeedSettings) bool {
+	return settings == nil || settings.VerticalPodAutoscaler == nil || settings.VerticalPodAutoscaler.Enabled
 }
 
-func deployDNSResources(ctx context.Context, dnsRecord component.DeployMigrateWaiter) error {
-	if err := dnsRecord.Deploy(ctx); err != nil {
-		return err
-	}
-	return dnsRecord.Wait(ctx)
-}
-
-func destroyDNSResources(ctx context.Context, dnsRecord component.DeployMigrateWaiter) error {
-	if err := dnsRecord.Destroy(ctx); err != nil {
-		return err
-	}
-	return dnsRecord.WaitCleanup(ctx)
+func hvpaEnabled() bool {
+	return features.DefaultFeatureGate.Enabled(features.HVPA)
 }
