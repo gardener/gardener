@@ -41,15 +41,15 @@ var _ = Describe("Monitoring", func() {
 		Entry("not observed at latest version", &monitoringv1.Prometheus{
 			ObjectMeta: metav1.ObjectMeta{Generation: 1},
 			Status:     monitoringv1.PrometheusStatus{Conditions: []monitoringv1.Condition{{Type: monitoringv1.Available, Status: monitoringv1.ConditionTrue}}},
-		}, HaveOccurred()),
-		Entry("condition missing", &monitoringv1.Prometheus{}, HaveOccurred()),
+		}, MatchError(ContainSubstring("observed generation outdated (0/1)"))),
+		Entry("condition missing", &monitoringv1.Prometheus{}, MatchError(ContainSubstring(`condition "Available" is missing`))),
 		Entry("condition False", &monitoringv1.Prometheus{
 			Status: monitoringv1.PrometheusStatus{Conditions: []monitoringv1.Condition{{Type: monitoringv1.Available, Status: monitoringv1.ConditionFalse}}},
-		}, HaveOccurred()),
+		}, MatchError(ContainSubstring(`condition "Available" has invalid status False (expected True)`))),
 		Entry("not enough ready replicas", &monitoringv1.Prometheus{
 			Spec:   monitoringv1.PrometheusSpec{CommonPrometheusFields: monitoringv1.CommonPrometheusFields{Replicas: ptr.To(int32(2))}},
 			Status: monitoringv1.PrometheusStatus{Replicas: 1, AvailableReplicas: 1, Conditions: []monitoringv1.Condition{{Type: monitoringv1.Available, Status: monitoringv1.ConditionTrue}}},
-		}, HaveOccurred()),
+		}, MatchError(ContainSubstring(`not enough available replicas (1/2)`))),
 	)
 
 	Describe("IsPrometheusProgressing", func() {
@@ -119,15 +119,15 @@ var _ = Describe("Monitoring", func() {
 		Entry("not observed at latest version", &monitoringv1.Alertmanager{
 			ObjectMeta: metav1.ObjectMeta{Generation: 1},
 			Status:     monitoringv1.AlertmanagerStatus{Conditions: []monitoringv1.Condition{{Type: monitoringv1.Available, Status: monitoringv1.ConditionTrue}}},
-		}, HaveOccurred()),
-		Entry("condition missing", &monitoringv1.Alertmanager{}, HaveOccurred()),
+		}, MatchError(ContainSubstring("observed generation outdated (0/1)"))),
+		Entry("condition missing", &monitoringv1.Alertmanager{}, MatchError(ContainSubstring(`condition "Available" is missing`))),
 		Entry("condition False", &monitoringv1.Alertmanager{
 			Status: monitoringv1.AlertmanagerStatus{Conditions: []monitoringv1.Condition{{Type: monitoringv1.Available, Status: monitoringv1.ConditionFalse}}},
-		}, HaveOccurred()),
+		}, MatchError(ContainSubstring(`condition "Available" has invalid status False (expected True)`))),
 		Entry("not enough ready replicas", &monitoringv1.Alertmanager{
 			Spec:   monitoringv1.AlertmanagerSpec{Replicas: ptr.To(int32(2))},
 			Status: monitoringv1.AlertmanagerStatus{Replicas: 1, AvailableReplicas: 1, Conditions: []monitoringv1.Condition{{Type: monitoringv1.Available, Status: monitoringv1.ConditionTrue}}},
-		}, HaveOccurred()),
+		}, MatchError(ContainSubstring(`not enough available replicas (1/2)`))),
 	)
 
 	Describe("IsAlertmanagerProgressing", func() {
