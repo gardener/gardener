@@ -525,7 +525,7 @@ type HibernationSchedule struct {
 // Kubernetes contains the version and configuration variables for the Shoot control plane.
 type Kubernetes struct {
 	// AllowPrivilegedContainers is tombstoned to show why 1 is reserved protobuf tag.
-	AllowPrivilegedContainers *bool `json:"allowPrivilegedContainers,omitempty" protobuf:"varint,1,opt,name=allowPrivilegedContainers"`
+	// AllowPrivilegedContainers *bool `json:"allowPrivilegedContainers,omitempty" protobuf:"varint,1,opt,name=allowPrivilegedContainers"`
 
 	// ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.
 	// +optional

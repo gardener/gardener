@@ -3768,7 +3768,6 @@ func Convert_core_KubeletConfigReserved_To_v1beta1_KubeletConfigReserved(in *cor
 }
 
 func autoConvert_v1beta1_Kubernetes_To_core_Kubernetes(in *Kubernetes, out *core.Kubernetes, s conversion.Scope) error {
-	out.AllowPrivilegedContainers = (*bool)(unsafe.Pointer(in.AllowPrivilegedContainers))
 	out.ClusterAutoscaler = (*core.ClusterAutoscaler)(unsafe.Pointer(in.ClusterAutoscaler))
 	if in.KubeAPIServer != nil {
 		in, out := &in.KubeAPIServer, &out.KubeAPIServer
@@ -3803,7 +3802,6 @@ func Convert_v1beta1_Kubernetes_To_core_Kubernetes(in *Kubernetes, out *core.Kub
 }
 
 func autoConvert_core_Kubernetes_To_v1beta1_Kubernetes(in *core.Kubernetes, out *Kubernetes, s conversion.Scope) error {
-	out.AllowPrivilegedContainers = (*bool)(unsafe.Pointer(in.AllowPrivilegedContainers))
 	out.ClusterAutoscaler = (*ClusterAutoscaler)(unsafe.Pointer(in.ClusterAutoscaler))
 	if in.KubeAPIServer != nil {
 		in, out := &in.KubeAPIServer, &out.KubeAPIServer
