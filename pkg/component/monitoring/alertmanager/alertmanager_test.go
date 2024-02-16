@@ -193,7 +193,7 @@ var _ = Describe("Prometheus", func() {
 				AlertmanagerConfiguration:           &monitoringv1.AlertmanagerConfiguration{Name: "alertmanager-" + name},
 			},
 		}
-		vpaUpdateMode, vpaContainerScalingModeOff := vpaautoscalingv1.UpdateModeAuto, vpaautoscalingv1.ContainerScalingModeOff
+		vpaUpdateMode, vpaControlledValuesRequestsOnly, vpaContainerScalingModeOff := vpaautoscalingv1.UpdateModeAuto, vpaautoscalingv1.ContainerControlledValuesRequestsOnly, vpaautoscalingv1.ContainerScalingModeOff
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "alertmanager-" + name,
@@ -214,6 +214,10 @@ var _ = Describe("Prometheus", func() {
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+						{
+							ContainerName:    "*",
+							ControlledValues: &vpaControlledValuesRequestsOnly,
+						},
 						{
 							ContainerName: "alertmanager",
 							MinAllowed: corev1.ResourceList{

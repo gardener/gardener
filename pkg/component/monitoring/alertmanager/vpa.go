@@ -24,7 +24,7 @@ import (
 )
 
 func (a *alertManager) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
-	updateMode, containerScalingModeOff := vpaautoscalingv1.UpdateModeAuto, vpaautoscalingv1.ContainerScalingModeOff
+	updateMode, controlledValuesRequestsOnly, containerScalingModeOff := vpaautoscalingv1.UpdateModeAuto, vpaautoscalingv1.ContainerControlledValuesRequestsOnly, vpaautoscalingv1.ContainerScalingModeOff
 
 	return &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
@@ -43,6 +43,10 @@ func (a *alertManager) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 			},
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+					{
+						ContainerName:    "*",
+						ControlledValues: &controlledValuesRequestsOnly,
+					},
 					{
 						ContainerName: "alertmanager",
 						MinAllowed: corev1.ResourceList{
