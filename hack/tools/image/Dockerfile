@@ -13,6 +13,7 @@ RUN echo "Installing Packages ..." \
 FROM base as builder
 ARG GOPROXY=https://proxy.golang.org,direct
 ENV GOPROXY=$GOPROXY
+ENV GOTOOLCHAIN=auto
 WORKDIR /go/src/github.com/gardener/gardener
 COPY . .
 RUN make create-tools-bin
