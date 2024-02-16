@@ -58,6 +58,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/metricsserver"
 	"github.com/gardener/gardener/pkg/component/monitoring"
+	"github.com/gardener/gardener/pkg/component/monitoring/alertmanager"
 	"github.com/gardener/gardener/pkg/component/monitoring/prometheus"
 	cacheprometheus "github.com/gardener/gardener/pkg/component/monitoring/prometheus/cache"
 	"github.com/gardener/gardener/pkg/component/monitoring/prometheusoperator"
@@ -120,6 +121,7 @@ type components struct {
 	kubeStateMetrics              component.DeployWaiter
 	prometheusOperator            component.DeployWaiter
 	cachePrometheus               component.DeployWaiter
+	alertManager                  component.DeployWaiter
 }
 
 func (r *Reconciler) instantiateComponents(
@@ -217,7 +219,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.monitoring, err = r.newMonitoring(secretsManager, seed, alertingSMTPSecret, globalMonitoringSecretSeed, seed.GetIngressFQDN("p-seed"), wildCardCertSecret)
+	c.monitoring, err = r.newMonitoring(secretsManager, seed, globalMonitoringSecretSeed, seed.GetIngressFQDN("p-seed"), wildCardCertSecret)
 	if err != nil {
 		return
 	}
@@ -230,6 +232,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.cachePrometheus, err = r.newCachePrometheus(log, seed)
+	if err != nil {
+		return
+	}
+	c.alertManager, err = r.newAlertmanager(log, seed, alertingSMTPSecret)
 	if err != nil {
 		return
 	}
@@ -557,11 +563,7 @@ func (r *Reconciler) newPlutono(seed *seedpkg.Seed, secretsManager secretsmanage
 	)
 }
 
-func (r *Reconciler) newMonitoring(secretsManager secretsmanager.Interface, seed *seedpkg.Seed, alertingSMTPSecret *corev1.Secret, globalMonitoringSecret *corev1.Secret, ingressHost string, wildcardCertSecret *corev1.Secret) (component.Deployer, error) {
-	imageAlertmanager, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlertmanager)
-	if err != nil {
-		return nil, err
-	}
+func (r *Reconciler) newMonitoring(secretsManager secretsmanager.Interface, seed *seedpkg.Seed, globalMonitoringSecret *corev1.Secret, ingressHost string, wildcardCertSecret *corev1.Secret) (component.Deployer, error) {
 	imageAlpine, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlpine)
 	if err != nil {
 		return nil, err
@@ -586,16 +588,13 @@ func (r *Reconciler) newMonitoring(secretsManager secretsmanager.Interface, seed
 		secretsManager,
 		r.GardenNamespace,
 		monitoring.ValuesBootstrap{
-			AlertingSMTPSecret:                 alertingSMTPSecret,
 			GlobalMonitoringSecret:             globalMonitoringSecret,
 			HVPAEnabled:                        hvpaEnabled(),
-			ImageAlertmanager:                  imageAlertmanager.String(),
 			ImageAlpine:                        imageAlpine.String(),
 			ImageConfigmapReloader:             imageConfigmapReloader.String(),
 			ImagePrometheus:                    imagePrometheus.String(),
 			IngressHost:                        ingressHost,
 			SeedName:                           seed.GetInfo().Name,
-			StorageCapacityAlertmanager:        seed.GetValidVolumeSize("1Gi"),
 			StorageCapacityPrometheus:          seed.GetValidVolumeSize("10Gi"),
 			StorageCapacityAggregatePrometheus: seed.GetValidVolumeSize("20Gi"),
 			WildcardCertName:                   wildcardCertName,
@@ -613,12 +612,14 @@ func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed) (co
 		return nil, err
 	}
 
+	storageCapacity := resource.MustParse(seed.GetValidVolumeSize("10Gi"))
+
 	return prometheus.New(log, r.SeedClientSet.Client(), r.GardenNamespace, prometheus.Values{
 		Name:              "cache",
 		Image:             imagePrometheus.String(),
 		Version:           ptr.Deref(imagePrometheus.Version, "v0.0.0"),
 		PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
-		StorageCapacity:   resource.MustParse(seed.GetValidVolumeSize("10Gi")),
+		StorageCapacity:   storageCapacity,
 		CentralConfigs: prometheus.CentralConfigs{
 			AdditionalScrapeConfigs: cacheprometheus.AdditionalScrapeConfigs(),
 			ServiceMonitors:         cacheprometheus.CentralServiceMonitors(),
@@ -626,12 +627,54 @@ func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed) (co
 		},
 		AdditionalResources: []client.Object{cacheprometheus.NetworkPolicyToNodeExporter(r.GardenNamespace)},
 		// TODO(rfranzke): Remove this after v1.92 has been released.
-		DataMigration: prometheus.DataMigration{
+		DataMigration: monitoring.DataMigration{
+			Client:          r.SeedClientSet.Client(),
+			Namespace:       r.GardenNamespace,
+			StorageCapacity: storageCapacity,
 			ImageAlpine:     imageAlpine.String(),
 			StatefulSetName: "prometheus",
+			FullName:        "prometheus-cache",
 			PVCName:         "prometheus-db-prometheus-0",
 		},
 	}), nil
+}
+
+func (r *Reconciler) newAlertmanager(log logr.Logger, seed *seedpkg.Seed, alertingSMTPSecret *corev1.Secret) (component.DeployWaiter, error) {
+	imageAlertmanager, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlertmanager)
+	if err != nil {
+		return nil, err
+	}
+	imageAlpine, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlpine)
+	if err != nil {
+		return nil, err
+	}
+
+	storageCapacity := resource.MustParse(seed.GetValidVolumeSize("1Gi"))
+
+	alertManager := alertmanager.New(log, r.SeedClientSet.Client(), r.GardenNamespace, alertmanager.Values{
+		Name:               "seed",
+		Image:              imageAlertmanager.String(),
+		Version:            ptr.Deref(imageAlertmanager.Version, "v0.0.0"),
+		PriorityClassName:  v1beta1constants.PriorityClassNameSeedSystem600,
+		StorageCapacity:    storageCapacity,
+		AlertingSMTPSecret: alertingSMTPSecret,
+		// TODO(rfranzke): Remove this after v1.92 has been released.
+		DataMigration: monitoring.DataMigration{
+			Client:          r.SeedClientSet.Client(),
+			Namespace:       r.GardenNamespace,
+			StorageCapacity: storageCapacity,
+			ImageAlpine:     imageAlpine.String(),
+			StatefulSetName: "alertmanager",
+			FullName:        "alertmanager-seed",
+			PVCName:         "alertmanager-db-alertmanager-0",
+		},
+	})
+
+	if alertingSMTPSecret == nil {
+		return component.OpDestroyAndWait(alertManager), nil
+	}
+
+	return alertManager, nil
 }
 
 func (r *Reconciler) newFluentCustomResources(seedIsGarden bool) (deployer component.DeployWaiter, err error) {
@@ -639,6 +682,7 @@ func (r *Reconciler) newFluentCustomResources(seedIsGarden bool) (deployer compo
 		// seed system components
 		extensions.CentralLoggingConfiguration,
 		dependencywatchdog.CentralLoggingConfiguration,
+		alertmanager.CentralLoggingConfiguration,
 		monitoring.CentralLoggingConfiguration,
 		plutono.CentralLoggingConfiguration,
 		// shoot control plane components

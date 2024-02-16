@@ -879,6 +879,7 @@ build:
             - pkg/component/machinecontrollermanager
             - pkg/component/metricsserver
             - pkg/component/monitoring
+            - pkg/component/monitoring/alertmanager
             - pkg/component/monitoring/prometheus
             - pkg/component/monitoring/prometheus/cache
             - pkg/component/monitoring/prometheusoperator
