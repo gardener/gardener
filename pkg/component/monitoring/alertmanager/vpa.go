@@ -50,7 +50,7 @@ func (a *alertManager) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 						},
 						MaxAllowed: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("500m"),
-							corev1.ResourceMemory: resource.MustParse("250Mi"),
+							corev1.ResourceMemory: resource.MustParse("200Mi"),
 						},
 					},
 					{
