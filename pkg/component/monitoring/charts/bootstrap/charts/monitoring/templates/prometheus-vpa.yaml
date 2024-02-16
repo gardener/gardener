@@ -7,13 +7,14 @@ metadata:
 spec:
   resourcePolicy:
     containerPolicies:
-    - containerName: '*'
-      minAllowed:
-        memory: 400Mi
-    - containerName: prometheus
-      maxAllowed:
-        cpu: "4"
-        memory: 28G
+      - containerName: prometheus-config-reloader
+        mode: "Off"
+      - containerName: "*"
+        controlledValues: RequestsOnly
+      - containerName: prometheus
+        maxAllowed:
+          cpu: "4"
+          memory: 28G
   targetRef:
     apiVersion: apps/v1
     kind: StatefulSet
