@@ -80,28 +80,6 @@ var _ = Describe("Miscellaneous", func() {
 	coreShoot3 := core.Shoot{}
 	err = gardencorev1beta1.Convert_v1beta1_Shoot_To_core_Shoot(&shoot3, &coreShoot3, nil)
 	Expect(err).NotTo(HaveOccurred())
-	coreShoots := []*core.Shoot{&coreShoot1, &coreShoot2, &coreShoot3}
-
-	Describe("#ConvertList", func() {
-		It("should convert a list from pointer to non-pointer", func() {
-			expected, _ := ConvertList(shoots, func(cr *gardencorev1beta1.Shoot) (gardencorev1beta1.Shoot, error) {
-				return *cr, nil
-			})
-
-			sl := []gardencorev1beta1.Shoot{shoot1, shoot2, shoot3}
-
-			Expect(expected).To(Equal(sl))
-		})
-	})
-
-	Describe("#ConvertShootList", func() {
-		It("should convert a list of v1beta1 Shoots to core Shoots", func() {
-			expected, err := ConvertShootList(shoots)
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(expected).To(Equal(coreShoots))
-		})
-	})
 
 	DescribeTable("#SkipVerification",
 		func(operation admission.Operation, metadata metav1.ObjectMeta, expected bool) {
@@ -117,7 +95,7 @@ var _ = Describe("Miscellaneous", func() {
 
 	DescribeTable("#IsSeedUsedByShoot",
 		func(seedName string, expected bool) {
-			Expect(IsSeedUsedByShoot(seedName, coreShoots)).To(Equal(expected))
+			Expect(IsSeedUsedByShoot(seedName, shoots)).To(Equal(expected))
 		},
 		Entry("is used by shoot", "seed1", true),
 		Entry("is used by shoot in migration", "seed2", true),

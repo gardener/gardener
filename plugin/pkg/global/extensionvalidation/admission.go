@@ -37,7 +37,6 @@ import (
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	plugin "github.com/gardener/gardener/plugin/pkg"
-	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 )
 
 // Register registers a plugin.
@@ -138,19 +137,8 @@ func (e *ExtensionValidator) Validate(_ context.Context, a admission.Attributes,
 		return err
 	}
 
-	coreControllerRegistrationList, err := admissionutils.ConvertList(controllerRegistrationList, func(cr *gardencorev1beta1.ControllerRegistration) (*core.ControllerRegistration, error) {
-		coreControllerRegistration := &core.ControllerRegistration{}
-		if err2 := gardencorev1beta1.Convert_v1beta1_ControllerRegistration_To_core_ControllerRegistration(cr, coreControllerRegistration, nil); err2 != nil {
-			return nil, err2
-		}
-		return coreControllerRegistration, nil
-	})
-	if err != nil {
-		return apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 controllerregistration: %w", err))
-	}
-
 	var (
-		kindToTypesMap  = computeRegisteredPrimaryExtensionKindTypes(coreControllerRegistrationList)
+		kindToTypesMap  = computeRegisteredPrimaryExtensionKindTypes(controllerRegistrationList)
 		validationError error
 	)
 
@@ -228,7 +216,7 @@ func (e *ExtensionValidator) Validate(_ context.Context, a admission.Attributes,
 		}
 
 		if !apiequality.Semantic.DeepEqual(shoot.Spec, oldShoot.Spec) {
-			validationError = e.validateShoot(kindToTypesMap, computeWorkerlessSupportedExtensionTypes(coreControllerRegistrationList), shoot.Spec, gardencorehelper.IsWorkerless(shoot))
+			validationError = e.validateShoot(kindToTypesMap, computeWorkerlessSupportedExtensionTypes(controllerRegistrationList), shoot.Spec, gardencorehelper.IsWorkerless(shoot))
 		}
 	}
 
@@ -378,7 +366,7 @@ func isExtensionRegistered(kindToTypesMap map[string]sets.Set[string], extension
 
 // computeRegisteredPrimaryExtensionKindTypes computes a map that maps the extension kind to the set of types that are
 // registered (only if primary=true), e.g. {ControlPlane=>{foo,bar,baz}, Network=>{a,b,c}}.
-func computeRegisteredPrimaryExtensionKindTypes(controllerRegistrationList []*core.ControllerRegistration) map[string]sets.Set[string] {
+func computeRegisteredPrimaryExtensionKindTypes(controllerRegistrationList []*gardencorev1beta1.ControllerRegistration) map[string]sets.Set[string] {
 	out := map[string]sets.Set[string]{}
 
 	for _, controllerRegistration := range controllerRegistrationList {
@@ -399,7 +387,7 @@ func computeRegisteredPrimaryExtensionKindTypes(controllerRegistrationList []*co
 }
 
 // computeWorkerlessSupportedExtensionTypes computes Extension types that are supported for workerless Shoots.
-func computeWorkerlessSupportedExtensionTypes(controllerRegistrationList []*core.ControllerRegistration) sets.Set[string] {
+func computeWorkerlessSupportedExtensionTypes(controllerRegistrationList []*gardencorev1beta1.ControllerRegistration) sets.Set[string] {
 	out := sets.Set[string]{}
 
 	for _, controllerRegistration := range controllerRegistrationList {

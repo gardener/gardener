@@ -15,8 +15,6 @@
 package utils
 
 import (
-	"fmt"
-
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 
@@ -28,7 +26,7 @@ import (
 // ProjectForNamespaceFromExternalLister returns the Project responsible for a given <namespace>. It lists all Projects
 // via the given lister, iterates over them and tries to identify the Project by looking for the namespace name
 // in the project spec.
-func ProjectForNamespaceFromExternalLister(projectLister gardencorev1beta1listers.ProjectLister, namespaceName string) (*core.Project, error) {
+func ProjectForNamespaceFromExternalLister(projectLister gardencorev1beta1listers.ProjectLister, namespaceName string) (*gardencorev1beta1.Project, error) {
 	projectList, err := projectLister.List(labels.Everything())
 	if err != nil {
 		return nil, err
@@ -36,12 +34,7 @@ func ProjectForNamespaceFromExternalLister(projectLister gardencorev1beta1lister
 
 	for _, project := range projectList {
 		if project.Spec.Namespace != nil && *project.Spec.Namespace == namespaceName {
-			coreProject := &core.Project{}
-			if err := gardencorev1beta1.Convert_v1beta1_Project_To_core_Project(project, coreProject, nil); err != nil {
-				return nil, apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 project: %+v", err.Error()))
-			}
-
-			return coreProject, nil
+			return project, nil
 		}
 	}
 

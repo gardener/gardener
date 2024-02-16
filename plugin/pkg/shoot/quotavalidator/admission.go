@@ -193,11 +193,6 @@ func (q *QuotaValidator) Validate(_ context.Context, a admission.Attributes, _ a
 				return apierrors.NewInternalError(err)
 			}
 
-			coreQuota := &core.Quota{}
-			if err := gardencorev1beta1.Convert_v1beta1_Quota_To_core_Quota(quota, coreQuota, nil); err != nil {
-				return apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 quota: %+v", err.Error()))
-			}
-
 			// Get the max clusterLifeTime
 			if checkLifetime && quota.Spec.ClusterLifetimeDays != nil {
 				if maxShootLifetime == nil {
@@ -209,7 +204,7 @@ func (q *QuotaValidator) Validate(_ context.Context, a admission.Attributes, _ a
 			}
 
 			if checkQuota {
-				exceededMetrics, err := q.isQuotaExceeded(*shoot, *coreQuota)
+				exceededMetrics, err := q.isQuotaExceeded(*shoot, *quota)
 				if err != nil {
 					return apierrors.NewInternalError(err)
 				}
@@ -245,7 +240,7 @@ func (q *QuotaValidator) Validate(_ context.Context, a admission.Attributes, _ a
 	return nil
 }
 
-func (q *QuotaValidator) isQuotaExceeded(shoot core.Shoot, quota core.Quota) (*[]corev1.ResourceName, error) {
+func (q *QuotaValidator) isQuotaExceeded(shoot core.Shoot, quota gardencorev1beta1.Quota) (*[]corev1.ResourceName, error) {
 	allocatedResources, err := q.determineAllocatedResources(quota, shoot)
 	if err != nil {
 		return nil, err
@@ -270,7 +265,7 @@ func (q *QuotaValidator) isQuotaExceeded(shoot core.Shoot, quota core.Quota) (*[
 	return nil, nil
 }
 
-func (q *QuotaValidator) determineAllocatedResources(quota core.Quota, shoot core.Shoot) (corev1.ResourceList, error) {
+func (q *QuotaValidator) determineAllocatedResources(quota gardencorev1beta1.Quota, shoot core.Shoot) (corev1.ResourceList, error) {
 	shoots, err := q.findShootsReferQuota(quota, shoot)
 	if err != nil {
 		return nil, err
@@ -294,7 +289,7 @@ func (q *QuotaValidator) determineAllocatedResources(quota core.Quota, shoot cor
 	return allocatedResources, nil
 }
 
-func (q *QuotaValidator) findShootsReferQuota(quota core.Quota, shoot core.Shoot) ([]core.Shoot, error) {
+func (q *QuotaValidator) findShootsReferQuota(quota gardencorev1beta1.Quota, shoot core.Shoot) ([]core.Shoot, error) {
 	var (
 		shootsReferQuota []core.Shoot
 		secretBindings   []gardencorev1beta1.SecretBinding
@@ -333,7 +328,7 @@ func (q *QuotaValidator) findShootsReferQuota(quota core.Quota, shoot core.Shoot
 			if ptr.Deref(s.Spec.SecretBindingName, "") == binding.Name {
 				coreShoot := &core.Shoot{}
 				if err := gardencorev1beta1.Convert_v1beta1_Shoot_To_core_Shoot(s, coreShoot, nil); err != nil {
-					return nil, apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 shoot: %+v", err.Error()))
+					return nil, apierrors.NewInternalError(err)
 				}
 
 				shootsReferQuota = append(shootsReferQuota, *coreShoot)
@@ -362,17 +357,12 @@ func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceLis
 		return nil, apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %+v", err.Error()))
 	}
 
-	coreCloudProfile := &core.CloudProfile{}
-	if err := gardencorev1beta1.Convert_v1beta1_CloudProfile_To_core_CloudProfile(cloudProfile, coreCloudProfile, nil); err != nil {
-		return nil, apierrors.NewInternalError(fmt.Errorf("could not convert cloud profile: %+v", err.Error()))
-	}
-
 	var (
 		countLB      int64 = 1
 		resources          = make(corev1.ResourceList)
-		workers            = getShootWorkerResources(&shoot, coreCloudProfile)
-		machineTypes       = coreCloudProfile.Spec.MachineTypes
-		volumeTypes        = coreCloudProfile.Spec.VolumeTypes
+		workers            = getShootWorkerResources(&shoot, cloudProfile)
+		machineTypes       = cloudProfile.Spec.MachineTypes
+		volumeTypes        = cloudProfile.Spec.VolumeTypes
 	)
 
 	for _, worker := range workers {
@@ -385,7 +375,12 @@ func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceLis
 		for _, e := range machineTypes {
 			element := e
 			if element.Name == worker.Machine.Type {
-				machineType = &element
+				coreElement := &core.MachineType{}
+				if err := gardencorev1beta1.Convert_v1beta1_MachineType_To_core_MachineType(&element, coreElement, nil); err != nil {
+					return nil, apierrors.NewInternalError(fmt.Errorf("could not convert machine type: %+v", err.Error()))
+				}
+
+				machineType = coreElement
 				break
 			}
 		}
@@ -403,7 +398,12 @@ func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceLis
 				for _, e := range volumeTypes {
 					element := e
 					if worker.Volume.Type != nil && element.Name == *worker.Volume.Type {
-						volumeType = &element
+						coreElement := &core.VolumeType{}
+						if err := gardencorev1beta1.Convert_v1beta1_VolumeType_To_core_VolumeType(&element, coreElement, nil); err != nil {
+							return nil, apierrors.NewInternalError(fmt.Errorf("could not convert machine type: %+v", err.Error()))
+						}
+
+						volumeType = coreElement
 						break
 					}
 				}
@@ -444,7 +444,7 @@ func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceLis
 	return resources, nil
 }
 
-func getShootWorkerResources(shoot *core.Shoot, cloudProfile *core.CloudProfile) []core.Worker {
+func getShootWorkerResources(shoot *core.Shoot, cloudProfile *gardencorev1beta1.CloudProfile) []core.Worker {
 	workers := make([]core.Worker, 0, len(shoot.Spec.Provider.Workers))
 
 	for _, worker := range shoot.Spec.Provider.Workers {

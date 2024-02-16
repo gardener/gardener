@@ -486,20 +486,6 @@ func GetSecretBindingTypes(secretBinding *core.SecretBinding) []string {
 	return strings.Split(secretBinding.Provider.Type, ",")
 }
 
-// SecretBindingHasType checks if the given SecretBinding has the given provider type.
-func SecretBindingHasType(secretBinding *core.SecretBinding, providerType string) bool {
-	if secretBinding.Provider == nil {
-		return false
-	}
-
-	types := GetSecretBindingTypes(secretBinding)
-	if len(types) == 0 {
-		return false
-	}
-
-	return sets.New(types...).Has(providerType)
-}
-
 // GetAllZonesFromShoot returns the set of all availability zones defined in the worker pools of the Shoot specification.
 func GetAllZonesFromShoot(shoot *core.Shoot) sets.Set[string] {
 	out := sets.New[string]()
@@ -536,46 +522,4 @@ func DeterminePrimaryIPFamily(ipFamilies []core.IPFamily) core.IPFamily {
 		return core.IPFamilyIPv4
 	}
 	return ipFamilies[0]
-}
-
-// KubeAPIServerFeatureGateDisabled returns whether the given feature gate is explicitly disabled for the kube-apiserver for the given Shoot spec.
-func KubeAPIServerFeatureGateDisabled(shoot *core.Shoot, featureGate string) bool {
-	kubeAPIServer := shoot.Spec.Kubernetes.KubeAPIServer
-	if kubeAPIServer == nil || kubeAPIServer.FeatureGates == nil {
-		return false
-	}
-
-	value, ok := kubeAPIServer.FeatureGates[featureGate]
-	if !ok {
-		return false
-	}
-	return !value
-}
-
-// KubeControllerManagerFeatureGateDisabled returns whether the given feature gate is explicitly disabled for the kube-controller-manager for the given Shoot spec.
-func KubeControllerManagerFeatureGateDisabled(shoot *core.Shoot, featureGate string) bool {
-	kubeControllerManager := shoot.Spec.Kubernetes.KubeControllerManager
-	if kubeControllerManager == nil || kubeControllerManager.FeatureGates == nil {
-		return false
-	}
-
-	value, ok := kubeControllerManager.FeatureGates[featureGate]
-	if !ok {
-		return false
-	}
-	return !value
-}
-
-// KubeProxyFeatureGateDisabled returns whether the given feature gate is disabled for the kube-proxy for the given Shoot spec.
-func KubeProxyFeatureGateDisabled(shoot *core.Shoot, featureGate string) bool {
-	kubeProxy := shoot.Spec.Kubernetes.KubeProxy
-	if kubeProxy == nil || kubeProxy.FeatureGates == nil {
-		return false
-	}
-
-	value, ok := kubeProxy.FeatureGates[featureGate]
-	if !ok {
-		return false
-	}
-	return !value
 }

@@ -157,7 +157,9 @@ func (t *TolerationRestriction) admitShoot(shoot *core.Shoot) error {
 
 	defaults := t.defaults
 	if project.Spec.Tolerations != nil {
-		defaults = append(defaults, project.Spec.Tolerations.Defaults...)
+		for _, toleration := range project.Spec.Tolerations.Defaults {
+			defaults = append(defaults, core.Toleration{Key: toleration.Key, Value: toleration.Value})
+		}
 	}
 
 	existingKeys := sets.New[string]()
@@ -218,7 +220,9 @@ func (t *TolerationRestriction) validateShoot(shoot, oldShoot *core.Shoot) error
 
 	allowlist := t.allowlist
 	if project.Spec.Tolerations != nil {
-		allowlist = append(allowlist, project.Spec.Tolerations.Whitelist...)
+		for _, toleration := range project.Spec.Tolerations.Whitelist {
+			allowlist = append(allowlist, core.Toleration{Key: toleration.Key, Value: toleration.Value})
+		}
 	}
 
 	if errList := gardencorevalidation.ValidateTolerationsAgainstAllowlist(tolerationsToValidate, allowlist, field.NewPath("spec", "tolerations")); len(errList) > 0 {

@@ -147,12 +147,7 @@ func (v *ValidateSeed) validateSeedDeletion(a admission.Attributes) error {
 		return apierrors.NewInternalError(err)
 	}
 
-	coreShoots, err := admissionutils.ConvertShootList(shoots)
-	if err != nil {
-		return apierrors.NewInternalError(fmt.Errorf("could not convert v1beta1 shoot: %w", err))
-	}
-
-	if admissionutils.IsSeedUsedByShoot(seedName, coreShoots) {
+	if admissionutils.IsSeedUsedByShoot(seedName, shoots) {
 		return admission.NewForbidden(a, fmt.Errorf("cannot delete seed %s since it is still used by shoot(s)", seedName))
 	}
 	return nil

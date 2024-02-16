@@ -145,18 +145,13 @@ func (e *ExposureClass) admitShoot(shoot *core.Shoot) error {
 		return nil
 	}
 
-	coreExposureClass := &core.ExposureClass{}
-	if err := gardencorev1beta1.Convert_v1beta1_ExposureClass_To_core_ExposureClass(exposureClass, coreExposureClass, nil); err != nil {
-		return fmt.Errorf("could not convert v1beta1 exposureclass: %w", err)
-	}
-
-	targetSeedSelector, err := uniteSeedSelectors(shoot.Spec.SeedSelector, coreExposureClass.Scheduling.SeedSelector)
+	targetSeedSelector, err := uniteSeedSelectors(shoot.Spec.SeedSelector, exposureClass.Scheduling.SeedSelector)
 	if err != nil {
 		return err
 	}
 	shoot.Spec.SeedSelector = targetSeedSelector
 
-	targetTolerations, err := uniteTolerations(shoot.Spec.Tolerations, coreExposureClass.Scheduling.Tolerations)
+	targetTolerations, err := uniteTolerations(shoot.Spec.Tolerations, exposureClass.Scheduling.Tolerations)
 	if err != nil {
 		return err
 	}
@@ -165,7 +160,7 @@ func (e *ExposureClass) admitShoot(shoot *core.Shoot) error {
 	return nil
 }
 
-func uniteSeedSelectors(shootSeedSelector *core.SeedSelector, exposureClassSeedSelector *core.SeedSelector) (*core.SeedSelector, error) {
+func uniteSeedSelectors(shootSeedSelector *core.SeedSelector, exposureClassSeedSelector *gardencorev1beta1.SeedSelector) (*core.SeedSelector, error) {
 	if exposureClassSeedSelector == nil {
 		return shootSeedSelector, nil
 	}
@@ -191,7 +186,7 @@ func uniteSeedSelectors(shootSeedSelector *core.SeedSelector, exposureClassSeedS
 	return shootSeedSelector, nil
 }
 
-func uniteTolerations(shootTolerations []core.Toleration, exposureClassTolerations []core.Toleration) ([]core.Toleration, error) {
+func uniteTolerations(shootTolerations []core.Toleration, exposureClassTolerations []gardencorev1beta1.Toleration) ([]core.Toleration, error) {
 	shootTolerationsKeys := sets.New[string]()
 	for _, toleration := range shootTolerations {
 		shootTolerationsKeys.Insert(toleration.Key)
@@ -201,7 +196,7 @@ func uniteTolerations(shootTolerations []core.Toleration, exposureClassToleratio
 		if shootTolerationsKeys.Has(toleration.Key) {
 			return nil, fmt.Errorf("toleration with key %q conflicts with the ones of referenced exposureclass", toleration.Key)
 		}
-		shootTolerations = append(shootTolerations, toleration)
+		shootTolerations = append(shootTolerations, core.Toleration{Key: toleration.Key, Value: toleration.Value})
 	}
 
 	return shootTolerations, nil
