@@ -153,7 +153,6 @@ spec:
   kubernetes:
   # version: 1.27.3
   # enableStaticTokenKubeconfig: true
-  # allowPrivilegedContainers: true # no-op, deprecated. Will be removed in a future version.
   # kubeAPIServer:
   #   eventTTL: 1h
   #   featureGates:
