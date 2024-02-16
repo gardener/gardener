@@ -21,14 +21,12 @@ import (
 	"net/http"
 	"os"
 	goruntime "runtime"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
-	"golang.org/x/time/rate"
 	appsv1 "k8s.io/api/apps/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
@@ -74,7 +72,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap/certificate"
 	"github.com/gardener/gardener/pkg/gardenlet/controller"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -382,19 +379,9 @@ func (g *garden) Start(ctx context.Context) error {
 		return err
 	}
 
-	log.Info("Cleaning up orphaned ServiceAccounts related to garden access secrets for extensions")
-	if err := g.cleanupOrphanedExtensionsServiceAccounts(ctx, gardenCluster.GetClient()); err != nil {
-		return err
-	}
-
 	log.Info("Cleaning up GRM secret finalizers")
 	if err := cleanupGRMSecretFinalizers(ctx, g.mgr.GetClient(), log); err != nil {
 		return fmt.Errorf("failed to clean up GRM secret finalizers: %w", err)
-	}
-
-	log.Info("Recreating wrongly deleted managed resource secrets")
-	if err := recreateDeletedManagedResourceSecrets(ctx, g.mgr.GetClient()); err != nil {
-		return err
 	}
 
 	log.Info("Updating shoot Prometheus config for connection to cache Prometheus")
@@ -451,31 +438,6 @@ func (g *garden) Start(ctx context.Context) error {
 	return nil
 }
 
-// TODO(rfranzke): Remove this code after v1.86 has been released.
-func (g *garden) cleanupOrphanedExtensionsServiceAccounts(ctx context.Context, gardenClient client.Client) error {
-	serviceAccountList := &corev1.ServiceAccountList{}
-	if err := gardenClient.List(ctx, serviceAccountList, client.InNamespace(gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.Name))); err != nil {
-		return err
-	}
-
-	var taskFns []flow.TaskFn
-	for _, serviceAccount := range serviceAccountList.Items {
-		controllerInstallation := &gardencorev1beta1.ControllerInstallation{ObjectMeta: metav1.ObjectMeta{Name: strings.TrimPrefix(serviceAccount.Name, v1beta1constants.ExtensionGardenServiceAccountPrefix)}}
-		if err := gardenClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return err
-			}
-
-			sa := serviceAccount
-			taskFns = append(taskFns, func(ctx context.Context) error {
-				return gardenClient.Delete(ctx, &sa)
-			})
-		}
-	}
-
-	return flow.Parallel(taskFns...)(ctx)
-}
-
 // TODO(Kostov6): Remove this code after v1.91 has been released.
 func cleanupGRMSecretFinalizers(ctx context.Context, seedClient client.Client, log logr.Logger) error {
 	var (
@@ -519,7 +481,7 @@ func cleanupGRMSecretFinalizers(ctx context.Context, seedClient client.Client, l
 			}
 
 			for _, finalizer := range secret.Finalizers {
-				if strings.HasPrefix(finalizer, grmFinalizer) {
+				if strings.HasPrefix(finalizer, "resources.gardener.cloud/gardener-resource-manager") {
 					if err := controllerutils.RemoveFinalizers(ctx, seedClient, secret, finalizer); err != nil {
 						return fmt.Errorf("failed to remove finalizer from secret '%s': %w", client.ObjectKeyFromObject(secret), err)
 					}
@@ -528,176 +490,6 @@ func cleanupGRMSecretFinalizers(ctx context.Context, seedClient client.Client, l
 		}
 		return nil
 	})
-}
-
-const (
-	grmFinalizer                = "resources.gardener.cloud/gardener-resource-manager"
-	tempSecretLabel             = "resources.gardener.cloud/temp-secret"
-	tempSecretOldNameAnnotation = "resources.gardener.cloud/temp-secret-old-name"
-)
-
-// TODO(dimityrmirchev): Remove this code after v1.87 has been released.
-func recreateDeletedManagedResourceSecrets(ctx context.Context, c client.Client) error {
-	// check for already existing temp secrets
-	// these can occur in case the process is killed during cleanup phase
-	tempSecretList := &corev1.SecretList{}
-	if err := c.List(ctx, tempSecretList, client.MatchingLabels{tempSecretLabel: "true"}); err != nil {
-		return err
-	}
-
-	namespaceList := &corev1.NamespaceList{}
-	if err := c.List(ctx, namespaceList); err != nil {
-		return err
-	}
-
-	namespacesInDeletion := sets.New[string]()
-	for _, namespace := range namespaceList.Items {
-		if namespace.DeletionTimestamp != nil || namespace.Status.Phase == corev1.NamespaceTerminating {
-			namespacesInDeletion.Insert(namespace.Name)
-		}
-	}
-
-	var (
-		tasks   []flow.TaskFn
-		limiter = rate.NewLimiter(rate.Limit(20), 20)
-	)
-	for _, temp := range tempSecretList.Items {
-		temp := temp
-		tasks = append(tasks, func(ctx context.Context) error {
-			originalName := temp.Annotations[tempSecretOldNameAnnotation]
-			original := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: originalName, Namespace: temp.Namespace}}
-
-			if err := limiter.Wait(ctx); err != nil {
-				return err
-			}
-
-			if err := c.Get(ctx, client.ObjectKeyFromObject(original), original); err != nil {
-				if apierrors.IsNotFound(err) {
-					if !namespacesInDeletion.Has(original.Namespace) {
-						// original secret is not found so we recreate it
-						original := temp.DeepCopy()
-						delete(original.Labels, tempSecretLabel)
-						delete(original.Annotations, tempSecretOldNameAnnotation)
-						original.ResourceVersion = ""
-						original.Name = originalName
-
-						if err := c.Create(ctx, original); err != nil {
-							return fmt.Errorf("failed to recreate the original secret %w", err)
-						}
-					}
-
-					return client.IgnoreNotFound(c.Delete(ctx, &temp))
-				}
-
-				return err
-			}
-
-			// the original secret exists. check if the finalizer and deletion timestamp are there
-			if original.DeletionTimestamp != nil && slices.Contains(original.Finalizers, grmFinalizer) && !namespacesInDeletion.Has(original.Namespace) {
-				if err := removeFinalizersAndWait(ctx, c, original.DeepCopy()); err != nil {
-					return err
-				}
-
-				// zero meta info
-				original.DeletionTimestamp = nil
-				original.ResourceVersion = ""
-				original.Finalizers = nil
-
-				if err := c.Create(ctx, original); err != nil {
-					return fmt.Errorf("failed to recreate the original secret %w", err)
-				}
-			}
-
-			// secret was already recreated. just delete the temporary one
-			if err := c.Delete(ctx, &temp); client.IgnoreNotFound(err) != nil {
-				return err
-			}
-			return nil
-		})
-	}
-
-	if err := flow.Parallel(tasks...)(ctx); err != nil {
-		return err
-	}
-
-	secretsToRecreate, err := getSecretsToRecreate(ctx, c, namespacesInDeletion)
-	if err != nil {
-		return fmt.Errorf("failed listing secrets for recreation %w", err)
-	}
-
-	tasks = []flow.TaskFn{}
-	for _, original := range secretsToRecreate {
-		original := original
-		tasks = append(tasks, func(ctx context.Context) error {
-			tempSecret := original.DeepCopy()
-			tempSecret.Name = "tmp-" + original.Name
-			metav1.SetMetaDataLabel(&tempSecret.ObjectMeta, tempSecretLabel, "true")
-			metav1.SetMetaDataAnnotation(&tempSecret.ObjectMeta, tempSecretOldNameAnnotation, original.Name)
-			tempSecret.DeletionTimestamp = nil
-			tempSecret.ResourceVersion = ""
-			tempSecret.Finalizers = nil
-
-			if err := limiter.Wait(ctx); err != nil {
-				return err
-			}
-
-			if err := c.Create(ctx, tempSecret); err != nil {
-				return fmt.Errorf("failed to create a temporary secret %w", err)
-			}
-
-			if err := removeFinalizersAndWait(ctx, c, original.DeepCopy()); err != nil {
-				return err
-			}
-
-			// zero meta info
-			original.DeletionTimestamp = nil
-			original.ResourceVersion = ""
-			original.Finalizers = nil
-
-			// recreate the original and delete the temporary one
-			if err := c.Create(ctx, &original); err != nil {
-				return fmt.Errorf("failed to recreate the original secret %w", err)
-			}
-
-			return client.IgnoreNotFound(c.Delete(ctx, tempSecret))
-		})
-	}
-	return flow.Parallel(tasks...)(ctx)
-}
-
-// TODO(dimityrmirchev): Remove this code after v1.87 has been released.
-func removeFinalizersAndWait(ctx context.Context, c client.Client, secret *corev1.Secret) error {
-	patch := client.StrategicMergeFrom(secret.DeepCopy())
-	secret.Finalizers = []string{}
-	if err := c.Patch(ctx, secret, patch); err != nil {
-		return fmt.Errorf("failed to patch the original secret %w", err)
-	}
-
-	cancelCtx, cancel := context.WithTimeout(ctx, time.Second*10)
-	defer cancel()
-	return kubernetesutils.WaitUntilResourceDeleted(cancelCtx, c, secret, 1*time.Second)
-}
-
-// TODO(dimityrmirchev): Remove this code after v1.87 has been released.
-func getSecretsToRecreate(ctx context.Context, c client.Client, namespacesInDeletion sets.Set[string]) ([]corev1.Secret, error) {
-	selector := labels.NewSelector()
-	isGC, err := labels.NewRequirement(references.LabelKeyGarbageCollectable, selection.Equals, []string{"true"})
-	if err != nil {
-		return nil, err
-	}
-	notTemp, err := labels.NewRequirement(tempSecretLabel, selection.DoesNotExist, nil)
-	if err != nil {
-		return nil, err
-	}
-	selector.Add(*isGC, *notTemp)
-	secretList := &corev1.SecretList{}
-	if err := c.List(ctx, secretList, client.MatchingLabelsSelector{Selector: selector}); err != nil {
-		return nil, err
-	}
-	secretsToRecreate := slices.DeleteFunc(secretList.Items, func(s corev1.Secret) bool {
-		return namespacesInDeletion.Has(s.Namespace) || !slices.Contains(s.Finalizers, grmFinalizer) || s.DeletionTimestamp == nil
-	})
-	return secretsToRecreate, nil
 }
 
 // TODO(rfranzke): Remove this code after v1.90 has been released.

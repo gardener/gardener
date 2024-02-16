@@ -4042,7 +4042,7 @@ DNSIncludeExclude
 <td>
 <em>(Optional)</em>
 <p>Domains contains information about which domains shall be included/excluded for this provider.
-Deprecated: This field is deprecated and will be removed in Gardener release v1.87.</p>
+Deprecated: This field is deprecated and will be removed in a future release.</p>
 </td>
 </tr>
 <tr>
@@ -4096,7 +4096,7 @@ DNSIncludeExclude
 <td>
 <em>(Optional)</em>
 <p>Zones contains information about which hosted zones shall be included/excluded for this provider.
-Deprecated: This field is deprecated and will be removed in Gardener release v1.87.</p>
+Deprecated: This field is deprecated and will be removed in a future release.</p>
 </td>
 </tr>
 </tbody>
