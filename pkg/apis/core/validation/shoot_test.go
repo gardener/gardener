@@ -2420,19 +2420,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 		})
 
-		Context("kubernetes.allowPrivilegedContainers field validation", func() {
-			It("should deny creating shoots with this field set", func() {
-				shoot.Spec.Kubernetes.AllowPrivilegedContainers = ptr.To(true)
-
-				errorList := ValidateShoot(shoot)
-				Expect(errorList).Should(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("spec.kubernetes.allowPrivilegedContainers"),
-					"Detail": ContainSubstring("allowPrivilegedContainers field should not be set"),
-				}))))
-			})
-		})
-
 		Context("kubernetes.enableStaticTokenKubeconfig field validation", func() {
 			Context("kubernetes version < 1.27", func() {
 				It("should allow creating shoots with this field set to true", func() {
