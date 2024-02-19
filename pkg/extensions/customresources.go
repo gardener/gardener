@@ -92,6 +92,7 @@ func WaitUntilObjectReadyWithHealthFunction(
 		healthFunc = health.And(health.ObjectHasAnnotationWithValue(v1beta1constants.GardenerTimestamp, expectedTimestamp), healthFunc)
 	}
 
+	var objectKind string
 	if err := retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (bool, error) {
 		retryCountUntilSevere++
 
@@ -100,6 +101,12 @@ func WaitUntilObjectReadyWithHealthFunction(
 				return retry.MinorError(err)
 			}
 			return retry.SevereError(err)
+		}
+
+		if objectKind == "" {
+			if objectKind = obj.GetObjectKind().GroupVersionKind().Kind; objectKind != "" {
+				log = log.WithValues("kind", objectKind)
+			}
 		}
 
 		if err := healthFunc(obj); err != nil {
