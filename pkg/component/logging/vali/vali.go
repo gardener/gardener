@@ -23,6 +23,7 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -42,6 +43,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
+	"github.com/gardener/gardener/pkg/component/monitoring/prometheus/aggregate"
+	monitoringutils "github.com/gardener/gardener/pkg/component/monitoring/utils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -262,6 +265,13 @@ func (v *vali) Deploy(ctx context.Context) error {
 		v.getService(),
 		v.getStatefulSet(valiConfigMap.Name, telegrafConfigMapName, genericTokenKubeconfigSecretName),
 	)
+
+	if v.values.ClusterType == component.ClusterTypeSeed {
+		resources = append(resources,
+			v.getServiceMonitor(),
+			v.getPrometheusRule(),
+		)
+	}
 
 	if err := registry.Add(resources...); err != nil {
 		return err
@@ -957,6 +967,84 @@ func (v *vali) getValitailClusterRoleBinding(serviceAccountName string) *rbacv1.
 			Name:      serviceAccountName,
 			Namespace: metav1.NamespaceSystem,
 		}},
+	}
+}
+
+func (v *vali) getServiceMonitor() *monitoringv1.ServiceMonitor {
+	return &monitoringv1.ServiceMonitor{
+		ObjectMeta: monitoringutils.ConfigObjectMeta("vali", v.namespace, aggregate.Label),
+		Spec: monitoringv1.ServiceMonitorSpec{
+			Selector: metav1.LabelSelector{MatchLabels: getLabels()},
+			Endpoints: []monitoringv1.Endpoint{{
+				Port: valiMetricsPortName,
+				RelabelConfigs: []*monitoringv1.RelabelConfig{
+					// This service monitor is targeting the logging service. Without explicitly overriding the
+					// job label, prometheus-operator would choose job=logging (service name).
+					{
+						Action:      "replace",
+						Replacement: "vali",
+						TargetLabel: "job",
+					},
+					{
+						Action: "labelmap",
+						Regex:  `__meta_kubernetes_service_label_(.+)`,
+					},
+				},
+				MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
+					"vali_ingester_blocks_per_chunk_sum",
+					"vali_ingester_blocks_per_chunk_count",
+					"vali_ingester_chunk_age_seconds_sum",
+					"vali_ingester_chunk_age_seconds_count",
+					"vali_ingester_chunk_bounds_hours_sum",
+					"vali_ingester_chunk_bounds_hours_count",
+					"vali_ingester_chunk_compression_ratio_sum",
+					"vali_ingester_chunk_compression_ratio_count",
+					"vali_ingester_chunk_encode_time_seconds_sum",
+					"vali_ingester_chunk_encode_time_seconds_count",
+					"vali_ingester_chunk_entries_sum",
+					"vali_ingester_chunk_entries_count",
+					"vali_ingester_chunk_size_bytes_sum",
+					"vali_ingester_chunk_size_bytes_count",
+					"vali_ingester_chunk_utilization_sum",
+					"vali_ingester_chunk_utilization_count",
+					"vali_ingester_memory_chunks",
+					"vali_ingester_received_chunks",
+					"vali_ingester_samples_per_chunk_sum",
+					"vali_ingester_samples_per_chunk_count",
+					"vali_ingester_sent_chunks",
+					"vali_panic_total",
+					"vali_logql_querystats_duplicates_total",
+					"vali_logql_querystats_ingester_sent_lines_total",
+					"prometheus_target_scrapes_sample_out_of_order_total",
+				),
+			}},
+		},
+	}
+}
+
+func (v *vali) getPrometheusRule() *monitoringv1.PrometheusRule {
+	return &monitoringv1.PrometheusRule{
+		ObjectMeta: monitoringutils.ConfigObjectMeta("vali", v.namespace, aggregate.Label),
+		Spec: monitoringv1.PrometheusRuleSpec{
+			Groups: []monitoringv1.RuleGroup{{
+				Name: "vali.rules",
+				Rules: []monitoringv1.Rule{{
+					Alert: "ValiDown",
+					Expr:  intstr.FromString(fmt.Sprintf(`absent(up{%s="%s"} == 1)`, v1beta1constants.LabelApp, valiName)),
+					For:   ptr.To(monitoringv1.Duration("30m")),
+					Labels: map[string]string{
+						"service":    "logging",
+						"severity":   "warning",
+						"type":       "seed",
+						"visibility": "operator",
+					},
+					Annotations: map[string]string{
+						"description": "There are no vali pods running on seed: {{ .ExternalLabels.seed }}. No logs will be collected.",
+						"summary":     "Vali is down",
+					},
+				}},
+			}},
+		},
 	}
 }
 

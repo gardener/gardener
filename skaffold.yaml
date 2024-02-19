@@ -613,6 +613,8 @@ build:
             - pkg/component/kubeproxy
             - pkg/component/logging/vali
             - pkg/component/machinecontrollermanager
+            - pkg/component/monitoring/prometheus/aggregate
+            - pkg/component/monitoring/utils
             - pkg/controller/service
             - pkg/controllerutils
             - pkg/controllerutils/mapper
@@ -1150,6 +1152,8 @@ build:
             - pkg/component/extensions/operatingsystemconfig/utils
             - pkg/component/kubeapiserver/constants
             - pkg/component/logging/vali
+            - pkg/component/monitoring/prometheus/aggregate
+            - pkg/component/monitoring/utils
             - pkg/controllerutils
             - pkg/controllerutils/predicate
             - pkg/controllerutils/routes
