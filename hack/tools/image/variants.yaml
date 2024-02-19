@@ -3,8 +3,6 @@
 # - https://github.com/kubernetes/test-infra/blob/master/images/krte/Dockerfile
 # - https://github.com/gardener/ci-infra/blob/master/images/krte
 variants:
-  "1.20":
-    image: golang:1.20.14-bookworm
   "1.21":
     image: golang:1.21.7-bookworm
   "1.22":
