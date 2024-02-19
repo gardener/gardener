@@ -16,6 +16,7 @@ package nginxingress
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -618,7 +619,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 
 		destinationRule *istionetworkingv1beta1.DestinationRule
 		gateway         *istionetworkingv1beta1.Gateway
-		virtualService  *istionetworkingv1beta1.VirtualService
+		virtualServices []client.Object
 	)
 
 	if n.values.ClusterType == component.ClusterTypeSeed {
@@ -667,9 +668,13 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			return nil, err
 		}
 
-		virtualService = &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: controllerName, Namespace: n.values.TargetNamespace}}
-		if err := istio.VirtualServiceWithSNIMatch(virtualService, n.getLabels(LabelValueController, false), n.values.WildcardIngressDomains, gateway.Name, port, destinationHost)(); err != nil {
-			return nil, err
+		// If multiple domains overlap istio validation may complain => separate virtual services per domain solve this reliably
+		for i, domain := range n.values.WildcardIngressDomains {
+			virtualService := &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("%s-%d", controllerName, i), Namespace: n.values.TargetNamespace}}
+			if err := istio.VirtualServiceWithSNIMatch(virtualService, n.getLabels(LabelValueController, false), []string{domain}, gateway.Name, port, destinationHost)(); err != nil {
+				return nil, err
+			}
+			virtualServices = append(virtualServices, virtualService)
 		}
 
 		serviceController.Spec.Type = corev1.ServiceTypeClusterIP
@@ -765,6 +770,10 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		}
 	}
 
+	if err := registry.Add(virtualServices...); err != nil {
+		return nil, err
+	}
+
 	return registry.AddAllAndSerialize(
 		clusterRole,
 		clusterRoleBinding,
@@ -783,7 +792,6 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		networkPolicy,
 		destinationRule,
 		gateway,
-		virtualService,
 	)
 }
 
