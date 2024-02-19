@@ -50,8 +50,6 @@ const (
 	ExternalProbeSecretName = gardenerutils.SecretNamePrefixShootAccess + "dependency-watchdog-external-probe"
 	// InternalProbeSecretName is the name of the kubecfg secret with cluster IP access.
 	InternalProbeSecretName = gardenerutils.SecretNamePrefixShootAccess + "dependency-watchdog-internal-probe"
-	// TempGRMConfigMapName is the name is the configMap that is temporarily deployed for DWD prober
-	TempGRMConfigMapName = "gardener-resource-manager-dwd"
 )
 
 // NewAccess creates a new instance of the deployer for shoot cluster access for the dependency-watchdog.
@@ -97,14 +95,12 @@ func (d *dependencyWatchdogAccess) Deploy(ctx context.Context) error {
 
 // TODO(aaronfern): Remove this function after v1.91 got released.
 func (d *dependencyWatchdogAccess) DeployMigrate(ctx context.Context) error {
-	// Create shoot access secret
-	caSecret := corev1.Secret{}
-	err := d.client.Get(ctx, types.NamespacedName{Namespace: d.namespace, Name: v1beta1constants.SecretNameCACluster}, &caSecret)
-	if err != nil {
-		return fmt.Errorf("error in fetching secret %s. err: %v", v1beta1constants.SecretNameCACluster, err)
+	caSecret := &corev1.Secret{}
+	if err := d.client.Get(ctx, types.NamespacedName{Namespace: d.namespace, Name: v1beta1constants.SecretNameCACluster}, caSecret); err != nil {
+		return fmt.Errorf("error in fetching secret %s: %w", v1beta1constants.SecretNameCACluster, err)
 	}
 
-	if err := d.createShootAccessSecret(ctx, &caSecret); err != nil {
+	if err := d.createShootAccessSecret(ctx, caSecret); err != nil {
 		return err
 	}
 
