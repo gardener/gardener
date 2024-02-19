@@ -388,7 +388,7 @@ type FallbackClient struct {
 // Get retrieves an obj for a given object key from the Kubernetes Cluster.
 // `client.Reader` is used in case the kind of an object is configured in `KindToNamespaces` but the namespace isn't.
 func (d *FallbackClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-	gvk, err := apiutil.GVKForObject(obj, GardenScheme)
+	gvk, err := apiutil.GVKForObject(obj, d.Scheme())
 	if err != nil {
 		return err
 	}
