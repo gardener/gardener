@@ -1535,3 +1535,8 @@ func ConvertShootList(list []gardencorev1beta1.Shoot) []*gardencorev1beta1.Shoot
 	}
 	return result
 }
+
+// HasManagedIssuer checks if the shoot has managed issuer enabled.
+func HasManagedIssuer(shoot *gardencorev1beta1.Shoot) bool {
+	return shoot.GetAnnotations()[v1beta1constants.AnnotationAuthenticationIssuer] == v1beta1constants.AnnotationAuthenticationIssuerManaged
+}
