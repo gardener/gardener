@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -51,7 +52,7 @@ func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName s
 		deployment         = k.emptyDeployment()
 		vpa                = k.emptyVerticalPodAutoscaler()
 		pdb                = k.emptyPodDisruptionBudget()
-		serviceMonitor     = k.emptyServiceMonitor()
+		scrapeConfigCache  = k.emptyScrapeConfigCache()
 
 		configs = component.ResourceConfigs{
 			{Obj: clusterRole, Class: component.Application, MutateFn: func() { k.reconcileClusterRole(clusterRole) }},
@@ -68,7 +69,7 @@ func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName s
 			component.ResourceConfig{Obj: clusterRoleBinding, Class: component.Application, MutateFn: func() { k.reconcileClusterRoleBinding(clusterRoleBinding, clusterRole, serviceAccount) }},
 			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { k.reconcileDeployment(deployment, serviceAccount, "", nil) }},
 			component.ResourceConfig{Obj: pdb, Class: component.Runtime, MutateFn: func() { k.reconcilePodDisruptionBudget(pdb, deployment) }},
-			component.ResourceConfig{Obj: serviceMonitor, Class: component.Runtime, MutateFn: func() { k.reconcileServiceMonitor(serviceMonitor) }},
+			component.ResourceConfig{Obj: scrapeConfigCache, Class: component.Runtime, MutateFn: func() { k.reconcileScrapeConfigCache(scrapeConfigCache) }},
 		)
 	}
 
@@ -356,34 +357,47 @@ func (k *kubeStateMetrics) reconcilePodDisruptionBudget(podDisruptionBudget *pol
 	kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, k.values.KubernetesVersion)
 }
 
-func (k *kubeStateMetrics) emptyServiceMonitor() *monitoringv1.ServiceMonitor {
-	return &monitoringv1.ServiceMonitor{ObjectMeta: monitoringutils.ConfigObjectMeta("kube-state-metrics", k.namespace, cache.Label)}
+func (k *kubeStateMetrics) emptyScrapeConfigCache() *monitoringv1alpha1.ScrapeConfig {
+	return &monitoringv1alpha1.ScrapeConfig{ObjectMeta: monitoringutils.ConfigObjectMeta("kube-state-metrics", k.namespace, cache.Label)}
 }
 
-func (k *kubeStateMetrics) reconcileServiceMonitor(serviceMonitor *monitoringv1.ServiceMonitor) {
-	serviceMonitor.Labels = monitoringutils.Labels(cache.Label)
-	serviceMonitor.Spec = monitoringv1.ServiceMonitorSpec{
-		Selector: metav1.LabelSelector{MatchLabels: k.getLabels()},
-		Endpoints: []monitoringv1.Endpoint{{
-			Port: portNameMetrics,
-			RelabelConfigs: []*monitoringv1.RelabelConfig{
-				{
-					TargetLabel: "instance",
-					Replacement: "kube-state-metrics",
-				},
-				{
-					SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_type"},
-					Regex:        `(.+)`,
-					TargetLabel:  "type",
-					Replacement:  `${1}`,
-				},
-			},
-			MetricRelabelConfigs: append([]*monitoringv1.RelabelConfig{{
-				SourceLabels: []monitoringv1.LabelName{"pod"},
-				Regex:        `^.+\.tf-pod.+$`,
-				Action:       "drop",
-			}}, monitoringutils.StandardMetricRelabelConfig(cachePrometheusAllowedMetrics...)...),
+func (k *kubeStateMetrics) reconcileScrapeConfigCache(scrapeConfig *monitoringv1alpha1.ScrapeConfig) {
+	scrapeConfig.Labels = monitoringutils.Labels(cache.Label)
+	scrapeConfig.Spec = monitoringv1alpha1.ScrapeConfigSpec{
+		KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
+			Role:       "service",
+			Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{k.namespace}},
 		}},
+		RelabelConfigs: []*monitoringv1.RelabelConfig{
+			{
+				SourceLabels: []monitoringv1.LabelName{
+					"__meta_kubernetes_service_label_" + labelKeyComponent,
+					"__meta_kubernetes_service_port_name",
+				},
+				Regex:  labelValueComponent + ";" + portNameMetrics,
+				Action: "keep",
+			},
+			{
+				SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_" + labelKeyType},
+				Regex:        `(.+)`,
+				Replacement:  `${1}`,
+				TargetLabel:  labelKeyType,
+			},
+			{
+				Action:      "replace",
+				Replacement: "kube-state-metrics",
+				TargetLabel: "job",
+			},
+			{
+				TargetLabel: "instance",
+				Replacement: "kube-state-metrics",
+			},
+		},
+		MetricRelabelConfigs: append([]*monitoringv1.RelabelConfig{{
+			SourceLabels: []monitoringv1.LabelName{"pod"},
+			Regex:        `^.+\.tf-pod.+$`,
+			Action:       "drop",
+		}}, monitoringutils.StandardMetricRelabelConfig(cachePrometheusAllowedMetrics...)...),
 	}
 }
 
