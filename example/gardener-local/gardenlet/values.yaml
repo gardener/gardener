@@ -102,3 +102,5 @@ config:
           visible: true
         verticalPodAutoscaler:
           enabled: true
+  shootIssuer:
+    hostname: metadata.local.gardener.cloud

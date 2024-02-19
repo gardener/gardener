@@ -199,3 +199,5 @@ etcdConfig:
 nodeToleration:
   defaultNotReadyTolerationSeconds: 60
   defaultUnreachableTolerationSeconds: 60
+# shootIssuer:
+#   hostname: shoot.issuer.domain.name

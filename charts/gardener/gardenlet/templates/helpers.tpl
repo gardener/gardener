@@ -325,6 +325,10 @@ config.yaml: |
   nodeToleration:
 {{ toYaml .Values.nodeToleration | indent 4 }}
   {{- end}}
+  {{- if .Values.config.shootIssuer }}
+  shootIssuer:
+{{ toYaml .Values.config.shootIssuer | indent 4 }}
+  {{- end}}
 {{- end -}}
 
 {{- define "gardenlet.config.name" -}}

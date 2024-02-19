@@ -90,6 +90,10 @@ type GardenletConfiguration struct {
 	// NodeToleration contains optional settings for default tolerations.
 	// +optional
 	NodeToleration *NodeToleration `json:"nodeToleration,omitempty"`
+	// ShootIssuer contains optional settings that are applied in case
+	// the shoot requires its service account issuer to be managed by Gardener.
+	// +optional
+	ShootIssuer *ShootIssuer `json:"shootIssuer,omitempty"`
 }
 
 // GardenClientConnection specifies the kubeconfig file and the client connection settings
@@ -723,4 +727,12 @@ type NodeToleration struct {
 	// should be added to pods not already tolerating this taint.
 	// +optional
 	DefaultUnreachableTolerationSeconds *int64 `json:"defaultUnreachableTolerationSeconds,omitempty"`
+}
+
+// ShootIssuer contains information about shoot service account issuer options.
+type ShootIssuer struct {
+	// Hostname is the hostname used by the gardenlet to configure the shoot service account issuer and its discovery endpoints, i.e.
+	// if it is set to "abc.example.com" this means that the gardenlet will set --service-account-issuer=https://abc.example.com/projects/<project-name>/shoots/<shoot-uid>/issuer
+	// and --service-account-jwks-uri=https://abc.example.com/projects/<project-name>/shoots/<shoot-uid>/issuer/jwks as flags for the shoot's kube-apiserver.
+	Hostname string `json:"hostname,omitempty"`
 }
