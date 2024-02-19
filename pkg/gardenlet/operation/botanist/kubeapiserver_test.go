@@ -44,7 +44,6 @@ import (
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	mockkubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/mock"
 	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
@@ -517,12 +516,8 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("should set managed issuer configuration",
 					func() {
-						botanist.Config = &config.GardenletConfiguration{
-							ShootIssuer: &config.ShootIssuer{
-								Hostname: "foo.bar.example.cloud",
-							},
-						}
 						botanist.Garden = &garden.Garden{
+							ShootServiceAccountIssuerHostname: ptr.To("foo.bar.example.cloud"),
 							Project: &gardencorev1beta1.Project{
 								ObjectMeta: metav1.ObjectMeta{
 									Name: "test",

@@ -352,6 +352,7 @@ func (r *Reconciler) initializeOperation(
 		WithProject(project).
 		WithInternalDomainFromSecrets(gardenSecrets).
 		WithDefaultDomainsFromSecrets(gardenSecrets).
+		WithShootServiceAccountIssuerHostname(gardenSecrets).
 		Build(ctx)
 	if err != nil {
 		return nil, err

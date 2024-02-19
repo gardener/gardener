@@ -16,27 +16,31 @@ package garden
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // Builder is an object that builds Garden objects.
 type Builder struct {
-	projectFunc        func(context.Context) (*gardencorev1beta1.Project, error)
-	internalDomainFunc func() (*gardenerutils.Domain, error)
-	defaultDomainsFunc func() ([]*gardenerutils.Domain, error)
+	projectFunc                       func(context.Context) (*gardencorev1beta1.Project, error)
+	internalDomainFunc                func() (*gardenerutils.Domain, error)
+	defaultDomainsFunc                func() ([]*gardenerutils.Domain, error)
+	shootServiceAccountIssuerHostname func() (*string, error)
 }
 
 // Garden is an object containing Garden cluster specific data.
 type Garden struct {
-	Project        *gardencorev1beta1.Project
-	DefaultDomains []*gardenerutils.Domain
-	InternalDomain *gardenerutils.Domain
+	Project                           *gardencorev1beta1.Project
+	DefaultDomains                    []*gardenerutils.Domain
+	InternalDomain                    *gardenerutils.Domain
+	ShootServiceAccountIssuerHostname *string
 }
 
 // NewBuilder returns a new Builder.
@@ -97,6 +101,21 @@ func (b *Builder) WithDefaultDomainsFromSecrets(secrets map[string]*corev1.Secre
 	return b
 }
 
+// WithProjectFrom sets the projectFunc attribute after fetching it from the given reader.
+func (b *Builder) WithShootServiceAccountIssuerHostname(secrets map[string]*corev1.Secret) *Builder {
+	b.shootServiceAccountIssuerHostname = func() (*string, error) {
+		if s, ok := secrets[v1beta1constants.GardenRoleShootServiceAccountIssuer]; ok {
+			if host, ok := s.Data["hostname"]; ok {
+				hostname := string(host)
+				return &hostname, nil
+			}
+			return nil, errors.New("shoot service account issuer secret is missing a hostname key")
+		}
+		return nil, nil
+	}
+	return b
+}
+
 // Build initializes a new Garden object.
 func (b *Builder) Build(ctx context.Context) (*Garden, error) {
 	garden := &Garden{}
@@ -118,6 +137,12 @@ func (b *Builder) Build(ctx context.Context) (*Garden, error) {
 		return nil, err
 	}
 	garden.DefaultDomains = defaultDomains
+
+	shootServiceAccountIssuerHostname, err := b.shootServiceAccountIssuerHostname()
+	if err != nil {
+		return nil, err
+	}
+	garden.ShootServiceAccountIssuerHostname = shootServiceAccountIssuerHostname
 
 	return garden, nil
 }

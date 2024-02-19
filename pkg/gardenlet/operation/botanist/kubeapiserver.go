@@ -299,17 +299,17 @@ func (b *Botanist) computeKubeAPIServerSAConfig(externalHostname string) kubeapi
 	}
 
 	shouldManageIssuer := v1beta1helper.HasManagedIssuer(b.Shoot.GetInfo())
-	canManageIssuer := b.Config != nil && b.Config.ShootIssuer != nil && len(strings.TrimSpace(b.Config.ShootIssuer.Hostname)) != 0
+	canManageIssuer := b.Garden != nil && b.Garden.ShootServiceAccountIssuerHostname != nil && len(strings.TrimSpace(*b.Garden.ShootServiceAccountIssuerHostname)) != 0
 	if shouldManageIssuer && !canManageIssuer {
 		// TODO return error
-		b.Logger.Error(errors.New("shoot requires managed issuer, but the gardenlet does not have .shootIssuer.hostname configured"), "incompatible configuration")
+		b.Logger.Error(errors.New("shoot requires managed issuer, but the gardenlet does not have shoot service account hostname configured"), "incompatible configuration")
 	}
 
 	if shouldManageIssuer && canManageIssuer {
 		if saConfig == nil {
 			saConfig = &gardencorev1beta1.ServiceAccountConfig{}
 		}
-		managedIssuer := fmt.Sprintf("https://%s/projects/%s/shoots/%s/issuer", b.Config.ShootIssuer.Hostname, b.Garden.Project.Name, b.Shoot.GetInfo().ObjectMeta.UID)
+		managedIssuer := fmt.Sprintf("https://%s/projects/%s/shoots/%s/issuer", *b.Garden.ShootServiceAccountIssuerHostname, b.Garden.Project.Name, b.Shoot.GetInfo().ObjectMeta.UID)
 		saConfig.Issuer = &managedIssuer
 	}
 
@@ -320,7 +320,7 @@ func (b *Botanist) computeKubeAPIServerSAConfig(externalHostname string) kubeapi
 	)
 
 	if shouldManageIssuer && canManageIssuer {
-		jwksURI := fmt.Sprintf("https://%s/projects/%s/shoots/%s/issuer/jwks", b.Config.ShootIssuer.Hostname, b.Garden.Project.Name, b.Shoot.GetInfo().ObjectMeta.UID)
+		jwksURI := fmt.Sprintf("https://%s/projects/%s/shoots/%s/issuer/jwks", *b.Garden.ShootServiceAccountIssuerHostname, b.Garden.Project.Name, b.Shoot.GetInfo().ObjectMeta.UID)
 		serviceAccountConfig.JWKSURI = &jwksURI
 	}
 	return serviceAccountConfig

@@ -21,7 +21,6 @@ import (
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
@@ -142,6 +141,7 @@ var _ = Describe("AdvertisedAddresses", func() {
 			botanist.Shoot.ExternalClusterDomain = ptr.To("foo.bar")
 			botanist.Shoot.InternalClusterDomain = "baz.foo"
 			botanist.Garden = &garden.Garden{
+				ShootServiceAccountIssuerHostname: ptr.To("managed.foo.bar"),
 				Project: &gardencorev1beta1.Project{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "some-proj",
@@ -155,11 +155,6 @@ var _ = Describe("AdvertisedAddresses", func() {
 				UID:       "some-uid",
 				Annotations: map[string]string{
 					"authentication.gardener.cloud/issuer": "managed",
-				},
-			}
-			botanist.Config = &config.GardenletConfiguration{
-				ShootIssuer: &config.ShootIssuer{
-					Hostname: "managed.foo.bar",
 				},
 			}
 			botanist.APIServerAddress = "bar.foo"
