@@ -19,7 +19,6 @@ import (
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation"
@@ -82,73 +81,4 @@ var _ = Describe("operation", func() {
 			"ingress.seed.example.com",
 			Equal("t-barProject--fooShoot.ingress.seed.example.com")),
 	)
-
-	Describe("#ToAdvertisedAddresses", func() {
-		var operation *Operation
-
-		BeforeEach(func() {
-			operation = &Operation{
-				Shoot: &shootpkg.Shoot{},
-			}
-		})
-
-		It("returns empty list when shoot is nil", func() {
-			operation.Shoot = nil
-
-			Expect(operation.ToAdvertisedAddresses()).To(BeNil())
-		})
-		It("returns external address", func() {
-			operation.Shoot.ExternalClusterDomain = ptr.To("foo.bar")
-
-			addresses := operation.ToAdvertisedAddresses()
-
-			Expect(addresses).To(HaveLen(1))
-			Expect(addresses).To(ConsistOf(gardencorev1beta1.ShootAdvertisedAddress{
-				Name: "external",
-				URL:  "https://api.foo.bar",
-			}))
-		})
-
-		It("returns internal address", func() {
-			operation.Shoot.InternalClusterDomain = "baz.foo"
-
-			addresses := operation.ToAdvertisedAddresses()
-
-			Expect(addresses).To(HaveLen(1))
-			Expect(addresses).To(ConsistOf(gardencorev1beta1.ShootAdvertisedAddress{
-				Name: "internal",
-				URL:  "https://api.baz.foo",
-			}))
-		})
-
-		It("returns unmanaged address", func() {
-			operation.APIServerAddress = "bar.foo"
-
-			addresses := operation.ToAdvertisedAddresses()
-
-			Expect(addresses).To(HaveLen(1))
-			Expect(addresses).To(ConsistOf(gardencorev1beta1.ShootAdvertisedAddress{
-				Name: "unmanaged",
-				URL:  "https://bar.foo",
-			}))
-		})
-
-		It("returns external and internal addresses in correct order", func() {
-			operation.Shoot.ExternalClusterDomain = ptr.To("foo.bar")
-			operation.Shoot.InternalClusterDomain = "baz.foo"
-			operation.APIServerAddress = "bar.foo"
-
-			addresses := operation.ToAdvertisedAddresses()
-
-			Expect(addresses).To(Equal([]gardencorev1beta1.ShootAdvertisedAddress{
-				{
-					Name: "external",
-					URL:  "https://api.foo.bar",
-				}, {
-					Name: "internal",
-					URL:  "https://api.baz.foo",
-				},
-			}))
-		})
-	})
 })

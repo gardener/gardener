@@ -450,47 +450,6 @@ func (o *Operation) ComputeIngressHost(prefix string) string {
 	return fmt.Sprintf("%s-%s.%s", prefix, shortID, o.Seed.IngressDomain())
 }
 
-// ToAdvertisedAddresses returns list of advertised addresses on a Shoot cluster.
-func (o *Operation) ToAdvertisedAddresses() []gardencorev1beta1.ShootAdvertisedAddress {
-	var addresses []gardencorev1beta1.ShootAdvertisedAddress
-
-	if o.Shoot == nil {
-		return addresses
-	}
-
-	if o.Shoot.ExternalClusterDomain != nil && len(*o.Shoot.ExternalClusterDomain) > 0 {
-		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
-			Name: "external",
-			URL:  "https://" + gardenerutils.GetAPIServerDomain(*o.Shoot.ExternalClusterDomain),
-		})
-	}
-
-	if len(o.Shoot.InternalClusterDomain) > 0 {
-		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
-			Name: "internal",
-			URL:  "https://" + gardenerutils.GetAPIServerDomain(o.Shoot.InternalClusterDomain),
-		})
-	}
-
-	if len(o.APIServerAddress) > 0 && len(addresses) == 0 {
-		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
-			Name: "unmanaged",
-			URL:  "https://" + o.APIServerAddress,
-		})
-	}
-
-	return addresses
-}
-
-// UpdateAdvertisedAddresses updates the shoot.status.advertisedAddresses with the list of
-// addresses on which the API server of the shoot is accessible.
-func (o *Operation) UpdateAdvertisedAddresses(ctx context.Context) error {
-	return o.Shoot.UpdateInfoStatus(ctx, o.GardenClient, false, func(shoot *gardencorev1beta1.Shoot) error {
-		shoot.Status.AdvertisedAddresses = o.ToAdvertisedAddresses()
-		return nil
-	})
-}
-
 // StoreSecret stores the passed secret under the given key from the operation. Calling this function is thread-safe.
 func (o *Operation) StoreSecret(key string, secret *corev1.Secret) {
 	o.secretsMutex.Lock()
