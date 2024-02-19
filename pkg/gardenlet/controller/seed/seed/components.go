@@ -21,6 +21,7 @@ import (
 	weederapi "github.com/gardener/dependency-watchdog/api/weeder"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -123,6 +124,7 @@ type components struct {
 	prometheusOperator            component.DeployWaiter
 	cachePrometheus               component.DeployWaiter
 	seedPrometheus                component.DeployWaiter
+	aggregatePrometheus           component.DeployWaiter
 	alertManager                  component.DeployWaiter
 }
 
@@ -242,6 +244,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.seedPrometheus, err = r.newSeedPrometheus(log, seed)
+	if err != nil {
+		return
+	}
+	c.aggregatePrometheus, err = r.newAggregatePrometheus(log, seed)
 	if err != nil {
 		return
 	}
@@ -625,6 +631,7 @@ func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed) (co
 		Version:           ptr.Deref(imagePrometheus.Version, "v0.0.0"),
 		PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
 		StorageCapacity:   storageCapacity,
+		Retention:         ptr.To(monitoringv1.Duration("1d")),
 		RetentionSize:     "5GB",
 		CentralConfigs: prometheus.CentralConfigs{
 			AdditionalScrapeConfigs: cacheprometheus.AdditionalScrapeConfigs(),
@@ -686,6 +693,45 @@ func (r *Reconciler) newSeedPrometheus(log logr.Logger, seed *seedpkg.Seed) (com
 			StatefulSetName: "seed-prometheus",
 			FullName:        "prometheus-seed",
 			PVCName:         "prometheus-db-seed-prometheus-0",
+		},
+	}), nil
+}
+
+func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed) (component.DeployWaiter, error) {
+	imagePrometheus, err := imagevector.ImageVector().FindImage(imagevector.ImageNamePrometheus)
+	if err != nil {
+		return nil, err
+	}
+	imageAlpine, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlpine)
+	if err != nil {
+		return nil, err
+	}
+
+	storageCapacity := resource.MustParse(seed.GetValidVolumeSize("20Gi"))
+
+	return prometheus.New(log, r.SeedClientSet.Client(), r.GardenNamespace, prometheus.Values{
+		Name:              "aggregate",
+		Image:             imagePrometheus.String(),
+		Version:           ptr.Deref(imagePrometheus.Version, "v0.0.0"),
+		PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
+		StorageCapacity:   storageCapacity,
+		Retention:         ptr.To(monitoringv1.Duration("30d")),
+		RetentionSize:     "15GB",
+		VPAMinAllowed:     &corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("1000M")},
+		AdditionalPodLabels: map[string]string{
+			"networking.resources.gardener.cloud/to-" + v1beta1constants.IstioSystemNamespace + "-" + v1beta1constants.LabelNetworkPolicySeedScrapeTargets:                         v1beta1constants.LabelNetworkPolicyAllowed,
+			"networking.resources.gardener.cloud/to-" + v1beta1constants.LabelNetworkPolicyIstioIngressNamespaceAlias + "-" + v1beta1constants.LabelNetworkPolicySeedScrapeTargets: v1beta1constants.LabelNetworkPolicyAllowed,
+			gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-prometheus-web", 9090):                                                       v1beta1constants.LabelNetworkPolicyAllowed,
+		},
+		// TODO(rfranzke): Remove this after v1.93 has been released.
+		DataMigration: monitoring.DataMigration{
+			Client:          r.SeedClientSet.Client(),
+			Namespace:       r.GardenNamespace,
+			StorageCapacity: storageCapacity,
+			ImageAlpine:     imageAlpine.String(),
+			StatefulSetName: "aggregate-prometheus",
+			FullName:        "prometheus-aggregate",
+			PVCName:         "prometheus-db-aggregate-prometheus-0",
 		},
 	}), nil
 }

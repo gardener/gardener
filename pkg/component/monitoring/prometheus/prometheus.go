@@ -36,7 +36,6 @@ func (p *prometheus) prometheus(takeOverOldPV bool) *monitoringv1.Prometheus {
 			Labels:    p.getLabels(),
 		},
 		Spec: monitoringv1.PrometheusSpec{
-			Retention:          "1d",
 			RetentionSize:      p.values.RetentionSize,
 			EvaluationInterval: "1m",
 			CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
@@ -93,6 +92,10 @@ func (p *prometheus) prometheus(takeOverOldPV bool) *monitoringv1.Prometheus {
 			RuleSelector:          &metav1.LabelSelector{MatchLabels: monitoringutils.Labels(p.values.Name)},
 			RuleNamespaceSelector: &metav1.LabelSelector{},
 		},
+	}
+
+	if p.values.Retention != nil {
+		obj.Spec.Retention = *p.values.Retention
 	}
 
 	if takeOverOldPV {

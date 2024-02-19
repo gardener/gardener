@@ -157,6 +157,10 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Name: "Destroying seed Prometheus",
 			Fn:   c.seedPrometheus.Destroy,
 		})
+		destroyAggregatePrometheus = g.Add(flow.Task{
+			Name: "Destroying aggregate Prometheus",
+			Fn:   c.aggregatePrometheus.Destroy,
+		})
 		destroyAlertManager = g.Add(flow.Task{
 			Name: "Destroying AlertManager",
 			Fn:   c.alertManager.Destroy,
@@ -282,6 +286,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 			destroyClusterIdentity,
 			destroyCachePrometheus,
 			destroySeedPrometheus,
+			destroyAggregatePrometheus,
 			destroyAlertManager,
 			destroyNginxIngress,
 			destroyClusterAutoscaler,

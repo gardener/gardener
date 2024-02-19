@@ -95,6 +95,7 @@ rules:
   - vali-vali-0
   - prometheus-db-prometheus-0 # TODO(rfranzke): Remove this as soon as the Prometheus migration code is getting deleted.
   - prometheus-db-seed-prometheus-0 # TODO(rfranzke): Remove this as soon as the Prometheus migration code is getting deleted.
+  - prometheus-db-aggregate-prometheus-0 # TODO(rfranzke): Remove this as soon as the Prometheus migration code is getting deleted.
   verbs:
   - delete
 - apiGroups:

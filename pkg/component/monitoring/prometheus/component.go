@@ -53,6 +53,8 @@ type Values struct {
 	PriorityClassName string
 	// StorageCapacity is the storage capacity of Prometheus.
 	StorageCapacity resource.Quantity
+	// Retention is the duration for the data retention.
+	Retention *monitoringv1.Duration
 	// RetentionSize is the size for the data retention.
 	RetentionSize monitoringv1.ByteSize
 	// VPAMinAllowed defines the resource list for the minAllowed field for the prometheus container resource policy.

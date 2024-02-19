@@ -59,6 +59,7 @@ var _ = Describe("Prometheus", func() {
 		version           = "v1.2.3"
 		priorityClassName = "priority-class"
 		storageCapacity   = resource.MustParse("1337Gi")
+		retention         = monitoringv1.Duration("1d")
 		retentionSize     = monitoringv1.ByteSize("5GB")
 		additionalLabels  = map[string]string{"foo": "bar"}
 
@@ -102,6 +103,7 @@ honor_labels: true`
 			Version:             version,
 			PriorityClassName:   priorityClassName,
 			StorageCapacity:     storageCapacity,
+			Retention:           &retention,
 			RetentionSize:       retentionSize,
 			AdditionalPodLabels: additionalLabels,
 		}
@@ -194,7 +196,7 @@ honor_labels: true`
 				},
 			},
 			Spec: monitoringv1.PrometheusSpec{
-				Retention:          "1d",
+				Retention:          retention,
 				RetentionSize:      retentionSize,
 				EvaluationInterval: "1m",
 				CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
