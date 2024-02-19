@@ -204,7 +204,7 @@ func DeployKubeAPIServer(
 	runtimeClient client.Client,
 	runtimeNamespace string,
 	kubeAPIServer kubeapiserver.Interface,
-	apiServerConfig *gardencorev1beta1.KubeAPIServerConfig,
+	serviceAccountConfig kubeapiserver.ServiceAccountConfig,
 	serverCertificateConfig kubeapiserver.ServerCertificateConfig,
 	sniConfig kubeapiserver.SNIConfig,
 	externalHostname string,
@@ -213,7 +213,6 @@ func DeployKubeAPIServer(
 	resourcesToEncrypt []string,
 	encryptedResources []string,
 	etcdEncryptionKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase,
-	serviceAccountKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase,
 	wantScaleDown bool,
 ) error {
 	var (
@@ -242,7 +241,7 @@ func DeployKubeAPIServer(
 	}
 
 	kubeAPIServer.SetServerCertificateConfig(serverCertificateConfig)
-	kubeAPIServer.SetServiceAccountConfig(computeKubeAPIServerServiceAccountConfig(apiServerConfig, externalHostname, serviceAccountKeyRotationPhase))
+	kubeAPIServer.SetServiceAccountConfig(serviceAccountConfig)
 	kubeAPIServer.SetSNIConfig(sniConfig)
 	kubeAPIServer.SetExternalHostname(externalHostname)
 	kubeAPIServer.SetExternalServer(externalServer)
@@ -373,44 +372,4 @@ func computeKubeAPIServerReplicas(autoscalingConfig apiserver.AutoscalingConfig,
 		// If none of the above cases applies then a default value has to be returned.
 		return ptr.To(int32(1))
 	}
-}
-
-func computeKubeAPIServerServiceAccountConfig(
-	config *gardencorev1beta1.KubeAPIServerConfig,
-	externalHostname string,
-	serviceAccountKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase,
-) kubeapiserver.ServiceAccountConfig {
-	var (
-		defaultIssuer = "https://" + externalHostname
-		out           = kubeapiserver.ServiceAccountConfig{
-			Issuer:        defaultIssuer,
-			RotationPhase: serviceAccountKeyRotationPhase,
-		}
-	)
-
-	if config == nil || config.ServiceAccountConfig == nil {
-		return out
-	}
-
-	out.ExtendTokenExpiration = config.ServiceAccountConfig.ExtendTokenExpiration
-	out.MaxTokenExpiration = config.ServiceAccountConfig.MaxTokenExpiration
-
-	if config.ServiceAccountConfig.Issuer != nil {
-		out.Issuer = *config.ServiceAccountConfig.Issuer
-	}
-	out.AcceptedIssuers = config.ServiceAccountConfig.AcceptedIssuers
-	if out.Issuer != defaultIssuer && !slices.Contains(out.AcceptedIssuers, defaultIssuer) {
-		out.AcceptedIssuers = append(out.AcceptedIssuers, defaultIssuer)
-	}
-	if config.ServiceAccountConfig.Issuer == nil {
-		// ensure defaultIssuer is not duplicated in the accepted issuers
-		for i, val := range out.AcceptedIssuers {
-			if val == defaultIssuer {
-				out.AcceptedIssuers = append(out.AcceptedIssuers[:i], out.AcceptedIssuers[i+1:]...)
-				break
-			}
-		}
-	}
-
-	return out
 }

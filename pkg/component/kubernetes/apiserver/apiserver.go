@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"slices"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -191,6 +192,8 @@ type ServiceAccountConfig struct {
 	Issuer string
 	// AcceptedIssuers is an additional set of issuers that are used to determine which service account tokens are accepted.
 	AcceptedIssuers []string
+	// JWKSURI is used to overwrite the URI for the JSON Web Key Set in the discovery document served at /.well-known/openid-configuration.
+	JWKSURI *string
 	// ExtendTokenExpiration states whether the service account token expirations should be extended.
 	ExtendTokenExpiration *bool
 	// MaxTokenExpiration states what the maximal token expiration should be.
@@ -560,4 +563,44 @@ func getLabels() map[string]string {
 		v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
 		v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer,
 	}
+}
+
+func ComputeKubeAPIServerServiceAccountConfig(
+	config *gardencorev1beta1.ServiceAccountConfig,
+	externalHostname string,
+	serviceAccountKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase,
+) ServiceAccountConfig {
+	var (
+		defaultIssuer = "https://" + externalHostname
+		out           = ServiceAccountConfig{
+			Issuer:        defaultIssuer,
+			RotationPhase: serviceAccountKeyRotationPhase,
+		}
+	)
+
+	if config == nil {
+		return out
+	}
+
+	out.ExtendTokenExpiration = config.ExtendTokenExpiration
+	out.MaxTokenExpiration = config.MaxTokenExpiration
+
+	if config.Issuer != nil {
+		out.Issuer = *config.Issuer
+	}
+	out.AcceptedIssuers = config.AcceptedIssuers
+	if out.Issuer != defaultIssuer && !slices.Contains(out.AcceptedIssuers, defaultIssuer) {
+		out.AcceptedIssuers = append(out.AcceptedIssuers, defaultIssuer)
+	}
+	if config.Issuer == nil {
+		// ensure defaultIssuer is not duplicated in the accepted issuers
+		for i, val := range out.AcceptedIssuers {
+			if val == defaultIssuer {
+				out.AcceptedIssuers = append(out.AcceptedIssuers[:i], out.AcceptedIssuers[i+1:]...)
+				break
+			}
+		}
+	}
+
+	return out
 }
