@@ -8,27 +8,6 @@ data:
 
     rule_files:
     - /etc/prometheus/rules/*.yaml
-    alerting:
-      alertmanagers:
-      - kubernetes_sd_configs:
-        - role: endpoints
-          namespaces:
-            names:
-            - garden
-        relabel_configs:
-        - source_labels: [ __meta_kubernetes_service_label_component ]
-          action: keep
-          regex: alertmanager
-        - source_labels: [ __meta_kubernetes_service_label_role ]
-          action: keep
-          regex: monitoring
-        - source_labels: [ __meta_kubernetes_endpoint_port_name ]
-          action: keep
-          regex: metrics
-      alert_relabel_configs:
-      - source_labels: [ ignoreAlerts ]
-        regex: true
-        action: drop
     scrape_configs:
     - job_name: shoot-prometheus
       metrics_path: /federate

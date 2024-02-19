@@ -24,6 +24,11 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
+const (
+	secretNameSuffixAdditionalScrapeConfigs       = "-additional-scrape-configs"
+	secretNameSuffixAdditionalAlertRelabelConfigs = "-additional-alert-relabel-configs"
+)
+
 func (p *prometheus) secretAdditionalScrapeConfigs() *corev1.Secret {
 	var scrapeConfigs strings.Builder
 
@@ -33,11 +38,27 @@ func (p *prometheus) secretAdditionalScrapeConfigs() *corev1.Secret {
 
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      p.name() + "-additional-scrape-configs",
+			Name:      p.name() + secretNameSuffixAdditionalScrapeConfigs,
 			Namespace: p.namespace,
 			Labels:    p.getLabels(),
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{dataKeyAdditionalScrapeConfigs: []byte(scrapeConfigs.String())},
+	}
+}
+
+func (p *prometheus) secretAdditionalAlertRelabelConfigs() *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      p.name() + secretNameSuffixAdditionalAlertRelabelConfigs,
+			Namespace: p.namespace,
+			Labels:    p.getLabels(),
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{dataKeyAdditionalAlertRelabelConfigs: []byte(`
+- source_labels: [ ignoreAlerts ]
+  regex: true
+  action: drop
+`)},
 	}
 }

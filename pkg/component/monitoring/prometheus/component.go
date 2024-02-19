@@ -38,9 +38,10 @@ import (
 )
 
 const (
-	dataKeyAdditionalScrapeConfigs = "prometheus.yaml"
-	port                           = 9090
-	servicePort                    = 80
+	dataKeyAdditionalScrapeConfigs       = "prometheus.yaml"
+	dataKeyAdditionalAlertRelabelConfigs = "configs.yaml"
+	port                                 = 9090
+	servicePort                          = 80
 )
 
 // Values contains configuration values for the prometheus resources.
@@ -70,6 +71,8 @@ type Values struct {
 	CentralConfigs CentralConfigs
 	// IngressValues contains configuration for exposing this Prometheus instance via an Ingress resource.
 	Ingress *IngressValues
+	// Alerting contains alerting configuration for this Prometheus instance.
+	Alerting *AlertingValues
 	// AdditionalResources contains any additional resources which get added to the ManagedResource.
 	AdditionalResources []client.Object
 
@@ -92,6 +95,11 @@ type CentralConfigs struct {
 	ServiceMonitors []*monitoringv1.ServiceMonitor
 	// PodMonitors is a list of central PodMonitor objects for this prometheus instance.
 	PodMonitors []*monitoringv1.PodMonitor
+}
+
+// AlertingValues contains alerting configuration for this Prometheus instance.
+type AlertingValues struct {
+	AlertmanagerName string
 }
 
 // IngressValues contains configuration for exposing this Prometheus instance via an Ingress resource.
@@ -148,6 +156,12 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 	ingress, err := p.ingress(ctx)
 	if err != nil {
 		return err
+	}
+
+	if p.values.Alerting != nil {
+		if err := registry.Add(p.secretAdditionalAlertRelabelConfigs()); err != nil {
+			return err
+		}
 	}
 
 	resources, err := registry.AddAllAndSerialize(

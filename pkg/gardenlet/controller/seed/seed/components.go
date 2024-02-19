@@ -247,7 +247,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.aggregatePrometheus, err = r.newAggregatePrometheus(log, seed, secretsManager, globalMonitoringSecretSeed, wildCardCertSecret)
+	c.aggregatePrometheus, err = r.newAggregatePrometheus(log, seed, secretsManager, globalMonitoringSecretSeed, wildCardCertSecret, alertingSMTPSecret)
 	if err != nil {
 		return
 	}
@@ -697,7 +697,7 @@ func (r *Reconciler) newSeedPrometheus(log logr.Logger, seed *seedpkg.Seed) (com
 	}), nil
 }
 
-func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed, secretsManager secretsmanager.Interface, globalMonitoringSecret, wildcardCertSecret *corev1.Secret) (component.DeployWaiter, error) {
+func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed, secretsManager secretsmanager.Interface, globalMonitoringSecret, wildcardCertSecret, alertingSMTPSecret *corev1.Secret) (component.DeployWaiter, error) {
 	imagePrometheus, err := imagevector.ImageVector().FindImage(imagevector.ImageNamePrometheus)
 	if err != nil {
 		return nil, err
@@ -709,11 +709,18 @@ func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed,
 
 	var (
 		storageCapacity  = resource.MustParse(seed.GetValidVolumeSize("20Gi"))
+		alerting         *prometheus.AlertingValues
 		wildcardCertName *string
 	)
 
 	if wildcardCertSecret != nil {
 		wildcardCertName = ptr.To(wildcardCertSecret.GetName())
+	}
+
+	if alertingSMTPSecret != nil {
+		alerting = &prometheus.AlertingValues{
+			AlertmanagerName: "alertmanager-seed",
+		}
 	}
 
 	return prometheus.New(log, r.SeedClientSet.Client(), r.GardenNamespace, prometheus.Values{
@@ -737,6 +744,7 @@ func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed,
 			SecretsManager:   secretsManager,
 			WildcardCertName: wildcardCertName,
 		},
+		Alerting: alerting,
 		// TODO(rfranzke): Remove this after v1.93 has been released.
 		DataMigration: monitoring.DataMigration{
 			Client:          r.SeedClientSet.Client(),

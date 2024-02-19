@@ -19,16 +19,16 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/component/monitoring/alertmanager"
 	monitoringutils "github.com/gardener/gardener/pkg/component/monitoring/utils"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
 func (p *prometheus) prometheus(takeOverOldPV bool) *monitoringv1.Prometheus {
-	reloadStrategy := monitoringv1.HTTPReloadStrategyType
-
 	obj := &monitoringv1.Prometheus{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      p.values.Name,
@@ -40,13 +40,11 @@ func (p *prometheus) prometheus(takeOverOldPV bool) *monitoringv1.Prometheus {
 			EvaluationInterval: "1m",
 			CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
 				ScrapeInterval: "1m",
-				ReloadStrategy: &reloadStrategy,
+				ReloadStrategy: ptr.To(monitoringv1.HTTPReloadStrategyType),
 				ExternalLabels: p.values.ExternalLabels,
 				AdditionalScrapeConfigs: &corev1.SecretKeySelector{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: p.name() + "-additional-scrape-configs",
-					},
-					Key: dataKeyAdditionalScrapeConfigs,
+					LocalObjectReference: corev1.LocalObjectReference{Name: p.name() + secretNameSuffixAdditionalScrapeConfigs},
+					Key:                  dataKeyAdditionalScrapeConfigs,
 				},
 
 				PodMetadata: &monitoringv1.EmbeddedObjectMetadata{
@@ -97,6 +95,20 @@ func (p *prometheus) prometheus(takeOverOldPV bool) *monitoringv1.Prometheus {
 
 	if p.values.Retention != nil {
 		obj.Spec.Retention = *p.values.Retention
+	}
+
+	if p.values.Alerting != nil {
+		obj.Spec.Alerting = &monitoringv1.AlertingSpec{
+			Alertmanagers: []monitoringv1.AlertmanagerEndpoints{{
+				Namespace: p.namespace,
+				Name:      p.values.Alerting.AlertmanagerName,
+				Port:      intstr.FromString(alertmanager.PortNameMetrics),
+			}},
+		}
+		obj.Spec.AdditionalAlertRelabelConfigs = &corev1.SecretKeySelector{
+			LocalObjectReference: corev1.LocalObjectReference{Name: p.name() + secretNameSuffixAdditionalAlertRelabelConfigs},
+			Key:                  dataKeyAdditionalAlertRelabelConfigs,
+		}
 	}
 
 	if takeOverOldPV {
