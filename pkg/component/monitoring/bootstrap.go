@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -35,7 +34,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/istio"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -156,25 +154,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	applierOptions[hvpaGK] = retainStatusInformation
 	applierOptions[issuerGK] = retainStatusInformation
 
-	var ingressTLSSecretName string
-	if b.values.WildcardCertName != nil {
-		ingressTLSSecretName = *b.values.WildcardCertName
-	} else {
-		ingressTLSSecret, err := b.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-			Name:                        "aggregate-prometheus-tls",
-			CommonName:                  "prometheus",
-			Organization:                []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:                    []string{b.values.IngressHost},
-			CertType:                    secretsutils.ServerCert,
-			Validity:                    ptr.To(v1beta1constants.IngressTLSCertificateValidity),
-			SkipPublishingCACertificate: true,
-		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCASeed))
-		if err != nil {
-			return err
-		}
-		ingressTLSSecretName = ingressTLSSecret.Name
-	}
-
 	values := kubernetes.Values(map[string]interface{}{
 		"global": map[string]interface{}{
 			"ingressClass": v1beta1constants.SeedNginxIngressClass,
@@ -188,8 +167,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			"resources":               monitoringResources["aggregate-prometheus"],
 			"storage":                 b.values.StorageCapacityAggregatePrometheus,
 			"seed":                    b.values.SeedName,
-			"hostName":                b.values.IngressHost,
-			"secretName":              ingressTLSSecretName,
 			"additionalScrapeConfigs": aggregateScrapeConfigs.String(),
 		},
 		"hvpa": map[string]interface{}{

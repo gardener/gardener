@@ -26,6 +26,7 @@ import (
 	istiov1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -514,14 +515,23 @@ func (r *Reconciler) runReconcileSeedFlow(
 		_ = g.Add(flow.Task{
 			Name: "Cleaning up legacy aggregate Prometheus resources",
 			Fn: func(ctx context.Context) error {
-				return kubernetesutils.DeleteObjects(ctx, r.SeedClientSet.Client(),
+				if err := kubernetesutils.DeleteObjects(ctx, r.SeedClientSet.Client(),
 					&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus-web", Namespace: r.GardenNamespace}},
 					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus", Namespace: r.GardenNamespace}},
 					&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus", Namespace: r.GardenNamespace}},
+					&networkingv1beta1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus", Namespace: r.GardenNamespace}},
 					&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus"}},
 					&hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus", Namespace: r.GardenNamespace}},
 					&vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus-vpa", Namespace: r.GardenNamespace}},
-				)
+				); err != nil {
+					return err
+				}
+
+				return r.SeedClientSet.Client().DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(r.GardenNamespace), client.MatchingLabels{
+					secretsmanager.LabelKeyName:            "aggregate-prometheus-tls",
+					secretsmanager.LabelKeyManagedBy:       secretsmanager.LabelValueSecretsManager,
+					secretsmanager.LabelKeyManagerIdentity: v1beta1constants.SecretManagerIdentityGardenlet,
+				})
 			},
 			Dependencies: flow.NewTaskIDs(deployAggregatePrometheus),
 		})

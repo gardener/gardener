@@ -39,7 +39,7 @@ func (p *prometheus) service() *corev1.Service {
 			Selector: map[string]string{"prometheus": p.values.Name},
 			Ports: []corev1.ServicePort{{
 				Name:       "web",
-				Port:       80,
+				Port:       servicePort,
 				Protocol:   corev1.ProtocolTCP,
 				TargetPort: intstr.FromInt32(port),
 			}},

@@ -34,11 +34,13 @@ import (
 	monitoringutils "github.com/gardener/gardener/pkg/component/monitoring/utils"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 const (
 	dataKeyAdditionalScrapeConfigs = "prometheus.yaml"
 	port                           = 9090
+	servicePort                    = 80
 )
 
 // Values contains configuration values for the prometheus resources.
@@ -64,6 +66,8 @@ type Values struct {
 	// CentralConfigs contains configuration for this Prometheus instance that is created together with it. This should
 	// only contain configuration that cannot be directly assigned to another component package.
 	CentralConfigs CentralConfigs
+	// IngressValues contains configuration for exposing this Prometheus instance via an Ingress resource.
+	Ingress *IngressValues
 	// AdditionalResources contains any additional resources which get added to the ManagedResource.
 	AdditionalResources []client.Object
 
@@ -86,6 +90,20 @@ type CentralConfigs struct {
 	ServiceMonitors []*monitoringv1.ServiceMonitor
 	// PodMonitors is a list of central PodMonitor objects for this prometheus instance.
 	PodMonitors []*monitoringv1.PodMonitor
+}
+
+// IngressValues contains configuration for exposing this Prometheus instance via an Ingress resource.
+type IngressValues struct {
+	// AuthSecretName is the name of the auth secret.
+	AuthSecretName string
+	// Host is the hostname under which the Prometheus instance should be exposed.
+	Host string
+	// SecretsManager is the secrets manager used for generating the TLS certificate if no wildcard certificate is
+	// provided.
+	SecretsManager secretsmanager.Interface
+	// WildcardCertName is name of wildcard TLS certificate which is issued for the ingress domain. If not provided, a
+	// self-signed server certificate will be created.
+	WildcardCertName *string
 }
 
 // New creates a new instance of DeployWaiter for the prometheus.
@@ -125,6 +143,11 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	ingress, err := p.ingress(ctx)
+	if err != nil {
+		return err
+	}
+
 	resources, err := registry.AddAllAndSerialize(
 		p.serviceAccount(),
 		p.service(),
@@ -132,6 +155,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		p.secretAdditionalScrapeConfigs(),
 		p.prometheus(takeOverExistingPV),
 		p.vpa(),
+		ingress,
 	)
 	if err != nil {
 		return err

@@ -247,7 +247,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.aggregatePrometheus, err = r.newAggregatePrometheus(log, seed)
+	c.aggregatePrometheus, err = r.newAggregatePrometheus(log, seed, secretsManager, globalMonitoringSecretSeed, wildCardCertSecret)
 	if err != nil {
 		return
 	}
@@ -697,7 +697,7 @@ func (r *Reconciler) newSeedPrometheus(log logr.Logger, seed *seedpkg.Seed) (com
 	}), nil
 }
 
-func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed) (component.DeployWaiter, error) {
+func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed, secretsManager secretsmanager.Interface, globalMonitoringSecret, wildcardCertSecret *corev1.Secret) (component.DeployWaiter, error) {
 	imagePrometheus, err := imagevector.ImageVector().FindImage(imagevector.ImageNamePrometheus)
 	if err != nil {
 		return nil, err
@@ -707,7 +707,14 @@ func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed)
 		return nil, err
 	}
 
-	storageCapacity := resource.MustParse(seed.GetValidVolumeSize("20Gi"))
+	var (
+		storageCapacity  = resource.MustParse(seed.GetValidVolumeSize("20Gi"))
+		wildcardCertName *string
+	)
+
+	if wildcardCertSecret != nil {
+		wildcardCertName = ptr.To(wildcardCertSecret.GetName())
+	}
 
 	return prometheus.New(log, r.SeedClientSet.Client(), r.GardenNamespace, prometheus.Values{
 		Name:              "aggregate",
@@ -722,6 +729,12 @@ func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed)
 			"networking.resources.gardener.cloud/to-" + v1beta1constants.IstioSystemNamespace + "-" + v1beta1constants.LabelNetworkPolicySeedScrapeTargets:                         v1beta1constants.LabelNetworkPolicyAllowed,
 			"networking.resources.gardener.cloud/to-" + v1beta1constants.LabelNetworkPolicyIstioIngressNamespaceAlias + "-" + v1beta1constants.LabelNetworkPolicySeedScrapeTargets: v1beta1constants.LabelNetworkPolicyAllowed,
 			gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-prometheus-web", 9090):                                                       v1beta1constants.LabelNetworkPolicyAllowed,
+		},
+		Ingress: &prometheus.IngressValues{
+			AuthSecretName:   globalMonitoringSecret.Name,
+			Host:             seed.GetIngressFQDN("p-seed"),
+			SecretsManager:   secretsManager,
+			WildcardCertName: wildcardCertName,
 		},
 		// TODO(rfranzke): Remove this after v1.93 has been released.
 		DataMigration: monitoring.DataMigration{

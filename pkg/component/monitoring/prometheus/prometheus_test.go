@@ -24,6 +24,7 @@ import (
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,6 +36,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
@@ -68,6 +70,10 @@ honor_labels: false`
 		additionalScrapeConfig2 = `job_name: bar
 honor_labels: true`
 
+		ingressAuthSecretName     = "foo"
+		ingressHost               = "some-host.example.com"
+		ingressWildcardSecretName = "bar"
+
 		fakeClient client.Client
 		deployer   component.DeployWaiter
 		values     Values
@@ -84,6 +90,7 @@ honor_labels: true`
 		clusterRoleBinding            *rbacv1.ClusterRoleBinding
 		prometheus                    *monitoringv1.Prometheus
 		vpa                           *vpaautoscalingv1.VerticalPodAutoscaler
+		ingress                       *networkingv1.Ingress
 		prometheusRule                *monitoringv1.PrometheusRule
 		serviceMonitor                *monitoringv1.ServiceMonitor
 		podMonitor                    *monitoringv1.PodMonitor
@@ -296,6 +303,46 @@ honor_labels: true`
 				},
 			},
 		}
+		ingress = &networkingv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "prometheus-" + name,
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "prometheus",
+					"role": "monitoring",
+					"name": name,
+				},
+				Annotations: map[string]string{
+					"nginx.ingress.kubernetes.io/auth-type":   "basic",
+					"nginx.ingress.kubernetes.io/auth-realm":  "Authentication Required",
+					"nginx.ingress.kubernetes.io/auth-secret": ingressAuthSecretName,
+				},
+			},
+			Spec: networkingv1.IngressSpec{
+				IngressClassName: ptr.To(v1beta1constants.SeedNginxIngressClass),
+				TLS: []networkingv1.IngressTLS{{
+					SecretName: ingressWildcardSecretName,
+					Hosts:      []string{ingressHost},
+				}},
+				Rules: []networkingv1.IngressRule{{
+					Host: ingressHost,
+					IngressRuleValue: networkingv1.IngressRuleValue{
+						HTTP: &networkingv1.HTTPIngressRuleValue{
+							Paths: []networkingv1.HTTPIngressPath{{
+								Backend: networkingv1.IngressBackend{
+									Service: &networkingv1.IngressServiceBackend{
+										Name: "prometheus-" + name,
+										Port: networkingv1.ServiceBackendPort{Number: 80},
+									},
+								},
+								Path:     "/",
+								PathType: ptr.To(networkingv1.PathTypePrefix),
+							}},
+						},
+					},
+				}},
+			},
+		}
 		prometheusRule = &monitoringv1.PrometheusRule{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   "rule",
@@ -441,6 +488,23 @@ honor_labels: true`
 
 				Expect(string(managedResourceSecret.Data["secret__some-namespace__prometheus-"+name+"-additional-scrape-configs.yaml"])).To(Equal(componenttest.Serialize(secretAdditionalScrapeConfigs)))
 				Expect(string(managedResourceSecret.Data["configmap__some-namespace__configmap.yaml"])).To(Equal(componenttest.Serialize(additionalConfigMap)))
+			})
+
+			When("ingress is configured", func() {
+				BeforeEach(func() {
+					values.Ingress = &IngressValues{
+						AuthSecretName:   ingressAuthSecretName,
+						Host:             ingressHost,
+						WildcardCertName: &ingressWildcardSecretName,
+					}
+					deployer = New(logr.Discard(), fakeClient, namespace, values)
+				})
+
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceSecret.Data).To(HaveLen(12))
+
+					Expect(string(managedResourceSecret.Data["ingress__some-namespace__prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(ingress)))
+				})
 			})
 		})
 	})
