@@ -2874,7 +2874,8 @@ message ShootStatus {
   // +optional
   optional string clusterIdentity = 12;
 
-  // List of addresses on which the Kube API server can be reached.
+  // List of addresses that are relevant to the shoot.
+  // These include the Kube API server address and also the service account issuer.
   // +optional
   // +patchMergeKey=name
   // +patchStrategy=merge

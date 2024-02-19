@@ -18,6 +18,7 @@ import (
 	"context"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -56,6 +57,24 @@ func (b *Botanist) ToAdvertisedAddresses() []gardencorev1beta1.ShootAdvertisedAd
 		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
 			Name: "unmanaged",
 			URL:  "https://" + b.APIServerAddress,
+		})
+	}
+
+	hasCustomIssuer := func(shoot *gardencorev1beta1.Shoot) bool {
+		return shoot != nil &&
+			shoot.Spec.Kubernetes.KubeAPIServer != nil &&
+			shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig != nil &&
+			shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.Issuer != nil
+	}
+
+	if len(b.Shoot.InternalClusterDomain) > 0 ||
+		hasCustomIssuer(b.Shoot.GetInfo()) ||
+		helper.HasManagedIssuer(b.Shoot.GetInfo()) {
+		externalHostname := b.Shoot.ComputeOutOfClusterAPIServerAddress(true)
+		serviceAccountConfig := b.computeKubeAPIServerSAConfig(externalHostname)
+		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
+			Name: "service-account-issuer",
+			URL:  serviceAccountConfig.Issuer,
 		})
 	}
 

@@ -453,9 +453,6 @@ func validateAdvertisedURL(URL string, fldPath *field.Path) field.ErrorList {
 		if len(u.Host) == 0 {
 			allErrors = append(allErrors, field.Invalid(fldPath, u.Host, "host must be provided"+form))
 		}
-		if len(u.Path) > 0 {
-			allErrors = append(allErrors, field.Invalid(fldPath, u.Path, "path is not permitted in the URL"+form))
-		}
 		if u.User != nil {
 			allErrors = append(allErrors, field.Invalid(fldPath, u.User.String(), "user information is not permitted in the URL"+form))
 		}

@@ -151,7 +151,8 @@ type ShootStatus struct {
 	UID types.UID
 	// ClusterIdentity is the identity of the Shoot cluster. This field is immutable.
 	ClusterIdentity *string
-	// List of addresses on which the Kube API server can be reached.
+	// List of addresses that are relevant to the shoot.
+	// These include the Kube API server address and also the service account issuer.
 	AdvertisedAddresses []ShootAdvertisedAddress
 	// MigrationStartTime is the time when a migration to a different seed was initiated.
 	MigrationStartTime *metav1.Time

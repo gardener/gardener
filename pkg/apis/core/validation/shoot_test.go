@@ -5228,18 +5228,13 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))
 			})
 
-			It("should fail for URL with path", func() {
+			It("should not fail for URL with path", func() {
 				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
 					{Name: "a", URL: "https://foo.bar/baz"},
 				}
 
 				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
-				Expect(errorList).To(HaveLen(1))
-				Expect(errorList).To(ConsistOfFields(Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("status.advertisedAddresses[0].url"),
-					"Detail": ContainSubstring(`path is not permitted in the URL`),
-				}))
+				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should fail for URL with user information", func() {
