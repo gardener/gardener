@@ -61,6 +61,8 @@ type Values struct {
 	RetentionSize monitoringv1.ByteSize
 	// VPAMinAllowed defines the resource list for the minAllowed field for the prometheus container resource policy.
 	VPAMinAllowed *corev1.ResourceList
+	// ExternalLabels is the set of external labels for the Prometheus configuration.
+	ExternalLabels map[string]string
 	// AdditionalPodLabels is a map containing additional labels for the created pods.
 	AdditionalPodLabels map[string]string
 	// CentralConfigs contains configuration for this Prometheus instance that is created together with it. This should

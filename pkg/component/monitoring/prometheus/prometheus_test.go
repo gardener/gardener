@@ -63,6 +63,7 @@ var _ = Describe("Prometheus", func() {
 		storageCapacity   = resource.MustParse("1337Gi")
 		retention         = monitoringv1.Duration("1d")
 		retentionSize     = monitoringv1.ByteSize("5GB")
+		externalLabels    = map[string]string{"seed": "test"}
 		additionalLabels  = map[string]string{"foo": "bar"}
 
 		additionalScrapeConfig1 = `job_name: foo
@@ -112,6 +113,7 @@ honor_labels: true`
 			StorageCapacity:     storageCapacity,
 			Retention:           &retention,
 			RetentionSize:       retentionSize,
+			ExternalLabels:      externalLabels,
 			AdditionalPodLabels: additionalLabels,
 		}
 
@@ -209,6 +211,7 @@ honor_labels: true`
 				CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
 					ScrapeInterval: "1m",
 					ReloadStrategy: &reloadStrategy,
+					ExternalLabels: externalLabels,
 					AdditionalScrapeConfigs: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{
 							Name: "prometheus-" + name + "-additional-scrape-configs",

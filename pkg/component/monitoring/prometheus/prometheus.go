@@ -41,6 +41,7 @@ func (p *prometheus) prometheus(takeOverOldPV bool) *monitoringv1.Prometheus {
 			CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
 				ScrapeInterval: "1m",
 				ReloadStrategy: &reloadStrategy,
+				ExternalLabels: p.values.ExternalLabels,
 				AdditionalScrapeConfigs: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: p.name() + "-additional-scrape-configs",

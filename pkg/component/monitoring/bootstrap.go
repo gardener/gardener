@@ -166,7 +166,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		"aggregatePrometheus": map[string]interface{}{
 			"resources":               monitoringResources["aggregate-prometheus"],
 			"storage":                 b.values.StorageCapacityAggregatePrometheus,
-			"seed":                    b.values.SeedName,
 			"additionalScrapeConfigs": aggregateScrapeConfigs.String(),
 		},
 		"hvpa": map[string]interface{}{

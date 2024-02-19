@@ -724,6 +724,7 @@ func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed,
 		StorageCapacity:   storageCapacity,
 		Retention:         ptr.To(monitoringv1.Duration("30d")),
 		RetentionSize:     "15GB",
+		ExternalLabels:    map[string]string{"seed": seed.GetInfo().Name},
 		VPAMinAllowed:     &corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("1000M")},
 		AdditionalPodLabels: map[string]string{
 			"networking.resources.gardener.cloud/to-" + v1beta1constants.IstioSystemNamespace + "-" + v1beta1constants.LabelNetworkPolicySeedScrapeTargets:                         v1beta1constants.LabelNetworkPolicyAllowed,
