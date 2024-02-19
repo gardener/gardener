@@ -1138,7 +1138,7 @@ func (r *resourceManager) ensureServiceMonitor(ctx context.Context) error {
 					},
 					{
 						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_node_name"},
-						TargetLabel:  "node",
+						TargetLabel:  "pod",
 					},
 					{
 						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_namespace"},

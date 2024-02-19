@@ -48,11 +48,6 @@ func CentralPodMonitors() []*monitoringv1.PodMonitor {
 							Action: "keep",
 						},
 						{
-							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_namespace"},
-							Regex:        `extension-(.+)`,
-							Action:       "keep",
-						},
-						{
 							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_annotation_prometheus_io_name"},
 							Regex:        `(.+)`,
 							Action:       "replace",

@@ -884,7 +884,7 @@ var _ = Describe("ResourceManager", func() {
 						},
 						{
 							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_node_name"},
-							TargetLabel:  "node",
+							TargetLabel:  "pod",
 						},
 						{
 							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_namespace"},
