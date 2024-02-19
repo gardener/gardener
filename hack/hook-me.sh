@@ -89,6 +89,7 @@ metadata:
     app: quic-lb
   annotations:
     networking.resources.gardener.cloud/from-world-to-ports: '[{"protocol":"UDP","port":${quicTunnelPort}}]'
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
   name: quic-lb
   namespace: $namespace
 spec:
@@ -107,9 +108,6 @@ EOF
 waitForQuicLBToBeReady(){
     namespace=${1:-}
     [[ -z $namespace ]] && echo "Please specify extension namespace!" && exit 1
-
-    serviceName=${2:-}
-    [[ -z $serviceName ]] && echo "Please specify the service name (gardener-extension-provider-{aws,gcp,azure},..etc.)!" && exit 1
 
     until host $(kubectl -n $namespace get svc quic-lb -o yaml | yq '.status.loadBalancer.ingress[0] | .hostname // .ip') 2>&1 > /dev/null
     do
@@ -357,21 +355,21 @@ usage(){
 
     echo "========================================================USAGE======================================================================"
     echo "> ./hack/hook-me.sh <service e.g., gardener-extension-provider-aws> <extension namespace e.g. extension-provider-aws-fpr6w> <webhookserver port e.g., 8443> [<quic-server port, e.g. 9443>]"
-    echo "> \`make EXTENSION_NAMESPACE=<extension namespace e.g. extension-provider-aws-fpr6w> WEBHOOK_CONFIG_MODE=service start\`"
+    echo "> \`make start [EXTENSION_NAMESPACE=<extension namespace e.g. extension-provider-aws-fpr6w> WEBHOOK_CONFIG_MODE=service GARDEN_KUBECONFIG=<path to kubeconfig for garden cluster>]\`"
     echo "=================================================================================================================================="
 
     echo ""
 
     echo "===================================CLEAN UP COMMANDS========================================="
-    echo "> kubectl -n $namespace delete --ignore-not-found svc/quic-lb"
-    echo "> kubectl -n $namespace delete --ignore-not-found deploy/quic-server"
+    echo "> kubectl -n <extension namespace e.g. extension-provider-aws-fpr6w> delete --ignore-not-found svc/quic-lb"
+    echo "> kubectl -n <extension namespace e.g. extension-provider-aws-fpr6w> delete --ignore-not-found deploy/quic-server"
     echo "============================================================================================="
 
     exit 0
 }
-if [[ "${BASH_SOURCE[0]}" = "$0" ]]; then
 
-    if [ "$1" == "-h" ] ; then
+if [[ "${BASH_SOURCE[0]}" = "$0" ]]; then
+    if [ "$#" -lt 2 ] || [ "$1" == "-h" ]; then
         usage
     fi
 
