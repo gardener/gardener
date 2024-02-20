@@ -205,7 +205,7 @@ func (c resultingConditionFunc) Check(_ context.Context, conditions SeedConditio
 }
 
 func healthCheckFunc(fn resultingConditionFunc) NewHealthCheckFunc {
-	return func(*gardencorev1beta1.Seed, client.Client, clock.Clock, *string, bool, bool, bool, map[gardencorev1beta1.ConditionType]time.Duration) HealthCheck {
+	return func(*gardencorev1beta1.Seed, client.Client, clock.Clock, *string, bool, bool, bool, bool, map[gardencorev1beta1.ConditionType]time.Duration) HealthCheck {
 		return fn
 	}
 }
