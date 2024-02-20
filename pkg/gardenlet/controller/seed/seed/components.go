@@ -736,6 +736,7 @@ func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed,
 		VPAMinAllowed:     &corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("1000M")},
 		CentralConfigs: prometheus.CentralConfigs{
 			PrometheusRules: aggregateprometheus.CentralPrometheusRules(),
+			ServiceMonitors: aggregateprometheus.CentralServiceMonitors(),
 		},
 		AdditionalPodLabels: map[string]string{
 			"networking.resources.gardener.cloud/to-" + v1beta1constants.IstioSystemNamespace + "-" + v1beta1constants.LabelNetworkPolicySeedScrapeTargets:                         v1beta1constants.LabelNetworkPolicyAllowed,

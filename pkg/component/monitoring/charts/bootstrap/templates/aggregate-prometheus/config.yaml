@@ -7,29 +7,6 @@ data:
   prometheus.yaml: |
 
     scrape_configs:
-    - job_name: shoot-prometheus
-      metrics_path: /federate
-      honor_timestamps: false
-      honor_labels: true
-      params:
-        'match[]':
-        - '{__name__="shoot:availability"}'
-        - '{__name__=~"shoot:(.+):(.+)"}'
-        - '{__name__="ALERTS"}'
-        - '{__name__="prometheus_tsdb_lowest_timestamp"}'
-        - '{__name__="prometheus_tsdb_storage_blocks_bytes"}'
-        - '{__name__="kubeproxy_network_latency:quantile"}'
-        - '{__name__="kubeproxy_sync_proxy:quantile"}'
-      kubernetes_sd_configs:
-      - role: endpoints
-      relabel_configs:
-      - source_labels:
-        - __meta_kubernetes_namespace
-        - __meta_kubernetes_endpoints_name
-        - __meta_kubernetes_endpoint_port_name
-        regex: shoot-(.+);prometheus-web;metrics
-        action: keep
-
     - job_name: prometheus
       honor_timestamps: false
       metrics_path: /federate
