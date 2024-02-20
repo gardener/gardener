@@ -517,6 +517,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Fn: func(ctx context.Context) error {
 				if err := kubernetesutils.DeleteObjects(ctx, r.SeedClientSet.Client(),
 					&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus-rules", Namespace: r.GardenNamespace}},
+					&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus-config", Namespace: r.GardenNamespace}},
 					&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus-web", Namespace: r.GardenNamespace}},
 					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus", Namespace: r.GardenNamespace}},
 					&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus", Namespace: r.GardenNamespace}},

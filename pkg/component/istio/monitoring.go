@@ -15,10 +15,12 @@
 package istio
 
 import (
-	"strings"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/monitoring/prometheus/aggregate"
+	monitoringutils "github.com/gardener/gardener/pkg/component/monitoring/utils"
 )
 
 const (
@@ -80,125 +82,94 @@ const (
 )
 
 var (
-	monitoringAllowedMetricsIstiod = []string{
-		monitoringMetricGalleyValidationFailed,
-		monitoringMetricGalleyValidationPassed,
-		monitoringMetricGoGoroutines,
-		monitoringMetricGoMemstatsAllocBytes,
-		monitoringMetricGoMemstatsHeapAllocBytes,
-		monitoringMetricGoMemstatsHeapInuseBytes,
-		monitoringMetricGoMemstatsHeapSysBytes,
-		monitoringMetricGoMemstatsStackInuseBytes,
-		monitoringMetricIstioBuild,
-		monitoringMetricPilotConflictInboundListener,
-		monitoringMetricPilotConflictOutboundListenerHttpOverCurrentTcp,
-		monitoringMetricPilotConflictOutboundListenerTcpOverCurrentHttp,
-		monitoringMetricPilotConflictOutboundListenerTcpOverCurrentTcp,
-		monitoringMetricPilotK8sCfgEvents,
-		monitoringMetricPilotProxy_convergenceTimeBucket,
-		monitoringMetricPilotServices,
-		monitoringMetricPilotTotalXdsInternalErrors,
-		monitoringMetricPilotTotalXdsRejects,
-		monitoringMetricPilotVirtServices,
-		monitoringMetricPilotXds,
-		monitoringMetricPilotXdsCdsReject,
-		monitoringMetricPilotXdsEdsReject,
-		monitoringMetricPilotXdsLdsReject,
-		monitoringMetricPilotXdsPushContextErrors,
-		monitoringMetricPilotXdsPushes,
-		monitoringMetricPilotXdsRdsReject,
-		monitoringMetricPilotXdsWriteTimeout,
-		monitoringMetricProcessCpuSecondsTotal,
-		monitoringMetricProcessOpenFds,
-		monitoringMetricProcessResidentMemoryBytes,
-		monitoringMetricProcessVirtualMemoryBytes,
+	serviceMonitorIstiod = &monitoringv1.ServiceMonitor{
+		ObjectMeta: monitoringutils.ConfigObjectMeta(monitoringPrometheusJobNameIstiod, v1beta1constants.IstioSystemNamespace, aggregate.Label),
+		Spec: monitoringv1.ServiceMonitorSpec{
+			Selector: metav1.LabelSelector{MatchLabels: getIstiodLabels()},
+			Endpoints: []monitoringv1.Endpoint{{
+				Port: istiodServicePortNameMetrics,
+				MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
+					monitoringMetricGalleyValidationFailed,
+					monitoringMetricGalleyValidationPassed,
+					monitoringMetricGoGoroutines,
+					monitoringMetricGoMemstatsAllocBytes,
+					monitoringMetricGoMemstatsHeapAllocBytes,
+					monitoringMetricGoMemstatsHeapInuseBytes,
+					monitoringMetricGoMemstatsHeapSysBytes,
+					monitoringMetricGoMemstatsStackInuseBytes,
+					monitoringMetricIstioBuild,
+					monitoringMetricPilotConflictInboundListener,
+					monitoringMetricPilotConflictOutboundListenerHttpOverCurrentTcp,
+					monitoringMetricPilotConflictOutboundListenerTcpOverCurrentHttp,
+					monitoringMetricPilotConflictOutboundListenerTcpOverCurrentTcp,
+					monitoringMetricPilotK8sCfgEvents,
+					monitoringMetricPilotProxy_convergenceTimeBucket,
+					monitoringMetricPilotServices,
+					monitoringMetricPilotTotalXdsInternalErrors,
+					monitoringMetricPilotTotalXdsRejects,
+					monitoringMetricPilotVirtServices,
+					monitoringMetricPilotXds,
+					monitoringMetricPilotXdsCdsReject,
+					monitoringMetricPilotXdsEdsReject,
+					monitoringMetricPilotXdsLdsReject,
+					monitoringMetricPilotXdsPushContextErrors,
+					monitoringMetricPilotXdsPushes,
+					monitoringMetricPilotXdsRdsReject,
+					monitoringMetricPilotXdsWriteTimeout,
+					monitoringMetricProcessCpuSecondsTotal,
+					monitoringMetricProcessOpenFds,
+					monitoringMetricProcessResidentMemoryBytes,
+					monitoringMetricProcessVirtualMemoryBytes,
+				),
+			}},
+		},
 	}
 
-	monitoringAllowedMetricsIstioIngressGateway = []string{
-		monitoringMetricEnvoyClusterUpstreamCxActive,
-		monitoringMetricEnvoyClusterUpstreamCxConnectFail,
-		monitoringMetricEnvoyClusterUpstreamCxTotal,
-		monitoringMetricEnvoyClusterUpstreamCxTxBytesTotal,
-		monitoringMetricEnvoyServerHotRestartEpoch,
-		monitoringMetricGoGoroutines,
-		monitoringMetricGoMemstatsAllocBytes,
-		monitoringMetricGoMemstatsHeapAllocBytes,
-		monitoringMetricGoMemstatsHeapInuseBytes,
-		monitoringMetricGoMemstatsHeapSysBytes,
-		monitoringMetricGoMemstatsStackInuseBytes,
-		monitoringMetricIstioBuild,
-		monitoringMetricIstioRequestBytesBucket,
-		monitoringMetricIstioRequestBytesSum,
-		monitoringMetricIstioRequestDurationMillisecondsBucket,
-		monitoringMetricIstioRequestDurationSecondsBucket,
-		monitoringMetricIstioRequestsTotal,
-		monitoringMetricIstioResponseBytesBucket,
-		monitoringMetricIstioResponseBytesSum,
-		monitoringMetricIstioTcpConnectionsClosedTotal,
-		monitoringMetricIstioTcpConnectionsOpenedTotal,
-		monitoringMetricIstioTcpReceivedBytesTotal,
-		monitoringMetricIstioTcpSentBytesTotal,
-		monitoringMetricProcessCpuSecondsTotal,
-		monitoringMetricProcessOpenFds,
-		monitoringMetricProcessResidentMemoryBytes,
-		monitoringMetricProcessVirtualMemoryBytes,
+	serviceMonitorIstioIngress = &monitoringv1.ServiceMonitor{
+		ObjectMeta: monitoringutils.ConfigObjectMeta(monitoringPrometheusJobNameIstioIngressGateway, v1beta1constants.IstioSystemNamespace, aggregate.Label),
+		Spec: monitoringv1.ServiceMonitorSpec{
+			Selector:          metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelApp: "istio-ingressgateway"}},
+			NamespaceSelector: monitoringv1.NamespaceSelector{Any: true},
+			Endpoints: []monitoringv1.Endpoint{{
+				Path: "/stats/prometheus",
+				Port: "tls-tunnel",
+				RelabelConfigs: []*monitoringv1.RelabelConfig{{
+					SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_ip"},
+					Action:       "replace",
+					TargetLabel:  "__address__",
+					Regex:        `(.+)`,
+					Replacement:  "${1}:15020",
+				}},
+				MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
+					monitoringMetricEnvoyClusterUpstreamCxActive,
+					monitoringMetricEnvoyClusterUpstreamCxConnectFail,
+					monitoringMetricEnvoyClusterUpstreamCxTotal,
+					monitoringMetricEnvoyClusterUpstreamCxTxBytesTotal,
+					monitoringMetricEnvoyServerHotRestartEpoch,
+					monitoringMetricGoGoroutines,
+					monitoringMetricGoMemstatsAllocBytes,
+					monitoringMetricGoMemstatsHeapAllocBytes,
+					monitoringMetricGoMemstatsHeapInuseBytes,
+					monitoringMetricGoMemstatsHeapSysBytes,
+					monitoringMetricGoMemstatsStackInuseBytes,
+					monitoringMetricIstioBuild,
+					monitoringMetricIstioRequestBytesBucket,
+					monitoringMetricIstioRequestBytesSum,
+					monitoringMetricIstioRequestDurationMillisecondsBucket,
+					monitoringMetricIstioRequestDurationSecondsBucket,
+					monitoringMetricIstioRequestsTotal,
+					monitoringMetricIstioResponseBytesBucket,
+					monitoringMetricIstioResponseBytesSum,
+					monitoringMetricIstioTcpConnectionsClosedTotal,
+					monitoringMetricIstioTcpConnectionsOpenedTotal,
+					monitoringMetricIstioTcpReceivedBytesTotal,
+					monitoringMetricIstioTcpSentBytesTotal,
+					monitoringMetricProcessCpuSecondsTotal,
+					monitoringMetricProcessOpenFds,
+					monitoringMetricProcessResidentMemoryBytes,
+					monitoringMetricProcessVirtualMemoryBytes,
+				),
+			}},
+		},
 	}
-
-	monitoringScrapeConfigIstiod = `job_name: ` + monitoringPrometheusJobNameIstiod + `
-kubernetes_sd_configs:
-- role: endpoints
-  namespaces:
-    names: [ ` + v1beta1constants.IstioSystemNamespace + ` ]
-relabel_configs:
-- source_labels:
-  - __meta_kubernetes_service_name
-  - __meta_kubernetes_endpoint_port_name
-  - __meta_kubernetes_namespace
-  action: keep
-  regex: ` + IstiodServiceName + `;` + istiodServicePortNameMetrics + `;` + v1beta1constants.IstioSystemNamespace + `
-- source_labels: [ __meta_kubernetes_pod_name ]
-  target_label: pod
-- source_labels: [ __meta_kubernetes_namespace ]
-  target_label: namespace
-metric_relabel_configs:
-- source_labels: [ __name__ ]
-  action: keep
-  regex: ^(` + strings.Join(monitoringAllowedMetricsIstiod, "|") + `)$
-`
-
-	monitoringScrapeConfigIstioIngressGateway = `job_name: ` + monitoringPrometheusJobNameIstioIngressGateway + `
-metrics_path: /stats/prometheus
-kubernetes_sd_configs:
-- role: endpoints
-  selectors:
-  - role: "endpoints"
-    field: "metadata.name=` + v1beta1constants.DefaultSNIIngressServiceName + `"
-relabel_configs:
-- source_labels:
-  - __meta_kubernetes_service_name
-  - __meta_kubernetes_endpoint_port_name
-  action: keep
-  regex: ` + v1beta1constants.DefaultSNIIngressServiceName + `;tls-tunnel
-- source_labels: [__meta_kubernetes_pod_ip]
-  action: replace
-  target_label: __address__
-  regex: (.+)
-  replacement: ${1}:15020
-- source_labels: [ __meta_kubernetes_pod_name ]
-  target_label: pod
-- source_labels: [ __meta_kubernetes_namespace ]
-  target_label: namespace
-metric_relabel_configs:
-- source_labels: [ __name__ ]
-  action: keep
-  regex: ^(` + strings.Join(monitoringAllowedMetricsIstioIngressGateway, "|") + `)$
-`
 )
-
-// AggregateMonitoringConfiguration returns scrape configs for the aggregate Prometheus.
-func AggregateMonitoringConfiguration() (component.AggregateMonitoringConfig, error) {
-	return component.AggregateMonitoringConfig{ScrapeConfigs: []string{
-		monitoringScrapeConfigIstiod,
-		monitoringScrapeConfigIstioIngressGateway,
-	}}, nil
-}

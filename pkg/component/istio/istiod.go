@@ -143,20 +143,23 @@ func (i *istiod) deployIstiod(ctx context.Context) error {
 		return err
 	}
 
-	renderedIstiodChart, err := i.generateIstiodChart()
+	renderedChart, err := i.generateIstiodChart()
 	if err != nil {
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, i.client, i.values.Istiod.Namespace, managedResourceIstioSystemName, false, renderedIstiodChart.AsSecretData())
+	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+	if err := registry.Add(serviceMonitorIstiod); err != nil {
+		return err
+	}
+
+	return managedresources.CreateForSeed(ctx, i.client, i.values.Istiod.Namespace, managedResourceIstioSystemName, false, serializeRenderedChartAndRegistry(renderedChart, registry))
 }
 
 func (i *istiod) Deploy(ctx context.Context) error {
 	if err := i.deployIstiod(ctx); err != nil {
 		return err
 	}
-
-	var renderedChart = &chartrenderer.RenderedChart{}
 
 	for _, ingressGateway := range i.values.IngressGateway {
 		for _, filterName := range []string{"tcp-stats-filter-1.11", "stats-filter-1.11", "tcp-stats-filter-1.12", "stats-filter-1.12"} {
@@ -166,11 +169,6 @@ func (i *istiod) Deploy(ctx context.Context) error {
 				return err
 			}
 		}
-	}
-
-	renderedIstioIngressGatewayChart, err := i.generateIstioIngressGatewayChart()
-	if err != nil {
-		return err
 	}
 
 	for _, istioIngressGateway := range i.values.IngressGateway {
@@ -207,19 +205,17 @@ func (i *istiod) Deploy(ctx context.Context) error {
 		}
 	}
 
-	renderedChart.Manifests = append(renderedChart.Manifests, renderedIstioIngressGatewayChart.Manifests...)
-
-	var (
-		registry  = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-		chartsMap = renderedChart.AsSecretData()
-		objMap    = registry.SerializedObjects()
-	)
-
-	for key := range objMap {
-		chartsMap[key] = objMap[key]
+	renderedChart, err := i.generateIstioIngressGatewayChart()
+	if err != nil {
+		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, i.client, i.values.Istiod.Namespace, i.managedResourceIstioIngressName, false, chartsMap)
+	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+	if err := registry.Add(serviceMonitorIstioIngress); err != nil {
+		return err
+	}
+
+	return managedresources.CreateForSeed(ctx, i.client, i.values.Istiod.Namespace, i.managedResourceIstioIngressName, false, serializeRenderedChartAndRegistry(renderedChart, registry))
 }
 
 func (i *istiod) Destroy(ctx context.Context) error {
@@ -297,26 +293,28 @@ func (i *istiod) GetValues() Values {
 }
 
 func (i *istiod) generateIstiodChart() (*chartrenderer.RenderedChart, error) {
-	istiodValues := i.values.Istiod
-
 	return i.chartRenderer.RenderEmbeddedFS(chartIstiod, chartPathIstiod, releaseName, i.values.Istiod.Namespace, map[string]interface{}{
-		"serviceName": IstiodServiceName,
-		"trustDomain": istiodValues.TrustDomain,
-		"labels": map[string]interface{}{
-			"app":   "istiod",
-			"istio": "pilot",
-		},
+		"serviceName":       IstiodServiceName,
+		"trustDomain":       i.values.Istiod.TrustDomain,
+		"labels":            getIstiodLabels(),
 		"deployNamespace":   false,
-		"priorityClassName": istiodValues.PriorityClassName,
+		"priorityClassName": i.values.Istiod.PriorityClassName,
 		"ports": map[string]interface{}{
 			"https": PortWebhookServer,
 		},
 		"portsNames": map[string]interface{}{
 			"metrics": istiodServicePortNameMetrics,
 		},
-		"image":     istiodValues.Image,
-		"dualStack": istiodValues.DualStack,
+		"image":     i.values.Istiod.Image,
+		"dualStack": i.values.Istiod.DualStack,
 	})
+}
+
+func getIstiodLabels() map[string]string {
+	return map[string]string{
+		"app":   "istiod",
+		"istio": "pilot",
+	}
 }
 
 // ManagedResourceNames returns the names of the `ManagedResource`s being used by Istio.
@@ -326,4 +324,14 @@ func ManagedResourceNames(istiodEnabled bool, namePrefix string) []string {
 		names = append(names, managedResourceIstioSystemName)
 	}
 	return names
+}
+
+func serializeRenderedChartAndRegistry(chart *chartrenderer.RenderedChart, registry *managedresources.Registry) map[string][]byte {
+	data := chart.AsSecretData()
+
+	for k, v := range registry.SerializedObjects() {
+		data[k] = v
+	}
+
+	return data
 }

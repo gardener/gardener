@@ -17,9 +17,7 @@ package monitoring
 import (
 	"context"
 	"embed"
-	"fmt"
 	"path/filepath"
-	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,8 +29,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/istio"
-	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -100,25 +96,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		}
 	}
 
-	// Fetch component-specific aggregate and central monitoring configuration
-	var (
-		aggregateScrapeConfigs                = strings.Builder{}
-		aggregateMonitoringComponentFunctions = []component.AggregateMonitoringConfiguration{
-			istio.AggregateMonitoringConfiguration,
-		}
-	)
-
-	for _, componentFn := range aggregateMonitoringComponentFunctions {
-		aggregateMonitoringConfig, err := componentFn()
-		if err != nil {
-			return err
-		}
-
-		for _, config := range aggregateMonitoringConfig.ScrapeConfigs {
-			aggregateScrapeConfigs.WriteString(fmt.Sprintf("- %s\n", utils.Indent(config, 2)))
-		}
-	}
-
 	// Monitoring resource values
 	monitoringResources := map[string]interface{}{
 		"aggregate-prometheus": map[string]interface{}{},
@@ -164,9 +141,8 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			},
 		},
 		"aggregatePrometheus": map[string]interface{}{
-			"resources":               monitoringResources["aggregate-prometheus"],
-			"storage":                 b.values.StorageCapacityAggregatePrometheus,
-			"additionalScrapeConfigs": aggregateScrapeConfigs.String(),
+			"resources": monitoringResources["aggregate-prometheus"],
+			"storage":   b.values.StorageCapacityAggregatePrometheus,
 		},
 		"hvpa": map[string]interface{}{
 			"enabled": b.values.HVPAEnabled,
