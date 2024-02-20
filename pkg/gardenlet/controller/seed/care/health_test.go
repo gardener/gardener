@@ -61,6 +61,7 @@ var (
 		"istio",
 		prometheusoperator.ManagedResourceName,
 		"prometheus-cache",
+		"prometheus-seed",
 	}
 
 	optionalManagedResources = []string{
