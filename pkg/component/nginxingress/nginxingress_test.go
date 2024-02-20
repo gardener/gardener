@@ -16,6 +16,7 @@ package nginxingress_test
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
@@ -45,13 +46,14 @@ import (
 
 var _ = Describe("NginxIngress", func() {
 	var (
-		ctx                 = context.TODO()
-		namespace           = "some-namespace"
-		imageController     = "some-image:some-tag"
-		imageDefaultBackend = "some-image2:some-tag2"
-		wildcardIngress     = "*.ingress.seed.world"
-		istioLabelKey       = "my"
-		istioLabelValue     = "istio"
+		ctx                   = context.TODO()
+		namespace             = "some-namespace"
+		imageController       = "some-image:some-tag"
+		imageDefaultBackend   = "some-image2:some-tag2"
+		firstWildcardIngress  = "*.ingress.seed.world"
+		secondWildcardIngress = "*.world.seed"
+		istioLabelKey         = "my"
+		istioLabelValue       = "istio"
 
 		c            client.Client
 		nginxIngress component.DeployWaiter
@@ -109,7 +111,7 @@ var _ = Describe("NginxIngress", func() {
 				LoadBalancerAnnotations:   loadBalancerAnnotations,
 				PSPDisabled:               true,
 				VPAEnabled:                true,
-				WildcardIngressDomains:    []string{wildcardIngress},
+				WildcardIngressDomains:    []string{firstWildcardIngress, secondWildcardIngress},
 				IstioIngressGatewayLabels: map[string]string{istioLabelKey: istioLabelValue},
 			}
 		})
@@ -629,7 +631,8 @@ spec:
     ` + istioLabelKey + `: ` + istioLabelValue + `
   servers:
   - hosts:
-    - '` + wildcardIngress + `'
+    - '` + firstWildcardIngress + `'
+    - '` + secondWildcardIngress + `'
     port:
       name: tls
       number: 443
@@ -638,14 +641,15 @@ spec:
 status: {}
 `
 
-				virtualServiceYAML = `apiVersion: networking.istio.io/v1beta1
+				virtualServiceYAML = func(index int) string {
+					return `apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
   creationTimestamp: null
   labels:
     app: nginx-ingress
     component: controller
-  name: nginx-ingress-controller
+  name: nginx-ingress-controller-` + fmt.Sprintf("%d", index) + `
   namespace: ` + namespace + `
 spec:
   exportTo:
@@ -653,12 +657,12 @@ spec:
   gateways:
   - nginx-ingress-controller
   hosts:
-  - '` + wildcardIngress + `'
+  - '` + values.WildcardIngressDomains[index] + `'
   tls:
   - match:
     - port: 443
       sniHosts:
-      - '` + wildcardIngress + `'
+      - '` + values.WildcardIngressDomains[index] + `'
     route:
     - destination:
         host: nginx-ingress-controller.` + namespace + `.svc.cluster.local
@@ -666,6 +670,7 @@ spec:
           number: 443
 status: {}
 `
+				}
 			)
 
 			JustBeforeEach(func() {
@@ -703,7 +708,7 @@ status: {}
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-				Expect(managedResourceSecret.Data).To(HaveLen(16))
+				Expect(managedResourceSecret.Data).To(HaveLen(17))
 
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_seed_nginx-ingress.yaml"])).To(Equal(clusterRoleYAML))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_seed_nginx-ingress.yaml"])).To(Equal(clusterRoleBindingYAML))
@@ -719,7 +724,8 @@ status: {}
 				Expect(string(managedResourceSecret.Data["ingressclass____"+v1beta1constants.SeedNginxIngressClass+".yaml"])).To(Equal(ingressClassYAML))
 				Expect(string(managedResourceSecret.Data["destinationrule__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(destinationRuleYAML))
 				Expect(string(managedResourceSecret.Data["gateway__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(gatewayYAML))
-				Expect(string(managedResourceSecret.Data["virtualservice__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(virtualServiceYAML))
+				Expect(string(managedResourceSecret.Data["virtualservice__"+namespace+"__nginx-ingress-controller-0.yaml"])).To(Equal(virtualServiceYAML(0)))
+				Expect(string(managedResourceSecret.Data["virtualservice__"+namespace+"__nginx-ingress-controller-1.yaml"])).To(Equal(virtualServiceYAML(1)))
 			})
 
 			Context("Kubernetes version < 1.26", func() {
