@@ -39,16 +39,16 @@ reviewers:
 
 [CloudProfiles](https://github.com/gardener/gardener/blob/master/docs/concepts/apiserver.md#cloudprofiles) are non-namespaced objects that are managed centrally by Gardener operators. They usually don't only contain global configuration, but options that are relevant to certain projects only (e.g. special machine types). This increases the operation burden for operators and clutters `CloudProfile` objects. On the other hand, users are blocked until the requested special configuration is rolled out to the desired landscapes.
 
-This GEP proposes a mechanism that allows project administrators to create private cloud profiles that are only visible in the project they belong to.
+This GEP proposes a mechanism that allows project administrators to create `PrivateCloudProfile`s that are only visible in the project they belong to.
 
 ## Motivation
 
 ### Context
 
-`CloudProfile`s are an integral component of Gardener for managing shoot clusters. They are currently managed centrally by Gardener operators and can be consumed by any Gardener user. However, some teams require frequent changes to a cloud profile, mainly for the following reasons:
+`CloudProfile`s are an integral component of Gardener for managing shoot clusters. They are currently managed centrally by Gardener operators and can be consumed by any Gardener user. However, some teams require frequent changes to a `CloudProfile`, mainly for the following reasons:
 
-1. Testing with different machine types than the ones present in the cloud profile.
-2. Need to use different volume types than the ones present in the cloud profile.
+1. Testing with different machine types than the ones present in the `CloudProfile`.
+2. Need to use different volume types than the ones present in the `CloudProfile`.
 3. Extending the expiration date of Kubernetes versions. Given that the `CloudProfile` is a cluster-scoped resource, it is currently not possible to extend the expiration date for shoots in one project but only centrally for all projects.
 4. Extending the expiration date for machine images. For the same reasons as extending the expiration date of the Kubernetes versions.
 5. Some gardener users might have access to custom cloud provider regions that others do not have access to. They currently have no way of using custom cloud provider regions.
@@ -59,9 +59,9 @@ This GEP proposes a mechanism that allows project administrators to create priva
 
 ### Goals
 
-- Reduce load on Gardener operators for maintaining cloud profiles
+- Reduce load on Gardener operators for maintaining `CloudProfile`s
 - Possibly reduce the time a team has to wait until a change in a `CloudProfile` is reflected in the landscape.
-- Make it so that project-scoped information in the cloud profile is only visible to the relevant project
+- Make it so that project-scoped information in the `CloudProfile` is only visible to the relevant project
 - Full backward compatibility
 
 ### Non-Goals
@@ -71,7 +71,7 @@ This GEP proposes a mechanism that allows project administrators to create priva
 
 ## Proposal
 
-It is proposed to implement a solution that enables project administrators to create custom (private) cloud profiles. These cloud profiles would be consumed by project users of the project they were created in.
+It is proposed to implement a solution that enables project administrators to create custom (private) `CloudProfile`s. These `CloudProfile`s would be consumed by project users of the project they were created in.
 
 ### Approach
 
@@ -121,9 +121,9 @@ spec:
 
 ### Rendering
 
-Since Gardener is designed around using the `CloudProfile` object for managing infrastructure details for a shoot, the private cloud profile has to be rendered so that a `CloudProfile` object is emitted. This rendered cloud profile will be written to the status of the `PrivateCloudProfile` object.
+Since Gardener is designed around using the `CloudProfile` object for managing infrastructure details for a shoot, the `PrivateCloudProfile` has to be rendered so that a `CloudProfile` object is emitted. This rendered `CloudProfile` will be written to the status of the `PrivateCloudProfile` object.
 
-Suppose we have a simplified cloud profile that looks like this:
+Suppose we have a simplified `CloudProfile` that looks like this:
 
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1
@@ -163,9 +163,9 @@ spec:
         - name: europe-central-1c
 ```
 
-and a private cloud profile from the [manifest section](#manifest).
+and a `PrivateCloudProfile` from the [manifest section](#manifest).
 
-After the rendering is done, the private cloud profile will look like this:
+After the rendering is done, the `PrivateCloudProfile` will look like this:
 
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1
@@ -271,20 +271,20 @@ rules:
 
 ### Automated removal of outdated Kubernetes versions and machine image versions
 
-Expired Kubernetes versions in cloud profiles are currently being removed manually. This is not an issue since there is a very limited amount of cloud profiles. However, if any project administrator is allowed to create a private cloud profile that can then have its Kubernetes versions expiration dates extended, it could become a very cumbersome process to manually remove all the expired Kubernetes versions. One possible solution is to implement a custom controller managed by `gardener-controller-manager`, that reconciles `PrivateCloudProfile`s (and possibly even regular cloud profiles) and removes any Kubernetes versions that are past their expiration date. The same could be done for machine image versions.
+Expired Kubernetes versions in `CloudProfile`s are currently being removed manually. This is not an issue since there is a very limited amount of `CloudProfile`s. However, if any project administrator is allowed to create a `PrivateCloudProfile` that can then have its Kubernetes versions expiration dates extended, it could become a very cumbersome process to manually remove all the expired Kubernetes versions. One possible solution is to implement a custom controller managed by `gardener-controller-manager`, that reconciles `PrivateCloudProfile`s (and possibly even regular `CloudProfile`s) and removes any Kubernetes versions that are past their expiration date. The same could be done for machine image versions.
 
 However, a problem arises as the Kubernetes/machine image versions are referenced in the `providerConfig` and would therefore need to be removed manually anyway. Because of that, this feature is not part of this GEP.
 
 ### Cross-project sharing
 
-A use case could be defined where a private cloud profile might want to be shared across multiple projects and not just be used within the project it was created in. However, this use case seems to be very slim so this functionality will not be implemented as of now. However, when taking a broader view of Private Seeds and Cloud in Country, this feature is going to be necessary at some point. Still, it is not planned to be implemented as part of this GEP.
+A use case could be defined where a `PrivateCloudProfile` might want to be shared across multiple projects and not just be used within the project it was created in. However, this use case seems to be very slim so this functionality will not be implemented as of now. However, when taking a broader view of Private Seeds and Cloud in Country, this feature is going to be necessary at some point. Still, it is not planned to be implemented as part of this GEP.
 
 ### Multi-Level inheritance
 
-Theoretically, a private cloud profile could inherit from a cloud profile that already inherits from a cloud profile. However, this should probably not be allowed since it presents some major challenges.
+Theoretically, a `PrivateCloudProfile` could inherit from a `CloudProfile` that already inherits from a `CloudProfile`. However, this should probably not be allowed since it presents some major challenges.
 
 1. The rendering process would need to be recursive
-2. The `parent` field becomes more complex because it could point to a cloud profile or a private cloud profile
+2. The `parent` field becomes more complex because it could point to a `CloudProfile` or a `PrivateCloudProfile`
 
 Because of this, multi-level inheritance will not be implemented as of this GEP.
 
@@ -292,8 +292,8 @@ Because of this, multi-level inheritance will not be implemented as of this GEP.
 
 ### Arbitrary Value Fields
 
-Instead of specifying a private cloud profile resource, an end user could be allowed to enter arbitrary names in fields such as `machineTypes`. The entry would then, if the user enters a wrong value, throw an error when provisioning the resource at the cloud provider. However, this approach does not seem feasible as the metadata that is specified in a cloud profile like the number of CPUs and amount of RAM is used in the trial clusters (see [Shoot Qutas](https://github.com/gardener/gardener/blob/master/docs/concepts/apiserver.md#shoot-quotas)) to validate quotas and to enable the scale-from-zero feature. Therefore, an exception would need to be developed for this specific, and possibly other, use cases.
+Instead of specifying a `PrivateCloudProfile` resource, an end user could be allowed to enter arbitrary names in fields such as `machineTypes`. The entry would then, if the user enters a wrong value, throw an error when provisioning the resource at the cloud provider. However, this approach does not seem feasible as the metadata that is specified in a `CloudProfile` like the number of CPUs and amount of RAM is used in the trial clusters (see [Shoot Qutas](https://github.com/gardener/gardener/blob/master/docs/concepts/apiserver.md#shoot-quotas)) to validate quotas and to enable the scale-from-zero feature. Therefore, an exception would need to be developed for this specific, and possibly other, use cases.
 
 ### Private Cloud Profiles by Selection
 
-Instead of using a single inheritance-based approach with the `parent` field, a similar approach as [aggregated cluster roles](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#aggregated-clusterroles) in Kubernetes could be used. In this approach, cloud profiles would be defined without a parent and would be aggregated together. However, this approach is not well suited as it can not clearly define which cloud profile overwrites which fields. A restriction could be defined that when combining multiple cloud profiles, no merge conflicts must be introduced, making the approach more reasonable.
+Instead of using a single inheritance-based approach with the `parent` field, a similar approach as [aggregated cluster roles](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#aggregated-clusterroles) in Kubernetes could be used. In this approach, `CloudProfile`s would be defined without a parent and would be aggregated together. However, this approach is not well suited as it can not clearly define which `CloudProfile` overwrites which fields. A restriction could be defined that when combining multiple `CloudProfile`s, no merge conflicts must be introduced, making the approach more reasonable.
