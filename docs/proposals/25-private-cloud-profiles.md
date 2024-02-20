@@ -51,7 +51,6 @@ This GEP proposes a mechanism that allows project administrators to create `Priv
 2. Need to use different volume types than the ones present in the `CloudProfile`.
 3. Extending the expiration date of Kubernetes versions. Given that the `CloudProfile` is a cluster-scoped resource, it is currently not possible to extend the expiration date for shoots in one project but only centrally for all projects.
 4. Extending the expiration date for machine images. For the same reasons as extending the expiration date of the Kubernetes versions.
-5. Some gardener users might have access to custom cloud provider regions that others do not have access to. They currently have no way of using custom cloud provider regions.
 
 ### Current State
 
@@ -77,9 +76,11 @@ It is proposed to implement a solution that enables project administrators to cr
 
 First of all, a new, namespaced API object `PrivateCloudProfile` is defined. Its type definition is very similar to the `CloudProfile` object, but omits the following fields:
 
-The general approach is that a `PrivateCloudProfile` inherits from a `CloudProfile` using a `parent` field. Fields such as `machineTypes`, `volumeTypes`, `regions` and `caBundle` are going to be merged with the parent `CloudProfile`. However, a restriction needs to be defined so that the `kubernetes` and `machineImages` fields in a `PrivateCloudProfile` may only be adjusted by a Gardener operator to reduce the chance of a team staying on an unsupported Kubernetes version. A similar problem is already solved in Gardener using custom RBAC verbs [here](https://github.com/gardener/gardener/blob/master/plugin/pkg/global/customverbauthorizer), see [custom RBAC verb section](#custom-rbac-verb) for more information.
+The general approach is that a `PrivateCloudProfile` inherits from a `CloudProfile` using a `parent` field. Fields such as `machineTypes`, `volumeTypes` and `caBundle` are going to be merged with the parent `CloudProfile`. However, a restriction needs to be defined so that the `kubernetes` and `machineImages` fields in a `PrivateCloudProfile` may only be adjusted by a Gardener operator to reduce the chance of a team staying on an unsupported Kubernetes version. A similar problem is already solved in Gardener using custom RBAC verbs [here](https://github.com/gardener/gardener/blob/master/plugin/pkg/global/customverbauthorizer), see [custom RBAC verb section](#custom-rbac-verb) for more information.
 
 Currently, the shoot's reference to a `CloudProfile` is immutable. This validation will be relaxed to allow updating to a `PrivateCloudProfile` whose parent is the same as the currently configured `CloudProfile`. The change will also be reversible, i.e. switching from `PrivateCloudProfile` to `CloudProfile`.
+
+The `PrivateCloudProfile` will not include the `providerConfig` and `regions` fields. The contents of the `providerConfig` field are not known to Gardener but only to the provider extensions and can therefore not be merged without consulting the appropriate extension. The `regions` field typically needs some kind of entry in the `providerConfig` and is therefore excluded as well.
 
 ### Manifest
 
@@ -111,12 +112,6 @@ spec:
     - name: ab6
       class: premium
       usable: true
-  regions:
-    - name: europe-special
-      zones:
-        - name: europe-custom-1a
-        - name: europe-custom-1b
-        - name: europe-custom-1c
 ```
 
 ### Rendering
@@ -155,12 +150,6 @@ spec:
     - name: gp3
       class: standard
       usable: true
-  regions:
-    - name: europe-central-1
-      zones:
-        - name: europe-central-1a
-        - name: europe-central-1b
-        - name: europe-central-1c
 ```
 
 and a `PrivateCloudProfile` from the [manifest section](#manifest).
@@ -193,12 +182,6 @@ spec:
     - name: ab6
       class: premium
       usable: true
-  regions:
-    - name: europe-special
-      zones:
-        - name: europe-custom-1a
-        - name: europe-custom-1b
-        - name: europe-custom-1c
 status:
   cloudProfile:
     apiVersion: core.gardener.cloud/v1beta1
@@ -239,17 +222,6 @@ status:
         - name: gp3
           class: standard
           usable: true
-      regions:
-        - name: europe-central-1
-          zones:
-            - name: europe-central-1a
-            - name: europe-central-1b
-            - name: europe-central-1c
-        - name: europe-special
-          zones:
-            - name: europe-custom-1a
-            - name: europe-custom-1b
-            - name: europe-custom-1c
 ```
 
 The rendering is done by a new custom controller registered to the `gardener-controller-manager`. Merge conflicts can not arise during the merge process as they are caught by static validation and an admission plugin for validating the `PrivateCloudProfile` object.
