@@ -208,6 +208,7 @@ honor_labels: true`
 					},
 					PriorityClassName: priorityClassName,
 					Replicas:          ptr.To(int32(1)),
+					Shards:            ptr.To(int32(1)),
 					Image:             &image,
 					ImagePullPolicy:   corev1.PullIfNotPresent,
 					Version:           version,
@@ -259,9 +260,9 @@ honor_labels: true`
 			},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
-					APIVersion: "apps/v1",
-					Kind:       "StatefulSet",
-					Name:       "prometheus-" + name,
+					APIVersion: "monitoring.coreos.com/v1",
+					Kind:       "Prometheus",
+					Name:       name,
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 					UpdateMode: &vpaUpdateMode,

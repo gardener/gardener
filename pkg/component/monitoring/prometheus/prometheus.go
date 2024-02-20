@@ -57,6 +57,7 @@ func (p *prometheus) prometheus(takeOverOldPV bool) *monitoringv1.Prometheus {
 				},
 				PriorityClassName: p.values.PriorityClassName,
 				Replicas:          ptr.To(int32(1)),
+				Shards:            ptr.To(int32(1)),
 				Image:             &p.values.Image,
 				ImagePullPolicy:   corev1.PullIfNotPresent,
 				Version:           p.values.Version,
