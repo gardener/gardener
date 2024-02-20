@@ -15,7 +15,7 @@
 package prometheus
 
 import (
-	appsv1 "k8s.io/api/apps/v1"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -34,9 +34,9 @@ func (p *prometheus) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 		},
 		Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 			TargetRef: &autoscalingv1.CrossVersionObjectReference{
-				APIVersion: appsv1.SchemeGroupVersion.String(),
-				Kind:       "StatefulSet",
-				Name:       p.name(),
+				APIVersion: monitoringv1.SchemeGroupVersion.String(),
+				Kind:       "Prometheus",
+				Name:       p.values.Name,
 			},
 			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 				UpdateMode: &updateMode,
