@@ -193,7 +193,7 @@ func (b *backupEntry) Destroy(ctx context.Context) error {
 	)
 }
 
-// WaitCleanup is not implemented yet.
+// WaitCleanup waits until the BackupEntry is deleted.
 func (b *backupEntry) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, b.waitTimeout)
 	defer cancel()

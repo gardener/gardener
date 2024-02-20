@@ -272,8 +272,13 @@ var _ = Describe("BackupEntry", func() {
 	})
 
 	Describe("#WaitCleanup", func() {
-		It("should be nil because it's not implemented", func() {
+		It("should not return error when it's already removed", func() {
 			Expect(defaultDepWaiter.WaitCleanup(ctx)).To(Succeed())
+		})
+
+		It("should return error when it's not deleted successfully", func() {
+			Expect(c.Create(ctx, expected)).To(Succeed(), "creating backupentry succeeds")
+			Expect(defaultDepWaiter.WaitCleanup(ctx)).To(MatchError(ContainSubstring("resource namespace/be still exists")))
 		})
 	})
 
