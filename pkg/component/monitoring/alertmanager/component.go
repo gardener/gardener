@@ -88,6 +88,7 @@ func (a *alertManager) Deploy(ctx context.Context) error {
 		a.alertManager(takeOverExistingPV),
 		a.vpa(),
 		a.config(),
+		a.smtpSecret(),
 	)
 	if err != nil {
 		return err
