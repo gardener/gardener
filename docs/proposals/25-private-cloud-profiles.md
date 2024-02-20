@@ -37,36 +37,36 @@ reviewers:
 
 ## Summary
 
-Cloud profiles are currently non-namespaced objects that are configured centrally and consumed by any end user creating a shoot in the landscape. However, some projects require lots of special entries in a cloud profile which adds unnecessary bulk to the cloud profile, as there are lots of entries in it, that are only relevant to one project. Additionally, is usually updated in a certain time interval which means that might projects have to wait several days or even weeks before they can use the changed cloud profile.
+[CloudProfiles](https://github.com/gardener/gardener/blob/master/docs/concepts/apiserver.md#cloudprofiles) are non-namespaced objects that are managed centrally by Gardener operators. They usually don't only contain global configuration, but options that are relevant to certain projects only (e.g. special machine types). This increases the operation burden for operators and clutters `CloudProfile` objects. On the other hand, users are blocked until the requested special configuration is rolled out to the desired landscapes.
 
-This GEP proposes a mechanism that will allow project administrators to create private cloud profiles that are only visible to and can only be consumed by the project they were created in.
+This GEP proposes a mechanism that allows project administrators to create private cloud profiles that are only visible in the project they belong to.
 
 ## Motivation
 
 ### Context
 
-Cloud profiles are an integral component of Gardener for managing shoot resources. They are currently managed centrally by Gardener and can be consumed by any Gardener user. However, some teams require frequent changes to a cloud profile. There are a few reasons why:
+`CloudProfile`s are an integral component of Gardener for managing shoot clusters. They are currently managed centrally by Gardener operators and can be consumed by any Gardener user. However, some teams require frequent changes to a cloud profile, mainly for the following reasons:
 
 1. Testing with different machine types than the ones present in the cloud profile.
 2. Need to use different volume types than the ones present in the cloud profile.
-3. Extending the expiration date of Kubernetes versions. Teams might need to hang on to an older version of Kubernetes as they might not be ready for an upgrade as of the set expiration date. Given that the cloud profile is a cluster-scoped resource, it is currently not possible to extend the expiration date for shoots in one project but only centrally for all projects.
+3. Extending the expiration date of Kubernetes versions. Given that the `CloudProfile` is a cluster-scoped resource, it is currently not possible to extend the expiration date for shoots in one project but only centrally for all projects.
 4. Extending the expiration date for machine images. For the same reasons as extending the expiration date of the Kubernetes versions.
-5. Some gardener users might have access to custom cloud provider regions that others do not have access to, they currently have no way of using custom cloud provider regions.
+5. Some gardener users might have access to custom cloud provider regions that others do not have access to. They currently have no way of using custom cloud provider regions.
 
 ### Current State
 
-Cloud Profiles are non-namespaced resources. This means that in a typical gardener installation, only a handful of cloud profiles (i.e. one per cloud provider) exist. They can be consumed by any project's clusters. Consequently, when a project requires changes to cloud profiles for any of the reasons mentioned in the [context section](#context), they are changed for the entire gardener landscape. Since some projects might require frequent changes to a cloud profile, this become quite a cumbersome process. Additionally, it adds confusion to every project's workflow if say for example a team requires an extension of the expiration date of a Kubernetes version since they will be wondering why it was extended.
+`CloudProfile`s are non-namespaced resources. This means that in a typical Gardener installation, only a handful of `CloudProfile`s (typically one per cloud provider) exist. They can be consumed by any shoot cluster. Consequently, when a project requires changes to `CloudProfile`s for any of the reasons mentioned in the [context section](#context), they are changed for the entire Gardener landscape. Since some projects might require frequent changes, this becomes quite a cumbersome process on both, the operators' and users' sides.
 
 ### Goals
 
 - Reduce load on Gardener operators for maintaining cloud profiles
-- Possibly reduce the time a team has to wait until a change in a cloud profile is reflected in production
+- Possibly reduce the time a team has to wait until a change in a `CloudProfile` is reflected in the landscape.
 - Make it so that project-scoped information in the cloud profile is only visible to the relevant project
 - Full backward compatibility
 
 ### Non-Goals
 
-- Automate approval process for changes in Gardeners cloud profiles
+- Automate the approval process for changes in `CloudProfile`s
 - Add different, possibly unsupported Kubernetes versions or machine image versions and names
 
 ## Proposal
@@ -75,21 +75,21 @@ It is proposed to implement a solution that enables project administrators to cr
 
 ### Approach
 
-First of all, a new, namespaced API object is defined, the `PrivateCloudProfile`. Its type definition is very similar to the `CloudProfile` object but it omits the `type`, `providerConfig` and `seedSelector` fields. The `type` field is omitted as it is inherited from the parent cloud profile. The `providerConfig` field is omitted as gardener itself does not know anything about the structure of this field and cannot merge it accordingly. The `seedSelector` field is omitted as it is too complex for this GEP but may be added in the future.
+First of all, a new, namespaced API object `PrivateCloudProfile` is defined. Its type definition is very similar to the `CloudProfile` object, but omits the following fields:
 
-The general approach is that a private cloud profile inherits from a cloud profile using a `parent` field in the private cloud profile and should therefore not change the type or provider config. Fields such as `machineTypes`, `volumeTypes`, `regions` and `caBundle` are going to be merged with the parent cloud profile. However, a restriction need to be defined so that the `kubernetes` and `machineImages` fields in a private cloud profile may only be adjusted by a gardener operator to reduce the chance of a team staying on an unsupported kubernetes version. A similar problem is already solved in Gardener using custom RBAC verbs [here](https://github.com/gardener/gardener/blob/master/plugin/pkg/global/customverbauthorizer), the approach is described in more detail in the [custom RBAC verb section](#custom-rbac-verb).
+The general approach is that a `PrivateCloudProfile` inherits from a `CloudProfile` using a `parent` field. Fields such as `machineTypes`, `volumeTypes`, `regions` and `caBundle` are going to be merged with the parent `CloudProfile`. However, a restriction needs to be defined so that the `kubernetes` and `machineImages` fields in a `PrivateCloudProfile` may only be adjusted by a Gardener operator to reduce the chance of a team staying on an unsupported Kubernetes version. A similar problem is already solved in Gardener using custom RBAC verbs [here](https://github.com/gardener/gardener/blob/master/plugin/pkg/global/customverbauthorizer), see [custom RBAC verb section](#custom-rbac-verb) for more information.
 
-Currently, a shoot's reference to a cloud profile is immutable. When enabling private cloud profiles, it is necessary to allow a change to the cloud profile reference. Although it is very important to only allow a change to a private cloud profile that uses the shoot's current cloud profile as a parent. Additionally, the change may go in the other direction, changing from a private cloud profile to the private cloud profile's parent cloud profile.
+Currently, the shoot's reference to a `CloudProfile` is immutable. This validation will be relaxed to allow updating to a `PrivateCloudProfile` whose parent is the same as the currently configured `CloudProfile`. The change will also be reversible, i.e. switching from `PrivateCloudProfile` to `CloudProfile`.
 
 ### Manifest
 
-A private cloud profile could look like this:
+A `PrivateCloudProfile` could look like this:
 
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1
 kind: PrivateCloudProfile
 metadata:
-  name: private-cloud-profile-xyz
+  name: aws-profile-xyz
   namespace: project-xyz
 spec:
   parent: aws-central-cloud-profile
@@ -171,7 +171,7 @@ After the rendering is done, the private cloud profile will look like this:
 apiVersion: core.gardener.cloud/v1beta1
 kind: PrivateCloudProfile
 metadata:
-  name: private-cloud-profile-xyz
+  name:  aws-profile-xyz
   namespace: project-xyz
 spec:
   parent: aws-central-cloud-profile
@@ -252,7 +252,7 @@ status:
             - name: europe-custom-1c
 ```
 
-The rendering is done by a new custom controller registered to the `gardener-controller-manager`. Merge conflicts can not arise during the merge process as they are caught by static validation and an admission plugin for validating the private cloud profile.
+The rendering is done by a new custom controller registered to the `gardener-controller-manager`. Merge conflicts can not arise during the merge process as they are caught by static validation and an admission plugin for validating the `PrivateCloudProfile` object.
 
 ### Custom RBAC verb
 
@@ -292,7 +292,7 @@ Because of this, multi-level inheritance will not be implemented as of this GEP.
 
 ### Arbitrary Value Fields
 
-Instead of specifying a private cloud profile resource, an end user could be allowed to enter arbitrary names in fields such as `machineTypes`. The entry would then, if the user enters a wrong value, throw an error when provisioning the resource at the cloud provider. However, this approach does not seem feasible as the metadata that is specified in a cloud profile like the number of CPUs and amount of RAM is used in the trial clusters to validate quotas and to enable the scale-from-zero feature. Therefore, an exception would need to be developed for this specific, and possibly other, use cases.
+Instead of specifying a private cloud profile resource, an end user could be allowed to enter arbitrary names in fields such as `machineTypes`. The entry would then, if the user enters a wrong value, throw an error when provisioning the resource at the cloud provider. However, this approach does not seem feasible as the metadata that is specified in a cloud profile like the number of CPUs and amount of RAM is used in the trial clusters (see [Shoot Qutas](https://github.com/gardener/gardener/blob/master/docs/concepts/apiserver.md#shoot-quotas)) to validate quotas and to enable the scale-from-zero feature. Therefore, an exception would need to be developed for this specific, and possibly other, use cases.
 
 ### Private Cloud Profiles by Selection
 
