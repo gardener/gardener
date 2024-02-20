@@ -17,15 +17,20 @@ package fluentoperator
 import (
 	"context"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator/customresources"
+	"github.com/gardener/gardener/pkg/component/monitoring/prometheus/aggregate"
+	monitoringutils "github.com/gardener/gardener/pkg/component/monitoring/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
@@ -128,6 +133,149 @@ end
 `,
 			},
 		}
+		serviceMonitor = &monitoringv1.ServiceMonitor{
+			ObjectMeta: monitoringutils.ConfigObjectMeta("fluent-bit", f.namespace, aggregate.Label),
+			Spec: monitoringv1.ServiceMonitorSpec{
+				Selector: metav1.LabelSelector{MatchLabels: getFluentBitLabels()},
+				Endpoints: []monitoringv1.Endpoint{{
+					Port: "metrics",
+					RelabelConfigs: []*monitoringv1.RelabelConfig{
+						{
+							TargetLabel: "__metrics_path__",
+							Replacement: "/api/v1/metrics/prometheus",
+						},
+						{
+							Action: "labelmap",
+							Regex:  `__meta_kubernetes_pod_label_(.+)`,
+						},
+					},
+					MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
+						"fluentbit_input_bytes_total",
+						"fluentbit_input_records_total",
+						"fluentbit_output_proc_bytes_total",
+						"fluentbit_output_proc_records_total",
+						"fluentbit_output_errors_total",
+						"fluentbit_output_retries_total",
+						"fluentbit_output_retries_failed_total",
+						"fluentbit_filter_add_records_total",
+						"fluentbit_filter_drop_records_total",
+					),
+				}},
+			},
+		}
+		serviceMonitorPlugin = &monitoringv1.ServiceMonitor{
+			ObjectMeta: monitoringutils.ConfigObjectMeta("fluent-bit-output-plugin", f.namespace, aggregate.Label),
+			Spec: monitoringv1.ServiceMonitorSpec{
+				Selector: metav1.LabelSelector{MatchLabels: getFluentBitLabels()},
+				Endpoints: []monitoringv1.Endpoint{{
+					Port: "metrics-plugin",
+					RelabelConfigs: []*monitoringv1.RelabelConfig{
+						// This service monitor is targeting the fluent-bit service. Without explicitly overriding the
+						// job label, prometheus-operator would choose job=fluent-bit (service name).
+						{
+							Action:      "replace",
+							Replacement: "fluent-bit-output-plugin",
+							TargetLabel: "job",
+						},
+						{
+							Action: "labelmap",
+							Regex:  `__meta_kubernetes_pod_label_(.+)`,
+						},
+					},
+					MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
+						"valitail_dropped_entries_total",
+						"fluentbit_vali_gardener_errors_total",
+						"fluentbit_vali_gardener_logs_without_metadata_total",
+						"fluentbit_vali_gardener_incoming_logs_total",
+						"fluentbit_vali_gardener_incoming_logs_with_endpoint_total",
+						"fluentbit_vali_gardener_forwarded_logs_total",
+						"fluentbit_vali_gardener_dropped_logs_total",
+					),
+				}},
+			},
+		}
+		prometheusRule = &monitoringv1.PrometheusRule{
+			ObjectMeta: monitoringutils.ConfigObjectMeta("fluent-bit", f.namespace, aggregate.Label),
+			Spec: monitoringv1.PrometheusRuleSpec{
+				Groups: []monitoringv1.RuleGroup{{
+					Name: "fluent-bit.rules",
+					Rules: []monitoringv1.Rule{
+						{
+							Alert: "FluentBitDown",
+							Expr:  intstr.FromString(`absent(up{job="fluent-bit"} == 1)`),
+							For:   ptr.To(monitoringv1.Duration("15m")),
+							Labels: map[string]string{
+								"service":    "logging",
+								"severity":   "warning",
+								"type":       "seed",
+								"visibility": "operator",
+							},
+							Annotations: map[string]string{
+								"description": "There are no fluent-bit pods running on seed: {{$externalLabels.seed}}. No logs will be collected.",
+								"summary":     "Fluent-bit is down",
+							},
+						},
+						{
+							Alert: "FluentBitIdleInputPlugins",
+							Expr:  intstr.FromString(`sum by (pod) (increase(fluentbit_input_bytes_total{pod=~"fluent-bit.*"}[4m])) == 0`),
+							For:   ptr.To(monitoringv1.Duration("6h")),
+							Labels: map[string]string{
+								"service":    "logging",
+								"severity":   "warning",
+								"type":       "seed",
+								"visibility": "operator",
+							},
+							Annotations: map[string]string{
+								"description": "The input plugins of Fluent-bit pod {{$labels.pod}} running on seed {{$externalLabels.seed}} haven't collected any logs for the last 6 hours.",
+								"summary":     "Fluent-bit input plugins haven't process any data for the past 6 hours",
+							},
+						},
+						{
+							Alert: "FluentBitReceivesLogsWithoutMetadata",
+							Expr:  intstr.FromString(`sum by (pod) (increase(fluentbit_vali_gardener_logs_without_metadata_total[4m])) > 0`),
+							Labels: map[string]string{
+								"service":    "logging",
+								"severity":   "warning",
+								"type":       "seed",
+								"visibility": "operator",
+							},
+							Annotations: map[string]string{
+								"description": "{{$labels.pod}} receives logs without metadata on seed: {{$externalLabels.seed}}. These logs will be dropped.",
+								"summary":     "Fluent-bit receives logs without metadata",
+							},
+						},
+						{
+							Alert: "FluentBitSendsOoOLogs",
+							Expr:  intstr.FromString(`sum by (pod) (increase(prometheus_target_scrapes_sample_out_of_order_total[4m])) > 0`),
+							Labels: map[string]string{
+								"service":    "logging",
+								"severity":   "warning",
+								"type":       "seed",
+								"visibility": "operator",
+							},
+							Annotations: map[string]string{
+								"description": "{{$labels.pod}} on seed: {{$externalLabels.seed}} sends OutOfOrder logs to the Vali. These logs will be dropped.",
+								"summary":     "Fluent-bit sends OoO logs",
+							},
+						},
+						{
+							Alert: "FluentBitGardenerValiPluginErrors",
+							Expr:  intstr.FromString(`sum by (pod) (increase(fluentbit_vali_gardener_errors_total[4m])) > 0`),
+							Labels: map[string]string{
+								"service":    "logging",
+								"severity":   "warning",
+								"type":       "seed",
+								"visibility": "operator",
+							},
+							Annotations: map[string]string{
+								"description": "There are errors in the {{$labels.pod}} GardenerVali plugin on seed: {{$externalLabels.seed}}.",
+								"summary":     "Errors in Fluent-bit GardenerVali plugin",
+							},
+						},
+					},
+				}},
+			},
+		}
 	)
 
 	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
@@ -137,6 +285,9 @@ end
 		customresources.GetFluentBit(getFluentBitLabels(), v1beta1constants.DaemonSetNameFluentBit, f.namespace, f.values.Image, f.values.InitContainerImage, f.values.PriorityClass),
 		customresources.GetClusterFluentBitConfig(v1beta1constants.DaemonSetNameFluentBit, getCustomResourcesLabels()),
 		customresources.GetDefaultClusterOutput(getCustomResourcesLabels()),
+		serviceMonitor,
+		serviceMonitorPlugin,
+		prometheusRule,
 	}
 
 	for _, clusterInput := range customresources.GetClusterInputs(getCustomResourcesLabels()) {
