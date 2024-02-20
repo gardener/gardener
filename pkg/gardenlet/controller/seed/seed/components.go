@@ -61,6 +61,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/monitoring"
 	"github.com/gardener/gardener/pkg/component/monitoring/alertmanager"
 	"github.com/gardener/gardener/pkg/component/monitoring/prometheus"
+	aggregateprometheus "github.com/gardener/gardener/pkg/component/monitoring/prometheus/aggregate"
 	cacheprometheus "github.com/gardener/gardener/pkg/component/monitoring/prometheus/cache"
 	seedprometheus "github.com/gardener/gardener/pkg/component/monitoring/prometheus/seed"
 	"github.com/gardener/gardener/pkg/component/monitoring/prometheusoperator"
@@ -733,6 +734,9 @@ func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed,
 		RetentionSize:     "15GB",
 		ExternalLabels:    map[string]string{"seed": seed.GetInfo().Name},
 		VPAMinAllowed:     &corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("1000M")},
+		CentralConfigs: prometheus.CentralConfigs{
+			PrometheusRules: aggregateprometheus.CentralPrometheusRules(),
+		},
 		AdditionalPodLabels: map[string]string{
 			"networking.resources.gardener.cloud/to-" + v1beta1constants.IstioSystemNamespace + "-" + v1beta1constants.LabelNetworkPolicySeedScrapeTargets:                         v1beta1constants.LabelNetworkPolicyAllowed,
 			"networking.resources.gardener.cloud/to-" + v1beta1constants.LabelNetworkPolicyIstioIngressNamespaceAlias + "-" + v1beta1constants.LabelNetworkPolicySeedScrapeTargets: v1beta1constants.LabelNetworkPolicyAllowed,

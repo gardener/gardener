@@ -6,8 +6,6 @@ metadata:
 data:
   prometheus.yaml: |
 
-    rule_files:
-    - /etc/prometheus/rules/*.yaml
     scrape_configs:
     - job_name: shoot-prometheus
       metrics_path: /federate
