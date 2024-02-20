@@ -325,7 +325,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.ExposureClassName, oldSpec.ExposureClassName, fldPath.Child("exposureClassName"))...)
 
 	allErrs = append(allErrs, validateDNSUpdate(newSpec.DNS, oldSpec.DNS, newSpec.SeedName != nil, fldPath.Child("dns"))...)
-	allErrs = append(allErrs, ValidateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
+	allErrs = append(allErrs, ValidateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, false, fldPath.Child("kubernetes", "version"))...)
 
 	allErrs = append(allErrs, validateKubeControllerManagerUpdate(newSpec.Kubernetes.KubeControllerManager, oldSpec.Kubernetes.KubeControllerManager, fldPath.Child("kubernetes", "kubeControllerManager"))...)
 
@@ -355,8 +355,8 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 			newKubernetesVersion = *newWorker.Kubernetes.Version
 		}
 
-		// worker kubernetes versions must not be downgraded and must not skip a minor
-		allErrs = append(allErrs, ValidateKubernetesVersionUpdate(newKubernetesVersion, oldKubernetesVersion, idxPath.Child("kubernetes", "version"))...)
+		// worker kubernetes versions must not be downgraded and but can skip minor versions
+		allErrs = append(allErrs, ValidateKubernetesVersionUpdate(newKubernetesVersion, oldKubernetesVersion, true, idxPath.Child("kubernetes", "version"))...)
 	}
 
 	allErrs = append(allErrs, validateNetworkingUpdate(newSpec.Networking, oldSpec.Networking, fldPath.Child("networking"))...)
@@ -661,8 +661,8 @@ func validateDNSUpdate(new, old *core.DNS, seedGotAssigned bool, fldPath *field.
 	return allErrs
 }
 
-// ValidateKubernetesVersionUpdate ensures that new version is newer than old version and does not skip one minor
-func ValidateKubernetesVersionUpdate(new, old string, fldPath *field.Path) field.ErrorList {
+// ValidateKubernetesVersionUpdate ensures that new version is newer than old version and does not skip minor versions when not allowed
+func ValidateKubernetesVersionUpdate(new, old string, skipMinorVersionAllowed bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(new) == 0 {
@@ -679,19 +679,21 @@ func ValidateKubernetesVersionUpdate(new, old string, fldPath *field.Path) field
 		allErrs = append(allErrs, field.Forbidden(fldPath, "kubernetes version downgrade is not supported"))
 	}
 
-	// Forbid Kubernetes version upgrade which skips a minor version
-	oldVersion, err := semver.NewVersion(old)
-	if err != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath, old, err.Error()))
-	}
-	nextMinorVersion := oldVersion.IncMinor().IncMinor()
+	if !skipMinorVersionAllowed {
+		// Forbid Kubernetes version upgrade which skips a minor version
+		oldVersion, err := semver.NewVersion(old)
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath, old, err.Error()))
+		}
+		nextMinorVersion := oldVersion.IncMinor().IncMinor()
 
-	skippingMinorVersion, err := versionutils.CompareVersions(new, ">=", nextMinorVersion.String())
-	if err != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath, new, err.Error()))
-	}
-	if skippingMinorVersion {
-		allErrs = append(allErrs, field.Forbidden(fldPath, "kubernetes version upgrade cannot skip a minor version"))
+		skippingMinorVersion, err := versionutils.CompareVersions(new, ">=", nextMinorVersion.String())
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath, new, err.Error()))
+		}
+		if skippingMinorVersion {
+			allErrs = append(allErrs, field.Forbidden(fldPath, "kubernetes version upgrade cannot skip a minor version"))
+		}
 	}
 
 	return allErrs
