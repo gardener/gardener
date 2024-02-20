@@ -33,6 +33,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/component/clusteridentity"
@@ -68,10 +69,15 @@ var _ = Describe("Seed Care controller tests", func() {
 			Scheme:  testScheme,
 			Metrics: metricsserver.Options{BindAddress: "0"},
 			Cache: cache.Options{
-				// Here kube-system namespace is added because in the controller we fetch cluster identity from
-				// kube-system namespace and expect it to return not found error, but if don't create cache for it
-				// a cache error will be returned.
-				DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}, metav1.NamespaceSystem: {}},
+				DefaultNamespaces: map[string]cache.Config{
+					testNamespace.Name: {},
+					// kube-system namespace is added because in the controller we fetch cluster identity from
+					// kube-system namespace and expect it to return not found error, but if don't create cache for it a
+					// cache error will be returned.
+					metav1.NamespaceSystem: {},
+					// Seed namespace is added because controller reads secrets from this namespace
+					seedNamespace.Name: {},
+				},
 				ByObject: map[client.Object]cache.ByObject{
 					&gardencorev1beta1.Seed{}: {
 						Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
@@ -187,6 +193,7 @@ var _ = Describe("Seed Care controller tests", func() {
 			"istio",
 			"istio-system",
 			prometheusoperator.ManagedResourceName,
+			"prometheus-cache",
 		}
 
 		test := func(managedResourceNames []string) {
@@ -278,6 +285,25 @@ var _ = Describe("Seed Care controller tests", func() {
 				"fluent-bit",
 				"vali",
 			))
+		})
+
+		Context("alertmanager enabled", func() {
+			BeforeEach(func() {
+				smtpSecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						GenerateName: "smtp-",
+						Namespace:    seedNamespace.Name,
+						Labels:       map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleAlerting},
+					},
+					Data: map[string][]byte{"auth_type": []byte("smtp")},
+				}
+				Expect(testClient.Create(ctx, smtpSecret)).To(Succeed())
+				DeferCleanup(func() {
+					Expect(testClient.Delete(ctx, smtpSecret)).To(Succeed())
+				})
+			})
+
+			test(append(requiredManagedResources, "alertmanager-seed"))
 		})
 	})
 })

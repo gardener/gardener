@@ -54,6 +54,7 @@ var requiredManagedResourcesSeed = sets.New(
 	seedsystem.ManagedResourceName,
 	vpa.ManagedResourceControlName,
 	prometheusoperator.ManagedResourceName,
+	"prometheus-cache",
 )
 
 // health contains information needed to execute health checks for a seed.
@@ -65,6 +66,7 @@ type health struct {
 	seedIsGarden        bool
 	loggingEnabled      bool
 	valiEnabled         bool
+	alertManagerEnabled bool
 	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration
 	healthChecker       *healthchecker.HealthChecker
 }
@@ -78,6 +80,7 @@ func NewHealth(
 	seedIsGarden bool,
 	loggingEnabled bool,
 	valiEnabled bool,
+	alertManagerEnabled bool,
 	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
 ) HealthCheck {
 	return &health{
@@ -88,6 +91,7 @@ func NewHealth(
 		seedIsGarden:        seedIsGarden,
 		loggingEnabled:      loggingEnabled,
 		valiEnabled:         valiEnabled,
+		alertManagerEnabled: alertManagerEnabled,
 		conditionThresholds: conditionThresholds,
 		healthChecker:       healthchecker.NewHealthChecker(seedClient, clock, conditionThresholds, seed.Status.LastOperation),
 	}
@@ -136,6 +140,9 @@ func (h *health) checkSystemComponents(
 	}
 	if h.valiEnabled {
 		managedResources = append(managedResources, vali.ManagedResourceNameRuntime)
+	}
+	if h.alertManagerEnabled {
+		managedResources = append(managedResources, "alertmanager-seed")
 	}
 
 	for _, name := range managedResources {

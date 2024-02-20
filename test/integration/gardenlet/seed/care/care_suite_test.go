@@ -36,6 +36,7 @@ import (
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -58,6 +59,7 @@ var (
 	testScheme    *runtime.Scheme
 	testRunID     string
 	testNamespace *corev1.Namespace
+	seedNamespace *corev1.Namespace
 	seedName      string
 )
 
@@ -115,5 +117,19 @@ var _ = BeforeSuite(func() {
 	DeferCleanup(func() {
 		By("Delete test Namespace")
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
+	})
+
+	By("Create seed Namespace")
+	seedNamespace = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: gardenerutils.ComputeGardenNamespace(seedName),
+		},
+	}
+	Expect(testClient.Create(ctx, seedNamespace)).To(Succeed())
+	log.Info("Created Namespace for seed", "namespaceName", seedNamespace.Name)
+
+	DeferCleanup(func() {
+		By("Delete seed Namespace")
+		Expect(testClient.Delete(ctx, seedNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 })
