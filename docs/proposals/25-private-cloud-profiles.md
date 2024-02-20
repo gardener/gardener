@@ -271,9 +271,9 @@ rules:
 
 ### Automated removal of outdated Kubernetes versions and machine image versions
 
-Expired Kubernetes versions in cloud profiles are currently being removed manually. This is not an issue since there is a very limited amount of cloud profiles. However, if any project administrator is allowed to create a private cloud profile that can then have its Kubernetes versions expiration dates extended, it could become a very cumbersome process to manually remove all the expired Kubernetes versions. It is therefore proposed to implement a custom controller managed by `gardener-controller-manager`, that reconciles private cloud profiles (and possibly even regular cloud profiles) and removes any Kubernetes versions that are past their expiration date. The same could be done for machine image versions.
+Expired Kubernetes versions in cloud profiles are currently being removed manually. This is not an issue since there is a very limited amount of cloud profiles. However, if any project administrator is allowed to create a private cloud profile that can then have its Kubernetes versions expiration dates extended, it could become a very cumbersome process to manually remove all the expired Kubernetes versions. One possible solution is to implement a custom controller managed by `gardener-controller-manager`, that reconciles `PrivateCloudProfile`s (and possibly even regular cloud profiles) and removes any Kubernetes versions that are past their expiration date. The same could be done for machine image versions.
 
-However, a problem arises as the Kubernetes/machine image versions are referenced in the `providerConfig` and would therefore need to be removed manually anyway.
+However, a problem arises as the Kubernetes/machine image versions are referenced in the `providerConfig` and would therefore need to be removed manually anyway. Because of that, this feature is not part of this GEP.
 
 ### Cross-project sharing
 
