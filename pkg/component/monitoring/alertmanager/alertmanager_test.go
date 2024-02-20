@@ -83,6 +83,7 @@ var _ = Describe("Prometheus", func() {
 		alertManager *monitoringv1.Alertmanager
 		vpa          *vpaautoscalingv1.VerticalPodAutoscaler
 		config       *monitoringv1alpha1.AlertmanagerConfig
+		smtpSecret   *corev1.Secret
 	)
 
 	BeforeEach(func() {
@@ -293,13 +294,21 @@ var _ = Describe("Prometheus", func() {
 							AuthUsername: string(alertingSMTPSecret.Data["auth_username"]),
 							AuthIdentity: string(alertingSMTPSecret.Data["auth_identity"]),
 							AuthPassword: &corev1.SecretKeySelector{
-								LocalObjectReference: corev1.LocalObjectReference{Name: alertingSMTPSecret.Name},
+								LocalObjectReference: corev1.LocalObjectReference{Name: "alertmanager-" + name + "-smtp"},
 								Key:                  "auth_password",
 							},
 						}},
 					},
 				},
 			},
+		}
+		smtpSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "alertmanager-" + name + "-smtp",
+				Namespace: namespace,
+			},
+			Type: alertingSMTPSecret.Type,
+			Data: map[string][]byte{"auth_password": alertingSMTPSecret.Data["auth_password"]},
 		}
 	})
 
@@ -359,11 +368,12 @@ var _ = Describe("Prometheus", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(4))
+				Expect(managedResourceSecret.Data).To(HaveLen(5))
 				Expect(string(managedResourceSecret.Data["service__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
 				Expect(string(managedResourceSecret.Data["alertmanager__some-namespace__"+name+".yaml"])).To(Equal(componenttest.Serialize(alertManager)))
 				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(vpa)))
 				Expect(string(managedResourceSecret.Data["alertmanagerconfig__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(config)))
+				Expect(string(managedResourceSecret.Data["secret__some-namespace__alertmanager-"+name+"-smtp.yaml"])).To(Equal(componenttest.Serialize(smtpSecret)))
 			})
 		})
 	})

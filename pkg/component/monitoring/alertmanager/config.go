@@ -21,6 +21,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const dataKeyAuthPassword = "auth_password"
+
 func (a *alertManager) config() *monitoringv1alpha1.AlertmanagerConfig {
 	emailReceiverName := "email-kubernetes-ops"
 
@@ -99,12 +101,23 @@ func (a *alertManager) config() *monitoringv1alpha1.AlertmanagerConfig {
 						AuthUsername: string(a.values.AlertingSMTPSecret.Data["auth_username"]),
 						AuthIdentity: string(a.values.AlertingSMTPSecret.Data["auth_identity"]),
 						AuthPassword: &corev1.SecretKeySelector{
-							LocalObjectReference: corev1.LocalObjectReference{Name: a.values.AlertingSMTPSecret.Name},
-							Key:                  "auth_password",
+							LocalObjectReference: corev1.LocalObjectReference{Name: a.smtpSecret().Name},
+							Key:                  dataKeyAuthPassword,
 						},
 					}},
 				},
 			},
 		},
+	}
+}
+
+func (a *alertManager) smtpSecret() *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      a.name() + "-smtp",
+			Namespace: a.namespace,
+		},
+		Type: a.values.AlertingSMTPSecret.Type,
+		Data: map[string][]byte{dataKeyAuthPassword: a.values.AlertingSMTPSecret.Data[dataKeyAuthPassword]},
 	}
 }
