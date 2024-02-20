@@ -42,6 +42,8 @@ const (
 	dataKeyAdditionalAlertRelabelConfigs = "configs.yaml"
 	port                                 = 9090
 	servicePort                          = 80
+	// ServicePortName is the name of the port in the Service specification.
+	ServicePortName = "web"
 )
 
 // Values contains configuration values for the prometheus resources.
