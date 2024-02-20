@@ -56,6 +56,7 @@ var requiredManagedResourcesSeed = sets.New(
 	prometheusoperator.ManagedResourceName,
 	"prometheus-cache",
 	"prometheus-seed",
+	"prometheus-aggregate",
 )
 
 // health contains information needed to execute health checks for a seed.

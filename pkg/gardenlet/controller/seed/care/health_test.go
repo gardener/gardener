@@ -62,6 +62,7 @@ var (
 		prometheusoperator.ManagedResourceName,
 		"prometheus-cache",
 		"prometheus-seed",
+		"prometheus-aggregate",
 	}
 
 	optionalManagedResources = []string{
