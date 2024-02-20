@@ -661,8 +661,8 @@ func validateDNSUpdate(new, old *core.DNS, seedGotAssigned bool, fldPath *field.
 	return allErrs
 }
 
-// ValidateKubernetesVersionUpdate ensures that new version is newer than old version and does not skip one minor
-func ValidateKubernetesVersionUpdate(new, old string, isWorkerPoolKubernetesVersion bool, fldPath *field.Path) field.ErrorList {
+// ValidateKubernetesVersionUpdate ensures that new version is newer than old version and does not skip minor versions when not allowed
+func ValidateKubernetesVersionUpdate(new, old string, skipMinorVersionAllowed bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(new) == 0 {
@@ -679,7 +679,7 @@ func ValidateKubernetesVersionUpdate(new, old string, isWorkerPoolKubernetesVers
 		allErrs = append(allErrs, field.Forbidden(fldPath, "kubernetes version downgrade is not supported"))
 	}
 
-	if !isWorkerPoolKubernetesVersion {
+	if !skipMinorVersionAllowed {
 		// Forbid Kubernetes version upgrade which skips a minor version
 		oldVersion, err := semver.NewVersion(old)
 		if err != nil {
