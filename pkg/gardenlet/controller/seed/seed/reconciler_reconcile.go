@@ -361,11 +361,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying monitoring components",
-			Fn:           c.monitoring.Deploy,
-			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
-		})
-		_ = g.Add(flow.Task{
 			Name: "Renewing garden access secrets",
 			Fn: func(ctx context.Context) error {
 				// renew access secrets in all namespaces with the resources.gardener.cloud/class=garden label

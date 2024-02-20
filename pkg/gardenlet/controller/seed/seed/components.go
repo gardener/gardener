@@ -115,7 +115,6 @@ type components struct {
 	kubeAPIServerIngress component.Deployer
 	ingressDNSRecord     component.DeployWaiter
 
-	monitoring                    component.Deployer
 	fluentOperator                component.DeployWaiter
 	fluentBit                     component.DeployWaiter
 	fluentOperatorCustomResources component.DeployWaiter
@@ -221,10 +220,6 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.plutono, err = r.newPlutono(seed, secretsManager, globalMonitoringSecretSeed, wildCardCertSecret)
-	if err != nil {
-		return
-	}
-	c.monitoring, err = r.newMonitoring(secretsManager, seed, globalMonitoringSecretSeed, seed.GetIngressFQDN("p-seed"), wildCardCertSecret)
 	if err != nil {
 		return
 	}
@@ -574,44 +569,6 @@ func (r *Reconciler) newPlutono(seed *seedpkg.Seed, secretsManager secretsmanage
 		false,
 		wildcardCertName,
 	)
-}
-
-func (r *Reconciler) newMonitoring(secretsManager secretsmanager.Interface, seed *seedpkg.Seed, globalMonitoringSecret *corev1.Secret, ingressHost string, wildcardCertSecret *corev1.Secret) (component.Deployer, error) {
-	imageAlpine, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlpine)
-	if err != nil {
-		return nil, err
-	}
-	imageConfigmapReloader, err := imagevector.ImageVector().FindImage(imagevector.ImageNameConfigmapReloader)
-	if err != nil {
-		return nil, err
-	}
-	imagePrometheus, err := imagevector.ImageVector().FindImage(imagevector.ImageNamePrometheus)
-	if err != nil {
-		return nil, err
-	}
-
-	var wildcardCertName *string
-	if wildcardCertSecret != nil {
-		wildcardCertName = ptr.To(wildcardCertSecret.GetName())
-	}
-
-	return monitoring.NewBootstrap(
-		r.SeedClientSet.Client(),
-		r.SeedClientSet.ChartApplier(),
-		secretsManager,
-		r.GardenNamespace,
-		monitoring.ValuesBootstrap{
-			GlobalMonitoringSecret:             globalMonitoringSecret,
-			HVPAEnabled:                        hvpaEnabled(),
-			ImageAlpine:                        imageAlpine.String(),
-			ImageConfigmapReloader:             imageConfigmapReloader.String(),
-			ImagePrometheus:                    imagePrometheus.String(),
-			IngressHost:                        ingressHost,
-			SeedName:                           seed.GetInfo().Name,
-			StorageCapacityAggregatePrometheus: seed.GetValidVolumeSize("20Gi"),
-			WildcardCertName:                   wildcardCertName,
-		},
-	), nil
 }
 
 func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed) (component.DeployWaiter, error) {
