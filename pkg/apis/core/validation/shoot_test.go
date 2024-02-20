@@ -3105,11 +3105,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"Field":  Equal("spec.kubernetes.version"),
 						"Detail": Equal("kubernetes version upgrade cannot skip a minor version"),
 					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeForbidden),
-						"Field":  Equal("spec.provider.workers[0].kubernetes.version"),
-						"Detail": Equal("kubernetes version upgrade cannot skip a minor version"),
-					})),
 				))
 			})
 
@@ -3326,6 +3321,16 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
+			It("should allow to skip minor versions during worker pool kubernetes version upgrade", func() {
+				shoot.Spec.Kubernetes.Version = "1.28.0"
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: ptr.To("1.25.2")}
+
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: ptr.To("1.27.0")}
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+			})
+
 			It("should allow to set worker pool kubernetes version to nil with one minor difference", func() {
 				shoot.Spec.Kubernetes.Version = "1.25.0"
 				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: ptr.To("1.24.2")}
@@ -3336,18 +3341,14 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 			})
 
-			It("forbid to set worker pool kubernetes version to nil with two minor difference", func() {
-				shoot.Spec.Kubernetes.Version = "1.27.0"
+			It("should allow to set worker pool kubernetes version to nil with more than one minor difference", func() {
+				shoot.Spec.Kubernetes.Version = "1.28.0"
 				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: ptr.To("1.25.2")}
 
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: nil}
 
-				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("spec.provider.workers[0].kubernetes.version"),
-					"Detail": Equal("kubernetes version upgrade cannot skip a minor version"),
-				}))))
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 			})
 		})
 
