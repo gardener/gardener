@@ -91,9 +91,10 @@ rules:
   resources:
   - persistentvolumeclaims
   resourceNames:
-  - alertmanager-db-alertmanager-0
+  - alertmanager-db-alertmanager-0 # TODO(rfranzke): Remove this as soon as the Prometheus migration code is getting deleted.
   - vali-vali-0
-  - prometheus-db-prometheus-0
+  - prometheus-db-prometheus-0 # TODO(rfranzke): Remove this as soon as the Prometheus migration code is getting deleted.
+  - prometheus-db-seed-prometheus-0 # TODO(rfranzke): Remove this as soon as the Prometheus migration code is getting deleted.
   verbs:
   - delete
 - apiGroups:
@@ -432,6 +433,18 @@ rules:
   - list
   - watch
   - get
+  - patch
+  - update
+  - delete
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - list
+  - watch
+  - get
+  - create
   - patch
   - update
   - delete

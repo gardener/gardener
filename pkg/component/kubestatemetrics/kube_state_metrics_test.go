@@ -495,6 +495,43 @@ var _ = Describe("KubeStateMetrics", func() {
 				},
 			},
 		}
+		scrapeConfigSeed = &monitoringv1alpha1.ScrapeConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "seed-kube-state-metrics",
+				Namespace: namespace,
+				Labels:    map[string]string{"prometheus": "seed"},
+			},
+			Spec: monitoringv1alpha1.ScrapeConfigSpec{
+				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
+					Role:       "service",
+					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{namespace}},
+				}},
+				RelabelConfigs: []*monitoringv1.RelabelConfig{
+					{
+						SourceLabels: []monitoringv1.LabelName{
+							"__meta_kubernetes_service_label_component",
+							"__meta_kubernetes_service_port_name",
+						},
+						Regex:  "kube-state-metrics;metrics",
+						Action: "keep",
+					},
+					{
+						Action:      "replace",
+						Replacement: "kube-state-metrics",
+						TargetLabel: "job",
+					},
+					{
+						TargetLabel: "instance",
+						Replacement: "kube-state-metrics",
+					},
+				},
+				MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+					SourceLabels: []monitoringv1.LabelName{"namespace"},
+					Regex:        `shoot-.+`,
+					Action:       "drop",
+				}},
+			},
+		}
 	)
 
 	BeforeEach(func() {
@@ -662,7 +699,7 @@ var _ = Describe("KubeStateMetrics", func() {
 				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(8))
+				Expect(managedResourceSecret.Data).To(HaveLen(9))
 				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
@@ -673,6 +710,7 @@ var _ = Describe("KubeStateMetrics", func() {
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__kube-state-metrics.yaml"])).To(Equal(componenttest.Serialize(deploymentFor(component.ClusterTypeSeed))))
 				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__kube-state-metrics-vpa.yaml"])).To(Equal(componenttest.Serialize(vpa)))
 				Expect(string(managedResourceSecret.Data["scrapeconfig__"+namespace+"__cache-kube-state-metrics.yaml"])).To(Equal(componenttest.Serialize(scrapeConfigCache)))
+				Expect(string(managedResourceSecret.Data["scrapeconfig__"+namespace+"__seed-kube-state-metrics.yaml"])).To(Equal(componenttest.Serialize(scrapeConfigSeed)))
 			})
 
 			Context("Kubernetes versions >= 1.26", func() {

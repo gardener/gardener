@@ -61,8 +61,6 @@ type ValuesBootstrap struct {
 	IngressHost string
 	// SeedName is the name of the seed.
 	SeedName string
-	// StorageCapacityPrometheus is the storage capacity of Prometheus.
-	StorageCapacityPrometheus string
 	// StorageCapacityAggregatePrometheus is the storage capacity of AggregatePrometheus.
 	StorageCapacityAggregatePrometheus string
 	// WildcardCertName is name of wildcard tls certificate which is issued for the seed's ingress domain.
@@ -125,7 +123,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 
 	// Monitoring resource values
 	monitoringResources := map[string]interface{}{
-		"prometheus":           map[string]interface{}{},
 		"aggregate-prometheus": map[string]interface{}{},
 	}
 
@@ -186,10 +183,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				"configmap-reloader": b.values.ImageConfigmapReloader,
 				"prometheus":         b.values.ImagePrometheus,
 			},
-		},
-		"prometheus": map[string]interface{}{
-			"resources": monitoringResources["prometheus"],
-			"storage":   b.values.StorageCapacityPrometheus,
 		},
 		"aggregatePrometheus": map[string]interface{}{
 			"resources":               monitoringResources["aggregate-prometheus"],

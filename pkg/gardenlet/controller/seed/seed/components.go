@@ -61,6 +61,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/monitoring/alertmanager"
 	"github.com/gardener/gardener/pkg/component/monitoring/prometheus"
 	cacheprometheus "github.com/gardener/gardener/pkg/component/monitoring/prometheus/cache"
+	seedprometheus "github.com/gardener/gardener/pkg/component/monitoring/prometheus/seed"
 	"github.com/gardener/gardener/pkg/component/monitoring/prometheusoperator"
 	"github.com/gardener/gardener/pkg/component/nodeexporter"
 	"github.com/gardener/gardener/pkg/component/nodeproblemdetector"
@@ -121,6 +122,7 @@ type components struct {
 	kubeStateMetrics              component.DeployWaiter
 	prometheusOperator            component.DeployWaiter
 	cachePrometheus               component.DeployWaiter
+	seedPrometheus                component.DeployWaiter
 	alertManager                  component.DeployWaiter
 }
 
@@ -236,6 +238,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.alertManager, err = r.newAlertmanager(log, seed, alertingSMTPSecret)
+	if err != nil {
+		return
+	}
+	c.seedPrometheus, err = r.newSeedPrometheus(log, seed)
 	if err != nil {
 		return
 	}
@@ -595,7 +601,6 @@ func (r *Reconciler) newMonitoring(secretsManager secretsmanager.Interface, seed
 			ImagePrometheus:                    imagePrometheus.String(),
 			IngressHost:                        ingressHost,
 			SeedName:                           seed.GetInfo().Name,
-			StorageCapacityPrometheus:          seed.GetValidVolumeSize("10Gi"),
 			StorageCapacityAggregatePrometheus: seed.GetValidVolumeSize("20Gi"),
 			WildcardCertName:                   wildcardCertName,
 		},
@@ -620,6 +625,7 @@ func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed) (co
 		Version:           ptr.Deref(imagePrometheus.Version, "v0.0.0"),
 		PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
 		StorageCapacity:   storageCapacity,
+		RetentionSize:     "5GB",
 		CentralConfigs: prometheus.CentralConfigs{
 			AdditionalScrapeConfigs: cacheprometheus.AdditionalScrapeConfigs(),
 			ServiceMonitors:         cacheprometheus.CentralServiceMonitors(),
@@ -635,6 +641,51 @@ func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed) (co
 			StatefulSetName: "prometheus",
 			FullName:        "prometheus-cache",
 			PVCName:         "prometheus-db-prometheus-0",
+		},
+	}), nil
+}
+
+func (r *Reconciler) newSeedPrometheus(log logr.Logger, seed *seedpkg.Seed) (component.DeployWaiter, error) {
+	imagePrometheus, err := imagevector.ImageVector().FindImage(imagevector.ImageNamePrometheus)
+	if err != nil {
+		return nil, err
+	}
+	imageAlpine, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlpine)
+	if err != nil {
+		return nil, err
+	}
+
+	storageCapacity := resource.MustParse(seed.GetValidVolumeSize("100Gi"))
+
+	return prometheus.New(log, r.SeedClientSet.Client(), r.GardenNamespace, prometheus.Values{
+		Name:              "seed",
+		Image:             imagePrometheus.String(),
+		Version:           ptr.Deref(imagePrometheus.Version, "v0.0.0"),
+		PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
+		StorageCapacity:   storageCapacity,
+		RetentionSize:     "85GB",
+		VPAMinAllowed:     &corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("400Mi")},
+		AdditionalPodLabels: map[string]string{
+			"networking.resources.gardener.cloud/to-extensions-" + v1beta1constants.LabelNetworkPolicySeedScrapeTargets: v1beta1constants.LabelNetworkPolicyAllowed,
+			// TODO: For whatever reasons, the seed-prometheus also scrapes vpa-recommenders in all shoot namespaces.
+			//  Conceptionally, this is wrong and should be improved (seed-prometheus should only scrape
+			//  vpa-recommenders in garden namespace, and prometheis in shoot namespaces should scrape their
+			//  vpa-recommenders, respectively).
+			gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-vpa-recommender", 8942): v1beta1constants.LabelNetworkPolicyAllowed,
+		},
+		CentralConfigs: prometheus.CentralConfigs{
+			PodMonitors:   seedprometheus.CentralPodMonitors(),
+			ScrapeConfigs: seedprometheus.CentralScrapeConfigs(),
+		},
+		// TODO(rfranzke): Remove this after v1.92 has been released.
+		DataMigration: monitoring.DataMigration{
+			Client:          r.SeedClientSet.Client(),
+			Namespace:       r.GardenNamespace,
+			StorageCapacity: storageCapacity,
+			ImageAlpine:     imageAlpine.String(),
+			StatefulSetName: "seed-prometheus",
+			FullName:        "prometheus-seed",
+			PVCName:         "prometheus-db-seed-prometheus-0",
 		},
 	}), nil
 }

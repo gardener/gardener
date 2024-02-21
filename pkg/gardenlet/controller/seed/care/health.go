@@ -55,6 +55,7 @@ var requiredManagedResourcesSeed = sets.New(
 	vpa.ManagedResourceControlName,
 	prometheusoperator.ManagedResourceName,
 	"prometheus-cache",
+	"prometheus-seed",
 )
 
 // health contains information needed to execute health checks for a seed.

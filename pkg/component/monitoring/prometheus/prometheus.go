@@ -23,6 +23,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	monitoringutils "github.com/gardener/gardener/pkg/component/monitoring/utils"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 func (p *prometheus) prometheus(takeOverOldPV bool) *monitoringv1.Prometheus {
@@ -36,7 +37,7 @@ func (p *prometheus) prometheus(takeOverOldPV bool) *monitoringv1.Prometheus {
 		},
 		Spec: monitoringv1.PrometheusSpec{
 			Retention:          "1d",
-			RetentionSize:      "5GB",
+			RetentionSize:      p.values.RetentionSize,
 			EvaluationInterval: "1m",
 			CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
 				ScrapeInterval: "1m",
@@ -49,11 +50,11 @@ func (p *prometheus) prometheus(takeOverOldPV bool) *monitoringv1.Prometheus {
 				},
 
 				PodMetadata: &monitoringv1.EmbeddedObjectMetadata{
-					Labels: map[string]string{
+					Labels: utils.MergeStringMaps(map[string]string{
 						v1beta1constants.LabelNetworkPolicyToDNS:                                                         v1beta1constants.LabelNetworkPolicyAllowed,
 						v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                                            v1beta1constants.LabelNetworkPolicyAllowed,
 						"networking.resources.gardener.cloud/to-" + v1beta1constants.LabelNetworkPolicySeedScrapeTargets: v1beta1constants.LabelNetworkPolicyAllowed,
-					},
+					}, p.values.AdditionalPodLabels),
 				},
 				PriorityClassName: p.values.PriorityClassName,
 				Replicas:          ptr.To(int32(1)),

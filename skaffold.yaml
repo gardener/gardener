@@ -882,6 +882,7 @@ build:
             - pkg/component/monitoring/alertmanager
             - pkg/component/monitoring/prometheus
             - pkg/component/monitoring/prometheus/cache
+            - pkg/component/monitoring/prometheus/seed
             - pkg/component/monitoring/prometheusoperator
             - pkg/component/monitoring/utils
             - pkg/component/namespaces

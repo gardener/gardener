@@ -217,7 +217,7 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			{
 				APIGroups:     []string{""},
 				Resources:     []string{"persistentvolumeclaims"},
-				ResourceNames: []string{"alertmanager-db-alertmanager-0", "vali-vali-0", "prometheus-db-prometheus-0"},
+				ResourceNames: []string{"alertmanager-db-alertmanager-0", "vali-vali-0", "prometheus-db-prometheus-0", "prometheus-db-seed-prometheus-0"},
 				Verbs:         []string{"delete"},
 			},
 			{
@@ -384,6 +384,11 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 				APIGroups: []string{"machine.sapcloud.io"},
 				Resources: []string{"machineclasses", "machinedeployments", "machinesets", "machines"},
 				Verbs:     []string{"list", "watch", "get", "patch", "update", "delete"},
+			},
+			{
+				APIGroups: []string{"monitoring.coreos.com"},
+				Resources: []string{"servicemonitors"},
+				Verbs:     []string{"list", "watch", "get", "create", "patch", "update", "delete"},
 			},
 		},
 	}

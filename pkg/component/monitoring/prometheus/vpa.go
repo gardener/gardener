@@ -21,10 +21,11 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	"k8s.io/utils/ptr"
 )
 
 func (p *prometheus) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
-	updateMode, containerScalingModeOff := vpaautoscalingv1.UpdateModeAuto, vpaautoscalingv1.ContainerScalingModeOff
+	updateMode, controlledValuesRequestsOnly, containerScalingModeOff := vpaautoscalingv1.UpdateModeAuto, vpaautoscalingv1.ContainerControlledValuesRequestsOnly, vpaautoscalingv1.ContainerScalingModeOff
 
 	return &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
@@ -44,10 +45,14 @@ func (p *prometheus) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 					{
+						ContainerName:    "*",
+						ControlledValues: &controlledValuesRequestsOnly,
+					},
+					{
 						ContainerName: "prometheus",
-						MinAllowed: corev1.ResourceList{
+						MinAllowed: ptr.Deref(p.values.VPAMinAllowed, corev1.ResourceList{
 							corev1.ResourceMemory: resource.MustParse("1000M"),
-						},
+						}),
 						MaxAllowed: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("4"),
 							corev1.ResourceMemory: resource.MustParse("28G"),

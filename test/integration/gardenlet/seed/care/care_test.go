@@ -194,6 +194,7 @@ var _ = Describe("Seed Care controller tests", func() {
 			"istio-system",
 			prometheusoperator.ManagedResourceName,
 			"prometheus-cache",
+			"prometheus-seed",
 		}
 
 		test := func(managedResourceNames []string) {
