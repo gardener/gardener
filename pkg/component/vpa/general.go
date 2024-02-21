@@ -187,7 +187,7 @@ func (v *vpa) reconcileGeneralMutatingWebhookConfiguration(mutatingWebhookConfig
 	var (
 		failurePolicy      = admissionregistrationv1.Ignore
 		matchPolicy        = admissionregistrationv1.Exact
-		reinvocationPolicy = admissionregistrationv1.NeverReinvocationPolicy
+		reinvocationPolicy = admissionregistrationv1.IfNeededReinvocationPolicy
 		sideEffects        = admissionregistrationv1.SideEffectClassNone
 		scope              = admissionregistrationv1.AllScopes
 

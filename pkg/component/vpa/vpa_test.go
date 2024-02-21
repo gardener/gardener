@@ -106,7 +106,7 @@ var _ = Describe("VPA", func() {
 
 		webhookFailurePolicy      = admissionregistrationv1.Ignore
 		webhookMatchPolicy        = admissionregistrationv1.Exact
-		webhookReinvocationPolicy = admissionregistrationv1.NeverReinvocationPolicy
+		webhookReinvocationPolicy = admissionregistrationv1.IfNeededReinvocationPolicy
 		webhookSideEffects        = admissionregistrationv1.SideEffectClassNone
 		webhookScope              = admissionregistrationv1.AllScopes
 

@@ -244,6 +244,9 @@ func (v *vpa) emptyMutatingWebhookConfiguration() *admissionregistrationv1.Mutat
 		suffix = "target"
 	}
 
+	// This name intentionally starts with a 'v', such that the webhook is called after all other webhooks which inject
+	// containers. All containers injected by webhooks that are called _after_ the vpa webhook will not be under control
+	// of vpa.
 	return &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "vpa-webhook-config-" + suffix}}
 }
 
