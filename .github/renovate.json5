@@ -1,0 +1,74 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:best-practices"
+  ],
+  "labels": ["kind/enhancement"],
+  "postUpdateOptions": ["gomodTidy"],
+  "customManagers": [
+    {
+      // Update `_VERSION` and `_version` variables in Makefiles and scripts.
+      // Inspired by `regexManagers:dockerfileVersions` preset.
+      "customType": "regex",
+      "fileMatch": ["Makefile$", "\\.mk$", "\\.sh$"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-z-.]+?) depName=(?<depName>[^\\s]+?)(?: (lookupName|packageName)=(?<packageName>[^\\s]+?))?(?: versioning=(?<versioning>[^\\s]+?))?(?: extractVersion=(?<extractVersion>[^\\s]+?))?(?: registryUrl=(?<registryUrl>[^\\s]+?))?\\s.+?_(VERSION|version) *[?:]?= *\"?(?<currentValue>.+?)\"?\\s"
+      ]
+    },
+    {
+      // Generic detection for pod-like image specifications.
+      "customType": "regex",
+      "fileMatch": ["^hack\/.+\\.yaml$", "^\\.test-defs\/.+\\.yaml$"],
+      "matchStrings": ["image: (?<depName>.*?):(?<currentValue>.*?)\\s"],
+      "datasourceTemplate": "docker"
+    }
+  ],
+  "separateMinorPatch": true,
+  "packageRules": [
+    {
+      // Group golang updates in an PR.
+      "groupName": "Update golang",
+      "matchDatasources": ["docker"],
+      "matchPackagePatterns": ["golang"],
+    },
+        {
+      // Only patch level updates for golang-test image. Minor and major versions are manually updated.
+      "matchDatasources": ["docker"],
+      "matchUpdateTypes": ["major", "minor"],
+      "matchFileNames": ["hack\/tools\/image\/variants.yaml"],
+      "enabled": false
+    },
+    {
+      // Update only patchlevels of major dependencies like kubernetes, controller-runtime and istio.
+      // Minor and major upgrades most likely require manual adaptations of the code.
+      "matchDatasources": ["go"],
+      "matchUpdateTypes": ["major", "minor"],
+      "matchPackagePatterns": [
+        "k8s\\.io\/.+",
+        "sigs\\.k8s\\.io\/controller-runtime",
+        "istio\\.io\/.+"
+      ],
+      "enabled": false
+    },
+    {
+      // Ignore dependency updates from github.com/gardener because these PRs are created by pipeline jobs.
+      "matchDatasources": ["go"],
+      "matchPackagePatterns": ["github\\.com\/gardener\/.+"],
+      "enabled": false
+    },
+    {
+      // Ignore paths which most likely create false positives.
+      "matchFileNames": [
+          "chart/**",
+          "cmd/**",
+          "example/**",
+          "extensions/**",
+          "pkg/**",
+          "plugin/**",
+          "test/**",
+          "third_party/**"
+      ],
+      "enabled": false
+    }
+  ]
+}

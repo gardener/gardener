@@ -56,18 +56,30 @@ YQ                         := $(TOOLS_BIN_DIR)/yq
 VGOPATH                    := $(TOOLS_BIN_DIR)/vgopath
 
 # default tool versions
+# renovate: datasource=github-releases depName=golangci/golangci-lint
 GOLANGCI_LINT_VERSION ?= v1.55.2
+# renovate: datasource=github-releases depName=joelanford/go-apidiff
 GO_APIDIFF_VERSION ?= v0.8.2
+# renovate: datasource=github-releases depName=google/addlicense
 GO_ADD_LICENSE_VERSION ?= v1.1.1
+# renovate: datasource=github-releases depName=incu6us/goimports-reviser
 GOIMPORTSREVISER_VERSION ?= v3.6.4
 GO_VULN_CHECK_VERSION ?= latest
+# renovate: datasource=github-releases depName=helm/helm
 HELM_VERSION ?= v3.14.0
+# renovate: datasource=github-releases depName=kubernetes-sigs/kind
 KIND_VERSION ?= v0.21.0
+# renovate: datasource=github-releases depName=kubernetes/kubernetes
 KUBECTL_VERSION ?= v1.29.1
+# renovate: datasource=github-releases depName=prometheus/prometheus
 PROMTOOL_VERSION ?= 2.49.1
+# renovate: datasource=github-releases depName=protocolbuffers/protobuf
 PROTOC_VERSION ?= 25.2
+# renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
 SKAFFOLD_VERSION ?= v2.9.0
+# renovate: datasource=github-releases depName=mikefarah/yq
 YQ_VERSION ?= v4.40.5
+# renovate: datasource=github-releases depName=ironcore-dev/vgopath
 VGOPATH_VERSION ?= v0.1.3
 
 # tool versions from go.mod
