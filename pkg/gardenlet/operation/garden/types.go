@@ -104,7 +104,9 @@ func (b *Builder) WithDefaultDomainsFromSecrets(secrets map[string]*corev1.Secre
 	return b
 }
 
-// WithProjectFrom sets the projectFunc attribute after fetching it from the given reader.
+// WithShootServiceAccountIssuerHostname prepares the [Builder] for initialization of the shoot service account issuer hostname.
+// It reads the configuration from the secret that corresponds to the [v1beta1constants.GardenRoleShootServiceAccountIssuer] map key.
+// Should be called before [Builder.Build].
 func (b *Builder) WithShootServiceAccountIssuerHostname(secrets map[string]*corev1.Secret) *Builder {
 	b.shootServiceAccountIssuerHostname = func() (*string, error) {
 		if s, ok := secrets[v1beta1constants.GardenRoleShootServiceAccountIssuer]; ok {

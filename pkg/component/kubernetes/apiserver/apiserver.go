@@ -565,6 +565,8 @@ func getLabels() map[string]string {
 	}
 }
 
+// ComputeKubeAPIServerServiceAccountConfig computes the [ServiceAccountConfig]
+// needed to configure a kube-apiserver.
 func ComputeKubeAPIServerServiceAccountConfig(
 	config *gardencorev1beta1.ServiceAccountConfig,
 	externalHostname string,
