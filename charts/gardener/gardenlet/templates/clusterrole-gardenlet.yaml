@@ -111,16 +111,6 @@ rules:
   - patch
   - update
 - apiGroups:
-  - admissionregistration.k8s.io
-  resources:
-  - mutatingwebhookconfigurations
-  resourceNames:
-  - vpa-webhook-config-seed
-  verbs:
-  - get
-  - delete
-  - update
-- apiGroups:
   - apiextensions.k8s.io
   resources:
   - customresourcedefinitions

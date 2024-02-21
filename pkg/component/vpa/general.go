@@ -211,6 +211,11 @@ func (v *vpa) reconcileGeneralMutatingWebhookConfiguration(mutatingWebhookConfig
 	}
 
 	metav1.SetMetaDataLabel(&mutatingWebhookConfiguration.ObjectMeta, v1beta1constants.LabelExcludeWebhookFromRemediation, "true")
+	metav1.SetMetaDataAnnotation(&mutatingWebhookConfiguration.ObjectMeta, v1beta1constants.GardenerDescription,
+		"The order in which MutatingWebhooks are called is determined alphabetically. This webhook's name "+
+			"intentionally starts with 'zzz', such that it is called after all other webhooks which inject "+
+			"containers. All containers injected by webhooks that are called _after_ the vpa webhook will not be "+
+			"under control of vpa.")
 	mutatingWebhookConfiguration.Webhooks = []admissionregistrationv1.MutatingWebhook{{
 		Name:                    "vpa.k8s.io",
 		AdmissionReviewVersions: []string{"v1"},
