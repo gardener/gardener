@@ -237,7 +237,10 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	}
 
 	externalHostname := b.Shoot.ComputeOutOfClusterAPIServerAddress(true)
-	serviceAccountConfig := b.computeKubeAPIServerSAConfig(externalHostname)
+	serviceAccountConfig, err := b.computeKubeAPIServerSAConfig(externalHostname)
+	if err != nil {
+		return err
+	}
 
 	if err := shared.DeployKubeAPIServer(
 		ctx,
@@ -292,7 +295,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	return nil
 }
 
-func (b *Botanist) computeKubeAPIServerSAConfig(externalHostname string) kubeapiserver.ServiceAccountConfig {
+func (b *Botanist) computeKubeAPIServerSAConfig(externalHostname string) (kubeapiserver.ServiceAccountConfig, error) {
 	var saConfig *gardencorev1beta1.ServiceAccountConfig
 	if b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer != nil && b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig != nil {
 		saConfig = b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.DeepCopy()
@@ -301,8 +304,7 @@ func (b *Botanist) computeKubeAPIServerSAConfig(externalHostname string) kubeapi
 	shouldManageIssuer := v1beta1helper.HasManagedIssuer(b.Shoot.GetInfo())
 	canManageIssuer := b.Garden != nil && b.Garden.ShootServiceAccountIssuerHostname != nil && len(strings.TrimSpace(*b.Garden.ShootServiceAccountIssuerHostname)) != 0
 	if shouldManageIssuer && !canManageIssuer {
-		// TODO return error
-		b.Logger.Error(errors.New("shoot requires managed issuer, but the gardenlet does not have shoot service account hostname configured"), "incompatible configuration")
+		return kubeapiserver.ServiceAccountConfig{}, errors.New("shoot requires managed issuer, but the gardenlet does not have shoot service account hostname configured")
 	}
 
 	if shouldManageIssuer && canManageIssuer {
@@ -323,7 +325,7 @@ func (b *Botanist) computeKubeAPIServerSAConfig(externalHostname string) kubeapi
 		jwksURI := fmt.Sprintf("https://%s/projects/%s/shoots/%s/issuer/jwks", *b.Garden.ShootServiceAccountIssuerHostname, b.Garden.Project.Name, b.Shoot.GetInfo().ObjectMeta.UID)
 		serviceAccountConfig.JWKSURI = &jwksURI
 	}
-	return serviceAccountConfig
+	return serviceAccountConfig, nil
 }
 
 // DeleteKubeAPIServer deletes the kube-apiserver deployment in the Seed cluster which holds the Shoot's control plane.

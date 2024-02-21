@@ -42,14 +42,16 @@ var _ = Describe("AdvertisedAddresses", func() {
 		It("returns empty list when shoot is nil", func() {
 			botanist.Shoot = nil
 
-			Expect(botanist.ToAdvertisedAddresses()).To(BeNil())
+			addresses, err := botanist.ToAdvertisedAddresses()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(addresses).To(BeNil())
 		})
 
 		It("returns external address", func() {
 			botanist.Shoot.ExternalClusterDomain = ptr.To("foo.bar")
 
-			addresses := botanist.ToAdvertisedAddresses()
-
+			addresses, err := botanist.ToAdvertisedAddresses()
+			Expect(err).ToNot(HaveOccurred())
 			Expect(addresses).To(HaveLen(1))
 			Expect(addresses).To(ConsistOf(gardencorev1beta1.ShootAdvertisedAddress{
 				Name: "external",
@@ -60,7 +62,8 @@ var _ = Describe("AdvertisedAddresses", func() {
 		It("returns internal and service-account-issuer addresses", func() {
 			botanist.Shoot.InternalClusterDomain = "baz.foo"
 
-			addresses := botanist.ToAdvertisedAddresses()
+			addresses, err := botanist.ToAdvertisedAddresses()
+			Expect(err).ToNot(HaveOccurred())
 
 			Expect(addresses).To(Equal([]gardencorev1beta1.ShootAdvertisedAddress{
 				{
@@ -77,7 +80,8 @@ var _ = Describe("AdvertisedAddresses", func() {
 		It("returns unmanaged address", func() {
 			botanist.APIServerAddress = "bar.foo"
 
-			addresses := botanist.ToAdvertisedAddresses()
+			addresses, err := botanist.ToAdvertisedAddresses()
+			Expect(err).ToNot(HaveOccurred())
 
 			Expect(addresses).To(HaveLen(1))
 			Expect(addresses).To(ConsistOf(gardencorev1beta1.ShootAdvertisedAddress{
@@ -91,7 +95,8 @@ var _ = Describe("AdvertisedAddresses", func() {
 			botanist.Shoot.InternalClusterDomain = "baz.foo"
 			botanist.APIServerAddress = "bar.foo"
 
-			addresses := botanist.ToAdvertisedAddresses()
+			addresses, err := botanist.ToAdvertisedAddresses()
+			Expect(err).ToNot(HaveOccurred())
 
 			Expect(addresses).To(Equal([]gardencorev1beta1.ShootAdvertisedAddress{
 				{
@@ -120,7 +125,8 @@ var _ = Describe("AdvertisedAddresses", func() {
 			}
 			botanist.APIServerAddress = "bar.foo"
 
-			addresses := botanist.ToAdvertisedAddresses()
+			addresses, err := botanist.ToAdvertisedAddresses()
+			Expect(err).ToNot(HaveOccurred())
 
 			Expect(addresses).To(Equal([]gardencorev1beta1.ShootAdvertisedAddress{
 				{
@@ -159,7 +165,8 @@ var _ = Describe("AdvertisedAddresses", func() {
 			}
 			botanist.APIServerAddress = "bar.foo"
 
-			addresses := botanist.ToAdvertisedAddresses()
+			addresses, err := botanist.ToAdvertisedAddresses()
+			Expect(err).ToNot(HaveOccurred())
 
 			Expect(addresses).To(Equal([]gardencorev1beta1.ShootAdvertisedAddress{
 				{
@@ -174,6 +181,34 @@ var _ = Describe("AdvertisedAddresses", func() {
 					URL:  "https://managed.foo.bar/projects/some-proj/shoots/some-uid/issuer",
 				},
 			}))
+		})
+
+		It("should return error because shoot wants managed issuer, but issuer hostname is not configured", func() {
+			botanist.Shoot.ExternalClusterDomain = ptr.To("foo.bar")
+			botanist.Shoot.InternalClusterDomain = "baz.foo"
+			botanist.Garden = &garden.Garden{
+				ShootServiceAccountIssuerHostname: ptr.To(""),
+				Project: &gardencorev1beta1.Project{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "some-proj",
+					},
+				},
+			}
+
+			botanist.Shoot.GetInfo().ObjectMeta = metav1.ObjectMeta{
+				Name:      "test",
+				Namespace: "testspace",
+				UID:       "some-uid",
+				Annotations: map[string]string{
+					"authentication.gardener.cloud/issuer": "managed",
+				},
+			}
+			botanist.APIServerAddress = "bar.foo"
+
+			addresses, err := botanist.ToAdvertisedAddresses()
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("shoot requires managed issuer, but the gardenlet does not have shoot service account hostname configured"))
+			Expect(addresses).To(BeNil())
 		})
 	})
 })

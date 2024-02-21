@@ -26,17 +26,21 @@ import (
 // addresses on which the API server of the shoot is accessible.
 func (b *Botanist) UpdateAdvertisedAddresses(ctx context.Context) error {
 	return b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, false, func(shoot *gardencorev1beta1.Shoot) error {
-		shoot.Status.AdvertisedAddresses = b.ToAdvertisedAddresses()
+		addresses, err := b.ToAdvertisedAddresses()
+		if err != nil {
+			return err
+		}
+		shoot.Status.AdvertisedAddresses = addresses
 		return nil
 	})
 }
 
 // ToAdvertisedAddresses returns list of advertised addresses on a Shoot cluster.
-func (b *Botanist) ToAdvertisedAddresses() []gardencorev1beta1.ShootAdvertisedAddress {
+func (b *Botanist) ToAdvertisedAddresses() ([]gardencorev1beta1.ShootAdvertisedAddress, error) {
 	var addresses []gardencorev1beta1.ShootAdvertisedAddress
 
 	if b.Shoot == nil {
-		return addresses
+		return addresses, nil
 	}
 
 	if b.Shoot.ExternalClusterDomain != nil && len(*b.Shoot.ExternalClusterDomain) > 0 {
@@ -71,12 +75,15 @@ func (b *Botanist) ToAdvertisedAddresses() []gardencorev1beta1.ShootAdvertisedAd
 		hasCustomIssuer(b.Shoot.GetInfo()) ||
 		helper.HasManagedIssuer(b.Shoot.GetInfo()) {
 		externalHostname := b.Shoot.ComputeOutOfClusterAPIServerAddress(true)
-		serviceAccountConfig := b.computeKubeAPIServerSAConfig(externalHostname)
+		serviceAccountConfig, err := b.computeKubeAPIServerSAConfig(externalHostname)
+		if err != nil {
+			return nil, err
+		}
 		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
 			Name: "service-account-issuer",
 			URL:  serviceAccountConfig.Issuer,
 		})
 	}
 
-	return addresses
+	return addresses, nil
 }

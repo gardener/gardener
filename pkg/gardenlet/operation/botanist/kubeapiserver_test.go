@@ -545,6 +545,28 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 				),
 			)
+
+			It("should return error because shoot wants managed issuer, but issuer hostname is not configured", func() {
+				botanist.Garden = &garden.Garden{
+					ShootServiceAccountIssuerHostname: nil,
+					Project: &gardencorev1beta1.Project{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test",
+						},
+					},
+				}
+				botanist.Shoot.GetInfo().ObjectMeta.UID = "some-uuid"
+				botanist.Shoot.GetInfo().Annotations = map[string]string{
+					"authentication.gardener.cloud/issuer": "managed",
+				}
+				botanist.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
+					ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{},
+				}
+
+				err := botanist.DeployKubeAPIServer(ctx)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("shoot requires managed issuer, but the gardenlet does not have shoot service account hostname configured"))
+			})
 		})
 
 		It("should sync the kubeconfig to the garden project namespace when enableStaticTokenKubeconfig is set to true", func() {
