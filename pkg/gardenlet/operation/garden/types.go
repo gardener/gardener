@@ -52,6 +52,9 @@ func NewBuilder() *Builder {
 		internalDomainFunc: func() (*gardenerutils.Domain, error) {
 			return nil, fmt.Errorf("internal domain is required but not set")
 		},
+		shootServiceAccountIssuerHostname: func() (*string, error) {
+			return nil, fmt.Errorf("shoot service account issuer hostname func is required but not set")
+		},
 	}
 }
 
