@@ -170,6 +170,7 @@ honor_labels: true`
 					"role": "monitoring",
 					"name": name,
 				},
+				Annotations: map[string]string{"resources.gardener.cloud/delete-on-invalid-update": "true"},
 			},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: "rbac.authorization.k8s.io",
