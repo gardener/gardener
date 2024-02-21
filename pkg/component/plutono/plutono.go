@@ -322,7 +322,7 @@ func (p *plutono) getDataSource() string {
 		url = "http://" + p.namespace + "-prometheus:80"
 		maxLine = "5000"
 	} else if p.values.ClusterType == component.ClusterTypeSeed {
-		url = "http://aggregate-prometheus-web:80"
+		url = "http://prometheus-aggregate:80"
 		maxLine = "5000"
 	}
 
@@ -841,10 +841,9 @@ func (p *plutono) getPodLabels() map[string]string {
 
 	if p.values.ClusterType == component.ClusterTypeSeed {
 		labels = utils.MergeStringMaps(labels, map[string]string{
-			v1beta1constants.LabelRole:                                         v1beta1constants.LabelMonitoring,
-			"networking.gardener.cloud/to-seed-prometheus":                     v1beta1constants.LabelNetworkPolicyAllowed,
-			gardenerutils.NetworkPolicyLabel("aggregate-prometheus-web", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
-			gardenerutils.NetworkPolicyLabel("prometheus-seed", 9090):          v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelRole:                                     v1beta1constants.LabelMonitoring,
+			gardenerutils.NetworkPolicyLabel("prometheus-aggregate", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
+			gardenerutils.NetworkPolicyLabel("prometheus-seed", 9090):      v1beta1constants.LabelNetworkPolicyAllowed,
 		})
 	} else if p.values.ClusterType == component.ClusterTypeShoot {
 		labels = utils.MergeStringMaps(labels, map[string]string{

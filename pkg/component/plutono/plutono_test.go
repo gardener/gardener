@@ -168,7 +168,7 @@ metadata:
 					url = "http://" + namespace + "-prometheus:80"
 					maxLine = "5000"
 				} else if values.ClusterType == comp.ClusterTypeSeed {
-					url = "http://aggregate-prometheus-web:80"
+					url = "http://prometheus-aggregate:80"
 					maxLine = "5000"
 				}
 
@@ -251,7 +251,7 @@ metadata:
   namespace: some-namespace
 `
 				} else {
-					configMap += `  name: plutono-datasources-cf9781ab
+					configMap += `  name: plutono-datasources-be28eaa6
   namespace: some-namespace
 `
 				}
@@ -261,7 +261,7 @@ metadata:
 
 			deploymentYAMLFor = func(values Values, dashboardConfigMaps []string) *appsv1.Deployment {
 				providerConfigMap := "plutono-dashboard-providers-29d306e7"
-				dataSourceConfigMap := "plutono-datasources-cf9781ab"
+				dataSourceConfigMap := "plutono-datasources-be28eaa6"
 				if values.ClusterType == comp.ClusterTypeShoot {
 					dataSourceConfigMap = "plutono-datasources-0fd41775"
 				}
@@ -578,7 +578,7 @@ status:
 
 				It("should successfully deploy all resources", func() {
 					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-29d306e7.yaml"])).To(Equal(providerConfigMapYAMLFor(values)))
-					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-cf9781ab.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
+					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-be28eaa6.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
 					plutonoDashboardsConfigMap, err := getDashboardConfigMaps(ctx, c, namespace, "plutono-dashboards-[^-]{8}")
 					Expect(err).ToNot(HaveOccurred())
 					testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: plutonoDashboardsConfigMap.Name}, 22)
@@ -841,10 +841,9 @@ func getPodLabels(values Values) map[string]string {
 
 	if values.ClusterType == comp.ClusterTypeSeed {
 		labels = utils.MergeStringMaps(labels, map[string]string{
-			v1beta1constants.LabelRole:                                         v1beta1constants.LabelMonitoring,
-			"networking.gardener.cloud/to-seed-prometheus":                     v1beta1constants.LabelNetworkPolicyAllowed,
-			gardenerutils.NetworkPolicyLabel("aggregate-prometheus-web", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
-			gardenerutils.NetworkPolicyLabel("prometheus-seed", 9090):          v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelRole:                                     v1beta1constants.LabelMonitoring,
+			gardenerutils.NetworkPolicyLabel("prometheus-aggregate", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
+			gardenerutils.NetworkPolicyLabel("prometheus-seed", 9090):      v1beta1constants.LabelNetworkPolicyAllowed,
 		})
 	} else if values.ClusterType == comp.ClusterTypeShoot {
 		labels = utils.MergeStringMaps(labels, map[string]string{
