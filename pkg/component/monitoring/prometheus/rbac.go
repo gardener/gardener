@@ -17,13 +17,16 @@ package prometheus
 import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 )
 
 func (p *prometheus) clusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   p.name(),
-			Labels: p.getLabels(),
+			Name:        p.name(),
+			Labels:      p.getLabels(),
+			Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
