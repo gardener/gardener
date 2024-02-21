@@ -74,7 +74,7 @@ It is proposed to implement a solution that enables project administrators to cr
 
 ### Approach
 
-First of all, a new, namespaced API object `PrivateCloudProfile` is defined. Its type definition is very similar to the `CloudProfile` object, but omits the following fields:
+First of all, a new, namespaced API object `PrivateCloudProfile` is defined. Its type definition is very similar to the `CloudProfile` object.
 
 The general approach is that a `PrivateCloudProfile` inherits from a `CloudProfile` using a `parent` field. Fields such as `machineTypes`, `volumeTypes` and `caBundle` are going to be merged with the parent `CloudProfile`. However, a restriction needs to be defined so that the `kubernetes` and `machineImages` fields in a `PrivateCloudProfile` may only be adjusted by a Gardener operator to reduce the chance of a team staying on an unsupported Kubernetes version. A similar problem is already solved in Gardener using custom RBAC verbs [here](https://github.com/gardener/gardener/blob/master/plugin/pkg/global/customverbauthorizer), see [custom RBAC verb section](#custom-rbac-verb) for more information.
 
