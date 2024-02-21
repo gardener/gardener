@@ -26,16 +26,21 @@
   "separateMinorPatch": true,
   "packageRules": [
     {
-      // Group golang updates in an PR.
+      // Group golang updates in one PR.
       "groupName": "Update golang",
       "matchDatasources": ["docker"],
       "matchPackagePatterns": ["golang"],
     },
-        {
+    {
+      // Group tool updates in one PR.
+      "groupName": "Update tools",
+      "matchFileNames": ["hack\/tools\\.mk"]
+    },
+    {
       // Only patch level updates for golang-test image. Minor and major versions are manually updated.
       "matchDatasources": ["docker"],
       "matchUpdateTypes": ["major", "minor"],
-      "matchFileNames": ["hack\/tools\/image\/variants.yaml"],
+      "matchFileNames": ["hack\/tools\/image\/variants\\.yaml"],
       "enabled": false
     },
     {
