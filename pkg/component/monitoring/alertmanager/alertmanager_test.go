@@ -216,10 +216,6 @@ var _ = Describe("Prometheus", func() {
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
-							ContainerName:    "*",
-							ControlledValues: &vpaControlledValuesRequestsOnly,
-						},
-						{
 							ContainerName: "alertmanager",
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceMemory: resource.MustParse("20Mi"),
@@ -228,6 +224,7 @@ var _ = Describe("Prometheus", func() {
 								corev1.ResourceCPU:    resource.MustParse("500m"),
 								corev1.ResourceMemory: resource.MustParse("200Mi"),
 							},
+							ControlledValues: &vpaControlledValuesRequestsOnly,
 						},
 						{
 							ContainerName: "config-reloader",
