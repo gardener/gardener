@@ -22,7 +22,7 @@ spec:
     # failed to write 2485760 to memory.limit_in_bytes in /sys/fs/cgroup/memory/kubepods/prometheus-config-reloader/memory.limit_in_bytes: device or resource busy
     # https://github.com/lxc/lxc/commit/6400238d08cdf1ca20d49bafb85f4e224348bf9d
     # https://github.com/helm/charts/issues/11447#issuecomment-464716379
+      controlledValues: RequestsOnly
     - containerName: prometheus-config-reloader
       mode: "Off"
-    - containerName: '*'
-      controlledValues: RequestsOnly
+
