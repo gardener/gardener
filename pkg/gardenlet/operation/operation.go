@@ -96,6 +96,7 @@ func (b *Builder) WithGardenFrom(reader client.Reader, namespace string) *Builde
 			WithProjectFrom(reader, namespace).
 			WithInternalDomainFromSecrets(secrets).
 			WithDefaultDomainsFromSecrets(secrets).
+			WithShootServiceAccountIssuerHostname(secrets).
 			Build(ctx)
 	}
 	return b
