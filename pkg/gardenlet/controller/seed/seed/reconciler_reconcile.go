@@ -323,19 +323,16 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Fn:           c.istio.Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 		})
-		ingressDNSRecord component.DeployWaiter
-		istioLBReady     = g.Add(flow.Task{
-			Name: "Waiting until istio LoadBalancer is ready",
+		_ = g.Add(flow.Task{
+			Name: "Waiting until istio LoadBalancer is ready and managed ingress DNS record is reconciled",
 			Fn: func(ctx context.Context) error {
-				ingressDNSRecord, err = r.deployNginxIngressAndWaitForIstioServiceAndGetDNSComponent(ctx, log, seed, c.nginxIngressController, seedIsGarden, c.istioDefaultNamespace)
-				return err
+				ingressDNSRecord, err := r.deployNginxIngressAndWaitForIstioServiceAndGetDNSComponent(ctx, log, seed, c.nginxIngressController, seedIsGarden, c.istioDefaultNamespace)
+				if err != nil {
+					return err
+				}
+				return component.OpWait(ingressDNSRecord).Deploy(ctx)
 			},
 			Dependencies: flow.NewTaskIDs(deployIstio),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Deploying managed ingress DNS record",
-			Fn:           component.OpWait(ingressDNSRecord).Deploy,
-			Dependencies: flow.NewTaskIDs(istioLBReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying cluster-autoscaler resources",
