@@ -483,7 +483,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 					&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-web", Namespace: r.GardenNamespace}},
 					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "prometheus", Namespace: r.GardenNamespace}},
 					&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "prometheus", Namespace: r.GardenNamespace}},
-					&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-seed"}},
 					&hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "prometheus", Namespace: r.GardenNamespace}},
 					&vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-vpa", Namespace: r.GardenNamespace}},
 				)
