@@ -366,7 +366,7 @@ datasources:
 		datasource += `- name: seed-prometheus
   type: prometheus
   access: proxy
-  url: http://seed-prometheus-web:80
+  url: http://prometheus-seed:80
   basicAuth: false
   version: 1
   editable: false
@@ -844,7 +844,7 @@ func (p *plutono) getPodLabels() map[string]string {
 			v1beta1constants.LabelRole:                                         v1beta1constants.LabelMonitoring,
 			"networking.gardener.cloud/to-seed-prometheus":                     v1beta1constants.LabelNetworkPolicyAllowed,
 			gardenerutils.NetworkPolicyLabel("aggregate-prometheus-web", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
-			gardenerutils.NetworkPolicyLabel("seed-prometheus-web", 9090):      v1beta1constants.LabelNetworkPolicyAllowed,
+			gardenerutils.NetworkPolicyLabel("prometheus-seed", 9090):          v1beta1constants.LabelNetworkPolicyAllowed,
 		})
 	} else if p.values.ClusterType == component.ClusterTypeShoot {
 		labels = utils.MergeStringMaps(labels, map[string]string{
