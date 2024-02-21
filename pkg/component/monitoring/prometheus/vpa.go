@@ -45,10 +45,6 @@ func (p *prometheus) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 					{
-						ContainerName:    "*",
-						ControlledValues: &controlledValuesRequestsOnly,
-					},
-					{
 						ContainerName: "prometheus",
 						MinAllowed: ptr.Deref(p.values.VPAMinAllowed, corev1.ResourceList{
 							corev1.ResourceMemory: resource.MustParse("1000M"),
@@ -57,6 +53,7 @@ func (p *prometheus) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 							corev1.ResourceCPU:    resource.MustParse("4"),
 							corev1.ResourceMemory: resource.MustParse("28G"),
 						},
+						ControlledValues: &controlledValuesRequestsOnly,
 					},
 					{
 						ContainerName: "config-reloader",

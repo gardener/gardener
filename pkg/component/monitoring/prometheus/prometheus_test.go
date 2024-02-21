@@ -278,10 +278,6 @@ honor_labels: true`
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
-							ContainerName:    "*",
-							ControlledValues: &vpaControlledValuesRequestsOnly,
-						},
-						{
 							ContainerName: "prometheus",
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceMemory: resource.MustParse("1000M"),
@@ -290,6 +286,7 @@ honor_labels: true`
 								corev1.ResourceCPU:    resource.MustParse("4"),
 								corev1.ResourceMemory: resource.MustParse("28G"),
 							},
+							ControlledValues: &vpaControlledValuesRequestsOnly,
 						},
 						{
 							ContainerName: "config-reloader",
