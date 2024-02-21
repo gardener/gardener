@@ -36,7 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/istio"
 	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
-	"github.com/gardener/gardener/pkg/component/logging/vali"
+	valiconstants "github.com/gardener/gardener/pkg/component/logging/vali/constants"
 	"github.com/gardener/gardener/pkg/component/monitoring/prometheusoperator"
 	"github.com/gardener/gardener/pkg/component/nginxingress"
 	"github.com/gardener/gardener/pkg/component/seedsystem"
@@ -141,7 +141,7 @@ func (h *health) checkSystemComponents(
 		managedResources = append(managedResources, fluentoperator.FluentBitManagedResourceName)
 	}
 	if h.valiEnabled {
-		managedResources = append(managedResources, vali.ManagedResourceNameRuntime)
+		managedResources = append(managedResources, valiconstants.ManagedResourceNameRuntime)
 	}
 	if h.alertManagerEnabled {
 		managedResources = append(managedResources, "alertmanager-seed")

@@ -33,7 +33,7 @@ import (
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/valitail"
-	"github.com/gardener/gardener/pkg/component/logging/vali"
+	valiconstants "github.com/gardener/gardener/pkg/component/logging/vali/constants"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 )
@@ -73,7 +73,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	var additionalTokenSyncConfigs []nodeagentv1alpha1.TokenSecretSyncConfig
 	if ctx.ValitailEnabled {
 		additionalTokenSyncConfigs = append(additionalTokenSyncConfigs, nodeagentv1alpha1.TokenSecretSyncConfig{
-			SecretName: vali.ValitailTokenSecretName,
+			SecretName: valiconstants.ValitailTokenSecretName,
 			Path:       valitail.PathAuthToken,
 		})
 	}

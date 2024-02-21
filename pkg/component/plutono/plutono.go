@@ -41,7 +41,7 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/logging/vali"
+	valiconstants "github.com/gardener/gardener/pkg/component/logging/vali/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
@@ -378,7 +378,7 @@ datasources:
 	datasource += `- name: vali
   type: vali
   access: proxy
-  url: http://logging.` + p.namespace + `.svc:` + fmt.Sprint(vali.ValiPort) + `
+  url: http://logging.` + p.namespace + `.svc:` + fmt.Sprint(valiconstants.ValiPort) + `
   jsonData:
     maxLines: ` + maxLine + `
 `
@@ -826,8 +826,8 @@ func convertToCompactJSON(data map[string]string) (map[string]string, error) {
 
 func (p *plutono) getPodLabels() map[string]string {
 	labels := map[string]string{
-		v1beta1constants.LabelNetworkPolicyToDNS:                          v1beta1constants.LabelNetworkPolicyAllowed,
-		gardenerutils.NetworkPolicyLabel(vali.ServiceName, vali.ValiPort): v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelNetworkPolicyToDNS:                                            v1beta1constants.LabelNetworkPolicyAllowed,
+		gardenerutils.NetworkPolicyLabel(valiconstants.ServiceName, valiconstants.ValiPort): v1beta1constants.LabelNetworkPolicyAllowed,
 	}
 
 	if p.values.IsGardenCluster {

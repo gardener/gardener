@@ -43,6 +43,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
+	valiconstants "github.com/gardener/gardener/pkg/component/logging/vali/constants"
 	"github.com/gardener/gardener/pkg/component/monitoring/prometheus/aggregate"
 	monitoringutils "github.com/gardener/gardener/pkg/component/monitoring/utils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
@@ -55,14 +56,7 @@ import (
 )
 
 const (
-	// ValiPort is the port exposed by the vali.
-	ValiPort = 3100
-	// ServiceName is the name of the logging service.
-	ServiceName = "logging"
-
-	// ManagedResourceNameRuntime is the name of the managed resource which deploys Vali statefulSet.
-	ManagedResourceNameRuntime = "vali"
-	managedResourceNameTarget  = "vali-target"
+	managedResourceNameTarget = "vali-target"
 
 	valiName                      = "vali"
 	valiServiceName               = "logging"
@@ -78,9 +72,6 @@ const (
 
 	valitailName            = "gardener-valitail"
 	valitailClusterRoleName = "gardener.cloud:logging:valitail"
-	// ValitailTokenSecretName is the name of a secret in the kube-system namespace in the target cluster containing
-	// valitail's token for communication with the kube-apiserver.
-	ValitailTokenSecretName = valitailName
 
 	curatorName            = "curator"
 	curatorPort            = 2718
@@ -277,7 +268,7 @@ func (v *vali) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, v.client, v.namespace, ManagedResourceNameRuntime, false, registry.SerializedObjects())
+	return managedresources.CreateForSeed(ctx, v.client, v.namespace, valiconstants.ManagedResourceNameRuntime, false, registry.SerializedObjects())
 }
 
 func (v *vali) Destroy(ctx context.Context) error {
@@ -285,7 +276,7 @@ func (v *vali) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	if err := managedresources.DeleteForSeed(ctx, v.client, v.namespace, ManagedResourceNameRuntime); err != nil {
+	if err := managedresources.DeleteForSeed(ctx, v.client, v.namespace, valiconstants.ManagedResourceNameRuntime); err != nil {
 		return err
 	}
 
@@ -299,7 +290,7 @@ func (v *vali) newValitailShootAccessSecret() *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret("valitail", v.namespace).
 		WithServiceAccountName(valitailName).
 		WithTokenExpirationDuration("720h").
-		WithTargetSecret(ValitailTokenSecretName, metav1.NamespaceSystem)
+		WithTargetSecret(valiconstants.ValitailTokenSecretName, metav1.NamespaceSystem)
 }
 
 func (v *vali) newKubeRBACProxyShootAccessSecret() *gardenerutils.AccessSecret {
@@ -517,7 +508,7 @@ func (v *vali) getService() *corev1.Service {
 	var (
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        ServiceName,
+				Name:        valiconstants.ServiceName,
 				Namespace:   v.namespace,
 				Labels:      getLabels(),
 				Annotations: map[string]string{},
@@ -527,15 +518,15 @@ func (v *vali) getService() *corev1.Service {
 				Selector: getLabels(),
 				Ports: []corev1.ServicePort{{
 					Name:       valiMetricsPortName,
-					Port:       ValiPort,
+					Port:       valiconstants.ValiPort,
 					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt32(ValiPort),
+					TargetPort: intstr.FromInt32(valiconstants.ValiPort),
 				}},
 			},
 		}
 
 		networkPolicyPorts = []networkingv1.NetworkPolicyPort{{
-			Port:     utils.IntStrPtrFromInt32(ValiPort),
+			Port:     utils.IntStrPtrFromInt32(valiconstants.ValiPort),
 			Protocol: ptr.To(corev1.ProtocolTCP),
 		}}
 	)
@@ -691,7 +682,7 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 								},
 								Ports: []corev1.ContainerPort{{
 									Name:          valiMetricsPortName,
-									ContainerPort: ValiPort,
+									ContainerPort: valiconstants.ValiPort,
 									Protocol:      corev1.ProtocolTCP,
 								}},
 								LivenessProbe: &corev1.Probe{
@@ -811,7 +802,7 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 				Image: v.values.KubeRBACProxyImage,
 				Args: []string{
 					fmt.Sprintf("--insecure-listen-address=0.0.0.0:%d", kubeRBACProxyPort),
-					fmt.Sprintf("--upstream=http://127.0.0.1:%d/", ValiPort),
+					fmt.Sprintf("--upstream=http://127.0.0.1:%d/", valiconstants.ValiPort),
 					"--kubeconfig=" + gardenerutils.PathGenericKubeconfig,
 					"--logtostderr=true",
 					"--v=6",
@@ -1060,7 +1051,7 @@ func getLabels() map[string]string {
 // current one.
 // Caution: If the passed storage capacity is less than the current one the existing PVC and its PV will be deleted.
 func (v *vali) resizeOrDeleteValiDataVolumeIfStorageNotTheSame(ctx context.Context) error {
-	managedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: ManagedResourceNameRuntime, Namespace: v.namespace}}
+	managedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: valiconstants.ManagedResourceNameRuntime, Namespace: v.namespace}}
 	addOrRemoveIgnoreAnnotationFromManagedResource := func(addIgnoreAnnotation bool) error {
 		// In order to not create the managed resource here first check if exists.
 		if err := v.client.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource); err != nil {

@@ -50,7 +50,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
-	"github.com/gardener/gardener/pkg/component/logging/vali"
+	valiconstants "github.com/gardener/gardener/pkg/component/logging/vali/constants"
 	"github.com/gardener/gardener/pkg/component/monitoring/prometheusoperator"
 	"github.com/gardener/gardener/pkg/component/plutono"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
@@ -91,7 +91,7 @@ var (
 		fluentoperator.OperatorManagedResourceName,
 		fluentoperator.CustomResourcesManagedResourceName + "-garden",
 		fluentoperator.FluentBitManagedResourceName,
-		vali.ManagedResourceNameRuntime,
+		valiconstants.ManagedResourceNameRuntime,
 		plutono.ManagedResourceName,
 		gardenermetricsexporter.ManagedResourceNameRuntime,
 		gardenermetricsexporter.ManagedResourceNameVirtual,
