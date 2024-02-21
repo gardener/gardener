@@ -44,10 +44,6 @@ func (a *alertManager) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 					{
-						ContainerName:    "*",
-						ControlledValues: &controlledValuesRequestsOnly,
-					},
-					{
 						ContainerName: "alertmanager",
 						MinAllowed: corev1.ResourceList{
 							corev1.ResourceMemory: resource.MustParse("20Mi"),
@@ -56,6 +52,7 @@ func (a *alertManager) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 							corev1.ResourceCPU:    resource.MustParse("500m"),
 							corev1.ResourceMemory: resource.MustParse("200Mi"),
 						},
+						ControlledValues: &controlledValuesRequestsOnly,
 					},
 					{
 						ContainerName: "config-reloader",
