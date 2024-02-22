@@ -173,9 +173,6 @@ var _ = Describe("Prometheus", func() {
 						corev1.ResourceCPU:    resource.MustParse("5m"),
 						corev1.ResourceMemory: resource.MustParse("20Mi"),
 					},
-					Limits: corev1.ResourceList{
-						corev1.ResourceMemory: resource.MustParse("200Mi"),
-					},
 				},
 				SecurityContext: &corev1.PodSecurityContext{RunAsUser: ptr.To(int64(0))},
 				Storage: &monitoringv1.StorageSpec{
