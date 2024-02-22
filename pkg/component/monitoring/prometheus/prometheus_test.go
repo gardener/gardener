@@ -226,9 +226,6 @@ honor_labels: true`
 							corev1.ResourceCPU:    resource.MustParse("300m"),
 							corev1.ResourceMemory: resource.MustParse("1000Mi"),
 						},
-						Limits: corev1.ResourceList{
-							corev1.ResourceMemory: resource.MustParse("2000Mi"),
-						},
 					},
 					ServiceAccountName: "prometheus-" + name,
 					SecurityContext:    &corev1.PodSecurityContext{RunAsUser: ptr.To(int64(0))},
