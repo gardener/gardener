@@ -24,6 +24,7 @@ import (
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,6 +35,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
@@ -72,6 +74,10 @@ var _ = Describe("Prometheus", func() {
 			},
 		}
 
+		ingressAuthSecretName     = "foo"
+		ingressHost               = "some-host.example.com"
+		ingressWildcardSecretName = "bar"
+
 		fakeClient client.Client
 		deployer   component.DeployWaiter
 		values     Values
@@ -86,6 +92,7 @@ var _ = Describe("Prometheus", func() {
 		vpa          *vpaautoscalingv1.VerticalPodAutoscaler
 		config       *monitoringv1alpha1.AlertmanagerConfig
 		smtpSecret   *corev1.Secret
+		ingress      *networkingv1.Ingress
 	)
 
 	BeforeEach(func() {
@@ -308,6 +315,48 @@ var _ = Describe("Prometheus", func() {
 			Type: alertingSMTPSecret.Type,
 			Data: map[string][]byte{"auth_password": alertingSMTPSecret.Data["auth_password"]},
 		}
+		ingress = &networkingv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "alertmanager-" + name,
+				Namespace: namespace,
+				Labels: map[string]string{
+					"component": "alertmanager",
+					"role":      "monitoring",
+				},
+				Annotations: map[string]string{
+					"nginx.ingress.kubernetes.io/auth-type":   "basic",
+					"nginx.ingress.kubernetes.io/auth-realm":  "Authentication Required",
+					"nginx.ingress.kubernetes.io/auth-secret": ingressAuthSecretName,
+					"nginx.ingress.kubernetes.io/server-snippet": `location /-/reload {
+  return 403;
+}`,
+				},
+			},
+			Spec: networkingv1.IngressSpec{
+				IngressClassName: ptr.To(v1beta1constants.SeedNginxIngressClass),
+				TLS: []networkingv1.IngressTLS{{
+					SecretName: ingressWildcardSecretName,
+					Hosts:      []string{ingressHost},
+				}},
+				Rules: []networkingv1.IngressRule{{
+					Host: ingressHost,
+					IngressRuleValue: networkingv1.IngressRuleValue{
+						HTTP: &networkingv1.HTTPIngressRuleValue{
+							Paths: []networkingv1.HTTPIngressPath{{
+								Backend: networkingv1.IngressBackend{
+									Service: &networkingv1.IngressServiceBackend{
+										Name: "alertmanager-" + name,
+										Port: networkingv1.ServiceBackendPort{Number: 9093},
+									},
+								},
+								Path:     "/",
+								PathType: ptr.To(networkingv1.PathTypePrefix),
+							}},
+						},
+					},
+				}},
+			},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -364,7 +413,6 @@ var _ = Describe("Prometheus", func() {
 		})
 
 		assert := func() {
-			ExpectWithOffset(1, managedResourceSecret.Data).To(HaveLen(5))
 			ExpectWithOffset(1, string(managedResourceSecret.Data["service__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
 			ExpectWithOffset(1, string(managedResourceSecret.Data["alertmanager__some-namespace__"+name+".yaml"])).To(Equal(componenttest.Serialize(alertManager)))
 			ExpectWithOffset(1, string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(vpa)))
@@ -374,7 +422,25 @@ var _ = Describe("Prometheus", func() {
 
 		When("cluster type is 'seed'", func() {
 			It("should successfully deploy all resources", func() {
+				ExpectWithOffset(1, managedResourceSecret.Data).To(HaveLen(5))
+
 				assert()
+			})
+
+			When("ingress is configured", func() {
+				BeforeEach(func() {
+					values.Ingress = &IngressValues{
+						AuthSecretName:   ingressAuthSecretName,
+						Host:             ingressHost,
+						WildcardCertName: &ingressWildcardSecretName,
+					}
+				})
+
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceSecret.Data).To(HaveLen(6))
+
+					Expect(string(managedResourceSecret.Data["ingress__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(ingress)))
+				})
 			})
 		})
 
@@ -388,6 +454,8 @@ var _ = Describe("Prometheus", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
+				ExpectWithOffset(1, managedResourceSecret.Data).To(HaveLen(5))
+
 				assert()
 			})
 		})

@@ -16,6 +16,7 @@ package botanist
 
 import (
 	"context"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -32,18 +33,35 @@ import (
 )
 
 // DefaultAlertmanager creates a new alertmanager deployer.
-func (b *Botanist) DefaultAlertmanager() (component.DeployWaiter, error) {
-	// TODOs for future commits:
-	// - configure ingress host via b.ComputeAlertManagerHost()
-	// - set wildcard cert if present
-
+func (b *Botanist) DefaultAlertmanager() (alertmanager.Interface, error) {
 	return sharedcomponent.NewAlertmanager(b.Logger, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, alertmanager.Values{
 		Name:              "shoot",
 		ClusterType:       component.ClusterTypeShoot,
 		PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane100,
 		StorageCapacity:   resource.MustParse(b.Seed.GetValidVolumeSize("1Gi")),
 		Replicas:          b.Shoot.GetReplicas(1),
+		Ingress: &alertmanager.IngressValues{
+			Host:           b.ComputeAlertManagerHost(),
+			SecretsManager: b.SecretsManager,
+		},
 	})
+}
+
+// DeployAlertManager reconciles the shoot alert manager.
+func (b *Botanist) DeployAlertManager(ctx context.Context) error {
+	if !b.Shoot.WantsAlertmanager || !b.IsShootMonitoringEnabled() {
+		return b.Shoot.Components.Monitoring.Alertmanager.Destroy(ctx)
+	}
+
+	ingressAuthSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameObservabilityIngressUsers)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngressUsers)
+	}
+
+	b.Operation.Shoot.Components.Monitoring.Alertmanager.SetIngressAuthSecret(ingressAuthSecret)
+	b.Operation.Shoot.Components.Monitoring.Alertmanager.SetIngressWildcardCertSecret(b.ControlPlaneWildcardCert)
+
+	return b.Shoot.Components.Monitoring.Alertmanager.Deploy(ctx)
 }
 
 // DefaultMonitoring creates a new monitoring component.
@@ -77,7 +95,6 @@ func (b *Botanist) DefaultMonitoring() (monitoring.Interface, error) {
 		ImageBlackboxExporter:        imageBlackboxExporter.String(),
 		ImageConfigmapReloader:       imageConfigmapReloader.String(),
 		ImagePrometheus:              imagePrometheus.String(),
-		IngressHostAlertmanager:      b.ComputeAlertManagerHost(),
 		IngressHostPrometheus:        b.ComputePrometheusHost(),
 		IsWorkerless:                 b.Shoot.IsWorkerless,
 		KubernetesVersion:            b.Shoot.GetInfo().Spec.Kubernetes.Version,

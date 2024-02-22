@@ -20,13 +20,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
-	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
 )
 
 // NewAlertmanager creates a new alertmanager deployer.
-func NewAlertmanager(log logr.Logger, c client.Client, namespace string, values alertmanager.Values) (component.DeployWaiter, error) {
+func NewAlertmanager(log logr.Logger, c client.Client, namespace string, values alertmanager.Values) (alertmanager.Interface, error) {
 	imageAlertmanager, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlertmanager)
 	if err != nil {
 		return nil, err

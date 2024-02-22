@@ -789,14 +789,8 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady, waitUntilTunnelConnectionExists),
 		})
 		deployAlertmanager = g.Add(flow.Task{
-			Name: "Reconciling Shoot alertmanager",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if !botanist.Shoot.WantsAlertmanager || !botanist.IsShootMonitoringEnabled() {
-					return botanist.Shoot.Components.Monitoring.Alertmanager.Destroy(ctx)
-				}
-
-				return botanist.Shoot.Components.Monitoring.Alertmanager.Deploy(ctx)
-			}).RetryUntilTimeout(defaultInterval, 2*time.Minute),
+			Name:         "Reconciling Shoot alertmanager",
+			Fn:           flow.TaskFn(botanist.DeployAlertManager).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilTunnelConnectionExists, waitUntilWorkerReady).InsertIf(!staticNodesCIDR, waitUntilInfrastructureReady),
 		})
 		// TODO(rfranzke): Remove this after v1.93 has been released.

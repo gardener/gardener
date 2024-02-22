@@ -96,8 +96,6 @@ type Values struct {
 	ImageConfigmapReloader string
 	// ImagePrometheus is the image of Prometheus.
 	ImagePrometheus string
-	// IngressHostAlertmanager is the host name of Alertmanager.
-	IngressHostAlertmanager string
 	// IngressHostPrometheus is the host name of Prometheus.
 	IngressHostPrometheus string
 	// IsWorkerless specifies whether the cluster is workerless.
@@ -360,36 +358,7 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 			}
 		}
 
-		var alertManagerIngressTLSSecretName string
-		if m.values.WildcardCertName != nil {
-			alertManagerIngressTLSSecretName = *m.values.WildcardCertName
-		} else {
-			ingressTLSSecret, err := m.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-				Name:                        "alertmanager-tls",
-				CommonName:                  "alertmanager",
-				Organization:                []string{"gardener.cloud:monitoring:ingress"},
-				DNSNames:                    []string{m.values.IngressHostAlertmanager},
-				CertType:                    secretsutils.ServerCert,
-				Validity:                    ptr.To(v1beta1constants.IngressTLSCertificateValidity),
-				SkipPublishingCACertificate: true,
-			}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
-			if err != nil {
-				return err
-			}
-			alertManagerIngressTLSSecretName = ingressTLSSecret.Name
-		}
-
 		alertManagerValues := map[string]interface{}{
-			"ingress": map[string]interface{}{
-				"class":          v1beta1constants.SeedNginxIngressClass,
-				"authSecretName": credentialsSecret.Name,
-				"hosts": []map[string]interface{}{
-					{
-						"hostName":   m.values.IngressHostAlertmanager,
-						"secretName": alertManagerIngressTLSSecretName,
-					},
-				},
-			},
 			"emailConfigs": emailConfigs,
 		}
 

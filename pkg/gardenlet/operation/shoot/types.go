@@ -53,6 +53,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/nodeexporter"
@@ -182,7 +183,7 @@ type SystemComponents struct {
 
 // Monitoring contains references to monitoring deployers.
 type Monitoring struct {
-	Alertmanager component.DeployWaiter
+	Alertmanager alertmanager.Interface
 	Monitoring   monitoring.Interface
 }
 

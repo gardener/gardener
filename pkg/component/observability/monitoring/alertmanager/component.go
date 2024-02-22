@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 const (
@@ -35,6 +36,15 @@ const (
 	// PortNameMetrics is the name of the metrics port.
 	PortNameMetrics = "metrics"
 )
+
+// Interface contains functions for an alertmanager deployer.
+type Interface interface {
+	component.DeployWaiter
+	// SetIngressAuthSecret sets the ingress auth secret name.
+	SetIngressAuthSecret(*corev1.Secret)
+	// SetIngressWildcardCertSecret sets the ingress wild card cert secret name.
+	SetIngressWildcardCertSecret(*corev1.Secret)
+}
 
 // Values contains configuration values for the AlertManager resources.
 type Values struct {
@@ -54,14 +64,30 @@ type Values struct {
 	Replicas int32
 	// AlertingSMTPSecret is the alerting SMTP secret.
 	AlertingSMTPSecret *corev1.Secret
+	// IngressValues contains configuration for exposing this AlertManager instance via an Ingress resource.
+	Ingress *IngressValues
 
 	// DataMigration is a struct for migrating data from existing disks.
 	// TODO(rfranzke): Remove this as soon as the PV migration code is removed.
 	DataMigration monitoring.DataMigration
 }
 
+// IngressValues contains configuration for exposing this AlertManager instance via an Ingress resource.
+type IngressValues struct {
+	// AuthSecretName is the name of the auth secret.
+	AuthSecretName string
+	// Host is the hostname under which the AlertManager instance should be exposed.
+	Host string
+	// SecretsManager is the secrets manager used for generating the TLS certificate if no wildcard certificate is
+	// provided.
+	SecretsManager secretsmanager.Interface
+	// WildcardCertName is name of wildcard TLS certificate which is issued for the ingress domain. If not provided, a
+	// self-signed server certificate will be created.
+	WildcardCertName *string
+}
+
 // New creates a new instance of DeployWaiter for the AlertManager.
-func New(log logr.Logger, client client.Client, namespace string, values Values) component.DeployWaiter {
+func New(log logr.Logger, client client.Client, namespace string, values Values) Interface {
 	return &alertManager{
 		log:       log,
 		client:    client,
@@ -89,12 +115,18 @@ func (a *alertManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	ingress, err := a.ingress(ctx)
+	if err != nil {
+		return err
+	}
+
 	resources, err := registry.AddAllAndSerialize(
 		a.service(),
 		a.alertManager(takeOverExistingPV),
 		a.vpa(),
 		a.config(),
 		a.smtpSecret(),
+		ingress,
 	)
 	if err != nil {
 		return err
@@ -144,6 +176,18 @@ func (a *alertManager) WaitCleanup(ctx context.Context) error {
 	defer cancel()
 
 	return managedresources.WaitUntilDeleted(timeoutCtx, a.client, a.namespace, a.name())
+}
+
+func (a *alertManager) SetIngressAuthSecret(secret *corev1.Secret) {
+	if a.values.Ingress != nil && secret != nil {
+		a.values.Ingress.AuthSecretName = secret.Name
+	}
+}
+
+func (a *alertManager) SetIngressWildcardCertSecret(secret *corev1.Secret) {
+	if a.values.Ingress != nil && secret != nil {
+		a.values.Ingress.WildcardCertName = &secret.Name
+	}
 }
 
 func (a *alertManager) name() string {
