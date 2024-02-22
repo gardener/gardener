@@ -18,8 +18,8 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-QUIC_CLIENT_IMAGE=ghcr.io/mvladev/quic-reverse-http-tunnel/quic-client-tcp:v0.1.2
-QUIC_SERVER_IMAGE=ghcr.io/mvladev/quic-reverse-http-tunnel/quic-server:v0.1.2
+QUIC_CLIENT_IMAGE=ghcr.io/gardener/quic-reverse-http-tunnel/quic-client-tcp:v0.1.4
+QUIC_SERVER_IMAGE=ghcr.io/gardener/quic-reverse-http-tunnel/quic-server:v0.1.4
 
 QUIC_SECRET_NAME=quic-tunnel-certs
 QUIC_CLIENT_CONTAINER=gardener-quic-client
@@ -296,7 +296,7 @@ loadCerts() {
 tunnelConsent() {
     local red='\033[0;31m'
     local no_color='\033[0m'
-    echo -e "${red}> WARNING: A network tunnel from the seed cluster toward this host is about to be opened via https://github.com/mvladev/quic-reverse-http-tunnel.${no_color}"
+    echo -e "${red}> WARNING: A network tunnel from the seed cluster toward this host is about to be opened via https://github.com/gardener/quic-reverse-http-tunnel.${no_color}"
 
     read -p "Do you agree the tunnel to be opened? [Yes|No]: " yn
     case $yn in
