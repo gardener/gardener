@@ -67,9 +67,6 @@ func (p *prometheus) prometheus(takeOverOldPV bool) *monitoringv1.Prometheus {
 						corev1.ResourceCPU:    resource.MustParse("300m"),
 						corev1.ResourceMemory: resource.MustParse("1000Mi"),
 					},
-					Limits: corev1.ResourceList{
-						corev1.ResourceMemory: resource.MustParse("2000Mi"),
-					},
 				},
 				ServiceAccountName: p.name(),
 				SecurityContext:    &corev1.PodSecurityContext{RunAsUser: ptr.To(int64(0))},
