@@ -34,12 +34,19 @@ import (
 
 // DefaultAlertmanager creates a new alertmanager deployer.
 func (b *Botanist) DefaultAlertmanager() (alertmanager.Interface, error) {
+	var emailReceivers []string
+	if monitoring := b.Shoot.GetInfo().Spec.Monitoring; monitoring != nil && monitoring.Alerting != nil {
+		emailReceivers = monitoring.Alerting.EmailReceivers
+	}
+
 	return sharedcomponent.NewAlertmanager(b.Logger, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, alertmanager.Values{
-		Name:              "shoot",
-		ClusterType:       component.ClusterTypeShoot,
-		PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane100,
-		StorageCapacity:   resource.MustParse(b.Seed.GetValidVolumeSize("1Gi")),
-		Replicas:          b.Shoot.GetReplicas(1),
+		Name:               "shoot",
+		ClusterType:        component.ClusterTypeShoot,
+		PriorityClassName:  v1beta1constants.PriorityClassNameShootControlPlane100,
+		StorageCapacity:    resource.MustParse(b.Seed.GetValidVolumeSize("1Gi")),
+		Replicas:           b.Shoot.GetReplicas(1),
+		AlertingSMTPSecret: b.LoadSecret(v1beta1constants.GardenRoleAlerting),
+		EmailReceivers:     emailReceivers,
 		Ingress: &alertmanager.IngressValues{
 			Host:           b.ComputeAlertManagerHost(),
 			SecretsManager: b.SecretsManager,

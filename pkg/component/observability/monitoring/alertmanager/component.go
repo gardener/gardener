@@ -64,6 +64,9 @@ type Values struct {
 	Replicas int32
 	// AlertingSMTPSecret is the alerting SMTP secret.
 	AlertingSMTPSecret *corev1.Secret
+	// EmailReceivers is a list of email addresses to which alerts should be sent. If this list is empty, the alerts
+	// will be sent to the email address in `.data.to` in the alerting SMTP secret.
+	EmailReceivers []string
 	// IngressValues contains configuration for exposing this AlertManager instance via an Ingress resource.
 	Ingress *IngressValues
 

@@ -71,6 +71,7 @@ var _ = Describe("Prometheus", func() {
 				"auth_username": []byte("secret-data4"),
 				"auth_identity": []byte("secret-data5"),
 				"auth_password": []byte("secret-data6"),
+				"auth_type":     []byte("smtp"),
 			},
 		}
 
@@ -412,19 +413,15 @@ var _ = Describe("Prometheus", func() {
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 		})
 
-		assert := func() {
-			ExpectWithOffset(1, string(managedResourceSecret.Data["service__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
-			ExpectWithOffset(1, string(managedResourceSecret.Data["alertmanager__some-namespace__"+name+".yaml"])).To(Equal(componenttest.Serialize(alertManager)))
-			ExpectWithOffset(1, string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(vpa)))
-			ExpectWithOffset(1, string(managedResourceSecret.Data["alertmanagerconfig__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(config)))
-			ExpectWithOffset(1, string(managedResourceSecret.Data["secret__some-namespace__alertmanager-"+name+"-smtp.yaml"])).To(Equal(componenttest.Serialize(smtpSecret)))
-		}
-
 		When("cluster type is 'seed'", func() {
 			It("should successfully deploy all resources", func() {
-				ExpectWithOffset(1, managedResourceSecret.Data).To(HaveLen(5))
+				Expect(managedResourceSecret.Data).To(HaveLen(5))
 
-				assert()
+				Expect(string(managedResourceSecret.Data["service__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
+				Expect(string(managedResourceSecret.Data["alertmanager__some-namespace__"+name+".yaml"])).To(Equal(componenttest.Serialize(alertManager)))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(vpa)))
+				Expect(string(managedResourceSecret.Data["alertmanagerconfig__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(config)))
+				Expect(string(managedResourceSecret.Data["secret__some-namespace__alertmanager-"+name+"-smtp.yaml"])).To(Equal(componenttest.Serialize(smtpSecret)))
 			})
 
 			When("ingress is configured", func() {
@@ -442,6 +439,63 @@ var _ = Describe("Prometheus", func() {
 					Expect(string(managedResourceSecret.Data["ingress__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(ingress)))
 				})
 			})
+
+			When("no alerting smtp secret is configured", func() {
+				BeforeEach(func() {
+					values.AlertingSMTPSecret = nil
+				})
+
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceSecret.Data).To(HaveLen(3))
+
+					Expect(string(managedResourceSecret.Data["service__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
+					Expect(string(managedResourceSecret.Data["alertmanager__some-namespace__"+name+".yaml"])).To(Equal(componenttest.Serialize(alertManager)))
+					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(vpa)))
+					Expect(managedResourceSecret.Data).NotTo(HaveKey("alertmanagerconfig__some-namespace__alertmanager-" + name + ".yaml"))
+					Expect(managedResourceSecret.Data).NotTo(HaveKey("secret__some-namespace__alertmanager-" + name + "-smtp.yaml"))
+				})
+			})
+
+			When("email receivers are configured", func() {
+				BeforeEach(func() {
+					values.EmailReceivers = []string{"foo@example.bar", "bar@example.foo"}
+
+					config.Spec.Receivers[1].EmailConfigs = []monitoringv1alpha1.EmailConfig{
+						{
+							To:           values.EmailReceivers[0],
+							From:         string(alertingSMTPSecret.Data["from"]),
+							Smarthost:    string(alertingSMTPSecret.Data["smarthost"]),
+							AuthUsername: string(alertingSMTPSecret.Data["auth_username"]),
+							AuthIdentity: string(alertingSMTPSecret.Data["auth_identity"]),
+							AuthPassword: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{Name: "alertmanager-" + name + "-smtp"},
+								Key:                  "auth_password",
+							},
+						},
+						{
+							To:           values.EmailReceivers[1],
+							From:         string(alertingSMTPSecret.Data["from"]),
+							Smarthost:    string(alertingSMTPSecret.Data["smarthost"]),
+							AuthUsername: string(alertingSMTPSecret.Data["auth_username"]),
+							AuthIdentity: string(alertingSMTPSecret.Data["auth_identity"]),
+							AuthPassword: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{Name: "alertmanager-" + name + "-smtp"},
+								Key:                  "auth_password",
+							},
+						},
+					}
+				})
+
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceSecret.Data).To(HaveLen(5))
+
+					Expect(string(managedResourceSecret.Data["service__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
+					Expect(string(managedResourceSecret.Data["alertmanager__some-namespace__"+name+".yaml"])).To(Equal(componenttest.Serialize(alertManager)))
+					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(vpa)))
+					Expect(string(managedResourceSecret.Data["alertmanagerconfig__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(config)))
+					Expect(string(managedResourceSecret.Data["secret__some-namespace__alertmanager-"+name+"-smtp.yaml"])).To(Equal(componenttest.Serialize(smtpSecret)))
+				})
+			})
 		})
 
 		When("cluster type is 'shoot'", func() {
@@ -451,12 +505,17 @@ var _ = Describe("Prometheus", func() {
 				service.Annotations = map[string]string{"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":9093}]`}
 				alertManager.Labels["gardener.cloud/role"] = "monitoring"
 				alertManager.Spec.PodMetadata.Labels["gardener.cloud/role"] = "monitoring"
+				config.Spec.Route.Routes[0].Raw = []byte(`{"match_re":{"visibility":"^(all|owner)$"},"receiver":"email-kubernetes-ops"}`)
 			})
 
 			It("should successfully deploy all resources", func() {
-				ExpectWithOffset(1, managedResourceSecret.Data).To(HaveLen(5))
+				Expect(managedResourceSecret.Data).To(HaveLen(5))
 
-				assert()
+				Expect(string(managedResourceSecret.Data["service__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
+				Expect(string(managedResourceSecret.Data["alertmanager__some-namespace__"+name+".yaml"])).To(Equal(componenttest.Serialize(alertManager)))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(vpa)))
+				Expect(string(managedResourceSecret.Data["alertmanagerconfig__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(config)))
+				Expect(string(managedResourceSecret.Data["secret__some-namespace__alertmanager-"+name+"-smtp.yaml"])).To(Equal(componenttest.Serialize(smtpSecret)))
 			})
 		})
 	})

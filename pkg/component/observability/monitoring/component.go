@@ -48,10 +48,6 @@ import (
 )
 
 var (
-	//go:embed charts/seed-monitoring/charts/alertmanager
-	chartAlertmanager     embed.FS
-	chartPathAlertmanager = filepath.Join("charts", "seed-monitoring", "charts", "alertmanager")
-
 	//go:embed charts/seed-monitoring/charts/core
 	chartCore     embed.FS
 	chartPathCore = filepath.Join("charts", "seed-monitoring", "charts", "core")
@@ -333,39 +329,7 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := m.reconcilePrometheusShootResources(ctx, shootAccessSecret.ServiceAccountName); err != nil {
-		return err
-	}
-
-	// Check if we want to deploy an alertmanager into the shoot namespace.
-	if m.values.AlertmanagerEnabled {
-		var emailConfigs []map[string]interface{}
-		if m.values.MonitoringConfig != nil && m.values.MonitoringConfig.Alerting != nil {
-			for _, email := range m.values.MonitoringConfig.Alerting.EmailReceivers {
-				for _, secret := range m.values.AlertingSecrets {
-					if string(secret.Data["auth_type"]) != "smtp" {
-						continue
-					}
-					emailConfigs = append(emailConfigs, map[string]interface{}{
-						"to":            email,
-						"from":          string(secret.Data["from"]),
-						"smarthost":     string(secret.Data["smarthost"]),
-						"auth_username": string(secret.Data["auth_username"]),
-						"auth_identity": string(secret.Data["auth_identity"]),
-						"auth_password": string(secret.Data["auth_password"]),
-					})
-				}
-			}
-		}
-
-		alertManagerValues := map[string]interface{}{
-			"emailConfigs": emailConfigs,
-		}
-
-		return m.chartApplier.ApplyFromEmbeddedFS(ctx, chartAlertmanager, chartPathAlertmanager, m.namespace, "alertmanager", kubernetes.Values(alertManagerValues))
-	}
-
-	return nil
+	return m.reconcilePrometheusShootResources(ctx, shootAccessSecret.ServiceAccountName)
 }
 
 func (m *monitoring) Destroy(ctx context.Context) error {

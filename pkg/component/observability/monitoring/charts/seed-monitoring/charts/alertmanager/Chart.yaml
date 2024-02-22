@@ -1,4 +1,0 @@
-apiVersion: v1
-description: Alertmanager for Kubernetes
-name: alertmanager
-version: 0.1.0
