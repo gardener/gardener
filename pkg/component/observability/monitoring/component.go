@@ -90,8 +90,6 @@ type Values struct {
 	GlobalShootRemoteWriteSecret *corev1.Secret
 	// IgnoreAlerts specifies whether alerts should be ignored.
 	IgnoreAlerts bool
-	// ImageAlertmanager is the image of Alertmanager.
-	ImageAlertmanager string
 	// ImageBlackboxExporter is the image of BlackboxExporter.
 	ImageBlackboxExporter string
 	// ImageConfigmapReloader is the image of ConfigmapReloader.
@@ -126,8 +124,6 @@ type Values struct {
 	RuntimeProviderType string
 	// RuntimeRegion is the region of the runtime cluster.
 	RuntimeRegion string
-	// StorageCapacityAlertmanager is the storage capacity of Alertmanager.
-	StorageCapacityAlertmanager string
 	// TargetName is the name of the target cluster.
 	TargetName string
 	// TargetProviderType is the provider type of the target cluster.
@@ -384,10 +380,6 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 		}
 
 		alertManagerValues := map[string]interface{}{
-			"images": map[string]string{
-				"alertmanager":       m.values.ImageAlertmanager,
-				"configmap-reloader": m.values.ImageConfigmapReloader,
-			},
 			"ingress": map[string]interface{}{
 				"class":          v1beta1constants.SeedNginxIngressClass,
 				"authSecretName": credentialsSecret.Name,
@@ -398,22 +390,16 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 					},
 				},
 			},
-			"replicas":     m.values.Replicas,
-			"storage":      m.values.StorageCapacityAlertmanager,
 			"emailConfigs": emailConfigs,
 		}
 
 		return m.chartApplier.ApplyFromEmbeddedFS(ctx, chartAlertmanager, chartPathAlertmanager, m.namespace, "alertmanager", kubernetes.Values(alertManagerValues))
 	}
 
-	return deleteAlertmanager(ctx, m.client, m.namespace)
+	return nil
 }
 
 func (m *monitoring) Destroy(ctx context.Context) error {
-	if err := deleteAlertmanager(ctx, m.client, m.namespace); err != nil {
-		return err
-	}
-
 	if err := managedresources.DeleteForShoot(ctx, m.client, m.namespace, managedResourceNamePrometheus); err != nil {
 		return err
 	}

@@ -18,22 +18,36 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
+	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
+// DefaultAlertmanager creates a new alertmanager deployer.
+func (b *Botanist) DefaultAlertmanager() (component.DeployWaiter, error) {
+	// TODOs for future commits:
+	// - configure ingress host via b.ComputeAlertManagerHost()
+	// - set wildcard cert if present
+
+	return sharedcomponent.NewAlertmanager(b.Logger, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, alertmanager.Values{
+		Name:              "shoot",
+		ClusterType:       component.ClusterTypeShoot,
+		PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane100,
+		StorageCapacity:   resource.MustParse(b.Seed.GetValidVolumeSize("1Gi")),
+		Replicas:          b.Shoot.GetReplicas(1),
+	})
+}
+
 // DefaultMonitoring creates a new monitoring component.
 func (b *Botanist) DefaultMonitoring() (monitoring.Interface, error) {
-	imageAlertmanager, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlertmanager)
-	if err != nil {
-		return nil, err
-	}
 	imageBlackboxExporter, err := imagevector.ImageVector().FindImage(imagevector.ImageNameBlackboxExporter)
 	if err != nil {
 		return nil, err
@@ -60,7 +74,6 @@ func (b *Botanist) DefaultMonitoring() (monitoring.Interface, error) {
 		Config:                       b.Config.Monitoring,
 		GlobalShootRemoteWriteSecret: b.LoadSecret(v1beta1constants.GardenRoleGlobalShootRemoteWriteMonitoring),
 		IgnoreAlerts:                 b.Shoot.IgnoreAlerts,
-		ImageAlertmanager:            imageAlertmanager.String(),
 		ImageBlackboxExporter:        imageBlackboxExporter.String(),
 		ImageConfigmapReloader:       imageConfigmapReloader.String(),
 		ImagePrometheus:              imagePrometheus.String(),
@@ -74,7 +87,6 @@ func (b *Botanist) DefaultMonitoring() (monitoring.Interface, error) {
 		Replicas:                     b.Shoot.GetReplicas(1),
 		RuntimeProviderType:          b.Seed.GetInfo().Spec.Provider.Type,
 		RuntimeRegion:                b.Seed.GetInfo().Spec.Provider.Region,
-		StorageCapacityAlertmanager:  b.Seed.GetValidVolumeSize("1Gi"),
 		TargetName:                   b.Shoot.GetInfo().Name,
 		TargetProviderType:           b.Shoot.GetInfo().Spec.Provider.Type,
 		WildcardCertName:             nil,

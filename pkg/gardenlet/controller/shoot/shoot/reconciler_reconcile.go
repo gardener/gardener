@@ -19,6 +19,9 @@ import (
 	"fmt"
 	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -785,6 +788,33 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			SkipIf:       o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady, waitUntilTunnelConnectionExists),
 		})
+		deployAlertmanager = g.Add(flow.Task{
+			Name: "Reconciling Shoot alertmanager",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				if !botanist.Shoot.WantsAlertmanager || !botanist.IsShootMonitoringEnabled() {
+					return botanist.Shoot.Components.Monitoring.Alertmanager.Destroy(ctx)
+				}
+
+				return botanist.Shoot.Components.Monitoring.Alertmanager.Deploy(ctx)
+			}).RetryUntilTimeout(defaultInterval, 2*time.Minute),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilTunnelConnectionExists, waitUntilWorkerReady).InsertIf(!staticNodesCIDR, waitUntilInfrastructureReady),
+		})
+		// TODO(rfranzke): Remove this after v1.93 has been released.
+		_ = g.Add(flow.Task{
+			Name: "Cleaning up legacy Alertmanager resources",
+			Fn: func(ctx context.Context) error {
+				return kubernetesutils.DeleteObjects(ctx, r.SeedClientSet.Client(),
+					&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager", Namespace: botanist.Shoot.SeedNamespace}},
+					&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager", Namespace: botanist.Shoot.SeedNamespace}},
+					&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager-client", Namespace: botanist.Shoot.SeedNamespace}},
+					&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager", Namespace: botanist.Shoot.SeedNamespace}},
+					&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager-basic-auth", Namespace: botanist.Shoot.SeedNamespace}},
+					&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager-config", Namespace: botanist.Shoot.SeedNamespace}},
+					&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager-db-alertmanager-0", Namespace: botanist.Shoot.SeedNamespace}},
+				)
+			},
+			Dependencies: flow.NewTaskIDs(deployAlertmanager),
+		})
 		deploySeedMonitoring = g.Add(flow.Task{
 			Name:         "Deploying Shoot monitoring stack in Seed",
 			Fn:           flow.TaskFn(botanist.DeployMonitoring).RetryUntilTimeout(defaultInterval, 2*time.Minute),
@@ -794,19 +824,19 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Name:         "Reconciling kube-state-metrics for Shoot in Seed for the monitoring stack",
 			Fn:           flow.TaskFn(botanist.DeployKubeStateMetrics).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			SkipIf:       o.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(deploySeedMonitoring),
+			Dependencies: flow.NewTaskIDs(deploySeedMonitoring, deployAlertmanager),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Reconciling Plutono for Shoot in Seed for the monitoring stack",
 			Fn:           flow.TaskFn(botanist.DeployPlutono).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			Dependencies: flow.NewTaskIDs(deploySeedMonitoring),
+			Dependencies: flow.NewTaskIDs(deploySeedMonitoring, deployAlertmanager),
 		})
 
 		hibernateControlPlane = g.Add(flow.Task{
 			Name:         "Hibernating control plane",
 			Fn:           flow.TaskFn(botanist.HibernateControlPlane).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			SkipIf:       !o.Shoot.HibernationEnabled,
-			Dependencies: flow.NewTaskIDs(initializeShootClients, deploySeedMonitoring, deploySeedLogging, deployClusterAutoscaler, waitUntilWorkerReady, waitUntilExtensionResourcesAfterKAPIReady),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, deploySeedMonitoring, deployAlertmanager, deploySeedLogging, deployClusterAutoscaler, waitUntilWorkerReady, waitUntilExtensionResourcesAfterKAPIReady),
 		})
 
 		// logic is inverted here

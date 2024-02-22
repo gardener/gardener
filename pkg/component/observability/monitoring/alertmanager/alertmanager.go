@@ -22,6 +22,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -41,7 +42,7 @@ func (a *alertManager) alertManager(takeOverOldPV bool) *monitoringv1.Alertmanag
 				}),
 			},
 			PriorityClassName: a.values.PriorityClassName,
-			Replicas:          ptr.To(int32(1)),
+			Replicas:          &a.values.Replicas,
 			Image:             &a.values.Image,
 			ImagePullPolicy:   corev1.PullIfNotPresent,
 			Version:           a.values.Version,
@@ -67,6 +68,11 @@ func (a *alertManager) alertManager(takeOverOldPV bool) *monitoringv1.Alertmanag
 			ForceEnableClusterMode:              true,
 			AlertmanagerConfiguration:           &monitoringv1.AlertmanagerConfiguration{Name: a.name()},
 		},
+	}
+
+	if a.values.ClusterType == component.ClusterTypeShoot {
+		obj.Labels[v1beta1constants.GardenRole] = v1beta1constants.GardenRoleMonitoring
+		obj.Spec.PodMetadata.Labels[v1beta1constants.GardenRole] = v1beta1constants.GardenRoleMonitoring
 	}
 
 	if takeOverOldPV {

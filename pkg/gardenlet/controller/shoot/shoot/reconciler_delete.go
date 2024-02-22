@@ -334,6 +334,11 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			SkipIf:       !cleanupShootResources || !kubeControllerManagerDeploymentFound,
 			Dependencies: flow.NewTaskIDs(deployKubeControllerManager),
 		})
+		deleteAlertmanager = g.Add(flow.Task{
+			Name:         "Deleting Shoot alertmanager",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Monitoring.Alertmanager.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(initializeShootClients),
+		})
 		deleteSeedMonitoring = g.Add(flow.Task{
 			Name:         "Deleting shoot monitoring stack in Seed",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.Monitoring.Monitoring.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -677,6 +682,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 
 		syncPoint = flow.NewTaskIDs(
+			deleteAlertmanager,
 			deleteSeedMonitoring,
 			deletePlutono,
 			destroySeedLogging,

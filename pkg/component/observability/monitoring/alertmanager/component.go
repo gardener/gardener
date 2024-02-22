@@ -44,10 +44,14 @@ type Values struct {
 	Image string
 	// Version is the version of AlertManager.
 	Version string
+	// ClusterType is the type of the cluster.
+	ClusterType component.ClusterType
 	// PriorityClassName is the name of the priority class for the StatefulSet.
 	PriorityClassName string
 	// StorageCapacity is the storage capacity of AlertManager.
 	StorageCapacity resource.Quantity
+	// Replicas is the number of replicas.
+	Replicas int32
 	// AlertingSMTPSecret is the alerting SMTP secret.
 	AlertingSMTPSecret *corev1.Secret
 

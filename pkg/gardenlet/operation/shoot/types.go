@@ -182,7 +182,8 @@ type SystemComponents struct {
 
 // Monitoring contains references to monitoring deployers.
 type Monitoring struct {
-	Monitoring monitoring.Interface
+	Alertmanager component.DeployWaiter
+	Monitoring   monitoring.Interface
 }
 
 // Logging contains references to logging deployers.
