@@ -146,8 +146,8 @@ github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMo
 github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4IgpuI1SZQ=
 github.com/fsnotify/fsnotify v1.7.0 h1:8JEhPFa5W2WU7YfeZzPNqzMP6Lwt7L2715Ggo0nosvA=
 github.com/fsnotify/fsnotify v1.7.0/go.mod h1:40Bi/Hjc2AVfZrqy+aj+yEI+/bRxZnMJyTJwOpGvigM=
-github.com/gardener/dependency-watchdog v1.2.0 h1:Hadv09aqz9yEYTFvvFS2JDgDTy7BI9nqq8CToMDN1R0=
-github.com/gardener/dependency-watchdog v1.2.0/go.mod h1:RgU0VmsdBHxRU8IO9VsLxEinz58xEJdEz5hxvMqLKHQ=
+github.com/gardener/dependency-watchdog v1.2.1 h1:Q0zqinZNImBuNYfNQGAXkUh5qrfJyrynO5QjUTzO/7w=
+github.com/gardener/dependency-watchdog v1.2.1/go.mod h1:RgU0VmsdBHxRU8IO9VsLxEinz58xEJdEz5hxvMqLKHQ=
 github.com/gardener/etcd-druid v0.22.0 h1:DVe+Zjrb93r9vI1uUiCTMHBffIUoMAKhNzFZNC6hsQ8=
 github.com/gardener/etcd-druid v0.22.0/go.mod h1:FROhfVKyWBo4krlPe3R6FIhJRmOmijEWBdEeUP0CJjE=
 github.com/gardener/hvpa-controller/api v0.5.0 h1:f4F3O7YUrenwh4S3TgPREPiB287JjjUiUL18OqPLyAA=
