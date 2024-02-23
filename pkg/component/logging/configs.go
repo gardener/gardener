@@ -26,7 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/component/monitoring/kubestatemetrics"
-	"github.com/gardener/gardener/pkg/component/nginxingress"
+	"github.com/gardener/gardener/pkg/component/networking/nginxingress"
 )
 
 // GardenCentralLoggingConfigurations is a list of central logging configuration for components running in the garden

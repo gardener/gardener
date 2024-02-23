@@ -41,7 +41,7 @@ import (
 	valiconstants "github.com/gardener/gardener/pkg/component/logging/vali/constants"
 	"github.com/gardener/gardener/pkg/component/monitoring/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/monitoring/prometheusoperator"
-	"github.com/gardener/gardener/pkg/component/nginxingress"
+	"github.com/gardener/gardener/pkg/component/networking/nginxingress"
 	"github.com/gardener/gardener/pkg/component/seedsystem"
 	"github.com/gardener/gardener/pkg/features"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed/care"

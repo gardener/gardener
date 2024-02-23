@@ -35,7 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/etcd"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/constants"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
-	"github.com/gardener/gardener/pkg/component/vpnseedserver"
+	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"

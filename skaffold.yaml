@@ -842,13 +842,13 @@ build:
             - pkg/client/kubernetes/clientmap/keys
             - pkg/component
             - pkg/component/apiserver
-            - pkg/component/apiserverproxy
+            - pkg/component/networking/apiserverproxy
             - pkg/component/backupentry
             - pkg/component/monitoring/blackboxexporter
             - pkg/component/autoscaling/clusterautoscaler
             - pkg/component/clusteridentity
-            - pkg/component/coredns
-            - pkg/component/coredns/constants
+            - pkg/component/networking/coredns
+            - pkg/component/networking/coredns/constants
             - pkg/component/dependencywatchdog
             - pkg/component/etcd
             - pkg/component/etcd/constants
@@ -884,7 +884,7 @@ build:
             - pkg/component/gardener/access
             - pkg/component/gardener/apiserver
             - pkg/component/autoscaling/hvpa
-            - pkg/component/istio
+            - pkg/component/networking/istio
             - pkg/component/kubeapiserver
             - pkg/component/kubeapiserver/constants
             - pkg/component/kubeapiserverexposure
@@ -910,10 +910,10 @@ build:
             - pkg/component/monitoring/prometheusoperator
             - pkg/component/monitoring/utils
             - pkg/component/namespaces
-            - pkg/component/nginxingress
+            - pkg/component/networking/nginxingress
             - pkg/component/monitoring/nodeexporter
-            - pkg/component/nodelocaldns
-            - pkg/component/nodelocaldns/constants
+            - pkg/component/networking/nodelocaldns
+            - pkg/component/networking/nodelocaldns/constants
             - pkg/component/nodeproblemdetector
             - pkg/component/plutono
             - pkg/component/gardener/resourcemanager
@@ -923,9 +923,9 @@ build:
             - pkg/component/shootsystem
             - pkg/component/autoscaling/vpa
             - pkg/component/autoscaling/vpa/constants
-            - pkg/component/vpnauthzserver
-            - pkg/component/vpnseedserver
-            - pkg/component/vpnshoot
+            - pkg/component/networking/vpn/authzserver
+            - pkg/component/networking/vpn/seedserver
+            - pkg/component/networking/vpn/shoot
             - pkg/controller/networkpolicy
             - pkg/controller/networkpolicy/helper
             - pkg/controller/networkpolicy/hostnameresolver

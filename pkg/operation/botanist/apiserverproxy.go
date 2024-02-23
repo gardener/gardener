@@ -19,7 +19,7 @@ import (
 
 	"github.com/gardener/gardener/imagevector"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/component/apiserverproxy"
+	"github.com/gardener/gardener/pkg/component/networking/apiserverproxy"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 

@@ -68,7 +68,7 @@ build:
             - pkg/client/kubernetes/clientmap/keys
             - pkg/component
             - pkg/component/apiserver
-            - pkg/component/coredns/constants
+            - pkg/component/networking/coredns/constants
             - pkg/component/etcd
             - pkg/component/etcd/constants
             - pkg/component/extensions/operatingsystemconfig/original/components
@@ -84,7 +84,7 @@ build:
             - pkg/component/gardensystem/runtime
             - pkg/component/gardensystem/virtual
             - pkg/component/autoscaling/hvpa
-            - pkg/component/istio
+            - pkg/component/networking/istio
             - pkg/component/kubeapiserver
             - pkg/component/kubeapiserver/constants
             - pkg/component/kubeapiserverexposure
@@ -105,16 +105,16 @@ build:
             - pkg/component/monitoring/prometheus/seed
             - pkg/component/monitoring/prometheusoperator
             - pkg/component/monitoring/utils
-            - pkg/component/nginxingress
-            - pkg/component/nodelocaldns/constants
+            - pkg/component/networking/nginxingress
+            - pkg/component/networking/nodelocaldns/constants
             - pkg/component/plutono
             - pkg/component/gardener/resourcemanager
             - pkg/component/gardener/resourcemanager/constants
             - pkg/component/shared
             - pkg/component/autoscaling/vpa
             - pkg/component/autoscaling/vpa/constants
-            - pkg/component/vpnauthzserver
-            - pkg/component/vpnseedserver
+            - pkg/component/networking/vpn/authzserver
+            - pkg/component/networking/vpn/seedserver
             - pkg/controller/networkpolicy
             - pkg/controller/networkpolicy/helper
             - pkg/controller/networkpolicy/hostnameresolver

@@ -35,7 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/executor"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
-	nodelocaldnsconstants "github.com/gardener/gardener/pkg/component/nodelocaldns/constants"
+	nodelocaldnsconstants "github.com/gardener/gardener/pkg/component/networking/nodelocaldns/constants"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"

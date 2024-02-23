@@ -32,7 +32,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
-	mocknodelocaldns "github.com/gardener/gardener/pkg/component/nodelocaldns/mock"
+	mocknodelocaldns "github.com/gardener/gardener/pkg/component/networking/nodelocaldns/mock"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"

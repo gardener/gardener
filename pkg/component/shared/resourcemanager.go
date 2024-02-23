@@ -37,7 +37,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
-	"github.com/gardener/gardener/pkg/component/nginxingress"
+	"github.com/gardener/gardener/pkg/component/networking/nginxingress"
 	resourcemanagerv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/managedresources"

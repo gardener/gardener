@@ -32,7 +32,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
-	mockcoredns "github.com/gardener/gardener/pkg/component/coredns/mock"
+	mockcoredns "github.com/gardener/gardener/pkg/component/networking/coredns/mock"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/garden"
