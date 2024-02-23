@@ -91,7 +91,7 @@ webhooks:
 		})
 
 		It("should reconcile the shoot webhook config", func() {
-			Expect(ReconcileWebhookConfig(ctx, fakeClient, namespace, extensionNamespace, extensionName, managedResourceName, shootWebhookConfigs, cluster)).To(Succeed())
+			Expect(ReconcileWebhookConfig(ctx, fakeClient, namespace, extensionNamespace, extensionName, managedResourceName, shootWebhookConfigs, cluster, true)).To(Succeed())
 			expectWebhookConfigReconciliation(ctx, fakeClient, namespace, managedResourceName, shootWebhookConfigRaw)
 		})
 	})

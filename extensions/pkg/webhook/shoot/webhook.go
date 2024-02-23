@@ -16,6 +16,7 @@ package shoot
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -46,6 +47,7 @@ func ReconcileWebhookConfig(
 	managedResourceName string,
 	shootWebhookConfigs webhook.Configs,
 	cluster *controller.Cluster,
+	createOnUpdate bool,
 ) error {
 	if cluster.Shoot == nil {
 		return fmt.Errorf("no shoot found in cluster resource")
@@ -68,8 +70,16 @@ func ReconcileWebhookConfig(
 		return err
 	}
 
-	if err := managedresources.Create(ctx, c, shootNamespace, managedResourceName, nil, false, "", data, nil, nil, nil); err != nil {
-		return fmt.Errorf("could not create or update managed resource '%s/%s' containing shoot webhooks: %w", shootNamespace, managedResourceName, err)
+	if createOnUpdate {
+		err := managedresources.Create(ctx, c, shootNamespace, managedResourceName, nil, false, "", data, nil, nil, nil)
+		if err != nil {
+			return fmt.Errorf("could not create or update managed resource '%s/%s' containing shoot webhooks: %w", shootNamespace, managedResourceName, err)
+		}
+	} else {
+		err := managedresources.Update(ctx, c, shootNamespace, managedResourceName, nil, false, "", data, nil, nil, nil)
+		if err != nil {
+			return fmt.Errorf("could not update managed resource '%s/%s' containing shoot webhooks: %w", shootNamespace, managedResourceName, err)
+		}
 	}
 
 	return nil
@@ -114,7 +124,15 @@ func ReconcileWebhooksForAllNamespaces(
 				return err
 			}
 
-			return ReconcileWebhookConfig(ctx, c, namespaceName, extensionNamespace, extensionName, managedResourceName, *shootWebhookConfigs.DeepCopy(), cluster)
+			if err := ReconcileWebhookConfig(ctx, c, namespaceName, extensionNamespace, extensionName, managedResourceName, *shootWebhookConfigs.DeepCopy(), cluster, false); err != nil {
+				statusErr := &apierrors.StatusError{}
+				if !errors.As(err, &statusErr) {
+					return err
+				}
+				// Ignore not found errors since the managed resource can be deleted in parallel during shoot deletion.
+				return client.IgnoreNotFound(err)
+			}
+			return nil
 		})
 	}
 
