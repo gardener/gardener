@@ -881,8 +881,8 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/varlibmount
             - pkg/component/extensions/operatingsystemconfig/utils
             - pkg/component/extensions/worker
-            - pkg/component/gardeneraccess
-            - pkg/component/gardenerapiserver
+            - pkg/component/gardener/access
+            - pkg/component/gardener/apiserver
             - pkg/component/hvpa
             - pkg/component/istio
             - pkg/component/kubeapiserver
@@ -916,8 +916,8 @@ build:
             - pkg/component/nodelocaldns/constants
             - pkg/component/nodeproblemdetector
             - pkg/component/plutono
-            - pkg/component/resourcemanager
-            - pkg/component/resourcemanager/constants
+            - pkg/component/gardener/resourcemanager
+            - pkg/component/gardener/resourcemanager/constants
             - pkg/component/seedsystem
             - pkg/component/shared
             - pkg/component/shootsystem

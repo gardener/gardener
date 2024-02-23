@@ -35,7 +35,7 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/apiserver"
-	mockgardenerapiserver "github.com/gardener/gardener/pkg/component/gardenerapiserver/mock"
+	mockgardenerapiserver "github.com/gardener/gardener/pkg/component/gardener/apiserver/mock"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"

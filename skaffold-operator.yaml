@@ -76,12 +76,11 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd/logrotate
             - pkg/component/extensions/operatingsystemconfig/original/components/kubelet
             - pkg/component/extensions/operatingsystemconfig/utils
-            - pkg/component/gardeneraccess
-            - pkg/component/gardeneradmissioncontroller
-            - pkg/component/gardenerapiserver
-            - pkg/component/gardenercontrollermanager
-            - pkg/component/monitoring/gardenermetricsexporter
-            - pkg/component/gardenerscheduler
+            - pkg/component/gardener/access
+            - pkg/component/gardener/admissioncontroller
+            - pkg/component/gardener/apiserver
+            - pkg/component/gardener/controllermanager
+            - pkg/component/gardener/scheduler
             - pkg/component/gardensystem/runtime
             - pkg/component/gardensystem/virtual
             - pkg/component/hvpa
@@ -101,6 +100,7 @@ build:
             - pkg/component/monitoring/alertmanager
             - pkg/component/monitoring/prometheus
             - pkg/component/monitoring/prometheus/aggregate
+            - pkg/component/monitoring/gardenermetricsexporter
             - pkg/component/monitoring/prometheus/cache
             - pkg/component/monitoring/prometheus/seed
             - pkg/component/monitoring/prometheusoperator
@@ -108,8 +108,8 @@ build:
             - pkg/component/nginxingress
             - pkg/component/nodelocaldns/constants
             - pkg/component/plutono
-            - pkg/component/resourcemanager
-            - pkg/component/resourcemanager/constants
+            - pkg/component/gardener/resourcemanager
+            - pkg/component/gardener/resourcemanager/constants
             - pkg/component/shared
             - pkg/component/vpa
             - pkg/component/vpa/constants
