@@ -79,7 +79,7 @@ Another Prometheus instance in the `garden` namespace (called "aggregate Prometh
 An ingress exposes this Prometheus instance allowing it to be scraped from another cluster.
 For more details, continue reading [here](../monitoring/README.md#aggregate-prometheus).
 
-Typically, this is not necessary, but in case an extension wants to extend the configuration for this seed Prometheus, they can create the [`prometheus-operator`'s custom resources](https://github.com/prometheus-operator/prometheus-operator?tab=readme-ov-file#customresourcedefinitions) and label them with `prometheus=seed`, for example:
+Typically, this is not necessary, but in case an extension wants to extend the configuration for this aggregate Prometheus, they can create the [`prometheus-operator`'s custom resources](https://github.com/prometheus-operator/prometheus-operator?tab=readme-ov-file#customresourcedefinitions) and label them with `prometheus=aggregate`, for example:
 
 ```yaml
 apiVersion: monitoring.coreos.com/v1

@@ -101,6 +101,7 @@ type CentralConfigs struct {
 
 // AlertingValues contains alerting configuration for this Prometheus instance.
 type AlertingValues struct {
+	// AlertmanagerName is the name of the alertmanager to which alerts should be sent.
 	AlertmanagerName string
 }
 
