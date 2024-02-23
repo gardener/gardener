@@ -314,8 +314,11 @@ var _ = Describe("operatingsystemconfig", func() {
 
 				kubernetesInterfaceShoot.EXPECT().Client().Return(kubernetesClientShoot).AnyTimes()
 				kubernetesInterfaceSeed.EXPECT().Client().Return(kubernetesClientSeed).AnyTimes()
+			})
 
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, false))
+			JustBeforeEach(func() {
+				worker1Key = operatingsystemconfig.LegacyKey(worker1Name, semver.MustParse(kubernetesVersion), nil)
+				worker2Key = operatingsystemconfig.LegacyKey(worker2Name, semver.MustParse(worker2KubernetesVersion), nil)
 			})
 
 			type tableTestParams struct {
