@@ -969,12 +969,12 @@ build:
             - pkg/logger
             - pkg/nodeagent/apis/config
             - pkg/nodeagent/apis/config/v1alpha1
-            - pkg/operation
-            - pkg/operation/botanist
-            - pkg/operation/botanist/matchers
-            - pkg/operation/garden
-            - pkg/operation/seed
-            - pkg/operation/shoot
+            - pkg/gardenlet/operation
+            - pkg/gardenlet/operation/botanist
+            - pkg/gardenlet/operation/botanist/matchers
+            - pkg/gardenlet/operation/garden
+            - pkg/gardenlet/operation/seed
+            - pkg/gardenlet/operation/shoot
             - pkg/operator/client
             - pkg/resourcemanager/apis/config
             - pkg/resourcemanager/apis/config/v1alpha1

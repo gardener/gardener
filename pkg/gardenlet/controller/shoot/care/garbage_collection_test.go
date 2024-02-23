@@ -31,8 +31,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
-	"github.com/gardener/gardener/pkg/operation"
-	"github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/gardenlet/operation"
+	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 

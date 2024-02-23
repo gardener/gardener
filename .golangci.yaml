@@ -220,11 +220,11 @@ linters-settings:
         alias: mock${1}
       - pkg: github.com/gardener/gardener/third_party/mock/client-go/util/(\w+)
         alias: mock${1}
-      - pkg: github.com/gardener/gardener/pkg/operation/.*/(\w+)/mock$
+      - pkg: github.com/gardener/gardener/pkg/gardenlet/operation/.*/(\w+)/mock$
         alias: mock${1}
       - pkg: github.com/gardener/gardener/pkg/component/(\w+)/constants
         alias: ${1}constants
-      - pkg: github.com/gardener/gardener/pkg/operation/(\w+)
+      - pkg: github.com/gardener/gardener/pkg/gardenlet/operation/(\w+)
         alias: ${1}pkg
       - pkg: github.com/gardener/gardener/pkg/operator/client
         alias: operatorclient

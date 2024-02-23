@@ -30,8 +30,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/operation"
-	"github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/gardenlet/operation"
+	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 

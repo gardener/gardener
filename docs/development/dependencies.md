@@ -34,7 +34,7 @@ These packages feature a dummy `doc.go` file to allow other Go projects to pull 
 These packages are explicitly *not* supposed to be used in other projects (consider them as "non-exported"):
 
 - API validation packages: `pkg/apis/*/*/validation`
-- Operation package (main Gardener business logic regarding `Seed` and `Shoot` clusters): `pkg/operation`
+- Operation package (main Gardener business logic regarding `Seed` and `Shoot` clusters): `pkg/gardenlet/operation`
 - Third party code: `third_party`
 
 Currently, we don't have a mechanism yet for selectively syncing out these exported packages into dedicated repositories like kube's [staging mechanism](https://github.com/kubernetes/kubernetes/tree/master/staging) ([publishing-bot](https://github.com/kubernetes/publishing-bot)).
