@@ -152,11 +152,9 @@ var _ = Describe("Etcd", func() {
 							expectedReplicas:                PointTo(Equal(int32(1))),
 							expectedStorageCapacity:         Equal("10Gi"),
 							expectedDefragmentationSchedule: Equal(ptr.To("34 12 */3 * *")),
-							expectedHVPAConfig: Equal(&etcd.HVPAConfig{
-								Enabled:               hvpaEnabled,
-								MaintenanceTimeWindow: maintenanceTimeWindow,
-								ScaleDownUpdateMode:   ptr.To(computeUpdateMode(class, purpose)),
-							}),
+							expectedHVPAEnabled:             Equal(hvpaEnabled),
+							expectedMaintenanceTimeWindow:   Equal(maintenanceTimeWindow),
+							expectedScaleDownUpdateMode:     Equal(ptr.To(computeUpdateMode(class, purpose))),
 							expectedHighAvailabilityEnabled: Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
 						}
 
@@ -192,11 +190,9 @@ var _ = Describe("Etcd", func() {
 					expectedReplicas:                PointTo(Equal(int32(1))),
 					expectedStorageCapacity:         Equal("10Gi"),
 					expectedDefragmentationSchedule: Equal(ptr.To("34 12 * * *")),
-					expectedHVPAConfig: Equal(&etcd.HVPAConfig{
-						Enabled:               hvpaForShootedSeedEnabled,
-						MaintenanceTimeWindow: maintenanceTimeWindow,
-						ScaleDownUpdateMode:   ptr.To(hvpav1alpha1.UpdateModeMaintenanceWindow),
-					}),
+					expectedHVPAEnabled:             Equal(hvpaEnabled),
+					expectedMaintenanceTimeWindow:   Equal(maintenanceTimeWindow),
+					expectedScaleDownUpdateMode:     Equal(ptr.To(hvpav1alpha1.UpdateModeMaintenanceWindow)),
 					expectedHighAvailabilityEnabled: Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
 				}
 
@@ -224,11 +220,9 @@ var _ = Describe("Etcd", func() {
 					expectedReplicas:                PointTo(Equal(int32(1))),
 					expectedStorageCapacity:         Equal("10Gi"),
 					expectedDefragmentationSchedule: Equal(ptr.To("34 12 * * *")),
-					expectedHVPAConfig: Equal(&etcd.HVPAConfig{
-						Enabled:               hvpaForShootedSeedEnabled,
-						MaintenanceTimeWindow: maintenanceTimeWindow,
-						ScaleDownUpdateMode:   ptr.To(hvpav1alpha1.UpdateModeMaintenanceWindow),
-					}),
+					expectedHVPAEnabled:             Equal(hvpaEnabled),
+					expectedMaintenanceTimeWindow:   Equal(maintenanceTimeWindow),
+					expectedScaleDownUpdateMode:     Equal(ptr.To(hvpav1alpha1.UpdateModeMaintenanceWindow)),
 					expectedHighAvailabilityEnabled: Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
 				}
 
@@ -551,8 +545,10 @@ type newEtcdValidator struct {
 	expectedReplicas                gomegatypes.GomegaMatcher
 	expectedStorageCapacity         gomegatypes.GomegaMatcher
 	expectedDefragmentationSchedule gomegatypes.GomegaMatcher
-	expectedHVPAConfig              gomegatypes.GomegaMatcher
 	expectedHighAvailabilityEnabled gomegatypes.GomegaMatcher
+	expectedHVPAEnabled             gomegatypes.GomegaMatcher
+	expectedMaintenanceTimeWindow   gomegatypes.GomegaMatcher
+	expectedScaleDownUpdateMode     gomegatypes.GomegaMatcher
 }
 
 func (v *newEtcdValidator) NewEtcd(
@@ -574,8 +570,4 @@ func (v *newEtcdValidator) NewEtcd(
 	Expect(values.HighAvailabilityEnabled).To(v.expectedHighAvailabilityEnabled)
 
 	return v
-}
-
-func (v *newEtcdValidator) SetHVPAConfig(config *etcd.HVPAConfig) {
-	Expect(config).To(v.expectedHVPAConfig)
 }

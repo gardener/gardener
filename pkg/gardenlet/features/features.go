@@ -31,6 +31,7 @@ func GetFeatures() []featuregate.Feature {
 	return []featuregate.Feature{
 		features.HVPA,
 		features.HVPAForShootedSeed,
+		features.VPAForETCD,
 		features.DefaultSeccompProfile,
 		features.CoreDNSQueryRewriting,
 		features.IPv6SingleStack,

@@ -906,6 +906,7 @@ build:
             - pkg/controller/networkpolicy/helper
             - pkg/controller/networkpolicy/hostnameresolver
             - pkg/controller/tokenrequestor
+            - pkg/controller/vpaevictionrequirements
             - pkg/controllerutils
             - pkg/controllerutils/mapper
             - pkg/controllerutils/predicate
@@ -940,6 +941,7 @@ build:
             - pkg/gardenlet/controller/shoot/shoot
             - pkg/gardenlet/controller/shoot/shoot/helper
             - pkg/gardenlet/controller/shoot/state
+            - pkg/gardenlet/controller/vpaevictionrequirements
             - pkg/gardenlet/features
             - pkg/healthz
             - pkg/logger

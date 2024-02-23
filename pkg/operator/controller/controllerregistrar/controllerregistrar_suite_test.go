@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package networkpolicyregistrar_test
+package controllerregistrar_test
 
 import (
 	"testing"
@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestNetworkPolicyRegistrar(t *testing.T) {
+func TestControllerRegistrar(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Operator Controller NetworkPolicyRegistrar Suite")
+	RunSpecs(t, "Operator Controller ControllerRegistrar Suite")
 }
