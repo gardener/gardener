@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package etcdcopybackupstask_test
+package copybackupstask_test
 
 import (
 	"context"
@@ -29,12 +29,12 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	. "github.com/gardener/gardener/pkg/component/etcdcopybackupstask"
+	. "github.com/gardener/gardener/pkg/component/etcd/copybackupstask"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("EtcdCopyBackupsTask", func() {
+var _ = Describe("CopyBackupsTask", func() {
 	var (
 		ctrl *gomock.Controller
 		ctx  context.Context

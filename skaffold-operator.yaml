@@ -69,8 +69,8 @@ build:
             - pkg/component
             - pkg/component/apiserver
             - pkg/component/networking/coredns/constants
-            - pkg/component/etcd
-            - pkg/component/etcd/constants
+            - pkg/component/etcd/etcd
+            - pkg/component/etcd/etcd/constants
             - pkg/component/extensions/operatingsystemconfig/original/components
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd/logrotate

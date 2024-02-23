@@ -22,7 +22,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	"k8s.io/utils/ptr"
 
-	. "github.com/gardener/gardener/pkg/component/etcd"
+	. "github.com/gardener/gardener/pkg/component/etcd/etcd"
 	"github.com/gardener/gardener/pkg/component/test"
 )
 

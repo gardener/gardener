@@ -34,7 +34,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	mocketcd "github.com/gardener/gardener/pkg/component/etcd/mock"
+	mocketcd "github.com/gardener/gardener/pkg/component/etcd/etcd/mock"
 	mockcontainerruntime "github.com/gardener/gardener/pkg/component/extensions/containerruntime/mock"
 	mockcontrolplane "github.com/gardener/gardener/pkg/component/extensions/controlplane/mock"
 	mockinfrastructure "github.com/gardener/gardener/pkg/component/extensions/infrastructure/mock"

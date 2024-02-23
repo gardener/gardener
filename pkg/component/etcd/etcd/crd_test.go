@@ -28,7 +28,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	. "github.com/gardener/gardener/pkg/component/etcd"
+	. "github.com/gardener/gardener/pkg/component/etcd/etcd"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 

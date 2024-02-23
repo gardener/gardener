@@ -19,7 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/constants"
+	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 )
 
 // NewDependencyWatchdogWeederConfiguration returns the configuration for the dependency watchdog ensuring that its dependant

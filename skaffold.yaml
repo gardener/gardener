@@ -850,9 +850,9 @@ build:
             - pkg/component/networking/coredns
             - pkg/component/networking/coredns/constants
             - pkg/component/nodemanagement/dependencywatchdog
-            - pkg/component/etcd
-            - pkg/component/etcd/constants
-            - pkg/component/etcdcopybackupstask
+            - pkg/component/etcd/copybackupstask
+            - pkg/component/etcd/etcd
+            - pkg/component/etcd/etcd/constants
             - pkg/component/extensions
             - pkg/component/extensions/backupentry
             - pkg/component/extensions/containerruntime
