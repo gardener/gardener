@@ -29,6 +29,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/component"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -58,7 +59,7 @@ func NewAccess(
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	values AccessValues,
-) *dependencyWatchdogAccess {
+) DWDAccess {
 	return &dependencyWatchdogAccess{
 		client:         client,
 		namespace:      namespace,
@@ -78,6 +79,11 @@ type dependencyWatchdogAccess struct {
 type AccessValues struct {
 	// ServerInCluster is the in-cluster address of a kube-apiserver.
 	ServerInCluster string
+}
+
+type DWDAccess interface {
+	component.Deployer
+	DeployMigrate(ctx context.Context) error
 }
 
 func (d *dependencyWatchdogAccess) Deploy(ctx context.Context) error {
