@@ -38,7 +38,7 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	. "github.com/gardener/gardener/pkg/component/machinecontrollermanager"
+	. "github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"

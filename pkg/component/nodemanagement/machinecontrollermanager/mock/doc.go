@@ -12,6 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate ../../../../hack/generate-crds.sh -p crd- -l machine.sapcloud.io
+//go:generate mockgen -package mock -destination=mocks.go github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager Interface
 
-package templates
+package mock

@@ -34,7 +34,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
-	mockmachinecontrollermanager "github.com/gardener/gardener/pkg/component/machinecontrollermanager/mock"
+	mockmachinecontrollermanager "github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager/mock"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"

@@ -624,7 +624,7 @@ build:
             - pkg/component/kubeapiserver/constants
             - pkg/component/kubeproxy
             - pkg/component/logging/vali/constants
-            - pkg/component/machinecontrollermanager
+            - pkg/component/nodemanagement/machinecontrollermanager
             - pkg/controller/service
             - pkg/controllerutils
             - pkg/controllerutils/mapper
@@ -849,7 +849,7 @@ build:
             - pkg/component/clusteridentity
             - pkg/component/networking/coredns
             - pkg/component/networking/coredns/constants
-            - pkg/component/dependencywatchdog
+            - pkg/component/nodemanagement/dependencywatchdog
             - pkg/component/etcd
             - pkg/component/etcd/constants
             - pkg/component/etcdcopybackupstask
@@ -899,7 +899,7 @@ build:
             - pkg/component/logging/fluentoperator/customresources
             - pkg/component/logging/vali
             - pkg/component/logging/vali/constants
-            - pkg/component/machinecontrollermanager
+            - pkg/component/nodemanagement/machinecontrollermanager
             - pkg/component/monitoring/metricsserver
             - pkg/component/monitoring
             - pkg/component/monitoring/alertmanager
@@ -914,7 +914,7 @@ build:
             - pkg/component/monitoring/nodeexporter
             - pkg/component/networking/nodelocaldns
             - pkg/component/networking/nodelocaldns/constants
-            - pkg/component/nodeproblemdetector
+            - pkg/component/nodemanagement/nodeproblemdetector
             - pkg/component/plutono
             - pkg/component/gardener/resourcemanager
             - pkg/component/gardener/resourcemanager/constants

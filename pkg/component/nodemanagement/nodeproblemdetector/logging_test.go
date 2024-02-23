@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
-	. "github.com/gardener/gardener/pkg/component/nodeproblemdetector"
+	. "github.com/gardener/gardener/pkg/component/nodemanagement/nodeproblemdetector"
 )
 
 var _ = Describe("Logging", func() {

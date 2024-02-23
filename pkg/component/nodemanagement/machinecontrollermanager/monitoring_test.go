@@ -19,7 +19,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 
 	"github.com/gardener/gardener/pkg/component"
-	. "github.com/gardener/gardener/pkg/component/machinecontrollermanager"
+	. "github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/test"
 )
 

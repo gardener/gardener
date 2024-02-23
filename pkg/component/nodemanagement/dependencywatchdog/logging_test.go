@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
-	. "github.com/gardener/gardener/pkg/component/dependencywatchdog"
+	. "github.com/gardener/gardener/pkg/component/nodemanagement/dependencywatchdog"
 )
 
 var _ = Describe("Logging", func() {

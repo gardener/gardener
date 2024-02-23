@@ -19,7 +19,7 @@ import (
 
 	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/nodeproblemdetector"
+	"github.com/gardener/gardener/pkg/component/nodemanagement/nodeproblemdetector"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 

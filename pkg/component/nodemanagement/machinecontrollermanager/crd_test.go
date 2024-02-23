@@ -27,7 +27,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	. "github.com/gardener/gardener/pkg/component/machinecontrollermanager"
+	. "github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 

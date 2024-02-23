@@ -1,4 +1,4 @@
-// Copyright 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,16 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dependencywatchdog_test
+package machinecontrollermanager_test
 
 import (
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
-func TestDependencyWatchdog(t *testing.T) {
+func TestMachineControllerManager(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Component DependencyWatchdog Suite")
+	RunSpecs(t, "Component NodeManagement MachineControllerManager Suite")
 }
+
+var _ = BeforeSuite(func() {
+	DeferCleanup(test.WithVar(&secretsutils.GenerateKey, secretsutils.FakeGenerateKey))
+})
