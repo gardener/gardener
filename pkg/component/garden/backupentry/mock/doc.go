@@ -12,16 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package projectrbac_test
+package backupentry
 
-import (
-	"testing"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-)
-
-func TestProjectRBAC(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Component ProjectRBAC Suite")
-}
+//go:generate mockgen -package backupentry -destination=mocks.go github.com/gardener/gardener/pkg/component/garden/backupentry Interface

@@ -81,8 +81,8 @@ build:
             - pkg/component/gardener/apiserver
             - pkg/component/gardener/controllermanager
             - pkg/component/gardener/scheduler
-            - pkg/component/gardensystem/runtime
-            - pkg/component/gardensystem/virtual
+            - pkg/component/garden/system/runtime
+            - pkg/component/garden/system/virtual
             - pkg/component/autoscaling/hvpa
             - pkg/component/networking/istio
             - pkg/component/kubeapiserver
@@ -509,7 +509,7 @@ build:
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
             - pkg/component
-            - pkg/component/projectrbac
+            - pkg/component/garden/projectrbac
             - pkg/controller/reference
             - pkg/controllermanager/apis/config
             - pkg/controllermanager/apis/config/v1alpha1
