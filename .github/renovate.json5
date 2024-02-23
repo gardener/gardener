@@ -1,7 +1,7 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:best-practices"
+    "config:recommended"
   ],
   "labels": ["kind/enhancement"],
   "postUpdateOptions": ["gomodTidy"],
@@ -21,6 +21,16 @@
       "fileMatch": ["^hack\/.+\\.yaml$", "^\\.test-defs\/.+\\.yaml$"],
       "matchStrings": ["image: (?<depName>.*?):(?<currentValue>.*?)\\s"],
       "datasourceTemplate": "docker"
+    },
+    {
+      // Generic detection for install manifests from GitHub releases.
+      "customType": "regex",
+      "fileMatch": ["\/kustomization\\.yaml$"],
+      "matchStrings": [
+        "https:\/\/github\\.com\/(?<depName>[^/]*\/[^/]*?)\/releases\/download\/(?<currentValue>.*?)\/",
+        "https:\/\/raw\\.githubusercontent\\.com\/(?<depName>[^/]*\/[^/]*?)\/(?<currentValue>.*?)\/",
+      ],
+      "datasourceTemplate": "github-releases"
     }
   ],
   "separateMinorPatch": true,
@@ -28,7 +38,7 @@
     {
       // Group golang updates in one PR.
       "groupName": "Update golang",
-      "matchDatasources": ["docker"],
+      "matchDatasources": ["docker", "go-version"],
       "matchPackagePatterns": ["golang"],
     },
     {
@@ -66,7 +76,6 @@
       "matchFileNames": [
           "chart/**",
           "cmd/**",
-          "example/**",
           "extensions/**",
           "pkg/**",
           "plugin/**",
