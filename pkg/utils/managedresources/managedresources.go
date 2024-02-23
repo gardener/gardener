@@ -137,6 +137,27 @@ func CreateFromUnstructured(
 	return Create(ctx, client, namespace, name, nil, secretNameWithPrefix, class, dataMap, &keepObjects, injectedLabels, ptr.To(false))
 }
 
+// Update updates a managed resource and its secret with the given name, class, key, and data in the given namespace.
+func Update(
+	ctx context.Context,
+	client client.Client,
+	namespace, name string,
+	labels map[string]string,
+	secretNameWithPrefix bool,
+	class string,
+	data map[string][]byte,
+	keepObjects *bool,
+	injectedLabels map[string]string,
+	forceOverwriteAnnotations *bool,
+) error {
+	var (
+		secretName, secret = NewSecret(client, namespace, name, data, secretNameWithPrefix)
+		managedResource    = New(client, namespace, name, class, keepObjects, labels, injectedLabels, forceOverwriteAnnotations).WithSecretRef(secretName).CreateOnUpdate(false)
+	)
+
+	return deployManagedResource(ctx, secret, managedResource)
+}
+
 // Create creates a managed resource and its secret with the given name, class, key, and data in the given namespace.
 func Create(
 	ctx context.Context,

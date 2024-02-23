@@ -88,7 +88,7 @@ func (e *errorClient) Patch(ctx context.Context, obj client.Object, patch client
 
 var _ = Describe("managedresources", func() {
 	var (
-		ctx     = context.TODO()
+		ctx     = context.Background()
 		fakeErr = fmt.Errorf("fake")
 
 		namespace   = "test"
@@ -150,6 +150,20 @@ var _ = Describe("managedresources", func() {
 					KeepObjects:  ptr.To(keepObjects),
 				},
 			}))
+		})
+	})
+
+	Describe("#Update", func() {
+		It("should fail to update managed resource because it doesn't exist", func() {
+			Expect(Update(ctx, fakeClient, namespace, name, nil, false, "", data, nil, nil, nil)).To(BeNotFoundError())
+
+			// Even though the update of the managed resource is expected to fail,
+			// the secret is still created because it is immutable.
+			secretList := &corev1.SecretList{}
+			Expect(fakeClient.List(ctx, secretList, client.Limit(1))).To(Succeed())
+			Expect(secretList.Items[0].Name).To(HavePrefix(name))
+
+			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
 		})
 	})
 
