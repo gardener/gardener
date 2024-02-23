@@ -79,6 +79,7 @@ const (
 	// When enabled, maxSurge for Shoot kube-apiserver deployments is set to 100%.
 	// owner: @oliver-goetz
 	// beta: v1.82.0
+	// GA: v1.90.0
 	APIServerFastRollout featuregate.Feature = "APIServerFastRollout"
 
 	// UseGardenerNodeAgent enables the `gardener-node-agent` instead of the `cloud-config-downloader` for shoot worker
@@ -122,7 +123,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	MutableShootSpecNetworkingNodes:    {Default: false, PreRelease: featuregate.Alpha},
 	ShootForceDeletion:                 {Default: false, PreRelease: featuregate.Alpha},
 	MachineControllerManagerDeployment: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	APIServerFastRollout:               {Default: true, PreRelease: featuregate.Beta},
+	APIServerFastRollout:               {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	UseGardenerNodeAgent:               {Default: true, PreRelease: featuregate.Beta},
 }
 

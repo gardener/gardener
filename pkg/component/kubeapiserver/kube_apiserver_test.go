@@ -1798,38 +1798,6 @@ rules:
 
 			It("should have the expected deployment settings", func() {
 				var (
-					replicas        int32 = 1337
-					intStr25Percent       = intstr.FromString("25%")
-					intStrZero            = intstr.FromInt32(0)
-				)
-
-				kapi = New(kubernetesInterface, namespace, sm, Values{
-					Values: apiserver.Values{
-						Autoscaling:    apiserver.AutoscalingConfig{Replicas: &replicas},
-						RuntimeVersion: runtimeVersion,
-					},
-					Version: version,
-				})
-				deployAndRead()
-
-				Expect(deployment.Spec.MinReadySeconds).To(Equal(int32(30)))
-				Expect(deployment.Spec.RevisionHistoryLimit).To(PointTo(Equal(int32(2))))
-				Expect(deployment.Spec.Replicas).To(PointTo(Equal(replicas)))
-				Expect(deployment.Spec.Selector).To(Equal(&metav1.LabelSelector{MatchLabels: map[string]string{
-					"app":  "kubernetes",
-					"role": "apiserver",
-				}}))
-				Expect(deployment.Spec.Strategy).To(Equal(appsv1.DeploymentStrategy{
-					Type: appsv1.RollingUpdateDeploymentStrategyType,
-					RollingUpdate: &appsv1.RollingUpdateDeployment{
-						MaxSurge:       &intStr25Percent,
-						MaxUnavailable: &intStrZero,
-					},
-				}))
-			})
-
-			It("should have the expected deployment settings when rolling out fast", func() {
-				var (
 					intStr100Percent = intstr.FromString("100%")
 					intStrZero       = intstr.FromInt32(0)
 				)
@@ -1838,8 +1806,7 @@ rules:
 					Values: apiserver.Values{
 						RuntimeVersion: runtimeVersion,
 					},
-					FastRollout: true,
-					Version:     version,
+					Version: version,
 				})
 				deployAndRead()
 

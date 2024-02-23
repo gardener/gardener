@@ -18,21 +18,22 @@ The following tables are a summary of the feature gates that you can set on diff
 
 ## Feature Gates for Alpha or Beta Features
 
-| Feature                             | Default | Stage   | Since  | Until  |
-|-------------------------------------|---------|---------|--------|--------|
-| HVPA                                | `false` | `Alpha` | `0.31` |        |
-| HVPAForShootedSeed                  | `false` | `Alpha` | `0.32` |        |
-| DefaultSeccompProfile               | `false` | `Alpha` | `1.54` |        |
-| CoreDNSQueryRewriting               | `false` | `Alpha` | `1.55` |        |
-| IPv6SingleStack                     | `false` | `Alpha` | `1.63` |        |
-| MutableShootSpecNetworkingNodes     | `false` | `Alpha` | `1.64` |        |
-| MachineControllerManagerDeployment  | `false` | `Alpha` | `1.73` |        |
-| MachineControllerManagerDeployment  | `true`  | `Beta`  | `1.81` | `1.81` |
-| MachineControllerManagerDeployment  | `true`  | `GA`    | `1.82` |        |
-| ShootForceDeletion                  | `false` | `Alpha` | `1.81` |        |
-| APIServerFastRollout                | `true`  | `Beta`  | `1.82` |        |
-| UseGardenerNodeAgent                | `false` | `Alpha` | `1.82` | `1.88` |
-| UseGardenerNodeAgent                | `true`  | `Beta`  | `1.89` |        |
+| Feature                            | Default | Stage   | Since  | Until  |
+|------------------------------------|---------|---------|--------|--------|
+| HVPA                               | `false` | `Alpha` | `0.31` |        |
+| HVPAForShootedSeed                 | `false` | `Alpha` | `0.32` |        |
+| DefaultSeccompProfile              | `false` | `Alpha` | `1.54` |        |
+| CoreDNSQueryRewriting              | `false` | `Alpha` | `1.55` |        |
+| IPv6SingleStack                    | `false` | `Alpha` | `1.63` |        |
+| MutableShootSpecNetworkingNodes    | `false` | `Alpha` | `1.64` |        |
+| MachineControllerManagerDeployment | `false` | `Alpha` | `1.73` |        |
+| MachineControllerManagerDeployment | `true`  | `Beta`  | `1.81` | `1.81` |
+| MachineControllerManagerDeployment | `true`  | `GA`    | `1.82` |        |
+| ShootForceDeletion                 | `false` | `Alpha` | `1.81` |        |
+| APIServerFastRollout               | `true`  | `Beta`  | `1.82` | `1.89` |
+| APIServerFastRollout               | `true`  | `GA`    | `1.90` |        |
+| UseGardenerNodeAgent               | `false` | `Alpha` | `1.82` | `1.88` |
+| UseGardenerNodeAgent               | `true`  | `Beta`  | `1.89` |        |
 
 ## Feature Gates for Graduated or Deprecated Features
 

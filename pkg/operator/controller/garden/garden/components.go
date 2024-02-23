@@ -580,7 +580,6 @@ func (r *Reconciler) newKubeAPIServer(
 		authenticationWebhookConfig,
 		authorizationWebhookConfig,
 		resourcesToStoreInETCDEvents,
-		true,
 	)
 }
 
