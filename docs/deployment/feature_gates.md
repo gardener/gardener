@@ -34,6 +34,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | APIServerFastRollout               | `true`  | `GA`    | `1.90` |        |
 | UseGardenerNodeAgent               | `false` | `Alpha` | `1.82` | `1.88` |
 | UseGardenerNodeAgent               | `true`  | `Beta`  | `1.89` |        |
+| UseGardenerNodeAgent               | `true`  | `GA`    | `1.90` |        |
 
 ## Feature Gates for Graduated or Deprecated Features
 
