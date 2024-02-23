@@ -85,7 +85,6 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		nil,
 		nil,
 		nil,
-		features.DefaultFeatureGate.Enabled(features.APIServerFastRollout),
 	)
 }
 
