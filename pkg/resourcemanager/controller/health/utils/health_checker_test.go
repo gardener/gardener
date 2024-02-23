@@ -24,6 +24,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -505,6 +506,25 @@ var _ = Describe("CheckHealth", func() {
 				},
 				Spec:   monitoringv1.AlertmanagerSpec{Replicas: ptr.To(int32(2))},
 				Status: monitoringv1.AlertmanagerStatus{AvailableReplicas: 1},
+			}
+		})
+
+		testSuite()
+	})
+
+	Context("VerticalPodAutoscaler", func() {
+		BeforeEach(func() {
+			healthy = &vpaautoscalingv1.VerticalPodAutoscaler{}
+			unhealthy = &vpaautoscalingv1.VerticalPodAutoscaler{
+				Status: vpaautoscalingv1.VerticalPodAutoscalerStatus{Conditions: []vpaautoscalingv1.VerticalPodAutoscalerCondition{{Type: vpaautoscalingv1.ConfigUnsupported, Status: corev1.ConditionTrue}}},
+			}
+			unhealthyWithSkipHealthCheckAnnotation = &vpaautoscalingv1.VerticalPodAutoscaler{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						resourcesv1alpha1.SkipHealthCheck: "true",
+					},
+				},
+				Status: vpaautoscalingv1.VerticalPodAutoscalerStatus{Conditions: []vpaautoscalingv1.VerticalPodAutoscalerCondition{{Type: vpaautoscalingv1.ConfigUnsupported, Status: corev1.ConditionTrue}}},
 			}
 		})
 

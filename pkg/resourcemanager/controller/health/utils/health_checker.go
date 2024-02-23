@@ -26,6 +26,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -92,6 +93,8 @@ func CheckHealth(obj client.Object) (bool, error) {
 		return true, health.CheckPrometheus(o)
 	case *monitoringv1.Alertmanager:
 		return true, health.CheckAlertmanager(o)
+	case *vpaautoscalingv1.VerticalPodAutoscaler:
+		return true, health.CheckVerticalPodAutoscaler(o)
 	}
 
 	return false, nil
