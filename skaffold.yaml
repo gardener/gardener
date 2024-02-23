@@ -845,7 +845,7 @@ build:
             - pkg/component/apiserverproxy
             - pkg/component/backupentry
             - pkg/component/monitoring/blackboxexporter
-            - pkg/component/clusterautoscaler
+            - pkg/component/autoscaling/clusterautoscaler
             - pkg/component/clusteridentity
             - pkg/component/coredns
             - pkg/component/coredns/constants
@@ -883,7 +883,7 @@ build:
             - pkg/component/extensions/worker
             - pkg/component/gardener/access
             - pkg/component/gardener/apiserver
-            - pkg/component/hvpa
+            - pkg/component/autoscaling/hvpa
             - pkg/component/istio
             - pkg/component/kubeapiserver
             - pkg/component/kubeapiserver/constants
@@ -921,8 +921,8 @@ build:
             - pkg/component/seedsystem
             - pkg/component/shared
             - pkg/component/shootsystem
-            - pkg/component/vpa
-            - pkg/component/vpa/constants
+            - pkg/component/autoscaling/vpa
+            - pkg/component/autoscaling/vpa/constants
             - pkg/component/vpnauthzserver
             - pkg/component/vpnseedserver
             - pkg/component/vpnshoot

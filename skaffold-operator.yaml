@@ -83,7 +83,7 @@ build:
             - pkg/component/gardener/scheduler
             - pkg/component/gardensystem/runtime
             - pkg/component/gardensystem/virtual
-            - pkg/component/hvpa
+            - pkg/component/autoscaling/hvpa
             - pkg/component/istio
             - pkg/component/kubeapiserver
             - pkg/component/kubeapiserver/constants
@@ -111,8 +111,8 @@ build:
             - pkg/component/gardener/resourcemanager
             - pkg/component/gardener/resourcemanager/constants
             - pkg/component/shared
-            - pkg/component/vpa
-            - pkg/component/vpa/constants
+            - pkg/component/autoscaling/vpa
+            - pkg/component/autoscaling/vpa/constants
             - pkg/component/vpnauthzserver
             - pkg/component/vpnseedserver
             - pkg/controller/networkpolicy

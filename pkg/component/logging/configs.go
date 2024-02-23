@@ -16,17 +16,17 @@ package logging
 
 import (
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/autoscaling/hvpa"
+	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
 	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/containerd"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
-	"github.com/gardener/gardener/pkg/component/hvpa"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/component/monitoring/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/nginxingress"
-	"github.com/gardener/gardener/pkg/component/vpa"
 )
 
 // GardenCentralLoggingConfigurations is a list of central logging configuration for components running in the garden
