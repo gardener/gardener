@@ -18,6 +18,7 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
@@ -31,7 +32,8 @@ import (
 
 // Secret is a structure for managing a secret.
 type Secret struct {
-	client client.Client
+	client         client.Client
+	createOnUpdate bool
 
 	keyValues map[string]string
 	secret    *corev1.Secret
@@ -40,10 +42,18 @@ type Secret struct {
 // NewSecret creates a new builder for a secret.
 func NewSecret(client client.Client) *Secret {
 	return &Secret{
-		client:    client,
-		keyValues: make(map[string]string),
-		secret:    &corev1.Secret{},
+		client:         client,
+		createOnUpdate: true,
+		keyValues:      make(map[string]string),
+		secret:         &corev1.Secret{},
 	}
+}
+
+// CreateOnUpdate determines if the secret should be created if it does not exist.
+// Immutable secrets are always created, regardless of this configuration.
+func (s *Secret) CreateOnUpdate(create bool) *Secret {
+	s.createOnUpdate = create
+	return s
 }
 
 // WithNamespacedName sets the namespace and name.
@@ -106,13 +116,35 @@ func (s *Secret) Reconcile(ctx context.Context) error {
 		ObjectMeta: metav1.ObjectMeta{Name: s.secret.Name, Namespace: s.secret.Namespace},
 	}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, s.client, secret, func() error {
+	mutate := func() error {
 		secret.Labels = s.secret.Labels
 		secret.Annotations = s.secret.Annotations
 		secret.Type = corev1.SecretTypeOpaque
 		secret.Data = s.secret.Data
 		secret.Immutable = s.secret.Immutable
 		return nil
-	})
-	return err
+	}
+
+	if s.createOnUpdate || ptr.Deref(s.secret.Immutable, false) {
+		_, err := controllerutil.CreateOrUpdate(ctx, s.client, secret, mutate)
+		return err
+	}
+	return updateSecret(ctx, s.client, secret, mutate)
+}
+
+func updateSecret(ctx context.Context, cl client.Client, secret *corev1.Secret, mutate func() error) error {
+	if err := cl.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
+		return err
+	}
+
+	existingSecret := secret.DeepCopy()
+	if err := mutate(); err != nil {
+		return err
+	}
+
+	if equality.Semantic.DeepEqual(existingSecret, secret) {
+		return nil
+	}
+
+	return cl.Update(ctx, secret)
 }
