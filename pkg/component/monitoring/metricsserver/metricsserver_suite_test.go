@@ -26,7 +26,7 @@ import (
 
 func TestMetricsServer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Component MetricsServer Suite")
+	RunSpecs(t, "Component Monitoring MetricsServer Suite")
 }
 
 var _ = BeforeSuite(func() {

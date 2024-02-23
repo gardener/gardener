@@ -18,7 +18,7 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/imagevector"
-	"github.com/gardener/gardener/pkg/component/blackboxexporter"
+	"github.com/gardener/gardener/pkg/component/monitoring/blackboxexporter"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 

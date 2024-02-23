@@ -25,7 +25,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
-	mocknodeexporter "github.com/gardener/gardener/pkg/component/nodeexporter/mock"
+	mocknodeexporter "github.com/gardener/gardener/pkg/component/monitoring/nodeexporter/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"

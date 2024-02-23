@@ -1,4 +1,4 @@
-// Copyright 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metricsserver_test
+package kubestatemetrics_test
 
 import (
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
@@ -23,7 +23,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
-	. "github.com/gardener/gardener/pkg/component/metricsserver"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	. "github.com/gardener/gardener/pkg/component/monitoring/kubestatemetrics"
 )
 
 var _ = Describe("Logging", func() {
@@ -36,16 +37,16 @@ var _ = Describe("Logging", func() {
 				[]*fluentbitv1alpha2.ClusterFilter{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:   "metrics-server",
+							Name:   v1beta1constants.DeploymentNameKubeStateMetrics,
 							Labels: map[string]string{"fluentbit.gardener/type": "seed"},
 						},
 						Spec: fluentbitv1alpha2.FilterSpec{
-							Match: "kubernetes.*metrics-server*metrics-server*",
+							Match: "kubernetes.*kube-state-metrics*kube-state-metrics*",
 							FilterItems: []fluentbitv1alpha2.FilterItem{
 								{
 									Parser: &fluentbitv1alpha2filter.Parser{
 										KeyName:     "log",
-										Parser:      "metrics-server-parser",
+										Parser:      "kube-state-metrics-parser",
 										ReserveData: ptr.To(true),
 									},
 								},
@@ -57,7 +58,7 @@ var _ = Describe("Logging", func() {
 				[]*fluentbitv1alpha2.ClusterParser{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:   "metrics-server-parser",
+							Name:   "kube-state-metrics-parser",
 							Labels: map[string]string{"fluentbit.gardener/type": "seed"},
 						},
 						Spec: fluentbitv1alpha2.ParserSpec{

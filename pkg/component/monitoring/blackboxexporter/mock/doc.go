@@ -12,16 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package blackboxexporter_test
+//go:generate mockgen -package mock -destination=mocks.go github.com/gardener/gardener/pkg/component/monitoring/blackboxexporter Interface
 
-import (
-	"testing"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-)
-
-func TestBlackboxExporter(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Component BlackboxExporter Suite")
-}
+package mock

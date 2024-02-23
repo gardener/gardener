@@ -18,7 +18,7 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/imagevector"
-	"github.com/gardener/gardener/pkg/component/nodeexporter"
+	"github.com/gardener/gardener/pkg/component/monitoring/nodeexporter"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 

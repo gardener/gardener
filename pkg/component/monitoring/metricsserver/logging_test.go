@@ -1,10 +1,10 @@
-// Copyright 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file.
+// Copyright 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,11 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package nodeexporter_test
+package metricsserver_test
 
 import (
-	"fmt"
-
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
 	fluentbitv1alpha2filter "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/filter"
 	fluentbitv1alpha2parser "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/parser"
@@ -25,8 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	. "github.com/gardener/gardener/pkg/component/nodeexporter"
+	. "github.com/gardener/gardener/pkg/component/monitoring/metricsserver"
 )
 
 var _ = Describe("Logging", func() {
@@ -39,16 +36,16 @@ var _ = Describe("Logging", func() {
 				[]*fluentbitv1alpha2.ClusterFilter{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:   "node-exporter",
-							Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
+							Name:   "metrics-server",
+							Labels: map[string]string{"fluentbit.gardener/type": "seed"},
 						},
 						Spec: fluentbitv1alpha2.FilterSpec{
-							Match: fmt.Sprintf("kubernetes.*%s*%s*", "node-exporter", "node-exporter"),
+							Match: "kubernetes.*metrics-server*metrics-server*",
 							FilterItems: []fluentbitv1alpha2.FilterItem{
 								{
 									Parser: &fluentbitv1alpha2filter.Parser{
 										KeyName:     "log",
-										Parser:      "node-exporter" + "-parser",
+										Parser:      "metrics-server-parser",
 										ReserveData: ptr.To(true),
 									},
 								},
@@ -60,14 +57,14 @@ var _ = Describe("Logging", func() {
 				[]*fluentbitv1alpha2.ClusterParser{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:   "node-exporter-parser",
-							Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
+							Name:   "metrics-server-parser",
+							Labels: map[string]string{"fluentbit.gardener/type": "seed"},
 						},
 						Spec: fluentbitv1alpha2.ParserSpec{
 							Regex: &fluentbitv1alpha2parser.Regex{
-								Regex:      "^time=\"(?<time>\\d{4}-\\d{2}-\\d{2}T[^\"]*)\"\\s+level=(?<severity>\\w+)\\smsg=\"(?<log>.*)\"\\s+source=\"(?<source>.*)\"",
+								Regex:      "^(?<severity>\\w)(?<time>\\d{4} [^\\s]*)\\s+(?<pid>\\d+)\\s+(?<source>[^ \\]]+)\\] (?<log>.*)$",
 								TimeKey:    "time",
-								TimeFormat: "%Y-%m-%dT%H:%M:%S.%L",
+								TimeFormat: "%m%d %H:%M:%S.%L",
 							},
 						},
 					},

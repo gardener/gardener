@@ -844,7 +844,7 @@ build:
             - pkg/component/apiserver
             - pkg/component/apiserverproxy
             - pkg/component/backupentry
-            - pkg/component/blackboxexporter
+            - pkg/component/monitoring/blackboxexporter
             - pkg/component/clusterautoscaler
             - pkg/component/clusteridentity
             - pkg/component/coredns
@@ -892,7 +892,7 @@ build:
             - pkg/component/kubeproxy
             - pkg/component/kubernetesdashboard
             - pkg/component/kubescheduler
-            - pkg/component/kubestatemetrics
+            - pkg/component/monitoring/kubestatemetrics
             - pkg/component/logging
             - pkg/component/logging/eventlogger
             - pkg/component/logging/fluentoperator
@@ -900,7 +900,7 @@ build:
             - pkg/component/logging/vali
             - pkg/component/logging/vali/constants
             - pkg/component/machinecontrollermanager
-            - pkg/component/metricsserver
+            - pkg/component/monitoring/metricsserver
             - pkg/component/monitoring
             - pkg/component/monitoring/alertmanager
             - pkg/component/monitoring/prometheus
@@ -911,7 +911,7 @@ build:
             - pkg/component/monitoring/utils
             - pkg/component/namespaces
             - pkg/component/nginxingress
-            - pkg/component/nodeexporter
+            - pkg/component/monitoring/nodeexporter
             - pkg/component/nodelocaldns
             - pkg/component/nodelocaldns/constants
             - pkg/component/nodeproblemdetector

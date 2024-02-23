@@ -1,10 +1,10 @@
-// Copyright 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package blackboxexporter_test
+package nodeexporter_test
 
 import (
 	"context"
 
-	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -31,7 +30,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	. "github.com/gardener/gardener/pkg/component/blackboxexporter"
+	. "github.com/gardener/gardener/pkg/component/monitoring/nodeexporter"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -39,11 +38,11 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("BlackboxExporter", func() {
+var _ = Describe("NodeExporter", func() {
 	var (
 		ctx = context.TODO()
 
-		managedResourceName = "shoot-core-blackbox-exporter"
+		managedResourceName = "shoot-core-node-exporter"
 		namespace           = "some-namespace"
 		image               = "some-image:some-tag"
 
@@ -58,11 +57,8 @@ var _ = Describe("BlackboxExporter", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		values = Values{
-			Image:             image,
-			VPAEnabled:        false,
-			KubernetesVersion: semver.MustParse("1.25.5"),
+			Image: image,
 		}
-		component = New(c, namespace, values)
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -80,187 +76,163 @@ var _ = Describe("BlackboxExporter", func() {
 
 	Describe("#Deploy", func() {
 		var (
-			configMapName = "blackbox-exporter-config-07d191e0"
-
 			serviceAccountYAML = `apiVersion: v1
 automountServiceAccountToken: false
 kind: ServiceAccount
 metadata:
   creationTimestamp: null
   labels:
-    component: blackbox-exporter
-    gardener.cloud/role: monitoring
-    origin: gardener
-  name: blackbox-exporter
+    component: node-exporter
+  name: node-exporter
   namespace: kube-system
 `
-
-			configMapYAML = `apiVersion: v1
-data:
-  blackbox.yaml: |
-    modules:
-      http_kubernetes_service:
-        prober: http
-        timeout: 10s
-        http:
-          headers:
-            Accept: "*/*"
-            Accept-Language: "en-US"
-          tls_config:
-            ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-          bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-          preferred_ip_protocol: "ip4"
-immutable: true
-kind: ConfigMap
-metadata:
-  creationTimestamp: null
-  labels:
-    app: prometheus
-    resources.gardener.cloud/garbage-collectable-reference: "true"
-    role: monitoring
-  name: ` + configMapName + `
-  namespace: kube-system
-`
-
-			pdbYAMLFor = func(k8sGreaterEquals126 bool) string {
-				out := `apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  creationTimestamp: null
-  labels:
-    component: blackbox-exporter
-    gardener.cloud/role: monitoring
-  name: blackbox-exporter
-  namespace: kube-system
-spec:
-  maxUnavailable: 1
-  selector:
-    matchLabels:
-      component: blackbox-exporter
-`
-				if k8sGreaterEquals126 {
-					out += `  unhealthyPodEvictionPolicy: AlwaysAllow
-`
-				}
-				out += `status:
-  currentHealthy: 0
-  desiredHealthy: 0
-  disruptionsAllowed: 0
-  expectedPods: 0
-`
-				return out
-			}
-
-			deploymentYAML = `apiVersion: apps/v1
-kind: Deployment
-metadata:
-  annotations:
-    ` + references.AnnotationKey(references.KindConfigMap, configMapName) + `: ` + configMapName + `
-  creationTimestamp: null
-  labels:
-    component: blackbox-exporter
-    gardener.cloud/role: monitoring
-    high-availability-config.resources.gardener.cloud/type: server
-    origin: gardener
-  name: blackbox-exporter
-  namespace: kube-system
-spec:
-  replicas: 1
-  revisionHistoryLimit: 2
-  selector:
-    matchLabels:
-      component: blackbox-exporter
-  strategy: {}
-  template:
-    metadata:
-      annotations:
-        ` + references.AnnotationKey(references.KindConfigMap, configMapName) + `: ` + configMapName + `
-      creationTimestamp: null
-      labels:
-        component: blackbox-exporter
-        gardener.cloud/role: monitoring
-        networking.gardener.cloud/from-seed: allowed
-        networking.gardener.cloud/to-apiserver: allowed
-        networking.gardener.cloud/to-dns: allowed
-        networking.gardener.cloud/to-public-networks: allowed
-        origin: gardener
-    spec:
-      containers:
-      - args:
-        - --config.file=/etc/blackbox_exporter/blackbox.yaml
-        - --log.level=debug
-        image: some-image:some-tag
-        imagePullPolicy: IfNotPresent
-        name: blackbox-exporter
-        ports:
-        - containerPort: 9115
-          name: probe
-          protocol: TCP
-        resources:
-          limits:
-            memory: 128Mi
-          requests:
-            cpu: 10m
-            memory: 25Mi
-        volumeMounts:
-        - mountPath: /etc/blackbox_exporter
-          name: blackbox-exporter-config
-      dnsConfig:
-        options:
-        - name: ndots
-          value: "3"
-      priorityClassName: system-cluster-critical
-      securityContext:
-        fsGroup: 65534
-        runAsUser: 65534
-        seccompProfile:
-          type: RuntimeDefault
-        supplementalGroups:
-        - 1
-      serviceAccountName: blackbox-exporter
-      volumes:
-      - configMap:
-          name: ` + configMapName + `
-        name: blackbox-exporter-config
-status: {}
-`
-
 			serviceYAML = `apiVersion: v1
 kind: Service
 metadata:
   creationTimestamp: null
   labels:
-    component: blackbox-exporter
-  name: blackbox-exporter
+    component: node-exporter
+  name: node-exporter
   namespace: kube-system
 spec:
+  clusterIP: None
   ports:
-  - name: probe
-    port: 9115
+  - name: metrics
+    port: 16909
     protocol: TCP
     targetPort: 0
   selector:
-    component: blackbox-exporter
+    component: node-exporter
   type: ClusterIP
 status:
   loadBalancer: {}
 `
-
+			daemonSetYAML = `apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  creationTimestamp: null
+  labels:
+    component: node-exporter
+    gardener.cloud/role: monitoring
+    origin: gardener
+  name: node-exporter
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      component: node-exporter
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        component: node-exporter
+        gardener.cloud/role: monitoring
+        networking.gardener.cloud/from-seed: allowed
+        networking.gardener.cloud/to-public-networks: allowed
+        origin: gardener
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - command:
+        - /bin/node_exporter
+        - --web.listen-address=:16909
+        - --path.procfs=/host/proc
+        - --path.sysfs=/host/sys
+        - --path.rootfs=/host
+        - --log.level=error
+        - --collector.disable-defaults
+        - --collector.conntrack
+        - --collector.cpu
+        - --collector.diskstats
+        - --collector.filefd
+        - --collector.filesystem
+        - --collector.filesystem.mount-points-exclude=^/(run|var)/.+$|^/(boot|dev|sys|usr)($|/.+$)
+        - --collector.loadavg
+        - --collector.meminfo
+        - --collector.uname
+        - --collector.stat
+        - --collector.pressure
+        - --collector.textfile
+        - --collector.textfile.directory=/textfile-collector
+        image: some-image:some-tag
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 16909
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+        name: node-exporter
+        ports:
+        - containerPort: 16909
+          hostPort: 16909
+          name: scrape
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 16909
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+        resources:
+          limits:
+            memory: 250Mi
+          requests:
+            cpu: 50m
+            memory: 50Mi
+        volumeMounts:
+        - mountPath: /host
+          name: host
+          readOnly: true
+        - mountPath: /textfile-collector
+          name: textfile
+          readOnly: true
+      hostNetwork: true
+      hostPID: true
+      priorityClassName: system-cluster-critical
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: node-exporter
+      tolerations:
+      - effect: NoSchedule
+        operator: Exists
+      - effect: NoExecute
+        operator: Exists
+      volumes:
+      - hostPath:
+          path: /
+        name: host
+      - hostPath:
+          path: /var/lib/node-exporter/textfile-collector
+        name: textfile
+  updateStrategy:
+    type: RollingUpdate
+status:
+  currentNumberScheduled: 0
+  desiredNumberScheduled: 0
+  numberMisscheduled: 0
+  numberReady: 0
+`
 			vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   creationTimestamp: null
-  name: blackbox-exporter
+  name: node-exporter
   namespace: kube-system
 spec:
   resourcePolicy:
     containerPolicies:
     - containerName: '*'
       controlledValues: RequestsOnly
+      minAllowed:
+        memory: 50Mi
   targetRef:
     apiVersion: apps/v1
-    kind: Deployment
-    name: blackbox-exporter
+    kind: DaemonSet
+    name: node-exporter
   updatePolicy:
     updateMode: Auto
 status: {}
@@ -268,9 +240,9 @@ status: {}
 		)
 
 		JustBeforeEach(func() {
+			component = New(c, namespace, values)
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 
-			component = New(c, namespace, values)
 			Expect(component.Deploy(ctx)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
@@ -301,48 +273,32 @@ status: {}
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-
-			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__blackbox-exporter.yaml"])).To(Equal(serviceAccountYAML))
-			Expect(string(managedResourceSecret.Data["configmap__kube-system__blackbox-exporter-config-07d191e0.yaml"])).To(Equal(configMapYAML))
-			Expect(string(managedResourceSecret.Data["deployment__kube-system__blackbox-exporter.yaml"])).To(Equal(deploymentYAML))
-			Expect(string(managedResourceSecret.Data["service__kube-system__blackbox-exporter.yaml"])).To(Equal(serviceYAML))
+			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__node-exporter.yaml"])).To(Equal(serviceAccountYAML))
+			Expect(string(managedResourceSecret.Data["service__kube-system__node-exporter.yaml"])).To(Equal(serviceYAML))
+			Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-exporter.yaml"])).To(Equal(daemonSetYAML))
 		})
 
-		Context("w/o vpa enabled", func() {
-			Context("kubernetes versions < 1.26", func() {
-				It("should successfully deploy the resources", func() {
-					Expect(managedResourceSecret.Data).To(HaveLen(5))
-					Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__blackbox-exporter.yaml"])).To(Equal(pdbYAMLFor(false)))
-				})
-			})
-
-			Context("kubernetes versions >= 1.26", func() {
-				BeforeEach(func() {
-					values.KubernetesVersion = semver.MustParse("1.26")
-				})
-
-				It("should successfully deploy the resources", func() {
-					Expect(managedResourceSecret.Data).To(HaveLen(5))
-					Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__blackbox-exporter.yaml"])).To(Equal(pdbYAMLFor(true)))
-				})
+		Context("VPA disabled", func() {
+			It("should successfully deploy all resources", func() {
+				Expect(managedResourceSecret.Data).To(HaveLen(3))
 			})
 		})
 
-		Context("w/ vpa enabled", func() {
+		Context("VPA enabled", func() {
 			BeforeEach(func() {
 				values.VPAEnabled = true
 			})
 
-			It("should successfully deploy the resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(6))
-				Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__blackbox-exporter.yaml"])).To(Equal(pdbYAMLFor(false)))
-				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__blackbox-exporter.yaml"])).To(Equal(vpaYAML))
+			It("should successfully deploy the VPA resource", func() {
+				Expect(managedResourceSecret.Data).To(HaveLen(4))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-exporter.yaml"])).To(Equal(vpaYAML))
 			})
 		})
 	})
 
 	Describe("#Destroy", func() {
 		It("should successfully destroy all resources", func() {
+			component = New(c, namespace, values)
 			Expect(c.Create(ctx, managedResource)).To(Succeed())
 			Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
 
@@ -357,14 +313,23 @@ status: {}
 	})
 
 	Context("waiting functions", func() {
-		var fakeOps *retryfake.Ops
+		var (
+			fakeOps   *retryfake.Ops
+			resetVars func()
+		)
 
 		BeforeEach(func() {
+			component = New(c, namespace, values)
+
 			fakeOps = &retryfake.Ops{MaxAttempts: 1}
-			DeferCleanup(test.WithVars(
+			resetVars = test.WithVars(
 				&retry.Until, fakeOps.Until,
 				&retry.UntilTimeout, fakeOps.UntilTimeout,
-			))
+			)
+		})
+
+		AfterEach(func() {
+			resetVars()
 		})
 
 		Describe("#Wait", func() {

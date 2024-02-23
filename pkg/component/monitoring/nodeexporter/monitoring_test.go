@@ -20,7 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 
 	"github.com/gardener/gardener/pkg/component"
-	. "github.com/gardener/gardener/pkg/component/nodeexporter"
+	. "github.com/gardener/gardener/pkg/component/monitoring/nodeexporter"
 	"github.com/gardener/gardener/pkg/component/test"
 )
 

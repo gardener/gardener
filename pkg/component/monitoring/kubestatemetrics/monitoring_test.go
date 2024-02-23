@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/gardener/gardener/pkg/component"
-	. "github.com/gardener/gardener/pkg/component/kubestatemetrics"
+	. "github.com/gardener/gardener/pkg/component/monitoring/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/test"
 )
 
