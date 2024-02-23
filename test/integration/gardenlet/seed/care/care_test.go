@@ -44,7 +44,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/monitoring/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/monitoring/prometheusoperator"
 	"github.com/gardener/gardener/pkg/component/networking/nginxingress"
-	"github.com/gardener/gardener/pkg/component/seedsystem"
+	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/care"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"

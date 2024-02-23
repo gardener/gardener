@@ -40,7 +40,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/monitoring/prometheusoperator"
 	"github.com/gardener/gardener/pkg/component/networking/istio"
 	"github.com/gardener/gardener/pkg/component/networking/nginxingress"
-	"github.com/gardener/gardener/pkg/component/seedsystem"
+	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	"github.com/gardener/gardener/pkg/features"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	healthchecker "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"

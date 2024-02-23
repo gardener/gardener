@@ -918,7 +918,7 @@ build:
             - pkg/component/plutono
             - pkg/component/gardener/resourcemanager
             - pkg/component/gardener/resourcemanager/constants
-            - pkg/component/seedsystem
+            - pkg/component/seed/system
             - pkg/component/shared
             - pkg/component/shootsystem
             - pkg/component/autoscaling/vpa
