@@ -26,7 +26,7 @@ import (
 	"k8s.io/client-go/testing"
 
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	mockshootsystem "github.com/gardener/gardener/pkg/component/shootsystem/mock"
+	mockshootsystem "github.com/gardener/gardener/pkg/component/shoot/system/mock"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"

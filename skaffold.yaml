@@ -909,7 +909,7 @@ build:
             - pkg/component/monitoring/prometheus/seed
             - pkg/component/monitoring/prometheusoperator
             - pkg/component/monitoring/utils
-            - pkg/component/namespaces
+            - pkg/component/shoot/namespaces
             - pkg/component/networking/nginxingress
             - pkg/component/monitoring/nodeexporter
             - pkg/component/networking/nodelocaldns
@@ -920,7 +920,7 @@ build:
             - pkg/component/gardener/resourcemanager/constants
             - pkg/component/seed/system
             - pkg/component/shared
-            - pkg/component/shootsystem
+            - pkg/component/shoot/system
             - pkg/component/autoscaling/vpa
             - pkg/component/autoscaling/vpa/constants
             - pkg/component/networking/vpn/authzserver
