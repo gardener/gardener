@@ -33,11 +33,11 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 )
 
 func TestCare(t *testing.T) {

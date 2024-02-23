@@ -36,9 +36,9 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/retry"
-	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 )
 
 func TestRetry(t *testing.T) {

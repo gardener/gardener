@@ -197,7 +197,7 @@ It sets up a temporary control plane (etcd + kube-apiserver) and runs the test a
 The test suites start their individual `envtest` environment before running the tested controller/webhook and executing test cases.
 Before exiting, the test suites tear down the temporary test environment.
 
-Package `github.com/gardener/gardener/pkg/envtest` augments the controller-runtime's `envtest` package by starting and registering `gardener-apiserver`.
+Package `github.com/gardener/gardener/test/envtest` augments the controller-runtime's `envtest` package by starting and registering `gardener-apiserver`.
 This is used to test controllers that act on resources in the Gardener APIs (aggregated APIs).
 
 Historically, [test machinery tests](#test-machinery-tests) have also been called "integration tests".

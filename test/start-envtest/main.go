@@ -31,8 +31,8 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
-	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
+	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 )
 
 const name = "start-envtest"

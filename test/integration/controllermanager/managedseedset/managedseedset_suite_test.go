@@ -38,9 +38,9 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	managedseedsetcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
-	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 )
 
 func TestManagedSeedSet(t *testing.T) {

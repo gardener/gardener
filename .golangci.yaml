@@ -202,7 +202,7 @@ linters-settings:
         alias: settingsv1alpha1lister
       - pkg: github.com/gardener/gardener/pkg/controllerutils/(\w+)
         alias: ${1}utils
-      - pkg: github.com/gardener/gardener/pkg/envtest
+      - pkg: github.com/gardener/gardener/test/envtest
         alias: gardenerenvtest
       - pkg: github.com/gardener/gardener/pkg/extensions
         alias: gardenerextensions
