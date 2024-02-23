@@ -563,14 +563,6 @@ var _ = Describe("Worker", func() {
 			})
 		}
 
-		When("UseGardenerNodeAgent feature gate is disabled", func() {
-			BeforeEach(func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, false))
-			})
-
-			tests(name, cloudConfigSecretListOptions, "cloud-config", false)
-		})
-
 		When("UseGardenerNodeAgent feature gate is enabled", func() {
 			BeforeEach(func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, true))

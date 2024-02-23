@@ -181,19 +181,6 @@ subjects:
 `
 		})
 
-		It("should generate the expected RBAC resources when UseGardenerNodeAgent feature gate is off", func() {
-			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, false))
-
-			data, err := GenerateRBACResourcesData([]string{secretName1, secretName2})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(data).To(HaveLen(5))
-			Expect(string(data["role__kube-system__cloud-config-downloader.yaml"])).To(Equal(roleYAML))
-			Expect(string(data["rolebinding__kube-system__cloud-config-downloader.yaml"])).To(Equal(roleBindingYAML))
-			Expect(string(data["clusterrolebinding____system_node-bootstrapper.yaml"])).To(Equal(clusterRoleBindingNodeBootstrapperYAML))
-			Expect(string(data["clusterrolebinding____system_certificates.k8s.io_certificatesigningrequests_nodeclient.yaml"])).To(Equal(clusterRoleBindingNodeClientYAML))
-			Expect(string(data["clusterrolebinding____system_certificates.k8s.io_certificatesigningrequests_selfnodeclient.yaml"])).To(Equal(clusterRoleBindingSelfNodeClientYAML))
-		})
-
 		It("should generate the expected RBAC resources when UseGardenerNodeAgent feature gate is on", func() {
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, true))
 

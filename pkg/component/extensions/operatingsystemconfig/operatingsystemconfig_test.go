@@ -46,7 +46,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/gardeneruser"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/sshdensurer"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/features"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
@@ -419,7 +418,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 			})
 
 			It("should successfully deploy the shoot access secret for the gardener-node-agent", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, true))
 				DeferCleanup(test.WithVars(
 					&DownloaderConfigFn, downloaderConfigFn,
 					&OriginalConfigFn, originalConfigFn,
@@ -442,33 +440,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				}))
 			})
 
-			It("should successfully deploy all extensions resources when UseGardenerNodeAgent feature gate is off", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, false))
-				DeferCleanup(test.WithVars(
-					&TimeNow, mockNow.Do,
-					&DownloaderConfigFn, downloaderConfigFn,
-					&OriginalConfigFn, originalConfigFn,
-				))
-
-				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
-
-				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
-
-				for _, e := range computeExpectedOperatingSystemConfigs(false, false) {
-					actual := &extensionsv1alpha1.OperatingSystemConfig{}
-					Expect(c.Get(ctx, client.ObjectKey{Name: e.Name, Namespace: e.Namespace}, actual)).To(Succeed())
-
-					obj := e.DeepCopy()
-					obj.TypeMeta.APIVersion = extensionsv1alpha1.SchemeGroupVersion.String()
-					obj.TypeMeta.Kind = extensionsv1alpha1.OperatingSystemConfigResource
-					obj.ResourceVersion = "1"
-
-					Expect(actual).To(Equal(obj))
-				}
-			})
-
-			It("should successfully deploy all extensions resources when UseGardenerNodeAgent feature gate is on", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, true))
+			It("should successfully deploy all extensions resources", func() {
 				DeferCleanup(test.WithVars(
 					&TimeNow, mockNow.Do,
 					&InitConfigFn, initConfigFn,
@@ -492,8 +464,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				}
 			})
 
-			It("should successfully deploy all extensions resources when UseGardenerNodeAgent feature gate is on and SSH access is enabled", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, true))
+			It("should successfully deploy all extensions resources and SSH access is enabled", func() {
 				DeferCleanup(test.WithVars(
 					&TimeNow, mockNow.Do,
 					&InitConfigFn, initConfigFn,
@@ -1092,13 +1063,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			Expect(Key(workerName, nil, nil)).To(BeEmpty())
 		})
 
-		It("should return the expected key when UseGardenerNodeAgent feature gate is off", func() {
-			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, false))
-			Expect(Key(workerName, semver.MustParse(kubernetesVersion), nil)).To(Equal("cloud-config-" + workerName + "-77ac3"))
-		})
-
-		It("should return the expected key when UseGardenerNodeAgent feature gate is on", func() {
-			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, true))
+		It("should return the expected key", func() {
 			Expect(Key(workerName, semver.MustParse(kubernetesVersion), nil)).To(Equal("gardener-node-agent-" + workerName + "-77ac3"))
 		})
 
