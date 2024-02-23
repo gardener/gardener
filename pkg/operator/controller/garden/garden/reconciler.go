@@ -36,7 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/component/kubeapiserver"
+	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	"github.com/gardener/gardener/pkg/utils/flow"

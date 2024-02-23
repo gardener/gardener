@@ -36,7 +36,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
-	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/cache"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/seed"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"

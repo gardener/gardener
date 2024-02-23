@@ -28,7 +28,7 @@ import (
 	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/component/kubeproxy"
+	kubeproxy "github.com/gardener/gardener/pkg/component/kubernetes/proxy"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"

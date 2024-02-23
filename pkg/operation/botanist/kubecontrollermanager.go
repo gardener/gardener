@@ -23,7 +23,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/component/kubecontrollermanager"
+	kubecontrollermanager "github.com/gardener/gardener/pkg/component/kubernetes/controllermanager"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/features"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"

@@ -22,7 +22,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/kubeapiserverexposure"
+	kubeapiserverexposure "github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 

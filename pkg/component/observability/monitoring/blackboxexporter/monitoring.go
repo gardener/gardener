@@ -19,7 +19,7 @@ import (
 	"strings"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 )
 
 const (

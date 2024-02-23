@@ -33,7 +33,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"

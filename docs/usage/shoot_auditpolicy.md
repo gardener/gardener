@@ -4,7 +4,7 @@ The shoot cluster is a Kubernetes cluster and its `kube-apiserver` handles the a
 
 ## Default Audit Policy
 
-By default, the Gardener will deploy the shoot cluster with audit policy defined in the [kube-apiserver package](../../pkg/component/kubeapiserver/secrets.go).
+By default, the Gardener will deploy the shoot cluster with audit policy defined in the [kube-apiserver package](../../pkg/component/kubernetes/apiserver/secrets.go).
 
 ## Custom Audit Policy
 

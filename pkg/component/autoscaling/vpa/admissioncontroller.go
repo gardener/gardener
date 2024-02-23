@@ -33,7 +33,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	vpaconstants "github.com/gardener/gardener/pkg/component/autoscaling/vpa/constants"
-	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"

@@ -85,11 +85,11 @@ build:
             - pkg/component/garden/system/virtual
             - pkg/component/autoscaling/hvpa
             - pkg/component/networking/istio
-            - pkg/component/kubeapiserver
-            - pkg/component/kubeapiserver/constants
-            - pkg/component/kubeapiserverexposure
-            - pkg/component/kubecontrollermanager
-            - pkg/component/kubescheduler
+            - pkg/component/kubernetes/apiserver
+            - pkg/component/kubernetes/apiserver/constants
+            - pkg/component/kubernetes/apiserverexposure
+            - pkg/component/kubernetes/controllermanager
+            - pkg/component/kubernetes/scheduler
             - pkg/component/observability/monitoring/kubestatemetrics
             - pkg/component/observability/logging
             - pkg/component/observability/logging/fluentoperator

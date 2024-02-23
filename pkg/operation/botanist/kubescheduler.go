@@ -16,7 +16,7 @@ package botanist
 
 import (
 	"github.com/gardener/gardener/imagevector"
-	"github.com/gardener/gardener/pkg/component/kubescheduler"
+	kubescheduler "github.com/gardener/gardener/pkg/component/kubernetes/scheduler"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 

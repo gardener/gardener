@@ -31,9 +31,9 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
-	"github.com/gardener/gardener/pkg/component/kubeapiserver"
-	mockkubeapiserver "github.com/gardener/gardener/pkg/component/kubeapiserver/mock"
-	mockkubecontrollermanager "github.com/gardener/gardener/pkg/component/kubecontrollermanager/mock"
+	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
+	mockkubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/mock"
+	mockkubecontrollermanager "github.com/gardener/gardener/pkg/component/kubernetes/controllermanager/mock"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"

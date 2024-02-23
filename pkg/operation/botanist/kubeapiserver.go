@@ -29,7 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/component/apiserver"
-	"github.com/gardener/gardener/pkg/component/kubeapiserver"
+	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"

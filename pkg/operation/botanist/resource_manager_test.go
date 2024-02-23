@@ -36,7 +36,7 @@ import (
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	mockresourcemanager "github.com/gardener/gardener/pkg/component/gardener/resourcemanager/mock"
-	mockkubeapiserver "github.com/gardener/gardener/pkg/component/kubeapiserver/mock"
+	mockkubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/mock"
 	"github.com/gardener/gardener/pkg/component/shared"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"

@@ -30,7 +30,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	"github.com/gardener/gardener/pkg/component/kubeapiserver"
+	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"

@@ -21,7 +21,7 @@ import (
 
 	"github.com/gardener/gardener/imagevector"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/component/kubernetesdashboard"
+	kubernetesdashboard "github.com/gardener/gardener/pkg/component/kubernetes/dashboard"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 

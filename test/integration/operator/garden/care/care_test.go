@@ -40,7 +40,7 @@ import (
 	gardenercontrollermanager "github.com/gardener/gardener/pkg/component/gardener/controllermanager"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	gardenerscheduler "github.com/gardener/gardener/pkg/component/gardener/scheduler"
-	"github.com/gardener/gardener/pkg/component/kubecontrollermanager"
+	kubecontrollermanager "github.com/gardener/gardener/pkg/component/kubernetes/controllermanager"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/gardenermetricsexporter"

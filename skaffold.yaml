@@ -621,8 +621,8 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/nodeagent
             - pkg/component/extensions/operatingsystemconfig/original/components/valitail
             - pkg/component/extensions/operatingsystemconfig/utils
-            - pkg/component/kubeapiserver/constants
-            - pkg/component/kubeproxy
+            - pkg/component/kubernetes/apiserver/constants
+            - pkg/component/kubernetes/proxy
             - pkg/component/observability/logging/vali/constants
             - pkg/component/nodemanagement/machinecontrollermanager
             - pkg/controller/service
@@ -885,13 +885,13 @@ build:
             - pkg/component/gardener/apiserver
             - pkg/component/autoscaling/hvpa
             - pkg/component/networking/istio
-            - pkg/component/kubeapiserver
-            - pkg/component/kubeapiserver/constants
-            - pkg/component/kubeapiserverexposure
-            - pkg/component/kubecontrollermanager
-            - pkg/component/kubeproxy
-            - pkg/component/kubernetesdashboard
-            - pkg/component/kubescheduler
+            - pkg/component/kubernetes/apiserver
+            - pkg/component/kubernetes/apiserver/constants
+            - pkg/component/kubernetes/apiserverexposure
+            - pkg/component/kubernetes/controllermanager
+            - pkg/component/kubernetes/proxy
+            - pkg/component/kubernetes/dashboard
+            - pkg/component/kubernetes/scheduler
             - pkg/component/observability/monitoring/kubestatemetrics
             - pkg/component/observability/logging
             - pkg/component/observability/logging/eventlogger
@@ -1171,7 +1171,6 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/nodeagent
             - pkg/component/extensions/operatingsystemconfig/original/components/valitail
             - pkg/component/extensions/operatingsystemconfig/utils
-            - pkg/component/kubeapiserver/constants
             - pkg/component/observability/logging/vali/constants
             - pkg/controllerutils
             - pkg/controllerutils/predicate

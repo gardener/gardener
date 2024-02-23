@@ -37,7 +37,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	corednsconstants "github.com/gardener/gardener/pkg/component/networking/coredns/constants"
 	nodelocaldnsconstants "github.com/gardener/gardener/pkg/component/networking/nodelocaldns/constants"
 	"github.com/gardener/gardener/pkg/utils/managedresources"

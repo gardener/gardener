@@ -42,7 +42,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	gardenerapiserver "github.com/gardener/gardener/pkg/component/gardener/apiserver"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
-	"github.com/gardener/gardener/pkg/component/kubeapiserver"
+	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"

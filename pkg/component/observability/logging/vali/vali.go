@@ -38,15 +38,14 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/aggregate"
-	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
-
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/aggregate"
+	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
