@@ -23,7 +23,7 @@ echo "> Adding Apache License header to all go files where it is not present"
 
 temp_file=$(mktemp)
 trap "rm -f $temp_file" EXIT
-sed 's|^//||' hack/LICENSE_BOILERPLATE.txt > $temp_file
+sed 's|^// *||' hack/LICENSE_BOILERPLATE.txt > $temp_file
 
 addlicense \
   -f $temp_file \
