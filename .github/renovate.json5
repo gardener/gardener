@@ -1,0 +1,88 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "labels": ["kind/enhancement"],
+  "postUpdateOptions": ["gomodTidy"],
+  "customManagers": [
+    {
+      // Update `_VERSION` and `_version` variables in Makefiles and scripts.
+      // Inspired by `regexManagers:dockerfileVersions` preset.
+      "customType": "regex",
+      "fileMatch": ["Makefile$", "\\.mk$", "\\.sh$"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-z-.]+?) depName=(?<depName>[^\\s]+?)(?: (lookupName|packageName)=(?<packageName>[^\\s]+?))?(?: versioning=(?<versioning>[^\\s]+?))?(?: extractVersion=(?<extractVersion>[^\\s]+?))?(?: registryUrl=(?<registryUrl>[^\\s]+?))?\\s.+?_(VERSION|version) *[?:]?= *\"?(?<currentValue>.+?)\"?\\s"
+      ]
+    },
+    {
+      // Generic detection for pod-like image specifications.
+      "customType": "regex",
+      "fileMatch": ["^hack\/.+\\.yaml$", "^\\.test-defs\/.+\\.yaml$"],
+      "matchStrings": ["image: (?<depName>.*?):(?<currentValue>.*?)\\s"],
+      "datasourceTemplate": "docker"
+    },
+    {
+      // Generic detection for install manifests from GitHub releases.
+      "customType": "regex",
+      "fileMatch": ["\/kustomization\\.yaml$"],
+      "matchStrings": [
+        "https:\/\/github\\.com\/(?<depName>[^/]*\/[^/]*?)\/releases\/download\/(?<currentValue>.*?)\/",
+        "https:\/\/raw\\.githubusercontent\\.com\/(?<depName>[^/]*\/[^/]*?)\/(?<currentValue>.*?)\/",
+      ],
+      "datasourceTemplate": "github-releases"
+    }
+  ],
+  "separateMinorPatch": true,
+  "packageRules": [
+    {
+      // Group golang updates in one PR.
+      "groupName": "Update golang",
+      "matchDatasources": ["docker", "go-version"],
+      "matchPackagePatterns": ["golang"],
+    },
+    {
+      // Group tool updates in one PR.
+      "groupName": "Update tools",
+      "matchFileNames": ["hack\/tools\\.mk"]
+    },
+    {
+      // Only patch level updates for golang-test image. Minor and major versions are manually updated.
+      "matchDatasources": ["docker"],
+      "matchUpdateTypes": ["major", "minor"],
+      "matchFileNames": ["hack\/tools\/image\/variants\\.yaml"],
+      "enabled": false
+    },
+    {
+      // Update only patchlevels of major dependencies like kubernetes, controller-runtime and istio.
+      // Minor and major upgrades most likely require manual adaptations of the code.
+      "matchDatasources": ["go"],
+      "matchUpdateTypes": ["major", "minor"],
+      "matchPackagePatterns": [
+        "k8s\\.io\/.+",
+        "sigs\\.k8s\\.io\/controller-runtime",
+        "istio\\.io\/.+"
+      ],
+      "enabled": false
+    },
+    {
+      // Ignore dependency updates from github.com/gardener because these PRs are created by pipeline jobs.
+      "matchDatasources": ["go"],
+      "matchPackagePatterns": ["github\\.com\/gardener\/.+"],
+      "enabled": false
+    },
+    {
+      // Ignore paths which most likely create false positives.
+      "matchFileNames": [
+          "chart/**",
+          "cmd/**",
+          "extensions/**",
+          "pkg/**",
+          "plugin/**",
+          "test/**",
+          "third_party/**"
+      ],
+      "enabled": false
+    }
+  ]
+}
