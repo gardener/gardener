@@ -32,10 +32,10 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 	mockmanagedseedset "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset/mock"
-	mockrecord "github.com/gardener/gardener/pkg/mock/client-go/tools/record"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/test"
+	mockrecord "github.com/gardener/gardener/third_party/mock/client-go/tools/record"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 const (

@@ -31,8 +31,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	. "github.com/gardener/gardener/pkg/controllerutils/mapper"
-	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
-	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
+	mockcache "github.com/gardener/gardener/third_party/mock/controller-runtime/cache"
+	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
 )
 
 var _ = Describe("EnqueueMapped", func() {

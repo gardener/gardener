@@ -31,8 +31,8 @@ import (
 
 	. "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
-	mockio "github.com/gardener/gardener/pkg/mock/go/io"
+	mockcorev1 "github.com/gardener/gardener/third_party/mock/client-go/core/v1"
+	mockio "github.com/gardener/gardener/third_party/mock/go/io"
 )
 
 var _ = Describe("Pods", func() {

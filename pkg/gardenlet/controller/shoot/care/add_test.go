@@ -32,8 +32,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
-	mockworkqueue "github.com/gardener/gardener/pkg/mock/client-go/util/workqueue"
 	"github.com/gardener/gardener/pkg/utils/test"
+	mockworkqueue "github.com/gardener/gardener/third_party/mock/client-go/util/workqueue"
 )
 
 var _ = Describe("Add", func() {

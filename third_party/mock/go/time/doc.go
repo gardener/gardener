@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate mockgen -destination=funcs.go -package=time github.com/gardener/gardener/pkg/mock/go/time Now
+//go:generate mockgen -destination=funcs.go -package=time github.com/gardener/gardener/third_party/mock/go/time Now
 
 package time
 

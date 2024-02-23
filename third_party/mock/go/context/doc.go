@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate mockgen -package=context -destination=funcs.go github.com/gardener/gardener/pkg/mock/go/context WithTimeout,CancelFunc
-//go:generate mockgen -package=context -destination=mocks.go github.com/gardener/gardener/pkg/mock/go/context Context
+//go:generate mockgen -package=context -destination=funcs.go github.com/gardener/gardener/third_party/mock/go/context WithTimeout,CancelFunc
+//go:generate mockgen -package=context -destination=mocks.go github.com/gardener/gardener/third_party/mock/go/context Context
 
 package context
 

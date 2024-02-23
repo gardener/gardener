@@ -210,15 +210,15 @@ linters-settings:
         alias: gardenletbootstraputil
       - pkg: github.com/gardener/gardener/pkg/healthz
         alias: gardenerhealthz
-      - pkg: github.com/gardener/gardener/pkg/mock/apiserver/authorization/authorizer
+      - pkg: github.com/gardener/gardener/third_party/mock/apiserver/authorization/authorizer
         alias: mockauthorizer
-      - pkg: github.com/gardener/gardener/pkg/mock/\w+/(\w+)
+      - pkg: github.com/gardener/gardener/third_party/mock/\w+/(\w+)
         alias: mock${1}
-      - pkg: github.com/gardener/gardener/pkg/mock/client-go/core/v1
+      - pkg: github.com/gardener/gardener/third_party/mock/client-go/core/v1
         alias: mockcorev1
-      - pkg: github.com/gardener/gardener/pkg/mock/client-go/tools/(\w+)
+      - pkg: github.com/gardener/gardener/third_party/mock/client-go/tools/(\w+)
         alias: mock${1}
-      - pkg: github.com/gardener/gardener/pkg/mock/client-go/util/(\w+)
+      - pkg: github.com/gardener/gardener/third_party/mock/client-go/util/(\w+)
         alias: mock${1}
       - pkg: github.com/gardener/gardener/pkg/operation/.*/(\w+)/mock$
         alias: mock${1}

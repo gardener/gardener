@@ -33,7 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/gardener/gardener/pkg/client/kubernetes/cache"
-	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
+	mockcache "github.com/gardener/gardener/third_party/mock/controller-runtime/cache"
 )
 
 var _ = Describe("SingleObject", func() {

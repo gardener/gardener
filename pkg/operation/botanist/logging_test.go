@@ -34,13 +34,13 @@ import (
 	mockcomponent "github.com/gardener/gardener/pkg/component/mock"
 	mockvali "github.com/gardener/gardener/pkg/component/observability/logging/vali/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("Logging", func() {

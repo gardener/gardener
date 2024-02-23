@@ -36,13 +36,13 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	mockutilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client/mock"
 	"github.com/gardener/gardener/pkg/utils/test"
 	mocktime "github.com/gardener/gardener/pkg/utils/time/mock"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 func TestClient(t *testing.T) {
