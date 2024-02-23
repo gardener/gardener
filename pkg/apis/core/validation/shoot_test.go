@@ -839,6 +839,74 @@ var _ = Describe("Shoot Validation Tests", func() {
 			))
 		})
 
+		Context("seed selector", func() {
+			seedSelector := &core.SeedSelector{LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}}}
+
+			When("seed name is not set", func() {
+				BeforeEach(func() {
+					shoot.Spec.SeedName = nil
+				})
+
+				It("should allow setting the seed selector", func() {
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.SeedSelector = seedSelector
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+				})
+
+				It("should allow changing the seed selector", func() {
+					shoot.Spec.SeedSelector = seedSelector
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.SeedSelector.MatchLabels["foo"] = "baz"
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+				})
+
+				It("should allow removing the seed selector", func() {
+					shoot.Spec.SeedSelector = seedSelector
+					newShoot := prepareShootForUpdate(shoot)
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+				})
+			})
+
+			When("seed name is set", func() {
+				BeforeEach(func() {
+					shoot.Spec.SeedName = ptr.To("some-seed")
+				})
+
+				It("should not allow setting the seed selector", func() {
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.SeedSelector = seedSelector
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.seedSelector"),
+						"Detail": Equal("cannot set seed selector when .spec.seedName is set"),
+					}))))
+				})
+
+				It("should not allow changing the seed selector", func() {
+					shoot.Spec.SeedSelector = seedSelector
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.SeedSelector.MatchLabels["foo"] = "baz"
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.seedSelector"),
+						"Detail": Equal("field is immutable"),
+					}))))
+				})
+
+				It("should allow removing the seed selector", func() {
+					shoot.Spec.SeedSelector = seedSelector
+					newShoot := prepareShootForUpdate(shoot)
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+				})
+			})
+		})
+
 		It("should forbid passing an extension w/o type information", func() {
 			extension := core.Extension{}
 			shoot.Spec.Extensions = append(shoot.Spec.Extensions, extension)
