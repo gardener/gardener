@@ -23,12 +23,12 @@ import (
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	kubeinformers "k8s.io/client-go/informers"
 
+	corerest "github.com/gardener/gardener/pkg/apiserver/registry/core/rest"
+	operationsrest "github.com/gardener/gardener/pkg/apiserver/registry/operations/rest"
+	seedmanagementrest "github.com/gardener/gardener/pkg/apiserver/registry/seedmanagement/rest"
+	settingsrest "github.com/gardener/gardener/pkg/apiserver/registry/settings/rest"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/logger"
-	corerest "github.com/gardener/gardener/pkg/registry/core/rest"
-	operationsrest "github.com/gardener/gardener/pkg/registry/operations/rest"
-	seedmanagementrest "github.com/gardener/gardener/pkg/registry/seedmanagement/rest"
-	settingsrest "github.com/gardener/gardener/pkg/registry/settings/rest"
 )
 
 // ExtraConfig contains non-generic Gardener API server configuration.

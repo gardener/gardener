@@ -515,8 +515,8 @@ openapi_definitions() {
     --input-dirs=k8s.io/apimachinery/pkg/version \
     --input-dirs=k8s.io/apimachinery/pkg/runtime \
     --input-dirs=k8s.io/apimachinery/pkg/util/intstr \
-    --report-filename=${PROJECT_ROOT}/pkg/openapi/api_violations.report \
-    --output-package=github.com/gardener/gardener/pkg/openapi \
+    --report-filename=${PROJECT_ROOT}/pkg/apiserver/openapi/api_violations.report \
+    --output-package=github.com/gardener/gardener/pkg/apiserver/openapi \
     -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
 
 }
