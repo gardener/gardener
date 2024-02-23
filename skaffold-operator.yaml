@@ -90,24 +90,24 @@ build:
             - pkg/component/kubeapiserverexposure
             - pkg/component/kubecontrollermanager
             - pkg/component/kubescheduler
-            - pkg/component/monitoring/kubestatemetrics
-            - pkg/component/logging
-            - pkg/component/logging/fluentoperator
-            - pkg/component/logging/fluentoperator/customresources
-            - pkg/component/logging/vali
-            - pkg/component/logging/vali/constants
-            - pkg/component/monitoring
-            - pkg/component/monitoring/alertmanager
-            - pkg/component/monitoring/prometheus
-            - pkg/component/monitoring/prometheus/aggregate
-            - pkg/component/monitoring/gardenermetricsexporter
-            - pkg/component/monitoring/prometheus/cache
-            - pkg/component/monitoring/prometheus/seed
-            - pkg/component/monitoring/prometheusoperator
-            - pkg/component/monitoring/utils
+            - pkg/component/observability/monitoring/kubestatemetrics
+            - pkg/component/observability/logging
+            - pkg/component/observability/logging/fluentoperator
+            - pkg/component/observability/logging/fluentoperator/customresources
+            - pkg/component/observability/logging/vali
+            - pkg/component/observability/logging/vali/constants
+            - pkg/component/observability/monitoring/gardenermetricsexporter
+            - pkg/component/observability/monitoring
+            - pkg/component/observability/monitoring/alertmanager
+            - pkg/component/observability/monitoring/prometheus
+            - pkg/component/observability/monitoring/prometheus/aggregate
+            - pkg/component/observability/monitoring/prometheus/cache
+            - pkg/component/observability/monitoring/prometheus/seed
+            - pkg/component/observability/monitoring/prometheusoperator
+            - pkg/component/observability/monitoring/utils
             - pkg/component/networking/nginxingress
             - pkg/component/networking/nodelocaldns/constants
-            - pkg/component/plutono
+            - pkg/component/observability/plutono
             - pkg/component/gardener/resourcemanager
             - pkg/component/gardener/resourcemanager/constants
             - pkg/component/shared

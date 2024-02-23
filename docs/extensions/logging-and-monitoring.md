@@ -219,16 +219,16 @@ Further details how to define parsers and use them with examples can be found in
 ### Plutono
 The two types of Plutono instances found in a seed cluster are configured to expose logs of different origin in their dashboards:
 - Garden Plutono dashboards expose logs from non-shoot namespaces of the seed clusters
-  - [Pod Logs](../../pkg/component/plutono/dashboards/seed/pod-logs.json)
-  - [Extensions](../../pkg/component/plutono/dashboards/seed/extensions-dashboard.json)
-  - [Systemd Logs](../../pkg/component/plutono/dashboards/seed/systemd-logs.json)
+  - [Pod Logs](../../pkg/component/observability/plutono/dashboards/seed/pod-logs.json)
+  - [Extensions](../../pkg/component/observability/plutono/dashboards/seed/extensions-dashboard.json)
+  - [Systemd Logs](../../pkg/component/observability/plutono/dashboards/seed/systemd-logs.json)
 - Shoot Plutono dashboards expose logs from the shoot cluster namespace where they belong
   - Kube Apiserver
   - Kube Controller Manager
   - Kube Scheduler
   - Cluster Autoscaler
   - VPA components
-  - [Kubernetes Pods](../../pkg/component/plutono/dashboards/shoot/owners/kubernetes-pods-dashboard.json)
+  - [Kubernetes Pods](../../pkg/component/observability/plutono/dashboards/shoot/owners/kubernetes-pods-dashboard.json)
 
 If the type of logs exposed in the Plutono instances needs to be changed, it is necessary to update the corresponding instance dashboard configurations.
 

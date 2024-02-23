@@ -19,7 +19,7 @@ import (
 
 	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/monitoring/metricsserver"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/metricsserver"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 

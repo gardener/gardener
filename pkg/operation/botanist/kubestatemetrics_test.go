@@ -24,7 +24,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
-	mockkubestatemetrics "github.com/gardener/gardener/pkg/component/monitoring/kubestatemetrics/mock"
+	mockkubestatemetrics "github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics/mock"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"

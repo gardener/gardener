@@ -19,8 +19,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/component/monitoring/prometheus/aggregate"
-	monitoringutils "github.com/gardener/gardener/pkg/component/monitoring/utils"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/aggregate"
+	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 )
 
 const (
