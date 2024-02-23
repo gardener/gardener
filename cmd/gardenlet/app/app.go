@@ -457,7 +457,7 @@ func (g *garden) Start(ctx context.Context) error {
 	return nil
 }
 
-// TODO(aaronfern): Remove this code after v1.91 has been released.
+// TODO(aaronfern): Remove this code after v1.92 has been released.
 func (g *garden) createNewDWDResources(ctx context.Context, seedClient client.Client) error {
 	namespaceList := &corev1.NamespaceList{}
 	if err := seedClient.List(ctx, namespaceList, client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot})); err != nil {

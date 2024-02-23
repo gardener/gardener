@@ -81,6 +81,7 @@ type AccessValues struct {
 	ServerInCluster string
 }
 
+// DWDAccess is an interface to control the life cycle of the DWD object
 type DWDAccess interface {
 	component.Deployer
 	DeployMigrate(ctx context.Context) error
@@ -99,7 +100,7 @@ func (d *dependencyWatchdogAccess) Deploy(ctx context.Context) error {
 	return d.createManagedResource(ctx)
 }
 
-// TODO(aaronfern): Remove this function after v1.91 got released.
+// TODO(aaronfern): Remove this function after v1.92 got released.
 func (d *dependencyWatchdogAccess) DeployMigrate(ctx context.Context) error {
 	caSecret := &corev1.Secret{}
 	if err := d.client.Get(ctx, types.NamespacedName{Namespace: d.namespace, Name: v1beta1constants.SecretNameCACluster}, caSecret); err != nil {
