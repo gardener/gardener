@@ -96,7 +96,9 @@ metadata:
   name: aws-profile-xyz
   namespace: project-xyz
 spec:
-  parent: aws-central-cloud-profile
+  parent:
+    kind: CloudProfile
+    name: aws-central-cloud-profile
   kubernetes:
     versions:
       - version: 1.28.6
@@ -166,7 +168,9 @@ metadata:
   name:  aws-profile-xyz
   namespace: project-xyz
 spec:
-  parent: aws-central-cloud-profile
+  parent:
+    kind: CloudProfile
+    name: aws-central-cloud-profile
   kubernetes:
     versions:
       - version: 1.28.6
@@ -244,7 +248,7 @@ rules:
 
 ### Adjusting `Shoot`s `cloudProfileName` field
 
-Since `CloudProfiles` and `NamespacedCloudProfiles` are separate API objects, a `CloudProfile` could have the same name as a `NamespacedCloudProfile`. When the Shoot then references the `CloudProfile` two possible profiles could match on the reference. To solve this issue, the `Shoot` object should be extended with a `cloudProfile` field that specifies both the `name` and the `kind` of the referenced `CloudProfile`. However, the existing `cloudProfileName` field should remain intact and default to a `CloudProfile` for a smooth migration. Sane default will also be defined to allow for full backwards compatibility with the `cloudProfileName` field.
+Since `CloudProfiles` and `NamespacedCloudProfiles` are separate API objects, a `CloudProfile` could have the same name as a `NamespacedCloudProfile`. When the Shoot then references the `CloudProfile` two possible profiles could match on the reference. To solve this issue, the `Shoot` object should be extended with a `cloudProfile` field that specifies both the `name` and the `kind` of the referenced `CloudProfile`. However, the existing `cloudProfileName` field should remain intact and default to a `CloudProfile` for a smooth migration. Sane default will also be defined to allow for full backward compatibility with the `cloudProfileName` field.
 
 An example of the new field can be found here:
 
@@ -258,8 +262,8 @@ metadata:
 spec:
   ...
   cloudProfile:
-    name: aws-profile-xyz
     kind: NamespacedCloudProfile
+    name: aws-profile-xyz
   ...
 ```
 
@@ -267,9 +271,10 @@ spec:
 
 `CloudProfile`s are not just a central Gardener resource but are also used by Gardener's provider extensions. Therefore, enabling `NamespacedCloudProfiles` is a multi-step process.
 
-1. Adjust all provider extensions to understand both `CloudProfile`s as well as `NamespacedCloudProfiles`
-2. Adjust Shoot controller in `gardener-controller-manager` to understand the new `cloudProfile` field and fill it accordingly
-3. Enable `NamespacedCloudProfiles` in Gardener
+1. Rollout `NamespacedCloudProfile` API and validations, rollout Shoot API changes, add a feature gate for both
+2. Adjust all provider extensions to understand both `CloudProfile`s as well as `NamespacedCloudProfiles`
+3. Migrate `Shoot`s `cloudProfileName` to the `cloudProfile` field but keep `cloudProfileName` in the API for now
+4. Enable `NamespacedCloudProfiles` in Gardener
 
 ## Outlook
 
@@ -291,19 +296,36 @@ metadata:
 spec:
   ...
   cloudProfile:
-    name: aws-profile-xyz
     kind: NamespacedCloudProfile
+    name: aws-profile-xyz
     namespace: other-project-abc
   ...
 ```
 
 ### Multi-Level inheritance
 
-A `NamespacedCloudProfile` could inherit from a `CloudProfile` that already inherits from a `CloudProfile`. This would enable reusing `NamespacedCloudProfile`s and would aid in deduplication within fields of `NamespacedCloudProfiles`. This feature can be implemented easily but is also excluded for now to stick to the defined use cases.
+A `NamespacedCloudProfile` could inherit from a `NamespacedCloudProfile` that already inherits from a `CloudProfile`. This would enable reusing `NamespacedCloudProfile`s and would aid in deduplication within fields of `NamespacedCloudProfiles`. This feature can be implemented easily but is also excluded for now to stick to the defined use cases.
+
+When enabling multi-level inheritance, the `NamespacedCloudProfile`s `parent` field should also be adjusted to allow for a `NamespacedCloudProfile` as a parent.
+
+```yaml
+parent:
+  kind: <NamespacedCloudProfile | CloudProfile>
+  name: <objects name>
+```
+
+In combination with [cross-project sharing](#cross-project-sharing), the `parent` field should also allow for a namespace to be defined with the same reasoning as in [cross-project sharing](#cross-project-sharing).
+
+```yaml
+parent:
+  kind: <NamespacedCloudProfile | CloudProfile>
+  name: <objects name>
+  namespace: <(optional) objects namespace if outside project namespace>
+```
 
 ### `NamespacedCloudProfile`s replacing regular `CloudProfile`s
 
-In the future, once `NamespacedCloudProfiles` have established themselves and found good use in the Gardener landscape and amongst its users, they could replace regular `CloudProfile`s entirely. This has several benefits. Firstly, Gardener maintainers don't have to maintain, test and operate two almost identical objects. Secondly, it would allow for the central "Gardener provided" `CloudProfile`s to use inheritance. This could enable deduplication in our central `CloudProfiles` as common values do not have to be copied from one `CloudProfile` to another `CloudProfile`.
+In the future, once `NamespacedCloudProfiles` have established themselves and found good use in the Gardener landscape and amongst its users, they could replace regular `CloudProfile`s entirely. For this, they would have to include all fields of a `CloudProfile`. Replacing `CloudProfile`s with `NamespacedCloudProfile`s has several benefits. Firstly, Gardener maintainers don't have to maintain, test and operate two almost identical objects. Secondly, it would allow for the central "Gardener provided" `CloudProfile`s to use inheritance. This could enable deduplication in our central `CloudProfiles` as common values do not have to be copied from one `CloudProfile` to another `CloudProfile`. Additionally, it could enable both cloud, as well as on-prem infrastructures to only be visible to defined projects and not to every landscape user.
 
 ## Alternatives
 
