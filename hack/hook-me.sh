@@ -14,8 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-QUIC_CLIENT_IMAGE=ghcr.io/mvladev/quic-reverse-http-tunnel/quic-client-tcp:v0.1.2
-QUIC_SERVER_IMAGE=ghcr.io/mvladev/quic-reverse-http-tunnel/quic-server:v0.1.2
+set -o errexit
+set -o nounset
+set -o pipefail
+
+QUIC_CLIENT_IMAGE=ghcr.io/gardener/quic-reverse-http-tunnel/quic-client-tcp:v0.1.4
+QUIC_SERVER_IMAGE=ghcr.io/gardener/quic-reverse-http-tunnel/quic-server:v0.1.4
 
 QUIC_SECRET_NAME=quic-tunnel-certs
 QUIC_CLIENT_CONTAINER=gardener-quic-client
@@ -23,22 +27,24 @@ QUIC_CLIENT_CONTAINER=gardener-quic-client
 CERTS_DIR=$(pwd)/tmp/certs
 
 checkPrereqs() {
-  command -v host > /dev/null || echo "please install host command for lookup"
-  command -v docker > /dev/null || echo "please install docker https://www.docker.com"
+    command -v host > /dev/null || echo "please install host command for lookup"
+    command -v docker > /dev/null || echo "please install docker https://www.docker.com"
+    command -v yq > /dev/null || echo "please install yq https://github.com/mikefarah/yq"
 }
 
 createOrUpdateWebhookSVC(){
-namespace=${1:-}
-[[ -z $namespace ]] && echo "Please specify extension namespace!" && exit 1
+    namespace=${1:-}
+    [[ -z $namespace ]] && echo "Please specify extension namespace!" && exit 1
 
-serviceName=${2:-}
-[[ -z $serviceName ]] && echo "Please specify the service name (gardener-extension-provider-{aws,gcp,azure},..etc.)!" && exit 1
+    serviceName=${2:-}
+    [[ -z $serviceName ]] && echo "Please specify the service name (gardener-extension-provider-{aws,gcp,azure},..etc.)!" && exit 1
 
-local quicServerPort=${3:-}
-[[ -z $quicServerPort ]] && echo "Please specify the quic pod server port!" && exit 1
+    local quicServerPort=${3:-}
+    [[ -z $quicServerPort ]] && echo "Please specify the quic pod server port!" && exit 1
 
-tmpService=$(mktemp)
-kubectl get svc $serviceName -o yaml > $tmpService
+    tmpService=$(mktemp)
+    echo ">> A backup copy of the service $namespace/$serviceName is stored in the file $tmpService"
+    kubectl -n $namespace get svc $serviceName -o yaml | yq 'del(.metadata.resourceVersion)' > $tmpService
 
     cat <<EOF | kubectl apply -f -
 ---
@@ -49,6 +55,8 @@ metadata:
     app: $serviceName
     app.kubernetes.io/instance: $serviceName
     app.kubernetes.io/name: $serviceName
+  annotations:
+    networking.resources.gardener.cloud/from-world-to-ports: '[{"protocol":"TCP","port":${quicServerPort}}]'
   name: $serviceName
   namespace: $namespace
 spec:
@@ -66,19 +74,22 @@ EOF
 
 
 createQuicLB(){
-namespace=${1:-}
-[[ -z $namespace ]] && echo "Please specify extension namespace!" && exit 1
+    namespace=${1:-}
+    [[ -z $namespace ]] && echo "Please specify extension namespace!" && exit 1
 
-local quicTunnelPort=${2:-}
-[[ -z $quicTunnelPort ]] && echo "Please specify the quic pod tunnel port!" && exit 1
+    local quicTunnelPort=${2:-}
+    [[ -z $quicTunnelPort ]] && echo "Please specify the quic pod tunnel port!" && exit 1
 
-cat <<EOF | kubectl apply -f -
+    cat <<EOF | kubectl apply -f -
 ---
 apiVersion: v1
 kind: Service
 metadata:
   labels:
     app: quic-lb
+  annotations:
+    networking.resources.gardener.cloud/from-world-to-ports: '[{"protocol":"UDP","port":${quicTunnelPort}}]'
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
   name: quic-lb
   namespace: $namespace
 spec:
@@ -98,40 +109,27 @@ waitForQuicLBToBeReady(){
     namespace=${1:-}
     [[ -z $namespace ]] && echo "Please specify extension namespace!" && exit 1
 
-    serviceName=${2:-}
-    [[ -z $serviceName ]] && echo "Please specify the service name (gardener-extension-provider-{aws,gcp,azure},..etc.)!" && exit 1
-
-    # slightly different template for aws and everything else
-    local template=""
-    case $serviceName in
-    gardener-extension-provider-aws*)
-      template="{{ index (index  .status.loadBalancer.ingress 0).hostname }}"
-      ;;
-    *)
-      template="{{ index (index  .status.loadBalancer.ingress 0).ip }}"
-      ;;
-    esac
-    until host $(kubectl -n $namespace get svc quic-lb -o go-template="${template}") 2>&1 > /dev/null
+    until host $(kubectl -n $namespace get svc quic-lb -o yaml | yq '.status.loadBalancer.ingress[0] | .hostname // .ip') 2>&1 > /dev/null
     do
-      sleep 2s
+        sleep 2s
     done
-    echo $(kubectl -n $namespace get svc quic-lb -o go-template="${template}")
+    echo $(kubectl -n $namespace get svc quic-lb -o yaml | yq '.status.loadBalancer.ingress[0] | .hostname // .ip')
 }
 
 createServerDeploy(){
-namespace=${1:-}
-[[ -z $namespace ]] && echo "Please specify extension namespace!" && exit 1
+    namespace=${1:-}
+    [[ -z $namespace ]] && echo "Please specify extension namespace!" && exit 1
 
-serviceName=${2:-}
-[[ -z $serviceName ]] && echo "Please specify the service name (gardener-extension-provider-{aws,gcp,azure},..etc.)!" && exit 1
+    serviceName=${2:-}
+    [[ -z $serviceName ]] && echo "Please specify the service name (gardener-extension-provider-{aws,gcp,azure},..etc.)!" && exit 1
 
-local quicServerPort=${3:-}
-[[ -z $quicServerPort ]] && echo "Please specify the quic pod server port!" && exit 1
+    local quicServerPort=${3:-}
+    [[ -z $quicServerPort ]] && echo "Please specify the quic pod server port!" && exit 1
 
-local quicTunnelPort=${4:-}
-[[ -z $quicTunnelPort ]] && echo "Please specify the quic pod tunnel port!" && exit 1
+    local quicTunnelPort=${4:-}
+    [[ -z $quicTunnelPort ]] && echo "Please specify the quic pod tunnel port!" && exit 1
 
-cat <<EOF | kubectl apply -f -
+    cat <<EOF | kubectl apply -f -
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -206,29 +204,29 @@ waitForQuicDeployToBeReady(){
 
     until test "$(kubectl -n $namespace get deploy quic-server --no-headers | awk '{print $2}')" = "1/1"
     do
-      sleep 2s
+        sleep 2s
     done
 }
 
 createCerts() {
-  local dir=${1:-}
-  [[ -z $dir ]] && echo "Please specify certs directory!" && exit 1
+    local dir=${1:-}
+    [[ -z $dir ]] && echo "Please specify certs directory!" && exit 1
 
-  mkdir -p $dir
+    mkdir -p $dir
 
-  local ipOrHostname=${2:-}
-  local template=""
+    local ipOrHostname=${2:-}
+    local template=""
 
-  # This will not validate the quads but it is enough to determine if the value is an ip or a hostname
-  if [[ $ipOrHostname =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    # This will not validate the quads but it is enough to determine if the value is an ip or a hostname
+    if [[ $ipOrHostname =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     template="IP.1 = ${ipOrHostname}"
-  else
+    else
     template="DNS.3 = ${ipOrHostname}"
-  fi
+    fi
 (
-  cd $dir
+    cd $dir
 
-  cat > server.conf << EOF
+    cat > server.conf << EOF
 [req]
 req_extensions = v3_req
 distinguished_name = req_distinguished_name
@@ -245,7 +243,7 @@ ${template}
 IP.2 = 127.0.0.1
 EOF
 
-  cat > client.conf << EOF
+    cat > client.conf << EOF
 [req]
 req_extensions = v3_req
 distinguished_name = req_distinguished_name
@@ -256,122 +254,144 @@ keyUsage = nonRepudiation, digitalSignature, keyEncipherment
 extendedKeyUsage = clientAuth
 EOF
 
-  # Create a certificate authority
-  openssl genrsa -out ca.key 3072
-  openssl req -x509 -new -nodes -key ca.key -days 100000 -out ca.crt -subj "/CN=quic-tunnel-ca"
+    # Create a certificate authority
+    openssl genrsa -out ca.key 3072
+    openssl req -x509 -new -nodes -key ca.key -days 1 -out ca.crt -subj "/CN=quic-tunnel-ca"
 
-  # Create a server certiticate
-  openssl genrsa -out tls.key 3072
-  openssl req -new -key tls.key -out server.csr -subj "/CN=quic-tunnel-server" -config server.conf
-  openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out tls.crt -days 100000 -extensions v3_req -extfile server.conf
+    # Create a server certiticate
+    openssl genrsa -out tls.key 3072
+    openssl req -new -key tls.key -out server.csr -subj "/CN=quic-tunnel-server" -config server.conf
+    openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out tls.crt -days 1 -extensions v3_req -extfile server.conf
 
-  # Create a client certiticate
-  openssl genrsa -out client.key 3072
-  openssl req -new -key client.key -out client.csr -subj "/CN=quic-tunnel-client" -config client.conf
-  openssl x509 -req -in client.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out client.crt -days 100000 -extensions v3_req -extfile client.conf
+    # Create a client certiticate
+    openssl genrsa -out client.key 3072
+    openssl req -new -key client.key -out client.csr -subj "/CN=quic-tunnel-client" -config client.conf
+    openssl x509 -req -in client.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out client.crt -days 1 -extensions v3_req -extfile client.conf
 
-  # Clean up after we're done.
-  rm ./*.csr
-  rm ./*.srl
-  rm ./*.conf
+    # Clean up after we're done.
+    rm ./*.csr
+    rm ./*.srl
+    rm ./*.conf
 )
 }
 
 loadCerts() {
-  local certsDir=${1:-}
-  local namespace=${2:-}
-  local secret=${3:-}
-  [[ -z $certsDir ]] && echo "Please specify local certs Dir!" && exit 1
-  [[ -z $namespace ]] && echo "Please specify extension namespace!" && exit 1
-  [[ -z $secret ]] && echo "Please specify webhook secret name!" && exit 1
+    local certsDir=${1:-}
+    local namespace=${2:-}
+    local secret=${3:-}
+    [[ -z $certsDir ]] && echo "Please specify local certs Dir!" && exit 1
+    [[ -z $namespace ]] && echo "Please specify extension namespace!" && exit 1
+    [[ -z $secret ]] && echo "Please specify webhook secret name!" && exit 1
 
-  # if it already exists, we get rid of it
-  kubectl -n $namespace delete secret $secret 2>/dev/null || true
+    # if it already exists, we get rid of it
+    kubectl -n $namespace delete --ignore-not-found secret $secret 2>/dev/null || true
 
-  # now create it anew
-  (
-  cd $certsDir
-  kubectl -n $namespace create secret generic $secret --from-file=ca.crt --from-file=tls.key --from-file=tls.crt
-  )
+    # now create it anew
+    (
+    cd $certsDir
+    kubectl -n $namespace create secret generic $secret --from-file=ca.crt --from-file=tls.key --from-file=tls.crt
+    )
 }
 
+tunnelConsent() {
+    local red='\033[0;31m'
+    local no_color='\033[0m'
+    echo -e "${red}> WARNING: A network tunnel from the seed cluster toward this host is about to be opened via https://github.com/gardener/quic-reverse-http-tunnel.${no_color}"
+
+    read -p "Do you agree the tunnel to be opened? [Yes|No]: " yn
+    case $yn in
+        [Yy]* )
+            echo "Tunnel will be opened!"
+            ;;
+        [Nn]* )
+            echo "Tunnel will not be opened, exiting ..."
+            exit
+            ;;
+        * )
+            echo "Invalid answer, please answer with 'Yes' or 'No'."
+            exit 1
+            ;;
+    esac
+}
 
 cleanUP() {
-   namespace=${1:-}
-   [[ -z $namespace ]] && echo "Please specify the extension namespace!" && exit 1
+    namespace=${1:-}
+    [[ -z $namespace ]] && echo "Please specify the extension namespace!" && exit 1
 
-   echo "cleaning up local-dev setup.."
+    echo "cleaning up local-dev setup.."
 
-   echo "Deleting quic service..."
-   kubectl -n $namespace delete  svc/quic-lb
+    echo "Deleting quic service..."
+    kubectl -n $namespace delete --ignore-not-found svc/quic-lb
 
-   echo "Deleting the quic deploy..."
-   kubectl -n $namespace delete  deploy/quic-server
+    echo "Deleting the quic deploy..."
+    kubectl -n $namespace delete --ignore-not-found deploy/quic-server
 
-   echo "Deleting the quic certs..."
-   kubectl -n $namespace delete  secret/quic-tunnel-certs
+    echo "Deleting the quic certs..."
+    kubectl -n $namespace delete --ignore-not-found secret/quic-tunnel-certs
 
-   echo "Re-applying old service values..."
-   kubectl apply -f $tmpService
+    echo "Re-applying old service values..."
+    kubectl apply -f $tmpService
 
-   docker kill $QUIC_CLIENT_CONTAINER
-   exit 0
+    if [[ "$(docker container ls -f name=$QUIC_CLIENT_CONTAINER -q)" != "" ]]; then
+        docker kill $QUIC_CLIENT_CONTAINER
+    fi
 }
 
 usage(){
-  echo "==================================================================DISCLAIMER============================================================================"
-  echo "This scripts needs to be run against the KUBECONFIG of a seed cluster, please set your KUBECONFIG accordingly"
-  echo "You also need to set the \`ignoreResources\` variable in your extension chart to \`true\`, generate and apply the corresponding controller-installation"
-  echo "========================================================================================================================================================"
+    echo "==================================================================DISCLAIMER============================================================================"
+    echo "This scripts needs to be run against the KUBECONFIG of a seed cluster, please set your KUBECONFIG accordingly"
+    echo "You also need to set the \`ignoreResources\` variable in your extension chart to \`true\`, generate and apply the corresponding controller-installation"
+    echo "========================================================================================================================================================"
 
-  echo ""
+    echo ""
 
-  echo "===================================PRE-REQs========================================="
-  echo "\`host\` commands for DNS"
-  echo "\`docker\` https://www.docker.com"
-  echo "===================================================================================="
+    echo "===================================PRE-REQs========================================="
+    echo "\`host\` commands for DNS"
+    echo "\`docker\` https://www.docker.com"
+    echo "\`yq\` https://github.com/mikefarah/yq"
+    echo "===================================================================================="
 
-  echo ""
+    echo ""
 
-  echo "========================================================USAGE======================================================================"
-  echo "> ./hack/hook-me.sh <service e.g., gardener-extension-provider-aws> <extension namespace e.g. extension-provider-aws-fpr6w> <webhookserver port e.g., 8443> [<quic-server port, e.g. 9443>]"
-  echo "> \`make EXTENSION_NAMESPACE=<extension namespace e.g. extension-provider-aws-fpr6w> WEBHOOK_CONFIG_MODE=service start\`"
-  echo "=================================================================================================================================="
+    echo "========================================================USAGE======================================================================"
+    echo "> ./hack/hook-me.sh <service e.g., gardener-extension-provider-aws> <extension namespace e.g. extension-provider-aws-fpr6w> <webhookserver port e.g., 8443> [<quic-server port, e.g. 9443>]"
+    echo "> \`make start [EXTENSION_NAMESPACE=<extension namespace e.g. extension-provider-aws-fpr6w> WEBHOOK_CONFIG_MODE=service GARDEN_KUBECONFIG=<path to kubeconfig for garden cluster>]\`"
+    echo "=================================================================================================================================="
 
-  echo ""
+    echo ""
 
-  echo "===================================CLEAN UP COMMANDS========================================="
-  echo ">  kubectl -n $namespace delete  svc/quic-lb"
-  echo ">  kubectl -n $namespace delete  deploy/quic-server"
-  echo "============================================================================================="
+    echo "===================================CLEAN UP COMMANDS========================================="
+    echo "> kubectl -n <extension namespace e.g. extension-provider-aws-fpr6w> delete --ignore-not-found svc/quic-lb"
+    echo "> kubectl -n <extension namespace e.g. extension-provider-aws-fpr6w> delete --ignore-not-found deploy/quic-server"
+    echo "============================================================================================="
 
-  exit 0
+    exit 0
 }
+
 if [[ "${BASH_SOURCE[0]}" = "$0" ]]; then
-
-  if [ "$1" == "-h" ] ; then
+    if [ "$#" -lt 2 ] || [ "$1" == "-h" ]; then
         usage
-  fi
+    fi
 
-  serviceName=${1:-}
-  [[ -z $serviceName ]] && echo "Please specify the service name (gardener-extension-provider-{aws,gcp,azure},..etc.)!" && exit 1
+    serviceName=${1:-}
+    [[ -z $serviceName ]] && echo "Please specify the service name (gardener-extension-provider-{aws,gcp,azure},..etc.)!" && exit 1
 
-  namespace=${2:-}
-  [[ -z $namespace ]] && echo "Please specify the extension namespace!" && exit 1
+    namespace=${2:-}
+    [[ -z $namespace ]] && echo "Please specify the extension namespace!" && exit 1
 
-  webhookServerPort=${3:-}
-  [[ -z $webhookServerPort ]] && echo "Please specify webhook server port" && exit 1
+    webhookServerPort=${3:-}
+    [[ -z $webhookServerPort ]] && echo "Please specify webhook server port" && exit 1
 
-  quicServerPort=${4:-}
-  [[ -z $quicServerPort ]] && echo "quic-server port not specified, using default port of 9443" && quicServerPort=9443
+    quicServerPort=${4:-}
+    [[ -z $quicServerPort ]] && echo "quic-server port not specified, using default port of 9443" && quicServerPort=9443
 
-  quicTunnelPort=${5:-}
-  [[ -z $quicTunnelPort ]] && echo "quic-tunnel port not specified, using default port of 9444" && quicTunnelPort=9444
+    quicTunnelPort=${5:-}
+    [[ -z $quicTunnelPort ]] && echo "quic-tunnel port not specified, using default port of 9444" && quicTunnelPort=9444
 
+    tunnelConsent
+    trap 'cleanUP $namespace' EXIT
 
-  trap 'cleanUP $namespace' SIGINT SIGTERM
-
-  while true; do
+    while true; do
     read -p "[STEP 0] Have you already set the \`ignoreResources\` chart value to \`true\` for your extension controller-registration?" yn
     case $yn in
         [Yy]* )
@@ -407,18 +427,18 @@ if [[ "${BASH_SOURCE[0]}" = "$0" ]]; then
 
             echo "[Step 10] Running quic client"
             docker run \
-              --name ${QUIC_CLIENT_CONTAINER} \
-              --rm \
-              -v "$CERTS_DIR":/certs \
-              $QUIC_CLIENT_IMAGE \
-              --server="$loadbalancerIPOrHostName:$quicTunnelPort" \
-              --upstream="host.docker.internal:$webhookServerPort" \
-              --ca-file=/certs/ca.crt \
-              --cert-file=/certs/client.crt \
-              --cert-key=/certs/client.key \
-              --v=3
+                --name ${QUIC_CLIENT_CONTAINER} \
+                --rm \
+                -v "$CERTS_DIR":/certs \
+                $QUIC_CLIENT_IMAGE \
+                --server="$loadbalancerIPOrHostName:$quicTunnelPort" \
+                --upstream="host.docker.internal:$webhookServerPort" \
+                --ca-file=/certs/ca.crt \
+                --cert-file=/certs/client.crt \
+                --cert-key=/certs/client.key \
+                --v=3
         ;;
-        [Nn]* ) echo "You need to set  \`ignoreResources\` to true and generate the controller installlation first in your extension chart before proceeding!"; exit;;
+        [Nn]* ) echo "You need to set \`ignoreResources\` to true and generate the controller installlation first in your extension chart before proceeding!"; exit;;
         * ) echo "Please answer yes or no.";;
     esac
 done
