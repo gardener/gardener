@@ -57,7 +57,7 @@ require (
 	k8s.io/cluster-bootstrap v0.28.7
 	k8s.io/code-generator v0.28.7
 	k8s.io/component-base v0.28.7
-	k8s.io/component-helpers v0.28.3
+	k8s.io/component-helpers v0.28.7
 	k8s.io/helm v2.17.0+incompatible
 	k8s.io/klog/v2 v2.110.1
 	k8s.io/kube-aggregator v0.28.7
