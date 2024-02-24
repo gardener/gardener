@@ -66,11 +66,11 @@ GO_ADD_LICENSE_VERSION ?= v1.1.1
 GOIMPORTSREVISER_VERSION ?= v3.6.4
 GO_VULN_CHECK_VERSION ?= latest
 # renovate: datasource=github-releases depName=helm/helm
-HELM_VERSION ?= v3.14.0
+HELM_VERSION ?= v3.14.2
 # renovate: datasource=github-releases depName=kubernetes-sigs/kind
 KIND_VERSION ?= v0.21.0
 # renovate: datasource=github-releases depName=kubernetes/kubernetes
-KUBECTL_VERSION ?= v1.29.1
+KUBECTL_VERSION ?= v1.29.2
 # renovate: datasource=github-releases depName=prometheus/prometheus
 PROMTOOL_VERSION ?= 2.49.1
 # renovate: datasource=github-releases depName=protocolbuffers/protobuf
@@ -78,9 +78,9 @@ PROTOC_VERSION ?= 25.2
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
 SKAFFOLD_VERSION ?= v2.9.0
 # renovate: datasource=github-releases depName=mikefarah/yq
-YQ_VERSION ?= v4.40.5
+YQ_VERSION ?= v4.40.7
 # renovate: datasource=github-releases depName=ironcore-dev/vgopath
-VGOPATH_VERSION ?= v0.1.3
+VGOPATH_VERSION ?= v0.1.4
 
 # tool versions from go.mod
 CONTROLLER_GEN_VERSION ?= $(call version_gomod,sigs.k8s.io/controller-tools)
