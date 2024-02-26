@@ -1388,6 +1388,62 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(errorList).To(BeEmpty())
 				})
 			})
+			Describe("clusterAutoscaler options validation", func() {
+				var (
+					negativeDuration = metav1.Duration{Duration: -time.Second}
+					positiveDuration = metav1.Duration{Duration: time.Second}
+				)
+				DescribeTable("cluster autoscaler values",
+					func(caOptions core.ClusterAutoscalerOptions, matcher gomegatypes.GomegaMatcher) {
+						Expect(ValidateClusterAutoscalerOptions(&caOptions, nil)).To(matcher)
+					},
+					Entry("valid with empty options", core.ClusterAutoscalerOptions{}, BeEmpty()),
+					Entry("valid with nil options", nil, BeEmpty()),
+					Entry("valid with all options", core.ClusterAutoscalerOptions{
+						ScaleDownUtilizationThreshold:    ptr.To(float64(0.5)),
+						ScaleDownGpuUtilizationThreshold: ptr.To(float64(0.5)),
+						ScaleDownUnneededTime:            ptr.To(positiveDuration),
+						ScaleDownUnreadyTime:             ptr.To(positiveDuration),
+						MaxNodeProvisionTime:             ptr.To(positiveDuration),
+					}, BeEmpty()),
+					Entry("valid with ScaleDownUtilizationThreshold", core.ClusterAutoscalerOptions{
+						ScaleDownUtilizationThreshold: ptr.To(float64(0.5)),
+					}, BeEmpty()),
+					Entry("invalid negative ScaleDownUtilizationThreshold", core.ClusterAutoscalerOptions{
+						ScaleDownUtilizationThreshold: ptr.To(float64(-0.5)),
+					}, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), -0.5, "can not be negative"))),
+					Entry("invalid > 1 ScaleDownUtilizationThreshold", core.ClusterAutoscalerOptions{
+						ScaleDownUtilizationThreshold: ptr.To(float64(1.5)),
+					}, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), 1.5, "can not be greater than 1.0"))),
+					Entry("valid with ScaleDownGpuUtilizationThreshold", core.ClusterAutoscalerOptions{
+						ScaleDownGpuUtilizationThreshold: ptr.To(float64(0.5)),
+					}, BeEmpty()),
+					Entry("invalid negative ScaleDownGpuUtilizationThreshold", core.ClusterAutoscalerOptions{
+						ScaleDownGpuUtilizationThreshold: ptr.To(float64(-0.5)),
+					}, ConsistOf(field.Invalid(field.NewPath("scaleDownGpuUtilizationThreshold"), -0.5, "can not be negative"))),
+					Entry("invalid > 1 ScaleDownGpuUtilizationThreshold", core.ClusterAutoscalerOptions{
+						ScaleDownGpuUtilizationThreshold: ptr.To(float64(1.5)),
+					}, ConsistOf(field.Invalid(field.NewPath("scaleDownGpuUtilizationThreshold"), 1.5, "can not be greater than 1.0"))),
+					Entry("valid with ScaleDownUnneededTime", core.ClusterAutoscalerOptions{
+						ScaleDownUnneededTime: ptr.To(metav1.Duration{Duration: time.Minute}),
+					}, BeEmpty()),
+					Entry("invalid negative ScaleDownUnneededTime", core.ClusterAutoscalerOptions{
+						ScaleDownUnneededTime: ptr.To(negativeDuration),
+					}, ConsistOf(field.Invalid(field.NewPath("scaleDownUnneededTime"), negativeDuration, "can not be negative"))),
+					Entry("valid with ScaleDownUnreadyTime", core.ClusterAutoscalerOptions{
+						ScaleDownUnreadyTime: ptr.To(metav1.Duration{Duration: time.Minute}),
+					}, BeEmpty()),
+					Entry("invalid negative ScaleDownUnreadyTime", core.ClusterAutoscalerOptions{
+						ScaleDownUnreadyTime: ptr.To(negativeDuration),
+					}, ConsistOf(field.Invalid(field.NewPath("scaleDownUnreadyTime"), negativeDuration, "can not be negative"))),
+					Entry("valid with MaxNodeProvisionTime", core.ClusterAutoscalerOptions{
+						MaxNodeProvisionTime: ptr.To(metav1.Duration{Duration: time.Minute}),
+					}, BeEmpty()),
+					Entry("invalid negative MaxNodeProvisionTime", core.ClusterAutoscalerOptions{
+						MaxNodeProvisionTime: ptr.To(negativeDuration),
+					}, ConsistOf(field.Invalid(field.NewPath("maxNodeProvisionTime"), negativeDuration, "can not be negative"))),
+				)
+			})
 		})
 
 		Context("dns section", func() {

@@ -202,24 +202,25 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			}
 		}
 
-		autoscalerOptions := &extensionsv1alpha1.ClusterAutoscalerOptions{}
-		if workerPool.Autoscaler != nil {
-			if workerPool.Autoscaler.ScaleDownUtilizationThreshold != nil {
-				ScaleDownUtilThreshold := fmt.Sprint(*workerPool.Autoscaler.ScaleDownUtilizationThreshold)
+		var autoscalerOptions *extensionsv1alpha1.ClusterAutoscalerOptions
+		if workerPool.ClusterAutoscaler != nil {
+			autoscalerOptions = &extensionsv1alpha1.ClusterAutoscalerOptions{}
+			if workerPool.ClusterAutoscaler.ScaleDownUtilizationThreshold != nil {
+				ScaleDownUtilThreshold := fmt.Sprint(*workerPool.ClusterAutoscaler.ScaleDownUtilizationThreshold)
 				autoscalerOptions.ScaleDownUtilizationThreshold = &ScaleDownUtilThreshold
 			}
-			if workerPool.Autoscaler.ScaleDownGpuUtilizationThreshold != nil {
-				ScaleDownGpuUtilThreshold := fmt.Sprint(*workerPool.Autoscaler.ScaleDownGpuUtilizationThreshold)
+			if workerPool.ClusterAutoscaler.ScaleDownGpuUtilizationThreshold != nil {
+				ScaleDownGpuUtilThreshold := fmt.Sprint(*workerPool.ClusterAutoscaler.ScaleDownGpuUtilizationThreshold)
 				autoscalerOptions.ScaleDownGpuUtilizationThreshold = &ScaleDownGpuUtilThreshold
 			}
-			if workerPool.Autoscaler.ScaleDownUnneededTime != nil {
-				autoscalerOptions.ScaleDownUnneededTime = workerPool.Autoscaler.ScaleDownUnneededTime
+			if workerPool.ClusterAutoscaler.ScaleDownUnneededTime != nil {
+				autoscalerOptions.ScaleDownUnneededTime = workerPool.ClusterAutoscaler.ScaleDownUnneededTime
 			}
-			if workerPool.Autoscaler.ScaleDownUnreadyTime != nil {
-				autoscalerOptions.ScaleDownUnreadyTime = workerPool.Autoscaler.ScaleDownUnreadyTime
+			if workerPool.ClusterAutoscaler.ScaleDownUnreadyTime != nil {
+				autoscalerOptions.ScaleDownUnreadyTime = workerPool.ClusterAutoscaler.ScaleDownUnreadyTime
 			}
-			if workerPool.Autoscaler.MaxNodeProvisionTime != nil {
-				autoscalerOptions.MaxNodeProvisionTime = workerPool.Autoscaler.MaxNodeProvisionTime
+			if workerPool.ClusterAutoscaler.MaxNodeProvisionTime != nil {
+				autoscalerOptions.MaxNodeProvisionTime = workerPool.ClusterAutoscaler.MaxNodeProvisionTime
 			}
 		}
 
@@ -247,7 +248,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			Zones:                            workerPool.Zones,
 			MachineControllerManagerSettings: workerPool.MachineControllerManagerSettings,
 			Architecture:                     workerPool.Machine.Architecture,
-			Autoscaler:                       autoscalerOptions,
+			ClusterAutoscaler:                autoscalerOptions,
 		})
 	}
 

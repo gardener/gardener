@@ -3182,7 +3182,7 @@ int32
 <a href="#core.gardener.cloud/v1beta1.Worker">Worker</a>)
 </p>
 <p>
-<p>ClusterAutoscalerOptions jdkddskddd</p>
+<p>ClusterAutoscalerOptions contains the cluster autoscaler configurations for the worker.</p>
 </p>
 <table>
 <thead>
@@ -12429,7 +12429,7 @@ map[string]string
 </tr>
 <tr>
 <td>
-<code>autoscaler</code></br>
+<code>clusterAutoscaler</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.ClusterAutoscalerOptions">
 ClusterAutoscalerOptions
@@ -12438,7 +12438,7 @@ ClusterAutoscalerOptions
 </td>
 <td>
 <em>(Optional)</em>
-<p>Autoscaler is a map of kernel settings to apply on all machines in this worker pool.</p>
+<p>ClusterAutoscaler contains the cluster autoscaler configurations for the worker.</p>
 </td>
 </tr>
 </tbody>

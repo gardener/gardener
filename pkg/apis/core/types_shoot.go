@@ -1117,11 +1117,11 @@ type Worker struct {
 	MachineControllerManagerSettings *MachineControllerManagerSettings
 	// Sysctls is a map of kernel settings to apply on all machines in this worker pool.
 	Sysctls map[string]string
-	// Autoscaler is a map of kernel settings to apply on all machines in this worker pool.
-	Autoscaler *ClusterAutoscalerOptions
+	// ClusterAutoscaler contains the cluster autoscaler configurations for the worker.
+	ClusterAutoscaler *ClusterAutoscalerOptions
 }
 
-// ClusterAutoscalerOptions jdkddskddd
+// ClusterAutoscalerOptions contains the cluster autoscaler configurations for the worker.
 type ClusterAutoscalerOptions struct {
 	// ScaleDownUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) under which a node is being removed.
 	ScaleDownUtilizationThreshold *float64

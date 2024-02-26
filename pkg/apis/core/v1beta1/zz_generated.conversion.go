@@ -6259,7 +6259,7 @@ func autoConvert_v1beta1_Worker_To_core_Worker(in *Worker, out *core.Worker, s c
 	out.SystemComponents = (*core.WorkerSystemComponents)(unsafe.Pointer(in.SystemComponents))
 	out.MachineControllerManagerSettings = (*core.MachineControllerManagerSettings)(unsafe.Pointer(in.MachineControllerManagerSettings))
 	out.Sysctls = *(*map[string]string)(unsafe.Pointer(&in.Sysctls))
-	out.Autoscaler = (*core.ClusterAutoscalerOptions)(unsafe.Pointer(in.Autoscaler))
+	out.ClusterAutoscaler = (*core.ClusterAutoscalerOptions)(unsafe.Pointer(in.ClusterAutoscaler))
 	return nil
 }
 
@@ -6299,7 +6299,7 @@ func autoConvert_core_Worker_To_v1beta1_Worker(in *core.Worker, out *Worker, s c
 	out.Zones = *(*[]string)(unsafe.Pointer(&in.Zones))
 	out.MachineControllerManagerSettings = (*MachineControllerManagerSettings)(unsafe.Pointer(in.MachineControllerManagerSettings))
 	out.Sysctls = *(*map[string]string)(unsafe.Pointer(&in.Sysctls))
-	out.Autoscaler = (*ClusterAutoscalerOptions)(unsafe.Pointer(in.Autoscaler))
+	out.ClusterAutoscaler = (*ClusterAutoscalerOptions)(unsafe.Pointer(in.ClusterAutoscaler))
 	return nil
 }
 

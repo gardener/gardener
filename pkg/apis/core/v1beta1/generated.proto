@@ -412,7 +412,7 @@ message ClusterAutoscaler {
   optional int32 verbosity = 14;
 }
 
-// ClusterAutoscalerOptions jdkddskddd
+// ClusterAutoscalerOptions contains the cluster autoscaler configurations for the worker.
 message ClusterAutoscalerOptions {
   // ScaleDownUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) under which a node is being removed.
   // +optional
@@ -3106,9 +3106,9 @@ message Worker {
   // +optional
   map<string, string> sysctls = 20;
 
-  // Autoscaler is a map of kernel settings to apply on all machines in this worker pool.
+  // ClusterAutoscaler contains the cluster autoscaler configurations for the worker.
   // +optional
-  optional ClusterAutoscalerOptions autoscaler = 21;
+  optional ClusterAutoscalerOptions clusterAutoscaler = 21;
 }
 
 // WorkerKubernetes contains configuration for Kubernetes components related to this worker pool.

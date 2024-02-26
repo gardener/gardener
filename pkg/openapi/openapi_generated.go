@@ -1859,7 +1859,7 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscalerOptions(ref common.ReferenceC
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "ClusterAutoscalerOptions jdkddskddd",
+				Description: "ClusterAutoscalerOptions contains the cluster autoscaler configurations for the worker.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"scaleDownUtilizationThreshold": {
@@ -8801,9 +8801,9 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 							},
 						},
 					},
-					"autoscaler": {
+					"clusterAutoscaler": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Autoscaler is a map of kernel settings to apply on all machines in this worker pool.",
+							Description: "ClusterAutoscaler contains the cluster autoscaler configurations for the worker.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ClusterAutoscalerOptions"),
 						},
 					},

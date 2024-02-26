@@ -1438,12 +1438,12 @@ type Worker struct {
 	// Sysctls is a map of kernel settings to apply on all machines in this worker pool.
 	// +optional
 	Sysctls map[string]string `json:"sysctls,omitempty" protobuf:"bytes,20,rep,name=sysctls"`
-	// Autoscaler is a map of kernel settings to apply on all machines in this worker pool.
+	// ClusterAutoscaler contains the cluster autoscaler configurations for the worker.
 	// +optional
-	Autoscaler *ClusterAutoscalerOptions `json:"autoscaler,omitempty" protobuf:"bytes,21,opt,name=autoscaler"`
+	ClusterAutoscaler *ClusterAutoscalerOptions `json:"clusterAutoscaler,omitempty" protobuf:"bytes,21,opt,name=clusterAutoscaler"`
 }
 
-// ClusterAutoscalerOptions jdkddskddd
+// ClusterAutoscalerOptions contains the cluster autoscaler configurations for the worker.
 type ClusterAutoscalerOptions struct {
 	// ScaleDownUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) under which a node is being removed.
 	// +optional

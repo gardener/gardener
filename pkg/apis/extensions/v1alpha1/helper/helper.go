@@ -18,6 +18,7 @@ import (
 	"net"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	ca "github.com/gardener/gardener/pkg/component/clusterautoscaler"
 )
 
 // ClusterAutoscalerRequired returns whether the given worker pool configuration indicates that a cluster-autoscaler
@@ -67,4 +68,28 @@ func FilePathsFrom(files []extensionsv1alpha1.File) []string {
 	}
 
 	return out
+}
+
+// GetClusterAutoscalerAnnotationMap returns a map of annotations with values intended to be used as cluster autoscaler options for the worker group
+func GetClusterAutoscalerAnnotationMap(caOptions *extensionsv1alpha1.ClusterAutoscalerOptions) map[string]string {
+	mcdAnnotationMap := map[string]string{}
+	if caOptions != nil {
+		if caOptions.ScaleDownUtilizationThreshold != nil {
+			mcdAnnotationMap[ca.ScaleDownUtilizationThresholdAnnotation] = *caOptions.ScaleDownUtilizationThreshold
+		}
+		if caOptions.ScaleDownGpuUtilizationThreshold != nil {
+			mcdAnnotationMap[ca.ScaleDownGpuUtilizationThresholdAnnotation] = *caOptions.ScaleDownGpuUtilizationThreshold
+		}
+		if caOptions.ScaleDownUnneededTime != nil {
+			mcdAnnotationMap[ca.ScaleDownUnneededTimeAnnotation] = caOptions.ScaleDownUnneededTime.Duration.String()
+		}
+		if caOptions.ScaleDownUnreadyTime != nil {
+			mcdAnnotationMap[ca.ScaleDownUnreadyTimeAnnotation] = caOptions.ScaleDownUnreadyTime.Duration.String()
+		}
+		if caOptions.MaxNodeProvisionTime != nil {
+			mcdAnnotationMap[ca.MaxNodeProvisionTimeAnnotation] = caOptions.MaxNodeProvisionTime.Duration.String()
+		}
+	}
+
+	return mcdAnnotationMap
 }

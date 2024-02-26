@@ -75,13 +75,13 @@ spec:
                       description: Architecture is the CPU architecture of the worker
                         pool machines and machine image.
                       type: string
-                    autoscaler:
-                      description: Autoscaler is a map of kernel settings to apply
-                        on all machines in this worker pool.
+                    clusterAutoscaler:
+                      description: ClusterAutoscaler contains the cluster autoscaler
+                        configurations for the worker.
                       properties:
                         maxNodeProvisionTime:
-                          description: MaxNodeProvisionTime defines how long CA waits
-                            for node to be provisioned.
+                          description: MaxNodeProvisionTime defines how long cluster
+                            autoscaler should wait for a node to be provisioned.
                           type: string
                         scaleDownGpuUtilizationThreshold:
                           description: ScaleDownGpuUtilizationThreshold defines the

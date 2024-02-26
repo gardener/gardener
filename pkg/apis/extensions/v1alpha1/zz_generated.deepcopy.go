@@ -1783,8 +1783,8 @@ func (in *WorkerPool) DeepCopyInto(out *WorkerPool) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.Autoscaler != nil {
-		in, out := &in.Autoscaler, &out.Autoscaler
+	if in.ClusterAutoscaler != nil {
+		in, out := &in.ClusterAutoscaler, &out.ClusterAutoscaler
 		*out = new(ClusterAutoscalerOptions)
 		(*in).DeepCopyInto(*out)
 	}

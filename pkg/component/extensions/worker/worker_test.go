@@ -222,7 +222,7 @@ var _ = Describe("Worker", func() {
 					ProviderConfig:                   worker1ProviderConfig,
 					MachineControllerManagerSettings: worker1MCMSettings,
 					Zones:                            []string{worker1Zone1, worker1Zone2},
-					Autoscaler:                       &gardencorev1beta1.ClusterAutoscalerOptions{},
+					ClusterAutoscaler:                &gardencorev1beta1.ClusterAutoscalerOptions{},
 				},
 				{
 					Name:           worker2Name,
@@ -241,7 +241,7 @@ var _ = Describe("Worker", func() {
 					Kubernetes: &gardencorev1beta1.WorkerKubernetes{
 						Version: &workerKubernetesVersion,
 					},
-					Autoscaler: &gardencorev1beta1.ClusterAutoscalerOptions{},
+					ClusterAutoscaler: &gardencorev1beta1.ClusterAutoscalerOptions{},
 				},
 			},
 		}
@@ -314,7 +314,7 @@ var _ = Describe("Worker", func() {
 					MachineControllerManagerSettings: worker1MCMSettings,
 					NodeTemplate:                     workerPool1NodeTemplate,
 					Architecture:                     worker1Arch,
-					Autoscaler:                       emptyAutoscalerOptions,
+					ClusterAutoscaler:                emptyAutoscalerOptions,
 				},
 				{
 					Name:           worker2Name,
@@ -339,7 +339,7 @@ var _ = Describe("Worker", func() {
 					UserData:          worker2UserData,
 					NodeTemplate:      workerPool2NodeTemplate,
 					Architecture:      worker2Arch,
-					Autoscaler:        emptyAutoscalerOptions,
+					ClusterAutoscaler: emptyAutoscalerOptions,
 				},
 			},
 		}
@@ -475,33 +475,34 @@ var _ = Describe("Worker", func() {
 				Spec: *expectedWorkerSpec,
 			}))
 		})
+
 		It("should successfully deploy the Worker resource with cluster autoscaker options when present", func() {
 			defer test.WithVars(&worker.TimeNow, mockNow.Do)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			newValues := *values
-			newValues.Workers[0].Autoscaler = &gardencorev1beta1.ClusterAutoscalerOptions{
+			newValues.Workers[0].ClusterAutoscaler = &gardencorev1beta1.ClusterAutoscalerOptions{
 				ScaleDownUtilizationThreshold:    ptr.To(0.5),
 				ScaleDownGpuUtilizationThreshold: ptr.To(0.7),
 				ScaleDownUnneededTime:            ptr.To(metav1.Duration{Duration: 1 * time.Minute}),
 				ScaleDownUnreadyTime:             ptr.To(metav1.Duration{Duration: 2 * time.Minute}),
 				MaxNodeProvisionTime:             ptr.To(metav1.Duration{Duration: 3 * time.Minute}),
 			}
-			newValues.Workers[1].Autoscaler = &gardencorev1beta1.ClusterAutoscalerOptions{
+			newValues.Workers[1].ClusterAutoscaler = &gardencorev1beta1.ClusterAutoscalerOptions{
 				ScaleDownGpuUtilizationThreshold: ptr.To(0.8),
 				ScaleDownUnneededTime:            ptr.To(metav1.Duration{Duration: 4 * time.Minute}),
 				MaxNodeProvisionTime:             ptr.To(metav1.Duration{Duration: 5 * time.Minute}),
 			}
 
 			expectedWorkerSpec := wSpec.DeepCopy()
-			expectedWorkerSpec.Pools[0].Autoscaler = &extensionsv1alpha1.ClusterAutoscalerOptions{
+			expectedWorkerSpec.Pools[0].ClusterAutoscaler = &extensionsv1alpha1.ClusterAutoscalerOptions{
 				ScaleDownUtilizationThreshold:    ptr.To("0.5"),
 				ScaleDownGpuUtilizationThreshold: ptr.To("0.7"),
 				ScaleDownUnneededTime:            ptr.To(metav1.Duration{Duration: 1 * time.Minute}),
 				ScaleDownUnreadyTime:             ptr.To(metav1.Duration{Duration: 2 * time.Minute}),
 				MaxNodeProvisionTime:             ptr.To(metav1.Duration{Duration: 3 * time.Minute}),
 			}
-			expectedWorkerSpec.Pools[1].Autoscaler = &extensionsv1alpha1.ClusterAutoscalerOptions{
+			expectedWorkerSpec.Pools[1].ClusterAutoscaler = &extensionsv1alpha1.ClusterAutoscalerOptions{
 				ScaleDownGpuUtilizationThreshold: ptr.To("0.8"),
 				ScaleDownUnneededTime:            ptr.To(metav1.Duration{Duration: 4 * time.Minute}),
 				MaxNodeProvisionTime:             ptr.To(metav1.Duration{Duration: 5 * time.Minute}),

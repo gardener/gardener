@@ -15,12 +15,16 @@
 package helper_test
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
+	ca "github.com/gardener/gardener/pkg/component/clusterautoscaler"
 )
 
 var _ = Describe("helper", func() {
@@ -82,6 +86,43 @@ var _ = Describe("helper", func() {
 			file2 := extensionsv1alpha1.File{Path: "bar"}
 
 			Expect(FilePathsFrom([]extensionsv1alpha1.File{file1, file2})).To(ConsistOf("foo", "bar"))
+		})
+	})
+
+	Describe("#GetClusterAutoscalerAnnotationMap", func() {
+		It("should return empty map when options passed is nil", func() {
+			Expect(GetClusterAutoscalerAnnotationMap(nil)).To(Equal(map[string]string{}))
+		})
+		It("should return empty map when an empty map is passed", func() {
+			Expect(GetClusterAutoscalerAnnotationMap(ptr.To(extensionsv1alpha1.ClusterAutoscalerOptions{}))).To(Equal(map[string]string{}))
+		})
+		It("should return correctly populated map when all options are passed", func() {
+			caOptions := &extensionsv1alpha1.ClusterAutoscalerOptions{
+				ScaleDownUtilizationThreshold:    ptr.To("0.5"),
+				ScaleDownGpuUtilizationThreshold: ptr.To("0.6"),
+				ScaleDownUnneededTime:            ptr.To(metav1.Duration{Duration: time.Minute}),
+				ScaleDownUnreadyTime:             ptr.To(metav1.Duration{Duration: 2 * time.Minute}),
+				MaxNodeProvisionTime:             ptr.To(metav1.Duration{Duration: 3 * time.Minute}),
+			}
+			expectedValues := map[string]string{
+				ca.ScaleDownUtilizationThresholdAnnotation:    "0.5",
+				ca.ScaleDownGpuUtilizationThresholdAnnotation: "0.6",
+				ca.ScaleDownUnneededTimeAnnotation:            "1m0s",
+				ca.ScaleDownUnreadyTimeAnnotation:             "2m0s",
+				ca.MaxNodeProvisionTimeAnnotation:             "3m0s",
+			}
+			Expect(GetClusterAutoscalerAnnotationMap(caOptions)).To(Equal(expectedValues))
+		})
+		It("should return correctly populated map when partial options are passed", func() {
+			caOptions := &extensionsv1alpha1.ClusterAutoscalerOptions{
+				ScaleDownGpuUtilizationThreshold: ptr.To("0.6"),
+				ScaleDownUnneededTime:            ptr.To(metav1.Duration{Duration: time.Minute}),
+			}
+			expectedValues := map[string]string{
+				ca.ScaleDownGpuUtilizationThresholdAnnotation: "0.6",
+				ca.ScaleDownUnneededTimeAnnotation:            "1m0s",
+			}
+			Expect(GetClusterAutoscalerAnnotationMap(caOptions)).To(Equal(expectedValues))
 		})
 	})
 })

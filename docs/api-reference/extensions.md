@@ -2099,7 +2099,7 @@ Kubernetes core/v1.SecretReference
 <a href="#extensions.gardener.cloud/v1alpha1.WorkerPool">WorkerPool</a>)
 </p>
 <p>
-<p>ClusterAutoscalerOptions jdkddskddd</p>
+<p>ClusterAutoscalerOptions contains the cluster autoscaler configurations for the worker.</p>
 </p>
 <table>
 <thead>
@@ -2117,6 +2117,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>ScaleDownUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) under which a node is being removed.</p>
 </td>
 </tr>
@@ -2128,6 +2129,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>ScaleDownGpuUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) of gpu resources under which a node is being removed.</p>
 </td>
 </tr>
@@ -2141,6 +2143,7 @@ Kubernetes meta/v1.Duration
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>ScaleDownUnneededTime defines how long a node should be unneeded before it is eligible for scale down.</p>
 </td>
 </tr>
@@ -2154,6 +2157,7 @@ Kubernetes meta/v1.Duration
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>ScaleDownUnreadyTime defines how long an unready node should be unneeded before it is eligible for scale down.</p>
 </td>
 </tr>
@@ -2167,7 +2171,8 @@ Kubernetes meta/v1.Duration
 </em>
 </td>
 <td>
-<p>MaxNodeProvisionTime defines how long CA waits for node to be provisioned.</p>
+<em>(Optional)</em>
+<p>MaxNodeProvisionTime defines how long cluster autoscaler should wait for a node to be provisioned.</p>
 </td>
 </tr>
 </tbody>
@@ -4367,7 +4372,7 @@ string
 </tr>
 <tr>
 <td>
-<code>autoscaler</code></br>
+<code>clusterAutoscaler</code></br>
 <em>
 <a href="#extensions.gardener.cloud/v1alpha1.ClusterAutoscalerOptions">
 ClusterAutoscalerOptions
@@ -4376,7 +4381,7 @@ ClusterAutoscalerOptions
 </td>
 <td>
 <em>(Optional)</em>
-<p>Autoscaler is a map of kernel settings to apply on all machines in this worker pool.</p>
+<p>ClusterAutoscaler contains the cluster autoscaler configurations for the worker.</p>
 </td>
 </tr>
 </tbody>

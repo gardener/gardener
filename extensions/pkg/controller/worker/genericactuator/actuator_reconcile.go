@@ -248,7 +248,7 @@ func deployMachineDeployments(
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        deployment.Name,
 				Namespace:   worker.Namespace,
-				Annotations: deployment.McdAnnotations,
+				Annotations: deployment.ClusterAutoscalerOptions,
 			},
 		}
 

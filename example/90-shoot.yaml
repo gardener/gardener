@@ -45,7 +45,7 @@ spec:
         # providerConfig:
         #   <some-machine-image-specific-configuration>
       # architecture: <some-cpu-architecture>
-    # autoscaler:
+    # clusterAutoscaler:
     #   scaleDownUtilizationThreshold: 0.5
     #   scaleDownGpuUtilizationThreshold: 0.5
     #   scaleDownUnneededTime: 30m

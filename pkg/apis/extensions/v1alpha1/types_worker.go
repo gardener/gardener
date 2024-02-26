@@ -154,22 +154,27 @@ type WorkerPool struct {
 	// Architecture is the CPU architecture of the worker pool machines and machine image.
 	// +optional
 	Architecture *string `json:"architecture,omitempty"`
-	// Autoscaler is a map of kernel settings to apply on all machines in this worker pool.
+	// ClusterAutoscaler contains the cluster autoscaler configurations for the worker.
 	// +optional
-	Autoscaler *ClusterAutoscalerOptions `json:"autoscaler,omitempty"`
+	ClusterAutoscaler *ClusterAutoscalerOptions `json:"clusterAutoscaler,omitempty"`
 }
 
-// ClusterAutoscalerOptions jdkddskddd
+// ClusterAutoscalerOptions contains the cluster autoscaler configurations for the worker.
 type ClusterAutoscalerOptions struct {
 	// ScaleDownUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) under which a node is being removed.
+	// +optional
 	ScaleDownUtilizationThreshold *string `json:"scaleDownUtilizationThreshold,omitempty"`
 	// ScaleDownGpuUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) of gpu resources under which a node is being removed.
+	// +optional
 	ScaleDownGpuUtilizationThreshold *string `json:"scaleDownGpuUtilizationThreshold,omitempty"`
 	// ScaleDownUnneededTime defines how long a node should be unneeded before it is eligible for scale down.
+	// +optional
 	ScaleDownUnneededTime *metav1.Duration `json:"scaleDownUnneededTime,omitempty"`
 	// ScaleDownUnreadyTime defines how long an unready node should be unneeded before it is eligible for scale down.
+	// +optional
 	ScaleDownUnreadyTime *metav1.Duration `json:"scaleDownUnreadyTime,omitempty"`
-	// MaxNodeProvisionTime defines how long CA waits for node to be provisioned.
+	// MaxNodeProvisionTime defines how long cluster autoscaler should wait for a node to be provisioned.
+	// +optional
 	MaxNodeProvisionTime *metav1.Duration `json:"maxNodeProvisionTime,omitempty"`
 }
 
