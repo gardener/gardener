@@ -35,9 +35,9 @@ require (
 	github.com/spf13/viper v1.18.2
 	github.com/texttheater/golang-levenshtein v1.0.1
 	go.uber.org/automaxprocs v1.5.3
-	go.uber.org/goleak v1.2.1
+	go.uber.org/goleak v1.3.0
 	go.uber.org/mock v0.2.0
-	go.uber.org/zap v1.26.0
+	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.17.0
 	golang.org/x/text v0.14.0
 	golang.org/x/time v0.5.0
