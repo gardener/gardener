@@ -75,6 +75,33 @@ spec:
                       description: Architecture is the CPU architecture of the worker
                         pool machines and machine image.
                       type: string
+                    autoscaler:
+                      description: Autoscaler is a map of kernel settings to apply
+                        on all machines in this worker pool.
+                      properties:
+                        maxNodeProvisionTime:
+                          description: MaxNodeProvisionTime defines how long CA waits
+                            for node to be provisioned.
+                          type: string
+                        scaleDownGpuUtilizationThreshold:
+                          description: ScaleDownGpuUtilizationThreshold defines the
+                            threshold in fraction (0.0 - 1.0) of gpu resources under
+                            which a node is being removed.
+                          type: string
+                        scaleDownUnneededTime:
+                          description: ScaleDownUnneededTime defines how long a node
+                            should be unneeded before it is eligible for scale down.
+                          type: string
+                        scaleDownUnreadyTime:
+                          description: ScaleDownUnreadyTime defines how long an unready
+                            node should be unneeded before it is eligible for scale
+                            down.
+                          type: string
+                        scaleDownUtilizationThreshold:
+                          description: ScaleDownUtilizationThreshold defines the threshold
+                            in fraction (0.0 - 1.0) under which a node is being removed.
+                          type: string
+                      type: object
                     dataVolumes:
                       description: DataVolumes contains a list of additional worker
                         volumes.

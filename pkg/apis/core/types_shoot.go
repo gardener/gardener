@@ -1117,6 +1117,22 @@ type Worker struct {
 	MachineControllerManagerSettings *MachineControllerManagerSettings
 	// Sysctls is a map of kernel settings to apply on all machines in this worker pool.
 	Sysctls map[string]string
+	// Autoscaler is a map of kernel settings to apply on all machines in this worker pool.
+	Autoscaler *ClusterAutoscalerOptions
+}
+
+// ClusterAutoscalerOptions jdkddskddd
+type ClusterAutoscalerOptions struct {
+	// ScaleDownUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) under which a node is being removed.
+	ScaleDownUtilizationThreshold *float64
+	// ScaleDownGpuUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) of gpu resources under which a node is being removed.
+	ScaleDownGpuUtilizationThreshold *float64
+	// ScaleDownUnneededTime defines how long a node should be unneeded before it is eligible for scale down.
+	ScaleDownUnneededTime *metav1.Duration
+	// ScaleDownUnreadyTime defines how long an unready node should be unneeded before it is eligible for scale down.
+	ScaleDownUnreadyTime *metav1.Duration
+	// MaxNodeProvisionTime defines how long CA waits for node to be provisioned.
+	MaxNodeProvisionTime *metav1.Duration
 }
 
 // MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.

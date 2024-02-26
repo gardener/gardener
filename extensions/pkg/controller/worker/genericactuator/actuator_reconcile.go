@@ -246,8 +246,9 @@ func deployMachineDeployments(
 
 		machineDeployment := &machinev1alpha1.MachineDeployment{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      deployment.Name,
-				Namespace: worker.Namespace,
+				Name:        deployment.Name,
+				Namespace:   worker.Namespace,
+				Annotations: deployment.McdAnnotations,
 			},
 		}
 

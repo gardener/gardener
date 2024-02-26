@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	genericworkeractuator "github.com/gardener/gardener/extensions/pkg/controller/worker/genericactuator"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	ca "github.com/gardener/gardener/pkg/component/clusterautoscaler"
 	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 )
@@ -128,6 +129,25 @@ func (w *workerDelegate) generateMachineConfig() error {
 			ProviderSpec: runtime.RawExtension{Raw: []byte(`{"image":"` + image + `"}`)},
 		})
 
+		mcdAnnotationMap := map[string]string{}
+		if pool.Autoscaler != nil {
+			if pool.Autoscaler.ScaleDownUtilizationThreshold != nil {
+				mcdAnnotationMap[ca.ScaleDownUtilizationThresholdAnnotation] = *pool.Autoscaler.ScaleDownUtilizationThreshold
+			}
+			if pool.Autoscaler.ScaleDownGpuUtilizationThreshold != nil {
+				mcdAnnotationMap[ca.ScaleDownGpuUtilizationThresholdAnnotation] = *pool.Autoscaler.ScaleDownGpuUtilizationThreshold
+			}
+			if pool.Autoscaler.ScaleDownUnneededTime != nil {
+				mcdAnnotationMap[ca.ScaleDownUnneededTimeAnnotation] = pool.Autoscaler.ScaleDownUnneededTime.Duration.String()
+			}
+			if pool.Autoscaler.ScaleDownUnreadyTime != nil {
+				mcdAnnotationMap[ca.ScaleDownUnreadyTimeAnnotation] = pool.Autoscaler.ScaleDownUnreadyTime.Duration.String()
+			}
+			if pool.Autoscaler.MaxNodeProvisionTime != nil {
+				mcdAnnotationMap[ca.MaxNodeProvisionTimeAnnotation] = pool.Autoscaler.MaxNodeProvisionTime.Duration.String()
+			}
+		}
+
 		machineDeployments = append(machineDeployments, worker.MachineDeployment{
 			Name:                 deploymentName,
 			ClassName:            className,
@@ -140,6 +160,7 @@ func (w *workerDelegate) generateMachineConfig() error {
 			Annotations:          pool.Annotations,
 			Taints:               pool.Taints,
 			MachineConfiguration: genericworkeractuator.ReadMachineConfiguration(pool),
+			McdAnnotations:       mcdAnnotationMap,
 		})
 	}
 

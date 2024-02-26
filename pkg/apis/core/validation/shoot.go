@@ -1706,6 +1706,34 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *fie
 		allErrs = append(allErrs, ValidateArchitecture(worker.Machine.Architecture, fldPath.Child("machine", "architecture"))...)
 	}
 
+	if worker.Autoscaler != nil {
+		if scaleDownUtilThreshold := worker.Autoscaler.ScaleDownUtilizationThreshold; scaleDownUtilThreshold != nil {
+			if *scaleDownUtilThreshold < 0.0 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("scaleDownUtilizationThreshold"), *scaleDownUtilThreshold, "can not be negative"))
+			}
+			if *scaleDownUtilThreshold > 1.0 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("scaleDownUtilizationThreshold"), *scaleDownUtilThreshold, "can not be greater than 1.0"))
+			}
+		}
+		if scaleDownGpuUtilThreshold := worker.Autoscaler.ScaleDownGpuUtilizationThreshold; scaleDownGpuUtilThreshold != nil {
+			if *scaleDownGpuUtilThreshold < 0.0 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("scaleDownGpuUtilizationThreshold"), *scaleDownGpuUtilThreshold, "can not be negative"))
+			}
+			if *scaleDownGpuUtilThreshold > 1.0 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("scaleDownGpuUtilizationThreshold"), *scaleDownGpuUtilThreshold, "can not be greater than 1.0"))
+			}
+		}
+		if scaleDownUnneededTime := worker.Autoscaler.ScaleDownUnneededTime; scaleDownUnneededTime != nil && scaleDownUnneededTime.Duration < 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("scaleDownUnneededTime"), *scaleDownUnneededTime, "can not be negative"))
+		}
+		if scaleDownUnreadyTime := worker.Autoscaler.ScaleDownUnreadyTime; scaleDownUnreadyTime != nil && scaleDownUnreadyTime.Duration < 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("scaleDownUnreadyTime"), *scaleDownUnreadyTime, "can not be negative"))
+		}
+		if maxNodeProvisionTime := worker.Autoscaler.MaxNodeProvisionTime; maxNodeProvisionTime != nil && maxNodeProvisionTime.Duration < 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("maxNodeProvisionTime"), *maxNodeProvisionTime, "can not be negative"))
+		}
+	}
+
 	return allErrs
 }
 

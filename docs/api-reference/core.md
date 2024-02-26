@@ -3175,6 +3175,91 @@ int32
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.ClusterAutoscalerOptions">ClusterAutoscalerOptions
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.Worker">Worker</a>)
+</p>
+<p>
+<p>ClusterAutoscalerOptions jdkddskddd</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>scaleDownUtilizationThreshold</code></br>
+<em>
+float64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ScaleDownUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) under which a node is being removed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>scaleDownGpuUtilizationThreshold</code></br>
+<em>
+float64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ScaleDownGpuUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) of gpu resources under which a node is being removed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>scaleDownUnneededTime</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ScaleDownUnneededTime defines how long a node should be unneeded before it is eligible for scale down.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>scaleDownUnreadyTime</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ScaleDownUnreadyTime defines how long an unready node should be unneeded before it is eligible for scale down.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maxNodeProvisionTime</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxNodeProvisionTime defines how long CA waits for node to be provisioned.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.Condition">Condition
 </h3>
 <p>
@@ -12340,6 +12425,20 @@ map[string]string
 <td>
 <em>(Optional)</em>
 <p>Sysctls is a map of kernel settings to apply on all machines in this worker pool.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>autoscaler</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ClusterAutoscalerOptions">
+ClusterAutoscalerOptions
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Autoscaler is a map of kernel settings to apply on all machines in this worker pool.</p>
 </td>
 </tr>
 </tbody>

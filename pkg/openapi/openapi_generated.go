@@ -51,6 +51,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileList":                           schema_pkg_apis_core_v1beta1_CloudProfileList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileSpec":                           schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ClusterAutoscaler":                          schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ClusterAutoscalerOptions":                   schema_pkg_apis_core_v1beta1_ClusterAutoscalerOptions(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition":                                  schema_pkg_apis_core_v1beta1_Condition(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ContainerRuntime":                           schema_pkg_apis_core_v1beta1_ContainerRuntime(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlane":                               schema_pkg_apis_core_v1beta1_ControlPlane(ref),
@@ -1844,6 +1845,53 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 							Description: "Verbosity allows CA to modify its log level (default: 2).",
 							Type:        []string{"integer"},
 							Format:      "int32",
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ClusterAutoscalerOptions(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ClusterAutoscalerOptions jdkddskddd",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"scaleDownUtilizationThreshold": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ScaleDownUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) under which a node is being removed.",
+							Type:        []string{"number"},
+							Format:      "double",
+						},
+					},
+					"scaleDownGpuUtilizationThreshold": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ScaleDownGpuUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) of gpu resources under which a node is being removed.",
+							Type:        []string{"number"},
+							Format:      "double",
+						},
+					},
+					"scaleDownUnneededTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ScaleDownUnneededTime defines how long a node should be unneeded before it is eligible for scale down.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"scaleDownUnreadyTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ScaleDownUnreadyTime defines how long an unready node should be unneeded before it is eligible for scale down.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"maxNodeProvisionTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxNodeProvisionTime defines how long CA waits for node to be provisioned.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 				},
@@ -8753,12 +8801,18 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 							},
 						},
 					},
+					"autoscaler": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Autoscaler is a map of kernel settings to apply on all machines in this worker pool.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ClusterAutoscalerOptions"),
+						},
+					},
 				},
 				Required: []string{"name", "machine", "maximum", "minimum"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1beta1.DataVolume", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Machine", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineControllerManagerSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Volume", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerKubernetes", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerSystemComponents", "k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/runtime.RawExtension", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ClusterAutoscalerOptions", "github.com/gardener/gardener/pkg/apis/core/v1beta1.DataVolume", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Machine", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineControllerManagerSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Volume", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerKubernetes", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerSystemComponents", "k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/runtime.RawExtension", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
 	}
 }
 

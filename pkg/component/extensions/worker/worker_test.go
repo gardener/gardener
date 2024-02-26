@@ -146,6 +146,8 @@ var _ = Describe("Worker", func() {
 
 		defaultDepWaiter worker.Interface
 		values           *worker.Values
+
+		emptyAutoscalerOptions = &extensionsv1alpha1.ClusterAutoscalerOptions{}
 	)
 
 	BeforeEach(func() {
@@ -220,6 +222,7 @@ var _ = Describe("Worker", func() {
 					ProviderConfig:                   worker1ProviderConfig,
 					MachineControllerManagerSettings: worker1MCMSettings,
 					Zones:                            []string{worker1Zone1, worker1Zone2},
+					Autoscaler:                       &gardencorev1beta1.ClusterAutoscalerOptions{},
 				},
 				{
 					Name:           worker2Name,
@@ -238,6 +241,7 @@ var _ = Describe("Worker", func() {
 					Kubernetes: &gardencorev1beta1.WorkerKubernetes{
 						Version: &workerKubernetesVersion,
 					},
+					Autoscaler: &gardencorev1beta1.ClusterAutoscalerOptions{},
 				},
 			},
 		}
@@ -310,6 +314,7 @@ var _ = Describe("Worker", func() {
 					MachineControllerManagerSettings: worker1MCMSettings,
 					NodeTemplate:                     workerPool1NodeTemplate,
 					Architecture:                     worker1Arch,
+					Autoscaler:                       emptyAutoscalerOptions,
 				},
 				{
 					Name:           worker2Name,
@@ -334,6 +339,7 @@ var _ = Describe("Worker", func() {
 					UserData:          worker2UserData,
 					NodeTemplate:      workerPool2NodeTemplate,
 					Architecture:      worker2Arch,
+					Autoscaler:        emptyAutoscalerOptions,
 				},
 			},
 		}
@@ -469,7 +475,66 @@ var _ = Describe("Worker", func() {
 				Spec: *expectedWorkerSpec,
 			}))
 		})
+		It("should successfully deploy the Worker resource with cluster autoscaker options when present", func() {
+			defer test.WithVars(&worker.TimeNow, mockNow.Do)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
+			newValues := *values
+			newValues.Workers[0].Autoscaler = &gardencorev1beta1.ClusterAutoscalerOptions{
+				ScaleDownUtilizationThreshold:    ptr.To(0.5),
+				ScaleDownGpuUtilizationThreshold: ptr.To(0.7),
+				ScaleDownUnneededTime:            ptr.To(metav1.Duration{Duration: 1 * time.Minute}),
+				ScaleDownUnreadyTime:             ptr.To(metav1.Duration{Duration: 2 * time.Minute}),
+				MaxNodeProvisionTime:             ptr.To(metav1.Duration{Duration: 3 * time.Minute}),
+			}
+			newValues.Workers[1].Autoscaler = &gardencorev1beta1.ClusterAutoscalerOptions{
+				ScaleDownGpuUtilizationThreshold: ptr.To(0.8),
+				ScaleDownUnneededTime:            ptr.To(metav1.Duration{Duration: 4 * time.Minute}),
+				MaxNodeProvisionTime:             ptr.To(metav1.Duration{Duration: 5 * time.Minute}),
+			}
+
+			expectedWorkerSpec := wSpec.DeepCopy()
+			expectedWorkerSpec.Pools[0].Autoscaler = &extensionsv1alpha1.ClusterAutoscalerOptions{
+				ScaleDownUtilizationThreshold:    ptr.To("0.5"),
+				ScaleDownGpuUtilizationThreshold: ptr.To("0.7"),
+				ScaleDownUnneededTime:            ptr.To(metav1.Duration{Duration: 1 * time.Minute}),
+				ScaleDownUnreadyTime:             ptr.To(metav1.Duration{Duration: 2 * time.Minute}),
+				MaxNodeProvisionTime:             ptr.To(metav1.Duration{Duration: 3 * time.Minute}),
+			}
+			expectedWorkerSpec.Pools[1].Autoscaler = &extensionsv1alpha1.ClusterAutoscalerOptions{
+				ScaleDownGpuUtilizationThreshold: ptr.To("0.8"),
+				ScaleDownUnneededTime:            ptr.To(metav1.Duration{Duration: 4 * time.Minute}),
+				MaxNodeProvisionTime:             ptr.To(metav1.Duration{Duration: 5 * time.Minute}),
+			}
+
+			existingWorker := w.DeepCopy()
+			existingWorker.Spec.Pools = expectedWorkerSpec.Pools
+
+			Expect(c.Create(ctx, existingWorker)).To(Succeed(), "creating worker succeeds")
+
+			defaultDepWaiter = worker.New(log, c, &newValues, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
+			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+			obj := &extensionsv1alpha1.Worker{}
+			Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, obj)).To(Succeed())
+
+			Expect(obj).To(DeepEqual(&extensionsv1alpha1.Worker{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
+					Kind:       extensionsv1alpha1.WorkerResource,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+					Annotations: map[string]string{
+						"gardener.cloud/operation": "reconcile",
+						"gardener.cloud/timestamp": now.UTC().Format(time.RFC3339Nano),
+					},
+					ResourceVersion: "2",
+				},
+				Spec: *expectedWorkerSpec,
+			}))
+		})
 	})
 
 	Describe("#Wait", func() {

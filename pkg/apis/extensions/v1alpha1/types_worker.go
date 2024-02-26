@@ -154,6 +154,23 @@ type WorkerPool struct {
 	// Architecture is the CPU architecture of the worker pool machines and machine image.
 	// +optional
 	Architecture *string `json:"architecture,omitempty"`
+	// Autoscaler is a map of kernel settings to apply on all machines in this worker pool.
+	// +optional
+	Autoscaler *ClusterAutoscalerOptions `json:"autoscaler,omitempty"`
+}
+
+// ClusterAutoscalerOptions jdkddskddd
+type ClusterAutoscalerOptions struct {
+	// ScaleDownUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) under which a node is being removed.
+	ScaleDownUtilizationThreshold *string `json:"scaleDownUtilizationThreshold,omitempty"`
+	// ScaleDownGpuUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) of gpu resources under which a node is being removed.
+	ScaleDownGpuUtilizationThreshold *string `json:"scaleDownGpuUtilizationThreshold,omitempty"`
+	// ScaleDownUnneededTime defines how long a node should be unneeded before it is eligible for scale down.
+	ScaleDownUnneededTime *metav1.Duration `json:"scaleDownUnneededTime,omitempty"`
+	// ScaleDownUnreadyTime defines how long an unready node should be unneeded before it is eligible for scale down.
+	ScaleDownUnreadyTime *metav1.Duration `json:"scaleDownUnreadyTime,omitempty"`
+	// MaxNodeProvisionTime defines how long CA waits for node to be provisioned.
+	MaxNodeProvisionTime *metav1.Duration `json:"maxNodeProvisionTime,omitempty"`
 }
 
 // NodeTemplate contains information about the expected node properties.

@@ -46,6 +46,7 @@ type MachineDeployment struct {
 	MaxUnavailable       intstr.IntOrString
 	Labels               map[string]string
 	Annotations          map[string]string
+	McdAnnotations       map[string]string
 	Taints               []corev1.Taint
 	State                *shootstate.MachineDeploymentState
 	MachineConfiguration *machinev1alpha1.MachineConfiguration

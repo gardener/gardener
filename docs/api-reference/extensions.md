@@ -2092,6 +2092,86 @@ Kubernetes core/v1.SecretReference
 </tr>
 </tbody>
 </table>
+<h3 id="extensions.gardener.cloud/v1alpha1.ClusterAutoscalerOptions">ClusterAutoscalerOptions
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.WorkerPool">WorkerPool</a>)
+</p>
+<p>
+<p>ClusterAutoscalerOptions jdkddskddd</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>scaleDownUtilizationThreshold</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>ScaleDownUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) under which a node is being removed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>scaleDownGpuUtilizationThreshold</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>ScaleDownGpuUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) of gpu resources under which a node is being removed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>scaleDownUnneededTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#duration-v1-meta">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<p>ScaleDownUnneededTime defines how long a node should be unneeded before it is eligible for scale down.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>scaleDownUnreadyTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#duration-v1-meta">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<p>ScaleDownUnreadyTime defines how long an unready node should be unneeded before it is eligible for scale down.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maxNodeProvisionTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#duration-v1-meta">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<p>MaxNodeProvisionTime defines how long CA waits for node to be provisioned.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="extensions.gardener.cloud/v1alpha1.ClusterSpec">ClusterSpec
 </h3>
 <p>
@@ -4283,6 +4363,20 @@ string
 <td>
 <em>(Optional)</em>
 <p>Architecture is the CPU architecture of the worker pool machines and machine image.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>autoscaler</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.ClusterAutoscalerOptions">
+ClusterAutoscalerOptions
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Autoscaler is a map of kernel settings to apply on all machines in this worker pool.</p>
 </td>
 </tr>
 </tbody>
