@@ -93,8 +93,6 @@ import (
 const (
 	// Name is a const for the name of this component.
 	Name = "gardenlet"
-	// TempGRMConfigMapName is the name is the configMap that is temporarily deployed for DWD prober
-	TempGRMConfigMapName = "gardener-resource-manager-dwd"
 )
 
 // NewCommand creates a new cobra.Command for running gardenlet.
@@ -403,7 +401,7 @@ func (g *garden) Start(ctx context.Context) error {
 		return err
 	}
 
-	log.Info("Creating new secret and managed resource required by DWD")
+	log.Info("Creating new secret and managed resource required by dependency-watchdog")
 	if err := g.createNewDWDResources(ctx, g.mgr.GetClient()); err != nil {
 		return err
 	}
@@ -457,7 +455,7 @@ func (g *garden) Start(ctx context.Context) error {
 	return nil
 }
 
-// TODO(aaronfern): Remove this code after v1.92 has been released.
+// TODO(aaronfern): Remove this code after v1.93 has been released.
 func (g *garden) createNewDWDResources(ctx context.Context, seedClient client.Client) error {
 	namespaceList := &corev1.NamespaceList{}
 	if err := seedClient.List(ctx, namespaceList, client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot})); err != nil {
@@ -499,15 +497,12 @@ func (g *garden) createNewDWDResources(ctx context.Context, seedClient client.Cl
 			}
 
 			//Delete old DWD secrets
-			if err := seedClient.Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: dwd.InternalProbeSecretName, Namespace: namespace.Name}}); err != nil {
-				if !apierrors.IsNotFound(err) {
-					return err
-				}
+			if err := kubernetesutils.DeleteObjects(ctx, seedClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: dwd.InternalProbeSecretName, Namespace: namespace.Name}}); err != nil {
+				return err
 			}
-			if err := seedClient.Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: dwd.ExternalProbeSecretName, Namespace: namespace.Name}}); err != nil {
-				if !apierrors.IsNotFound(err) {
-					return err
-				}
+
+			if err := kubernetesutils.DeleteObjects(ctx, seedClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: dwd.ExternalProbeSecretName, Namespace: namespace.Name}}); err != nil {
+				return err
 			}
 
 			// Fetch and update the GRM configmap
@@ -567,11 +562,7 @@ func (g *garden) createNewDWDResources(ctx context.Context, seedClient client.Cl
 				return err
 			}
 
-			if err = seedClient.Delete(ctx, grmConfigMap); err != nil {
-				return err
-			}
-
-			newGRMConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: TempGRMConfigMapName, Namespace: namespace.Name}}
+			newGRMConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager-dwd", Namespace: namespace.Name}}
 			newGRMConfigMap.Data = map[string]string{"config.yaml": string(data)}
 			utilruntime.Must(kubernetesutils.MakeUnique(newGRMConfigMap))
 
