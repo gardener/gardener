@@ -155,6 +155,13 @@ func SetDefaults_SecretControllerConfig(obj *SecretControllerConfig) {
 	}
 }
 
+// SetDefaults_TokenInvalidatorControllerConfig sets defaults for the TokenInvalidatorControllerConfig object.
+func SetDefaults_TokenInvalidatorControllerConfig(obj *TokenInvalidatorControllerConfig) {
+	if obj.Enabled && obj.ConcurrentSyncs == nil {
+		obj.ConcurrentSyncs = ptr.To(5)
+	}
+}
+
 // SetDefaults_TokenRequestorControllerConfig sets defaults for the TokenRequestorControllerConfig object.
 func SetDefaults_TokenRequestorControllerConfig(obj *TokenRequestorControllerConfig) {
 	if obj.Enabled && obj.ConcurrentSyncs == nil {

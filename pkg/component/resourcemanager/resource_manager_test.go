@@ -85,35 +85,36 @@ var _ = Describe("ResourceManager", func() {
 		binPackingSchedulingProfile       = gardencorev1beta1.SchedulingProfileBinPacking
 
 		// optional configuration
-		clusterIdentity                    = "foo"
-		secretNameServer                   = "gardener-resource-manager-server"
-		secretMountPathServer              = "/etc/gardener-resource-manager-tls"
-		secretMountPathRootCA              = "/etc/gardener-resource-manager-root-ca"
-		secretMountPathConfig              = "/etc/gardener-resource-manager-config"
-		secretMountPathAPIAccess           = "/var/run/secrets/kubernetes.io/serviceaccount"
-		secrets                            Secrets
-		alwaysUpdate                       = true
-		concurrentSyncs                    = 20
-		genericTokenKubeconfigSecretName   = "generic-token-kubeconfig"
-		clusterRoleName                    = "gardener-resource-manager-seed"
-		healthSyncPeriod                   = metav1.Duration{Duration: time.Minute}
-		maxConcurrentHealthWorkers         = 20
-		maxConcurrentTokenRequestorWorkers = 21
-		maxConcurrentCSRApproverWorkers    = 24
-		maxConcurrentNetworkPolicyWorkers  = 25
-		resourceClass                      = "fake-ResourceClass"
-		syncPeriod                         = metav1.Duration{Duration: time.Second * 80}
-		watchedNamespace                   = "fake-ns"
-		targetDisableCache                 = true
-		maxUnavailable                     = intstr.FromInt32(1)
-		failurePolicyFail                  = admissionregistrationv1.Fail
-		failurePolicyIgnore                = admissionregistrationv1.Ignore
-		reinvocationPolicyNever            = admissionregistrationv1.NeverReinvocationPolicy
-		matchPolicyExact                   = admissionregistrationv1.Exact
-		matchPolicyEquivalent              = admissionregistrationv1.Equivalent
-		sideEffect                         = admissionregistrationv1.SideEffectClassNone
-		priorityClassName                  = v1beta1constants.PriorityClassNameSeedSystemCritical
-		ingressControllerSelector          = &resourcemanagerv1alpha1.IngressControllerSelector{
+		clusterIdentity                      = "foo"
+		secretNameServer                     = "gardener-resource-manager-server"
+		secretMountPathServer                = "/etc/gardener-resource-manager-tls"
+		secretMountPathRootCA                = "/etc/gardener-resource-manager-root-ca"
+		secretMountPathConfig                = "/etc/gardener-resource-manager-config"
+		secretMountPathAPIAccess             = "/var/run/secrets/kubernetes.io/serviceaccount"
+		secrets                              Secrets
+		alwaysUpdate                         = true
+		concurrentSyncs                      = 20
+		genericTokenKubeconfigSecretName     = "generic-token-kubeconfig"
+		clusterRoleName                      = "gardener-resource-manager-seed"
+		healthSyncPeriod                     = metav1.Duration{Duration: time.Minute}
+		maxConcurrentHealthWorkers           = 20
+		maxConcurrentTokenInvalidatorWorkers = 23
+		maxConcurrentTokenRequestorWorkers   = 21
+		maxConcurrentCSRApproverWorkers      = 24
+		maxConcurrentNetworkPolicyWorkers    = 25
+		resourceClass                        = "fake-ResourceClass"
+		syncPeriod                           = metav1.Duration{Duration: time.Second * 80}
+		watchedNamespace                     = "fake-ns"
+		targetDisableCache                   = true
+		maxUnavailable                       = intstr.FromInt32(1)
+		failurePolicyFail                    = admissionregistrationv1.Fail
+		failurePolicyIgnore                  = admissionregistrationv1.Ignore
+		reinvocationPolicyNever              = admissionregistrationv1.NeverReinvocationPolicy
+		matchPolicyExact                     = admissionregistrationv1.Exact
+		matchPolicyEquivalent                = admissionregistrationv1.Equivalent
+		sideEffect                           = admissionregistrationv1.SideEffectClassNone
+		priorityClassName                    = v1beta1constants.PriorityClassNameSeedSystemCritical
+		ingressControllerSelector            = &resourcemanagerv1alpha1.IngressControllerSelector{
 			Namespace:   "foo",
 			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{"bar": "baz"}},
 		}
@@ -324,6 +325,7 @@ var _ = Describe("ResourceManager", func() {
 			KubernetesServiceHost:                            &kubernetesServiceHost,
 			Image:                                            image,
 			MaxConcurrentHealthWorkers:                       &maxConcurrentHealthWorkers,
+			MaxConcurrentTokenInvalidatorWorkers:             &maxConcurrentTokenInvalidatorWorkers,
 			MaxConcurrentTokenRequestorWorkers:               &maxConcurrentTokenRequestorWorkers,
 			MaxConcurrentCSRApproverWorkers:                  &maxConcurrentCSRApproverWorkers,
 			MaxConcurrentNetworkPolicyWorkers:                &maxConcurrentNetworkPolicyWorkers,
@@ -417,6 +419,10 @@ var _ = Describe("ResourceManager", func() {
 						SyncPeriod:      &syncPeriod,
 						AlwaysUpdate:    &alwaysUpdate,
 					},
+					TokenInvalidator: resourcemanagerv1alpha1.TokenInvalidatorControllerConfig{
+						Enabled:         true,
+						ConcurrentSyncs: &maxConcurrentTokenInvalidatorWorkers,
+					},
 					TokenRequestor: resourcemanagerv1alpha1.TokenRequestorControllerConfig{
 						Enabled:         true,
 						ConcurrentSyncs: &maxConcurrentTokenRequestorWorkers,
@@ -446,6 +452,9 @@ var _ = Describe("ResourceManager", func() {
 					},
 					SystemComponentsConfig: resourcemanagerv1alpha1.SystemComponentsConfigWebhookConfig{
 						Enabled: false,
+					},
+					TokenInvalidator: resourcemanagerv1alpha1.TokenInvalidatorWebhookConfig{
+						Enabled: true,
 					},
 				},
 			}
@@ -897,6 +906,39 @@ var _ = Describe("ResourceManager", func() {
 			},
 			Webhooks: []admissionregistrationv1.MutatingWebhook{
 				{
+					Name: "token-invalidator.resources.gardener.cloud",
+					Rules: []admissionregistrationv1.RuleWithOperations{{
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{""},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"secrets"},
+						},
+						Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
+					}},
+					NamespaceSelector: &metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{{
+							Key:      "gardener.cloud/purpose",
+							Operator: metav1.LabelSelectorOpNotIn,
+							Values:   []string{"kube-system", "kubernetes-dashboard"},
+						}},
+					},
+					ObjectSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{"resources.gardener.cloud/purpose": "token-invalidator"},
+					},
+					ClientConfig: admissionregistrationv1.WebhookClientConfig{
+						Service: &admissionregistrationv1.ServiceReference{
+							Name:      "gardener-resource-manager",
+							Namespace: deployNamespace,
+							Path:      ptr.To("/webhooks/invalidate-service-account-token-secret"),
+						},
+					},
+					AdmissionReviewVersions: []string{"v1beta1", "v1"},
+					FailurePolicy:           &failurePolicyFail,
+					MatchPolicy:             &matchPolicyExact,
+					SideEffects:             &sideEffect,
+					TimeoutSeconds:          ptr.To(int32(10)),
+				},
+				{
 					Name: "projected-token-mount.resources.gardener.cloud",
 					Rules: []admissionregistrationv1.RuleWithOperations{{
 						Rule: admissionregistrationv1.Rule{
@@ -1170,6 +1212,36 @@ metadata:
   name: gardener-resource-manager-shoot
   namespace: fake-ns
 webhooks:
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    url: https://gardener-resource-manager.` + deployNamespace + `:443/webhooks/invalidate-service-account-token-secret
+  failurePolicy: Fail
+  matchPolicy: Exact
+  name: token-invalidator.resources.gardener.cloud
+  namespaceSelector:
+    matchExpressions:
+    - key: gardener.cloud/purpose
+      operator: In
+      values:
+      - kube-system
+      - kubernetes-dashboard
+  objectSelector:
+    matchLabels:
+      resources.gardener.cloud/purpose: token-invalidator
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - secrets
+  sideEffects: None
+  timeoutSeconds: 10
 - admissionReviewVersions:
   - v1beta1
   - v1

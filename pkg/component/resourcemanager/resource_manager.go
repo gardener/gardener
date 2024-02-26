@@ -75,6 +75,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/seccompprofile"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/systemcomponentsconfig"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -272,6 +273,8 @@ type Values struct {
 	LogFormat string
 	// MaxConcurrentHealthWorkers configures the number of worker threads for concurrent health reconciliation of resources.
 	MaxConcurrentHealthWorkers *int
+	// MaxConcurrentTokenInvalidatorWorkers configures the number of worker threads for concurrent token invalidator reconciliations.
+	MaxConcurrentTokenInvalidatorWorkers *int
 	// MaxConcurrentTokenRequestorWorkers configures the number of worker threads for concurrent token requestor reconciliations.
 	MaxConcurrentTokenRequestorWorkers *int
 	// MaxConcurrentCSRApproverWorkers configures the number of worker threads for concurrent kubelet CSR approver reconciliations.
@@ -618,6 +621,12 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 	if v := r.values.MaxConcurrentTokenRequestorWorkers; v != nil {
 		config.Controllers.TokenRequestor.Enabled = true
 		config.Controllers.TokenRequestor.ConcurrentSyncs = v
+	}
+
+	if v := r.values.MaxConcurrentTokenInvalidatorWorkers; v != nil {
+		config.Webhooks.TokenInvalidator.Enabled = true
+		config.Controllers.TokenInvalidator.Enabled = true
+		config.Controllers.TokenInvalidator.ConcurrentSyncs = v
 	}
 
 	if r.values.SchedulingProfile != nil && *r.values.SchedulingProfile != gardencorev1beta1.SchedulingProfileBalanced {
@@ -1270,6 +1279,7 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks(
 	}
 
 	webhooks := []admissionregistrationv1.MutatingWebhook{
+		GetTokenInvalidatorMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn),
 		r.getProjectedTokenMountMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn),
 		GetHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn),
 	}
@@ -1310,6 +1320,41 @@ func (r *resourceManager) getValidatingWebhookConfigurationWebhooks(
 		GetCRDDeletionProtectionValidatingWebhooks(secretServerCA, buildClientConfigFn),
 		GetExtensionValidationValidatingWebhooks(secretServerCA, buildClientConfigFn)...,
 	)
+}
+
+// GetTokenInvalidatorMutatingWebhook returns the token-invalidator mutating webhook for the resourcemanager component for reuse
+// between the component and integration tests.
+func GetTokenInvalidatorMutatingWebhook(namespaceSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
+	var (
+		failurePolicy = admissionregistrationv1.Fail
+		matchPolicy   = admissionregistrationv1.Exact
+		sideEffect    = admissionregistrationv1.SideEffectClassNone
+	)
+
+	return admissionregistrationv1.MutatingWebhook{
+		Name: "token-invalidator.resources.gardener.cloud",
+		Rules: []admissionregistrationv1.RuleWithOperations{{
+			Rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{corev1.GroupName},
+				APIVersions: []string{corev1.SchemeGroupVersion.Version},
+				Resources:   []string{"secrets"},
+			},
+			Operations: []admissionregistrationv1.OperationType{
+				admissionregistrationv1.Create,
+				admissionregistrationv1.Update,
+			},
+		}},
+		NamespaceSelector: namespaceSelector,
+		ObjectSelector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{resourcesv1alpha1.ResourceManagerPurpose: resourcesv1alpha1.LabelPurposeTokenInvalidation},
+		},
+		ClientConfig:            buildClientConfigFn(secretServerCA, tokeninvalidator.WebhookPath),
+		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+		FailurePolicy:           &failurePolicy,
+		MatchPolicy:             &matchPolicy,
+		SideEffects:             &sideEffect,
+		TimeoutSeconds:          ptr.To(int32(10)),
+	}
 }
 
 // GetCRDDeletionProtectionValidatingWebhooks returns the ValidatingWebhooks for the crd-deletion-protection webhook for
