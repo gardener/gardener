@@ -329,6 +329,15 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 
 	allErrs = append(allErrs, validateKubeControllerManagerUpdate(newSpec.Kubernetes.KubeControllerManager, oldSpec.Kubernetes.KubeControllerManager, fldPath.Child("kubernetes", "kubeControllerManager"))...)
 
+	if newSpec.SeedName != nil {
+		if oldSpec.SeedSelector == nil && newSpec.SeedSelector != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("seedSelector"), "cannot set seed selector when .spec.seedName is set"))
+		}
+		if oldSpec.SeedSelector != nil && newSpec.SeedSelector != nil {
+			allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.SeedSelector, oldSpec.SeedSelector, fldPath.Child("seedSelector"))...)
+		}
+	}
+
 	if err := validateWorkerUpdate(len(newSpec.Provider.Workers) > 0, len(oldSpec.Provider.Workers) > 0, fldPath.Child("provider", "workers")); err != nil {
 		allErrs = append(allErrs, err)
 		return allErrs
