@@ -19,9 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -788,26 +785,16 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			SkipIf:       o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady, waitUntilTunnelConnectionExists),
 		})
+		// TODO(rfranzke): Remove the migrateAlertmanager task after v1.93 has been released.
+		migrateAlertmanager = g.Add(flow.Task{
+			Name:         "Migrating Shoot alertmanager to prometheus-operator",
+			Fn:           flow.TaskFn(botanist.MigrateAlertManager).RetryUntilTimeout(defaultInterval, 2*time.Minute),
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
+		})
 		deployAlertmanager = g.Add(flow.Task{
 			Name:         "Reconciling Shoot alertmanager",
 			Fn:           flow.TaskFn(botanist.DeployAlertManager).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilTunnelConnectionExists, waitUntilWorkerReady).InsertIf(!staticNodesCIDR, waitUntilInfrastructureReady),
-		})
-		// TODO(rfranzke): Remove this after v1.93 has been released.
-		_ = g.Add(flow.Task{
-			Name: "Cleaning up legacy Alertmanager resources",
-			Fn: func(ctx context.Context) error {
-				return kubernetesutils.DeleteObjects(ctx, r.SeedClientSet.Client(),
-					&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager", Namespace: botanist.Shoot.SeedNamespace}},
-					&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager", Namespace: botanist.Shoot.SeedNamespace}},
-					&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager-client", Namespace: botanist.Shoot.SeedNamespace}},
-					&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager", Namespace: botanist.Shoot.SeedNamespace}},
-					&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager-basic-auth", Namespace: botanist.Shoot.SeedNamespace}},
-					&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager-config", Namespace: botanist.Shoot.SeedNamespace}},
-					&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager-db-alertmanager-0", Namespace: botanist.Shoot.SeedNamespace}},
-				)
-			},
-			Dependencies: flow.NewTaskIDs(deployAlertmanager),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilTunnelConnectionExists, waitUntilWorkerReady, migrateAlertmanager).InsertIf(!staticNodesCIDR, waitUntilInfrastructureReady),
 		})
 		deploySeedMonitoring = g.Add(flow.Task{
 			Name:         "Deploying Shoot monitoring stack in Seed",
