@@ -3,6 +3,9 @@ kind: VerticalPodAutoscaler
 metadata:
   name: prometheus-vpa
   namespace: {{ .Release.Namespace }}
+  labels:
+    app: prometheus
+    role: monitoring
 spec:
   targetRef:
     apiVersion: apps/v1
