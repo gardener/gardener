@@ -600,7 +600,6 @@ build:
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
             - pkg/component
-            - pkg/component/clusterautoscaler
             - pkg/component/extensions/operatingsystemconfig/downloader
             - pkg/component/extensions/operatingsystemconfig/nodeinit
             - pkg/component/extensions/operatingsystemconfig/original/components

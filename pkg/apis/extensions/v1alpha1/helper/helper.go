@@ -17,8 +17,8 @@ package helper
 import (
 	"net"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	ca "github.com/gardener/gardener/pkg/component/clusterautoscaler"
 )
 
 // ClusterAutoscalerRequired returns whether the given worker pool configuration indicates that a cluster-autoscaler
@@ -75,19 +75,19 @@ func GetClusterAutoscalerAnnotationMap(caOptions *extensionsv1alpha1.ClusterAuto
 	mcdAnnotationMap := map[string]string{}
 	if caOptions != nil {
 		if caOptions.ScaleDownUtilizationThreshold != nil {
-			mcdAnnotationMap[ca.ScaleDownUtilizationThresholdAnnotation] = *caOptions.ScaleDownUtilizationThreshold
+			mcdAnnotationMap[v1beta1constants.ScaleDownUtilizationThresholdAnnotation] = *caOptions.ScaleDownUtilizationThreshold
 		}
 		if caOptions.ScaleDownGpuUtilizationThreshold != nil {
-			mcdAnnotationMap[ca.ScaleDownGpuUtilizationThresholdAnnotation] = *caOptions.ScaleDownGpuUtilizationThreshold
+			mcdAnnotationMap[v1beta1constants.ScaleDownGpuUtilizationThresholdAnnotation] = *caOptions.ScaleDownGpuUtilizationThreshold
 		}
 		if caOptions.ScaleDownUnneededTime != nil {
-			mcdAnnotationMap[ca.ScaleDownUnneededTimeAnnotation] = caOptions.ScaleDownUnneededTime.Duration.String()
+			mcdAnnotationMap[v1beta1constants.ScaleDownUnneededTimeAnnotation] = caOptions.ScaleDownUnneededTime.Duration.String()
 		}
 		if caOptions.ScaleDownUnreadyTime != nil {
-			mcdAnnotationMap[ca.ScaleDownUnreadyTimeAnnotation] = caOptions.ScaleDownUnreadyTime.Duration.String()
+			mcdAnnotationMap[v1beta1constants.ScaleDownUnreadyTimeAnnotation] = caOptions.ScaleDownUnreadyTime.Duration.String()
 		}
 		if caOptions.MaxNodeProvisionTime != nil {
-			mcdAnnotationMap[ca.MaxNodeProvisionTimeAnnotation] = caOptions.MaxNodeProvisionTime.Duration.String()
+			mcdAnnotationMap[v1beta1constants.MaxNodeProvisionTimeAnnotation] = caOptions.MaxNodeProvisionTime.Duration.String()
 		}
 	}
 

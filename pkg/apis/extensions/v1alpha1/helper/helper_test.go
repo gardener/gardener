@@ -22,9 +22,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
-	ca "github.com/gardener/gardener/pkg/component/clusterautoscaler"
 )
 
 var _ = Describe("helper", func() {
@@ -105,11 +105,11 @@ var _ = Describe("helper", func() {
 				MaxNodeProvisionTime:             ptr.To(metav1.Duration{Duration: 3 * time.Minute}),
 			}
 			expectedValues := map[string]string{
-				ca.ScaleDownUtilizationThresholdAnnotation:    "0.5",
-				ca.ScaleDownGpuUtilizationThresholdAnnotation: "0.6",
-				ca.ScaleDownUnneededTimeAnnotation:            "1m0s",
-				ca.ScaleDownUnreadyTimeAnnotation:             "2m0s",
-				ca.MaxNodeProvisionTimeAnnotation:             "3m0s",
+				v1beta1constants.ScaleDownUtilizationThresholdAnnotation:    "0.5",
+				v1beta1constants.ScaleDownGpuUtilizationThresholdAnnotation: "0.6",
+				v1beta1constants.ScaleDownUnneededTimeAnnotation:            "1m0s",
+				v1beta1constants.ScaleDownUnreadyTimeAnnotation:             "2m0s",
+				v1beta1constants.MaxNodeProvisionTimeAnnotation:             "3m0s",
 			}
 			Expect(GetClusterAutoscalerAnnotationMap(caOptions)).To(Equal(expectedValues))
 		})
@@ -119,8 +119,8 @@ var _ = Describe("helper", func() {
 				ScaleDownUnneededTime:            ptr.To(metav1.Duration{Duration: time.Minute}),
 			}
 			expectedValues := map[string]string{
-				ca.ScaleDownGpuUtilizationThresholdAnnotation: "0.6",
-				ca.ScaleDownUnneededTimeAnnotation:            "1m0s",
+				v1beta1constants.ScaleDownGpuUtilizationThresholdAnnotation: "0.6",
+				v1beta1constants.ScaleDownUnneededTimeAnnotation:            "1m0s",
 			}
 			Expect(GetClusterAutoscalerAnnotationMap(caOptions)).To(Equal(expectedValues))
 		})
