@@ -1,5 +1,3 @@
-API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/authentication/v1alpha1,AdminKubeconfigRequestStatus,Kubeconfig
-API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/authentication/v1alpha1,ViewerKubeconfigRequestStatus,Kubeconfig
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,Alerting,EmailReceivers
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,AvailabilityZone,UnavailableMachineTypes
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,AvailabilityZone,UnavailableVolumeTypes
@@ -156,7 +154,6 @@ API rule violation: list_type_missing,k8s.io/api/core/v1,PodStatus,PodIPs
 API rule violation: list_type_missing,k8s.io/api/core/v1,ProjectedVolumeSource,Sources
 API rule violation: list_type_missing,k8s.io/api/core/v1,RBDPersistentVolumeSource,CephMonitors
 API rule violation: list_type_missing,k8s.io/api/core/v1,RBDVolumeSource,CephMonitors
-API rule violation: list_type_missing,k8s.io/api/core/v1,RangeAllocation,Data
 API rule violation: list_type_missing,k8s.io/api/core/v1,ReplicationControllerStatus,Conditions
 API rule violation: list_type_missing,k8s.io/api/core/v1,ResourceQuotaSpec,Scopes
 API rule violation: list_type_missing,k8s.io/api/core/v1,ScopeSelector,MatchExpressions
@@ -199,7 +196,6 @@ API rule violation: list_type_missing,k8s.io/apimachinery/pkg/apis/meta/v1,APIVe
 API rule violation: list_type_missing,k8s.io/apimachinery/pkg/apis/meta/v1,ApplyOptions,DryRun
 API rule violation: list_type_missing,k8s.io/apimachinery/pkg/apis/meta/v1,CreateOptions,DryRun
 API rule violation: list_type_missing,k8s.io/apimachinery/pkg/apis/meta/v1,DeleteOptions,DryRun
-API rule violation: list_type_missing,k8s.io/apimachinery/pkg/apis/meta/v1,FieldsV1,Raw
 API rule violation: list_type_missing,k8s.io/apimachinery/pkg/apis/meta/v1,LabelSelector,MatchExpressions
 API rule violation: list_type_missing,k8s.io/apimachinery/pkg/apis/meta/v1,LabelSelectorRequirement,Values
 API rule violation: list_type_missing,k8s.io/apimachinery/pkg/apis/meta/v1,ObjectMeta,Finalizers
@@ -213,8 +209,6 @@ API rule violation: list_type_missing,k8s.io/apimachinery/pkg/apis/meta/v1,Table
 API rule violation: list_type_missing,k8s.io/apimachinery/pkg/apis/meta/v1,TableRow,Cells
 API rule violation: list_type_missing,k8s.io/apimachinery/pkg/apis/meta/v1,TableRow,Conditions
 API rule violation: list_type_missing,k8s.io/apimachinery/pkg/apis/meta/v1,UpdateOptions,DryRun
-API rule violation: list_type_missing,k8s.io/apimachinery/pkg/runtime,RawExtension,Raw
-API rule violation: list_type_missing,k8s.io/apimachinery/pkg/runtime,Unknown,Raw
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,DataVolume,VolumeSize
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,KubeControllerManagerConfig,HorizontalPodAutoscalerConfig
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,KubeletConfig,PodPIDsLimit
