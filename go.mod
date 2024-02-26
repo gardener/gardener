@@ -61,7 +61,7 @@ require (
 	k8s.io/helm v2.17.0+incompatible
 	k8s.io/klog/v2 v2.110.1
 	k8s.io/kube-aggregator v0.28.7
-	k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9
+	k8s.io/kube-openapi v0.0.0-20240224005224-582cce78233b
 	k8s.io/kube-proxy v0.28.7
 	k8s.io/kubelet v0.28.7
 	k8s.io/metrics v0.28.7
@@ -198,7 +198,7 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/gengo v0.0.0-20220902162205-c0856e24416d // indirect
+	k8s.io/gengo v0.0.0-20230829151522-9cce18d56c01 // indirect
 	k8s.io/klog v1.0.0 // indirect
 	k8s.io/kms v0.28.7 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.1.2 // indirect
