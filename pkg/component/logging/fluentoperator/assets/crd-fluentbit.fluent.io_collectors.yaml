@@ -1420,6 +1420,10 @@ spec:
               runtimeClassName:
                 description: RuntimeClassName represents the container runtime configuration.
                 type: string
+              schedulerName:
+                description: SchedulerName represents the desired scheduler for the
+                  Fluentbit collector pods
+                type: string
               secrets:
                 description: The Secrets are mounted into /fluent-bit/secrets/<secret-name>.
                 items:

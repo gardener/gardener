@@ -286,6 +286,7 @@ spec:
                   logLevel:
                     description: Diagnostic level (error/warning/info/debug/trace)
                     enum:
+                    - "off"
                     - error
                     - warning
                     - info
@@ -295,6 +296,58 @@ spec:
                   parsersFile:
                     description: Optional 'parsers' config file (can be multiple)
                     type: string
+                  storage:
+                    description: Configure a global environment for the storage layer
+                      in Service. It is recommended to configure the volume and volumeMount
+                      separately for this storage. The hostPath type should be used
+                      for that Volume in Fluentbit daemon set.
+                    properties:
+                      backlogMemLimit:
+                        description: This option configure a hint of maximum value
+                          of memory to use when processing these records
+                        type: string
+                      checksum:
+                        description: Enable the data integrity check when writing
+                          and reading data from the filesystem
+                        enum:
+                        - "on"
+                        - "off"
+                        type: string
+                      deleteIrrecoverableChunks:
+                        description: When enabled, irrecoverable chunks will be deleted
+                          during runtime, and any other irrecoverable chunk located
+                          in the configured storage path directory will be deleted
+                          when Fluent-Bit starts.
+                        enum:
+                        - "on"
+                        - "off"
+                        type: string
+                      maxChunksUp:
+                        description: If the input plugin has enabled filesystem storage
+                          type, this property sets the maximum number of Chunks that
+                          can be up in memory
+                        format: int64
+                        type: integer
+                      metrics:
+                        description: If http_server option has been enabled in the
+                          Service section, this option registers a new endpoint where
+                          internal metrics of the storage layer can be consumed
+                        enum:
+                        - "on"
+                        - "off"
+                        type: string
+                      path:
+                        description: Select an optional location in the file system
+                          to store streams and chunks of data/
+                        type: string
+                      sync:
+                        description: Configure the synchronization mode used to store
+                          the data into the file system
+                        enum:
+                        - normal
+                        - full
+                        type: string
+                    type: object
                 type: object
             type: object
         type: object

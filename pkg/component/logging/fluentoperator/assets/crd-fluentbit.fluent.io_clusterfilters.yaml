@@ -702,6 +702,15 @@ spec:
                       type: object
                   type: object
                 type: array
+              logLevel:
+                enum:
+                - "off"
+                - error
+                - warning
+                - info
+                - debug
+                - trace
+                type: string
               match:
                 description: A pattern to match against the tags of incoming records.
                   It's case-sensitive and support the star (*) character as a wildcard.
