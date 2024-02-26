@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kyverno
+  name: kyverno-admission-controller
   namespace: kyverno
 spec:
   replicas: 3
