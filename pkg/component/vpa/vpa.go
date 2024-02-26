@@ -251,7 +251,11 @@ func (v *vpa) emptyMutatingWebhookConfiguration() *admissionregistrationv1.Mutat
 		suffix = "target"
 	}
 
-	return &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "vpa-webhook-config-" + suffix}}
+	// The order in which MutatingWebhooks are called is determined alphabetically. This webhook's name intentionally
+	// starts with 'zzz', such that it is called after all other webhooks which inject containers. All containers
+	// injected by webhooks that are called _after_ the vpa webhook will not be under control of vpa.
+	// See also the `gardener.cloud/description` annotation on the MutatingWebhook.
+	return &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "zzz-vpa-webhook-config-" + suffix}}
 }
 
 func (v *vpa) rbacNamePrefix() string {

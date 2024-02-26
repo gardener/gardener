@@ -42,6 +42,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
@@ -107,7 +108,7 @@ var _ = Describe("VPA", func() {
 
 		webhookFailurePolicy      = admissionregistrationv1.Ignore
 		webhookMatchPolicy        = admissionregistrationv1.Exact
-		webhookReinvocationPolicy = admissionregistrationv1.NeverReinvocationPolicy
+		webhookReinvocationPolicy = admissionregistrationv1.IfNeededReinvocationPolicy
 		webhookSideEffects        = admissionregistrationv1.SideEffectClassNone
 		webhookScope              = admissionregistrationv1.AllScopes
 
@@ -1255,8 +1256,12 @@ var _ = Describe("VPA", func() {
 				Kind:       "MutatingWebhookConfiguration",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   "vpa-webhook-config-target",
+				Name:   "zzz-vpa-webhook-config-target",
 				Labels: map[string]string{"remediation.webhook.shoot.gardener.cloud/exclude": "true"},
+				Annotations: map[string]string{constants.GardenerDescription: "The order in which MutatingWebhooks are " +
+					"called is determined alphabetically. This webhook's name intentionally starts with 'zzz', such " +
+					"that it is called after all other webhooks which inject containers. All containers injected by " +
+					"webhooks that are called _after_ the vpa webhook will not be under control of vpa."},
 			},
 			Webhooks: []admissionregistrationv1.MutatingWebhook{{
 				Name:                    "vpa.k8s.io",
@@ -1435,7 +1440,7 @@ var _ = Describe("VPA", func() {
 					Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_actor.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingGeneralActor)))
 					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_target-reader.yaml"])).To(Equal(componenttest.Serialize(clusterRoleGeneralTargetReader)))
 					Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_target-reader.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingGeneralTargetReader)))
-					Expect(string(managedResourceSecret.Data["mutatingwebhookconfiguration____vpa-webhook-config-source.yaml"])).To(Equal(componenttest.Serialize(mutatingWebhookConfiguration)))
+					Expect(string(managedResourceSecret.Data["mutatingwebhookconfiguration____zzz-vpa-webhook-config-source.yaml"])).To(Equal(componenttest.Serialize(mutatingWebhookConfiguration)))
 				})
 
 				Context("Kubernetes versions < 1.26", func() {
@@ -1684,7 +1689,7 @@ var _ = Describe("VPA", func() {
 					Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_target_actor.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingGeneralActor)))
 					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_target_target-reader.yaml"])).To(Equal(componenttest.Serialize(clusterRoleGeneralTargetReader)))
 					Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_target_target-reader.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingGeneralTargetReader)))
-					Expect(string(managedResourceSecret.Data["mutatingwebhookconfiguration____vpa-webhook-config-target.yaml"])).To(Equal(componenttest.Serialize(mutatingWebhookConfiguration)))
+					Expect(string(managedResourceSecret.Data["mutatingwebhookconfiguration____zzz-vpa-webhook-config-target.yaml"])).To(Equal(componenttest.Serialize(mutatingWebhookConfiguration)))
 					Expect(managedResourceSecret.Data).To(HaveKey("crd-verticalpodautoscalercheckpoints.yaml"))
 					Expect(managedResourceSecret.Data).To(HaveKey("crd-verticalpodautoscalers.yaml"))
 				})

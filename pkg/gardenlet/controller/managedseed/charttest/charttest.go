@@ -226,12 +226,6 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 				Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 			},
 			{
-				APIGroups:     []string{"admissionregistration.k8s.io"},
-				Resources:     []string{"mutatingwebhookconfigurations"},
-				ResourceNames: []string{"vpa-webhook-config-seed"},
-				Verbs:         []string{"get", "delete", "update"},
-			},
-			{
 				APIGroups: []string{"apiextensions.k8s.io"},
 				Resources: []string{"customresourcedefinitions"},
 				Verbs:     []string{"create", "get", "list", "watch", "patch", "update"},
