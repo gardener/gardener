@@ -531,12 +531,7 @@ func (v *ManagedSeed) getShoot(ctx context.Context, namespace, name string) (*ga
 }
 
 func (v *ManagedSeed) getSecretBinding(namespace, name string) (*gardencorev1beta1.SecretBinding, error) {
-	secretBinding, err := v.secretBindingLister.SecretBindings(namespace).Get(name)
-	if err != nil {
-		return nil, err
-	}
-
-	return secretBinding, nil
+	return v.secretBindingLister.SecretBindings(namespace).Get(name)
 }
 
 func (v *ManagedSeed) getSecrets(namespace string, selector labels.Selector) ([]*corev1.Secret, error) {

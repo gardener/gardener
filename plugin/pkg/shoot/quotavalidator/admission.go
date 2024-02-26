@@ -367,20 +367,15 @@ func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceLis
 
 	for _, worker := range workers {
 		var (
-			machineType *core.MachineType
-			volumeType  *core.VolumeType
+			machineType *gardencorev1beta1.MachineType
+			volumeType  *gardencorev1beta1.VolumeType
 		)
 
 		// Get the proper machineType
 		for _, e := range machineTypes {
 			element := e
 			if element.Name == worker.Machine.Type {
-				coreElement := &core.MachineType{}
-				if err := gardencorev1beta1.Convert_v1beta1_MachineType_To_core_MachineType(&element, coreElement, nil); err != nil {
-					return nil, apierrors.NewInternalError(fmt.Errorf("could not convert machine type: %+v", err.Error()))
-				}
-
-				machineType = coreElement
+				machineType = &element
 				break
 			}
 		}
@@ -390,7 +385,7 @@ func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceLis
 
 		if worker.Volume != nil {
 			if machineType.Storage != nil {
-				volumeType = &core.VolumeType{
+				volumeType = &gardencorev1beta1.VolumeType{
 					Class: machineType.Storage.Class,
 				}
 			} else {
@@ -398,12 +393,7 @@ func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceLis
 				for _, e := range volumeTypes {
 					element := e
 					if worker.Volume.Type != nil && element.Name == *worker.Volume.Type {
-						coreElement := &core.VolumeType{}
-						if err := gardencorev1beta1.Convert_v1beta1_VolumeType_To_core_VolumeType(&element, coreElement, nil); err != nil {
-							return nil, apierrors.NewInternalError(fmt.Errorf("could not convert machine type: %+v", err.Error()))
-						}
-
-						volumeType = coreElement
+						volumeType = &element
 						break
 					}
 				}
