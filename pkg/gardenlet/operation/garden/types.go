@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -112,6 +113,9 @@ func (b *Builder) WithShootServiceAccountIssuerHostname(secrets map[string]*core
 		if s, ok := secrets[v1beta1constants.GardenRoleShootServiceAccountIssuer]; ok {
 			if host, ok := s.Data["hostname"]; ok {
 				hostname := string(host)
+				if strings.TrimSpace(string(hostname)) == "" {
+					return nil, errors.New("shoot service account issuer secret has an empty hostname key")
+				}
 				return &hostname, nil
 			}
 			return nil, errors.New("shoot service account issuer secret is missing a hostname key")
