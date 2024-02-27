@@ -110,6 +110,7 @@
 * [GEP-22: Improved Usage of the `ShootState` API](proposals/22-improved-usage-of-shootstate-api.md)
 * [GEP-23: Autoscaling Shoot kube-apiserver via Independently Driven HPA and VPA](proposals/23-autoscaling-kube-apiserver-via-independent-hpa-and-vpa.md)
 * [GEP-24: Shoot OIDC Issuer](proposals/24-shoot-oidc-issuer.md)
+* [GEP-25: Namespaced Cloud Profiles](proposals/25-namespaced-cloud-profiles.md)
 
 ## Development
 
