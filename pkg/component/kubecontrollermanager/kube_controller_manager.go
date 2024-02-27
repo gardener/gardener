@@ -77,6 +77,10 @@ const (
 	volumeMountPathCAKubelet         = "/srv/kubernetes/ca-kubelet"
 	volumeMountPathServiceAccountKey = "/srv/kubernetes/service-account-key"
 	volumeMountPathServer            = "/var/lib/kube-controller-manager-server"
+
+	nodeMonitorGraceDuration = 2 * time.Minute
+	// NodeMonitorGraceDurationK8sGreaterEqual127 is the default node monitoring grace duration used with k8s versions >= 1.27
+	NodeMonitorGraceDurationK8sGreaterEqual127 = 40 * time.Second
 )
 
 // Interface contains functions for a kube-controller-manager deployer.
@@ -635,7 +639,7 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 	var (
 		defaultHorizontalPodAutoscalerConfig = k.getHorizontalPodAutoscalerConfig()
 		podEvictionTimeout                   = metav1.Duration{Duration: 2 * time.Minute}
-		nodeMonitorGracePeriod               = metav1.Duration{Duration: 2 * time.Minute}
+		nodeMonitorGracePeriod               = metav1.Duration{Duration: nodeMonitorGraceDuration}
 		command                              = []string{
 			"/usr/local/bin/kube-controller-manager",
 			"--authentication-kubeconfig=" + gardenerutils.PathGenericKubeconfig,
@@ -648,7 +652,7 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 	)
 
 	if versionutils.ConstraintK8sGreaterEqual127.Check(k.values.TargetVersion) {
-		nodeMonitorGracePeriod = metav1.Duration{Duration: 40 * time.Second}
+		nodeMonitorGracePeriod = metav1.Duration{Duration: NodeMonitorGraceDurationK8sGreaterEqual127}
 	}
 
 	if !k.values.IsWorkerless {

@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"os"
 	goruntime "runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -32,12 +33,19 @@ import (
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/types"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
@@ -63,6 +71,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
+	dwd "github.com/gardener/gardener/pkg/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	"github.com/gardener/gardener/pkg/features"
@@ -72,6 +81,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap/certificate"
 	"github.com/gardener/gardener/pkg/gardenlet/controller"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
+	resourcemanagerv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -80,8 +90,10 @@ import (
 	thirdpartyapiutil "github.com/gardener/gardener/third_party/controller-runtime/pkg/apiutil"
 )
 
-// Name is a const for the name of this component.
-const Name = "gardenlet"
+const (
+	// Name is a const for the name of this component.
+	Name = "gardenlet"
+)
 
 // NewCommand creates a new cobra.Command for running gardenlet.
 func NewCommand() *cobra.Command {
@@ -389,6 +401,11 @@ func (g *garden) Start(ctx context.Context) error {
 		return err
 	}
 
+	log.Info("Creating new secret and managed resource required by dependency-watchdog")
+	if err := g.createNewDWDResources(ctx, g.mgr.GetClient()); err != nil {
+		return err
+	}
+
 	log.Info("Setting up shoot client map")
 	shootClientMap, err := clientmapbuilder.
 		NewShootClientMapBuilder().
@@ -436,6 +453,132 @@ func (g *garden) Start(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// TODO(aaronfern): Remove this code after v1.93 has been released.
+func (g *garden) createNewDWDResources(ctx context.Context, seedClient client.Client) error {
+	namespaceList := &corev1.NamespaceList{}
+	if err := seedClient.List(ctx, namespaceList, client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot})); err != nil {
+		return err
+	}
+
+	var tasks []flow.TaskFn
+	for _, ns := range namespaceList.Items {
+		if ns.DeletionTimestamp != nil || ns.Status.Phase == corev1.NamespaceTerminating {
+			continue
+		}
+		namespace := ns
+		tasks = append(tasks, func(ctx context.Context) error {
+			dwdOldSecret := &corev1.Secret{}
+			if err := seedClient.Get(ctx, types.NamespacedName{Namespace: namespace.Name, Name: dwd.InternalProbeSecretName}, dwdOldSecret); err != nil {
+				// If ns does not contain old DWD secret, do not procees.
+				if apierrors.IsNotFound(err) {
+					return nil
+				}
+				return err
+			}
+
+			// Fetch GRM deployment
+			grmDeploy := &appsv1.Deployment{}
+			if err := seedClient.Get(ctx, types.NamespacedName{Namespace: namespace.Name, Name: "gardener-resource-manager"}, grmDeploy); err != nil {
+				if apierrors.IsNotFound(err) {
+					// Do not proceed if GRM deployment is not present
+					return nil
+				}
+				return err
+			}
+
+			// Create a DWDAccess object
+			inClusterServerURL := fmt.Sprintf("%s.%s.svc", v1beta1constants.DeploymentNameKubeAPIServer, namespace.Name)
+			dwdAccess := dwd.NewAccess(seedClient, namespace.Name, nil, dwd.AccessValues{ServerInCluster: inClusterServerURL})
+
+			if err := dwdAccess.DeployMigrate(ctx); err != nil {
+				return err
+			}
+
+			//Delete old DWD secrets
+			if err := kubernetesutils.DeleteObjects(ctx, seedClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: dwd.InternalProbeSecretName, Namespace: namespace.Name}}); err != nil {
+				return err
+			}
+
+			if err := kubernetesutils.DeleteObjects(ctx, seedClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: dwd.ExternalProbeSecretName, Namespace: namespace.Name}}); err != nil {
+				return err
+			}
+
+			// Fetch and update the GRM configmap
+			grmConfigMap := &corev1.ConfigMap{}
+			var grmCMName string
+			var grmCMVolumeIndex int
+			for n, vol := range grmDeploy.Spec.Template.Spec.Volumes {
+				if vol.Name == "config" {
+					grmCMName = vol.ConfigMap.Name
+					grmCMVolumeIndex = n
+					break
+				}
+			}
+			if len(grmCMName) == 0 {
+				return nil
+			}
+			if err := seedClient.Get(ctx, types.NamespacedName{Namespace: namespace.Name, Name: grmCMName}, grmConfigMap); err != nil {
+				if apierrors.IsNotFound(err) {
+					return nil
+				}
+				return err
+			}
+
+			cmData := grmConfigMap.Data["config.yaml"]
+			rmConfig := resourcemanagerv1alpha1.ResourceManagerConfiguration{}
+
+			// create codec
+			var codec runtime.Codec
+			configScheme := runtime.NewScheme()
+			utilruntime.Must(resourcemanagerv1alpha1.AddToScheme(configScheme))
+			utilruntime.Must(apiextensionsv1.AddToScheme(configScheme))
+			ser := json.NewSerializerWithOptions(json.DefaultMetaFactory, configScheme, configScheme, json.SerializerOptions{
+				Yaml:   true,
+				Pretty: false,
+				Strict: false,
+			})
+			versions := schema.GroupVersions([]schema.GroupVersion{
+				resourcemanagerv1alpha1.SchemeGroupVersion,
+				apiextensionsv1.SchemeGroupVersion,
+			})
+			codec = serializer.NewCodecFactory(configScheme).CodecForVersions(ser, ser, versions, versions)
+
+			obj, err := runtime.Decode(codec, []byte(cmData))
+			if err != nil {
+				return err
+			}
+			rmConfig = *(obj.(*resourcemanagerv1alpha1.ResourceManagerConfiguration))
+
+			if rmConfig.TargetClientConnection == nil || slices.Contains(rmConfig.TargetClientConnection.Namespaces, corev1.NamespaceNodeLease) {
+				return nil
+			}
+
+			rmConfig.TargetClientConnection.Namespaces = append(rmConfig.TargetClientConnection.Namespaces, corev1.NamespaceNodeLease)
+
+			data, err := runtime.Encode(codec, &rmConfig)
+			if err != nil {
+				return err
+			}
+
+			newGRMConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager-dwd", Namespace: namespace.Name}}
+			newGRMConfigMap.Data = map[string]string{"config.yaml": string(data)}
+			utilruntime.Must(kubernetesutils.MakeUnique(newGRMConfigMap))
+
+			if err = seedClient.Create(ctx, newGRMConfigMap); err != nil {
+				if !apierrors.IsAlreadyExists(err) {
+					return err
+				}
+			}
+
+			patch := client.MergeFrom(grmDeploy.DeepCopy())
+			grmDeploy.Spec.Template.Spec.Volumes[grmCMVolumeIndex].ConfigMap.Name = newGRMConfigMap.Name
+
+			return seedClient.Patch(ctx, grmDeploy, patch)
+		})
+	}
+	return flow.Parallel(tasks...)(ctx)
 }
 
 // TODO(Kostov6): Remove this code after v1.91 has been released.
