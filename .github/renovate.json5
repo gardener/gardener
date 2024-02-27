@@ -18,7 +18,7 @@
     {
       // Generic detection for pod-like image specifications.
       "customType": "regex",
-      "fileMatch": ["^hack\/.+\\.yaml$", "^\\.test-defs\/.+\\.yaml$"],
+      "fileMatch": ["^example\/.+\\.yaml$", "^hack\/.+\\.yaml$", "^\\.test-defs\/.+\\.yaml$"],
       "matchStrings": ["image: (?<depName>.*?):(?<currentValue>.*?)\\s"],
       "datasourceTemplate": "docker"
     },
