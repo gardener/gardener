@@ -40,7 +40,7 @@ reviewers:
 
 ## Summary
 
-[CloudProfiles](https://github.com/gardener/gardener/blob/master/docs/concepts/apiserver.md#cloudprofiles) are non-namespaced objects that are managed centrally by Gardener operators. They usually don't only contain global configuration, but options that are relevant to certain projects only (e.g. special machine types). This increases the operation burden for operators and clutters `CloudProfile` objects. On the other hand, users are blocked until the requested special configuration is rolled out to the desired landscapes.
+[CloudProfiles](https://github.com/gardener/gardener/blob/master/docs/concepts/apiserver.md#cloudprofiles) are non-namespaced objects that are managed centrally by Gardener operators. They usually contain not only global configuration, but options that are relevant to certain projects only (e.g. special machine types). This increases the operation burden for operators and clutters `CloudProfile` objects. On the other hand, users are blocked until the requested special configuration is rolled out to the desired landscapes.
 
 This GEP proposes a mechanism that allows project administrators to create `NamespacedCloudProfile`s that are only visible in the project they belong to.
 
@@ -73,7 +73,7 @@ This GEP proposes a mechanism that allows project administrators to create `Name
 
 ## Proposal
 
-It is proposed to implement a solution that enables project administrators to create custom (namespaced) `CloudProfile`s. These `CloudProfile`s would be consumed by project users of the project they were created in.
+It is proposed to implement a solution that enables project administrators to create custom (namespaced) `CloudProfile`s. These `CloudProfile`s would be consumed by users of the project they were created in.
 
 ### Approach
 
@@ -331,7 +331,7 @@ In the future, once `NamespacedCloudProfiles` have established themselves and fo
 
 ### Arbitrary Value Fields
 
-Instead of specifying a `NamespacedCloudProfile` resource, an end user could be allowed to enter arbitrary names in fields such as `machineTypes`. The entry would then, if the user enters a wrong value, throw an error when provisioning the resource at the cloud provider. However, this approach does not seem feasible as the metadata that is specified in a `CloudProfile` like the number of CPUs and amount of RAM is used in the trial clusters (see [Shoot Qutas](https://github.com/gardener/gardener/blob/master/docs/concepts/apiserver.md#shoot-quotas)) to validate quotas and to enable the scale-from-zero feature. Therefore, an exception would need to be developed for this specific, and possibly other, use cases.
+Instead of specifying a `NamespacedCloudProfile` resource, an end user could be allowed to enter arbitrary names in fields such as `machineTypes`. The entry would then, if the user enters a wrong value, throw an error when provisioning the resource at the cloud provider. However, this approach does not seem feasible as the metadata that is specified in a `CloudProfile` like the number of CPUs and amount of RAM is used in the trial clusters (see [Shoot Quotas](https://github.com/gardener/gardener/blob/master/docs/concepts/apiserver.md#shoot-quotas)) to validate quotas and to enable the scale-from-zero feature. Therefore, an exception would need to be developed for this specific, and possibly other, use cases.
 
 ### Namespaced Cloud Profiles by Selection
 
