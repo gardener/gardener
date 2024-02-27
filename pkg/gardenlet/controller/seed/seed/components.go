@@ -869,7 +869,6 @@ func (r *Reconciler) newNginxIngressController(seed *seedpkg.Seed, istioDefaultL
 		nil,
 		v1beta1constants.PriorityClassNameSeedSystem600,
 		true,
-		true,
 		component.ClusterTypeSeed,
 		"",
 		v1beta1constants.SeedNginxIngressClass,

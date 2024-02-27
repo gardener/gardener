@@ -49,7 +49,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -78,7 +77,7 @@ const (
 
 	dataKeyComponentConfig = "config.yaml"
 
-	componentConfigTmpl = `apiVersion: {{ .apiVersion }}
+	componentConfigTmpl = `apiVersion: kubescheduler.config.k8s.io/v1
 kind: KubeSchedulerConfiguration
 clientConnection:
   kubeconfig: ` + gardenerutils.PathGenericKubeconfig + `
@@ -87,16 +86,6 @@ leaderElection:
 {{- if eq .profile "bin-packing" }}
 profiles:
 - schedulerName: ` + corev1.DefaultSchedulerName + `
-{{- if eq .apiVersion "kubescheduler.config.k8s.io/v1beta1" }}
-- schedulerName: ` + BinPackingSchedulerName + `
-  plugins:
-    score:
-      disabled:
-      - name: NodeResourcesLeastAllocated
-      - name: NodeResourcesBalancedAllocation
-      enabled:
-      - name: NodeResourcesMostAllocated
-{{- else if or (eq .apiVersion "kubescheduler.config.k8s.io/v1beta2") (eq .apiVersion "kubescheduler.config.k8s.io/v1beta3") (eq .apiVersion "kubescheduler.config.k8s.io/v1") }}
 - schedulerName: ` + BinPackingSchedulerName + `
   pluginConfig:
   - name: NodeResourcesFit
@@ -107,7 +96,6 @@ profiles:
     score:
       disabled:
       - name: NodeResourcesBalancedAllocation
-{{- end }}
 {{- end }}`
 )
 
@@ -494,13 +482,6 @@ func (k *kubeScheduler) computeEnvironmentVariables() []corev1.EnvVar {
 }
 
 func (k *kubeScheduler) computeComponentConfig() (string, error) {
-	var apiVersion string
-	if versionutils.ConstraintK8sGreaterEqual125.Check(k.targetVersion) {
-		apiVersion = "kubescheduler.config.k8s.io/v1"
-	} else {
-		apiVersion = "kubescheduler.config.k8s.io/v1beta3"
-	}
-
 	profile := gardencorev1beta1.SchedulingProfileBalanced
 	if k.config != nil && k.config.Profile != nil {
 		profile = *k.config.Profile
@@ -509,8 +490,7 @@ func (k *kubeScheduler) computeComponentConfig() (string, error) {
 	var (
 		componentConfigYAML bytes.Buffer
 		values              = map[string]string{
-			"apiVersion": apiVersion,
-			"profile":    string(profile),
+			"profile": string(profile),
 		}
 	)
 	if err := componentConfigTemplate.Execute(&componentConfigYAML, values); err != nil {

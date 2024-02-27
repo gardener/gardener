@@ -26,7 +26,6 @@ import (
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	rbacv1alpha1 "k8s.io/api/rbac/v1alpha1"
 	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
@@ -137,7 +136,6 @@ var (
 		{GVR: extensionsv1beta1.SchemeGroupVersion.WithResource("replicasets"), NamespaceLabels: kubeSystemNamespaceLabels, Subresource: "status"},
 		{GVR: extensionsv1beta1.SchemeGroupVersion.WithResource("replicasets"), NamespaceLabels: kubeSystemNamespaceLabels, Subresource: "scale"},
 		{GVR: extensionsv1beta1.SchemeGroupVersion.WithResource("networkpolicies"), NamespaceLabels: kubeSystemNamespaceLabels},
-		{GVR: extensionsv1beta1.SchemeGroupVersion.WithResource("podsecuritypolicies"), ClusterScoped: true},
 
 		// Needed for kubelet and kube-system controllers leader election.
 		{GVR: coordinationv1.SchemeGroupVersion.WithResource("leases")},
@@ -146,8 +144,6 @@ var (
 		// Modifications might be needed for old clusters with new policies.
 		{GVR: networkingv1.SchemeGroupVersion.WithResource("networkpolicies"), NamespaceLabels: kubeSystemNamespaceLabels},
 		{GVR: networkingv1beta1.SchemeGroupVersion.WithResource("networkpolicies"), NamespaceLabels: kubeSystemNamespaceLabels},
-
-		{GVR: policyv1beta1.SchemeGroupVersion.WithResource("podsecuritypolicies"), ClusterScoped: true},
 
 		// Needed as part of /readyz/poststarthook/rbac/bootstrap-roles in kube-apiserver.
 		{GVR: rbacv1.SchemeGroupVersion.WithResource("clusterroles"), ClusterScoped: true},

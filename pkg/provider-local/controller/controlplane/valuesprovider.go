@@ -21,7 +21,6 @@ import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
 	extensionssecretsmanager "github.com/gardener/gardener/extensions/pkg/util/secret/manager"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/provider-local/charts"
 	localimagevector "github.com/gardener/gardener/pkg/provider-local/imagevector"
@@ -110,13 +109,9 @@ var (
 func (vp *valuesProvider) GetControlPlaneShootChartValues(
 	_ context.Context,
 	_ *extensionsv1alpha1.ControlPlane,
-	cluster *extensionscontroller.Cluster,
+	_ *extensionscontroller.Cluster,
 	_ secretsmanager.Reader,
 	_ map[string]string,
 ) (map[string]interface{}, error) {
-	return map[string]interface{}{
-		"local-path-provisioner": map[string]interface{}{
-			"pspDisabled": v1beta1helper.IsPSPDisabled(cluster.Shoot),
-		},
-	}, nil
+	return map[string]interface{}{}, nil
 }

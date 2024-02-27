@@ -106,12 +106,11 @@ var _ = Describe("KubeAPIServer", func() {
 		secretNameVPNSeedClient           = "vpn-seed-client"
 		secretNameVPNSeedServerTLSAuth    = "vpn-seed-server-tlsauth-a1d0aa00"
 
-		configMapNameAdmissionConfigs   = "kube-apiserver-admission-config-e38ff146"
-		secretNameAdmissionKubeconfigs  = "kube-apiserver-admission-kubeconfigs-e3b0c442"
-		secretNameETCDEncryptionConfig  = "kube-apiserver-etcd-encryption-configuration-97e14df3"
-		configMapNameAuditPolicy        = "audit-policy-config-f5b578b4"
-		configMapNameEgressPolicy       = "kube-apiserver-egress-selector-config-53d92abc"
-		configMapNameTerminationHandler = "kube-apiserver-watchdog-f4f4b3d5"
+		configMapNameAdmissionConfigs  = "kube-apiserver-admission-config-e38ff146"
+		secretNameAdmissionKubeconfigs = "kube-apiserver-admission-kubeconfigs-e3b0c442"
+		secretNameETCDEncryptionConfig = "kube-apiserver-etcd-encryption-configuration-97e14df3"
+		configMapNameAuditPolicy       = "audit-policy-config-f5b578b4"
+		configMapNameEgressPolicy      = "kube-apiserver-egress-selector-config-53d92abc"
 
 		deployment                 *appsv1.Deployment
 		horizontalPodAutoscaler    *autoscalingv2.HorizontalPodAutoscaler
@@ -2256,83 +2255,6 @@ rules:
 				))
 			})
 
-			It("should have the watchdog container when the kubernetes is version 1.24", func() {
-				var (
-					version = semver.MustParse("1.24.7")
-					images  = Images{Watchdog: "some-image:latest"}
-				)
-
-				kapi = New(kubernetesInterface, namespace, sm, Values{
-					Values: apiserver.Values{
-						RuntimeVersion: runtimeVersion,
-					},
-					Images:  images,
-					Version: version,
-				})
-				deployAndRead()
-
-				expectedHealthCheckToken, err := secretsutils.FakeGenerateRandomString(128)
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(deployment.Spec.Template.Spec.ShareProcessNamespace).To(PointTo(BeTrue()))
-				Expect(deployment.Spec.Template.Spec.Containers).To(ContainElement(corev1.Container{
-					Name:  "watchdog",
-					Image: images.Watchdog,
-					Command: []string{
-						"/bin/sh",
-						"/var/watchdog/bin/watchdog.sh",
-						expectedHealthCheckToken,
-					},
-					SecurityContext: &corev1.SecurityContext{
-						Capabilities: &corev1.Capabilities{
-							Add: []corev1.Capability{"SYS_PTRACE"},
-						},
-					},
-					VolumeMounts: []corev1.VolumeMount{{
-						Name:      "watchdog",
-						MountPath: "/var/watchdog/bin",
-					}},
-				}))
-				Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElement(corev1.Volume{
-					Name: "watchdog",
-					VolumeSource: corev1.VolumeSource{
-						ConfigMap: &corev1.ConfigMapVolumeSource{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: configMapNameTerminationHandler,
-							},
-							DefaultMode: ptr.To(int32(500)),
-						},
-					},
-				}))
-			})
-
-			Context("resources", func() {
-				It("should deploy the watchdog configmap if the kubernetes version is 1.24", func() {
-					var (
-						version = semver.MustParse("1.24.7")
-						images  = Images{Watchdog: "some-image:latest"}
-
-						expectedConfigMap = &corev1.ConfigMap{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      configMapNameTerminationHandler,
-								Namespace: namespace,
-							},
-						}
-					)
-
-					kapi = New(kubernetesInterface, namespace, sm, Values{
-						Values: apiserver.Values{
-							RuntimeVersion: runtimeVersion,
-						},
-						Images:  images,
-						Version: version,
-					})
-					deployAndRead()
-
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedConfigMap), expectedConfigMap)).To(Succeed())
-				})
-			})
-
 			Context("kube-apiserver container", func() {
 				var (
 					acceptedIssuers  = []string{"issuer1", "issuer2"}
@@ -3024,29 +2946,8 @@ rules:
 					Expect(deployment.Spec.Template.Spec.Containers[0].Args).NotTo(ContainElement(ContainSubstring("--runtime-config=")))
 				})
 
-				It("should allow to enable apis via 'RuntimeConfig' in case of workerless shoot with k8s version < 1.25", func() {
+				It("should allow to enable apis via 'RuntimeConfig' in case of workerless shoot", func() {
 					runtimeConfig := map[string]bool{"apps/v1": true, "bar": false}
-
-					version = semver.MustParse("v1.24.0")
-					kapi = New(kubernetesInterface, namespace, sm, Values{
-						Values: apiserver.Values{
-							RuntimeVersion: runtimeVersion,
-						},
-						RuntimeConfig: runtimeConfig,
-						Images:        images,
-						Version:       version,
-						IsWorkerless:  true,
-					})
-					deployAndRead()
-
-					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(
-						"--runtime-config=apps/v1=true,autoscaling/v2=false,bar=false,batch/v1=false,policy/v1/poddisruptionbudgets=false,policy/v1beta1/podsecuritypolicies=false,storage.k8s.io/v1/csidrivers=false,storage.k8s.io/v1/csinodes=false",
-					))
-				})
-
-				It("should allow to enable apis via 'RuntimeConfig' in case of workerless shoot with k8s version >= 1.25", func() {
-					runtimeConfig := map[string]bool{"apps/v1": true, "bar": false}
-					version = semver.MustParse("v1.26.0")
 
 					kapi = New(kubernetesInterface, namespace, sm, Values{
 						Values: apiserver.Values{
@@ -3060,8 +2961,7 @@ rules:
 					deployAndRead()
 
 					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(
-						"--runtime-config=apps/v1=true" +
-							",autoscaling/v2=false,bar=false,batch/v1=false,policy/v1/poddisruptionbudgets=false,storage.k8s.io/v1/csidrivers=false,storage.k8s.io/v1/csinodes=false",
+						"--runtime-config=apps/v1=true,autoscaling/v2=false,bar=false,batch/v1=false,policy/v1/poddisruptionbudgets=false,storage.k8s.io/v1/csidrivers=false,storage.k8s.io/v1/csinodes=false",
 					))
 				})
 
@@ -3235,7 +3135,7 @@ rules:
 							RuntimeVersion: runtimeVersion,
 						},
 						Images:                       images,
-						Version:                      semver.MustParse("1.24.9"),
+						Version:                      semver.MustParse("1.26.9"),
 						StaticTokenKubeconfigEnabled: ptr.To(true),
 					})
 					deployAndRead()
@@ -3263,22 +3163,6 @@ rules:
 					deployAndRead()
 
 					Expect(deployment.Spec.Template.Spec.Containers[0].Lifecycle).To(BeNil())
-				})
-
-				It("should set the --shutdown-send-retry-after=true flag if the kubernetes version is 1.24", func() {
-					version = semver.MustParse("1.24.7")
-					kapi = New(kubernetesInterface, namespace, sm, Values{
-						Values: apiserver.Values{
-							RuntimeVersion: runtimeVersion,
-						},
-						Images:  images,
-						Version: version,
-					})
-					deployAndRead()
-
-					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
-						"--shutdown-send-retry-after=true",
-					))
 				})
 
 				It("should properly set the TLS SNI flag if necessary", func() {

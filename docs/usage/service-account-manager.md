@@ -1,7 +1,7 @@
 # Service Account Manager
 
 ## Overview
-With Gardener `v1.47`, a new role called `serviceaccountmanager` was introduced. This role allows to fully manage `ServiceAccount`'s in the project namespace and request tokens for them. This is the preferred way of managing the access to a project namespace, as it aims to replace the usage of the default `ServiceAccount` secrets that will no longer be generated automatically with Kubernetes `v1.24+`.
+With Gardener `v1.47`, a new role called `serviceaccountmanager` was introduced. This role allows to fully manage `ServiceAccount`'s in the project namespace and request tokens for them. This is the preferred way of managing the access to a project namespace, as it aims to replace the usage of the default `ServiceAccount` secrets that will no longer be generated automatically.
 
 ## Actions
 
@@ -17,22 +17,8 @@ kubectl -n project-abc create sa robot-user
 ### Request a Token for a Service Account
 A token for the "robot-user" `ServiceAccount` can be requested via the [TokenRequest API](https://kubernetes.io/docs/reference/kubernetes-api/authentication-resources/token-request-v1/) in several ways:
 
-- using `kubectl` >= v1.24
 ```bash
 kubectl -n project-abc create token robot-user --duration=3600s
-```
-
-- using `kubectl` < v1.24
-```bash
-cat <<EOF | kubectl create -f - --raw /api/v1/namespaces/project-abc/serviceaccounts/robot-user/token
-{
-  "apiVersion": "authentication.k8s.io/v1",
-  "kind": "TokenRequest",
-  "spec": {
-    "expirationSeconds": 3600
-  }
-}
-EOF
 ```
 
 - directly calling the Kubernetes HTTP API

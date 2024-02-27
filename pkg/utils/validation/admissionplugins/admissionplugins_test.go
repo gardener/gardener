@@ -39,7 +39,7 @@ var _ = Describe("admissionplugins", func() {
 			}
 		},
 		Entry("Unknown admission plugin", "Unknown", "1.25", false, false),
-		Entry("Known admission plugin but version not present in supported range", "PodSecurityPolicy", "1.25", false, true),
+		Entry("Known admission plugin but version not present in supported range", "ClusterTrustBundleAttest", "1.25", false, true),
 		Entry("Known admission plugin and version present in supported range", "DenyServiceExternalIPs", "1.25", true, true),
 		Entry("Known admission plugin but version range not present", "PodNodeSelector", "1.25", true, true),
 	)
@@ -57,17 +57,11 @@ var _ = Describe("admissionplugins", func() {
 				"Field":  Equal(field.NewPath("admissionPlugins[0].name").String()),
 				"Detail": Equal("admission plugin \"ClusterTrustBundleAttest\" is not supported in Kubernetes version 1.25.10"),
 			})))),
-			Entry("unsupported admission plugin", []core.AdmissionPlugin{{Name: "PodSecurityPolicy"}}, "1.26.6", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal(field.NewPath("admissionPlugins[0].name").String()),
-				"Detail": Equal("admission plugin \"PodSecurityPolicy\" is not supported in Kubernetes version 1.26.6"),
-			})))),
 			Entry("unsupported admission plugin but is disabled", []core.AdmissionPlugin{{Name: "ClusterTrustBundleAttest", Disabled: ptr.To(true)}}, "1.26.6", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal(field.NewPath("admissionPlugins[0].name").String()),
 				"Detail": Equal("admission plugin \"ClusterTrustBundleAttest\" is not supported in Kubernetes version 1.26.6"),
 			})))),
-			Entry("unsupported admission plugin and is disabled but plugin in migration", []core.AdmissionPlugin{{Name: "PodSecurityPolicy", Disabled: ptr.To(true)}}, "1.25.6", BeEmpty()),
 			Entry("admission plugin without name", []core.AdmissionPlugin{{}}, "1.26.10", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeRequired),
 				"Field":  Equal(field.NewPath("admissionPlugins[0].name").String()),
@@ -99,90 +93,6 @@ var _ = Describe("admissionplugins", func() {
 		)
 
 		Describe("validate PodSecurity admissionPlugin config", func() {
-			test := func(kubernetesVersion string, v1alpha1, v1beta1, v1 bool) {
-				if v1alpha1 {
-					It("should allow v1alpha1 configuration", func() {
-						Expect(ValidateAdmissionPlugins([]core.AdmissionPlugin{
-							getPodSecurityPluginForConfigVersion("v1alpha1"),
-						},
-							kubernetesVersion,
-							field.NewPath("admissionPlugins"),
-						)).To(BeEmpty())
-					})
-				}
-
-				if v1beta1 {
-					It("should allow v1beta1 configuration", func() {
-						Expect(ValidateAdmissionPlugins([]core.AdmissionPlugin{
-							getPodSecurityPluginForConfigVersion("v1beta1"),
-						},
-							kubernetesVersion,
-							field.NewPath("admissionPlugins"),
-						)).To(BeEmpty())
-					})
-				} else {
-					It("should not allow v1beta1 configuration", func() {
-						Expect(ValidateAdmissionPlugins([]core.AdmissionPlugin{
-							getPodSecurityPluginForConfigVersion("v1beta1"),
-						},
-							kubernetesVersion,
-							field.NewPath("admissionPlugins"),
-						)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeInvalid),
-							"Field":  Equal(field.NewPath("admissionPlugins[0].config").String()),
-							"Detail": ContainSubstring("PodSecurityConfiguration apiVersion for Kubernetes version %q should be %q but got %q", kubernetesVersion, "pod-security.admission.config.k8s.io/v1alpha1", "pod-security.admission.config.k8s.io/v1beta1"),
-						}))))
-					})
-				}
-
-				if v1 {
-					It("should allow v1 configuration", func() {
-						Expect(ValidateAdmissionPlugins([]core.AdmissionPlugin{
-							getPodSecurityPluginForConfigVersion("v1"),
-						},
-							kubernetesVersion,
-							field.NewPath("admissionPlugins"),
-						)).To(BeEmpty())
-					})
-				} else if v1alpha1 && v1beta1 {
-					It("should not allow v1 configuration", func() {
-						Expect(ValidateAdmissionPlugins([]core.AdmissionPlugin{
-							getPodSecurityPluginForConfigVersion("v1"),
-						},
-							kubernetesVersion,
-							field.NewPath("admissionPlugins"),
-						)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeInvalid),
-							"Field":  Equal(field.NewPath("admissionPlugins[0].config").String()),
-							"Detail": ContainSubstring("PodSecurityConfiguration apiVersion for Kubernetes version %q should be %q but got %q", kubernetesVersion, "pod-security.admission.config.k8s.io/v1beta1 or pod-security.admission.config.k8s.io/v1alpha1", "pod-security.admission.config.k8s.io/v1"),
-						}))))
-					})
-				} else {
-					It("should not allow v1 configuration", func() {
-						Expect(ValidateAdmissionPlugins([]core.AdmissionPlugin{
-							getPodSecurityPluginForConfigVersion("v1"),
-						},
-							kubernetesVersion,
-							field.NewPath("admissionPlugins"),
-						)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeInvalid),
-							"Field":  Equal(field.NewPath("admissionPlugins[0].config").String()),
-							"Detail": ContainSubstring("PodSecurityConfiguration apiVersion for Kubernetes version %q should be %q but got %q", kubernetesVersion, "pod-security.admission.config.k8s.io/v1alpha1", "pod-security.admission.config.k8s.io/v1"),
-						}))))
-					})
-				}
-			}
-
-			Context("v1.24 cluster", func() {
-				test("v1.24.8", true, true, false)
-			})
-			Context("v1.25 cluster", func() {
-				test("v1.25.4", true, true, true)
-			})
-			Context("v1.26 cluster", func() {
-				test("v1.26.2", true, true, true)
-			})
-
 			Context("invalid PodSecurityConfiguration", func() {
 				It("should return error if decoding fails", func() {
 					Expect(ValidateAdmissionPlugins([]core.AdmissionPlugin{
@@ -199,7 +109,7 @@ usernames: "admin"
 							},
 						},
 					},
-						"v1.24.8",
+						"1.26.8",
 						field.NewPath("admissionPlugins"),
 					)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
@@ -223,12 +133,12 @@ exemptions:
 							},
 						},
 					},
-						"v1.24.8",
+						"1.26.8",
 						field.NewPath("admissionPlugins"),
 					)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal(field.NewPath("admissionPlugins[0].config").String()),
-						"Detail": ContainSubstring("expected pod-security.admission.config.k8s.io/v1alpha1.PodSecurityConfiguration or pod-security.admission.config.k8s.io/v1beta1.PodSecurityConfiguration or pod-security.admission.config.k8s.io/v1.PodSecurityConfiguration"),
+						"Detail": ContainSubstring("expected pod-security.admission.config.k8s.io/v1.PodSecurityConfiguration"),
 					}))))
 				})
 
@@ -236,9 +146,18 @@ exemptions:
 					Expect(ValidateAdmissionPlugins([]core.AdmissionPlugin{
 						{
 							Name: "PodSecurity",
+							Config: &runtime.RawExtension{Raw: []byte(`apiVersion: pod-security.admission.config.k8s.io/v1
+kind: PodSecurityConfiguration
+defaults:
+  enforce-error: "privileged"
+  enforce-version: "latest"
+exemptions:
+  usernames: ["admin"]
+`),
+							},
 						},
 					},
-						"v1.24.8",
+						"1.26.8",
 						field.NewPath("admissionPlugins"),
 					)).To(BeEmpty())
 				})
@@ -246,31 +165,3 @@ exemptions:
 		})
 	})
 })
-
-func getPodSecurityPluginForConfigVersion(version string) core.AdmissionPlugin {
-	apiVersion := "pod-security.admission.config.k8s.io/v1alpha1"
-
-	if version == "v1beta1" {
-		apiVersion = "pod-security.admission.config.k8s.io/v1beta1"
-	} else if version == "v1" {
-		apiVersion = "pod-security.admission.config.k8s.io/v1"
-	}
-
-	return core.AdmissionPlugin{
-		Name: "PodSecurity",
-		Config: &runtime.RawExtension{Raw: []byte(`apiVersion: ` + apiVersion + `
-kind: PodSecurityConfiguration
-defaults:
-  enforce: "privileged"
-  enforce-version: "latest"
-  audit-version: "latest"
-  warn: "baseline"
-  warn-version: "v1.25"
-exemptions:
-  usernames: ["admin"]
-  runtimeClasses: ["random"]
-  namespaces: ["random"]
-`),
-		},
-	}
-}

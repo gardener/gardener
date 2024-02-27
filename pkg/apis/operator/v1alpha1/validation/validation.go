@@ -28,7 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/component-base/featuregate"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	admissioncontrollerconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
@@ -173,7 +173,7 @@ func validateRuntimeCluster(runtimeCluster operatorv1alpha1.RuntimeCluster, fldP
 		if domains.Has(domain) {
 			allErrs = append(allErrs, field.Duplicate(fldPath.Child("ingress", "domains").Index(i), domain))
 		}
-		if domain == pointer.StringDeref(runtimeCluster.Ingress.Domain, "") {
+		if domain == ptr.Deref(runtimeCluster.Ingress.Domain, "") {
 			allErrs = append(allErrs, field.Duplicate(fldPath.Child("ingress", "domain"), domain))
 		}
 		domains.Insert(domain)

@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -37,7 +36,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	admissionpluginsvalidation "github.com/gardener/gardener/pkg/utils/validation/admissionplugins"
 )
 
 type shootStrategy struct {
@@ -173,33 +171,6 @@ func (shootStrategy) Canonicalize(obj runtime.Object) {
 	shoot := obj.(*core.Shoot)
 
 	gardenerutils.MaintainSeedNameLabels(shoot, shoot.Spec.SeedName, shoot.Status.SeedName)
-	cleanupAdmissionPlugins(shoot)
-}
-
-func cleanupAdmissionPlugins(shoot *core.Shoot) {
-	if shoot.Spec.Kubernetes.KubeAPIServer == nil {
-		return
-	}
-
-	var (
-		admissionPlugins      []core.AdmissionPlugin
-		shootAdmissionPlugins = shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins
-	)
-
-	kubernetesVersion, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
-	if err != nil {
-		return
-	}
-
-	for _, plugin := range shootAdmissionPlugins {
-		if constraint, ok := admissionpluginsvalidation.PluginsInMigration[plugin.Name]; ok && constraint.Check(kubernetesVersion) {
-			continue
-		}
-
-		admissionPlugins = append(admissionPlugins, plugin)
-	}
-
-	shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = admissionPlugins
 }
 
 func (shootStrategy) AllowCreateOnUpdate() bool {

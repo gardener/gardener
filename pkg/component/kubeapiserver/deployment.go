@@ -43,7 +43,6 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -105,7 +104,6 @@ const (
 	volumeMountPathCentOS                          = "/etc/pki/ca-trust/extracted/pem"
 	volumeMountPathEtcSSL                          = "/etc/ssl"
 	volumeMountPathUsrShareCaCerts                 = "/usr/share/ca-certificates"
-	volumeMountPathWatchdog                        = "/var/watchdog/bin"
 )
 
 func (k *kubeAPIServer) emptyDeployment() *appsv1.Deployment {
@@ -120,7 +118,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 	configMapAdmissionConfigs *corev1.ConfigMap,
 	secretAdmissionKubeconfigs *corev1.Secret,
 	configMapEgressSelector *corev1.ConfigMap,
-	configMapTerminationHandler *corev1.ConfigMap,
 	secretETCDEncryptionConfiguration *corev1.Secret,
 	secretOIDCCABundle *corev1.Secret,
 	secretServiceAccountKey *corev1.Secret,
@@ -379,7 +376,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 		apiserver.InjectAuditSettings(deployment, configMapAuditPolicy, secretAuditWebhookKubeconfig, k.values.Audit)
 		apiserver.InjectAdmissionSettings(deployment, configMapAdmissionConfigs, secretAdmissionKubeconfigs, k.values.Values)
 		apiserver.InjectEncryptionSettings(deployment, secretETCDEncryptionConfiguration)
-		k.handleLifecycleSettings(deployment)
 		k.handleSNISettings(deployment)
 		k.handleTLSSNISettings(deployment, tlsSNISecrets)
 		k.handleOIDCSettings(deployment, secretOIDCCABundle)
@@ -391,14 +387,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 		}
 		if err := k.handleKubeletSettings(deployment, secretKubeletClient); err != nil {
 			return err
-		}
-
-		if version.ConstraintK8sEqual124.Check(k.values.Version) {
-			// For kube-apiserver version 1.24 there is a deadlock that can occur during shutdown that prevents the
-			// graceful termination of the kube-apiserver container to complete when the --audit-log-mode setting
-			// is set to batch. For more information check
-			// https://github.com/gardener/gardener/blob/a63e23a27dabc6a25fb470128a52f8585cd136ff/pkg/operation/botanist/component/kubeapiserver/deployment.go#L677-L683
-			k.handleWatchdogSidecar(deployment, configMapTerminationHandler, healthCheckToken)
 		}
 
 		utilruntime.Must(references.InjectAnnotations(deployment))
@@ -448,10 +436,6 @@ func (k *kubeAPIServer) computeKubeAPIServerArgs() []string {
 			"policy/v1/poddisruptionbudgets": false,
 			"storage.k8s.io/v1/csidrivers":   false,
 			"storage.k8s.io/v1/csinodes":     false,
-		}
-
-		if version.ConstraintK8sLess125.Check(k.values.Version) {
-			disableAPIs["policy/v1beta1/podsecuritypolicies"] = false
 		}
 
 		// Allow users to explicitly enable disabled APIs via RuntimeConfig.
@@ -532,19 +516,6 @@ func (k *kubeAPIServer) handleTLSSNISettings(deployment *appsv1.Deployment, tlsS
 				},
 			},
 		})
-	}
-}
-
-func (k *kubeAPIServer) handleLifecycleSettings(deployment *appsv1.Deployment) {
-	// For kube-apiserver version 1.24 there is a deadlock that can occur during shutdown that prevents the graceful termination
-	// of the kube-apiserver container to complete when the --audit-log-mode setting is set to batch. Open TCP connections to that
-	// kube-apiserver are not terminated and clients will keep receiving an error that the kube-apiserver is shutting down which leads
-	// to various problems, e.g. nodes becoming not ready. By setting --shutdown-send-retry-after=true, we instruct the kube-apiserver
-	// to send a response with `Connection: close` and `Retry-After: N` headers during the graceful termination and thus all new
-	// requests will have their connections closed and eventually be reopened to healthy kube-apiservers.
-	// TODO: Once https://github.com/kubernetes/kubernetes/pull/113741 is merged this setting can be removed.
-	if version.ConstraintK8sEqual124.Check(k.values.Version) {
-		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--shutdown-send-retry-after=true")
 	}
 }
 
@@ -1020,42 +991,6 @@ func (k *kubeAPIServer) handleKubeletSettings(deployment *appsv1.Deployment, sec
 	}...)
 
 	return nil
-}
-
-func (k *kubeAPIServer) handleWatchdogSidecar(deployment *appsv1.Deployment, configMap *corev1.ConfigMap, healthCheckToken string) {
-	deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, corev1.Container{
-		Name:  containerNameWatchdog,
-		Image: k.values.Images.Watchdog,
-		Command: []string{
-			"/bin/sh",
-			fmt.Sprintf("%s/%s", volumeMountPathWatchdog, dataKeyWatchdogScript),
-			healthCheckToken,
-		},
-		SecurityContext: &corev1.SecurityContext{
-			Capabilities: &corev1.Capabilities{
-				Add: []corev1.Capability{"SYS_PTRACE"},
-			},
-		},
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				Name:      volumeNameWatchdog,
-				MountPath: volumeMountPathWatchdog,
-			},
-		},
-	})
-
-	deployment.Spec.Template.Spec.ShareProcessNamespace = ptr.To(true)
-	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-		Name: volumeNameWatchdog,
-		VolumeSource: corev1.VolumeSource{
-			ConfigMap: &corev1.ConfigMapVolumeSource{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: configMap.Name,
-				},
-				DefaultMode: ptr.To(int32(500)),
-			},
-		},
-	})
 }
 
 func (k *kubeAPIServer) handleAuthenticationSettings(deployment *appsv1.Deployment, secretWebhookKubeconfig *corev1.Secret) {

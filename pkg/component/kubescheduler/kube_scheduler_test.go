@@ -89,8 +89,16 @@ var _ = Describe("KubeScheduler", func() {
 			componentConfigYAML := string(data)
 
 			cm := &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{Name: "kube-scheduler-config", Namespace: namespace},
-				Data:       map[string]string{"config.yaml": componentConfigYAML},
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "ConfigMap",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "kube-scheduler-config",
+					Namespace:       namespace,
+					ResourceVersion: "1",
+				},
+				Data: map[string]string{"config.yaml": componentConfigYAML},
 			}
 			Expect(kubernetesutils.MakeUnique(cm)).To(Succeed())
 			return cm
@@ -484,6 +492,16 @@ subjects:
 				Expect(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_target_kube-scheduler.yaml"]).To(Equal([]byte(clusterRoleBinding1YAML)))
 				Expect(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_target_kube-scheduler-volume.yaml"]).To(Equal([]byte(clusterRoleBinding2YAML)))
 
+				expectedConfigMap := configMapFor(expectedComponentConfigFilePath)
+				actualConfigMap := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      expectedConfigMap.Name,
+						Namespace: namespace,
+					},
+				}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(actualConfigMap), actualConfigMap)).To(Succeed())
+				Expect(actualConfigMap).To(DeepEqual(expectedConfigMap))
+
 				actualDeployment := &appsv1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      deploymentName,
@@ -518,8 +536,6 @@ subjects:
 				Expect(actualPDB).To(DeepEqual(pdbFor(runtimeSemverVersion)))
 			},
 
-			Entry("kubernetes 1.24 w/o config", "1.24.1", "1.24.1", configEmpty, "testdata/component-config-1.24.yaml"),
-			Entry("kubernetes 1.24 w/ full config", "1.24.1", "1.24.1", configFull, "testdata/component-config-1.24-bin-packing.yaml"),
 			Entry("kubernetes 1.25 w/o config", "1.25.0", "1.25.0", configEmpty, "testdata/component-config-1.25.yaml"),
 			Entry("kubernetes 1.25 w/ full config", "1.25.0", "1.25.0", configFull, "testdata/component-config-1.25-bin-packing.yaml"),
 			Entry("kubernetes 1.26 w/o config", "1.26.0", "1.26.0", configEmpty, "testdata/component-config-1.25.yaml"),

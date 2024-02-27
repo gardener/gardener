@@ -38,16 +38,16 @@ var _ = Describe("featuregates", func() {
 
 		Entry("TopologyAwareHints is supported in 1.27.4", "TopologyAwareHints", "1.27.4", true, true),                        // AddedInVersion: 1.21
 		Entry("AggregatedDiscoveryEndpoint is not supported in 1.25.8", "AggregatedDiscoveryEndpoint", "1.25.8", false, true), // AddedInVersion: 1.26
-		Entry("TTLAfterFinished is not supported in 1.26.2", "TTLAfterFinished", "1.26.2", false, true),                       // RemovedInVersion: 1.25
+		Entry("CSIMigrationOpenStack is not supported in 1.26.2", "CSIMigrationOpenStack", "1.26.2", false, true),             // RemovedInVersion: 1.25
 		Entry("SuspendJob is supported in 1.25.9", "SuspendJob", "1.25.9", true, true),                                        // AddedInVersion: 1.24, RemovedInVersion: 1.26
-		Entry("VolumeSubpath is supported in 1.24.7", "VolumeSubpath", "1.24.7", true, true),                                  // RemovedInVersion: 1.25
+		Entry("DaemonSetUpdateSurge is supported in 1.26.7", "DaemonSetUpdateSurge", "1.26.7", true, true),                    // RemovedInVersion: 1.27
 		Entry("Foo is unknown in 1.25.8", "Foo", "1.25.8", false, false),                                                      // Unknown
 
 		Entry("AnyVolumeDataSource is supported in 1.24.9", "AnyVolumeDataSource", "1.24.9", true, true),                     // AddedInVersion: 1.18
 		Entry("SELinuxMountReadWriteOncePod is supported in 1.26.10", "SELinuxMountReadWriteOncePod", "1.26.10", true, true), // AddedInVersion: 1.25
-		Entry("EndpointSlice is not supported in 1.25.4", "EndpointSlice", "1.25.4", false, true),                            // RemovedInVersion: 1.23
+		Entry("EphemeralContainers is not supported in 1.28.2", "EphemeralContainers", "1.28.2", false, true),                // RemovedInVersion: 1.27
 		Entry("DownwardAPIHugePages is supported in 1.27.1", "DownwardAPIHugePages", "1.27.1", true, true),                   // AddedInVersion: 1.20, RemovedInVersion: 1.27
-		Entry("CSIServiceAccountToken is not supported in 1.27.4", "CSIServiceAccountToken", "1.27.4", false, true),          // RemovedInVersion: 1.25
+		Entry("CSRDuration is not supported in 1.27.4", "CSRDuration", "1.27.4", false, true),                                // RemovedInVersion: 1.26
 		Entry("Foo is unknown in 1.27.0", "Foo", "1.27.0", false, false),                                                     // Unknown
 
 		Entry("AllAlpha is supported in 1.17.0", "AllAlpha", "1.17.0", true, true),        // AddedInVersion: 1.17
@@ -74,9 +74,9 @@ var _ = Describe("featuregates", func() {
 				"BadValue": Equal("Foo"),
 				"Detail":   Equal("unknown feature gate Foo"),
 			})))),
-			Entry("setting non-default value for locked feature gate", map[string]bool{"EndpointSlice": false}, "1.21.5", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("setting non-default value for locked feature gate", map[string]bool{"CPUManager": false}, "1.27.5", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal(field.NewPath("EndpointSlice").String()),
+				"Field":  Equal(field.NewPath("CPUManager").String()),
 				"Detail": Equal("cannot set feature gate to false, feature is locked to true"),
 			})))),
 		)

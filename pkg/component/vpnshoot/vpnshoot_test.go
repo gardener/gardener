@@ -77,7 +77,6 @@ var _ = Describe("VPNShoot", func() {
 				Header:      reversedVPNHeader,
 				IPFamilies:  []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
 			},
-			PSPDisabled:       true,
 			KubernetesVersion: semver.MustParse("1.25.0"),
 		}
 	)
@@ -159,67 +158,6 @@ metadata:
   creationTimestamp: null
   labels:
     app: vpn-shoot
-  name: vpn-shoot
-  namespace: kube-system
-`
-			podSecurityPolicyYAML = `apiVersion: policy/v1beta1
-kind: PodSecurityPolicy
-metadata:
-  annotations:
-    seccomp.security.alpha.kubernetes.io/allowedProfileNames: runtime/default
-    seccomp.security.alpha.kubernetes.io/defaultProfileName: runtime/default
-  creationTimestamp: null
-  name: gardener.kube-system.vpn-shoot
-spec:
-  allowedCapabilities:
-  - NET_ADMIN
-  allowedHostPaths:
-  - pathPrefix: /dev/net/tun
-  fsGroup:
-    rule: RunAsAny
-  privileged: true
-  runAsUser:
-    rule: RunAsAny
-  seLinux:
-    rule: RunAsAny
-  supplementalGroups:
-    rule: RunAsAny
-  volumes:
-  - secret
-  - emptyDir
-  - projected
-  - hostPath
-`
-			clusterRolePSPYAML = `apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  creationTimestamp: null
-  name: gardener.cloud:psp:kube-system:vpn-shoot
-rules:
-- apiGroups:
-  - policy
-  - extensions
-  resourceNames:
-  - gardener.kube-system.vpn-shoot
-  resources:
-  - podsecuritypolicies
-  verbs:
-  - use
-`
-			roleBindingPSPYAML = `apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  annotations:
-    resources.gardener.cloud/delete-on-invalid-update: "true"
-  creationTimestamp: null
-  name: gardener.cloud:psp:vpn-shoot
-  namespace: kube-system
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: gardener.cloud:psp:kube-system:vpn-shoot
-subjects:
-- kind: ServiceAccount
   name: vpn-shoot
   namespace: kube-system
 `
@@ -823,48 +761,6 @@ spec:
 
 				AfterEach(func() {
 					values.HighAvailabilityEnabled = false
-				})
-			})
-		})
-
-		Context("PodSecurityPolicy", func() {
-			BeforeEach(func() {
-				values.VPAEnabled = true
-			})
-
-			Context("PSP is not disabled", func() {
-				BeforeEach(func() {
-					values.PSPDisabled = false
-				})
-				JustBeforeEach(func() {
-					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__vpn-shoot.yaml"])).To(Equal(vpaYAML))
-
-					var (
-						secretNameClient  = expectVPNShootSecret(managedResourceSecret.Data)
-						secretNameCA      = expectCASecret(managedResourceSecret.Data)
-						secretNameTLSAuth = expectTLSAuthSecret(managedResourceSecret.Data)
-					)
-
-					deployment := &appsv1.Deployment{}
-					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"], deployment)).To(Succeed())
-					Expect(deployment).To(DeepEqual(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuth, values.VPAEnabled)))
-				})
-
-				It("should successfully deploy all resources", func() {
-					Expect(managedResourceSecret.Data).To(HaveLen(11))
-					Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.vpn-shoot.yaml"])).To(Equal(podSecurityPolicyYAML))
-					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_vpn-shoot.yaml"])).To(Equal(clusterRolePSPYAML))
-					Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_vpn-shoot.yaml"])).To(Equal(roleBindingPSPYAML))
-				})
-			})
-
-			Context("PSP is disabled", func() {
-				BeforeEach(func() {
-					values.PSPDisabled = true
-				})
-
-				It("should successfully deploy all resources", func() {
-					Expect(managedResourceSecret.Data).To(HaveLen(8))
 				})
 			})
 		})

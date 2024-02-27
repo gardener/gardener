@@ -55,7 +55,6 @@ func (b *Botanist) DefaultKubeProxy() (kubeproxy.Interface, error) {
 			ImageAlpine:    imageAlpine.String(),
 			PodNetworkCIDR: ptr.To(b.Shoot.Networks.Pods.String()),
 			VPAEnabled:     b.Shoot.WantsVerticalPodAutoscaler,
-			PSPDisabled:    b.Shoot.PSPDisabled,
 		},
 	), nil
 }

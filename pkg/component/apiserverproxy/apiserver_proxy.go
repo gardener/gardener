@@ -25,8 +25,6 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -60,9 +58,6 @@ const (
 
 	volumeMountPathConfig = "/etc/apiserver-proxy"
 	dataKeyConfig         = "envoy.yaml"
-
-	clusterRoleName = "gardener.cloud:psp:kube-system:apiserver-proxy"
-	roleBindingName = "gardener.cloud:psp:apiserver-proxy"
 )
 
 var (
@@ -84,7 +79,6 @@ func init() {
 // Values is a set of configuration values for the apiserver-proxy component.
 type Values struct {
 	ProxySeedServerHost string
-	PSPDisabled         bool
 	Image               string
 	SidecarImage        string
 	DNSLookupFamily     string
@@ -402,86 +396,6 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 			},
 		}
 	)
-
-	if !a.values.PSPDisabled {
-		var (
-			clusterRole = &rbacv1.ClusterRole{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   clusterRoleName,
-					Labels: getDefaultLabels(),
-				},
-				Rules: []rbacv1.PolicyRule{
-					{
-						APIGroups:     []string{"policy", "extensions"},
-						ResourceNames: []string{"gardener.kube-system.apiserver-proxy"},
-						Resources:     []string{"podsecuritypolicies"},
-						Verbs:         []string{"use"},
-					},
-				},
-			}
-			roleBinding = &rbacv1.RoleBinding{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        roleBindingName,
-					Namespace:   metav1.NamespaceSystem,
-					Annotations: map[string]string{"resources.gardener.cloud/delete-on-invalid-update": "true"},
-					Labels:      getDefaultLabels(),
-				},
-				RoleRef: rbacv1.RoleRef{
-					APIGroup: rbacv1.GroupName,
-					Kind:     "ClusterRole",
-					Name:     clusterRoleName,
-				},
-				Subjects: []rbacv1.Subject{
-					{
-						Kind:      rbacv1.ServiceAccountKind,
-						Name:      serviceAcountName,
-						Namespace: metav1.NamespaceSystem,
-					},
-				},
-			}
-			podSecurityPolicy = &policyv1beta1.PodSecurityPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "gardener.kube-system.apiserver-proxy",
-					Annotations: map[string]string{
-						v1beta1constants.AnnotationSeccompDefaultProfile:  v1beta1constants.AnnotationSeccompAllowedProfilesRuntimeDefaultValue,
-						v1beta1constants.AnnotationSeccompAllowedProfiles: v1beta1constants.AnnotationSeccompAllowedProfilesRuntimeDefaultValue,
-					},
-					Labels: getDefaultLabels(),
-				},
-				Spec: policyv1beta1.PodSecurityPolicySpec{
-					Privileged: false,
-					Volumes: []policyv1beta1.FSType{
-						policyv1beta1.Secret,
-						policyv1beta1.ConfigMap,
-						policyv1beta1.EmptyDir,
-					},
-					HostNetwork: true,
-					HostPorts: []policyv1beta1.HostPortRange{
-						{Min: 443, Max: 443},
-						{Min: adminPort, Max: adminPort},
-					},
-					AllowedHostPaths:    []policyv1beta1.AllowedHostPath{},
-					AllowedCapabilities: []corev1.Capability{"NET_ADMIN", "NET_BIND_SERVICE"},
-					RunAsUser: policyv1beta1.RunAsUserStrategyOptions{
-						Rule: policyv1beta1.RunAsUserStrategyRunAsAny,
-					},
-					SELinux: policyv1beta1.SELinuxStrategyOptions{
-						Rule: policyv1beta1.SELinuxStrategyRunAsAny,
-					},
-					SupplementalGroups: policyv1beta1.SupplementalGroupsStrategyOptions{
-						Rule: policyv1beta1.SupplementalGroupsStrategyRunAsAny,
-					},
-					FSGroup: policyv1beta1.FSGroupStrategyOptions{
-						Rule: policyv1beta1.FSGroupStrategyRunAsAny,
-					},
-					ReadOnlyRootFilesystem: false,
-				},
-			}
-		)
-		if err := registry.Add(clusterRole, roleBinding, podSecurityPolicy); err != nil {
-			return nil, err
-		}
-	}
 
 	utilruntime.Must(references.InjectAnnotations(daemonSet))
 

@@ -222,7 +222,7 @@ users:
 							Name: "node2",
 							Labels: map[string]string{
 								"worker.gardener.cloud/pool":               poolName2,
-								"worker.gardener.cloud/kubernetes-version": "1.24.3",
+								"worker.gardener.cloud/kubernetes-version": "1.27.3",
 							},
 						},
 					},
@@ -240,7 +240,7 @@ users:
 							Name: "node4",
 							Labels: map[string]string{
 								"worker.gardener.cloud/pool":               "pool4",
-								"worker.gardener.cloud/kubernetes-version": "1.24.3",
+								"worker.gardener.cloud/kubernetes-version": "1.27.3",
 							},
 						},
 					},
@@ -267,13 +267,13 @@ users:
 						},
 						{
 							Name:              poolName2,
-							KubernetesVersion: semver.MustParse("1.24.3"),
-							Image:             repositoryKubeProxyImage + ":v1.24.3",
+							KubernetesVersion: semver.MustParse("1.27.3"),
+							Image:             repositoryKubeProxyImage + ":v1.27.3",
 						},
 						{
 							Name:              "pool4",
-							KubernetesVersion: semver.MustParse("1.24.3"),
-							Image:             repositoryKubeProxyImage + ":v1.24.3",
+							KubernetesVersion: semver.MustParse("1.27.3"),
+							Image:             repositoryKubeProxyImage + ":v1.27.3",
 						},
 					})
 				})

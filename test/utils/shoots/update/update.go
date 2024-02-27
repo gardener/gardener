@@ -25,18 +25,15 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/utils/access"
 	"github.com/gardener/gardener/test/utils/shoots/update/highavailability"
@@ -86,39 +83,6 @@ func RunTest(
 			f.SeedClient.Client(), "update", shootSeedNamespace, GetKubeAPIServerAuthToken(ctx, f.SeedClient, shootSeedNamespace))
 		Expect(err).NotTo(HaveOccurred())
 		WaitForJobToBeReady(ctx, f.SeedClient.Client(), job)
-	}
-
-	k8sLess125, err := versionutils.CheckVersionMeetsConstraint(f.Shoot.Spec.Kubernetes.Version, "< 1.25")
-	Expect(err).NotTo(HaveOccurred())
-
-	if k8sLess125 {
-		patch := client.MergeFrom(f.Shoot.DeepCopy())
-		// Disable PodSecurityPolicy in the Shoot spec
-		if !v1beta1helper.IsPSPDisabled(f.Shoot) {
-			if f.Shoot.Spec.Kubernetes.KubeAPIServer == nil {
-				f.Shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{}
-			}
-			f.Shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = append(f.Shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins, gardencorev1beta1.AdmissionPlugin{
-				Name:     "PodSecurityPolicy",
-				Disabled: ptr.To(true),
-			})
-		}
-
-		if v1beta1helper.IsPSPDisabled(f.Shoot) {
-			// This field should not be set for kubernetes v1.25+ or when PSP is disabled in the Shoot spec.
-			f.Shoot.Spec.Kubernetes.AllowPrivilegedContainers = nil
-		}
-
-		Eventually(func() error {
-			return f.GardenClient.Client().Patch(ctx, f.Shoot, patch)
-		}).Should(Succeed())
-
-		Expect(f.WaitForShootToBeReconciled(ctx, f.Shoot)).To(Succeed())
-
-		By("Verify no PodSecurityPolicy resources exist")
-		pspList := &policyv1beta1.PodSecurityPolicyList{}
-		Expect(shootClient.Client().List(ctx, pspList)).To(Succeed())
-		Expect(pspList.Items).To(BeEmpty())
 	}
 
 	By("Verify the Kubernetes version for all existing nodes matches with the versions defined in the Shoot spec [before update]")

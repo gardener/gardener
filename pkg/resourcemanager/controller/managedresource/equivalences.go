@@ -25,7 +25,6 @@ var defaultEquivalences = []equivalenceList{
 	newEquivalenceList("StatefulSet", "extensions", "apps"),
 	newEquivalenceList("Ingress", "extensions", "networking.k8s.io"),
 	newEquivalenceList("NetworkPolicy", "extensions", "networking.k8s.io"),
-	newEquivalenceList("PodSecurityPolicy", "extensions", "policy"),
 }
 
 type equivalenceList []metav1.GroupKind

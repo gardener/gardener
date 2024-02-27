@@ -47,7 +47,6 @@ import (
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 var (
@@ -125,7 +124,7 @@ func NewKubeAPIServer(
 	)
 
 	if apiServerConfig != nil {
-		enabledAdmissionPlugins = computeEnabledKubeAPIServerAdmissionPlugins(enabledAdmissionPlugins, apiServerConfig.AdmissionPlugins, isWorkerless)
+		enabledAdmissionPlugins = computeEnabledAPIServerAdmissionPlugins(enabledAdmissionPlugins, apiServerConfig.AdmissionPlugins)
 		disabledAdmissionPlugins = computeDisabledAPIServerAdmissionPlugins(apiServerConfig.AdmissionPlugins)
 
 		enabledAdmissionPlugins, err = ensureKubeAPIServerAdmissionPluginConfig(enabledAdmissionPlugins)
@@ -286,14 +285,6 @@ func computeKubeAPIServerImages(
 	}
 	result.KubeAPIServer = imageKubeAPIServer.String()
 
-	if version.ConstraintK8sEqual124.Check(targetVersion) {
-		imageWatchdog, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlpine, imagevectorutils.RuntimeVersion(runtimeVersion.String()), imagevectorutils.TargetVersion(targetVersion.String()))
-		if err != nil {
-			return kubeapiserver.Images{}, err
-		}
-		result.Watchdog = imageWatchdog.String()
-	}
-
 	if vpnConfig.HighAvailabilityEnabled {
 		imageVPNClient, err := imagevector.ImageVector().FindImage(imagevector.ImageNameVpnShootClient, imagevectorutils.RuntimeVersion(runtimeVersion.String()), imagevectorutils.TargetVersion(targetVersion.String()))
 		if err != nil {
@@ -360,18 +351,6 @@ func ensureKubeAPIServerAdmissionPluginConfig(plugins []gardencorev1beta1.Admiss
 	}
 
 	return plugins, nil
-}
-
-func computeEnabledKubeAPIServerAdmissionPlugins(defaultPlugins, configuredPlugins []gardencorev1beta1.AdmissionPlugin, isWorkerless bool) []gardencorev1beta1.AdmissionPlugin {
-	var admissionPlugins []gardencorev1beta1.AdmissionPlugin
-	for _, defaultPlugin := range computeEnabledAPIServerAdmissionPlugins(defaultPlugins, configuredPlugins) {
-		// if it's a workerless cluster, we don't add the PodSecurityPolicy plugin, because the API is disabled already
-		if isWorkerless && defaultPlugin.Name == "PodSecurityPolicy" {
-			continue
-		}
-		admissionPlugins = append(admissionPlugins, defaultPlugin)
-	}
-	return admissionPlugins
 }
 
 func computeKubeAPIServerReplicas(autoscalingConfig apiserver.AutoscalingConfig, deployment *appsv1.Deployment, wantScaleDown bool) *int32 {

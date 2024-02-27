@@ -2007,7 +2007,7 @@ subjects:
 
 					secrets.BootstrapKubeconfig = &component.Secret{Name: secretNameBootstrapKubeconfig}
 
-					cfg.RuntimeKubernetesVersion = semver.MustParse("1.24.0")
+					cfg.RuntimeKubernetesVersion = semver.MustParse("1.25.0")
 					resourceManager = New(c, deployNamespace, sm, cfg)
 					resourceManager.SetSecrets(secrets)
 

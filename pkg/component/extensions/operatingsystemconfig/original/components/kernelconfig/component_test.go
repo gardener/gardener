@@ -106,8 +106,8 @@ var _ = Describe("Component", func() {
 		Expect(units).To(ConsistOf(systemdSysctlUnit))
 		Expect(files).To(ConsistOf(kernelSettingsFile))
 	},
-		Entry("should return the expected units and files", "1.24.0", "", nil, nil),
-		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set", "1.24.0", kubeletSysctlConfig, ptr.To(true), nil),
+		Entry("should return the expected units and files", "1.25.0", "", nil, nil),
+		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set", "1.25.0", kubeletSysctlConfig, ptr.To(true), nil),
 		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set by default", "1.26.0", kubeletSysctlConfig, nil, nil),
 		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set to false", "1.26.0", "", ptr.To(false), nil),
 		// This test prevents from unknowingly upgrading to a newer k8s version which may have different sysctl settings.

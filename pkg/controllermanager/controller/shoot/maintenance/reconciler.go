@@ -154,23 +154,6 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		return err
 	}
 
-	// Disable PodSecurityPolicy Admission Controller when shoot cluster is updated to k8s version >= 1.25
-	if versionutils.ConstraintK8sLess125.Check(oldShootKubernetesVersion) && versionutils.ConstraintK8sGreaterEqual125.Check(shootKubernetesVersion) {
-		if maintainedShoot.Spec.Kubernetes.AllowPrivilegedContainers != nil {
-			maintainedShoot.Spec.Kubernetes.AllowPrivilegedContainers = nil
-			operations = append(operations, fmt.Sprintf("allowPrivilegedContainers must be nil for updating Kubernetes to %q", shootKubernetesVersion.String()))
-		}
-
-		reasonsForAdmissionPluginUpdate := disablePodSecurityPolicyAdmissionController(maintainedShoot, fmt.Sprintf("PodSecurityPolicy Admission Controller must be disabled for updating Kubernetes to %q", shootKubernetesVersion.String()))
-		operations = append(operations, reasonsForAdmissionPluginUpdate...)
-		if len(reasonsForAdmissionPluginUpdate) > 0 {
-			operations = append(operations, fmt.Sprintf("Postponing Kubernetes update to %q to the next maintenance window because disabling PodSecurityPolicy Admission Controller and Kubernetes update cannot be done at the same time", shootKubernetesVersion.String()))
-			shootKubernetesVersion = oldShootKubernetesVersion
-			maintainedShoot.Spec.Kubernetes.Version = shoot.Spec.Kubernetes.Version
-			kubernetesControlPlaneUpdate = nil
-		}
-	}
-
 	// Reset the `EnableStaticTokenKubeconfig` value to false, when shoot cluster is updated to  k8s version >= 1.27.
 	if versionutils.ConstraintK8sLess127.Check(oldShootKubernetesVersion) && versionutils.ConstraintK8sGreaterEqual127.Check(shootKubernetesVersion) {
 		if ptr.Deref(maintainedShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, false) {
@@ -807,34 +790,6 @@ func ExpirationDateExpired(timestamp *metav1.Time) bool {
 		return false
 	}
 	return time.Now().UTC().After(timestamp.Time) || time.Now().UTC().Equal(timestamp.Time)
-}
-
-// disablePodSecurityPolicyAdmissionController disables the PodSecurityPolicy Admission Controller of a shoot
-func disablePodSecurityPolicyAdmissionController(shoot *gardencorev1beta1.Shoot, reason string) []string {
-	var reasonsForUpdate []string
-
-	if shoot.Spec.Kubernetes.KubeAPIServer == nil {
-		shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{}
-	}
-
-	for i, admissionPlugin := range shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins {
-		if admissionPlugin.Name == "PodSecurityPolicy" {
-			if !ptr.Deref(admissionPlugin.Disabled, false) {
-				shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins[i].Disabled = ptr.To(true)
-				reasonsForUpdate = append(reasonsForUpdate, reason)
-			}
-			return reasonsForUpdate
-		}
-	}
-
-	disabledAdmissionPlugin := gardencorev1beta1.AdmissionPlugin{
-		Name:     "PodSecurityPolicy",
-		Disabled: ptr.To(true),
-	}
-	shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = append(shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins, disabledAdmissionPlugin)
-	reasonsForUpdate = append(reasonsForUpdate, reason)
-
-	return reasonsForUpdate
 }
 
 // ensureSufficientMaxWorkers ensures that the number of max workers of a worker group is greater or equal to its number of zones

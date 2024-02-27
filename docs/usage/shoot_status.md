@@ -78,7 +78,6 @@ webhooks:
 However, some other resources (some of them cluster-scoped) might still trigger the remediator, namely:
 - endpoints
 - nodes
-- podsecuritypolicies
 - clusterroles
 - clusterrolebindings
 - customresourcedefinitions

@@ -2388,10 +2388,10 @@ var _ = Describe("validator", func() {
 			Context("kubernetes allowPrivilegedContainers defaulting", func() {
 				BeforeEach(func() {
 					shoot.Spec.Kubernetes.AllowPrivilegedContainers = nil
+					shoot.Spec.Kubernetes.Version = "1.25.0"
 
 					cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
 						{Version: "1.25.0"},
-						{Version: "1.24.0"},
 					}
 
 					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
@@ -2400,72 +2400,12 @@ var _ = Describe("validator", func() {
 					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 				})
 
-				Context("when shoot uses Kubernetes < 1.25", func() {
-					BeforeEach(func() {
-						shoot.Spec.Kubernetes.Version = "1.24.0"
-					})
+				It("should not set the field", func() {
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
 
-					It("should set the field to 'true' if PodSecurityPolicy admission plugin is not disabled and shoot has workers", func() {
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-
-						Expect(err).NotTo(HaveOccurred())
-						Expect(shoot.Spec.Kubernetes.AllowPrivilegedContainers).To(PointTo(Equal(true)))
-					})
-
-					It("should not set the field if shoot is in deletion", func() {
-						oldShoot := shoot.DeepCopy()
-						shoot.SetDeletionTimestamp(&metav1.Time{})
-
-						attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-
-						Expect(err).NotTo(HaveOccurred())
-						Expect(shoot.Spec.Kubernetes.AllowPrivilegedContainers).To(BeNil())
-					})
-
-					It("should not set the field if the shoot is workerless", func() {
-						shoot.Spec.Provider.Workers = nil
-
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-
-						Expect(err).NotTo(HaveOccurred())
-						Expect(shoot.Spec.Kubernetes.AllowPrivilegedContainers).To(BeNil())
-					})
-
-					It("should not default the field if PodSecurityPolicy admission plugin is disabled in the shoot spec", func() {
-						shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
-							AdmissionPlugins: []core.AdmissionPlugin{
-								{
-									Name:     "PodSecurityPolicy",
-									Disabled: ptr.To(true),
-								},
-							},
-						}
-
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-
-						Expect(err).NotTo(HaveOccurred())
-						Expect(shoot.Spec.Kubernetes.AllowPrivilegedContainers).To(BeNil())
-					})
-				})
-
-				Context("when shoot uses Kubernetes >= 1.25", func() {
-					BeforeEach(func() {
-						shoot.Spec.Kubernetes.Version = "1.25.0"
-					})
-
-					It("should not set the field", func() {
-						shoot.Spec.Kubernetes.AllowPrivilegedContainers = ptr.To(false)
-
-						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-						err := admissionHandler.Admit(ctx, attrs, nil)
-
-						Expect(err).NotTo(HaveOccurred())
-						Expect(shoot.Spec.Kubernetes.AllowPrivilegedContainers).To(PointTo(BeFalse()))
-					})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(shoot.Spec.Kubernetes.AllowPrivilegedContainers).To(BeNil())
 				})
 			})
 

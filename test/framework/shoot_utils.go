@@ -34,7 +34,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/retry"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // ShootSeedNamespace gets the shoot namespace in the seed
@@ -259,16 +258,6 @@ func setShootGeneralSettings(shoot *gardencorev1beta1.Shoot, cfg *ShootCreationC
 			shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{}
 		}
 		shoot.Spec.Hibernation.Enabled = &cfg.startHibernated
-	}
-
-	// Errors are ignored here because we cannot do anything meaningful with them - variables will default to `false`.
-	k8sLessEqual125, _ := versionutils.CheckVersionMeetsConstraint(shoot.Spec.Kubernetes.Version, "< 1.25")
-	// This field should not be set for kubernetes version >= 1.25
-	if k8sLessEqual125 {
-		// allow privileged containers defaults to true
-		if cfg.allowPrivilegedContainers != nil {
-			shoot.Spec.Kubernetes.AllowPrivilegedContainers = cfg.allowPrivilegedContainers
-		}
 	}
 
 	if clearExtensions {

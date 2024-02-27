@@ -49,7 +49,6 @@ func (b *Botanist) DefaultAPIServerProxy() (apiserverproxy.Interface, error) {
 		Image:               image.String(),
 		SidecarImage:        sidecarImage.String(),
 		ProxySeedServerHost: b.outOfClusterAPIServerFQDN(),
-		PSPDisabled:         b.Shoot.PSPDisabled,
 		DNSLookupFamily:     dnsLookupFamily,
 	}
 

@@ -4276,7 +4276,7 @@ func schema_pkg_apis_core_v1beta1_Kubernetes(ref common.ReferenceCallback) commo
 				Properties: map[string]spec.Schema{
 					"allowPrivilegedContainers": {
 						SchemaProps: spec.SchemaProps{
-							Description: "AllowPrivilegedContainers indicates whether privileged containers are allowed in the Shoot. Defaults to true for Kubernetes versions below v1.25. Unusable for Kubernetes versions v1.25 and higher.",
+							Description: "AllowPrivilegedContainers indicates whether privileged containers are allowed in the Shoot. Defaults to true for Kubernetes versions below v1.25. Unusable for Kubernetes versions v1.25 and higher.\n\nDeprecated: This field is deprecated and will be removed in a future version.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},

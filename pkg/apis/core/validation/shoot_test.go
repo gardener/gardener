@@ -2363,43 +2363,15 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("kubernetes.allowPrivilegedContainers field validation", func() {
-			Context("kubernetes version < 1.25", func() {
-				It("should allow creating shoots with this field set", func() {
-					shoot.Spec.Kubernetes.Version = "1.24.6"
-					shoot.Spec.Kubernetes.AllowPrivilegedContainers = ptr.To(true)
+			It("should deny creating shoots with this field set", func() {
+				shoot.Spec.Kubernetes.AllowPrivilegedContainers = ptr.To(true)
 
-					errorList := ValidateShoot(shoot)
-					Expect(errorList).To(BeEmpty())
-				})
-			})
-
-			Context("kubernetes version >= 1.25", func() {
-				It("should deny creating shoots with this field set", func() {
-					shoot.Spec.Kubernetes.Version = "1.25.0"
-					shoot.Spec.Kubernetes.AllowPrivilegedContainers = ptr.To(true)
-
-					errorList := ValidateShoot(shoot)
-					Expect(errorList).Should(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeForbidden),
-						"Field":  Equal("spec.kubernetes.allowPrivilegedContainers"),
-						"Detail": ContainSubstring("for Kubernetes versions >= 1.25, allowPrivilegedContainers field should not be set"),
-					}))))
-				})
-
-				It("should deny updating shoots to v1.25 with this field set", func() {
-					shoot.Spec.Kubernetes.Version = "1.24.0"
-					shoot.Spec.Kubernetes.AllowPrivilegedContainers = ptr.To(true)
-
-					newShoot := prepareShootForUpdate(shoot)
-					newShoot.Spec.Kubernetes.Version = "1.25.0"
-
-					errorList := ValidateShootUpdate(newShoot, shoot)
-					Expect(errorList).Should(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeForbidden),
-						"Field":  Equal("spec.kubernetes.allowPrivilegedContainers"),
-						"Detail": ContainSubstring("for Kubernetes versions >= 1.25, allowPrivilegedContainers field should not be set"),
-					}))))
-				})
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).Should(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.kubernetes.allowPrivilegedContainers"),
+					"Detail": ContainSubstring("allowPrivilegedContainers field should not be set"),
+				}))))
 			})
 		})
 
@@ -2859,7 +2831,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			ignoreTaintsUnique                  = []string{"taint-1", "taint-2"}
 			ignoreTaintsDuplicate               = []string{"taint-1", "taint-1"}
 			ignoreTaintsInvalid                 = []string{"taint 1", "taint-1"}
-			version                             = "1.24"
+			version                             = "1.27.0"
 		)
 
 		Context("ClusterAutoscaler validation", func() {
@@ -3035,9 +3007,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 		Context("FeatureGates validation", func() {
 			It("should forbid invalid feature gates", func() {
 				featureGates := map[string]bool{
-					"AnyVolumeDataSource":    true,
-					"GenericEphemeralVolume": true,
-					"Foo":                    true,
+					"AnyVolumeDataSource":  true,
+					"GracefulNodeShutdown": true,
+					"Foo":                  true,
 				}
 				shoot.Spec.Kubernetes.Version = "1.26.14"
 				shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates = featureGates
@@ -3065,40 +3037,20 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).ToNot(BeEmpty())
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.kubernetes.kubeAPIServer.featureGates.GenericEphemeralVolume"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.kubernetes.kubeAPIServer.featureGates.Foo"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.kubernetes.kubeControllerManager.featureGates.GenericEphemeralVolume"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.kubernetes.kubeControllerManager.featureGates.Foo"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.kubernetes.kubeScheduler.featureGates.GenericEphemeralVolume"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.kubernetes.kubeScheduler.featureGates.Foo"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.kubernetes.kubeProxy.featureGates.GenericEphemeralVolume"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.kubernetes.kubeProxy.featureGates.Foo"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.kubernetes.kubelet.featureGates.GenericEphemeralVolume"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
@@ -3174,141 +3126,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"Detail": Equal("kubernetes version upgrade cannot skip a minor version"),
 					})),
 				))
-			})
-
-			It("should forbid upgrading to v1.25 if PodSecurityPolicy admission plugin is not disabled", func() {
-				shoot.Spec.Kubernetes.Version = "1.24.0"
-				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Kubernetes.Version = "1.25.0"
-
-				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeForbidden),
-						"Field":  Equal("spec.kubernetes.version"),
-						"Detail": ContainSubstring("admission plugin \"PodSecurityPolicy\" should be disabled for Kubernetes versions >=1.25, please check https://github.com/gardener/gardener/blob/master/docs/usage/pod-security.md#migrating-from-podsecuritypolicys-to-podsecurity-admission-controller"),
-					})),
-				))
-			})
-
-			It("should allow upgrading to v1.25 even if PodSecurityPolicy admission plugin is not disabled for a workerless Shoot", func() {
-				shoot.Spec.Kubernetes.Version = "1.24.0"
-				shoot.Spec.Kubernetes.KubeControllerManager = nil
-				shoot.Spec.Provider.Workers = nil
-				shoot.Spec.SecretBindingName = nil
-				shoot.Spec.Addons = nil
-				shoot.Spec.Networking = nil
-
-				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Kubernetes.Version = "1.25.0"
-
-				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
-			})
-
-			It("should not allow upgrading to v1.25 if PodSecurityPolicy admission plugin is disabled in the same patch call", func() {
-				shoot.Spec.Kubernetes.Version = "1.24.0"
-				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Kubernetes.Version = "1.25.0"
-				newShoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
-					{
-						Name:     "PodSecurityPolicy",
-						Disabled: ptr.To(true),
-					},
-				}
-
-				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeForbidden),
-						"Field":  Equal("spec.kubernetes.version"),
-						"Detail": ContainSubstring("admission plugin \"PodSecurityPolicy\" should be disabled for Kubernetes versions >=1.25, please check https://github.com/gardener/gardener/blob/master/docs/usage/pod-security.md#migrating-from-podsecuritypolicys-to-podsecurity-admission-controller"),
-					})),
-				))
-			})
-
-			It("should not allow upgrading to v1.25 if PodSecurityPolicy admission plugin is disabled in the Shoot spec but the Shoot hasn't reconciled successfully", func() {
-				shoot.Spec.Kubernetes.Version = "1.24.0"
-				shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
-					{
-						Name:     "PodSecurityPolicy",
-						Disabled: ptr.To(true),
-					},
-				}
-				shoot.Status.LastOperation = &core.LastOperation{
-					Type:  core.LastOperationTypeReconcile,
-					State: core.LastOperationStateFailed,
-				}
-				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Kubernetes.Version = "1.25.0"
-
-				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.kubernetes.version"),
-						"Detail": And(
-							ContainSubstring("Shoot should have been reconciled successfully before upgrading to v1.25"),
-							ContainSubstring("last operation type was Reconcile but state was not succeeded"),
-						),
-					})),
-				))
-			})
-
-			It("should not allow upgrading to v1.25 if PodSecurityPolicy admission plugin is disabled in the Shoot spec but the lastOperation was not Reconcile", func() {
-				shoot.Spec.Kubernetes.Version = "1.24.0"
-				shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
-					{
-						Name:     "PodSecurityPolicy",
-						Disabled: ptr.To(true),
-					},
-				}
-				shoot.Status.LastOperation = &core.LastOperation{
-					Type:  core.LastOperationTypeRestore,
-					State: core.LastOperationStateSucceeded,
-				}
-				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Kubernetes.Version = "1.25.0"
-
-				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.kubernetes.version"),
-						"Detail": And(
-							ContainSubstring("Shoot should have been reconciled successfully before upgrading to v1.25"),
-							ContainSubstring("last operation was Restore, not Reconcile"),
-						),
-					})),
-				))
-			})
-
-			It("should allow upgrading to v1.25 if PodSecurityPolicy admission plugin is disabled in the Shoot spec and the Shoot has reconciled successfully", func() {
-				shoot.Spec.Kubernetes.Version = "1.24.0"
-				shoot.Status.LastOperation = &core.LastOperation{
-					Type:  core.LastOperationTypeReconcile,
-					State: core.LastOperationStateSucceeded,
-				}
-				shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
-					{
-						Name:     "PodSecurityPolicy",
-						Disabled: ptr.To(true),
-					},
-				}
-				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Kubernetes.Version = "1.25.0"
-
-				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
-			})
-
-			It("should allow creating a new shoot with v1.25 even if PodSecurityPolicy admission plugin is not disabled", func() {
-				shoot.Spec.Kubernetes.Version = "1.25.0"
-
-				Expect(ValidateShoot(shoot)).To(BeEmpty())
-			})
-
-			It("should allow updating specs of a shoot with v1.25 even if PodSecurityPolicy admission plugin is not explicitly disabled", func() {
-				shoot.Spec.Kubernetes.Version = "1.25.0"
-				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Kubernetes.Version = "1.25.0"
-				newShoot.Spec.Provider.Workers[0].Maximum = 5
-
-				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 			})
 		})
 
@@ -6289,16 +6106,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			Entry("valid configuration", "1.25", true, nil, BeEmpty()),
 			Entry("valid configuration with set feature gate", "1.25", true, ptr.To(true), BeEmpty()),
-			Entry("do not allow to set SeccompDefault to true when k8s version < 1.25", "1.24", true, nil, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal("seccompDefault"),
-				"Detail": Equal("seccomp defaulting is not available for kubernetes versions < 1.25"),
-			})))),
-			Entry("do not allow to set SeccompDefault to false when k8s version < 1.25", "1.24", false, nil, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal("seccompDefault"),
-				"Detail": Equal("seccomp defaulting is not available for kubernetes versions < 1.25"),
-			})))),
 			Entry("do not allow to set SeccompDefault to true when feature gate is disabled", "1.25", true, ptr.To(false), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal("seccompDefault"),

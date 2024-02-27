@@ -55,7 +55,6 @@ func (b *Botanist) DefaultNodeLocalDNS() (nodelocaldns.Interface, error) {
 			Config:            v1beta1helper.GetNodeLocalDNS(b.Shoot.GetInfo().Spec.SystemComponents),
 			ClusterDNS:        clusterDNS,
 			DNSServer:         dnsServer,
-			PSPDisabled:       b.Shoot.PSPDisabled,
 			KubernetesVersion: b.Shoot.KubernetesVersion,
 		},
 	), nil

@@ -265,31 +265,6 @@ var _ = Describe("Config", func() {
 		},
 
 		Entry(
-			"kubernetes 1.24 w/o defaults",
-			"1.24.1",
-			clusterDNSAddress,
-			clusterDomain,
-			components.ConfigurableKubeletConfigParameters{},
-			kubeletConfigWithDefaults,
-			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
-				cfg.RotateCertificates = true
-				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
-			},
-		),
-		Entry(
-			"kubernetes 1.24 w/ defaults",
-			"1.24.1",
-			clusterDNSAddress,
-			clusterDomain,
-			params,
-			kubeletConfigWithParams,
-			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
-				cfg.RotateCertificates = true
-				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
-			},
-		),
-
-		Entry(
 			"kubernetes 1.25 w/o defaults",
 			"1.25.1",
 			clusterDNSAddress,

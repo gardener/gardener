@@ -293,43 +293,6 @@ var _ = Describe("Warnings", func() {
 			)
 		})
 
-		Context("PodSecurityPolicy", func() {
-			BeforeEach(func() {
-				shoot.CreationTimestamp = metav1.Now()
-			})
-
-			It("should return a warning when the PodSecurity admission plugin is not disabled for shoots < 1.25", func() {
-				shoot.Spec.Kubernetes.Version = "1.24.2"
-
-				warnings := GetWarnings(ctx, shoot, shoot, credentialsRotationInterval)
-				Expect(warnings).To(ContainElement(
-					ContainSubstring("you should consider migrating to PodSecurity, see https://github.com/gardener/gardener/blob/master/docs/usage/pod-security.md#migrating-from-podsecuritypolicys-to-podsecurity-admission-controller for details"),
-				))
-			})
-
-			It("should not return a warning when the PodSecurity admission plugin is disabled for shoots < 1.25", func() {
-				shoot.Spec.Kubernetes.Version = "1.24.2"
-				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
-					AdmissionPlugins: []core.AdmissionPlugin{
-						{
-							Name:     "PodSecurityPolicy",
-							Disabled: ptr.To(true),
-						},
-					},
-				}
-
-				warnings := GetWarnings(ctx, shoot, shoot, credentialsRotationInterval)
-				Expect(warnings).To(BeEmpty())
-			})
-
-			It("should not return a warning when the PodSecurity admission plugin is not disabled for shoots >= 1.25", func() {
-				shoot.Spec.Kubernetes.Version = "1.25.0"
-
-				warnings := GetWarnings(ctx, shoot, shoot, credentialsRotationInterval)
-				Expect(warnings).To(BeEmpty())
-			})
-		})
-
 		It("should return a warning when podEvictionTimeout is set", func() {
 			shoot.Spec.Kubernetes.KubeControllerManager = &core.KubeControllerManagerConfig{
 				PodEvictionTimeout: &metav1.Duration{Duration: 2 * time.Minute},
