@@ -28,6 +28,7 @@ reviewers:
     - [Manifest](#manifest)
     - [Rendering](#rendering)
     - [Custom RBAC verb](#custom-rbac-verb)
+    - [Preventing deletion of certain fields in parent `CloudProfile`](#preventing-deletion-of-certain-fields-in-parent-cloudprofile)
     - [Adjusting `Shoot`s `cloudProfileName` field](#adjusting-shoots-cloudprofilename-field)
     - [Migration path](#migration-path)
   - [Outlook](#outlook)
@@ -245,6 +246,10 @@ rules:
     resources: ["namespacedcloudprofiles"]
     verbs: ["modify-spec-kubernetes", "modify-spec-machineImages"]
 ```
+
+### Preventing deletion of certain fields in parent `CloudProfile`
+
+When a `CloudProfile` is deleted it is checked if any `Shoot`s exists that are still referencing it. This concept should also be applied to `NamespacedCloudProfile`s. When deleting a Kubernetes version or a machine image version from a `CloudProfile`, it should be ensured that no `NamespacedCloudProfile`s exist that are using the versions that should be deleted. This check is performed by the `CloudProfile` validation admission plugin.
 
 ### Adjusting `Shoot`s `cloudProfileName` field
 
