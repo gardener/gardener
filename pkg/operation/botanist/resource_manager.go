@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/Masterminds/semver/v3"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
@@ -63,7 +64,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		b.Shoot.TopologyAwareRoutingEnabled,
 		ptr.To(b.Shoot.ComputeOutOfClusterAPIServerAddress(true)),
 		b.Shoot.IsWorkerless,
-		[]string{metav1.NamespaceSystem, v1beta1constants.KubernetesDashboardNamespace},
+		[]string{metav1.NamespaceSystem, v1beta1constants.KubernetesDashboardNamespace, corev1.NamespaceNodeLease},
 	)
 }
 

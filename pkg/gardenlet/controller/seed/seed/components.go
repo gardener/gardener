@@ -236,10 +236,9 @@ func defaultDependencyWatchdogs(
 				kubeapiserver.NewDependencyWatchdogProberConfiguration,
 			}
 			dependencyWatchdogProberConfiguration = proberapi.Config{
-				InternalKubeConfigSecretName: dependencywatchdog.InternalProbeSecretName,
-				ExternalKubeConfigSecretName: dependencywatchdog.ExternalProbeSecretName,
-				ProbeInterval:                &metav1.Duration{Duration: dependencywatchdog.DefaultProbeInterval},
-				DependentResourceInfos:       make([]proberapi.DependentResourceInfo, 0, len(dependencyWatchdogProberConfigurationFuncs)),
+				KubeConfigSecretName:   dependencywatchdog.KubeConfigSecretName,
+				ProbeInterval:          &metav1.Duration{Duration: dependencywatchdog.DefaultProbeInterval},
+				DependentResourceInfos: make([]proberapi.DependentResourceInfo, 0, len(dependencyWatchdogProberConfigurationFuncs)),
 			}
 		)
 
