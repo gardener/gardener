@@ -70,7 +70,7 @@ func NewBuilder() *Builder {
 		seedFunc: func(context.Context) (*seed.Seed, error) {
 			return nil, fmt.Errorf("seed object is required but not set")
 		},
-		shootFunc: func(context.Context, client.Reader, *garden.Garden, *seed.Seed) (*shootpkg.Shoot, error) {
+		shootFunc: func(context.Context, client.Reader, *garden.Garden, *seed.Seed, *corev1.Secret) (*shootpkg.Shoot, error) {
 			return nil, fmt.Errorf("shoot object is required but not set")
 		},
 	}
@@ -96,7 +96,6 @@ func (b *Builder) WithGardenFrom(reader client.Reader, namespace string) *Builde
 			WithProjectFrom(reader, namespace).
 			WithInternalDomainFromSecrets(secrets).
 			WithDefaultDomainsFromSecrets(secrets).
-			WithShootServiceAccountIssuerHostname(secrets).
 			Build(ctx)
 	}
 	return b
@@ -145,7 +144,7 @@ func (b *Builder) WithSeedFrom(gardenClient client.Reader, seedName string) *Bui
 
 // WithShoot sets the shootFunc attribute at the Builder.
 func (b *Builder) WithShoot(s *shootpkg.Shoot) *Builder {
-	b.shootFunc = func(_ context.Context, _ client.Reader, _ *garden.Garden, _ *seed.Seed) (*shootpkg.Shoot, error) {
+	b.shootFunc = func(_ context.Context, _ client.Reader, _ *garden.Garden, _ *seed.Seed, _ *corev1.Secret) (*shootpkg.Shoot, error) {
 		return s, nil
 	}
 	return b
@@ -154,7 +153,7 @@ func (b *Builder) WithShoot(s *shootpkg.Shoot) *Builder {
 // WithShootFromCluster sets the shootFunc attribute at the Builder which will build a new Shoot object constructed from the cluster resource.
 // The shoot status is still taken from the passed `shoot`, though.
 func (b *Builder) WithShootFromCluster(gardenClient client.Client, seedClientSet kubernetes.Interface, s *gardencorev1beta1.Shoot) *Builder {
-	b.shootFunc = func(ctx context.Context, c client.Reader, gardenObj *garden.Garden, seedObj *seed.Seed) (*shootpkg.Shoot, error) {
+	b.shootFunc = func(ctx context.Context, c client.Reader, gardenObj *garden.Garden, seedObj *seed.Seed, serviceAccountIssuerConfig *corev1.Secret) (*shootpkg.Shoot, error) {
 		shootNamespace := gardenerutils.ComputeTechnicalID(gardenObj.Project.Name, s)
 
 		shoot, err := shootpkg.
@@ -166,6 +165,7 @@ func (b *Builder) WithShootFromCluster(gardenClient client.Client, seedClientSet
 			WithProjectName(gardenObj.Project.Name).
 			WithInternalDomain(gardenObj.InternalDomain).
 			WithDefaultDomains(gardenObj.DefaultDomains).
+			WithServiceAccountIssuerHostname(serviceAccountIssuerConfig).
 			Build(ctx, c)
 		if err != nil {
 			return nil, err
@@ -246,7 +246,7 @@ func (b *Builder) Build(
 	}
 	operation.Seed.KubernetesVersion = seedVersion
 
-	shoot, err := b.shootFunc(ctx, gardenClient, garden, seed)
+	shoot, err := b.shootFunc(ctx, gardenClient, garden, seed, secrets[v1beta1constants.GardenRoleShootServiceAccountIssuer])
 	if err != nil {
 		return nil, err
 	}

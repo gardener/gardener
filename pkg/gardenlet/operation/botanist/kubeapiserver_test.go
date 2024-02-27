@@ -517,13 +517,13 @@ var _ = Describe("KubeAPIServer", func() {
 				Entry("should set managed issuer configuration",
 					func() {
 						botanist.Garden = &garden.Garden{
-							ShootServiceAccountIssuerHostname: ptr.To("foo.bar.example.cloud"),
 							Project: &gardencorev1beta1.Project{
 								ObjectMeta: metav1.ObjectMeta{
 									Name: "test",
 								},
 							},
 						}
+						botanist.Shoot.ServiceAccountIssuerHostname = ptr.To("foo.bar.example.cloud")
 						botanist.Shoot.GetInfo().ObjectMeta.UID = "some-uuid"
 						botanist.Shoot.GetInfo().Annotations = map[string]string{
 							"authentication.gardener.cloud/issuer": "managed",
@@ -548,13 +548,13 @@ var _ = Describe("KubeAPIServer", func() {
 
 			It("should return error because shoot wants managed issuer, but issuer hostname is not configured", func() {
 				botanist.Garden = &garden.Garden{
-					ShootServiceAccountIssuerHostname: nil,
 					Project: &gardencorev1beta1.Project{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "test",
 						},
 					},
 				}
+				botanist.Shoot.ServiceAccountIssuerHostname = nil
 				botanist.Shoot.GetInfo().ObjectMeta.UID = "some-uuid"
 				botanist.Shoot.GetInfo().Annotations = map[string]string{
 					"authentication.gardener.cloud/issuer": "managed",

@@ -352,7 +352,6 @@ func (r *Reconciler) initializeOperation(
 		WithProject(project).
 		WithInternalDomainFromSecrets(gardenSecrets).
 		WithDefaultDomainsFromSecrets(gardenSecrets).
-		WithShootServiceAccountIssuerHostname(gardenSecrets).
 		Build(ctx)
 	if err != nil {
 		return nil, err
@@ -376,6 +375,7 @@ func (r *Reconciler) initializeOperation(
 		WithProjectName(project.Name).
 		WithInternalDomain(gardenObj.InternalDomain).
 		WithDefaultDomains(gardenObj.DefaultDomains).
+		WithServiceAccountIssuerHostname(gardenSecrets[v1beta1constants.GardenRoleShootServiceAccountIssuer]).
 		Build(ctx, r.GardenClient)
 	if err != nil {
 		return nil, err

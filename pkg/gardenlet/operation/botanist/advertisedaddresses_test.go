@@ -146,8 +146,8 @@ var _ = Describe("AdvertisedAddresses", func() {
 		It("returns external, internal addresses with addition to managed service-account-issuer address", func() {
 			botanist.Shoot.ExternalClusterDomain = ptr.To("foo.bar")
 			botanist.Shoot.InternalClusterDomain = "baz.foo"
+			botanist.Shoot.ServiceAccountIssuerHostname = ptr.To("managed.foo.bar")
 			botanist.Garden = &garden.Garden{
-				ShootServiceAccountIssuerHostname: ptr.To("managed.foo.bar"),
 				Project: &gardencorev1beta1.Project{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "some-proj",
@@ -186,8 +186,8 @@ var _ = Describe("AdvertisedAddresses", func() {
 		It("should return error because shoot wants managed issuer, but issuer hostname is not configured", func() {
 			botanist.Shoot.ExternalClusterDomain = ptr.To("foo.bar")
 			botanist.Shoot.InternalClusterDomain = "baz.foo"
+
 			botanist.Garden = &garden.Garden{
-				ShootServiceAccountIssuerHostname: ptr.To(""),
 				Project: &gardencorev1beta1.Project{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "some-proj",

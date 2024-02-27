@@ -16,9 +16,11 @@ package shoot
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -52,6 +54,9 @@ func NewBuilder() *Builder {
 		},
 		shootSecretFunc: func(context.Context, string, string) (*corev1.Secret, error) {
 			return nil, fmt.Errorf("shoot secret object is required but not set")
+		},
+		serviceAccountIssuerHostname: func() (*string, error) {
+			return nil, fmt.Errorf("service account issuer hostname is required but not set")
 		},
 	}
 }
@@ -156,6 +161,25 @@ func (b *Builder) WithDefaultDomains(defaultDomains []*gardenerutils.Domain) *Bu
 	return b
 }
 
+// WithServiceAccountIssuerHostname prepares the [Builder] for initialization of the service account issuer hostname.
+// Should be called before [Builder.Build].
+func (b *Builder) WithServiceAccountIssuerHostname(secret *corev1.Secret) *Builder {
+	b.serviceAccountIssuerHostname = func() (*string, error) {
+		if secret != nil {
+			if host, ok := secret.Data["hostname"]; ok {
+				hostname := string(host)
+				if strings.TrimSpace(hostname) == "" {
+					return nil, errors.New("service account issuer secret has an empty hostname key")
+				}
+				return &hostname, nil
+			}
+			return nil, errors.New("service account issuer secret is missing a hostname key")
+		}
+		return nil, nil
+	}
+	return b
+}
+
 // Build initializes a new Shoot object.
 func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	shoot := &Shoot{}
@@ -196,6 +220,12 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 		Monitoring:       &Monitoring{},
 		Addons:           &Addons{},
 	}
+
+	serviceAccountIssuerHostname, err := b.serviceAccountIssuerHostname()
+	if err != nil {
+		return nil, err
+	}
+	shoot.ServiceAccountIssuerHostname = serviceAccountIssuerHostname
 
 	// Determine information about external domain for shoot cluster.
 	externalDomain, err := gardenerutils.ConstructExternalDomain(ctx, c, shootObject, shoot.Secret, b.defaultDomains)
