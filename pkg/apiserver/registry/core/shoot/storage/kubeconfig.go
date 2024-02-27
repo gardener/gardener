@@ -108,13 +108,13 @@ func (r *KubeconfigREST) Create(ctx context.Context, name string, obj runtime.Ob
 
 	// filter only addresses that actually advertise the kube-apiserver
 	// it is possible that the list of addresses also include URLs like the shoot's issuer URL
-	kapiAddresses := []core.ShootAdvertisedAddress{}
+	var kubeAPIServerAddresses []core.ShootAdvertisedAddress
 	for _, addr := range shoot.Status.AdvertisedAddresses {
 		if addr.Name == "external" || addr.Name == "internal" || addr.Name == "unmanaged" {
-			kapiAddresses = append(kapiAddresses, addr)
+			kubeAPIServerAddresses = append(kubeAPIServerAddresses, addr)
 		}
 	}
-	if len(kapiAddresses) == 0 {
+	if len(kubeAPIServerAddresses) == 0 {
 		fieldErr := field.Invalid(field.NewPath("status", "status"), shoot.Status.AdvertisedAddresses, "no suitable kube-apiserver advertised addresses in Shoot .status.advertisedAddresses")
 		return nil, apierrors.NewInvalid(r.gvk.GroupKind(), shoot.Name, field.ErrorList{fieldErr})
 	}
@@ -169,7 +169,7 @@ func (r *KubeconfigREST) Create(ctx context.Context, name string, obj runtime.Ob
 		}
 	)
 
-	for _, address := range kapiAddresses {
+	for _, address := range kubeAPIServerAddresses {
 		u, err := url.Parse(address.URL)
 		if err != nil {
 			return nil, err

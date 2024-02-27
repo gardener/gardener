@@ -1075,7 +1075,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("metadata.annotations[authentication.gardener.cloud/issuer]"),
-					"Detail": ContainSubstring("managed shoot issuer cannot be enabled when .kuberbetes.kubeAPIServer.serviceAccountConfig.issuer is set"),
+					"Detail": ContainSubstring("managed shoot issuer cannot be enabled when .kubernetes.kubeAPIServer.serviceAccountConfig.issuer is set"),
 				}))))
 			})
 

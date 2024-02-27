@@ -238,7 +238,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	}
 
 	externalHostname := b.Shoot.ComputeOutOfClusterAPIServerAddress(true)
-	serviceAccountConfig, err := b.computeKubeAPIServerSAConfig(externalHostname)
+	serviceAccountConfig, err := b.computeKubeAPIServerServiceAccountConfig(externalHostname)
 	if err != nil {
 		return err
 	}
@@ -296,10 +296,10 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	return nil
 }
 
-func (b *Botanist) computeKubeAPIServerSAConfig(externalHostname string) (kubeapiserver.ServiceAccountConfig, error) {
-	var saConfig *gardencorev1beta1.ServiceAccountConfig
+func (b *Botanist) computeKubeAPIServerServiceAccountConfig(externalHostname string) (kubeapiserver.ServiceAccountConfig, error) {
+	var config *gardencorev1beta1.ServiceAccountConfig
 	if b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer != nil && b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig != nil {
-		saConfig = b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.DeepCopy()
+		config = b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.DeepCopy()
 	}
 
 	shouldManageIssuer := v1beta1helper.HasManagedIssuer(b.Shoot.GetInfo())
@@ -310,16 +310,15 @@ func (b *Botanist) computeKubeAPIServerSAConfig(externalHostname string) (kubeap
 
 	var jwksURI *string
 	if shouldManageIssuer && canManageIssuer {
-		if saConfig == nil {
-			saConfig = &gardencorev1beta1.ServiceAccountConfig{}
+		if config == nil {
+			config = &gardencorev1beta1.ServiceAccountConfig{}
 		}
-		managedIssuer := fmt.Sprintf("https://%s/projects/%s/shoots/%s/issuer", *b.Garden.ShootServiceAccountIssuerHostname, b.Garden.Project.Name, b.Shoot.GetInfo().ObjectMeta.UID)
-		saConfig.Issuer = &managedIssuer
+		config.Issuer = ptr.To(fmt.Sprintf("https://%s/projects/%s/shoots/%s/issuer", *b.Garden.ShootServiceAccountIssuerHostname, b.Garden.Project.Name, b.Shoot.GetInfo().ObjectMeta.UID))
 		jwksURI = ptr.To(fmt.Sprintf("https://%s/projects/%s/shoots/%s/issuer/jwks", *b.Garden.ShootServiceAccountIssuerHostname, b.Garden.Project.Name, b.Shoot.GetInfo().ObjectMeta.UID))
 	}
 
 	serviceAccountConfig := kubeapiserver.ComputeKubeAPIServerServiceAccountConfig(
-		saConfig,
+		config,
 		externalHostname,
 		v1beta1helper.GetShootServiceAccountKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials),
 	)

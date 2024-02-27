@@ -3524,7 +3524,7 @@ rules:
 		})
 	})
 
-	Describe("ComputeKubeAPIServerServiceAccountConfig", func() {
+	Describe("#ComputeKubeAPIServerServiceAccountConfig", func() {
 		externalHostname := "foo.bar"
 		DescribeTable("should have the expected ServiceAccountConfig config", func(
 			config *gardencorev1beta1.ServiceAccountConfig,

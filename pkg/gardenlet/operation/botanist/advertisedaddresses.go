@@ -18,7 +18,7 @@ import (
 	"context"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -73,9 +73,9 @@ func (b *Botanist) ToAdvertisedAddresses() ([]gardencorev1beta1.ShootAdvertisedA
 
 	if len(b.Shoot.InternalClusterDomain) > 0 ||
 		hasCustomIssuer(b.Shoot.GetInfo()) ||
-		helper.HasManagedIssuer(b.Shoot.GetInfo()) {
+		v1beta1helper.HasManagedIssuer(b.Shoot.GetInfo()) {
 		externalHostname := b.Shoot.ComputeOutOfClusterAPIServerAddress(true)
-		serviceAccountConfig, err := b.computeKubeAPIServerSAConfig(externalHostname)
+		serviceAccountConfig, err := b.computeKubeAPIServerServiceAccountConfig(externalHostname)
 		if err != nil {
 			return nil, err
 		}
