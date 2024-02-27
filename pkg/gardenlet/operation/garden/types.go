@@ -113,7 +113,7 @@ func (b *Builder) WithShootServiceAccountIssuerHostname(secrets map[string]*core
 		if s, ok := secrets[v1beta1constants.GardenRoleShootServiceAccountIssuer]; ok {
 			if host, ok := s.Data["hostname"]; ok {
 				hostname := string(host)
-				if strings.TrimSpace(string(hostname)) == "" {
+				if strings.TrimSpace(hostname) == "" {
 					return nil, errors.New("shoot service account issuer secret has an empty hostname key")
 				}
 				return &hostname, nil
